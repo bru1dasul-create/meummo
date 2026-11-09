@@ -130,7 +130,8 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[estrutura]** Iara, chefe da Billings (nível 8): jato d'água e o **canto** — aviso no chão em volta dela, quem
   fica é encantado (não anda e é puxado para perto dela) e a esquiva quebra o encanto; deixa a Escama da Iara.
   Números do canto em `data/monsters.json` (`canto`) e no painel do administrador
-- [ ] **[mundo]** Passar a área da Iara da camada `lendas` para `monstros` na Billings (quantidade 1)
+- [x] **[mundo]** Passar a área da Iara da camada `lendas` para `monstros` na Billings (quantidade 1, na prainha e
+  na pedra; a camada `lendas` ficou vazia e saiu do mapa)
 - [x] **[arte]** Desenho da Iara (sereia de cabelo comprido com vitória-régia, cauda verde-água; bola d'água na mão
   e pose de canto própria), efeito do canto (notas coloridas se espalhando pela área, com um anel no alcance), o
   jogador encantado (brilho azul, anel no chão e notinhas em cima do nome) e o ícone da Escama da Iara

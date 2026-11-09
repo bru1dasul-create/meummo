@@ -3,12 +3,12 @@
 // Ao sul do brejo do Refúgio, a Billings virou um labirinto de canais de água verde e ilhas de mato de brejo:
 // passarelas de madeira ligando as ilhas, aguapés cobrindo a água, buritis, casas afundadas com o telhado de
 // fora, a usina velha e, no meio do lago, a ponte da rodovia antiga, quebrada. No sul fica o lago aberto, com
-// uma prainha de frente para a pedra onde a Iara vai cantar. Clima: neblina, vaga-lumes e um pouco escuro.
+// uma prainha de frente para a pedra onde a Iara canta. Clima: neblina, vaga-lumes e um pouco escuro.
 //
-// Criaturas: o Jacaré Mutante nos canais do oeste e o Boto Encantado no lago das casas afundadas; e as de fora
-// (jararacas nas ilhas perto da entrada, Corpo-Seco perto da usina e das casas afundadas, Capelobo nas matas da
-// beira do lago). A área da Iara fica marcada na camada "lendas" (o servidor ignora; vira área de monstro quando
-// ela existir).
+// Criaturas: a Iara (a chefe) na prainha e na pedra, o Jacaré Mutante nos canais do oeste e o Boto Encantado no
+// lago das casas afundadas; e as de fora (jararacas nas ilhas perto da entrada, Corpo-Seco perto da usina e das
+// casas afundadas, Capelobo nas matas da beira do lago). As três ficaram marcadas numa camada "lendas" (que o
+// servidor ignora) até existirem; hoje moram todas na camada "monstros".
 //
 // Como os outros geradores, este script NÃO sobrescreve um mapa existente sem --force
 // (para comparar: npm run gen:billings -- --out outro.tmj)
@@ -369,15 +369,13 @@ softenEdges(m.ground, W, H, [
 ]);
 softenEdges(m.ground, W, H, [{ base: ['swamp_water'], set: 'swamp_deep_edge', touches: (x, y) => m.groundIs(x, y, 'swamp_deep') }], m.depth.shade);
 
-// 12. Áreas das criaturas e da lenda que ainda vai chegar (a Iara)
+// 12. Áreas das criaturas (a prainha e a pedra são da Iara: as outras áreas ficam longe dali)
 const game0 = GameMap.fromTiled(
   m.toTiled({ properties: [], points: [{ name: 'spawn', ...ARRIVAL }], monsters: [], exits: [] }) as unknown as TiledMap,
   'billings',
 );
 const reach = (x: number, y: number) => findPath(game0, ARRIVAL.x, ARRIVAL.y, x, y, W * H * 2) !== null;
-const legends: AreaObject[] = [
-  { name: 'iara', x: ROCK.x - 9, y: ROCK.y - 9, w: 19, h: 12, properties: [] }, // a prainha e a pedra
-];
+const IARA_AREA = { x: ROCK.x - 9, y: ROCK.y - 9, w: 19, h: 12 }; // a prainha e a pedra
 const areas: AreaObject[] = [];
 function placeArea(name: string, count: number, region: { x0: number; y0: number; x1: number; y1: number }, minDistance: number): void {
   for (let tries = 0; tries < 400; tries++) {
@@ -387,7 +385,7 @@ function placeArea(name: string, count: number, region: { x0: number; y0: number
     const y = region.y0 + Math.floor(m.rng() * Math.max(1, region.y1 - region.y0 - h));
     if (Math.hypot(x + w / 2 - ARRIVAL.x, y + h / 2 - ARRIVAL.y) < minDistance) continue;
     if (areas.some((a) => x < a.x + a.w + 2 && x + w + 2 > a.x && y < a.y + a.h + 2 && y + h + 2 > a.y)) continue;
-    if (legends[0] && x < legends[0].x + legends[0].w && x + w > legends[0].x && y < legends[0].y + legends[0].h && y + h > legends[0].y) continue; // a prainha é da Iara
+    if (x < IARA_AREA.x + IARA_AREA.w && x + w > IARA_AREA.x && y < IARA_AREA.y + IARA_AREA.h && y + h > IARA_AREA.y) continue; // a prainha é da Iara
     let free = 0;
     m.fill(x, y, x + w - 1, y + h - 1, (cx, cy) => {
       if (game0.isWalkable(cx, cy)) free++;
@@ -407,6 +405,7 @@ for (let k = 0; k < 2; k++) placeArea('capelobo', 2, { x0: 4, y0: 30, x1: W - 4,
 areas.push(
   { name: 'jacare', x: 8, y: 8, w: 20, h: 26, properties: [{ name: 'quantidade', type: 'int', value: 3 }] }, // os canais do oeste
   { name: 'boto', x: 50, y: 34, w: 24, h: 10, properties: [{ name: 'quantidade', type: 'int', value: 2 }] }, // o lago das casas afundadas
+  { name: 'iara', ...IARA_AREA, properties: [{ name: 'quantidade', type: 'int', value: 1 }] }, // a chefe, na prainha
 );
 
 // 13. Monta o mapa
@@ -435,7 +434,6 @@ const map = m.toTiled({
       ],
     },
   ],
-  extraGroups: [{ name: 'lendas', areas: legends }],
 });
 
 // 14. Confere se dá para chegar a pé nos lugares importantes
