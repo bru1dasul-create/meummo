@@ -10,7 +10,8 @@ const HAIRS = ['#2a1c14', '#4b2f1e', '#7b4a25', '#b5803c', '#e2c372', '#dcdcdc',
 const PANTS = ['#3b3b58', '#4c3a2a', '#2f4a3a', '#5a4632', '#2c2c2c'];
 const EYES = ['#6b4423', '#3f6fb0', '#3d8a52', '#8a6a2a', '#5a4a7a'];
 
-export type HairStyle = 'curto' | 'longo' | 'espetado' | 'tranca';
+export type HairStyle = 'curto' | 'longo' | 'espetado' | 'tranca' | 'coque';
+/** Penteados que saem do nome (o coque é de NPC: veja NPC_LOOKS em characters.ts). */
 const HAIR_STYLES: HairStyle[] = ['curto', 'longo', 'espetado', 'tranca'];
 
 /** Silhueta: 'forte' (ombros largos) ou 'esguio' (cintura fina, quadril um pouco mais largo). */
@@ -27,6 +28,10 @@ export interface BodyLook {
   eyes: string;
   hairStyle: HairStyle;
   build: Build;
+  /** Óculos (cor da armação). */
+  glasses?: string;
+  /** Sorriso no rosto parado (NPC simpático). */
+  smile?: boolean;
 }
 
 export function bodyLook(look: number): BodyLook {
@@ -123,6 +128,12 @@ export const HAIR: Record<HairStyle, HairViews> = {
       { at: [-0.9, -5.6], to: [-3.4, -9.9], r: [1.9, 1.9] },
       { at: [1.7, -5.6], to: [1.7, -9.8], r: [1.8, 1.8] },
     ],
+  },
+  coque: {
+    // cabelo preso: rente na cabeça, com o coque no alto de trás (aparece atrás do chapéu)
+    down: [{ at: [0, -4.2], r: [6.3, 3.3] }, { at: [-5.4, -1.2], r: [1.4, 2.8], low: true }, { at: [5.4, -1.2], r: [1.4, 2.8], low: true }, { at: [0, -6.4], r: [2.6, 2], back: true, low: true }],
+    up: [{ at: [0, -3.2], r: [6.3, 4.4] }, { at: [0, 1], r: [5.5, 3.6], low: true }, { at: [0, -3], r: [3, 2.6], low: true }],
+    side: [{ at: [-0.6, -3.9], r: [5.9, 3.6] }, { at: [-3.2, 0.2], r: [2.9, 4], low: true }, { at: [-4.6, -3.6], r: [2.7, 2.4], low: true }],
   },
   tranca: {
     down: [

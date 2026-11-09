@@ -45,6 +45,8 @@ export function dressOf(look: BodyLook, gear: DollGear): Dress {
         d.shirt = d.sleeve = material(art.shirt, 'cloth');
         d.skirt = art.skirt ?? false;
         if (art.belt) d.belt = material(art.belt, 'leather');
+        if (art.apron) d.apron = material(art.apron, 'cloth');
+        d.flowers = art.flowers;
         break;
       case 'plate':
         d.shirt = material(art.metal, 'metal');
@@ -135,12 +137,13 @@ function drawHips(cv: Canvas, r: Rig, d: Dress): void {
     );
   }
   if (d.skirt) {
-    // saia da túnica, da cintura até o meio da coxa, com a barra mais escura
+    // saia: até o meio da coxa (túnica) ou até o tornozelo (vestido), com a barra mais escura
     cv.part('skirt');
     const top = r.waist[1] + 1;
-    const hem = p[1] + 6.5;
+    const long = d.skirt === 'long';
+    const hem = long ? Math.max(r.ankle[0][1], r.ankle[1][1]) - 1.5 : p[1] + 6.5;
     const [l, rr] = torsoEdges(r, build, top);
-    const flare = r.view === 'side' ? 1.2 : 1.6;
+    const flare = (r.view === 'side' ? 1.2 : 1.6) * (long ? 2.2 : 1);
     cv.polygon(
       [
         [l, top],
@@ -151,6 +154,7 @@ function drawHips(cv: Canvas, r: Rig, d: Dress): void {
       d.shirt,
       { pattern: (x, y, t) => (y > hem - 1.2 ? t - 1 : Math.sin(x * 1.3) > 0.7 ? t - 1 : t) },
     );
+    flowers(cv, d, 'skirt', r.pelvis, [l - flare - 1, top, rr + flare + 1, hem + 1]);
   }
 }
 
@@ -158,6 +162,7 @@ function drawTorso(cv: Canvas, r: Rig, d: Dress): void {
   const build = d.look.build;
   cv.part('torso');
   cv.polygon(torsoShape(r, build), d.shirt, { normal: torsoNormal(r, build) });
+  flowers(cv, d, 'torso', r.chest, [r.chest[0] - 9, r.neck[1], r.chest[0] + 9, r.pelvis[1] + 2]);
   const plain = d.shirt === d.sleeve && d.shortSleeves; // camisa (não armadura)
   if (!plain) return;
   const top = r.neck[1] + 1.2;
@@ -188,6 +193,74 @@ function drawTorso(cv: Canvas, r: Rig, d: Dress): void {
   } else {
     cv.line([cx - 2.4, top + 0.4], [cx + 2.4, top + 0.4], d.shirt.ramp[0]); // gola de costas
     cv.line([cx - 0.5, r.waist[1] - 4], [cx - 0.5, r.waist[1] - 1], fold);
+  }
+}
+
+/**
+ * Estampa de chita: florzinhas espalhadas sobre os pixels de uma parte. A posição é medida a partir de
+ * um ponto do corpo (`anchor`), então a estampa acompanha o corpo quando ele respira ou anda.
+ */
+function flowers(cv: Canvas, d: Dress, group: string, anchor: Vec, box: [number, number, number, number]): void {
+  const colors = d.flowers;
+  if (!colors?.length) return;
+  for (let y = Math.floor(box[1]); y <= Math.ceil(box[3]); y++) {
+    for (let x = Math.floor(box[0]); x <= Math.ceil(box[2]); x++) {
+      if (!cv.ownedBy(x, y, group)) continue;
+      const u = x - Math.round(anchor[0]);
+      const v = y - Math.round(anchor[1]);
+      // grade torta de flores: uma a cada ~3x3 pixels, cores alternando
+      if (((u * 2 + v * 3) % 7 + 7) % 7 !== 0 || ((v % 2) + 2) % 2 !== 0) continue;
+      cv.dot(x, y, colors[(((u + v * 2) % colors.length) + colors.length) % colors.length]!);
+    }
+  }
+}
+
+/** Avental claro por cima da roupa: peitilho e saia de pano na frente; de costas, o laço. */
+function drawApron(cv: Canvas, r: Rig, d: Dress): void {
+  const apron = d.apron;
+  if (!apron) return;
+  const cx = r.chest[0];
+  const top = r.neck[1] + 3.5;
+  const waist = r.waist[1] + 1.5;
+  const hem = Math.max(r.ankle[0][1], r.ankle[1][1]) - 7;
+  cv.part('apron');
+  if (r.view === 'down') {
+    cv.polygon(
+      [
+        [cx - 3.2, top],
+        [cx + 3.2, top],
+        [cx + 3.8, waist],
+        [cx + 5, hem],
+        [cx - 5, hem],
+        [cx - 3.8, waist],
+      ],
+      apron,
+      { normal: (x) => cylinder((x - cx) / 7), pattern: (_x, y, t) => (y > hem - 1.2 ? t - 1 : t) },
+    );
+    cv.line([cx - 3.2, top], [cx - 1.6, r.neck[1] + 0.6], apron.ramp[1]); // alças
+    cv.line([cx + 3.2, top], [cx + 1.6, r.neck[1] + 0.6], apron.ramp[1]);
+    cv.line([cx - 3.9, waist], [cx + 3.9, waist], apron.ramp[0]); // cordão da cintura
+    cv.line([cx - 2, waist + 3], [cx + 2, waist + 3], apron.ramp[1]); // bolso
+  } else if (r.view === 'side') {
+    const front = r.waist[0] + 2.2;
+    cv.polygon(
+      [
+        [front - 1, top + 0.5],
+        [front + 1.6, top + 0.5],
+        [front + 2.6, waist],
+        [front + 3.4, hem],
+        [front - 0.4, hem],
+        [front, waist],
+      ],
+      apron,
+      { normal: (x) => cylinder((x - front - 1) / 3) },
+    );
+  } else {
+    // de costas: só o laço do avental na cintura
+    cv.ellipse([cx - 1.4, waist], 1.4, 1, apron);
+    cv.ellipse([cx + 1.4, waist], 1.4, 1, apron);
+    cv.line([cx - 0.5, waist + 0.5], [cx - 1.5, waist + 3.2], apron.ramp[1]);
+    cv.line([cx + 0.5, waist + 0.5], [cx + 1.5, waist + 3.2], apron.ramp[1]);
   }
 }
 
@@ -248,6 +321,7 @@ function drawArm(cv: Canvas, r: Rig, d: Dress, which: 'main' | 'off', far: boole
     cv.capsule(cut, e, 2, 1.8, d.skin, { bias });
     cv.part(`sleeve_${which}`);
     cv.capsule(s, cut, 2.5, 2.3, d.sleeve, { bias });
+    flowers(cv, d, `sleeve_${which}`, s, [Math.min(s[0], cut[0]) - 3, Math.min(s[1], cut[1]) - 3, Math.max(s[0], cut[0]) + 3, Math.max(s[1], cut[1]) + 3]);
     // barra da manga
     const dx = e[0] - s[0];
     const dy = e[1] - s[1];
@@ -377,6 +451,7 @@ function drawFrame(cv: Canvas, r: Rig, d: Dress): void {
       chinShadow(cv, r);
       drawBelt(cv, r, d);
       drawBodyGear(cv, r, d, 'hips');
+      drawApron(cv, r, d);
       drawArm(cv, r, d, 'main', false);
       drawArm(cv, r, d, 'off', false);
       drawShoulderGear(cv, r, d);
@@ -397,6 +472,7 @@ function drawFrame(cv: Canvas, r: Rig, d: Dress): void {
       drawTorso(cv, r, d);
       drawBodyGear(cv, r, d, 'torso');
       drawBelt(cv, r, d);
+      drawApron(cv, r, d);
       drawArm(cv, r, d, 'main', false);
       drawArm(cv, r, d, 'off', false);
       drawShoulderGear(cv, r, d);
@@ -417,6 +493,7 @@ function drawFrame(cv: Canvas, r: Rig, d: Dress): void {
       drawBodyGear(cv, r, d, 'torso');
       drawBelt(cv, r, d);
       drawBodyGear(cv, r, d, 'hips');
+      drawApron(cv, r, d);
       drawBodyGear(cv, r, d, 'neck');
       drawShield(cv, r, d);
       drawHead(cv, r, d);

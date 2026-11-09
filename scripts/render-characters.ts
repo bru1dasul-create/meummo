@@ -15,6 +15,7 @@ import { drawFace } from '../src/client/game/doll/face';
 import { gearIcon, slotOfArt } from '../src/client/game/doll/gearIcon';
 import { ANIMS, FRAME_H, FRAME_W, VIEWS, faceOrigin, type AnimName } from '../src/client/game/doll/poses';
 import { Sheet } from '../src/client/game/doll/sheet';
+import { lookOf, resolveGear } from '../src/client/game/characters';
 import { GEAR_ART } from '../src/client/game/gearArt';
 import { lookFromName } from '../src/shared/look';
 
@@ -40,7 +41,8 @@ function gearOf(names: string[]): DollGear {
 }
 
 // Os de cima usam itens que já existem no jogo; Caio e Duda mostram visuais prontos para itens futuros.
-const ALL_SETS: { name: string; gear: string[] }[] = [
+const ALL_SETS: { name: string; gear: string[]; npc?: string }[] = [
+  { name: 'Dona Iracema', gear: ['chapeu_palha'], npc: 'iracema' },
   { name: 'Ana', gear: [] },
   { name: 'Beto', gear: ['chapeu_palha', 'gibao', 'estilingue', 'colar'] },
   { name: 'Eva', gear: ['gorro', 'couraca', 'faca', 'ferradura'] },
@@ -74,8 +76,9 @@ const iconRows = Math.ceil(Object.keys(GEAR_ART).length / iconsPerRow);
 const sheet = new Sheet(columns * (FRAME_W + gap), rows * (FRAME_H + gap) + iconRows * (ICON + gap * 2));
 
 SETS.forEach((set, s) => {
-  const look = bodyLook(lookFromName(set.name));
-  const gear = gearOf(set.gear);
+  const look = set.npc ? lookOf(lookFromName(set.name), set.npc) : bodyLook(lookFromName(set.name));
+  // NPC: o que os dados vestem (chapéu) + a roupa própria dele (NPC_LOOKS)
+  const gear = set.npc ? resolveGear({ head: set.gear[0] }, set.npc).gear : gearOf(set.gear);
   VIEWS.forEach((view, v) => {
     FRAMES.forEach(([anim, f], column) => {
       const ox = column * (FRAME_W + gap);

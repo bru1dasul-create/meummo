@@ -10,13 +10,15 @@
 //   hat      chapéu de aba        color, band (fita), brim (raio da aba), crown (altura da copa)
 //   cap      gorro mole           color, trim (barra), tip (para que lado a ponta cai: 1 ou -1)
 //   helmet   capacete             metal, rim (aba), crest (pluma), noseGuard (protetor de nariz), handle (cabo de panela)
-//   clothes  roupa (túnica)       shirt, skirt (saia até a coxa), belt
+//   clothes  roupa                shirt, skirt (true = até a coxa, 'long' = até o tornozelo), belt,
+//                                 apron (avental por cima), flowers (estampa de chita: cores das flores)
 //   vest     colete               leather, lacing (cordão), studs (tachinhas), scales (escamas de cobra)
 //   plate    armadura             metal, chain (malha dos braços), pauldrons (ombreiras), tassets (placas do quadril), trim
 //   gloves   luvas                color, metal (manopla), long (cobre o antebraço)
 //   boots    botas                color, tall (cano alto), cuff (barra), metal
 //   cape     capa                 color, trim (barra), leaves (folhas por cima), clasp (broche), length
-//   necklace colar                cord, pendant, count (quantos pingentes), shape ('fang' presa, 'horseshoe' ferradura), glow (brilho)
+//   necklace colar                cord, pendant, count (quantos pingentes), shape ('fang' presa, 'horseshoe' ferradura,
+//                                 'beads' contas/sementes), glow (brilho)
 //   blade    facão, espada        steel, length, width, guard, grip, curve (lâmina de facão)
 //   axe      machado              head, handle, length, binding (amarração)
 //   bow      arco                 wood, string, size
@@ -35,13 +37,13 @@ export type GearArt =
   | { kind: 'hat'; color: string; band?: string; brim: number; crown: number }
   | { kind: 'cap'; color: string; trim?: string; tip: 1 | -1 }
   | { kind: 'helmet'; metal: string; rim?: string; crest?: string; noseGuard?: boolean; handle?: string }
-  | { kind: 'clothes'; shirt: string; skirt?: boolean; belt?: string }
+  | { kind: 'clothes'; shirt: string; skirt?: boolean | 'long'; belt?: string; apron?: string; flowers?: string[] }
   | { kind: 'vest'; leather: string; lacing?: string; studs?: string; scales?: boolean }
   | { kind: 'plate'; metal: string; chain?: string; pauldrons?: boolean; tassets?: boolean; trim?: string }
   | { kind: 'gloves'; color: string; metal?: boolean; long?: boolean }
   | { kind: 'boots'; color: string; tall?: boolean; cuff?: string; metal?: boolean }
   | { kind: 'cape'; color: string; trim?: string; leaves?: string; clasp?: string; length?: number }
-  | { kind: 'necklace'; cord: string; pendant: string; count: number; shape?: 'fang' | 'horseshoe'; glow?: string }
+  | { kind: 'necklace'; cord: string; pendant: string; count: number; shape?: 'fang' | 'horseshoe' | 'beads'; glow?: string }
   | { kind: 'blade'; steel: string; length: number; width: number; guard?: string; grip: string; curve?: boolean }
   | { kind: 'axe'; head: string; handle: string; length: number; binding?: string }
   | { kind: 'bow'; wood: string; string: string; size: number }
@@ -68,6 +70,8 @@ export const GEAR_ART: Record<string, GearArt> = {
   // chapas de carro amarradas com corda: placas de lata meio enferrujadas, sem ombreira
   couraca: { kind: 'plate', metal: '#9fa7a8', chain: '#7a6a58', tassets: true, trim: '#b5823c' },
   tunica: { kind: 'clothes', shirt: '#ece4cf', skirt: true, belt: '#8a6b3d' },
+  // vestido de chita (o tecido florido das feiras) com avental: a roupa da Dona Iracema
+  chita_avental: { kind: 'clothes', shirt: '#c8452f', skirt: 'long', apron: '#efe6d2', flowers: ['#f2c94c', '#f6efe0', '#4f9a3c'] },
   // couro de cobra, costurado à mão: escamas e um tom oliva (não some em quem tem a pele morena)
   gibao: { kind: 'vest', leather: '#7c7440', lacing: '#e9d9a8', studs: '#e9b941', scales: true },
   armadura: { kind: 'plate', metal: '#a3acb5', chain: '#6e767f', pauldrons: true, tassets: true, trim: '#c9a062' },
@@ -79,6 +83,8 @@ export const GEAR_ART: Record<string, GearArt> = {
 
   // ======================= acessórios =======================
   colar: { kind: 'necklace', cord: '#8a6b3d', pendant: '#f3efe0', count: 3 },
+  // sementes de açaí num cordão
+  colar_sementes: { kind: 'necklace', cord: '#5a3a1e', pendant: '#4a2a3a', count: 9, shape: 'beads' },
   // ferradura que nunca esfria (da Mula sem Cabeça)
   ferradura: { kind: 'necklace', cord: '#4a3a2a', pendant: '#ff8a2a', count: 1, shape: 'horseshoe', glow: '#ffd36a' },
   capa: { kind: 'cape', color: '#3f8f3a', trim: '#2b6627', leaves: '#7fd05a', clasp: '#d8b050', length: 27 },

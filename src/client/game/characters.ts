@@ -34,7 +34,14 @@ const BUILD_BUDGET_MS = 6;
  * Aparência própria de NPCs (a chave é o id em data/npcs.json). O que não estiver aqui vem do nome,
  * como nos jogadores. `gear` usa os nomes dos visuais de gearArt.ts.
  */
-export const NPC_LOOKS: Record<string, { body?: Partial<BodyLook>; gear?: Partial<Record<DollSlot, string>> }> = {};
+export const NPC_LOOKS: Record<string, { body?: Partial<BodyLook>; gear?: Partial<Record<DollSlot, string>> }> = {
+  // quitandeira do píer: senhora de cabelo grisalho em coque, óculos redondinhos e sorriso de vó,
+  // vestido de chita com avental e colar de sementes (o chapéu de palha vem dos dados: "veste")
+  iracema: {
+    body: { skin: '#9a6440', hair: '#ddd8cf', hairStyle: 'coque', build: 'forte', eyes: '#6b4423', glasses: '#4a3424', smile: true, shoes: '#5a3a22' },
+    gear: { body: 'chita_avental', charm: 'colar_sementes' },
+  },
+};
 
 /** O desenho de cada parte vestida e uma chave que identifica a combinação. */
 export function resolveGear(gear: GearLook | undefined, npc?: string): { gear: DollGear; key: string } {
@@ -53,7 +60,7 @@ export function resolveGear(gear: GearLook | undefined, npc?: string): { gear: D
 }
 
 /** A aparência do corpo: a do nome, com o que o NPC tiver de próprio por cima. */
-function lookOf(look: number, npc?: string): BodyLook {
+export function lookOf(look: number, npc?: string): BodyLook {
   const own = npc ? NPC_LOOKS[npc]?.body : undefined;
   return own ? { ...bodyLook(look), ...own } : bodyLook(look);
 }

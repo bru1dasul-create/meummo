@@ -62,15 +62,32 @@ function colors(look: BodyLook): Record<string, string> {
   };
 }
 
+// Sorriso (rosto parado de NPC simpático) e óculos redondinhos (por cima de tudo): G = armação
+const SMILE: Record<'down' | 'side', Record<number, string>> = {
+  down: { 10: '....m..m....', 11: '.....mm.....' },
+  side: { 10: '.........m..', 11: '..........m.' },
+};
+const GLASSES: Record<'down' | 'side', string[]> = {
+  down: blank({ 6: '..GGG..GGG..', 7: '..G..GG..G..', 8: '..G..G.G.G..', 9: '...GG...GG..' }),
+  side: blank({ 6: '.......GGG..', 7: 'GGGGGGG...G.', 8: '.......G..G.', 9: '........GG..' }),
+};
+
 /** Desenha o rosto com o canto da caixa em (x, y). Sem rosto de costas. */
 export function drawFace(sheet: Sheet, x: number, y: number, view: 'down' | 'side', expression: Expression, look: BodyLook): void {
-  const palette = colors(look);
-  (view === 'down' ? DOWN : SIDE)[expression].forEach((row, gy) => {
-    for (let gx = 0; gx < row.length; gx++) {
-      const c = palette[row[gx]!];
-      if (c) sheet.set(x + gx, y + gy, rgba(c));
-    }
-  });
+  const palette: Record<string, string> = { ...colors(look), G: look.glasses ?? '' };
+  let rows = (view === 'down' ? DOWN : SIDE)[expression];
+  if (look.smile && (expression === 'normal' || expression === 'blink')) {
+    rows = rows.map((row, i) => (i === 10 ? '' : row)).map((row, i) => SMILE[view][i] ?? row);
+  }
+  const paint = (art: string[]) =>
+    art.forEach((row, gy) => {
+      for (let gx = 0; gx < row.length; gx++) {
+        const c = palette[row[gx]!];
+        if (c) sheet.set(x + gx, y + gy, rgba(c));
+      }
+    });
+  paint(rows);
+  if (look.glasses) paint(GLASSES[view]);
 }
 
 /** Folha com todos os rostos: linha 0 de frente, linha 1 de lado; uma coluna por expressão. */

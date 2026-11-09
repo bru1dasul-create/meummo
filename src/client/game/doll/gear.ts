@@ -28,7 +28,11 @@ export interface Dress {
   foot: Material;
   belt: Material;
   buckle: Material;
-  skirt: boolean;
+  skirt: boolean | 'long';
+  /** Avental por cima da roupa. */
+  apron?: Material;
+  /** Estampa de chita: cores das florzinhas. */
+  flowers?: string[];
   tallBoots: boolean;
   bootCuff?: Material;
   gloveCuff?: Material;
@@ -149,6 +153,15 @@ export function drawBodyGear(cv: Canvas, r: Rig, d: Dress, layer: 'torso' | 'hip
       const k = n === 1 ? 6 : Math.round(3 + (i * 6) / Math.max(1, n - 1));
       const p = pts[k]!;
       cv.part('pendant');
+      if (necklace.shape === 'beads') {
+        // contas/sementes ao longo do cordão inteiro
+        for (let b = 1; b < pts.length - 1; b += r.view === 'side' ? 3 : 1) {
+          const q = pts[b]!;
+          cv.dot(q[0], q[1] + 0.4, pend.ramp[1]);
+          if (b % 2 === 0) cv.dot(q[0] - 0.6, q[1] - 0.2, pend.ramp[3]);
+        }
+        break;
+      }
       if (necklace.shape === 'horseshoe') {
         // ferradura em U, de boca para cima, com um brilho de brasa em volta
         const at = add(p, [0, 2.2]);
