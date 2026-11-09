@@ -25,7 +25,8 @@
 3. **Regras compartilhadas** (movimento, esquiva, mapa, combate/projéteis, progressão, protocolo, busca de
    caminho) ficam em `src/shared`, que não pode importar nada de navegador, Phaser ou Node.
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
-   `data/items.json`, vendedores e outros NPCs em `data/npcs.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
+   `data/items.json`, vendedores e outros NPCs em `data/npcs.json`, missões em `data/missoes.json` (chaves em
+   português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
    Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
    ícones de itens em `src/client/itemArt.ts`, ícones das habilidades em `src/client/actionArt.ts`, personagens
    (20x24) e o equipamento no corpo em `src/client/game/characters.ts` — equipamento com ícone novo precisa de
@@ -95,6 +96,12 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
 - Atalhos na área de trabalho: `jogar.bat` (liga tudo e abre o navegador) e `atualizar.bat` (git pull + npm install).
 - Scripts `.bat`/`.ps1` sem acentos (compatibilidade) e com CRLF (veja `.gitattributes`).
 - Se mudar algo que exige passo extra na instalação, atualize o `instalar-windows.ps1` e o `atualizar.bat`.
+
+## Painel do administrador
+- http://localhost:3000/admin, só no computador do servidor (travas em `src/server/admin.ts`). Ajusta monstros,
+  itens e loja na hora; os ajustes ficam em `saves/ajustes.json` (fora do Git) por cima de `data/*.json`.
+- Campo novo no painel: acrescente na lista de `src/server/tuning.ts` (e ele já é conferido pelo leitor do arquivo).
+- Testes usam `tuningFile: null` (ajustes só na memória) quando o servidor sobe com `':memory:'`.
 
 ## Conferir no navegador
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra

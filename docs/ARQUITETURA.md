@@ -120,6 +120,43 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   tudo ou nada) e o limite de ouro (vende só o que cabe). A loja paga `compraPor`% do preço (`sellPrice`, mínimo 1).
   Recusa vem em `fail` (`no_gold`, `too_far`, `cant_trade`, `bag_full`, `dead`), com `item: true`.
 
+## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
+- As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
+  itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no
+  `welcome` (`quests`). O progresso de cada um (`Player.quests`, um `QuestLog`: missão → `active`/`done` e a
+  contagem) vai no `welcome` e no `zone` (`questLog`) e, quando muda, em `quests`.
+- Pedidos: `quest` com `accept` ou `complete` (perto do NPC que dá a missão, `TRADE_RANGE`) e `abandon` (em
+  qualquer lugar). O servidor confere tudo (`questBlocker`: já fazendo, já feita e não repetível, falta a anterior,
+  nível, limite de 5). "Derrotar" conta em `killMonster` para cada um que ajudou; "entregar" conta pela mochila
+  e tira os itens na hora de entregar. Recompensa: XP, ouro e itens (o que não couber cai no chão, ao lado).
+  Concluir salva o personagem na hora.
+- No navegador, `src/client/talk.ts`: a conversa (missões para entregar, em andamento, novas e as que esperam
+  nível; botão da loja se o NPC tiver uma), a lista na tela e o sinal ! / ? em cima do NPC (`npcMark`).
+- Salvo na coluna `quests` (JSON) — passo 3 de `MIGRATIONS`; o mundo confere ao carregar (missão que sumiu sai,
+  contagem fora do limite é corrigida).
+
+## Painel do administrador (`src/server/admin.ts` e `tuning.ts`)
+- `GET /admin` entrega a página (`src/server/admin/painel.html`, HTML e JavaScript sem nada externo); a página só
+  mostra e pede (`GET /admin/api/dados`, `POST /admin/api/ajustar`, `POST /admin/api/padrao`, `GET /admin/api/exportar`;
+  jogadores: `GET /admin/api/jogadores`, `POST /admin/api/jogador` com `acao` = `ouro`, `item`, `curar`, `levar` ou
+  `expulsar`, e `POST /admin/api/aviso`).
+- **Ferramentas de jogadores** ficam no `Realm` (`playersOnline`, `adminGiveGold`, `adminGiveItem`, `adminHeal`,
+  `adminMove`, `notice`) e no `World` de cada mapa; expulsar é `Session.end('kicked')` (o navegador mostra o motivo).
+  Cada ação vira uma linha na janela do servidor ("painel: ...") e uma mensagem no chat de quem recebeu.
+- **Travas** (`accessProblem`): só aceita quem pede do próprio computador (127.0.0.1/::1) e pelo nome `localhost`
+  (contra sites que se fingem de localhost); pedidos que mudam algo precisam do cabeçalho `X-MeuMMO-Admin: 1` e de
+  origem local (outro site não consegue mandar esse cabeçalho sem permissão). A página não abre dentro de outro
+  site. No M5 entram senha e HTTPS.
+- **Ajustes** (`Tuning`): os arquivos `data/*.json` são o padrão; os ajustes (só o que mudou, no mesmo formato em
+  português) ficam em `ajustes.json` ao lado do arquivo dos personagens e são misturados por cima. Cada ajuste é
+  montado e conferido pelos mesmos leitores de quando o servidor liga (`parseMonsterDefs`, `checkNpcs`...): erro =
+  recusa com a mensagem, nada muda. Aceito: os objetos que o jogo usa são atualizados no lugar (quem guardou a
+  referência — monstros vivos, mochilas, NPCs — vê o valor novo), o arquivo é gravado (temporário + troca) e o
+  `Realm.tuningChanged` avisa os mapas: vida dos monstros vivos acompanha na proporção, equipamentos recalculam,
+  e os jogadores recebem `items` e `npcs` com as listas novas.
+- Só campos de uma lista fechada (`MONSTER_FIELDS`, `ITEM_FIELDS`, `NPC_FIELDS`) podem ser ajustados; criar
+  monstro ou item novo continua sendo nos arquivos de dados.
+
 ## Personagens salvos (`src/server/accounts.ts`)
 - Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
   vem dentro do Node.js (`node:sqlite`, Node 22.13+): nada para instalar ou compilar, nem no Windows.
@@ -149,10 +186,11 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
 | cliente | `buy` / `sell` | comprar `n` de um item do vendedor `npc` / vender `n` do item do espaço `i` para ele |
+| cliente | `quest` | aceitar, entregar (perto de quem dá a missão) ou abandonar uma missão |
 | cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
 | servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
-| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, ou o servidor está desligando |
+| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar no mesmo mapa |
@@ -166,6 +204,9 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
 | servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / estes itens do monstro que caiu em (x, y) foram para a sua mochila |
 | servidor | `drop` / `pickup` / `drop_gone` | caiu ouro ou item no chão para você / você pegou / sumiu (o tempo acabou) |
+| servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
+| servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
+| servidor | `quests` | seu progresso nas missões mudou |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |

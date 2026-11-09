@@ -55,6 +55,7 @@ const JOIN_ERRORS: Record<JoinFailure, string> = {
 const BYE_MESSAGES: Record<ByeReason, string> = {
   replaced: 'Você entrou com esse personagem em outro lugar (outra aba ou aparelho).',
   shutdown: 'O servidor foi desligado ou reiniciou. Seu progresso está salvo: entre de novo daqui a pouco.',
+  kicked: 'Você foi desconectado pelo administrador. Seu progresso está salvo.',
 };
 
 let game: Phaser.Game | null = null;

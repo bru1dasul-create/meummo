@@ -100,8 +100,15 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[mundo]** Barraquinha de frutas da Dona Iracema, na praça do Refúgio (ela fica em (46, 28)): toldo listrado
   atrás dela e balcão com frutas na frente. De quebra: os píeres dos lados voltaram a encostar no deck da fogueira
   (as casas maiores do passo 2 tinham fechado a passagem) e um teste confere que todo NPC tem lugar alcançável
-- [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
-- [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
+- [x] **[estrutura]** NPCs com diálogo: o **Curupira**, guardião da mata, na beira da mata ao norte da vila; clicar
+  nele abre a conversa (falas em `data/npcs.json`); **!** em cima = missão nova, **?** = missão para entregar
+- [x] **[estrutura]** Missões simples em `data/missoes.json` ("derrotar" monstros ou "entregar" itens), com
+  recompensa de XP, ouro e itens, sequência (`depoisDe`), nível mínimo e repetíveis; até 5 ao mesmo tempo; lista
+  na tela; progresso salvo com o personagem. Primeiras: Saguis Travessos → Couro de Jararaca → O Dono do
+  Redemoinho (o Saci) → Guardião da Mata (repetível)
+- [ ] **[arte]** Desenho do Curupira (cabelo de fogo, pés virados para trás) e caprichar a conversa, a lista de
+  missões e os sinais ! e ? (hoje: personagem padrão e visual simples)
+- [ ] **[mundo]** Opcional: enfeite em volta do Curupira (árvore oca, cantinho de mata fechada) em (45, 12)
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
   buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,
   neblina e vaga-lumes), com criaturas provisórias (Jararaca, Corpo-Seco, Capelobo)
@@ -111,8 +118,22 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[mundo]** Shopping do Largo Treze (sem nome de marca): mapa de dentro, com a porta de vidro no prédio do
   lado oeste do largo de Santo Amaro (átrio com jardim embaixo da claraboia quebrada, chafariz, escadas rolantes,
   12 lojas, supermercado, cinema e praça de alimentação), com criaturas provisórias (Corpo-Seco, Capelobo e Saci)
-- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
-  Boto e jacarés na Billings, Boitatá como chefe
+- [x] **[estrutura]** Jacaré Mutante e Boto Encantado em `data/monsters.json` (golpes que já existem; o jacaré
+  deixa o Dente de Jacaré, que vale ouro na loja)
+- [ ] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings
+- [ ] **[arte]** Desenhos do jacaré, do boto e da Iara; ícone do Dente de Jacaré (`icone: "dente"`)
+- [ ] **[estrutura + arte + mundo]** Iara, chefe da Billings: o canto puxa o jogador para a água e a esquiva quebra o
+  encanto (área já marcada: camada `lendas`); depois, Boitatá como chefe
+
+## 🛠️ Ferramentas do administrador
+- [x] **[estrutura]** Painel do administrador, passo 1 — **ajustes do jogo** (http://localhost:3000/admin, só no
+  computador do servidor): monstros, itens e loja; vale na hora, valor inválido é recusado com o motivo; ajustes em
+  `saves/ajustes.json` (fora do GitHub), marcados no painel, com "voltar ao padrão" e "copiar meus ajustes"
+- [x] **[estrutura]** Passo 2 — **ferramentas de jogadores** (aba Jogadores): quem está online (atualiza sozinho),
+  dar ouro e itens (testar a loja sem caçar), curar, levar para outro mapa ou posição, aviso para todos e expulsar;
+  quem recebe fica sabendo pelo chat; tudo registrado na janela do servidor
+- [ ] **[estrutura]** No M5 (internet): senha e conexão criptografada para o painel, banir, registro do que o
+  administrador fez
 
 ## M4 — Social
 - [ ] **[estrutura]** Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada

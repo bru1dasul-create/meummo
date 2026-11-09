@@ -91,6 +91,9 @@ export class Session {
       case 'sell':
         this.lobby.realm.sell(this.player, msg.npc, msg.i, msg.n);
         break;
+      case 'quest':
+        this.lobby.realm.questAction(this.player, msg.act, msg.id, msg.npc);
+        break;
       case 'loaded':
         this.lobby.realm.loaded(this.player);
         break;
@@ -112,6 +115,11 @@ export class Session {
   }
 
   /** O servidor encerra esta sessão: avisa o navegador, tira o personagem do mundo (salvando) e fecha. */
+  /** Id do jogador desta sessão (null = ainda não entrou). */
+  get playerId(): number | null {
+    return this.player?.id ?? null;
+  }
+
   end(reason: ByeReason): void {
     if (this.closed) return;
     this.sendBatch([{ t: 'bye', reason }]);

@@ -26,6 +26,8 @@ import { SKILLS } from '../../shared/skills';
 import { Bag } from '../bag';
 import { itemTexture } from '../itemArt';
 import { ShopWindow } from '../shop';
+import { npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
+import type { QuestInfo, QuestLog } from '../../shared/quests';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
@@ -93,6 +95,11 @@ export class WorldScene extends Phaser.Scene {
   private zoneBanner!: ZoneBanner;
   private bag!: Bag;
   private shop!: ShopWindow;
+  /** Conversa com NPCs que dão missões. */
+  private talk!: TalkWindow;
+  private tracker!: QuestTracker;
+  private questList: QuestInfo[] = [];
+  private questLog: QuestLog = {};
   /** Ouro e itens no chão esperando você pegar. */
   private drops!: GroundDrops;
   /** Os NPCs deste mapa (vendedora...), pelo id. */
@@ -100,6 +107,8 @@ export class WorldScene extends Phaser.Scene {
   /** Andando até este NPC para negociar (abre a loja ao chegar perto). */
   private pendingNpc: number | null = null;
   private myGold = 0;
+  /** A última mochila que o servidor mandou (para redesenhar quando os itens mudam no painel do administrador). */
+  private lastInv!: InventoryState;
   /** Tipos de item (chegam nas boas-vindas). */
   private readonly items = new Map<string, ItemInfo>();
   /** O que estava equipado (para tocar o som de "equipou" só quando muda). */
@@ -194,11 +203,25 @@ export class WorldScene extends Phaser.Scene {
     this.bagEquipped = this.welcome.inv.equipped;
     this.hud.setGold(this.welcome.inv.gold ?? 0);
     this.myGold = this.welcome.inv.gold ?? 0;
+    this.lastInv = this.welcome.inv;
     this.drops = new GroundDrops(this, this.items);
     this.shop = new ShopWindow(this.items, this.welcome.inv, {
       buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
       sell: (npc, i, n) => this.conn.send({ t: 'sell', npc, i, n }),
     });
+    this.questList = this.welcome.quests ?? [];
+    this.questLog = this.welcome.questLog ?? {};
+    this.talk = new TalkWindow(this.questList, this.items, {
+      accept: (npc, id) => this.conn.send({ t: 'quest', act: 'accept', id, npc }),
+      complete: (npc, id) => this.conn.send({ t: 'quest', act: 'complete', id, npc }),
+      abandon: (id) => this.conn.send({ t: 'quest', act: 'abandon', id }),
+      openShop: (npc) => {
+        this.talk.close();
+        this.bag.close();
+        this.shop.open(npc);
+      },
+    });
+    this.tracker = new QuestTracker(this.questList);
     for (const npc of this.welcome.npcs ?? []) {
       this.npcInfo.set(npc.e.id, npc);
       this.addEntity(npc.e, false).setSubtitle(npc.title);
@@ -319,6 +342,11 @@ export class WorldScene extends Phaser.Scene {
         this.pendingNpc = null; // parou de andar antes de chegar
       }
     }
+    const talking = this.talk.npcId;
+    if (talking !== null) {
+      const view = this.entities.get(talking);
+      if (!view || chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) > TRADE_RANGE + 1) this.talk.close();
+    }
     const open = this.shop.npcId;
     if (open !== null) {
       const view = this.entities.get(open);
@@ -356,6 +384,12 @@ export class WorldScene extends Phaser.Scene {
   private openNpc(id: number): void {
     const info = this.npcInfo.get(id);
     if (!info) return;
+    if (this.talk.hasQuests(info)) {
+      this.bag.close();
+      this.shop.close();
+      this.talk.open(info, this.questContext());
+      return;
+    }
     if (!info.shop) {
       if (info.line) this.entities.get(id)?.say(info.line);
       return;
@@ -643,7 +677,8 @@ export class WorldScene extends Phaser.Scene {
         if (!event.repeat) this.bag.toggle();
         break;
       case 'Escape':
-        if (this.shop.isOpen) this.shop.close();
+        if (this.talk.isOpen) this.talk.close();
+        else if (this.shop.isOpen) this.shop.close();
         else if (this.bag.isOpen) this.bag.close();
         break;
     }
@@ -821,9 +856,34 @@ export class WorldScene extends Phaser.Scene {
         // comprou ou vendeu: tilintar de moedas
         if (this.shop.isOpen && msg.inv.gold !== this.myGold) this.sfx.play('loot');
         this.myGold = msg.inv.gold ?? 0;
+        this.lastInv = msg.inv;
         this.shop.setInventory(msg.inv);
+        this.refreshQuests(); // missão de entregar conta pela mochila
         break;
       }
+      case 'quests':
+        this.onQuestLog(msg.log);
+        break;
+      case 'notice':
+        // aviso do administrador para todo mundo
+        this.toast.show(msg.text, 7000);
+        this.chat.addSystem(`Aviso do administrador: ${msg.text}`);
+        this.sfx.play('levelup');
+        break;
+      case 'items':
+        // o administrador ajustou os itens (preço, cura, bônus): a mochila e a loja mostram os números novos
+        for (const item of msg.items) this.items.set(item.id, item);
+        this.bag.setState(this.lastInv);
+        this.shop.setInventory(this.lastInv);
+        break;
+      case 'npcs':
+        for (const npc of msg.npcs) {
+          this.npcInfo.set(npc.e.id, npc);
+          this.entities.get(npc.e.id)?.setSubtitle(npc.title);
+          if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
+          if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
+        }
+        break;
       case 'gear':
         this.entities.get(msg.id)?.setGear(msg.gear);
         break;
@@ -999,7 +1059,7 @@ export class WorldScene extends Phaser.Scene {
   /** Fomos para outro mapa: esta cena sai e entra uma nova, já com o mapa novo. */
   private changeZone(msg: ZoneMsg): void {
     this.conn.hold(); // o que chegar daqui em diante é do mapa novo: fica guardado para a próxima cena
-    this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online, npcs: msg.npcs }, this.seq);
+    this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online, npcs: msg.npcs, questLog: msg.questLog }, this.seq);
   }
 
   /** Você pegou o que estava no chão: voa até você, com o "+N ouro" (ou o nome do item) e o som. */
@@ -1046,7 +1106,7 @@ export class WorldScene extends Phaser.Scene {
     else if (reason === 'bag_full') this.toast.show('A mochila está cheia');
     else if (reason === 'dead') this.toast.show('Desmaiado não dá para mexer na mochila');
     else if (reason === 'no_gold') this.toast.show('Ouro insuficiente');
-    else if (reason === 'too_far') this.toast.show('Chegue mais perto para negociar');
+    else if (reason === 'too_far') this.toast.show('Chegue mais perto');
     else if (reason === 'cant_trade') this.toast.show('Isso não dá para negociar aqui');
   }
 
@@ -1062,6 +1122,43 @@ export class WorldScene extends Phaser.Scene {
     this.bag?.setStats(stats);
     this.hud.setXp(stats.xp, stats.xpNext, stats.level);
     this.setMyHp(Math.min(this.myHp, stats.maxHp), stats.maxHp);
+    if (this.talk) this.refreshQuests(); // nível novo pode liberar missões
+  }
+
+  // ======================= missões =======================
+
+  private questContext(): QuestContext {
+    return {
+      log: this.questLog,
+      level: this.myLevel,
+      inBag: (item) => this.lastInv.slots.reduce((n, stack) => n + (stack?.item === item ? stack.n : 0), 0),
+    };
+  }
+
+  /** O diário, o nível ou a mochila mudaram: lista na tela, conversa aberta e os sinais ! e ? em cima dos NPCs. */
+  private refreshQuests(): void {
+    const ctx = this.questContext();
+    this.tracker.update(ctx);
+    this.talk.update(ctx);
+    for (const [id, info] of this.npcInfo) this.entities.get(id)?.setMark(npcMark(info.e.type, this.questList, ctx));
+  }
+
+  private onQuestLog(log: QuestLog): void {
+    const before = this.questLog;
+    this.questLog = log;
+    for (const quest of this.questList) {
+      const was = before[quest.id];
+      const now = log[quest.id];
+      if (quest.goal.kind === 'kill' && was?.state === 'active' && now?.state === 'active' && now.count > was.count) {
+        this.me?.floatText(`${quest.goalName} ${now.count}/${quest.goal.count}`, 'quest');
+        if (now.count === quest.goal.count) this.toast.show(`Missão pronta: ${quest.name}`, 2500);
+      }
+      if (was?.state === 'active' && now?.state === 'done') {
+        this.toast.show(`Missão concluída: ${quest.name}!`, 3000);
+        this.sfx.play('rare');
+      }
+    }
+    this.refreshQuests();
   }
 
   private setMyHp(hp: number, maxHp: number): void {
@@ -1177,6 +1274,8 @@ export class WorldScene extends Phaser.Scene {
     this.zoneBanner?.destroy();
     this.bag?.destroy();
     this.shop?.destroy();
+    this.talk?.destroy();
+    this.tracker?.destroy();
     this.drops?.destroy();
     this.feedback?.destroy();
   }

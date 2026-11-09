@@ -115,6 +115,34 @@ Cada personagem (nome + senha + progresso) fica no arquivo `saves/meummo.db`, de
   Ainda assim, por enquanto use uma senha só do jogo: na rede de casa ela viaja sem criptografia
   (isso muda quando o jogo for para a internet, no M5).
 
+## Painel do administrador (ajustar o jogo sem mexer em arquivos)
+
+Com o jogo ligado, abra **http://localhost:3000/admin** no navegador **do mesmo computador** onde o jogo está
+rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não consegue abrir o painel.
+
+- **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
+  sozinho, distância que percebe e persegue, tempo para renascer.
+- **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
+- **Loja e personagens:** o que a Dona Iracema diz, o que vende e quanto paga pelo que você vende.
+- **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **dar ouro**,
+  **dar item** (o que não couber na mochila fica no chão, ao lado), **curar**, **levar para** outro mapa ou posição
+  (x e y vazios = ponto de nascimento) e **expulsar** (o progresso fica salvo e dá para entrar de novo). No topo,
+  **aviso para todos** (aparece na tela de quem está jogando). Quem recebe vê no chat o que o administrador fez.
+  Tudo fica registrado na janela do servidor. Banir fica para quando o jogo for para a internet (M5).
+
+Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
+alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").
+Tempos são em milissegundos (1000 ms = 1 segundo).
+
+Os ajustes ficam em `saves/ajustes.json`, **fora do GitHub**: atualizar o jogo não apaga nem dá conflito. Cada
+número que você mudou aparece marcado, com o botão **voltar ao padrão**. Para um ajuste virar o padrão do projeto
+(para todo mundo e para quem instalar do zero), abra a aba **Meus ajustes**, clique em **Copiar meus ajustes** e
+mande para o chat "Estrutura e regras". Se uma atualização do jogo deixar algum ajuste sem sentido, o jogo liga
+com os valores padrão, avisa no painel e guarda os ajustes antigos em `saves/ajustes-antigos.json`.
+
+Os arquivos `data/*.json` continuam valendo como antes (são o padrão do projeto); o painel só põe os seus ajustes
+por cima deles.
+
 ## Ajustar os monstros (sem programar)
 
 Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` ([mínimo, máximo]),
@@ -173,6 +201,28 @@ Os personagens que não são jogadores (como a **Dona Iracema**, quitandeira do 
 
 Para mudar preços, mexa no `preco` de cada item; para mudar o que ela vende, na lista `vende`. Salve e reinicie
 o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão livre mais perto e o servidor avisa.
+
+## Missões (sem programar)
+
+As missões ficam em [`data/missoes.json`](data/missoes.json). Hoje quem dá missões é o **Curupira**, guardião da
+mata, na beira da mata ao norte da vila (logo depois do píer). Um **!** em cima dele quer dizer missão nova; um
+**?**, missão pronta para entregar. As missões em andamento aparecem embaixo do painel de vida.
+
+| Campo | O que é |
+|---|---|
+| `nome` | o nome da missão |
+| `quemDa` | o id do NPC que dá a missão (em `data/npcs.json`); é para ele que se volta para entregar |
+| `pedido`, `concluida` | o que ele diz ao pedir e ao receber |
+| `objetivo` | `{ "tipo": "derrotar", "monstro": "sagui", "quantidade": 5 }` ou `{ "tipo": "entregar", "item": "couro_jararaca", "quantidade": 3 }` (entregar tira os itens da mochila) |
+| `recompensa` | `xp`, `ouro` e `itens` (lista de `{ "item": ..., "quantidade": ... }`) |
+| `depoisDe` | opcional: só aparece depois de concluir esta outra missão (para fazer uma sequência) |
+| `nivelMinimo` | opcional: nível mínimo para aceitar (padrão 1) |
+| `repetivel` | opcional: `true` para dar para fazer de novo depois de concluir |
+
+Cada um pode fazer até 5 missões ao mesmo tempo. Conta para "derrotar" todo monstro que você ajudou a derrubar
+(em grupo, conta para todo mundo que bateu). O progresso fica salvo com o personagem. Qualquer NPC de
+`data/npcs.json` pode dar missões: é só usar o id dele em `quemDa`. Salve e reinicie o servidor; se algo estiver
+errado (um monstro ou item que não existe, uma sequência em círculo), o servidor explica o quê.
 
 ## Editar os mapas
 

@@ -4,6 +4,7 @@
 
 import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
+import type { QuestInfo, QuestLog } from './quests';
 
 export type EntityKind = 'player' | 'monster' | 'npc';
 
@@ -63,9 +64,13 @@ export type ClientMsg =
   | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
   | { t: 'buy'; npc: number; item: string; n: number } // comprar n deste item do vendedor `npc`
   | { t: 'sell'; npc: number; i: number; n: number } // vender n do item do espaço i da mochila para o vendedor `npc`
+  | { t: 'quest'; act: QuestAction; id: string; npc?: number } // aceitar ou concluir (perto de quem dá a missão) ou abandonar
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
+
+/** accept = aceitar a missão; complete = entregar (receber a recompensa); abandon = desistir. */
+export type QuestAction = 'accept' | 'complete' | 'abandon';
 
 /** equip = equipar; use = usar/comer; drop = jogar fora (a pilha inteira). */
 export type ItemAction = 'equip' | 'use' | 'drop';
@@ -81,7 +86,7 @@ export type RejectReason =
   | 'full'
   | 'version';
 /** Por que o servidor encerrou a sua sessão. */
-export type ByeReason = 'replaced' | 'shutdown';
+export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
@@ -103,9 +108,12 @@ export type ServerMsg =
       inv: InventoryState;
       /** Os NPCs deste mapa (não somem nem andam: vêm uma vez só). */
       npcs: NpcInfo[];
+      /** Todas as missões (de data/missoes.json) e o seu progresso. */
+      quests: QuestInfo[];
+      questLog: QuestLog;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
-  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[] }
+  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
   | { t: 'reject'; reason: RejectReason }
   | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
@@ -133,9 +141,13 @@ export type ServerMsg =
   | { t: 'drop'; id: number; x: number; y: number; gold?: number; item?: ItemStack; ms: number }
   | { t: 'pickup'; id: number; gold?: number; item?: ItemStack } // você pegou (tudo ou parte de) o que estava no chão
   | { t: 'drop_gone'; id: number } // o que estava no chão sumiu (o tempo acabou)
+  | { t: 'items'; items: ItemInfo[] } // o administrador ajustou os itens (preço, cura, bônus): use estes daqui pra frente
+  | { t: 'npcs'; npcs: NpcInfo[] } // o administrador ajustou os NPCs deste mapa (o que vendem, o que dizem...)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }
   | { t: 'sys'; text: string } // aviso do sistema
+  | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
+  | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
   | { t: 'online'; n: number }
   | { t: 'pong'; id: number };
 

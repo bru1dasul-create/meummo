@@ -7,10 +7,29 @@ import type { Dir } from '../shared/dir';
 import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
-import type { ItemAction, ServerMsg } from '../shared/protocol';
+import type { ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
+import type { ItemInfo } from '../shared/items';
+import type { TuningFile } from './tuning';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
 
 export type RealmOptions = Omit<WorldOptions, 'links'>;
+
+/** Um jogador online, como o painel do administrador mostra. */
+export interface AdminPlayer {
+  id: number;
+  nome: string;
+  mapa: string;
+  mapaNome: string;
+  x: number;
+  y: number;
+  nivel: number;
+  vida: number;
+  vidaMax: number;
+  ouro: number;
+  desmaiado: boolean;
+}
+
+export type AdminResult = { ok: true; texto: string } | { ok: false; erro: string };
 
 /** Confere se toda saída leva a um mapa e a um ponto de chegada que existem (erro em português se não). */
 export function checkLinks(maps: GameMap[]): void {
@@ -131,6 +150,10 @@ export class Realm {
     this.worldOf(player)?.sell(player, npc, i, n);
   }
 
+  questAction(player: Player, act: QuestAction, id: string, npc?: number): void {
+    this.worldOf(player)?.questAction(player, act, id, npc);
+  }
+
   chat(player: Player, text: string): void {
     this.worldOf(player)?.chat(player, text);
   }
@@ -152,6 +175,101 @@ export class Realm {
       from.detach(player);
       target.adopt(player, target.arrivalSpot(arrival));
       this.where.set(player.id, target);
+    }
+  }
+
+  // ---------- painel do administrador: ferramentas de jogadores ----------
+
+  /** Quem está online agora, em todos os mapas. */
+  playersOnline(): AdminPlayer[] {
+    const list: AdminPlayer[] = [];
+    for (const world of this.worlds.values()) {
+      for (const p of world.players.values()) {
+        list.push({
+          id: p.id,
+          nome: p.name,
+          mapa: world.map.id,
+          mapaNome: world.map.name,
+          x: p.x,
+          y: p.y,
+          nivel: p.level,
+          vida: p.hp,
+          vidaMax: p.maxHp,
+          ouro: p.inventory.gold,
+          desmaiado: p.dead,
+        });
+      }
+    }
+    return list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  private findOnline(id: number): { player: Player; world: World } | null {
+    const world = this.where.get(id);
+    const player = world?.players.get(id);
+    return world && player ? { player, world } : null;
+  }
+
+  adminGiveGold(id: number, n: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    const added = found.world.adminGiveGold(found.player, n);
+    return { ok: true, texto: `${found.player.name} recebeu ${added} de ouro.` };
+  }
+
+  adminGiveItem(id: number, item: ItemInfo, n: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    const added = found.world.adminGiveItem(found.player, item.id, n);
+    const what = `${item.name}${n > 1 ? ` ×${n}` : ''}`;
+    return {
+      ok: true,
+      texto: added === n ? `${found.player.name} recebeu: ${what}.` : `${found.player.name} recebeu: ${what} (${n - added} não couberam na mochila e ficaram no chão, ao lado).`,
+    };
+  }
+
+  adminHeal(id: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    if (found.player.dead) return { ok: false, erro: `${found.player.name} desmaiou: espere acordar na vila.` };
+    found.world.adminHeal(found.player);
+    return { ok: true, texto: `${found.player.name} está com a vida cheia.` };
+  }
+
+  /** Leva o jogador para um mapa (no ponto de nascimento, ou em (x, y) — ou o chão livre mais perto). */
+  adminMove(id: number, mapId: string, x?: number, y?: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    const { player, world: from } = found;
+    if (player.dead) return { ok: false, erro: `${player.name} desmaiou: espere acordar na vila.` };
+    if (player.loading) return { ok: false, erro: `${player.name} está trocando de mapa agora: tente de novo em um instante.` };
+    const target = this.worlds.get(mapId);
+    if (!target) return { ok: false, erro: `O mapa "${mapId}" não existe.` };
+    if (x !== undefined && y !== undefined && (x >= target.map.width || y >= target.map.height)) {
+      return { ok: false, erro: `(${x}, ${y}) fica fora do mapa ${target.map.name} (${target.map.width}×${target.map.height}).` };
+    }
+    const spot = target.freeSpot(x, y);
+    if (!spot) return { ok: false, erro: `Não achei chão livre perto de (${x}, ${y}) em ${target.map.name}.` };
+    if (target === from) {
+      from.adminTeleport(player, spot);
+    } else {
+      from.detach(player);
+      target.adopt(player, spot);
+      this.where.set(player.id, target);
+    }
+    return { ok: true, texto: `${player.name} agora está em ${target.map.name} (${spot.x}, ${spot.y}).` };
+  }
+
+  /** Aviso do administrador para todo mundo online (aparece grande na tela). */
+  notice(text: string): void {
+    this.announce({ t: 'notice', text });
+  }
+
+  /** O administrador ajustou o jogo no painel: cada mapa atualiza o que precisa e avisa quem está jogando. */
+  tuningChanged(changed: ReadonlySet<TuningFile>): void {
+    for (const world of this.worlds.values()) {
+      if (changed.has('monstros')) world.refreshMonsters();
+      if (changed.has('itens')) world.refreshItems();
+      if (changed.has('npcs')) world.refreshNpcs();
     }
   }
 

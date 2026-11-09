@@ -1,0 +1,40 @@
+{
+  "saguis_travessos": {
+    "nome": "Saguis Travessos",
+    "quemDa": "curupira",
+    "pedido": "Os saguis andam roubando as frutas da mata e jogando nos viajantes. Espante 5 deles aqui no norte pra mim.",
+    "concluida": "Hehe, agora eles pensam duas vezes antes de jogar fruta em alguém. Tome, pra viagem.",
+    "objetivo": { "tipo": "derrotar", "monstro": "sagui", "quantidade": 5 },
+    "recompensa": { "xp": 30, "ouro": 15, "itens": [{ "item": "banana", "quantidade": 3 }] }
+  },
+  "couro_de_jararaca": {
+    "nome": "Couro de Jararaca",
+    "quemDa": "curupira",
+    "depoisDe": "saguis_travessos",
+    "nivelMinimo": 2,
+    "pedido": "No brejo ao sul da represa, as jararacas estão demais. Me traga 3 couros delas que eu costuro uma proteção pra você.",
+    "concluida": "Couro bom, bem curtido! Vista isto: aguenta bote de cobra.",
+    "objetivo": { "tipo": "entregar", "item": "couro_jararaca", "quantidade": 3 },
+    "recompensa": { "xp": 60, "ouro": 25, "itens": [{ "item": "gibao_couro", "quantidade": 1 }] }
+  },
+  "o_dono_do_redemoinho": {
+    "nome": "O Dono do Redemoinho",
+    "quemDa": "curupira",
+    "depoisDe": "couro_de_jararaca",
+    "nivelMinimo": 3,
+    "pedido": "Tem um Saci fazendo redemoinho na praça em ruínas, a leste da vila. Ele some no vento e aparece do seu lado. Derrube ele uma vez — e leve amigos, que ele é esperto.",
+    "concluida": "Você venceu o Saci? A mata inteira vai falar disso. Toma, você mereceu.",
+    "objetivo": { "tipo": "derrotar", "monstro": "saci", "quantidade": 1 },
+    "recompensa": { "xp": 120, "ouro": 60 }
+  },
+  "guardiao_da_mata": {
+    "nome": "Guardião da Mata",
+    "quemDa": "curupira",
+    "depoisDe": "o_dono_do_redemoinho",
+    "repetivel": true,
+    "pedido": "Os saguis voltaram, como sempre voltam. Espante 8 deles e a mata fica em paz por mais um tempo.",
+    "concluida": "Obrigado, guardião. Volte quando quiser: trabalho na mata não falta.",
+    "objetivo": { "tipo": "derrotar", "monstro": "sagui", "quantidade": 8 },
+    "recompensa": { "xp": 40, "ouro": 25 }
+  }
+}

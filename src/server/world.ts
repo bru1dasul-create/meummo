@@ -49,7 +49,8 @@ import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
-import type { FailReason, ItemAction, RejectReason, ServerMsg } from '../shared/protocol';
+import type { FailReason, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
+import { questBlocker, type QuestInfo, type QuestLog } from '../shared/quests';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
@@ -100,6 +101,8 @@ export interface WorldOptions {
   links?: WorldLinks;
   /** Personagens que não são jogadores (de data/npcs.json); cada mapa fica com os seus. */
   npcs?: ReadonlyMap<string, NpcDef>;
+  /** Missões (de data/missoes.json). */
+  quests?: ReadonlyMap<string, QuestInfo>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -153,6 +156,9 @@ export class World {
   readonly drops = new Map<number, GroundDrop>();
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
+  readonly quests: ReadonlyMap<string, QuestInfo>;
+  /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
+  private readonly npcDefs: ReadonlyMap<string, NpcDef>;
   /** Chão pegando fogo agora (rastros de investida). */
   private hazards: Hazard[] = [];
   /** Tile → id do monstro que está nele (monstros não se empilham). */
@@ -174,6 +180,8 @@ export class World {
     this.log = options.log ?? (() => {});
     this.saver = options.saver ?? null;
     this.items = options.items ?? new Map();
+    this.quests = options.quests ?? new Map();
+    this.npcDefs = options.npcs ?? new Map();
     let ids = 1;
     this.links = options.links ?? {
       nextId: () => ids++,
@@ -270,6 +278,8 @@ export class World {
         items: [...this.items.values()],
         inv: player.inventory.state(),
         npcs: this.npcList(),
+        quests: [...this.quests.values()],
+        questLog: { ...player.quests },
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
     ]);
@@ -328,6 +338,7 @@ export class World {
         inv: player.inventory.state(),
         online: this.links.online(),
         npcs: this.npcList(),
+        questLog: { ...player.quests },
       },
     ]);
     this.saveCharacters([player]);
@@ -365,6 +376,22 @@ export class World {
     // Volta com a vida que tinha (sair do jogo não cura); na vila (ou sem vida salva), vida cheia.
     player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
     if (samePlace) player.dir = saved.dir;
+    player.quests = this.cleanQuestLog(saved.quests);
+  }
+
+  /** O diário de missões salvo, conferido: missão que sumiu do arquivo sai; números estranhos são corrigidos. */
+  private cleanQuestLog(saved: unknown): QuestLog {
+    const log: QuestLog = {};
+    if (typeof saved !== 'object' || saved === null) return log;
+    for (const [id, raw] of Object.entries(saved as Record<string, unknown>)) {
+      const quest = this.quests.get(id);
+      if (!quest || typeof raw !== 'object' || raw === null) continue;
+      const { state, count } = raw as { state?: unknown; count?: unknown };
+      if (state !== 'active' && state !== 'done') continue;
+      const n = typeof count === 'number' && Number.isFinite(count) ? Math.floor(count) : 0;
+      log[id] = { state, count: Math.max(0, Math.min(quest.goal.count, n)) };
+    }
+    return log;
   }
 
   /** Onde o personagem estava, se ainda dá para ficar lá (o mapa pode ter mudado). */
@@ -616,6 +643,179 @@ export class World {
     if (this.items.get(stack.item)?.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
   }
 
+  // ======================= ferramentas do administrador =======================
+
+  /** Dá itens a um jogador; o que não couber na mochila cai no chão, perto dele. Devolve quantos foram para a mochila. */
+  adminGiveItem(player: Player, item: string, n: number): number {
+    const added = player.inventory.add(item, n);
+    if (added > 0) player.invDirty = true;
+    if (added < n) this.dropOnGround(player, { x: player.x, y: player.y }, 0, { item, n: n - added }, this.now(), ITEM_DROP_MS);
+    player.outbox.push({ t: 'sys', text: `O administrador te deu: ${this.describe([{ item, n }])}.` });
+    return added;
+  }
+
+  adminGiveGold(player: Player, n: number): number {
+    const added = player.inventory.addGold(n);
+    if (added > 0) player.invDirty = true;
+    player.outbox.push({ t: 'sys', text: `O administrador te deu ${added} de ouro.` });
+    return added;
+  }
+
+  /** Vida cheia. */
+  adminHeal(player: Player): void {
+    const amount = player.maxHp - player.hp;
+    player.hp = player.maxHp;
+    if (amount > 0) this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
+    player.outbox.push({ t: 'sys', text: 'O administrador te curou.' });
+  }
+
+  /** Leva o jogador para outro lugar deste mesmo mapa. */
+  adminTeleport(player: Player, spot: Tile): void {
+    player.x = spot.x;
+    player.y = spot.y;
+    player.queue.length = 0;
+    player.nextStepAt = 0;
+    player.changed = true;
+    player.outbox.push({ t: 'teleport', x: player.x, y: player.y, dir: player.dir });
+    player.outbox.push({ t: 'sys', text: `O administrador te levou para (${spot.x}, ${spot.y}).` });
+  }
+
+  /** Um lugar livre neste mapa: (x, y) se der para ficar lá (ou o mais perto), ou o nascimento se não vier posição. */
+  freeSpot(x?: number, y?: number): Tile | null {
+    if (x === undefined || y === undefined) return this.arrivalSpot('spawn');
+    if (this.map.isWalkable(x, y) && this.map.isReachable(x, y)) return { x, y };
+    const near = this.map.nearestWalkable(x, y);
+    return near && this.map.isReachable(near.x, near.y) ? near : null;
+  }
+
+  // ======================= ajustes do administrador =======================
+
+  /** A vida dos monstros mudou no painel: os que estão no mapa acompanham (na mesma proporção). */
+  refreshMonsters(): void {
+    for (const monster of this.monsters.values()) {
+      const max = monster.def.hp;
+      if (max === monster.maxHp) continue;
+      monster.hp = Math.max(1, Math.min(max, Math.round((monster.hp / monster.maxHp) * max)));
+      monster.maxHp = max;
+      this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
+    }
+  }
+
+  /** Os itens mudaram no painel: refaz o que os equipamentos somam e manda a lista nova para quem está aqui. */
+  refreshItems(): void {
+    const items = [...this.items.values()];
+    for (const player of this.players.values()) {
+      player.bonus = player.inventory.bonus();
+      const maxHp = playerMaxHp(player);
+      if (maxHp !== player.maxHp) {
+        player.maxHp = maxHp;
+        player.hp = Math.min(player.hp, maxHp);
+        this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
+      }
+      player.statsDirty = true;
+      player.outbox.push({ t: 'items', items });
+    }
+  }
+
+  /** Os NPCs mudaram no painel (o que vendem, o que dizem): manda a lista nova para quem está aqui. */
+  refreshNpcs(): void {
+    const npcs = this.npcList();
+    for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
+  }
+
+  // ======================= missões =======================
+
+  /** Aceitar ou concluir (perto de quem dá a missão) ou abandonar uma missão. */
+  questAction(player: Player, act: QuestAction, id: string, npcId?: number): void {
+    const quest = this.quests.get(id);
+    if (!quest || player.loading) return;
+    if (player.dead) return this.fail(player, 'dead', true);
+    if (act === 'abandon') {
+      if (player.quests[id]?.state !== 'active') return;
+      // repetível já concluída antes: volta a contar como concluída; senão, some do diário
+      delete player.quests[id];
+      player.questsDirty = true;
+      player.outbox.push({ t: 'sys', text: `Missão abandonada: ${quest.name}.` });
+      return;
+    }
+    const npc = npcId !== undefined ? this.npcs.get(npcId) : undefined;
+    if (!npc || npc.def.id !== quest.giver) return; // NPC de outro mapa, ou não é ele quem dá esta missão
+    if (chebyshev(player, npc) > TRADE_RANGE) return this.fail(player, 'too_far', true);
+
+    if (act === 'accept') {
+      const blocker = questBlocker(quest, player.quests, player.level);
+      if (blocker) {
+        const why: Record<typeof blocker, string> = {
+          active: 'Você já está fazendo esta missão.',
+          done: 'Você já fez esta missão.',
+          after: 'Ainda não: faça antes a missão anterior.',
+          level: `Esta missão é para quem tem nível ${quest.minLevel} ou mais.`,
+          full: 'Você já está com missões demais. Conclua ou abandone uma antes.',
+        };
+        player.outbox.push({ t: 'sys', text: why[blocker] });
+        return;
+      }
+      player.quests[id] = { state: 'active', count: 0 };
+      player.questsDirty = true;
+      player.outbox.push({ t: 'sys', text: `Missão aceita: ${quest.name}.` });
+      return;
+    }
+
+    // concluir
+    const mine = player.quests[id];
+    if (mine?.state !== 'active') return;
+    const goal = quest.goal;
+    if (goal.kind === 'kill' && mine.count < goal.count) {
+      player.outbox.push({ t: 'sys', text: `Ainda falta: ${goal.count - mine.count} para concluir "${quest.name}".` });
+      return;
+    }
+    if (goal.kind === 'deliver') {
+      if (!player.inventory.removeItem(goal.item, goal.count)) {
+        const missing = goal.count - player.inventory.countOf(goal.item);
+        player.outbox.push({ t: 'sys', text: `Ainda faltam ${missing} de ${this.items.get(goal.item)?.name ?? goal.item} para concluir "${quest.name}".` });
+        return;
+      }
+      player.invDirty = true;
+    }
+    player.quests[id] = { state: 'done', count: goal.count };
+    player.questsDirty = true;
+    this.giveQuestReward(player, quest);
+    this.saveCharacters([player]); // missão concluída não pode se perder se o servidor cair
+  }
+
+  private giveQuestReward(player: Player, quest: QuestInfo): void {
+    const parts: string[] = [];
+    if (quest.reward.xp > 0) parts.push(`${quest.reward.xp} XP`);
+    if (quest.reward.gold > 0) {
+      const gold = player.inventory.addGold(quest.reward.gold);
+      if (gold > 0) parts.push(`${gold} de ouro`);
+      player.invDirty = true;
+    }
+    for (const stack of quest.reward.items) {
+      const added = player.inventory.add(stack.item, stack.n);
+      if (added > 0) player.invDirty = true;
+      if (added < stack.n) this.dropOnGround(player, { x: player.x, y: player.y }, 0, { item: stack.item, n: stack.n - added }, this.now(), ITEM_DROP_MS);
+      parts.push(this.describe([stack]));
+    }
+    player.outbox.push({ t: 'sys', text: `Missão concluída: ${quest.name}!${parts.length ? ` Você ganhou: ${parts.join(', ')}.` : ''}` });
+    this.giveXp(player, quest.reward.xp);
+  }
+
+  /** Um monstro que você ajudou a derrubar conta nas suas missões de derrotar. */
+  private countQuestKill(player: Player, monster: string): void {
+    for (const [id, progress] of Object.entries(player.quests)) {
+      const quest = this.quests.get(id);
+      if (progress.state !== 'active' || !quest || quest.goal.kind !== 'kill' || quest.goal.monster !== monster) continue;
+      if (progress.count >= quest.goal.count) continue;
+      progress.count += 1;
+      player.questsDirty = true;
+      if (progress.count === quest.goal.count) {
+        const giver = this.npcDefs.get(quest.giver)?.name ?? 'quem te deu a missão';
+        player.outbox.push({ t: 'sys', text: `Missão pronta: ${quest.name}. Fale com ${giver} para receber a recompensa.` });
+      }
+    }
+  }
+
   // ======================= loja =======================
 
   /** Comprar `n` deste item do vendedor `npcId` (pelo `preco` de data/items.json). */
@@ -710,6 +910,10 @@ export class World {
       if (player.invDirty) {
         player.outbox.push({ t: 'inv', inv: player.inventory.state() });
         player.invDirty = false;
+      }
+      if (player.questsDirty) {
+        player.outbox.push({ t: 'quests', log: { ...player.quests } });
+        player.questsDirty = false;
       }
       if (player.ackPending) {
         player.outbox.push({ t: 'ack', seq: player.ackSeq, x: player.x, y: player.y, dir: player.dir });
@@ -965,6 +1169,7 @@ export class World {
       if (!player || player.dead) continue;
       this.giveXp(player, monster.def.xp);
       this.giveLoot(player, monster, now);
+      this.countQuestKill(player, monster.def.id);
     }
   }
 
@@ -1424,7 +1629,7 @@ function playerMaxHp(player: Player): number {
 
 /** O que fica salvo de um jogador. */
 export function characterData(player: Player, zone: string): CharacterData {
-  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state() };
+  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests } };
   // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
   if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
   return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };
