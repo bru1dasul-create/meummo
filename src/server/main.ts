@@ -5,10 +5,12 @@ const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST || undefined; // vazio = aceita conexões de qualquer interface
 // MEUMMO_SAVE troca o arquivo dos personagens (ex.: para testar com um mundo vazio).
 const saveFile = process.env.MEUMMO_SAVE || SAVE_FILE;
+// MEUMMO_ITENS_TESTE=1: todo personagem que entra ganha um de cada equipamento (para testar os visuais).
+const testKit = process.env.MEUMMO_ITENS_TESTE === '1';
 
 let server: RunningServer;
 try {
-  server = await startServer({ port, host, saveFile });
+  server = await startServer({ port, host, saveFile, testKit });
 } catch (error) {
   const err = error as NodeJS.ErrnoException;
   console.error(

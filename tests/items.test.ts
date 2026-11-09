@@ -13,7 +13,7 @@ import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
 import { SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
 import { DOWN } from '../src/shared/dir';
-import { BAG_SIZE } from '../src/shared/items';
+import { BAG_SIZE, emptyEquipment } from '../src/shared/items';
 import { GameMap } from '../src/shared/map';
 import { damageRange, maxHpFor } from '../src/shared/progression';
 import { FAST_HASH, FakeClock, FakeConn, tiledFromAscii } from './helpers';
@@ -44,7 +44,7 @@ describe('data/items.json', () => {
     const bad = (item: Record<string, unknown>) => () => parseItemDefs({ teste: item });
     expect(bad({ nome: 'X', tipo: 'arma' })).toThrow(/"tipo" não pode ser "arma". Use: equipamento, consumivel, material/);
     expect(bad({ nome: 'X', tipo: 'equipamento' })).toThrow(/"parte"/);
-    expect(bad({ nome: 'X', tipo: 'equipamento', parte: 'pé' })).toThrow(/Use: arma, cabeca, corpo, amuleto/);
+    expect(bad({ nome: 'X', tipo: 'equipamento', parte: 'perna' })).toThrow(/Use: cabeca, corpo, maos, luvas, pes, botas, arma, escudo, amuleto, acessorio/);
     expect(bad({ nome: 'X', tipo: 'material', parte: 'arma' })).toThrow(/só vale para equipamentos/);
     expect(bad({ nome: 'X', tipo: 'consumivel' })).toThrow(/"cura"/);
     expect(bad({ nome: 'X', tipo: 'equipamento', parte: 'arma', dano: 1.5 })).toThrow(/número inteiro/);
@@ -104,7 +104,7 @@ describe('mochila', () => {
     });
     expect(inventory.slots[0]).toEqual({ item: 'fruta', n: 5 });
     expect(inventory.slots[1]).toEqual({ item: 'espada', n: 1 }); // estava na cabeça: volta para a mochila
-    expect(inventory.equipped).toEqual({ weapon: 'espada', head: null, body: null, charm: null });
+    expect(inventory.equipped).toEqual({ ...emptyEquipment(), weapon: 'espada' });
     expect(dropped).toEqual(['sumiu', 'velho']);
     expect(Inventory.fromSaved(items, 'qualquer coisa').inventory.slots.every((s) => s === null)).toBe(true);
   });

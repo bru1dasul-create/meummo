@@ -103,6 +103,7 @@ export class Player {
       level: this.level,
       hp: this.hp,
       maxHp: this.maxHp,
+      gear: this.inventory.gear(),
     };
   }
 

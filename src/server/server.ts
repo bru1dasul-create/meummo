@@ -29,6 +29,8 @@ export interface ServerOptions {
   hashCost?: HashCost;
   /** Limites de tentativas de senha e de personagens novos. */
   guardLimits?: GuardLimits;
+  /** Só para testar em casa: todo mundo ganha um de cada equipamento ao entrar. */
+  testKit?: boolean;
 }
 
 export interface RunningServer {
@@ -48,7 +50,8 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const monsters = loadMonsterDefs();
   checkDrops(monsters, items);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const world = new World(loadMap(), { log, monsters, items, saver: store });
+  const world = new World(loadMap(), { log, monsters, items, saver: store, testKit: options.testKit });
+  if (options.testKit) log('MEUMMO_ITENS_TESTE ligado: quem entrar ganha um de cada equipamento (só para testar!)');
   const lobby: Lobby = {
     world,
     store,

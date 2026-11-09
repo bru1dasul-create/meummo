@@ -1,11 +1,32 @@
 // Mochila: o que você tem equipado, os itens que carrega e o que dá para fazer com cada um.
 // Só mostra e pede: quem decide se dá para equipar ou comer é o servidor.
 
-import { EQUIP_SLOTS, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
+import { EQUIP_SLOTS, gearLookOf, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
 import type { ItemAction, PlayerStats } from '../shared/protocol';
+import { resolveGear } from './game/characters';
+import { bodyLook } from './game/doll/body';
+import { drawDollFrame } from './game/doll/compose';
+import { drawFace } from './game/doll/face';
+import { FRAME_H, FRAME_W, faceOrigin, type View } from './game/doll/poses';
+import { Sheet } from './game/doll/sheet';
 import { itemIconUrl } from './itemArt';
 
-const PART_LABELS: Record<EquipSlot, string> = { weapon: 'Arma', head: 'Cabeça', body: 'Corpo', charm: 'Amuleto' };
+const PART_LABELS: Record<EquipSlot, string> = {
+  head: 'Cabeça',
+  body: 'Corpo',
+  hands: 'Luvas',
+  feet: 'Botas',
+  weapon: 'Arma',
+  offhand: 'Escudo',
+  charm: 'Acessório',
+};
+/** Ordem em que a prévia do personagem gira quando você clica nela. */
+const DOLL_VIEWS: { view: View; flip: boolean }[] = [
+  { view: 'down', flip: false },
+  { view: 'side', flip: true },
+  { view: 'up', flip: false },
+  { view: 'side', flip: false },
+];
 const KIND_LABELS: Record<ItemInfo['kind'], string> = { equipment: 'Equipamento', consumable: 'Consumível', material: 'Material' };
 const RARITY_LABELS: Record<Rarity, string> = { common: 'Comum', rare: 'Raro', legendary: 'Lendário' };
 /** Tempo para o segundo clique em "Jogar fora" (confirmação). */
@@ -26,7 +47,7 @@ function byId<T extends HTMLElement>(id: string): T {
 
 function icon(def: ItemInfo): HTMLImageElement {
   const img = document.createElement('img');
-  img.src = itemIconUrl(def.icon);
+  img.src = itemIconUrl(def.icon, def.appearance);
   img.alt = '';
   img.draggable = false;
   return img;
@@ -52,6 +73,9 @@ export class Bag {
   private readonly gridEl = byId<HTMLDivElement>('bag-grid');
   private readonly infoEl = byId<HTMLDivElement>('bag-info');
   private readonly gearButtons = new Map<EquipSlot, HTMLButtonElement>();
+  /** Prévia do personagem com o que está vestido (clique para girar). */
+  private readonly doll = document.createElement('canvas');
+  private dollView = 0;
   private readonly slotButtons: HTMLButtonElement[] = [];
   private selected: Selection = null;
   private confirmDrop: { i: number; until: number } | null = null;
@@ -62,8 +86,19 @@ export class Bag {
     private state: InventoryState,
     private readonly actions: BagActions,
     private stats: PlayerStats,
+    /** Semente da aparência do seu personagem (para a prévia). */
+    private readonly look: number,
   ) {
     this.gearEl.replaceChildren();
+    this.doll.width = FRAME_W;
+    this.doll.height = FRAME_H;
+    this.doll.className = 'bag-doll';
+    this.doll.title = 'Seu personagem (clique para girar)';
+    this.doll.addEventListener('click', () => {
+      this.dollView = (this.dollView + 1) % DOLL_VIEWS.length;
+      this.renderDoll();
+    });
+    this.gearEl.append(this.doll);
     for (const part of EQUIP_SLOTS) {
       const el = document.createElement('button');
       el.type = 'button';
@@ -206,7 +241,23 @@ export class Bag {
       el.classList.toggle('selected', this.selected?.kind === 'bag' && this.selected.i === i);
     });
     this.renderStats();
+    this.renderDoll();
     this.renderInfo();
+  }
+
+  /** Desenha o personagem parado com o que está vestido agora. */
+  private renderDoll(): void {
+    const { view, flip } = DOLL_VIEWS[this.dollView]!;
+    const look = bodyLook(this.look);
+    const sheet = new Sheet(FRAME_W, FRAME_H);
+    drawDollFrame(sheet, 0, 0, look, resolveGear(gearLookOf(this.state.equipped), this.items).gear, view, 'idle', 0);
+    if (view !== 'up') {
+      const [fx, fy] = faceOrigin(view, 'idle', 0);
+      drawFace(sheet, fx, fy, view, 'normal', look);
+    }
+    const ctx = this.doll.getContext('2d')!;
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(sheet.data), FRAME_W, FRAME_H), 0, 0);
+    this.doll.style.transform = flip ? 'scaleX(-1)' : '';
   }
 
   private renderStats(): void {
@@ -243,7 +294,7 @@ export class Bag {
     title.textContent = count > 1 ? `${def.name} ×${count}` : def.name;
     const kind = document.createElement('span');
     kind.className = 'item-kind';
-    kind.textContent = [def.slot ? PART_LABELS[def.slot] : KIND_LABELS[def.kind], RARITY_LABELS[def.rarity]].join(' · ');
+    kind.textContent = [def.slot ? PART_LABELS[def.slot] : KIND_LABELS[def.kind], ...(def.twoHanded ? ['Duas mãos'] : []), RARITY_LABELS[def.rarity]].join(' · ');
     const parts: HTMLElement[] = [title, kind];
     const lines = bonusLines(def);
     if (lines.length > 0) {

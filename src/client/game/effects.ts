@@ -166,15 +166,16 @@ export class Effects {
   }
 
   /** Rastro da esquiva: "fantasmas" do personagem entre a origem e o destino. */
-  trail(texture: string, frame: number, flipX: boolean, from: { x: number; y: number }, to: { x: number; y: number }, now: number): void {
+  trail(sprite: Phaser.GameObjects.Sprite, from: { x: number; y: number }, to: { x: number; y: number }, now: number): void {
     const ghosts: Phaser.GameObjects.Sprite[] = [];
     for (let i = 1; i <= 3; i++) {
       const k = i / 4;
       ghosts.push(
         this.scene.add
-          .sprite(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, texture, frame)
-          .setOrigin(0.5, 1)
-          .setFlipX(flipX)
+          .sprite(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, sprite.texture.key, sprite.frame.name)
+          .setOrigin(0.5, sprite.originY)
+          .setScale(sprite.scaleX, sprite.scaleY)
+          .setFlipX(sprite.flipX)
           .setAlpha(0.35)
           .setTint(0xbfe3ff)
           .setDepth(from.y - 1),
@@ -194,6 +195,8 @@ export class Effects {
   /** Item saindo do monstro que caiu e voando até quem pegou (`to` segue o personagem andando). */
   loot(texture: string, from: { x: number; y: number }, to: () => { x: number; y: number }, now: number, delay = 0): void {
     const sprite = this.scene.add.image(from.x, from.y, texture).setDepth(1e6).setAlpha(0);
+    // ícones podem ter 16 ou 32 px: na tela todos têm o tamanho de um tile
+    const base = 16 / Math.max(1, sprite.width);
     const start = now + delay;
     const POP_MS = 280;
     const FLY_MS = 420;
@@ -204,13 +207,13 @@ export class Effects {
         if (k < POP_MS) {
           // sobe com um pulinho
           const p = k / POP_MS;
-          sprite.setAlpha(1).setScale(0.5 + 0.5 * p).setPosition(from.x, from.y - 14 * Math.sin((p * Math.PI) / 2));
+          sprite.setAlpha(1).setScale(base * (0.5 + 0.5 * p)).setPosition(from.x, from.y - 14 * Math.sin((p * Math.PI) / 2));
           return true;
         }
         const p = Math.min(1, (k - POP_MS) / FLY_MS);
         const target = to();
         const e = p * p;
-        sprite.setPosition(from.x + (target.x - from.x) * e, from.y - 14 + (target.y - from.y + 14) * e).setScale(1 - 0.5 * p);
+        sprite.setPosition(from.x + (target.x - from.x) * e, from.y - 14 + (target.y - from.y + 14) * e).setScale(base * (1 - 0.5 * p));
         return p < 1;
       },
       destroy: () => sprite.destroy(),

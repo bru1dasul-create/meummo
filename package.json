@@ -19,7 +19,8 @@
     "bots": "tsx scripts/bots.ts",
     "gen:tiles": "tsx scripts/gen-tiles.ts",
     "gen:map": "tsx scripts/gen-map.ts",
-    "render:map": "tsx scripts/render-map.ts"
+    "render:map": "tsx scripts/render-map.ts",
+    "render:characters": "tsx scripts/render-characters.ts"
   },
   "dependencies": {
     "phaser": "4.2.1",

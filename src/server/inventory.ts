@@ -5,6 +5,8 @@ import {
   BAG_SIZE,
   EQUIP_SLOTS,
   emptyEquipment,
+  gearLookOf,
+  type GearLook,
   type EquipSlot,
   type InventoryState,
   type ItemBonus,
@@ -64,15 +66,35 @@ export class Inventory {
     return { item: stack.item, n: taken };
   }
 
-  /** Equipa o item do espaço `i`. O que estava equipado naquela parte volta para o mesmo espaço. */
+  /**
+   * Equipa o item do espaço `i`. O que estava equipado naquela parte volta para o mesmo espaço.
+   * Arma de duas mãos e escudo não andam juntos: o outro volta para a mochila (se não couber, não equipa).
+   */
   equip(i: number): boolean {
     const found = this.at(i);
     if (!found || found.def.kind !== 'equipment' || !found.def.slot) return false;
     const slot = found.def.slot;
+    const blocker = this.blockedBy(found.def);
+    if (blocker) {
+      // o espaço `i` vai receber o que estava na mesma parte; o bloqueador precisa de outro espaço livre
+      const freeAfter = this.slots.filter((s) => s === null).length + (this.equipped[slot] ? 0 : 1);
+      if (freeAfter === 0) return false;
+    }
     const previous = this.equipped[slot];
     this.equipped[slot] = found.stack.item;
     this.slots[i] = previous ? { item: previous, n: 1 } : null;
+    if (blocker) {
+      this.slots[this.slots.indexOf(null)] = { item: this.equipped[blocker]!, n: 1 };
+      this.equipped[blocker] = null;
+    }
     return true;
+  }
+
+  /** Parte que precisa ser tirada para equipar este item (arco de duas mãos x escudo), ou null. */
+  private blockedBy(def: ItemInfo): EquipSlot | null {
+    if (def.slot === 'weapon' && def.twoHanded && this.equipped.offhand) return 'offhand';
+    if (def.slot === 'offhand' && this.equipped.weapon && this.defs.get(this.equipped.weapon)?.twoHanded) return 'weapon';
+    return null;
   }
 
   /** Tira o equipamento e guarda na mochila. false = nada equipado ali, ou mochila cheia. */
@@ -96,6 +118,11 @@ export class Inventory {
       total.defense += def.bonus.defense;
     }
     return total;
+  }
+
+  /** O que aparece no personagem (para os outros jogadores). */
+  gear(): GearLook {
+    return gearLookOf(this.equipped);
   }
 
   /** Uma cópia, para mandar ao navegador ou salvar. */
@@ -129,7 +156,7 @@ export class Inventory {
         if (typeof item !== 'string') continue;
         const def = defs.get(item);
         if (!def) dropped.push(item);
-        else if (def.kind === 'equipment' && def.slot === slot) inventory.equipped[slot] = item;
+        else if (def.kind === 'equipment' && def.slot === slot && !inventory.blockedBy(def)) inventory.equipped[slot] = item;
         else if (inventory.add(item, 1) === 0) dropped.push(item);
       }
     }

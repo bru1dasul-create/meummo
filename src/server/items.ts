@@ -9,7 +9,22 @@ import { ITEMS_FILE } from './paths';
 const FILE = 'data/items.json';
 
 const KINDS: Record<string, ItemKind> = { equipamento: 'equipment', consumivel: 'consumable', consumível: 'consumable', material: 'material' };
-const SLOTS: Record<string, EquipSlot> = { arma: 'weapon', cabeca: 'head', cabeça: 'head', corpo: 'body', amuleto: 'charm' };
+const SLOTS: Record<string, EquipSlot> = {
+  cabeca: 'head',
+  cabeça: 'head',
+  corpo: 'body',
+  maos: 'hands',
+  mãos: 'hands',
+  luvas: 'hands',
+  pes: 'feet',
+  pés: 'feet',
+  botas: 'feet',
+  arma: 'weapon',
+  escudo: 'offhand',
+  amuleto: 'charm',
+  acessorio: 'charm',
+  acessório: 'charm',
+};
 const RARITIES: Record<string, Rarity> = { comum: 'common', raro: 'rare', lendario: 'legendary', lendário: 'legendary' };
 
 function pick<T>(table: Record<string, T>, value: string, field: string, where: string): T {
@@ -54,7 +69,10 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       rarity: pick(RARITIES, r.text('raridade', 'comum'), 'raridade', where),
       description: typeof (raw as Record<string, unknown>).descricao === 'string' ? ((raw as Record<string, unknown>).descricao as string).trim() : '',
       icon: r.text('icone', id),
+      appearance: kind === 'equipment' ? r.text('aparencia', r.text('icone', id)) : '',
+      twoHanded: kind === 'equipment' && slot === 'weapon' ? r.bool('duasMaos', false) : false,
     };
+    if (r.has('duasMaos') && slot !== 'weapon') r.fail('duasMaos', 'só vale para armas (parte "arma")');
     if (kind === 'consumable' && def.heal === 0) r.fail('cura', 'precisa ser maior que 0 (por enquanto, consumível é para curar)');
     defs.set(id, def);
   }

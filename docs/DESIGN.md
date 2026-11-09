@@ -70,7 +70,9 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 
 - **Cada um com o seu:** quando um monstro cai, cada pessoa que ajudou sorteia os itens dele e eles vão direto
   para a mochila (ninguém rouba o item de ninguém, e no celular não precisa ficar catando coisa no chão).
-- **Mochila** com 20 espaços (itens iguais se empilham) e 4 partes para equipar: arma, cabeça, corpo e amuleto.
+- **Mochila** com 20 espaços (itens iguais se empilham) e 7 partes para equipar: cabeça, corpo, luvas, botas,
+  arma, escudo e acessório. Arco é de duas mãos: equipar o arco guarda o escudo (e vice-versa).
+- **Tudo aparece no personagem**, para todo mundo ver, e acompanha as animações.
 - **Atributos:** equipamentos somam dano, vida e defesa. Defesa tira um pouco de cada golpe, mas sempre sobra 1.
 - **Consumíveis** curam; entre um e outro há uma pequena espera (a banana não substitui a esquiva).
 - **Lendário:** quando alguém consegue um, todo mundo vê no chat.
@@ -84,9 +86,21 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 | Colar de Presas (raro) | amuleto | +1 de dano, +1 de defesa | Jararaca (6%) |
 | Gibão de Couro (raro) | corpo | +8 de vida, +2 de defesa | Jararaca (5%) |
 | Gorro Vermelho do Saci (lendário) | cabeça | +2 de dano, +15 de vida | Saci (30%) |
+| Túnica de Algodão | corpo | +5 de vida | Sagui (5%) |
+| Luvas de Couro | luvas | +1 de dano | Sagui (4%), Jararaca (4%) |
+| Facão de Mato | arma | +2 de dano | Sagui (4%) |
+| Escudo de Casco de Jabuti | escudo | +6 de vida, +2 de defesa | Sagui (3%) |
+| Botas de Seringueiro | botas | +4 de vida, +1 de defesa | Jararaca (5%) |
+| Machadinha de Pedra (rara) | arma | +3 de dano | Jararaca (3%) |
+| Capacete de Sucata (raro) | cabeça | +8 de vida, +2 de defesa | Jararaca (3%) |
+| Arco de Ipê (raro, duas mãos) | arma | +4 de dano | Saci (12%) |
+| Armadura de Sucata (rara) | corpo | +12 de vida, +4 de defesa | Saci (10%) |
+| Manoplas de Sucata (raras) | luvas | +1 de dano, +1 de defesa | Saci (10%) |
+| Tampa de Bueiro (rara) | escudo | +10 de vida, +3 de defesa | Saci (10%) |
+| Capa de Folhas (lendária) | acessório | +5 de vida, +1 de defesa | Saci (4%) |
 
-Ideias para depois: ver o chapéu/gorro no personagem, loja e ouro (M3), artesãos que transformam couro em
-roupa, equipamentos com nível mínimo, poções do Curandeiro.
+Ideias para depois: a arma mudar o jeito de atacar (facão e machadinha corpo a corpo, arco de longe), loja e
+ouro (M3), artesãos que transformam couro em roupa, equipamentos com nível mínimo, poções do Curandeiro.
 
 ## Progressão no futuro
 - **Caminhos (classes)**, escolhidos depois de alguns níveis: Capoeirista (corpo a corpo, ágil),

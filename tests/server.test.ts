@@ -10,6 +10,7 @@ import { CharacterStore } from '../src/server/accounts';
 import { startServer, type RunningServer } from '../src/server/server';
 import { PROTOCOL_VERSION } from '../src/shared/constants';
 import { DX, DY, type Dir } from '../src/shared/dir';
+import { emptyEquipment } from '../src/shared/items';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
 import { FAST_HASH } from './helpers';
 
@@ -73,7 +74,7 @@ describe('servidor de verdade', () => {
     const anaWelcome = await ana.waitFor('welcome');
     // Os tipos de item chegam junto, para o navegador mostrar a mochila.
     expect(anaWelcome.items.some((item) => item.id === 'banana')).toBe(true);
-    expect(anaWelcome.inv.equipped).toEqual({ weapon: null, head: null, body: null, charm: null });
+    expect(anaWelcome.inv.equipped).toEqual(emptyEquipment());
     beto.hello('Beto');
     const betoWelcome = await beto.waitFor('welcome');
 

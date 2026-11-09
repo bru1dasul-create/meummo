@@ -76,6 +76,8 @@ export interface WorldOptions {
   saver?: CharacterSaver;
   /** Tipos de item (de data/items.json). */
   items?: ReadonlyMap<string, ItemInfo>;
+  /** Só para testar em casa: todo personagem que entra ganha um de cada equipamento que ainda não tem. */
+  testKit?: boolean;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -106,6 +108,7 @@ export class World {
   private readonly random: () => number;
   private readonly log: (message: string) => void;
   private readonly saver: CharacterSaver | null;
+  private readonly testKit: boolean;
   private nextAutosaveAt: number;
 
   constructor(
@@ -117,6 +120,7 @@ export class World {
     this.log = options.log ?? (() => {});
     this.saver = options.saver ?? null;
     this.items = options.items ?? new Map();
+    this.testKit = options.testKit ?? false;
     this.lastTickAt = this.now();
     this.nextAutosaveAt = this.lastTickAt + AUTOSAVE_MS;
 
@@ -152,6 +156,7 @@ export class World {
     const bag = Inventory.fromSaved(this.items, saved?.inventory ?? null);
     player.inventory = bag.inventory;
     if (bag.dropped.length > 0) this.log(`aviso: ${name} tinha itens que não existem mais em data/items.json: ${bag.dropped.join(', ')}`);
+    if (this.testKit) this.giveTestKit(player);
     player.bonus = player.inventory.bonus();
     player.maxHp = playerMaxHp(player);
     player.hp = player.maxHp;
@@ -310,7 +315,9 @@ export class World {
       return;
     }
     if (def.kind === 'equipment') {
+      // só falha se for trocar arco por escudo (ou o contrário) sem espaço para guardar o outro
       if (player.inventory.equip(i)) this.gearChanged(player);
+      else this.fail(player, 'bag_full', true);
       return;
     }
     if (act !== 'use' || def.kind !== 'consumable') return;
@@ -323,6 +330,15 @@ export class World {
     const amount = Math.min(player.maxHp - player.hp, def.heal);
     player.hp += amount;
     this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
+  }
+
+  /** Kit de teste (MEUMMO_ITENS_TESTE=1): um de cada equipamento que o personagem ainda não tem. */
+  private giveTestKit(player: Player): void {
+    const bag = player.inventory;
+    const owned = new Set([...bag.slots.map((s) => s?.item), ...Object.values(bag.equipped)]);
+    for (const def of this.items.values()) {
+      if (def.kind === 'equipment' && !owned.has(def.id)) bag.add(def.id, 1);
+    }
   }
 
   /** Tira o que está equipado nesta parte e guarda na mochila. */
@@ -344,6 +360,8 @@ export class World {
     }
     player.invDirty = true;
     player.statsDirty = true;
+    // todo mundo que está vendo precisa redesenhar o personagem com a roupa nova
+    this.emitToViewers(player, { t: 'gear', id: player.id, gear: player.inventory.gear() });
   }
 
   /** O monstro caiu: cada um que ajudou sorteia os itens dele (cada um tem os seus, ninguém rouba de ninguém). */

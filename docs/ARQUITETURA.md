@@ -66,13 +66,37 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 - Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro: os itens vão direto para
   a mochila dele (`loot` para o efeito do item voando, `inv` com a mochila nova). Mochila cheia: o item se perde,
   com aviso. Item raro ou lendário salva o personagem na hora.
-- `src/server/inventory.ts`: 20 espaços com pilhas e 4 partes equipadas (`weapon`, `head`, `body`, `charm`).
-  Equipar troca com o que estava naquela parte. A soma dos equipamentos (`Player.bonus`) entra na vida máxima,
+- `src/server/inventory.ts`: 20 espaços com pilhas e 7 partes equipadas (`head`, `body`, `hands`, `feet`,
+  `weapon`, `offhand`, `charm`). Equipar troca com o que estava naquela parte; arma de duas mãos (`duasMaos`)
+  e escudo não andam juntos (o outro volta para a mochila; sem espaço, o servidor recusa com `bag_full`). A soma dos equipamentos (`Player.bonus`) entra na vida máxima,
   no dano do estilingue e da Bordunada e na defesa (cada golpe recebido perde `defesa`, mínimo 1).
 - O navegador só pede (`item` com `equip`/`use`/`drop` e o espaço; `unequip` com a parte); o servidor confere
   tudo (espaço vazio, desmaiado, vida cheia, espera entre consumíveis) e responde com `inv` ou `fail` (`item: true`).
 - Salva junto com o personagem (coluna `inventory`, JSON; versão 2 do arquivo). Ao carregar, itens que não existem
-  mais em `data/items.json` saem e pilhas grandes demais são cortadas.
+  mais em `data/items.json` saem e pilhas grandes demais são cortadas. As partes novas (luvas, botas, escudo)
+  não precisaram de passo novo em `MIGRATIONS`: o JSON antigo só não tem essas chaves, e elas começam vazias.
+- **O que cada um veste aparece para os outros:** `EntityState.gear` (parte → id do item) vai no `spawn`/`welcome`,
+  e a mensagem `gear` avisa quem está vendo quando alguém troca. O navegador descobre o desenho pelo `aparencia`
+  do item (que chega no `welcome`).
+- `MEUMMO_ITENS_TESTE=1 npm start`: todo personagem que entra ganha um de cada equipamento (só para testar).
+
+## Personagem em camadas (`src/client/game/doll/`)
+O personagem é um "boneco de papel" desenhado por código, com o dobro de pixels do mapa (quadro 48x64, mostrado
+na metade do tamanho; por isso o zoom da câmera é sempre par).
+- `poses.ts` — o esqueleto: para cada animação (`idle` 4 quadros, `walk` 6, `run` 4, `shoot` 3, `swing` 4,
+  `hurt`, `ko`) e cada vista (`down`, `up`, `side`; a esquerda é a direita espelhada), onde ficam mãos e pés, a
+  inclinação do corpo e o ângulo da arma. Cotovelos e joelhos são calculados (cinemática inversa).
+- `raster.ts` — o "pincel": esferas, cápsulas e polígonos com volume, em 5 tons de cada material (`palette.ts`,
+  sombras puxando para o roxo e brilhos para o amarelo); contorno colorido e linha interna onde uma parte cobre outra.
+- `body.ts` — cores que vêm do nome (as mesmas de antes) e penteados feitos de mechas. `compose.ts` monta o corpo
+  e decide a ordem das camadas em cada vista; `gear.ts` desenha cada tipo de equipamento preso aos ossos (por isso
+  tudo acompanha as animações). Os parâmetros de cada visual ficam em `src/client/game/gearArt.ts`.
+- `face.ts` — o rosto é outra camada (pisca, careta, sorriso, boca falando), então não precisa de uma textura
+  por expressão. `animator.ts` (fora da pasta) escolhe quadro e expressão a cada momento.
+- `characters.ts` junta tudo numa textura por combinação aparência + roupa (dividida entre quem é igual),
+  desenhada aos poucos (uma vista por quadro do jogo) para não engasgar; na troca de roupa, a antiga fica na tela
+  até a nova ficar pronta. `gearIcon.ts` faz o ícone da mochila a partir do mesmo desenho.
+- `npm run render:characters` desenha uma prancha com exemplos em `docs/personagens.png`.
 
 ## Personagens salvos (`src/server/accounts.ts`)
 - Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
@@ -115,6 +139,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
 | servidor | `inv` / `loot` | sua mochila mudou / você pegou estes itens do monstro que caiu em (x, y) |
+| servidor | `gear` | alguém (ou você) trocou o que está vestindo: redesenhe o personagem |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |
 

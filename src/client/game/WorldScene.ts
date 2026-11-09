@@ -136,10 +136,11 @@ export class WorldScene extends Phaser.Scene {
 
     this.labels = document.getElementById('labels')!;
     const you = this.welcome.you;
+    // os tipos de item vêm antes: o personagem precisa deles para desenhar o que está vestindo
+    for (const item of this.welcome.items) this.items.set(item.id, item);
     this.me = this.addEntity(you, true);
     this.predicted = { x: you.x, y: you.y, dir: you.dir };
     this.myHp = you.hp;
-    for (const item of this.welcome.items) this.items.set(item.id, item);
     this.bag = new Bag(
       this.items,
       this.welcome.inv,
@@ -148,6 +149,7 @@ export class WorldScene extends Phaser.Scene {
         unequip: (part) => this.conn.send({ t: 'unequip', part }),
       },
       this.welcome.stats,
+      you.look,
     );
     this.bagEquipped = this.welcome.inv.equipped;
     this.applyStats(this.welcome.stats, false);
@@ -325,10 +327,10 @@ export class WorldScene extends Phaser.Scene {
     const from = feetOf(this.predicted.x, this.predicted.y);
     this.predicted = { x: result.x, y: result.y, dir };
     this.nextStepAt = nextStepTime(now, this.nextStepAt, stepDuration(dir, this.stepMs), TICK_MS);
-    this.me.moveTo(result.x, result.y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140 });
+    this.me.moveTo(result.x, result.y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140, dash: true });
     this.me.ghost(now, DASH_INVULNERABLE_MS);
     const to = feetOf(result.x, result.y);
-    this.effects.trail(this.me.sprite.texture.key, Number(this.me.sprite.frame.name) || 0, this.me.sprite.flipX, { x: from[0], y: from[1] }, { x: to[0], y: to[1] }, now);
+    this.effects.trail(this.me.sprite, { x: from[0], y: from[1] }, { x: to[0], y: to[1] }, now);
     this.dashReadyAt = now + DASH_COOLDOWN_MS + 120;
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
     this.clearPath();
@@ -401,6 +403,7 @@ export class WorldScene extends Phaser.Scene {
       now,
     );
     this.face(dirFromAngle(angle));
+    this.me.attack('shoot', angle, now);
     this.actionBar.setCooldown('shot', this.nextShotAt, SHOT_COOLDOWN_MS);
   }
 
@@ -421,6 +424,8 @@ export class WorldScene extends Phaser.Scene {
     if (skill.kind === 'arc') {
       this.sfx.play('arc');
       this.face(dirFromAngle(angle));
+      // o servidor não manda o efeito da Bordunada de volta para quem golpeou: anima aqui mesmo
+      this.me.attack('swing', angle, now);
       this.effects.flashTiles(arcTiles(this.predicted.x, this.predicted.y, angle), 0xffe08a, 220, now);
     }
   }
@@ -575,6 +580,7 @@ export class WorldScene extends Phaser.Scene {
         if (msg.by === this.myId && msg.cid !== undefined) {
           this.effects.bindShot(msg.cid, msg.id);
         } else {
+          this.entities.get(msg.by)?.attack('shoot', msg.a, now);
           this.effects.addShot(
             {
               x: msg.x,
@@ -608,6 +614,7 @@ export class WorldScene extends Phaser.Scene {
         const view = this.entities.get(msg.id);
         view?.setHp(msg.hp);
         view?.floatText(`+${msg.amount}`, 'heal');
+        view?.cheer(now, 900);
         if (msg.id === this.myId) {
           this.setMyHp(msg.hp, this.myMaxHp);
           this.sfx.play('heal');
@@ -622,6 +629,7 @@ export class WorldScene extends Phaser.Scene {
         this.onDeath(msg.id, now);
         break;
       case 'levelup':
+        this.entities.get(msg.id)?.cheer(now, 2000);
         this.onLevelUp(msg.id, msg.level, msg.maxHp);
         break;
       case 'cd': {
@@ -659,6 +667,10 @@ export class WorldScene extends Phaser.Scene {
         this.bag.setState(msg.inv);
         break;
       }
+      case 'gear':
+        // alguém (ou você) trocou o que está vestindo: redesenha na hora
+        this.entities.get(msg.id)?.setGear(msg.gear);
+        break;
       case 'loot':
         this.onLoot(msg.x, msg.y, msg.items, now);
         break;
@@ -695,8 +707,8 @@ export class WorldScene extends Phaser.Scene {
     if (dash) {
       const [fx, fy] = feetOf(view.tileX, view.tileY);
       const [tx, ty] = feetOf(x, y);
-      this.effects.trail(view.sprite.texture.key, Number(view.sprite.frame.name) || 0, view.sprite.flipX, { x: fx, y: fy }, { x: tx, y: ty }, now);
-      view.moveTo(x, y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140 });
+      this.effects.trail(view.sprite, { x: fx, y: fy }, { x: tx, y: ty }, now);
+      view.moveTo(x, y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140, dash: true });
       view.ghost(now, DASH_INVULNERABLE_MS);
       return;
     }
@@ -784,6 +796,7 @@ export class WorldScene extends Phaser.Scene {
     const center = view.center(now);
     switch (kind) {
       case 'arc':
+        view.attack('swing', angle, now);
         this.effects.flashTiles(arcTiles(view.tileX, view.tileY, angle), 0xffe08a, 220, now);
         break;
       case 'spin':
@@ -806,7 +819,7 @@ export class WorldScene extends Phaser.Scene {
       const def = this.items.get(stack.item);
       if (!def) return;
       if (def.rarity !== 'common') precious = true;
-      this.effects.loot(itemTexture(this, def.icon), from, () => this.lootTarget(), now, i * 150);
+      this.effects.loot(itemTexture(this, def.icon, def.appearance), from, () => this.lootTarget(), now, i * 150);
       const label = `+${stack.n > 1 ? `${stack.n} ` : ''}${def.name}`;
       window.setTimeout(() => this.me?.floatText(label, `loot ${def.rarity}`), 650 + i * 150);
       if (def.rarity === 'legendary') this.toast.show(`Item lendário: ${def.name}!`, 3000);
@@ -868,17 +881,20 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private addEntity(state: EntityState, isSelf: boolean): EntityView {
-    const view = new EntityView(this, this.labels, state, isSelf);
+    const view = new EntityView(this, this.labels, state, isSelf, this.items);
     this.entities.set(state.id, view);
     return view;
   }
 
   // ======================= tela =======================
 
-  /** Zoom em números inteiros (pixel art fica nítida) mostrando ~14 tiles no lado menor. */
+  /**
+   * Zoom mostrando ~14 tiles no lado menor, sempre em número PAR: os personagens têm o dobro de
+   * detalhe do mapa, então só com zoom par cada pixel deles vira um quadradinho inteiro na tela.
+   */
   private fitZoom(): void {
     const { width, height } = this.scale.gameSize;
-    const zoom = Math.max(1, Math.round(Math.min(width, height) / (TILES_ON_SHORT_SIDE * T)));
+    const zoom = Math.max(2, 2 * Math.round(Math.min(width, height) / (TILES_ON_SHORT_SIDE * T) / 2));
     this.cameras.main.setZoom(zoom);
   }
 

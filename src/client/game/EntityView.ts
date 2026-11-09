@@ -4,13 +4,21 @@
 
 import type Phaser from 'phaser';
 import { TILE_SIZE } from '../../shared/constants';
-import { DX, facingOf, LEFT, type Dir } from '../../shared/dir';
+import { DX, LEFT, type Dir } from '../../shared/dir';
+import type { GearLook, ItemInfo } from '../../shared/items';
 import type { EntityKind, EntityState } from '../../shared/protocol';
-import { characterFrame, characterTexture } from './characters';
+import { CharacterAnimator, type AttackKind } from './animator';
+import { acquireCharacterTexture, CHARACTER_ORIGIN_Y, CHARACTER_SCALE, characterTextureReady, faceTexture, releaseCharacterTexture } from './characters';
+import { faceFrame, FACE_W } from './doll/face';
+import { FEET_Y, FRAME_W, faceOrigin, frameIndex } from './doll/poses';
 import { monsterTexture } from './monsterArt';
 
 const BUBBLE_MS = 5000;
 const FADE_MS = 450;
+/** Jogadores: altura do nome acima dos pés (o personagem tem ~26 px, mais chapéu). */
+const PLAYER_LABEL_HEIGHT = 29;
+/** Folga entre um passo e o próximo em que ainda conta como "andando" (não pisca a pose parada). */
+const WALK_GRACE_MS = 90;
 
 /** Pixel dos pés do personagem no tile (x, y). */
 export function feetOf(x: number, y: number): [number, number] {
@@ -22,6 +30,8 @@ export interface MoveOptions {
   snapBeyond?: number;
   /** Duração total da animação (esquiva é rápida). */
   durationMs?: number;
+  /** É uma esquiva: o personagem usa a animação de correr. */
+  dash?: boolean;
 }
 
 export class EntityView {
@@ -29,6 +39,8 @@ export class EntityView {
   readonly kind: EntityKind;
   readonly type: string;
   readonly name: string;
+  /** Semente da aparência (jogadores). */
+  readonly lookSeed: number;
   readonly sprite: Phaser.GameObjects.Sprite;
   tileX: number;
   tileY: number;
@@ -40,6 +52,8 @@ export class EntityView {
   readonly stepMs: number | undefined;
   /** Morrendo: some aos poucos e depois é destruída. */
   dying = false;
+  /** Jogadores: o que estão vestindo. */
+  gear: GearLook;
 
   private readonly shadow: Phaser.GameObjects.Ellipse;
   private readonly tag: HTMLDivElement;
@@ -63,14 +77,27 @@ export class EntityView {
   private ghostUntil = 0;
   private fainted = false;
   private cachedLabelWidth: number | null = null;
+  // só jogadores: animações, rosto e textura da roupa
+  private readonly animator: CharacterAnimator | null = null;
+  private readonly face: Phaser.GameObjects.Sprite | null = null;
+  private textureKey = '';
+  /** Roupa nova ainda sendo desenhada: a antiga continua na tela até ela ficar pronta. */
+  private pendingKey = '';
+  private dashing = false;
+  private lastMovingAt = -Infinity;
+  /** Jogadores aparecem na metade do tamanho da textura (que tem o dobro de detalhe). */
+  private baseScale = 1;
 
   constructor(
     private readonly scene: Phaser.Scene,
     labels: HTMLElement,
     state: EntityState,
     private readonly isSelf: boolean,
+    /** Tipos de item, para saber como desenhar o que o jogador veste. */
+    private readonly items: ReadonlyMap<string, ItemInfo> = new Map(),
   ) {
     this.id = state.id;
+    this.lookSeed = state.look;
     this.kind = state.kind;
     this.type = state.type;
     this.name = state.name;
@@ -81,14 +108,22 @@ export class EntityView {
     this.hp = state.hp;
     this.maxHp = state.maxHp;
     this.stepMs = state.stepMs;
+    this.gear = state.gear ?? {};
     this.facingLeft = state.dir === LEFT;
     const [px, py] = feetOf(state.x, state.y);
     this.fromX = this.toX = px;
     this.fromY = this.toY = py;
 
     this.shadow = scene.add.ellipse(px, py - 1.5, 10, 4, 0x000000, 0.28);
-    const texture = state.kind === 'player' ? characterTexture(scene, state.look) : monsterTexture(scene, state.type);
-    this.sprite = scene.add.sprite(px, py, texture, 0).setOrigin(0.5, 1);
+    if (state.kind === 'player') {
+      this.textureKey = acquireCharacterTexture(scene, state.look, this.gear, items);
+      this.sprite = scene.add.sprite(px, py, this.textureKey, 0).setOrigin(0.5, CHARACTER_ORIGIN_Y).setScale(CHARACTER_SCALE);
+      this.face = scene.add.sprite(px, py, faceTexture(scene, state.look), 0).setOrigin(0, 0).setScale(CHARACTER_SCALE);
+      this.baseScale = CHARACTER_SCALE;
+      this.animator = new CharacterAnimator(state.id);
+    } else {
+      this.sprite = scene.add.sprite(px, py, monsterTexture(scene, state.type), 0).setOrigin(0.5, 1);
+    }
 
     this.tag = document.createElement('div');
     this.tag.className = `tag ${state.kind}${isSelf ? ' self' : ''}`;
@@ -122,6 +157,7 @@ export class EntityView {
       return;
     }
     const current = this.position(now);
+    this.dashing = options.dash ?? false;
     this.fromX = current.x;
     this.fromY = current.y;
     this.toX = px;
@@ -156,10 +192,10 @@ export class EntityView {
     this.sprite.setDepth(y);
     this.shadow.setDepth(y - 0.5);
 
-    if (this.kind === 'player') {
-      const facing = facingOf(this.dir);
-      this.sprite.setFrame(characterFrame(facing, moving ? (this.steps % 2 === 0 ? 1 : 2) : 0));
-      this.sprite.setFlipX(facing === LEFT);
+    if (this.animator) {
+      this.swapWhenReady();
+      if (moving) this.lastMovingAt = now;
+      this.drawCharacter(now, moving || now - this.lastMovingAt < WALK_GRACE_MS);
     } else {
       this.sprite.setFrame(moving || (now % 900 < 450 && this.type === 'saci') ? 1 : 0);
       this.sprite.setFlipX(this.facingLeft);
@@ -168,13 +204,18 @@ export class EntityView {
     // preparando golpe: pulsa
     if (now < this.windupUntil) {
       const progress = (now - this.windupStart) / Math.max(1, this.windupUntil - this.windupStart);
-      this.sprite.setScale(1 + 0.12 * Math.abs(Math.sin(progress * Math.PI * 4)));
+      this.sprite.setScale(this.baseScale * (1 + 0.12 * Math.abs(Math.sin(progress * Math.PI * 4))));
     } else {
-      this.sprite.setScale(1);
+      this.sprite.setScale(this.baseScale);
     }
 
-    if (now < this.flashUntil) this.sprite.setTint(0xff6b6b);
-    else this.sprite.clearTint();
+    if (now < this.flashUntil) {
+      this.sprite.setTint(0xff6b6b);
+      this.face?.setTint(0xff6b6b);
+    } else {
+      this.sprite.clearTint();
+      this.face?.clearTint();
+    }
 
     let alpha = 1;
     if (this.fainted) alpha = 0.45;
@@ -186,15 +227,49 @@ export class EntityView {
       if (t >= 1) return false;
     }
     this.sprite.setAlpha(alpha);
+    this.face?.setAlpha(alpha);
     this.shadow.setAlpha(alpha);
     return true;
+  }
+
+  /** Escolhe o quadro do corpo e a expressão, e cola o rosto em cima da cabeça desse quadro. */
+  private drawCharacter(now: number, moving: boolean): void {
+    const progress = this.moveDuration > 0 ? Math.min(1, (now - this.moveStart) / this.moveDuration) : 1;
+    const pick = this.animator!.pick({
+      now,
+      dir: this.dir,
+      moving,
+      progress,
+      steps: this.steps,
+      dashing: this.dashing,
+      fainted: this.fainted,
+    });
+    this.sprite.setFrame(frameIndex(pick.view, pick.anim, pick.frame));
+    this.sprite.setFlipX(pick.flip);
+    const face = this.face!;
+    // de costas não tem rosto; e enquanto o corpo ainda está sendo desenhado, o rosto espera
+    if (pick.view === 'up' || !characterTextureReady(this.textureKey)) {
+      face.setVisible(false);
+      return;
+    }
+    // o rosto é outra camada: vai para o mesmo lugar da cabeça deste quadro (em pixels da textura)
+    const [fx, fy] = faceOrigin(pick.view, pick.anim, pick.frame);
+    const k = CHARACTER_SCALE;
+    const left = this.sprite.x - (FRAME_W / 2) * k;
+    const top = this.sprite.y - (FEET_Y + 1) * k;
+    face
+      .setVisible(true)
+      .setFrame(faceFrame(pick.view, pick.expression))
+      .setFlipX(pick.flip)
+      .setPosition(left + (pick.flip ? FRAME_W - fx - FACE_W : fx) * k, top + fy * k)
+      .setDepth(this.sprite.depth + 0.01);
   }
 
   /** Ponto da tela (em pixels) logo acima da cabeça, onde o nome fica normalmente. */
   labelAnchor(camera: Phaser.Cameras.Scene2D.Camera): { x: number; y: number } {
     return {
       x: (this.sprite.x - camera.worldView.x) * camera.zoom,
-      y: (this.sprite.y - TILE_SIZE - camera.worldView.y) * camera.zoom,
+      y: (this.sprite.y - (this.kind === 'player' ? PLAYER_LABEL_HEIGHT : TILE_SIZE) - camera.worldView.y) * camera.zoom,
     };
   }
 
@@ -231,9 +306,43 @@ export class EntityView {
     this.tag.dataset.threat = diff <= -3 ? 'easy' : diff <= 1 ? 'normal' : diff <= 3 ? 'hard' : 'deadly';
   }
 
-  /** Piscada vermelha de quando apanha. */
+  /** Piscada vermelha de quando apanha (jogadores também fazem careta e recuam). */
   flash(now: number): void {
     this.flashUntil = now + 140;
+    this.animator?.hurt(now);
+  }
+
+  /** Animação de ataque (jogadores): `shoot` = estilingue/arco, `swing` = golpe (Bordunada). */
+  attack(kind: AttackKind, angle: number, now: number): void {
+    this.animator?.startAttack(kind, angle, now);
+  }
+
+  /** Cara de feliz por um tempo (subiu de nível, se curou). */
+  cheer(now: number, ms: number): void {
+    this.animator?.cheer(now, ms);
+  }
+
+  /** Trocou de roupa: redesenha com o equipamento novo, sem interromper a animação. */
+  setGear(gear: GearLook): void {
+    if (this.kind !== 'player') return;
+    this.gear = gear;
+    const next = acquireCharacterTexture(this.scene, this.lookSeed, gear, this.items);
+    if (this.pendingKey) releaseCharacterTexture(this.scene, this.pendingKey);
+    this.pendingKey = '';
+    if (next === this.textureKey) {
+      releaseCharacterTexture(this.scene, next); // mesma combinação: só devolve a referência extra
+      return;
+    }
+    this.pendingKey = next;
+    this.swapWhenReady();
+  }
+
+  private swapWhenReady(): void {
+    if (!this.pendingKey || !characterTextureReady(this.pendingKey)) return;
+    this.sprite.setTexture(this.pendingKey, this.sprite.frame.name);
+    releaseCharacterTexture(this.scene, this.textureKey);
+    this.textureKey = this.pendingKey;
+    this.pendingKey = '';
   }
 
   /** Pulsa enquanto prepara um golpe. */
@@ -276,6 +385,8 @@ export class EntityView {
       this.tag.prepend(this.bubble);
     }
     this.bubble.textContent = text;
+    // mexe a boca mais ou menos o tempo de "falar" o texto
+    this.animator?.talk(performance.now(), Math.min(2500, 400 + text.length * 45));
     window.clearTimeout(this.bubbleTimer);
     this.bubbleTimer = window.setTimeout(() => {
       this.bubble?.remove();
@@ -292,6 +403,9 @@ export class EntityView {
   destroy(): void {
     window.clearTimeout(this.bubbleTimer);
     this.sprite.destroy();
+    this.face?.destroy();
+    if (this.textureKey) releaseCharacterTexture(this.scene, this.textureKey);
+    if (this.pendingKey) releaseCharacterTexture(this.scene, this.pendingKey);
     this.shadow.destroy();
     this.tag.remove();
   }

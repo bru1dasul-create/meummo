@@ -61,5 +61,116 @@
     "raridade": "lendario",
     "descricao": "Quem tira o gorro do Saci ganha a força dele... e a raiva também.",
     "icone": "gorro"
+  },
+  "capacete_sucata": {
+    "nome": "Capacete de Sucata",
+    "tipo": "equipamento",
+    "parte": "cabeca",
+    "vida": 8,
+    "defesa": 2,
+    "raridade": "raro",
+    "descricao": "Uma panela velha das ruínas, martelada até virar capacete. Faz um barulhão quando leva pedrada.",
+    "icone": "capacete_sucata"
+  },
+  "tunica_algodao": {
+    "nome": "Túnica de Algodão",
+    "tipo": "equipamento",
+    "parte": "corpo",
+    "vida": 5,
+    "descricao": "Tecida no tear da vila flutuante. Leve e fresquinha.",
+    "icone": "tunica"
+  },
+  "armadura_sucata": {
+    "nome": "Armadura de Sucata",
+    "tipo": "equipamento",
+    "parte": "corpo",
+    "vida": 12,
+    "defesa": 4,
+    "raridade": "raro",
+    "descricao": "Placas de lata e couro amarradas com arame. Pesada, mas segura o tranco.",
+    "icone": "armadura"
+  },
+  "luvas_couro": {
+    "nome": "Luvas de Couro",
+    "tipo": "equipamento",
+    "parte": "luvas",
+    "dano": 1,
+    "descricao": "Couro curtido de jararaca. Firmam a mão no estilingue.",
+    "icone": "luvas"
+  },
+  "manoplas_sucata": {
+    "nome": "Manoplas de Sucata",
+    "tipo": "equipamento",
+    "parte": "luvas",
+    "dano": 1,
+    "defesa": 1,
+    "raridade": "raro",
+    "descricao": "Latas amassadas viraram dedos de metal. Ninguém aperta a sua mão duas vezes.",
+    "icone": "manoplas"
+  },
+  "botas_seringueiro": {
+    "nome": "Botas de Seringueiro",
+    "tipo": "equipamento",
+    "parte": "botas",
+    "vida": 4,
+    "defesa": 1,
+    "descricao": "Borracha de seringa, à prova do brejo. Cano alto contra picada de cobra.",
+    "icone": "botas"
+  },
+  "facao_mato": {
+    "nome": "Facão de Mato",
+    "tipo": "equipamento",
+    "parte": "arma",
+    "dano": 2,
+    "descricao": "Abre trilha na mata e na briga.",
+    "icone": "facao"
+  },
+  "machadinha": {
+    "nome": "Machadinha de Pedra",
+    "tipo": "equipamento",
+    "parte": "arma",
+    "dano": 3,
+    "raridade": "raro",
+    "descricao": "Lâmina de pedra polida amarrada num cabo de pau-brasil.",
+    "icone": "machadinha"
+  },
+  "arco_ipe": {
+    "nome": "Arco de Ipê",
+    "tipo": "equipamento",
+    "parte": "arma",
+    "dano": 4,
+    "duasMaos": true,
+    "raridade": "raro",
+    "descricao": "Madeira de ipê-amarelo, a mais dura da mata. Precisa das duas mãos: não dá para usar escudo junto.",
+    "icone": "arco"
+  },
+  "escudo_jabuti": {
+    "nome": "Escudo de Casco de Jabuti",
+    "tipo": "equipamento",
+    "parte": "escudo",
+    "vida": 6,
+    "defesa": 2,
+    "descricao": "O jabuti trocou de casco e deixou este para trás. Devagar e sempre.",
+    "icone": "escudo_jabuti"
+  },
+  "escudo_bueiro": {
+    "nome": "Tampa de Bueiro",
+    "tipo": "equipamento",
+    "parte": "escudo",
+    "vida": 10,
+    "defesa": 3,
+    "raridade": "raro",
+    "descricao": "Ferro fundido das ruas antigas de São Paulo. Pesa uma tonelada e não amassa.",
+    "icone": "escudo_bueiro"
+  },
+  "capa_folhas": {
+    "nome": "Capa de Folhas",
+    "tipo": "equipamento",
+    "parte": "acessorio",
+    "vida": 5,
+    "defesa": 1,
+    "raridade": "lendario",
+    "descricao": "Trançada pelo Curupira para os amigos da mata. Farfalha quando você corre.",
+    "icone": "capa"
   }
 }

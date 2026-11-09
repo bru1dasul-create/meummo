@@ -22,7 +22,9 @@
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
    `data/items.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
    Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
-   ícones de itens em `src/client/itemArt.ts`.
+   ícones de itens em `src/client/itemArt.ts`, personagem em camadas em `src/client/game/doll/` e o visual de
+   cada equipamento em `src/client/game/gearArt.ts` (o ícone do equipamento sai dele). Confira com
+   `npm run render:characters` (`docs/personagens.png`).
 5. Antes de commitar: `npm run check` (tipos + testes) precisa passar. Regra nova no servidor vem com teste em `tests/`.
 6. Mudou o formato das mensagens? Aumente `PROTOCOL_VERSION` em `src/shared/constants.ts`.
    Mudou o que fica salvo do personagem? Acrescente um passo em `MIGRATIONS` (`src/server/accounts.ts`) — nunca
@@ -49,6 +51,9 @@
   Tiles novos sempre no fim da lista (os mapas guardam o número de cada tile).
 - `npm run gen:map -- --out arquivo.tmj` — gera o mapa do Refúgio em outro arquivo (veja a regra 9)
 - `npm run render:map` — desenha o mapa inteiro em `docs/mapa.png`
+- `npm run render:characters` — prancha de personagens (todas as animações e equipamentos) em `docs/personagens.png`
+  (`-- --escala 6 --so Caio` para ver um só de perto)
+- `MEUMMO_ITENS_TESTE=1 npm start` — todo personagem que entra ganha um de cada equipamento (só para testar)
 
 ## Instalação no PC do dono do projeto (Windows)
 - O jogo fica em `E:\mmorpg`, instalado por `instalar-windows.ps1` (comando de uma linha no README).
@@ -57,7 +62,8 @@
 - Se mudar algo que exige passo extra na instalação, atualize o `instalar-windows.ps1` e o `atualizar.bat`.
 
 ## Conferir no navegador
-Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
+Além dos testes: `npm run build && npm start` (com `MEUMMO_ITENS_TESTE=1` os bots vestem combinações sorteadas e
+trocam de roupa de tempos em tempos), ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).
 No navegador existe `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
 `__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)` — útil para testes automáticos.

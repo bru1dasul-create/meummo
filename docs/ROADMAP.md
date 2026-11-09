@@ -50,7 +50,14 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Senhas protegidas (scrypt), freio para quem erra a senha muitas vezes, entrar de outro lugar tira a sessão antiga
 - [x] Monstros deixam itens (cada um que ajudou sorteia os seus); mochila com 20 espaços; equipamentos em
   4 partes que somam dano, vida e defesa; banana que cura. Tudo em `data/items.json`, salvo com o personagem
-- [ ] Ver o equipamento no personagem (chapéu, gorro do Saci...)
+- [x] Ver o equipamento no personagem: personagem novo em camadas ("boneco de papel"), com o dobro de detalhe,
+  volume sombreado, rosto com expressões (pisca, careta, sorriso, fala) e animações (respirar, andar, correr na
+  esquiva, atirar, golpe, apanhar, desmaiar). 7 partes: cabeça, corpo, luvas, botas, arma, escudo e acessório;
+  arco de duas mãos não deixa usar escudo. Trocar de roupa aparece na hora para quem está vendo
+- [x] 12 equipamentos novos (capacete e armadura de sucata, túnica, luvas, manoplas, botas de seringueiro, facão,
+  machadinha, arco de ipê, escudo de casco de jabuti, tampa de bueiro, capa de folhas do Curupira)
+- [ ] A arma muda o jeito de atacar (hoje é só visual: todas atiram a pedrinha do estilingue)
+- [ ] Monstros com o mesmo nível de detalhe dos personagens
 
 ## M3 — Mundo
 - [ ] Vários mapas ligados (portas e saídas): a avenida a leste do Refúgio leva às **Ruínas de Santo Amaro**

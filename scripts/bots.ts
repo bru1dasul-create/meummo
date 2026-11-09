@@ -12,6 +12,7 @@ import { loadMap } from '../src/server/server';
 import { SHOT_COOLDOWN_MS, PROTOCOL_VERSION, STEP_MS } from '../src/shared/constants';
 import { angleBetween, chebyshev } from '../src/shared/combat';
 import type { Dir } from '../src/shared/dir';
+import type { InventoryState, ItemInfo } from '../src/shared/items';
 import type { Tile } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
@@ -76,6 +77,9 @@ class Bot {
   private nextShotAt = 0;
   private restUntil = 0;
   private readonly monsters = new Map<number, Tile>();
+  private items = new Map<string, ItemInfo>();
+  private inv: InventoryState | null = null;
+  private dressTimer: NodeJS.Timeout | undefined;
 
   constructor(name: string) {
     this.name = name;
@@ -91,6 +95,26 @@ class Bot {
     this.ws.on('error', (err) => console.error(`[${this.name}] erro: ${err.message}`));
   }
 
+  /**
+   * Veste uma combinação sorteada do que tem na mochila (com MEUMMO_ITENS_TESTE=1 eles têm de tudo)
+   * e troca de novo de tempos em tempos: bom para ver os equipamentos mudando em tempo real.
+   */
+  private dressUp(): void {
+    clearTimeout(this.dressTimer);
+    this.dressTimer = setTimeout(() => this.dressUp(), 30000 + Math.random() * 30000);
+    const inv = this.inv;
+    if (!inv) return;
+    const bySlot = new Map<string, number[]>();
+    inv.slots.forEach((stack, i) => {
+      const slot = stack ? this.items.get(stack.item)?.slot : null;
+      if (slot) bySlot.set(slot, [...(bySlot.get(slot) ?? []), i]);
+    });
+    for (const choices of bySlot.values()) {
+      if (Math.random() < 0.3) continue;
+      this.send({ t: 'item', act: 'equip', i: choices[Math.floor(Math.random() * choices.length)]! });
+    }
+  }
+
   private onMessage(msg: ServerMsg): void {
     switch (msg.t) {
       case 'welcome':
@@ -98,7 +122,13 @@ class Bot {
         this.x = msg.you.x;
         this.y = msg.you.y;
         this.ready = true;
+        this.items = new Map(msg.items.map((item) => [item.id, item]));
+        this.inv = msg.inv;
+        this.dressUp();
         console.log(`bot ${this.name} entrou${hunting ? ' (caçador)' : ''}`);
+        break;
+      case 'inv':
+        this.inv = msg.inv;
         break;
       case 'reject':
         // Nome de alguém de verdade (outra senha) ou em uso: tenta com um número no fim.

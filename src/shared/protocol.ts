@@ -3,7 +3,7 @@
 // Posições são em tiles. Ângulos são em radianos (0 = direita, π/2 = baixo).
 
 import type { Dir } from './dir';
-import type { EquipSlot, InventoryState, ItemInfo, ItemStack } from './items';
+import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 
 export type EntityKind = 'player' | 'monster';
 
@@ -24,6 +24,8 @@ export interface EntityState {
   maxHp: number;
   /** Monstros: tempo para andar um tile (cada um tem sua velocidade). */
   stepMs?: number;
+  /** Jogadores: o que estão vestindo (aparece no personagem). */
+  gear?: GearLook;
 }
 
 /** Números que só o próprio jogador precisa ver. */
@@ -103,6 +105,7 @@ export type ServerMsg =
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
+  | { t: 'gear'; id: number; gear: GearLook } // alguém (ou você) trocou o que está vestindo
   | { t: 'loot'; x: number; y: number; items: ItemStack[] } // você pegou isto do monstro que caiu em (x, y)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }

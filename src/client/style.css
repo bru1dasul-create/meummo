@@ -743,8 +743,22 @@ kbd {
 
 .bag-gear {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 96px repeat(4, 1fr);
   gap: 6px;
+  align-content: center;
+  align-items: center;
+}
+
+/* Prévia do personagem com o que está vestido (clique para girar) */
+.bag-doll {
+  grid-row: span 2;
+  width: 96px;
+  height: 128px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 70%, rgba(92, 140, 74, 0.55), rgba(0, 0, 0, 0.35) 70%);
+  image-rendering: pixelated;
+  cursor: pointer;
 }
 
 .bag-stats {
@@ -804,7 +818,11 @@ kbd {
 .gear-slot .part {
   position: absolute;
   bottom: 2px;
-  font-size: 10px;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 9px;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
   color: var(--muted);
 }
 

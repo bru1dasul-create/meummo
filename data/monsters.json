@@ -22,7 +22,11 @@
     "itens": [
       { "item": "banana", "chance": 50, "quantidade": [1, 2] },
       { "item": "chapeu_palha", "chance": 6 },
-      { "item": "estilingue_goiabeira", "chance": 4 }
+      { "item": "estilingue_goiabeira", "chance": 4 },
+      { "item": "tunica_algodao", "chance": 5 },
+      { "item": "luvas_couro", "chance": 4 },
+      { "item": "facao_mato", "chance": 4 },
+      { "item": "escudo_jabuti", "chance": 3 }
     ]
   },
   "jararaca": {
@@ -45,7 +49,11 @@
     "itens": [
       { "item": "couro_jararaca", "chance": 45 },
       { "item": "colar_presas", "chance": 6 },
-      { "item": "gibao_couro", "chance": 5 }
+      { "item": "gibao_couro", "chance": 5 },
+      { "item": "botas_seringueiro", "chance": 5 },
+      { "item": "luvas_couro", "chance": 4 },
+      { "item": "machadinha", "chance": 3 },
+      { "item": "capacete_sucata", "chance": 3 }
     ]
   },
   "saci": {
@@ -72,7 +80,12 @@
     },
     "itens": [
       { "item": "banana", "chance": 100, "quantidade": [2, 3] },
-      { "item": "gorro_saci", "chance": 30 }
+      { "item": "gorro_saci", "chance": 30 },
+      { "item": "arco_ipe", "chance": 12 },
+      { "item": "armadura_sucata", "chance": 10 },
+      { "item": "manoplas_sucata", "chance": 10 },
+      { "item": "escudo_bueiro", "chance": 10 },
+      { "item": "capa_folhas", "chance": 4 }
     ]
   }
 }
