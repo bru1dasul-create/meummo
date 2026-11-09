@@ -5,9 +5,10 @@
 // fora, a usina velha e, no meio do lago, a ponte da rodovia antiga, quebrada. No sul fica o lago aberto, com
 // uma prainha de frente para a pedra onde a Iara vai cantar. Clima: neblina, vaga-lumes e um pouco escuro.
 //
-// Criaturas por enquanto (as de lá — Iara, Boto, jacarés — ainda vão ser criadas): jararacas nas ilhas perto da
-// entrada, Corpo-Seco perto da usina e das casas afundadas, Capelobo nas matas da beira do lago. As áreas das
-// lendas ficam marcadas na camada "lendas" (o servidor ignora; viram áreas de monstro quando eles existirem).
+// Criaturas: o Jacaré Mutante nos canais do oeste e o Boto Encantado no lago das casas afundadas; e as de fora
+// (jararacas nas ilhas perto da entrada, Corpo-Seco perto da usina e das casas afundadas, Capelobo nas matas da
+// beira do lago). A área da Iara fica marcada na camada "lendas" (o servidor ignora; vira área de monstro quando
+// ela existir).
 //
 // Como os outros geradores, este script NÃO sobrescreve um mapa existente sem --force
 // (para comparar: npm run gen:billings -- --out outro.tmj)
@@ -368,7 +369,7 @@ softenEdges(m.ground, W, H, [
 ]);
 softenEdges(m.ground, W, H, [{ base: ['swamp_water'], set: 'swamp_deep_edge', touches: (x, y) => m.groundIs(x, y, 'swamp_deep') }], m.depth.shade);
 
-// 12. Áreas das criaturas (as que já existem, por enquanto) e das lendas que ainda vão chegar
+// 12. Áreas das criaturas e da lenda que ainda vai chegar (a Iara)
 const game0 = GameMap.fromTiled(
   m.toTiled({ properties: [], points: [{ name: 'spawn', ...ARRIVAL }], monsters: [], exits: [] }) as unknown as TiledMap,
   'billings',
@@ -376,8 +377,6 @@ const game0 = GameMap.fromTiled(
 const reach = (x: number, y: number) => findPath(game0, ARRIVAL.x, ARRIVAL.y, x, y, W * H * 2) !== null;
 const legends: AreaObject[] = [
   { name: 'iara', x: ROCK.x - 9, y: ROCK.y - 9, w: 19, h: 12, properties: [] }, // a prainha e a pedra
-  { name: 'boto', x: 50, y: 34, w: 24, h: 10, properties: [] }, // a parte do lago com as casas afundadas
-  { name: 'jacare', x: 8, y: 8, w: 20, h: 26, properties: [] }, // os canais do oeste
 ];
 const areas: AreaObject[] = [];
 function placeArea(name: string, count: number, region: { x0: number; y0: number; x1: number; y1: number }, minDistance: number): void {
@@ -404,6 +403,11 @@ function placeArea(name: string, count: number, region: { x0: number; y0: number
 for (let k = 0; k < 3; k++) placeArea('jararaca', 3, { x0: 4, y0: 6, x1: W - 4, y1: 34 }, 12);
 for (let k = 0; k < 2; k++) placeArea('corpo_seco', 2, { x0: W / 2, y0: 14, x1: W - 4, y1: 44 }, 20);
 for (let k = 0; k < 2; k++) placeArea('capelobo', 2, { x0: 4, y0: 30, x1: W - 4, y1: H - 4 }, 26);
+// as criaturas de lá (eram marcadas na camada "lendas" até existirem); entram no fim, para não mudar os sorteios acima
+areas.push(
+  { name: 'jacare', x: 8, y: 8, w: 20, h: 26, properties: [{ name: 'quantidade', type: 'int', value: 3 }] }, // os canais do oeste
+  { name: 'boto', x: 50, y: 34, w: 24, h: 10, properties: [{ name: 'quantidade', type: 'int', value: 2 }] }, // o lago das casas afundadas
+);
 
 // 13. Monta o mapa
 const map = m.toTiled({

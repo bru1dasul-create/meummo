@@ -131,6 +131,21 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   tudo ou nada) e o limite de ouro (vende só o que cabe). A loja paga `compraPor`% do preço (`sellPrice`, mínimo 1).
   Recusa vem em `fail` (`no_gold`, `too_far`, `cant_trade`, `bag_full`, `dead`), com `item: true`.
 
+## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
+- As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
+  itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no
+  `welcome` (`quests`). O progresso de cada um (`Player.quests`, um `QuestLog`: missão → `active`/`done` e a
+  contagem) vai no `welcome` e no `zone` (`questLog`) e, quando muda, em `quests`.
+- Pedidos: `quest` com `accept` ou `complete` (perto do NPC que dá a missão, `TRADE_RANGE`) e `abandon` (em
+  qualquer lugar). O servidor confere tudo (`questBlocker`: já fazendo, já feita e não repetível, falta a anterior,
+  nível, limite de 5). "Derrotar" conta em `killMonster` para cada um que ajudou; "entregar" conta pela mochila
+  e tira os itens na hora de entregar. Recompensa: XP, ouro e itens (o que não couber cai no chão, ao lado).
+  Concluir salva o personagem na hora.
+- No navegador, `src/client/talk.ts`: a conversa (missões para entregar, em andamento, novas e as que esperam
+  nível; botão da loja se o NPC tiver uma), a lista na tela e o sinal ! / ? em cima do NPC (`npcMark`).
+- Salvo na coluna `quests` (JSON) — passo 3 de `MIGRATIONS`; o mundo confere ao carregar (missão que sumiu sai,
+  contagem fora do limite é corrigida).
+
 ## Painel do administrador (`src/server/admin.ts` e `tuning.ts`)
 - `GET /admin` entrega a página (`src/server/admin/painel.html`, HTML e JavaScript sem nada externo); a página só
   mostra e pede (`GET /admin/api/dados`, `POST /admin/api/ajustar`, `POST /admin/api/padrao`, `GET /admin/api/exportar`;
@@ -182,6 +197,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
 | cliente | `buy` / `sell` | comprar `n` de um item do vendedor `npc` / vender `n` do item do espaço `i` para ele |
+| cliente | `quest` | aceitar, entregar (perto de quem dá a missão) ou abandonar uma missão |
 | cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
 | servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
@@ -201,6 +217,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `drop` / `pickup` / `drop_gone` | caiu ouro ou item no chão para você / você pegou / sumiu (o tempo acabou) |
 | servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
 | servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
+| servidor | `quests` | seu progresso nas missões mudou |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |
@@ -244,13 +261,17 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
 - Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
   `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`), Represa Billings (88×64,
-  `scripts/gen-billings.ts`) e Terminal Santo Amaro (64×48, `scripts/gen-terminal.ts`), os três últimos usando
-  `scripts/map-builder.ts`. Gerar de novo por cima apaga as
+  `scripts/gen-billings.ts`), Terminal Santo Amaro (64×48, `scripts/gen-terminal.ts`) e Shopping do Largo Treze
+  (64×44, `scripts/gen-shopping.ts`), os quatro últimos usando `scripts/map-builder.ts`. Gerar de novo por cima apaga as
   edições: gere com `--out outro.tmj` e compare. Cada gerador confere no fim se dá para chegar a pé nos lugares
   importantes; o da Billings também liga cada ilha à entrada com passarelas e guarda os caminhos antes de plantar
   as árvores. Mexeu num gerador? Cuidado com a ordem dos sorteios: um sorteio a mais (ou a menos) no meio muda
   tudo o que vem depois (por isso alguns passos sorteiam "à toa", para o resto do mapa ficar igual).
-- Camada de objetos `lendas` (Billings): áreas de criaturas que ainda vão existir; o servidor ignora.
+- Camada de objetos `lendas` (Billings): áreas de criaturas que ainda vão existir (hoje, a Iara); o servidor ignora.
+- Mapa de dentro (o shopping): a planta sai de constantes no gerador (corredores, átrio, faixas de lojas) e cada
+  loja tem a frente em duas linhas: o letreiro na camada `acima` (em cima da porta dá para passar por baixo dele;
+  no resto da linha, a `decor` tem parede, que bloqueia) e a frente na `decor` (porta de aço, vitrine, entrada).
+  Os objetos que bloqueiam só entram se todo o chão continuar alcançável a pé a partir da entrada.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
   Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, varal 3x2, ônibus) são desenhados inteiros e

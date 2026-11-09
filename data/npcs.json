@@ -6,10 +6,24 @@
     "x": 46,
     "y": 28,
     "fala": "Banana fresquinha, arruda contra quebranto e chapéu pro sol! Vendo e compro, freguês.",
-    "veste": ["chapeu_palha"],
+    "veste": [
+      "chapeu_palha"
+    ],
     "loja": {
-      "vende": ["banana", "erva_arruda", "chapeu_palha"],
+      "vende": [
+        "banana",
+        "erva_arruda",
+        "chapeu_palha"
+      ],
       "compraPor": 50
     }
+  },
+  "curupira": {
+    "nome": "Curupira",
+    "titulo": "guardião da mata",
+    "mapa": "refugio",
+    "x": 45,
+    "y": 12,
+    "fala": "Psiu! Os pés virados pra trás confundem os caçadores, não os amigos da mata. Precisa de trabalho?"
   }
 }

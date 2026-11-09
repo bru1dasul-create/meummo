@@ -2020,6 +2020,776 @@ function drawTicketBooth(p: Pixels): void {
   p.outline(S.outline);
 }
 
+// ---------- Shopping do Largo Treze: piso, paredes, lojas, átrio, supermercado, praça de alimentação e cinema ----------
+
+const MALL = {
+  floor: hex('#cbbfa6'),
+  floorAlt: hex('#c3b69c'),
+  floorDark: hex('#b0a388'),
+  floorLight: hex('#dbd1bc'),
+  seam: hex('#a29479'),
+  crack: hex('#6f6552'),
+  under: hex('#8d8a82'),
+  dust: [92, 80, 60, 46] as RGBA,
+  market: hex('#cfd2ce'),
+  marketAlt: hex('#c4c7c3'),
+  marketDark: hex('#a3a7a3'),
+  carpet: hex('#6a2331'),
+  carpetDark: hex('#511a26'),
+  carpetLight: hex('#7d2d3c'),
+  carpetGold: hex('#94743a'),
+  wall: hex('#d4c9b1'),
+  wallDark: hex('#bbaf97'),
+  wallLight: hex('#e3dac8'),
+  stain: hex('#ad9f84'),
+  wallTop: hex('#6b6660'),
+  wallTopDark: hex('#56524c'),
+  wallTopLight: hex('#837d75'),
+  baseboard: hex('#7f7565'),
+  frame: hex('#8f9498'),
+  frameDark: hex('#5f6468'),
+  frameLight: hex('#b3b8bc'),
+  glass: hex('#456570'),
+  glassDark: hex('#1d2a30'),
+  glassLight: hex('#a8c8cf'),
+  glassPane: hex('#9db8be'),
+  water: hex('#56877a'),
+  waterMid: hex('#679889'),
+  waterLight: hex('#b2d6c8'),
+  granite: hex('#8e8b86'),
+  graniteDark: hex('#6d6a66'),
+  graniteLight: hex('#aba8a2'),
+  signs: [hex('#c4473b'), hex('#3d74a6'), hex('#d29a34')],
+  product: [hex('#d9534a'), hex('#e8c547'), hex('#4f8fc9'), hex('#5fae5a'), hex('#ece6d8'), hex('#9a5fb5')],
+  seat: hex('#a52f3d'),
+  seatDark: hex('#78212c'),
+  seatLight: hex('#c2475a'),
+  screen: hex('#e4dfd2'),
+  table: hex('#e3ded3'),
+  tableDark: hex('#bab4a8'),
+  chair: hex('#d9783f'),
+  chairDark: hex('#a85a2c'),
+  tray: hex('#b8443a'),
+  steel: hex('#a9adb1'),
+  steelLight: hex('#d6d9dc'),
+  steelDark: hex('#7b7f83'),
+  skin: hex('#e2d8c6'),
+  skinDark: hex('#bcb09a'),
+  ink: hex('#141518'),
+};
+
+/** Letras de 5x7 pixels (o "I" tem 3) para os letreiros grandes: CINEMA e SHOPPING. */
+const SIGN_FONT: Record<string, string[]> = {
+  A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  C: ['.###.', '#...#', '#....', '#....', '#....', '#...#', '.###.'],
+  E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
+  G: ['.###.', '#...#', '#....', '#.###', '#...#', '#...#', '.###.'],
+  H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  I: ['###', '.#.', '.#.', '.#.', '.#.', '.#.', '###'],
+  M: ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'],
+  N: ['#...#', '##..#', '#.#.#', '#.#.#', '#..##', '#...#', '#...#'],
+  O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
+  S: ['.####', '#....', '#....', '.###.', '....#', '....#', '####.'],
+};
+
+/** Largura (em pixels) de um texto escrito com SIGN_FONT (1 pixel entre as letras). */
+function signTextWidth(text: string): number {
+  return [...text].reduce((w, ch) => w + SIGN_FONT[ch]![0]!.length + 1, -1);
+}
+
+/** Escreve um texto com SIGN_FONT a partir de (x, y). `fallen`: posições de letras que caíram (fica o buraco). */
+function signText(p: Pixels, text: string, x: number, y: number, color: RGBA, fallen: number[] = []): void {
+  let cx = x;
+  [...text].forEach((ch, i) => {
+    const rows = SIGN_FONT[ch]!;
+    if (!fallen.includes(i)) rows.forEach((row, dy) => [...row].forEach((c, dx) => c === '#' && p.set(cx + dx, y + dy, color)));
+    cx += rows[0]!.length + 1;
+  });
+}
+
+/**
+ * Porcelanato bege do shopping (placas de 8x8 em xadrez discreto), empoeirado. Variações: rachado (com uma placa
+ * solta), com musgo nas juntas, com sol (embaixo da claraboia quebrada: brilha) e com poça de chuva.
+ */
+function mallFloor(kind: 'plain' | 'cracked' | 'moss' | 'sun' | 'puddle') {
+  return (p: Pixels, rng: Rng) => {
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) p.set(x, y, ((x >> 3) + (y >> 3)) % 2 ? MALL.floorAlt : MALL.floor);
+    p.speckle(rng, [MALL.floorDark, MALL.floorLight], 16);
+    for (let i = 0; i < T; i++) {
+      p.set(i, 0, MALL.seam);
+      p.set(0, i, MALL.seam);
+      p.set(i, 8, MALL.seam);
+      p.set(8, i, MALL.seam);
+    }
+    for (let k = 0; k < 3; k++) p.set(11 + k, 5 - k, MALL.floorLight); // o brilho da cera, que ainda aparece
+    p.speckle(rng, [MALL.dust], 20);
+    if (kind === 'cracked') {
+      p.rect(9, 9, 7, 7, MALL.under); // uma placa que soltou: aparece o contrapiso
+      for (let k = 0; k < 6; k++) p.set(9 + randInt(rng, 7), 9 + randInt(rng, 7), MALL.graniteDark);
+      p.rect(9, 9, 7, 1, MALL.crack);
+      p.rect(9, 9, 1, 7, MALL.crack);
+      let x = 2 + randInt(rng, 5);
+      for (let y = 1; y < 9; y++) {
+        p.set(x, y, MALL.crack);
+        x = clamp15(x + randInt(rng, 3) - 1);
+      }
+      p.ellipse(4, 12, 3, 1.8, [70, 60, 45, 60]); // terra trazida pela chuva
+    } else if (kind === 'moss') {
+      for (let i = 0; i < T; i++) {
+        if (rng() < 0.55) p.set(i, 8, rng() < 0.5 ? S.moss : S.mossDark);
+        if (rng() < 0.55) p.set(8, i, rng() < 0.5 ? S.moss : S.mossDark);
+        if (rng() < 0.35) p.set(i, 0, S.moss);
+        if (rng() < 0.35) p.set(0, i, S.moss);
+      }
+      p.disc(4, 12, 2.2, S.mossDark);
+      p.disc(4, 12, 1.3, S.moss);
+      for (const [x, y] of [[12, 3], [13, 2], [11, 2], [12, 1]] as const) p.set(x, y, S.herbLight); // um broto
+    } else if (kind === 'sun') {
+      p.rect(0, 0, T, T, [255, 238, 176, 45]);
+      for (let k = 0; k < 6; k++) p.set(randInt(rng, T), randInt(rng, T), [255, 252, 230, 210]); // poeira no raio de sol
+    } else if (kind === 'puddle') {
+      p.ellipse(8, 9, 6.5, 4, MALL.water);
+      p.ellipse(7.5, 8.5, 5, 2.8, MALL.waterMid);
+      p.rect(4, 7, 3, 1, MALL.waterLight); // o reflexo da claraboia
+      p.rect(9, 10, 2, 1, MALL.waterLight);
+      p.set(11, 8, MALL.waterLight);
+    }
+  };
+}
+
+/** Piso do supermercado: placas brancas, com as marcas das rodinhas dos carrinhos. */
+function drawMarketFloor(p: Pixels, rng: Rng): void {
+  p.fill(MALL.market);
+  p.speckle(rng, [MALL.marketAlt, MALL.marketAlt, hex('#dcdfdb')], 34);
+  for (let i = 0; i < T; i++) {
+    p.set(i, 0, MALL.marketDark);
+    p.set(0, i, MALL.marketDark);
+    p.set(i, 8, MALL.marketAlt);
+    p.set(8, i, MALL.marketAlt);
+  }
+  for (let x = 2; x < 14; x++) p.set(x, 11 + ((x >> 2) % 2), [100, 102, 100, 70]); // risco de rodinha
+  p.speckle(rng, [MALL.dust], 18);
+}
+
+/** Carpete do cinema: vinho com losangos dourados, gasto e manchado. */
+function drawCinemaCarpet(p: Pixels, rng: Rng): void {
+  p.fill(MALL.carpet);
+  p.speckle(rng, [MALL.carpetDark, MALL.carpetLight], 46);
+  for (let y = 0; y < T; y++) {
+    for (let x = 0; x < T; x++) {
+      const d = Math.abs(x - 8) + Math.abs(y - 8);
+      if (d === 8) p.set(x, y, MALL.carpetGold);
+      else if (d === 3) p.set(x, y, MALL.carpetDark);
+    }
+  }
+  p.ellipse(3 + rng() * 10, 3 + rng() * 10, 2.6, 1.6, [24, 10, 12, 80]); // mancha de refrigerante
+  p.speckle(rng, [[150, 130, 100, 50]], 12);
+}
+
+/** Parede vista de cima (o topo das divisórias e das paredes de fora): cinza quente, quina de cima mais clara. */
+function drawMallWallTop(p: Pixels, rng: Rng): void {
+  p.fill(MALL.wallTop);
+  p.speckle(rng, [MALL.wallTopDark, MALL.wallTopLight], 26);
+  p.rect(0, 0, T, 1, MALL.wallTopLight);
+  p.rect(0, 0, 1, T, MALL.wallTopLight);
+  p.rect(T - 1, 0, 1, T, MALL.wallTopDark);
+  p.rect(0, T - 1, T, 1, MALL.wallTopDark);
+  let x = 4 + randInt(rng, 8);
+  for (let y = 2; y < 2 + 4 + randInt(rng, 6); y++) {
+    p.set(x, y, MALL.wallTopDark);
+    x = clamp15(x + randInt(rng, 3) - 1);
+  }
+}
+
+/** Topo, reboco creme e rodapé: o começo de toda parede vista de frente. */
+function mallWallBase(p: Pixels, rng: Rng): void {
+  p.fill(MALL.wall);
+  p.speckle(rng, [MALL.wallDark, MALL.wallLight], 22);
+  p.rect(0, 0, T, 3, MALL.wallTop);
+  p.rect(0, 0, T, 1, MALL.wallTopLight);
+  p.rect(0, 3, T, 1, MALL.wallDark);
+  p.rect(0, 13, T, 3, MALL.baseboard);
+  p.rect(0, 13, T, 1, MALL.wallDark);
+  for (let k = 0; k < 3; k++) {
+    const x = randInt(rng, T);
+    for (let y = 4; y < 4 + 2 + randInt(rng, 7); y++) p.set(x, y, MALL.stain); // infiltração escorrendo
+  }
+}
+
+/** Parede do shopping vista de frente: lisa, tomada pelo cipó (com o reboco caído) ou com um painel de propaganda. */
+function mallWall(kind: 'plain' | 'vines' | 'ad') {
+  return (p: Pixels, rng: Rng) => {
+    mallWallBase(p, rng);
+    if (kind === 'vines') {
+      p.rect(9, 6, 5, 4, BRICK); // o reboco caiu: aparece o tijolo
+      for (const x of [9, 12]) p.set(x, 7, S.rustLight);
+      p.rect(9, 8, 5, 1, MALL.stain);
+      for (let k = 0; k < 4; k++) {
+        let x = randInt(rng, T);
+        for (let y = 3; y < 5 + randInt(rng, 10); y++) {
+          p.set(x, y, S.vine);
+          if (rng() < 0.45) p.set(x + (rng() < 0.5 ? -1 : 1), y, rng() < 0.5 ? S.vineLight : S.vineDark);
+          if (rng() < 0.3) x = clamp15(x + randInt(rng, 3) - 1);
+        }
+      }
+    } else if (kind === 'ad') {
+      // painel luminoso apagado: uma praia desbotada (propaganda de nada: sem marca nenhuma)
+      p.rect(2, 4, 12, 9, MALL.frameDark);
+      p.rect(3, 5, 10, 4, hex('#9cc3d0'));
+      p.rect(3, 8, 10, 1, hex('#5f9fc0'));
+      p.rect(3, 9, 10, 3, hex('#e3cf8f'));
+      p.disc(10, 6.5, 1.4, hex('#f6d36a'));
+      p.rect(3, 5, 10, 7, [255, 255, 255, 60]);
+      for (let k = 0; k < 4; k++) p.set(4 + k, 9 - k, [40, 40, 40, 120]); // rachadura no acrílico
+    }
+  };
+}
+
+/**
+ * A parte de cima da frente de uma loja: o letreiro apagado (sem nome de ninguém) ou só a parede. Vai na camada
+ * "acima": quem entra pela porta passa por baixo dele.
+ */
+function storeSign(color: RGBA | null) {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(MALL.wall);
+    p.speckle(rng, [MALL.wallDark, MALL.wallLight], 16);
+    p.rect(0, 0, T, 3, MALL.wallTop);
+    p.rect(0, 0, T, 1, MALL.wallTopLight);
+    p.rect(0, 3, T, 1, MALL.wallDark);
+    if (color) {
+      p.rect(0, 5, T, 7, color);
+      p.rect(0, 5, T, 1, [255, 255, 255, 70]);
+      p.rect(0, 11, T, 1, [0, 0, 0, 60]);
+      for (let x = 1; x < 15; x += 3) if (rng() < 0.75) p.rect(x, 7, 2, 3, [255, 255, 255, 110]); // letras apagadas
+      p.set(randInt(rng, T), 6 + randInt(rng, 5), [0, 0, 0, 90]);
+    } else {
+      const x = randInt(rng, T);
+      for (let y = 4; y < 4 + 2 + randInt(rng, 6); y++) p.set(x, y, MALL.stain);
+    }
+    p.rect(0, 13, T, 3, MALL.frame); // a viga em cima da vitrine
+    p.rect(0, 13, T, 1, MALL.frameLight);
+    p.rect(0, 15, T, 1, MALL.frameDark);
+  };
+}
+
+/** A parte de baixo da frente de uma loja: o pilar entre duas lojas, porta de aço, vitrine quebrada ou a entrada. */
+function storeFront(kind: 'pillar' | 'shutter' | 'window' | 'door') {
+  return (p: Pixels, rng: Rng) => {
+    if (kind === 'door') {
+      // entrada aberta: o chão (na sombra) passa por baixo; batentes nos lados, a porta de vidro quebrada encostada
+      mallFloor('plain')(p, rng);
+      p.rect(0, 0, T, T, [24, 20, 14, 80]);
+      p.rect(0, 0, T, 2, [12, 12, 12, 110]);
+      p.rect(0, 0, 2, T, MALL.frame);
+      p.rect(0, 0, 1, T, MALL.frameLight);
+      p.rect(14, 0, 2, T, MALL.frame);
+      p.rect(15, 0, 1, T, MALL.frameDark);
+      for (let y = 2; y < 12; y++) p.rect(2, y, y > 8 ? 2 : 3, 1, MALL.glassPane);
+      p.set(3, 4, MALL.glassLight);
+      for (let k = 0; k < 7; k++) p.set(4 + randInt(rng, 10), 11 + randInt(rng, 4), [190, 225, 232, 220]); // cacos
+      return;
+    }
+    p.fill(MALL.wall);
+    p.speckle(rng, [MALL.wallDark, MALL.wallLight], 18);
+    if (kind === 'pillar') {
+      p.rect(0, 0, 2, T, MALL.wallDark);
+      p.rect(14, 0, 2, T, MALL.wallDark);
+      p.rect(0, 13, T, 3, MALL.baseboard);
+      p.rect(0, 13, T, 1, MALL.wallDark);
+      const x = 4 + randInt(rng, 8);
+      for (let y = 1; y < 1 + 3 + randInt(rng, 7); y++) p.set(x, y, MALL.stain);
+      return;
+    }
+    if (kind === 'shutter') {
+      for (let y = 0; y < 15; y++) p.rect(0, y, T, 1, y % 2 ? S.shutterDark : S.shutter);
+      p.rect(0, 0, T, 1, S.shutterLight);
+      for (let k = 0; k < 16; k++) p.set(randInt(rng, T), 6 + randInt(rng, 9), k % 2 ? S.rust : S.rustDark);
+      p.rect(7, 12, 2, 2, S.ironDark); // cadeado
+      if (rng() < 0.7) for (let x = 2; x < 13; x++) p.set(x, 7 + Math.round(Math.sin(x * 0.9) * 1.3), G.graffiti[x % 4]!);
+      p.rect(0, 15, T, 1, MALL.baseboard);
+      return;
+    }
+    // vitrine quebrada: o vidro escuro, um manequim lá dentro e o buraco no vidro
+    p.rect(0, 0, T, 14, MALL.glassDark);
+    const dress = MALL.signs[randInt(rng, MALL.signs.length)]!;
+    p.disc(8, 3.5, 1.7, MALL.skin);
+    p.rect(6, 5, 5, 6, dress);
+    p.rect(5, 5, 1, 4, MALL.skin);
+    p.rect(11, 5, 1, 4, MALL.skinDark);
+    p.rect(7, 11, 1, 3, MALL.skin);
+    p.rect(9, 11, 1, 3, MALL.skinDark);
+    p.rect(0, 0, T, 14, [150, 190, 200, 45]); // o vidro
+    for (let k = 0; k < 5; k++) p.set(1 + k, 6 - k, [210, 235, 240, 120]); // reflexo
+    const cx = 12 + randInt(rng, 2);
+    const cy = 3 + randInt(rng, 3);
+    for (let a = 0; a < 4; a++) {
+      for (let r = 1; r < 3; r++) p.set(cx + Math.cos(a * 1.6 + 0.4) * r, cy + Math.sin(a * 1.6 + 0.4) * r, [220, 240, 245, 150]); // trincado
+    }
+    p.set(cx, cy, MALL.ink); // o furo da pedrada
+    p.rect(0, 0, 1, 14, MALL.frame);
+    p.rect(15, 0, 1, 14, MALL.frameDark);
+    p.rect(0, 14, T, 2, MALL.frame);
+    p.rect(0, 15, T, 1, MALL.frameDark);
+  };
+}
+
+/** Vitrine do supermercado: o vidro escuro com os cartazes de oferta desbotados colados por dentro (sem marca). */
+function drawMarketWindow(p: Pixels, rng: Rng): void {
+  p.fill(MALL.glassDark);
+  p.rect(0, 0, T, 14, [150, 190, 200, 40]);
+  for (const [x, y, w, h, c] of [[2, 2, 5, 6, '#e8c547'], [9, 4, 5, 5, '#d9534a'], [4, 9, 4, 4, '#ece6d8']] as const) {
+    p.rect(x, y, w, h, hex(c));
+    p.rect(x, y, w, h, [230, 220, 190, 90]); // desbotou no sol
+    p.rect(x + 1, y + 1, w - 2, 1, [60, 40, 30, 150]); // o preço, que não dá mais para ler
+  }
+  for (let k = 0; k < 5; k++) p.set(1 + k, 7 - k, [210, 235, 240, 110]); // reflexo
+  if (rng() < 0.7) p.set(12, 11, MALL.ink);
+  p.rect(0, 0, 1, 14, MALL.frame);
+  p.rect(15, 0, 1, 14, MALL.frameDark);
+  p.rect(0, 14, T, 2, MALL.frame);
+  p.rect(0, 15, T, 1, MALL.frameDark);
+}
+
+/** Escadas rolantes paradas (2x2 tiles): uma sobe, outra desce, para o andar de cima, que desabou. */
+function drawEscalators(): Pixels {
+  const p = new Pixels(2 * T, 2 * T);
+  const rng = mulberry32(5150);
+  p.ellipse(16, 30.5, 16, 2, C.shadow);
+  for (const x0 of [3, 18]) {
+    for (let y = 3; y < 27; y++) {
+      p.rect(x0, y, 11, 1, y % 2 ? MALL.steelDark : MALL.frame); // degraus
+      for (let x = x0 + 1; x < x0 + 11; x += 3) p.set(x, y, MALL.frameDark);
+    }
+    for (let y = 3; y < 17; y++) p.rect(x0, y, 11, 1, [10, 12, 14, (17 - y) * 12]); // sobe para longe: escurece
+    p.rect(x0, 27, 11, 3, MALL.steelLight); // o pente de metal
+    for (let x = x0; x < x0 + 11; x += 2) p.rect(x, 28, 1, 2, MALL.steel);
+  }
+  // as laterais de vidro, com o corrimão de borracha preto
+  for (const [x0, w] of [[0, 3], [14, 4], [29, 3]] as const) {
+    p.rect(x0, 3, w, 27, MALL.glassPane);
+    p.rect(x0, 26, w, 4, MALL.steel); // a saia de metal
+  }
+  for (const x of [2, 14, 17, 29]) p.rect(x, 3, 1, 27, MALL.ink);
+  // o alto: o piso de cima caiu em cima das escadas
+  p.rect(0, 0, 32, 4, hex('#16171a'));
+  for (const [x, y, w, h] of [[1, 1, 7, 4], [8, 2, 6, 5], [15, 0, 5, 4], [20, 2, 7, 4], [26, 1, 5, 5], [4, 5, 4, 2]] as const) {
+    p.rect(x, y, w, h, S.concrete);
+    p.rect(x, y, w, 1, S.concreteLight);
+    p.rect(x, y + h - 1, w, 1, S.concreteDark);
+    if (rng() < 0.6) p.set(x + 1 + randInt(rng, Math.max(1, w - 2)), y + 1, S.crack);
+  }
+  for (let y = 0; y < 5; y++) p.set(12 + (y >> 1), y, S.rust); // vergalhão
+  let x = 30;
+  for (let y = 26; y > 8; y--) {
+    p.set(x, y, S.vine); // cipó subindo pelo vidro
+    if (rng() < 0.4) p.set(x - 1, y, S.vineLight);
+    if (rng() < 0.3) x = Math.max(29, Math.min(31, x + randInt(rng, 3) - 1));
+  }
+  p.outline(S.outline);
+  return p;
+}
+
+/** O chafariz do átrio (2x2 tiles): bacia de granito cheia de água da chuva, aguapés e a peça do meio quebrada. */
+function drawMallFountain(): Pixels {
+  const p = new Pixels(2 * T, 2 * T);
+  const rng = mulberry32(6262);
+  p.ellipse(16, 21, 15.5, 10, C.shadow);
+  p.ellipse(16, 18.5, 15, 11, MALL.graniteDark); // o lado de fora da bacia
+  p.ellipse(16, 15.5, 15, 11, MALL.graniteLight); // a borda
+  p.ellipse(16, 16, 12.5, 8.5, MALL.water); // a água da chuva
+  p.ellipse(15.5, 15, 10, 6, MALL.waterMid);
+  for (let k = 0; k < 6; k++) p.rect(7 + randInt(rng, 17), 12 + randInt(rng, 8), 2 + randInt(rng, 2), 1, MALL.waterLight);
+  // a coluna do meio quebrada e a cuia caída de lado
+  p.rect(14, 8, 4, 8, MALL.granite);
+  p.rect(14, 8, 4, 1, MALL.graniteLight);
+  p.rect(17, 8, 1, 8, MALL.graniteDark);
+  p.rect(14, 15, 4, 1, [30, 50, 45, 120]);
+  p.ellipse(22.5, 19, 3.5, 1.7, MALL.graniteLight);
+  p.ellipse(22.5, 19.6, 3, 1, MALL.graniteDark);
+  for (const [x, y, flower] of [[8, 16, false], [11, 20, true], [24, 13, false], [19, 21, false], [9, 12, true], [21, 16, false]] as const) {
+    p.disc(x, y, 1.7, S.herb); // aguapés
+    p.set(x - 1, y - 1, S.herbLight);
+    if (flower) p.set(x, y - 1, hex('#b98ad8'));
+  }
+  p.outline(S.outline);
+  return p;
+}
+
+/** Floreira de granito com uma costela-de-adão que cresceu demais e passa da borda. */
+function drawPlanter(p: Pixels): void {
+  p.ellipse(8, 15, 7, 1.4, C.shadow);
+  p.rect(2, 9, 12, 6, MALL.granite);
+  p.rect(2, 9, 12, 1, MALL.graniteLight);
+  p.rect(2, 14, 12, 1, MALL.graniteDark);
+  p.rect(13, 10, 1, 4, MALL.graniteDark);
+  for (const [cx, cy, r] of [[4, 7.5, 3], [11, 6, 3.4], [7.5, 3.5, 3], [13, 9, 2.2], [3, 10, 2]] as const) {
+    p.disc(cx, cy, r, S.vine);
+    p.disc(cx - 0.7, cy - 0.7, r * 0.6, S.vineLight);
+    for (let k = 0; k < r; k++) p.set(cx + k * 0.7, cy + k * 0.3, S.vineDark); // a nervura
+  }
+  p.outline(S.outline);
+}
+
+/** Quiosque no corredor (2 tiles): balcão de vidro com capinhas e bugigangas, e a plaquinha apagada em cima. */
+function drawKiosk(p: Pixels): void {
+  p.ellipse(16, 14.5, 15, 1.6, C.shadow);
+  p.rect(1, 5, 30, 9, MALL.frameDark);
+  p.rect(2, 6, 28, 5, MALL.glassDark);
+  for (let k = 0; k < 9; k++) p.rect(3 + k * 3, 8 + (k % 2), 2, 2, MALL.product[k % MALL.product.length]!);
+  p.rect(2, 6, 28, 1, MALL.glassLight);
+  p.rect(1, 11, 30, 3, MALL.steel);
+  p.rect(1, 11, 30, 1, MALL.steelLight);
+  p.rect(15, 2, 2, 3, MALL.frame);
+  p.rect(9, 0, 14, 3, MALL.signs[1]!);
+  for (let x = 11; x < 21; x += 3) p.rect(x, 1, 2, 1, [255, 255, 255, 110]);
+  p.outline(S.outline);
+}
+
+/** Totem "você está aqui": a planta do shopping (o pontinho vermelho é você). */
+function drawDirectory(p: Pixels): void {
+  p.ellipse(8, 15, 5, 1.2, C.shadow);
+  p.rect(4, 1, 8, 13, MALL.frameDark);
+  p.rect(5, 2, 6, 9, hex('#ebe6d9'));
+  p.rect(6, 3, 2, 2, MALL.signs[0]!);
+  p.rect(9, 3, 1, 3, MALL.signs[1]!);
+  p.rect(6, 6, 4, 1, MALL.wallTop);
+  p.rect(6, 8, 2, 2, MALL.signs[2]!);
+  p.set(9, 9, hex('#e8202a'));
+  p.rect(5, 11, 6, 1, MALL.frame);
+  p.rect(3, 13, 10, 2, MALL.granite);
+  p.outline(S.outline);
+}
+
+/** Cacos de vidro no chão (por cima de qualquer piso), brilhando. */
+function drawGlassShards(p: Pixels, rng: Rng): void {
+  for (let k = 0; k < 8; k++) {
+    const x = 1 + randInt(rng, 13);
+    const y = 1 + randInt(rng, 13);
+    p.set(x, y, [235, 250, 255, 255]);
+    p.set(x + 1, y, [150, 195, 205, 240]);
+    if (rng() < 0.6) p.set(x, y + 1, [120, 165, 178, 230]);
+    if (rng() < 0.4) p.set(x + 1, y + 1, [90, 120, 130, 160]);
+  }
+}
+
+/** Flores do ipê-amarelo caídas no chão (por cima de qualquer piso). */
+function drawPetals(p: Pixels, rng: Rng): void {
+  for (let k = 0; k < 16; k++) {
+    const x = randInt(rng, T);
+    const y = randInt(rng, T);
+    p.set(x, y, rng() < 0.6 ? G.ipeYellow : G.ipeYellowLight);
+    if (rng() < 0.4) p.set(x + 1, y, G.ipeYellowDark);
+  }
+}
+
+/** Gôndola do supermercado vista de frente: três prateleiras de produtos desbotados (ou quase vazias). */
+function drawShelf(empty: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    p.rect(0, 0, T, 2, MALL.frameLight); // o topo, visto de cima
+    p.rect(0, 2, T, 1, MALL.frame);
+    p.rect(0, 3, T, 13, hex('#3b3e42'));
+    for (const y of [7, 11, 15]) {
+      for (let x = 1; x < 15; ) {
+        const w = Math.min(1 + randInt(rng, 3), 15 - x);
+        if (rng() < (empty ? 0.16 : 0.88)) {
+          const h = 2 + randInt(rng, 2);
+          p.rect(x, y - h, w, h, MALL.product[randInt(rng, MALL.product.length)]!);
+          p.rect(x, y - h, w, 1, [255, 255, 255, 70]);
+        }
+        x += w + (rng() < 0.3 ? 1 : 0);
+      }
+      p.rect(0, y, T, 1, MALL.frame); // a prateleira
+    }
+    p.rect(0, 3, 1, 13, MALL.frameDark);
+    p.rect(15, 3, 1, 13, MALL.frameDark);
+    p.rect(1, 3, 14, 12, [150, 142, 128, 45]); // poeira em tudo
+    if (empty) {
+      for (let k = 0; k < 4; k++) p.set(1 + k, 3 + k, [220, 220, 220, 120]); // teia
+      for (let k = 0; k < 3; k++) p.set(1 + k, 6 - k, [220, 220, 220, 90]);
+      let x = 10 + randInt(rng, 4);
+      for (let y = 15; y > 6; y--) {
+        p.set(x, y, S.vine);
+        if (rng() < 0.4) p.set(x + 1, y, S.vineLight);
+        if (rng() < 0.3) x = Math.max(1, Math.min(14, x + randInt(rng, 3) - 1));
+      }
+    }
+  };
+}
+
+/** Carrinho de supermercado largado, com folhas secas dentro. */
+function drawCart(p: Pixels, rng: Rng): void {
+  p.ellipse(8, 14.5, 6, 1.3, C.shadow);
+  for (let y = 4; y <= 10; y++) {
+    for (let x = 3; x <= 12; x++) {
+      if (x === 3 || x === 12 || y === 4 || y === 10 || x % 3 === 0 || y % 3 === 1) p.set(x, y, MALL.frameLight);
+    }
+  }
+  for (let k = 0; k < 6; k++) p.set(4 + randInt(rng, 8), 5 + randInt(rng, 3), rng() < 0.5 ? S.deadWoodLight : S.dry);
+  p.rect(12, 3, 3, 1, MALL.seat); // a pega vermelha
+  p.rect(4, 11, 8, 1, MALL.frame);
+  for (const x of [4, 10]) p.rect(x, 12, 2, 2, S.tire);
+}
+
+/** Caixa do supermercado: balcão com a esteira, a registradora apagada e a plaquinha com o número. */
+function drawCheckout(p: Pixels): void {
+  p.ellipse(8, 14.5, 7, 1.4, C.shadow);
+  p.rect(1, 6, 14, 8, hex('#d8d2c4'));
+  p.rect(1, 6, 14, 3, hex('#2b2d30')); // a esteira
+  for (let x = 2; x < 14; x += 2) p.set(x, 7, hex('#45484c'));
+  p.rect(10, 2, 4, 4, MALL.frameDark); // a registradora
+  p.rect(11, 3, 2, 1, MALL.ink);
+  p.rect(2, 2, 1, 4, MALL.frame);
+  p.rect(1, 0, 4, 3, MALL.signs[2]!);
+  p.set(2, 1, MALL.ink);
+  p.rect(1, 12, 14, 2, hex('#b6af9f'));
+  p.outline(S.outline);
+}
+
+/** Mesa redonda da praça de alimentação com 4 cadeiras laranja e uma bandeja esquecida (ou tudo virado no chão). */
+function drawFoodTable(fallen: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    if (fallen) {
+      p.ellipse(8, 13, 7, 2, C.shadow);
+      p.ellipse(7, 8, 5, 5.5, MALL.table); // o tampo, de pé
+      p.ellipse(7, 8, 3.6, 4, MALL.tableDark);
+      p.rect(11, 7, 4, 2, MALL.frame); // o pé da mesa
+      p.rect(1, 12, 3, 3, MALL.chair);
+      p.rect(1, 12, 3, 1, MALL.chairDark);
+      p.rect(12, 1, 3, 3, MALL.chair);
+      p.rect(14, 1, 1, 3, MALL.chairDark);
+      p.set(5, 14, [250, 250, 250, 255]); // o copo
+      p.ellipse(7, 14.5, 2, 0.8, [90, 40, 20, 90]);
+      p.outline(S.outline);
+      return;
+    }
+    p.ellipse(8, 10.5, 7, 4.5, C.shadow);
+    for (const [x, y] of [[7, 0], [7, 13], [0, 7], [13, 7]] as const) {
+      p.rect(x, y, 3, 3, MALL.chair);
+      p.rect(x, y, 3, 1, MALL.chairDark);
+    }
+    p.disc(8, 8, 5, MALL.tableDark);
+    p.disc(8, 7.5, 4.5, MALL.table);
+    p.rect(5, 6, 4, 3, MALL.tray);
+    p.set(6, 7, hex('#e8c547'));
+    p.disc(10.5, 9, 1, hex('#f4f1ea'));
+    if (rng() < 0.5) p.set(10, 5, S.deadWoodLight); // uma folha seca
+    p.outline(S.outline);
+  };
+}
+
+/** Lanchonete da praça de alimentação: em cima, o painel do cardápio (fotos desbotadas); embaixo, o balcão. */
+function foodStall(part: 'menu' | 'counter') {
+  return (p: Pixels, rng: Rng) => {
+    if (part === 'menu') {
+      mallWallBase(p, rng);
+      p.rect(1, 4, 14, 9, hex('#26292d'));
+      for (const [x, k] of [[2, 0], [6, 1], [10, 2]] as const) {
+        p.rect(x, 5, 3, 3, MALL.product[(k * 2 + randInt(rng, 2)) % MALL.product.length]!); // a foto do lanche
+        p.rect(x, 9, 3, 1, hex('#8a8d90')); // o preço apagado
+        p.rect(x, 11, 2, 1, hex('#5c5f63'));
+      }
+      p.rect(1, 4, 14, 9, [255, 255, 255, 25]);
+      return;
+    }
+    p.fill(MALL.steel);
+    p.rect(0, 0, T, 4, MALL.steelLight); // o tampo do balcão
+    p.rect(0, 4, T, 1, MALL.steelDark);
+    for (let x = 1; x < T; x += 3) p.rect(x, 5, 1, 9, hex('#9a9ea2'));
+    p.rect(2, 1, 4, 2, MALL.tray);
+    p.rect(10, 1, 2, 2, hex('#f4f1ea')); // porta-guardanapo
+    p.rect(0, 14, T, 2, MALL.baseboard);
+    for (let k = 0; k < 6; k++) p.set(randInt(rng, T), 6 + randInt(rng, 8), S.rust);
+  };
+}
+
+/** Fileira de poltronas do cinema, vistas de trás (todas viradas para a tela, no norte). */
+function drawCinemaSeats(p: Pixels, rng: Rng): void {
+  for (const x of [0, 8]) {
+    p.rect(x + 1, 1, 6, 3, MALL.seatLight); // o assento, quase escondido
+    p.rect(x + 1, 4, 6, 9, MALL.seatDark); // as costas da poltrona
+    p.rect(x + 1, 4, 6, 1, MALL.seat);
+    p.rect(x, 3, 1, 10, hex('#2a2a2e')); // o braço
+  }
+  p.rect(15, 3, 1, 10, hex('#2a2a2e'));
+  p.rect(0, 13, T, 1, [0, 0, 0, 90]);
+  if (rng() < 0.8) p.rect(3, 7, 2, 2, hex('#d9c9a0')); // a espuma aparecendo
+  p.outline(S.outline);
+}
+
+/** A tela do cinema (na parede do norte): lona clara manchada; a rasgada tem fendas escuras. */
+function cinemaScreen(torn: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(MALL.screen);
+    p.speckle(rng, [hex('#d6d0c2'), hex('#f1ede4')], 30);
+    p.ellipse(3 + rng() * 10, 3 + rng() * 10, 3, 2, [150, 140, 110, 50]); // umidade
+    if (!torn) return;
+    for (let k = 0; k < 2; k++) {
+      let x = 3 + randInt(rng, 10);
+      for (let y = 0; y < 8 + randInt(rng, 8); y++) {
+        p.set(x, y, MALL.ink);
+        if (rng() < 0.5) p.set(x + 1, y, hex('#2a2a2a'));
+        if (rng() < 0.3) x = clamp15(x + randInt(rng, 3) - 1);
+      }
+    }
+  };
+}
+
+/** Cartaz de filme na frente do cinema (de lenda, claro, e sem nome de filme): o Saci na lua ou a Mula pegando fogo. */
+function cinemaPoster(kind: 'saci' | 'mula') {
+  return (p: Pixels, rng: Rng) => {
+    mallWallBase(p, rng);
+    p.rect(0, 0, T, 3, MALL.wall);
+    p.rect(3, 1, 10, 12, MALL.frame);
+    if (kind === 'saci') {
+      p.rect(4, 2, 8, 10, hex('#1c2238'));
+      p.disc(9.5, 4.5, 1.8, hex('#f2e6b0')); // a lua
+      p.rect(6, 6, 2, 3, MALL.ink); // o Saci, numa perna só
+      p.rect(7, 9, 1, 2, MALL.ink);
+      p.rect(5, 7, 1, 1, MALL.ink);
+      p.rect(6, 5, 2, 1, hex('#d0262e')); // o gorro vermelho
+      p.set(7, 4, hex('#d0262e'));
+    } else {
+      p.rect(4, 2, 8, 10, hex('#3a0f12'));
+      p.rect(5, 7, 5, 2, MALL.ink); // a Mula, sem cabeça
+      p.rect(5, 9, 1, 2, MALL.ink);
+      p.rect(9, 9, 1, 2, MALL.ink);
+      p.rect(10, 6, 1, 2, MALL.ink);
+      for (const [x, y, c] of [[10, 5, '#ffcf4a'], [11, 4, '#ff8a2a'], [10, 3, '#ffe07a'], [11, 6, '#e0482b']] as const) p.set(x, y, hex(c)); // fogo no pescoço
+    }
+    p.rect(4, 11, 8, 1, hex('#c9a43a')); // a faixa do título, apagada
+  };
+}
+
+/** O letreiro do cinema (4 tiles, na camada "acima", em cima da entrada): CINEMA e as lâmpadas, quase todas queimadas. */
+function drawCinemaSign(p: Pixels): void {
+  const rng = mulberry32(9090);
+  p.fill(hex('#2a1d1a'));
+  p.rect(0, 0, p.width, 1, hex('#4a3a33'));
+  for (let x = 2; x < p.width - 1; x += 4) for (const y of [1, 14]) p.set(x, y, rng() < 0.15 ? hex('#ffe08a') : hex('#8c8270'));
+  p.rect(3, 3, p.width - 6, 10, hex('#ece2c8'));
+  for (let k = 0; k < 36; k++) p.set(3 + randInt(rng, p.width - 6), 3 + randInt(rng, 10), [120, 100, 70, 70]);
+  const text = 'CINEMA';
+  signText(p, text, Math.floor((p.width - signTextWidth(text)) / 2), 4, hex('#a3232f'));
+  for (let k = 0; k < 6; k++) p.set(40 + k, 3 + k, [60, 50, 40, 140]); // rachadura no acrílico
+}
+
+/** Carrinho de pipoca do cinema: a caixa de vidro (com pipoca velha) em cima do carrinho vermelho. */
+function drawPopcornCart(p: Pixels): void {
+  p.ellipse(8, 15, 6, 1.3, C.shadow);
+  p.rect(3, 8, 10, 5, MALL.seat);
+  p.rect(3, 8, 10, 1, MALL.seatLight);
+  p.rect(4, 2, 8, 6, MALL.glassPane);
+  p.rect(4, 5, 8, 3, hex('#f1e4b0'));
+  for (const [x, y] of [[5, 5], [8, 4], [10, 5], [6, 6]] as const) p.set(x, y, hex('#fff6d8'));
+  p.rect(4, 1, 8, 1, MALL.seat);
+  p.rect(3, 13, 2, 2, S.tire);
+  p.rect(11, 13, 2, 2, S.tire);
+  p.outline(S.outline);
+}
+
+/** Manequim de loja, de pé, careca, com a roupa desbotada (de noite assusta). */
+function drawMannequin(p: Pixels, rng: Rng): void {
+  p.ellipse(8, 15, 4, 1.2, C.shadow);
+  p.rect(5, 14, 6, 1, MALL.frameDark);
+  p.rect(7, 12, 2, 2, MALL.frameDark);
+  p.rect(7, 10, 1, 3, MALL.skin);
+  p.rect(9, 10, 1, 3, MALL.skinDark);
+  p.rect(5, 5, 6, 6, MALL.signs[randInt(rng, MALL.signs.length)]!);
+  p.rect(5, 5, 6, 1, [255, 255, 255, 60]);
+  p.rect(4, 5, 1, 4, MALL.skin);
+  if (rng() < 0.5) p.rect(11, 5, 1, 4, MALL.skinDark); // às vezes falta um braço
+  p.disc(8, 3, 2, MALL.skin);
+  p.set(9, 2, MALL.skinDark);
+  p.outline(S.outline);
+}
+
+/** Arara de roupas: a barra de metal com roupas velhas penduradas. */
+function drawClothesRack(p: Pixels, rng: Rng): void {
+  p.ellipse(8, 15, 7, 1.2, C.shadow);
+  for (let x = 2; x < 14; x += 2) {
+    p.rect(x, 4, 2, 6 + randInt(rng, 3), MALL.product[randInt(rng, MALL.product.length)]!);
+    p.rect(x, 4, 2, 6, [120, 110, 95, 50]);
+  }
+  p.rect(1, 3, 14, 1, MALL.frameLight);
+  p.rect(1, 3, 1, 12, MALL.frame);
+  p.rect(14, 3, 1, 12, MALL.frame);
+  p.outline(S.outline);
+}
+
+/** Pele de vidro do prédio do shopping vista da rua: placas de vidro esverdeado, reflexo e uma placa quebrada. */
+function mallCurtain(p: Pixels, rng: Rng, broken: boolean): void {
+  p.fill(MALL.glass);
+  for (let y = 0; y < p.height; y++) for (let x = 0; x < p.width; x++) if ((x + y * 0.6) % 11 < 2) p.set(x, y, [168, 205, 212, 70]);
+  for (let x = 0; x < p.width; x += 8) p.rect(x, 0, 1, p.height, MALL.frameDark); // montantes
+  p.rect(0, 7, p.width, 1, MALL.frameDark);
+  p.rect(0, 0, p.width, 2, S.concreteDark); // a laje
+  p.rect(0, 13, p.width, 3, S.concreteLight); // a marquise
+  p.rect(0, 15, p.width, 1, S.concreteDark);
+  if (broken) {
+    p.rect(9, 8, 6, 5, MALL.glassDark);
+    for (const [x, y] of [[9, 8], [10, 9], [14, 8], [13, 12], [9, 11]] as const) p.set(x, y, MALL.glassLight);
+  }
+}
+
+/** Andar de cima da fachada do shopping (vista da rua): a pele de vidro, com cipó subindo. */
+function drawMallFrontUp(p: Pixels, rng: Rng): void {
+  mallCurtain(p, rng, rng() < 0.5);
+  let x = 1 + randInt(rng, 4);
+  for (let y = 15; y > 2 + randInt(rng, 5); y--) {
+    p.set(x, y, S.vine);
+    if (rng() < 0.45) p.set(x + 1, y, rng() < 0.5 ? S.vineLight : S.vineDark);
+    if (rng() < 0.3) x = clamp15(x + randInt(rng, 3) - 1);
+  }
+}
+
+/** O letreiro do shopping (4 tiles, no andar de cima, em cima da entrada): SHOPPING em azul — o I caiu na marquise. */
+function drawMallSign(p: Pixels): void {
+  const rng = mulberry32(4711);
+  mallCurtain(p, rng, false);
+  p.rect(4, 2, p.width - 8, 11, hex('#efece3'));
+  p.rect(4, 2, p.width - 8, 1, hex('#ffffff'));
+  p.rect(4, 12, p.width - 8, 1, hex('#c9c4b6'));
+  for (let k = 0; k < 24; k++) p.set(4 + randInt(rng, p.width - 8), 3 + randInt(rng, 9), [120, 110, 90, 60]);
+  const text = 'SHOPPING';
+  const x0 = Math.floor((p.width - signTextWidth(text)) / 2);
+  signText(p, text, x0, 4, hex('#2f5f8f'), [5]);
+  const ix = x0 + signTextWidth('SHOPP') + 1; // onde ficava o I: ele está deitado na marquise
+  p.rect(ix - 2, 14, 7, 1, hex('#2f5f8f'));
+  p.set(ix - 2, 13, hex('#2f5f8f'));
+  p.set(ix + 4, 13, hex('#2f5f8f'));
+}
+
+/** Andar de baixo da fachada do shopping (vista da rua): as vitrines altas, trincadas. */
+function drawMallFrontGlass(p: Pixels, rng: Rng): void {
+  p.fill(MALL.glass);
+  p.rect(0, 0, T, 3, [16, 18, 20, 255]); // sombra da marquise
+  for (let y = 3; y < 14; y++) for (let x = 0; x < T; x++) if ((x + y) % 9 < 2) p.set(x, y, [168, 205, 212, 60]);
+  p.rect(0, 3, T, 11, [10, 16, 20, 60]);
+  p.rect(0, 0, 1, 14, MALL.frameDark);
+  p.rect(8, 0, 1, 14, MALL.frameDark);
+  for (let k = 0; k < 4; k++) p.set(11 + k, 6 + (k >> 1), [220, 240, 245, 110]); // uma trinca só
+  for (let k = 0; k < 8; k++) p.set(1 + randInt(rng, 14), 10 + randInt(rng, 4), [70, 80, 70, 90]); // sujeira
+  p.rect(0, 14, T, 2, S.concreteDark);
+  for (let x = 0; x < T; x++) if (rng() < 0.5) p.set(x, 15, rng() < 0.5 ? S.moss : S.mossDark);
+}
+
+/** A entrada do shopping (vista da rua): portas de vidro abertas e quebradas, e o escuro lá dentro. */
+function drawMallFrontDoor(p: Pixels, rng: Rng): void {
+  drawConcrete(p, rng, false);
+  p.rect(0, 0, T, 11, hex('#101418'));
+  for (let y = 11; y < 14; y++) p.rect(0, y, T, 1, [16, 20, 24, 200 - (y - 11) * 60]);
+  p.rect(0, 0, T, 2, [6, 8, 10, 255]);
+  p.rect(0, 0, 2, 14, MALL.frame);
+  p.rect(14, 0, 2, 14, MALL.frame);
+  p.rect(0, 0, 1, 14, MALL.frameLight);
+  for (let y = 2; y < 11; y++) p.rect(2, y, y > 7 ? 2 : 3, 1, MALL.glassPane);
+  for (let k = 0; k < 6; k++) p.set(4 + randInt(rng, 9), 12 + randInt(rng, 4), [190, 225, 232, 230]);
+}
+
+const escalators = once(drawEscalators);
+const mallFountain = once(drawMallFountain);
+
 export const TILES: TileDef[] = [
   { key: 'grass', draw: grass(0) },
   { key: 'grass_tufts', draw: grass(1) },
@@ -2723,6 +3493,70 @@ export const TILES: TileDef[] = [
   { key: 'turnstile', collides: true, shootOver: true, draw: drawTurnstile },
   { key: 'ticket_booth_left', collides: true, draw: halfOf(drawTicketBooth, 0) },
   { key: 'ticket_booth_right', collides: true, draw: halfOf(drawTicketBooth, 1) },
+  // ---- Shopping do Largo Treze ----
+  { key: 'mall_floor', draw: mallFloor('plain') },
+  { key: 'mall_floor_cracked', draw: mallFloor('cracked') },
+  { key: 'mall_floor_moss', draw: mallFloor('moss') },
+  { key: 'mall_floor_sun', light: { color: '#f2dca2', radius: 20 }, draw: mallFloor('sun') },
+  { key: 'mall_puddle', draw: mallFloor('puddle') },
+  { key: 'market_floor', draw: drawMarketFloor },
+  { key: 'cinema_carpet', draw: drawCinemaCarpet },
+  { key: 'mall_wall_top', collides: true, draw: drawMallWallTop },
+  { key: 'mall_wall', collides: true, draw: mallWall('plain') },
+  { key: 'mall_wall_vines', collides: true, draw: mallWall('vines') },
+  { key: 'mall_wall_ad', collides: true, draw: mallWall('ad') },
+  // a frente das lojas: o letreiro vai na camada "acima" (quem entra pela porta passa por baixo); o resto bloqueia
+  { key: 'store_sign_a', draw: storeSign(MALL.signs[0]!) },
+  { key: 'store_sign_b', draw: storeSign(MALL.signs[1]!) },
+  { key: 'store_sign_c', draw: storeSign(MALL.signs[2]!) },
+  { key: 'store_sign_none', draw: storeSign(null) },
+  { key: 'store_pillar', collides: true, draw: storeFront('pillar') },
+  { key: 'store_shutter', collides: true, draw: storeFront('shutter') },
+  { key: 'store_window', collides: true, draw: storeFront('window') },
+  { key: 'store_door', draw: storeFront('door') },
+  { key: 'escalator_tl', collides: true, draw: pieceOf(escalators, 0, 0) },
+  { key: 'escalator_tr', collides: true, draw: pieceOf(escalators, 1, 0) },
+  { key: 'escalator_bl', collides: true, draw: pieceOf(escalators, 0, 1) },
+  { key: 'escalator_br', collides: true, draw: pieceOf(escalators, 1, 1) },
+  { key: 'mall_fountain_tl', collides: true, shootOver: true, draw: pieceOf(mallFountain, 0, 0) },
+  { key: 'mall_fountain_tr', collides: true, shootOver: true, draw: pieceOf(mallFountain, 1, 0) },
+  { key: 'mall_fountain_bl', collides: true, shootOver: true, draw: pieceOf(mallFountain, 0, 1) },
+  { key: 'mall_fountain_br', collides: true, shootOver: true, draw: pieceOf(mallFountain, 1, 1) },
+  { key: 'planter', collides: true, shootOver: true, draw: drawPlanter },
+  { key: 'kiosk_left', collides: true, shootOver: true, draw: halfOf(drawKiosk, 0) },
+  { key: 'kiosk_right', collides: true, shootOver: true, draw: halfOf(drawKiosk, 1) },
+  { key: 'mall_directory', collides: true, shootOver: true, draw: drawDirectory },
+  { key: 'glass_shards', draw: drawGlassShards },
+  { key: 'ipe_petals', draw: drawPetals },
+  { key: 'shelf', collides: true, draw: drawShelf(false) },
+  { key: 'shelf_empty', collides: true, draw: drawShelf(true) },
+  { key: 'cart', collides: true, shootOver: true, draw: drawCart },
+  { key: 'checkout', collides: true, shootOver: true, draw: drawCheckout },
+  { key: 'food_table', collides: true, shootOver: true, draw: drawFoodTable(false) },
+  { key: 'food_table_fallen', collides: true, shootOver: true, draw: drawFoodTable(true) },
+  { key: 'food_menu', collides: true, draw: foodStall('menu') },
+  { key: 'food_counter', collides: true, shootOver: true, draw: foodStall('counter') },
+  { key: 'cinema_seats', collides: true, shootOver: true, draw: drawCinemaSeats },
+  { key: 'cinema_screen', collides: true, draw: cinemaScreen(false) },
+  { key: 'cinema_screen_torn', collides: true, draw: cinemaScreen(true) },
+  { key: 'cinema_poster_saci', collides: true, draw: cinemaPoster('saci') },
+  { key: 'cinema_poster_mula', collides: true, draw: cinemaPoster('mula') },
+  { key: 'cinema_sign_1', draw: sliceOf(4, drawCinemaSign, 0) },
+  { key: 'cinema_sign_2', draw: sliceOf(4, drawCinemaSign, 1) },
+  { key: 'cinema_sign_3', draw: sliceOf(4, drawCinemaSign, 2) },
+  { key: 'cinema_sign_4', draw: sliceOf(4, drawCinemaSign, 3) },
+  { key: 'popcorn_cart', collides: true, shootOver: true, draw: drawPopcornCart },
+  { key: 'mannequin', collides: true, shootOver: true, draw: drawMannequin },
+  { key: 'clothes_rack', collides: true, shootOver: true, draw: drawClothesRack },
+  // a fachada do shopping em Santo Amaro (vista da rua); a porta é a saída para dentro
+  { key: 'mall_front_up', collides: true, draw: drawMallFrontUp },
+  { key: 'mall_sign_1', collides: true, draw: sliceOf(4, drawMallSign, 0) },
+  { key: 'mall_sign_2', collides: true, draw: sliceOf(4, drawMallSign, 1) },
+  { key: 'mall_sign_3', collides: true, draw: sliceOf(4, drawMallSign, 2) },
+  { key: 'mall_sign_4', collides: true, draw: sliceOf(4, drawMallSign, 3) },
+  { key: 'mall_front_glass', collides: true, draw: drawMallFrontGlass },
+  { key: 'mall_front_door', draw: drawMallFrontDoor },
+  { key: 'market_window', collides: true, draw: drawMarketWindow },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));

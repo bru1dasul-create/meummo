@@ -91,6 +91,9 @@ export class Session {
       case 'sell':
         this.lobby.realm.sell(this.player, msg.npc, msg.i, msg.n);
         break;
+      case 'quest':
+        this.lobby.realm.questAction(this.player, msg.act, msg.id, msg.npc);
+        break;
       case 'loaded':
         this.lobby.realm.loaded(this.player);
         break;

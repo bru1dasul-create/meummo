@@ -11,7 +11,9 @@ import { tiledFromAscii } from './helpers';
 
 const realMap = (id: string) => JSON.parse(readFileSync(`public/assets/maps/${id}.tmj`, 'utf8')) as TiledMap;
 const layerData = (map: TiledMap, name: string) => map.layers.find((l) => l.name === name)?.data as number[];
-const MAPS = ['refugio', 'santo-amaro', 'billings', 'terminal-santo-amaro'];
+const MAPS = ['refugio', 'santo-amaro', 'billings', 'terminal-santo-amaro', 'shopping-largo-treze'];
+/** Mínimo de árvores grandes de cada mapa (a cidade tem poucas; dentro do shopping, só as do jardim do átrio). */
+const MIN_TREES: Record<string, number> = { 'terminal-santo-amaro': 4, 'shopping-largo-treze': 2 };
 
 describe('camadas do mapa', () => {
   it('o que está na camada "acima" (copas) não bloqueia: dá para passar por baixo', () => {
@@ -55,7 +57,7 @@ describe('camadas do mapa', () => {
           }
         }
       }
-      expect(trees, id).toBeGreaterThan(id === 'terminal-santo-amaro' ? 4 : 40); // o terminal é cidade: poucas árvores
+      expect(trees, id).toBeGreaterThan(MIN_TREES[id] ?? 40);
     }
   });
 
@@ -80,7 +82,7 @@ describe('camadas do mapa', () => {
     expect(shore).toBeGreaterThan(100);
   });
 
-  it('a Billings liga com o Refúgio, usa só criaturas que existem e marca onde vão morar as lendas', () => {
+  it('a Billings liga com o Refúgio, tem o jacaré e o boto (criaturas que existem) e marca onde vai morar a Iara', () => {
     const billings = realMap('billings');
     const refugio = realMap('refugio');
     const objects = (map: TiledMap, layer: string) => map.layers.find((l) => l.name === layer)?.objects ?? [];
@@ -91,8 +93,9 @@ describe('camadas do mapa', () => {
     const areas = objects(billings, 'monstros');
     expect(areas.length).toBeGreaterThanOrEqual(5);
     for (const area of areas) expect(monsters.has(area.name!), area.name).toBe(true);
-    // as lendas (Iara, Boto, jacarés) ainda não existem: ficam numa camada que o servidor ignora
-    expect(objects(billings, 'lendas').map((a) => a.name)).toEqual(['iara', 'boto', 'jacare']);
+    // o jacaré e o boto já existem e moram lá; a Iara ainda não: fica numa camada que o servidor ignora
+    expect(areas.map((a) => a.name)).toEqual(expect.arrayContaining(['jacare', 'boto']));
+    expect(objects(billings, 'lendas').map((a) => a.name)).toEqual(['iara']);
     const map = GameMap.fromTiled(billings, 'billings');
     expect(map).toMatchObject({ name: 'Represa Billings', safe: false, respawnMap: 'refugio' });
     expect(map.monsterZones.map((z) => z.monster)).not.toContain('iara');
@@ -110,6 +113,43 @@ describe('camadas do mapa', () => {
     const monsters = loadMonsterDefs();
     for (const area of objects(terminal, 'monstros')) expect(monsters.has(area.name!), area.name).toBe(true);
     expect(GameMap.fromTiled(terminal, 'terminal-santo-amaro')).toMatchObject({ name: 'Terminal Santo Amaro', safe: false, respawnMap: 'refugio' });
+  });
+
+  it('o Shopping do Largo Treze liga com Santo Amaro (pela porta de vidro do prédio do largo) e dá para entrar em toda loja', () => {
+    const shopping = realMap('shopping-largo-treze');
+    const santoAmaro = realMap('santo-amaro');
+    const objects = (map: TiledMap, layer: string) => map.layers.find((l) => l.name === layer)?.objects ?? [];
+    const prop = (obj: { properties?: { name: string; value: unknown }[] }, name: string) => obj.properties?.find((p) => p.name === name)?.value;
+    const toMall = objects(santoAmaro, 'saidas').find((e) => prop(e, 'mapa') === 'shopping-largo-treze')!;
+    expect(prop(toMall, 'chegada')).toBe('entrada');
+    // a saída fica em cima da porta de vidro da fachada (o resto da fachada bloqueia)
+    const saDecor = layerData(santoAmaro, 'decor');
+    for (let x = toMall.x / 16; x < (toMall.x + toMall.width!) / 16; x++) {
+      expect(saDecor[(toMall.y / 16) * santoAmaro.width + x], `porta em x=${x}`).toBe(gid('mall_front_door'));
+    }
+    expect(objects(shopping, 'saidas').map((e) => [prop(e, 'mapa'), prop(e, 'chegada')])).toEqual([['santo-amaro', 'shopping']]);
+    const above = layerData(shopping, 'acima');
+    const decor = layerData(shopping, 'decor');
+    for (let i = 1; i <= 4; i++) expect(above, 'letreiro do cinema').toContain(gid(`cinema_sign_${i}`));
+    for (const key of ['shelf', 'checkout', 'food_table', 'cinema_seats', 'mall_fountain_tl', 'escalator_tl']) expect(decor, key).toContain(gid(key));
+    const monsters = loadMonsterDefs();
+    for (const area of objects(shopping, 'monstros')) expect(monsters.has(area.name!), area.name).toBe(true);
+    const map = GameMap.fromTiled(shopping, 'shopping-largo-treze');
+    expect(map).toMatchObject({ name: 'Shopping do Largo Treze', safe: false, respawnMap: 'refugio' });
+    // cada porta de loja: dá para passar por ela e por baixo do letreiro, chegando lá dentro
+    let doors = 0;
+    decor.forEach((g, i) => {
+      if (g !== gid('store_door')) return;
+      doors++;
+      const x = i % shopping.width;
+      const y = Math.floor(i / shopping.width);
+      for (const dy of [1, 0, -1, -2]) expect(map.isWalkable(x, y + dy) && map.isReachable(x, y + dy), `porta (${x},${y}), dy=${dy}`).toBe(true);
+    });
+    expect(doors).toBeGreaterThanOrEqual(30); // 12 lojas, o supermercado (2 portas) e o cinema, com 2 tiles cada
+    // e nenhum pedaço de chão ficou preso (sem caminho até a entrada)
+    const stuck: string[] = [];
+    for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) if (map.isWalkable(x, y) && !map.isReachable(x, y)) stuck.push(`(${x},${y})`);
+    expect(stuck).toEqual([]);
   });
 
   it('do deck da fogueira dá para ir direto aos decks dos lados e aos píeres (sem dar a volta no lago)', () => {

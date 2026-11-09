@@ -118,5 +118,13 @@
     "raridade": "lendario",
     "descricao": "Uma ferradura que nunca esfria. Dizem que é da Mula sem Cabeça.",
     "icone": "ferradura"
+  },
+  "dente_jacare": {
+    "nome": "Dente de Jacaré",
+    "preco": 14,
+    "tipo": "material",
+    "raridade": "comum",
+    "descricao": "Afiado e enorme. A Dona Iracema paga bem por ele.",
+    "icone": "dente"
   }
 }

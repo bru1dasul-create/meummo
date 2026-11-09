@@ -19,10 +19,16 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
   A, B, C e D continuam de pé, com a cobertura de concreto furada e cheia de cipó, e os ônibus enferrujados nunca
   mais saíram das pistas. Na entrada, as catracas e a bilheteria; no fundo, a parte que desabou virou mato e
   acampamento, com tambores de fogo (por enquanto quem anda por lá é o Corpo-Seco e o Capelobo)
+- Ao lado do largo de Santo Amaro, entre pela porta de vidro do **Shopping do Largo Treze** (o letreiro perdeu o
+  "I"): a claraboia do átrio caiu e a mata entrou — dois ipês e uma árvore cresceram no jardim do meio, o sol entra
+  pelo buraco e a chuva enche o chafariz. Em volta, corredores escuros com lojas de porta de aço, vitrines quebradas
+  com manequins, quiosques e escadas rolantes paradas; no norte, o supermercado (Corpo-Seco entre as gôndolas), o
+  cinema (Capelobo entre as poltronas) e a praça de alimentação (onde o Saci apronta)
 - Desça a trilha do brejo, ao sul, até a **Represa Billings**: um labirinto de canais de água verde e ilhas de
   mato ligadas por passarelas, com buritis, aguapés, casas afundadas, a usina velha, a ponte da rodovia quebrada
-  no meio do lago e a prainha de frente para a pedra onde a **Iara** vai cantar (as criaturas de lá ainda estão
-  chegando; por enquanto quem mora é Jararaca, Corpo-Seco e Capelobo)
+  no meio do lago e a prainha de frente para a pedra onde a **Iara** vai cantar. Nos canais do oeste, o
+  **Jacaré Mutante** (lento na terra, mas a abocanhada dói); no lago das casas afundadas, o **Boto Encantado**, que
+  fica na dele até alguém mexer com ele. Também moram lá Jararaca, Corpo-Seco e Capelobo (a Iara ainda está chegando)
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -198,12 +204,34 @@ Os personagens que não são jogadores (como a **Dona Iracema**, quitandeira do 
 Para mudar preços, mexa no `preco` de cada item; para mudar o que ela vende, na lista `vende`. Salve e reinicie
 o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão livre mais perto e o servidor avisa.
 
+## Missões (sem programar)
+
+As missões ficam em [`data/missoes.json`](data/missoes.json). Hoje quem dá missões é o **Curupira**, guardião da
+mata, na beira da mata ao norte da vila (logo depois do píer). Um **!** em cima dele quer dizer missão nova; um
+**?**, missão pronta para entregar. As missões em andamento aparecem embaixo do painel de vida.
+
+| Campo | O que é |
+|---|---|
+| `nome` | o nome da missão |
+| `quemDa` | o id do NPC que dá a missão (em `data/npcs.json`); é para ele que se volta para entregar |
+| `pedido`, `concluida` | o que ele diz ao pedir e ao receber |
+| `objetivo` | `{ "tipo": "derrotar", "monstro": "sagui", "quantidade": 5 }` ou `{ "tipo": "entregar", "item": "couro_jararaca", "quantidade": 3 }` (entregar tira os itens da mochila) |
+| `recompensa` | `xp`, `ouro` e `itens` (lista de `{ "item": ..., "quantidade": ... }`) |
+| `depoisDe` | opcional: só aparece depois de concluir esta outra missão (para fazer uma sequência) |
+| `nivelMinimo` | opcional: nível mínimo para aceitar (padrão 1) |
+| `repetivel` | opcional: `true` para dar para fazer de novo depois de concluir |
+
+Cada um pode fazer até 5 missões ao mesmo tempo. Conta para "derrotar" todo monstro que você ajudou a derrubar
+(em grupo, conta para todo mundo que bateu). O progresso fica salvo com o personagem. Qualquer NPC de
+`data/npcs.json` pode dar missões: é só usar o id dele em `quemDa`. Salve e reinicie o servidor; se algo estiver
+errado (um monstro ou item que não existe, uma sequência em círculo), o servidor explica o quê.
+
 ## Editar os mapas
 
 Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito. Cada zona é um arquivo em
 `public/assets/maps`, e o nome do arquivo é o **id** do mapa: `refugio.tmj` (Refúgio de Guarapiranga, onde
 todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro), `billings.tmj` (Represa Billings) e
-`terminal-santo-amaro.tmj` (Terminal Santo Amaro). Em cada mapa:
+`terminal-santo-amaro.tmj` (Terminal Santo Amaro) e `shopping-largo-treze.tmj` (Shopping do Largo Treze). Em cada mapa:
 
 - camadas de tiles, de baixo para cima: `ground` (o chão), `sombras` (sombra de casas e prédios), `decor`
   (troncos, casas, flores…) e `acima`, que o jogo desenha **por cima dos personagens**: copa das árvores e alto
@@ -218,8 +246,9 @@ todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro), `billings.tmj` 
 - propriedade `faiscas` num tile: solta faíscas subindo (as brasas e o tambor com fogo de Santo Amaro)
 - propriedades do mapa `neblina` e `escuro` (de 0 a 1): neblina passando por cima de tudo e o lugar mais escuro
   (Santo Amaro usa 0.22 e 0.14; o Refúgio não usa); `vagalumes` (0 a 1): vaga-lumes piscando (a Billings usa 0.7)
-- camada de objetos `lendas` (na Billings): áreas marcadas para criaturas que ainda vão existir (`iara`, `boto`,
-  `jacare`). O servidor ignora; quando a criatura existir, a área passa para a camada `monstros`
+- camada de objetos `lendas` (na Billings): áreas marcadas para criaturas que ainda vão existir (hoje só a `iara`).
+  O servidor ignora; quando a criatura existir, a área passa para a camada `monstros` (como já foi com o `jacare` e
+  o `boto`)
 - beiradas entre terrenos (areia e água, grama e terra...) são tiles próprios, como `shore_3` (água ao norte e a
   leste) ou `sand_grass_c_ne` (grama só no canto de cima à direita): o número diz os lados que encostam no
   outro terreno (1 = norte, 2 = leste, 4 = sul, 8 = oeste, somados). Os geradores escolhem sozinhos
@@ -246,6 +275,8 @@ Se uma saída apontar para um mapa ou ponto que não existe, o servidor explica 
 ![Mapa da Represa Billings](docs/mapa-billings.png)
 
 ![Mapa do Terminal Santo Amaro](docs/mapa-terminal-santo-amaro.png)
+
+![Mapa do Shopping do Largo Treze](docs/mapa-shopping-largo-treze.png)
 
 Nos mapas: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci, **azul-claro** = saída
 para outro mapa.

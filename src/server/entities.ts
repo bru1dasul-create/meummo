@@ -8,6 +8,7 @@ import type { MonsterZone, Tile } from '../shared/map';
 import type { GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
 import type { EntityState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
+import type { QuestLog } from '../shared/quests';
 import { SKILLS } from '../shared/skills';
 import { Inventory } from './inventory';
 import type { AttackKind, MonsterDef } from './monsters';
@@ -55,6 +56,10 @@ export class Player {
   nextItemAt = 0;
   /** A mochila mudou neste tick (o dono precisa saber). */
   invDirty = false;
+  /** Missões: progresso deste jogador (salvo com o personagem). */
+  quests: QuestLog = {};
+  /** O progresso nas missões mudou neste tick (o dono precisa saber). */
+  questsDirty = false;
 
   /** Trocando de mapa: o navegador está carregando o mapa novo (pedidos são ignorados até ele avisar). */
   loading = false;

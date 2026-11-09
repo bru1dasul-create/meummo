@@ -41,7 +41,7 @@ export interface ShotOptions {
   cid?: number;
 }
 
-const SHOT_COLORS: Record<string, number> = { pedra: 0xe9e6df, fruta: 0xff9f1c };
+const SHOT_COLORS: Record<string, number> = { pedra: 0xe9e6df, fruta: 0xff9f1c, agua: 0x7cc8f0 }; // agua: jato do boto
 
 /** Lista [x0, y0, x1, y1, ...] de tiles → o centro de cada um, em pixels. */
 function tileCenters(tiles: number[]): { x: number; y: number }[] {

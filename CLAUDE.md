@@ -11,7 +11,8 @@
   Zonas: **Refúgio de Guarapiranga** (`public/assets/maps/refugio.tmj`, inicial), **Ruínas de Santo Amaro**
   (`santo-amaro.tmj`, níveis 4 a 8, chefe: Mula sem Cabeça), pela avenida a leste, e **Represa Billings**
   (`billings.tmj`, labirinto de canais; a Iara vai morar lá), pela trilha do brejo ao sul (camada `saidas`).
-  De Santo Amaro, pela rua do meio ao sul: **Terminal Santo Amaro** (`terminal-santo-amaro.tmj`, plataformas A a D).
+  De Santo Amaro, pela rua do meio ao sul: **Terminal Santo Amaro** (`terminal-santo-amaro.tmj`, plataformas A a D);
+  pela porta de vidro do prédio a oeste do largo: **Shopping do Largo Treze** (`shopping-largo-treze.tmj`, mapa de dentro).
   Lugares reais sim, **marcas não**.
 - Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
   Como funciona por dentro: `docs/ARQUITETURA.md`.
@@ -24,7 +25,8 @@
 3. **Regras compartilhadas** (movimento, esquiva, mapa, combate/projéteis, progressão, protocolo, busca de
    caminho) ficam em `src/shared`, que não pode importar nada de navegador, Phaser ou Node.
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
-   `data/items.json`, vendedores e outros NPCs em `data/npcs.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
+   `data/items.json`, vendedores e outros NPCs em `data/npcs.json`, missões em `data/missoes.json` (chaves em
+   português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
    Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
    ícones de itens em `src/client/itemArt.ts`, ícones das habilidades em `src/client/actionArt.ts`, moeda em
    `src/client/coinArt.ts`, personagens em camadas em `src/client/game/doll/` (+ `characters.ts`, aparência de
@@ -38,7 +40,7 @@
    edite um passo antigo: os personagens de quem já joga são convertidos por eles.
 7. Ao concluir algo do roteiro, marque em `docs/ROADMAP.md`.
 8. Comentários e textos do jogo em português; nomes no código em inglês.
-9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro`, `gen:billings` ou `gen:terminal` com `--force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
+9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro`, `gen:billings`, `gen:terminal` ou `gen:shopping` com `--force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
    arquivo com `--out` e compare as camadas antes de substituir.
 
 ## Divisão do trabalho (3 chats)
@@ -87,6 +89,7 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
 - `npm run gen:santo-amaro -- --out arquivo.tmj` — idem para as Ruínas de Santo Amaro
 - `npm run gen:billings -- --out arquivo.tmj` — idem para a Represa Billings
 - `npm run gen:terminal -- --out arquivo.tmj` — idem para o Terminal Santo Amaro
+- `npm run gen:shopping -- --out arquivo.tmj` — idem para o Shopping do Largo Treze
 - `npm run render:map` — desenha todos os mapas em `docs/mapa-<id>.png` (azul-claro = saídas)
 - `npm run render:characters` — prancha de personagens (animações, equipamentos, Dona Iracema) em `docs/personagens.png`
   (`-- --escala 6 --so Beto` para ver um de perto, `-- --tudo` para todos os quadros)

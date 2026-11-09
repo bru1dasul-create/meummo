@@ -147,5 +147,54 @@
       { "item": "erva_arruda", "chance": 100, "quantidade": [2, 3] },
       { "item": "ferradura_brasa", "chance": 30 }
     ]
+  },
+  "jacare": {
+    "nome": "Jacaré Mutante",
+    "nivel": 5,
+    "vida": 150,
+    "xp": 45,
+    "ouro": [5, 10],
+    "passoMs": 450,
+    "agressivo": true,
+    "alcanceAgressao": 3,
+    "perseguicao": 6,
+    "renascerMs": 25000,
+    "ataque": {
+      "tipo": "bote",
+      "alcance": 2,
+      "preparoMs": 750,
+      "intervaloMs": 1900,
+      "dano": [11, 16]
+    },
+    "itens": [
+      { "item": "dente_jacare", "chance": 40 },
+      { "item": "erva_arruda", "chance": 15 }
+    ]
+  },
+  "boto": {
+    "nome": "Boto Encantado",
+    "nivel": 6,
+    "vida": 120,
+    "xp": 55,
+    "ouro": [6, 12],
+    "passoMs": 260,
+    "agressivo": false,
+    "alcanceAgressao": 0,
+    "perseguicao": 10,
+    "renascerMs": 25000,
+    "ataque": {
+      "tipo": "projetil",
+      "alcance": 6,
+      "distanciaMinima": 3,
+      "preparoMs": 450,
+      "intervaloMs": 1400,
+      "dano": [9, 13],
+      "velocidade": 9,
+      "projetil": "agua"
+    },
+    "itens": [
+      { "item": "erva_arruda", "chance": 30 },
+      { "item": "colar_presas", "chance": 5 }
+    ]
   }
 }
