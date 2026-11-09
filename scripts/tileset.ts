@@ -74,6 +74,8 @@ export interface TileDef {
   animation?: { key: string; ms: number }[];
   /** Brilho em volta (fogueira, janela acesa): cor e raio em pixels (propriedades `luz` e `luzRaio`). */
   light?: { color: string; radius: number };
+  /** Solta faíscas subindo (propriedade `faiscas`): brasas, tambor com fogo. */
+  sparks?: boolean;
   draw(p: Pixels, rng: Rng): void;
 }
 
@@ -410,6 +412,52 @@ function drawConcrete(p: Pixels, rng: Rng, moss: boolean, cracked = false): void
   if (moss) {
     p.disc(1 + randInt(rng, 3), 12 + randInt(rng, 3), 1.6, S.mossDark); // musgo encostado na emenda
     p.speckle(rng, [S.moss, S.mossDark, S.gloomLight], 16);
+  }
+}
+
+const BRICK = hex('#a85a3a');
+
+/** Entulho: pedaços de laje (com a quebra mais clara), tijolos, pó e vergalhões tortos saindo do monte. */
+function drawRubble(p: Pixels, rng: Rng): void {
+  p.ellipse(8, 13.5, 7.5, 2.4, C.shadow);
+  p.ellipse(8, 12.5, 6.5, 2.2, [120, 116, 108, 150]); // pó em volta
+  for (const [x, y, w, h] of [
+    [1, 9, 6, 4],
+    [7, 7, 6, 6],
+    [4, 4, 5, 4],
+    [10, 10, 5, 3],
+    [3, 12, 5, 2],
+  ] as const) {
+    p.rect(x, y, w, h, S.concrete);
+    p.rect(x, y, w, 1, S.concreteLight);
+    p.rect(x, y, 1, h, S.concreteLight);
+    p.rect(x, y + h - 1, w, 1, S.concreteDark);
+    p.rect(x + w - 1, y, 1, h, S.concreteDark);
+    if (rng() < 0.6) p.set(x + 1 + randInt(rng, Math.max(1, w - 2)), y + 1, S.crack);
+  }
+  for (const [x, y] of [
+    [9, 4],
+    [12, 6],
+    [2, 7],
+  ] as const) {
+    p.rect(x, y, 3, 2, BRICK); // tijolos
+    p.set(x + 1, y, S.rustLight);
+  }
+  for (let y = 1; y < 7; y++) p.set(6 + Math.floor((y - 1) / 2), y, S.rust); // vergalhões
+  for (let y = 3; y < 8; y++) p.set(13 - (y > 5 ? 1 : 0), y, S.rustDark);
+  p.outline(S.outline);
+}
+
+/** Mato escuro e meio seco, onde a cidade sumiu. */
+function drawGloom(p: Pixels, rng: Rng): void {
+  p.fill(S.gloom);
+  p.speckle(rng, [S.gloomDark, S.gloomDark, S.gloomLight], 42);
+  p.speckle(rng, [S.dry], 10);
+  for (let k = 0; k < 4; k++) {
+    const x = randInt(rng, T);
+    const y = 2 + randInt(rng, 12);
+    p.set(x, y, S.gloomLight);
+    p.set(x, y - 1, S.gloomLight);
   }
 }
 
@@ -1111,6 +1159,7 @@ const EDGE_STYLES: Record<string, EdgeStyle> = {
   dirt_grass: { base: drawDirt, over: grass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: GRASS_RIM, shade: C.dirtDark },
   mud_grass: { base: drawMud, over: grass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: GRASS_RIM, shade: G.mudDark },
   dirt_mud: { base: drawDirt, over: drawMud, band: 3, wobble: SHORE_WOBBLE, rim: G.mudDark, shade: C.dirtDark },
+  concrete_gloom: { base: (p, rng) => drawConcrete(p, rng, false), over: drawGloom, band: 3.5, wobble: GRASS_WOBBLE, rim: S.gloomDark, shade: S.concreteDark },
 };
 
 // ---------- Capricho no mapa, passo 2: a vila (casas coloridas, enfeites) e a parte funda da represa ----------
@@ -1425,6 +1474,140 @@ function houseTiles(name: string, color: HouseColor): TileDef[] {
 const clothesline = once(drawClothesline);
 const lanternFlagsRight = once(() => drawLantern('right'));
 const lanternFlagsLeft = once(() => drawLantern('left'));
+
+// ---------- Capricho no mapa, passo 3: Santo Amaro (prédios de 2 andares, brasas, fogo, beiradas) ----------
+
+/** Andar de cima da fachada: beirada da laje em cima, janelas quebradas e a marquise de concreto embaixo. */
+function facadeUpper(kind: 'windows' | 'vines' | 'tags') {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(S.facade);
+    p.speckle(rng, [S.facadeDark, S.facadeLight], 24);
+    p.rect(0, 0, T, 2, S.concreteDark); // beirada da laje
+    p.rect(0, 2, T, 1, S.facadeLight);
+    for (const x of [1, 6, 11]) {
+      p.rect(x, 4, 4, 6, S.window);
+      p.rect(x + 2, 4, 1, 6, S.facadeDark);
+      p.rect(x, 10, 4, 1, S.facadeLight); // peitoril
+      if (rng() < 0.6) p.set(x + 1, 5, S.glass);
+      if (rng() < 0.4) p.set(x + 3, 8, S.glassLight);
+    }
+    if (rng() < 0.5) for (const y of [5, 7]) p.rect(11, y, 4, 1, G.plank); // janela tapada com tábuas
+    p.rect(0, 12, T, 2, S.concreteLight); // marquise
+    p.rect(0, 14, T, 2, S.concreteDark);
+    if (kind === 'vines') {
+      for (let k = 0; k < 4; k++) {
+        let x = randInt(rng, T);
+        for (let y = 0; y < 12; y++) {
+          p.set(x, y, S.vine);
+          if (rng() < 0.4) p.set(x + (rng() < 0.5 ? -1 : 1), y, rng() < 0.5 ? S.vineLight : S.vineDark);
+          if (rng() < 0.3) x = clamp15(x + randInt(rng, 3) - 1);
+        }
+      }
+    }
+    if (kind === 'tags') {
+      // pichação lá no alto: letras retas e pontudas, em preto
+      for (let x = 1; x < 15; x += 3) {
+        p.rect(x, 0, 1, 3, S.wire);
+        p.set(x + 1, rng() < 0.5 ? 0 : 2, S.wire);
+      }
+    }
+  };
+}
+
+/** Andar de baixo (a calçada): loja de porta de aço, entrada escura, parede com lambe-lambe, ou cipó subindo. */
+function facadeLower(kind: 'shop' | 'door' | 'posters' | 'vines') {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(S.facade);
+    p.speckle(rng, [S.facadeDark, S.facadeLight], 20);
+    p.rect(0, 0, T, 2, [24, 26, 30, 120]); // sombra da marquise
+    if (kind === 'shop') {
+      const sign = S.sign[randInt(rng, S.sign.length)]!;
+      p.rect(0, 2, T, 3, sign);
+      for (let x = 2; x < 14; x += 3) p.rect(x, 3, 2, 1, S.facadeLight); // letras apagadas (sem nome de ninguém)
+      for (let y = 5; y < T; y++) p.rect(1, y, 14, 1, y % 2 ? S.shutterDark : S.shutter);
+      p.rect(1, 5, 14, 1, S.shutterLight);
+      for (let k = 0; k < 14; k++) p.set(1 + randInt(rng, 14), 10 + randInt(rng, 6), k % 2 ? S.rust : S.rustDark);
+      p.rect(7, 12, 2, 2, S.ironDark); // cadeado
+      if (rng() < 0.6) for (let x = 3; x < 12; x++) p.set(x, 8 + Math.round(Math.sin(x) * 1.2), G.graffiti[x % 4]!);
+    } else if (kind === 'door') {
+      p.rect(4, 3, 8, 13, S.facadeDark); // batente
+      p.rect(5, 4, 6, 12, S.window); // entrada escura
+      p.rect(5, 4, 6, 1, S.glass);
+      p.set(6, 7, S.glassLight); // caco de vidro
+      p.rect(3, 15, 10, 1, S.concreteLight); // degrau
+    } else if (kind === 'posters') {
+      const colors = [hex('#d9c9a0'), hex('#c9a43a'), hex('#b5473a'), hex('#3f78a8'), hex('#e6e2d6')];
+      for (let k = 0; k < 5; k++) {
+        const x = randInt(rng, 12);
+        const y = 3 + randInt(rng, 8);
+        p.rect(x, y, 4, 5, colors[k % colors.length]!); // lambe-lambe rasgado
+        p.set(x + 3, y + 4, S.facade);
+        p.rect(x + 1, y + 1, 2, 1, S.facadeDark);
+      }
+    } else {
+      for (let k = 0; k < 5; k++) {
+        let x = randInt(rng, T);
+        for (let y = T - 1; y >= 4 + randInt(rng, 6); y--) {
+          p.set(x, y, S.vine);
+          if (rng() < 0.45) p.set(x + (rng() < 0.5 ? -1 : 1), y, rng() < 0.5 ? S.vineLight : S.vineDark);
+          if (rng() < 0.3) x = clamp15(x + randInt(rng, 3) - 1);
+        }
+      }
+    }
+    for (let x = 0; x < T; x++) if (rng() < 0.5) p.set(x, 15, rng() < 0.5 ? S.moss : S.mossDark); // musgo no pé
+  };
+}
+
+/** Brasas no chão (o rastro da Mula): cinza com carvões acesos que pulsam. `frame` 0, 1 ou 2. */
+function drawEmbers(frame: number) {
+  return (p: Pixels) => {
+    const rng = mulberry32(9091);
+    p.ellipse(8, 9, 7, 4.5, [40, 34, 32, 200]); // cinza
+    p.speckle(rng, [hex('#2a2422'), hex('#4a3f3a')], 26, true);
+    const hot = [G.fire1, G.fire2, G.fire3, G.ember];
+    for (let k = 0; k < 9; k++) {
+      const x = 3 + randInt(rng, 10);
+      const y = 6 + randInt(rng, 6);
+      const heat = (k + frame) % 4;
+      p.set(x, y, hot[heat]!);
+      if (heat < 2) p.set(x + 1, y, G.fire3);
+    }
+  };
+}
+
+/** Tambor com fogo (o pessoal das ruínas se esquentando). `frame` 0, 1 ou 2: as chamas mudam. */
+function drawFireBarrel(frame: number) {
+  return (p: Pixels) => {
+    p.ellipse(8, 14.5, 6.5, 1.6, C.shadow);
+    p.rect(3, 6, 10, 9, S.rustDark);
+    p.rect(3, 6, 2, 9, S.rust);
+    for (const y of [8, 12]) p.rect(3, y, 10, 1, S.ironDark);
+    p.rect(3, 5, 10, 1, S.iron); // borda
+    const flames = [
+      [
+        [5, 1, 2, 4],
+        [8, 0, 2, 5],
+        [10, 2, 2, 3],
+      ],
+      [
+        [4, 2, 2, 3],
+        [7, 1, 3, 4],
+        [10, 0, 2, 5],
+      ],
+      [
+        [5, 0, 2, 5],
+        [8, 2, 2, 3],
+        [10, 1, 2, 4],
+      ],
+    ][frame]!;
+    for (const [x, y, w, h] of flames) {
+      p.rect(x!, y!, w!, h!, G.fire3);
+      p.rect(x!, y! + 1, w!, h! - 1, G.fire2);
+      p.set(x!, y! + h! - 1, G.fire1);
+    }
+    p.outline(S.outline);
+  };
+}
 
 export const TILES: TileDef[] = [
   { key: 'grass', draw: grass(0) },
@@ -1794,20 +1977,7 @@ export const TILES: TileDef[] = [
   // ---------- Ruínas de Santo Amaro ----------
   { key: 'concrete', draw: (p, rng) => drawConcrete(p, rng, false) },
   { key: 'concrete_moss', draw: (p, rng) => drawConcrete(p, rng, true) },
-  {
-    key: 'grass_gloom', // mato escuro e meio seco, onde a cidade sumiu
-    draw(p, rng) {
-      p.fill(S.gloom);
-      p.speckle(rng, [S.gloomDark, S.gloomDark, S.gloomLight], 42);
-      p.speckle(rng, [S.dry], 10);
-      for (let k = 0; k < 4; k++) {
-        const x = randInt(rng, T);
-        const y = 2 + randInt(rng, 12);
-        p.set(x, y, S.gloomLight);
-        p.set(x, y - 1, S.gloomLight);
-      }
-    },
-  },
+  { key: 'grass_gloom', draw: drawGloom }, // mato escuro e meio seco, onde a cidade sumiu
   {
     key: 'oil_puddle', // poça escura de óleo velho (dá para pisar)
     draw(p, rng) {
@@ -1835,17 +2005,7 @@ export const TILES: TileDef[] = [
     key: 'rubble', // entulho: pedaços de concreto e ferro
     collides: true,
     shootOver: true,
-    draw(p) {
-      p.ellipse(8, 13.5, 7, 2.2, C.shadow);
-      for (const [x, y, w, h] of [[2, 9, 5, 4], [7, 7, 5, 6], [5, 5, 4, 3], [10, 10, 5, 3], [4, 12, 4, 2]] as const) {
-        p.rect(x, y, w, h, S.concrete);
-        p.rect(x, y, w, 1, S.concreteLight);
-        p.rect(x, y + h - 1, w, 1, S.concreteDark);
-      }
-      for (let y = 2; y < 8; y++) p.set(6 + Math.floor((y - 2) / 2), y, S.rust); // vergalhões
-      for (let y = 4; y < 9; y++) p.set(12, y, S.rustDark);
-      p.outline(S.outline);
-    },
+    draw: drawRubble,
   },
   { key: 'building_top', collides: true, draw: (p, rng) => drawRoofSlab(p, rng, false) },
   { key: 'building_top_broken', collides: true, draw: (p, rng) => drawRoofSlab(p, rng, true) },
@@ -2066,6 +2226,43 @@ export const TILES: TileDef[] = [
   { key: 'crate', collides: true, draw: drawCrate },
   { key: 'barrel', collides: true, draw: drawBarrel },
   { key: 'fish_basket', collides: true, shootOver: true, draw: drawFishBasket },
+  // ---- capricho no mapa, passo 3: Santo Amaro ----
+  { key: 'facade_up_windows', collides: true, draw: facadeUpper('windows') },
+  { key: 'facade_up_vines', collides: true, draw: facadeUpper('vines') },
+  { key: 'facade_up_tags', collides: true, draw: facadeUpper('tags') },
+  { key: 'facade_low_shop', collides: true, draw: facadeLower('shop') },
+  { key: 'facade_low_door', collides: true, draw: facadeLower('door') },
+  { key: 'facade_low_posters', collides: true, draw: facadeLower('posters') },
+  { key: 'facade_low_vines', collides: true, draw: facadeLower('vines') },
+  {
+    key: 'embers',
+    animation: [
+      { key: 'embers', ms: 260 },
+      { key: 'embers_f1', ms: 220 },
+      { key: 'embers_f2', ms: 280 },
+    ],
+    light: { color: '#ff6a2a', radius: 22 },
+    sparks: true,
+    draw: drawEmbers(0),
+  },
+  { key: 'embers_f1', draw: drawEmbers(1) },
+  { key: 'embers_f2', draw: drawEmbers(2) },
+  {
+    key: 'fire_barrel',
+    collides: true,
+    shootOver: true,
+    animation: [
+      { key: 'fire_barrel', ms: 130 },
+      { key: 'fire_barrel_f1', ms: 120 },
+      { key: 'fire_barrel_f2', ms: 140 },
+    ],
+    light: { color: '#ffa040', radius: 40 },
+    sparks: true,
+    draw: drawFireBarrel(0),
+  },
+  { key: 'fire_barrel_f1', collides: true, shootOver: true, draw: drawFireBarrel(1) },
+  { key: 'fire_barrel_f2', collides: true, shootOver: true, draw: drawFireBarrel(2) },
+  ...edgeTiles('concrete_gloom', EDGE_STYLES.concrete_gloom!),
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));
@@ -2132,6 +2329,7 @@ export function tiledTileset(imagePath: string) {
       if (t.collides) properties.push({ name: 'colide', type: 'bool', value: true });
       if (t.collides && !t.shootOver) properties.push({ name: 'bloqueiaTiro', type: 'bool', value: true });
       if (t.light) properties.push({ name: 'luz', type: 'string', value: t.light.color }, { name: 'luzRaio', type: 'int', value: t.light.radius });
+      if (t.sparks) properties.push({ name: 'faiscas', type: 'bool', value: true });
       const entry: { id: number; properties?: typeof properties; animation?: { tileid: number; duration: number }[] } = { id };
       if (properties.length > 0) entry.properties = properties;
       if (t.animation) entry.animation = t.animation.map((f) => ({ tileid: gid(f.key) - 1, duration: f.ms }));

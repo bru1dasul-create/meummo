@@ -154,6 +154,9 @@ todo mundo começa) e `santo-amaro.tmj` (Ruínas de Santo Amaro). Em cada mapa:
 - propriedade `colide` nos tiles: bloqueia a passagem; `bloqueiaTiro`: segura projéteis (a água não segura)
 - propriedades `luz` (uma cor, ex.: `#ffb04a`) e `luzRaio` (tamanho em pixels) num tile: ele brilha no jogo
   (a fogueira, as lamparinas e as janelas acesas). Tiles animados (água, fogueira) usam a animação do Tiled
+- propriedade `faiscas` num tile: solta faíscas subindo (as brasas e o tambor com fogo de Santo Amaro)
+- propriedades do mapa `neblina` e `escuro` (de 0 a 1): neblina passando por cima de tudo e o lugar mais escuro
+  (Santo Amaro usa 0.22 e 0.14; o Refúgio não usa)
 - beiradas entre terrenos (areia e água, grama e terra...) são tiles próprios, como `shore_3` (água ao norte e a
   leste) ou `sand_grass_c_ne` (grama só no canto de cima à direita): o número diz os lados que encostam no
   outro terreno (1 = norte, 2 = leste, 4 = sul, 8 = oeste, somados). Os geradores escolhem sozinhos

@@ -125,13 +125,16 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 ### Ruínas de Santo Amaro (o mapa)
 - **A entrada:** a avenida que sai do Refúgio continua pelo oeste e corta a zona inteira; carros e um ônibus
   enferrujados, bueiros, postes tortos com fios caídos.
-- **Os quarteirões:** prédios mortos vistos de cima (lajes rachadas e furadas), com a fachada virada para a rua —
-  janelas quebradas, paredes engolidas pelo cipó e as portas de aço das lojas que fecharam para sempre (as placas
-  apagaram: nada de marcas).
+- **Os quarteirões:** prédios mortos vistos de cima (lajes rachadas e furadas), com a fachada de dois andares virada
+  para a rua — janelas quebradas e pichação lá no alto, a marquise de concreto, lambe-lambes rasgados, paredes
+  engolidas pelo cipó e as portas de aço das lojas que fecharam para sempre (as placas apagaram: nada de marcas).
 - **Os desabados:** sete prédios caíram e viraram clareiras de entulho, sucata, pneus, ossos, árvores secas e
   **ervas de cura** nascendo no concreto. É onde vivem as criaturas da zona.
 - **O largo:** no meio de tudo, o chafariz seco cercado de ervas, árvores secas e ipês floridos — a única cor forte
-  do lugar ("um pouco dos dois": a cidade cinza e pesada, a vida teimando no meio dela).
+  do lugar ("um pouco dos dois": a cidade cinza e pesada, a vida teimando no meio dela). Brasas da Mula pelo chão,
+  soltando faíscas, e tambores com fogo na beirada.
+- **O clima:** neblina passando devagar por cima de tudo e o lugar um pouco mais escuro que o Refúgio; as luzes
+  (fogo, brasas) aparecem no meio da penumbra.
 - Quem desmaia aqui acorda no Refúgio (não há vila em Santo Amaro).
 
 | Criatura | Nível | Onde vive | Jeito | Golpe | Deixa |

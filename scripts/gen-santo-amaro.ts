@@ -16,7 +16,7 @@ import path from 'node:path';
 import { GameMap, type TiledMap } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
 import { MapBuilder } from './map-builder';
-import { shuffled, type BigTree } from './map-depth';
+import { shuffled, softenEdges, type BigTree } from './map-depth';
 import { TILES } from './tileset';
 
 const outIndex = process.argv.indexOf('--out');
@@ -106,6 +106,18 @@ m.fill(PLAZA.x0 + 2, PLAZA.y0 + 2, PLAZA.x1 - 2, PLAZA.y1 - 2, (x, y) => {
   const d = Math.abs(x - FOUNTAIN.x) + Math.abs(y - FOUNTAIN.y);
   if (d >= 2 && d <= 3 && m.rng() < 0.55) m.setDecor(x, y, m.rng() < 0.7 ? 'herbs' : 'flowers_yellow');
 });
+// o rastro da Mula: brasas pelo largo (soltam faíscas) e tambores com fogo na beirada de baixo
+for (const [x, y] of [
+  [36, 15],
+  [45, 16],
+  [38, 18],
+  [46, 19],
+  [36, 19],
+  [42, 20],
+] as const) {
+  if (!m.hasDecor(x, y)) m.setDecor(x, y, 'embers');
+}
+for (const x of [PLAZA.x0 + 2, PLAZA.x1 - 2]) if (!m.hasDecor(x, PLAZA.y1)) m.setDecor(x, PLAZA.y1, 'fire_barrel');
 m.fill(PLAZA.x0, PLAZA.y0, PLAZA.x1, PLAZA.y1, (x, y) => m.reserve(x, y));
 
 // 4. Os quarteirões: prédios mortos (laje + fachada com janelas e lojas) e prédios que desabaram
@@ -151,24 +163,24 @@ for (const b of standing) {
   m.depth.shadeBlock(b.x0, b.y0, b.x1, b.y1, (x, y) => !m.hasDecor(x, y));
   m.fill(b.x0, b.y0, b.x1, b.y1, (x, y) => {
     m.setGround(x, y, 'concrete');
-    if (y < b.y1) {
-      m.setDecor(x, y, m.rng() < 0.13 ? 'building_top_broken' : 'building_top');
-      return;
+    const r = m.rng(); // um sorteio por tile, como antes: assim o resto do mapa não muda
+    if (y < b.y1 - 1) {
+      m.setDecor(x, y, r < 0.13 ? 'building_top_broken' : 'building_top');
+    } else if (y === b.y1 - 1) {
+      // andar de cima (os prédios têm 2 andares de fachada, mais altos que quem passa): janelas, cipó ou pichação
+      m.setDecor(x, y, r < 0.6 ? 'facade_up_windows' : r < 0.85 ? 'facade_up_vines' : 'facade_up_tags');
+    } else {
+      // andar de baixo, na calçada: de frente para a rua, muitas lojas fechadas
+      const onStreet = nearStreet(x, y + 1) || inStreet(x, y + 1);
+      const shop = r < 0.45 ? 'facade_low_shop' : r < 0.6 ? 'facade_low_door' : r < 0.85 ? 'facade_low_posters' : 'facade_low_vines';
+      m.setDecor(x, y, onStreet ? shop : r < 0.35 ? 'facade_low_door' : r < 0.7 ? 'facade_low_vines' : 'facade_low_posters');
     }
-    // a fachada fica embaixo; de frente para a rua, muitas lojas fechadas
-    const onStreet = nearStreet(x, y + 1) || inStreet(x, y + 1);
-    const r = m.rng();
-    m.setDecor(
-      x,
-      y,
-      onStreet ? (r < 0.4 ? 'shop_shutter' : r < 0.75 ? 'building_window' : r < 0.88 ? 'vine_wall' : 'building_wall') : r < 0.5 ? 'building_window' : r < 0.75 ? 'vine_wall' : 'building_wall',
-    );
   });
   // um canto desabado: entulho em cima da laje
   if (m.rng() < 0.6) {
     const cx = m.rng() < 0.5 ? b.x0 : b.x1;
     for (const [x, y] of [[cx, b.y0], [cx + (cx === b.x0 ? 1 : -1), b.y0], [cx, b.y0 + 1]] as const) {
-      if (y < b.y1) {
+      if (y < b.y1 - 1) {
         m.setDecor(x, y, 'rubble');
         m.setGround(x, y, 'concrete_moss');
       }
@@ -271,6 +283,15 @@ m.fill(0, WEST_EXIT.y, 5, WEST_EXIT.y + WEST_EXIT.h - 1, (x, y) => {
   if (!inStreet(x, y)) m.setGround(x, y, 'grass_gloom');
 });
 
+// 7b. Beiradas suaves: o mato escuro avançando por cima do concreto (no fim, depois de tudo estar no lugar)
+softenEdges(m.ground, W, H, [
+  {
+    base: ['concrete', 'concrete_moss', 'concrete_cracked'],
+    set: 'concrete_gloom',
+    touches: (x, y) => m.groundIs(x, y, 'grass_gloom', 'grass_dark'),
+  },
+]);
+
 // 8. Áreas das criaturas (camada "monstros"): calculadas depois, com o mapa pronto (veja o passo 9)
 const monsterAreas = () => {
   const ruins = collapsed.filter((b) => b.x1 - b.x0 >= 4 && b.y1 - b.y0 >= 3);
@@ -302,6 +323,9 @@ const map = m.toTiled({
     { name: 'nome', type: 'string', value: ZONE_NAME },
     { name: 'seguro', type: 'bool', value: false },
     { name: 'renascerEm', type: 'string', value: 'refugio' },
+    // clima pesado: neblina passando por cima de tudo e o lugar um pouco mais escuro (0 a 1)
+    { name: 'neblina', type: 'float', value: 0.22 },
+    { name: 'escuro', type: 'float', value: 0.14 },
   ],
   points: [
     { name: 'spawn', ...ARRIVAL },

@@ -30,7 +30,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
 import { KeyboardDirections, type HeldMove } from './input';
-import { CanopyFader, createMapLayers, MapLights } from './mapDepth';
+import { CanopyFader, createMapLayers, MapLights, MapSparks, MapWeather } from './mapDepth';
 
 export interface WorldSceneData {
   conn: Connection;
@@ -81,6 +81,8 @@ export class WorldScene extends Phaser.Scene {
   /** Copas que ficam transparentes em cima de quem passa embaixo (null: o mapa não tem camada "acima"). */
   private canopy: CanopyFader | null = null;
   private mapLights!: MapLights;
+  private mapWeather!: MapWeather;
+  private mapSparks!: MapSparks;
   private lastFrameAt = 0;
   private actionBar!: ActionBar;
   private toast!: Toast;
@@ -159,6 +161,8 @@ export class WorldScene extends Phaser.Scene {
     const mapJson = (this.cache.tilemap.get(this.mapKey) as { data: TiledMap }).data;
     this.map = GameMap.fromTiled(mapJson, this.welcome.map);
     this.mapLights = new MapLights(this, mapJson);
+    this.mapWeather = new MapWeather(this, mapJson);
+    this.mapSparks = new MapSparks(this, mapJson);
 
     this.labels = document.getElementById('labels')!;
     const you = this.welcome.you;
@@ -278,9 +282,11 @@ export class WorldScene extends Phaser.Scene {
   private updateDepth(now: number): void {
     const delta = this.lastFrameAt ? now - this.lastFrameAt : 0;
     this.lastFrameAt = now;
-    this.mapLights.update(now);
-    if (!this.canopy) return;
     const view = this.cameras.main.worldView;
+    this.mapLights.update(now);
+    this.mapWeather.update(now);
+    this.mapSparks.update(now, view);
+    if (!this.canopy) return;
     const near = (x: number, y: number) => x > view.x - 48 && x < view.right + 48 && y > view.y - 48 && y < view.bottom + 48;
     const points: { x: number; y: number }[] = [];
     for (const entity of [...this.entities.values(), ...this.dying]) {

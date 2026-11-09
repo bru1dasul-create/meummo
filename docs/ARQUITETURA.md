@@ -167,7 +167,11 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   e fica transparente perto de quem está embaixo dela e dos avisos/fogo no chão (`CanopyFader`). Pode criar
   outras camadas (ficam embaixo dos personagens, na ordem do arquivo).
 - Propriedades dos tiles: `colide` (bloqueia a passagem), `bloqueiaTiro` (segura projéteis), `luz` (cor) e
-  `luzRaio` (pixels): um brilho em volta do tile (`MapLights`; tremula se o tile for animado).
+  `luzRaio` (pixels): um brilho em volta do tile (`MapLights`; tremula se o tile for animado); `faiscas`: solta
+  faíscas subindo (`MapSparks`).
+- Propriedades do mapa só de aparência: `neblina` e `escuro` (0 a 1), em `MapWeather`. Altura de desenho (depth):
+  chão e enfeites embaixo (negativo), personagens pela posição y, copas 3000, escuro 3100, luzes 3200, neblina 3300,
+  faíscas 3400, golpes e tiros 4000+.
 - Animação de tiles (água, fogueira): a `animation` do próprio Tiled no tileset; o Phaser 4 já anima sozinho.
 - Um objeto do tipo ponto chamado `spawn` marca onde os jogadores nascem.
 - Camada de objetos `monstros`: cada retângulo é uma área de nascimento. O nome do retângulo é o id do
