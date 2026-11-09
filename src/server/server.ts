@@ -12,6 +12,7 @@ import { createAdminHandler } from './admin';
 import { LoginGuard, type GuardLimits } from './login-guard';
 import { CLIENT_DIR, MAPS_DIR } from './paths';
 import { Realm } from './realm';
+import { checkQuests, loadQuestDefs, nameQuestGoals } from './quests';
 import { Session, type Lobby } from './session';
 import { Tuning } from './tuning';
 import type { World } from './world';
@@ -73,8 +74,11 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const tuningFile =
     options.tuningFile !== undefined ? options.tuningFile : options.saveFile === ':memory:' ? null : path.join(path.dirname(options.saveFile), 'ajustes.json');
   const tuning = Tuning.load(tuningFile, maps, log);
+  const quests = loadQuestDefs();
+  checkQuests(quests, tuning);
+  nameQuestGoals(quests, tuning);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, saver: store });
+  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, quests, saver: store });
   tuning.onChange = (changed) => realm.tuningChanged(changed);
   const sessions = new Set<Session>();
   const admin = createAdminHandler({

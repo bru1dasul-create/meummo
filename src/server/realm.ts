@@ -7,7 +7,7 @@ import type { Dir } from '../shared/dir';
 import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
-import type { ItemAction, ServerMsg } from '../shared/protocol';
+import type { ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
 import type { ItemInfo } from '../shared/items';
 import type { TuningFile } from './tuning';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
@@ -148,6 +148,10 @@ export class Realm {
 
   sell(player: Player, npc: number, i: number, n: number): void {
     this.worldOf(player)?.sell(player, npc, i, n);
+  }
+
+  questAction(player: Player, act: QuestAction, id: string, npc?: number): void {
+    this.worldOf(player)?.questAction(player, act, id, npc);
   }
 
   chat(player: Player, text: string): void {

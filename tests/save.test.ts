@@ -130,6 +130,7 @@ describe('arquivo de personagens', () => {
       dir: LEFT,
       look: 4_000_000_000,
       inventory: { slots: [{ item: 'banana', n: 3 }, null], equipped: { head: 'chapeu_palha' } },
+      quests: { saguis_travessos: { state: 'active', count: 2 } },
     };
     store.save([{ id: login.id, data }]);
     store.close();

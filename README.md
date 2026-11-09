@@ -197,6 +197,28 @@ Os personagens que não são jogadores (como a **Dona Iracema**, quitandeira do 
 Para mudar preços, mexa no `preco` de cada item; para mudar o que ela vende, na lista `vende`. Salve e reinicie
 o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão livre mais perto e o servidor avisa.
 
+## Missões (sem programar)
+
+As missões ficam em [`data/missoes.json`](data/missoes.json). Hoje quem dá missões é o **Curupira**, guardião da
+mata, na beira da mata ao norte da vila (logo depois do píer). Um **!** em cima dele quer dizer missão nova; um
+**?**, missão pronta para entregar. As missões em andamento aparecem embaixo do painel de vida.
+
+| Campo | O que é |
+|---|---|
+| `nome` | o nome da missão |
+| `quemDa` | o id do NPC que dá a missão (em `data/npcs.json`); é para ele que se volta para entregar |
+| `pedido`, `concluida` | o que ele diz ao pedir e ao receber |
+| `objetivo` | `{ "tipo": "derrotar", "monstro": "sagui", "quantidade": 5 }` ou `{ "tipo": "entregar", "item": "couro_jararaca", "quantidade": 3 }` (entregar tira os itens da mochila) |
+| `recompensa` | `xp`, `ouro` e `itens` (lista de `{ "item": ..., "quantidade": ... }`) |
+| `depoisDe` | opcional: só aparece depois de concluir esta outra missão (para fazer uma sequência) |
+| `nivelMinimo` | opcional: nível mínimo para aceitar (padrão 1) |
+| `repetivel` | opcional: `true` para dar para fazer de novo depois de concluir |
+
+Cada um pode fazer até 5 missões ao mesmo tempo. Conta para "derrotar" todo monstro que você ajudou a derrubar
+(em grupo, conta para todo mundo que bateu). O progresso fica salvo com o personagem. Qualquer NPC de
+`data/npcs.json` pode dar missões: é só usar o id dele em `quemDa`. Salve e reinicie o servidor; se algo estiver
+errado (um monstro ou item que não existe, uma sequência em círculo), o servidor explica o quê.
+
 ## Editar os mapas
 
 Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito. Cada zona é um arquivo em

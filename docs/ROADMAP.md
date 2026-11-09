@@ -100,8 +100,15 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[mundo]** Barraquinha de frutas da Dona Iracema, na praça do Refúgio (ela fica em (46, 28)): toldo listrado
   atrás dela e balcão com frutas na frente. De quebra: os píeres dos lados voltaram a encostar no deck da fogueira
   (as casas maiores do passo 2 tinham fechado a passagem) e um teste confere que todo NPC tem lugar alcançável
-- [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
-- [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
+- [x] **[estrutura]** NPCs com diálogo: o **Curupira**, guardião da mata, na beira da mata ao norte da vila; clicar
+  nele abre a conversa (falas em `data/npcs.json`); **!** em cima = missão nova, **?** = missão para entregar
+- [x] **[estrutura]** Missões simples em `data/missoes.json` ("derrotar" monstros ou "entregar" itens), com
+  recompensa de XP, ouro e itens, sequência (`depoisDe`), nível mínimo e repetíveis; até 5 ao mesmo tempo; lista
+  na tela; progresso salvo com o personagem. Primeiras: Saguis Travessos → Couro de Jararaca → O Dono do
+  Redemoinho (o Saci) → Guardião da Mata (repetível)
+- [ ] **[arte]** Desenho do Curupira (cabelo de fogo, pés virados para trás) e caprichar a conversa, a lista de
+  missões e os sinais ! e ? (hoje: personagem padrão e visual simples)
+- [ ] **[mundo]** Opcional: enfeite em volta do Curupira (árvore oca, cantinho de mata fechada) em (45, 12)
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
   buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,
   neblina e vaga-lumes), com criaturas provisórias (Jararaca, Corpo-Seco, Capelobo)

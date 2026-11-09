@@ -239,6 +239,22 @@ export class EntityView {
     this.hpBar.hidden = this.isSelf || this.kind === 'npc' || (this.kind === 'player' && fraction >= 1);
   }
 
+  /** Sinal em cima do nome (NPCs: '!' missão nova, '?' missão para entregar, '' nada). */
+  setMark(mark: string): void {
+    let el = this.tag.querySelector<HTMLDivElement>('.npc-mark');
+    if (!mark) {
+      el?.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'npc-mark';
+      this.tag.prepend(el);
+    }
+    if (el.textContent !== mark) el.textContent = mark;
+    this.cachedLabelWidth = null;
+  }
+
   /** Linha pequena embaixo do nome (NPCs: "quitandeira do píer"). */
   setSubtitle(text: string): void {
     this.tag.querySelector('.subtitle')?.remove();

@@ -12,6 +12,7 @@ import path from 'node:path';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { DOWN, isDir, type Dir } from '../shared/dir';
 import type { SavedInventory } from './inventory';
+import type { QuestLog } from '../shared/quests';
 import { lookFromName } from '../shared/look';
 import { nameKey } from '../shared/names';
 
@@ -30,6 +31,8 @@ export interface CharacterData {
   look: number;
   /** Mochila e equipamentos (null = vazia). Conferida pelo mundo ao carregar. */
   inventory: SavedInventory | null;
+  /** Progresso nas missões (null ou ausente = nenhuma). Conferido pelo mundo ao carregar. */
+  quests?: QuestLog | null;
 }
 
 export interface SavedCharacter extends CharacterData {
@@ -85,6 +88,8 @@ export const MIGRATIONS: readonly string[] = [
   )`,
   // versão 2: mochila e equipamentos (JSON); quem já existia começa com a mochila vazia
   `ALTER TABLE characters ADD COLUMN inventory TEXT`,
+  // versão 3: progresso nas missões (JSON); quem já existia começa sem missões
+  `ALTER TABLE characters ADD COLUMN quests TEXT`,
 ];
 
 interface CharacterRow {
@@ -99,9 +104,10 @@ interface CharacterRow {
   dir: number;
   look: number;
   inventory: string | null;
+  quests: string | null;
 }
 
-const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory';
+const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests';
 
 export class CharacterStore implements CharacterSaver {
   private readonly db: DatabaseSync;
@@ -135,7 +141,7 @@ export class CharacterStore implements CharacterSaver {
       'INSERT INTO characters (name, name_key, password_hash, look, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)',
     );
     this.update = this.db.prepare(
-      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, saved_at = ? WHERE id = ?',
+      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, quests = ?, saved_at = ? WHERE id = ?',
     );
     this.touch = this.db.prepare('UPDATE characters SET last_login_at = ? WHERE id = ?');
   }
@@ -181,6 +187,7 @@ export class CharacterStore implements CharacterSaver {
       dir: isDir(row.dir) ? row.dir : DOWN,
       look: row.look >>> 0,
       inventory: parseJson(row.inventory) as SavedInventory | null,
+      quests: parseJson(row.quests) as QuestLog | null,
     };
   }
 
@@ -193,7 +200,8 @@ export class CharacterStore implements CharacterSaver {
     try {
       for (const { id, data } of list) {
         const inventory = data.inventory ? JSON.stringify(data.inventory) : null;
-        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, now, id);
+        const quests = data.quests && Object.keys(data.quests).length > 0 ? JSON.stringify(data.quests) : null;
+        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, quests, now, id);
       }
       this.db.exec('COMMIT');
     } catch (error) {

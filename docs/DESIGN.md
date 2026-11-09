@@ -54,9 +54,15 @@ desenhadas no mapa (camada `monstros`; veja `docs/mapa-refugio.png`).
 | Jararaca | 2 | brejo ao sul da represa | Agressiva e lenta | Bote em linha (2 quadrados), aviso de 0,65 s |
 | Saci | 5 (mini-chefe) | praça em ruínas perto da avenida, a leste | Agressivo e rápido | Giro em volta dele (3×3); depois some num redemoinho e reaparece longe. Se você fugir, ele surge do seu lado |
 
+## Missões (feito no M3)
+O **Curupira**, guardião da mata, fica na beira da mata ao norte da vila e dá missões: espantar os saguis,
+trazer couro de jararaca, enfrentar o Saci e, depois, cuidar da mata de vez em quando (repetível). Missão nova
+aparece com **!** em cima dele; pronta para entregar, com **?**. A recompensa é XP, ouro e itens (o Gibão de
+Couro vem do Curupira para quem traz os couros). Tudo em `data/missoes.json`, para ajustar sem programar.
+
 ## Próximas lendas (ideias para os próximos marcos)
-- **Curupira** — guardião da mata. Pode ser um NPC de missões ("proteja a floresta") ou um chefe com
-  pegadas ao contrário que confundem quem tenta segui-lo.
+- **Curupira** — já é o NPC de missões da vila. Mais adiante pode ganhar uma versão chefe, com pegadas ao
+  contrário que confundem quem tenta segui-lo.
 - **Iara** — no lago e nos rios. Canto que puxa o jogador para perto da água; a esquiva quebra o encanto.
 - **Boitatá** — serpente de fogo, chefe. Deixa rastros de fogo no chão (áreas que machucam).
 - **Mula sem Cabeça** — aparece à noite; investida em linha reta soltando fogo.

@@ -78,6 +78,28 @@ export class Inventory {
     return room;
   }
 
+  /** Quantos deste item há na mochila (somando as pilhas). */
+  countOf(item: string): number {
+    let total = 0;
+    for (const stack of this.slots) if (stack?.item === item) total += stack.n;
+    return total;
+  }
+
+  /** Tira `n` deste item, das pilhas que houver. false (e nada muda) se não tiver tudo isso. */
+  removeItem(item: string, n: number): boolean {
+    if (this.countOf(item) < n) return false;
+    let left = n;
+    for (let i = this.slots.length - 1; i >= 0 && left > 0; i--) {
+      const stack = this.slots[i];
+      if (stack?.item !== item) continue;
+      const taken = Math.min(left, stack.n);
+      stack.n -= taken;
+      left -= taken;
+      if (stack.n === 0) this.slots[i] = null;
+    }
+    return true;
+  }
+
   /** Tira até `n` itens do espaço `i`. */
   take(i: number, n = 1): ItemStack | null {
     const stack = Number.isInteger(i) ? this.slots[i] : undefined;
