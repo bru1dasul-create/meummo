@@ -259,6 +259,8 @@ export const POSES: Record<View, Record<AnimName, Pose[]>> = { down: DOWN, up: U
 export interface Rig {
   view: View;
   pose: Pose;
+  /** Número do quadro (o que tremula, como o cabelo de fogo, muda um pouco a cada quadro). */
+  tick?: number;
   head: Vec;
   neck: Vec;
   chest: Vec;

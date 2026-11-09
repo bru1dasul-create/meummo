@@ -116,7 +116,8 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   calculados. `raster.ts` é o pincel (formas com volume, sombra projetada, contorno); `compose.ts` monta o corpo
   na ordem certa de cada vista; `gear.ts` desenha cada tipo de equipamento preso aos ossos (acompanha tudo).
 - `src/client/game/characters.ts` junta numa textura por combinação (dividida entre quem é igual, desenhada aos
-  poucos para não engasgar). NPCs podem ter aparência própria pela chave deles (`NPC_LOOKS`: a Dona Iracema).
+  poucos para não engasgar). NPCs podem ter aparência própria pela chave deles (`NPC_LOOKS`: a Dona Iracema; o Curupira, com
+  cabelo de fogo — penteado `fogo`, que tremula a cada quadro — e `feetBackward`/`barefoot`).
 - `npm run render:characters` desenha uma prancha de exemplo em `docs/personagens.png`.
 - Monstros novos usam o mesmo pincel (`src/client/game/monsterPaint.ts`): olham para a direita (o jogo espelha) e
   têm quadros de parado, andando, armando o golpe (enquanto o aviso está no chão) e golpeando. `monsterArt.ts`

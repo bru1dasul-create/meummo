@@ -108,8 +108,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   recompensa de XP, ouro e itens, sequência (`depoisDe`), nível mínimo e repetíveis; até 5 ao mesmo tempo; lista
   na tela; progresso salvo com o personagem. Primeiras: Saguis Travessos → Couro de Jararaca → O Dono do
   Redemoinho (o Saci) → Guardião da Mata (repetível)
-- [ ] **[arte]** Desenho do Curupira (cabelo de fogo, pés virados para trás) e caprichar a conversa, a lista de
-  missões e os sinais ! e ? (hoje: personagem padrão e visual simples)
+- [x] **[arte]** Desenho do Curupira (cabelo de fogo que tremula, pés virados para trás, descalço, túnica de folhas)
+  e caprichar a conversa (painel da loja com cipó, retrato, fala no balão, cartões com barra de progresso e a
+  recompensa em fichas), a lista de missões (com barrinha) e os sinais ! e ? (selo dourado; verde quando é para entregar)
 - [ ] **[mundo]** Opcional: enfeite em volta do Curupira (árvore oca, cantinho de mata fechada) em (45, 12)
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
   buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,

@@ -41,6 +41,20 @@ export const NPC_LOOKS: Record<string, { body?: Partial<BodyLook>; gear?: Partia
     body: { skin: '#9a6440', hair: '#ddd8cf', hairStyle: 'coque', build: 'forte', eyes: '#6b4423', glasses: '#4a3424', smile: true, shoes: '#5a3a22' },
     gear: { body: 'chita_avental', charm: 'colar_sementes' },
   },
+  // guardião da mata: menino de cabelo de fogo, pés virados para trás, descalço, de túnica de folhas
+  curupira: {
+    body: {
+      skin: '#8a5634',
+      hair: '#f47b20',
+      hairStyle: 'fogo',
+      build: 'esguio',
+      eyes: '#3d8a52',
+      smile: true,
+      feetBackward: true,
+      barefoot: true,
+    },
+    gear: { body: 'tunica_folhas' },
+  },
 };
 
 /** O desenho de cada parte vestida e uma chave que identifica a combinação. */

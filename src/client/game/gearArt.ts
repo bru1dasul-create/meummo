@@ -72,6 +72,8 @@ export const GEAR_ART: Record<string, GearArt> = {
   tunica: { kind: 'clothes', shirt: '#ece4cf', skirt: true, belt: '#8a6b3d' },
   // vestido de chita (o tecido florido das feiras) com avental: a roupa da Dona Iracema
   chita_avental: { kind: 'clothes', shirt: '#c8452f', skirt: 'long', apron: '#efe6d2', flowers: ['#f2c94c', '#f6efe0', '#4f9a3c'] },
+  // túnica de folhas amarrada com cipó: a roupa do Curupira
+  tunica_folhas: { kind: 'clothes', shirt: '#4e8a3a', skirt: true, belt: '#6b4a22', flowers: ['#86c95a', '#2f5e26'] },
   // couro de cobra, costurado à mão: escamas e um tom oliva (não some em quem tem a pele morena)
   gibao: { kind: 'vest', leather: '#7c7440', lacing: '#e9d9a8', studs: '#e9b941', scales: true },
   armadura: { kind: 'plate', metal: '#a3acb5', chain: '#6e767f', pauldrons: true, tassets: true, trim: '#c9a062' },

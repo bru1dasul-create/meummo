@@ -6,7 +6,7 @@
 import { DOLL_SLOTS, type DollSlot, type GearArt } from '../gearArt';
 import { HAIR, type BodyLook, type Clump } from './body';
 import { drawBackGear, drawBodyGear, drawHeadGear, drawShield, drawShoulderGear, drawWeapon, type Dress } from './gear';
-import { material } from './palette';
+import { material, type Material } from './palette';
 import { ANIMS, FRAME_H, FRAME_W, FRAMES_PER_VIEW, HEAD_RX, HEAD_RY, POSES, VIEWS, frameIndex, rigOf, type AnimName, type Rig, type View } from './poses';
 import { add, Canvas, cylinder, lerp, type Vec } from './raster';
 import { torsoEdges, torsoNormal, torsoShape } from './shapes';
@@ -16,6 +16,9 @@ import { Sheet } from './sheet';
 export type DollGear = Partial<Record<DollSlot, GearArt>>;
 
 /** Materiais do corpo, já com o que roupa, luvas e botas trocam. */
+/** Cabelo de fogo: vermelho na raiz, laranja no meio e amarelo nas pontas. */
+const FIRE: Material = { ramp: ['#8e2418', '#d2401c', '#f2701f', '#ffaa2b', '#ffe27a'], shiny: false };
+
 export function dressOf(look: BodyLook, gear: DollGear): Dress {
   const skin = material(look.skin, 'skin');
   const shirt = material(look.shirt, 'cloth');
@@ -23,7 +26,7 @@ export function dressOf(look: BodyLook, gear: DollGear): Dress {
     gear,
     look,
     skin,
-    hair: material(look.hair, 'hair'),
+    hair: look.hairStyle === 'fogo' ? FIRE : material(look.hair, 'hair'),
     shirt,
     sleeve: shirt,
     shortSleeves: true,
@@ -37,6 +40,8 @@ export function dressOf(look: BodyLook, gear: DollGear): Dress {
     skirt: false,
     tallBoots: false,
   };
+  // descalço e de pernas de fora (botas, se vestir, cobrem os pés do mesmo jeito)
+  if (look.barefoot) d.pants = d.shin = d.foot = skin;
   for (const slot of DOLL_SLOTS) {
     const art = gear[slot];
     if (!art) continue;
@@ -77,19 +82,24 @@ export function dressOf(look: BodyLook, gear: DollGear): Dress {
 
 function drawFoot(cv: Canvas, r: Rig, d: Dress, i: 0 | 1, bias: number): void {
   const a = r.ankle[i];
+  // pés virados para trás (o Curupira): o bico aponta para o outro lado
+  const back = d.look.feetBackward ?? false;
+  const s = back ? -1 : 1;
   if (r.view === 'side') {
     // bota de lado: calcanhar, peito do pé e bico, com a sola reta no chão
-    cv.polygon([add(a, [-1.9, -0.9]), add(a, [1.1, -0.9]), add(a, [3.5, 0.7]), add(a, [3.9, 2.4]), add(a, [-2.1, 2.4])], d.foot, {
+    cv.polygon([add(a, [-1.9 * s, -0.9]), add(a, [1.1 * s, -0.9]), add(a, [3.5 * s, 0.7]), add(a, [3.9 * s, 2.4]), add(a, [-2.1 * s, 2.4])], d.foot, {
       bias,
       normal: (_x, y) => {
         const v = Math.max(-1, Math.min(1, (y - a[1] - 0.5) / 2));
-        return [0.2, v, Math.sqrt(Math.max(0, 1 - v * v))];
+        return [0.2 * s, v, Math.sqrt(Math.max(0, 1 - v * v))];
       },
     });
-    cv.line(add(a, [-2, 2.1]), add(a, [3.8, 2.1]), d.foot.ramp[0]);
+    cv.line(add(a, [-2 * s, 2.1]), add(a, [3.8 * s, 2.1]), d.foot.ramp[0]);
   } else {
-    // de frente/costas: o bico da bota visto de cima, com a sola embaixo
-    cv.ellipse(add(a, [0, 0.9]), 2.15, 1.6, d.foot, { bias });
+    // de frente/costas: o bico da bota visto de cima, com a sola embaixo (virado para trás: de frente aparece
+    // só o calcanhar; de costas, os dedos)
+    const toward = back ? (r.view === 'down' ? -0.6 : 1.6) : 0.9;
+    cv.ellipse(add(a, [0, toward]), 2.15, back && r.view === 'up' ? 1.9 : 1.6, d.foot, { bias });
     cv.line(add(a, [-1.7, 2.1]), add(a, [1.7, 2.1]), d.foot.ramp[0]);
   }
 }
@@ -104,14 +114,14 @@ function drawLeg(cv: Canvas, r: Rig, d: Dress, i: 0 | 1): void {
   cv.part(`leg${i}`);
   cv.capsule(hip, knee, 2.85, 2.2, d.pants, { bias });
   cv.capsule(knee, bootTop, 2.2, 1.95, d.pants, { bias });
-  if (r.view !== 'side') {
+  if (r.view !== 'side' && !d.look.barefoot) {
     // vinco da calça: um fio de luz descendo pela coxa, do lado da luz
     cv.line(add(hip, [-1, 1.5]), add(knee, [-0.9, -0.5]), d.pants.ramp[3]);
   }
   cv.part(`boot${i}`);
   cv.capsule(bootTop, ankle, 2.15, 1.7, d.tallBoots ? d.shin : d.foot, { bias });
   if (d.bootCuff) cv.capsule(add(bootTop, [-1.9, 0.2]), add(bootTop, [1.9, 0.2]), 0.9, 0.9, d.bootCuff, { bias });
-  else cv.line(add(bootTop, [-1.5, 0.4]), add(bootTop, [1.5, 0.4]), d.foot.ramp[3]); // dobra do cano
+  else if (!d.look.barefoot || d.tallBoots) cv.line(add(bootTop, [-1.5, 0.4]), add(bootTop, [1.5, 0.4]), d.foot.ramp[3]); // dobra do cano
   drawFoot(cv, r, d, i, bias);
 }
 
@@ -395,16 +405,26 @@ function drawHair(cv: Canvas, r: Rig, d: Dress, layer: 'back' | 'front', covered
   const sx = HEAD_RX / 5.6;
   const sy = HEAD_RY / 6;
   const at = (v: Vec): Vec => [r.head[0] + v[0] * sx, r.head[1] + v[1] * sy];
+  const fire = d.look.hairStyle === 'fogo';
+  // cabelo de fogo: as pontas tremulam de um quadro para o outro e clareiam para o amarelo
+  const tick = r.tick ?? 0;
+  const top = r.head[1] - HEAD_RY;
+  const flame = fire ? (_x: number, y: number, tone: number) => (y < top - 3.2 ? 4 : y < top - 0.6 ? Math.max(tone, 3) : tone) : undefined;
   const drawn: { k: number; c: Clump }[] = [];
   clumps.forEach((c, k) => {
     if ((c.back ?? false) !== (layer === 'back')) return;
     if (covered && !c.low) return;
     // cada mecha é uma parte: onde uma cobre a outra aparece a linha que separa os fios
     cv.part(`hair${k}`);
-    if (c.to) cv.capsule(at(c.at), at(c.to), c.r[0] * sx, c.r[0] * sx * 0.35, d.hair);
-    else cv.ellipse(at(c.at), c.r[0] * sx, c.r[1] * sy, d.hair);
+    if (c.to) {
+      let end = at(c.to);
+      // labareda: a ponta tremula e não passa do alto do quadro (correndo, a cabeça sobe)
+      if (fire) end = [end[0] + Math.sin(tick * 1.7 + k * 2.1) * 0.9, Math.max(2.8, end[1] + Math.cos(tick * 2.3 + k * 1.3) * 0.8)];
+      cv.capsule(at(c.at), end, c.r[0] * sx, c.r[0] * sx * (fire ? 0.25 : 0.35), d.hair, { pattern: flame });
+    } else cv.ellipse(at(c.at), c.r[0] * sx, c.r[1] * sy, d.hair, { pattern: flame });
     drawn.push({ k, c });
   });
+  if (fire) return; // fogo não tem fios
   // fios (linha escura) e brilho (linha clara) dentro de cada mecha, só nos pixels dela
   const dark = d.hair.ramp[0];
   const light = d.hair.ramp[3];
@@ -514,7 +534,7 @@ export const SHEET_ROWS = VIEWS.length;
 /** Desenha um quadro numa folha qualquer (usado também pela prévia da mochila). */
 export function drawDollFrame(sheet: Sheet, ox: number, oy: number, look: BodyLook, gear: DollGear, view: View, anim: AnimName, frame: number, dress = dressOf(look, gear)): void {
   const cv = new Canvas(FRAME_W, FRAME_H);
-  drawFrame(cv, rigOf(view, POSES[view][anim][frame]!), dress);
+  drawFrame(cv, { ...rigOf(view, POSES[view][anim][frame]!), tick: frameIndex(view, anim, frame) }, dress);
   cv.finish(sheet, ox, oy);
 }
 

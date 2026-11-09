@@ -45,6 +45,7 @@ function gearOf(names: string[]): DollGear {
 // Os de cima usam itens que já existem no jogo; Caio e Duda mostram visuais prontos para itens futuros.
 const ALL_SETS: { name: string; gear: string[]; npc?: string }[] = [
   { name: 'Dona Iracema', gear: ['chapeu_palha'], npc: 'iracema' },
+  { name: 'Curupira', gear: [], npc: 'curupira' },
   { name: 'Ana', gear: [] },
   { name: 'Beto', gear: ['chapeu_palha', 'gibao', 'estilingue', 'colar'] },
   { name: 'Eva', gear: ['gorro', 'couraca', 'faca', 'ferradura'] },

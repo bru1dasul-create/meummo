@@ -3,8 +3,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { CharacterAnimator } from '../src/client/game/animator';
-import { hasGearArt, resolveGear } from '../src/client/game/characters';
-import { bodyLook } from '../src/client/game/doll/body';
+import { hasGearArt, lookOf, resolveGear } from '../src/client/game/characters';
+import { bodyLook, type BodyLook } from '../src/client/game/doll/body';
 import { buildDollSheet, drawDollFrame, SHEET_COLUMNS, type DollGear } from '../src/client/game/doll/compose';
 import { gearIcon } from '../src/client/game/doll/gearIcon';
 import { ANIMS, FRAME_H, FRAME_W, faceOrigin, frameIndex, FRAMES_PER_VIEW, VIEWS, type AnimName, type View } from '../src/client/game/doll/poses';
@@ -154,5 +154,43 @@ describe('animações e expressões', () => {
     const blinks = Array.from({ length: 1000 }, (_, i) => anim.pick({ ...base, now: 10000 + i * 10 }).expression).filter((e) => e === 'blink');
     expect(blinks.length).toBeGreaterThan(0);
     expect(blinks.length).toBeLessThan(100); // só de vez em quando
+  });
+});
+
+describe('aparência própria de NPC', () => {
+  const draw = (look: BodyLook, view: View, anim: AnimName, f: number): Sheet => {
+    const sheet = new Sheet(FRAME_W, FRAME_H);
+    drawDollFrame(sheet, 0, 0, look, resolveGear({}, 'curupira').gear, view, anim, f);
+    return sheet;
+  };
+  /** Pixels desenhados nas últimas linhas do quadro (os pés): [mais à esquerda, mais à direita]. */
+  const feet = (sheet: Sheet): [number, number] => {
+    const xs: number[] = [];
+    for (let y = FRAME_H - 8; y < FRAME_H; y++) for (let x = 0; x < FRAME_W; x++) if (sheet.solid(x, y)) xs.push(x);
+    return [Math.min(...xs), Math.max(...xs)];
+  };
+
+  it('o Curupira tem cabelo de fogo, que tremula e cabe no quadro em todas as animações', () => {
+    const look = lookOf(0, 'curupira');
+    expect(look.hairStyle).toBe('fogo');
+    allFrames((view, anim, f) => {
+      const sheet = draw(look, view, anim, f);
+      for (let x = 0; x < FRAME_W; x++) expect(sheet.solid(x, 0), `${view} ${anim} ${f}: fogo cortado em cima`).toBe(false);
+    });
+    // dois quadros parados seguidos: o corpo quase não muda, mas as labaredas sim
+    const a = draw(look, 'down', 'idle', 0);
+    const b = draw(look, 'down', 'idle', 1);
+    let changed = 0;
+    for (let y = 0; y < 12; y++) for (let x = 0; x < FRAME_W; x++) if (a.solid(x, y) !== b.solid(x, y)) changed++;
+    expect(changed).toBeGreaterThan(0);
+  });
+
+  it('o Curupira tem os pés virados para trás (de lado, o bico do pé aponta para as costas)', () => {
+    const look = lookOf(0, 'curupira');
+    const [backLeft, backRight] = feet(draw(look, 'side', 'idle', 0));
+    const [left, right] = feet(draw({ ...look, feetBackward: false }, 'side', 'idle', 0));
+    // olhando para a direita: com o pé virado, ele vai mais para a esquerda e menos para a direita
+    expect(backLeft).toBeLessThan(left);
+    expect(backRight).toBeLessThan(right);
   });
 });

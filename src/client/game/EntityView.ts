@@ -347,7 +347,10 @@ export class EntityView {
       el.className = 'npc-mark';
       this.tag.prepend(el);
     }
-    if (el.textContent !== mark) el.textContent = mark;
+    if (el.textContent !== mark) {
+      el.textContent = mark;
+      el.dataset.mark = mark; // o CSS pinta o ? de verde
+    }
     this.cachedLabelWidth = null;
   }
 
