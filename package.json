@@ -1,0 +1,40 @@
+{
+  "name": "meummo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MMORPG 2D de fantasia que roda no navegador.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n servidor,cliente -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "tsx watch src/server/main.ts",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "tsx src/server/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test",
+    "bots": "tsx scripts/bots.ts",
+    "gen:tiles": "tsx scripts/gen-tiles.ts",
+    "gen:map": "tsx scripts/gen-map.ts",
+    "render:map": "tsx scripts/render-map.ts"
+  },
+  "dependencies": {
+    "phaser": "4.2.1",
+    "sirv": "3.0.2",
+    "tsx": "4.23.15",
+    "ws": "8.22.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/pngjs": "6.0.5",
+    "@types/ws": "8.18.2",
+    "concurrently": "10.0.7",
+    "pngjs": "7.0.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}

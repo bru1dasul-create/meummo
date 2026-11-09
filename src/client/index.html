@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#101a12" />
+    <title>MeuMMO</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="labels"></div>
+
+    <div id="login" class="overlay">
+      <form id="login-form" class="panel" autocomplete="off">
+        <h1>MeuMMO</h1>
+        <p class="subtitle">Um mundo de fantasia para explorar junto.</p>
+        <label for="name">Nome do personagem</label>
+        <input id="name" name="name" maxlength="16" placeholder="Ex.: Aurora" required />
+        <button id="login-button" type="submit">Entrar no mundo</button>
+        <p id="login-error" class="error" role="alert"></p>
+        <ul class="controls">
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas para andar</li>
+          <li>Clique ou toque no chão para ir até lá</li>
+          <li><kbd>Enter</kbd> para conversar</li>
+        </ul>
+      </form>
+    </div>
+
+    <div id="hud" hidden>
+      <span id="hud-name"></span>
+      <span class="sep">·</span>
+      <span id="hud-online"></span>
+      <span class="sep">·</span>
+      <span id="hud-ping">ping —</span>
+    </div>
+
+    <div id="chat" hidden>
+      <ul id="chat-log" aria-live="polite"></ul>
+      <form id="chat-form" autocomplete="off">
+        <input id="chat-input" maxlength="160" placeholder="Enter para conversar" enterkeyhint="send" />
+      </form>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
