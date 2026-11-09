@@ -19,6 +19,11 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
   A, B, C e D continuam de pé, com a cobertura de concreto furada e cheia de cipó, e os ônibus enferrujados nunca
   mais saíram das pistas. Na entrada, as catracas e a bilheteria; no fundo, a parte que desabou virou mato e
   acampamento, com tambores de fogo (por enquanto quem anda por lá é o Corpo-Seco e o Capelobo)
+- Ao lado do largo de Santo Amaro, entre pela porta de vidro do **Shopping do Largo Treze** (o letreiro perdeu o
+  "I"): a claraboia do átrio caiu e a mata entrou — dois ipês e uma árvore cresceram no jardim do meio, o sol entra
+  pelo buraco e a chuva enche o chafariz. Em volta, corredores escuros com lojas de porta de aço, vitrines quebradas
+  com manequins, quiosques e escadas rolantes paradas; no norte, o supermercado (Corpo-Seco entre as gôndolas), o
+  cinema (Capelobo entre as poltronas) e a praça de alimentação (onde o Saci apronta)
 - Desça a trilha do brejo, ao sul, até a **Represa Billings**: um labirinto de canais de água verde e ilhas de
   mato ligadas por passarelas, com buritis, aguapés, casas afundadas, a usina velha, a ponte da rodovia quebrada
   no meio do lago e a prainha de frente para a pedra onde a **Iara** vai cantar (as criaturas de lá ainda estão
@@ -174,7 +179,7 @@ o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão
 Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito. Cada zona é um arquivo em
 `public/assets/maps`, e o nome do arquivo é o **id** do mapa: `refugio.tmj` (Refúgio de Guarapiranga, onde
 todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro), `billings.tmj` (Represa Billings) e
-`terminal-santo-amaro.tmj` (Terminal Santo Amaro). Em cada mapa:
+`terminal-santo-amaro.tmj` (Terminal Santo Amaro) e `shopping-largo-treze.tmj` (Shopping do Largo Treze). Em cada mapa:
 
 - camadas de tiles, de baixo para cima: `ground` (o chão), `sombras` (sombra de casas e prédios), `decor`
   (troncos, casas, flores…) e `acima`, que o jogo desenha **por cima dos personagens**: copa das árvores e alto
@@ -217,6 +222,8 @@ Se uma saída apontar para um mapa ou ponto que não existe, o servidor explica 
 ![Mapa da Represa Billings](docs/mapa-billings.png)
 
 ![Mapa do Terminal Santo Amaro](docs/mapa-terminal-santo-amaro.png)
+
+![Mapa do Shopping do Largo Treze](docs/mapa-shopping-largo-treze.png)
 
 Nos mapas: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci, **azul-claro** = saída
 para outro mapa.

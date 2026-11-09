@@ -209,13 +209,17 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
 - Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
   `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`), Represa Billings (88×64,
-  `scripts/gen-billings.ts`) e Terminal Santo Amaro (64×48, `scripts/gen-terminal.ts`), os três últimos usando
-  `scripts/map-builder.ts`. Gerar de novo por cima apaga as
+  `scripts/gen-billings.ts`), Terminal Santo Amaro (64×48, `scripts/gen-terminal.ts`) e Shopping do Largo Treze
+  (64×44, `scripts/gen-shopping.ts`), os quatro últimos usando `scripts/map-builder.ts`. Gerar de novo por cima apaga as
   edições: gere com `--out outro.tmj` e compare. Cada gerador confere no fim se dá para chegar a pé nos lugares
   importantes; o da Billings também liga cada ilha à entrada com passarelas e guarda os caminhos antes de plantar
   as árvores. Mexeu num gerador? Cuidado com a ordem dos sorteios: um sorteio a mais (ou a menos) no meio muda
   tudo o que vem depois (por isso alguns passos sorteiam "à toa", para o resto do mapa ficar igual).
 - Camada de objetos `lendas` (Billings): áreas de criaturas que ainda vão existir; o servidor ignora.
+- Mapa de dentro (o shopping): a planta sai de constantes no gerador (corredores, átrio, faixas de lojas) e cada
+  loja tem a frente em duas linhas: o letreiro na camada `acima` (em cima da porta dá para passar por baixo dele;
+  no resto da linha, a `decor` tem parede, que bloqueia) e a frente na `decor` (porta de aço, vitrine, entrada).
+  Os objetos que bloqueiam só entram se todo o chão continuar alcançável a pé a partir da entrada.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
   Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, varal 3x2, ônibus) são desenhados inteiros e

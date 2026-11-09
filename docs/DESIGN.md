@@ -103,7 +103,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | Zona | Nível | Como é | Situação |
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
-| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. Ao sul, o Terminal Santo Amaro, com os ônibus parados para sempre. | ✅ mapa e criaturas (níveis 4 a 8) e o terminal |
+| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. Ao sul, o Terminal Santo Amaro, com os ônibus parados para sempre; ao lado do largo, o Shopping do Largo Treze. | ✅ mapa e criaturas (níveis 4 a 8), o terminal e o shopping |
 | **Represa Billings** (os Labirintos) | farm e perigo | Canais e pântanos ao sul do brejo, com jacarés mutantes e espíritos da água (Iara, Boto, Lobisomem da Mata). | ✅ mapa (criaturas provisórias) |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
@@ -172,6 +172,25 @@ Dica para a Mula: saia da linha vermelha **para o lado** (ou use a Esquiva no mo
   tambores de fogo (alguém ainda vive por ali?).
 - **O clima:** neblina e penumbra como em Santo Amaro, só que um pouco menos.
 - **Criaturas por enquanto:** Corpo-Seco nas plataformas e Capelobo no fundo. Quem desmaia aqui acorda no Refúgio.
+
+### Shopping do Largo Treze (o mapa)
+Lugar real, sem marca: é "o shopping do Largo Treze", o prédio do lado oeste do largo do chafariz.
+- **A entrada:** em Santo Amaro, a fachada de vidro com o letreiro SHOPPING (o "I" caiu na marquise) e a porta no
+  meio, de frente para a avenida. Lá dentro, o totem "você está aqui" e um tambor de fogo de quem acampa na porta.
+- **O átrio:** a claraboia caiu e a mata entrou. No meio, o jardim onde o piso afundou: um ipê-amarelo, um ipê-rosa
+  e uma árvore grande, com mato passando por cima do piso. O sol entra pelo buraco (o único lugar claro), a chuva
+  enche o chafariz (com aguapés) e deixa poças; cacos de vidro e pedaços da estrutura pelo chão; as escadas
+  rolantes paradas sobem para o andar de cima, que desabou.
+- **Os corredores e as lojas:** três corredores com quiosques, bancos e floreiras; doze lojas com o letreiro apagado
+  (sem nome de ninguém), porta de aço, vitrine quebrada com manequim e a entrada aberta: roupas (manequins e
+  araras), farmácia (virou horta de ervas de cura), eletrônicos (sucata e fios), calçados (caixas) e as vazias,
+  onde alguém acendeu fogo num tambor.
+- **No norte:** o supermercado (gôndolas desbotadas, caixas e carrinhos largados), o cinema (letreiro CINEMA,
+  cartazes de lenda — o Saci na lua, a Mula pegando fogo —, carpete vinho, poltronas, a tela rasgada e o carrinho
+  de pipoca) e a praça de alimentação (lanchonetes com o cardápio desbotado, mesas viradas e o acampamento).
+- **O clima:** escuro lá dentro (a luz vem do sol no átrio, das portas e dos tambores de fogo) e poeira no ar.
+- **Criaturas por enquanto:** Corpo-Seco no supermercado e na ala leste, Capelobo no cinema e na ala oeste e o
+  Saci na praça de alimentação. Quem desmaia aqui acorda no Refúgio.
 
 **Facções (PvP por território, mais adiante):**
 - **Tecnocratas — os Herdeiros da Pedra:** reconstroem a tecnologia antiga; armaduras de lataria de carro,

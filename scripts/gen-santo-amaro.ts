@@ -292,6 +292,19 @@ m.fill(SOUTH_EXIT.x, H - 7, SOUTH_EXIT.x + SOUTH_EXIT.w - 1, H - 1, (x, y) => m.
 m.fill(SOUTH_EXIT.x - 1, H - 7, SOUTH_EXIT.x - 1, H - 1, (x, y) => m.setGround(x, y, 'concrete_cracked'));
 m.fill(SOUTH_EXIT.x + SOUTH_EXIT.w, H - 7, SOUTH_EXIT.x + SOUTH_EXIT.w, H - 1, (x, y) => m.setGround(x, y, 'concrete_cracked'));
 
+// 7c. O Shopping do Largo Treze é o prédio do lado oeste do largo: a fachada vira vidro, com o letreiro em cima e a
+//     porta no meio, de frente para a avenida (sem sortear nada: o resto do mapa não muda)
+const mall = standing.find((b) => b.x1 === PLAZA.x0 - 2 && b.y0 <= PLAZA.y1 && b.y1 >= PLAZA.y0);
+if (!mall) throw new Error('não achei o prédio do shopping (do lado oeste do largo)');
+const mallDoor = (mall.x0 + mall.x1 - 1) >> 1; // a porta tem 2 tiles: mallDoor e mallDoor + 1
+for (let x = mall.x0; x <= mall.x1; x++) {
+  const sign = x - (mallDoor - 1); // o letreiro tem 4 tiles, em cima da porta
+  m.setDecor(x, mall.y1 - 1, sign >= 0 && sign < 4 ? `mall_sign_${sign + 1}` : 'mall_front_up');
+  m.setDecor(x, mall.y1, x === mallDoor || x === mallDoor + 1 ? 'mall_front_door' : 'mall_front_glass');
+}
+const MALL_EXIT = { x: mallDoor, y: mall.y1, w: 2, h: 1 };
+const MALL_ARRIVAL = { x: mallDoor, y: mall.y1 + 2 };
+
 // 7b. Beiradas suaves: o mato escuro avançando por cima do concreto (no fim, depois de tudo estar no lugar)
 softenEdges(m.ground, W, H, [
   {
@@ -340,6 +353,7 @@ const map = m.toTiled({
     { name: 'spawn', ...ARRIVAL },
     { name: 'oeste', ...ARRIVAL },
     { name: 'sul', ...SOUTH_ARRIVAL },
+    { name: 'shopping', ...MALL_ARRIVAL },
   ],
   monsters: monsterAreas(),
   exits: [
@@ -359,6 +373,14 @@ const map = m.toTiled({
         { name: 'chegada', type: 'string', value: 'norte' },
       ],
     },
+    {
+      name: 'Shopping do Largo Treze',
+      ...MALL_EXIT,
+      properties: [
+        { name: 'mapa', type: 'string', value: 'shopping-largo-treze' },
+        { name: 'chegada', type: 'string', value: 'entrada' },
+      ],
+    },
   ],
 });
 
@@ -370,6 +392,7 @@ const checkpoints: Record<string, { x: number; y: number }> = {
   'largo do chafariz': { x: FOUNTAIN.x, y: FOUNTAIN.y + 2 },
   'fim da avenida (leste)': { x: W - 6, y: AVENUE_Y + 1 },
   'saída para o terminal (sul)': { x: SOUTH_EXIT.x + 1, y: H - 1 },
+  'porta do shopping': { x: MALL_EXIT.x, y: MALL_EXIT.y },
 };
 for (const sx of STREETS_X) {
   checkpoints[`rua x=${sx} (norte)`] = { x: sx + 1, y: 6 };

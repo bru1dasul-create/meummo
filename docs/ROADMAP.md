@@ -108,7 +108,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[mundo]** Terminal Santo Amaro: mapa novo pela rua do meio de Santo Amaro, ao sul (plataformas cobertas
   A a D com a cobertura furada, ônibus enferrujados nas pistas, catracas, bilheteria e o fundo desabado com
   tambores de fogo), com criaturas provisórias (Corpo-Seco nas plataformas, Capelobo no fundo)
-- [ ] **[mundo]** Shopping em ruínas (sem nome de marca): mapa de dentro, com entrada por Santo Amaro
+- [x] **[mundo]** Shopping do Largo Treze (sem nome de marca): mapa de dentro, com a porta de vidro no prédio do
+  lado oeste do largo de Santo Amaro (átrio com jardim embaixo da claraboia quebrada, chafariz, escadas rolantes,
+  12 lojas, supermercado, cinema e praça de alimentação), com criaturas provisórias (Corpo-Seco, Capelobo e Saci)
 - [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
   Boto e jacarés na Billings, Boitatá como chefe
 
