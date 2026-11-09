@@ -38,17 +38,18 @@ Feito pela Estrutura, tudo na `main`:
 Números para não se perder: protocolo na versão **15**; `MIGRATIONS` no passo **3** (coluna `quests`).
 
 ## Esperando outras frentes
-- **[arte]:** desenhos do Curupira, jacaré, boto e Iara; efeito do canto e algo no jogador encantado; ícones
-  `dente` e `escama`; caprichar a conversa, a lista de missões e os sinais ! e ?.
-- **[arte]:** o dono autorizou (9/11) juntar na `main` o trabalho do ramo dela (loja e ouro caprichados, Dona
-  Iracema com aparência própria, personagem em camadas). O único conflito era no `style.css` (`#shop, #talk`).
+- Nada pendente para a [estrutura]. A [arte] entregou tudo que estava pedido (Curupira, jacaré, boto, Iara, canto,
+  jogador encantado, ícones `dente` e `escama`, conversa, missões e sinais ! e ?) e juntou na `main` em 9/11, junto
+  com o personagem em camadas e a loja e o ouro caprichados. O ramo dela ficou igual à `main`.
 - O dono vai ligar o **Nano Banana** (gerador de imagens) para o chat de Arte.
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
 1. **Equilíbrio:** o dono joga e ajusta no painel (itens "[dono → estrutura]" do roteiro); a Estrutura muda o
    padrão nos arquivos quando ele mandar os ajustes copiados do painel.
 2. **M5 — servidor na internet** para os amigos testarem: VPS, domínio, HTTPS, senha no painel do administrador,
-   banir, registros. (Pesquisar preços de VPS antes de propor.)
+   banir, registros. (Pesquisar preços de VPS antes de propor.) A avaliar com o dono: um primeiro teste sem VPS,
+   por túnel gratuito a partir do PC dele. Antes, o painel precisa de senha e os freios de senha precisam do
+   endereço real de cada jogador: pelo túnel, todo visitante chega como se fosse do próprio computador.
 3. **M4 — social:** grupo com XP dividido, troca entre jogadores, mensagem privada, guilda.
 4. **Lendas novas:** Boitatá (chefe) e uma lenda própria para o Shopping do Largo Treze (o [mundo] deixou o lugar
    pronto).

@@ -48,8 +48,9 @@
 Três chats trabalham ao mesmo tempo, cada um numa **frente**. **Cada chat só mexe nos arquivos da sua frente.**
 Precisa de algo de outra? Não faça: termine a resposta com `PEDIDO PARA [frente]: ...` e o dono do projeto repassa.
 No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só as suas.
-Para retomar depois de limpar a conversa (`/clear`), cada chat lê este arquivo, o roteiro e o seu caderno — o da
-[estrutura] é `docs/ESTRUTURA.md` (combinados com o dono, onde estamos e próximos passos).
+Para retomar depois de limpar a conversa (`/clear`), cada chat lê este arquivo, o roteiro e o seu caderno (combinados
+com o dono, onde estamos e próximos passos): `docs/ESTRUTURA.md` da [estrutura], `docs/ARTE.md` da [arte] e
+`docs/MUNDO.md` do [mundo]. Antes de limpar, o chat atualiza o caderno e junta na `main`.
 
 | Frente | Chat (hoje) | É dela |
 |---|---|---|
