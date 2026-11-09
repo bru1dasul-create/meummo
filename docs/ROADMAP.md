@@ -40,8 +40,10 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
   quando alguém passa embaixo), postes altos, mata fechada nas bordas, sombras de casas e prédios, água
   balançando, fogueira crepitando com brilho em volta (camadas `sombras` e `acima` do Tiled)
-- [ ] Mapa, passo 2 — Refúgio caprichado: chão redesenhado, beiradas suaves entre água, areia e grama, casas na
-  escala dos personagens novos, enfeites de vila (redes de pesca, varais, lamparinas, flores)
+- [x] Mapa, passo 2 — Refúgio caprichado: beiradas suaves entre água, areia, grama, terra e lama (com espuma na
+  beira da represa), a parte funda escurecendo aos poucos, grama/areia/terra com mais detalhe, casas coloridas
+  na escala dos personagens novos (porta de 2 tiles, janelas acesas, floreiras), lamparinas nos píeres,
+  bandeirinhas de festa junina, varais, redes de pesca, caixotes, barris e cestos de peixe
 - [ ] Mapa, passo 3 — Santo Amaro caprichado: neblina, brasas perto da Mula, prédios mais altos, escombros
 
 ## ✅ Pindorama — a primeira zona

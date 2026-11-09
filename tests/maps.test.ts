@@ -57,6 +57,27 @@ describe('camadas do mapa', () => {
     }
   });
 
+  it('no Refúgio, a areia que encosta na água tem beirada suave (nenhum degrau quadrado sobrou)', () => {
+    const map = realMap('refugio');
+    const ground = layerData(map, 'ground');
+    const water = new Set(['water', 'water_sparkle', 'dark_water', 'water_posts'].map((k) => gid(k)));
+    const at = (x: number, y: number) => (x >= 0 && y >= 0 && x < map.width && y < map.height ? ground[y * map.width + x] : 0);
+    const steps: string[] = [];
+    let shore = 0;
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        const g = at(x, y);
+        if (g !== gid('sand')) {
+          if (g && g >= gid('shore_1') && g <= gid('shore_c_nw')) shore++;
+          continue;
+        }
+        if ([at(x, y - 1), at(x + 1, y), at(x, y + 1), at(x - 1, y)].some((n) => n !== undefined && water.has(n))) steps.push(`(${x},${y})`);
+      }
+    }
+    expect(steps).toEqual([]);
+    expect(shore).toBeGreaterThan(100);
+  });
+
   it('as animações e as luzes do tileset apontam para tiles que existem', () => {
     const tileset = tiledTileset('');
     const animated = tileset.tiles.filter((t) => t.animation);
