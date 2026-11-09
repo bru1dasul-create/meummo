@@ -40,10 +40,28 @@ export interface MonsterDef {
   attack: MonsterAttack;
   /** Só o Saci (por enquanto): some num redemoinho e aparece em outro lugar. */
   whirlwind: { distance: number; everyMs: number; lines: string[] } | null;
+  /** Só a Iara (por enquanto): o canto encanta quem está perto e puxa para ela; a esquiva solta. */
+  song: MonsterSong | null;
   /** O que ele pode deixar para quem ajudou a derrubá-lo. */
   drops: MonsterDrop[];
   /** Ouro que cada um que ajudou ganha: sorteado entre [mínimo, máximo] ([0, 0] = nenhum). */
   gold: [number, number];
+}
+
+/** O canto (campo "canto" em data/monsters.json). */
+export interface MonsterSong {
+  /** De quanto em quanto tempo canta (se tem alguém por perto). */
+  everyMs: number;
+  /** Até quantos tiles dela o canto pega. */
+  range: number;
+  /** Tempo do aviso no chão antes de encantar (dá para sair ou esquivar). */
+  windupMs: number;
+  /** Quanto tempo o encanto dura (a esquiva solta antes). */
+  durationMs: number;
+  /** De quanto em quanto tempo puxa o encantado um passo para perto dela. */
+  pullEveryMs: number;
+  /** O que ela diz ao cantar (um balão, sorteado). */
+  lines: string[];
 }
 
 /** Um item que o monstro pode deixar: `chance` em % (0 a 100), quantidade entre min e max. */
@@ -94,6 +112,20 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         lines: Array.isArray(lines) ? lines.filter((l): l is string => typeof l === 'string' && l.trim() !== '') : [],
       };
     }
+    const songData = r.object('canto', true);
+    let song: MonsterSong | null = null;
+    if (songData) {
+      const s = new Reader(songData, FILE, `canto do monstro "${rawId}"`);
+      const lines = songData.falas;
+      song = {
+        everyMs: s.number('cadaMs', { min: 1000, fallback: 10000 }),
+        range: s.number('alcance', { min: 1, fallback: 5 }),
+        windupMs: s.number('preparoMs', { min: 300, fallback: 1300 }),
+        durationMs: s.number('duracaoMs', { min: 500, fallback: 3000 }),
+        pullEveryMs: s.number('puxaACadaMs', { min: 150, fallback: 450 }),
+        lines: Array.isArray(lines) ? lines.filter((l): l is string => typeof l === 'string' && l.trim() !== '') : [],
+      };
+    }
     defs.set(id, {
       id,
       name: r.text('nome'),
@@ -117,6 +149,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         fire,
       },
       whirlwind,
+      song,
       drops: parseDrops(r.list('itens'), rawId),
       gold: r.wholeRange('ouro'),
     });

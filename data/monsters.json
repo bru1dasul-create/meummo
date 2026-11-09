@@ -196,5 +196,40 @@
       { "item": "erva_arruda", "chance": 30 },
       { "item": "colar_presas", "chance": 5 }
     ]
+  },
+  "iara": {
+    "nome": "Iara",
+    "nivel": 8,
+    "vida": 420,
+    "xp": 200,
+    "ouro": [40, 60],
+    "passoMs": 320,
+    "agressivo": true,
+    "alcanceAgressao": 6,
+    "perseguicao": 9,
+    "renascerMs": 120000,
+    "ataque": {
+      "tipo": "projetil",
+      "alcance": 6,
+      "distanciaMinima": 2,
+      "preparoMs": 500,
+      "intervaloMs": 1300,
+      "dano": [14, 20],
+      "velocidade": 9,
+      "projetil": "agua"
+    },
+    "canto": {
+      "cadaMs": 10000,
+      "alcance": 5,
+      "preparoMs": 1300,
+      "duracaoMs": 3000,
+      "puxaACadaMs": 450,
+      "falas": ["Vem... vem pra beira...", "Escuta o meu canto...", "As águas te chamam..."]
+    },
+    "itens": [
+      { "item": "erva_arruda", "chance": 100, "quantidade": [1, 2] },
+      { "item": "escama_iara", "chance": 60 },
+      { "item": "colar_presas", "chance": 20 }
+    ]
   }
 }

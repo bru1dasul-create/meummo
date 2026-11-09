@@ -56,6 +56,12 @@ export class Player {
   nextItemAt = 0;
   /** A mochila mudou neste tick (o dono precisa saber). */
   invDirty = false;
+  /** Encantado pelo canto (Iara): até quando, por quem, e quando é o próximo puxão. */
+  charmedUntil = 0;
+  charmedBy: number | null = null;
+  nextPullAt = 0;
+  /** Para não repetir o aviso "você está encantado" a cada passo recusado. */
+  charmResyncAt = 0;
   /** Missões: progresso deste jogador (salvo com o personagem). */
   quests: QuestLog = {};
   /** O progresso nas missões mudou neste tick (o dono precisa saber). */
@@ -165,6 +171,8 @@ export class Monster {
   mode: MonsterMode = 'idle';
   targetId: number | null = null;
   windup: Windup | null = null;
+  /** Cantando (Iara): quando o canto encanta quem ficou na área. */
+  singing: { resolveAt: number } | null = null;
   nextStepAt = 0;
   nextAttackAt = 0;
   nextWanderAt = 0;

@@ -1221,6 +1221,11 @@ kbd {
   letter-spacing: 0.2px;
 }
 
+.float.charm {
+  color: #9ad8ff;
+  font-size: 14px;
+}
+
 /* NPCs (vendedora...): nome em verde-água e o que ela é embaixo */
 .tag.npc .name {
   color: #8fe3c8;

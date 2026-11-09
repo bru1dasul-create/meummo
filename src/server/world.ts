@@ -945,6 +945,7 @@ export class World {
       if (now >= player.deadUntil) this.respawnPlayer(player, now);
       return;
     }
+    if (player.charmedBy !== null) this.updateCharm(player, now);
     this.processSteps(player, now);
     this.regenPlayer(player, now);
   }
@@ -955,6 +956,17 @@ export class World {
       // Esquiva pronta não espera o passo anterior terminar (no cliente ela também acontece na hora).
       // Esquiva ainda recarregando vira um passo normal (o cliente se corrige com o ack).
       const dash = input.dash && now >= player.dashReadyAt - SKILL_TOLERANCE_MS;
+      if (!dash && now < player.charmedUntil) {
+        // Encantado: não anda (só a esquiva solta). O navegador corrige a posição pelo ack.
+        player.queue.shift();
+        player.ackSeq = input.seq;
+        player.ackPending = true;
+        if (now >= player.charmResyncAt) {
+          player.charmResyncAt = now + 500;
+          player.outbox.push({ t: 'charm', ms: player.charmedUntil - now });
+        }
+        continue;
+      }
       if (!dash && now < player.nextStepAt - STEP_TOLERANCE_MS) break;
       player.queue.shift();
       const result = applyInput(this.map, player, input.dir, dash, DASH_TILES);
@@ -966,6 +978,7 @@ export class World {
         player.dashed = true;
         player.outbox.push({ t: 'cd', n: DASH_SLOT, ms: DASH_COOLDOWN_MS });
         this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'dash' }, player.id);
+        this.breakCharm(player); // a esquiva quebra o encanto
       }
       if (result.moved || result.dir !== player.dir) player.changed = true;
       player.x = result.x;
@@ -1001,6 +1014,7 @@ export class World {
   }
 
   private respawnPlayer(player: Player, now: number): void {
+    this.breakCharm(player);
     // Mapa sem vila (propriedade renascerEm): acorda no mapa da vila.
     const home = this.map.respawnMap;
     if (home && home !== this.map.id && this.links.travel(player, home, 'spawn')) {
@@ -1178,6 +1192,10 @@ export class World {
       if (now >= monster.windup.resolveAt) this.resolveWindup(monster, now);
       return; // parado enquanto prepara o golpe
     }
+    if (monster.singing) {
+      if (now >= monster.singing.resolveAt) this.resolveSong(monster, now);
+      return; // parada enquanto canta
+    }
     const def = monster.def;
     let target = monster.targetId !== null ? this.players.get(monster.targetId) : undefined;
     if (
@@ -1211,6 +1229,13 @@ export class World {
   private fight(monster: Monster, target: Player, now: number): void {
     const attack = monster.def.attack;
     const distance = chebyshev(monster, target);
+
+    // Iara: de tempos em tempos canta, e quem fica perto é encantado e puxado para ela.
+    const song = monster.def.song;
+    if (song && distance <= song.range && now >= monster.nextSpecialAt) {
+      this.startSong(monster, now);
+      return;
+    }
 
     // Saci: se o alvo foge para longe, ele aparece do lado num redemoinho.
     const whirlwind = monster.def.whirlwind;
@@ -1258,6 +1283,65 @@ export class World {
       default:
         return [];
     }
+  }
+
+  // ---------- o canto (Iara) ----------
+
+  /** Começa a cantar: avisa no chão a área do canto (dá para sair dela ou esquivar). */
+  private startSong(monster: Monster, now: number): void {
+    const song = monster.def.song!;
+    monster.singing = { resolveAt: now + song.windupMs };
+    monster.nextSpecialAt = now + song.everyMs;
+    const tiles = areaTiles(monster.x, monster.y, song.range).filter((t) => this.map.isWalkable(t.x, t.y));
+    this.emitToViewers(monster, { t: 'warn', id: monster.id, tiles: tiles.flatMap((t) => [t.x, t.y]), ms: song.windupMs });
+    this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'song', r: song.range });
+    if (song.lines.length > 0) {
+      this.emitToViewers(monster, { t: 'say', id: monster.id, text: song.lines[Math.floor(this.random() * song.lines.length)]! });
+    }
+  }
+
+  /** O canto acaba: quem ficou na área (e não estava esquivando) fica encantado. */
+  private resolveSong(monster: Monster, now: number): void {
+    const song = monster.def.song;
+    monster.singing = null;
+    if (!song) return; // o administrador tirou o canto no meio
+    monster.nextAttackAt = Math.max(monster.nextAttackAt, now + 600);
+    for (const player of this.players.values()) {
+      if (player.dead || player.loading || now < player.invulnerableUntil) continue;
+      if (chebyshev(monster, player) > song.range) continue;
+      player.charmedUntil = now + song.durationMs;
+      player.charmedBy = monster.id;
+      player.nextPullAt = now + song.pullEveryMs;
+      player.queue.length = 0;
+      player.charmResyncAt = now + 500;
+      player.outbox.push({ t: 'charm', ms: song.durationMs });
+    }
+  }
+
+  /** Encantado: a cada pouco é puxado um passo para perto de quem cantou; o tempo acabando ou ela sumindo, solta. */
+  private updateCharm(player: Player, now: number): void {
+    const charmer = player.charmedBy !== null ? this.monsters.get(player.charmedBy) : undefined;
+    if (!charmer || now >= player.charmedUntil) return this.breakCharm(player);
+    if (now < player.nextPullAt) return;
+    player.nextPullAt = now + (charmer.def.song?.pullEveryMs ?? 450);
+    if (chebyshev(player, charmer) <= 1) return; // já está colado nela
+    const dir = dirTowards8(player, charmer);
+    if (dir === null) return;
+    const result = applyInput(this.map, player, dir, false, DASH_TILES);
+    if (!result.moved) return;
+    player.x = result.x;
+    player.y = result.y;
+    player.dir = result.dir;
+    player.changed = true;
+    player.outbox.push({ t: 'pull', x: player.x, y: player.y, dir: player.dir });
+  }
+
+  /** Solta o encanto (esquivou, acabou o tempo, ou quem cantou sumiu). */
+  private breakCharm(player: Player): void {
+    if (player.charmedBy === null) return;
+    player.charmedBy = null;
+    player.charmedUntil = 0;
+    player.outbox.push({ t: 'charm', ms: 0 });
   }
 
   /** Começa a preparar um golpe: avisa no chão onde ele vai acertar. */

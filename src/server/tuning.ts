@@ -46,6 +46,12 @@ const MONSTER_FIELDS: FieldSpec<MonsterDef>[] = [
   { campo: 'alcanceAgressao', rotulo: 'Percebe você a (tiles)', tipo: 'inteiro', dica: 'só vale se ataca sozinho', ler: (d) => d.aggroRange },
   { campo: 'perseguicao', rotulo: 'Persegue até (tiles)', tipo: 'inteiro', ler: (d) => d.chaseRange },
   { campo: 'renascerMs', rotulo: 'Renasce em (ms)', tipo: 'inteiro', ler: (d) => d.respawnMs },
+  // o canto (só a Iara, por enquanto)
+  { campo: 'canto.cadaMs', rotulo: 'Canta a cada (ms)', tipo: 'inteiro', ler: (d) => d.song?.everyMs, vale: (d) => d.song !== null },
+  { campo: 'canto.alcance', rotulo: 'Alcance do canto (tiles)', tipo: 'inteiro', ler: (d) => d.song?.range, vale: (d) => d.song !== null },
+  { campo: 'canto.preparoMs', rotulo: 'Aviso do canto (ms)', tipo: 'inteiro', dica: 'maior = mais tempo para sair da área', ler: (d) => d.song?.windupMs, vale: (d) => d.song !== null },
+  { campo: 'canto.duracaoMs', rotulo: 'Encanto dura (ms)', tipo: 'inteiro', dica: 'a esquiva solta antes', ler: (d) => d.song?.durationMs, vale: (d) => d.song !== null },
+  { campo: 'canto.puxaACadaMs', rotulo: 'Puxa um passo a cada (ms)', tipo: 'inteiro', dica: 'menor = puxa mais forte', ler: (d) => d.song?.pullEveryMs, vale: (d) => d.song !== null },
 ];
 
 const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [

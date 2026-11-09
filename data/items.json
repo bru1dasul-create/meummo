@@ -126,5 +126,13 @@
     "raridade": "comum",
     "descricao": "Afiado e enorme. A Dona Iracema paga bem por ele.",
     "icone": "dente"
+  },
+  "escama_iara": {
+    "nome": "Escama da Iara",
+    "preco": 90,
+    "tipo": "material",
+    "raridade": "raro",
+    "descricao": "Brilha como a lua na água. A Dona Iracema paga muito bem por ela.",
+    "icone": "escama"
   }
 }

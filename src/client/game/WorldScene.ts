@@ -132,6 +132,8 @@ export class WorldScene extends Phaser.Scene {
   private nextShotAt = 0;
   private shotCid = 0;
   private dashReadyAt = 0;
+  /** Encantado pelo canto (Iara) até este momento: não anda, só a esquiva solta. */
+  private charmedUntil = 0;
   private readonly skillReadyAt = SKILLS.map(() => 0);
   /** Atirando sem parar: segurando o botão do mouse ou o botão "Estilingue". */
   private firing: 'mouse' | 'button' | null = null;
@@ -298,6 +300,8 @@ export class WorldScene extends Phaser.Scene {
         return scene.welcome.map;
       },
       walking: () => scene.path.length > 0,
+      /** Encantado pelo canto (Iara) agora. */
+      charmed: () => performance.now() < scene.charmedUntil,
       /** O que está no chão esperando você pegar. */
       drops: () => scene.drops.list(),
       /** Posição na tela (pixels) do centro de um tile. */
@@ -423,6 +427,11 @@ export class WorldScene extends Phaser.Scene {
   // ======================= movimento =======================
 
   private handleMovementInput(now: number): void {
+    if (now < this.charmedUntil) {
+      // encantado: o servidor recusaria os passos (a esquiva continua valendo, pelo tryDash)
+      this.clearPath();
+      return;
+    }
     const held = this.keyboard?.current() ?? null;
     if (held !== null) {
       this.clearPath();
@@ -516,6 +525,7 @@ export class WorldScene extends Phaser.Scene {
     this.dashReadyAt = now + DASH_COOLDOWN_MS + 120;
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
     this.clearPath();
+    this.charmedUntil = 0; // a esquiva quebra o encanto (o servidor confirma)
   }
 
   /** O servidor confirmou nossos passos até `seq`. Se a previsão errou, corrige. */
@@ -872,6 +882,17 @@ export class WorldScene extends Phaser.Scene {
       case 'quests':
         this.onQuestLog(msg.log);
         break;
+      case 'charm':
+        this.onCharm(msg.ms, now);
+        break;
+      case 'pull':
+        // o canto te puxou um passo: desliza até lá (sem a previsão de passos, que o servidor recusaria)
+        this.pending = [];
+        this.predicted = { x: msg.x, y: msg.y, dir: msg.dir };
+        this.nextStepAt = 0;
+        this.clearPath();
+        this.me.moveTo(msg.x, msg.y, msg.dir, now, this.stepMs);
+        break;
       case 'notice':
         // aviso do administrador para todo mundo
         this.toast.show(msg.text, 7000);
@@ -1062,6 +1083,10 @@ export class WorldScene extends Phaser.Scene {
       case 'whirlwind':
         this.effects.whirlwind(center.x, center.y + 6, now);
         break;
+      case 'song':
+        // o canto da Iara: um anel do tamanho da área (o aviso no chão vem junto, no 'warn')
+        this.effects.ring(center.x, center.y, 0x9ad8ff, (range ?? 5) * T, 900, now);
+        break;
     }
   }
 
@@ -1150,6 +1175,23 @@ export class WorldScene extends Phaser.Scene {
     this.tracker.update(ctx);
     this.talk.update(ctx);
     for (const [id, info] of this.npcInfo) this.entities.get(id)?.setMark(npcMark(info.e.type, this.questList, ctx));
+  }
+
+  /** Encantado pelo canto (ms > 0) ou solto (ms = 0). */
+  private onCharm(ms: number, now: number): void {
+    const was = now < this.charmedUntil;
+    this.charmedUntil = ms > 0 ? now + ms : 0;
+    if (ms > 0) {
+      this.pending = [];
+      this.clearPath();
+      if (!was) {
+        // celular: pelo toque (ou pelo aparelho, se ainda não tocou na tela)
+        const touch = this.usingTouch || matchMedia('(pointer: coarse)').matches;
+        this.toast.show(touch ? 'Encantado pelo canto! Use a Esquiva para se soltar' : 'Encantado pelo canto! Esquiva (Espaço) para se soltar', 2500);
+        this.me.floatText('♪ encantado', 'charm');
+        this.sfx.play('warn');
+      }
+    }
   }
 
   private onQuestLog(log: QuestLog): void {
