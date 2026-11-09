@@ -9,6 +9,9 @@ import type { EntityKind, EntityState } from '../../shared/protocol';
 import { characterFrame, characterTexture } from './characters';
 import { monsterTexture } from './monsterArt';
 
+/** Monstros que se mexem mesmo parados (o Saci pulando, o fogo da Mula). */
+const ANIMATED_IDLE = new Set(['saci', 'mula_sem_cabeca']);
+
 const BUBBLE_MS = 5000;
 const FADE_MS = 450;
 
@@ -161,7 +164,7 @@ export class EntityView {
       this.sprite.setFrame(characterFrame(facing, moving ? (this.steps % 2 === 0 ? 1 : 2) : 0));
       this.sprite.setFlipX(facing === LEFT);
     } else {
-      this.sprite.setFrame(moving || (now % 900 < 450 && this.type === 'saci') ? 1 : 0);
+      this.sprite.setFrame(moving || (now % 900 < 450 && ANIMATED_IDLE.has(this.type)) ? 1 : 0);
       this.sprite.setFlipX(this.facingLeft);
     }
 

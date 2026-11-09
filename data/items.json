@@ -61,5 +61,50 @@
     "raridade": "lendario",
     "descricao": "Quem tira o gorro do Saci ganha a força dele... e a raiva também.",
     "icone": "gorro"
+  },
+  "erva_arruda": {
+    "nome": "Ramo de Arruda",
+    "tipo": "consumivel",
+    "cura": 30,
+    "recargaMs": 3000,
+    "pilha": 20,
+    "descricao": "Erva de cura que teima em nascer no meio do concreto.",
+    "icone": "erva"
+  },
+  "sucata": {
+    "nome": "Sucata",
+    "tipo": "material",
+    "pilha": 20,
+    "descricao": "Ferro velho da cidade antiga. Os ferreiros do Refúgio vão querer isso.",
+    "icone": "sucata"
+  },
+  "faca_sucata": {
+    "nome": "Faca de Sucata",
+    "tipo": "equipamento",
+    "parte": "arma",
+    "dano": 4,
+    "raridade": "raro",
+    "descricao": "Lâmina de lata afiada na pedra, cabo enrolado com fio de cobre.",
+    "icone": "faca"
+  },
+  "couraca_lata": {
+    "nome": "Couraça de Lata",
+    "tipo": "equipamento",
+    "parte": "corpo",
+    "vida": 15,
+    "defesa": 3,
+    "raridade": "raro",
+    "descricao": "Chapas de carro amarradas com corda. Barulhenta, mas segura um bote.",
+    "icone": "couraca"
+  },
+  "ferradura_brasa": {
+    "nome": "Ferradura em Brasa",
+    "tipo": "equipamento",
+    "parte": "amuleto",
+    "dano": 3,
+    "defesa": 2,
+    "raridade": "lendario",
+    "descricao": "Uma ferradura que nunca esfria. Dizem que é da Mula sem Cabeça.",
+    "icone": "ferradura"
   }
 }

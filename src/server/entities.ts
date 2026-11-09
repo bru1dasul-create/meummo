@@ -166,6 +166,8 @@ export class Monster {
   retargetAt = 0;
   lastDamagedAt = -Infinity;
   changed = false;
+  /** O movimento deste tick foi uma investida (o navegador desenha rápido, com rastro). */
+  dashed = false;
   /** Jogadores que bateram neste monstro (todos ganham XP quando ele cai). */
   readonly contributors = new Set<number>();
 
@@ -202,6 +204,15 @@ export class Monster {
 }
 
 export type Entity = Player | Monster;
+
+/** Chão perigoso por um tempo (o rastro de fogo da investida da Mula sem Cabeça). */
+export interface Hazard {
+  ownerId: number;
+  tiles: Tile[];
+  until: number;
+  nextPulseAt: number;
+  damage: [number, number];
+}
 
 export interface Projectile extends ShotPath {
   id: number;

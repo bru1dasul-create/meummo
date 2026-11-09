@@ -69,7 +69,7 @@ export type ByeReason = 'replaced' | 'shutdown';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind';
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge';
 
 /** Servidor → cliente. O servidor sempre envia uma lista (um pacote por tick). */
 export type ServerMsg =
@@ -99,7 +99,8 @@ export type ServerMsg =
   | { t: 'shot'; id: number; by: number; x: number; y: number; a: number; speed: number; range: number; kind: string; cid?: number }
   | { t: 'shot_end'; id: number; hit: number } // projétil acabou (hit = id de quem levou, ou 0)
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
-  | { t: 'fx'; id: number; kind: FxKind; a?: number }
+  | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number } // r = alcance do golpe (bote, investida)
+  | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)
   | { t: 'hit'; id: number; by: number; dmg: number; hp: number }
   | { t: 'heal'; id: number; amount: number; hp: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }

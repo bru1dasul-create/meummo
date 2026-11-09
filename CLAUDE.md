@@ -9,7 +9,7 @@
 - Mundo (aprovado): **Pindorama — Selva de Pedra**, São Paulo tomada pela floresta. Tom: "um pouco dos dois" —
   colorido e vivo nas vilas, sombrio nas ruínas; sem violência explícita (quem perde a vida desmaia).
   Zonas: **Refúgio de Guarapiranga** (`public/assets/maps/refugio.tmj`, inicial) e **Ruínas de Santo Amaro**
-  (`santo-amaro.tmj`, ainda sem monstros), ligadas pela avenida (camada `saidas`). Lugares reais sim, **marcas não**.
+  (`santo-amaro.tmj`, níveis 4 a 8, chefe: Mula sem Cabeça), ligadas pela avenida (camada `saidas`). Lugares reais sim, **marcas não**.
 - Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
   Como funciona por dentro: `docs/ARQUITETURA.md`.
 - Tentativas anteriores de MMO não deram certo por excesso de escopo. Por isso: etapas pequenas, sempre jogáveis.

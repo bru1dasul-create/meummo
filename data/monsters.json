@@ -74,5 +74,72 @@
       { "item": "banana", "chance": 100, "quantidade": [2, 3] },
       { "item": "gorro_saci", "chance": 30 }
     ]
+  },
+  "corpo_seco": {
+    "nome": "Corpo-Seco",
+    "nivel": 4,
+    "vida": 95,
+    "xp": 30,
+    "passoMs": 430,
+    "agressivo": true,
+    "alcanceAgressao": 3,
+    "perseguicao": 8,
+    "renascerMs": 25000,
+    "ataque": {
+      "tipo": "mordida",
+      "preparoMs": 700,
+      "intervaloMs": 1500,
+      "dano": [9, 14]
+    },
+    "itens": [
+      { "item": "sucata", "chance": 50 },
+      { "item": "erva_arruda", "chance": 20 },
+      { "item": "faca_sucata", "chance": 5 }
+    ]
+  },
+  "capelobo": {
+    "nome": "Capelobo",
+    "nivel": 6,
+    "vida": 130,
+    "xp": 50,
+    "passoMs": 300,
+    "agressivo": true,
+    "alcanceAgressao": 5,
+    "perseguicao": 10,
+    "renascerMs": 30000,
+    "ataque": {
+      "tipo": "bote",
+      "alcance": 3,
+      "preparoMs": 600,
+      "intervaloMs": 1500,
+      "dano": [12, 18]
+    },
+    "itens": [
+      { "item": "erva_arruda", "chance": 35 },
+      { "item": "couraca_lata", "chance": 5 }
+    ]
+  },
+  "mula_sem_cabeca": {
+    "nome": "Mula sem Cabeça",
+    "nivel": 8,
+    "vida": 450,
+    "xp": 220,
+    "passoMs": 260,
+    "agressivo": true,
+    "alcanceAgressao": 4,
+    "perseguicao": 14,
+    "renascerMs": 120000,
+    "ataque": {
+      "tipo": "investida",
+      "alcance": 6,
+      "preparoMs": 900,
+      "intervaloMs": 2600,
+      "dano": [18, 28],
+      "rastroFogo": { "duracaoMs": 2500, "dano": [4, 7] }
+    },
+    "itens": [
+      { "item": "erva_arruda", "chance": 100, "quantidade": [2, 3] },
+      { "item": "ferradura_brasa", "chance": 30 }
+    ]
   }
 }

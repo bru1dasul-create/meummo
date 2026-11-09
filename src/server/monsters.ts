@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { Reader } from './data-reader';
 import { MONSTERS_FILE } from './paths';
 
-export type AttackKind = 'bite' | 'strike' | 'spin' | 'projectile';
+export type AttackKind = 'bite' | 'strike' | 'spin' | 'projectile' | 'charge';
 
 export interface MonsterAttack {
   kind: AttackKind;
@@ -22,6 +22,8 @@ export interface MonsterAttack {
   speed: number;
   /** Projétil: como ele aparece na tela (ex.: 'fruta'). */
   projectile: string;
+  /** Investida: rastro de fogo que fica no caminho (null = sem fogo). */
+  fire: { durationMs: number; damage: [number, number] } | null;
 }
 
 export interface MonsterDef {
@@ -57,6 +59,7 @@ const ATTACK_KINDS: Record<string, AttackKind> = {
   bote: 'strike',
   giro: 'spin',
   projetil: 'projectile',
+  investida: 'charge',
 };
 
 export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
@@ -72,6 +75,12 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
     const kindName = a.text('tipo');
     const kind = ATTACK_KINDS[kindName];
     if (!kind) throw new Error(`Erro em data/monsters.json (ataque do monstro "${rawId}"): tipo "${kindName}" não existe. Use: ${Object.keys(ATTACK_KINDS).join(', ')}.`);
+    const fireData = a.object('rastroFogo', true);
+    let fire: MonsterAttack['fire'] = null;
+    if (fireData) {
+      const f = new Reader(fireData, FILE, `rastro de fogo do monstro "${rawId}"`);
+      fire = { durationMs: f.number('duracaoMs', { min: 200 }), damage: f.range('dano') };
+    }
     const whirl = r.object('redemoinho', true);
     let whirlwind: MonsterDef['whirlwind'] = null;
     if (whirl) {
@@ -103,6 +112,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         damage: a.range('dano'),
         speed: a.number('velocidade', { min: 1, fallback: 8 }),
         projectile: a.text('projetil', 'pedra'),
+        fire,
       },
       whirlwind,
       drops: parseDrops(r.list('itens'), rawId),

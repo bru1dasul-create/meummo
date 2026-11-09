@@ -53,6 +53,10 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 - **Golpes telegrafados:** quando um monstro vai atacar, o servidor manda `warn` com os quadrados que
   serão atingidos e o tempo até o golpe. Na hora, só leva dano quem ainda estiver ali (e não estiver
   invencível pela esquiva). Por isso a rede não atrapalha: o aviso dura mais que o atraso da internet.
+- **Investida** (Mula sem Cabeça): o aviso é a linha inteira; na hora, quem estiver nela é atropelado e o monstro
+  corre até o fim (para antes de parede, de outro monstro e de cima de alguém). Os viewers recebem `fx`
+  (`charge`), o `move` com `dash` (corrida rápida) e `fire` com os tiles do caminho, que queimam quem fica em cima
+  a cada 0,5 s até apagar (a esquiva protege, como de qualquer golpe).
 - **Esquiva** entra na mesma fila dos passos (`step` com `dash`), então também é prevista no cliente e
   corrigida pelo servidor se precisar.
 - **Monstros** (`src/server/world.ts`): passeiam na área deles; os agressivos percebem quem chega perto;
@@ -126,7 +130,8 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`) |
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
-| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho) |
+| servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
+| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho, investida), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |

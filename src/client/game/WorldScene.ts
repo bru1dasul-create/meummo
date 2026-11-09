@@ -626,7 +626,11 @@ export class WorldScene extends Phaser.Scene {
         if (this.isMyTile(msg.tiles)) this.sfx.play('warn');
         break;
       case 'fx':
-        this.onFx(msg.id, msg.kind, msg.a ?? 0, now);
+        this.onFx(msg.id, msg.kind, msg.a ?? 0, now, msg.r);
+        break;
+      case 'fire':
+        this.effects.fire(msg.tiles, msg.ms, now);
+        if (this.isMyTile(msg.tiles) || this.near(msg.id, 8)) this.sfx.play('fire');
         break;
       case 'hit':
         this.onHit(msg.id, msg.by, msg.dmg, msg.hp, now);
@@ -725,9 +729,11 @@ export class WorldScene extends Phaser.Scene {
     if (dash) {
       const [fx, fy] = feetOf(view.tileX, view.tileY);
       const [tx, ty] = feetOf(x, y);
-      this.effects.trail(view.sprite.texture.key, Number(view.sprite.frame.name) || 0, view.sprite.flipX, { x: fx, y: fy }, { x: tx, y: ty }, now);
-      view.moveTo(x, y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140 });
-      view.ghost(now, DASH_INVULNERABLE_MS);
+      const monster = view.kind === 'monster';
+      // investida de monstro: rastro cor de fogo e uma corrida um pouco mais longa (até 8 tiles)
+      this.effects.trail(view.sprite.texture.key, Number(view.sprite.frame.name) || 0, view.sprite.flipX, { x: fx, y: fy }, { x: tx, y: ty }, now, monster ? 0xff9a4a : undefined);
+      view.moveTo(x, y, dir, now, this.stepMs, monster ? { snapBeyond: 9, durationMs: 220 } : { snapBeyond: DASH_TILES + 1, durationMs: 140 });
+      if (!monster) view.ghost(now, DASH_INVULNERABLE_MS);
       return;
     }
     if (view.kind === 'monster') {
@@ -808,7 +814,13 @@ export class WorldScene extends Phaser.Scene {
     for (const other of this.entities.values()) other.setThreat(level);
   }
 
-  private onFx(id: number, kind: string, angle: number, now: number): void {
+  /** A entidade está a até `tiles` de distância de mim? */
+  private near(id: number, tiles: number): boolean {
+    const view = this.entities.get(id);
+    return !!view && Math.max(Math.abs(view.tileX - this.predicted.x), Math.abs(view.tileY - this.predicted.y)) <= tiles;
+  }
+
+  private onFx(id: number, kind: string, angle: number, now: number, range?: number): void {
     const view = this.entities.get(id);
     if (!view) return;
     const center = view.center(now);
@@ -821,7 +833,15 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'strike':
       case 'bite':
-        this.effects.flashTiles(reachableLine(this.map, view.tileX, view.tileY, dir8FromAngle(angle), kind === 'strike' ? 2 : 1).slice(1), 0xffffff, 160, now);
+        this.effects.flashTiles(reachableLine(this.map, view.tileX, view.tileY, dir8FromAngle(angle), kind === 'strike' ? (range ?? 2) : 1).slice(1), 0xffffff, 160, now);
+        break;
+      case 'charge':
+        this.effects.flashTiles(reachableLine(this.map, view.tileX, view.tileY, dir8FromAngle(angle), range ?? 6).slice(1), 0xffb347, 220, now);
+        this.effects.ring(center.x, center.y, 0xff9a4a, 14, 260, now);
+        if (this.near(id, 10)) {
+          this.sfx.play('charge');
+          this.cameras.main.shake(180, 0.004);
+        }
         break;
       case 'whirlwind':
         this.effects.whirlwind(center.x, center.y + 6, now);

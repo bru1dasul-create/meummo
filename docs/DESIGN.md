@@ -101,7 +101,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | Zona | Nível | Como é | Situação |
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
-| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | 🔧 mapa pronto; faltam os monstros |
+| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | ✅ mapa e criaturas (níveis 4 a 8) |
 | **Labirintos da Billings** | farm e perigo | Canais e pântanos no extremo sul, com jacarés mutantes e espíritos da água (Boto, Lobisomem da Mata). | depois |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
@@ -125,10 +125,18 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
   janelas quebradas, paredes engolidas pelo cipó e as portas de aço das lojas que fecharam para sempre (as placas
   apagaram: nada de marcas).
 - **Os desabados:** sete prédios caíram e viraram clareiras de entulho, sucata, pneus, ossos, árvores secas e
-  **ervas de cura** nascendo no concreto. São os lugares das criaturas (passo 3).
+  **ervas de cura** nascendo no concreto. É onde vivem as criaturas da zona.
 - **O largo:** no meio de tudo, o chafariz seco cercado de ervas, árvores secas e ipês floridos — a única cor forte
   do lugar ("um pouco dos dois": a cidade cinza e pesada, a vida teimando no meio dela).
 - Quem desmaia aqui acorda no Refúgio (não há vila em Santo Amaro).
+
+| Criatura | Nível | Onde vive | Jeito | Golpe | Deixa |
+|---|---|---|---|---|---|
+| Corpo-Seco | 4 | prédios desabados do oeste | Morto-vivo lento e resistente; só nota quem chega bem perto | Agarra quem está do lado (aviso de 0,7 s) | Sucata, Ramo de Arruda, Faca de Sucata (rara, +4 de dano) |
+| Capelobo | 6 | prédios desabados do leste | Rápido; cabeça de tamanduá | Língua comprida: bote em linha de 3 tiles | Ramo de Arruda, Couraça de Lata (rara, +15 vida, +3 defesa) |
+| Mula sem Cabeça | 8 (chefe) | o largo do chafariz | Agressiva, nota quem entra no largo | **Investida**: marca uma linha de 6 tiles, atravessa atropelando e deixa o chão pegando fogo por 2,5 s | Arruda (sempre), **Ferradura em Brasa** (lendária, +3 dano, +2 defesa) |
+
+Dica para a Mula: saia da linha vermelha **para o lado** (ou use a Esquiva no momento certo) e não pare em cima do fogo.
 
 **Facções (PvP por território, mais adiante):**
 - **Tecnocratas — os Herdeiros da Pedra:** reconstroem a tecnologia antiga; armaduras de lataria de carro,

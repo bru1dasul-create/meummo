@@ -178,6 +178,16 @@ describe('vários mapas', () => {
     expect(ana.conn.ofType('zone').at(-1)).toMatchObject({ map: 'vila', you: { hp: ana.player.maxHp } });
   });
 
+  it('quem sai do jogo desmaiado num mapa sem vila volta acordando na vila', () => {
+    const saved: CharacterData[] = [];
+    realm = new Realm([vila(), mata()], { now: clock.now, random: () => 0, saver: { save: (list) => saved.push(...list.map((e) => e.data)) } });
+    const ana = join('Ana', { zone: 'mata', x: 6, y: 1 });
+    ana.player.hp = 0;
+    ana.player.deadUntil = clock.now() + 3000;
+    realm.leave(ana.player);
+    expect(saved.at(-1)).toMatchObject({ zone: 'vila', x: null, y: null, hp: null });
+  });
+
   it('volta no mapa salvo (pelo id, ou pelo nome dos saves antigos); mapa que sumiu = mapa inicial', () => {
     expect(zoneOf(join('Ana', { zone: 'mata', x: 6, y: 1 }).player)).toBe('mata');
     expect(zoneOf(join('Beto', { zone: 'Mata', x: 6, y: 1 }).player)).toBe('mata');

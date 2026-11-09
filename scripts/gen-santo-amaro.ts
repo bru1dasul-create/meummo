@@ -5,7 +5,8 @@
 // prédios que desabaram e viraram clareiras de entulho, sucata e ervas de cura, ruas rachadas com
 // carros e um ônibus enferrujados, postes com fios caídos, poças de óleo. No meio, o largo com o
 // chafariz seco e os ipês — a única cor forte do lugar. A avenida do Refúgio entra pelo oeste.
-// Por enquanto sem monstros: eles chegam no passo 3 (os prédios desabados são bons lugares para eles).
+// Criaturas: Corpo-Seco nos prédios desabados do oeste, Capelobo nos do leste e a Mula sem Cabeça
+// rondando o largo (aberto, bom para as investidas). As áreas saem da posição dos prédios desabados.
 //
 // Como o gerador do Refúgio, este script NÃO sobrescreve um mapa existente sem --force
 // (para comparar: npm run gen:santo-amaro -- --out outro.tmj)
@@ -259,6 +260,32 @@ m.fill(0, WEST_EXIT.y, 5, WEST_EXIT.y + WEST_EXIT.h - 1, (x, y) => {
   if (!inStreet(x, y)) m.setGround(x, y, 'grass_gloom');
 });
 
+// 8. Áreas das criaturas (camada "monstros"): calculadas depois, com o mapa pronto (veja o passo 9)
+const monsterAreas = () => {
+  const ruins = collapsed.filter((b) => b.x1 - b.x0 >= 4 && b.y1 - b.y0 >= 3);
+  const areas = ruins.map((b) => {
+    const size = (b.x1 - b.x0 - 1) * (b.y1 - b.y0 - 1);
+    return {
+      name: (b.x0 + b.x1) / 2 < 40 ? 'corpo_seco' : 'capelobo',
+      x: b.x0 + 1,
+      y: b.y0 + 1,
+      w: b.x1 - b.x0 - 1,
+      h: b.y1 - b.y0 - 1,
+      properties: [{ name: 'quantidade', type: 'int' as const, value: size >= 70 ? 3 : 2 }],
+    };
+  });
+  // a chefe ronda a parte de cima do largo, longe da avenida (quem só passa não é atacado)
+  areas.push({
+    name: 'mula_sem_cabeca',
+    x: PLAZA.x0 + 2,
+    y: PLAZA.y0 + 1,
+    w: PLAZA.x1 - PLAZA.x0 - 3,
+    h: 4,
+    properties: [{ name: 'quantidade', type: 'int' as const, value: 1 }],
+  });
+  return areas;
+};
+
 const map = m.toTiled({
   properties: [
     { name: 'nome', type: 'string', value: ZONE_NAME },
@@ -269,7 +296,7 @@ const map = m.toTiled({
     { name: 'spawn', ...ARRIVAL },
     { name: 'oeste', ...ARRIVAL },
   ],
-  monsters: [],
+  monsters: monsterAreas(),
   exits: [
     {
       name: 'Refúgio de Guarapiranga',
@@ -282,7 +309,7 @@ const map = m.toTiled({
   ],
 });
 
-// 8. Confere se dá para chegar a pé nos lugares importantes (e dentro dos prédios desabados)
+// 9. Confere se dá para chegar a pé nos lugares importantes (e dentro dos prédios desabados)
 const game = GameMap.fromTiled(map as unknown as TiledMap, 'santo-amaro');
 const reach = (x: number, y: number) => findPath(game, ARRIVAL.x, ARRIVAL.y, x, y, W * H * 2) !== null;
 const checkpoints: Record<string, { x: number; y: number }> = {

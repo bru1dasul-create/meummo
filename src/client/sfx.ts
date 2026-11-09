@@ -14,7 +14,9 @@ export type SoundName =
   | 'arc'
   | 'loot'
   | 'rare'
-  | 'equip';
+  | 'equip'
+  | 'charge'
+  | 'fire';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -112,6 +114,14 @@ export class Sfx {
         break;
       case 'rare': // item raro ou lendário: plim mais caprichado
         [1047, 1319, 1568, 2093].forEach((f, i) => this.tone('triangle', f, f, t + i * 0.07, 0.16, 0.12));
+        break;
+      case 'charge': // cascos batendo e o vento da corrida
+        for (let i = 0; i < 4; i++) this.noise(t + i * 0.07, 0.05, 'lowpass', 500, 150, 0.4);
+        this.noise(t + 0.05, 0.3, 'bandpass', 400, 2200, 0.3);
+        break;
+      case 'fire': // fogo estalando
+        this.noise(t, 0.35, 'highpass', 1800, 900, 0.18);
+        this.noise(t + 0.12, 0.08, 'bandpass', 2600, 1400, 0.2);
         break;
       case 'equip': // fivela fechando
         this.noise(t, 0.05, 'bandpass', 2600, 1700, 0.25);

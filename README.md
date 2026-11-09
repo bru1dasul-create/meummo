@@ -12,9 +12,9 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 - Entre com **nome e senha**: na primeira vez o personagem nasce na hora; depois ele volta com o nível,
   a XP, a vida, a mochila e o lugar onde parou
-- Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro**: quarteirões de prédios mortos, lojas
-  fechadas, prédios desabados cheios de entulho e ervas de cura, e o largo com o chafariz seco (as criaturas de lá
-  chegam no próximo passo)
+- Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro** (níveis 4 a 8): quarteirões de prédios
+  mortos e lojas fechadas. Nos prédios desabados vivem o **Corpo-Seco** e o **Capelobo**; no largo do chafariz seco,
+  a chefe: a **Mula sem Cabeça**, que dá investidas em linha reta e deixa o chão pegando fogo
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -105,7 +105,9 @@ Cada personagem (nome + senha + progresso) fica no arquivo `saves/meummo.db`, de
 
 Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` ([mínimo, máximo]),
 `passoMs` (tempo para andar um quadrado — menor é mais rápido), `alcanceAgressao`, `xp`, `renascerMs`
-e o `ataque` (`tipo`: `mordida`, `bote`, `giro` ou `projetil`; `preparoMs` é o tempo do aviso vermelho).
+e o `ataque` (`tipo`: `mordida`, `bote`, `giro`, `projetil` ou `investida`; `preparoMs` é o tempo do aviso vermelho).
+Na `investida`, o monstro corre `alcance` tiles em linha reta atropelando quem estiver no caminho; com
+`"rastroFogo": { "duracaoMs": 2500, "dano": [4, 7] }` o caminho fica pegando fogo e queima quem fica em cima.
 Salve e reinicie o servidor. Se algo estiver errado no arquivo, o servidor explica o quê.
 
 O que cada monstro deixa fica na lista `itens` dele: `item` (o id em `data/items.json`), `chance` (em %, de 0 a 100)

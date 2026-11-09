@@ -66,6 +66,9 @@ function render(map: MapJson): Buffer {
     sagui: [255, 214, 64],
     jararaca: [255, 140, 0],
     saci: [235, 40, 40],
+    corpo_seco: [190, 200, 120],
+    capelobo: [200, 120, 60],
+    mula_sem_cabeca: [255, 60, 200],
   };
   const frames: {
     name: string;

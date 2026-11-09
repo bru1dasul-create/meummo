@@ -58,7 +58,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] A avenida a leste do Refúgio leva às **Ruínas de Santo Amaro** (mapa provisório, sem monstros)
 - [x] Ruínas de Santo Amaro, passo 2: mapa caprichado com arte nova (22 tiles: concreto, lajes, fachadas, lojas
   fechadas, cipó, entulho, sucata, pneus, fios, postes, árvore seca, ervas, ônibus) e tom pesado
-- [ ] Ruínas de Santo Amaro, passo 3: monstros de nível 4 a 8 (sugestão: Corpo-Seco, Capelobo e a Mula sem Cabeça como chefe)
+- [x] Ruínas de Santo Amaro, passo 3: Corpo-Seco, Capelobo e a Mula sem Cabeça (chefe com investida e rastro de
+  fogo), com itens novos (Arruda, Sucata, Faca de Sucata, Couraça de Lata, Ferradura em Brasa)
 - [ ] NPCs com diálogo (o Curupira!), missões simples, loja e ouro
 - [ ] Novas lendas: Iara no lago, Boitatá como chefe
 

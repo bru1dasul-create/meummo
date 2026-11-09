@@ -50,7 +50,7 @@ import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
 import { Inventory } from './inventory';
-import { Monster, Player, type Conn, type Entity, type Projectile, type ZoneState } from './entities';
+import { Monster, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { sanitizeChat } from './validate';
 
@@ -106,6 +106,11 @@ const RESPAWN_PROTECTION_MS = 2000;
 const ITEM_TOLERANCE_MS = 100;
 /** Proteção para quem acabou de chegar de outro mapa (o navegador ainda está desenhando o mapa novo). */
 const ARRIVAL_PROTECTION_MS = 2000;
+/** Rastro de fogo: a primeira queimada demora um pouquinho (dá para sair), depois queima a cada FIRE_PULSE_MS. */
+const FIRE_FIRST_PULSE_MS = 350;
+const FIRE_PULSE_MS = 500;
+/** Depois da investida, o monstro respira um pouco antes de andar de novo. */
+const CHARGE_REST_MS = 500;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
 export const AUTOSAVE_MS = 30_000;
 
@@ -117,6 +122,8 @@ export class World {
   readonly projectiles = new Map<number, Projectile>();
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
+  /** Chão pegando fogo agora (rastros de investida). */
+  private hazards: Hazard[] = [];
   /** Tile → id do monstro que está nele (monstros não se empilham). */
   private readonly monsterAt = new Map<number, number>();
   private lastTickAt: number;
@@ -308,7 +315,10 @@ export class World {
     if (!this.saver) return;
     const list: { id: number; data: CharacterData }[] = [];
     for (const player of players) {
-      if (player.characterId !== null) list.push({ id: player.characterId, data: characterData(player, this.map.id) });
+      if (player.characterId === null) continue;
+      // Desmaiado num mapa sem vila (renascerEm): na volta ele acorda na vila do outro mapa.
+      const zone = player.dead ? (this.map.respawnMap ?? this.map.id) : this.map.id;
+      list.push({ id: player.characterId, data: characterData(player, zone) });
     }
     if (list.length === 0) return;
     try {
@@ -478,6 +488,7 @@ export class World {
     for (const monster of [...this.monsters.values()]) {
       if (this.monsters.has(monster.id)) this.updateMonster(monster, now);
     }
+    this.updateHazards(now);
     this.respawnMonsters(now);
 
     for (const player of this.players.values()) this.updateView(player);
@@ -509,7 +520,10 @@ export class World {
       player.changed = false;
       player.dashed = false;
     }
-    for (const monster of this.monsters.values()) monster.changed = false;
+    for (const monster of this.monsters.values()) {
+      monster.changed = false;
+      monster.dashed = false;
+    }
   }
 
   // ======================= jogadores =======================
@@ -828,6 +842,8 @@ export class World {
         return reachableLine(this.map, monster.x, monster.y, dir, attack.range);
       case 'bite':
         return reachableLine(this.map, monster.x, monster.y, dir, 1);
+      case 'charge':
+        return reachableLine(this.map, monster.x, monster.y, dir, attack.range);
       default:
         return [];
     }
@@ -853,7 +869,9 @@ export class World {
       return;
     }
 
-    this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: windup.kind, a: round3(windup.angle) });
+    const reach = windup.kind === 'strike' || windup.kind === 'charge' ? { r: attack.range } : {};
+    this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: windup.kind, a: round3(windup.angle), ...reach });
+    if (windup.kind === 'charge') return this.resolveCharge(monster, windup.tiles, now);
     for (const player of [...this.players.values()]) {
       if (!player.dead && tileIn(windup.tiles, player.x, player.y)) {
         this.damage(player, this.rollRange(...attack.damage), monster.id, now);
@@ -861,6 +879,55 @@ export class World {
     }
     // Saci: depois do giro, some num redemoinho.
     if (windup.kind === 'spin' && monster.def.whirlwind) this.whirlwindAway(monster, now);
+  }
+
+  /** Investida: atropela quem está na linha, corre até o fim dela e deixa o chão pegando fogo. */
+  private resolveCharge(monster: Monster, path: Tile[], now: number): void {
+    const attack = monster.def.attack;
+    // até onde dá para correr: para antes de parede ou de outro monstro
+    let last = 0;
+    for (let i = 1; i < path.length; i++) {
+      const tile = path[i]!;
+      const other = this.monsterAt.get(this.tileKey(tile.x, tile.y));
+      if (!this.map.isWalkable(tile.x, tile.y) || (other !== undefined && other !== monster.id)) break;
+      last = i;
+    }
+    const run = path.slice(0, last + 1);
+    for (const player of [...this.players.values()]) {
+      if (!player.dead && tileIn(run, player.x, player.y)) this.damage(player, this.rollRange(...attack.damage), monster.id, now);
+    }
+    // não para em cima de ninguém: se tem gente no fim, para um tile antes
+    const occupied = (t: Tile) => [...this.players.values()].some((p) => !p.dead && p.x === t.x && p.y === t.y);
+    while (last > 0 && occupied(path[last]!)) last--;
+    if (last > 0) {
+      const end = path[last]!;
+      this.monsterAt.delete(this.tileKey(monster.x, monster.y));
+      monster.x = end.x;
+      monster.y = end.y;
+      this.monsterAt.set(this.tileKey(end.x, end.y), monster.id);
+      monster.changed = true;
+      monster.dashed = true;
+    }
+    monster.nextStepAt = now + CHARGE_REST_MS;
+    if (attack.fire) this.setFire(monster, run, attack.fire, now);
+  }
+
+  private setFire(monster: Monster, tiles: Tile[], fire: { durationMs: number; damage: [number, number] }, now: number): void {
+    this.hazards.push({ ownerId: monster.id, tiles, until: now + fire.durationMs, nextPulseAt: now + FIRE_FIRST_PULSE_MS, damage: fire.damage });
+    this.emitToViewers(monster, { t: 'fire', id: monster.id, tiles: tiles.flatMap((t) => [t.x, t.y]), ms: fire.durationMs });
+  }
+
+  /** Quem está em cima do fogo se queima (a esquiva protege, como em qualquer golpe). */
+  private updateHazards(now: number): void {
+    if (this.hazards.length === 0) return;
+    this.hazards = this.hazards.filter((hazard) => now < hazard.until);
+    for (const hazard of this.hazards) {
+      if (now < hazard.nextPulseAt) continue;
+      hazard.nextPulseAt += FIRE_PULSE_MS;
+      for (const player of [...this.players.values()]) {
+        if (!player.dead && tileIn(hazard.tiles, player.x, player.y)) this.damage(player, this.rollRange(...hazard.damage), hazard.ownerId, now);
+      }
+    }
   }
 
   private dropTarget(monster: Monster): void {
@@ -1079,7 +1146,7 @@ export class World {
         player.known.delete(other.id);
         player.outbox.push({ t: 'despawn', id: other.id });
       } else if (other.changed) {
-        const dashed = other.kind === 'player' && other.dashed;
+        const dashed = other.dashed;
         player.outbox.push({ t: 'move', id: other.id, x: other.x, y: other.y, dir: other.dir, ...(dashed ? { dash: true as const } : {}) });
       }
     } else if (dx <= VIEW_RADIUS_X && dy <= VIEW_RADIUS_Y) {
