@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -55,3 +55,10 @@ export const REGEN_FRACTION = 0.03;
 
 /** Distância (em tiles) para negociar com um vendedor. */
 export const TRADE_RANGE = 3;
+
+/** Ouro no chão: quanto tempo fica esperando o dono pegar (pisca nos últimos segundos). */
+export const GOLD_DROP_MS = 60_000;
+/** Item que não coube na mochila: quanto tempo fica no chão (dá tempo de abrir espaço). */
+export const ITEM_DROP_MS = 120_000;
+/** Distância (em tiles) para pegar o que está no chão: chegou perto, pegou. */
+export const PICKUP_RANGE = 1;

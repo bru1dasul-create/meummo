@@ -128,7 +128,11 @@ export type ServerMsg =
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila ou da loja)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
-  | { t: 'loot'; x: number; y: number; items: ItemStack[]; gold?: number } // você pegou isto (e este ouro) do monstro que caiu em (x, y)
+  | { t: 'loot'; x: number; y: number; items: ItemStack[] } // estes itens do monstro que caiu em (x, y) foram para a sua mochila
+  /** Caiu no chão para você pegar (só você vê): ouro ou um item que não coube na mochila. Some em `ms`. */
+  | { t: 'drop'; id: number; x: number; y: number; gold?: number; item?: ItemStack; ms: number }
+  | { t: 'pickup'; id: number; gold?: number; item?: ItemStack } // você pegou (tudo ou parte de) o que estava no chão
+  | { t: 'drop_gone'; id: number } // o que estava no chão sumiu (o tempo acabou)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }
   | { t: 'sys'; text: string } // aviso do sistema

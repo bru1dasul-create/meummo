@@ -87,8 +87,14 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   a mochila dele (`loot` para o efeito do item voando, `inv` com a mochila nova). Mochila cheia: o item se perde,
   com aviso. Item raro ou lendário salva o personagem na hora.
 - **Ouro:** cada um que ajudou também sorteia o `ouro` do monstro (`MonsterDef.gold`). O ouro fica em
-  `Inventory.gold` (não ocupa espaço; máximo `MAX_GOLD` em `src/shared/items.ts`), vai no `inv` (`gold`) e no
-  `loot` (`gold`, para o "+N ouro"), e é salvo dentro do JSON da mochila — save de antes do ouro entra com 0.
+  `Inventory.gold` (não ocupa espaço; máximo `MAX_GOLD` em `src/shared/items.ts`), vai no `inv` (`gold`) e é salvo
+  dentro do JSON da mochila — save de antes do ouro entra com 0.
+- **No chão (`World.drops`):** o ouro sorteado e o item que não coube na mochila viram um `GroundDrop` com dono:
+  só ele recebe o `drop` (posição, ouro ou item, tempo que falta) e só ele pega. A cada tick, o dono a
+  `PICKUP_RANGE` tile (depois de `DROP_READY_MS`, o tempo das moedas caírem) pega: `pickup` (com o que pegou) e `inv`.
+  Some em `GOLD_DROP_MS` / `ITEM_DROP_MS` (`drop_gone`). Item com a mochila ainda cheia continua no chão (avisa
+  uma vez por chegada); dono que sai do mapa ou do jogo perde o que estava no chão. O navegador desenha em
+  `src/client/game/drops.ts` (montinho de moedas por código, pulinho, pisca nos últimos 10 s).
 - `src/server/inventory.ts`: 20 espaços com pilhas e 4 partes equipadas (`weapon`, `head`, `body`, `charm`).
   Equipar troca com o que estava naquela parte. A soma dos equipamentos (`Player.bonus`) entra na vida máxima,
   no dano do estilingue e da Bordunada e na defesa (cada golpe recebido perde `defesa`, mínimo 1).
@@ -158,7 +164,8 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
-| servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / você pegou estes itens (e este ouro) do monstro que caiu em (x, y) |
+| servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / estes itens do monstro que caiu em (x, y) foram para a sua mochila |
+| servidor | `drop` / `pickup` / `drop_gone` | caiu ouro ou item no chão para você / você pegou / sumiu (o tempo acabou) |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |
@@ -201,8 +208,13 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   acorda quem desmaia ali. Sem `nome`, a zona se chama "Pindorama".
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
 - Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
-  `scripts/gen-map.ts`) e Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`, usando
-  `scripts/map-builder.ts`). Gerar de novo por cima apaga as edições: gere com `--out outro.tmj` e compare.
+  `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`) e Represa Billings (88×64,
+  `scripts/gen-billings.ts`), os dois últimos usando `scripts/map-builder.ts`. Gerar de novo por cima apaga as
+  edições: gere com `--out outro.tmj` e compare. Cada gerador confere no fim se dá para chegar a pé nos lugares
+  importantes; o da Billings também liga cada ilha à entrada com passarelas e guarda os caminhos antes de plantar
+  as árvores. Mexeu num gerador? Cuidado com a ordem dos sorteios: um sorteio a mais (ou a menos) no meio muda
+  tudo o que vem depois (por isso alguns passos sorteiam "à toa", para o resto do mapa ficar igual).
+- Camada de objetos `lendas` (Billings): áreas de criaturas que ainda vão existir; o servidor ignora.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
   Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, varal 3x2, ônibus) são desenhados inteiros e

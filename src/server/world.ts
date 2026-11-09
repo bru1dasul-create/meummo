@@ -7,8 +7,11 @@ import {
   DASH_INVULNERABLE_MS,
   DASH_TILES,
   DEATH_MS,
+  GOLD_DROP_MS,
+  ITEM_DROP_MS,
   MAX_PLAYERS,
   MAX_QUEUED_STEPS,
+  PICKUP_RANGE,
   REGEN_DELAY_MS,
   REGEN_EVERY_MS,
   REGEN_FRACTION,
@@ -115,6 +118,26 @@ const FIRE_FIRST_PULSE_MS = 350;
 const FIRE_PULSE_MS = 500;
 /** Depois da investida, o monstro respira um pouco antes de andar de novo. */
 const CHARGE_REST_MS = 500;
+/** Ouro ou item no chão, esperando o dono: só ele vê e só ele pega (ninguém rouba de ninguém). */
+export interface GroundDrop {
+  id: number;
+  /** Id do jogador dono. */
+  owner: number;
+  x: number;
+  y: number;
+  gold: number;
+  /** Item que não coube na mochila (null = é ouro). */
+  item: ItemStack | null;
+  /** A partir de quando dá para pegar (antes disso as moedas ainda estão caindo do monstro). */
+  readyAt: number;
+  /** Quando some. */
+  until: number;
+  /** Já avisou que a mochila está cheia (avisa uma vez cada vez que o dono chega perto). */
+  warned: boolean;
+}
+
+/** As moedas pulam do monstro antes de dar para pegar (para dar tempo de ver e ouvir caírem). */
+export const DROP_READY_MS = 400;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
 export const AUTOSAVE_MS = 30_000;
 
@@ -126,6 +149,8 @@ export class World {
   readonly projectiles = new Map<number, Projectile>();
   /** Vendedora e outros personagens que não são jogadores (ficam parados no lugar deles). */
   readonly npcs = new Map<number, Npc>();
+  /** Ouro e itens no chão, cada um com o seu dono. */
+  readonly drops = new Map<number, GroundDrop>();
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
   /** Chão pegando fogo agora (rastros de investida). */
@@ -476,13 +501,16 @@ export class World {
     this.emitToViewers(player, { t: 'gear', id: player.id, gear: player.inventory.look() });
   }
 
-  /** O monstro caiu: cada um que ajudou sorteia os itens e o ouro dele (cada um tem os seus, ninguém rouba de ninguém). */
-  private giveLoot(player: Player, monster: Monster): void {
+  /**
+   * O monstro caiu: cada um que ajudou sorteia os itens e o ouro dele (cada um tem os seus, ninguém rouba de ninguém).
+   * Os itens vão direto para a mochila; o ouro (e o item que não coube) cai no chão, perto do monstro, para o dono pegar.
+   */
+  private giveLoot(player: Player, monster: Monster, now: number): void {
     const got: ItemStack[] = [];
     const lost: ItemStack[] = [];
     let precious = false;
     const [goldMin, goldMax] = monster.def.gold;
-    const gold = goldMax > 0 ? player.inventory.addGold(this.rollRange(goldMin, goldMax)) : 0;
+    const gold = goldMax > 0 ? this.rollRange(goldMin, goldMax) : 0;
     for (const drop of monster.def.drops) {
       if (this.random() * 100 >= drop.chance) continue;
       const def = this.items.get(drop.item);
@@ -494,14 +522,98 @@ export class World {
       if (added > 0 && def.rarity !== 'common') precious = true;
       if (added > 0 && def.rarity === 'legendary') this.links.announce({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
     }
-    if (got.length > 0 || gold > 0) {
+    if (got.length > 0) {
       player.invDirty = true;
-      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got, ...(gold > 0 ? { gold } : {}) });
-      const parts = [...(gold > 0 ? [`${gold} de ouro`] : []), ...(got.length > 0 ? [this.describe(got)] : [])];
-      player.outbox.push({ t: 'sys', text: `Você pegou: ${parts.join(', ')}.` });
+      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got });
+      player.outbox.push({ t: 'sys', text: `Você pegou: ${this.describe(got)}.` });
       if (precious) this.saveCharacters([player]); // item raro não pode sumir se o servidor cair
     }
-    if (lost.length > 0) player.outbox.push({ t: 'sys', text: `Mochila cheia! Ficou para trás: ${this.describe(lost)}.` });
+    // O ouro cai onde o monstro estava; o que não coube na mochila, nos tiles livres em volta.
+    const spots = this.map.walkableAround(monster.x, monster.y, 1);
+    const spot = (i: number): Tile => spots[Math.min(i, spots.length - 1)] ?? { x: monster.x, y: monster.y };
+    if (gold > 0) this.dropOnGround(player, spot(0), gold, null, now, GOLD_DROP_MS);
+    lost.forEach((stack, i) => this.dropOnGround(player, spot(i + 1), 0, stack, now, ITEM_DROP_MS));
+    if (lost.length > 0) {
+      player.outbox.push({ t: 'sys', text: `Mochila cheia! Ficou no chão: ${this.describe(lost)}. Abra espaço e passe lá para pegar.` });
+    }
+  }
+
+  /** Põe ouro ou um item no chão para o jogador (só ele vê). */
+  private dropOnGround(player: Player, at: Tile, gold: number, item: ItemStack | null, now: number, ms: number): void {
+    const drop: GroundDrop = {
+      id: this.links.nextId(),
+      owner: player.id,
+      x: at.x,
+      y: at.y,
+      gold,
+      item,
+      readyAt: now + DROP_READY_MS,
+      until: now + ms,
+      warned: false,
+    };
+    this.drops.set(drop.id, drop);
+    player.outbox.push(this.dropMsg(drop, now));
+  }
+
+  private dropMsg(drop: GroundDrop, now: number): ServerMsg {
+    return {
+      t: 'drop',
+      id: drop.id,
+      x: drop.x,
+      y: drop.y,
+      ...(drop.gold > 0 ? { gold: drop.gold } : {}),
+      ...(drop.item ? { item: { ...drop.item } } : {}),
+      ms: Math.max(0, drop.until - now),
+    };
+  }
+
+  /** Cada tick: o que está no chão some quando o tempo acaba, e o dono pega quando chega perto. */
+  private updateDrops(now: number): void {
+    for (const drop of [...this.drops.values()]) {
+      const owner = this.players.get(drop.owner);
+      if (!owner) {
+        this.drops.delete(drop.id); // o dono saiu do jogo ou foi para outro mapa
+        continue;
+      }
+      if (now >= drop.until) {
+        this.drops.delete(drop.id);
+        owner.outbox.push({ t: 'drop_gone', id: drop.id });
+        continue;
+      }
+      if (owner.dead || owner.loading || now < drop.readyAt) continue;
+      if (chebyshev(owner, drop) > PICKUP_RANGE) {
+        drop.warned = false;
+        continue;
+      }
+      this.pickUp(owner, drop, now);
+    }
+  }
+
+  private pickUp(player: Player, drop: GroundDrop, now: number): void {
+    if (drop.gold > 0) {
+      const gold = player.inventory.addGold(drop.gold);
+      this.drops.delete(drop.id);
+      player.invDirty = true;
+      player.outbox.push({ t: 'pickup', id: drop.id, gold });
+      return;
+    }
+    const stack = drop.item;
+    if (!stack) {
+      this.drops.delete(drop.id);
+      return;
+    }
+    const added = player.inventory.add(stack.item, stack.n);
+    if (added === 0) {
+      if (!drop.warned) player.outbox.push({ t: 'sys', text: `Mochila cheia: ${this.describe([stack])} continua no chão.` });
+      drop.warned = true;
+      return;
+    }
+    player.invDirty = true;
+    player.outbox.push({ t: 'pickup', id: drop.id, item: { item: stack.item, n: added } });
+    stack.n -= added;
+    if (stack.n > 0) player.outbox.push(this.dropMsg(drop, now)); // só uma parte coube: o resto continua lá
+    else this.drops.delete(drop.id);
+    if (this.items.get(stack.item)?.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
   }
 
   // ======================= loja =======================
@@ -583,6 +695,7 @@ export class World {
     }
     this.updateHazards(now);
     this.respawnMonsters(now);
+    this.updateDrops(now);
 
     for (const player of this.players.values()) this.updateView(player);
     if (now >= this.nextAutosaveAt) {
@@ -851,7 +964,7 @@ export class World {
       const player = this.players.get(id);
       if (!player || player.dead) continue;
       this.giveXp(player, monster.def.xp);
-      this.giveLoot(player, monster);
+      this.giveLoot(player, monster, now);
     }
   }
 

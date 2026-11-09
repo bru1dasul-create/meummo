@@ -15,6 +15,10 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 - Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro** (níveis 4 a 8): quarteirões de prédios
   mortos e lojas fechadas. Nos prédios desabados vivem o **Corpo-Seco** e o **Capelobo**; no largo do chafariz seco,
   a chefe: a **Mula sem Cabeça**, que dá investidas em linha reta e deixa o chão pegando fogo
+- Desça a trilha do brejo, ao sul, até a **Represa Billings**: um labirinto de canais de água verde e ilhas de
+  mato ligadas por passarelas, com buritis, aguapés, casas afundadas, a usina velha, a ponte da rodovia quebrada
+  no meio do lago e a prainha de frente para a pedra onde a **Iara** vai cantar (as criaturas de lá ainda estão
+  chegando; por enquanto quem mora é Jararaca, Corpo-Seco e Capelobo)
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -116,7 +120,9 @@ e `quantidade` (opcional: um número, ou [mínimo, máximo]). Exemplo:
 `"itens": [{ "item": "banana", "chance": 50, "quantidade": [1, 2] }]`. Cada um que ajudou sorteia os seus.
 
 O ouro que cada monstro deixa fica no campo `ouro`: um número (ex.: `"ouro": 5`) ou [mínimo, máximo]
-(ex.: `"ouro": [2, 6]`). Sem o campo, o monstro não deixa ouro. Como os itens, cada um que ajudou ganha o seu.
+(ex.: `"ouro": [2, 6]`). Sem o campo, o monstro não deixa ouro. Como os itens, cada um que ajudou ganha o seu —
+mas o ouro **cai no chão** onde o monstro estava: cada um vê só o seu montinho e pega chegando perto (some em
+1 minuto, piscando antes). Item que não cabe na mochila também fica no chão, por 2 minutos.
 
 ## Criar e ajustar itens (sem programar)
 
@@ -163,7 +169,7 @@ o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão
 
 Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito. Cada zona é um arquivo em
 `public/assets/maps`, e o nome do arquivo é o **id** do mapa: `refugio.tmj` (Refúgio de Guarapiranga, onde
-todo mundo começa) e `santo-amaro.tmj` (Ruínas de Santo Amaro). Em cada mapa:
+todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro) e `billings.tmj` (Represa Billings). Em cada mapa:
 
 - camadas de tiles, de baixo para cima: `ground` (o chão), `sombras` (sombra de casas e prédios), `decor`
   (troncos, casas, flores…) e `acima`, que o jogo desenha **por cima dos personagens**: copa das árvores e alto
@@ -177,7 +183,9 @@ todo mundo começa) e `santo-amaro.tmj` (Ruínas de Santo Amaro). Em cada mapa:
   (a fogueira, as lamparinas e as janelas acesas). Tiles animados (água, fogueira) usam a animação do Tiled
 - propriedade `faiscas` num tile: solta faíscas subindo (as brasas e o tambor com fogo de Santo Amaro)
 - propriedades do mapa `neblina` e `escuro` (de 0 a 1): neblina passando por cima de tudo e o lugar mais escuro
-  (Santo Amaro usa 0.22 e 0.14; o Refúgio não usa)
+  (Santo Amaro usa 0.22 e 0.14; o Refúgio não usa); `vagalumes` (0 a 1): vaga-lumes piscando (a Billings usa 0.7)
+- camada de objetos `lendas` (na Billings): áreas marcadas para criaturas que ainda vão existir (`iara`, `boto`,
+  `jacare`). O servidor ignora; quando a criatura existir, a área passa para a camada `monstros`
 - beiradas entre terrenos (areia e água, grama e terra...) são tiles próprios, como `shore_3` (água ao norte e a
   leste) ou `sand_grass_c_ne` (grama só no canto de cima à direita): o número diz os lados que encostam no
   outro terreno (1 = norte, 2 = leste, 4 = sul, 8 = oeste, somados). Os geradores escolhem sozinhos
@@ -200,6 +208,8 @@ Se uma saída apontar para um mapa ou ponto que não existe, o servidor explica 
 ![Mapa do Refúgio de Guarapiranga](docs/mapa-refugio.png)
 
 ![Mapa das Ruínas de Santo Amaro](docs/mapa-santo-amaro.png)
+
+![Mapa da Represa Billings](docs/mapa-billings.png)
 
 Nos mapas: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci, **azul-claro** = saída
 para outro mapa.

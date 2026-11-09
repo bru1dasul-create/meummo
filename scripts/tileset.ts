@@ -1160,6 +1160,11 @@ const EDGE_STYLES: Record<string, EdgeStyle> = {
   mud_grass: { base: drawMud, over: grass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: GRASS_RIM, shade: G.mudDark },
   dirt_mud: { base: drawDirt, over: drawMud, band: 3, wobble: SHORE_WOBBLE, rim: G.mudDark, shade: C.dirtDark },
   concrete_gloom: { base: (p, rng) => drawConcrete(p, rng, false), over: drawGloom, band: 3.5, wobble: GRASS_WOBBLE, rim: S.gloomDark, shade: S.concreteDark },
+  swamp_shore: { base: swampGrass(0), over: stillSwampWater, band: 4, wobble: SHORE_WOBBLE, rim: hex('#a9cbbf'), shade: hex('#35602c') },
+  mud_swamp: { base: drawMud, over: swampGrass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: hex('#2f5a26'), shade: G.mudDark },
+  mud_swamp_shore: { base: drawMud, over: stillSwampWater, band: 4, wobble: SHORE_WOBBLE, rim: hex('#a9cbbf'), shade: G.mudDark },
+  sand_swamp_shore: { base: drawSand, over: stillSwampWater, band: 4.5, wobble: SHORE_WOBBLE, rim: hex('#cfe6da'), shade: hex('#c9b06a') },
+  sand_swamp: { base: drawSand, over: swampGrass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: hex('#2f5a26'), shade: C.sandDark },
 };
 
 // ---------- Capricho no mapa, passo 2: a vila (casas coloridas, enfeites) e a parte funda da represa ----------
@@ -1472,6 +1477,8 @@ function houseTiles(name: string, color: HouseColor): TileDef[] {
 }
 
 const clothesline = once(drawClothesline);
+const boulder = once(drawBoulder);
+const fruitStall = once(drawFruitStall);
 const lanternFlagsRight = once(() => drawLantern('right'));
 const lanternFlagsLeft = once(() => drawLantern('left'));
 
@@ -1607,6 +1614,246 @@ function drawFireBarrel(frame: number) {
     }
     p.outline(S.outline);
   };
+}
+
+// ---------- Represa Billings: água verde, mato de brejo, buritis, aguapés e casas afundadas ----------
+
+/** Cores da Billings: água esverdeada (cheia de vida depois de anos parada) e mato de brejo. */
+const B2 = {
+  water: hex('#3f7a6e'),
+  waterDark: hex('#346a60'),
+  waterLight: hex('#62a092'),
+  foam: hex('#cfe6da'),
+  deep: hex('#2c5a52'),
+  deepDark: hex('#254d46'),
+  deepLight: hex('#3d7068'),
+  grass: hex('#4b7a3a'),
+  grassDark: hex('#3c6630'),
+  grassLight: hex('#5f9146'),
+  grassWet: hex('#3f6a4f'),
+  leaf: hex('#4f9a3c'),
+  leafLight: hex('#78c25a'),
+  leafDark: hex('#357a2a'),
+  flower: hex('#b48ad9'),
+  flowerLight: hex('#dcc2f2'),
+  palm: hex('#5a9a3e'),
+  palmLight: hex('#86c45a'),
+  palmDark: hex('#3a6e2a'),
+  palmTrunk: hex('#7a6248'),
+  palmTrunkDark: hex('#5a4634'),
+  fruit: hex('#b4542e'),
+};
+
+/** Água da Billings (verde). `frame` 0, 1 ou 2: as ondinhas balançam (animação 0-1-2-1, como a da Guarapiranga). */
+function swampWater(frame: number, deep = false) {
+  return (p: Pixels) => {
+    const rng = mulberry32(deep ? 512 : 511);
+    p.fill(deep ? B2.deep : B2.water);
+    p.speckle(rng, [deep ? B2.deepDark : B2.waterDark], deep ? 22 : 16);
+    const light = deep ? B2.deepLight : B2.waterLight;
+    [
+      [2, 5],
+      [10, 9],
+      [4, 13],
+    ].forEach(([x, y], i) => wave(p, x! + (i % 2 === 0 ? frame : -frame), y!, light));
+    if (!deep && frame === 1) p.set(12, 3, B2.foam);
+  };
+}
+
+/** Água verde parada (a beirada; a água de verdade, no tile do lado, balança). */
+function stillSwampWater(p: Pixels, rng: Rng): void {
+  p.fill(B2.water);
+  p.speckle(rng, [B2.waterDark], 10);
+}
+
+/** Mato de brejo: escuro e úmido, com poças pequenas e (na variação b) trevos e samambaias. */
+function swampGrass(variant: number) {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(B2.grass);
+    p.speckle(rng, [B2.grassDark, B2.grassDark, B2.grassLight], 26);
+    for (let k = 0; k < 8; k++) {
+      const x = randInt(rng, T);
+      const y = 1 + randInt(rng, T - 2);
+      p.set(x, y, B2.grassLight);
+      p.set(x, y + 1, B2.grassDark);
+    }
+    if (rng() < 0.5) p.ellipse(3 + rng() * 10, 3 + rng() * 10, 2.2, 1.2, B2.grassWet); // chão encharcado
+    if (variant === 1) {
+      for (let k = 0; k < 3; k++) {
+        const x = 2 + randInt(rng, 12);
+        const y = 2 + randInt(rng, 12);
+        for (const [dx, dy] of [
+          [0, -1],
+          [-1, 0],
+          [1, 0],
+        ] as const) {
+          p.set(x + dx, y + dy, B2.leafLight); // trevo
+        }
+        p.set(x, y, B2.leafDark);
+      }
+    }
+  };
+}
+
+/** Aguapé boiando: folhas redondas e (na variação com flor) um cacho lilás. Fica na "decor", em cima da água. */
+function drawAguape(withFlower: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    for (let k = 0; k < 6; k++) {
+      const cx = 3 + rng() * 10;
+      const cy = 4 + rng() * 9;
+      p.ellipse(cx, cy + 1, 2.6, 1.6, [20, 50, 40, 90]); // sombra na água
+      clump(p, cx, cy, 2.2 + rng() * 0.8, B2.leaf, B2.leafLight, B2.leafDark);
+    }
+    if (withFlower) {
+      for (let y = 2; y < 8; y++) p.set(8 + (y % 2), y, y < 4 ? B2.flowerLight : B2.flower);
+      p.set(7, 4, B2.flower);
+      p.set(10, 5, B2.flower);
+    }
+  };
+}
+
+/** Buriti (palmeira do brejo), alta: as folhas em leque lá em cima, cachos de coquinhos, tronco com anéis. */
+function drawBigBuriti(): Pixels {
+  const p = new Pixels(32, 48);
+  const rng = mulberry32(8181);
+  p.ellipse(16.5, 44.5, 9, 2.6, C.shadow);
+  for (let y = 14; y <= 45; y++) {
+    const x = 15 + Math.round(Math.sin(y / 9) * 0.8); // tronco quase reto
+    p.rect(x, y, 3, 1, y % 3 === 0 ? B2.palmTrunkDark : B2.palmTrunk);
+    p.set(x, y, hex('#937a5e'));
+  }
+  p.rect(13, 43, 7, 3, B2.palmTrunkDark); // pé mais largo
+  // folhas em leque: muitas pontas saindo do alto do tronco; as dos lados caem bastante
+  const top = { x: 16.5, y: 13 };
+  for (let k = 0; k < 22; k++) {
+    const t = k / 21;
+    const angle = Math.PI * (0.92 + t * 1.16) + (rng() - 0.5) * 0.08; // de 166° a 374°: em volta toda, mais para cima
+    const side = Math.abs(Math.cos(angle));
+    const length = 12 + rng() * 4 + side * 3;
+    for (let i = 0; i < length; i++) {
+      const droop = (i / length) ** 2 * (3 + side * 7); // as folhas dos lados caem mais
+      const x = top.x + Math.cos(angle) * i;
+      const y = top.y + Math.sin(angle) * i * 0.8 + droop;
+      p.set(x, y, i > length - 3 ? B2.palmLight : k % 3 === 0 ? B2.palmDark : B2.palm);
+      if (i > 3 && i % 2 === 0) {
+        p.set(x, y + 1, B2.palmDark); // folíolos
+        p.set(x + (Math.cos(angle) > 0 ? 1 : -1), y + 1, B2.palm);
+      }
+    }
+  }
+  for (const [x, y] of [
+    [13, 16],
+    [20, 16],
+    [16.5, 17],
+  ] as const) {
+    p.ellipse(x, y, 1.6, 1.4, B2.fruit); // cachos de buriti
+    p.set(x - 1, y - 1, hex('#d07a4a'));
+  }
+  p.outline(C.outline);
+  return p;
+}
+
+/**
+ * Barraquinha de frutas da feira (3x2 tiles): em cima, o toldo listrado nos dois postes (a vendedora fica em pé no
+ * meio, na frente do toldo); embaixo, o balcão com caixotes de banana, laranja, abacaxi, melancia e mamão.
+ */
+function drawFruitStall(): Pixels {
+  const p = new Pixels(48, 32);
+  const rng = mulberry32(6262);
+  p.ellipse(24, 30.5, 22, 1.8, C.shadow);
+  for (const x of [3, 43]) {
+    p.rect(x, 3, 2, 26, G.post); // postes
+    p.rect(x + 1, 3, 1, 26, G.postDark);
+  }
+  // toldo listrado (vermelho e branco), com a beirada em ondinhas
+  for (let y = 1; y < 9; y++) {
+    for (let x = 1; x < 47; x++) p.set(x, y, Math.floor((x - 1) / 4) % 2 === 0 ? hex('#d9483b') : hex('#f2ede0'));
+  }
+  for (let x = 1; x < 47; x++) {
+    const red = Math.floor((x - 1) / 4) % 2 === 0;
+    if ((x - 1) % 4 !== 3) p.set(x, 9, red ? hex('#b23a2f') : hex('#d6cfbd'));
+  }
+  p.rect(1, 1, 46, 1, hex('#8e2f26'));
+  // cacho de banana pendurado e uma réstia de alho no poste
+  p.rect(8, 10, 3, 4, C.yellow);
+  p.set(9, 14, C.yellow);
+  p.rect(8, 10, 1, 4, hex('#c9a42a'));
+  p.rect(37, 10, 2, 5, V.trim);
+  // o balcão: tampo, frente de tábuas e uma lousinha
+  p.rect(1, 17, 46, 2, G.plankLight);
+  p.rect(1, 19, 46, 11, G.plank);
+  for (let x = 4; x < 46; x += 5) p.rect(x, 19, 1, 11, G.plankDark);
+  p.rect(1, 29, 46, 1, G.postDark);
+  p.rect(19, 21, 10, 6, hex('#2f3a33')); // lousinha (preço escrito a giz)
+  for (let x = 21; x < 27; x += 2) p.set(x, 23 + (x % 3 === 0 ? 1 : 0), V.trim);
+  // caixotes com frutas em cima do balcão
+  const crate = (x: number, fruit: RGBA, light: RGBA) => {
+    p.rect(x, 13, 9, 5, G.plankDark);
+    p.rect(x + 1, 12, 7, 2, fruit);
+    for (let k = 0; k < 5; k++) p.set(x + 1 + randInt(rng, 7), 12 + randInt(rng, 2), light);
+  };
+  crate(3, hex('#ef8a2b'), hex('#ffc070')); // laranja
+  crate(13, C.yellow, hex('#fff2a0')); // banana
+  crate(26, hex('#e8a23a'), hex('#5ab55a')); // mamão
+  p.ellipse(39.5, 14, 4, 3, hex('#3f8a3a')); // melancia, com uma fatia aberta
+  p.rect(37, 12, 3, 2, hex('#e2435a'));
+  p.set(38, 12, G.postDark);
+  p.rect(23, 9, 2, 4, hex('#d9b34a')); // abacaxi em pé
+  p.set(23, 8, C.stem);
+  p.set(24, 7, C.stem);
+  p.outline(G.postDark);
+  return p;
+}
+
+/** Pedra grande (2x2 tiles), lisa em cima e com musgo embaixo: a pedra da Iara, no meio do lago. */
+function drawBoulder(): Pixels {
+  const p = new Pixels(32, 32);
+  const rng = mulberry32(4242);
+  p.ellipse(16.5, 27, 14, 4, [20, 50, 45, 120]); // reflexo escuro na água
+  p.ellipse(16, 18, 13, 10, C.rockDark);
+  p.ellipse(15, 16, 12, 9.5, C.rock);
+  p.ellipse(13, 12, 8, 5, C.rockLight); // o alto, liso (onde ela senta)
+  p.ellipse(11.5, 10.5, 3.5, 1.6, hex('#d4d3da'));
+  for (let k = 0; k < 40; k++) {
+    const x = 4 + randInt(rng, 24);
+    const y = 18 + randInt(rng, 9);
+    if (p.alpha(x, y) === 255) p.set(x, y, k % 3 ? B2.grassDark : B2.leaf); // musgo perto da água
+  }
+  for (const [x0, y0, len] of [
+    [20, 9, 5],
+    [8, 17, 4],
+  ] as const) {
+    for (let i = 0; i < len; i++) p.set(x0 + i, y0 + (i % 2), C.rockEdge); // rachaduras
+  }
+  for (const [x, y, w] of [
+    [3, 26, 6],
+    [22, 27, 7],
+  ] as const) {
+    p.rect(x, y, w, 1, B2.waterLight); // marolinha
+  }
+  p.outline(C.rockEdge);
+  return p;
+}
+
+/** Telhado de uma casa afundada saindo da água (2 tiles: a cumeeira e as duas águas do telhado). */
+function drawSunkenRoof(p: Pixels): void {
+  p.ellipse(16, 12, 15, 3.5, [20, 50, 45, 110]); // sombra na água
+  for (let y = 3; y < 13; y++) {
+    const half = 3 + (y - 3) * 1.25;
+    for (let x = Math.floor(16 - half); x < Math.ceil(16 + half); x++) {
+      p.set(x, y, x < 16 ? (x % 3 === 0 ? G.tin2 : G.tin1) : x % 3 === 0 ? G.tin2 : hex('#8d969b'));
+    }
+  }
+  p.rect(13, 3, 6, 1, hex('#c3c9cd')); // cumeeira
+  for (let k = 0; k < 7; k++) p.set(6 + ((k * 7) % 20), 6 + ((k * 5) % 6), G.tinRust);
+  for (const [x, y, w] of [
+    [2, 13, 5],
+    [24, 13, 6],
+    [11, 14, 9],
+  ] as const) {
+    p.rect(x, y, w, 1, B2.waterLight); // marolinha batendo no telhado
+  }
+  p.outline(G.postDark);
 }
 
 export const TILES: TileDef[] = [
@@ -2263,6 +2510,38 @@ export const TILES: TileDef[] = [
   { key: 'fire_barrel_f1', collides: true, shootOver: true, draw: drawFireBarrel(1) },
   { key: 'fire_barrel_f2', collides: true, shootOver: true, draw: drawFireBarrel(2) },
   ...edgeTiles('concrete_gloom', EDGE_STYLES.concrete_gloom!),
+  // ---- Represa Billings ----
+  { key: 'swamp_water', collides: true, shootOver: true, animation: swayFrames('swamp_water', 360), draw: swampWater(0) },
+  { key: 'swamp_water_f1', collides: true, shootOver: true, draw: swampWater(1) },
+  { key: 'swamp_water_f2', collides: true, shootOver: true, draw: swampWater(2) },
+  { key: 'swamp_deep', collides: true, shootOver: true, animation: swayFrames('swamp_deep', 420), draw: swampWater(0, true) },
+  { key: 'swamp_deep_f1', collides: true, shootOver: true, draw: swampWater(1, true) },
+  { key: 'swamp_deep_f2', collides: true, shootOver: true, draw: swampWater(2, true) },
+  { key: 'swamp_grass', draw: swampGrass(0) },
+  { key: 'swamp_grass_b', draw: swampGrass(1) },
+  ...edgeTiles('swamp_shore', EDGE_STYLES.swamp_shore!),
+  ...edgeTiles('mud_swamp', EDGE_STYLES.mud_swamp!),
+  ...edgeTiles('mud_swamp_shore', EDGE_STYLES.mud_swamp_shore!),
+  ...fadeEdgeTiles('swamp_deep_edge', B2.deep, 14, 235),
+  { key: 'aguape', draw: drawAguape(false) },
+  { key: 'aguape_flower', draw: drawAguape(true) },
+  ...bigTreeTiles('buriti_big', once(drawBigBuriti)),
+  { key: 'sunken_roof_left', collides: true, shootOver: true, draw: halfOf(drawSunkenRoof, 0) },
+  { key: 'sunken_roof_right', collides: true, shootOver: true, draw: halfOf(drawSunkenRoof, 1) },
+  ...edgeTiles('sand_swamp_shore', EDGE_STYLES.sand_swamp_shore!),
+  ...edgeTiles('sand_swamp', EDGE_STYLES.sand_swamp!),
+  { key: 'boulder_tl', collides: true, draw: pieceOf(boulder, 0, 0) },
+  { key: 'boulder_tr', collides: true, draw: pieceOf(boulder, 1, 0) },
+  { key: 'boulder_bl', collides: true, draw: pieceOf(boulder, 0, 1) },
+  { key: 'boulder_br', collides: true, draw: pieceOf(boulder, 1, 1) },
+  // barraquinha de frutas (a da Dona Iracema): a fileira de trás (toldo e postes) é livre — a vendedora fica no meio
+  // e entra pelos lados; quem bloqueia é só o balcão (um NPC precisa de um lugar que dê para alcançar a pé)
+  { key: 'stall_back_l', draw: pieceOf(fruitStall, 0, 0) },
+  { key: 'stall_back_m', draw: pieceOf(fruitStall, 1, 0) },
+  { key: 'stall_back_r', draw: pieceOf(fruitStall, 2, 0) },
+  { key: 'stall_front_l', collides: true, shootOver: true, draw: pieceOf(fruitStall, 0, 1) },
+  { key: 'stall_front_m', collides: true, shootOver: true, draw: pieceOf(fruitStall, 1, 1) },
+  { key: 'stall_front_r', collides: true, shootOver: true, draw: pieceOf(fruitStall, 2, 1) },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));

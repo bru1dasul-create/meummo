@@ -29,6 +29,7 @@ import { ShopWindow } from '../shop';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
+import { GroundDrops } from './drops';
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
 import { KeyboardDirections, type HeldMove } from './input';
@@ -92,6 +93,8 @@ export class WorldScene extends Phaser.Scene {
   private zoneBanner!: ZoneBanner;
   private bag!: Bag;
   private shop!: ShopWindow;
+  /** Ouro e itens no chão esperando você pegar. */
+  private drops!: GroundDrops;
   /** Os NPCs deste mapa (vendedora...), pelo id. */
   private readonly npcInfo = new Map<number, NpcInfo>();
   /** Andando até este NPC para negociar (abre a loja ao chegar perto). */
@@ -191,6 +194,7 @@ export class WorldScene extends Phaser.Scene {
     this.bagEquipped = this.welcome.inv.equipped;
     this.hud.setGold(this.welcome.inv.gold ?? 0);
     this.myGold = this.welcome.inv.gold ?? 0;
+    this.drops = new GroundDrops(this, this.items);
     this.shop = new ShopWindow(this.items, this.welcome.inv, {
       buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
       sell: (npc, i, n) => this.conn.send({ t: 'sell', npc, i, n }),
@@ -271,6 +275,8 @@ export class WorldScene extends Phaser.Scene {
         return scene.welcome.map;
       },
       walking: () => scene.path.length > 0,
+      /** O que está no chão esperando você pegar. */
+      drops: () => scene.drops.list(),
       /** Posição na tela (pixels) do centro de um tile. */
       screenOf: (x: number, y: number) => {
         const camera = scene.cameras.main;
@@ -292,6 +298,7 @@ export class WorldScene extends Phaser.Scene {
       return false;
     });
     this.effects.update(now);
+    this.drops.update(now);
     this.actionBar.update(now);
     this.updateShop();
     this.updateDepth(now);
@@ -363,7 +370,7 @@ export class WorldScene extends Phaser.Scene {
     this.lastFrameAt = now;
     const view = this.cameras.main.worldView;
     this.mapLights.update(now);
-    this.mapWeather.update(now);
+    this.mapWeather.update(now, view);
     this.mapSparks.update(now, view);
     if (!this.canopy) return;
     const near = (x: number, y: number) => x > view.x - 48 && x < view.right + 48 && y > view.y - 48 && y < view.bottom + 48;
@@ -373,6 +380,7 @@ export class WorldScene extends Phaser.Scene {
       if (near(x, y)) points.push({ x, y: y - 12 });
     }
     for (const spot of this.effects.dangerSpots()) if (near(spot.x, spot.y)) points.push(spot);
+    for (const spot of this.drops.spots()) if (near(spot.x, spot.y)) points.push(spot);
     if (this.marker.visible) points.push({ x: this.marker.x + T / 2, y: this.marker.y + T / 2 });
     this.canopy.update(points, delta);
   }
@@ -820,7 +828,17 @@ export class WorldScene extends Phaser.Scene {
         this.entities.get(msg.id)?.setGear(msg.gear);
         break;
       case 'loot':
-        this.onLoot(msg.x, msg.y, msg.items, msg.gold ?? 0, now);
+        this.onLoot(msg.x, msg.y, msg.items, now);
+        break;
+      case 'drop':
+        this.drops.add(msg.id, msg.x, msg.y, msg.gold ?? 0, msg.item ?? null, msg.ms, now);
+        if (msg.gold) this.sfx.play('coins');
+        break;
+      case 'pickup':
+        this.onPickup(msg.id, msg.gold ?? 0, msg.item ?? null, now);
+        break;
+      case 'drop_gone':
+        this.drops.remove(msg.id);
         break;
       case 'zone':
         this.changeZone(msg);
@@ -984,10 +1002,25 @@ export class WorldScene extends Phaser.Scene {
     this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online, npcs: msg.npcs }, this.seq);
   }
 
-  private onLoot(x: number, y: number, stacks: ItemStack[], gold: number, now: number): void {
+  /** Você pegou o que estava no chão: voa até você, com o "+N ouro" (ou o nome do item) e o som. */
+  private onPickup(id: number, gold: number, item: ItemStack | null, now: number): void {
+    const from = this.drops.remove(id);
+    if (from) this.effects.loot(from.texture, from, () => this.lootTarget(), now);
+    if (gold > 0) {
+      this.me?.floatText(`+${gold} ouro`, 'gold-gain');
+      this.sfx.play('coin');
+    }
+    if (item) {
+      const def = this.items.get(item.item);
+      this.me?.floatText(`+${item.n > 1 ? `${item.n} ` : ''}${def?.name ?? item.item}`, `loot ${def?.rarity ?? 'common'}`);
+      this.sfx.play(def && def.rarity !== 'common' ? 'rare' : 'loot');
+      this.bag.notifyNew();
+    }
+  }
+
+  private onLoot(x: number, y: number, stacks: ItemStack[], now: number): void {
     const from = { x: (x + 0.5) * T, y: (y + 0.5) * T };
     let precious = false;
-    if (gold > 0) window.setTimeout(() => this.me?.floatText(`+${gold} ouro`, 'gold-gain'), 450);
     stacks.forEach((stack, i) => {
       const def = this.items.get(stack.item);
       if (!def) return;
@@ -1144,6 +1177,7 @@ export class WorldScene extends Phaser.Scene {
     this.zoneBanner?.destroy();
     this.bag?.destroy();
     this.shop?.destroy();
+    this.drops?.destroy();
     this.feedback?.destroy();
   }
 }
