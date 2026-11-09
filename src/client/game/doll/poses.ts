@@ -18,8 +18,8 @@ export const FEET_Y = 60;
 /** Quantos pixels do quadro cabem em 1 pixel do mapa. */
 export const DENSITY = 2;
 /** Tamanho da cabeça (raios da elipse): os chapéus e capacetes usam isto. */
-export const HEAD_RX = 5.6;
-export const HEAD_RY = 6;
+export const HEAD_RX = 6;
+export const HEAD_RY = 6.3;
 
 /** As três vistas desenhadas (a esquerda é a direita espelhada). */
 export type View = 'down' | 'up' | 'side';

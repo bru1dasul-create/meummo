@@ -47,8 +47,8 @@ export function bodyLook(look: number): BodyLook {
 
 /** Meia largura do tronco em cada altura, por tipo de corpo: [ombro, peito, cintura, quadril]. */
 export const BUILD_WIDTHS: Record<Build, [number, number, number, number]> = {
-  forte: [6.6, 6.5, 4.9, 5.2],
-  esguio: [6, 5.7, 4.2, 5.4],
+  forte: [6.9, 6.8, 5.2, 5.4],
+  esguio: [6.3, 6, 4.5, 5.6],
 };
 
 // ---------- penteados: "mechas" (elipses com volume) em volta do centro da cabeça ----------

@@ -19,7 +19,7 @@ export const FACE_H = 12;
 const blank = (rows: Record<number, string>): string[] => Array.from({ length: FACE_H }, (_, i) => rows[i] ?? '');
 
 const DOWN: Record<Expression, string[]> = {
-  normal: blank({ 5: '..BBB..BBB..', 6: '...EE..EE...', 7: '...WI..WI...', 8: '...Ii..Ii...', 9: '......n.....', 10: '.....mm.....' }),
+  normal: blank({ 5: '..BBB..BBB..', 6: '...EE..EE...', 7: '...WI..IW...', 8: '...Ii..iI...', 9: '......n.....', 10: '.....mm.....' }),
   blink: blank({ 5: '..BBB..BBB..', 8: '...EE..EE...', 9: '......n.....', 10: '.....mm.....' }),
   hurt: blank({
     4: '....B..B....',
@@ -32,7 +32,7 @@ const DOWN: Record<Expression, string[]> = {
     11: '.....MM.....',
   }),
   happy: blank({ 5: '..BBB..BBB..', 7: '...EE..EE...', 9: '..b......b..', 10: '....m..m....', 11: '.....mm.....' }),
-  talk: blank({ 5: '..BBB..BBB..', 6: '...EE..EE...', 7: '...WI..WI...', 8: '...Ii..Ii...', 9: '......n.....', 10: '.....MM.....', 11: '.....MM.....' }),
+  talk: blank({ 5: '..BBB..BBB..', 6: '...EE..EE...', 7: '...WI..IW...', 8: '...Ii..iI...', 9: '......n.....', 10: '.....MM.....', 11: '.....MM.....' }),
   ko: blank({ 5: '..BBB..BBB..', 6: '..E.E..E.E..', 7: '...E....E...', 8: '..E.E..E.E..', 9: '......n.....', 10: '....m.m.....' }),
 };
 // de lado (olhando para a direita): um olho só, perto da frente do rosto

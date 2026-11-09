@@ -11,7 +11,7 @@
 //   cap      gorro mole           color, trim (barra), tip (para que lado a ponta cai: 1 ou -1)
 //   helmet   capacete             metal, rim (aba), crest (pluma), noseGuard (protetor de nariz), handle (cabo de panela)
 //   clothes  roupa (túnica)       shirt, skirt (saia até a coxa), belt
-//   vest     colete               leather, lacing (cordão), studs (tachinhas)
+//   vest     colete               leather, lacing (cordão), studs (tachinhas), scales (escamas de cobra)
 //   plate    armadura             metal, chain (malha dos braços), pauldrons (ombreiras), tassets (placas do quadril), trim
 //   gloves   luvas                color, metal (manopla), long (cobre o antebraço)
 //   boots    botas                color, tall (cano alto), cuff (barra), metal
@@ -36,7 +36,7 @@ export type GearArt =
   | { kind: 'cap'; color: string; trim?: string; tip: 1 | -1 }
   | { kind: 'helmet'; metal: string; rim?: string; crest?: string; noseGuard?: boolean; handle?: string }
   | { kind: 'clothes'; shirt: string; skirt?: boolean; belt?: string }
-  | { kind: 'vest'; leather: string; lacing?: string; studs?: string }
+  | { kind: 'vest'; leather: string; lacing?: string; studs?: string; scales?: boolean }
   | { kind: 'plate'; metal: string; chain?: string; pauldrons?: boolean; tassets?: boolean; trim?: string }
   | { kind: 'gloves'; color: string; metal?: boolean; long?: boolean }
   | { kind: 'boots'; color: string; tall?: boolean; cuff?: string; metal?: boolean }
@@ -68,7 +68,8 @@ export const GEAR_ART: Record<string, GearArt> = {
   // chapas de carro amarradas com corda: placas de lata meio enferrujadas, sem ombreira
   couraca: { kind: 'plate', metal: '#9fa7a8', chain: '#7a6a58', tassets: true, trim: '#b5823c' },
   tunica: { kind: 'clothes', shirt: '#ece4cf', skirt: true, belt: '#8a6b3d' },
-  gibao: { kind: 'vest', leather: '#9b6a3c', lacing: '#e9d9a8', studs: '#e9b941' },
+  // couro de cobra, costurado à mão: escamas e um tom oliva (não some em quem tem a pele morena)
+  gibao: { kind: 'vest', leather: '#7c7440', lacing: '#e9d9a8', studs: '#e9b941', scales: true },
   armadura: { kind: 'plate', metal: '#a3acb5', chain: '#6e767f', pauldrons: true, tassets: true, trim: '#c9a062' },
 
   // ======================= luvas e botas =======================

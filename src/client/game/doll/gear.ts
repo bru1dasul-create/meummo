@@ -59,10 +59,17 @@ export function drawBodyGear(cv: Canvas, r: Rig, d: Dress, layer: 'torso' | 'hip
     cv.part('vest');
     const shape = torsoShape(r, build);
     const normal = torsoNormal(r, build);
+    // escamas: fileiras de "meias-luas" um tom mais escuras, desencontradas
+    const scales = vest.scales
+      ? (x: number, y: number, t: number) => {
+          const row = Math.floor(y / 2);
+          return y % 2 < 1 && Math.floor(x + (row % 2) * 1.5) % 3 === 0 ? t - 1 : t;
+        }
+      : undefined;
     if (r.view === 'down') {
       // colete aberto na frente: dois painéis com a camisa aparecendo no meio
       const gap = 1.1;
-      cv.polygon(shape, leather, { normal, clip: (x, y) => Math.abs(x - c[0]) > gap + Math.max(0, (top + 4.5 - y) * 0.55) });
+      cv.polygon(shape, leather, { normal, pattern: scales, clip: (x, y) => Math.abs(x - c[0]) > gap + Math.max(0, (top + 4.5 - y) * 0.55) });
       if (vest.lacing) {
         for (let y = top + 5; y < r.waist[1] + 1; y += 2) {
           cv.dot(c[0] - 1, y, vest.lacing);
@@ -73,10 +80,10 @@ export function drawBodyGear(cv: Canvas, r: Rig, d: Dress, layer: 'torso' | 'hip
       cv.line([c[0] - 1.6, top + 4.5], [c[0] - 1.6, r.waist[1] + 1.5], leather.ramp[0]);
       cv.line([c[0] + 1.6, top + 4.5], [c[0] + 1.6, r.waist[1] + 1.5], leather.ramp[0]);
     } else if (r.view === 'side') {
-      cv.polygon(shape, leather, { normal, clip: (x) => x < c[0] + 2.6 });
+      cv.polygon(shape, leather, { normal, pattern: scales, clip: (x) => x < c[0] + 2.6 });
       cv.line([c[0] + 2.3, top + 2], [c[0] + 2.1, r.waist[1] + 1.5], leather.ramp[0]);
     } else {
-      cv.polygon(shape, leather, { normal });
+      cv.polygon(shape, leather, { normal, pattern: scales });
       cv.line([c[0], top + 2], [c[0], r.waist[1]], leather.ramp[1]);
     }
     if (vest.studs && r.view !== 'up') {
@@ -266,6 +273,9 @@ export function drawHeadGear(cv: Canvas, r: Rig, d: Dress): void {
       const straw = material(art.color, 'straw');
       const weave = (x: number, y: number, t: number) => ((Math.floor(x) + Math.floor(y) * 2) % 4 === 0 ? t - 1 : t);
       const brimY = h[1] - 3;
+      // sombra da aba na testa e no cabelo (o que dá a sensação de chapéu de verdade)
+      const reach = (side ? art.brim * 0.88 : art.brim) - 1.5;
+      cv.shadow(h[0] - reach, brimY + 1.2, h[0] + reach, brimY + 3.6, (x, y) => ((x - h[0]) / reach) ** 2 + ((y - brimY - 1.2) / 2.4) ** 2 <= 1, 0.72);
       cv.part('hat_brim');
       cv.ellipse([h[0] + (side ? 0.5 : 0), brimY], side ? art.brim * 0.88 : art.brim, side ? 1.9 : 2.4, straw, { pattern: weave });
       cv.part('hat_crown');
@@ -280,6 +290,7 @@ export function drawHeadGear(cv: Canvas, r: Rig, d: Dress): void {
     case 'cap': {
       const cloth = material(art.color, 'cloth');
       const tip = side ? -1 : r.view === 'up' ? -art.tip : art.tip;
+      cv.shadow(h[0] - HEAD_RX, h[1] - 0.2, h[0] + HEAD_RX, h[1] + 1.4, (x, y) => ((x - h[0]) / HEAD_RX) ** 2 + ((y - h[1] + 0.2) / 1.6) ** 2 <= 1, 0.76);
       cv.part('cap');
       cv.ellipse([h[0], h[1] - 2.4], HEAD_RX + 0.8, 5, cloth, { clip: (_x, y) => y < h[1] - 0.2 });
       // ponta mole que cai para o lado
@@ -305,6 +316,8 @@ export function drawHeadGear(cv: Canvas, r: Rig, d: Dress): void {
         const from: Vec = side ? [h[0] - R + 0.4, h[1] - 0.9] : [h[0] - R + 0.2, h[1] - 0.6];
         cv.capsule(from, add(from, [side ? -3.8 : -3.2, -0.5]), 0.95, 0.95, material(art.handle, 'wood'));
       }
+      // sombra da aba do capacete no rosto
+      cv.shadow(h[0] - R, h[1] + 0.8, h[0] + R, h[1] + 2.4, (x, y) => ((x - h[0]) / R) ** 2 + ((y - h[1] - 0.8) / 1.8) ** 2 <= 1, 0.74);
       cv.part('helmet');
       cv.ellipse([h[0] + (side ? -0.3 : 0), h[1] - 2], R, 5.8, metal, { clip: (_x, y) => y < h[1] + 0.6 });
       cv.part('helmet_rim');

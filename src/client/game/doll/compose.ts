@@ -100,10 +100,14 @@ function drawLeg(cv: Canvas, r: Rig, d: Dress, i: 0 | 1): void {
   const ankle = r.ankle[i];
   const bootTop = lerp(knee, ankle, d.tallBoots ? 0.18 : 0.64);
   cv.part(`leg${i}`);
-  cv.capsule(hip, knee, 2.65, 2.0, d.pants, { bias });
-  cv.capsule(knee, bootTop, 2.0, 1.75, d.pants, { bias });
+  cv.capsule(hip, knee, 2.85, 2.2, d.pants, { bias });
+  cv.capsule(knee, bootTop, 2.2, 1.95, d.pants, { bias });
+  if (r.view !== 'side') {
+    // vinco da calça: um fio de luz descendo pela coxa, do lado da luz
+    cv.line(add(hip, [-1, 1.5]), add(knee, [-0.9, -0.5]), d.pants.ramp[3]);
+  }
   cv.part(`boot${i}`);
-  cv.capsule(bootTop, ankle, 1.95, 1.5, d.tallBoots ? d.shin : d.foot, { bias });
+  cv.capsule(bootTop, ankle, 2.15, 1.7, d.tallBoots ? d.shin : d.foot, { bias });
   if (d.bootCuff) cv.capsule(add(bootTop, [-1.9, 0.2]), add(bootTop, [1.9, 0.2]), 0.9, 0.9, d.bootCuff, { bias });
   else cv.line(add(bootTop, [-1.5, 0.4]), add(bootTop, [1.5, 0.4]), d.foot.ramp[3]); // dobra do cano
   drawFoot(cv, r, d, i, bias);
@@ -187,6 +191,13 @@ function drawTorso(cv: Canvas, r: Rig, d: Dress): void {
   }
 }
 
+/** Sombra que a cabeça faz no peito, logo abaixo do pescoço (de frente). */
+function chinShadow(cv: Canvas, r: Rig): void {
+  const y = r.neck[1] + 1.2;
+  const cx = r.chest[0];
+  cv.shadow(cx - 3.2, y, cx + 3.2, y + 2.2, (x, py) => ((x - cx) / 3.2) ** 2 + ((py - y) / 2.2) ** 2 <= 1, 0.82);
+}
+
 function drawBelt(cv: Canvas, r: Rig, d: Dress): void {
   const build = d.look.build;
   const y = r.waist[1] + 2.6;
@@ -231,12 +242,12 @@ function drawArm(cv: Canvas, r: Rig, d: Dress, which: 'main' | 'off', far: boole
   const e = r.elbow[which];
   const h = r.hand[which];
   cv.part(`arm_${which}`);
-  cv.capsule(e, lerp(e, h, 0.85), 1.6, 1.2, d.forearm, { bias });
+  cv.capsule(e, lerp(e, h, 0.85), 1.8, 1.4, d.forearm, { bias });
   if (d.shortSleeves) {
     const cut = lerp(s, e, 0.6);
-    cv.capsule(cut, e, 1.8, 1.6, d.skin, { bias });
+    cv.capsule(cut, e, 2, 1.8, d.skin, { bias });
     cv.part(`sleeve_${which}`);
-    cv.capsule(s, cut, 2.3, 2.1, d.sleeve, { bias });
+    cv.capsule(s, cut, 2.5, 2.3, d.sleeve, { bias });
     // barra da manga
     const dx = e[0] - s[0];
     const dy = e[1] - s[1];
@@ -244,7 +255,7 @@ function drawArm(cv: Canvas, r: Rig, d: Dress, which: 'main' | 'off', far: boole
     const p: Vec = [-dy / n, dx / n];
     cv.line(add(cut, [p[0] * -1.9, p[1] * -1.9]), add(cut, [p[0] * 1.9, p[1] * 1.9]), d.sleeve.ramp[0]);
   } else {
-    cv.capsule(s, e, 2.25, 1.8, d.sleeve, { bias });
+    cv.capsule(s, e, 2.45, 2, d.sleeve, { bias });
   }
   if (d.gloveCuff) {
     cv.part(`cuff_${which}`);
@@ -257,7 +268,7 @@ function drawHand(cv: Canvas, r: Rig, d: Dress, which: 'main' | 'off', far: bool
   const bias = far ? -0.28 : 0;
   const h = r.hand[which];
   cv.part(`hand_${which}`);
-  cv.ellipse(h, 1.75, 1.85, d.hand, { bias });
+  cv.ellipse(h, 1.9, 2, d.hand, { bias });
   // polegar, do lado de dentro (de frente/costas) ou da frente (de lado)
   const thumb = r.view === 'side' ? 1.4 : (which === 'main') === (r.view === 'down') ? 1.3 : -1.3;
   cv.ellipse(add(h, [thumb, -0.9]), 0.85, 0.85, d.hand, { bias });
@@ -306,23 +317,44 @@ function drawHead(cv: Canvas, r: Rig, d: Dress): void {
 /** Cabelo: as mechas do penteado. `back` = só as que ficam atrás do corpo; `covered` = com capacete/chapéu. */
 function drawHair(cv: Canvas, r: Rig, d: Dress, layer: 'back' | 'front', covered: boolean): void {
   const clumps: Clump[] = HAIR[d.look.hairStyle][r.view];
+  // as mechas foram pensadas para uma cabeça de 5,6 x 6: acompanham o tamanho da cabeça
+  const sx = HEAD_RX / 5.6;
+  const sy = HEAD_RY / 6;
+  const at = (v: Vec): Vec => [r.head[0] + v[0] * sx, r.head[1] + v[1] * sy];
+  const drawn: { k: number; c: Clump }[] = [];
   clumps.forEach((c, k) => {
     if ((c.back ?? false) !== (layer === 'back')) return;
     if (covered && !c.low) return;
     // cada mecha é uma parte: onde uma cobre a outra aparece a linha que separa os fios
     cv.part(`hair${k}`);
-    const at = add(r.head, c.at);
-    if (c.to) cv.capsule(at, add(r.head, c.to), c.r[0], c.r[0] * 0.7, d.hair);
-    else cv.ellipse(at, c.r[0], c.r[1], d.hair);
+    if (c.to) cv.capsule(at(c.at), at(c.to), c.r[0] * sx, c.r[0] * sx * 0.35, d.hair);
+    else cv.ellipse(at(c.at), c.r[0] * sx, c.r[1] * sy, d.hair);
+    drawn.push({ k, c });
   });
-  if (layer === 'front' && !covered && r.view !== 'up') {
-    // brilho do cabelo: um arquinho claro no alto, do lado da luz
-    const shine = d.hair.ramp[4];
-    for (let i = 0; i <= 4; i++) {
-      const a = Math.PI * (1.12 + i * 0.07);
-      const x = r.head[0] + (r.view === 'side' ? -1 : -0.5) + Math.cos(a) * 4.2;
-      const y = r.head[1] - 3.6 + Math.sin(a) * 2.4;
-      if (cv.filled(Math.floor(x), Math.floor(y))) cv.dot(x, y, shine);
+  // fios (linha escura) e brilho (linha clara) dentro de cada mecha, só nos pixels dela
+  const dark = d.hair.ramp[0];
+  const light = d.hair.ramp[3];
+  for (const { k, c } of drawn) {
+    const group = `hair${k}`;
+    const mine = (x: number, y: number) => cv.ownedBy(Math.floor(x), Math.floor(y), group);
+    const paint = (a: Vec, b: Vec, color: string) => {
+      const steps = Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]))) || 1;
+      for (let i = 0; i <= steps; i++) {
+        const x = a[0] + ((b[0] - a[0]) * i) / steps;
+        const y = a[1] + ((b[1] - a[1]) * i) / steps;
+        if (mine(x, y)) cv.dot(x, y, color);
+      }
+    };
+    const center = at(c.at);
+    if (c.to) {
+      const end = at(c.to);
+      paint(lerp(center, end, 0.25), lerp(end, center, 0.12), dark);
+    } else {
+      const rx = c.r[0] * sx;
+      const ry = c.r[1] * sy;
+      if (rx < 1.6 || ry < 1.4) continue;
+      paint([center[0] + rx * 0.25, center[1] - ry * 0.35], [center[0] + rx * 0.45, center[1] + ry * 0.7], dark);
+      if (r.view !== 'up' || ry > 3) paint([center[0] - rx * 0.55, center[1] - ry * 0.25], [center[0] - rx * 0.2, center[1] - ry * 0.6], light);
     }
   }
 }
@@ -342,6 +374,7 @@ function drawFrame(cv: Canvas, r: Rig, d: Dress): void {
       drawNeck(cv, r, d);
       drawTorso(cv, r, d);
       drawBodyGear(cv, r, d, 'torso');
+      chinShadow(cv, r);
       drawBelt(cv, r, d);
       drawBodyGear(cv, r, d, 'hips');
       drawArm(cv, r, d, 'main', false);

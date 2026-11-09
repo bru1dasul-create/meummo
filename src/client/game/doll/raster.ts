@@ -95,6 +95,30 @@ export class Canvas {
     return x >= 0 && y >= 0 && x < this.width && y < this.height && this.color[y * this.width + x] !== null;
   }
 
+  /**
+   * Sombra projetada: escurece o que JÁ está desenhado dentro da caixa (aba do chapéu na testa, queixo no
+   * peito...), onde `where` deixar. A cor puxa para o roxo, como as sombras pintadas à mão.
+   */
+  shadow(x0: number, y0: number, x1: number, y1: number, where: (x: number, y: number) => boolean, factor = 0.8): void {
+    for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(this.height - 1, Math.ceil(y1)); y++) {
+      for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(this.width - 1, Math.ceil(x1)); x++) {
+        const i = y * this.width + x;
+        const c = this.color[i];
+        if (!c || !where(x + 0.5, y + 0.5)) continue;
+        this.color[i] = darken(c, factor);
+        this.shaded[i] = 0;
+      }
+    }
+  }
+
+  /** O grupo da parte que pintou o pixel ('' = vazio). */
+  groupAt(x: number, y: number): string {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return '';
+    const id = this.groupOf[this.owner[y * this.width + x]!];
+    for (const [name, value] of this.groups) if (value === id) return name;
+    return '';
+  }
+
   /** O pixel foi pintado por uma parte deste grupo? */
   ownedBy(x: number, y: number, group: string): boolean {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return false;
