@@ -16,7 +16,9 @@ export type SoundName =
   | 'rare'
   | 'equip'
   | 'charge'
-  | 'fire';
+  | 'fire'
+  | 'coins'
+  | 'coin';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -122,6 +124,14 @@ export class Sfx {
       case 'fire': // fogo estalando
         this.noise(t, 0.35, 'highpass', 1800, 900, 0.18);
         this.noise(t + 0.12, 0.08, 'bandpass', 2600, 1400, 0.2);
+        break;
+      case 'coins': // moedas caindo no chão (tilintar)
+        [2093, 2637, 2349, 2794].forEach((f, i) => this.tone('triangle', f, f * 0.97, t + i * 0.055, 0.09, 0.08));
+        this.noise(t, 0.05, 'highpass', 6000, 3500, 0.05);
+        break;
+      case 'coin': // pegou o ouro
+        this.tone('square', 988, 988, t, 0.06, 0.06);
+        this.tone('square', 1319, 1319, t + 0.06, 0.16, 0.06);
         break;
       case 'equip': // fivela fechando
         this.noise(t, 0.05, 'bandpass', 2600, 1700, 0.25);

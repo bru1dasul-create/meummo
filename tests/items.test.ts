@@ -190,14 +190,15 @@ describe('itens no mundo', () => {
     expect(beto.conn.ofType('sys').some((m) => m.text === 'Ana conseguiu: Coroa!')).toBe(true);
   });
 
-  it('mochila cheia: o item fica para trás, com aviso', () => {
+  it('mochila cheia: o item fica no chão, com aviso', () => {
     const world = arena();
     const ana = join(world);
     for (let i = 0; i < BAG_SIZE; i++) ana.player.inventory.add('espada', 1);
     world.tick();
     shootRight(world, ana.player);
     expect(ana.conn.ofType('loot')).toHaveLength(0);
-    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia! Ficou para trás: Fruta ×2, Coroa.')).toBe(true);
+    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia! Ficou no chão: Fruta ×2, Coroa. Abra espaço e passe lá para pegar.')).toBe(true);
+    expect(ana.conn.ofType('drop').map((d) => d.item)).toEqual([{ item: 'fruta', n: 2 }, { item: 'coroa', n: 1 }]);
   });
 
   it('equipar muda vida máxima e dano; tirar volta ao normal', () => {

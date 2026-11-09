@@ -1,13 +1,13 @@
 // Ouro: quanto cada monstro deixa (data/monsters.json), onde ele fica (fora dos espaços da mochila),
-// como chega para quem ajudou a derrubar e como fica salvo.
+// como cai no chão para quem ajudou a derrubar (cada um o seu, pega chegando perto) e como fica salvo.
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CharacterStore, type CharacterData } from '../src/server/accounts';
 import { Inventory } from '../src/server/inventory';
 import { parseItemDefs } from '../src/server/items';
 import { loadMonsterDefs, parseMonsterDefs } from '../src/server/monsters';
-import { World, type Player } from '../src/server/world';
-import { SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
+import { DROP_READY_MS, World, type Player } from '../src/server/world';
+import { GOLD_DROP_MS, ITEM_DROP_MS, SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
 import { DOWN } from '../src/shared/dir';
 import { BAG_SIZE, MAX_GOLD } from '../src/shared/items';
 import { GameMap } from '../src/shared/map';
@@ -112,8 +112,8 @@ function shootRight(world: World, player: Player): void {
   run(world, SHOT_COOLDOWN_MS + TICK_MS);
 }
 
-describe('ouro no mundo', () => {
-  it('cada um que ajudou a derrubar o monstro ganha o seu ouro, junto com os itens', () => {
+describe('ouro no chão', () => {
+  it('cai onde o monstro estava, um montinho para cada um que ajudou (cada um só vê o seu)', () => {
     const world = arena('rico');
     const ana = join(world, 'Ana');
     const beto = join(world, 'Beto');
@@ -121,41 +121,116 @@ describe('ouro no mundo', () => {
     [...world.monsters.values()][0]!.contributors.add(beto.player.id); // Beto também bateu
     shootRight(world, ana.player);
     for (const { player, conn } of [ana, beto]) {
-      expect(player.inventory.gold).toBe(2);
-      expect(conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [{ item: 'fruta', n: 2 }], gold: 2 });
-      expect(conn.ofType('inv').at(-1)?.inv.gold).toBe(2);
-      expect(conn.ofType('sys').some((m) => m.text === 'Você pegou: 2 de ouro, Fruta ×2.')).toBe(true);
+      expect(player.inventory.gold).toBe(0); // ainda está no chão
+      expect(conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [{ item: 'fruta', n: 2 }] });
+      const drops = conn.ofType('drop');
+      expect(drops).toHaveLength(1); // só o seu
+      expect(drops[0]).toMatchObject({ x: 4, y: 1, gold: 2, ms: GOLD_DROP_MS });
+      expect(conn.ofType('sys').some((m) => m.text === 'Você pegou: Fruta ×2.')).toBe(true);
     }
+    expect(ana.conn.ofType('drop')[0]!.id).not.toBe(beto.conn.ofType('drop')[0]!.id);
   });
 
-  it('monstro sem ouro: a mensagem não fala de ouro', () => {
-    const world = arena('pobre');
-    const ana = join(world);
+  it('chegou perto, pegou (e só o dono pega)', () => {
+    const world = arena('so_ouro');
+    const ana = join(world, 'Ana');
+    const beto = join(world, 'Beto');
     world.tick();
-    shootRight(world, ana.player);
+    shootRight(world, ana.player); // só a Ana bateu
+    expect(beto.conn.ofType('drop')).toHaveLength(0);
+    // Beto em cima do ouro: não é dele
+    beto.player.x = 4;
+    beto.player.y = 1;
+    run(world, DROP_READY_MS + TICK_MS);
+    expect(beto.player.inventory.gold).toBe(0);
+    // Ana a 2 tiles: ainda não
+    ana.player.x = 2;
+    run(world, TICK_MS);
     expect(ana.player.inventory.gold).toBe(0);
-    expect(ana.conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [{ item: 'fruta', n: 1 }] });
-    expect(ana.conn.ofType('sys').some((m) => m.text === 'Você pegou: Fruta.')).toBe(true);
+    // Ana ao lado: pegou
+    ana.player.x = 3;
+    run(world, TICK_MS);
+    expect(ana.player.inventory.gold).toBe(3);
+    const dropId = ana.conn.ofType('drop')[0]!.id;
+    expect(ana.conn.ofType('pickup')).toEqual([{ t: 'pickup', id: dropId, gold: 3 }]);
+    expect(ana.conn.ofType('inv').at(-1)?.inv.gold).toBe(3);
+    expect(world.drops.size).toBe(0);
   });
 
-  it('monstro que só deixa ouro também avisa', () => {
+  it('as moedas caem primeiro: mesmo colado no monstro, só pega depois de um instante', () => {
+    const world = arena('so_ouro');
+    const ana = join(world);
+    ana.player.x = 3; // ao lado do monstro
+    world.tick();
+    world.shoot(ana.player, Math.floor(clock.now()), 0);
+    for (let i = 0; i < 20 && ana.conn.ofType('drop').length === 0; i++) run(world, TICK_MS);
+    expect(ana.conn.ofType('drop')).toHaveLength(1);
+    expect(ana.player.inventory.gold).toBe(0); // ainda caindo
+    run(world, DROP_READY_MS + TICK_MS);
+    expect(ana.player.inventory.gold).toBe(3);
+  });
+
+  it('some se ninguém pegar a tempo', () => {
     const world = arena('so_ouro');
     const ana = join(world);
     world.tick();
     shootRight(world, ana.player);
-    expect(ana.conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [], gold: 3 });
-    expect(ana.conn.ofType('sys').some((m) => m.text === 'Você pegou: 3 de ouro.')).toBe(true);
+    const dropId = ana.conn.ofType('drop')[0]!.id;
+    run(world, GOLD_DROP_MS);
+    expect(ana.conn.ofType('drop_gone')).toEqual([{ t: 'drop_gone', id: dropId }]);
+    ana.player.x = 4;
+    run(world, TICK_MS * 2);
+    expect(ana.player.inventory.gold).toBe(0);
   });
 
-  it('mochila cheia: o item fica para trás, mas o ouro entra', () => {
+  it('desmaiado não pega; quem sai do jogo deixa de ter ouro no chão', () => {
+    const world = arena('so_ouro');
+    const ana = join(world);
+    world.tick();
+    shootRight(world, ana.player);
+    ana.player.x = 4;
+    ana.player.deadUntil = clock.now() + 60_000;
+    run(world, DROP_READY_MS + TICK_MS);
+    expect(ana.player.inventory.gold).toBe(0);
+    world.leave(ana.player);
+    world.tick();
+    expect(world.drops.size).toBe(0);
+  });
+
+  it('monstro sem ouro não deixa nada no chão', () => {
+    const world = arena('pobre');
+    const ana = join(world);
+    world.tick();
+    shootRight(world, ana.player);
+    expect(ana.conn.ofType('drop')).toHaveLength(0);
+    expect(ana.conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [{ item: 'fruta', n: 1 }] });
+  });
+
+  it('mochila cheia: o item também fica no chão, esperando você abrir espaço', () => {
     const world = arena('rico');
     const ana = join(world);
     for (let i = 0; i < BAG_SIZE; i++) ana.player.inventory.add('espada', 1);
     world.tick();
     shootRight(world, ana.player);
+    expect(ana.conn.ofType('loot')).toHaveLength(0);
+    const drops = ana.conn.ofType('drop');
+    expect(drops.map((d) => d.gold ?? d.item)).toEqual([2, { item: 'fruta', n: 2 }]);
+    expect(drops[1]!.ms).toBe(ITEM_DROP_MS);
+    expect(Math.max(Math.abs(drops[1]!.x - 4), Math.abs(drops[1]!.y - 1))).toBe(1); // ao lado do ouro
+    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia! Ficou no chão: Fruta ×2. Abra espaço e passe lá para pegar.')).toBe(true);
+
+    // chega perto com a mochila cheia: pega o ouro, avisa uma vez só que a fruta não cabe
+    ana.player.x = 4;
+    run(world, DROP_READY_MS + TICK_MS * 3);
     expect(ana.player.inventory.gold).toBe(2);
-    expect(ana.conn.ofType('loot')[0]).toMatchObject({ items: [], gold: 2 });
-    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia! Ficou para trás: Fruta ×2.')).toBe(true);
+    expect(ana.conn.ofType('sys').filter((m) => m.text === 'Mochila cheia: Fruta ×2 continua no chão.')).toHaveLength(1);
+
+    // abre espaço: pega a fruta
+    world.itemAction(ana.player, 'drop', 0);
+    run(world, TICK_MS);
+    expect(ana.player.inventory.slots[0]).toEqual({ item: 'fruta', n: 2 });
+    expect(ana.conn.ofType('pickup').at(-1)).toEqual({ t: 'pickup', id: drops[1]!.id, item: { item: 'fruta', n: 2 } });
+    expect(world.drops.size).toBe(0);
   });
 
   it('o ouro chega nas boas-vindas e é salvo com o personagem', () => {
