@@ -81,14 +81,17 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 - `MEUMMO_ITENS_TESTE=1 npm start`: todo personagem que entra ganha um de cada equipamento (só para testar).
 
 ## Personagem em camadas (`src/client/game/doll/`)
-O personagem é um "boneco de papel" desenhado por código, com o dobro de pixels do mapa (quadro 48x64, mostrado
-na metade do tamanho; por isso o zoom da câmera é sempre par).
+O personagem é um "boneco de papel" desenhado por código, com o dobro de pixels do mapa (quadro 64x64, mostrado
+na metade do tamanho; por isso o zoom da câmera é sempre par). O corpo tem ~52 px de altura (cabeça de 12 px,
+pernas longas) e a sobra dos lados do quadro é para armas e golpes.
 - `poses.ts` — o esqueleto: para cada animação (`idle` 4 quadros, `walk` 6, `run` 4, `shoot` 3, `swing` 4,
   `hurt`, `ko`) e cada vista (`down`, `up`, `side`; a esquerda é a direita espelhada), onde ficam mãos e pés, a
   inclinação do corpo e o ângulo da arma. Cotovelos e joelhos são calculados (cinemática inversa).
 - `raster.ts` — o "pincel": esferas, cápsulas e polígonos com volume, em 5 tons de cada material (`palette.ts`,
   sombras puxando para o roxo e brilhos para o amarelo); contorno colorido e linha interna onde uma parte cobre outra.
-- `body.ts` — cores que vêm do nome (as mesmas de antes) e penteados feitos de mechas. `compose.ts` monta o corpo
+- `body.ts` — cores que vêm do nome (as mesmas de antes), dois tipos de corpo (`forte` e `esguio`) e penteados
+  feitos de mechas (cada mecha é uma parte, então aparece a linha que separa os fios). `shapes.ts` tem o contorno
+  do tronco, que o colete e a armadura seguem. `compose.ts` monta o corpo
   e decide a ordem das camadas em cada vista; `gear.ts` desenha cada tipo de equipamento preso aos ossos (por isso
   tudo acompanha as animações). Os parâmetros de cada visual ficam em `src/client/game/gearArt.ts`.
 - `face.ts` — o rosto é outra camada (pisca, careta, sorriso, boca falando), então não precisa de uma textura

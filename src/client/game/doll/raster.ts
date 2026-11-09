@@ -1,6 +1,7 @@
 // O "pincel" do personagem: desenha formas com volume (esfera, cápsula, polígono) já sombreadas em
 // tons de pixel art, numa tela do tamanho de um quadro. Cada forma pertence a uma "parte" (braço, tronco,
 // chapéu...). No fim, `finish` faz o acabamento que um pixel artist faria à mão:
+//   - limpa pixels soltos no meio do sombreado (o tom fica em "blocos", não em chuvisco);
 //   - linha interna mais escura onde uma parte passa NA FRENTE de outra (braço sobre o tronco);
 //   - contorno externo colorido (a cor vizinha bem escura, não preto puro).
 
@@ -18,13 +19,23 @@ const LIGHT: Normal = (() => {
   return [v[0] / n, v[1] / n, v[2] / n];
 })();
 
-/** Escolhe o tom da rampa (0 = sombra forte ... 4 = brilho) pela luz que bate no pixel. */
+/**
+ * Escolhe o tom da rampa (0 = sombra forte ... 4 = brilho) pela luz que bate no pixel.
+ * Como na pixel art feita à mão: a maior parte fica no tom do meio, a sombra é um bloco do lado de lá,
+ * o tom mais escuro só na beirada e o brilho (só metal) é um pontinho.
+ */
 export function tone(nx: number, ny: number, nz: number, shiny: boolean, bias = 0): number {
   const light = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2] + bias;
-  if (light > (shiny ? 0.86 : 0.97)) return 4;
-  if (light > (shiny ? 0.62 : 0.7)) return 3;
-  if (light > 0.36) return 2;
-  if (light > 0.08) return 1;
+  if (shiny) {
+    if (light > 0.8) return 4;
+    if (light > 0.56) return 3;
+    if (light > 0.18) return 2;
+    if (light > -0.22) return 1;
+    return 0;
+  }
+  if (light > 0.78) return 3;
+  if (light > 0.2) return 2;
+  if (light > -0.28) return 1;
   return 0;
 }
 
@@ -41,6 +52,8 @@ export class Canvas {
   readonly color: (string | null)[];
   /** Número da parte que pintou cada pixel (0 = vazio). */
   private readonly owner: Uint16Array;
+  /** 1 = pixel de sombreado (pode ser limpo), 0 = detalhe pintado de propósito (fivela, costura...). */
+  private readonly shaded: Uint8Array;
   /** Grupo de cada parte (número, para comparar rápido). */
   private readonly groupOf: number[] = [0];
   private readonly groups = new Map<string, number>();
@@ -52,6 +65,7 @@ export class Canvas {
   ) {
     this.color = new Array<string | null>(width * height).fill(null);
     this.owner = new Uint16Array(width * height);
+    this.shaded = new Uint8Array(width * height);
   }
 
   /** Começa uma parte nova. Partes do mesmo grupo (ex.: coxa e canela) não ganham linha entre si. */
@@ -74,10 +88,18 @@ export class Canvas {
     const i = y * this.width + x;
     this.color[i] = color;
     this.owner[i] = this.current;
+    this.shaded[i] = 0;
   }
 
   filled(x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < this.width && y < this.height && this.color[y * this.width + x] !== null;
+  }
+
+  /** O pixel foi pintado por uma parte deste grupo? */
+  ownedBy(x: number, y: number, group: string): boolean {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return false;
+    const id = this.groups.get(group);
+    return id !== undefined && this.groupOf[this.owner[y * this.width + x]!] === id && this.color[y * this.width + x] !== null;
   }
 
   private shade(x: number, y: number, nx: number, ny: number, nz: number, mat: Material, o: ShapeOptions): void {
@@ -87,6 +109,35 @@ export class Canvas {
     let t = tone(nx, ny, nz, mat.shiny, o.bias ?? 0);
     if (o.pattern) t = Math.max(0, Math.min(4, o.pattern(px, py, t)));
     this.dot(x, y, mat.ramp[t]!);
+    if (!o.pattern) this.shaded[y * this.width + x] = 1;
+  }
+
+  /** Pixel de sombreado sozinho no meio de outro tom da MESMA forma vira o tom dos vizinhos. */
+  private despeckle(): void {
+    const w = this.width;
+    const h = this.height;
+    const { color, owner, shaded } = this;
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        if (!shaded[i]) continue;
+        const me = owner[i]!;
+        const n = [i + 1, i - 1, i + w, i - w];
+        if (n.some((k) => owner[k] !== me)) continue;
+        const c = color[i];
+        let same = 0;
+        let other: string | null = null;
+        let otherCount = 0;
+        for (const k of n) {
+          if (color[k] === c) same++;
+          else if (other === null || color[k] === other) {
+            other = color[k]!;
+            otherCount++;
+          }
+        }
+        if (same === 0 && otherCount >= 3 && other) color[i] = other;
+      }
+    }
   }
 
   /** Elipse com sombreado de esfera (cabeça, mãos, ombreiras...). */
@@ -174,6 +225,7 @@ export class Canvas {
    * e contorno externo.
    */
   finish(sheet: Sheet, ox: number, oy: number): void {
+    this.despeckle();
     const w = this.width;
     const h = this.height;
     const color = this.color;
@@ -193,7 +245,7 @@ export class Canvas {
             const n = near(x, y, k);
             const nc = n >= 0 ? color[n] : null;
             if (nc) {
-              out = darken(nc, 0.34);
+              out = darken(nc, 0.24);
               break;
             }
           }
@@ -205,7 +257,7 @@ export class Canvas {
             if (n < 0) continue;
             const other = owner[n]!;
             if (other !== 0 && other < me && groupOf[other] !== groupOf[me]) {
-              out = darken(c, 0.62);
+              out = darken(c, 0.58);
               break;
             }
           }

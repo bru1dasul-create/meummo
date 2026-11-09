@@ -20,6 +20,8 @@ const PART_LABELS: Record<EquipSlot, string> = {
   offhand: 'Escudo',
   charm: 'Acessório',
 };
+/** Largura da prévia do personagem (o meio do quadro). */
+const DOLL_W = 48;
 /** Ordem em que a prévia do personagem gira quando você clica nela. */
 const DOLL_VIEWS: { view: View; flip: boolean }[] = [
   { view: 'down', flip: false },
@@ -90,7 +92,7 @@ export class Bag {
     private readonly look: number,
   ) {
     this.gearEl.replaceChildren();
-    this.doll.width = FRAME_W;
+    this.doll.width = DOLL_W;
     this.doll.height = FRAME_H;
     this.doll.className = 'bag-doll';
     this.doll.title = 'Seu personagem (clique para girar)';
@@ -256,7 +258,9 @@ export class Bag {
       drawFace(sheet, fx, fy, view, 'normal', look);
     }
     const ctx = this.doll.getContext('2d')!;
-    ctx.putImageData(new ImageData(new Uint8ClampedArray(sheet.data), FRAME_W, FRAME_H), 0, 0);
+    ctx.clearRect(0, 0, DOLL_W, FRAME_H);
+    // o quadro tem sobra dos lados (para armas); a prévia mostra só o meio
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(sheet.data), FRAME_W, FRAME_H), -(FRAME_W - DOLL_W) / 2, 0);
     this.doll.style.transform = flip ? 'scaleX(-1)' : '';
   }
 

@@ -51,7 +51,7 @@ export type GearKind = GearArt['kind'];
 
 export const GEAR_ART: Record<string, GearArt> = {
   // ======================= cabeça =======================
-  chapeu_palha: { kind: 'hat', color: '#e2be62', band: '#c0392b', brim: 10.5, crown: 4.2 },
+  chapeu_palha: { kind: 'hat', color: '#e2be62', band: '#c0392b', brim: 9.2, crown: 3.6 },
   gorro: { kind: 'cap', color: '#d62f2f', trim: '#a51f1f', tip: 1 },
   capacete_sucata: { kind: 'helmet', metal: '#a3acb5', rim: '#6b737c', handle: '#7a4a22', noseGuard: true },
 

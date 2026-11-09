@@ -24,6 +24,7 @@ const MANNEQUIN: BodyLook = {
   buckle: '#d8b050',
   eyes: '#3a5a8c',
   hairStyle: 'curto',
+  build: 'forte',
 };
 
 const SLOT_OF: Record<GearArt['kind'], EquipSlot> = {
@@ -93,7 +94,8 @@ export function gearIcon(art: GearArt): Sheet | null {
       break;
     }
     case 'boots':
-      drawIconBody(cv, idle(), d, 'feet');
+      // o par de botas, um pouco afastadas para não virar um bloco só
+      drawIconBody(cv, idle({ feet: [[-1.8, 0], [1.8, 0]] }), d, 'feet');
       break;
     case 'cape':
       drawBackGear(cv, rigOf('up', { ...POSES.up.idle[0]! }), d, 'over');

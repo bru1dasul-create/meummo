@@ -63,7 +63,8 @@ export function ramp(base: string, kind: MaterialKind = 'cloth'): Ramp {
     if (k === 0) return base;
     const hue = k < 0 ? towards(h, shadowHue, hueShift * -k) : towards(h, 55, hueShift * k * 0.8);
     const light = k < 0 ? l + k * step : l + k * step * (kind === 'metal' ? 1.25 : 0.9);
-    const sat = k < 0 ? s + 0.04 * -k : s - 0.05 * k;
+    // pele: a sombra fica um pouco menos saturada (senão parece queimadura de sol)
+    const sat = k < 0 ? (kind === 'skin' ? s * (1 - 0.1 * -k) : s + 0.04 * -k) : s - 0.05 * k;
     return hslToHex(hue, sat, light);
   };
   return [tone(-2), tone(-1), base, tone(1), tone(2)];
@@ -90,7 +91,8 @@ export function darken(hex: string, factor: number): string {
   let found = byColor.get(hex);
   if (!found) {
     const [h, s, l] = hexToHsl(hex);
-    found = hslToHex(towards(h, 265, 25), Math.min(1, s * 0.9 + 0.1), l * factor);
+    // gira pouco o matiz (senão a pele fica com contorno vermelho) e tira um pouco de saturação
+    found = hslToHex(towards(h, 265, 12), Math.min(1, s * 0.75 + 0.08), l * factor);
     byColor.set(hex, found);
   }
   return found;

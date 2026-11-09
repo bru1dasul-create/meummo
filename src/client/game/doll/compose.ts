@@ -8,9 +8,9 @@ import type { GearArt } from '../gearArt';
 import { HAIR, type BodyLook, type Clump } from './body';
 import { drawBackGear, drawBodyGear, drawHeadGear, drawShield, drawShoulderGear, drawWeapon, type Dress } from './gear';
 import { material } from './palette';
-import { ANIMS, FRAME_H, FRAME_W, FRAMES_PER_VIEW, POSES, VIEWS, frameIndex, rigOf, type AnimName, type Rig, type View } from './poses';
+import { ANIMS, FRAME_H, FRAME_W, FRAMES_PER_VIEW, HEAD_RX, HEAD_RY, POSES, VIEWS, frameIndex, rigOf, type AnimName, type Rig, type View } from './poses';
 import { add, Canvas, cylinder, lerp, type Vec } from './raster';
-import { torsoNormal, torsoShape } from './shapes';
+import { torsoEdges, torsoNormal, torsoShape } from './shapes';
 import { Sheet } from './sheet';
 
 /** O que está vestido, já com o desenho de cada parte. */
@@ -74,156 +74,257 @@ export function dressOf(look: BodyLook, gear: DollGear): Dress {
 
 // ======================= corpo =======================
 
+function drawFoot(cv: Canvas, r: Rig, d: Dress, i: 0 | 1, bias: number): void {
+  const a = r.ankle[i];
+  if (r.view === 'side') {
+    // bota de lado: calcanhar, peito do pé e bico, com a sola reta no chão
+    cv.polygon([add(a, [-1.9, -0.9]), add(a, [1.1, -0.9]), add(a, [3.5, 0.7]), add(a, [3.9, 2.4]), add(a, [-2.1, 2.4])], d.foot, {
+      bias,
+      normal: (_x, y) => {
+        const v = Math.max(-1, Math.min(1, (y - a[1] - 0.5) / 2));
+        return [0.2, v, Math.sqrt(Math.max(0, 1 - v * v))];
+      },
+    });
+    cv.line(add(a, [-2, 2.1]), add(a, [3.8, 2.1]), d.foot.ramp[0]);
+  } else {
+    // de frente/costas: o bico da bota visto de cima, com a sola embaixo
+    cv.ellipse(add(a, [0, 0.9]), 2.15, 1.6, d.foot, { bias });
+    cv.line(add(a, [-1.7, 2.1]), add(a, [1.7, 2.1]), d.foot.ramp[0]);
+  }
+}
+
 function drawLeg(cv: Canvas, r: Rig, d: Dress, i: 0 | 1): void {
   const far = r.view === 'side' && i === 1;
-  const bias = far ? -0.22 : 0;
+  const bias = far ? -0.28 : 0;
   const hip = r.hip[i];
   const knee = r.knee[i];
   const ankle = r.ankle[i];
+  const bootTop = lerp(knee, ankle, d.tallBoots ? 0.18 : 0.64);
   cv.part(`leg${i}`);
-  cv.capsule(hip, knee, 3.1, 2.7, d.pants, { bias });
-  if (d.tallBoots) {
-    const top = lerp(knee, ankle, 0.22);
-    cv.capsule(knee, top, 2.6, 2.5, d.pants, { bias });
-    cv.part(`boot${i}`);
-    cv.capsule(top, ankle, 2.7, 2.3, d.shin, { bias });
-    if (d.bootCuff) cv.capsule(add(top, [-2.3, 0.3]), add(top, [2.3, 0.3]), 1.1, 1.1, d.bootCuff, { bias });
-  } else {
-    cv.capsule(knee, ankle, 2.6, 2.1, d.shin, { bias });
-    cv.part(`boot${i}`);
-  }
-  // pé: de frente/costas uma bota vista de cima; de lado, com o bico para a frente
-  if (r.view === 'side') cv.capsule(add(ankle, [-1.2, 1.1]), add(ankle, [3.4, 1.5]), 1.9, 1.6, d.foot, { bias });
-  else cv.ellipse(add(ankle, [0, 1.3]), 2.9, 1.9, d.foot, { bias: bias + (r.view === 'up' ? -0.1 : 0) });
+  cv.capsule(hip, knee, 2.65, 2.0, d.pants, { bias });
+  cv.capsule(knee, bootTop, 2.0, 1.75, d.pants, { bias });
+  cv.part(`boot${i}`);
+  cv.capsule(bootTop, ankle, 1.95, 1.5, d.tallBoots ? d.shin : d.foot, { bias });
+  if (d.bootCuff) cv.capsule(add(bootTop, [-1.9, 0.2]), add(bootTop, [1.9, 0.2]), 0.9, 0.9, d.bootCuff, { bias });
+  else cv.line(add(bootTop, [-1.5, 0.4]), add(bootTop, [1.5, 0.4]), d.foot.ramp[3]); // dobra do cano
+  drawFoot(cv, r, d, i, bias);
 }
 
 function drawHips(cv: Canvas, r: Rig, d: Dress): void {
   cv.part('hips');
-  const c = add(r.pelvis, [0, 0.6]);
-  cv.ellipse(c, r.view === 'side' ? 4.7 : 6.4, 3.1, d.pants);
-  if (d.skirt) {
-    // saia da túnica, do quadril até o meio da coxa
-    cv.part('skirt');
-    const top = r.pelvis[1] - 3.5;
-    const hem = r.pelvis[1] + 6;
-    const pts: Vec[] =
-      r.view === 'side'
-        ? [
-            [c[0] - 4.9, top],
-            [c[0] + 5.1, top],
-            [c[0] + 6.2, hem],
-            [c[0] - 5.9, hem],
-          ]
-        : [
-            [c[0] - 6.6, top],
-            [c[0] + 6.6, top],
-            [c[0] + 7.8, hem],
-            [c[0] - 7.8, hem],
-          ];
-    cv.polygon(pts, d.shirt, { pattern: (_x, y, t) => (y > hem - 1.2 ? t - 1 : t) });
-  }
-}
-
-function drawTorso(cv: Canvas, r: Rig, d: Dress): void {
-  cv.part('torso');
-  cv.polygon(torsoShape(r), d.shirt, { normal: torsoNormal(r) });
-  const top = r.neck[1] + 1.4;
-  if (r.view === 'down' && d.shirt === d.sleeve && d.shortSleeves) {
-    // decote em V
+  const p = r.pelvis;
+  const build = d.look.build;
+  if (r.view === 'side') {
+    cv.ellipse(add(p, [-0.2, 0.8]), 3.6, 2.8, d.pants);
+  } else {
+    const [l, rr] = torsoEdges(r, build, p[1]);
     cv.polygon(
       [
-        [r.chest[0] - 2.2, top - 0.2],
-        [r.chest[0] + 2.2, top - 0.2],
-        [r.chest[0], top + 2.8],
+        [l, p[1] - 1],
+        [rr, p[1] - 1],
+        [rr - 0.3, p[1] + 2.3],
+        [p[0] + 0.8, p[1] + 3.4],
+        [p[0] - 0.8, p[1] + 3.4],
+        [l + 0.3, p[1] + 2.3],
       ],
-      d.skin,
-      { bias: -0.25 },
+      d.pants,
+      { normal: (x, y) => cylinder((x - p[0]) / (rr - p[0] + 0.6), (y - p[1]) / 10) },
+    );
+  }
+  if (d.skirt) {
+    // saia da túnica, da cintura até o meio da coxa, com a barra mais escura
+    cv.part('skirt');
+    const top = r.waist[1] + 1;
+    const hem = p[1] + 6.5;
+    const [l, rr] = torsoEdges(r, build, top);
+    const flare = r.view === 'side' ? 1.2 : 1.6;
+    cv.polygon(
+      [
+        [l, top],
+        [rr, top],
+        [rr + flare, hem],
+        [l - flare, hem],
+      ],
+      d.shirt,
+      { pattern: (x, y, t) => (y > hem - 1.2 ? t - 1 : Math.sin(x * 1.3) > 0.7 ? t - 1 : t) },
     );
   }
 }
 
+function drawTorso(cv: Canvas, r: Rig, d: Dress): void {
+  const build = d.look.build;
+  cv.part('torso');
+  cv.polygon(torsoShape(r, build), d.shirt, { normal: torsoNormal(r, build) });
+  const plain = d.shirt === d.sleeve && d.shortSleeves; // camisa (não armadura)
+  if (!plain) return;
+  const top = r.neck[1] + 1.2;
+  const cx = r.chest[0];
+  const fold = d.shirt.ramp[1];
+  if (r.view === 'down') {
+    // decote em V com a gola
+    cv.polygon(
+      [
+        [cx - 1.9, top - 0.3],
+        [cx + 1.9, top - 0.3],
+        [cx, top + 3.2],
+      ],
+      d.skin,
+      { bias: -0.2 },
+    );
+    cv.line([cx - 2.3, top], [cx - 0.3, top + 3.4], d.shirt.ramp[0]);
+    cv.line([cx + 2.3, top], [cx + 0.3, top + 3.4], d.shirt.ramp[0]);
+    // dobrinhas do pano perto da cintura e debaixo do braço
+    cv.line([cx - 3.6, r.waist[1] - 3], [cx - 2.4, r.waist[1] - 1], fold);
+    cv.line([cx + 3.4, r.waist[1] - 2.6], [cx + 2.4, r.waist[1] - 0.8], fold);
+    const [l, rr] = torsoEdges(r, build, r.chest[1] + 1);
+    cv.line([l + 1.2, r.chest[1]], [l + 2, r.chest[1] + 2.4], fold);
+    cv.line([rr - 1.2, r.chest[1]], [rr - 2, r.chest[1] + 2.4], fold);
+  } else if (r.view === 'side') {
+    cv.line([cx + 1.4, top], [cx + 2.6, top + 2], d.shirt.ramp[0]); // gola
+    cv.line([cx + 0.5, r.waist[1] - 2.5], [cx + 1.8, r.waist[1] - 0.8], fold);
+  } else {
+    cv.line([cx - 2.4, top + 0.4], [cx + 2.4, top + 0.4], d.shirt.ramp[0]); // gola de costas
+    cv.line([cx - 0.5, r.waist[1] - 4], [cx - 0.5, r.waist[1] - 1], fold);
+  }
+}
+
 function drawBelt(cv: Canvas, r: Rig, d: Dress): void {
+  const build = d.look.build;
+  const y = r.waist[1] + 2.6;
+  const [l, rr] = torsoEdges(r, build, y);
   cv.part('belt');
-  const y = r.pelvis[1] - 3.3;
-  const half = r.view === 'side' ? 4.5 : 6.6;
-  const x = r.view === 'side' ? r.pelvis[0] + 0.2 : r.pelvis[0];
   cv.polygon(
     [
-      [x - half, y - 1],
-      [x + half, y - 1],
-      [x + half, y + 1],
-      [x - half, y + 1],
+      [l - 0.3, y - 1],
+      [rr + 0.3, y - 1],
+      [rr + 0.3, y + 1],
+      [l - 0.3, y + 1],
     ],
     d.belt,
-    { normal: (px) => cylinder((px - x) / (half + 0.5), -0.1) },
+    { normal: (px) => cylinder((px - (l + rr) / 2) / ((rr - l) / 2 + 0.8), -0.1) },
   );
+  // bolsinha de couro presa no cinto (do lado da mão do escudo)
+  cv.part('pouch');
+  const pouch = material(d.look.belt, 'leather');
+  const px = r.view === 'side' ? l + 0.8 : r.view === 'down' ? rr - 1.6 : l + 1.6;
+  cv.ellipse([px, y + 2], 1.7, 1.9, pouch, { bias: 0.1 });
+  cv.line([px - 1.5, y + 1.2], [px + 1.5, y + 1.2], pouch.ramp[0]);
   if (r.view !== 'up') {
     cv.part('buckle');
-    const bx = r.view === 'side' ? x + half - 1.6 : x;
-    cv.ellipse([bx, y + 0.1], 1.5, 1.3, d.buckle);
+    const bx = r.view === 'side' ? rr - 1.2 : (l + rr) / 2;
+    cv.polygon(
+      [
+        [bx - 1.5, y - 1.1],
+        [bx + 1.5, y - 1.1],
+        [bx + 1.5, y + 1.1],
+        [bx - 1.5, y + 1.1],
+      ],
+      d.buckle,
+      { normal: (x2, y2) => [(x2 - bx) / 2.5, (y2 - y) / 2.5, 0.8] },
+    );
+    cv.dot(bx, y, d.belt.ramp[0]);
   }
 }
 
 function drawArm(cv: Canvas, r: Rig, d: Dress, which: 'main' | 'off', far: boolean): void {
-  const bias = far ? -0.25 : 0;
+  const bias = far ? -0.28 : 0;
   const s = r.shoulder[which];
   const e = r.elbow[which];
   const h = r.hand[which];
   cv.part(`arm_${which}`);
+  cv.capsule(e, lerp(e, h, 0.85), 1.6, 1.2, d.forearm, { bias });
   if (d.shortSleeves) {
-    const cut = lerp(s, e, 0.72);
-    cv.capsule(cut, e, 2.3, 2.2, d.skin, { bias });
-    cv.capsule(e, h, 2.15, 1.85, d.forearm, { bias });
+    const cut = lerp(s, e, 0.6);
+    cv.capsule(cut, e, 1.8, 1.6, d.skin, { bias });
     cv.part(`sleeve_${which}`);
-    cv.capsule(s, cut, 2.9, 2.6, d.sleeve, { bias });
+    cv.capsule(s, cut, 2.3, 2.1, d.sleeve, { bias });
+    // barra da manga
+    const dx = e[0] - s[0];
+    const dy = e[1] - s[1];
+    const n = Math.hypot(dx, dy) || 1;
+    const p: Vec = [-dy / n, dx / n];
+    cv.line(add(cut, [p[0] * -1.9, p[1] * -1.9]), add(cut, [p[0] * 1.9, p[1] * 1.9]), d.sleeve.ramp[0]);
   } else {
-    cv.capsule(e, h, 2.2, 1.9, d.forearm, { bias });
-    cv.capsule(s, e, 2.9, 2.4, d.sleeve, { bias });
+    cv.capsule(s, e, 2.25, 1.8, d.sleeve, { bias });
   }
   if (d.gloveCuff) {
     cv.part(`cuff_${which}`);
-    const c = lerp(e, h, 0.3);
-    cv.ellipse(c, 2.7, 2.2, d.gloveCuff, { bias });
+    cv.ellipse(lerp(e, h, 0.4), 2, 1.7, d.gloveCuff, { bias });
   }
   drawHand(cv, r, d, which, far);
 }
 
 function drawHand(cv: Canvas, r: Rig, d: Dress, which: 'main' | 'off', far: boolean): void {
+  const bias = far ? -0.28 : 0;
+  const h = r.hand[which];
   cv.part(`hand_${which}`);
-  cv.ellipse(r.hand[which], 2.15, 2.15, d.hand, { bias: far ? -0.25 : 0 });
+  cv.ellipse(h, 1.75, 1.85, d.hand, { bias });
+  // polegar, do lado de dentro (de frente/costas) ou da frente (de lado)
+  const thumb = r.view === 'side' ? 1.4 : (which === 'main') === (r.view === 'down') ? 1.3 : -1.3;
+  cv.ellipse(add(h, [thumb, -0.9]), 0.85, 0.85, d.hand, { bias });
 }
 
 function drawNeck(cv: Canvas, r: Rig, d: Dress): void {
   cv.part('neck');
-  cv.capsule(add(r.neck, [0, -2.5]), add(r.neck, [0, 1.6]), 2.4, 2.5, d.skin, { bias: -0.3 });
+  cv.capsule(add(r.neck, [0, -2.4]), add(r.neck, [0, 1.4]), 1.7, 1.9, d.skin, { bias: -0.2 });
+}
+
+/** Contorno da cabeça: oval com o queixo mais fino. */
+function headShape(r: Rig): Vec[] {
+  const pts: Vec[] = [];
+  const side = r.view === 'side';
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    const down = Math.max(0, Math.sin(a));
+    const rx = HEAD_RX * (1 - 0.26 * down * down);
+    pts.push([r.head[0] + Math.cos(a) * rx + (side ? down * 0.6 : 0), r.head[1] + Math.sin(a) * HEAD_RY]);
+  }
+  return pts;
 }
 
 function drawHead(cv: Canvas, r: Rig, d: Dress): void {
   const h = r.head;
-  if (r.view === 'down') {
+  if (r.view !== 'side') {
     cv.part('ear');
-    cv.ellipse(add(h, [-6.1, 1.2]), 1.4, 2, d.skin, { bias: -0.1 });
-    cv.ellipse(add(h, [6.1, 1.2]), 1.4, 2, d.skin, { bias: -0.1 });
+    cv.ellipse(add(h, [-(HEAD_RX - 0.3), 0.9]), 1.05, 1.5, d.skin, { bias: -0.15 });
+    cv.ellipse(add(h, [HEAD_RX - 0.3, 0.9]), 1.05, 1.5, d.skin, { bias: -0.15 });
   }
   cv.part('head');
-  cv.ellipse(h, 6.5, 7, d.skin);
+  cv.polygon(headShape(r), d.skin, {
+    normal: (x, y) => {
+      const nx = (x - h[0]) / (HEAD_RX + 0.5);
+      const ny = (y - h[1]) / (HEAD_RY + 0.5);
+      return [nx, ny, Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny))];
+    },
+  });
   if (r.view === 'side') {
-    cv.ellipse(add(h, [6.2, 1.8]), 1.25, 1.2, d.skin); // nariz
+    cv.ellipse(add(h, [HEAD_RX + 0.1, 1.6]), 0.95, 1, d.skin); // nariz
     cv.part('ear');
-    cv.ellipse(add(h, [-1.6, 1.3]), 1.4, 2, d.skin, { bias: -0.1 });
+    cv.ellipse(add(h, [-1.1, 0.9]), 1.05, 1.5, d.skin, { bias: -0.15 });
   }
 }
 
 /** Cabelo: as mechas do penteado. `back` = só as que ficam atrás do corpo; `covered` = com capacete/chapéu. */
 function drawHair(cv: Canvas, r: Rig, d: Dress, layer: 'back' | 'front', covered: boolean): void {
   const clumps: Clump[] = HAIR[d.look.hairStyle][r.view];
-  cv.part('hair');
-  for (const c of clumps) {
-    if ((c.back ?? false) !== (layer === 'back')) continue;
-    if (covered && !c.low) continue;
+  clumps.forEach((c, k) => {
+    if ((c.back ?? false) !== (layer === 'back')) return;
+    if (covered && !c.low) return;
+    // cada mecha é uma parte: onde uma cobre a outra aparece a linha que separa os fios
+    cv.part(`hair${k}`);
     const at = add(r.head, c.at);
-    if (c.to) cv.capsule(at, add(r.head, c.to), c.r[0], c.r[0] * 0.75, d.hair);
+    if (c.to) cv.capsule(at, add(r.head, c.to), c.r[0], c.r[0] * 0.7, d.hair);
     else cv.ellipse(at, c.r[0], c.r[1], d.hair);
+  });
+  if (layer === 'front' && !covered && r.view !== 'up') {
+    // brilho do cabelo: um arquinho claro no alto, do lado da luz
+    const shine = d.hair.ramp[4];
+    for (let i = 0; i <= 4; i++) {
+      const a = Math.PI * (1.12 + i * 0.07);
+      const x = r.head[0] + (r.view === 'side' ? -1 : -0.5) + Math.cos(a) * 4.2;
+      const y = r.head[1] - 3.6 + Math.sin(a) * 2.4;
+      if (cv.filled(Math.floor(x), Math.floor(y))) cv.dot(x, y, shine);
+    }
   }
 }
 
@@ -328,7 +429,7 @@ export function drawIconBody(cv: Canvas, r: Rig, d: Dress, what: 'torso' | 'hand
   if (what === 'torso') {
     for (const which of ['main', 'off'] as const) {
       cv.part(`sleeve_${which}`);
-      cv.capsule(r.shoulder[which], lerp(r.shoulder[which], r.elbow[which], d.shortSleeves ? 0.75 : 1), 2.9, 2.6, d.sleeve);
+      cv.capsule(r.shoulder[which], lerp(r.shoulder[which], r.elbow[which], d.shortSleeves ? 0.6 : 1), 2.3, 2.05, d.sleeve);
     }
     drawTorso(cv, r, d);
     drawBodyGear(cv, r, d, 'torso');
@@ -338,18 +439,17 @@ export function drawIconBody(cv: Canvas, r: Rig, d: Dress, what: 'torso' | 'hand
   } else if (what === 'hands') {
     for (const which of ['main', 'off'] as const) {
       cv.part(`arm_${which}`);
-      cv.capsule(lerp(r.elbow[which], r.hand[which], d.gloveCuff ? 0.2 : 0.6), r.hand[which], 2.2, 1.9, d.forearm === d.skin ? d.hand : d.forearm);
-      if (d.gloveCuff) cv.ellipse(lerp(r.elbow[which], r.hand[which], 0.3), 2.7, 2.2, d.gloveCuff);
+      cv.capsule(lerp(r.elbow[which], r.hand[which], d.gloveCuff ? 0.2 : 0.6), r.hand[which], 1.7, 1.3, d.forearm === d.skin ? d.hand : d.forearm);
+      if (d.gloveCuff) cv.ellipse(lerp(r.elbow[which], r.hand[which], 0.35), 2, 1.7, d.gloveCuff);
       drawHand(cv, r, d, which, false);
     }
   } else {
     for (const i of [0, 1] as const) {
       cv.part(`boot${i}`);
-      const top = lerp(r.knee[i], r.ankle[i], d.tallBoots ? 0.15 : 0.62);
-      cv.capsule(top, r.ankle[i], 2.7, 2.3, d.tallBoots ? d.shin : d.foot);
-      if (d.bootCuff) cv.capsule(add(top, [-2.3, 0.3]), add(top, [2.3, 0.3]), 1.1, 1.1, d.bootCuff);
-      if (r.view === 'side') cv.capsule(add(r.ankle[i], [-1.2, 1.1]), add(r.ankle[i], [3.4, 1.5]), 1.9, 1.6, d.foot);
-      else cv.ellipse(add(r.ankle[i], [0, 1.3]), 2.9, 1.9, d.foot);
+      const top = lerp(r.knee[i], r.ankle[i], d.tallBoots ? 0.15 : 0.6);
+      cv.capsule(top, r.ankle[i], 2, 1.55, d.tallBoots ? d.shin : d.foot);
+      if (d.bootCuff) cv.capsule(add(top, [-1.9, 0.2]), add(top, [1.9, 0.2]), 0.9, 0.9, d.bootCuff);
+      drawFoot(cv, r, d, i, 0);
     }
   }
 }
