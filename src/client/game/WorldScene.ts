@@ -248,10 +248,34 @@ export class WorldScene extends Phaser.Scene {
     return result.moved ? 'moved' : 'turned';
   }
 
-  /** Esquiva: rola 3 tiles na direção que você está andando (ou olhando). */
+  /**
+   * Para onde rolar: a tecla que você segura; senão, para onde está andando;
+   * senão, para longe do monstro mais perto (é o que se quer quando um golpe vem vindo).
+   */
+  private dashDirection(): Dir {
+    const key = this.keyboard?.current() ?? null;
+    if (key !== null) return key;
+    if (this.path.length > 0) return this.path[0]!;
+    const threat = this.nearestMonster(this.predicted.x + 0.5, this.predicted.y + 0.5, 4.5);
+    if (!threat) return this.predicted.dir;
+    let best = this.predicted.dir;
+    let bestDistance = -Infinity;
+    for (const dir of [0, 1, 2, 3] as Dir[]) {
+      const landing = applyDash(this.map, this.predicted, dir, DASH_TILES);
+      if (!landing.moved) continue;
+      const distance = Math.hypot(landing.x - threat.tileX, landing.y - threat.tileY);
+      if (distance > bestDistance) {
+        best = dir;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /** Esquiva: rola 3 tiles (veja dashDirection). */
   private tryDash(now: number): void {
     if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_STEPS) return;
-    const dir = this.keyboard?.current() ?? this.predicted.dir;
+    const dir = this.dashDirection();
     const result = applyDash(this.map, this.predicted, dir, DASH_TILES);
     if (!result.moved) {
       this.toast.show('Sem espaço para rolar aí');
