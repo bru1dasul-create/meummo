@@ -49,6 +49,20 @@ export interface InventoryState {
   equipped: Record<EquipSlot, string | null>;
 }
 
+/** O que aparece no personagem: o desenho (ícone) do que está equipado em cada parte. */
+export type GearLook = Partial<Record<EquipSlot, string>>;
+
 export function emptyEquipment(): Record<EquipSlot, string | null> {
   return { weapon: null, head: null, body: null, charm: null };
+}
+
+/** O desenho de cada parte equipada (o ícone do item), para aparecer no personagem e no boneco da mochila. */
+export function gearLookOf(equipped: Record<EquipSlot, string | null>, defs: ReadonlyMap<string, ItemInfo>): GearLook {
+  const gear: GearLook = {};
+  for (const slot of EQUIP_SLOTS) {
+    const id = equipped[slot];
+    const def = id ? defs.get(id) : undefined;
+    if (def) gear[slot] = def.icon;
+  }
+  return gear;
 }

@@ -13,7 +13,7 @@ import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
 import { SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
 import { DOWN } from '../src/shared/dir';
-import { BAG_SIZE } from '../src/shared/items';
+import { BAG_SIZE, gearLookOf } from '../src/shared/items';
 import { GameMap } from '../src/shared/map';
 import { damageRange, maxHpFor } from '../src/shared/progression';
 import { FAST_HASH, FakeClock, FakeConn, tiledFromAscii } from './helpers';
@@ -95,6 +95,14 @@ describe('mochila', () => {
     expect(bag.unequip('head')).toBe(false);
     bag.add('fruta', 1);
     expect(bag.equip(2)).toBe(false); // fruta não se equipa
+  });
+
+  it('o desenho do que está equipado é o ícone de cada item (item que não existe é ignorado)', () => {
+    expect(gearLookOf({ weapon: 'espada', head: 'sumiu', body: null, charm: null }, items)).toEqual({ weapon: 'espada' });
+    const bag = new Inventory(items);
+    bag.add('coroa', 1);
+    bag.equip(0);
+    expect(bag.look()).toEqual({ head: 'coroa' });
   });
 
   it('carrega o que estava salvo com cuidado (itens que sumiram do jogo, pilhas grandes, lixo)', () => {
@@ -275,6 +283,29 @@ describe('itens no mundo', () => {
     world.tick();
     expect(ana.player.inventory.equipped.head).toBeNull();
     expect(ana.conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'dead', item: true });
+  });
+
+  it('o equipamento aparece no personagem: quem está perto recebe o desenho novo', () => {
+    const world = arena();
+    const ana = join(world, 'Ana');
+    const beto = join(world, 'Beto');
+    world.tick();
+    expect(beto.conn.ofType('spawn').find((m) => m.e.id === ana.player.id)?.e.gear).toEqual({});
+    ana.player.inventory.add('capacete', 1);
+    ana.player.inventory.add('espada', 1);
+    world.itemAction(ana.player, 'equip', 0);
+    world.itemAction(ana.player, 'equip', 1);
+    world.tick();
+    const look = { head: 'capacete', weapon: 'espada' };
+    expect(beto.conn.ofType('gear').at(-1)).toEqual({ t: 'gear', id: ana.player.id, gear: look });
+    expect(ana.conn.ofType('gear').at(-1)?.gear).toEqual(look); // o próprio também, para se desenhar
+    // quem chega depois já encontra a Ana equipada
+    const caio = join(world, 'Caio');
+    world.tick();
+    expect(caio.conn.ofType('spawn').find((m) => m.e.id === ana.player.id)?.e.gear).toEqual(look);
+    world.unequip(ana.player, 'head');
+    world.tick();
+    expect(beto.conn.ofType('gear').at(-1)?.gear).toEqual({ weapon: 'espada' });
   });
 
   it('tirar com a mochila cheia é recusado', () => {

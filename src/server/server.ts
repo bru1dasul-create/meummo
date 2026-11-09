@@ -1,6 +1,6 @@
 // Liga tudo: servidor HTTP (entrega o jogo pronto), WebSocket (tempo real) e o relógio do mundo.
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import sirv from 'sirv';
@@ -11,11 +11,12 @@ import { CharacterStore, type HashCost } from './accounts';
 import { loadItemDefs } from './items';
 import { LoginGuard, type GuardLimits } from './login-guard';
 import { checkDrops, loadMonsterDefs } from './monsters';
-import { CLIENT_DIR, MAP_FILE } from './paths';
+import { CLIENT_DIR, MAPS_DIR } from './paths';
+import { Realm } from './realm';
 import { Session, type Lobby } from './session';
-import { World } from './world';
+import type { World } from './world';
 
-export { MAP_FILE, ROOT, SAVE_FILE } from './paths';
+export { MAPS_DIR, ROOT, SAVE_FILE } from './paths';
 const HEARTBEAT_MS = 30_000;
 
 export interface ServerOptions {
@@ -33,12 +34,28 @@ export interface ServerOptions {
 
 export interface RunningServer {
   port: number;
+  /** Todos os mapas. */
+  realm: Realm;
+  /** O mapa inicial (onde os personagens novos começam). */
   world: World;
   close(): Promise<void>;
 }
 
-export function loadMap(file = MAP_FILE): GameMap {
-  return GameMap.fromTiled(JSON.parse(readFileSync(file, 'utf8')) as TiledMap);
+/** Lê um mapa pelo id (o nome do arquivo em public/assets/maps, sem .tmj). */
+export function loadMap(id = 'refugio', dir = MAPS_DIR): GameMap {
+  try {
+    return GameMap.fromTiled(JSON.parse(readFileSync(path.join(dir, `${id}.tmj`), 'utf8')) as TiledMap, id);
+  } catch (error) {
+    throw new Error(`Erro no mapa "${id}.tmj": ${(error as Error).message}`);
+  }
+}
+
+/** Lê todos os mapas de public/assets/maps. */
+export function loadMaps(dir = MAPS_DIR): GameMap[] {
+  return readdirSync(dir)
+    .filter((file) => file.endsWith('.tmj'))
+    .sort()
+    .map((file) => loadMap(file.slice(0, -4), dir));
 }
 
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
@@ -48,9 +65,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const monsters = loadMonsterDefs();
   checkDrops(monsters, items);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const world = new World(loadMap(), { log, monsters, items, saver: store });
+  const realm = new Realm(loadMaps(), { log, monsters, items, saver: store });
+  const world = realm.start;
   const lobby: Lobby = {
-    world,
+    realm,
     store,
     guard: new LoginGuard(() => performance.now(), options.guardLimits),
     online: new Map(),
@@ -108,7 +126,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     }
   }, HEARTBEAT_MS);
 
-  const ticker = setInterval(() => world.tick(), TICK_MS);
+  const ticker = setInterval(() => realm.tick(), TICK_MS);
 
   await new Promise<void>((resolve, reject) => {
     httpServer.once('error', reject);
@@ -117,13 +135,15 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const address = httpServer.address();
   const port = typeof address === 'object' && address ? address.port : options.port;
   log(
-    `servidor no ar em http://localhost:${port} (mapa ${world.map.width}x${world.map.height}, ` +
-      `${world.monsters.size} monstros, ${store.count()} personagens salvos)`,
+    `servidor no ar em http://localhost:${port} (mapas: ` +
+      [...realm.worlds.values()].map((w) => `${w.map.name} ${w.map.width}x${w.map.height}, ${w.monsters.size} monstros`).join('; ') +
+      ` — ${store.count()} personagens salvos)`,
   );
 
   let closing: Promise<void> | null = null;
   return {
     port,
+    realm,
     world,
     close: () =>
       (closing ??= (async () => {
@@ -131,7 +151,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
         clearInterval(ticker);
         // Todo mundo sai do mundo do jeito certo (e é salvo) antes de desligar.
         for (const session of sessions) session.end('shutdown');
-        world.saveAll();
+        realm.saveAll();
         await new Promise((resolve) => setTimeout(resolve, 100)); // deixa o aviso de "desligando" chegar
         for (const ws of wss.clients) ws.terminate();
         wss.close();

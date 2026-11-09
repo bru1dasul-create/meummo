@@ -15,6 +15,8 @@ interface Effect {
   /** Quem criou (para apagar os avisos de um monstro que morreu no meio do golpe). */
   owner?: number;
   cancelled?: boolean;
+  /** Avisos e fogo no chão: o centro de cada tile (as copas em cima ficam transparentes para dar para ver). */
+  spots?: { x: number; y: number }[];
 }
 
 interface VisualShot {
@@ -40,6 +42,13 @@ export interface ShotOptions {
 }
 
 const SHOT_COLORS: Record<string, number> = { pedra: 0xe9e6df, fruta: 0xff9f1c };
+
+/** Lista [x0, y0, x1, y1, ...] de tiles → o centro de cada um, em pixels. */
+function tileCenters(tiles: number[]): { x: number; y: number }[] {
+  const centers: { x: number; y: number }[] = [];
+  for (let i = 0; i + 1 < tiles.length; i += 2) centers.push({ x: (tiles[i]! + 0.5) * T, y: (tiles[i + 1]! + 0.5) * T });
+  return centers;
+}
 
 export class Effects {
   private effects: Effect[] = [];
@@ -73,6 +82,7 @@ export class Effects {
     const end = now + ms;
     this.effects.push({
       owner,
+      spots: tileCenters(tiles),
       update: (t) => {
         const progress = Math.min(1, Math.max(0, 1 - (end - t) / ms));
         for (const rect of rects) rect.setFillStyle(0xff3b30, 0.12 + 0.43 * progress);
@@ -80,6 +90,11 @@ export class Effects {
       },
       destroy: () => rects.forEach((r) => r.destroy()),
     });
+  }
+
+  /** Onde tem aviso de golpe ou fogo no chão agora (o centro de cada tile, em pixels). */
+  dangerSpots(): { x: number; y: number }[] {
+    return this.effects.flatMap((effect) => (effect.cancelled ? [] : (effect.spots ?? [])));
   }
 
   /** Apaga os avisos de alguém (ex.: o monstro morreu antes de dar o golpe). */
@@ -166,7 +181,15 @@ export class Effects {
   }
 
   /** Rastro da esquiva: "fantasmas" do personagem entre a origem e o destino. */
-  trail(texture: string, frame: number, flipX: boolean, from: { x: number; y: number }, to: { x: number; y: number }, now: number): void {
+  trail(
+    texture: string,
+    frame: number,
+    flipX: boolean,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    now: number,
+    tint = 0xbfe3ff,
+  ): void {
     const ghosts: Phaser.GameObjects.Sprite[] = [];
     for (let i = 1; i <= 3; i++) {
       const k = i / 4;
@@ -176,7 +199,7 @@ export class Effects {
           .setOrigin(0.5, 1)
           .setFlipX(flipX)
           .setAlpha(0.35)
-          .setTint(0xbfe3ff)
+          .setTint(tint)
           .setDepth(from.y - 1),
       );
     }
@@ -214,6 +237,38 @@ export class Effects {
         return p < 1;
       },
       destroy: () => sprite.destroy(),
+    });
+  }
+
+  /** Chão pegando fogo (rastro da investida): chamas tremendo por `ms`, que se apagam no fim. */
+  fire(tiles: number[], ms: number, now: number): void {
+    const flames: { glow: Phaser.GameObjects.Rectangle; tongue: Phaser.GameObjects.Rectangle; seed: number }[] = [];
+    for (let i = 0; i + 1 < tiles.length; i += 2) {
+      const x = tiles[i]! * T;
+      const y = tiles[i + 1]! * T;
+      flames.push({
+        glow: this.scene.add.rectangle(x, y, T, T, 0xff6a1a, 0.35).setOrigin(0).setDepth(-39),
+        tongue: this.scene.add
+          .rectangle(x + T / 2 + (Math.random() * 6 - 3), y + T - 2, 6, 9, 0xffd34d, 0.9)
+          .setOrigin(0.5, 1)
+          .setDepth(y + T - 1),
+        seed: Math.random() * 1000,
+      });
+    }
+    if (flames.length === 0) return;
+    const end = now + ms;
+    this.effects.push({
+      spots: tileCenters(tiles),
+      update: (t) => {
+        const fade = Math.max(0, Math.min(1, (end - t) / 400)); // apaga nos últimos 400 ms
+        for (const f of flames) {
+          const flick = 0.5 + 0.5 * Math.sin((t + f.seed) / 65);
+          f.glow.setFillStyle(0xff6a1a, (0.18 + 0.25 * flick) * fade);
+          f.tongue.setFillStyle(flick > 0.5 ? 0xffd34d : 0xff8a2a, 0.9 * fade).setScale(1, 0.55 + 0.65 * flick);
+        }
+        return t < end;
+      },
+      destroy: () => flames.forEach((f) => (f.glow.destroy(), f.tongue.destroy())),
     });
   }
 

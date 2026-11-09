@@ -13,7 +13,7 @@ import {
   type PasswordProblem,
 } from '../shared/names';
 import type { ByeReason, WelcomeMsg } from '../shared/protocol';
-import { WorldScene } from './game/WorldScene';
+import { WorldScene, type WorldSceneData } from './game/WorldScene';
 import { Connection, JoinError, type JoinFailure } from './net';
 import { Sfx } from './sfx';
 import { ChatBox, Hud } from './ui';
@@ -60,6 +60,9 @@ const BYE_MESSAGES: Record<ByeReason, string> = {
 let game: Phaser.Game | null = null;
 const sfx = new Sfx();
 let session: { conn: Connection; chat: ChatBox; hud: Hud } | null = null;
+/** A cena do mapa atual (cada mapa ganha uma cena nova, com uma chave nova). */
+let sceneKey: string | null = null;
+let scenes = 0;
 
 nameInput.value = loadSavedName();
 // Quem nunca entrou vê "Como jogar" aberto; quem já joga, fechado (tela mais limpa)
@@ -113,12 +116,31 @@ function startGame(conn: Connection, welcome: WelcomeMsg): void {
     audio: { noAudio: true },
     banner: false,
   });
-  game.scene.add('world', WorldScene, true, { conn, welcome, chat, hud, sfx });
+  showWorld(conn, welcome, 0, false);
+}
+
+/** Mostra o mapa de `welcome.map` (trocando de cena quando o personagem muda de mapa). */
+function showWorld(conn: Connection, welcome: WelcomeMsg, seq: number, arrived: boolean): void {
+  if (!game || !session) return;
+  if (sceneKey) game.scene.remove(sceneKey);
+  sceneKey = `mapa-${++scenes}`;
+  const data: WorldSceneData = {
+    conn,
+    welcome,
+    chat: session.chat,
+    hud: session.hud,
+    sfx,
+    seq,
+    arrived,
+    travel: (next, nextSeq) => showWorld(conn, next, nextSeq, true),
+  };
+  game.scene.add(sceneKey, WorldScene, true, data);
 }
 
 function endGame(message: string): void {
   game?.destroy(true);
   game = null;
+  sceneKey = null;
   if (session) {
     session.conn.close();
     session.chat.destroy();

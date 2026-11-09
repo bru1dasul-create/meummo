@@ -6,7 +6,12 @@
 // - propriedade booleana `bloqueiaTiro` no tile: segura projéteis (árvore, pedra, parede — água não);
 // - um objeto do tipo ponto chamado `spawn` marca onde os jogadores nascem;
 // - numa camada de objetos chamada `monstros`, cada retângulo é uma área onde nascem monstros:
-//   o nome do retângulo é o id do monstro (ex.: `jararaca`) e a propriedade `quantidade` diz quantos.
+//   o nome do retângulo é o id do monstro (ex.: `jararaca`) e a propriedade `quantidade` diz quantos;
+// - numa camada de objetos chamada `saidas`, cada retângulo leva para outro mapa: propriedade `mapa`
+//   (o nome do arquivo, sem .tmj) e `chegada` (o nome do ponto onde você aparece no outro mapa);
+// - pontos com nome (em qualquer camada de objetos) são lugares de chegada;
+// - propriedades do mapa: `nome`, `seguro`, `inicial` (onde todo mundo começa) e `renascerEm`
+//   (em que mapa acorda quem desmaia aqui; sem isso, no próprio mapa).
 
 import { TILE_SIZE } from './constants';
 import { DX, DY } from './dir';
@@ -69,6 +74,31 @@ export interface Tile {
   y: number;
 }
 
+/** Área (em tiles) que leva para outro mapa. */
+export interface MapExit {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Id do mapa de destino (nome do arquivo sem .tmj). */
+  to: string;
+  /** Nome do ponto de chegada no mapa de destino. */
+  arrival: string;
+  /** Placa mostrada no jogo (o nome do objeto no Tiled, ex.: "Ruínas de Santo Amaro"). */
+  label: string;
+}
+
+/** Informações do mapa que vêm das propriedades e objetos do Tiled. */
+export interface MapInfo {
+  id?: string;
+  name?: string;
+  safe?: boolean;
+  start?: boolean;
+  respawnMap?: string | null;
+  exits?: MapExit[];
+  points?: ReadonlyMap<string, Tile>;
+}
+
 /** Área (em tiles) onde nascem monstros de um tipo. */
 export interface MonsterZone {
   monster: string;
@@ -96,6 +126,16 @@ export class GameMap implements Walkable {
   readonly name: string;
   /** Zona segura (propriedade `seguro`): sem PvP. */
   readonly safe: boolean;
+  /** Id do mapa: o nome do arquivo sem .tmj (ex.: 'refugio'). */
+  readonly id: string;
+  /** É aqui que os personagens novos começam (propriedade `inicial`). */
+  readonly start: boolean;
+  /** Em que mapa acorda quem desmaia aqui (propriedade `renascerEm`); null = neste mesmo. */
+  readonly respawnMap: string | null;
+  /** Saídas para outros mapas (camada `saidas`). */
+  readonly exits: MapExit[];
+  /** Pontos com nome (lugares de chegada). Os nomes ficam em minúsculas. */
+  readonly points: ReadonlyMap<string, Tile>;
   private readonly blocked: Uint8Array;
   private readonly cover: Uint8Array;
   /** Tiles alcançáveis a pé a partir do ponto de nascimento (calculado na primeira consulta). */
@@ -108,10 +148,15 @@ export class GameMap implements Walkable {
     spawnHint: Tile,
     cover: Uint8Array = new Uint8Array(width * height),
     monsterZones: MonsterZone[] = [],
-    info: { name?: string; safe?: boolean } = {},
+    info: MapInfo = {},
   ) {
     this.name = info.name ?? 'Pindorama';
     this.safe = info.safe ?? false;
+    this.id = info.id ?? 'mapa';
+    this.start = info.start ?? false;
+    this.respawnMap = info.respawnMap ?? null;
+    this.exits = info.exits ?? [];
+    this.points = info.points ?? new Map();
     this.width = width;
     this.height = height;
     this.blocked = blocked;
@@ -122,7 +167,8 @@ export class GameMap implements Walkable {
     this.spawn = spawn;
   }
 
-  static fromTiled(json: TiledMap): GameMap {
+  /** `id` é o nome do arquivo sem .tmj (é por ele que as saídas de outros mapas chegam aqui). */
+  static fromTiled(json: TiledMap, id = 'mapa'): GameMap {
     if (json.infinite) {
       throw new Error('Mapas infinitos não são suportados. No Tiled: Map > Map Properties > desmarque "Infinite".');
     }
@@ -152,6 +198,8 @@ export class GameMap implements Walkable {
     const blocked = new Uint8Array(width * height);
     const cover = new Uint8Array(width * height);
     const zones: MonsterZone[] = [];
+    const exits: MapExit[] = [];
+    const points = new Map<string, Tile>();
     let spawnHint: Tile | null = null;
     const pending = [...json.layers];
     while (pending.length > 0) {
@@ -173,10 +221,30 @@ export class GameMap implements Walkable {
           if (shotBlocking.has(gid)) cover[i] = 1;
         });
       } else if (layer.type === 'objectgroup') {
-        const isMonsterLayer = layer.name.toLowerCase() === 'monstros';
+        const layerName = layer.name.toLowerCase();
+        const isMonsterLayer = layerName === 'monstros';
+        const isExitLayer = layerName === 'saidas' || layerName === 'saídas';
         for (const obj of layer.objects ?? []) {
-          if (obj.name?.toLowerCase() === 'spawn') {
+          const objName = obj.name?.trim().toLowerCase();
+          if (obj.point && objName) {
+            points.set(objName, { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) });
+          }
+          if (objName === 'spawn') {
             spawnHint = { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) };
+          } else if (isExitLayer && !obj.point) {
+            const text = (name: string) => {
+              const value = obj.properties?.find((p) => p.name === name)?.value;
+              return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+            };
+            const to = text('mapa');
+            if (!to) throw new Error(`A saída "${obj.name ?? obj.id}" do mapa "${id}" precisa da propriedade "mapa" (para onde ela leva).`);
+            const x0 = Math.max(0, Math.floor(obj.x / json.tilewidth));
+            const y0 = Math.max(0, Math.floor(obj.y / json.tileheight));
+            const x1 = Math.min(width - 1, Math.ceil((obj.x + (obj.width ?? 0)) / json.tilewidth) - 1);
+            const y1 = Math.min(height - 1, Math.ceil((obj.y + (obj.height ?? 0)) / json.tileheight) - 1);
+            if (x1 >= x0 && y1 >= y0) {
+              exits.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, to, arrival: text('chegada') ?? 'spawn', label: obj.name?.trim() ?? '' });
+            }
           } else if (isMonsterLayer && obj.name && !obj.point) {
             const x0 = Math.max(0, Math.floor(obj.x / json.tilewidth));
             const y0 = Math.max(0, Math.floor(obj.y / json.tileheight));
@@ -200,9 +268,15 @@ export class GameMap implements Walkable {
 
     const prop = (name: string) => json.properties?.find((p) => p.name === name)?.value;
     const mapName = prop('nome');
+    const respawnMap = prop('renascerEm');
     return new GameMap(width, height, blocked, spawnHint ?? { x: width >> 1, y: height >> 1 }, cover, zones, {
+      id,
       name: typeof mapName === 'string' && mapName.trim() ? mapName.trim() : undefined,
       safe: prop('seguro') === true,
+      start: prop('inicial') === true,
+      respawnMap: typeof respawnMap === 'string' && respawnMap.trim() ? respawnMap.trim().toLowerCase() : null,
+      exits,
+      points,
     });
   }
 
@@ -233,6 +307,11 @@ export class GameMap implements Walkable {
       }
     }
     return this.inside(x, y) && this.reachable[y * this.width + x] === 1;
+  }
+
+  /** A saída que cobre este tile (ou null). */
+  exitAt(x: number, y: number): MapExit | null {
+    return this.exits.find((e) => x >= e.x && y >= e.y && x < e.x + e.w && y < e.y + e.h) ?? null;
   }
 
   /** Projéteis param aqui? (fora do mapa, ou tile com `bloqueiaTiro`.) */

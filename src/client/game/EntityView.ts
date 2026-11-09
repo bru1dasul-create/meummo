@@ -5,9 +5,13 @@
 import type Phaser from 'phaser';
 import { TILE_SIZE } from '../../shared/constants';
 import { DX, facingOf, LEFT, type Dir } from '../../shared/dir';
+import type { GearLook } from '../../shared/items';
 import type { EntityKind, EntityState } from '../../shared/protocol';
-import { characterFrame, characterTexture } from './characters';
+import { CHAR_TOP, characterFrame, characterTexture } from './characters';
 import { monsterTexture } from './monsterArt';
+
+/** Monstros que se mexem mesmo parados (o Saci pulando, o fogo da Mula). */
+const ANIMATED_IDLE = new Set(['saci', 'mula_sem_cabeca']);
 
 const BUBBLE_MS = 5000;
 const FADE_MS = 450;
@@ -40,6 +44,10 @@ export class EntityView {
   readonly stepMs: number | undefined;
   /** Morrendo: some aos poucos e depois é destruída. */
   dying = false;
+  /** Jogadores: o look (vem do nome), para redesenhar quando o equipamento muda. */
+  private readonly look: number;
+  /** Altura do desenho acima dos pés (onde o nome fica). */
+  private readonly height: number;
 
   private readonly shadow: Phaser.GameObjects.Ellipse;
   private readonly tag: HTMLDivElement;
@@ -81,13 +89,15 @@ export class EntityView {
     this.hp = state.hp;
     this.maxHp = state.maxHp;
     this.stepMs = state.stepMs;
+    this.look = state.look;
+    this.height = state.kind === 'player' ? CHAR_TOP : TILE_SIZE;
     this.facingLeft = state.dir === LEFT;
     const [px, py] = feetOf(state.x, state.y);
     this.fromX = this.toX = px;
     this.fromY = this.toY = py;
 
     this.shadow = scene.add.ellipse(px, py - 1.5, 10, 4, 0x000000, 0.28);
-    const texture = state.kind === 'player' ? characterTexture(scene, state.look) : monsterTexture(scene, state.type);
+    const texture = state.kind === 'player' ? characterTexture(scene, state.look, state.gear) : monsterTexture(scene, state.type);
     this.sprite = scene.add.sprite(px, py, texture, 0).setOrigin(0.5, 1);
 
     this.tag = document.createElement('div');
@@ -142,6 +152,13 @@ export class EntityView {
     this.moveDuration = 0;
   }
 
+  /** Jogador trocou de equipamento: redesenha o personagem com as peças novas. */
+  setGear(gear: GearLook): void {
+    if (this.kind !== 'player') return;
+    const frame = this.sprite.frame.name;
+    this.sprite.setTexture(characterTexture(this.scene, this.look, gear), frame);
+  }
+
   setDir(dir: Dir): void {
     this.dir = dir;
     if (DX[dir] < 0) this.facingLeft = true;
@@ -150,7 +167,7 @@ export class EntityView {
 
   /** Atualiza sprite e sombra para o momento `now`. Chamado todo quadro. Devolve false quando já pode sumir. */
   update(now: number): boolean {
-    const { x, y, moving } = this.position(now);
+    const { x, y, moving, t } = this.position(now);
     this.sprite.setPosition(x, y);
     this.shadow.setPosition(x, y - 1.5);
     this.sprite.setDepth(y);
@@ -158,10 +175,12 @@ export class EntityView {
 
     if (this.kind === 'player') {
       const facing = facingOf(this.dir);
-      this.sprite.setFrame(characterFrame(facing, moving ? (this.steps % 2 === 0 ? 1 : 2) : 0));
+      // cada tile: meio passo com uma perna na frente, meio passo com as pernas juntas (passo A, junto, passo B, junto...)
+      const step = moving && t < 0.5 ? (this.steps % 2 === 0 ? 1 : 2) : 0;
+      this.sprite.setFrame(characterFrame(facing, step));
       this.sprite.setFlipX(facing === LEFT);
     } else {
-      this.sprite.setFrame(moving || (now % 900 < 450 && this.type === 'saci') ? 1 : 0);
+      this.sprite.setFrame(moving || (now % 900 < 450 && ANIMATED_IDLE.has(this.type)) ? 1 : 0);
       this.sprite.setFlipX(this.facingLeft);
     }
 
@@ -194,7 +213,7 @@ export class EntityView {
   labelAnchor(camera: Phaser.Cameras.Scene2D.Camera): { x: number; y: number } {
     return {
       x: (this.sprite.x - camera.worldView.x) * camera.zoom,
-      y: (this.sprite.y - TILE_SIZE - camera.worldView.y) * camera.zoom,
+      y: (this.sprite.y - this.height - camera.worldView.y) * camera.zoom,
     };
   }
 
@@ -308,13 +327,15 @@ export class EntityView {
     }
   }
 
-  private position(now: number): { x: number; y: number; moving: boolean } {
-    if (this.moveDuration <= 0) return { x: this.toX, y: this.toY, moving: false };
+  /** Onde a entidade está agora; `t` é quanto do passo atual já foi andado (0 a 1). */
+  private position(now: number): { x: number; y: number; moving: boolean; t: number } {
+    if (this.moveDuration <= 0) return { x: this.toX, y: this.toY, moving: false, t: 1 };
     const t = Math.min(1, (now - this.moveStart) / this.moveDuration);
     return {
       x: this.fromX + (this.toX - this.fromX) * t,
       y: this.fromY + (this.toY - this.fromY) * t,
       moving: t < 1,
+      t,
     };
   }
 }

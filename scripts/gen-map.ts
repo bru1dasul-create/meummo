@@ -1,4 +1,4 @@
-// Gera o mapa da zona inicial — o Refúgio de Guarapiranga — em public/assets/maps/world.tmj.
+// Gera o mapa da zona inicial — o Refúgio de Guarapiranga — em public/assets/maps/refugio.tmj.
 //
 // Pindorama: Selva de Pedra. Muito tempo depois do fim, a floresta tomou São Paulo.
 // A represa de Guarapiranga virou um lago sagrado, com uma vila flutuante de madeira e restos de barcos.
@@ -13,15 +13,19 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { GameMap, type TiledMap } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
+import { DepthLayers, depthTileLayers, shuffled, type BigTree } from './map-depth';
 import { mulberry32 } from './pixels';
 import { gid, TILES, tiledTileset } from './tileset';
 
 const outIndex = process.argv.indexOf('--out');
-const OUT = path.resolve(outIndex !== -1 && process.argv[outIndex + 1] ? process.argv[outIndex + 1]! : 'public/assets/maps/world.tmj');
+const OUT = path.resolve(outIndex !== -1 && process.argv[outIndex + 1] ? process.argv[outIndex + 1]! : 'public/assets/maps/refugio.tmj');
 const W = 96;
 const H = 72;
 const ZONE_NAME = 'Refúgio de Guarapiranga';
 const SPAWN = { x: 42, y: 29 };
+/** Saída no fim da avenida (leste) para as Ruínas de Santo Amaro, e onde chega quem volta de lá. */
+const EAST_EXIT = { x: W - 1, y: 22, w: 1, h: 9 };
+const EAST_ARRIVAL = { x: W - 4, y: 26 };
 
 /** Áreas onde nascem monstros (em tiles). O nome é o id em data/monsters.json. */
 const MONSTER_ZONES = [
@@ -41,6 +45,8 @@ if (existsSync(OUT) && !process.argv.includes('--force')) {
 const rng = mulberry32(20261110);
 const ground = new Array<number>(W * H).fill(0);
 const decor = new Array<number>(W * H).fill(0);
+/** Camadas "acima" (copas e alto dos postes, por cima dos personagens) e "sombras". */
+const depth = new DepthLayers(W, H, decor);
 /** Lugares onde não pode nascer nada aleatório (água, vila, caminhos, ruínas...). */
 const reserved = new Uint8Array(W * H);
 /** Lugares que podem ter flores e capim, mas nada que bloqueie a passagem. */
@@ -222,6 +228,7 @@ for (let start = 0; start < W * H; start++) {
 function house(x0: number, y0: number) {
   for (let y = y0; y < y0 + 2; y++) for (let x = x0; x < x0 + 5; x++) setDecor(x, y, 'tin_roof');
   ['wood_wall', 'wood_window', 'wood_door', 'wood_window', 'wood_wall'].forEach((key, i) => setDecor(x0 + i, y0 + 2, key));
+  depth.shadeBlock(x0, y0, x0 + 4, y0 + 2, (x, y) => !decor[idx(x, y)]);
 }
 house(36, 24);
 house(44, 24);
@@ -271,8 +278,9 @@ const roadStart = eastLanding;
 for (let x = roadStart; x < W; x++) {
   for (let y = 25; y <= 27; y++) setGround(x, y, rng() < 0.45 ? 'asphalt_cracked' : 'asphalt');
   if (x % 6 === 0) {
-    setDecor(x, 24, 'lamp_post');
-    setDecor(x + 3, 28, 'lamp_post');
+    // postes altos: a luminária quebrada fica na camada "acima" (a do lado de baixo pende sobre a avenida)
+    depth.tallPole('lamp_post_tall', x, 24);
+    depth.tallPole('lamp_post_tall', x + 3, 28);
   }
 }
 fillRect(roadStart, 23, W - 1, 24, (x, y) => (reserved[idx(x, y)] = 1));
@@ -285,6 +293,7 @@ for (let x = roadStart + 3; x < W - 3; x += 5 + Math.floor(rng() * 4)) {
     setDecor(x + k, y, rng() < 0.3 ? 'ruin_wall_graffiti' : 'ruin_wall');
     reserved[idx(x + k, y)] = 1;
   }
+  depth.shadeBlock(x, y, x + len - 1, y, (sx, sy) => !decor[idx(sx, sy)]);
 }
 // carros abandonados (deixando sempre uma faixa livre)
 for (const [x, y] of [
@@ -306,6 +315,7 @@ for (const [x, y, len] of [
   [85, 41, 5],
 ] as const) {
   for (let k = 0; k < len; k++) setDecor(x + k, y, k === 1 ? 'ruin_wall_graffiti' : 'ruin_wall');
+  depth.shadeBlock(x, y, x + len - 1, y, (sx, sy) => !decor[idx(sx, sy)]);
 }
 setDecor(83, 38, 'car_left');
 setDecor(84, 38, 'car_right');
@@ -336,14 +346,19 @@ fillRect(0, 48, W - 1, H - 1, (x, y) => {
   }
 });
 
-// 7. Matas: borda grossa em volta do mapa e bosques com ipês
+// 7. Matas: borda fechada em volta do mapa e bosques com ipês. As árvores são grandes (2x3 tiles): o tronco
+// bloqueia e a copa fica na camada "acima" — dá para passar por trás delas, embaixo das folhas.
 const exits = (x: number, y: number) => (y >= 24 && y <= 28 && x > W - 6) || (x >= 40 && x <= 44 && (y < 4 || y > H - 5));
-fillRect(0, 0, W - 1, H - 1, (x, y) => {
-  const i = idx(x, y);
-  if (reserved[i] || decor[i] || exits(x, y) || !groundIs(x, y, 'grass', 'grass_tufts', 'grass_dark', 'mud')) return;
-  const edge = Math.min(x, y, W - 1 - x, H - 1 - y);
-  const ragged = noiseSmall(x, y) * 2;
-  let chance = edge + ragged <= 2 ? 1 : edge + ragged <= 4 ? 0.65 : edge <= 6 ? 0.25 : 0;
+const natural = (x: number, y: number) => groundIs(x, y, 'grass', 'grass_tufts', 'grass_dark', 'mud');
+const canGrow = (x: number, y: number) =>
+  inside(x, y) && !reserved[idx(x, y)] && !decor[idx(x, y)] && !keepClear[idx(x, y)] && !exits(x, y) && natural(x, y);
+// a copa pode cobrir mato, areia e a beira da água, mas não trilhas, decks e a avenida
+const canCover = (x: number, y: number) => !exits(x, y) && (natural(x, y) || groundIs(x, y, 'sand', ...WATERS));
+/** Quão perto da borda do mapa (com a beirada irregular): até 2 é mata fechada. */
+const edgeBand = (x: number, y: number) => Math.min(x, y, W - 1 - x, H - 1 - y) + noiseSmall(x, y) * 2;
+function treeChance(x: number, y: number): number {
+  const band = edgeBand(x, y);
+  let chance = band <= 2 ? 1 : band <= 4 ? 0.65 : Math.min(x, y, W - 1 - x, H - 1 - y) <= 6 ? 0.25 : 0;
   // matas mais fechadas no norte e no oeste, mais abertas no brejo
   const forest = y < 16 || x < 12 || (x > 62 && (y < 22 || y > 44));
   if (forest) chance = Math.max(chance, 0.12 + 0.55 * noiseForest(x, y));
@@ -351,11 +366,23 @@ fillRect(0, 0, W - 1, H - 1, (x, y) => {
   for (const z of MONSTER_ZONES) {
     if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) chance *= 0.35; // clareiras para lutar
   }
-  if (keepClear[i]) chance = 0;
-  if (rng() < chance) {
-    const r = rng();
-    setDecor(x, y, r < 0.1 ? 'ipe_yellow' : r < 0.17 ? 'ipe_pink' : r < 0.55 ? 'pine' : 'tree');
-  }
+  return chance;
+}
+const treeKind = (): BigTree => {
+  const r = rng();
+  return r < 0.1 ? 'ipe_yellow_big' : r < 0.17 ? 'ipe_pink_big' : r < 0.55 ? 'pine_big' : 'tree_big';
+};
+// tenta em ordem embaralhada: as árvores se encaixam de um jeito natural, não em fileiras
+for (const i of shuffled([...Array(W * H).keys()], rng)) {
+  const x = i % W;
+  const y = Math.floor(i / W);
+  if (!canGrow(x, y) || !canGrow(x + 1, y)) continue;
+  if (rng() < Math.min(treeChance(x, y), treeChance(x + 1, y))) depth.plantBigTree(treeKind(), x, y, canCover);
+}
+// a borda do mapa é fechada: o que ficou livre ali vira mata fechada (embaixo das copas) ou arbusto
+fillRect(0, 0, W - 1, H - 1, (x, y) => {
+  if (edgeBand(x, y) > 2 || !canGrow(x, y)) return;
+  setDecor(x, y, depth.covered(x, y) ? 'thicket' : pick(['bush', 'bush', 'tree', 'pine']));
 });
 
 // 8. Detalhes: flores, capim, arbustos e pedras na grama livre
@@ -385,15 +412,18 @@ const map = {
   type: 'map',
   tilewidth: 16,
   tileheight: 16,
-  nextlayerid: 5,
-  nextobjectid: 2 + MONSTER_ZONES.length,
+  nextlayerid: 8,
+  nextobjectid: 4 + MONSTER_ZONES.length,
   properties: [
     { name: 'nome', type: 'string', value: ZONE_NAME },
     { name: 'seguro', type: 'bool', value: true },
+    { name: 'inicial', type: 'bool', value: true },
   ],
   layers: [
     { id: 1, name: 'ground', type: 'tilelayer', width: W, height: H, x: 0, y: 0, opacity: 1, visible: true, data: ground },
+    depthTileLayers(depth).shade,
     { id: 2, name: 'decor', type: 'tilelayer', width: W, height: H, x: 0, y: 0, opacity: 1, visible: true, data: decor },
+    depthTileLayers(depth).above,
     {
       id: 3,
       name: 'objects',
@@ -405,6 +435,8 @@ const map = {
       visible: true,
       objects: [
         { id: 1, name: 'spawn', type: '', point: true, x: SPAWN.x * 16 + 8, y: SPAWN.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
+        // quem volta de Santo Amaro aparece aqui, no fim da avenida
+        { id: 2 + MONSTER_ZONES.length, name: 'leste', type: '', point: true, x: EAST_ARRIVAL.x * 16 + 8, y: EAST_ARRIVAL.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
       ],
     },
     {
@@ -428,6 +460,33 @@ const map = {
         visible: true,
         properties: [{ name: 'quantidade', type: 'int', value: zone.count }],
       })),
+    },
+    {
+      id: 5,
+      name: 'saidas',
+      type: 'objectgroup',
+      draworder: 'topdown',
+      x: 0,
+      y: 0,
+      opacity: 1,
+      visible: true,
+      objects: [
+        {
+          id: 3 + MONSTER_ZONES.length,
+          name: 'Ruínas de Santo Amaro',
+          type: '',
+          x: EAST_EXIT.x * 16,
+          y: EAST_EXIT.y * 16,
+          width: EAST_EXIT.w * 16,
+          height: EAST_EXIT.h * 16,
+          rotation: 0,
+          visible: true,
+          properties: [
+            { name: 'mapa', type: 'string', value: 'santo-amaro' },
+            { name: 'chegada', type: 'string', value: 'oeste' },
+          ],
+        },
+      ],
     },
   ],
   tilesets: [tiledTileset('../tiles.png')],
@@ -454,5 +513,5 @@ if (!ok) process.exit(1);
 
 mkdirSync(path.dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(map));
-const used = new Set([...ground, ...decor].filter(Boolean));
+const used = new Set([...ground, ...decor, ...depth.above, ...depth.shade].filter(Boolean));
 console.log(`mapa "${ZONE_NAME}" salvo em ${path.relative(process.cwd(), OUT)} (${W}x${H}, ${used.size} de ${TILES.length} tiles usados)`);

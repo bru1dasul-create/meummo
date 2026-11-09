@@ -55,12 +55,30 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 - **Golpes telegrafados:** quando um monstro vai atacar, o servidor manda `warn` com os quadrados que
   serão atingidos e o tempo até o golpe. Na hora, só leva dano quem ainda estiver ali (e não estiver
   invencível pela esquiva). Por isso a rede não atrapalha: o aviso dura mais que o atraso da internet.
+- **Investida** (Mula sem Cabeça): o aviso é a linha inteira; na hora, quem estiver nela é atropelado e o monstro
+  corre até o fim (para antes de parede, de outro monstro e de cima de alguém). Os viewers recebem `fx`
+  (`charge`), o `move` com `dash` (corrida rápida) e `fire` com os tiles do caminho, que queimam quem fica em cima
+  a cada 0,5 s até apagar (a esquiva protege, como de qualquer golpe).
 - **Esquiva** entra na mesma fila dos passos (`step` com `dash`), então também é prevista no cliente e
   corrigida pelo servidor se precisar.
 - **Monstros** (`src/server/world.ts`): passeiam na área deles; os agressivos percebem quem chega perto;
   perseguem com busca de caminho; desistem quando o alvo foge para longe e voltam para casa se curando.
   Só nascem em tiles alcançáveis a pé a partir da vila.
 - **XP:** todo mundo que acertou o monstro ganha a XP inteira quando ele cai.
+
+## Vários mapas (`src/server/realm.ts`)
+- Cada mapa é um `World` completo (seus jogadores, monstros e projéteis; tudo o que já existia continua igual).
+  O `Realm` junta os mapas: números de entidade únicos, chat, avisos e "online" valendo para todo mundo, e a
+  troca de mapa.
+- Ao ligar, o servidor lê todos os `.tmj` e confere as ligações: toda saída precisa levar a um mapa e a um ponto
+  que existem, e nenhum ponto de chegada pode estar em cima de uma saída.
+- Entrar no jogo: no mapa salvo do personagem (pelo id; saves antigos com o nome da zona também valem) ou no mapa
+  `inicial`. O `welcome` diz o id do mapa e o navegador carrega `assets/maps/<id>.tmj`.
+- Trocar de mapa: pisou numa saída → no fim do tick o Realm tira o jogador de um mapa (`detach`: quem via recebe
+  `despawn`) e coloca no outro (`adopt`), no ponto de chegada, com 2 s de proteção, e já salva a zona nova.
+  O jogador recebe `zone` (mapa, posição, números e mochila); o navegador troca a cena inteira pela do mapa novo
+  e responde `loaded`. Até o `loaded`, pedidos dele (andar, atirar...) são ignorados — eram do mapa antigo.
+- Desmaiar num mapa com `renascerEm`: acorda no mapa indicado (o mesmo `adopt`, com a vida cheia).
 
 ## Itens e mochila
 - Os tipos de item vêm de `data/items.json` (lido por `src/server/items.ts`) e vão para o navegador no `welcome`.
@@ -75,6 +93,11 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   tudo (espaço vazio, desmaiado, vida cheia, espera entre consumíveis) e responde com `inv` ou `fail` (`item: true`).
 - Salva junto com o personagem (coluna `inventory`, JSON; versão 2 do arquivo). Ao carregar, itens que não existem
   mais em `data/items.json` saem e pilhas grandes demais são cortadas.
+- O equipamento aparece no personagem: o estado de cada jogador (`spawn`, `welcome`, `zone`) leva `gear`, o `icone`
+  de cada parte equipada (`gearLookOf` em `src/shared/items.ts`), e quando muda o servidor manda `gear` para quem
+  está vendo (e para o próprio). O navegador desenha em camadas (`src/client/game/characters.ts`): cabeça, corpo,
+  cabelo, roupa (gibão/couraça), braço, amuleto, arma e chapéu por cima; cada look + equipamento vira uma textura
+  criada uma vez só. O boneco da mochila usa o mesmo desenho.
 
 ## Personagens salvos (`src/server/accounts.ts`)
 - Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
@@ -104,19 +127,23 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
+| cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
 | servidor | `welcome` / `reject` | entrou (com seus números) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
 | servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, ou o servidor está desligando |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
-| servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar |
+| servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar no mesmo mapa |
+| servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`) |
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
-| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho) |
+| servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
+| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho, investida), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
 | servidor | `inv` / `loot` | sua mochila mudou / você pegou estes itens do monstro que caiu em (x, y) |
+| servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |
 
@@ -132,18 +159,33 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 - Conexões "zumbis" são derrubadas a cada 30 segundos.
 
 ## Mapas (Tiled)
-- Arquivo: `public/assets/maps/world.tmj`, tileset embutido chamado `tiles` (imagem `public/assets/tiles.png`).
-- Camadas de tiles: `ground` (chão) e `decor` (árvores, casas, flores…). Pode criar outras.
-- Propriedades dos tiles: `colide` (bloqueia a passagem) e `bloqueiaTiro` (segura projéteis).
+- Arquivos: `public/assets/maps/<id>.tmj` (um por zona; o nome do arquivo é o id), cada um com o tileset
+  embutido chamado `tiles` (imagem `public/assets/tiles.png`).
+- Camadas de tiles, de baixo para cima: `ground` (chão), `sombras`, `decor` (troncos, casas, flores…) e
+  `acima`. Para o servidor só importa se algum tile do lugar bloqueia (em qualquer camada); no navegador
+  (`src/client/game/mapDepth.ts`) a camada `acima` é desenhada por cima dos personagens (copas, alto dos postes)
+  e fica transparente perto de quem está embaixo dela e dos avisos/fogo no chão (`CanopyFader`). Pode criar
+  outras camadas (ficam embaixo dos personagens, na ordem do arquivo).
+- Propriedades dos tiles: `colide` (bloqueia a passagem), `bloqueiaTiro` (segura projéteis), `luz` (cor) e
+  `luzRaio` (pixels): um brilho em volta do tile (`MapLights`; tremula se o tile for animado).
+- Animação de tiles (água, fogueira): a `animation` do próprio Tiled no tileset; o Phaser 4 já anima sozinho.
 - Um objeto do tipo ponto chamado `spawn` marca onde os jogadores nascem.
 - Camada de objetos `monstros`: cada retângulo é uma área de nascimento. O nome do retângulo é o id do
   monstro em `data/monsters.json` (ex.: `jararaca`) e a propriedade inteira `quantidade` diz quantos.
+- Camada de objetos `saidas`: cada retângulo leva para outro mapa (`mapa` = id do destino, `chegada` = nome
+  de um ponto lá; sem `chegada`, perto do `spawn`). O nome do retângulo é a placa mostrada no jogo.
+- Pontos com nome, em qualquer camada de objetos, são lugares de chegada.
 - Propriedades do próprio mapa (Map > Map Properties): `nome` (texto) é o nome da zona — aparece na tela ao
-  entrar e nas boas-vindas do chat — e `seguro` (booleano) marca zona segura (para o PvP, quando existir).
-  Sem `nome`, a zona se chama "Pindorama".
+  entrar e nas boas-vindas do chat —, `seguro` (booleano) marca zona segura (para o PvP, quando existir),
+  `inicial` (booleano) marca onde os personagens novos começam e `renascerEm` (texto, id de um mapa) diz onde
+  acorda quem desmaia ali. Sem `nome`, a zona se chama "Pindorama".
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
-- O mapa atual (Refúgio de Guarapiranga, 96×72) foi gerado por `scripts/gen-map.ts` e pode ser editado à mão
-  no Tiled. Gerar de novo por cima apaga essas edições: use `npm run gen:map -- --out outro.tmj` para comparar.
+- Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
+  `scripts/gen-map.ts`) e Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`, usando
+  `scripts/map-builder.ts`). Gerar de novo por cima apaga as edições: gere com `--out outro.tmj` e compare.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
+  Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, ônibus) são desenhados inteiros e cortados em
+  pedaços; os geradores colocam cada pedaço na camada certa com `scripts/map-depth.ts` (árvores, postes e
+  sombras). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.

@@ -5,7 +5,9 @@ import {
   BAG_SIZE,
   EQUIP_SLOTS,
   emptyEquipment,
+  gearLookOf,
   type EquipSlot,
+  type GearLook,
   type InventoryState,
   type ItemBonus,
   type ItemInfo,
@@ -96,6 +98,11 @@ export class Inventory {
       total.defense += def.bonus.defense;
     }
     return total;
+  }
+
+  /** O desenho de cada parte equipada (o ícone do item), para os outros verem no personagem. */
+  look(): GearLook {
+    return gearLookOf(this.equipped, this.defs);
   }
 
   /** Uma cópia, para mandar ao navegador ou salvar. */

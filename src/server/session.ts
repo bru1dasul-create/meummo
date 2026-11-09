@@ -6,8 +6,9 @@ import type { ByeReason, RejectReason, ServerMsg } from '../shared/protocol';
 import type { CharacterStore, LoginResult, SavedCharacter } from './accounts';
 import type { LoginGuard } from './login-guard';
 import { TokenBucket } from './rate-limit';
+import type { Realm } from './realm';
 import { parseClientMsg } from './validate';
-import type { Player, World } from './world';
+import type { Player } from './world';
 
 /** O canal "cru" (no servidor real, um WebSocket). */
 export interface Transport {
@@ -17,7 +18,8 @@ export interface Transport {
 
 /** O que todas as sessões compartilham. */
 export interface Lobby {
-  world: World;
+  /** Todos os mapas do jogo. */
+  realm: Realm;
   store: CharacterStore;
   guard: LoginGuard;
   /** Quem está jogando com cada personagem salvo (para "entrou de outro lugar"). */
@@ -69,22 +71,25 @@ export class Session {
 
     switch (msg.t) {
       case 'step':
-        this.lobby.world.requestStep(this.player, msg.seq, msg.dir, msg.dash === true);
+        this.lobby.realm.requestStep(this.player, msg.seq, msg.dir, msg.dash === true);
         break;
       case 'shoot':
-        this.lobby.world.shoot(this.player, msg.cid, msg.a);
+        this.lobby.realm.shoot(this.player, msg.cid, msg.a);
         break;
       case 'skill':
-        this.lobby.world.useSkill(this.player, msg.n, msg.a);
+        this.lobby.realm.useSkill(this.player, msg.n, msg.a);
         break;
       case 'item':
-        this.lobby.world.itemAction(this.player, msg.act, msg.i);
+        this.lobby.realm.itemAction(this.player, msg.act, msg.i);
         break;
       case 'unequip':
-        this.lobby.world.unequip(this.player, msg.part);
+        this.lobby.realm.unequip(this.player, msg.part);
+        break;
+      case 'loaded':
+        this.lobby.realm.loaded(this.player);
         break;
       case 'chat':
-        this.lobby.world.chat(this.player, msg.text);
+        this.lobby.realm.chat(this.player, msg.text);
         break;
       case 'ping':
         this.sendBatch([{ t: 'pong', id: msg.id }]);
@@ -113,7 +118,7 @@ export class Session {
     if (nameProblem(name)) return this.reject('name_invalid');
     const password = rawPassword.normalize('NFC'); // o mesmo acento digitado em aparelhos diferentes vira a mesma senha
     if (passwordProblem(password)) return this.reject('password_invalid');
-    const { world, store, guard, online, log } = this.lobby;
+    const { realm, store, guard, online, log } = this.lobby;
     const key = nameKey(name);
     if (!guard.allowed(this.ip, key)) return this.reject('too_many_attempts');
 
@@ -146,7 +151,7 @@ export class Session {
     }
     if (!character) return this.reject('unavailable');
 
-    const joined = world.join(character.name, { send: (batch) => this.sendBatch(batch) }, { character, created: result.created });
+    const joined = realm.join(character.name, { send: (batch) => this.sendBatch(batch) }, { character, created: result.created });
     if (!joined.ok) return this.reject(joined.reason);
     this.player = joined.player;
     this.characterId = result.id;
@@ -155,7 +160,7 @@ export class Session {
   }
 
   private leaveWorld(): void {
-    if (this.player) this.lobby.world.leave(this.player);
+    if (this.player) this.lobby.realm.leave(this.player);
     this.player = null;
     if (this.characterId !== null && this.lobby.online.get(this.characterId) === this) this.lobby.online.delete(this.characterId);
     this.characterId = null;

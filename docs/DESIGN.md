@@ -46,7 +46,7 @@ Sem violência explícita: quem perde a vida **desmaia** e acorda na vila.
 
 ## Criaturas do Refúgio de Guarapiranga
 Os números ficam em `data/monsters.json` (dá para ajustar sem programar). As áreas de cada uma estão
-desenhadas no mapa (camada `monstros`; veja `docs/mapa.png`).
+desenhadas no mapa (camada `monstros`; veja `docs/mapa-refugio.png`).
 
 | Criatura | Nível | Onde vive | Jeito | Golpe |
 |---|---|---|---|---|
@@ -74,6 +74,8 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 - **Atributos:** equipamentos somam dano, vida e defesa. Defesa tira um pouco de cada golpe, mas sempre sobra 1.
 - **Consumíveis** curam; entre um e outro há uma pequena espera (a banana não substitui a esquiva).
 - **Lendário:** quando alguém consegue um, todo mundo vê no chat.
+- **Dá para ver:** tudo que está equipado aparece no personagem, para todo mundo (chapéu ou gorro na cabeça,
+  gibão ou couraça no corpo, a arma na mão, o amuleto no peito), e no boneco da mochila.
 
 | Item | Tipo | O que faz | Quem deixa |
 |---|---|---|---|
@@ -85,7 +87,7 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 | Gibão de Couro (raro) | corpo | +8 de vida, +2 de defesa | Jararaca (5%) |
 | Gorro Vermelho do Saci (lendário) | cabeça | +2 de dano, +15 de vida | Saci (30%) |
 
-Ideias para depois: ver o chapéu/gorro no personagem, loja e ouro (M3), artesãos que transformam couro em
+Ideias para depois: loja e ouro (M3), artesãos que transformam couro em
 roupa, equipamentos com nível mínimo, poções do Curandeiro.
 
 ## Progressão no futuro
@@ -101,7 +103,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | Zona | Nível | Como é | Situação |
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
-| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | próxima zona (M3) |
+| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | ✅ mapa e criaturas (níveis 4 a 8) |
 | **Labirintos da Billings** | farm e perigo | Canais e pântanos no extremo sul, com jacarés mutantes e espíritos da água (Boto, Lobisomem da Mata). | depois |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
@@ -117,6 +119,26 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
   Barcos afundados aparecem pelo caminho.
 - Ao entrar, o nome da zona aparece na tela ("Refúgio de Guarapiranga — Zona segura"). O nome e o "zona
   segura" são propriedades do mapa no Tiled (`nome` e `seguro`), então cada zona nova já nasce com os seus.
+
+### Ruínas de Santo Amaro (o mapa)
+- **A entrada:** a avenida que sai do Refúgio continua pelo oeste e corta a zona inteira; carros e um ônibus
+  enferrujados, bueiros, postes tortos com fios caídos.
+- **Os quarteirões:** prédios mortos vistos de cima (lajes rachadas e furadas), com a fachada virada para a rua —
+  janelas quebradas, paredes engolidas pelo cipó e as portas de aço das lojas que fecharam para sempre (as placas
+  apagaram: nada de marcas).
+- **Os desabados:** sete prédios caíram e viraram clareiras de entulho, sucata, pneus, ossos, árvores secas e
+  **ervas de cura** nascendo no concreto. É onde vivem as criaturas da zona.
+- **O largo:** no meio de tudo, o chafariz seco cercado de ervas, árvores secas e ipês floridos — a única cor forte
+  do lugar ("um pouco dos dois": a cidade cinza e pesada, a vida teimando no meio dela).
+- Quem desmaia aqui acorda no Refúgio (não há vila em Santo Amaro).
+
+| Criatura | Nível | Onde vive | Jeito | Golpe | Deixa |
+|---|---|---|---|---|---|
+| Corpo-Seco | 4 | prédios desabados do oeste | Morto-vivo lento e resistente; só nota quem chega bem perto | Agarra quem está do lado (aviso de 0,7 s) | Sucata, Ramo de Arruda, Faca de Sucata (rara, +4 de dano) |
+| Capelobo | 6 | prédios desabados do leste | Rápido; cabeça de tamanduá | Língua comprida: bote em linha de 3 tiles | Ramo de Arruda, Couraça de Lata (rara, +15 vida, +3 defesa) |
+| Mula sem Cabeça | 8 (chefe) | o largo do chafariz | Agressiva, nota quem entra no largo | **Investida**: marca uma linha de 6 tiles, atravessa atropelando e deixa o chão pegando fogo por 2,5 s | Arruda (sempre), **Ferradura em Brasa** (lendária, +3 dano, +2 defesa) |
+
+Dica para a Mula: saia da linha vermelha **para o lado** (ou use a Esquiva no momento certo) e não pare em cima do fogo.
 
 **Facções (PvP por território, mais adiante):**
 - **Tecnocratas — os Herdeiros da Pedra:** reconstroem a tecnologia antiga; armaduras de lataria de carro,

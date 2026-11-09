@@ -188,11 +188,11 @@ describe('Session', () => {
   it('entra, responde ping e remove o jogador ao desconectar', async () => {
     const { s, transport, lobby } = session();
     expect((await sendHello(s, transport, 'Ana', 'segredo1')).t).toBe('welcome');
-    expect(lobby.world.players.size).toBe(1);
+    expect(lobby.realm.start.players.size).toBe(1);
     s.handle(JSON.stringify({ t: 'ping', id: 7 }));
     expect(transport.batches.at(-1)).toEqual([{ t: 'pong', id: 7 }]);
     s.disconnect();
-    expect(lobby.world.players.size).toBe(0);
+    expect(lobby.realm.start.players.size).toBe(0);
   });
 
   it('desconecta quem manda lixo sem parar', () => {

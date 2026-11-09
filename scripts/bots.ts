@@ -12,7 +12,7 @@ import { loadMap } from '../src/server/server';
 import { SHOT_COOLDOWN_MS, PROTOCOL_VERSION, STEP_MS } from '../src/shared/constants';
 import { angleBetween, chebyshev } from '../src/shared/combat';
 import type { Dir } from '../src/shared/dir';
-import type { Tile } from '../src/shared/map';
+import type { GameMap, Tile } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
 
@@ -20,7 +20,13 @@ const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const hunting = process.argv.includes('--cacar');
 const count = Number(args[0] ?? 8);
 const url = args[1] ?? 'ws://localhost:3000/ws';
-const map = loadMap();
+/** Os mapas já lidos (cada bot usa o do mapa onde está). */
+const maps = new Map<string, GameMap>();
+function mapFor(id: string): GameMap {
+  let map = maps.get(id);
+  if (!map) maps.set(id, (map = loadMap(id)));
+  return map;
+}
 
 /** Senha dos personagens dos bots (qualquer um pode entrar com eles: são só para testes). */
 const BOT_PASSWORD = 'bots-do-meummo';
@@ -44,7 +50,7 @@ function pick<T>(list: T[]): T {
 }
 
 /** Um destino aleatório perto da vila (para os bots passeadores não sumirem no mapa). */
-function villageTarget(): Tile | null {
+function villageTarget(map: GameMap): Tile | null {
   for (let tries = 0; tries < 30; tries++) {
     const x = map.spawn.x + Math.round((Math.random() * 2 - 1) * 12);
     const y = map.spawn.y + Math.round((Math.random() * 2 - 1) * 9);
@@ -54,14 +60,15 @@ function villageTarget(): Tile | null {
 }
 
 /** Um ponto livre perto de uma área de monstros (para os caçadores). */
-function huntingTarget(): Tile | null {
+function huntingTarget(map: GameMap): Tile | null {
   const zone = pick(map.monsterZones.filter((z) => z.monster !== 'saci'));
-  if (!zone) return villageTarget();
+  if (!zone) return villageTarget(map);
   return map.nearestWalkable(zone.x - 3, zone.y + (zone.h >> 1));
 }
 
 class Bot {
   private ws!: WebSocket;
+  private map = mapFor('refugio');
   private name: string;
   private id = 0;
   x = 0;
@@ -94,6 +101,7 @@ class Bot {
   private onMessage(msg: ServerMsg): void {
     switch (msg.t) {
       case 'welcome':
+        this.map = mapFor(msg.map);
         this.id = msg.id;
         this.x = msg.you.x;
         this.y = msg.you.y;
@@ -109,6 +117,17 @@ class Bot {
         } else {
           console.log(`bot ${this.name} recusado: ${msg.reason}`);
         }
+        break;
+      case 'zone': // foi para outro mapa: troca o mapa e avisa que "carregou"
+        this.map = mapFor(msg.map);
+        this.x = msg.you.x;
+        this.y = msg.you.y;
+        this.path = [];
+        this.dead = false;
+        this.waitingAck = false;
+        this.monsters.clear();
+        this.send({ t: 'loaded' });
+        console.log(`bot ${this.name} foi para o mapa ${msg.map}`);
         break;
       case 'bye':
         console.log(`bot ${this.name} saiu: ${msg.reason === 'replaced' ? 'entraram com ele em outro lugar' : 'servidor desligando'}`);
@@ -156,8 +175,8 @@ class Bot {
         this.restUntil = now + 1000 + Math.random() * 3000; // para um pouquinho
         return;
       }
-      const target = hunting ? (this.nearestMonsterSpot() ?? huntingTarget()) : villageTarget();
-      this.path = (target && findPath(map, this.x, this.y, target.x, target.y, 20000)) || [];
+      const target = hunting ? (this.nearestMonsterSpot() ?? huntingTarget(this.map)) : villageTarget(this.map);
+      this.path = (target && findPath(this.map, this.x, this.y, target.x, target.y, 20000)) || [];
       return;
     }
     this.send({ t: 'step', seq: ++this.seq, dir: this.path.shift()! });
@@ -196,7 +215,7 @@ class Bot {
         bestDistance = distance;
       }
     }
-    return best ? map.nearestWalkable(best.x - 4, best.y) : null;
+    return best ? this.map.nearestWalkable(best.x - 4, best.y) : null;
   }
 
   send(msg: ClientMsg): void {

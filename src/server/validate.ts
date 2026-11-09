@@ -52,6 +52,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         : null;
     case 'unequip':
       return EQUIP_SLOTS.includes(msg.part as EquipSlot) ? { t: 'unequip', part: msg.part as EquipSlot } : null;
+    case 'loaded':
+      return { t: 'loaded' };
     case 'chat':
       return typeof msg.text === 'string' && msg.text.length <= CHAT_MAX_LENGTH * 4 ? { t: 'chat', text: msg.text } : null;
     case 'ping':

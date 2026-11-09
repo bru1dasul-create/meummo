@@ -3,7 +3,7 @@
 // Posições são em tiles. Ângulos são em radianos (0 = direita, π/2 = baixo).
 
 import type { Dir } from './dir';
-import type { EquipSlot, InventoryState, ItemInfo, ItemStack } from './items';
+import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 
 export type EntityKind = 'player' | 'monster';
 
@@ -24,6 +24,8 @@ export interface EntityState {
   maxHp: number;
   /** Monstros: tempo para andar um tile (cada um tem sua velocidade). */
   stepMs?: number;
+  /** Jogadores: o equipamento que aparece no personagem (chapéu, couraça, arma...). */
+  gear?: GearLook;
 }
 
 /** Números que só o próprio jogador precisa ver. */
@@ -47,6 +49,7 @@ export type ClientMsg =
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
   | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
+  | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
 
@@ -68,7 +71,7 @@ export type ByeReason = 'replaced' | 'shutdown';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind';
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge';
 
 /** Servidor → cliente. O servidor sempre envia uma lista (um pacote por tick). */
 export type ServerMsg =
@@ -79,10 +82,14 @@ export type ServerMsg =
       stats: PlayerStats;
       stepMs: number;
       online: number;
+      /** Id do mapa onde você está (arquivo public/assets/maps/<id>.tmj). */
+      map: string;
       /** Todos os tipos de item (de data/items.json). */
       items: ItemInfo[];
       inv: InventoryState;
     }
+  /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
+  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number }
   | { t: 'reject'; reason: RejectReason }
   | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
@@ -94,12 +101,14 @@ export type ServerMsg =
   | { t: 'shot'; id: number; by: number; x: number; y: number; a: number; speed: number; range: number; kind: string; cid?: number }
   | { t: 'shot_end'; id: number; hit: number } // projétil acabou (hit = id de quem levou, ou 0)
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
-  | { t: 'fx'; id: number; kind: FxKind; a?: number }
+  | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number } // r = alcance do golpe (bote, investida)
+  | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)
   | { t: 'hit'; id: number; by: number; dmg: number; hp: number }
   | { t: 'heal'; id: number; amount: number; hp: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }
   | { t: 'levelup'; id: number; level: number; maxHp: number }
+  | { t: 'gear'; id: number; gear: GearLook } // alguém trocou o equipamento (muda o desenho dele)
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
@@ -111,6 +120,7 @@ export type ServerMsg =
   | { t: 'pong'; id: number };
 
 export type WelcomeMsg = Extract<ServerMsg, { t: 'welcome' }>;
+export type ZoneMsg = Extract<ServerMsg, { t: 'zone' }>;
 
 /** Número usado em `cd` para a esquiva. */
 export const DASH_SLOT = -1;
