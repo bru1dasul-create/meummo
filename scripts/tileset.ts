@@ -255,6 +255,159 @@ const G = {
   boneDark: hex('#b9b09a'),
 };
 
+/** Cores das Ruínas de Santo Amaro: concreto, ferrugem, mato escuro, óleo e fios. */
+const S = {
+  concrete: hex('#7b7e83'),
+  concreteDark: hex('#5c5f64'),
+  concreteLight: hex('#94979c'),
+  seam: hex('#4c4f54'),
+  crack: hex('#2f3135'),
+  dirt: [40, 42, 46, 70] as RGBA,
+  gloom: hex('#3e6a38'),
+  gloomDark: hex('#30552d'),
+  gloomLight: hex('#4c7b43'),
+  dry: hex('#7a7a40'),
+  moss: hex('#4f7a3a'),
+  mossDark: hex('#3a5e2c'),
+  oil: hex('#1c242b'),
+  oilEdge: hex('#2d3840'),
+  sheen1: hex('#6a4f8a'),
+  sheen2: hex('#3f7a80'),
+  iron: hex('#4f5257'),
+  ironDark: hex('#36383c'),
+  ironLight: hex('#6d7076'),
+  rust: hex('#9a4a2b'),
+  rustLight: hex('#c26a3c'),
+  rustDark: hex('#6a3119'),
+  facade: hex('#8a8580'),
+  facadeDark: hex('#6a6560'),
+  facadeLight: hex('#a39e98'),
+  window: hex('#161b20'),
+  glass: hex('#4a6670'),
+  glassLight: hex('#86a8b0'),
+  shutter: hex('#80858b'),
+  shutterDark: hex('#5c6066'),
+  shutterLight: hex('#9a9fa5'),
+  sign: [hex('#c9a43a'), hex('#3f78a8'), hex('#b5473a'), hex('#4f9a5a')],
+  vine: hex('#2e6a2b'),
+  vineLight: hex('#4f9440'),
+  vineDark: hex('#1f4d1f'),
+  deadWood: hex('#5b4836'),
+  deadWoodDark: hex('#3d3025'),
+  deadWoodLight: hex('#76604a'),
+  wire: hex('#16161a'),
+  wireRed: hex('#8e2b24'),
+  wireYellow: hex('#b39b2e'),
+  insulator: hex('#d9d6cc'),
+  herb: hex('#5d9c48'),
+  herbDark: hex('#447a36'),
+  herbLight: hex('#8ccf66'),
+  herbFlower: hex('#e3d968'),
+  tire: hex('#222226'),
+  tireLight: hex('#3b3b41'),
+  busPaint: hex('#c9b27a'),
+  busPaintDark: hex('#9c8656'),
+  busStripe: hex('#3f6f9a'),
+  outline: hex('#1f2124'),
+};
+
+const clamp15 = (v: number) => Math.max(0, Math.min(15, v));
+
+/**
+ * Chão de concreto velho. Cada tile é uma placa (a emenda fica só na borda). Para não virar "papel de
+ * parede" quando o mesmo tile se repete, o desenho é discreto; rachadura só na variação rachada.
+ */
+function drawConcrete(p: Pixels, rng: Rng, moss: boolean, cracked = false): void {
+  p.fill(S.concrete);
+  p.speckle(rng, [S.concreteDark, S.concreteLight], 30);
+  for (let i = 0; i < T; i++) {
+    p.set(i, 0, S.concreteDark);
+    p.set(0, i, S.concreteDark);
+  }
+  if (cracked) {
+    let x = 3 + randInt(rng, 10);
+    for (let y = 2 + randInt(rng, 4); y < T; y++) {
+      p.set(x, y, S.crack);
+      if (rng() < 0.35) p.set(x + 1, y, rng() < 0.5 ? S.moss : S.gloomLight);
+      x = clamp15(x + randInt(rng, 3) - 1);
+    }
+    p.ellipse(4 + rng() * 8, 4 + rng() * 8, 2.4, 1.5, S.dirt);
+  }
+  if (moss) {
+    p.disc(1 + randInt(rng, 3), 12 + randInt(rng, 3), 1.6, S.mossDark); // musgo encostado na emenda
+    p.speckle(rng, [S.moss, S.mossDark, S.gloomLight], 16);
+  }
+}
+
+/** Fachada de prédio velho (o lado de baixo de um quarteirão): concreto manchado, laje e musgo no pé. */
+function drawFacade(p: Pixels, rng: Rng): void {
+  p.fill(S.facade);
+  p.speckle(rng, [S.facadeDark, S.facadeLight], 26);
+  p.rect(0, 0, T, 2, S.concreteDark); // beirada da laje
+  p.rect(0, 2, T, 1, S.facadeLight);
+  p.rect(0, 9, T, 1, S.facadeDark); // laje do andar de baixo
+  for (let k = 0; k < 4; k++) {
+    const sx = randInt(rng, T); // manchas escorrendo
+    for (let y = 3; y < 3 + 3 + randInt(rng, 6); y++) p.set(sx, y, S.facadeDark);
+  }
+  for (let x = 0; x < T; x++) if (rng() < 0.55) p.set(x, 15, rng() < 0.5 ? S.moss : S.mossDark);
+}
+
+/** Topo de prédio visto de cima: laje escura e gasta (com um buraco que deixa ver o andar de baixo, se pedir). */
+function drawRoofSlab(p: Pixels, rng: Rng, hole: boolean): void {
+  p.fill(S.concreteDark);
+  p.speckle(rng, [S.seam, S.concrete], 34);
+  for (let i = 0; i < T; i++) {
+    p.set(i, 0, S.seam);
+    p.set(0, i, S.seam);
+  }
+  if (!hole) {
+    let x = 4 + randInt(rng, 8);
+    for (let y = 3; y < 3 + 5 + randInt(rng, 5); y++) {
+      p.set(x, y, S.crack);
+      x = clamp15(x + randInt(rng, 3) - 1);
+    }
+    p.disc(3 + randInt(rng, 10), 3 + randInt(rng, 10), 1.3, S.mossDark);
+    return;
+  }
+  // buraco irregular: vários pedaços que caíram, com a beirada quebrada mais clara e ferros atravessando
+  for (const [cx, cy, rx, ry] of [[7, 7, 3.4, 2.6], [10, 9, 2.8, 2.4], [6.5, 10, 2.2, 1.8]] as const) p.ellipse(cx, cy, rx, ry, [12, 14, 16, 255]);
+  for (let y = 1; y < T - 1; y++) {
+    for (let x = 1; x < T - 1; x++) {
+      const dark = p.get(x, y)[0] < 20;
+      if (!dark && (p.get(x - 1, y)[0] < 20 || p.get(x + 1, y)[0] < 20 || p.get(x, y - 1)[0] < 20 || p.get(x, y + 1)[0] < 20)) p.set(x, y, S.concreteLight);
+    }
+  }
+  for (const [x, y] of [[3, 6], [3, 7], [13, 10], [12, 11], [8, 4]] as const) p.set(x, y, S.rust); // pontas de vergalhão na beirada
+}
+
+function sliceOf(width: number, drawFull: (p: Pixels) => void, index: number) {
+  return (p: Pixels) => {
+    const full = new Pixels(T * width, T);
+    drawFull(full);
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) p.set(x, y, full.get(x + index * T, y));
+  };
+}
+
+/** Ônibus velho visto de cima (3 tiles): teto desbotado, ferrugem, janelas quebradas e mato no teto. */
+function drawBus(p: Pixels): void {
+  const rng = mulberry32(4242);
+  p.ellipse(24, 14, 23, 2.4, C.shadow);
+  p.rect(1, 2, 46, 11, S.busPaintDark);
+  p.rect(2, 3, 44, 9, S.busPaint);
+  for (let x = 3; x < 45; x += 4) p.rect(x, 2, 3, 1, S.window); // janelas de um lado
+  for (let x = 3; x < 45; x += 4) p.rect(x, 12, 3, 1, S.window); // e do outro
+  p.rect(2, 7, 44, 1, S.busStripe);
+  p.rect(18, 5, 8, 4, S.ironLight); // ar-condicionado velho
+  p.rect(19, 6, 6, 2, S.iron);
+  for (let k = 0; k < 40; k++) p.set(2 + randInt(rng, 44), 3 + randInt(rng, 9), k % 3 ? S.rust : S.rustDark);
+  p.disc(36, 5.5, 2.2, S.moss);
+  p.disc(8, 9.5, 1.8, S.mossDark);
+  p.rect(1, 5, 1, 5, S.glass); // para-brisa
+  p.set(1, 6, S.glassLight);
+  p.outline(S.outline);
+}
+
 /** Deck da vila flutuante: tábuas deitadas, com pregos. */
 function drawDeck(p: Pixels, rng: Rng): void {
   p.fill(G.deck);
@@ -814,6 +967,222 @@ export const TILES: TileDef[] = [
       p.outline(G.asphaltDark);
     },
   },
+  // ---------- Ruínas de Santo Amaro ----------
+  { key: 'concrete', draw: (p, rng) => drawConcrete(p, rng, false) },
+  { key: 'concrete_moss', draw: (p, rng) => drawConcrete(p, rng, true) },
+  {
+    key: 'grass_gloom', // mato escuro e meio seco, onde a cidade sumiu
+    draw(p, rng) {
+      p.fill(S.gloom);
+      p.speckle(rng, [S.gloomDark, S.gloomDark, S.gloomLight], 42);
+      p.speckle(rng, [S.dry], 10);
+      for (let k = 0; k < 4; k++) {
+        const x = randInt(rng, T);
+        const y = 2 + randInt(rng, 12);
+        p.set(x, y, S.gloomLight);
+        p.set(x, y - 1, S.gloomLight);
+      }
+    },
+  },
+  {
+    key: 'oil_puddle', // poça escura de óleo velho (dá para pisar)
+    draw(p, rng) {
+      drawConcrete(p, rng, false);
+      p.ellipse(8, 8.5, 6.2, 4.4, S.oilEdge);
+      p.ellipse(8, 8.5, 5.4, 3.6, S.oil);
+      for (const [x, y, c] of [[5, 7, S.sheen1], [6, 7, S.sheen2], [9, 9, S.sheen1], [10, 9, S.sheen2], [7, 10, S.sheen2]] as const) p.set(x, y, c);
+    },
+  },
+  {
+    key: 'manhole', // tampa de bueiro no asfalto
+    draw(p, rng) {
+      p.fill(G.asphalt);
+      p.speckle(rng, [G.asphaltLight, G.asphaltDark], 26);
+      p.disc(8, 8, 5.6, S.ironDark);
+      p.disc(8, 8, 4.6, S.iron);
+      for (let i = 4; i <= 12; i += 2) p.rect(i, 4, 1, 8, S.ironDark);
+      p.disc(8, 8, 4.6, [0, 0, 0, 0], true);
+      p.set(6, 5, S.ironLight);
+      p.set(10, 10, S.rust);
+      p.set(11, 9, S.rust);
+    },
+  },
+  {
+    key: 'rubble', // entulho: pedaços de concreto e ferro
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 13.5, 7, 2.2, C.shadow);
+      for (const [x, y, w, h] of [[2, 9, 5, 4], [7, 7, 5, 6], [5, 5, 4, 3], [10, 10, 5, 3], [4, 12, 4, 2]] as const) {
+        p.rect(x, y, w, h, S.concrete);
+        p.rect(x, y, w, 1, S.concreteLight);
+        p.rect(x, y + h - 1, w, 1, S.concreteDark);
+      }
+      for (let y = 2; y < 8; y++) p.set(6 + Math.floor((y - 2) / 2), y, S.rust); // vergalhões
+      for (let y = 4; y < 9; y++) p.set(12, y, S.rustDark);
+      p.outline(S.outline);
+    },
+  },
+  { key: 'building_top', collides: true, draw: (p, rng) => drawRoofSlab(p, rng, false) },
+  { key: 'building_top_broken', collides: true, draw: (p, rng) => drawRoofSlab(p, rng, true) },
+  { key: 'building_wall', collides: true, draw: (p, rng) => drawFacade(p, rng) },
+  {
+    key: 'building_window', // fachada com janelas quebradas
+    collides: true,
+    draw(p, rng) {
+      drawFacade(p, rng);
+      // duas fileiras de janelas (uma por andar), com o caixilho no meio; algumas tapadas com tábuas
+      for (const [y, h] of [[3, 5], [10, 4]] as const) {
+        for (const x of [1, 6, 11]) {
+          p.rect(x, y, 4, h, S.window);
+          p.rect(x + 2, y, 1, h, S.facadeDark);
+          if (rng() < 0.6) p.set(x + 1, y + 1, S.glass);
+          if (rng() < 0.4) p.set(x + 3, y + h - 2, S.glassLight);
+        }
+      }
+      for (const y of [11, 13]) p.rect(11, y, 4, 1, G.plank); // janela tapada
+    },
+  },
+  {
+    key: 'shop_shutter', // porta de aço de loja abandonada, com a faixa da placa apagada
+    collides: true,
+    draw(p, rng) {
+      const sign = S.sign[randInt(rng, S.sign.length)]!;
+      p.fill(S.facade);
+      p.rect(0, 0, T, 2, S.concreteDark);
+      p.rect(0, 2, T, 3, sign);
+      for (let x = 2; x < 14; x += 3) p.rect(x, 3, 2, 1, S.facadeLight); // letras apagadas (sem nome de ninguém)
+      for (let y = 5; y < T; y++) p.rect(1, y, 14, 1, y % 2 ? S.shutterDark : S.shutter);
+      p.rect(1, 5, 14, 1, S.shutterLight);
+      for (let k = 0; k < 16; k++) p.set(1 + randInt(rng, 14), 11 + randInt(rng, 5), k % 2 ? S.rust : S.rustDark);
+      p.rect(7, 13, 2, 2, S.ironDark); // cadeado
+      if (rng() < 0.6) for (let x = 3; x < 12; x++) p.set(x, 9 + Math.round(Math.sin(x) * 1.2), G.graffiti[x % 4]!);
+    },
+  },
+  {
+    key: 'vine_wall', // fachada engolida pelo cipó
+    collides: true,
+    draw(p, rng) {
+      drawFacade(p, rng);
+      for (let k = 0; k < 5; k++) {
+        let x = randInt(rng, T);
+        for (let y = 0; y < T; y++) {
+          p.set(x, y, S.vine);
+          if (rng() < 0.45) p.set(x + (rng() < 0.5 ? -1 : 1), y, rng() < 0.5 ? S.vineLight : S.vineDark);
+          if (rng() < 0.3) x = clamp15(x + randInt(rng, 3) - 1);
+        }
+      }
+      p.speckle(rng, [S.vine, S.vineLight, S.vineDark], 24);
+    },
+  },
+  {
+    key: 'scrap', // monte de sucata: chapas, cano e engrenagem
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 13.5, 7, 2.2, C.shadow);
+      // tambor de óleo enferrujado
+      p.rect(2, 4, 5, 10, S.rust);
+      p.rect(2, 4, 5, 1, S.rustLight);
+      p.rect(2, 7, 5, 1, S.rustDark);
+      p.rect(2, 11, 5, 1, S.rustDark);
+      p.rect(6, 4, 1, 10, S.rustDark);
+      // chapas de lata empilhadas e um cano
+      p.rect(7, 9, 8, 2, S.iron);
+      p.rect(7, 9, 8, 1, S.ironLight);
+      p.rect(8, 11, 7, 2, S.rust);
+      p.rect(8, 11, 7, 1, S.rustLight);
+      p.rect(9, 6, 6, 1, S.ironLight);
+      p.rect(9, 7, 6, 1, S.ironDark);
+      p.set(14, 6, S.window);
+      p.outline(S.outline);
+    },
+  },
+  {
+    key: 'tires', // pilha de pneus velhos
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 14.2, 6.5, 1.6, C.shadow);
+      // três pneus deitados, um em cima do outro (dá para ver o furo do de cima)
+      for (const y of [11, 8, 5]) {
+        p.rect(2, y, 12, 3, S.tire);
+        p.rect(3, y - 1, 10, 1, S.tire);
+        p.rect(3, y + 3, 10, 1, S.tire);
+        p.rect(2, y + 1, 12, 1, S.tireLight);
+        for (let x = 3; x < 13; x += 2) p.set(x, y + 2, S.tireLight); // desenho da banda
+      }
+      p.rect(5, 4, 6, 2, [12, 12, 14, 255]); // furo do pneu de cima
+      p.rect(5, 4, 6, 1, S.tireLight);
+      p.set(4, 9, S.moss);
+      p.set(12, 12, S.mossDark);
+      p.outline(S.outline);
+    },
+  },
+  {
+    key: 'wires', // fios caídos no chão (dá para passar por cima)
+    draw(p) {
+      for (const [color, phase, base] of [[S.wire, 0, 5], [S.wireRed, 1.7, 9], [S.wireYellow, 3.1, 12]] as const) {
+        for (let x = 0; x < T; x++) {
+          if (base === 12 && x > 11) break; // ponta solta
+          p.set(x, base + Math.round(Math.sin(x * 0.55 + phase) * 1.6), color);
+        }
+      }
+      p.set(12, 11, S.wireYellow);
+      p.set(13, 10, S.herbFlower); // faísca de outro tempo
+    },
+  },
+  {
+    key: 'pole_wires', // poste de madeira com fios pendurados
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 14.5, 3, 1.2, C.shadow);
+      p.rect(7, 0, 2, 15, S.deadWood);
+      p.rect(8, 0, 1, 15, S.deadWoodDark);
+      p.rect(3, 1, 10, 1, S.deadWoodDark); // travessa lá no alto
+      for (const x of [3, 12]) p.set(x, 0, S.insulator);
+      p.rect(9, 4, 3, 4, S.ironLight); // transformador velho
+      p.rect(10, 4, 2, 4, S.iron);
+      p.rect(9, 8, 3, 1, S.rustDark);
+      for (let x = 0; x < 3; x++) p.set(x, 2 + x, S.wire); // fios caindo para os lados
+      for (let y = 2; y < 9; y++) p.set(13 + (y > 5 ? 1 : 0), y, S.wireRed);
+      p.set(6, 9, S.moss);
+      p.set(9, 12, S.mossDark);
+      p.outline(S.outline);
+    },
+  },
+  {
+    key: 'dead_tree', // árvore seca
+    collides: true,
+    draw(p) {
+      p.ellipse(8, 14.5, 5, 1.6, C.shadow);
+      p.rect(7, 7, 2, 8, S.deadWood);
+      p.rect(8, 7, 1, 8, S.deadWoodDark);
+      for (const [x0, y0, dx] of [[7, 8, -1], [8, 7, 1], [7, 5, -1], [8, 4, 1], [7, 3, 0]] as const) {
+        for (let k = 0; k < 4; k++) p.set(x0 + dx * k, y0 - k, k === 3 ? S.deadWoodLight : S.deadWood);
+      }
+      for (const [x, y] of [[3, 4], [12, 3], [5, 1], [10, 6]] as const) p.set(x, y, S.dry); // folhas secas
+      p.outline(S.outline);
+    },
+  },
+  {
+    key: 'herbs', // ervas de cura (arruda, boldo...) nascendo no meio do concreto
+    draw(p, rng) {
+      for (let k = 0; k < 9; k++) {
+        const x = 4 + randInt(rng, 8);
+        const y = 7 + randInt(rng, 6);
+        p.rect(x, y, 2, 2, k % 3 === 0 ? S.herbDark : k % 3 === 1 ? S.herb : S.herbLight);
+      }
+      p.rect(7, 12, 1, 3, S.herbDark);
+      for (const [x, y] of [[5, 7], [10, 8], [8, 6]] as const) p.set(x, y, S.herbFlower);
+      p.outline(S.outline);
+    },
+  },
+  { key: 'bus_left', collides: true, draw: sliceOf(3, drawBus, 0) },
+  { key: 'bus_middle', collides: true, draw: sliceOf(3, drawBus, 1) },
+  { key: 'bus_right', collides: true, draw: sliceOf(3, drawBus, 2) },
+  { key: 'concrete_cracked', draw: (p, rng) => drawConcrete(p, rng, true, true) },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));

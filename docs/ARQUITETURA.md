@@ -162,7 +162,7 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   acorda quem desmaia ali. Sem `nome`, a zona se chama "Pindorama".
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
 - Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
-  `scripts/gen-map.ts`) e Ruínas de Santo Amaro (80×60, provisório, `scripts/gen-santo-amaro.ts`, usando
+  `scripts/gen-map.ts`) e Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`, usando
   `scripts/map-builder.ts`). Gerar de novo por cima apaga as edições: gere com `--out outro.tmj` e compare.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.

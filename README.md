@@ -12,8 +12,9 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 - Entre com **nome e senha**: na primeira vez o personagem nasce na hora; depois ele volta com o nível,
   a XP, a vida, a mochila e o lugar onde parou
-- Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro** (por enquanto um mapa provisório e sem
-  monstros: a arte nova e as criaturas de lá vêm nos próximos passos)
+- Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro**: quarteirões de prédios mortos, lojas
+  fechadas, prédios desabados cheios de entulho e ervas de cura, e o largo com o chafariz seco (as criaturas de lá
+  chegam no próximo passo)
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -157,7 +158,7 @@ Se uma saída apontar para um mapa ou ponto que não existe, o servidor explica 
 
 ![Mapa do Refúgio de Guarapiranga](docs/mapa-refugio.png)
 
-![Mapa das Ruínas de Santo Amaro (provisório)](docs/mapa-santo-amaro.png)
+![Mapa das Ruínas de Santo Amaro](docs/mapa-santo-amaro.png)
 
 Nos mapas: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci, **azul-claro** = saída
 para outro mapa.
