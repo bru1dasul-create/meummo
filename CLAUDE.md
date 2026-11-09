@@ -25,9 +25,10 @@
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
    `data/items.json`, vendedores e outros NPCs em `data/npcs.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
    Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
-   ícones de itens em `src/client/itemArt.ts`, ícones das habilidades em `src/client/actionArt.ts`, personagens
-   (20x24) e o equipamento no corpo em `src/client/game/characters.ts` — equipamento com ícone novo precisa de
-   desenho lá (o teste avisa).
+   ícones de itens em `src/client/itemArt.ts`, ícones das habilidades em `src/client/actionArt.ts`, moeda em
+   `src/client/coinArt.ts`, personagens em camadas em `src/client/game/doll/` (+ `characters.ts`, aparência de
+   NPC em `NPC_LOOKS`) e o equipamento no corpo em `src/client/game/gearArt.ts` — equipamento com ícone novo
+   precisa de um visual lá com o mesmo nome (o teste avisa). Confira com `npm run render:characters`.
    Mapas em camadas: `ground`, `sombras`, `decor` e `acima` (por cima dos personagens: copas e alto dos
    postes; nada que bloqueia vai nela). Árvores grandes e postes altos: `scripts/map-depth.ts`.
 5. Antes de commitar: `npm run check` (tipos + testes) precisa passar. Regra nova no servidor vem com teste em `tests/`.
@@ -85,6 +86,8 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
 - `npm run gen:santo-amaro -- --out arquivo.tmj` — idem para as Ruínas de Santo Amaro
 - `npm run gen:billings -- --out arquivo.tmj` — idem para a Represa Billings
 - `npm run render:map` — desenha todos os mapas em `docs/mapa-<id>.png` (azul-claro = saídas)
+- `npm run render:characters` — prancha de personagens (animações, equipamentos, Dona Iracema) em `docs/personagens.png`
+  (`-- --escala 6 --so Beto` para ver um de perto, `-- --tudo` para todos os quadros)
 
 ## Instalação no PC do dono do projeto (Windows)
 - O jogo fica em `E:\mmorpg`, instalado por `instalar-windows.ps1` (comando de uma linha no README).

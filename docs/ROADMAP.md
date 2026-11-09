@@ -95,8 +95,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[estrutura]** Loja: a **Dona Iracema**, quitandeira do píer, na praça do Refúgio, vende banana, arruda e
   chapéu de palha e compra qualquer item pela metade do preço (`preco` em `data/items.json`; quem vende o quê e
   onde fica em `data/npcs.json`). Clicar nela leva até ela e abre a loja; afastar-se fecha
-- [ ] **[arte]** Caprichar a loja e o ouro: moeda desenhada, som de moeda, janela da loja e a aparência da
-  Dona Iracema (hoje é o personagem padrão com chapéu de palha)
+- [x] **[arte]** Caprichar a loja e o ouro: moeda desenhada (com flor de ipê em relevo) em todo lugar que mostra
+  ouro, sons de moeda (pegar, comprar, vender), janela da loja de barraca de feira (toldo, retrato, fala no balão,
+  abas Comprar/Vender) e a Dona Iracema com aparência própria (coque, óculos, vestido de chita com avental)
 - [x] **[mundo]** Barraquinha de frutas da Dona Iracema, na praça do Refúgio (ela fica em (46, 28)): toldo listrado
   atrás dela e balcão com frutas na frente. De quebra: os píeres dos lados voltaram a encostar no deck da fogueira
   (as casas maiores do passo 2 tinham fechado a passagem) e um teste confere que todo NPC tem lugar alcançável
@@ -124,6 +125,5 @@ noite e dia (lendas da noite), montarias, casas de jogadores.
 ## Decisões pendentes
 - **Nome do jogo** ("MeuMMO" é provisório) — sugestões em DESIGN.md
 - **Arte definitiva:** hoje é arte provisória desenhada por código
-- **Qual personagem fica:** o da `main` ("Equipamento aparece no personagem e personagem redesenhado") ou o do ramo
-  `claude/blissful-meitner-hp1i5e` (camadas e animações)? Os dois fizeram a mesma tarefa ao mesmo tempo; a [arte]
-  mostra prints dos dois e o dono escolhe. Seja qual for, o trabalho continua a partir da `main`.
+- ~~Qual personagem fica~~: decidido — o dono escolheu o personagem em camadas da [arte] (com animações de ataque,
+  expressões e mais detalhe); ele substituiu o personagem 20x24 a partir da `main`.
