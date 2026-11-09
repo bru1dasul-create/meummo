@@ -6,9 +6,20 @@ import { BAG_SIZE, EQUIP_SLOTS, type EquipSlot } from '../shared/items';
 import type { ClientMsg } from '../shared/protocol';
 
 const MAX_RAW_LENGTH = 1024;
+/** Maior quantidade numa compra ou venda (maior que qualquer pilha). */
+const MAX_TRADE = 999;
 
 function isAngle(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 10;
+}
+
+function isId(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
+}
+
+/** Quantos itens de uma vez numa compra ou venda (uma pilha cheia, no máximo). */
+function isCount(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= MAX_TRADE;
 }
 
 /** Transforma o texto recebido numa mensagem válida, ou null se vier qualquer coisa estranha. */
@@ -52,6 +63,14 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         : null;
     case 'unequip':
       return EQUIP_SLOTS.includes(msg.part as EquipSlot) ? { t: 'unequip', part: msg.part as EquipSlot } : null;
+    case 'buy':
+      return isId(msg.npc) && typeof msg.item === 'string' && /^[a-z0-9_-]{1,40}$/.test(msg.item) && isCount(msg.n)
+        ? { t: 'buy', npc: msg.npc, item: msg.item, n: msg.n }
+        : null;
+    case 'sell':
+      return isId(msg.npc) && Number.isInteger(msg.i) && (msg.i as number) >= 0 && (msg.i as number) < BAG_SIZE && isCount(msg.n)
+        ? { t: 'sell', npc: msg.npc, i: msg.i as number, n: msg.n }
+        : null;
     case 'loaded':
       return { t: 'loaded' };
     case 'chat':

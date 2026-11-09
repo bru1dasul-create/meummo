@@ -87,8 +87,14 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   fechadas, cipó, entulho, sucata, pneus, fios, postes, árvore seca, ervas, ônibus) e tom pesado
 - [x] Ruínas de Santo Amaro, passo 3: Corpo-Seco, Capelobo e a Mula sem Cabeça (chefe com investida e rastro de
   fogo), com itens novos (Arruda, Sucata, Faca de Sucata, Couraça de Lata, Ferradura em Brasa)
-- [ ] **[estrutura]** Ouro e loja: monstros deixam ouro, um vendedor no Refúgio vende banana e equipamento
-  (visual da loja: [arte]; lugar do vendedor no mapa: [mundo])
+- [x] **[estrutura]** Ouro: cada monstro deixa ouro (campo `ouro` em `data/monsters.json`) para cada um que ajudou;
+  aparece no painel, na mochila e no "+N ouro"; fica salvo com o personagem
+- [x] **[estrutura]** Loja: a **Dona Iracema**, quitandeira do píer, na praça do Refúgio, vende banana, arruda e
+  chapéu de palha e compra qualquer item pela metade do preço (`preco` em `data/items.json`; quem vende o quê e
+  onde fica em `data/npcs.json`). Clicar nela leva até ela e abre a loja; afastar-se fecha
+- [ ] **[arte]** Caprichar a loja e o ouro: moeda desenhada, som de moeda, janela da loja e a aparência da
+  Dona Iracema (hoje é o personagem padrão com chapéu de palha)
+- [ ] **[mundo]** Uma barraquinha de frutas atrás da Dona Iracema, na praça do Refúgio (ela fica em (46, 28))
 - [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
 - [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,

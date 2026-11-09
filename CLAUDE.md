@@ -23,7 +23,7 @@
 3. **Regras compartilhadas** (movimento, esquiva, mapa, combate/projéteis, progressão, protocolo, busca de
    caminho) ficam em `src/shared`, que não pode importar nada de navegador, Phaser ou Node.
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
-   `data/items.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
+   `data/items.json`, vendedores e outros NPCs em `data/npcs.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
    Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
    ícones de itens em `src/client/itemArt.ts`, ícones das habilidades em `src/client/actionArt.ts`, personagens
    (20x24) e o equipamento no corpo em `src/client/game/characters.ts` — equipamento com ícone novo precisa de

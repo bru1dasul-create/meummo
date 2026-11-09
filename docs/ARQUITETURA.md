@@ -86,6 +86,9 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 - Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro: os itens vão direto para
   a mochila dele (`loot` para o efeito do item voando, `inv` com a mochila nova). Mochila cheia: o item se perde,
   com aviso. Item raro ou lendário salva o personagem na hora.
+- **Ouro:** cada um que ajudou também sorteia o `ouro` do monstro (`MonsterDef.gold`). O ouro fica em
+  `Inventory.gold` (não ocupa espaço; máximo `MAX_GOLD` em `src/shared/items.ts`), vai no `inv` (`gold`) e no
+  `loot` (`gold`, para o "+N ouro"), e é salvo dentro do JSON da mochila — save de antes do ouro entra com 0.
 - `src/server/inventory.ts`: 20 espaços com pilhas e 4 partes equipadas (`weapon`, `head`, `body`, `charm`).
   Equipar troca com o que estava naquela parte. A soma dos equipamentos (`Player.bonus`) entra na vida máxima,
   no dano do estilingue e da Bordunada e na defesa (cada golpe recebido perde `defesa`, mínimo 1).
@@ -98,6 +101,18 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   está vendo (e para o próprio). O navegador desenha em camadas (`src/client/game/characters.ts`): cabeça, corpo,
   cabelo, roupa (gibão/couraça), braço, amuleto, arma e chapéu por cima; cada look + equipamento vira uma textura
   criada uma vez só. O boneco da mochila usa o mesmo desenho.
+
+## NPCs e loja
+- Os NPCs vêm de `data/npcs.json` (lido por `src/server/npcs.ts`; `checkNpcs` confere ao ligar se o mapa existe,
+  se tudo que a loja vende existe e tem `preco`, e se o que ela veste é equipamento). Cada mapa (World) fica com
+  os seus (`World.npcs`, classe `Npc` em `entities.ts`); lugar bloqueado vira o chão livre mais perto, com aviso.
+- NPC não anda, não luta e não entra na área de visão: a lista do mapa vai inteira no `welcome` e no `zone`
+  (`npcs`, com o desenho, o título, a fala e a loja). O navegador desenha como personagem (`kind: 'npc'`,
+  sem barra de vida) e abre a janela da loja (`src/client/shop.ts`) quando você clica nele e chega perto.
+- Comprar e vender são pedidos (`buy` com o item e a quantidade; `sell` com o espaço da mochila e a quantidade).
+  O servidor confere tudo: distância (`TRADE_RANGE`), acordado, item à venda, ouro, espaço na mochila (compra
+  tudo ou nada) e o limite de ouro (vende só o que cabe). A loja paga `compraPor`% do preço (`sellPrice`, mínimo 1).
+  Recusa vem em `fail` (`no_gold`, `too_far`, `cant_trade`, `bag_full`, `dead`), com `item: true`.
 
 ## Personagens salvos (`src/server/accounts.ts`)
 - Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
@@ -127,14 +142,15 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
+| cliente | `buy` / `sell` | comprar `n` de um item do vendedor `npc` / vender `n` do item do espaço `i` para ele |
 | cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
-| servidor | `welcome` / `reject` | entrou (com seus números) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
+| servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
 | servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, ou o servidor está desligando |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar no mesmo mapa |
-| servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`) |
+| servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
 | servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
@@ -142,7 +158,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
-| servidor | `inv` / `loot` | sua mochila mudou / você pegou estes itens do monstro que caiu em (x, y) |
+| servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / você pegou estes itens (e este ouro) do monstro que caiu em (x, y) |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |

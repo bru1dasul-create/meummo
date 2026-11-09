@@ -4,6 +4,7 @@
 import {
   BAG_SIZE,
   EQUIP_SLOTS,
+  MAX_GOLD,
   emptyEquipment,
   gearLookOf,
   type EquipSlot,
@@ -18,13 +19,25 @@ import {
 export interface SavedInventory {
   slots: (ItemStack | null)[];
   equipped: Partial<Record<EquipSlot, string | null>>;
+  /** Saves de antes do ouro não têm: começa com 0. */
+  gold?: number;
 }
 
 export class Inventory {
   readonly slots: (ItemStack | null)[] = new Array<ItemStack | null>(BAG_SIZE).fill(null);
   readonly equipped: Record<EquipSlot, string | null> = emptyEquipment();
+  /** Ouro: não ocupa espaço na mochila (até MAX_GOLD). */
+  gold = 0;
 
   constructor(private readonly defs: ReadonlyMap<string, ItemInfo>) {}
+
+  /** Guarda ouro (até o máximo). Devolve quanto entrou. */
+  addGold(n: number): number {
+    if (!(n > 0)) return 0;
+    const added = Math.min(Math.floor(n), MAX_GOLD - this.gold);
+    this.gold += added;
+    return added;
+  }
 
   /** O item do espaço `i` e o que se sabe dele (ou null se o espaço está vazio). */
   at(i: number): { stack: ItemStack; def: ItemInfo } | null {
@@ -54,6 +67,15 @@ export class Inventory {
       }
     }
     return Math.floor(n) - left;
+  }
+
+  /** Quantos deste item ainda cabem (nas pilhas que não estão cheias e nos espaços vazios). */
+  room(item: string): number {
+    const def = this.defs.get(item);
+    if (!def) return 0;
+    let room = 0;
+    for (const stack of this.slots) room += stack === null ? def.stack : stack.item === item ? Math.max(0, def.stack - stack.n) : 0;
+    return room;
   }
 
   /** Tira até `n` itens do espaço `i`. */
@@ -107,19 +129,21 @@ export class Inventory {
 
   /** Uma cópia, para mandar ao navegador ou salvar. */
   state(): InventoryState {
-    return { slots: this.slots.map((s) => (s ? { ...s } : null)), equipped: { ...this.equipped } };
+    return { slots: this.slots.map((s) => (s ? { ...s } : null)), equipped: { ...this.equipped }, gold: this.gold };
   }
 
   /**
    * Monta a mochila a partir do que estava salvo, com cuidado: o arquivo pode ser de outra versão do jogo.
    * Itens que não existem mais em data/items.json saem (e voltam em `dropped`); pilhas grandes demais são
-   * cortadas; um equipamento que mudou de parte volta para a mochila.
+   * cortadas; um equipamento que mudou de parte volta para a mochila; o ouro fica entre 0 e MAX_GOLD
+   * (save de antes do ouro: 0).
    */
   static fromSaved(defs: ReadonlyMap<string, ItemInfo>, saved: unknown): { inventory: Inventory; dropped: string[] } {
     const inventory = new Inventory(defs);
     const dropped: string[] = [];
     if (typeof saved !== 'object' || saved === null) return { inventory, dropped };
-    const { slots, equipped } = saved as { slots?: unknown; equipped?: unknown };
+    const { slots, equipped, gold } = saved as { slots?: unknown; equipped?: unknown; gold?: unknown };
+    if (typeof gold === 'number' && Number.isFinite(gold)) inventory.gold = Math.min(MAX_GOLD, Math.max(0, Math.floor(gold)));
     if (Array.isArray(slots)) {
       slots.slice(0, BAG_SIZE).forEach((raw: unknown, i) => {
         if (typeof raw !== 'object' || raw === null) return;

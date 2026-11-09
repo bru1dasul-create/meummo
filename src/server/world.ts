@@ -19,6 +19,7 @@ import {
   STEP_MS,
   STEP_TOLERANCE_MS,
   TICK_MS,
+  TRADE_RANGE,
   VIEW_HYSTERESIS,
   VIEW_RADIUS_X,
   VIEW_RADIUS_Y,
@@ -43,18 +44,19 @@ import type { GameMap, Tile } from '../shared/map';
 import { applyInput, canStep, nextStepTime } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
-import type { EquipSlot, ItemInfo, ItemStack } from '../shared/items';
+import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import type { FailReason, ItemAction, RejectReason, ServerMsg } from '../shared/protocol';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
 import { Inventory } from './inventory';
-import { Monster, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
+import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
+import type { NpcDef, NpcShop } from './npcs';
 import { sanitizeChat } from './validate';
 
-export { Monster, Player, type Conn } from './entities';
+export { Monster, Npc, Player, type Conn } from './entities';
 
 export type JoinResult = { ok: true; player: Player } | { ok: false; reason: RejectReason };
 
@@ -93,6 +95,8 @@ export interface WorldOptions {
   items?: ReadonlyMap<string, ItemInfo>;
   /** Ligação com os outros mapas (veja WorldLinks). */
   links?: WorldLinks;
+  /** Personagens que não são jogadores (de data/npcs.json); cada mapa fica com os seus. */
+  npcs?: ReadonlyMap<string, NpcDef>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -120,6 +124,8 @@ export class World {
   readonly players = new Map<number, Player>();
   readonly monsters = new Map<number, Monster>();
   readonly projectiles = new Map<number, Projectile>();
+  /** Vendedora e outros personagens que não são jogadores (ficam parados no lugar deles). */
+  readonly npcs = new Map<number, Npc>();
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
   /** Chão pegando fogo agora (rastros de investida). */
@@ -153,6 +159,10 @@ export class World {
     this.lastTickAt = this.now();
     this.nextAutosaveAt = this.lastTickAt + AUTOSAVE_MS;
 
+    for (const def of options.npcs?.values() ?? []) {
+      if (def.map === map.id) this.placeNpc(def);
+    }
+
     const defs = options.monsters ?? new Map<string, MonsterDef>();
     for (const zone of map.monsterZones) {
       const def = defs.get(zone.monster);
@@ -164,6 +174,33 @@ export class World {
       this.zones.push(state);
       for (let i = 0; i < zone.count; i++) this.spawnMonster(state);
     }
+  }
+
+  /** Põe o NPC no lugar dele (ou no chão livre mais perto, se o mapa mudou e o lugar ficou bloqueado). */
+  private placeNpc(def: NpcDef): void {
+    let tile: Tile | null = { x: def.x, y: def.y };
+    if (!this.map.isWalkable(def.x, def.y) || !this.map.isReachable(def.x, def.y)) {
+      tile = this.map.nearestWalkable(def.x, def.y);
+      if (tile && !this.map.isReachable(tile.x, tile.y)) tile = null;
+      this.log(
+        tile
+          ? `aviso: ${def.name} (data/npcs.json) estava em (${def.x}, ${def.y}), que é bloqueado no mapa "${this.map.id}"; ficou em (${tile.x}, ${tile.y})`
+          : `aviso: ${def.name} (data/npcs.json) não tem onde ficar perto de (${def.x}, ${def.y}) no mapa "${this.map.id}"`,
+      );
+      if (!tile) return;
+    }
+    const worn = emptyEquipment();
+    for (const id of def.wears) {
+      const slot = this.items.get(id)?.slot;
+      if (slot) worn[slot] = id;
+    }
+    const npc = new Npc(this.links.nextId(), def, tile.x, tile.y, gearLookOf(worn, this.items));
+    this.npcs.set(npc.id, npc);
+  }
+
+  /** Os NPCs deste mapa, para o navegador desenhar. */
+  private npcList() {
+    return [...this.npcs.values()].map((npc) => npc.info());
   }
 
   // ======================= entrar e sair =======================
@@ -207,6 +244,7 @@ export class World {
         map: this.map.id,
         items: [...this.items.values()],
         inv: player.inventory.state(),
+        npcs: this.npcList(),
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
     ]);
@@ -264,6 +302,7 @@ export class World {
         stats: player.stats(),
         inv: player.inventory.state(),
         online: this.links.online(),
+        npcs: this.npcList(),
       },
     ]);
     this.saveCharacters([player]);
@@ -437,11 +476,13 @@ export class World {
     this.emitToViewers(player, { t: 'gear', id: player.id, gear: player.inventory.look() });
   }
 
-  /** O monstro caiu: cada um que ajudou sorteia os itens dele (cada um tem os seus, ninguém rouba de ninguém). */
+  /** O monstro caiu: cada um que ajudou sorteia os itens e o ouro dele (cada um tem os seus, ninguém rouba de ninguém). */
   private giveLoot(player: Player, monster: Monster): void {
     const got: ItemStack[] = [];
     const lost: ItemStack[] = [];
     let precious = false;
+    const [goldMin, goldMax] = monster.def.gold;
+    const gold = goldMax > 0 ? player.inventory.addGold(this.rollRange(goldMin, goldMax)) : 0;
     for (const drop of monster.def.drops) {
       if (this.random() * 100 >= drop.chance) continue;
       const def = this.items.get(drop.item);
@@ -453,13 +494,63 @@ export class World {
       if (added > 0 && def.rarity !== 'common') precious = true;
       if (added > 0 && def.rarity === 'legendary') this.links.announce({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
     }
-    if (got.length > 0) {
+    if (got.length > 0 || gold > 0) {
       player.invDirty = true;
-      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got });
-      player.outbox.push({ t: 'sys', text: `Você pegou: ${this.describe(got)}.` });
+      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got, ...(gold > 0 ? { gold } : {}) });
+      const parts = [...(gold > 0 ? [`${gold} de ouro`] : []), ...(got.length > 0 ? [this.describe(got)] : [])];
+      player.outbox.push({ t: 'sys', text: `Você pegou: ${parts.join(', ')}.` });
       if (precious) this.saveCharacters([player]); // item raro não pode sumir se o servidor cair
     }
     if (lost.length > 0) player.outbox.push({ t: 'sys', text: `Mochila cheia! Ficou para trás: ${this.describe(lost)}.` });
+  }
+
+  // ======================= loja =======================
+
+  /** Comprar `n` deste item do vendedor `npcId` (pelo `preco` de data/items.json). */
+  buy(player: Player, npcId: number, item: string, n: number): void {
+    const shop = this.shopFor(player, npcId);
+    if (!shop) return;
+    const def = this.items.get(item);
+    if (!def || def.price <= 0 || !shop.sells.includes(item)) return this.fail(player, 'cant_trade', true);
+    const cost = def.price * n;
+    if (player.inventory.gold < cost) return this.fail(player, 'no_gold', true);
+    if (player.inventory.room(item) < n) return this.fail(player, 'bag_full', true);
+    player.inventory.add(item, n);
+    player.inventory.gold -= cost;
+    player.invDirty = true;
+    player.outbox.push({ t: 'sys', text: `Você comprou: ${this.describe([{ item, n }])}, por ${cost} de ouro.` });
+  }
+
+  /** Vender `n` do item do espaço `i` da mochila para o vendedor `npcId` (ele paga uma parte do preço). */
+  sell(player: Player, npcId: number, i: number, n: number): void {
+    const shop = this.shopFor(player, npcId);
+    if (!shop) return;
+    const found = player.inventory.at(i);
+    if (!found) return; // a mochila do navegador estava desatualizada: nada a fazer
+    const each = sellPrice(found.def, shop.buyPercent);
+    // Só vende o que cabe no limite de ouro (ninguém perde item sem receber).
+    const count = Math.min(n, found.stack.n, Math.floor((MAX_GOLD - player.inventory.gold) / Math.max(1, each)));
+    if (each <= 0 || count <= 0) return this.fail(player, 'cant_trade', true);
+    const sold = player.inventory.take(i, count)!;
+    const gold = player.inventory.addGold(each * sold.n);
+    player.invDirty = true;
+    player.outbox.push({ t: 'sys', text: `Você vendeu: ${this.describe([sold])}, por ${gold} de ouro.` });
+  }
+
+  /** A loja do vendedor, se dá para negociar agora (perto dele, acordado). Recusa com o motivo, se não. */
+  private shopFor(player: Player, npcId: number): NpcShop | null {
+    if (player.loading) return null;
+    const npc = this.npcs.get(npcId);
+    if (!npc?.def.shop) return null; // vendedor de outro mapa (o navegador estava desatualizado): ignora
+    if (player.dead) {
+      this.fail(player, 'dead', true);
+      return null;
+    }
+    if (chebyshev(player, npc) > TRADE_RANGE) {
+      this.fail(player, 'too_far', true);
+      return null;
+    }
+    return npc.def.shop;
   }
 
   /** "Banana ×2, Chapéu de Palha" */

@@ -90,14 +90,15 @@ export class EntityView {
     this.maxHp = state.maxHp;
     this.stepMs = state.stepMs;
     this.look = state.look;
-    this.height = state.kind === 'player' ? CHAR_TOP : TILE_SIZE;
+    this.height = state.kind === 'monster' ? TILE_SIZE : CHAR_TOP;
     this.facingLeft = state.dir === LEFT;
     const [px, py] = feetOf(state.x, state.y);
     this.fromX = this.toX = px;
     this.fromY = this.toY = py;
 
     this.shadow = scene.add.ellipse(px, py - 1.5, 10, 4, 0x000000, 0.28);
-    const texture = state.kind === 'player' ? characterTexture(scene, state.look, state.gear) : monsterTexture(scene, state.type);
+    // jogadores e NPCs (vendedora...) usam o mesmo desenho de personagem
+    const texture = state.kind === 'monster' ? monsterTexture(scene, state.type) : characterTexture(scene, state.look, state.gear);
     this.sprite = scene.add.sprite(px, py, texture, 0).setOrigin(0.5, 1);
 
     this.tag = document.createElement('div');
@@ -154,7 +155,7 @@ export class EntityView {
 
   /** Jogador trocou de equipamento: redesenha o personagem com as peças novas. */
   setGear(gear: GearLook): void {
-    if (this.kind !== 'player') return;
+    if (this.kind === 'monster') return;
     const frame = this.sprite.frame.name;
     this.sprite.setTexture(characterTexture(this.scene, this.look, gear), frame);
   }
@@ -173,7 +174,7 @@ export class EntityView {
     this.sprite.setDepth(y);
     this.shadow.setDepth(y - 0.5);
 
-    if (this.kind === 'player') {
+    if (this.kind !== 'monster') {
       const facing = facingOf(this.dir);
       // cada tile: meio passo com uma perna na frente, meio passo com as pernas juntas (passo A, junto, passo B, junto...)
       const step = moving && t < 0.5 ? (this.steps % 2 === 0 ? 1 : 2) : 0;
@@ -235,7 +236,18 @@ export class EntityView {
     this.hpFill.style.width = `${(fraction * 100).toFixed(1)}%`;
     this.hpFill.className = fraction > 0.5 ? 'ok' : fraction > 0.25 ? 'mid' : 'low';
     // monstros sempre mostram a vida; jogadores só quando estão machucados (o seu fica no painel)
-    this.hpBar.hidden = this.isSelf || (this.kind === 'player' && fraction >= 1);
+    this.hpBar.hidden = this.isSelf || this.kind === 'npc' || (this.kind === 'player' && fraction >= 1);
+  }
+
+  /** Linha pequena embaixo do nome (NPCs: "quitandeira do píer"). */
+  setSubtitle(text: string): void {
+    this.tag.querySelector('.subtitle')?.remove();
+    if (!text) return;
+    const sub = document.createElement('div');
+    sub.className = 'subtitle';
+    sub.textContent = text;
+    this.nameEl.after(sub);
+    this.cachedLabelWidth = null;
   }
 
   setLevel(level: number): void {

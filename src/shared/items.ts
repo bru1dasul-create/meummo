@@ -33,10 +33,21 @@ export interface ItemInfo {
   description: string;
   /** Nome do desenho (src/client/itemArt.ts). */
   icon: string;
+  /** Preço na loja, em ouro (0 = não se compra nem se vende). Quem vende para a loja recebe uma parte disso. */
+  price: number;
+}
+
+/** Quanto a loja paga por um item: `percent`% do preço, arredondado para baixo (mas pelo menos 1 se o item vale algo). */
+export function sellPrice(def: ItemInfo, percent: number): number {
+  if (def.price <= 0 || percent <= 0) return 0;
+  return Math.max(1, Math.floor((def.price * percent) / 100));
 }
 
 /** Quantos espaços a mochila tem. */
 export const BAG_SIZE = 20;
+
+/** Ouro máximo que um personagem carrega (o que passar disso não entra). */
+export const MAX_GOLD = 1_000_000;
 
 export interface ItemStack {
   item: string;
@@ -47,6 +58,8 @@ export interface ItemStack {
 export interface InventoryState {
   slots: (ItemStack | null)[];
   equipped: Record<EquipSlot, string | null>;
+  /** Ouro (fica fora dos espaços da mochila: não ocupa lugar). */
+  gold: number;
 }
 
 /** O que aparece no personagem: o desenho (ícone) do que está equipado em cada parte. */

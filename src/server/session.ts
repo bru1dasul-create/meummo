@@ -85,6 +85,12 @@ export class Session {
       case 'unequip':
         this.lobby.realm.unequip(this.player, msg.part);
         break;
+      case 'buy':
+        this.lobby.realm.buy(this.player, msg.npc, msg.item, msg.n);
+        break;
+      case 'sell':
+        this.lobby.realm.sell(this.player, msg.npc, msg.i, msg.n);
+        break;
       case 'loaded':
         this.lobby.realm.loaded(this.player);
         break;

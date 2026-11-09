@@ -1162,6 +1162,201 @@ kbd {
   font-size: 16px;
 }
 
+/* Ouro: número com uma moedinha na frente (painel e mochila) */
+.gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffd76a;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gold::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border: 1px solid #8a5a0c;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff2b0, #f2c23c 45%, #b8800f);
+}
+
+#hud-gold {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+#bag-gold {
+  margin-left: 8px;
+}
+
+.float.gold-gain {
+  color: #ffd76a;
+}
+
+/* NPCs (vendedora...): nome em verde-água e o que ela é embaixo */
+.tag.npc .name {
+  color: #8fe3c8;
+}
+
+.tag .subtitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0.9;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 3px #000;
+}
+
+/* Loja (visual simples; a frente de Arte capricha depois) */
+#shop {
+  position: fixed;
+  z-index: 21;
+  top: calc(112px + env(safe-area-inset-top));
+  left: 8px;
+  width: min(360px, calc(100vw - 16px));
+  max-height: calc(100vh - 124px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--frame);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(34, 27, 18, 0.97), rgba(16, 15, 12, 0.97));
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+}
+
+.shop-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.shop-who {
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-who strong {
+  font-family: var(--title-font);
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.shop-title {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shop-close {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.shop-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.shop-line {
+  margin: 0;
+  color: var(--text);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.shop-purse {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+#shop h3 {
+  margin: 4px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--accent);
+  font-size: 14px;
+}
+
+#shop h3 small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.shop-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.shop-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.shop-effect {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shop-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.shop-list button {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.shop-sell {
+  background: rgba(233, 185, 65, 0.16);
+  color: var(--accent);
+}
+
+.shop-sell:hover {
+  background: rgba(233, 185, 65, 0.28);
+}
+
+.shop-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
 .touch-only {
   display: none;
 }
@@ -1234,6 +1429,21 @@ kbd {
   /* abaixo do painel de vida */
   #zone-banner {
     top: calc(118px + env(safe-area-inset-top));
+  }
+
+  /* Celular: a loja ocupa a tela (fecha no ✕) */
+  #shop {
+    top: calc(8px + env(safe-area-inset-top));
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: none;
+    background: rgb(20, 18, 14);
+  }
+
+  .shop-list button {
+    padding: 10px 12px;
   }
 
   /* Celular: a mochila ocupa a tela (fecha no ✕ ou no botão Mochila) */

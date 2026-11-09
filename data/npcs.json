@@ -1,0 +1,15 @@
+{
+  "iracema": {
+    "nome": "Dona Iracema",
+    "titulo": "quitandeira do píer",
+    "mapa": "refugio",
+    "x": 46,
+    "y": 28,
+    "fala": "Banana fresquinha, arruda contra quebranto e chapéu pro sol! Vendo e compro, freguês.",
+    "veste": ["chapeu_palha"],
+    "loja": {
+      "vende": ["banana", "erva_arruda", "chapeu_palha"],
+      "compraPor": 50
+    }
+  }
+}

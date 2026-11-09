@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 10;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -52,3 +52,6 @@ export const DEATH_MS = 3000;
 export const REGEN_DELAY_MS = 6000;
 export const REGEN_EVERY_MS = 1000;
 export const REGEN_FRACTION = 0.03;
+
+/** Distância (em tiles) para negociar com um vendedor. */
+export const TRADE_RANGE = 3;

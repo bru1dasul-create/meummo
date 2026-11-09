@@ -42,6 +42,8 @@ export interface MonsterDef {
   whirlwind: { distance: number; everyMs: number; lines: string[] } | null;
   /** O que ele pode deixar para quem ajudou a derrubá-lo. */
   drops: MonsterDrop[];
+  /** Ouro que cada um que ajudou ganha: sorteado entre [mínimo, máximo] ([0, 0] = nenhum). */
+  gold: [number, number];
 }
 
 /** Um item que o monstro pode deixar: `chance` em % (0 a 100), quantidade entre min e max. */
@@ -116,6 +118,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       },
       whirlwind,
       drops: parseDrops(r.list('itens'), rawId),
+      gold: r.wholeRange('ouro'),
     });
   }
   return defs;

@@ -5,12 +5,13 @@ import { DOWN, type Dir } from '../shared/dir';
 import type { ShotPath } from '../shared/combat';
 import { lookFromName } from '../shared/look';
 import type { MonsterZone, Tile } from '../shared/map';
-import type { ItemBonus, ItemInfo } from '../shared/items';
+import type { GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
-import type { EntityState, PlayerStats, ServerMsg } from '../shared/protocol';
+import type { EntityState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import { Inventory } from './inventory';
 import type { AttackKind, MonsterDef } from './monsters';
+import type { NpcDef } from './npcs';
 import { TokenBucket } from './rate-limit';
 
 /** Como o mundo envia mensagens para um jogador. */
@@ -205,6 +206,32 @@ export class Monster {
 }
 
 export type Entity = Player | Monster;
+
+/** Personagem que não é jogador (vendedora...): fica parado, não luta e não apanha. */
+export class Npc {
+  readonly kind = 'npc' as const;
+  readonly look: number;
+
+  constructor(
+    readonly id: number,
+    readonly def: NpcDef,
+    readonly x: number,
+    readonly y: number,
+    /** O desenho do que ela veste (como o equipamento dos jogadores). */
+    readonly gear: GearLook,
+  ) {
+    this.look = lookFromName(def.name);
+  }
+
+  state(): EntityState {
+    return { id: this.id, kind: 'npc', type: this.def.id, name: this.def.name, x: this.x, y: this.y, dir: DOWN, look: this.look, level: 0, hp: 1, maxHp: 1, gear: this.gear };
+  }
+
+  info(): NpcInfo {
+    const shop = this.def.shop;
+    return { e: this.state(), title: this.def.title, line: this.def.line, shop: shop ? { sells: [...shop.sells], buyPercent: shop.buyPercent } : null };
+  }
+}
 
 /** Chão perigoso por um tempo (o rastro de fogo da investida da Mula sem Cabeça). */
 export interface Hazard {

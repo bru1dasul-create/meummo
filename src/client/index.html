@@ -139,7 +139,7 @@
     </div>
 
     <div id="hud" hidden>
-      <div class="hud-title"><span id="hud-level" class="badge" title="Nível">Nv 1</span><span id="hud-name"></span></div>
+      <div class="hud-title"><span id="hud-level" class="badge" title="Nível">Nv 1</span><span id="hud-name"></span><span id="hud-gold" class="gold" title="Ouro">0</span></div>
       <div class="bar hp" title="Vida"><div id="hud-hp-fill" class="fill ok"></div><span id="hud-hp-text"></span></div>
       <div class="bar xp" title="Experiência: enche e você sobe de nível"><div id="hud-xp-fill" class="fill"></div><span id="hud-xp-text"></span></div>
       <div class="hud-net"><span id="hud-online"></span> <span class="sep">·</span> <span id="hud-ping">ping —</span><button id="hud-sound" type="button" title="Ligar/desligar o som (M)">🔊</button></div>
@@ -163,11 +163,13 @@
       </form>
     </div>
 
+    <div id="shop" hidden></div>
+
     <!-- Mochila por último: fica por cima do chat, dos botões e dos nomes -->
     <button id="bag-button" type="button" hidden title="Mochila (I)"><img alt="" /><span>Mochila</span><kbd class="desktop-only">I</kbd></button>
     <div id="bag" hidden>
       <div class="bag-head">
-        <strong>Mochila</strong> <span id="bag-count" class="bag-count"></span>
+        <strong>Mochila</strong> <span id="bag-count" class="bag-count"></span> <span id="bag-gold" class="gold" title="Ouro">0</span>
         <button id="bag-close" type="button" aria-label="Fechar a mochila" title="Fechar (I ou Esc)">✕</button>
       </div>
       <div id="bag-gear" class="bag-gear"></div>
