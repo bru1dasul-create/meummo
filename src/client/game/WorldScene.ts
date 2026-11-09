@@ -1176,7 +1176,9 @@ export class WorldScene extends Phaser.Scene {
       this.pending = [];
       this.clearPath();
       if (!was) {
-        this.toast.show(this.usingTouch ? 'Encantado pelo canto! Use a Esquiva para se soltar' : 'Encantado pelo canto! Esquiva (Espaço) para se soltar', 2500);
+        // celular: pelo toque (ou pelo aparelho, se ainda não tocou na tela)
+        const touch = this.usingTouch || matchMedia('(pointer: coarse)').matches;
+        this.toast.show(touch ? 'Encantado pelo canto! Use a Esquiva para se soltar' : 'Encantado pelo canto! Esquiva (Espaço) para se soltar', 2500);
         this.me.floatText('♪ encantado', 'charm');
         this.sfx.play('warn');
       }
