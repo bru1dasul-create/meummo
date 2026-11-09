@@ -99,6 +99,8 @@ Depois de salvar, reinicie o servidor e recarregue o jogo.
 
 ![Mapa da vila inicial](docs/mapa.png)
 
+Áreas de monstros no mapa: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci.
+
 ## Organização
 
 | Pasta | O que tem |

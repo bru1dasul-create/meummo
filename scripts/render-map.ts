@@ -42,6 +42,31 @@ for (const layer of map.layers) {
   });
 }
 
+// Áreas de monstros (camada "monstros"): uma moldura colorida por criatura.
+const ZONE_COLORS: Record<string, [number, number, number]> = {
+  sagui: [255, 214, 64],
+  jararaca: [255, 140, 0],
+  saci: [235, 40, 40],
+};
+const zoneLayer = (map as unknown as { layers: { name: string; type: string; objects?: { name: string; x: number; y: number; width: number; height: number }[] }[] }).layers.find(
+  (l) => l.type === 'objectgroup' && l.name.toLowerCase() === 'monstros',
+);
+for (const zone of zoneLayer?.objects ?? []) {
+  const color = ZONE_COLORS[zone.name] ?? [180, 120, 255];
+  const x0 = Math.round(zone.x);
+  const y0 = Math.round(zone.y);
+  const x1 = Math.min(width - 1, Math.round(zone.x + zone.width) - 1);
+  const y1 = Math.min(height - 1, Math.round(zone.y + zone.height) - 1);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const border = x - x0 < 3 || x1 - x < 3 || y - y0 < 3 || y1 - y < 3;
+      const d = (y * width + x) * 4;
+      const a = border ? 0.85 : 0.12;
+      for (let k = 0; k < 3; k++) rgba[d + k] = Math.round(color[k]! * a + rgba[d + k]! * (1 - a));
+    }
+  }
+}
+
 // Pixel art usa poucas cores: um PNG com paleta fica ~15x menor que o normal.
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n;
