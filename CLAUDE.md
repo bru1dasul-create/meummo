@@ -30,6 +30,12 @@
 - `npm run gen:tiles` — redesenha a arte provisória (`scripts/tileset.ts` → `public/assets/tiles.png`)
 - `npm run render:map` — desenha o mapa inteiro em `docs/mapa.png`
 
+## Instalação no PC do dono do projeto (Windows)
+- O jogo fica em `E:\mmorpg`, instalado por `instalar-windows.ps1` (comando de uma linha no README).
+- Atalhos na área de trabalho: `jogar.bat` (liga tudo e abre o navegador) e `atualizar.bat` (git pull + npm install).
+- Scripts `.bat`/`.ps1` sem acentos (compatibilidade) e com CRLF (veja `.gitattributes`).
+- Se mudar algo que exige passo extra na instalação, atualize o `instalar-windows.ps1` e o `atualizar.bat`.
+
 ## Conferir no navegador
 Para ver de verdade (além dos testes): `npm run build && npm start`, ligue alguns bots e abra
 http://localhost:3000 com o Playwright/Chromium, entre com um nome e tire prints (computador e celular).

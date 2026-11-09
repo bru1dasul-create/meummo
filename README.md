@@ -15,7 +15,20 @@ código do Claude do outro. O nome é provisório.
 
 O que vem depois está em [docs/ROADMAP.md](docs/ROADMAP.md). Próxima etapa: **M1 — Combate**.
 
-## Como jogar no seu computador
+## Instalar no Windows (jeito fácil)
+
+Abra o **PowerShell** (tecla Windows, digite `PowerShell`, Enter), cole esta linha e aperte Enter:
+
+```powershell
+irm https://raw.githubusercontent.com/bru1dasul-create/meummo/main/instalar-windows.ps1 | iex
+```
+
+Ele instala o que faltar (Node.js e Git), baixa o jogo em `E:\mmorpg`, instala as dependências
+e cria dois atalhos na área de trabalho: **Jogar MeuMMO** e **Atualizar MeuMMO**.
+Também oferece instalar o Tiled (editor de mapas). Pode rodar de novo quando quiser: ele só atualiza
+e nunca apaga uma pasta que já tenha outras coisas.
+
+## Como jogar no seu computador (qualquer sistema)
 
 Precisa do [Node.js](https://nodejs.org) versão 22 ou mais nova. No terminal, dentro da pasta do projeto:
 

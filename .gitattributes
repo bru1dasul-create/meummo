@@ -1,0 +1,7 @@
+# Texto sempre com quebra de linha do Linux (LF), menos os scripts do Windows,
+# que precisam de CRLF para o cmd/PowerShell lerem direito.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary

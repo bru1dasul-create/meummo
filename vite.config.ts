@@ -24,6 +24,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // permite abrir pelo celular na mesma rede Wi-Fi
+    open: process.env.ABRIR_NAVEGADOR === '1', // o jogar.bat liga isso para abrir o navegador sozinho
     proxy: {
       '/ws': { target: 'ws://localhost:3000', ws: true },
     },
