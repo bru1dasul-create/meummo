@@ -23,7 +23,8 @@
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
    `data/items.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
    Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
-   ícones de itens em `src/client/itemArt.ts`.
+   ícones de itens em `src/client/itemArt.ts`, personagens (20x24) e o equipamento no corpo em
+   `src/client/game/characters.ts` — equipamento com ícone novo precisa de desenho lá (o teste avisa).
 5. Antes de commitar: `npm run check` (tipos + testes) precisa passar. Regra nova no servidor vem com teste em `tests/`.
 6. Mudou o formato das mensagens? Aumente `PROTOCOL_VERSION` em `src/shared/constants.ts`.
    Mudou o que fica salvo do personagem? Acrescente um passo em `MIGRATIONS` (`src/server/accounts.ts`) — nunca

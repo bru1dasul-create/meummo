@@ -165,6 +165,7 @@ export class WorldScene extends Phaser.Scene {
         unequip: (part) => this.conn.send({ t: 'unequip', part }),
       },
       this.welcome.stats,
+      you.look,
     );
     this.bagEquipped = this.welcome.inv.equipped;
     this.applyStats(this.welcome.stats, false);
@@ -232,7 +233,7 @@ export class WorldScene extends Phaser.Scene {
         return { id: scene.myId, x, y, hp: scene.myHp, maxHp: scene.myMaxHp, level: scene.myLevel, xp: scene.myXp, dead: scene.dead };
       },
       entities: () =>
-        [...scene.entities.values()].map((v) => ({ id: v.id, kind: v.kind, type: v.type, name: v.name, x: v.tileX, y: v.tileY, hp: v.hp, maxHp: v.maxHp, level: v.level })),
+        [...scene.entities.values()].map((v) => ({ id: v.id, kind: v.kind, type: v.type, name: v.name, x: v.tileX, y: v.tileY, hp: v.hp, maxHp: v.maxHp, level: v.level, texture: v.sprite.texture.key })),
       walkTo: (x: number, y: number) => scene.walkTo(x, y),
       /** Id do mapa onde você está. */
       get zone() {
@@ -690,6 +691,9 @@ export class WorldScene extends Phaser.Scene {
         this.bag.setState(msg.inv);
         break;
       }
+      case 'gear':
+        this.entities.get(msg.id)?.setGear(msg.gear);
+        break;
       case 'loot':
         this.onLoot(msg.x, msg.y, msg.items, now);
         break;

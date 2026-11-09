@@ -36,6 +36,7 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
 - [ ] Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] Arte de verdade para personagens e monstros
+- [ ] Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador)
 
 ## ✅ Pindorama — a primeira zona
 - [x] Mundo aprovado: **Pindorama — Selva de Pedra** (São Paulo tomada pela floresta), tom "um pouco dos dois"
@@ -50,7 +51,9 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Senhas protegidas (scrypt), freio para quem erra a senha muitas vezes, entrar de outro lugar tira a sessão antiga
 - [x] Monstros deixam itens (cada um que ajudou sorteia os seus); mochila com 20 espaços; equipamentos em
   4 partes que somam dano, vida e defesa; banana que cura. Tudo em `data/items.json`, salvo com o personagem
-- [ ] Ver o equipamento no personagem (chapéu, gorro do Saci...)
+- [x] Ver o equipamento no personagem: personagem redesenhado (20x24, com contorno, 5 jeitos de cabelo, olhos e
+  roupa variando pelo nome, passo mais suave) e o equipamento em camadas — chapéu de palha, gorro do Saci, gibão,
+  couraça, a arma na mão e o amuleto no peito — para todo mundo ver; boneco vestido na mochila (clique para girar)
 
 ## 🔧 M3 — Mundo
 - [x] Vários mapas ligados: saídas e pontos de chegada desenhados no Tiled; quem desmaia num mapa sem vila acorda

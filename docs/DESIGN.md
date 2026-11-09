@@ -74,6 +74,8 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 - **Atributos:** equipamentos somam dano, vida e defesa. Defesa tira um pouco de cada golpe, mas sempre sobra 1.
 - **Consumíveis** curam; entre um e outro há uma pequena espera (a banana não substitui a esquiva).
 - **Lendário:** quando alguém consegue um, todo mundo vê no chat.
+- **Dá para ver:** tudo que está equipado aparece no personagem, para todo mundo (chapéu ou gorro na cabeça,
+  gibão ou couraça no corpo, a arma na mão, o amuleto no peito), e no boneco da mochila.
 
 | Item | Tipo | O que faz | Quem deixa |
 |---|---|---|---|
@@ -85,7 +87,7 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 | Gibão de Couro (raro) | corpo | +8 de vida, +2 de defesa | Jararaca (5%) |
 | Gorro Vermelho do Saci (lendário) | cabeça | +2 de dano, +15 de vida | Saci (30%) |
 
-Ideias para depois: ver o chapéu/gorro no personagem, loja e ouro (M3), artesãos que transformam couro em
+Ideias para depois: loja e ouro (M3), artesãos que transformam couro em
 roupa, equipamentos com nível mínimo, poções do Curandeiro.
 
 ## Progressão no futuro

@@ -21,6 +21,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 - Ganhe XP, suba de nível e volte para a vila quando desmaiar
 - Monstros deixam **itens** para quem ajudou a derrubá-los: guarde na **Mochila**, equipe chapéus, estilingues,
   coletes e amuletos (mais vida, dano e defesa) e coma bananas para recuperar vida
+- O que você equipa **aparece no seu personagem** para todo mundo ver (e no boneco da mochila)
 - Funciona no computador (mouse e teclado) e no celular (toque e botões)
 
 ### Controles
@@ -129,9 +130,12 @@ espaço, ex.: `chapeu_palha`); é ele que os monstros usam na lista `itens`.
 | `pilha` | quantos cabem num espaço da mochila (padrão 20; equipamento é sempre 1) |
 | `raridade` | `comum`, `raro` (borda azul) ou `lendario` (dourado; todo mundo fica sabendo quando alguém pega) |
 | `descricao` | o textinho do item |
-| `icone` | o desenho: `banana`, `couro`, `chapeu_palha`, `estilingue`, `colar`, `gibao`, `gorro` ou `mochila` |
+| `icone` | o desenho: `banana`, `couro`, `chapeu_palha`, `estilingue`, `colar`, `gibao`, `gorro`, `erva`, `sucata`, `faca`, `couraca`, `ferradura` ou `mochila` |
 
-Desenho novo para um ícone precisa de código (`src/client/itemArt.ts`) — é só pedir. Se um item for apagado do
+O equipamento também aparece no personagem, pelo ícone: `chapeu_palha` e `gorro` (cabeça), `gibao` e `couraca`
+(corpo), `estilingue` e `faca` (arma), `colar` e `ferradura` (amuleto). Desenho novo para um ícone ou para uma peça
+no corpo precisa de código (`src/client/itemArt.ts` e `src/client/game/characters.ts`) — é só pedir; o
+`npm run check` avisa se algum equipamento ficou sem desenho no personagem. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
 
 ## Editar os mapas

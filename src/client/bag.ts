@@ -1,8 +1,9 @@
 // Mochila: o que você tem equipado, os itens que carrega e o que dá para fazer com cada um.
 // Só mostra e pede: quem decide se dá para equipar ou comer é o servidor.
 
-import { EQUIP_SLOTS, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
+import { EQUIP_SLOTS, gearLookOf, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
 import type { ItemAction, PlayerStats } from '../shared/protocol';
+import { characterPortrait } from './game/characters';
 import { itemIconUrl } from './itemArt';
 
 const PART_LABELS: Record<EquipSlot, string> = { weapon: 'Arma', head: 'Cabeça', body: 'Corpo', charm: 'Amuleto' };
@@ -10,6 +11,13 @@ const KIND_LABELS: Record<ItemInfo['kind'], string> = { equipment: 'Equipamento'
 const RARITY_LABELS: Record<Rarity, string> = { common: 'Comum', rare: 'Raro', legendary: 'Lendário' };
 /** Tempo para o segundo clique em "Jogar fora" (confirmação). */
 const CONFIRM_MS = 3000;
+/** O boneco gira quando você clica: de frente, de lado, de costas, do outro lado (quadro e se é espelhado). */
+const DOLL_TURNS: readonly { frame: number; mirror: boolean }[] = [
+  { frame: 6, mirror: false },
+  { frame: 3, mirror: false },
+  { frame: 0, mirror: false },
+  { frame: 3, mirror: true },
+];
 
 type Selection = { kind: 'bag'; i: number } | { kind: 'gear'; part: EquipSlot } | null;
 
@@ -52,6 +60,10 @@ export class Bag {
   private readonly gridEl = byId<HTMLDivElement>('bag-grid');
   private readonly infoEl = byId<HTMLDivElement>('bag-info');
   private readonly gearButtons = new Map<EquipSlot, HTMLButtonElement>();
+  private readonly doll = document.createElement('button');
+  private readonly dollImg = document.createElement('img');
+  private dollTurn = 0;
+  private dollKey = '';
   private readonly slotButtons: HTMLButtonElement[] = [];
   private selected: Selection = null;
   private confirmDrop: { i: number; until: number } | null = null;
@@ -62,13 +74,26 @@ export class Bag {
     private state: InventoryState,
     private readonly actions: BagActions,
     private stats: PlayerStats,
+    /** O look do seu personagem (vem do nome), para desenhar o boneco. */
+    private readonly look: number,
   ) {
     this.gearEl.replaceChildren();
+    // o boneco no meio, com as quatro partes em volta
+    this.doll.type = 'button';
+    this.doll.className = 'bag-doll';
+    this.doll.tabIndex = -1;
+    this.doll.title = 'Seu personagem (clique para girar)';
+    this.dollImg.alt = 'Seu personagem com o equipamento';
+    this.dollImg.draggable = false;
+    this.doll.append(this.dollImg);
+    this.doll.addEventListener('click', this.turnDoll);
+    this.gearEl.append(this.doll);
     for (const part of EQUIP_SLOTS) {
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'gear-slot';
       el.tabIndex = -1;
+      el.style.gridArea = part;
       el.addEventListener('click', () => this.select({ kind: 'gear', part }));
       this.gearButtons.set(part, el);
       this.gearEl.append(el);
@@ -141,9 +166,27 @@ export class Bag {
     this.close();
     this.button.hidden = true;
     this.button.classList.remove('new');
+    this.doll.removeEventListener('click', this.turnDoll);
     this.gearEl.replaceChildren();
     this.gridEl.replaceChildren();
     this.infoEl.replaceChildren();
+  }
+
+  private readonly turnDoll = (): void => {
+    this.dollTurn = (this.dollTurn + 1) % DOLL_TURNS.length;
+    this.renderDoll();
+  };
+
+  /** Desenha o boneco com o que está equipado agora (só refaz a imagem quando algo muda). */
+  private renderDoll(): void {
+    const gear = gearLookOf(this.state.equipped, this.items);
+    const turn = DOLL_TURNS[this.dollTurn]!;
+    const key = `${JSON.stringify(gear)}|${turn.frame}`;
+    if (key !== this.dollKey) {
+      this.dollKey = key;
+      this.dollImg.src = characterPortrait(this.look, gear, turn.frame);
+    }
+    this.dollImg.classList.toggle('mirror', turn.mirror);
   }
 
   private select(selection: Selection): void {
@@ -205,6 +248,7 @@ export class Bag {
       }
       el.classList.toggle('selected', this.selected?.kind === 'bag' && this.selected.i === i);
     });
+    this.renderDoll();
     this.renderStats();
     this.renderInfo();
   }

@@ -433,6 +433,8 @@ export class World {
     }
     player.invDirty = true;
     player.statsDirty = true;
+    // todo mundo que está vendo (e o próprio) passa a desenhar o equipamento novo
+    this.emitToViewers(player, { t: 'gear', id: player.id, gear: player.inventory.look() });
   }
 
   /** O monstro caiu: cada um que ajudou sorteia os itens dele (cada um tem os seus, ninguém rouba de ninguém). */

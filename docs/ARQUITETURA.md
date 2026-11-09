@@ -91,6 +91,11 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   tudo (espaço vazio, desmaiado, vida cheia, espera entre consumíveis) e responde com `inv` ou `fail` (`item: true`).
 - Salva junto com o personagem (coluna `inventory`, JSON; versão 2 do arquivo). Ao carregar, itens que não existem
   mais em `data/items.json` saem e pilhas grandes demais são cortadas.
+- O equipamento aparece no personagem: o estado de cada jogador (`spawn`, `welcome`, `zone`) leva `gear`, o `icone`
+  de cada parte equipada (`gearLookOf` em `src/shared/items.ts`), e quando muda o servidor manda `gear` para quem
+  está vendo (e para o próprio). O navegador desenha em camadas (`src/client/game/characters.ts`): cabeça, corpo,
+  cabelo, roupa (gibão/couraça), braço, amuleto, arma e chapéu por cima; cada look + equipamento vira uma textura
+  criada uma vez só. O boneco da mochila usa o mesmo desenho.
 
 ## Personagens salvos (`src/server/accounts.ts`)
 - Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
@@ -136,6 +141,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
 | servidor | `inv` / `loot` | sua mochila mudou / você pegou estes itens do monstro que caiu em (x, y) |
+| servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |
 
