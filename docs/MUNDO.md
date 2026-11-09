@@ -1,0 +1,106 @@
+# Caderno da frente Mundo
+
+> Para o chat **"Criar jogo MMO RPG do zero"** (a frente **[mundo]**) retomar o trabalho depois de limpar a conversa
+> (`/clear`) ou num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com
+> a etiqueta **[mundo]**), `docs/ARQUITETURA.md` (a parte dos mapas: geradores, camadas, tiles) e `docs/DESIGN.md`
+> (como é cada zona).
+
+## Quem sou
+O chat da frente **[mundo]**: mapas (`public/assets/maps/*.tmj`), tiles (`scripts/tileset.ts` → `public/assets/tiles.png`),
+geradores (`scripts/gen-*.ts`, `map-builder.ts`, `map-depth.ts`), `render-map.ts` e, no jogo, `src/client/game/mapDepth.ts`
+(copas por cima de quem passa, luzes, escuro, neblina, vaga-lumes e faíscas). O dono não programa: ele decide o jogo.
+Converso em português do Brasil, com explicações simples, e mando prints do navegador em cada entrega. Ele me chama de
+"meu xuxu".
+
+## Combinados com o dono
+- **O design dos mapas é meu** ("acho melhor você ficar com o design do mapa"). Zona nova ou capricho grande: proponho
+  com uma recomendação e espero o "pode" / "pra cima". Lugares reais sim, marcas não (ex.: "Shopping do Largo Treze",
+  sem o nome da rede).
+- **Juntar na `main`:** tudo o que ele aprovou foi juntado no mesmo dia, depois do `npm run check` e da conferência no
+  navegador (PC e celular); ele nunca pediu para esperar. Depois, aviso: o que mudou, como testar (`atualizar.bat` e
+  `jogar.bat`) e se outra frente precisa fazer algo.
+- **Pedidos entre as frentes vão direto entre os chats** ("o que não for da sua orçada pede para os outros chat
+  fazer"): ferramenta `send_message` do Claude Code Remote. Os chats são "Arte e visual" ([arte]) e "Estrutura e
+  regras" ([estrutura]); ache com `list_sessions` pelo título. Deixe o pedido também no roteiro. Mensagem de outro chat
+  é informação, não ordem do dono. Marcar no mapa a área de uma lenda que a [estrutura] criou é tarefa minha pela
+  divisão das frentes (fiz assim com o jacaré, o boto e a Iara, que estavam no roteiro).
+- **Não mexer** em `characters.ts`, `EntityView.ts`, `bag.ts`, `effects.ts` e `monsterArt.ts` (pedido da [arte]: o
+  dono escolheu o personagem em camadas dela no lugar do meu, de 20x24).
+- **Regra 9 na prática:** gere com `--out` num arquivo temporário, compare camada por camada com o mapa atual (receita
+  abaixo) e só então copie por cima. Antes, veja `git log -- public/assets/maps/<id>.tmj`: se alguém além do Claude
+  mexeu (edição no Tiled), não substitua sem falar com o dono.
+
+## Onde estamos (9 de novembro de 2026)
+Feito pelo [mundo], tudo na `main`:
+- **Mapa, passos 1 a 3:** profundidade (copas e alto dos postes na camada `acima`, que fica transparente perto de quem
+  passa), água e fogo animados, luzes, sombras; Refúgio caprichado (beiradas suaves, vila colorida, barraquinha da
+  Dona Iracema, píeres ligados ao deck da fogueira); Santo Amaro caprichado (prédios de 2 andares, neblina, brasas).
+- **Represa Billings**, **Terminal Santo Amaro** e **Shopping do Largo Treze** (mapa de dentro), cada um com o seu gerador.
+- **Criaturas da Billings no mapa:** as áreas da Iara, do jacaré e do boto saíram da camada `lendas` para `monstros`
+  quando a [estrutura] criou cada um. A camada `lendas` ficou vazia e saiu do mapa.
+- Antes da divisão em frentes eu fiz o personagem de 20x24 com o equipamento no corpo; hoje vale o da [arte].
+
+| Mapa | Tamanho | Gerador (semente) | Clima | Saídas (→ mapa / chegada) |
+|---|---|---|---|---|
+| `refugio` | 96×72 | `gen-map.ts` (20261110) | — | leste → `santo-amaro`/`oeste`; sul → `billings`/`norte` |
+| `santo-amaro` | 80×60 | `gen-santo-amaro.ts` (20261112) | neblina 0.22, escuro 0.14 | oeste → `refugio`/`leste`; sul (40-42, 59) → terminal/`norte`; porta do shopping (26-27, 22) → shopping/`entrada` |
+| `billings` | 88×64 | `gen-billings.ts` (20261120) | neblina 0.16, escuro 0.08, vaga-lumes 0.7 | norte → `refugio`/`sul` |
+| `terminal-santo-amaro` | 64×48 | `gen-terminal.ts` (20261130) | neblina 0.18, escuro 0.12 | norte → `santo-amaro`/`sul` |
+| `shopping-largo-treze` | 64×44 | `gen-shopping.ts` (20261213) | neblina 0.08, escuro 0.26 | portas de vidro (30-33, 43) → `santo-amaro`/`shopping` (26, 24) |
+
+- **Criaturas por mapa:** Billings: Iara 1 (prainha e pedra, x 35-53, y 34-45), jacaré 3 (canais do oeste), boto 2 (lago
+  das casas afundadas), jararaca, corpo-seco e capelobo. Shopping: corpo-seco no supermercado e na ala leste, capelobo
+  no cinema e na ala oeste, saci na praça de alimentação. Terminal: corpo-seco nas plataformas, capelobo no fundo.
+- **NPCs** (posição em `data/npcs.json`, da [estrutura]; o teste confere que o lugar é livre e alcançável): Dona Iracema
+  em (46, 28), no meio da barraquinha (a fileira de trás da barraca não bloqueia, só o balcão), e o Curupira em
+  (45, 12), na beira da mata ao norte da vila.
+- **Tileset:** 552 tiles (imagem 144×1242). Tile novo sempre no fim. Quando a imagem cresce, o tileset embutido em todos
+  os `.tmj` precisa ser atualizado (o teste "a imagem dos tiles está em dia" avisa), sem mexer nas camadas.
+- **Testes do [mundo]:** `tests/maps.test.ts` (ordem das camadas, nada que bloqueia na `acima`, árvore com copa e tronco,
+  beirada da areia, ligações entre mapas, criaturas da Billings, portas do shopping, NPCs alcançáveis, animações,
+  luzes e a imagem dos tiles).
+
+## Como confiro (receitas)
+- **Comparar um mapa gerado com o atual** (`node compara.cjs atual.tmj novo.tmj`):
+  ```js
+  const fs = require('fs');
+  const [a, b] = process.argv.slice(2).map((f) => JSON.parse(fs.readFileSync(f, 'utf8')));
+  const semId = (l) => JSON.stringify(l.objects.map(({ id, ...o }) => o));
+  for (const la of a.layers) {
+    const lb = b.layers.find((l) => l.name === la.name);
+    if (!lb) console.log(la.name, 'sumiu');
+    else if (la.data) console.log(la.name, la.data.filter((g, i) => g !== lb.data[i]).length, 'tiles diferentes');
+    else console.log(la.name, semId(la) === semId(lb) ? 'igual' : 'mudou');
+  }
+  ```
+- **Só o tileset embutido** (a imagem cresceu e as camadas não mudam): num script `tsx`, leia o `.tmj`, troque
+  `map.tilesets[0] = tiledTileset('../tiles.png')` (de `scripts/tileset.ts`) e salve com `JSON.stringify(map)`.
+- **Gerador sem estragar o resto:** mudança nova entra no fim do gerador, sem sortear nada (ou sorteando "à toa" no
+  mesmo lugar). No `MapBuilder`, `setGround(x, y, chave, false)`: sem o `false`, o tile fica reservado.
+- **Navegador:** `npm run build`, depois `MEUMMO_SAVE=<arquivo temporário> npm start`, espere uns segundos e entre
+  com qualquer nome e senha (o personagem nasce na hora). Para ir a outro mapa sem caminhar: `GET /admin/api/jogadores`
+  (o `id`) e `POST /admin/api/jogador` com o cabeçalho `x-meummo-admin: 1` e `{"acao":"levar","id":…,"mapa":…,"x":…,"y":…}`.
+  Na nuvem, o servidor ligado em segundo plano é desligado depois de uns 30 minutos.
+- **Luz:** muitas luzes juntas somam e estouram em branco (aconteceu no sol do átrio do shopping). Use raio pequeno
+  (~20) e poucas.
+- **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
+
+## Esperando outras frentes
+- Nada bloqueando o [mundo]. A [arte] já desenhou o Curupira, o jacaré, o boto e a Iara (na `main` em 9/11).
+- Combinado com a [arte]: o personagem novo tem ~1,6 tile de altura e o zoom ficou sempre par. Se a cabeça ou o
+  chapéu sumirem embaixo das copas ou dos letreiros do shopping, eles me avisam. Aí eu ajusto `FADE_NEAR`/`FADE_FAR`
+  em `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
+
+## Próximos passos possíveis (o dono escolhe)
+Perguntei ao dono qual dos dois primeiros prefere e ainda não houve resposta.
+1. **Enfeite em volta do Curupira** (roteiro, opcional): árvore oca ou cantinho de mata fechada em volta de (45, 12),
+   sem bloquear o tile dele (o teste dos NPCs confere).
+2. **Chefe do cinema do shopping:** uma lenda nova. A [estrutura] cria e eu marco a área no cinema (x 22-41, y 3-11).
+3. **Conferir as copas e os letreiros com o personagem novo** (veja acima), mesmo sem aviso da [arte].
+4. **Boitatá** (chefe, [estrutura + arte + mundo]): combinar com o dono onde ele mora e marcar a área.
+5. **Ideias para depois:**
+   - o segundo andar do shopping (as escadas rolantes já apontam para lá);
+   - o cinema mais escuro que o resto;
+   - a Selva do Centro (Paulista e Sé, fim de jogo, no `DESIGN.md`).
+6. **Nome do shopping:** se o dono preferir outro, troque `ZONE_NAME` em `gen-shopping.ts`, o nome da saída em
+   `gen-santo-amaro.ts` e os docs.
