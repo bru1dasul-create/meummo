@@ -1,6 +1,7 @@
 // Interface em HTML por cima do jogo: barra de informações e chat.
 
 import { actionIconUrl } from './actionArt';
+import { installCoinStyle } from './coinArt';
 
 const MAX_CHAT_LINES = 60;
 /** Sem mensagem nova por esse tempo, o chat fica mais transparente (para não esconder o jogo). */
@@ -127,6 +128,14 @@ export class Hud {
   constructor(playerName: string) {
     this.root.hidden = false;
     this.name.textContent = playerName;
+    installCoinStyle(); // a moeda desenhada aparece em todo lugar que mostra ouro
+  }
+
+  /** O ouro mudou: o número pula (e brilha) para chamar a atenção. */
+  private bumpGold(): void {
+    this.gold.classList.remove('bump');
+    void this.gold.offsetWidth; // reinicia a animação
+    this.gold.classList.add('bump');
   }
 
   setHp(hp: number, maxHp: number): void {
@@ -143,7 +152,9 @@ export class Hud {
   }
 
   setGold(gold: number): void {
-    this.gold.textContent = gold.toLocaleString('pt-BR');
+    const text = gold.toLocaleString('pt-BR');
+    if (this.gold.textContent !== text && this.gold.textContent !== '') this.bumpGold();
+    this.gold.textContent = text;
   }
 
   setOnline(count: number): void {

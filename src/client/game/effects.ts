@@ -20,8 +20,11 @@ interface Effect {
 }
 
 interface VisualShot {
+  kind: string;
   path: ShotPath;
   sprite: Phaser.GameObjects.Arc;
+  /** Gotinhas atrás do tiro (jato d'água). */
+  trail: Phaser.GameObjects.Arc[];
   serverId: number | null;
   cid: number | null;
   fromMonster: boolean;
@@ -42,6 +45,45 @@ export interface ShotOptions {
 }
 
 const SHOT_COLORS: Record<string, number> = { pedra: 0xe9e6df, fruta: 0xff9f1c, agua: 0x7cc8f0 }; // agua: jato do boto
+/** Respingo quando o tiro acaba (o padrão é poeira clara). */
+const SPLASH_COLORS: Record<string, [hit: number, miss: number]> = { agua: [0xc8ecff, 0x7cc8f0] };
+/** Distância (pixels) entre as gotinhas do rastro do jato d'água. */
+const TRAIL_GAP = 3.5;
+
+// Notas musicais (o canto da Iara): ♪ e ♫ em pixel art, brancas (o tom vem do tint) com contorno escuro.
+const NOTE_ROWS: string[][] = [
+  ['...XX...', '...XXX..', '...X.XX.', '...X..X.', '...X....', '...X....', '.XXX....', 'XXXX....', 'XXXX....', '.XX.....'],
+  ['..XXXXXX', '..XXXXXX', '..X....X', '..X....X', '..X....X', '.XX...XX', 'XXX..XXX', 'XXX..XXX', '.X....X.', '........'],
+];
+const NOTE_W = 10;
+const NOTE_H = 12;
+const NOTE_COLORS = [0xbfe8ff, 0x9ad8ff, 0xf7c9da, 0xfff2a8];
+
+/** Textura das notas (quadro 0 = ♪, 1 = ♫), criada uma vez. */
+function noteTexture(scene: Phaser.Scene): string {
+  const key = 'fx-notes';
+  if (scene.textures.exists(key)) return key;
+  const canvas = document.createElement('canvas');
+  canvas.width = NOTE_W * NOTE_ROWS.length;
+  canvas.height = NOTE_H;
+  const ctx = canvas.getContext('2d')!;
+  NOTE_ROWS.forEach((rows, f) => {
+    const solid = (x: number, y: number) => rows[y]?.[x] === 'X';
+    for (let y = -1; y <= rows.length; y++) {
+      for (let x = -1; x <= 8; x++) {
+        const px = f * NOTE_W + x + 1;
+        const py = y + 1;
+        if (solid(x, y)) ctx.fillStyle = '#ffffff';
+        else if (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1)) ctx.fillStyle = '#1d3a5e';
+        else continue;
+        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+  });
+  const texture = scene.textures.addCanvas(key, canvas)!;
+  NOTE_ROWS.forEach((_, f) => texture.add(f, 0, f * NOTE_W, 0, NOTE_W, NOTE_H));
+  return key;
+}
 
 /** Lista [x0, y0, x1, y1, ...] de tiles → o centro de cada um, em pixels. */
 function tileCenters(tiles: number[]): { x: number; y: number }[] {
@@ -114,13 +156,26 @@ export class Effects {
       range: options.range,
       traveled: 0,
     };
+    const water = options.kind === 'agua';
     const sprite = this.scene.add
-      .circle(path.x * T, path.y * T, options.kind === 'fruta' ? 2.5 : 2, SHOT_COLORS[options.kind] ?? 0xffffff)
-      .setStrokeStyle(1, 0x2a2420, 0.95)
+      .circle(path.x * T, path.y * T, options.kind === 'fruta' || water ? 2.5 : 2, SHOT_COLORS[options.kind] ?? 0xffffff)
+      .setStrokeStyle(1, water ? 0x1d4a6e : 0x2a2420, 0.95)
       .setDepth(5000);
+    // jato d'água: duas gotinhas menores e mais claras atrás
+    const trail = water
+      ? [1.8, 1.2].map((r, i) =>
+          this.scene.add
+            .circle(path.x * T, path.y * T, r, 0xb8e4ff, 0.85 - i * 0.25)
+            .setStrokeStyle(1, 0x1d4a6e, 0.6)
+            .setDepth(4999)
+            .setVisible(false),
+        )
+      : [];
     this.shots.push({
+      kind: options.kind,
       path,
       sprite,
+      trail,
       serverId: options.serverId ?? null,
       cid: options.cid ?? null,
       fromMonster: options.fromMonster,
@@ -175,29 +230,68 @@ export class Effects {
     });
   }
 
+  /**
+   * Canto da Iara: notas musicais saindo dela e se espalhando até a beira da área (`radius`, em pixels),
+   * subindo e balançando; um anel suave marca o alcance.
+   */
+  song(x: number, y: number, radius: number, now: number): void {
+    this.ring(x, y + 18, 0x9ad8ff, radius, 1300, now);
+    const key = noteTexture(this.scene);
+    const notes: { sprite: Phaser.GameObjects.Image; angle: number; delay: number; spin: number; far: number }[] = [];
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      notes.push({
+        sprite: this.scene.add
+          .image(x, y, key, i % 2)
+          .setTint(NOTE_COLORS[i % NOTE_COLORS.length]!)
+          .setDepth(4500)
+          .setAlpha(0),
+        angle: (i / count) * Math.PI * 2 + Math.random() * 0.4,
+        delay: (i % 4) * 140 + Math.random() * 120,
+        spin: Math.random() * Math.PI * 2,
+        far: radius * (0.55 + Math.random() * 0.4),
+      });
+    }
+    const LIFE = 1250;
+    const end = now + LIFE + 600;
+    this.effects.push({
+      update: (t) => {
+        for (const n of notes) {
+          const k = (t - now - n.delay) / LIFE;
+          if (k < 0) continue;
+          if (k >= 1) {
+            n.sprite.setVisible(false);
+            continue;
+          }
+          const ease = 1 - (1 - k) * (1 - k);
+          const wobble = Math.sin(n.spin + k * 9) * 3;
+          n.sprite
+            .setPosition(x + Math.cos(n.angle) * n.far * ease + wobble, y + Math.sin(n.angle) * n.far * ease * 0.7 - k * 14)
+            .setAlpha(k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1)
+            .setRotation(Math.sin(n.spin + k * 6) * 0.3);
+        }
+        return t < end;
+      },
+      destroy: () => notes.forEach((n) => n.sprite.destroy()),
+    });
+  }
+
   /** Redemoinho do Saci: vários anéis girando. */
   whirlwind(x: number, y: number, now: number): void {
     for (let i = 0; i < 3; i++) this.ring(x, y - 4 + i * 3, 0xd8c7a8, 10 + i * 4, 450 + i * 120, now);
   }
 
   /** Rastro da esquiva: "fantasmas" do personagem entre a origem e o destino. */
-  trail(
-    texture: string,
-    frame: number,
-    flipX: boolean,
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    now: number,
-    tint = 0xbfe3ff,
-  ): void {
+  trail(sprite: Phaser.GameObjects.Sprite, from: { x: number; y: number }, to: { x: number; y: number }, now: number, tint = 0xbfe3ff): void {
     const ghosts: Phaser.GameObjects.Sprite[] = [];
     for (let i = 1; i <= 3; i++) {
       const k = i / 4;
       ghosts.push(
         this.scene.add
-          .sprite(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, texture, frame)
-          .setOrigin(0.5, 1)
-          .setFlipX(flipX)
+          .sprite(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, sprite.texture.key, sprite.frame.name)
+          .setOrigin(0.5, sprite.originY)
+          .setScale(sprite.scaleX, sprite.scaleY)
+          .setFlipX(sprite.flipX)
           .setAlpha(0.35)
           .setTint(tint)
           .setDepth(from.y - 1),
@@ -282,6 +376,10 @@ export class Effects {
       const targets = this.targets(shot.fromMonster);
       const result = advanceShot(shot.path, dt, this.map, (x, y) => targets.some((t) => shotTouches(x, y, t.x, t.y, SHOT_HIT_RADIUS)));
       shot.sprite.setPosition(shot.path.x * T, shot.path.y * T);
+      shot.trail.forEach((drop, i) => {
+        const back = (i + 1) * TRAIL_GAP;
+        drop.setVisible(shot.path.traveled * T > back).setPosition(shot.path.x * T - shot.path.dx * back, shot.path.y * T - shot.path.dy * back);
+      });
       if (result !== 'flying') this.finishShot(shot, result === 'hit');
     }
     this.shots = this.shots.filter((s) => !s.done);
@@ -295,7 +393,11 @@ export class Effects {
   }
 
   destroy(): void {
-    for (const shot of this.shots) if (!shot.done) shot.sprite.destroy();
+    for (const shot of this.shots) {
+      if (shot.done) continue;
+      shot.sprite.destroy();
+      shot.trail.forEach((drop) => drop.destroy());
+    }
     for (const effect of this.effects) effect.destroy();
     this.shots = [];
     this.effects = [];
@@ -304,6 +406,9 @@ export class Effects {
   private finishShot(shot: VisualShot, hit: boolean): void {
     shot.done = true;
     shot.sprite.destroy();
-    this.ring(shot.path.x * T, shot.path.y * T, hit ? 0xffffff : 0xb8b2a6, hit ? 6 : 4, 180, performance.now(), hit);
+    shot.trail.forEach((drop) => drop.destroy());
+    const splash = SPLASH_COLORS[shot.kind];
+    const color = splash ? splash[hit ? 0 : 1] : hit ? 0xffffff : 0xb8b2a6;
+    this.ring(shot.path.x * T, shot.path.y * T, color, hit ? 6 : splash ? 5 : 4, splash ? 240 : 180, performance.now(), hit);
   }
 }

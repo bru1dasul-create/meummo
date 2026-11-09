@@ -40,7 +40,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
 - [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] **[arte]** Arte de verdade para personagens e monstros
-- [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador)
+- [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador;
+  o jacaré e o boto já nasceram assim, em `monsterPaint.ts`)
 - [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
   quando alguém passa embaixo), postes altos, mata fechada nas bordas, sombras de casas e prédios, água
   balançando, fogueira crepitando com brilho em volta (camadas `sombras` e `acima` do Tiled)
@@ -95,8 +96,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[estrutura]** Loja: a **Dona Iracema**, quitandeira do píer, na praça do Refúgio, vende banana, arruda e
   chapéu de palha e compra qualquer item pela metade do preço (`preco` em `data/items.json`; quem vende o quê e
   onde fica em `data/npcs.json`). Clicar nela leva até ela e abre a loja; afastar-se fecha
-- [ ] **[arte]** Caprichar a loja e o ouro: moeda desenhada, som de moeda, janela da loja e a aparência da
-  Dona Iracema (hoje é o personagem padrão com chapéu de palha)
+- [x] **[arte]** Caprichar a loja e o ouro: moeda desenhada (com flor de ipê em relevo) em todo lugar que mostra
+  ouro, sons de moeda (pegar, comprar, vender), janela da loja de barraca de feira (toldo, retrato, fala no balão,
+  abas Comprar/Vender) e a Dona Iracema com aparência própria (coque, óculos, vestido de chita com avental)
 - [x] **[mundo]** Barraquinha de frutas da Dona Iracema, na praça do Refúgio (ela fica em (46, 28)): toldo listrado
   atrás dela e balcão com frutas na frente. De quebra: os píeres dos lados voltaram a encostar no deck da fogueira
   (as casas maiores do passo 2 tinham fechado a passagem) e um teste confere que todo NPC tem lugar alcançável
@@ -106,8 +108,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   recompensa de XP, ouro e itens, sequência (`depoisDe`), nível mínimo e repetíveis; até 5 ao mesmo tempo; lista
   na tela; progresso salvo com o personagem. Primeiras: Saguis Travessos → Couro de Jararaca → O Dono do
   Redemoinho (o Saci) → Guardião da Mata (repetível)
-- [ ] **[arte]** Desenho do Curupira (cabelo de fogo, pés virados para trás) e caprichar a conversa, a lista de
-  missões e os sinais ! e ? (hoje: personagem padrão e visual simples)
+- [x] **[arte]** Desenho do Curupira (cabelo de fogo que tremula, pés virados para trás, descalço, túnica de folhas)
+  e caprichar a conversa (painel da loja com cipó, retrato, fala no balão, cartões com barra de progresso e a
+  recompensa em fichas), a lista de missões (com barrinha) e os sinais ! e ? (selo dourado; verde quando é para entregar)
 - [ ] **[mundo]** Opcional: enfeite em volta do Curupira (árvore oca, cantinho de mata fechada) em (45, 12)
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
   buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,
@@ -122,14 +125,16 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   deixa o Dente de Jacaré, que vale ouro na loja)
 - [x] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings (3 jacarés nos
   canais do oeste, 2 botos no lago das casas afundadas; a Iara continua marcada em `lendas`)
-- [ ] **[arte]** Desenhos do jacaré, do boto e da Iara; ícone do Dente de Jacaré (`icone: "dente"`)
+- [x] **[arte]** Desenhos do jacaré (papo-amarelo mutante: abre a boca no bote) e do boto (cor-de-rosa, de chapéu
+  branco: enche a bochecha e cospe o jato d'água, que ganhou gotinhas e respingo); ícone do Dente de Jacaré
 - [x] **[estrutura]** Iara, chefe da Billings (nível 8): jato d'água e o **canto** — aviso no chão em volta dela, quem
   fica é encantado (não anda e é puxado para perto dela) e a esquiva quebra o encanto; deixa a Escama da Iara.
   Números do canto em `data/monsters.json` (`canto`) e no painel do administrador
 - [x] **[mundo]** Passar a área da Iara da camada `lendas` para `monstros` na Billings (quantidade 1, na prainha e
   na pedra; a camada `lendas` ficou vazia e saiu do mapa)
-- [ ] **[arte]** Desenho da Iara, efeito do canto (notas no ar no lugar do anel azul), algo no jogador encantado
-  (hoje: texto "♪ encantado" e o aviso na tela) e o ícone da Escama da Iara (`icone: "escama"`)
+- [x] **[arte]** Desenho da Iara (sereia de cabelo comprido com vitória-régia, cauda verde-água; bola d'água na mão
+  e pose de canto própria), efeito do canto (notas coloridas se espalhando pela área, com um anel no alcance), o
+  jogador encantado (brilho azul, anel no chão e notinhas em cima do nome) e o ícone da Escama da Iara
 - [ ] **[estrutura + arte + mundo]** Boitatá como chefe
 
 ## 🛠️ Ferramentas do administrador
@@ -158,6 +163,5 @@ noite e dia (lendas da noite), montarias, casas de jogadores.
 ## Decisões pendentes
 - **Nome do jogo** ("MeuMMO" é provisório) — sugestões em DESIGN.md
 - **Arte definitiva:** hoje é arte provisória desenhada por código
-- **Qual personagem fica:** o da `main` ("Equipamento aparece no personagem e personagem redesenhado") ou o do ramo
-  `claude/blissful-meitner-hp1i5e` (camadas e animações)? Os dois fizeram a mesma tarefa ao mesmo tempo; a [arte]
-  mostra prints dos dois e o dono escolhe. Seja qual for, o trabalho continua a partir da `main`.
+- ~~Qual personagem fica~~: decidido — o dono escolheu o personagem em camadas da [arte] (com animações de ataque,
+  expressões e mais detalhe); ele substituiu o personagem 20x24 a partir da `main`.

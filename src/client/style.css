@@ -979,8 +979,8 @@ kbd {
 }
 
 .bag-doll img {
-  width: 100px;
-  height: 120px;
+  width: 96px;
+  height: 128px;
   image-rendering: pixelated;
   pointer-events: none;
 }
@@ -1175,11 +1175,31 @@ kbd {
 
 .gold::before {
   content: '';
-  width: 10px;
-  height: 10px;
-  border: 1px solid #8a5a0c;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  /* a moeda desenhada (coinArt.ts); antes de carregar, uma bolinha dourada */
+  background: var(--coin, radial-gradient(circle at 35% 35%, #fff2b0, #f2c23c 45%, #b8800f)) center / contain no-repeat;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff2b0, #f2c23c 45%, #b8800f);
+  image-rendering: pixelated;
+}
+
+/* o número do ouro pula quando muda */
+.gold.bump {
+  animation: gold-bump 0.45s ease-out;
+}
+
+@keyframes gold-bump {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 4px rgba(255, 215, 106, 0.9));
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 #hud-gold {
@@ -1196,13 +1216,70 @@ kbd {
 }
 
 .float.quest {
-  color: #b8f0a0;
+  color: #c8f5a8;
   font-size: 12px;
+  letter-spacing: 0.2px;
 }
 
 .float.charm {
   color: #9ad8ff;
   font-size: 14px;
+}
+
+/* Encantado pelo canto da Iara: notinhas subindo em cima do nome (o personagem também pisca azul) */
+.tag .charm-notes {
+  position: relative;
+  width: 60px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.tag .charm-notes span {
+  position: absolute;
+  bottom: 0;
+  color: #bfe8ff;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 0 6px rgba(120, 200, 255, 0.95),
+    0 1px 2px #000;
+  animation: charm-note 1.2s ease-out infinite;
+}
+
+.tag .charm-notes span:nth-child(1) {
+  left: 2px;
+}
+
+.tag .charm-notes span:nth-child(2) {
+  left: 17px;
+  color: #f7c9da;
+  animation-delay: 0.4s;
+}
+
+.tag .charm-notes span:nth-child(3) {
+  left: 32px;
+  animation-delay: 0.8s;
+}
+
+.tag .charm-notes span:nth-child(4) {
+  left: 46px;
+  color: #fff2a8;
+  animation-delay: 0.2s;
+}
+
+@keyframes charm-note {
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-14px) rotate(-12deg);
+    opacity: 0;
+  }
 }
 
 /* NPCs (vendedora...): nome em verde-água e o que ela é embaixo */
@@ -1221,54 +1298,124 @@ kbd {
     0 0 3px #000;
 }
 
-/* Loja (visual simples; a frente de Arte capricha depois) */
+/* Loja e conversa com NPC: painel de tábuas (a loja ganha toldo listrado; o retrato de quem fala e a fala
+   num balão são das duas) */
 #shop,
 #talk {
   position: fixed;
   z-index: 21;
   top: calc(112px + env(safe-area-inset-top));
   left: 8px;
-  width: min(360px, calc(100vw - 16px));
+  width: min(380px, calc(100vw - 16px));
   max-height: calc(100vh - 124px);
   overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px 12px;
-  border: 1px solid var(--frame);
+  padding: 0 12px 12px;
+  border: 2px solid #8a5a2b;
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(34, 27, 18, 0.97), rgba(16, 15, 12, 0.97));
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  /* tábuas de madeira escura */
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 22px, rgba(0, 0, 0, 0.18) 22px 24px),
+    linear-gradient(180deg, #3a2a1c, #241a12);
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 220, 150, 0.08);
   font-size: 13px;
+}
+
+/* toldo listrado vermelho e branco, com a beirada recortada */
+.shop-awning {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex: none;
+  height: 22px;
+  margin: 0 -12px;
+  background: repeating-linear-gradient(90deg, #c8452f 0 18px, #f3ece0 18px 36px);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+  -webkit-mask: radial-gradient(9px 7px at 9px 100%, transparent 98%, #000) 0 0 / 18px 100%;
+  mask: radial-gradient(9px 7px at 9px 100%, transparent 98%, #000) 0 0 / 18px 100%;
 }
 
 .shop-head {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
+}
+
+/* retrato de quem vende (do peito para cima) */
+.shop-portrait {
+  flex: none;
+  width: 72px;
+  height: 76px;
+  overflow: hidden;
+  border: 2px solid #c99a4a;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 210, 120, 0.35), transparent 70%),
+    linear-gradient(180deg, #5b8f4e, #3d6b38);
+  box-shadow: inset 0 -6px 12px rgba(0, 0, 0, 0.35);
+}
+
+.shop-portrait img {
+  display: block;
+  width: 96px;
+  height: 128px;
+  margin: -6px 0 0 -12px;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 
 .shop-who {
   display: flex;
+  flex: 1;
+  min-width: 0;
   flex-direction: column;
+  gap: 1px;
 }
 
 .shop-who strong {
   font-family: var(--title-font);
   color: var(--accent);
-  font-size: 18px;
+  font-size: 19px;
+  line-height: 1.1;
 }
 
 .shop-title {
-  color: var(--muted);
+  color: #d7c3a0;
   font-size: 12px;
 }
 
+/* a fala dela num balão */
+.shop-line {
+  position: relative;
+  margin: 6px 0 0;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: #f6efe0;
+  color: #3a2a1c;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.shop-line::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: -6px;
+  border: 6px solid transparent;
+  border-left: 0;
+  border-right-color: #f6efe0;
+}
+
 .shop-close {
-  margin-left: auto;
+  flex: none;
+  margin-top: 6px;
   padding: 2px 8px;
   background: transparent;
-  color: var(--muted);
+  color: #d7c3a0;
   font-size: 16px;
 }
 
@@ -1277,25 +1424,68 @@ kbd {
   color: var(--text);
 }
 
-.shop-line {
-  margin: 0;
-  color: var(--text);
-  font-style: italic;
-  line-height: 1.35;
+/* abas Comprar / Vender e o seu ouro */
+.shop-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 220, 150, 0.15);
+}
+
+.shop-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.shop-tab {
+  padding: 5px 11px;
+  border-radius: 7px;
+  background: transparent;
+  color: #d7c3a0;
+  font-weight: 700;
+}
+
+.shop-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.shop-tab.on {
+  background: linear-gradient(180deg, #e9b941, #c48a1f);
+  color: #2a1a0a;
 }
 
 .shop-purse {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--muted);
+  gap: 4px;
+  margin-left: auto;
+  padding: 3px 9px 3px 4px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 15px;
+}
+
+.shop-purse::before {
+  content: '';
+  width: 26px;
+  height: 26px;
+  background: var(--coin-stack) center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+.shop-purse .gold::before {
+  display: none;
 }
 
 #shop h3,
 #talk h3 {
   margin: 4px 0 0;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 220, 150, 0.15);
   color: var(--accent);
   font-size: 14px;
 }
@@ -1309,26 +1499,64 @@ kbd {
 .shop-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.shop-list li {
+/* cada item: ícone no quadradinho, nome e efeito, preço e botão */
+.shop-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
+  gap: 9px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 220, 150, 0.1);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.shop-card:hover {
+  border-color: rgba(233, 185, 65, 0.35);
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.shop-slot {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.3);
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3));
+}
+
+.shop-slot.rarity-rare {
+  border-color: rgba(110, 176, 255, 0.85);
+}
+
+.shop-slot.rarity-legendary {
+  border-color: rgba(233, 185, 65, 0.95);
+  box-shadow: inset 0 0 10px rgba(233, 185, 65, 0.35);
 }
 
 .shop-icon {
-  flex: none;
   width: 32px;
   height: 32px;
   image-rendering: pixelated;
+}
+
+.shop-count {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 2px #000;
 }
 
 .shop-info {
@@ -1336,43 +1564,116 @@ kbd {
   flex: 1;
   min-width: 0;
   flex-direction: column;
+  gap: 1px;
+}
+
+.shop-info .item-name {
+  font-weight: 700;
 }
 
 .shop-effect {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--muted);
+  color: #b9a888;
   font-size: 12px;
+}
+
+.shop-price {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-size: 14px;
+}
+
+.shop-missing {
+  color: #e08a7a;
+  font-size: 10.5px;
+  white-space: nowrap;
 }
 
 .shop-buttons {
   display: flex;
+  flex: none;
+  flex-direction: column;
   gap: 4px;
 }
 
 .shop-list button {
   padding: 6px 10px;
-  font-size: 13px;
+  border-radius: 7px;
+  font-weight: 700;
+}
+
+.shop-buy {
+  background: linear-gradient(180deg, #e9b941, #c48a1f);
+  color: #2a1a0a;
+}
+
+.shop-buy:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f5cd5c, #d49a2a);
+}
+
+.shop-buy:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
 }
 
 .shop-sell {
-  background: rgba(233, 185, 65, 0.16);
-  color: var(--accent);
+  background: linear-gradient(180deg, #6cc893, #3d9466);
+  color: #0d2418;
 }
 
 .shop-sell:hover {
-  background: rgba(233, 185, 65, 0.28);
+  background: linear-gradient(180deg, #82d8a6, #4aa674);
 }
 
-.shop-empty {
+.shop-sell.all {
+  font-size: 11px;
+}
+
+.shop-empty,
+.shop-foot {
   margin: 0;
-  color: var(--muted);
+  color: #b9a888;
+  font-size: 12px;
 }
 
-/* Conversa com NPCs (missões) */
-.talk-reply {
-  color: #b8f0a0;
+.shop-foot {
+  text-align: center;
+  font-style: italic;
+}
+
+/* Conversa com NPCs (missões): o painel da loja com cipó em cima e cada missão num cartão */
+.talk-vine {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex: none;
+  height: 18px;
+  margin: 0 -12px -6px;
+  /* cipó em onda com folhas penduradas, alternando verde-claro e verde-escuro */
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='18' viewBox='0 0 34 18'><path d='M0 4.5 Q8.5 8 17 4.5 T34 4.5' fill='none' stroke='%232f5e26' stroke-width='3'/><path d='M8 6 Q14 6.5 14 13.5 Q8.5 12 8 6Z' fill='%2386c95a' stroke='%231d4419' stroke-width='1'/><path d='M9.5 7.5 L13 12' stroke='%23b8e88a' stroke-width='0.8'/><path d='M25 5 Q19.5 6.5 20 13 Q25.5 11 25 5Z' fill='%234e8a3a' stroke='%231d4419' stroke-width='1'/><path d='M24 6.8 L21 11.5' stroke='%2378b45a' stroke-width='0.8'/></svg>") 0 0 / 34px 18px repeat-x;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+
+/* retrato de quem dá missão: um pouco mais para baixo (cabelo de fogo, chapéus altos) */
+.talk-portrait img {
+  margin-top: -2px;
+}
+
+/* a fala de quando você entrega a missão: balão verdinho */
+.shop-line.talk-reply {
+  background: #e2f4d2;
+  color: #22401b;
+}
+
+.shop-line.talk-reply::before {
+  border-right-color: #e2f4d2;
 }
 
 .talk-list {
@@ -1387,41 +1688,167 @@ kbd {
 .talk-quest {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(255, 220, 150, 0.12);
+  border-radius: 10px;
   background: rgba(0, 0, 0, 0.3);
 }
 
-.talk-quest strong {
+.talk-quest.fresh {
+  border-color: rgba(233, 185, 65, 0.35);
+}
+
+.talk-quest.ready {
+  border-color: rgba(108, 200, 147, 0.55);
+  background: linear-gradient(180deg, rgba(61, 148, 102, 0.18), rgba(0, 0, 0, 0.3));
+}
+
+.talk-quest-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.talk-quest-head strong {
   color: var(--text);
+  font-size: 14px;
+}
+
+/* o mesmo sinal que fica em cima do NPC */
+.talk-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f5cd5c, #c48a1f);
+  color: #2a1a0a;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.talk-quest.ready .talk-badge {
+  background: linear-gradient(180deg, #82d8a6, #3d9466);
+  color: #0d2418;
+}
+
+.talk-quest.doing .talk-badge {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--muted);
 }
 
 .talk-ask {
   margin: 0;
+  color: #e6dbc4;
   font-style: italic;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
+/* objetivo, com a contagem e a barrinha de progresso */
 .talk-goal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.talk-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.talk-bar {
+  flex-basis: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 150, 0.12);
+}
+
+.talk-bar > div {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f5cd5c, #c48a1f);
+  transition: width 0.3s ease-out;
 }
 
 .talk-goal.done {
-  color: #7dd87a;
+  color: #8fe0a8;
 }
 
+.talk-goal.done .talk-bar > div {
+  background: linear-gradient(180deg, #82d8a6, #3d9466);
+}
+
+/* recompensa em fichas: XP, ouro (com a moeda) e itens (com o ícone) */
 .talk-reward {
-  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.talk-reward-label {
+  margin-right: 2px;
+  color: #b9a888;
+  font-size: 11px;
+}
+
+.talk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px 2px 5px;
+  border: 1px solid rgba(255, 220, 150, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
   font-size: 12px;
+  font-weight: 600;
+}
+
+.talk-chip.xp {
+  padding-left: 8px;
+  color: #9fd8ff;
+}
+
+.talk-chip img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
 }
 
 .talk-quest button {
   align-self: flex-start;
-  margin-top: 4px;
-  padding: 6px 14px;
+  margin-top: 2px;
+  padding: 7px 16px;
+  border-radius: 7px;
   font-size: 13px;
+  font-weight: 700;
+}
+
+.talk-main {
+  background: linear-gradient(180deg, #e9b941, #c48a1f);
+  color: #2a1a0a;
+}
+
+.talk-main:hover {
+  background: linear-gradient(180deg, #f5cd5c, #d49a2a);
+}
+
+.talk-main.talk-give {
+  background: linear-gradient(180deg, #6cc893, #3d9466);
+  color: #0d2418;
+}
+
+.talk-main.talk-give:hover {
+  background: linear-gradient(180deg, #82d8a6, #4aa674);
 }
 
 .talk-soft {
@@ -1434,10 +1861,21 @@ kbd {
 }
 
 .talk-shop {
+  align-self: center;
   margin-top: 4px;
+  padding: 7px 18px;
+  border: 1px solid rgba(255, 220, 150, 0.25);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #5a4028, #3e2c1c);
+  color: #f3e3c4;
+  font-weight: 700;
 }
 
-/* Missões em andamento, embaixo do painel de vida */
+.talk-shop:hover {
+  background: linear-gradient(180deg, #6a4c30, #4a3420);
+}
+
+/* Missões em andamento, embaixo do painel de vida: nome, objetivo e uma barrinha */
 #quest-tracker {
   position: fixed;
   top: calc(104px + env(safe-area-inset-top));
@@ -1452,10 +1890,11 @@ kbd {
 .tracker-row {
   display: flex;
   flex-direction: column;
-  padding: 4px 8px;
+  gap: 1px;
+  padding: 4px 8px 5px;
   border-left: 3px solid var(--accent);
   border-radius: 6px;
-  background: rgba(10, 14, 12, 0.6);
+  background: rgba(10, 14, 12, 0.62);
   font-size: 11px;
   text-shadow: 0 1px 2px #000;
 }
@@ -1465,24 +1904,58 @@ kbd {
   font-size: 12px;
 }
 
+.tracker-bar {
+  height: 3px;
+  margin-top: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.tracker-bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease-out;
+}
+
 .tracker-row.ready {
   border-left-color: #7dd87a;
 }
 
+.tracker-row.ready strong,
 .tracker-row.ready span {
   color: #b8f0a0;
 }
 
-/* Sinal em cima do NPC: ! missão nova, ? missão para entregar */
+.tracker-row.ready .tracker-bar > div {
+  background: #7dd87a;
+}
+
+/* Sinal em cima do NPC: selo dourado com ! (missão nova) ou verde com ? (missão para entregar), brilhando */
 .tag .npc-mark {
-  color: #ffd76a;
-  font-size: 18px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #3a2408;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff1a8, #f5c638 45%, #c48a1f);
+  color: #3a2408;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1;
-  text-shadow:
-    0 1px 2px #000,
-    0 0 4px #000;
+  box-shadow:
+    0 0 9px rgba(255, 200, 70, 0.8),
+    0 2px 3px rgba(0, 0, 0, 0.55);
   animation: mark-bob 1.2s ease-in-out infinite;
+}
+
+.tag .npc-mark[data-mark='?'] {
+  background: radial-gradient(circle at 35% 30%, #e6ffd8, #6cc893 45%, #3d9466);
+  color: #0d2418;
+  box-shadow:
+    0 0 9px rgba(120, 230, 160, 0.85),
+    0 2px 3px rgba(0, 0, 0, 0.55);
 }
 
 @keyframes mark-bob {
@@ -1579,7 +2052,6 @@ kbd {
     bottom: calc(8px + env(safe-area-inset-bottom));
     width: auto;
     max-height: none;
-    background: rgb(20, 18, 14);
   }
 
   .shop-list button {

@@ -18,7 +18,9 @@ export type SoundName =
   | 'charge'
   | 'fire'
   | 'coins'
-  | 'coin';
+  | 'coin'
+  | 'buy'
+  | 'sell';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -129,14 +131,36 @@ export class Sfx {
         [2093, 2637, 2349, 2794].forEach((f, i) => this.tone('triangle', f, f * 0.97, t + i * 0.055, 0.09, 0.08));
         this.noise(t, 0.05, 'highpass', 6000, 3500, 0.05);
         break;
-      case 'coin': // pegou o ouro
-        this.tone('square', 988, 988, t, 0.06, 0.06);
-        this.tone('square', 1319, 1319, t + 0.06, 0.16, 0.06);
+      case 'coin': // pegou o ouro: "tlim-tlim" de moeda (sino com harmônicos)
+        this.bell(2093, t, 0.32, 0.12);
+        this.bell(2637, t + 0.07, 0.38, 0.1);
+        this.noise(t, 0.02, 'highpass', 7000, 5000, 0.08);
+        break;
+      case 'buy': // comprou: "ka-tching" de caixa registradora (gaveta + moedas)
+        this.noise(t, 0.06, 'bandpass', 1800, 900, 0.22);
+        this.tone('square', 196, 160, t, 0.05, 0.05);
+        this.bell(2349, t + 0.06, 0.4, 0.12);
+        this.bell(3136, t + 0.1, 0.45, 0.08);
+        break;
+      case 'sell': // vendeu: moedas caindo na mão, uma atrás da outra
+        [1760, 2093, 2349, 2794].forEach((f, i) => this.bell(f, t + i * 0.06, 0.22, 0.07));
+        this.noise(t + 0.02, 0.05, 'highpass', 6500, 4000, 0.05);
         break;
       case 'equip': // fivela fechando
         this.noise(t, 0.05, 'bandpass', 2600, 1700, 0.25);
         this.tone('square', 330, 440, t + 0.03, 0.07, 0.07);
         break;
+    }
+  }
+
+  /** Som de metal (moeda, sino): a nota e dois harmônicos "tortos", como num sino de verdade, morrendo rápido. */
+  private bell(freq: number, start: number, duration: number, volume: number): void {
+    for (const [ratio, gain] of [
+      [1, 1],
+      [2.76, 0.45],
+      [5.4, 0.2],
+    ] as const) {
+      this.tone('sine', freq * ratio, freq * ratio * 0.995, start, duration / ratio ** 0.4, volume * gain);
     }
   }
 

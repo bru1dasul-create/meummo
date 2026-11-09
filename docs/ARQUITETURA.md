@@ -104,9 +104,25 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   mais em `data/items.json` saem e pilhas grandes demais são cortadas.
 - O equipamento aparece no personagem: o estado de cada jogador (`spawn`, `welcome`, `zone`) leva `gear`, o `icone`
   de cada parte equipada (`gearLookOf` em `src/shared/items.ts`), e quando muda o servidor manda `gear` para quem
-  está vendo (e para o próprio). O navegador desenha em camadas (`src/client/game/characters.ts`): cabeça, corpo,
-  cabelo, roupa (gibão/couraça), braço, amuleto, arma e chapéu por cima; cada look + equipamento vira uma textura
-  criada uma vez só. O boneco da mochila usa o mesmo desenho.
+  está vendo (e para o próprio). O navegador procura o visual com o mesmo nome em `src/client/game/gearArt.ts`
+  e desenha o personagem em camadas (veja "Personagem em camadas" abaixo). O boneco da mochila usa o mesmo desenho.
+
+## Personagem em camadas (`src/client/game/doll/`)
+O personagem é um "boneco de papel" desenhado por código, com o dobro de pixels do mapa (quadro 64x64, mostrado
+na metade do tamanho; por isso o zoom da câmera é sempre par). Corpo de ~26 px do mapa, com cabeça, cabelo em
+mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de corpo, tudo vindo do nome.
+- `poses.ts` — o esqueleto: para cada animação (`idle` 4 quadros, `walk` 6, `run` 4 na esquiva, `shoot` 3,
+  `swing` 4, `hurt`, `ko`) e vista (`down`, `up`, `side`), onde ficam mãos e pés; cotovelos e joelhos são
+  calculados. `raster.ts` é o pincel (formas com volume, sombra projetada, contorno); `compose.ts` monta o corpo
+  na ordem certa de cada vista; `gear.ts` desenha cada tipo de equipamento preso aos ossos (acompanha tudo).
+- `src/client/game/characters.ts` junta numa textura por combinação (dividida entre quem é igual, desenhada aos
+  poucos para não engasgar). NPCs podem ter aparência própria pela chave deles (`NPC_LOOKS`: a Dona Iracema; o Curupira, com
+  cabelo de fogo — penteado `fogo`, que tremula a cada quadro — e `feetBackward`/`barefoot`).
+- `npm run render:characters` desenha uma prancha de exemplo em `docs/personagens.png`.
+- Monstros novos usam o mesmo pincel (`src/client/game/monsterPaint.ts`): olham para a direita (o jogo espelha) e
+  têm quadros de parado, andando, armando o golpe (enquanto o aviso está no chão) e golpeando, e podem ter um golpe
+  especial (`special`: o canto da Iara, ligado pelo `fx` `song`). `monsterArt.ts` escolhe o quadro (`monsterLook`);
+  monstro sem pintura usa o desenho antigo 16x16, e um sem desenho, a bolha.
 
 ## NPCs e loja
 - Os NPCs vêm de `data/npcs.json` (lido por `src/server/npcs.ts`; `checkNpcs` confere ao ligar se o mapa existe,
