@@ -33,6 +33,14 @@ export interface ItemInfo {
   description: string;
   /** Nome do desenho (src/client/itemArt.ts). */
   icon: string;
+  /** Preço na loja, em ouro (0 = não se compra nem se vende). Quem vende para a loja recebe uma parte disso. */
+  price: number;
+}
+
+/** Quanto a loja paga por um item: `percent`% do preço, arredondado para baixo (mas pelo menos 1 se o item vale algo). */
+export function sellPrice(def: ItemInfo, percent: number): number {
+  if (def.price <= 0 || percent <= 0) return 0;
+  return Math.max(1, Math.floor((def.price * percent) / 100));
 }
 
 /** Quantos espaços a mochila tem. */

@@ -37,6 +37,14 @@ export class Reader {
     return value.trim();
   }
 
+  /** Texto opcional (sem o campo = texto vazio). */
+  optionalText(field: string): string {
+    const value = this.data[field];
+    if (value === undefined) return '';
+    if (typeof value !== 'string') this.fail(field, 'precisa ser um texto');
+    return value.trim();
+  }
+
   range(field: string): [number, number] {
     const value = this.data[field];
     if (!Array.isArray(value) || value.length !== 2 || !value.every((v) => typeof v === 'number' && v >= 0) || value[0] > value[1]) {

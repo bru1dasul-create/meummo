@@ -54,6 +54,7 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       rarity: pick(RARITIES, r.text('raridade', 'comum'), 'raridade', where),
       description: typeof (raw as Record<string, unknown>).descricao === 'string' ? ((raw as Record<string, unknown>).descricao as string).trim() : '',
       icon: r.text('icone', id),
+      price: whole('preco', 0),
     };
     if (kind === 'consumable' && def.heal === 0) r.fail('cura', 'precisa ser maior que 0 (por enquanto, consumível é para curar)');
     defs.set(id, def);

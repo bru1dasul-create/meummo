@@ -126,6 +126,7 @@ espaço, ex.: `chapeu_palha`); é ele que os monstros usam na lista `itens`.
 | Campo | O que é |
 |---|---|
 | `nome` | o nome que aparece no jogo |
+| `preco` | quanto custa na loja, em ouro (a loja paga uma parte disso quando você vende; sem `preco`, não se compra nem se vende) |
 | `tipo` | `equipamento`, `consumivel` (de comer/usar) ou `material` (para trocas e missões, no futuro) |
 | `parte` | só equipamento: `arma`, `cabeca`, `corpo` ou `amuleto` |
 | `dano`, `vida`, `defesa` | só equipamento: quanto soma ao personagem (defesa tira isso de cada golpe, mas sempre sobra 1) |
@@ -140,6 +141,23 @@ O equipamento também aparece no personagem, pelo ícone: `chapeu_palha` e `gorr
 no corpo precisa de código (`src/client/itemArt.ts` e `src/client/game/characters.ts`) — é só pedir; o
 `npm run check` avisa se algum equipamento ficou sem desenho no personagem. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
+
+## Vendedores e loja (sem programar)
+
+Os personagens que não são jogadores (como a **Dona Iracema**, quitandeira do píer, no Refúgio) ficam em
+[`data/npcs.json`](data/npcs.json). Clicando (ou tocando) nela, o personagem anda até perto e abre a loja.
+
+| Campo | O que é |
+|---|---|
+| `nome`, `titulo` | o nome e o que ela é (aparece embaixo do nome) |
+| `mapa`, `x`, `y` | em que mapa fica (nome do arquivo em `public/assets/maps`, sem `.tmj`) e em que tile — a posição que o Tiled mostra |
+| `fala` | o que ela diz quando você chega para negociar |
+| `veste` | itens que aparecem nela, como o equipamento dos jogadores (ex.: `["chapeu_palha"]`) |
+| `loja.vende` | ids dos itens que ela vende (pelo `preco` de cada um em `data/items.json`) |
+| `loja.compraPor` | quanto ela paga pelo que você vende, em % do preço (50 = metade) |
+
+Para mudar preços, mexa no `preco` de cada item; para mudar o que ela vende, na lista `vende`. Salve e reinicie
+o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão livre mais perto e o servidor avisa.
 
 ## Editar os mapas
 

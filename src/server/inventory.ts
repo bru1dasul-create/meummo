@@ -69,6 +69,15 @@ export class Inventory {
     return Math.floor(n) - left;
   }
 
+  /** Quantos deste item ainda cabem (nas pilhas que não estão cheias e nos espaços vazios). */
+  room(item: string): number {
+    const def = this.defs.get(item);
+    if (!def) return 0;
+    let room = 0;
+    for (const stack of this.slots) room += stack === null ? def.stack : stack.item === item ? Math.max(0, def.stack - stack.n) : 0;
+    return room;
+  }
+
   /** Tira até `n` itens do espaço `i`. */
   take(i: number, n = 1): ItemStack | null {
     const stack = Number.isInteger(i) ? this.slots[i] : undefined;

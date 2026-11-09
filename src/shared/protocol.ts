@@ -5,13 +5,13 @@
 import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 
-export type EntityKind = 'player' | 'monster';
+export type EntityKind = 'player' | 'monster' | 'npc';
 
 /** Tudo que o cliente precisa saber para desenhar alguém. */
 export interface EntityState {
   id: number;
   kind: EntityKind;
-  /** 'player' para jogadores; para monstros, o id do monstro em data/monsters.json (ex.: 'saci'). */
+  /** 'player' para jogadores; para monstros e NPCs, o id em data/monsters.json ou data/npcs.json (ex.: 'saci'). */
   type: string;
   name: string;
   x: number;
@@ -26,6 +26,18 @@ export interface EntityState {
   stepMs?: number;
   /** Jogadores: o equipamento que aparece no personagem (chapéu, couraça, arma...). */
   gear?: GearLook;
+}
+
+/** Um personagem do jogo que não é jogador (vendedora...). Fica parado no lugar dele. */
+export interface NpcInfo {
+  /** Para desenhar (kind 'npc'). */
+  e: EntityState;
+  /** O que ela é ("quitandeira do píer"). */
+  title: string;
+  /** O que diz quando alguém chega para negociar. */
+  line: string;
+  /** null = não tem loja. `buyPercent`: quanto ela paga pelo que você vende (% do preço). */
+  shop: { sells: string[]; buyPercent: number } | null;
 }
 
 /** Números que só o próprio jogador precisa ver. */
@@ -49,6 +61,8 @@ export type ClientMsg =
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
   | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
+  | { t: 'buy'; npc: number; item: string; n: number } // comprar n deste item do vendedor `npc`
+  | { t: 'sell'; npc: number; i: number; n: number } // vender n do item do espaço i da mochila para o vendedor `npc`
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
@@ -68,7 +82,7 @@ export type RejectReason =
   | 'version';
 /** Por que o servidor encerrou a sua sessão. */
 export type ByeReason = 'replaced' | 'shutdown';
-export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full';
+export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
 export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge';
@@ -87,9 +101,11 @@ export type ServerMsg =
       /** Todos os tipos de item (de data/items.json). */
       items: ItemInfo[];
       inv: InventoryState;
+      /** Os NPCs deste mapa (não somem nem andam: vêm uma vez só). */
+      npcs: NpcInfo[];
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
-  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number }
+  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[] }
   | { t: 'reject'; reason: RejectReason }
   | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
@@ -110,7 +126,7 @@ export type ServerMsg =
   | { t: 'levelup'; id: number; level: number; maxHp: number }
   | { t: 'gear'; id: number; gear: GearLook } // alguém trocou o equipamento (muda o desenho dele)
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
-  | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila)
+  | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila ou da loja)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
   | { t: 'loot'; x: number; y: number; items: ItemStack[]; gold?: number } // você pegou isto (e este ouro) do monstro que caiu em (x, y)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat

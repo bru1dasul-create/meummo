@@ -13,17 +13,19 @@ import {
   STEP_TOLERANCE_MS,
   TICK_MS,
   TILE_SIZE,
+  TRADE_RANGE,
 } from '../../shared/constants';
-import { angleBetween, angleOfDir, arcTiles, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
+import { angleBetween, angleOfDir, arcTiles, chebyshev, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
 import { ALL_DIRS, DX, DY, stepDuration, type Dir } from '../../shared/dir';
 import { GameMap, type MapExit, type Tile, type TiledMap } from '../../shared/map';
 import { applyDash, applyInput, applyStep, nextStepTime, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
-import { DASH_SLOT, type EntityState, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
+import { DASH_SLOT, type EntityState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
 import { SKILLS } from '../../shared/skills';
 import { Bag } from '../bag';
 import { itemTexture } from '../itemArt';
+import { ShopWindow } from '../shop';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
@@ -89,6 +91,12 @@ export class WorldScene extends Phaser.Scene {
   private feedback!: Feedback;
   private zoneBanner!: ZoneBanner;
   private bag!: Bag;
+  private shop!: ShopWindow;
+  /** Os NPCs deste mapa (vendedora...), pelo id. */
+  private readonly npcInfo = new Map<number, NpcInfo>();
+  /** Andando até este NPC para negociar (abre a loja ao chegar perto). */
+  private pendingNpc: number | null = null;
+  private myGold = 0;
   /** Tipos de item (chegam nas boas-vindas). */
   private readonly items = new Map<string, ItemInfo>();
   /** O que estava equipado (para tocar o som de "equipou" só quando muda). */
@@ -182,6 +190,15 @@ export class WorldScene extends Phaser.Scene {
     );
     this.bagEquipped = this.welcome.inv.equipped;
     this.hud.setGold(this.welcome.inv.gold ?? 0);
+    this.myGold = this.welcome.inv.gold ?? 0;
+    this.shop = new ShopWindow(this.items, this.welcome.inv, {
+      buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
+      sell: (npc, i, n) => this.conn.send({ t: 'sell', npc, i, n }),
+    });
+    for (const npc of this.welcome.npcs ?? []) {
+      this.npcInfo.set(npc.e.id, npc);
+      this.addEntity(npc.e, false).setSubtitle(npc.title);
+    }
     this.applyStats(this.welcome.stats, false);
     this.hud.setOnline(this.welcome.online);
 
@@ -276,7 +293,68 @@ export class WorldScene extends Phaser.Scene {
     });
     this.effects.update(now);
     this.actionBar.update(now);
+    this.updateShop();
     this.updateDepth(now);
+  }
+
+  // ======================= NPCs e loja =======================
+
+  /** Abre a loja ao chegar perto do NPC; fecha se você se afastar dela. */
+  private updateShop(): void {
+    if (this.pendingNpc !== null) {
+      const view = this.entities.get(this.pendingNpc);
+      if (view && chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) <= TRADE_RANGE) {
+        const id = this.pendingNpc;
+        this.pendingNpc = null;
+        this.clearPath();
+        this.openNpc(id);
+      } else if (!view || this.path.length === 0) {
+        this.pendingNpc = null; // parou de andar antes de chegar
+      }
+    }
+    const open = this.shop.npcId;
+    if (open !== null) {
+      const view = this.entities.get(open);
+      if (!view || chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) > TRADE_RANGE + 1) {
+        this.shop.close();
+        this.toast.show('Você se afastou da loja');
+      }
+    }
+  }
+
+  /** O NPC desenhado embaixo do ponteiro (o corpo dele ocupa mais ou menos um tile e meio de altura). */
+  private npcAt(tx: number, ty: number): number | null {
+    for (const [id] of this.npcInfo) {
+      const view = this.entities.get(id);
+      if (!view) continue;
+      const dx = tx - (view.tileX + 0.5);
+      const dy = ty - (view.tileY + 0.5);
+      if (Math.abs(dx) <= 0.8 && dy >= -1.6 && dy <= 0.7) return id;
+    }
+    return null;
+  }
+
+  /** Clicou num NPC: perto, abre a loja (ou ele fala); longe, anda até ele primeiro. */
+  private talkTo(id: number): void {
+    const view = this.entities.get(id);
+    if (!view) return;
+    if (chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) <= TRADE_RANGE) {
+      this.openNpc(id);
+      return;
+    }
+    this.walkTo(view.tileX, view.tileY);
+    this.pendingNpc = this.path.length > 0 ? id : null;
+  }
+
+  private openNpc(id: number): void {
+    const info = this.npcInfo.get(id);
+    if (!info) return;
+    if (!info.shop) {
+      if (info.line) this.entities.get(id)?.say(info.line);
+      return;
+    }
+    this.bag.close();
+    this.shop.open(info);
   }
 
   /** Copas transparentes em cima de quem está embaixo delas (e dos avisos no chão), e as luzes tremulando. */
@@ -525,7 +603,7 @@ export class WorldScene extends Phaser.Scene {
   private shotTargets(fromMonster: boolean): Tile[] {
     const tiles: Tile[] = [];
     for (const view of this.entities.values()) {
-      if ((view.kind === 'player') === fromMonster) tiles.push({ x: view.tileX, y: view.tileY });
+      if (fromMonster ? view.kind === 'player' : view.kind === 'monster') tiles.push({ x: view.tileX, y: view.tileY });
     }
     return tiles;
   }
@@ -557,7 +635,8 @@ export class WorldScene extends Phaser.Scene {
         if (!event.repeat) this.bag.toggle();
         break;
       case 'Escape':
-        if (this.bag.isOpen) this.bag.close();
+        if (this.shop.isOpen) this.shop.close();
+        else if (this.bag.isOpen) this.bag.close();
         break;
     }
   };
@@ -570,6 +649,12 @@ export class WorldScene extends Phaser.Scene {
     const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const tx = point.x / T;
     const ty = point.y / T;
+
+    const npc = this.npcAt(tx, ty);
+    if (npc !== null) {
+      this.talkTo(npc);
+      return;
+    }
 
     if (pointer.wasTouch) {
       // Toque num monstro: atira nele. Toque no chão: anda até lá.
@@ -725,6 +810,10 @@ export class WorldScene extends Phaser.Scene {
         if (JSON.stringify(msg.inv.equipped) !== before) this.sfx.play('equip');
         this.bag.setState(msg.inv);
         this.hud.setGold(msg.inv.gold ?? 0);
+        // comprou ou vendeu: tilintar de moedas
+        if (this.shop.isOpen && msg.inv.gold !== this.myGold) this.sfx.play('loot');
+        this.myGold = msg.inv.gold ?? 0;
+        this.shop.setInventory(msg.inv);
         break;
       }
       case 'gear':
@@ -892,7 +981,7 @@ export class WorldScene extends Phaser.Scene {
   /** Fomos para outro mapa: esta cena sai e entra uma nova, já com o mapa novo. */
   private changeZone(msg: ZoneMsg): void {
     this.conn.hold(); // o que chegar daqui em diante é do mapa novo: fica guardado para a próxima cena
-    this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online }, this.seq);
+    this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online, npcs: msg.npcs }, this.seq);
   }
 
   private onLoot(x: number, y: number, stacks: ItemStack[], gold: number, now: number): void {
@@ -923,6 +1012,9 @@ export class WorldScene extends Phaser.Scene {
     else if (reason === 'full_hp') this.toast.show('Sua vida já está cheia');
     else if (reason === 'bag_full') this.toast.show('A mochila está cheia');
     else if (reason === 'dead') this.toast.show('Desmaiado não dá para mexer na mochila');
+    else if (reason === 'no_gold') this.toast.show('Ouro insuficiente');
+    else if (reason === 'too_far') this.toast.show('Chegue mais perto para negociar');
+    else if (reason === 'cant_trade') this.toast.show('Isso não dá para negociar aqui');
   }
 
   private applyStats(stats: PlayerStats, showGain: boolean): void {
@@ -1051,6 +1143,7 @@ export class WorldScene extends Phaser.Scene {
     this.toast?.destroy();
     this.zoneBanner?.destroy();
     this.bag?.destroy();
+    this.shop?.destroy();
     this.feedback?.destroy();
   }
 }

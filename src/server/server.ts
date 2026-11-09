@@ -11,6 +11,7 @@ import { CharacterStore, type HashCost } from './accounts';
 import { loadItemDefs } from './items';
 import { LoginGuard, type GuardLimits } from './login-guard';
 import { checkDrops, loadMonsterDefs } from './monsters';
+import { checkNpcs, loadNpcDefs } from './npcs';
 import { CLIENT_DIR, MAPS_DIR } from './paths';
 import { Realm } from './realm';
 import { Session, type Lobby } from './session';
@@ -64,8 +65,11 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const items = loadItemDefs();
   const monsters = loadMonsterDefs();
   checkDrops(monsters, items);
+  const maps = loadMaps();
+  const npcs = loadNpcDefs();
+  checkNpcs(npcs, items, maps);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const realm = new Realm(loadMaps(), { log, monsters, items, saver: store });
+  const realm = new Realm(maps, { log, monsters, items, npcs, saver: store });
   const world = realm.start;
   const lobby: Lobby = {
     realm,

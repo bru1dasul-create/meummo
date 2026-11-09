@@ -1,6 +1,7 @@
 {
   "banana": {
     "nome": "Banana",
+    "preco": 5,
     "tipo": "consumivel",
     "cura": 15,
     "recargaMs": 3000,
@@ -10,6 +11,7 @@
   },
   "couro_jararaca": {
     "nome": "Couro de Jararaca",
+    "preco": 6,
     "tipo": "material",
     "pilha": 20,
     "descricao": "Fino e resistente. Os artesãos do Refúgio vão querer isso.",
@@ -17,6 +19,7 @@
   },
   "chapeu_palha": {
     "nome": "Chapéu de Palha",
+    "preco": 40,
     "tipo": "equipamento",
     "parte": "cabeca",
     "vida": 10,
@@ -25,6 +28,7 @@
   },
   "estilingue_goiabeira": {
     "nome": "Estilingue de Goiabeira",
+    "preco": 120,
     "tipo": "equipamento",
     "parte": "arma",
     "dano": 2,
@@ -34,6 +38,7 @@
   },
   "colar_presas": {
     "nome": "Colar de Presas",
+    "preco": 120,
     "tipo": "equipamento",
     "parte": "amuleto",
     "dano": 1,
@@ -44,6 +49,7 @@
   },
   "gibao_couro": {
     "nome": "Gibão de Couro",
+    "preco": 150,
     "tipo": "equipamento",
     "parte": "corpo",
     "vida": 8,
@@ -54,6 +60,7 @@
   },
   "gorro_saci": {
     "nome": "Gorro Vermelho do Saci",
+    "preco": 600,
     "tipo": "equipamento",
     "parte": "cabeca",
     "dano": 2,
@@ -64,6 +71,7 @@
   },
   "erva_arruda": {
     "nome": "Ramo de Arruda",
+    "preco": 15,
     "tipo": "consumivel",
     "cura": 30,
     "recargaMs": 3000,
@@ -73,6 +81,7 @@
   },
   "sucata": {
     "nome": "Sucata",
+    "preco": 4,
     "tipo": "material",
     "pilha": 20,
     "descricao": "Ferro velho da cidade antiga. Os ferreiros do Refúgio vão querer isso.",
@@ -80,6 +89,7 @@
   },
   "faca_sucata": {
     "nome": "Faca de Sucata",
+    "preco": 200,
     "tipo": "equipamento",
     "parte": "arma",
     "dano": 4,
@@ -89,6 +99,7 @@
   },
   "couraca_lata": {
     "nome": "Couraça de Lata",
+    "preco": 220,
     "tipo": "equipamento",
     "parte": "corpo",
     "vida": 15,
@@ -99,6 +110,7 @@
   },
   "ferradura_brasa": {
     "nome": "Ferradura em Brasa",
+    "preco": 900,
     "tipo": "equipamento",
     "parte": "amuleto",
     "dano": 3,
