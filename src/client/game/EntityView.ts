@@ -11,15 +11,14 @@ import { CharacterAnimator, type AttackKind } from './animator';
 import { acquireCharacterTexture, CHAR_TOP, CHARACTER_ORIGIN_Y, CHARACTER_SCALE, characterTextureReady, faceTexture, releaseCharacterTexture } from './characters';
 import { faceFrame, FACE_W } from './doll/face';
 import { FEET_Y, FRAME_W, faceOrigin, frameIndex } from './doll/poses';
-import { monsterTexture } from './monsterArt';
-
-/** Monstros que se mexem mesmo parados (o Saci pulando, o fogo da Mula). */
-const ANIMATED_IDLE = new Set(['saci', 'mula_sem_cabeca']);
+import { monsterLook, type MonsterLook } from './monsterArt';
 
 const BUBBLE_MS = 5000;
 const FADE_MS = 450;
 /** Folga entre um passo e o próximo em que ainda conta como "andando" (não pisca a pose parada). */
 const WALK_GRACE_MS = 90;
+/** Quanto tempo o monstro mostra o quadro do golpe depois de preparar. */
+const STRIKE_MS = 220;
 
 /** Pixel dos pés do personagem no tile (x, y). */
 export function feetOf(x: number, y: number): [number, number] {
@@ -81,6 +80,8 @@ export class EntityView {
   // jogadores e NPCs: animações, rosto e a textura da roupa
   private readonly animator: CharacterAnimator | null = null;
   private readonly face: Phaser.GameObjects.Sprite | null = null;
+  // monstros: textura, tamanho e quadros (pintados ou 16x16)
+  private readonly monster: MonsterLook | null = null;
   private textureKey = '';
   /** Roupa nova ainda sendo desenhada: a antiga continua na tela até ela ficar pronta. */
   private pendingKey = '';
@@ -107,15 +108,17 @@ export class EntityView {
     this.maxHp = state.maxHp;
     this.stepMs = state.stepMs;
     this.look = state.look;
-    this.height = state.kind === 'monster' ? TILE_SIZE : CHAR_TOP;
+    if (state.kind === 'monster') this.monster = monsterLook(scene, state.type);
+    this.height = this.monster ? this.monster.top : CHAR_TOP;
     this.facingLeft = state.dir === LEFT;
     const [px, py] = feetOf(state.x, state.y);
     this.fromX = this.toX = px;
     this.fromY = this.toY = py;
 
-    this.shadow = scene.add.ellipse(px, py - 1.5, 10, 4, 0x000000, 0.28);
-    if (state.kind === 'monster') {
-      this.sprite = scene.add.sprite(px, py, monsterTexture(scene, state.type), 0).setOrigin(0.5, 1);
+    this.shadow = scene.add.ellipse(px, py - 1.5, this.monster?.shadow ?? 10, 4, 0x000000, 0.28);
+    if (this.monster) {
+      this.sprite = scene.add.sprite(px, py, this.monster.key, 0).setOrigin(0.5, this.monster.originY).setScale(this.monster.scale);
+      this.baseScale = this.monster.scale;
     } else {
       // jogadores e NPCs (vendedora...) usam o mesmo desenho de personagem; NPC pode ter aparência própria
       const npc = state.kind === 'npc' ? state.type : undefined;
@@ -234,15 +237,17 @@ export class EntityView {
       this.swapWhenReady();
       if (moving) this.lastMovingAt = now;
       this.drawCharacter(now, moving || now - this.lastMovingAt < WALK_GRACE_MS, t);
-    } else {
-      this.sprite.setFrame(moving || (now % 900 < 450 && ANIMATED_IDLE.has(this.type)) ? 1 : 0);
+    } else if (this.monster) {
+      const windup = now < this.windupUntil;
+      const striking = !windup && this.windupUntil > 0 && now < this.windupUntil + STRIKE_MS;
+      this.sprite.setFrame(this.monster.frame({ now, moving, windup, striking, seed: this.id }));
       this.sprite.setFlipX(this.facingLeft);
     }
 
     // preparando golpe: pulsa
     if (now < this.windupUntil) {
       const progress = (now - this.windupStart) / Math.max(1, this.windupUntil - this.windupStart);
-      this.sprite.setScale(this.baseScale * (1 + 0.12 * Math.abs(Math.sin(progress * Math.PI * 4))));
+      this.sprite.setScale(this.baseScale * (1 + (this.monster?.pulse ?? 0.12) * Math.abs(Math.sin(progress * Math.PI * 4))));
     } else {
       this.sprite.setScale(this.baseScale);
     }

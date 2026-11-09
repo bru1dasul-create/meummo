@@ -55,6 +55,28 @@ const ICONS: Record<string, IconArt> = {
       "................",
     ],
   },
+  // dente de jacaré: grande, curvo e pontudo, com a raiz mais escura
+  dente: {
+    colors: { I: "#efe6c8", W: "#fffdf4", i: "#c9b98e", r: "#a8845a", R: "#7a5a3a" },
+    rows: [
+      "................",
+      "................",
+      "......RrrR......",
+      ".....RrrrrR.....",
+      ".....iIIIIi.....",
+      ".....IWIIIi.....",
+      ".....IWIIIi.....",
+      "......WIIIi.....",
+      "......IWIIi.....",
+      ".......WIi......",
+      ".......IIi......",
+      "........Ii......",
+      "........I.......",
+      "................",
+      "................",
+      "................",
+    ],
+  },
   chapeu_palha: {
     colors: { S: "#e8c872", s: "#b8913c", R: "#c0392b" },
     rows: [

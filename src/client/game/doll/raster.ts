@@ -57,6 +57,8 @@ export class Canvas {
   /** Grupo de cada parte (número, para comparar rápido). */
   private readonly groupOf: number[] = [0];
   private readonly groups = new Map<string, number>();
+  /** Grupos de detalhe (sem linha interna). */
+  private readonly flat = new Set<number>();
   private current = 0;
 
   constructor(
@@ -77,6 +79,13 @@ export class Canvas {
     }
     this.groupOf.push(id);
     this.current = this.groupOf.length - 1;
+    return this;
+  }
+
+  /** Começa uma parte de detalhes miúdos (dentes, unhas): por cima de tudo, sem linha interna em volta. */
+  detail(group: string): this {
+    this.part(group);
+    this.flat.add(this.groups.get(group)!);
     return this;
   }
 
@@ -280,7 +289,7 @@ export class Canvas {
             const n = near(x, y, k);
             if (n < 0) continue;
             const other = owner[n]!;
-            if (other !== 0 && other < me && groupOf[other] !== groupOf[me]) {
+            if (other !== 0 && other < me && groupOf[other] !== groupOf[me] && !this.flat.has(groupOf[me]!)) {
               out = darken(c, 0.58);
               break;
             }

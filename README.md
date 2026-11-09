@@ -103,7 +103,7 @@ npm run bots -- 6 --cacar
 | `npm run bots -- 10` | 10 jogadores automáticos andando e conversando (`--cacar` para caçarem monstros); aparecem como "Bot ..." |
 | `npm run gen:tiles` | redesenha a arte provisória (`public/assets/tiles.png`) |
 | `npm run render:map` | desenha os mapas inteiros em `docs/mapa-<id>.png` |
-| `npm run render:characters` | desenha personagens de exemplo, com animações e equipamentos, em `docs/personagens.png` |
+| `npm run render:characters` | desenha personagens de exemplo, com animações e equipamentos, e os monstros pintados em `docs/personagens.png` |
 
 ## Personagens salvos
 

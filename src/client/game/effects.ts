@@ -20,8 +20,11 @@ interface Effect {
 }
 
 interface VisualShot {
+  kind: string;
   path: ShotPath;
   sprite: Phaser.GameObjects.Arc;
+  /** Gotinhas atrás do tiro (jato d'água). */
+  trail: Phaser.GameObjects.Arc[];
   serverId: number | null;
   cid: number | null;
   fromMonster: boolean;
@@ -42,6 +45,10 @@ export interface ShotOptions {
 }
 
 const SHOT_COLORS: Record<string, number> = { pedra: 0xe9e6df, fruta: 0xff9f1c, agua: 0x7cc8f0 }; // agua: jato do boto
+/** Respingo quando o tiro acaba (o padrão é poeira clara). */
+const SPLASH_COLORS: Record<string, [hit: number, miss: number]> = { agua: [0xc8ecff, 0x7cc8f0] };
+/** Distância (pixels) entre as gotinhas do rastro do jato d'água. */
+const TRAIL_GAP = 3.5;
 
 /** Lista [x0, y0, x1, y1, ...] de tiles → o centro de cada um, em pixels. */
 function tileCenters(tiles: number[]): { x: number; y: number }[] {
@@ -114,13 +121,26 @@ export class Effects {
       range: options.range,
       traveled: 0,
     };
+    const water = options.kind === 'agua';
     const sprite = this.scene.add
-      .circle(path.x * T, path.y * T, options.kind === 'fruta' ? 2.5 : 2, SHOT_COLORS[options.kind] ?? 0xffffff)
-      .setStrokeStyle(1, 0x2a2420, 0.95)
+      .circle(path.x * T, path.y * T, options.kind === 'fruta' || water ? 2.5 : 2, SHOT_COLORS[options.kind] ?? 0xffffff)
+      .setStrokeStyle(1, water ? 0x1d4a6e : 0x2a2420, 0.95)
       .setDepth(5000);
+    // jato d'água: duas gotinhas menores e mais claras atrás
+    const trail = water
+      ? [1.8, 1.2].map((r, i) =>
+          this.scene.add
+            .circle(path.x * T, path.y * T, r, 0xb8e4ff, 0.85 - i * 0.25)
+            .setStrokeStyle(1, 0x1d4a6e, 0.6)
+            .setDepth(4999)
+            .setVisible(false),
+        )
+      : [];
     this.shots.push({
+      kind: options.kind,
       path,
       sprite,
+      trail,
       serverId: options.serverId ?? null,
       cid: options.cid ?? null,
       fromMonster: options.fromMonster,
@@ -275,6 +295,10 @@ export class Effects {
       const targets = this.targets(shot.fromMonster);
       const result = advanceShot(shot.path, dt, this.map, (x, y) => targets.some((t) => shotTouches(x, y, t.x, t.y, SHOT_HIT_RADIUS)));
       shot.sprite.setPosition(shot.path.x * T, shot.path.y * T);
+      shot.trail.forEach((drop, i) => {
+        const back = (i + 1) * TRAIL_GAP;
+        drop.setVisible(shot.path.traveled * T > back).setPosition(shot.path.x * T - shot.path.dx * back, shot.path.y * T - shot.path.dy * back);
+      });
       if (result !== 'flying') this.finishShot(shot, result === 'hit');
     }
     this.shots = this.shots.filter((s) => !s.done);
@@ -288,7 +312,11 @@ export class Effects {
   }
 
   destroy(): void {
-    for (const shot of this.shots) if (!shot.done) shot.sprite.destroy();
+    for (const shot of this.shots) {
+      if (shot.done) continue;
+      shot.sprite.destroy();
+      shot.trail.forEach((drop) => drop.destroy());
+    }
     for (const effect of this.effects) effect.destroy();
     this.shots = [];
     this.effects = [];
@@ -297,6 +325,9 @@ export class Effects {
   private finishShot(shot: VisualShot, hit: boolean): void {
     shot.done = true;
     shot.sprite.destroy();
-    this.ring(shot.path.x * T, shot.path.y * T, hit ? 0xffffff : 0xb8b2a6, hit ? 6 : 4, 180, performance.now(), hit);
+    shot.trail.forEach((drop) => drop.destroy());
+    const splash = SPLASH_COLORS[shot.kind];
+    const color = splash ? splash[hit ? 0 : 1] : hit ? 0xffffff : 0xb8b2a6;
+    this.ring(shot.path.x * T, shot.path.y * T, color, hit ? 6 : splash ? 5 : 4, splash ? 240 : 180, performance.now(), hit);
   }
 }

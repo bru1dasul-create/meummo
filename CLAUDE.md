@@ -27,7 +27,8 @@
 4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
    `data/items.json`, vendedores e outros NPCs em `data/npcs.json`, missões em `data/missoes.json` (chaves em
    português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
-   Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
+   Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`
+   (os novos, pintados como os personagens e com animação de golpe, em `monsterPaint.ts`),
    ícones de itens em `src/client/itemArt.ts`, ícones das habilidades em `src/client/actionArt.ts`, moeda em
    `src/client/coinArt.ts`, personagens em camadas em `src/client/game/doll/` (+ `characters.ts`, aparência de
    NPC em `NPC_LOOKS`) e o equipamento no corpo em `src/client/game/gearArt.ts` — equipamento com ícone novo
@@ -91,7 +92,7 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
 - `npm run gen:terminal -- --out arquivo.tmj` — idem para o Terminal Santo Amaro
 - `npm run gen:shopping -- --out arquivo.tmj` — idem para o Shopping do Largo Treze
 - `npm run render:map` — desenha todos os mapas em `docs/mapa-<id>.png` (azul-claro = saídas)
-- `npm run render:characters` — prancha de personagens (animações, equipamentos, Dona Iracema) em `docs/personagens.png`
+- `npm run render:characters` — prancha de personagens (animações, equipamentos, Dona Iracema) e dos monstros pintados em `docs/personagens.png`
   (`-- --escala 6 --so Beto` para ver um de perto, `-- --tudo` para todos os quadros)
 
 ## Instalação no PC do dono do projeto (Windows)

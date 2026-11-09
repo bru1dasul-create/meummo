@@ -1,6 +1,7 @@
 // Desenha uma prancha com personagens de exemplo, em todas as animações e direções, com e sem
-// equipamentos: docs/personagens.png. Use para conferir a arte depois de mexer em
-// src/client/game/gearArt.ts ou src/client/game/doll/ (npm run render:characters).
+// equipamentos, os ícones de equipamento e, embaixo, os monstros pintados (todos os quadros):
+// docs/personagens.png. Use para conferir a arte depois de mexer em src/client/game/gearArt.ts,
+// src/client/game/doll/ ou src/client/game/monsterPaint.ts (npm run render:characters).
 //
 //   npm run render:characters                      → todos os conjuntos de exemplo
 //   npm run render:characters -- --out outro.png   → em outro arquivo
@@ -17,6 +18,7 @@ import { ANIMS, FRAME_H, FRAME_W, VIEWS, faceOrigin, type AnimName } from '../sr
 import { Sheet } from '../src/client/game/doll/sheet';
 import { lookOf, resolveGear } from '../src/client/game/characters';
 import { GEAR_ART } from '../src/client/game/gearArt';
+import { PAINTED, paintedFrameCount, paintMonster } from '../src/client/game/monsterPaint';
 import { lookFromName } from '../src/shared/look';
 
 const { PNG } = pngjs;
@@ -73,7 +75,12 @@ const gap = 2;
 const ICON = 32;
 const iconsPerRow = Math.floor((columns * (FRAME_W + gap)) / (ICON + gap * 2));
 const iconRows = Math.ceil(Object.keys(GEAR_ART).length / iconsPerRow);
-const sheet = new Sheet(columns * (FRAME_W + gap), rows * (FRAME_H + gap) + iconRows * (ICON + gap * 2));
+// monstros pintados: um por linha, todos os quadros (parado, andando, armando, golpe)
+const monsters = only ? [] : Object.values(PAINTED);
+const iconsHeight = iconRows * (ICON + gap * 2);
+const monstersHeight = monsters.reduce((sum, art) => sum + art.height + gap, 0);
+const width = Math.max(columns * (FRAME_W + gap), ...monsters.map((art) => paintedFrameCount(art) * (art.width + gap)));
+const sheet = new Sheet(width, rows * (FRAME_H + gap) + iconsHeight + monstersHeight);
 
 SETS.forEach((set, s) => {
   const look = set.npc ? lookOf(lookFromName(set.name), set.npc) : bodyLook(lookFromName(set.name));
@@ -105,6 +112,19 @@ Object.values(GEAR_ART).forEach((art, i) => {
   }
 });
 
+let monsterY = rows * (FRAME_H + gap) + iconsHeight;
+for (const art of monsters) {
+  const painted = paintMonster(art);
+  for (let y = 0; y < art.height; y++) {
+    for (let x = 0; x < painted.width; x++) {
+      const k = (y * painted.width + x) * 4;
+      const frame = Math.floor(x / art.width);
+      if (painted.data[k + 3]) sheet.set(x + frame * gap, monsterY + y, [painted.data[k]!, painted.data[k + 1]!, painted.data[k + 2]!, 255]);
+    }
+  }
+  monsterY += art.height + gap;
+}
+
 const png = new PNG({ width: sheet.width * SCALE, height: sheet.height * SCALE, deflateLevel: 9 });
 for (let y = 0; y < png.height; y++) {
   for (let x = 0; x < png.width; x++) {
@@ -119,4 +139,4 @@ for (let y = 0; y < png.height; y++) {
   }
 }
 writeFileSync(out, PNG.sync.write(png));
-console.log(`Prancha salva em ${out} (${SETS.length} personagens × ${VIEWS.length} direções × ${columns} quadros).`);
+console.log(`Prancha salva em ${out} (${SETS.length} personagens × ${VIEWS.length} direções × ${columns} quadros; ${monsters.length} monstros pintados).`);

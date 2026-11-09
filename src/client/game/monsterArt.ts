@@ -1,8 +1,18 @@
-// Monstros desenhados por código (pixel art 16x16), olhando para a direita.
-// Dois quadros: parado e andando. Para trocar por arte de verdade, carregue um spritesheet
-// com a mesma chave (`mon-<tipo>`) e os mesmos quadros.
+// Monstros desenhados por código, olhando para a direita (o jogo espelha para a esquerda).
+// Os novos são pintados com o pincel dos personagens (monsterPaint.ts: volume, contorno, o dobro de
+// detalhe e animação de andar, armar e dar o golpe). Os antigos ainda são pixel art 16x16, com dois
+// quadros: parado e andando. Para trocar por arte de verdade, carregue um spritesheet com a mesma chave
+// (`mon-<tipo>`) e os mesmos quadros.
 
 import type Phaser from "phaser";
+import { TILE_SIZE } from "../../shared/constants";
+import {
+  PAINTED,
+  paintedFrame,
+  paintedFrameCount,
+  paintMonster,
+  type PaintedMonster,
+} from "./monsterPaint";
 
 const FRAME = 16;
 const OUTLINE: [number, number, number] = [29, 24, 30];
@@ -331,7 +341,97 @@ export function outline(
   ctx.putImageData(image, 0, 0);
 }
 
-/** Cria (uma vez só) a textura do monstro e devolve a chave dela. Quadro 0 = parado, 1 = andando. */
+/** Monstros antigos (16x16) que se mexem mesmo parados (o Saci pulando, o fogo da Mula). */
+const ANIMATED_IDLE = new Set(["saci", "mula_sem_cabeca"]);
+
+/** O que muda o quadro do monstro a cada momento. */
+export interface MonsterMoment {
+  now: number;
+  moving: boolean;
+  /** Preparando o golpe (o aviso vermelho está no chão). */
+  windup: boolean;
+  /** Logo depois de preparar: o golpe. */
+  striking: boolean;
+  /** Número da entidade, para os monstros parados não respirarem todos juntos. */
+  seed: number;
+}
+
+/** Como o monstro aparece: textura, tamanho, sombra, altura do nome e qual quadro mostrar. */
+export interface MonsterLook {
+  key: string;
+  /** Escala do sprite (os pintados têm o dobro de detalhe e aparecem na metade). */
+  scale: number;
+  /** Ponto de apoio (0 a 1, de cima para baixo): logo abaixo dos pés. */
+  originY: number;
+  /** Altura do nome acima dos pés (pixels do mapa). */
+  top: number;
+  /** Largura da sombra no chão (pixels do mapa). */
+  shadow: number;
+  /** Quanto o monstro "pulsa" enquanto prepara o golpe (os pintados já abrem a boca, pulsam menos). */
+  pulse: number;
+  frame(moment: MonsterMoment): number;
+}
+
+function paintedTexture(scene: Phaser.Scene, key: string, art: PaintedMonster): void {
+  const sheet = paintMonster(art);
+  const canvas = document.createElement("canvas");
+  canvas.width = sheet.width;
+  canvas.height = sheet.height;
+  canvas
+    .getContext("2d")!
+    .putImageData(
+      new ImageData(
+        new Uint8ClampedArray(sheet.data),
+        sheet.width,
+        sheet.height,
+      ),
+      0,
+      0,
+    );
+  const texture = scene.textures.addCanvas(key, canvas);
+  for (let i = 0; i < paintedFrameCount(art); i++)
+    texture?.add(i, 0, i * art.width, 0, art.width, art.height);
+}
+
+/** Cria (uma vez só) a textura do monstro e diz como mostrá-lo. */
+export function monsterLook(scene: Phaser.Scene, type: string): MonsterLook {
+  const art = PAINTED[type];
+  if (!art) {
+    return {
+      key: monsterTexture(scene, type),
+      scale: 1,
+      originY: 1,
+      top: TILE_SIZE,
+      shadow: 10,
+      pulse: 0.12,
+      frame: ({ now, moving }) =>
+        moving || (now % 900 < 450 && ANIMATED_IDLE.has(type)) ? 1 : 0,
+    };
+  }
+  const key = `mon-${type}`;
+  if (!scene.textures.exists(key)) paintedTexture(scene, key, art);
+  return {
+    key,
+    scale: 0.5,
+    originY: art.feet / art.height,
+    top: art.top,
+    shadow: art.shadow,
+    pulse: 0.05,
+    frame: ({ now, moving, windup, striking, seed }) => {
+      if (windup) return paintedFrame(art, "windup", 0);
+      if (striking) return paintedFrame(art, "attack", 0);
+      if (moving)
+        return paintedFrame(art, "walk", Math.floor(now / art.walkMs));
+      return paintedFrame(
+        art,
+        "idle",
+        Math.floor((now + seed * 137) / art.idleMs),
+      );
+    },
+  };
+}
+
+/** Cria (uma vez só) a textura 16x16 do monstro antigo e devolve a chave dela. Quadro 0 = parado, 1 = andando. */
 export function monsterTexture(scene: Phaser.Scene, type: string): string {
   const key = `mon-${type}`;
   if (scene.textures.exists(key)) return key;

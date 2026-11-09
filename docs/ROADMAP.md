@@ -40,7 +40,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
 - [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] **[arte]** Arte de verdade para personagens e monstros
-- [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador)
+- [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador;
+  o jacaré e o boto já nasceram assim, em `monsterPaint.ts`)
 - [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
   quando alguém passa embaixo), postes altos, mata fechada nas bordas, sombras de casas e prédios, água
   balançando, fogueira crepitando com brilho em volta (camadas `sombras` e `acima` do Tiled)
@@ -123,7 +124,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   deixa o Dente de Jacaré, que vale ouro na loja)
 - [x] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings (3 jacarés nos
   canais do oeste, 2 botos no lago das casas afundadas; a Iara continua marcada em `lendas`)
-- [ ] **[arte]** Desenhos do jacaré, do boto e da Iara; ícone do Dente de Jacaré (`icone: "dente"`)
+- [x] **[arte]** Desenhos do jacaré (papo-amarelo mutante: abre a boca no bote) e do boto (cor-de-rosa, de chapéu
+  branco: enche a bochecha e cospe o jato d'água, que ganhou gotinhas e respingo); ícone do Dente de Jacaré
+- [ ] **[arte]** Desenho da Iara (quando a [estrutura] fizer a chefe)
 - [ ] **[estrutura + arte + mundo]** Iara, chefe da Billings: o canto puxa o jogador para a água e a esquiva quebra o
   encanto (área já marcada: camada `lendas`); depois, Boitatá como chefe
 

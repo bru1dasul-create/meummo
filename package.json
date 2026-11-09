@@ -23,7 +23,8 @@
     "gen:billings": "tsx scripts/gen-billings.ts",
     "gen:terminal": "tsx scripts/gen-terminal.ts",
     "gen:shopping": "tsx scripts/gen-shopping.ts",
-    "render:map": "tsx scripts/render-map.ts"
+    "render:map": "tsx scripts/render-map.ts",
+    "render:characters": "tsx scripts/render-characters.ts"
   },
   "dependencies": {
     "phaser": "4.2.1",

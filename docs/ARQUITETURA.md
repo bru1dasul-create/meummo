@@ -118,6 +118,9 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 - `src/client/game/characters.ts` junta numa textura por combinação (dividida entre quem é igual, desenhada aos
   poucos para não engasgar). NPCs podem ter aparência própria pela chave deles (`NPC_LOOKS`: a Dona Iracema).
 - `npm run render:characters` desenha uma prancha de exemplo em `docs/personagens.png`.
+- Monstros novos usam o mesmo pincel (`src/client/game/monsterPaint.ts`): olham para a direita (o jogo espelha) e
+  têm quadros de parado, andando, armando o golpe (enquanto o aviso está no chão) e golpeando. `monsterArt.ts`
+  escolhe o quadro (`monsterLook`); monstro sem pintura usa o desenho antigo 16x16, e um sem desenho, a bolha.
 
 ## NPCs e loja
 - Os NPCs vêm de `data/npcs.json` (lido por `src/server/npcs.ts`; `checkNpcs` confere ao ligar se o mapa existe,
