@@ -616,6 +616,51 @@ export class World {
     if (this.items.get(stack.item)?.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
   }
 
+  // ======================= ferramentas do administrador =======================
+
+  /** Dá itens a um jogador; o que não couber na mochila cai no chão, perto dele. Devolve quantos foram para a mochila. */
+  adminGiveItem(player: Player, item: string, n: number): number {
+    const added = player.inventory.add(item, n);
+    if (added > 0) player.invDirty = true;
+    if (added < n) this.dropOnGround(player, { x: player.x, y: player.y }, 0, { item, n: n - added }, this.now(), ITEM_DROP_MS);
+    player.outbox.push({ t: 'sys', text: `O administrador te deu: ${this.describe([{ item, n }])}.` });
+    return added;
+  }
+
+  adminGiveGold(player: Player, n: number): number {
+    const added = player.inventory.addGold(n);
+    if (added > 0) player.invDirty = true;
+    player.outbox.push({ t: 'sys', text: `O administrador te deu ${added} de ouro.` });
+    return added;
+  }
+
+  /** Vida cheia. */
+  adminHeal(player: Player): void {
+    const amount = player.maxHp - player.hp;
+    player.hp = player.maxHp;
+    if (amount > 0) this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
+    player.outbox.push({ t: 'sys', text: 'O administrador te curou.' });
+  }
+
+  /** Leva o jogador para outro lugar deste mesmo mapa. */
+  adminTeleport(player: Player, spot: Tile): void {
+    player.x = spot.x;
+    player.y = spot.y;
+    player.queue.length = 0;
+    player.nextStepAt = 0;
+    player.changed = true;
+    player.outbox.push({ t: 'teleport', x: player.x, y: player.y, dir: player.dir });
+    player.outbox.push({ t: 'sys', text: `O administrador te levou para (${spot.x}, ${spot.y}).` });
+  }
+
+  /** Um lugar livre neste mapa: (x, y) se der para ficar lá (ou o mais perto), ou o nascimento se não vier posição. */
+  freeSpot(x?: number, y?: number): Tile | null {
+    if (x === undefined || y === undefined) return this.arrivalSpot('spawn');
+    if (this.map.isWalkable(x, y) && this.map.isReachable(x, y)) return { x, y };
+    const near = this.map.nearestWalkable(x, y);
+    return near && this.map.isReachable(near.x, near.y) ? near : null;
+  }
+
   // ======================= ajustes do administrador =======================
 
   /** A vida dos monstros mudou no painel: os que estão no mapa acompanham (na mesma proporção). */

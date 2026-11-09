@@ -122,7 +122,12 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 
 ## Painel do administrador (`src/server/admin.ts` e `tuning.ts`)
 - `GET /admin` entrega a página (`src/server/admin/painel.html`, HTML e JavaScript sem nada externo); a página só
-  mostra e pede (`GET /admin/api/dados`, `POST /admin/api/ajustar`, `POST /admin/api/padrao`, `GET /admin/api/exportar`).
+  mostra e pede (`GET /admin/api/dados`, `POST /admin/api/ajustar`, `POST /admin/api/padrao`, `GET /admin/api/exportar`;
+  jogadores: `GET /admin/api/jogadores`, `POST /admin/api/jogador` com `acao` = `ouro`, `item`, `curar`, `levar` ou
+  `expulsar`, e `POST /admin/api/aviso`).
+- **Ferramentas de jogadores** ficam no `Realm` (`playersOnline`, `adminGiveGold`, `adminGiveItem`, `adminHeal`,
+  `adminMove`, `notice`) e no `World` de cada mapa; expulsar é `Session.end('kicked')` (o navegador mostra o motivo).
+  Cada ação vira uma linha na janela do servidor ("painel: ...") e uma mensagem no chat de quem recebeu.
 - **Travas** (`accessProblem`): só aceita quem pede do próprio computador (127.0.0.1/::1) e pelo nome `localhost`
   (contra sites que se fingem de localhost); pedidos que mudam algo precisam do cabeçalho `X-MeuMMO-Admin: 1` e de
   origem local (outro site não consegue mandar esse cabeçalho sem permissão). A página não abre dentro de outro
@@ -169,7 +174,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
 | servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
-| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, ou o servidor está desligando |
+| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar no mesmo mapa |
@@ -184,6 +189,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / estes itens do monstro que caiu em (x, y) foram para a sua mochila |
 | servidor | `drop` / `pickup` / `drop_gone` | caiu ouro ou item no chão para você / você pegou / sumiu (o tempo acabou) |
 | servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
+| servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |

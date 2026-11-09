@@ -3,7 +3,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { accessProblem } from '../src/server/admin';
 import { Realm } from '../src/server/realm';
 import { startServer, type RunningServer } from '../src/server/server';
@@ -229,6 +229,131 @@ describe('travas do painel', () => {
       expect(((await bad.json()) as { erro: string }).erro).toMatch(/pelo menos 1/);
 
       expect((await fetch(`${base}/admin/nada`)).status).toBe(404);
+    });
+  });
+});
+
+describe('ferramentas de jogadores', () => {
+  const vila = GameMap.fromTiled(tiledFromAscii(['........', '........', '...##...', '........'], { x: 1, y: 1 }), 'vila');
+  const mata = GameMap.fromTiled(tiledFromAscii(['......', '......', '......'], { x: 2, y: 1 }), 'mata');
+
+  function setup() {
+    const clock = new FakeClock();
+    const t = tuning();
+    const realm = new Realm([vila, mata], { now: clock.now, random: () => 0, items: t.items, monsters: t.monsters });
+    const join = (name: string) => {
+      const conn = new FakeConn();
+      const result = realm.join(name, conn);
+      if (!result.ok) throw new Error(result.reason);
+      return { player: result.player, conn };
+    };
+    const tick = () => {
+      clock.advance(TICK_MS);
+      realm.tick();
+    };
+    return { t, realm, join, tick, clock };
+  }
+
+  it('mostra quem está online, em que mapa e com quanto de vida e ouro', () => {
+    const { realm, join } = setup();
+    const ana = join('Ana');
+    ana.player.inventory.gold = 12;
+    join('Beto');
+    expect(realm.playersOnline().map((p) => p.nome)).toEqual(['Ana', 'Beto']);
+    expect(realm.playersOnline()[0]).toMatchObject({ id: ana.player.id, mapa: 'vila', nivel: 1, ouro: 12, desmaiado: false });
+  });
+
+  it('dar ouro e itens (o que não cabe na mochila cai no chão perto dele); quem recebe fica sabendo', () => {
+    const { t, realm, join, tick } = setup();
+    const ana = join('Ana');
+    expect(realm.adminGiveGold(ana.player.id, 100)).toEqual({ ok: true, texto: 'Ana recebeu 100 de ouro.' });
+    expect(ana.player.inventory.gold).toBe(100);
+    for (let i = 0; i < 19; i++) ana.player.inventory.add('chapeu', 1); // sobra 1 espaço
+    const fruta = t.items.get('fruta')!;
+    // pilha da fruta é 20: cabem 20 no espaço livre; 25 → 5 no chão
+    expect(realm.adminGiveItem(ana.player.id, fruta, 25)).toEqual({ ok: true, texto: 'Ana recebeu: Fruta ×25 (5 não couberam na mochila e ficaram no chão, ao lado).' });
+    tick();
+    expect(ana.conn.ofType('drop').at(-1)).toMatchObject({ x: ana.player.x, y: ana.player.y, item: { item: 'fruta', n: 5 } });
+    expect(ana.conn.ofType('sys').map((m) => m.text)).toEqual(expect.arrayContaining(['O administrador te deu 100 de ouro.', 'O administrador te deu: Fruta ×25.']));
+    expect(realm.adminGiveGold(9999, 5)).toEqual({ ok: false, erro: 'Esse jogador não está mais online.' });
+  });
+
+  it('curar enche a vida; desmaiado não dá', () => {
+    const { realm, join, clock } = setup();
+    const ana = join('Ana');
+    ana.player.hp = 5;
+    expect(realm.adminHeal(ana.player.id)).toEqual({ ok: true, texto: 'Ana está com a vida cheia.' });
+    expect(ana.player.hp).toBe(ana.player.maxHp);
+    ana.player.deadUntil = clock.now() + 5000;
+    expect(realm.adminHeal(ana.player.id)).toEqual({ ok: false, erro: 'Ana desmaiou: espere acordar na vila.' });
+  });
+
+  it('levar para outro lugar do mesmo mapa (chão bloqueado vira o livre mais perto) ou para outro mapa', () => {
+    const { realm, join, tick } = setup();
+    const ana = join('Ana');
+    expect(realm.adminMove(ana.player.id, 'vila', 6, 3)).toEqual({ ok: true, texto: `Ana agora está em ${vila.name} (6, 3).` });
+    tick();
+    expect(ana.conn.ofType('teleport').at(-1)).toMatchObject({ x: 6, y: 3 });
+    const blocked = realm.adminMove(ana.player.id, 'vila', 3, 2); // parede
+    expect(blocked.ok).toBe(true);
+    expect(vila.isWalkable(ana.player.x, ana.player.y)).toBe(true);
+    expect(realm.adminMove(ana.player.id, 'vila', 50, 50)).toEqual({ ok: false, erro: `(50, 50) fica fora do mapa ${vila.name} (8×4).` });
+    expect(realm.adminMove(ana.player.id, 'lua', 1, 1)).toEqual({ ok: false, erro: 'O mapa "lua" não existe.' });
+
+    expect(realm.adminMove(ana.player.id, 'mata')).toMatchObject({ ok: true });
+    expect(realm.worldOf(ana.player)?.map.id).toBe('mata');
+    expect(ana.conn.ofType('zone').at(-1)).toMatchObject({ map: 'mata' });
+    expect(realm.playersOnline()[0]!.mapa).toBe('mata');
+  });
+
+  it('aviso para todos chega em todo mundo, em qualquer mapa', () => {
+    const { realm, join, tick } = setup();
+    const ana = join('Ana');
+    const beto = join('Beto');
+    realm.adminMove(beto.player.id, 'mata');
+    realm.notice('O servidor vai reiniciar em 5 minutos');
+    tick();
+    for (const { conn } of [ana, beto]) expect(conn.ofType('notice')).toEqual([{ t: 'notice', text: 'O servidor vai reiniciar em 5 minutos' }]);
+  });
+
+  describe('pelo painel, com o servidor de verdade', () => {
+    let server: RunningServer;
+    beforeEach(async () => {
+      server = await startServer({ port: 0, host: '127.0.0.1', log: false, saveFile: ':memory:', hashCost: FAST_HASH });
+    });
+    afterEach(() => server.close());
+
+    it('dá ouro para quem está jogando e expulsa (ele recebe o aviso de que foi desconectado)', async () => {
+      const { default: WebSocket } = await import('ws');
+      const ws = new WebSocket(`ws://127.0.0.1:${server.port}/ws`);
+      const received: { t: string; [k: string]: unknown }[] = [];
+      ws.on('message', (data) => received.push(...(JSON.parse(data.toString()) as { t: string }[])));
+      await new Promise((resolve, reject) => ws.once('open', resolve).once('error', reject));
+      ws.send(JSON.stringify({ t: 'hello', v: (await import('../src/shared/constants')).PROTOCOL_VERSION, name: 'Ana', password: 'segredo1' }));
+      await vi.waitFor(() => expect(received.some((m) => m.t === 'welcome')).toBe(true), { timeout: 3000 });
+      const closed = new Promise((resolve) => ws.once('close', resolve));
+
+      const base = `http://127.0.0.1:${server.port}`;
+      const headers = { 'content-type': 'application/json', 'x-meummo-admin': '1' };
+      const list = (await (await fetch(`${base}/admin/api/jogadores`)).json()) as { jogadores: { id: number; nome: string }[]; mapas: { id: string }[] };
+      expect(list.jogadores.map((p) => p.nome)).toEqual(['Ana']);
+      expect(list.mapas.length).toBeGreaterThan(1);
+      const id = list.jogadores[0]!.id;
+
+      const gold = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'ouro', id, quantidade: 250 }) });
+      expect(await gold.json()).toEqual({ ok: true, texto: 'Ana recebeu 250 de ouro.' });
+      await vi.waitFor(() => expect(received.some((m) => m.t === 'inv' && (m.inv as { gold: number }).gold === 250)).toBe(true), { timeout: 3000 });
+
+      const bad = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'ouro', id, quantidade: -5 }) });
+      expect(bad.status).toBe(400);
+      const noHeader = await fetch(`${base}/admin/api/jogador`, { method: 'POST', body: JSON.stringify({ acao: 'expulsar', id }) });
+      expect(noHeader.status).toBe(403);
+
+      const kick = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'expulsar', id }) });
+      expect(await kick.json()).toEqual({ ok: true, texto: 'Desconectei Ana (o progresso fica salvo e pode entrar de novo).' });
+      await closed;
+      expect(received.some((m) => m.t === 'bye' && m.reason === 'kicked')).toBe(true);
+      expect(server.realm.online).toBe(0);
     });
   });
 });

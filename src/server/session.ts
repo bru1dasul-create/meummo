@@ -112,6 +112,11 @@ export class Session {
   }
 
   /** O servidor encerra esta sessão: avisa o navegador, tira o personagem do mundo (salvando) e fecha. */
+  /** Id do jogador desta sessão (null = ainda não entrou). */
+  get playerId(): number | null {
+    return this.player?.id ?? null;
+  }
+
   end(reason: ByeReason): void {
     if (this.closed) return;
     this.sendBatch([{ t: 'bye', reason }]);

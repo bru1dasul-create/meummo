@@ -19,6 +19,9 @@
       * {
         box-sizing: border-box;
       }
+      [hidden] {
+        display: none !important;
+      }
       body {
         margin: 0;
         background: var(--bg);
@@ -250,6 +253,69 @@
       .empty {
         color: var(--muted);
       }
+      .notice {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 14px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        background: var(--panel-2);
+      }
+      .notice input {
+        flex: 1;
+        min-width: 220px;
+      }
+      .act {
+        padding: 6px 12px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: #241a05;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .act.soft {
+        background: rgba(233, 185, 65, 0.16);
+        color: var(--accent);
+      }
+      .act.danger {
+        background: rgba(255, 143, 128, 0.16);
+        color: var(--danger);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .row > span:first-child {
+        min-width: 86px;
+        font-weight: 600;
+      }
+      select {
+        padding: 6px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 6px;
+        background: #15120d;
+        color: var(--text);
+        font: inherit;
+      }
+      .row input[type='number'] {
+        width: 80px;
+      }
+      .stats {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .fainted {
+        color: var(--danger);
+      }
     </style>
   </head>
   <body>
@@ -271,7 +337,7 @@
       'use strict';
       // O painel só mostra e pede: quem confere e aplica cada ajuste é o servidor (src/server/tuning.ts).
       const HEADERS = { 'Content-Type': 'application/json', 'X-MeuMMO-Admin': '1' };
-      const state = { data: null, tab: 'monstros', search: '' };
+      const state = { data: null, tab: 'jogadores', search: '', players: null };
       const content = document.getElementById('content');
 
       function el(tag, props = {}, ...children) {
@@ -419,15 +485,20 @@
 
         const tabs = document.getElementById('tabs');
         tabs.replaceChildren();
-        const tabList = [...data.grupos.map((g) => ({ id: g.arquivo, titulo: g.titulo, ajustados: g.lista.reduce((n, e) => n + e.campos.filter((c) => c.ajustado).length, 0) })), { id: 'ajustes', titulo: 'Meus ajustes', ajustados: 0 }];
+        const tabList = [
+          { id: 'jogadores', titulo: 'Jogadores', ajustados: state.players ? state.players.jogadores.length : 0 },
+          ...data.grupos.map((g) => ({ id: g.arquivo, titulo: g.titulo, ajustados: g.lista.reduce((n, e) => n + e.campos.filter((c) => c.ajustado).length, 0) })),
+          { id: 'ajustes', titulo: 'Meus ajustes', ajustados: 0 },
+        ];
         for (const tab of tabList) {
           const button = el('button', { type: 'button', class: tab.id === state.tab ? 'on' : '', onclick: () => ((state.tab = tab.id), render()) }, tab.titulo);
           if (tab.ajustados) button.append(el('span', { class: 'count', text: String(tab.ajustados) }));
           tabs.append(button);
         }
 
-        document.getElementById('tools').hidden = state.tab === 'ajustes';
+        document.getElementById('tools').hidden = state.tab === 'ajustes' || state.tab === 'jogadores';
         if (state.tab === 'ajustes') return renderExport();
+        if (state.tab === 'jogadores') return renderPlayers();
         const group = data.grupos.find((g) => g.arquivo === state.tab);
         const search = state.search.trim().toLowerCase();
         const list = group.lista.filter((e) => !search || e.nome.toLowerCase().includes(search) || e.id.includes(search));
@@ -466,6 +537,116 @@
           pre,
         );
       }
+
+      // ---------- Jogadores: quem está online e as ferramentas ----------
+
+      async function loadPlayers() {
+        const res = await fetch('/admin/api/jogadores', { cache: 'no-store' });
+        if (!res.ok) throw new Error(await res.text());
+        state.players = await res.json();
+      }
+
+      async function playerAction(body, confirmText) {
+        if (confirmText && !confirm(confirmText)) return;
+        try {
+          const res = await fetch('/admin/api/jogador', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
+          const result = await res.json();
+          toast(result.ok ? result.texto : `Não deu: ${result.erro}`, !result.ok);
+          await loadPlayers();
+          updatePlayers();
+        } catch (error) {
+          toast(`Não consegui falar com o servidor: ${error.message}`, true);
+        }
+      }
+
+      function statsText(p) {
+        const where = `${p.mapaNome} (${p.x}, ${p.y})`;
+        return `Nível ${p.nivel} · ${where} · vida ${p.vida}/${p.vidaMax} · ouro ${p.ouro.toLocaleString('pt-BR')}`;
+      }
+
+      function playerCard(p) {
+        const stats = el('div', { class: 'stats', 'data-stats': String(p.id), text: statsText(p) });
+        const fainted = el('span', { class: 'fainted', 'data-fainted': String(p.id), text: p.desmaiado ? ' desmaiado' : '' });
+        const card = el('section', { class: 'card', 'data-player': String(p.id) }, el('h2', {}, p.nome, fainted), stats);
+
+        const gold = el('input', { type: 'number', min: '1', step: '1', value: '100' });
+        card.append(el('div', { class: 'row' }, el('span', { text: 'Dar ouro' }), gold, el('button', { class: 'act', type: 'button', text: 'Dar', onclick: () => playerAction({ acao: 'ouro', id: p.id, quantidade: Number(gold.value) }) })));
+
+        const item = el('select');
+        for (const i of state.players.itens) item.append(el('option', { value: i.id, text: i.nome }));
+        const qty = el('input', { type: 'number', min: '1', step: '1', value: '1' });
+        card.append(el('div', { class: 'row' }, el('span', { text: 'Dar item' }), item, qty, el('button', { class: 'act', type: 'button', text: 'Dar', onclick: () => playerAction({ acao: 'item', id: p.id, item: item.value, quantidade: Number(qty.value) }) })));
+
+        const map = el('select');
+        for (const m of state.players.mapas) map.append(el('option', { value: m.id, text: m.nome }));
+        map.value = p.mapa;
+        const x = el('input', { type: 'number', min: '0', step: '1', placeholder: 'x' });
+        const y = el('input', { type: 'number', min: '0', step: '1', placeholder: 'y' });
+        const go = () => {
+          const body = { acao: 'levar', id: p.id, mapa: map.value };
+          if (x.value !== '' || y.value !== '') {
+            if (x.value === '' || y.value === '') return toast('Preencha x e y (ou deixe os dois vazios para ir ao ponto de nascimento).', true);
+            body.x = Number(x.value);
+            body.y = Number(y.value);
+          }
+          playerAction(body);
+        };
+        card.append(
+          el('div', { class: 'row' }, el('span', { text: 'Levar para' }), map, x, y, el('button', { class: 'act', type: 'button', text: 'Levar', onclick: go })),
+          el('div', { class: 'stats', text: 'x e y vazios = ponto de nascimento do mapa. A posição é a mesma que o Tiled mostra.' }),
+        );
+
+        card.append(
+          el(
+            'div',
+            { class: 'row' },
+            el('button', { class: 'act soft', type: 'button', text: 'Curar', onclick: () => playerAction({ acao: 'curar', id: p.id }) }),
+            el('button', { class: 'act danger', type: 'button', text: 'Expulsar', onclick: () => playerAction({ acao: 'expulsar', id: p.id }, `Desconectar ${p.nome}? O progresso fica salvo e dá para entrar de novo.`) }),
+          ),
+        );
+        return card;
+      }
+
+      function renderPlayers() {
+        if (!state.players) {
+          content.replaceChildren(el('p', { class: 'empty', text: 'Carregando...' }));
+          loadPlayers().then(render).catch((error) => toast(error.message, true));
+          return;
+        }
+        const message = el('input', { type: 'text', maxlength: '160', placeholder: 'Ex.: O servidor vai reiniciar em 5 minutos' });
+        const sendNotice = async () => {
+          const texto = message.value.trim();
+          if (!texto) return toast('Escreva o aviso.', true);
+          const res = await fetch('/admin/api/aviso', { method: 'POST', headers: HEADERS, body: JSON.stringify({ texto }) });
+          const result = await res.json();
+          toast(result.ok ? result.texto : `Não deu: ${result.erro}`, !result.ok);
+          if (result.ok) message.value = '';
+        };
+        message.addEventListener('keydown', (event) => event.key === 'Enter' && sendNotice());
+        const notice = el('div', { class: 'notice' }, el('strong', { text: 'Aviso para todos' }), message, el('button', { class: 'act', type: 'button', text: 'Enviar', onclick: sendNotice }));
+        const list = el('div', { class: 'cards', id: 'players' });
+        for (const p of state.players.jogadores) list.append(playerCard(p));
+        content.replaceChildren(notice, state.players.jogadores.length ? list : el('p', { class: 'empty', id: 'players', text: 'Ninguém online agora.' }));
+      }
+
+      /** Atualiza só os números (posição, vida, ouro) sem apagar o que você está digitando; quem entrou ou saiu redesenha. */
+      function updatePlayers() {
+        if (state.tab !== 'jogadores' || !state.players) return;
+        const shown = [...document.querySelectorAll('[data-player]')].map((e) => Number(e.dataset.player)).sort().join(',');
+        const now = state.players.jogadores.map((p) => p.id).sort().join(',');
+        if (shown !== now) return render();
+        for (const p of state.players.jogadores) {
+          const stats = document.querySelector(`[data-stats="${p.id}"]`);
+          if (stats) stats.textContent = statsText(p);
+          const fainted = document.querySelector(`[data-fainted="${p.id}"]`);
+          if (fainted) fainted.textContent = p.desmaiado ? ' desmaiado' : '';
+        }
+      }
+
+      setInterval(() => {
+        if (state.tab !== 'jogadores' || document.hidden) return;
+        loadPlayers().then(updatePlayers).catch(() => {});
+      }, 3000);
 
       document.getElementById('search').addEventListener('input', (event) => {
         state.search = event.target.value;

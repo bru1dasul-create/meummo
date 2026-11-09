@@ -116,8 +116,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[estrutura]** Painel do administrador, passo 1 — **ajustes do jogo** (http://localhost:3000/admin, só no
   computador do servidor): monstros, itens e loja; vale na hora, valor inválido é recusado com o motivo; ajustes em
   `saves/ajustes.json` (fora do GitHub), marcados no painel, com "voltar ao padrão" e "copiar meus ajustes"
-- [ ] **[estrutura]** Passo 2 — **ferramentas de jogadores**: quem está online, dar ouro e itens (testar a loja sem
-  caçar), curar, levar até um lugar, aviso para todos e expulsar
+- [x] **[estrutura]** Passo 2 — **ferramentas de jogadores** (aba Jogadores): quem está online (atualiza sozinho),
+  dar ouro e itens (testar a loja sem caçar), curar, levar para outro mapa ou posição, aviso para todos e expulsar;
+  quem recebe fica sabendo pelo chat; tudo registrado na janela do servidor
 - [ ] **[estrutura]** No M5 (internet): senha e conexão criptografada para o painel, banir, registro do que o
   administrador fez
 

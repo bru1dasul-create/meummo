@@ -10,8 +10,11 @@
 import { readFileSync } from 'node:fs';
 import type http from 'node:http';
 import path from 'node:path';
+import { MAX_GOLD } from '../shared/items';
 import { ROOT } from './paths';
+import type { AdminResult, Realm } from './realm';
 import { TUNING_FILES, type Tuning, type TuningFile } from './tuning';
+import { sanitizeChat } from './validate';
 
 const PAGE_FILE = path.join(ROOT, 'src/server/admin/painel.html');
 const MAX_BODY = 32 * 1024;
@@ -21,7 +24,55 @@ const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 
 export interface AdminOptions {
   tuning: Tuning;
+  /** Para as ferramentas de jogadores (sem isto, só os ajustes). */
+  realm?: Realm;
+  /** Desconecta o jogador (expulsar). false = ele não estava mais online. */
+  kick?: (playerId: number) => boolean;
   log?: (message: string) => void;
+}
+
+/** Ações que o painel pode fazer num jogador. */
+type PlayerAction =
+  | { acao: 'ouro'; id: number; quantidade: number }
+  | { acao: 'item'; id: number; item: string; quantidade: number }
+  | { acao: 'curar'; id: number }
+  | { acao: 'levar'; id: number; mapa: string; x?: number; y?: number }
+  | { acao: 'expulsar'; id: number };
+
+const MAX_ITEMS_GIVEN = 999;
+
+function whole(value: unknown, min: number, max: number): value is number {
+  return Number.isInteger(value) && (value as number) >= min && (value as number) <= max;
+}
+
+/** Confere o pedido de ação num jogador (null = pedido estranho). */
+function parsePlayerAction(body: unknown): PlayerAction | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const b = body as Record<string, unknown>;
+  if (!whole(b.id, 1, Number.MAX_SAFE_INTEGER)) return null;
+  const id = b.id;
+  switch (b.acao) {
+    case 'ouro':
+      return whole(b.quantidade, 1, MAX_GOLD) ? { acao: 'ouro', id, quantidade: b.quantidade } : null;
+    case 'item':
+      return typeof b.item === 'string' && /^[a-z0-9_-]{1,40}$/.test(b.item) && whole(b.quantidade, 1, MAX_ITEMS_GIVEN)
+        ? { acao: 'item', id, item: b.item, quantidade: b.quantidade }
+        : null;
+    case 'curar':
+      return { acao: 'curar', id };
+    case 'expulsar':
+      return { acao: 'expulsar', id };
+    case 'levar': {
+      if (typeof b.mapa !== 'string' || !/^[a-z0-9_-]{1,40}$/.test(b.mapa)) return null;
+      const hasX = b.x !== undefined && b.x !== null;
+      const hasY = b.y !== undefined && b.y !== null;
+      if (hasX !== hasY) return null; // as duas coordenadas, ou nenhuma
+      if (hasX && (!whole(b.x, 0, 9999) || !whole(b.y, 0, 9999))) return null;
+      return hasX ? { acao: 'levar', id, mapa: b.mapa, x: b.x as number, y: b.y as number } : { acao: 'levar', id, mapa: b.mapa };
+    }
+    default:
+      return null;
+  }
 }
 
 /** Por que este pedido não pode usar o painel (null = pode). */
@@ -123,6 +174,40 @@ export function createAdminHandler(options: AdminOptions): (req: http.IncomingMe
       sendJson(res, 200, tuning.exportOverrides());
       return true;
     }
+    const { realm } = options;
+    if (route === 'GET /admin/api/jogadores' && realm) {
+      sendJson(res, 200, {
+        jogadores: realm.playersOnline(),
+        mapas: [...realm.worlds.values()].map((w) => ({ id: w.map.id, nome: w.map.name, largura: w.map.width, altura: w.map.height })),
+        itens: [...tuning.items.values()].map((i) => ({ id: i.id, nome: i.name })),
+      });
+      return true;
+    }
+    if (route === 'POST /admin/api/jogador' && realm) {
+      readBody(req)
+        .then((body) => {
+          const action = parsePlayerAction(body);
+          if (!action) return sendJson(res, 400, { ok: false, erro: 'Pedido incompleto ou com números fora do limite.' });
+          const result = runPlayerAction(action, realm, tuning, options.kick);
+          if (result.ok) log(`painel: ${result.texto}`);
+          sendJson(res, result.ok ? 200 : 400, result);
+        })
+        .catch((error: Error) => sendJson(res, 400, { ok: false, erro: error.message }));
+      return true;
+    }
+    if (route === 'POST /admin/api/aviso' && realm) {
+      readBody(req)
+        .then((body) => {
+          const raw = (body as { texto?: unknown } | null)?.texto;
+          const text = typeof raw === 'string' ? sanitizeChat(raw) : '';
+          if (!text) return sendJson(res, 400, { ok: false, erro: 'Escreva o aviso.' });
+          realm.notice(text);
+          log(`painel: aviso para todos: ${text}`);
+          sendJson(res, 200, { ok: true, texto: `Aviso enviado para ${realm.online} ${realm.online === 1 ? 'jogador' : 'jogadores'}.` });
+        })
+        .catch((error: Error) => sendJson(res, 400, { ok: false, erro: error.message }));
+      return true;
+    }
     if (route === 'POST /admin/api/ajustar' || route === 'POST /admin/api/padrao') {
       const reset = url.pathname.endsWith('/padrao');
       readBody(req)
@@ -147,4 +232,25 @@ export function createAdminHandler(options: AdminOptions): (req: http.IncomingMe
     send(res, 404, 'Não existe esta página no painel.\n', 'text/plain; charset=utf-8');
     return true;
   };
+}
+
+function runPlayerAction(action: PlayerAction, realm: Realm, tuning: Tuning, kick?: (id: number) => boolean): AdminResult {
+  switch (action.acao) {
+    case 'ouro':
+      return realm.adminGiveGold(action.id, action.quantidade);
+    case 'item': {
+      const def = tuning.items.get(action.item);
+      if (!def) return { ok: false, erro: `O item "${action.item}" não existe.` };
+      return realm.adminGiveItem(action.id, def, action.quantidade);
+    }
+    case 'curar':
+      return realm.adminHeal(action.id);
+    case 'levar':
+      return realm.adminMove(action.id, action.mapa, action.x, action.y);
+    case 'expulsar': {
+      const name = realm.playersOnline().find((p) => p.id === action.id)?.nome;
+      if (!name || !kick?.(action.id)) return { ok: false, erro: 'Esse jogador não está mais online.' };
+      return { ok: true, texto: `Desconectei ${name} (o progresso fica salvo e pode entrar de novo).` };
+    }
+  }
 }

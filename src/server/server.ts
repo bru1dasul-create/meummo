@@ -76,7 +76,21 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
   const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, saver: store });
   tuning.onChange = (changed) => realm.tuningChanged(changed);
-  const admin = createAdminHandler({ tuning, log });
+  const sessions = new Set<Session>();
+  const admin = createAdminHandler({
+    tuning,
+    realm,
+    log,
+    kick: (playerId) => {
+      for (const session of sessions) {
+        if (session.playerId === playerId) {
+          session.end('kicked');
+          return true;
+        }
+      }
+      return false;
+    },
+  });
   const world = realm.start;
   const lobby: Lobby = {
     realm,
@@ -85,7 +99,6 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     online: new Map(),
     log,
   };
-  const sessions = new Set<Session>();
 
   // Em produção (depois do `npm run build`) o próprio servidor entrega o jogo.
   // Em desenvolvimento quem entrega é o Vite (porta 5173).

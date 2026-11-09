@@ -828,6 +828,12 @@ export class WorldScene extends Phaser.Scene {
         this.shop.setInventory(msg.inv);
         break;
       }
+      case 'notice':
+        // aviso do administrador para todo mundo
+        this.toast.show(msg.text, 7000);
+        this.chat.addSystem(`Aviso do administrador: ${msg.text}`);
+        this.sfx.play('levelup');
+        break;
       case 'items':
         // o administrador ajustou os itens (preço, cura, bônus): a mochila e a loja mostram os números novos
         for (const item of msg.items) this.items.set(item.id, item);

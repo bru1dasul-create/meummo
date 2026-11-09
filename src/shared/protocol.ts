@@ -81,7 +81,7 @@ export type RejectReason =
   | 'full'
   | 'version';
 /** Por que o servidor encerrou a sua sessão. */
-export type ByeReason = 'replaced' | 'shutdown';
+export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
@@ -138,6 +138,7 @@ export type ServerMsg =
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }
   | { t: 'sys'; text: string } // aviso do sistema
+  | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
   | { t: 'online'; n: number }
   | { t: 'pong'; id: number };
 
