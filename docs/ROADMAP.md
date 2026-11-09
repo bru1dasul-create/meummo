@@ -105,6 +105,10 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
   buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,
   neblina e vaga-lumes), com criaturas provisórias (Jararaca, Corpo-Seco, Capelobo)
+- [x] **[mundo]** Terminal Santo Amaro: mapa novo pela rua do meio de Santo Amaro, ao sul (plataformas cobertas
+  A a D com a cobertura furada, ônibus enferrujados nas pistas, catracas, bilheteria e o fundo desabado com
+  tambores de fogo), com criaturas provisórias (Corpo-Seco nas plataformas, Capelobo no fundo)
+- [ ] **[mundo]** Shopping em ruínas (sem nome de marca): mapa de dentro, com entrada por Santo Amaro
 - [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
   Boto e jacarés na Billings, Boitatá como chefe
 

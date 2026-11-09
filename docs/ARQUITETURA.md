@@ -208,8 +208,9 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   acorda quem desmaia ali. Sem `nome`, a zona se chama "Pindorama".
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
 - Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
-  `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`) e Represa Billings (88×64,
-  `scripts/gen-billings.ts`), os dois últimos usando `scripts/map-builder.ts`. Gerar de novo por cima apaga as
+  `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`), Represa Billings (88×64,
+  `scripts/gen-billings.ts`) e Terminal Santo Amaro (64×48, `scripts/gen-terminal.ts`), os três últimos usando
+  `scripts/map-builder.ts`. Gerar de novo por cima apaga as
   edições: gere com `--out outro.tmj` e compare. Cada gerador confere no fim se dá para chegar a pé nos lugares
   importantes; o da Billings também liga cada ilha à entrada com passarelas e guarda os caminhos antes de plantar
   as árvores. Mexeu num gerador? Cuidado com a ordem dos sorteios: um sorteio a mais (ou a menos) no meio muda
@@ -219,7 +220,8 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
   Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, varal 3x2, ônibus) são desenhados inteiros e
   cortados em pedaços; os geradores colocam cada pedaço na camada certa com `scripts/map-depth.ts` (árvores,
-  postes e sombras). Beiradas suaves entre terrenos: para cada par (ex.: areia que encosta na água) há 15 tiles
+  postes e sombras; `clearArea` tira árvores e postes inteiros de um retângulo, para abrir um caminho sem deixar
+  copa sem tronco). Beiradas suaves entre terrenos: para cada par (ex.: areia que encosta na água) há 15 tiles
   pelos lados que encostam (bits 1 norte, 2 leste, 4 sul, 8 oeste) e 4 de canto; `softenEdges` troca o chão no
   fim do gerador (ou põe a beirada noutra camada, como a parte funda da represa na `sombras`). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.
