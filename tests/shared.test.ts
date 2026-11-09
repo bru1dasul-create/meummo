@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DOWN, LEFT, RIGHT, UP } from '../src/shared/dir';
+import { combineDirs, DOWN, DOWN_LEFT, DOWN_RIGHT, facingOf, LEFT, RIGHT, splitDiagonal, stepDuration, UP, UP_LEFT, UP_RIGHT } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
-import { applyStep, nextStepTime } from '../src/shared/movement';
+import { applyDash, applyStep, canStep, nextStepTime } from '../src/shared/movement';
 import { nameProblem, normalizeName } from '../src/shared/names';
 import { findPath } from '../src/shared/pathfind';
 import { tiledFromAscii } from './helpers';
@@ -67,6 +67,51 @@ describe('movimento', () => {
     expect(nextStepTime(1210, 1200, 200, 50)).toBe(1400);
     // estava parado há muito tempo: conta a partir de agora
     expect(nextStepTime(5000, 1200, 200, 50)).toBe(5200);
+  });
+});
+
+describe('movimento em 8 direções', () => {
+  const open = GameMap.fromTiled(tiledFromAscii(['.....', '.....', '.....', '.....', '.....'], { x: 0, y: 0 }));
+  // Parede em (1,0).
+  const corner = GameMap.fromTiled(tiledFromAscii(['.#...', '.....', '.....'], { x: 0, y: 1 }));
+
+  it('anda na diagonal quando os dois lados estão livres', () => {
+    expect(applyStep(open, { x: 1, y: 1, dir: DOWN }, DOWN_RIGHT)).toEqual({ x: 2, y: 2, dir: DOWN_RIGHT, moved: true });
+    expect(applyStep(open, { x: 1, y: 1, dir: DOWN }, UP_LEFT)).toEqual({ x: 0, y: 0, dir: UP_LEFT, moved: true });
+  });
+
+  it('não corta a quina de uma parede', () => {
+    // o destino (1,0) é a própria parede
+    expect(applyStep(corner, { x: 0, y: 1, dir: DOWN }, UP_RIGHT).moved).toBe(false);
+    // de (0,0) para (1,1) passaria rente à quina da parede (1,0): proibido
+    expect(canStep(corner, 0, 0, DOWN_RIGHT)).toBe(false);
+    // de (0,2) para (1,1) os dois lados estão livres: pode
+    expect(canStep(corner, 0, 2, UP_RIGHT)).toBe(true);
+  });
+
+  it('a esquiva na diagonal rola 2 tiles (mais ou menos a mesma distância de 3 retos)', () => {
+    expect(applyDash(open, { x: 0, y: 0, dir: DOWN }, DOWN_RIGHT, 3)).toMatchObject({ x: 2, y: 2, moved: true });
+    expect(applyDash(open, { x: 0, y: 0, dir: DOWN }, RIGHT, 3)).toMatchObject({ x: 3, y: 0, moved: true });
+  });
+
+  it('passo na diagonal demora √2 a mais (mesma velocidade em qualquer direção)', () => {
+    expect(stepDuration(RIGHT, 200)).toBe(200);
+    expect(stepDuration(UP_LEFT, 200)).toBe(283);
+  });
+
+  it('junta e separa diagonais e escolhe o lado do desenho', () => {
+    expect(combineDirs(UP, RIGHT)).toBe(UP_RIGHT);
+    expect(combineDirs(DOWN, LEFT)).toBe(DOWN_LEFT);
+    expect(splitDiagonal(DOWN_LEFT)).toEqual([DOWN, LEFT]);
+    expect(facingOf(UP_RIGHT)).toBe(RIGHT);
+    expect(facingOf(DOWN_LEFT)).toBe(LEFT);
+    expect(facingOf(UP)).toBe(UP);
+  });
+
+  it('o caminho usa diagonais quando é mais curto', () => {
+    expect(findPath(open, 0, 0, 3, 3)).toEqual([DOWN_RIGHT, DOWN_RIGHT, DOWN_RIGHT]);
+    const path = findPath(open, 0, 0, 4, 2)!;
+    expect(path).toHaveLength(4); // 2 diagonais + 2 retos
   });
 });
 

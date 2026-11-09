@@ -23,8 +23,9 @@
 ## O servidor manda
 O cliente nunca diz "estou na posição X". Ele pede "quero andar para a direita" (`step`). O servidor:
 1. coloca o pedido na fila daquele jogador;
-2. a cada tick (20 por segundo) processa os passos no ritmo certo: no máximo 1 tile a cada 200 ms;
-3. confere no mapa se o tile está livre;
+2. a cada tick (20 por segundo) processa os passos no ritmo certo: no máximo 1 tile a cada 200 ms
+   (na diagonal, 283 ms — √2 a mais — para a velocidade ser a mesma em qualquer direção);
+3. confere no mapa se o tile está livre (na diagonal, os dois tiles do lado também: ninguém corta quinas);
 4. responde ao jogador com a posição oficial (`ack`) e avisa quem está vendo (`move`).
 
 Assim ninguém anda mais rápido nem atravessa parede, mesmo mexendo no código do navegador.

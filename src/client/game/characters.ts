@@ -2,6 +2,7 @@
 // Quando tivermos arte de verdade, é só trocar esta função por um spritesheet carregado.
 
 import type Phaser from 'phaser';
+import type { Facing } from '../../shared/dir';
 
 const FRAME = 16;
 
@@ -153,8 +154,8 @@ export function characterTexture(scene: Phaser.Scene, look: number): string {
   return key;
 }
 
-/** Qual quadro usar: direção (0 cima, 1 direita, 2 baixo, 3 esquerda) e passo (0 parado, 1/2 andando). */
-export function characterFrame(dir: number, step: 0 | 1 | 2): number {
-  const group = dir === 0 ? 0 : dir === 2 ? 2 : 1;
+/** Qual quadro usar: lado (0 cima, 1 direita, 2 baixo, 3 esquerda) e passo (0 parado, 1/2 andando). */
+export function characterFrame(facing: Facing, step: 0 | 1 | 2): number {
+  const group = facing === 0 ? 0 : facing === 2 ? 2 : 1;
   return group * 3 + step;
 }

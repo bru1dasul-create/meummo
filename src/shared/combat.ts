@@ -1,8 +1,9 @@
 // Geometria do combate e voo dos projéteis. O servidor usa para decidir quem levou dano;
 // o cliente usa as mesmas funções para desenhar os tiros sem esperar a rede.
 
-import { DOWN, DX, DY, LEFT, RIGHT, UP, type Dir } from './dir';
-import type { Tile } from './map';
+import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
+import type { Tile, Walkable } from './map';
+import { canStep } from './movement';
 
 export interface Point {
   x: number;
@@ -22,9 +23,25 @@ export function dirFromAngle(angle: number): Dir {
   return dy >= 0 ? DOWN : UP;
 }
 
-/** Ângulo de uma direção (4 lados). */
+/** Ângulo de uma direção (as 8). */
 export function angleOfDir(dir: Dir): number {
-  return [-Math.PI / 2, 0, Math.PI / 2, Math.PI][dir]!;
+  const q = Math.PI / 4;
+  return [-2 * q, 0, 2 * q, 4 * q, -q, q, 3 * q, -3 * q][dir]!;
+}
+
+/** Ângulo em múltiplos de 45° (0 = direita, sentido horário na tela) → direção. */
+const OCTANT_DIRS: Dir[] = [RIGHT, DOWN_RIGHT, DOWN, DOWN_LEFT, LEFT, UP_LEFT, UP, UP_RIGHT];
+
+/** Direção (as 8) mais próxima de um ângulo. */
+export function dir8FromAngle(angle: number): Dir {
+  const k = ((Math.round(angle / (Math.PI / 4)) % 8) + 8) % 8;
+  return OCTANT_DIRS[k]!;
+}
+
+/** Direção (as 8) de `from` para `to`; null se for o mesmo tile. */
+export function dirTowards8(from: Point, to: Point): Dir | null {
+  if (from.x === to.x && from.y === to.y) return null;
+  return dir8FromAngle(Math.atan2(to.y - from.y, to.x - from.x));
 }
 
 /** Direção (4 lados) de `from` para `to`; null se for o mesmo tile. */
@@ -69,15 +86,18 @@ export function lineTiles(x: number, y: number, dir: Dir, length: number): Tile[
 }
 
 /**
- * Como lineTiles, mas para no primeiro tile bloqueado: o golpe não atravessa árvores, pedras nem paredes.
+ * Como lineTiles, mas para no primeiro tile bloqueado: o golpe não atravessa árvores, pedras nem
+ * paredes (e, na diagonal, não corta quinas — mesma regra de quem anda).
  */
-export function reachableLine(map: { isWalkable(x: number, y: number): boolean }, x: number, y: number, dir: Dir, length: number): Tile[] {
+export function reachableLine(map: Walkable, x: number, y: number, dir: Dir, length: number): Tile[] {
   const tiles: Tile[] = [{ x, y }];
+  let cx = x;
+  let cy = y;
   for (let i = 1; i <= length; i++) {
-    const tx = x + DX[dir] * i;
-    const ty = y + DY[dir] * i;
-    if (!map.isWalkable(tx, ty)) break;
-    tiles.push({ x: tx, y: ty });
+    if (!canStep(map, cx, cy, dir)) break;
+    cx += DX[dir];
+    cy += DY[dir];
+    tiles.push({ x: cx, y: cy });
   }
   return tiles;
 }

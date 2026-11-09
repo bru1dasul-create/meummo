@@ -67,10 +67,31 @@ Os números ficam em `data/monsters.json` (dá para ajustar sem programar).
   Curandeiro(a) (ervas, rezas e cura do grupo) e Caçador(a) (distância).
 - **Equipamentos** que mudam o jeito de jogar: estilingues melhores, bordunas, chapéu de palha, amuletos.
 
-## O mundo
-- Nome sugerido para o mundo: **Pindorama** ("terra das palmeiras", nome tupi para estas terras).
-- Regiões inspiradas nos biomas: Mata Atlântica (início), Cerrado, Pantanal, Caatinga, Amazônia e Litoral.
-- Primeira cidade: a vila do poço (o mapa atual).
+## O mundo: Pindorama — Selva de Pedra (proposta do dono do projeto, em discussão)
+São Paulo, muito tempo depois do fim do mundo como conhecemos: a floresta engoliu a cidade e as lendas
+voltaram a andar por aí. O mapa começa pela Zona Sul.
+
+| Zona | Nível | Como é |
+|---|---|---|
+| **Refúgio de Guarapiranga** | inicial (sem PvP) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. |
+| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. |
+| **Labirintos da Billings** | farm e perigo | Canais e pântanos no extremo sul, com jacarés mutantes e espíritos da água (Boto, Lobisomem da Mata). |
+| **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. |
+
+**Facções (PvP por território, mais adiante):**
+- **Tecnocratas — os Herdeiros da Pedra:** reconstroem a tecnologia antiga; armaduras de lataria de carro,
+  armas de plasma improvisadas; querem desmatar para reerguer as fábricas.
+- **Escolhidos de Pindorama — os Guardiões:** fundidos com a magia da floresta; armaduras de troncos e ossos,
+  magia xamânica e arcos reforçados; querem que a floresta tome o planeta.
+
+**Notas para fazer por partes (para não repetir o excesso de escopo):**
+- A vila atual vira o Refúgio de Guarapiranga (o lago já existe no mapa). As outras zonas entram uma por vez
+  no M3 (vários mapas). Facções e PvP de território ficam para o M4/M5, depois de existir gente jogando.
+- Usar nomes de lugares reais é ótimo para a identidade; evitar **marcas** (ex.: nome de operadora de telefone
+  numa torre): chamar de "torre de antenas", "torre da Paulista" etc.
+
+Ideia anterior (substituída pela proposta acima se ela for aprovada): regiões inspiradas nos biomas
+(Mata Atlântica, Cerrado, Pantanal, Caatinga, Amazônia e Litoral), começando pela vila do poço.
 
 ## Sugestões de nome do jogo
 Pindorama Online · Lendas de Pindorama · Encantados · Mata Adentro · Terra Encantada

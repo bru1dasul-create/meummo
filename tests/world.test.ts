@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { MAX_QUEUED_STEPS, PROTOCOL_VERSION, STEP_MS, TICK_MS, VIEW_RADIUS_X } from '../src/shared/constants';
-import { DOWN, RIGHT, UP } from '../src/shared/dir';
+import { DOWN, DOWN_LEFT, RIGHT, UP } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
 import { Session } from '../src/server/session';
 import { World, type Player } from '../src/server/world';
@@ -85,6 +85,21 @@ describe('World — movimento autoritativo', () => {
     world.tick();
     expect(player.x).toBe(start + 3);
     expect(conn.ofType('ack').at(-1)).toEqual({ t: 'ack', seq: 3, x: start + 3, y: player.y, dir: RIGHT });
+  });
+
+  it('anda na diagonal no ritmo certo (√2 mais devagar por passo)', () => {
+    const { player } = join('Ana');
+    const start = { x: player.x, y: player.y }; // (2, 0)
+    world.requestStep(player, 1, DOWN_LEFT);
+    world.requestStep(player, 2, DOWN_LEFT);
+    world.tick();
+    expect([player.x, player.y]).toEqual([start.x - 1, start.y + 1]);
+    clock.advance(STEP_MS); // 200 ms ainda não basta para outra diagonal (283 ms)
+    world.tick();
+    expect([player.x, player.y]).toEqual([start.x - 1, start.y + 1]);
+    clock.advance(100);
+    world.tick();
+    expect([player.x, player.y]).toEqual([start.x - 2, start.y + 2]);
   });
 
   it('bloqueia passos contra paredes, mas o personagem vira', () => {

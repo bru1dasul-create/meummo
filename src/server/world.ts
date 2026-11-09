@@ -32,14 +32,15 @@ import {
   chebyshev,
   dirFromAngle,
   dirTowards,
+  dirTowards8,
   makeShot,
   reachableLine,
   shotTouches,
   tileIn,
 } from '../shared/combat';
-import { DOWN, DX, DY, type Dir } from '../shared/dir';
+import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
-import { applyInput, nextStepTime } from '../shared/movement';
+import { applyInput, canStep, nextStepTime } from '../shared/movement';
 import { nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { damageRange, MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
@@ -272,7 +273,7 @@ export class World {
       if (!dash && now < player.nextStepAt - STEP_TOLERANCE_MS) break;
       player.queue.shift();
       const result = applyInput(this.map, player, input.dir, dash, DASH_TILES);
-      if (result.moved) player.nextStepAt = nextStepTime(now, player.nextStepAt, STEP_MS, TICK_MS);
+      if (result.moved) player.nextStepAt = nextStepTime(now, player.nextStepAt, stepDuration(input.dir, STEP_MS), TICK_MS);
       // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
       if (dash && result.moved) {
         player.dashReadyAt = Math.max(now, player.dashReadyAt) + DASH_COOLDOWN_MS;
@@ -530,7 +531,7 @@ export class World {
       return;
     }
 
-    const dir = dirTowards(monster, target) ?? monster.dir;
+    const dir = dirTowards8(monster, target) ?? monster.dir;
     const tiles = this.attackTiles(monster, attack, dir);
     if (tileIn(tiles, target.x, target.y)) {
       this.face(monster, dir);
@@ -721,14 +722,15 @@ export class World {
   private tryMoveMonster(monster: Monster, dir: Dir, now: number): boolean {
     const nx = monster.x + DX[dir];
     const ny = monster.y + DY[dir];
-    if (!this.canMonsterEnter(nx, ny)) return false;
+    // mesma regra dos jogadores: na diagonal não corta quina de parede/árvore
+    if (!canStep(this.map, monster.x, monster.y, dir) || !this.canMonsterEnter(nx, ny)) return false;
     this.monsterAt.delete(this.tileKey(monster.x, monster.y));
     monster.x = nx;
     monster.y = ny;
     monster.dir = dir;
     this.monsterAt.set(this.tileKey(nx, ny), monster.id);
     monster.changed = true;
-    monster.nextStepAt = now + monster.def.stepMs;
+    monster.nextStepAt = now + stepDuration(dir, monster.def.stepMs);
     return true;
   }
 

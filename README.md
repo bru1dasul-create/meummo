@@ -17,7 +17,7 @@ Feito em dupla: ideias, design e testes de um lado, código do Claude do outro. 
 
 | Ação | Computador | Celular |
 |---|---|---|
-| Andar | `W` `A` `S` `D` / setas, ou botão direito no chão | toque no chão |
+| Andar | `W` `A` `S` `D` / setas (duas juntas = diagonal, ex.: `W`+`D`), ou botão direito no chão | toque no chão |
 | Estilingue | mire com o mouse e clique (segure para continuar) | toque no monstro ou segure **Estilingue** |
 | Bordunada (golpe em arco) | `Q` | botão **Bordunada** |
 | Fôlego (cura) | `E` | botão **Fôlego** |

@@ -4,7 +4,7 @@
 
 import type Phaser from 'phaser';
 import { TILE_SIZE } from '../../shared/constants';
-import { LEFT, RIGHT, type Dir } from '../../shared/dir';
+import { DX, facingOf, LEFT, type Dir } from '../../shared/dir';
 import type { EntityKind, EntityState } from '../../shared/protocol';
 import { characterFrame, characterTexture } from './characters';
 import { monsterTexture } from './monsterArt';
@@ -108,7 +108,9 @@ export class EntityView {
   /** Manda a entidade para o tile (x, y), andando suavemente (ou pulando, se for longe). */
   moveTo(x: number, y: number, dir: Dir, now: number, stepMs: number, options: MoveOptions = {}): void {
     this.setDir(dir);
-    const distance = Math.abs(x - this.tileX) + Math.abs(y - this.tileY);
+    // em passos (uma diagonal conta como 1 passo); a animação dura proporcional à distância de verdade
+    const distance = Math.max(Math.abs(x - this.tileX), Math.abs(y - this.tileY));
+    const length = Math.hypot(x - this.tileX, y - this.tileY);
     if (distance === 0) return;
     this.tileX = x;
     this.tileY = y;
@@ -125,7 +127,7 @@ export class EntityView {
     this.toX = px;
     this.toY = py;
     this.moveStart = now;
-    this.moveDuration = options.durationMs ?? stepMs * distance;
+    this.moveDuration = options.durationMs ?? Math.round(stepMs * length);
     this.steps++;
   }
 
@@ -142,8 +144,8 @@ export class EntityView {
 
   setDir(dir: Dir): void {
     this.dir = dir;
-    if (dir === LEFT) this.facingLeft = true;
-    else if (dir === RIGHT) this.facingLeft = false;
+    if (DX[dir] < 0) this.facingLeft = true;
+    else if (DX[dir] > 0) this.facingLeft = false;
   }
 
   /** Atualiza sprite e sombra para o momento `now`. Chamado todo quadro. Devolve false quando já pode sumir. */
@@ -155,8 +157,9 @@ export class EntityView {
     this.shadow.setDepth(y - 0.5);
 
     if (this.kind === 'player') {
-      this.sprite.setFrame(characterFrame(this.dir, moving ? (this.steps % 2 === 0 ? 1 : 2) : 0));
-      this.sprite.setFlipX(this.dir === LEFT);
+      const facing = facingOf(this.dir);
+      this.sprite.setFrame(characterFrame(facing, moving ? (this.steps % 2 === 0 ? 1 : 2) : 0));
+      this.sprite.setFlipX(facing === LEFT);
     } else {
       this.sprite.setFrame(moving || (now % 900 < 450 && this.type === 'saci') ? 1 : 0);
       this.sprite.setFlipX(this.facingLeft);

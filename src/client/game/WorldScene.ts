@@ -14,8 +14,8 @@ import {
   TICK_MS,
   TILE_SIZE,
 } from '../../shared/constants';
-import { angleBetween, angleOfDir, arcTiles, dirFromAngle, reachableLine } from '../../shared/combat';
-import { DX, DY, type Dir } from '../../shared/dir';
+import { angleBetween, angleOfDir, arcTiles, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
+import { ALL_DIRS, DX, DY, stepDuration, type Dir } from '../../shared/dir';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { applyDash, applyInput, applyStep, nextStepTime, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
@@ -26,7 +26,7 @@ import type { Sfx } from '../sfx';
 import { ActionBar, Feedback, Toast, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
-import { KeyboardDirections } from './input';
+import { KeyboardDirections, type HeldMove } from './input';
 
 export interface WorldSceneData {
   conn: Connection;
@@ -217,10 +217,10 @@ export class WorldScene extends Phaser.Scene {
   // ======================= movimento =======================
 
   private handleMovementInput(now: number): void {
-    const keyDir = this.keyboard?.current() ?? null;
-    if (keyDir !== null) {
+    const held = this.keyboard?.current() ?? null;
+    if (held !== null) {
       this.clearPath();
-      this.tryStep(keyDir, now);
+      this.tryHeldStep(held, now);
       return;
     }
     if (this.path.length === 0) return;
@@ -233,6 +233,21 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Passo pelo teclado. Na diagonal (ex.: W+D), se tiver parede no caminho, "escorrega"
+   * para o lado que estiver livre em vez de travar.
+   */
+  private tryHeldStep(held: HeldMove, now: number): void {
+    if (now < this.nextStepAt - STEP_TOLERANCE_MS || this.pending.length >= MAX_PENDING_STEPS) return;
+    for (const dir of [held.dir, ...held.fallbacks]) {
+      if (applyStep(this.map, this.predicted, dir).moved) {
+        this.tryStep(dir, now);
+        return;
+      }
+    }
+    this.tryStep(held.dir, now); // tudo bloqueado: só vira para lá
+  }
+
   /** Tenta dar um passo: mostra na hora (previsão) e avisa o servidor. */
   private tryStep(dir: Dir, now: number): StepResult {
     if (now < this.nextStepAt - STEP_TOLERANCE_MS || this.pending.length >= MAX_PENDING_STEPS) return 'wait';
@@ -243,7 +258,7 @@ export class WorldScene extends Phaser.Scene {
     this.pending.push({ seq: this.seq, dir, dash: false });
     this.conn.send({ t: 'step', seq: this.seq, dir });
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
-    if (result.moved) this.nextStepAt = nextStepTime(now, this.nextStepAt, this.stepMs, TICK_MS);
+    if (result.moved) this.nextStepAt = nextStepTime(now, this.nextStepAt, stepDuration(dir, this.stepMs), TICK_MS);
     this.me.moveTo(result.x, result.y, result.dir, now, this.stepMs);
     return result.moved ? 'moved' : 'turned';
   }
@@ -253,14 +268,14 @@ export class WorldScene extends Phaser.Scene {
    * senão, para longe do monstro mais perto (é o que se quer quando um golpe vem vindo).
    */
   private dashDirection(): Dir {
-    const key = this.keyboard?.current() ?? null;
-    if (key !== null) return key;
+    const held = this.keyboard?.current() ?? null;
+    if (held !== null) return held.dir;
     if (this.path.length > 0) return this.path[0]!;
     const threat = this.nearestMonster(this.predicted.x + 0.5, this.predicted.y + 0.5, 4.5);
     if (!threat) return this.predicted.dir;
     let best = this.predicted.dir;
     let bestDistance = -Infinity;
-    for (const dir of [0, 1, 2, 3] as Dir[]) {
+    for (const dir of ALL_DIRS) {
       const landing = applyDash(this.map, this.predicted, dir, DASH_TILES);
       if (!landing.moved) continue;
       const distance = Math.hypot(landing.x - threat.tileX, landing.y - threat.tileY);
@@ -287,7 +302,7 @@ export class WorldScene extends Phaser.Scene {
     this.sfx.play('dash');
     const from = feetOf(this.predicted.x, this.predicted.y);
     this.predicted = { x: result.x, y: result.y, dir };
-    this.nextStepAt = nextStepTime(now, this.nextStepAt, this.stepMs, TICK_MS);
+    this.nextStepAt = nextStepTime(now, this.nextStepAt, stepDuration(dir, this.stepMs), TICK_MS);
     this.me.moveTo(result.x, result.y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140 });
     this.me.ghost(now, DASH_INVULNERABLE_MS);
     const to = feetOf(result.x, result.y);
@@ -732,7 +747,7 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'strike':
       case 'bite':
-        this.effects.flashTiles(reachableLine(this.map, view.tileX, view.tileY, dirFromAngle(angle), kind === 'strike' ? 2 : 1).slice(1), 0xffffff, 160, now);
+        this.effects.flashTiles(reachableLine(this.map, view.tileX, view.tileY, dir8FromAngle(angle), kind === 'strike' ? 2 : 1).slice(1), 0xffffff, 160, now);
         break;
       case 'whirlwind':
         this.effects.whirlwind(center.x, center.y + 6, now);

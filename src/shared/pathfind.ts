@@ -1,8 +1,13 @@
-// Busca de caminho A* em grade (4 direções). Usada no "clique para andar"
-// e, no futuro, pelos monstros para perseguir jogadores.
+// Busca de caminho A* em grade, em 8 direções (retas e diagonais). Usada no "clique para andar"
+// e pelos monstros para perseguir jogadores. Diagonais custam √2 (≈ 14 contra 10 da reta) e
+// seguem a mesma regra do movimento: não dá para cortar quinas.
 
-import { DX, DY, type Dir } from './dir';
+import { ALL_DIRS, DX, DY, isDiagonal, type Dir } from './dir';
 import type { Walkable } from './map';
+import { canStep } from './movement';
+
+const STRAIGHT_COST = 10;
+const DIAGONAL_COST = 14;
 
 /**
  * Encontra o caminho mais curto de (sx, sy) até (gx, gy).
@@ -24,7 +29,7 @@ export function findPath(map: Walkable, sx: number, sy: number, gx: number, gy: 
   const open = new MinHeap();
 
   cost[start] = 0;
-  open.push(start, manhattan(sx, sy, gx, gy));
+  open.push(start, octile(sx, sy, gx, gy));
   let expanded = 0;
 
   while (open.size > 0) {
@@ -36,18 +41,18 @@ export function findPath(map: Walkable, sx: number, sy: number, gx: number, gy: 
 
     const cx = current % width;
     const cy = (current - cx) / width;
-    for (let d = 0; d < 4; d++) {
+    for (const d of ALL_DIRS) {
+      if (!canStep(map, cx, cy, d)) continue;
       const nx = cx + DX[d];
       const ny = cy + DY[d];
-      if (!map.isWalkable(nx, ny)) continue;
       const next = ny * width + nx;
       if (closed[next]) continue;
-      const nextCost = cost[current]! + 1;
+      const nextCost = cost[current]! + (isDiagonal(d) ? DIAGONAL_COST : STRAIGHT_COST);
       if (cost[next] === -1 || nextCost < cost[next]!) {
         cost[next] = nextCost;
         cameFrom[next] = current;
         cameDir[next] = d;
-        open.push(next, nextCost + manhattan(nx, ny, gx, gy));
+        open.push(next, nextCost + octile(nx, ny, gx, gy));
       }
     }
   }
@@ -58,8 +63,11 @@ export function findPath(map: Walkable, sx: number, sy: number, gx: number, gy: 
   return path.reverse();
 }
 
-function manhattan(ax: number, ay: number, bx: number, by: number): number {
-  return Math.abs(ax - bx) + Math.abs(ay - by);
+/** Distância estimada em grade com diagonais (nunca exagera, então o A* acha o menor caminho). */
+function octile(ax: number, ay: number, bx: number, by: number): number {
+  const dx = Math.abs(ax - bx);
+  const dy = Math.abs(ay - by);
+  return STRAIGHT_COST * (dx + dy) + (DIAGONAL_COST - 2 * STRAIGHT_COST) * Math.min(dx, dy);
 }
 
 /** Fila de prioridade mínima (heap binário) — devolve sempre o item de menor prioridade. */

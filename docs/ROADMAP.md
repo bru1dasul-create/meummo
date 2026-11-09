@@ -27,6 +27,7 @@ A visão do jogo está em [DESIGN.md](DESIGN.md).
 
 ## 🔧 Refinamento do M1 (para jogar e ajustar juntos)
 Tudo isto se ajusta mexendo em números, sem programar:
+- [x] Andar em 8 direções (W+D = diagonal), escorregando nas paredes; monstros e o clique para andar também usam diagonais
 - [ ] A velocidade do personagem e dos monstros está boa? (`STEP_MS` em `src/shared/constants.ts`; `passoMs` em `data/monsters.json`)
 - [ ] Os avisos dão tempo de desviar? (`preparoMs` de cada monstro)
 - [ ] O dano e a vida estão justos? (`vida`, `dano` nos monstros; `src/shared/progression.ts` para o jogador)
