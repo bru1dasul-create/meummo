@@ -474,10 +474,10 @@ export class WorldScene extends Phaser.Scene {
     const from = feetOf(this.predicted.x, this.predicted.y);
     this.predicted = { x: result.x, y: result.y, dir };
     this.nextStepAt = nextStepTime(now, this.nextStepAt, stepDuration(dir, this.stepMs), TICK_MS);
-    this.me.moveTo(result.x, result.y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140 });
+    this.me.moveTo(result.x, result.y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140, dash: true });
     this.me.ghost(now, DASH_INVULNERABLE_MS);
     const to = feetOf(result.x, result.y);
-    this.effects.trail(this.me.sprite.texture.key, Number(this.me.sprite.frame.name) || 0, this.me.sprite.flipX, { x: from[0], y: from[1] }, { x: to[0], y: to[1] }, now);
+    this.effects.trail(this.me.sprite, { x: from[0], y: from[1] }, { x: to[0], y: to[1] }, now);
     this.dashReadyAt = now + DASH_COOLDOWN_MS + 120;
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
     this.clearPath();
@@ -550,6 +550,7 @@ export class WorldScene extends Phaser.Scene {
       now,
     );
     this.face(dirFromAngle(angle));
+    this.me.attack('shoot', angle, now);
     this.actionBar.setCooldown('shot', this.nextShotAt, SHOT_COOLDOWN_MS);
   }
 
@@ -570,6 +571,8 @@ export class WorldScene extends Phaser.Scene {
     if (skill.kind === 'arc') {
       this.sfx.play('arc');
       this.face(dirFromAngle(angle));
+      // o servidor não manda o efeito da Bordunada de volta para quem golpeou: anima aqui mesmo
+      this.me.attack('swing', angle, now);
       this.effects.flashTiles(arcTiles(this.predicted.x, this.predicted.y, angle), 0xffe08a, 220, now);
     }
   }
@@ -731,6 +734,7 @@ export class WorldScene extends Phaser.Scene {
         if (msg.by === this.myId && msg.cid !== undefined) {
           this.effects.bindShot(msg.cid, msg.id);
         } else {
+          this.entities.get(msg.by)?.attack('shoot', msg.a, now);
           this.effects.addShot(
             {
               x: msg.x,
@@ -768,6 +772,7 @@ export class WorldScene extends Phaser.Scene {
         const view = this.entities.get(msg.id);
         view?.setHp(msg.hp);
         view?.floatText(`+${msg.amount}`, 'heal');
+        view?.cheer(now, 900);
         if (msg.id === this.myId) {
           this.setMyHp(msg.hp, this.myMaxHp);
           this.sfx.play('heal');
@@ -782,6 +787,7 @@ export class WorldScene extends Phaser.Scene {
         this.onDeath(msg.id, now);
         break;
       case 'levelup':
+        this.entities.get(msg.id)?.cheer(now, 2000);
         this.onLevelUp(msg.id, msg.level, msg.maxHp);
         break;
       case 'cd': {
@@ -878,8 +884,8 @@ export class WorldScene extends Phaser.Scene {
       const [tx, ty] = feetOf(x, y);
       const monster = view.kind === 'monster';
       // investida de monstro: rastro cor de fogo e uma corrida um pouco mais longa (até 8 tiles)
-      this.effects.trail(view.sprite.texture.key, Number(view.sprite.frame.name) || 0, view.sprite.flipX, { x: fx, y: fy }, { x: tx, y: ty }, now, monster ? 0xff9a4a : undefined);
-      view.moveTo(x, y, dir, now, this.stepMs, monster ? { snapBeyond: 9, durationMs: 220 } : { snapBeyond: DASH_TILES + 1, durationMs: 140 });
+      this.effects.trail(view.sprite, { x: fx, y: fy }, { x: tx, y: ty }, now, monster ? 0xff9a4a : undefined);
+      view.moveTo(x, y, dir, now, this.stepMs, monster ? { snapBeyond: 9, durationMs: 220 } : { snapBeyond: DASH_TILES + 1, durationMs: 140, dash: true });
       if (!monster) view.ghost(now, DASH_INVULNERABLE_MS);
       return;
     }
@@ -973,6 +979,7 @@ export class WorldScene extends Phaser.Scene {
     const center = view.center(now);
     switch (kind) {
       case 'arc':
+        view.attack('swing', angle, now);
         this.effects.flashTiles(arcTiles(view.tileX, view.tileY, angle), 0xffe08a, 220, now);
         break;
       case 'spin':
@@ -1100,7 +1107,9 @@ export class WorldScene extends Phaser.Scene {
   /** Zoom em números inteiros (pixel art fica nítida) mostrando ~14 tiles no lado menor. */
   private fitZoom(): void {
     const { width, height } = this.scale.gameSize;
-    const zoom = Math.max(1, Math.round(Math.min(width, height) / (TILES_ON_SHORT_SIDE * T)));
+    // sempre PAR: os personagens têm o dobro de detalhe do mapa, então só com zoom par cada pixel deles
+    // vira um quadradinho inteiro na tela (com zoom ímpar ficariam pixels tortos)
+    const zoom = Math.max(2, 2 * Math.round(Math.min(width, height) / (TILES_ON_SHORT_SIDE * T) / 2));
     this.cameras.main.setZoom(zoom);
   }
 

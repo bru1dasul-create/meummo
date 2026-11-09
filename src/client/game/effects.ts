@@ -181,23 +181,16 @@ export class Effects {
   }
 
   /** Rastro da esquiva: "fantasmas" do personagem entre a origem e o destino. */
-  trail(
-    texture: string,
-    frame: number,
-    flipX: boolean,
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    now: number,
-    tint = 0xbfe3ff,
-  ): void {
+  trail(sprite: Phaser.GameObjects.Sprite, from: { x: number; y: number }, to: { x: number; y: number }, now: number, tint = 0xbfe3ff): void {
     const ghosts: Phaser.GameObjects.Sprite[] = [];
     for (let i = 1; i <= 3; i++) {
       const k = i / 4;
       ghosts.push(
         this.scene.add
-          .sprite(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, texture, frame)
-          .setOrigin(0.5, 1)
-          .setFlipX(flipX)
+          .sprite(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, sprite.texture.key, sprite.frame.name)
+          .setOrigin(0.5, sprite.originY)
+          .setScale(sprite.scaleX, sprite.scaleY)
+          .setFlipX(sprite.flipX)
           .setAlpha(0.35)
           .setTint(tint)
           .setDepth(from.y - 1),

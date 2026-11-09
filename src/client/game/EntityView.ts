@@ -4,10 +4,13 @@
 
 import type Phaser from 'phaser';
 import { TILE_SIZE } from '../../shared/constants';
-import { DX, facingOf, LEFT, type Dir } from '../../shared/dir';
+import { DX, LEFT, type Dir } from '../../shared/dir';
 import type { GearLook } from '../../shared/items';
 import type { EntityKind, EntityState } from '../../shared/protocol';
-import { CHAR_TOP, characterFrame, characterTexture } from './characters';
+import { CharacterAnimator, type AttackKind } from './animator';
+import { acquireCharacterTexture, CHAR_TOP, CHARACTER_ORIGIN_Y, CHARACTER_SCALE, characterTextureReady, faceTexture, releaseCharacterTexture } from './characters';
+import { faceFrame, FACE_W } from './doll/face';
+import { FEET_Y, FRAME_W, faceOrigin, frameIndex } from './doll/poses';
 import { monsterTexture } from './monsterArt';
 
 /** Monstros que se mexem mesmo parados (o Saci pulando, o fogo da Mula). */
@@ -15,6 +18,8 @@ const ANIMATED_IDLE = new Set(['saci', 'mula_sem_cabeca']);
 
 const BUBBLE_MS = 5000;
 const FADE_MS = 450;
+/** Folga entre um passo e o próximo em que ainda conta como "andando" (não pisca a pose parada). */
+const WALK_GRACE_MS = 90;
 
 /** Pixel dos pés do personagem no tile (x, y). */
 export function feetOf(x: number, y: number): [number, number] {
@@ -26,6 +31,8 @@ export interface MoveOptions {
   snapBeyond?: number;
   /** Duração total da animação (esquiva é rápida). */
   durationMs?: number;
+  /** É uma esquiva: o personagem usa a animação de correr. */
+  dash?: boolean;
 }
 
 export class EntityView {
@@ -71,6 +78,16 @@ export class EntityView {
   private ghostUntil = 0;
   private fainted = false;
   private cachedLabelWidth: number | null = null;
+  // jogadores e NPCs: animações, rosto e a textura da roupa
+  private readonly animator: CharacterAnimator | null = null;
+  private readonly face: Phaser.GameObjects.Sprite | null = null;
+  private textureKey = '';
+  /** Roupa nova ainda sendo desenhada: a antiga continua na tela até ela ficar pronta. */
+  private pendingKey = '';
+  private dashing = false;
+  private lastMovingAt = -Infinity;
+  /** Personagens aparecem na metade do tamanho da textura (que tem o dobro de detalhe). */
+  private baseScale = 1;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -97,9 +114,17 @@ export class EntityView {
     this.fromY = this.toY = py;
 
     this.shadow = scene.add.ellipse(px, py - 1.5, 10, 4, 0x000000, 0.28);
-    // jogadores e NPCs (vendedora...) usam o mesmo desenho de personagem
-    const texture = state.kind === 'monster' ? monsterTexture(scene, state.type) : characterTexture(scene, state.look, state.gear);
-    this.sprite = scene.add.sprite(px, py, texture, 0).setOrigin(0.5, 1);
+    if (state.kind === 'monster') {
+      this.sprite = scene.add.sprite(px, py, monsterTexture(scene, state.type), 0).setOrigin(0.5, 1);
+    } else {
+      // jogadores e NPCs (vendedora...) usam o mesmo desenho de personagem; NPC pode ter aparência própria
+      const npc = state.kind === 'npc' ? state.type : undefined;
+      this.textureKey = acquireCharacterTexture(scene, state.look, state.gear, npc);
+      this.sprite = scene.add.sprite(px, py, this.textureKey, 0).setOrigin(0.5, CHARACTER_ORIGIN_Y).setScale(CHARACTER_SCALE);
+      this.face = scene.add.sprite(px, py, faceTexture(scene, state.look, npc), 0).setOrigin(0, 0).setScale(CHARACTER_SCALE);
+      this.animator = new CharacterAnimator(state.id);
+      this.baseScale = CHARACTER_SCALE;
+    }
 
     this.tag = document.createElement('div');
     this.tag.className = `tag ${state.kind}${isSelf ? ' self' : ''}`;
@@ -133,6 +158,7 @@ export class EntityView {
       return;
     }
     const current = this.position(now);
+    this.dashing = options.dash ?? false;
     this.fromX = current.x;
     this.fromY = current.y;
     this.toX = px;
@@ -153,11 +179,36 @@ export class EntityView {
     this.moveDuration = 0;
   }
 
-  /** Jogador trocou de equipamento: redesenha o personagem com as peças novas. */
+  /** Trocou de equipamento: redesenha com as peças novas, sem interromper a animação. */
   setGear(gear: GearLook): void {
     if (this.kind === 'monster') return;
-    const frame = this.sprite.frame.name;
-    this.sprite.setTexture(characterTexture(this.scene, this.look, gear), frame);
+    const next = acquireCharacterTexture(this.scene, this.look, gear, this.kind === 'npc' ? this.type : undefined);
+    if (this.pendingKey) releaseCharacterTexture(this.scene, this.pendingKey);
+    this.pendingKey = '';
+    if (next === this.textureKey) {
+      releaseCharacterTexture(this.scene, next); // mesma combinação: só devolve a referência extra
+      return;
+    }
+    this.pendingKey = next;
+    this.swapWhenReady();
+  }
+
+  private swapWhenReady(): void {
+    if (!this.pendingKey || !characterTextureReady(this.pendingKey)) return;
+    this.sprite.setTexture(this.pendingKey, this.sprite.frame.name);
+    releaseCharacterTexture(this.scene, this.textureKey);
+    this.textureKey = this.pendingKey;
+    this.pendingKey = '';
+  }
+
+  /** Animação de ataque: `shoot` = estilingue/arco, `swing` = golpe (Bordunada). */
+  attack(kind: AttackKind, angle: number, now: number): void {
+    this.animator?.startAttack(kind, angle, now);
+  }
+
+  /** Cara de feliz por um tempo (subiu de nível, se curou). */
+  cheer(now: number, ms: number): void {
+    this.animator?.cheer(now, ms);
   }
 
   setDir(dir: Dir): void {
@@ -174,12 +225,10 @@ export class EntityView {
     this.sprite.setDepth(y);
     this.shadow.setDepth(y - 0.5);
 
-    if (this.kind !== 'monster') {
-      const facing = facingOf(this.dir);
-      // cada tile: meio passo com uma perna na frente, meio passo com as pernas juntas (passo A, junto, passo B, junto...)
-      const step = moving && t < 0.5 ? (this.steps % 2 === 0 ? 1 : 2) : 0;
-      this.sprite.setFrame(characterFrame(facing, step));
-      this.sprite.setFlipX(facing === LEFT);
+    if (this.animator) {
+      this.swapWhenReady();
+      if (moving) this.lastMovingAt = now;
+      this.drawCharacter(now, moving || now - this.lastMovingAt < WALK_GRACE_MS, t);
     } else {
       this.sprite.setFrame(moving || (now % 900 < 450 && ANIMATED_IDLE.has(this.type)) ? 1 : 0);
       this.sprite.setFlipX(this.facingLeft);
@@ -188,13 +237,18 @@ export class EntityView {
     // preparando golpe: pulsa
     if (now < this.windupUntil) {
       const progress = (now - this.windupStart) / Math.max(1, this.windupUntil - this.windupStart);
-      this.sprite.setScale(1 + 0.12 * Math.abs(Math.sin(progress * Math.PI * 4)));
+      this.sprite.setScale(this.baseScale * (1 + 0.12 * Math.abs(Math.sin(progress * Math.PI * 4))));
     } else {
-      this.sprite.setScale(1);
+      this.sprite.setScale(this.baseScale);
     }
 
-    if (now < this.flashUntil) this.sprite.setTint(0xff6b6b);
-    else this.sprite.clearTint();
+    if (now < this.flashUntil) {
+      this.sprite.setTint(0xff6b6b);
+      this.face?.setTint(0xff6b6b);
+    } else {
+      this.sprite.clearTint();
+      this.face?.clearTint();
+    }
 
     let alpha = 1;
     if (this.fainted) alpha = 0.45;
@@ -206,8 +260,40 @@ export class EntityView {
       if (t >= 1) return false;
     }
     this.sprite.setAlpha(alpha);
+    this.face?.setAlpha(alpha);
     this.shadow.setAlpha(alpha);
     return true;
+  }
+
+  /** Escolhe o quadro do corpo e a expressão, e cola o rosto em cima da cabeça desse quadro. */
+  private drawCharacter(now: number, moving: boolean, progress: number): void {
+    const pick = this.animator!.pick({
+      now,
+      dir: this.dir,
+      moving,
+      progress,
+      steps: this.steps,
+      dashing: this.dashing,
+      fainted: this.fainted,
+    });
+    this.sprite.setFrame(frameIndex(pick.view, pick.anim, pick.frame));
+    this.sprite.setFlipX(pick.flip);
+    const face = this.face!;
+    // de costas não tem rosto; e enquanto o corpo ainda está sendo desenhado, o rosto espera
+    if (pick.view === 'up' || !characterTextureReady(this.textureKey)) {
+      face.setVisible(false);
+      return;
+    }
+    const [fx, fy] = faceOrigin(pick.view, pick.anim, pick.frame);
+    const k = CHARACTER_SCALE;
+    const left = this.sprite.x - (FRAME_W / 2) * k;
+    const top = this.sprite.y - (FEET_Y + 1) * k;
+    face
+      .setVisible(true)
+      .setFrame(faceFrame(pick.view, pick.expression))
+      .setFlipX(pick.flip)
+      .setPosition(left + (pick.flip ? FRAME_W - fx - FACE_W : fx) * k, top + fy * k)
+      .setDepth(this.sprite.depth + 0.01);
   }
 
   /** Ponto da tela (em pixels) logo acima da cabeça, onde o nome fica normalmente. */
@@ -262,9 +348,10 @@ export class EntityView {
     this.tag.dataset.threat = diff <= -3 ? 'easy' : diff <= 1 ? 'normal' : diff <= 3 ? 'hard' : 'deadly';
   }
 
-  /** Piscada vermelha de quando apanha. */
+  /** Piscada vermelha de quando apanha (personagens também fazem careta e recuam). */
   flash(now: number): void {
     this.flashUntil = now + 140;
+    this.animator?.hurt(now);
   }
 
   /** Pulsa enquanto prepara um golpe. */
@@ -307,6 +394,8 @@ export class EntityView {
       this.tag.prepend(this.bubble);
     }
     this.bubble.textContent = text;
+    // mexe a boca mais ou menos o tempo de "falar" o texto
+    this.animator?.talk(performance.now(), Math.min(2500, 400 + text.length * 45));
     window.clearTimeout(this.bubbleTimer);
     this.bubbleTimer = window.setTimeout(() => {
       this.bubble?.remove();
@@ -323,6 +412,9 @@ export class EntityView {
   destroy(): void {
     window.clearTimeout(this.bubbleTimer);
     this.sprite.destroy();
+    this.face?.destroy();
+    if (this.textureKey) releaseCharacterTexture(this.scene, this.textureKey);
+    if (this.pendingKey) releaseCharacterTexture(this.scene, this.pendingKey);
     this.shadow.destroy();
     this.tag.remove();
   }
