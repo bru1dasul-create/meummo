@@ -32,8 +32,8 @@ import {
   chebyshev,
   dirFromAngle,
   dirTowards,
-  lineTiles,
   makeShot,
+  reachableLine,
   shotTouches,
   tileIn,
 } from '../shared/combat';
@@ -167,7 +167,9 @@ export class World {
   shoot(player: Player, cid: number, angle: number): void {
     const now = this.now();
     if (player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
-    player.nextShotAt = now + SHOT_COOLDOWN_MS;
+    // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
+    // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
+    player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
     this.faceAngle(player, angle);
     const [min, max] = damageRange(player.level);
     this.spawnProjectile(player, angle, SHOT_SPEED, SHOT_RANGE, this.rollRange(min, max), 'pedra', cid);
@@ -196,7 +198,7 @@ export class World {
       player.hp += amount;
       this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
     }
-    player.skillReadyAt[n] = now + skill.cooldownMs;
+    player.skillReadyAt[n] = Math.max(now, player.skillReadyAt[n]!) + skill.cooldownMs;
     player.outbox.push({ t: 'cd', n, ms: skill.cooldownMs });
   }
 
@@ -262,14 +264,18 @@ export class World {
   }
 
   private processSteps(player: Player, now: number): void {
-    while (player.queue.length > 0 && now >= player.nextStepAt - STEP_TOLERANCE_MS) {
-      const input = player.queue.shift()!;
+    while (player.queue.length > 0) {
+      const input = player.queue[0]!;
+      // Esquiva pronta não espera o passo anterior terminar (no cliente ela também acontece na hora).
       // Esquiva ainda recarregando vira um passo normal (o cliente se corrige com o ack).
       const dash = input.dash && now >= player.dashReadyAt - SKILL_TOLERANCE_MS;
+      if (!dash && now < player.nextStepAt - STEP_TOLERANCE_MS) break;
+      player.queue.shift();
       const result = applyInput(this.map, player, input.dir, dash, DASH_TILES);
       if (result.moved) player.nextStepAt = nextStepTime(now, player.nextStepAt, STEP_MS, TICK_MS);
-      if (dash) {
-        player.dashReadyAt = now + DASH_COOLDOWN_MS;
+      // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
+      if (dash && result.moved) {
+        player.dashReadyAt = Math.max(now, player.dashReadyAt) + DASH_COOLDOWN_MS;
         player.invulnerableUntil = now + DASH_INVULNERABLE_MS;
         player.dashed = true;
         player.outbox.push({ t: 'cd', n: DASH_SLOT, ms: DASH_COOLDOWN_MS });
@@ -480,7 +486,7 @@ export class World {
       target = undefined;
     }
 
-    if (!target && def.aggressive && monster.mode !== 'return') {
+    if (!target && def.aggressive && monster.mode !== 'return' && now >= monster.retargetAt) {
       const found = this.nearestPlayer(monster, def.aggroRange);
       if (found) {
         monster.targetId = found.id;
@@ -537,11 +543,11 @@ export class World {
   private attackTiles(monster: Monster, attack: MonsterAttack, dir: Dir): Tile[] {
     switch (attack.kind) {
       case 'spin':
-        return areaTiles(monster.x, monster.y, attack.range);
+        return areaTiles(monster.x, monster.y, attack.range).filter((t) => this.map.isWalkable(t.x, t.y));
       case 'strike':
-        return lineTiles(monster.x, monster.y, dir, attack.range);
+        return reachableLine(this.map, monster.x, monster.y, dir, attack.range);
       case 'bite':
-        return lineTiles(monster.x, monster.y, dir, 1);
+        return reachableLine(this.map, monster.x, monster.y, dir, 1);
       default:
         return [];
     }
@@ -625,7 +631,9 @@ export class World {
   private stepToward(monster: Monster, target: Player, now: number): void {
     const path = findPath(this.map, monster.x, monster.y, target.x, target.y, 600);
     if (!path) {
-      this.dropTarget(monster); // não tem como chegar (ex.: do outro lado do rio)
+      // Não tem como chegar (ex.: do outro lado do rio): desiste e só tenta de novo daqui a pouco.
+      monster.retargetAt = now + 3000;
+      this.dropTarget(monster);
       return;
     }
     const first = path[0];

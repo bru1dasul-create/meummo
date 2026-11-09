@@ -68,6 +68,20 @@ export function lineTiles(x: number, y: number, dir: Dir, length: number): Tile[
   return tiles;
 }
 
+/**
+ * Como lineTiles, mas para no primeiro tile bloqueado: o golpe não atravessa árvores, pedras nem paredes.
+ */
+export function reachableLine(map: { isWalkable(x: number, y: number): boolean }, x: number, y: number, dir: Dir, length: number): Tile[] {
+  const tiles: Tile[] = [{ x, y }];
+  for (let i = 1; i <= length; i++) {
+    const tx = x + DX[dir] * i;
+    const ty = y + DY[dir] * i;
+    if (!map.isWalkable(tx, ty)) break;
+    tiles.push({ x: tx, y: ty });
+  }
+  return tiles;
+}
+
 /** O tile e todos os vizinhos até `radius` de distância (giro). */
 export function areaTiles(x: number, y: number, radius: number): Tile[] {
   const tiles: Tile[] = [];

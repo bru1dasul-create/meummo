@@ -130,6 +130,8 @@ export class Monster {
   nextWanderAt = 0;
   nextSpecialAt = 0;
   nextRegenAt = 0;
+  /** Depois de não achar caminho até alguém, espera um pouco antes de tentar de novo. */
+  retargetAt = 0;
   lastDamagedAt = -Infinity;
   changed = false;
   /** Jogadores que bateram neste monstro (todos ganham XP quando ele cai). */

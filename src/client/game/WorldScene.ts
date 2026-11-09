@@ -14,7 +14,7 @@ import {
   TICK_MS,
   TILE_SIZE,
 } from '../../shared/constants';
-import { angleBetween, angleOfDir, arcTiles, dirFromAngle, lineTiles } from '../../shared/combat';
+import { angleBetween, angleOfDir, arcTiles, dirFromAngle, reachableLine } from '../../shared/combat';
 import { DX, DY, type Dir } from '../../shared/dir';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { applyDash, applyInput, applyStep, nextStepTime, type Pose } from '../../shared/movement';
@@ -354,7 +354,8 @@ export class WorldScene extends Phaser.Scene {
 
   private tryShoot(angle: number, now: number): void {
     if (this.dead || now < this.nextShotAt) return;
-    this.nextShotAt = now + SHOT_COOLDOWN_MS + 15;
+    // um pouco mais que a recarga do servidor, para a variação da rede não fazer um tiro ser recusado
+    this.nextShotAt = now + SHOT_COOLDOWN_MS + 40;
     const cid = ++this.shotCid;
     this.conn.send({ t: 'shoot', cid, a: round3(angle) });
     this.sfx.play('shot');
@@ -551,7 +552,7 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'warn':
         this.entities.get(msg.id)?.windup(now, msg.ms);
-        this.effects.warn(msg.tiles, msg.ms, now);
+        this.effects.warn(msg.tiles, msg.ms, now, msg.id);
         if (this.isMyTile(msg.tiles)) this.sfx.play('warn');
         break;
       case 'fx':
@@ -696,6 +697,7 @@ export class WorldScene extends Phaser.Scene {
     if (view.kind === 'monster') {
       if (now - (this.lastHitByMe.get(id) ?? -Infinity) < 2000) this.sfx.play('kill');
       this.lastHitByMe.delete(id);
+      this.effects.clearWarns(id);
       view.die(now);
       this.entities.delete(id);
       this.dying.push(view);
@@ -710,7 +712,7 @@ export class WorldScene extends Phaser.Scene {
     view?.setHp(maxHp, maxHp);
     view?.floatText(`Nível ${level}!`, 'level');
     if (id !== this.myId) return;
-    this.myLevel = level;
+    // this.myLevel é atualizado pelo applyStats (vem logo em seguida), que também calcula o "+XP".
     this.setMyHp(maxHp, maxHp);
     this.toast.show(`Você chegou ao nível ${level}!`, 2500);
     this.sfx.play('levelup');
@@ -730,7 +732,7 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'strike':
       case 'bite':
-        this.effects.flashTiles(lineTiles(view.tileX, view.tileY, dirFromAngle(angle), kind === 'strike' ? 2 : 1).slice(1), 0xffffff, 160, now);
+        this.effects.flashTiles(reachableLine(this.map, view.tileX, view.tileY, dirFromAngle(angle), kind === 'strike' ? 2 : 1).slice(1), 0xffffff, 160, now);
         break;
       case 'whirlwind':
         this.effects.whirlwind(center.x, center.y + 6, now);

@@ -12,6 +12,9 @@ interface Effect {
   /** Devolve false quando o efeito acabou. */
   update(now: number): boolean;
   destroy(): void;
+  /** Quem criou (para apagar os avisos de um monstro que morreu no meio do golpe). */
+  owner?: number;
+  cancelled?: boolean;
 }
 
 interface VisualShot {
@@ -55,7 +58,7 @@ export class Effects {
   // ---------- avisos ----------
 
   /** Aviso vermelho no chão: o golpe vai acertar estes tiles daqui a `ms` milissegundos. */
-  warn(tiles: number[], ms: number, now: number): void {
+  warn(tiles: number[], ms: number, now: number, owner?: number): void {
     const rects: Phaser.GameObjects.Rectangle[] = [];
     for (let i = 0; i + 1 < tiles.length; i += 2) {
       rects.push(
@@ -69,6 +72,7 @@ export class Effects {
     if (rects.length === 0) return;
     const end = now + ms;
     this.effects.push({
+      owner,
       update: (t) => {
         const progress = Math.min(1, Math.max(0, 1 - (end - t) / ms));
         for (const rect of rects) rect.setFillStyle(0xff3b30, 0.12 + 0.43 * progress);
@@ -76,6 +80,11 @@ export class Effects {
       },
       destroy: () => rects.forEach((r) => r.destroy()),
     });
+  }
+
+  /** Apaga os avisos de alguém (ex.: o monstro morreu antes de dar o golpe). */
+  clearWarns(owner: number): void {
+    for (const effect of this.effects) if (effect.owner === owner) effect.cancelled = true;
   }
 
   // ---------- projéteis ----------
@@ -198,7 +207,7 @@ export class Effects {
 
     const alive: Effect[] = [];
     for (const effect of this.effects) {
-      if (effect.update(now)) alive.push(effect);
+      if (!effect.cancelled && effect.update(now)) alive.push(effect);
       else effect.destroy();
     }
     this.effects = alive;

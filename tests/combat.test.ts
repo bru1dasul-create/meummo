@@ -311,6 +311,66 @@ describe('habilidades', () => {
   });
 });
 
+describe('correções da revisão (não deixar voltar)', () => {
+  it('não deixa atirar mais rápido mandando os pedidos um pouquinho adiantados', () => {
+    const world = makeWorld(OPEN, []);
+    const ana = join(world);
+    for (let i = 0; i < 20; i++) {
+      world.shoot(ana.player, i, 0); // um pedido a cada 400 ms (a recarga é 450 ms)
+      run(world, 400);
+    }
+    // em 19 x 400 ms cabem no máximo 17 tiros respeitando a recarga
+    expect(ana.conn.ofType('shot').length).toBeLessThanOrEqual(Math.floor((19 * 400) / SHOT_COOLDOWN_MS) + 1);
+  });
+
+  it('a esquiva acontece na hora, mesmo logo depois de um passo', () => {
+    const world = makeWorld(OPEN, []);
+    const ana = join(world);
+    world.requestStep(ana.player, 1, RIGHT);
+    run(world, TICK_MS);
+    expect(ana.player.x).toBe(3);
+    world.requestStep(ana.player, 2, RIGHT, true);
+    run(world, TICK_MS); // não espera o tempo do passo anterior acabar
+    expect(ana.player.x).toBe(6);
+    expect(ana.player.invulnerableUntil).toBeGreaterThan(clock.time);
+  });
+
+  it('rolar contra a parede não dá invencibilidade nem gasta a esquiva', () => {
+    const world = makeWorld(withTile(OPEN, 3, 3, '#'), []);
+    const ana = join(world);
+    world.requestStep(ana.player, 1, RIGHT, true);
+    run(world, TICK_MS);
+    expect(ana.player.x).toBe(2);
+    expect(ana.player.invulnerableUntil).toBe(0);
+    expect(ana.conn.ofType('cd')).toHaveLength(0);
+  });
+
+  it('o bote da cobra não atravessa árvores (ela dá a volta)', () => {
+    const world = makeWorld(withTile(OPEN, 3, 3, '#'), [{ monster: 'cobra', x: 4, y: 3, w: 1, h: 1 }]);
+    const ana = join(world);
+    run(world, 3000);
+    const warnedTiles = ana.conn.ofType('warn').flatMap((w) => w.tiles.flatMap((v, i) => (i % 2 === 0 ? [`${v},${w.tiles[i + 1]}`] : [])));
+    expect(warnedTiles).not.toContain('3,3');
+  });
+
+  it('monstro que não consegue chegar até o jogador não fica gritando "!" sem parar', () => {
+    // Ana numa ilhota cercada de água; a cobra fica do lado de fora.
+    const rows = ['.'.repeat(14), '.~~~~' + '.'.repeat(9), '.~..~' + '.'.repeat(9), '.~..~' + '.'.repeat(9), '.~~~~' + '.'.repeat(9), '.'.repeat(14)];
+    clock = new FakeClock();
+    const world = new World(GameMap.fromTiled(tiledFromAscii(rows, { x: 10, y: 3 }, [{ monster: 'cobra', x: 6, y: 3, w: 1, h: 1 }])), {
+      now: clock.now,
+      random: () => 0,
+      monsters: defs,
+    });
+    const ana = join(world);
+    ana.player.x = 2; // na ilhota
+    ana.player.y = 3;
+    run(world, 2000);
+    const shouts = ana.conn.ofType('say').filter((m) => m.text === '!');
+    expect(shouts.length).toBeLessThanOrEqual(1);
+  });
+});
+
 describe('dados e validação', () => {
   it('lê o data/monsters.json de verdade', () => {
     const real = loadMonsterDefs();
