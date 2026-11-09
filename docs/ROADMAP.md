@@ -116,8 +116,12 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   A a D com a cobertura furada, ônibus enferrujados nas pistas, catracas, bilheteria e o fundo desabado com
   tambores de fogo), com criaturas provisórias (Corpo-Seco nas plataformas, Capelobo no fundo)
 - [ ] **[mundo]** Shopping em ruínas (sem nome de marca): mapa de dentro, com entrada por Santo Amaro
-- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
-  Boto e jacarés na Billings, Boitatá como chefe
+- [x] **[estrutura]** Jacaré Mutante e Boto Encantado em `data/monsters.json` (golpes que já existem; o jacaré
+  deixa o Dente de Jacaré, que vale ouro na loja)
+- [ ] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings
+- [ ] **[arte]** Desenhos do jacaré, do boto e da Iara; ícone do Dente de Jacaré (`icone: "dente"`)
+- [ ] **[estrutura + arte + mundo]** Iara, chefe da Billings: o canto puxa o jogador para a água e a esquiva quebra o
+  encanto (área já marcada: camada `lendas`); depois, Boitatá como chefe
 
 ## 🛠️ Ferramentas do administrador
 - [x] **[estrutura]** Painel do administrador, passo 1 — **ajustes do jogo** (http://localhost:3000/admin, só no

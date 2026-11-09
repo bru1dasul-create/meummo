@@ -140,6 +140,13 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 - **Criaturas por enquanto:** Jararacas nas ilhas perto da entrada, Corpo-Seco no leste (usina e casas
   afundadas) e Capelobo nas matas da beira do lago. As de lá (Iara, Boto, jacarés) estão marcadas no mapa e
   entram quando forem criadas. Quem desmaia aqui acorda no Refúgio.
+- **As criaturas de lá** (em `data/monsters.json`):
+
+  | Criatura | Nível | Jeito | Golpe | Deixa |
+  |---|---|---|---|---|
+  | Jacaré Mutante (`jacare`) | 5 | Agressivo de perto, lento na terra, não persegue longe da água | Abocanhada em linha (2 quadrados), aviso de 0,75 s, dano alto | Dente de Jacaré (vale ouro), arruda |
+  | Boto Encantado (`boto`) | 6 | Na dele até alguém mexer; mantém distância | Jato d'água (projétil) | Arruda, Colar de Presas (raro) |
+  | Iara (`iara`, chefe) | 7–8 | — | O canto puxa para a água; a esquiva quebra o encanto | (a fazer) |
 
 ### Ruínas de Santo Amaro (o mapa)
 - **A entrada:** a avenida que sai do Refúgio continua pelo oeste e corta a zona inteira; carros e um ônibus
