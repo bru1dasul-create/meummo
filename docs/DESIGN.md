@@ -110,7 +110,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
 | **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. Ao sul, o Terminal Santo Amaro, com os ônibus parados para sempre; ao lado do largo, o Shopping do Largo Treze. | ✅ mapa e criaturas (níveis 4 a 8), o terminal e o shopping |
-| **Represa Billings** (os Labirintos) | farm e perigo | Canais e pântanos ao sul do brejo, com jacarés mutantes e espíritos da água (Iara, Boto, Lobisomem da Mata). | ✅ mapa (criaturas provisórias) |
+| **Represa Billings** (os Labirintos) | farm e perigo | Canais e pântanos ao sul do brejo, com jacarés mutantes e espíritos da água (Iara, Boto, Lobisomem da Mata). | ✅ mapa e criaturas (Iara, a chefe; jacarés e botos) |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
 ### Refúgio de Guarapiranga (feito)
@@ -136,11 +136,10 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 - **O lago:** a represa aberta, no sul, com a parte funda escurecendo. A ponte da rodovia antiga atravessa o lago e
   caiu no meio (dá para andar até a ponta quebrada). Casas afundadas mostram só o telhado.
 - **A usina velha:** um prédio de concreto numa ilha do nordeste, com sucata em volta.
-- **A prainha da Iara:** areia de frente para uma pedra grande no meio d'água, onde ela vai cantar.
-- **Criaturas:** o Jacaré Mutante nos canais do oeste (3) e o Boto Encantado no lago das casas afundadas (2);
-  e as de fora: Jararacas nas ilhas perto da entrada, Corpo-Seco no leste (usina e casas afundadas) e Capelobo nas
-  matas da beira do lago. A área da Iara (a prainha e a pedra) está marcada no mapa e ela entra quando for criada.
-  Quem desmaia aqui acorda no Refúgio.
+- **A prainha da Iara:** areia de frente para uma pedra grande no meio d'água, onde ela canta.
+- **Criaturas:** a Iara (a chefe, uma só) na prainha e na pedra, o Jacaré Mutante nos canais do oeste (3) e o Boto
+  Encantado no lago das casas afundadas (2); e as de fora: Jararacas nas ilhas perto da entrada, Corpo-Seco no
+  leste (usina e casas afundadas) e Capelobo nas matas da beira do lago. Quem desmaia aqui acorda no Refúgio.
 - **As criaturas de lá** (em `data/monsters.json`):
 
   | Criatura | Nível | Jeito | Golpe | Deixa |

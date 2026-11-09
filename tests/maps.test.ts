@@ -82,7 +82,7 @@ describe('camadas do mapa', () => {
     expect(shore).toBeGreaterThan(100);
   });
 
-  it('a Billings liga com o Refúgio, tem o jacaré e o boto (criaturas que existem) e marca onde vai morar a Iara', () => {
+  it('a Billings liga com o Refúgio e é a casa dos jacarés, dos botos e da Iara (a chefe, na prainha)', () => {
     const billings = realMap('billings');
     const refugio = realMap('refugio');
     const objects = (map: TiledMap, layer: string) => map.layers.find((l) => l.name === layer)?.objects ?? [];
@@ -93,12 +93,17 @@ describe('camadas do mapa', () => {
     const areas = objects(billings, 'monstros');
     expect(areas.length).toBeGreaterThanOrEqual(5);
     for (const area of areas) expect(monsters.has(area.name!), area.name).toBe(true);
-    // o jacaré e o boto já existem e moram lá; a Iara ainda não: fica numa camada que o servidor ignora
-    expect(areas.map((a) => a.name)).toEqual(expect.arrayContaining(['jacare', 'boto']));
-    expect(objects(billings, 'lendas').map((a) => a.name)).toEqual(['iara']);
+    // as lendas de lá já existem e moram lá (antes ficavam marcadas numa camada "lendas", que o servidor ignora)
+    expect(areas.map((a) => a.name)).toEqual(expect.arrayContaining(['jacare', 'boto', 'iara']));
+    expect(objects(billings, 'lendas')).toEqual([]);
     const map = GameMap.fromTiled(billings, 'billings');
     expect(map).toMatchObject({ name: 'Represa Billings', safe: false, respawnMap: 'refugio' });
-    expect(map.monsterZones.map((z) => z.monster)).not.toContain('iara');
+    // a Iara é uma só (a chefe) e dá para chegar a pé na prainha dela
+    const iara = map.monsterZones.filter((z) => z.monster === 'iara');
+    expect(iara.map((z) => z.count)).toEqual([1]);
+    let beach = 0;
+    for (let y = iara[0]!.y; y < iara[0]!.y + iara[0]!.h; y++) for (let x = iara[0]!.x; x < iara[0]!.x + iara[0]!.w; x++) if (map.isReachable(x, y)) beach++;
+    expect(beach).toBeGreaterThan(40);
   });
 
   it('o Terminal Santo Amaro liga com Santo Amaro (pela rua do meio, ao sul) e tem as quatro plataformas', () => {

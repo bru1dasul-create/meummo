@@ -26,9 +26,10 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
   cinema (Capelobo entre as poltronas) e a praça de alimentação (onde o Saci apronta)
 - Desça a trilha do brejo, ao sul, até a **Represa Billings**: um labirinto de canais de água verde e ilhas de
   mato ligadas por passarelas, com buritis, aguapés, casas afundadas, a usina velha, a ponte da rodovia quebrada
-  no meio do lago e a prainha de frente para a pedra onde a **Iara** vai cantar. Nos canais do oeste, o
-  **Jacaré Mutante** (lento na terra, mas a abocanhada dói); no lago das casas afundadas, o **Boto Encantado**, que
-  fica na dele até alguém mexer com ele. Também moram lá Jararaca, Corpo-Seco e Capelobo (a Iara ainda está chegando)
+  no meio do lago e a prainha de frente para a pedra onde a **Iara**, a chefe, canta (quem fica perto é encantado e
+  puxado para ela; a esquiva solta). Nos canais do oeste, o **Jacaré Mutante** (lento na terra, mas a abocanhada
+  dói); no lago das casas afundadas, o **Boto Encantado**, que fica na dele até alguém mexer com ele. Também moram lá
+  Jararaca, Corpo-Seco e Capelobo
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -249,8 +250,8 @@ todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro), `billings.tmj` 
 - propriedade `faiscas` num tile: solta faíscas subindo (as brasas e o tambor com fogo de Santo Amaro)
 - propriedades do mapa `neblina` e `escuro` (de 0 a 1): neblina passando por cima de tudo e o lugar mais escuro
   (Santo Amaro usa 0.22 e 0.14; o Refúgio não usa); `vagalumes` (0 a 1): vaga-lumes piscando (a Billings usa 0.7)
-- camada de objetos `lendas` (na Billings): áreas marcadas para criaturas que ainda vão existir (hoje só a `iara`).
-  O servidor ignora; quando a criatura existir, a área passa para a camada `monstros` (como já foi com o `jacare` e
+- camada de objetos `lendas` (opcional): áreas marcadas para criaturas que ainda vão existir. O servidor ignora;
+  quando a criatura existir, a área passa para a camada `monstros` (foi assim com a `iara`, o `jacare` e
   o `boto`)
 - beiradas entre terrenos (areia e água, grama e terra...) são tiles próprios, como `shore_3` (água ao norte e a
   leste) ou `sand_grass_c_ne` (grama só no canto de cima à direita): o número diz os lados que encostam no
