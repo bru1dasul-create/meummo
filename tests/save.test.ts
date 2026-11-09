@@ -184,7 +184,7 @@ describe('progresso no mundo', () => {
     expect(saver.saves).toHaveLength(0);
     clock.advance(200);
     world.tick();
-    expect(saver.lastFor(7)).toMatchObject({ level: 1, x: 5, y: 2, zone: map.name, look: 123 });
+    expect(saver.lastFor(7)).toMatchObject({ level: 1, x: 5, y: 2, zone: map.id, look: 123 }); // a zona é guardada pelo id do mapa
 
     player.x = 8;
     world.leave(player);
@@ -249,13 +249,13 @@ describe('entrar com senha', () => {
     const welcome = await sendHello(a.session, a.transport, 'Ana', 'segredo1');
     expect(welcome.t).toBe('welcome');
     expect(a.transport.ofType('sys')[0]?.text).toContain('Personagem criado: Ana!');
-    const player = [...a.lobby.world.players.values()][0]!;
+    const player = [...a.lobby.realm.start.players.values()][0]!;
     player.level = 3;
     player.xp = 12;
     player.x = 6;
     player.y = 3;
     a.session.disconnect();
-    expect(a.lobby.world.players.size).toBe(0);
+    expect(a.lobby.realm.start.players.size).toBe(0);
 
     const b = connect(a.lobby);
     const back = await sendHello(b.session, b.transport, 'ana', 'segredo1');
@@ -271,7 +271,7 @@ describe('entrar com senha', () => {
     const wrong = connect(a.lobby);
     expect(await sendHello(wrong.session, wrong.transport, 'Ana', 'outra-senha')).toEqual({ t: 'reject', reason: 'wrong_password' });
     expect(wrong.transport.closed).toEqual([4000]);
-    expect(a.lobby.world.players.size).toBe(0);
+    expect(a.lobby.realm.start.players.size).toBe(0);
 
     const short = connect(a.lobby);
     expect(await sendHello(short.session, short.transport, 'Beto', '123')).toEqual({ t: 'reject', reason: 'password_invalid' });
@@ -281,7 +281,7 @@ describe('entrar com senha', () => {
   it('entrar de outro lugar tira a sessão antiga (avisando) e não perde nada', async () => {
     const tab1 = connect();
     await sendHello(tab1.session, tab1.transport, 'Ana', 'segredo1');
-    const player = [...tab1.lobby.world.players.values()][0]!;
+    const player = [...tab1.lobby.realm.start.players.values()][0]!;
     player.level = 4;
 
     const tab2 = connect(tab1.lobby);
@@ -289,11 +289,11 @@ describe('entrar com senha', () => {
     expect(tab1.transport.ofType('bye')).toEqual([{ t: 'bye', reason: 'replaced' }]);
     expect(tab1.transport.closed).toEqual([4002]);
     expect(welcome).toMatchObject({ t: 'welcome', you: { level: 4 } });
-    expect(tab1.lobby.world.players.size).toBe(1);
+    expect(tab1.lobby.realm.start.players.size).toBe(1);
 
     // A sessão antiga fechando depois não pode derrubar a nova.
     tab1.session.disconnect();
-    expect(tab1.lobby.world.players.size).toBe(1);
+    expect(tab1.lobby.realm.start.players.size).toBe(1);
     expect(tab1.lobby.online.size).toBe(1);
   });
 
@@ -334,7 +334,7 @@ describe('entrar com senha', () => {
     a.session.disconnect();
     await vi.waitFor(() => expect(a.lobby.store.count()).toBe(1)); // o personagem foi criado...
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(a.lobby.world.players.size).toBe(0); // ...mas ninguém ficou "fantasma" no mundo
+    expect(a.lobby.realm.start.players.size).toBe(0); // ...mas ninguém ficou "fantasma" no mundo
     expect(a.lobby.online.size).toBe(0);
     expect(a.transport.batches).toEqual([]);
   });

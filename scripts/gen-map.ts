@@ -1,4 +1,4 @@
-// Gera o mapa da zona inicial — o Refúgio de Guarapiranga — em public/assets/maps/world.tmj.
+// Gera o mapa da zona inicial — o Refúgio de Guarapiranga — em public/assets/maps/refugio.tmj.
 //
 // Pindorama: Selva de Pedra. Muito tempo depois do fim, a floresta tomou São Paulo.
 // A represa de Guarapiranga virou um lago sagrado, com uma vila flutuante de madeira e restos de barcos.
@@ -17,11 +17,14 @@ import { mulberry32 } from './pixels';
 import { gid, TILES, tiledTileset } from './tileset';
 
 const outIndex = process.argv.indexOf('--out');
-const OUT = path.resolve(outIndex !== -1 && process.argv[outIndex + 1] ? process.argv[outIndex + 1]! : 'public/assets/maps/world.tmj');
+const OUT = path.resolve(outIndex !== -1 && process.argv[outIndex + 1] ? process.argv[outIndex + 1]! : 'public/assets/maps/refugio.tmj');
 const W = 96;
 const H = 72;
 const ZONE_NAME = 'Refúgio de Guarapiranga';
 const SPAWN = { x: 42, y: 29 };
+/** Saída no fim da avenida (leste) para as Ruínas de Santo Amaro, e onde chega quem volta de lá. */
+const EAST_EXIT = { x: W - 1, y: 22, w: 1, h: 9 };
+const EAST_ARRIVAL = { x: W - 4, y: 26 };
 
 /** Áreas onde nascem monstros (em tiles). O nome é o id em data/monsters.json. */
 const MONSTER_ZONES = [
@@ -385,11 +388,12 @@ const map = {
   type: 'map',
   tilewidth: 16,
   tileheight: 16,
-  nextlayerid: 5,
-  nextobjectid: 2 + MONSTER_ZONES.length,
+  nextlayerid: 6,
+  nextobjectid: 4 + MONSTER_ZONES.length,
   properties: [
     { name: 'nome', type: 'string', value: ZONE_NAME },
     { name: 'seguro', type: 'bool', value: true },
+    { name: 'inicial', type: 'bool', value: true },
   ],
   layers: [
     { id: 1, name: 'ground', type: 'tilelayer', width: W, height: H, x: 0, y: 0, opacity: 1, visible: true, data: ground },
@@ -405,6 +409,8 @@ const map = {
       visible: true,
       objects: [
         { id: 1, name: 'spawn', type: '', point: true, x: SPAWN.x * 16 + 8, y: SPAWN.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
+        // quem volta de Santo Amaro aparece aqui, no fim da avenida
+        { id: 2 + MONSTER_ZONES.length, name: 'leste', type: '', point: true, x: EAST_ARRIVAL.x * 16 + 8, y: EAST_ARRIVAL.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
       ],
     },
     {
@@ -428,6 +434,33 @@ const map = {
         visible: true,
         properties: [{ name: 'quantidade', type: 'int', value: zone.count }],
       })),
+    },
+    {
+      id: 5,
+      name: 'saidas',
+      type: 'objectgroup',
+      draworder: 'topdown',
+      x: 0,
+      y: 0,
+      opacity: 1,
+      visible: true,
+      objects: [
+        {
+          id: 3 + MONSTER_ZONES.length,
+          name: 'Ruínas de Santo Amaro',
+          type: '',
+          x: EAST_EXIT.x * 16,
+          y: EAST_EXIT.y * 16,
+          width: EAST_EXIT.w * 16,
+          height: EAST_EXIT.h * 16,
+          rotation: 0,
+          visible: true,
+          properties: [
+            { name: 'mapa', type: 'string', value: 'santo-amaro' },
+            { name: 'chegada', type: 'string', value: 'oeste' },
+          ],
+        },
+      ],
     },
   ],
   tilesets: [tiledTileset('../tiles.png')],

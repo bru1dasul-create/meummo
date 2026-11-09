@@ -65,6 +65,21 @@ export interface JoinProfile {
   created: boolean;
 }
 
+/**
+ * O que um mapa precisa saber dos outros. No servidor de verdade quem cuida disso é o Realm (realm.ts);
+ * um World sozinho (como nos testes) usa o padrão: ele mesmo é o jogo todo.
+ */
+export interface WorldLinks {
+  /** Números de entidade únicos em todos os mapas. */
+  nextId(): number;
+  /** Aviso para todo mundo online, em qualquer mapa. */
+  announce(msg: ServerMsg, exceptId?: number): void;
+  /** Quantos estão online no jogo todo. */
+  online(): number;
+  /** Pede para levar o jogador para outro mapa (`arrival` = nome do ponto de chegada). false = não dá. */
+  travel(player: Player, to: string, arrival: string): boolean;
+}
+
 export interface WorldOptions {
   /** Relógio em milissegundos (nos testes usamos um relógio falso). */
   now?: () => number;
@@ -76,6 +91,8 @@ export interface WorldOptions {
   saver?: CharacterSaver;
   /** Tipos de item (de data/items.json). */
   items?: ReadonlyMap<string, ItemInfo>;
+  /** Ligação com os outros mapas (veja WorldLinks). */
+  links?: WorldLinks;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -87,6 +104,8 @@ const LEASH_MARGIN = 4;
 const RESPAWN_PROTECTION_MS = 2000;
 /** Folga para usar um consumível um pouquinho antes da hora (rede). */
 const ITEM_TOLERANCE_MS = 100;
+/** Proteção para quem acabou de chegar de outro mapa (o navegador ainda está desenhando o mapa novo). */
+const ARRIVAL_PROTECTION_MS = 2000;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
 export const AUTOSAVE_MS = 30_000;
 
@@ -100,13 +119,13 @@ export class World {
   readonly items: ReadonlyMap<string, ItemInfo>;
   /** Tile → id do monstro que está nele (monstros não se empilham). */
   private readonly monsterAt = new Map<number, number>();
-  private nextId = 1;
   private lastTickAt: number;
   private readonly now: () => number;
   private readonly random: () => number;
   private readonly log: (message: string) => void;
   private readonly saver: CharacterSaver | null;
   private nextAutosaveAt: number;
+  private readonly links: WorldLinks;
 
   constructor(
     readonly map: GameMap,
@@ -117,6 +136,13 @@ export class World {
     this.log = options.log ?? (() => {});
     this.saver = options.saver ?? null;
     this.items = options.items ?? new Map();
+    let ids = 1;
+    this.links = options.links ?? {
+      nextId: () => ids++,
+      announce: (msg, exceptId) => this.broadcastLocal(msg, exceptId),
+      online: () => this.players.size,
+      travel: () => false,
+    };
     this.lastTickAt = this.now();
     this.nextAutosaveAt = this.lastTickAt + AUTOSAVE_MS;
 
@@ -140,7 +166,7 @@ export class World {
     // O nome salvo já foi conferido quando o personagem nasceu (e as regras podem mudar depois).
     const name = saved ? saved.name : normalizeName(rawName);
     if (!saved && nameProblem(name)) return { ok: false, reason: 'name_invalid' };
-    if (this.players.size >= MAX_PLAYERS) return { ok: false, reason: 'full' };
+    if (this.links.online() >= MAX_PLAYERS) return { ok: false, reason: 'full' };
     const key = nameKey(name);
     for (const other of this.players.values()) {
       if (nameKey(other.name) === key) return { ok: false, reason: 'name_taken' };
@@ -148,7 +174,7 @@ export class World {
 
     const savedSpot = saved ? this.savedSpot(saved) : null;
     const spot = savedSpot ?? this.pickSpawnTile();
-    const player = new Player(this.nextId++, name, spot.x, spot.y, conn, this.now(), saved?.id ?? null, saved?.look);
+    const player = new Player(this.links.nextId(), name, spot.x, spot.y, conn, this.now(), saved?.id ?? null, saved?.look);
     const bag = Inventory.fromSaved(this.items, saved?.inventory ?? null);
     player.inventory = bag.inventory;
     if (bag.dropped.length > 0) this.log(`aviso: ${name} tinha itens que não existem mais em data/items.json: ${bag.dropped.join(', ')}`);
@@ -170,30 +196,82 @@ export class World {
         you: player.state(),
         stats: player.stats(),
         stepMs: STEP_MS,
-        online: this.players.size,
+        online: this.links.online(),
+        map: this.map.id,
         items: [...this.items.values()],
         inv: player.inventory.state(),
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
     ]);
-    this.broadcast({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
-    this.broadcast({ t: 'online', n: this.players.size });
-    this.log(`entrou: ${name} (online: ${this.players.size})`);
+    this.links.announce({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
+    this.links.announce({ t: 'online', n: this.links.online() });
+    this.log(`entrou: ${name} em ${this.map.name} (online: ${this.links.online()})`);
     return { ok: true, player };
   }
 
   leave(player: Player): void {
-    if (!this.players.delete(player.id)) return;
+    if (!this.players.has(player.id)) return;
+    this.detach(player);
     this.saveCharacters([player]);
+    this.links.announce({ t: 'sys', text: `${player.name} saiu.` });
+    this.links.announce({ t: 'online', n: this.links.online() });
+    this.log(`saiu: ${player.name} (online: ${this.links.online()})`);
+  }
+
+  /** Tira o jogador deste mapa sem os avisos de "saiu" (ele está indo para outro mapa). */
+  detach(player: Player): void {
+    if (!this.players.delete(player.id)) return;
     for (const other of this.players.values()) {
       if (other.known.delete(player.id)) other.outbox.push({ t: 'despawn', id: player.id });
     }
     for (const monster of this.monsters.values()) {
       if (monster.targetId === player.id) this.dropTarget(monster);
     }
-    this.broadcast({ t: 'sys', text: `${player.name} saiu.` });
-    this.broadcast({ t: 'online', n: this.players.size });
-    this.log(`saiu: ${player.name} (online: ${this.players.size})`);
+  }
+
+  /** Recebe um jogador vindo de outro mapa (por uma saída, ou acordando na vila depois de desmaiar). */
+  adopt(player: Player, spot: Tile): void {
+    const now = this.now();
+    if (player.dead) {
+      player.deadUntil = 0;
+      player.hp = player.maxHp;
+      player.dir = DOWN;
+      player.lastDamagedAt = -Infinity;
+    }
+    player.x = spot.x;
+    player.y = spot.y;
+    player.queue.length = 0;
+    player.nextStepAt = 0;
+    player.known.clear();
+    player.changed = true;
+    player.invulnerableUntil = now + ARRIVAL_PROTECTION_MS;
+    // Até o navegador avisar que terminou de carregar o mapa novo, pedidos dele são ignorados.
+    player.loading = true;
+    player.outbox = [{ t: 'sys', text: `Você chegou em: ${this.map.name}.` }];
+    this.players.set(player.id, player);
+    player.conn.send([
+      {
+        t: 'zone',
+        map: this.map.id,
+        you: player.state(),
+        stats: player.stats(),
+        inv: player.inventory.state(),
+        online: this.links.online(),
+      },
+    ]);
+    this.saveCharacters([player]);
+    this.log(`${player.name} foi para ${this.map.name}`);
+  }
+
+  /** Onde aparece quem chega por `arrival`: o ponto com esse nome no mapa ('spawn' = perto do nascimento). */
+  arrivalSpot(arrival: string): Tile {
+    const point = arrival === 'spawn' ? undefined : this.map.points.get(arrival);
+    return (point && this.map.nearestWalkable(point.x, point.y)) || this.pickSpawnTile();
+  }
+
+  /** O navegador terminou de carregar o mapa novo: os pedidos dele voltam a valer. */
+  loaded(player: Player): void {
+    player.loading = false;
   }
 
   /** Salva o progresso de todo mundo que está online (também acontece sozinho a cada AUTOSAVE_MS). */
@@ -221,7 +299,8 @@ export class World {
   /** Onde o personagem estava, se ainda dá para ficar lá (o mapa pode ter mudado). */
   private savedSpot(saved: SavedCharacter): Tile | null {
     const { x, y } = saved;
-    if (saved.zone !== this.map.name || x === null || y === null) return null;
+    // A zona é guardada pelo id do mapa (saves antigos guardavam o nome, que também vale).
+    if ((saved.zone !== this.map.id && saved.zone !== this.map.name) || x === null || y === null) return null;
     return this.map.isWalkable(x, y) && this.map.isReachable(x, y) ? { x, y } : null;
   }
 
@@ -229,7 +308,7 @@ export class World {
     if (!this.saver) return;
     const list: { id: number; data: CharacterData }[] = [];
     for (const player of players) {
-      if (player.characterId !== null) list.push({ id: player.characterId, data: characterData(player, this.map.name) });
+      if (player.characterId !== null) list.push({ id: player.characterId, data: characterData(player, this.map.id) });
     }
     if (list.length === 0) return;
     try {
@@ -243,7 +322,7 @@ export class World {
 
   /** O cliente pediu para andar (ou rolar). Entra na fila e é processado no ritmo certo, no tick. */
   requestStep(player: Player, seq: number, dir: Dir, dash = false): void {
-    if (seq <= player.lastSeq) return;
+    if (player.loading || seq <= player.lastSeq) return;
     player.lastSeq = seq;
     if (player.dead) return;
     if (player.queue.length >= MAX_QUEUED_STEPS) {
@@ -259,7 +338,7 @@ export class World {
   /** Estilingue: atira uma pedrinha na direção do ângulo. */
   shoot(player: Player, cid: number, angle: number): void {
     const now = this.now();
-    if (player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
+    if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
@@ -270,7 +349,7 @@ export class World {
 
   useSkill(player: Player, n: number, angle: number): void {
     const skill = SKILLS[n];
-    if (!skill) return;
+    if (!skill || player.loading) return;
     const now = this.now();
     if (player.dead) return this.fail(player, 'dead');
     if (now < player.skillReadyAt[n]! - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
@@ -300,7 +379,7 @@ export class World {
   /** Equipar, usar (comer) ou jogar fora o item do espaço `i` da mochila. */
   itemAction(player: Player, act: ItemAction, i: number): void {
     const found = player.inventory.at(i);
-    if (!found) return; // espaço vazio (a mochila do navegador estava desatualizada): nada a fazer
+    if (!found || player.loading) return; // espaço vazio (a mochila do navegador estava desatualizada): nada a fazer
     if (player.dead) return this.fail(player, 'dead', true);
     const { def } = found;
     if (act === 'drop') {
@@ -327,7 +406,7 @@ export class World {
 
   /** Tira o que está equipado nesta parte e guarda na mochila. */
   unequip(player: Player, part: EquipSlot): void {
-    if (!player.inventory.equipped[part]) return;
+    if (!player.inventory.equipped[part] || player.loading) return;
     if (player.dead) return this.fail(player, 'dead', true);
     if (!player.inventory.unequip(part)) return this.fail(player, 'bag_full', true);
     this.gearChanged(player);
@@ -360,7 +439,7 @@ export class World {
       if (added > 0) got.push({ item: drop.item, n: added });
       if (added < n) lost.push({ item: drop.item, n: n - added });
       if (added > 0 && def.rarity !== 'common') precious = true;
-      if (added > 0 && def.rarity === 'legendary') this.broadcast({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
+      if (added > 0 && def.rarity === 'legendary') this.links.announce({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
     }
     if (got.length > 0) {
       player.invDirty = true;
@@ -383,7 +462,7 @@ export class World {
       player.outbox.push({ t: 'sys', text: 'Calma! Você está mandando mensagens rápido demais.' });
       return;
     }
-    this.broadcast({ t: 'chat', id: player.id, name: player.name, text });
+    this.links.announce({ t: 'chat', id: player.id, name: player.name, text });
   }
 
   // ======================= o tick =======================
@@ -436,6 +515,7 @@ export class World {
   // ======================= jogadores =======================
 
   private updatePlayer(player: Player, now: number): void {
+    if (player.loading && player.dead) return; // indo acordar na vila, em outro mapa
     if (player.dead) {
       player.queue.length = 0;
       if (now >= player.deadUntil) this.respawnPlayer(player, now);
@@ -469,6 +549,13 @@ export class World {
       player.dir = result.dir;
       player.ackSeq = input.seq;
       player.ackPending = true;
+      // Pisou numa saída: vai para o outro mapa (o resto da fila era para este mapa, então fica para trás).
+      const exit = result.moved ? this.map.exitAt(player.x, player.y) : null;
+      if (exit && this.links.travel(player, exit.to, exit.arrival)) {
+        player.loading = true;
+        player.queue.length = 0;
+        break;
+      }
     }
   }
 
@@ -490,6 +577,12 @@ export class World {
   }
 
   private respawnPlayer(player: Player, now: number): void {
+    // Mapa sem vila (propriedade renascerEm): acorda no mapa da vila.
+    const home = this.map.respawnMap;
+    if (home && home !== this.map.id && this.links.travel(player, home, 'spawn')) {
+      player.loading = true;
+      return;
+    }
     const spot = this.pickSpawnTile();
     player.deadUntil = 0;
     player.hp = player.maxHp;
@@ -519,7 +612,7 @@ export class World {
       player.hp = player.maxHp;
       this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
       this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
-      this.broadcast({ t: 'sys', text: `${player.name} chegou ao nível ${player.level}!` });
+      this.links.announce({ t: 'sys', text: `${player.name} chegou ao nível ${player.level}!` });
       this.saveCharacters([player]); // subir de nível é importante demais para esperar o próximo salvamento
     }
     player.statsDirty = true;
@@ -530,7 +623,7 @@ export class World {
   private spawnProjectile(owner: Entity, angle: number, speed: number, range: number, damage: number, kind: string, cid?: number): void {
     const shot: Projectile = {
       ...makeShot(owner, angle, speed, range),
-      id: this.nextId++,
+      id: this.links.nextId(),
       ownerId: owner.id,
       fromMonster: owner.kind === 'monster',
       damage,
@@ -618,7 +711,7 @@ export class World {
   private spawnMonster(zone: ZoneState): boolean {
     const tile = this.freeTileInZone(zone);
     if (!tile) return false;
-    const monster = new Monster(this.nextId++, zone.def, zone, tile.x, tile.y);
+    const monster = new Monster(this.links.nextId(), zone.def, zone, tile.x, tile.y);
     monster.nextWanderAt = this.now() + this.random() * 3000;
     this.monsters.set(monster.id, monster);
     this.monsterAt.set(this.tileKey(tile.x, tile.y), monster.id);
@@ -1003,7 +1096,8 @@ export class World {
     }
   }
 
-  private broadcast(msg: ServerMsg, exceptId?: number): void {
+  /** Mensagem para todo mundo neste mapa. */
+  broadcastLocal(msg: ServerMsg, exceptId?: number): void {
     for (const player of this.players.values()) {
       if (player.id !== exceptId) player.outbox.push(msg);
     }

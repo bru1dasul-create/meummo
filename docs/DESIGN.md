@@ -46,7 +46,7 @@ Sem violência explícita: quem perde a vida **desmaia** e acorda na vila.
 
 ## Criaturas do Refúgio de Guarapiranga
 Os números ficam em `data/monsters.json` (dá para ajustar sem programar). As áreas de cada uma estão
-desenhadas no mapa (camada `monstros`; veja `docs/mapa.png`).
+desenhadas no mapa (camada `monstros`; veja `docs/mapa-refugio.png`).
 
 | Criatura | Nível | Onde vive | Jeito | Golpe |
 |---|---|---|---|---|
@@ -101,7 +101,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | Zona | Nível | Como é | Situação |
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
-| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | próxima zona (M3) |
+| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | 🔧 começando: a passagem já existe (mapa provisório) |
 | **Labirintos da Billings** | farm e perigo | Canais e pântanos no extremo sul, com jacarés mutantes e espíritos da água (Boto, Lobisomem da Mata). | depois |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 

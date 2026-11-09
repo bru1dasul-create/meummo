@@ -47,6 +47,7 @@ export type ClientMsg =
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
   | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
+  | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
 
@@ -79,10 +80,14 @@ export type ServerMsg =
       stats: PlayerStats;
       stepMs: number;
       online: number;
+      /** Id do mapa onde você está (arquivo public/assets/maps/<id>.tmj). */
+      map: string;
       /** Todos os tipos de item (de data/items.json). */
       items: ItemInfo[];
       inv: InventoryState;
     }
+  /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
+  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number }
   | { t: 'reject'; reason: RejectReason }
   | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
@@ -111,6 +116,7 @@ export type ServerMsg =
   | { t: 'pong'; id: number };
 
 export type WelcomeMsg = Extract<ServerMsg, { t: 'welcome' }>;
+export type ZoneMsg = Extract<ServerMsg, { t: 'zone' }>;
 
 /** Número usado em `cd` para a esquiva. */
 export const DASH_SLOT = -1;

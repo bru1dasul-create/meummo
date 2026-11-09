@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 import { CharacterStore, type HashCost } from '../src/server/accounts';
 import { LoginGuard, type GuardLimits } from '../src/server/login-guard';
+import { Realm, type RealmOptions } from '../src/server/realm';
 import type { Lobby, Session, Transport } from '../src/server/session';
-import { World, type WorldOptions } from '../src/server/world';
 import { PROTOCOL_VERSION } from '../src/shared/constants';
 import type { GameMap, MonsterZone, TiledMap } from '../src/shared/map';
 import type { ServerMsg } from '../src/shared/protocol';
@@ -98,10 +98,10 @@ export class FakeClock {
 export const FAST_HASH: HashCost = { N: 1024, r: 8, p: 1 };
 
 /** Tudo que uma Session precisa, com os personagens salvos só na memória (nada vai para o disco). */
-export function makeLobby(map: GameMap, clock: FakeClock, options: { world?: WorldOptions; guard?: GuardLimits } = {}): Lobby {
+export function makeLobby(map: GameMap | GameMap[], clock: FakeClock, options: { world?: RealmOptions; guard?: GuardLimits } = {}): Lobby {
   const store = new CharacterStore(':memory:', { cost: FAST_HASH });
-  const world = new World(map, { now: clock.now, random: () => 0, saver: store, ...options.world });
-  return { world, store, guard: new LoginGuard(clock.now, options.guard), online: new Map(), log: () => {} };
+  const realm = new Realm(Array.isArray(map) ? map : [map], { now: clock.now, random: () => 0, saver: store, ...options.world });
+  return { realm, store, guard: new LoginGuard(clock.now, options.guard), online: new Map(), log: () => {} };
 }
 
 /** Canal falso para uma Session: guarda o que foi enviado e se a conexão foi fechada. */

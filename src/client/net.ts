@@ -82,6 +82,11 @@ export class Connection {
     });
   }
 
+  /** Para de entregar mensagens: elas ficam guardadas até o próximo `listen` (ex.: trocando de mapa). */
+  hold(): void {
+    this.handler = null;
+  }
+
   /** Começa a receber mensagens (inclusive as que chegaram antes). */
   listen(handler: Handler): void {
     this.handler = handler;

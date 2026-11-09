@@ -8,10 +8,12 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 ![A vila flutuante do Refúgio de Guarapiranga](docs/screenshot.png)
 
-## Onde estamos: M1 — Combate de ação ✅ · M2 — Progresso salvo ✅
+## Onde estamos: M1 — Combate de ação ✅ · M2 — Progresso salvo ✅ · M3 — Mundo (começando)
 
 - Entre com **nome e senha**: na primeira vez o personagem nasce na hora; depois ele volta com o nível,
   a XP, a vida, a mochila e o lugar onde parou
+- Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro** (por enquanto um mapa provisório e sem
+  monstros: a arte nova e as criaturas de lá vêm nos próximos passos)
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -84,7 +86,7 @@ npm run bots -- 6 --cacar
 | `npm run build` e depois `npm start` | versão de produção: um único servidor na porta 3000 (reinicie o `npm start` depois de cada build) |
 | `npm run bots -- 10` | 10 jogadores automáticos andando e conversando (`--cacar` para caçarem monstros); aparecem como "Bot ..." |
 | `npm run gen:tiles` | redesenha a arte provisória (`public/assets/tiles.png`) |
-| `npm run render:map` | desenha o mapa inteiro em `docs/mapa.png` |
+| `npm run render:map` | desenha os mapas inteiros em `docs/mapa-<id>.png` |
 
 ## Personagens salvos
 
@@ -129,23 +131,36 @@ espaço, ex.: `chapeu_palha`); é ele que os monstros usam na lista `itens`.
 Desenho novo para um ícone precisa de código (`src/client/itemArt.ts`) — é só pedir. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
 
-## Editar o mapa
+## Editar os mapas
 
-O mapa é feito no [Tiled](https://www.mapeditor.org/), um editor gratuito. Abra `public/assets/maps/world.tmj`:
+Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito. Cada zona é um arquivo em
+`public/assets/maps`, e o nome do arquivo é o **id** do mapa: `refugio.tmj` (Refúgio de Guarapiranga, onde
+todo mundo começa) e `santo-amaro.tmj` (Ruínas de Santo Amaro). Em cada mapa:
 
 - camada `ground`: o chão; camada `decor`: árvores, casas, flores…
 - propriedade `colide` nos tiles: bloqueia a passagem; `bloqueiaTiro`: segura projéteis (a água não segura)
 - o ponto `spawn`, na camada `objects`, é onde os jogadores nascem
 - camada `monstros`: cada retângulo é uma área de monstros; o nome é o monstro (ex.: `jararaca`) e a
   propriedade `quantidade` diz quantos
-- propriedades do mapa (no Tiled: Map > Map Properties): `nome` é o nome da zona que aparece ao entrar e
-  `seguro` marca zona segura
+- camada `saidas`: cada retângulo leva para outro mapa. Propriedade `mapa` = id do mapa de destino
+  (ex.: `santo-amaro`) e `chegada` = nome do ponto onde você aparece lá (ex.: `oeste`). O nome do retângulo
+  vira a placa que aparece no jogo (ex.: "Ruínas de Santo Amaro")
+- pontos com nome (ex.: `oeste`, `leste`) na camada `objects` são lugares de chegada — não deixe um ponto de
+  chegada em cima de uma saída, senão a pessoa volta na hora (o servidor avisa)
+- propriedades do mapa (no Tiled: Map > Map Properties): `nome` é o nome da zona que aparece ao entrar,
+  `seguro` marca zona segura, `inicial` marca onde os personagens novos começam e `renascerEm` diz em que
+  mapa acorda quem desmaia ali (Santo Amaro não tem vila: quem desmaia lá acorda no Refúgio)
 
-Depois de salvar, reinicie o servidor e recarregue o jogo.
+Para criar uma zona nova: faça o mapa no Tiled (pode copiar um existente), salve em `public/assets/maps`
+e coloque saídas ligando os dois lados. Depois de salvar, reinicie o servidor e recarregue o jogo.
+Se uma saída apontar para um mapa ou ponto que não existe, o servidor explica o erro ao ligar.
 
-![Mapa do Refúgio de Guarapiranga](docs/mapa.png)
+![Mapa do Refúgio de Guarapiranga](docs/mapa-refugio.png)
 
-Áreas de monstros no mapa: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci.
+![Mapa das Ruínas de Santo Amaro (provisório)](docs/mapa-santo-amaro.png)
+
+Nos mapas: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci, **azul-claro** = saída
+para outro mapa.
 
 ## Organização
 

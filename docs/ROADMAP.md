@@ -52,8 +52,12 @@ Tudo isto se ajusta mexendo em números, sem programar:
   4 partes que somam dano, vida e defesa; banana que cura. Tudo em `data/items.json`, salvo com o personagem
 - [ ] Ver o equipamento no personagem (chapéu, gorro do Saci...)
 
-## M3 — Mundo
-- [ ] Vários mapas ligados (portas e saídas): a avenida a leste do Refúgio leva às **Ruínas de Santo Amaro**
+## 🔧 M3 — Mundo
+- [x] Vários mapas ligados: saídas e pontos de chegada desenhados no Tiled; quem desmaia num mapa sem vila acorda
+  no Refúgio; o personagem fica salvo no mapa onde parou
+- [x] A avenida a leste do Refúgio leva às **Ruínas de Santo Amaro** (mapa provisório, sem monstros)
+- [ ] Ruínas de Santo Amaro, passo 2: mapa caprichado com arte nova (prédios caídos, sucata, fios, lojas) e tom pesado
+- [ ] Ruínas de Santo Amaro, passo 3: monstros de nível 4 a 8 (sugestão: Corpo-Seco, Capelobo e a Mula sem Cabeça como chefe)
 - [ ] NPCs com diálogo (o Curupira!), missões simples, loja e ouro
 - [ ] Novas lendas: Iara no lago, Boitatá como chefe
 

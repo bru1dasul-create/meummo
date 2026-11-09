@@ -55,6 +55,9 @@ export class Player {
   /** A mochila mudou neste tick (o dono precisa saber). */
   invDirty = false;
 
+  /** Trocando de mapa: o navegador está carregando o mapa novo (pedidos são ignorados até ele avisar). */
+  loading = false;
+
   // combate
   /** Diferente de 0: está desmaiado e volta para a vila nesse momento. */
   deadUntil = 0;

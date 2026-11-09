@@ -46,6 +46,21 @@ body {
   pointer-events: none;
 }
 
+/* Placa de saída: para onde o caminho leva */
+.exit-sign {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 3px 8px;
+  border: 1px solid rgba(233, 185, 65, 0.6);
+  border-radius: 6px;
+  background: rgba(16, 22, 18, 0.8);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .tag {
   position: absolute;
   left: 0;

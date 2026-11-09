@@ -8,7 +8,8 @@
   monstros avisam golpes no chão. O nome "MeuMMO" é provisório.
 - Mundo (aprovado): **Pindorama — Selva de Pedra**, São Paulo tomada pela floresta. Tom: "um pouco dos dois" —
   colorido e vivo nas vilas, sombrio nas ruínas; sem violência explícita (quem perde a vida desmaia).
-  Zona atual: **Refúgio de Guarapiranga** (`public/assets/maps/world.tmj`). Lugares reais sim, **marcas não**.
+  Zonas: **Refúgio de Guarapiranga** (`public/assets/maps/refugio.tmj`, inicial) e **Ruínas de Santo Amaro**
+  (`santo-amaro.tmj`, provisório), ligadas pela avenida (camada `saidas`). Lugares reais sim, **marcas não**.
 - Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
   Como funciona por dentro: `docs/ARQUITETURA.md`.
 - Tentativas anteriores de MMO não deram certo por excesso de escopo. Por isso: etapas pequenas, sempre jogáveis.
@@ -29,7 +30,7 @@
    edite um passo antigo: os personagens de quem já joga são convertidos por eles.
 7. Ao concluir algo do roteiro, marque em `docs/ROADMAP.md`.
 8. Comentários e textos do jogo em português; nomes no código em inglês.
-9. Não rode `npm run gen:map -- --force` sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
+9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro -- --force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
    arquivo com `--out` e compare as camadas antes de substituir.
 
 ## Personagens salvos
@@ -48,7 +49,8 @@
 - `npm run gen:tiles` — redesenha a arte provisória (`scripts/tileset.ts` → `public/assets/tiles.png`).
   Tiles novos sempre no fim da lista (os mapas guardam o número de cada tile).
 - `npm run gen:map -- --out arquivo.tmj` — gera o mapa do Refúgio em outro arquivo (veja a regra 9)
-- `npm run render:map` — desenha o mapa inteiro em `docs/mapa.png`
+- `npm run gen:santo-amaro -- --out arquivo.tmj` — idem para as Ruínas de Santo Amaro
+- `npm run render:map` — desenha todos os mapas em `docs/mapa-<id>.png` (azul-claro = saídas)
 
 ## Instalação no PC do dono do projeto (Windows)
 - O jogo fica em `E:\mmorpg`, instalado por `instalar-windows.ps1` (comando de uma linha no README).

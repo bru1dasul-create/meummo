@@ -16,10 +16,10 @@ import {
 } from '../../shared/constants';
 import { angleBetween, angleOfDir, arcTiles, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
 import { ALL_DIRS, DX, DY, stepDuration, type Dir } from '../../shared/dir';
-import { GameMap, type Tile, type TiledMap } from '../../shared/map';
+import { GameMap, type MapExit, type Tile, type TiledMap } from '../../shared/map';
 import { applyDash, applyInput, applyStep, nextStepTime, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
-import { DASH_SLOT, type EntityState, type PlayerStats, type ServerMsg, type WelcomeMsg } from '../../shared/protocol';
+import { DASH_SLOT, type EntityState, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
 import { SKILLS } from '../../shared/skills';
 import { Bag } from '../bag';
@@ -37,6 +37,12 @@ export interface WorldSceneData {
   chat: ChatBox;
   hud: Hud;
   sfx: Sfx;
+  /** Número do último passo enviado (continua contando quando troca de mapa). */
+  seq?: number;
+  /** Chegou de outro mapa (e não acabou de entrar no jogo). */
+  arrived?: boolean;
+  /** Trocar de mapa: quem cuida é o main.ts (cria uma cena nova para o mapa novo). */
+  travel: (next: WelcomeMsg, seq: number) => void;
 }
 
 /** Quantos tiles queremos ver no lado menor da tela (isso define o zoom). */
@@ -107,8 +113,15 @@ export class WorldScene extends Phaser.Scene {
   private pingId = 0;
   private readonly pingsSent = new Map<number, number>();
 
+  /** Chave do mapa no cache do Phaser (`map-<id>`). */
+  private mapKey = '';
+  /** Placas das saídas (nome do lugar para onde cada uma leva), posicionadas a cada quadro. */
+  private exitSigns: { el: HTMLDivElement; x: number; y: number }[] = [];
+  private arrived = false;
+  private travel!: WorldSceneData['travel'];
+
   constructor() {
-    super('world');
+    super(); // a chave da cena vem de quem cria (main.ts): uma cena nova a cada mapa
   }
 
   init(data: WorldSceneData): void {
@@ -119,20 +132,24 @@ export class WorldScene extends Phaser.Scene {
     this.sfx = data.sfx;
     this.stepMs = data.welcome.stepMs;
     this.myId = data.welcome.id;
+    this.seq = data.seq ?? 0;
+    this.arrived = data.arrived ?? false;
+    this.travel = data.travel;
+    this.mapKey = `map-${data.welcome.map}`;
   }
 
   preload(): void {
-    this.load.image('tiles', 'assets/tiles.png');
-    this.load.tilemapTiledJSON('world', 'assets/maps/world.tmj');
+    if (!this.textures.exists('tiles')) this.load.image('tiles', 'assets/tiles.png');
+    if (!this.cache.tilemap.exists(this.mapKey)) this.load.tilemapTiledJSON(this.mapKey, `assets/maps/${this.welcome.map}.tmj`);
   }
 
   create(): void {
-    const tilemap = this.make.tilemap({ key: 'world' });
+    const tilemap = this.make.tilemap({ key: this.mapKey });
     const tileset = tilemap.addTilesetImage('tiles', 'tiles');
     if (!tileset) throw new Error('O mapa precisa usar um tileset chamado "tiles".');
     tilemap.layers.forEach((layer, i) => tilemap.createLayer(layer.name, tileset)?.setDepth(-100 + i));
     // O mesmo arquivo que o servidor usa: cliente e servidor concordam sobre as paredes.
-    this.map = GameMap.fromTiled((this.cache.tilemap.get('world') as { data: TiledMap }).data);
+    this.map = GameMap.fromTiled((this.cache.tilemap.get(this.mapKey) as { data: TiledMap }).data, this.welcome.map);
 
     this.labels = document.getElementById('labels')!;
     const you = this.welcome.you;
@@ -160,6 +177,7 @@ export class WorldScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitZoom, this);
 
     this.marker = this.add.rectangle(0, 0, T, T).setOrigin(0).setStrokeStyle(1, 0xffffff, 0.85).setDepth(-50).setVisible(false);
+    for (const exit of this.map.exits) this.drawExit(exit);
     this.effects = new Effects(this, this.map, (fromMonster) => this.shotTargets(fromMonster));
     this.toast = new Toast();
     this.feedback = new Feedback();
@@ -184,11 +202,16 @@ export class WorldScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_UP, this.onPointerUp, this);
 
     this.conn.listen((msg) => this.onMessage(msg));
-    this.chat.addSystem(
-      matchMedia('(pointer: coarse)').matches
-        ? 'Dica: toque num monstro para atirar. Quadrados vermelhos no chão = golpe vindo: saia deles ou use a Esquiva!'
-        : 'Dica: mire com o mouse e clique para atirar. Quadrados vermelhos no chão = golpe vindo: saia deles ou aperte Espaço!',
-    );
+    if (this.arrived) {
+      this.cameras.main.fadeIn(350, 16, 26, 18);
+    } else {
+      this.chat.addSystem(
+        matchMedia('(pointer: coarse)').matches
+          ? 'Dica: toque num monstro para atirar. Quadrados vermelhos no chão = golpe vindo: saia deles ou use a Esquiva!'
+          : 'Dica: mire com o mouse e clique para atirar. Quadrados vermelhos no chão = golpe vindo: saia deles ou aperte Espaço!',
+      );
+    }
+    this.conn.send({ t: 'loaded' }); // mapa pronto: o servidor volta a aceitar nossos pedidos
     this.game.events.on(Phaser.Core.Events.POST_RENDER, this.syncLabels, this);
     this.time.addEvent({ delay: PING_EVERY_MS, loop: true, callback: this.sendPing, callbackScope: this });
     this.sendPing();
@@ -211,6 +234,10 @@ export class WorldScene extends Phaser.Scene {
       entities: () =>
         [...scene.entities.values()].map((v) => ({ id: v.id, kind: v.kind, type: v.type, name: v.name, x: v.tileX, y: v.tileY, hp: v.hp, maxHp: v.maxHp, level: v.level })),
       walkTo: (x: number, y: number) => scene.walkTo(x, y),
+      /** Id do mapa onde você está. */
+      get zone() {
+        return scene.welcome.map;
+      },
       walking: () => scene.path.length > 0,
       /** Posição na tela (pixels) do centro de um tile. */
       screenOf: (x: number, y: number) => {
@@ -662,6 +689,9 @@ export class WorldScene extends Phaser.Scene {
       case 'loot':
         this.onLoot(msg.x, msg.y, msg.items, now);
         break;
+      case 'zone':
+        this.changeZone(msg);
+        break;
       case 'say':
         this.entities.get(msg.id)?.say(msg.text);
         break;
@@ -799,6 +829,12 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Fomos para outro mapa: esta cena sai e entra uma nova, já com o mapa novo. */
+  private changeZone(msg: ZoneMsg): void {
+    this.conn.hold(); // o que chegar daqui em diante é do mapa novo: fica guardado para a próxima cena
+    this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online }, this.seq);
+  }
+
   private onLoot(x: number, y: number, stacks: ItemStack[], now: number): void {
     const from = { x: (x + 0.5) * T, y: (y + 0.5) * T };
     let precious = false;
@@ -886,8 +922,33 @@ export class WorldScene extends Phaser.Scene {
    * Depois de desenhar o quadro, posiciona os nomes (HTML) em cima dos personagens.
    * Nomes que encostariam em outro sobem até achar espaço — o seu nunca sai do lugar.
    */
+  /** Saída: brilho dourado no chão e uma placa com o nome do lugar para onde ela leva. */
+  private drawExit(exit: MapExit): void {
+    const glow: Phaser.GameObjects.Rectangle[] = [];
+    for (let y = exit.y; y < exit.y + exit.h; y++) {
+      for (let x = exit.x; x < exit.x + exit.w; x++) {
+        if (this.map.isWalkable(x, y)) glow.push(this.add.rectangle(x * T, y * T, T, T, 0xffd76a, 0.25).setOrigin(0).setDepth(-60));
+      }
+    }
+    this.tweens.add({ targets: glow, alpha: { from: 0.35, to: 0.1 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    if (!exit.label) return;
+    const atLeft = exit.x === 0;
+    const atRight = exit.x + exit.w >= this.map.width;
+    const el = document.createElement('div');
+    el.className = 'exit-sign';
+    el.textContent = atLeft ? `‹ ${exit.label}` : atRight ? `${exit.label} ›` : exit.label;
+    this.labels.append(el);
+    // a placa fica um pouco para dentro do mapa, para aparecer inteira na tela
+    const cx = (atLeft ? exit.x + 3 : atRight ? exit.x - 2 : exit.x + exit.w / 2) * T;
+    const cy = (exit.y + exit.h / 2) * T - T * 1.2;
+    this.exitSigns.push({ el, x: cx, y: cy });
+  }
+
   private syncLabels(): void {
     const camera = this.cameras.main;
+    for (const sign of this.exitSigns) {
+      sign.el.style.transform = `translate(${(sign.x - camera.worldView.x) * camera.zoom}px, ${(sign.y - camera.worldView.y) * camera.zoom}px) translate(-50%, -100%)`;
+    }
     const items = [...this.entities.values(), ...this.dying].map((view) => ({ view, ...view.labelAnchor(camera) }));
     items.sort((a, b) => (a.view === this.me ? -1 : b.view === this.me ? 1 : b.y - a.y));
     const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
@@ -913,6 +974,8 @@ export class WorldScene extends Phaser.Scene {
 
   private cleanup(): void {
     delete (window as unknown as { __meummo?: unknown }).__meummo;
+    for (const sign of this.exitSigns) sign.el.remove();
+    this.exitSigns = [];
     this.keyboard?.destroy();
     this.keyboard = null;
     window.removeEventListener('keydown', this.onKeyDown);
