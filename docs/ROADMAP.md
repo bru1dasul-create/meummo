@@ -108,6 +108,15 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
   Boto e jacarés na Billings, Boitatá como chefe
 
+## 🛠️ Ferramentas do administrador
+- [x] **[estrutura]** Painel do administrador, passo 1 — **ajustes do jogo** (http://localhost:3000/admin, só no
+  computador do servidor): monstros, itens e loja; vale na hora, valor inválido é recusado com o motivo; ajustes em
+  `saves/ajustes.json` (fora do GitHub), marcados no painel, com "voltar ao padrão" e "copiar meus ajustes"
+- [ ] **[estrutura]** Passo 2 — **ferramentas de jogadores**: quem está online, dar ouro e itens (testar a loja sem
+  caçar), curar, levar até um lugar, aviso para todos e expulsar
+- [ ] **[estrutura]** No M5 (internet): senha e conexão criptografada para o painel, banir, registro do que o
+  administrador fez
+
 ## M4 — Social
 - [ ] **[estrutura]** Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada
 

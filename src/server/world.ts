@@ -616,6 +616,41 @@ export class World {
     if (this.items.get(stack.item)?.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
   }
 
+  // ======================= ajustes do administrador =======================
+
+  /** A vida dos monstros mudou no painel: os que estão no mapa acompanham (na mesma proporção). */
+  refreshMonsters(): void {
+    for (const monster of this.monsters.values()) {
+      const max = monster.def.hp;
+      if (max === monster.maxHp) continue;
+      monster.hp = Math.max(1, Math.min(max, Math.round((monster.hp / monster.maxHp) * max)));
+      monster.maxHp = max;
+      this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
+    }
+  }
+
+  /** Os itens mudaram no painel: refaz o que os equipamentos somam e manda a lista nova para quem está aqui. */
+  refreshItems(): void {
+    const items = [...this.items.values()];
+    for (const player of this.players.values()) {
+      player.bonus = player.inventory.bonus();
+      const maxHp = playerMaxHp(player);
+      if (maxHp !== player.maxHp) {
+        player.maxHp = maxHp;
+        player.hp = Math.min(player.hp, maxHp);
+        this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
+      }
+      player.statsDirty = true;
+      player.outbox.push({ t: 'items', items });
+    }
+  }
+
+  /** Os NPCs mudaram no painel (o que vendem, o que dizem): manda a lista nova para quem está aqui. */
+  refreshNpcs(): void {
+    const npcs = this.npcList();
+    for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
+  }
+
   // ======================= loja =======================
 
   /** Comprar `n` deste item do vendedor `npcId` (pelo `preco` de data/items.json). */

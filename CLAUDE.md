@@ -92,6 +92,12 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
 - Scripts `.bat`/`.ps1` sem acentos (compatibilidade) e com CRLF (veja `.gitattributes`).
 - Se mudar algo que exige passo extra na instalação, atualize o `instalar-windows.ps1` e o `atualizar.bat`.
 
+## Painel do administrador
+- http://localhost:3000/admin, só no computador do servidor (travas em `src/server/admin.ts`). Ajusta monstros,
+  itens e loja na hora; os ajustes ficam em `saves/ajustes.json` (fora do Git) por cima de `data/*.json`.
+- Campo novo no painel: acrescente na lista de `src/server/tuning.ts` (e ele já é conferido pelo leitor do arquivo).
+- Testes usam `tuningFile: null` (ajustes só na memória) quando o servidor sobe com `':memory:'`.
+
 ## Conferir no navegador
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).

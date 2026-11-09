@@ -8,6 +8,7 @@ import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import type { ItemAction, ServerMsg } from '../shared/protocol';
+import type { TuningFile } from './tuning';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
 
 export type RealmOptions = Omit<WorldOptions, 'links'>;
@@ -152,6 +153,15 @@ export class Realm {
       from.detach(player);
       target.adopt(player, target.arrivalSpot(arrival));
       this.where.set(player.id, target);
+    }
+  }
+
+  /** O administrador ajustou o jogo no painel: cada mapa atualiza o que precisa e avisa quem está jogando. */
+  tuningChanged(changed: ReadonlySet<TuningFile>): void {
+    for (const world of this.worlds.values()) {
+      if (changed.has('monstros')) world.refreshMonsters();
+      if (changed.has('itens')) world.refreshItems();
+      if (changed.has('npcs')) world.refreshNpcs();
     }
   }
 

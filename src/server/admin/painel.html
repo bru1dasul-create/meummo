@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel do administrador — MeuMMO</title>
+    <style>
+      :root {
+        --bg: #101a12;
+        --panel: #1d1812;
+        --panel-2: #15120d;
+        --line: rgba(233, 185, 65, 0.35);
+        --text: #f3ecda;
+        --muted: #b8b09c;
+        --accent: #e9b941;
+        --ok: #7dd87a;
+        --danger: #ff8f80;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+      }
+      header {
+        padding: 16px 20px 10px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #221b12, #15120d);
+      }
+      h1 {
+        margin: 0;
+        font-family: Georgia, serif;
+        color: var(--accent);
+        font-size: 24px;
+      }
+      header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        max-width: 900px;
+        line-height: 1.4;
+      }
+      .problem {
+        margin: 12px 20px 0;
+        padding: 10px 12px;
+        border: 1px solid var(--danger);
+        border-radius: 8px;
+        color: var(--danger);
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 12px 20px 0;
+      }
+      nav button {
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px 8px 0 0;
+        background: var(--panel-2);
+        color: var(--muted);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      nav button.on {
+        background: var(--panel);
+        color: var(--accent);
+        border-bottom-color: var(--panel);
+      }
+      nav .count {
+        margin-left: 6px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: rgba(233, 185, 65, 0.2);
+        color: var(--accent);
+        font-size: 11px;
+      }
+      main {
+        margin: 0 20px 40px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 0 10px 10px 10px;
+        background: var(--panel);
+      }
+      .tools {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      input,
+      textarea {
+        padding: 6px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--text);
+        font: inherit;
+      }
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      input[type='number'] {
+        width: 90px;
+      }
+      #search {
+        width: min(320px, 100%);
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        background: var(--panel-2);
+      }
+      .card h2 {
+        margin: 0;
+        font-size: 16px;
+        color: var(--text);
+      }
+      .card .sub {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .field {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 10px;
+        align-items: center;
+        padding: 7px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .field:first-of-type {
+        margin-top: 8px;
+      }
+      .field label {
+        font-weight: 600;
+      }
+      .field .hint {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .field .inputs {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        justify-content: flex-end;
+      }
+      .field .meta {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        min-height: 0;
+        font-size: 12px;
+      }
+      .tag {
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: rgba(233, 185, 65, 0.2);
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .reset {
+        padding: 1px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .reset:hover {
+        color: var(--text);
+      }
+      .err {
+        color: var(--danger);
+      }
+      .wide {
+        grid-column: 1 / -1;
+      }
+      .wide textarea {
+        width: 100%;
+        min-height: 60px;
+        resize: vertical;
+      }
+      .items {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 4px 10px;
+      }
+      .items label {
+        font-weight: 400;
+      }
+      .items .off {
+        color: var(--muted);
+      }
+      #toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        max-width: 420px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #221b12;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      #toast.bad {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+      pre {
+        overflow: auto;
+        max-height: 420px;
+        padding: 12px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.4);
+        color: #d8e9c8;
+      }
+      .copy {
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #241a05;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .empty {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Painel do administrador</h1>
+      <p id="info">Carregando...</p>
+    </header>
+    <div id="problem" class="problem" hidden></div>
+    <nav id="tabs"></nav>
+    <main>
+      <div class="tools" id="tools">
+        <input id="search" type="search" placeholder="Procurar pelo nome..." autocomplete="off" />
+      </div>
+      <div id="content"></div>
+    </main>
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      'use strict';
+      // O painel só mostra e pede: quem confere e aplica cada ajuste é o servidor (src/server/tuning.ts).
+      const HEADERS = { 'Content-Type': 'application/json', 'X-MeuMMO-Admin': '1' };
+      const state = { data: null, tab: 'monstros', search: '' };
+      const content = document.getElementById('content');
+
+      function el(tag, props = {}, ...children) {
+        const node = document.createElement(tag);
+        for (const [key, value] of Object.entries(props)) {
+          if (key === 'class') node.className = value;
+          else if (key === 'text') node.textContent = value;
+          else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+          else node.setAttribute(key, value);
+        }
+        for (const child of children) if (child) node.append(child);
+        return node;
+      }
+
+      let toastTimer;
+      function toast(text, bad = false) {
+        const box = document.getElementById('toast');
+        box.textContent = text;
+        box.className = `show${bad ? ' bad' : ''}`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (box.className = ''), bad ? 6000 : 2500);
+      }
+
+      function show(value, tipo) {
+        if (tipo === 'faixa') return `${value[0]} a ${value[1]}`;
+        if (tipo === 'sim-nao') return value ? 'sim' : 'não';
+        if (tipo === 'itens') return value.length ? value.join(', ') : 'nada';
+        if (tipo === 'texto') return value ? `"${value}"` : 'nada';
+        return String(value);
+      }
+
+      async function load() {
+        const res = await fetch('/admin/api/dados', { cache: 'no-store' });
+        if (!res.ok) throw new Error(await res.text());
+        state.data = await res.json();
+        render();
+      }
+
+      async function send(path, body, label) {
+        try {
+          const res = await fetch(path, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
+          const result = await res.json();
+          if (!result.ok) {
+            toast(`Não salvei: ${result.erro}`, true);
+            return false;
+          }
+          toast(label);
+          await load();
+          return true;
+        } catch (error) {
+          toast(`Não consegui falar com o servidor: ${error.message}`, true);
+          return false;
+        }
+      }
+
+      function change(group, entry, field, valor) {
+        return send('/admin/api/ajustar', { arquivo: group.arquivo, id: entry.id, campo: field.campo, valor }, `Salvo: ${entry.nome} › ${field.rotulo} = ${show(valor, field.tipo)}. Já vale no jogo.`);
+      }
+
+      function reset(group, entry, field) {
+        return send('/admin/api/padrao', { arquivo: group.arquivo, id: entry.id, campo: field.campo }, `${entry.nome} › ${field.rotulo} voltou ao padrão (${show(field.padrao, field.tipo)}).`);
+      }
+
+      function numberInput(value, onCommit, min) {
+        const input = el('input', { type: 'number', step: '1', value: String(value) });
+        if (min !== undefined) input.min = String(min);
+        input.addEventListener('change', () => {
+          if (input.value.trim() === '' || !Number.isFinite(Number(input.value))) return;
+          onCommit(Number(input.value));
+        });
+        return input;
+      }
+
+      function fieldInputs(group, entry, field) {
+        const commit = (valor) => change(group, entry, field, valor);
+        switch (field.tipo) {
+          case 'inteiro':
+            return [numberInput(field.valor, commit, 0)];
+          case 'porcento':
+            return [numberInput(field.valor, commit, 0), el('span', { text: '%' })];
+          case 'faixa': {
+            const values = [...field.valor];
+            const send2 = () => commit([...values]);
+            const a = numberInput(values[0], (v) => ((values[0] = v), send2()), 0);
+            const b = numberInput(values[1], (v) => ((values[1] = v), send2()), 0);
+            return [a, el('span', { text: 'a' }), b];
+          }
+          case 'sim-nao': {
+            const box = el('input', { type: 'checkbox' });
+            box.checked = Boolean(field.valor);
+            box.addEventListener('change', () => commit(box.checked));
+            return [box];
+          }
+          case 'texto': {
+            const area = el('textarea', { maxlength: '300' });
+            area.value = field.valor ?? '';
+            area.addEventListener('change', () => commit(area.value.trim()));
+            return [area];
+          }
+          case 'itens': {
+            const chosen = new Set(field.valor);
+            const list = el('div', { class: 'items' });
+            for (const item of state.data.itens) {
+              const box = el('input', { type: 'checkbox' });
+              box.checked = chosen.has(item.id);
+              const sellable = item.preco > 0;
+              box.disabled = !sellable && !chosen.has(item.id);
+              box.addEventListener('change', () => {
+                if (box.checked) chosen.add(item.id);
+                else chosen.delete(item.id);
+                commit([...chosen]);
+              });
+              const text = sellable ? `${item.nome} (${item.preco})` : `${item.nome} (sem preço)`;
+              list.append(el('label', { class: sellable ? '' : 'off', title: sellable ? '' : 'Dê um preço a este item na aba Itens para poder vender' }, box, ` ${text}`));
+            }
+            return [list];
+          }
+        }
+        return [];
+      }
+
+      function renderField(group, entry, field) {
+        const wide = field.tipo === 'texto' || field.tipo === 'itens';
+        const label = el('label', { text: field.rotulo });
+        if (field.dica) label.append(el('span', { class: 'hint', text: field.dica }));
+        const inputs = el('div', { class: wide ? 'inputs wide' : 'inputs' }, ...fieldInputs(group, entry, field));
+        const meta = el('div', { class: 'meta' });
+        if (field.ajustado) {
+          meta.append(
+            el('span', { class: 'tag', text: 'ajustado por você' }),
+            el('button', { class: 'reset', type: 'button', text: `voltar ao padrão (${show(field.padrao, field.tipo)})`, onclick: () => reset(group, entry, field) }),
+          );
+        }
+        return el('div', { class: 'field' }, label, inputs, meta);
+      }
+
+      function render() {
+        const data = state.data;
+        document.getElementById('info').textContent = data.arquivo
+          ? `Mudou, salvou: vale na hora para quem está jogando. Seus ajustes ficam em ${data.arquivo} (fora do GitHub: atualizar o jogo não apaga). Valor inválido é recusado com o motivo. Tempos em ms: 1000 ms = 1 segundo.`
+          : 'Mudou, salvou: vale na hora. (Este servidor não guarda os ajustes em arquivo.) Tempos em ms: 1000 ms = 1 segundo.';
+        const problem = document.getElementById('problem');
+        problem.hidden = !data.problema;
+        problem.textContent = data.problema ?? '';
+
+        const tabs = document.getElementById('tabs');
+        tabs.replaceChildren();
+        const tabList = [...data.grupos.map((g) => ({ id: g.arquivo, titulo: g.titulo, ajustados: g.lista.reduce((n, e) => n + e.campos.filter((c) => c.ajustado).length, 0) })), { id: 'ajustes', titulo: 'Meus ajustes', ajustados: 0 }];
+        for (const tab of tabList) {
+          const button = el('button', { type: 'button', class: tab.id === state.tab ? 'on' : '', onclick: () => ((state.tab = tab.id), render()) }, tab.titulo);
+          if (tab.ajustados) button.append(el('span', { class: 'count', text: String(tab.ajustados) }));
+          tabs.append(button);
+        }
+
+        document.getElementById('tools').hidden = state.tab === 'ajustes';
+        if (state.tab === 'ajustes') return renderExport();
+        const group = data.grupos.find((g) => g.arquivo === state.tab);
+        const search = state.search.trim().toLowerCase();
+        const list = group.lista.filter((e) => !search || e.nome.toLowerCase().includes(search) || e.id.includes(search));
+        const cards = el('div', { class: 'cards' });
+        for (const entry of list) {
+          const card = el('section', { class: 'card' }, el('h2', { text: entry.nome }), el('div', { class: 'sub', text: entry.detalhe }));
+          for (const field of entry.campos) card.append(renderField(group, entry, field));
+          cards.append(card);
+        }
+        content.replaceChildren(list.length ? cards : el('p', { class: 'empty', text: 'Nada com esse nome.' }));
+      }
+
+      async function renderExport() {
+        content.replaceChildren(el('p', { class: 'empty', text: 'Carregando...' }));
+        const res = await fetch('/admin/api/exportar', { cache: 'no-store' });
+        const json = JSON.stringify(await res.json(), null, 2);
+        const empty = json === '{}';
+        const pre = el('pre', { text: empty ? 'Nenhum ajuste ainda: o jogo está com os valores padrão do projeto.' : json });
+        const copy = el('button', {
+          class: 'copy',
+          type: 'button',
+          text: 'Copiar meus ajustes',
+          onclick: async () => {
+            try {
+              await navigator.clipboard.writeText(json);
+              toast('Copiado! Cole no chat "Estrutura e regras" para virar o padrão do projeto.');
+            } catch {
+              toast('Não consegui copiar sozinho: selecione o texto e copie com Ctrl+C.', true);
+            }
+          },
+        });
+        copy.disabled = empty;
+        content.replaceChildren(
+          el('p', { text: 'Só o que você mudou em relação ao padrão do projeto. Para virar o padrão de todo mundo (e de quem instalar o jogo do zero), copie e mande para o chat "Estrutura e regras".' }),
+          copy,
+          pre,
+        );
+      }
+
+      document.getElementById('search').addEventListener('input', (event) => {
+        state.search = event.target.value;
+        render();
+        document.getElementById('search').focus();
+      });
+
+      load().catch((error) => {
+        document.getElementById('info').textContent = `Não consegui carregar o painel: ${error.message}`;
+      });
+    </script>
+  </body>
+</html>

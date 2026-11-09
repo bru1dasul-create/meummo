@@ -106,6 +106,29 @@ Cada personagem (nome + senha + progresso) fica no arquivo `saves/meummo.db`, de
   Ainda assim, por enquanto use uma senha só do jogo: na rede de casa ela viaja sem criptografia
   (isso muda quando o jogo for para a internet, no M5).
 
+## Painel do administrador (ajustar o jogo sem mexer em arquivos)
+
+Com o jogo ligado, abra **http://localhost:3000/admin** no navegador **do mesmo computador** onde o jogo está
+rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não consegue abrir o painel.
+
+- **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
+  sozinho, distância que percebe e persegue, tempo para renascer.
+- **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
+- **Loja e personagens:** o que a Dona Iracema diz, o que vende e quanto paga pelo que você vende.
+
+Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
+alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").
+Tempos são em milissegundos (1000 ms = 1 segundo).
+
+Os ajustes ficam em `saves/ajustes.json`, **fora do GitHub**: atualizar o jogo não apaga nem dá conflito. Cada
+número que você mudou aparece marcado, com o botão **voltar ao padrão**. Para um ajuste virar o padrão do projeto
+(para todo mundo e para quem instalar do zero), abra a aba **Meus ajustes**, clique em **Copiar meus ajustes** e
+mande para o chat "Estrutura e regras". Se uma atualização do jogo deixar algum ajuste sem sentido, o jogo liga
+com os valores padrão, avisa no painel e guarda os ajustes antigos em `saves/ajustes-antigos.json`.
+
+Os arquivos `data/*.json` continuam valendo como antes (são o padrão do projeto); o painel só põe os seus ajustes
+por cima deles.
+
 ## Ajustar os monstros (sem programar)
 
 Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` ([mínimo, máximo]),

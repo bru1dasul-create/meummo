@@ -8,13 +8,12 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { TICK_MS } from '../shared/constants';
 import { GameMap, type TiledMap } from '../shared/map';
 import { CharacterStore, type HashCost } from './accounts';
-import { loadItemDefs } from './items';
+import { createAdminHandler } from './admin';
 import { LoginGuard, type GuardLimits } from './login-guard';
-import { checkDrops, loadMonsterDefs } from './monsters';
-import { checkNpcs, loadNpcDefs } from './npcs';
 import { CLIENT_DIR, MAPS_DIR } from './paths';
 import { Realm } from './realm';
 import { Session, type Lobby } from './session';
+import { Tuning } from './tuning';
 import type { World } from './world';
 
 export { MAPS_DIR, ROOT, SAVE_FILE } from './paths';
@@ -31,12 +30,19 @@ export interface ServerOptions {
   hashCost?: HashCost;
   /** Limites de tentativas de senha e de personagens novos. */
   guardLimits?: GuardLimits;
+  /**
+   * Onde o painel do administrador guarda os ajustes. Padrão: ajustes.json ao lado do arquivo dos personagens
+   * (saves/ajustes.json); null = só na memória (testes com ':memory:').
+   */
+  tuningFile?: string | null;
 }
 
 export interface RunningServer {
   port: number;
   /** Todos os mapas. */
   realm: Realm;
+  /** Os ajustes do painel do administrador. */
+  tuning: Tuning;
   /** O mapa inicial (onde os personagens novos começam). */
   world: World;
   close(): Promise<void>;
@@ -62,14 +68,15 @@ export function loadMaps(dir = MAPS_DIR): GameMap[] {
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
   const log =
     options.log === false ? () => {} : (message: string) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${message}`);
-  const items = loadItemDefs();
-  const monsters = loadMonsterDefs();
-  checkDrops(monsters, items);
   const maps = loadMaps();
-  const npcs = loadNpcDefs();
-  checkNpcs(npcs, items, maps);
+  // Monstros, itens e NPCs: os arquivos de data/ com os ajustes do painel por cima (tudo conferido).
+  const tuningFile =
+    options.tuningFile !== undefined ? options.tuningFile : options.saveFile === ':memory:' ? null : path.join(path.dirname(options.saveFile), 'ajustes.json');
+  const tuning = Tuning.load(tuningFile, maps, log);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const realm = new Realm(maps, { log, monsters, items, npcs, saver: store });
+  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, saver: store });
+  tuning.onChange = (changed) => realm.tuningChanged(changed);
+  const admin = createAdminHandler({ tuning, log });
   const world = realm.start;
   const lobby: Lobby = {
     realm,
@@ -84,6 +91,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   // Em desenvolvimento quem entrega é o Vite (porta 5173).
   const serveClient = existsSync(path.join(CLIENT_DIR, 'index.html')) ? sirv(CLIENT_DIR, { single: true, etag: true }) : null;
   const httpServer = http.createServer((req, res) => {
+    if (admin(req, res)) return; // painel do administrador (/admin): só no próprio computador
     if (serveClient) return serveClient(req, res);
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
     res.end(
@@ -148,6 +156,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   return {
     port,
     realm,
+    tuning,
     world,
     close: () =>
       (closing ??= (async () => {

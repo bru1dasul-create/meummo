@@ -133,6 +133,8 @@ export type ServerMsg =
   | { t: 'drop'; id: number; x: number; y: number; gold?: number; item?: ItemStack; ms: number }
   | { t: 'pickup'; id: number; gold?: number; item?: ItemStack } // você pegou (tudo ou parte de) o que estava no chão
   | { t: 'drop_gone'; id: number } // o que estava no chão sumiu (o tempo acabou)
+  | { t: 'items'; items: ItemInfo[] } // o administrador ajustou os itens (preço, cura, bônus): use estes daqui pra frente
+  | { t: 'npcs'; npcs: NpcInfo[] } // o administrador ajustou os NPCs deste mapa (o que vendem, o que dizem...)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }
   | { t: 'sys'; text: string } // aviso do sistema
