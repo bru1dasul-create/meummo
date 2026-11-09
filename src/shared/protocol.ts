@@ -90,7 +90,7 @@ export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge';
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge' | 'song';
 
 /** Servidor → cliente. O servidor sempre envia uma lista (um pacote por tick). */
 export type ServerMsg =
@@ -148,6 +148,8 @@ export type ServerMsg =
   | { t: 'sys'; text: string } // aviso do sistema
   | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
   | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
+  | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
+  | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }
   | { t: 'pong'; id: number };
 

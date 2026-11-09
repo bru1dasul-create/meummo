@@ -147,7 +147,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
   |---|---|---|---|---|
   | Jacaré Mutante (`jacare`) | 5 | Agressivo de perto, lento na terra, não persegue longe da água | Abocanhada em linha (2 quadrados), aviso de 0,75 s, dano alto | Dente de Jacaré (vale ouro), arruda |
   | Boto Encantado (`boto`) | 6 | Na dele até alguém mexer; mantém distância | Jato d'água (projétil) | Arruda, Colar de Presas (raro) |
-  | Iara (`iara`, chefe) | 7–8 | — | O canto puxa para a água; a esquiva quebra o encanto | (a fazer) |
+  | Iara (`iara`, chefe) | 8 | Agressiva; fica a 2 tiles de quem enfrenta | Jato d'água forte; a cada 10 s **canta**: o chão em volta dela (5 tiles) fica marcado por 1,3 s e quem ficar é **encantado** por 3 s — não anda e é puxado um passo para perto dela a cada 0,45 s. A **esquiva** quebra o encanto na hora (e quem estiver esquivando quando o canto acaba escapa) | Escama da Iara (rara, vale 45 na loja), arruda, Colar de Presas |
 
 ### Ruínas de Santo Amaro (o mapa)
 - **A entrada:** a avenida que sai do Refúgio continua pelo oeste e corta a zona inteira; carros e um ônibus

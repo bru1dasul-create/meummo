@@ -151,6 +151,10 @@ Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` 
 e o `ataque` (`tipo`: `mordida`, `bote`, `giro`, `projetil` ou `investida`; `preparoMs` é o tempo do aviso vermelho).
 Na `investida`, o monstro corre `alcance` tiles em linha reta atropelando quem estiver no caminho; com
 `"rastroFogo": { "duracaoMs": 2500, "dano": [4, 7] }` o caminho fica pegando fogo e queima quem fica em cima.
+O `canto` (a Iara) encanta quem fica perto: `"canto": { "cadaMs": 10000, "alcance": 5, "preparoMs": 1300,
+"duracaoMs": 3000, "puxaACadaMs": 450, "falas": ["..."] }` — de quanto em quanto tempo canta, até quantos tiles
+pega, o tempo do aviso no chão, quanto o encanto dura (o encantado não anda; a esquiva solta na hora) e de quanto
+em quanto tempo ele é puxado um passo para perto dela. Esses números também estão no painel do administrador.
 Salve e reinicie o servidor. Se algo estiver errado no arquivo, o servidor explica o quê.
 
 O que cada monstro deixa fica na lista `itens` dele: `item` (o id em `data/items.json`), `chance` (em %, de 0 a 100)

@@ -107,4 +107,6 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).
 No navegador existe `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
-`__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)` — útil para testes automáticos.
+`__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)`, `__meummo.drops()` (ouro e itens no chão),
+`__meummo.charmed()` (encantado pelo canto) — útil para testes automáticos. Para testar com ouro, itens ou em outro
+mapa sem caçar, use o painel do administrador (`/admin/api/jogador`) no servidor de teste.

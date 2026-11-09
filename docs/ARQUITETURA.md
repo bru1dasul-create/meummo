@@ -120,6 +120,16 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   tudo ou nada) e o limite de ouro (vende só o que cabe). A loja paga `compraPor`% do preço (`sellPrice`, mínimo 1).
   Recusa vem em `fail` (`no_gold`, `too_far`, `cant_trade`, `bag_full`, `dead`), com `item: true`.
 
+## O canto da Iara (`world.ts`: `startSong`, `resolveSong`, `updateCharm`, `breakCharm`)
+- Monstro com `canto` (`MonsterDef.song`), de tempos em tempos (`nextSpecialAt`), com alguém a até `alcance` tiles,
+  para e canta: `warn` com a área em volta dele, `fx` `song` e um balão. No fim do aviso, quem está na área e não
+  está invencível (esquivando) fica **encantado**: `Player.charmedBy`/`charmedUntil` e a mensagem `charm` (ms).
+- Encantado: os passos são recusados (o servidor manda `charm` de novo para o navegador se acertar) e, a cada
+  `puxaACadaMs`, o servidor move o jogador um passo na direção de quem cantou (`pull`, e `move` para quem vê).
+  A esquiva que de fato rola solta na hora (`charm` 0); acabar o tempo, desmaiar ou quem cantou sumir também.
+- No navegador: enquanto `charmedUntil` não passa, não anda nem prevê passos (só a esquiva); o `pull` desliza o
+  personagem um tile.
+
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
   itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no
@@ -207,6 +217,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
 | servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
 | servidor | `quests` | seu progresso nas missões mudou |
+| servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |

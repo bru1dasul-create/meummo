@@ -123,8 +123,13 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings (3 jacarés nos
   canais do oeste, 2 botos no lago das casas afundadas; a Iara continua marcada em `lendas`)
 - [ ] **[arte]** Desenhos do jacaré, do boto e da Iara; ícone do Dente de Jacaré (`icone: "dente"`)
-- [ ] **[estrutura + arte + mundo]** Iara, chefe da Billings: o canto puxa o jogador para a água e a esquiva quebra o
-  encanto (área já marcada: camada `lendas`); depois, Boitatá como chefe
+- [x] **[estrutura]** Iara, chefe da Billings (nível 8): jato d'água e o **canto** — aviso no chão em volta dela, quem
+  fica é encantado (não anda e é puxado para perto dela) e a esquiva quebra o encanto; deixa a Escama da Iara.
+  Números do canto em `data/monsters.json` (`canto`) e no painel do administrador
+- [ ] **[mundo]** Passar a área da Iara da camada `lendas` para `monstros` na Billings (quantidade 1)
+- [ ] **[arte]** Desenho da Iara, efeito do canto (notas no ar no lugar do anel azul), algo no jogador encantado
+  (hoje: texto "♪ encantado" e o aviso na tela) e o ícone da Escama da Iara (`icone: "escama"`)
+- [ ] **[estrutura + arte + mundo]** Boitatá como chefe
 
 ## 🛠️ Ferramentas do administrador
 - [x] **[estrutura]** Painel do administrador, passo 1 — **ajustes do jogo** (http://localhost:3000/admin, só no
