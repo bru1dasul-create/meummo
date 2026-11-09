@@ -96,5 +96,12 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 - Um objeto do tipo ponto chamado `spawn` marca onde os jogadores nascem.
 - Camada de objetos `monstros`: cada retângulo é uma área de nascimento. O nome do retângulo é o id do
   monstro em `data/monsters.json` (ex.: `jararaca`) e a propriedade inteira `quantidade` diz quantos.
+- Propriedades do próprio mapa (Map > Map Properties): `nome` (texto) é o nome da zona — aparece na tela ao
+  entrar e nas boas-vindas do chat — e `seguro` (booleano) marca zona segura (para o PvP, quando existir).
+  Sem `nome`, a zona se chama "Pindorama".
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
+- O mapa atual (Refúgio de Guarapiranga, 96×72) foi gerado por `scripts/gen-map.ts` e pode ser editado à mão
+  no Tiled. Gerar de novo por cima apaga essas edições: use `npm run gen:map -- --out outro.tmj` para comparar.
+- A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
+  sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.

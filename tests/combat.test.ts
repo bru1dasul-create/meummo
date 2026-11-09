@@ -5,6 +5,7 @@ import { RIGHT, UP } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
 import { DASH_SLOT } from '../src/shared/protocol';
 import { loadMonsterDefs, parseMonsterDefs } from '../src/server/monsters';
+import { loadMap } from '../src/server/server';
 import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
 import { FakeClock, FakeConn, tiledFromAscii, type TestZone } from './helpers';
@@ -372,6 +373,15 @@ describe('correções da revisão (não deixar voltar)', () => {
 });
 
 describe('dados e validação', () => {
+  it('o mapa de verdade tem nome, é zona segura e todas as áreas conseguem criar seus monstros', () => {
+    const map = loadMap();
+    expect(map.name).toBe('Refúgio de Guarapiranga');
+    expect(map.safe).toBe(true);
+    const world = new World(map, { monsters: loadMonsterDefs() });
+    expect(world.zones.length).toBe(map.monsterZones.length);
+    for (const zone of world.zones) expect(zone.alive.size).toBe(zone.zone.count);
+  });
+
   it('lê o data/monsters.json de verdade', () => {
     const real = loadMonsterDefs();
     expect([...real.keys()]).toEqual(expect.arrayContaining(['sagui', 'jararaca', 'saci']));

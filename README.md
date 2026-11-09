@@ -3,11 +3,14 @@
 MMORPG de ação em 2D, inspirado no **folclore brasileiro**, que roda no navegador do computador e do celular.
 Feito em dupla: ideias, design e testes de um lado, código do Claude do outro. O nome é provisório.
 
-![Combate com o Sagui Travesso](docs/screenshot.png)
+O mundo é **Pindorama — Selva de Pedra**: muito tempo depois do fim do mundo, a floresta tomou São Paulo e as
+lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuante no meio da represa.
+
+![A vila flutuante do Refúgio de Guarapiranga](docs/screenshot.png)
 
 ## Onde estamos: M1 — Combate de ação ✅
 
-- Explore a vila e os arredores com outros jogadores, em tempo real, com chat
+- Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
 - Ganhe XP, suba de nível e volte para a vila quando desmaiar
@@ -94,10 +97,12 @@ O mapa é feito no [Tiled](https://www.mapeditor.org/), um editor gratuito. Abra
 - o ponto `spawn`, na camada `objects`, é onde os jogadores nascem
 - camada `monstros`: cada retângulo é uma área de monstros; o nome é o monstro (ex.: `jararaca`) e a
   propriedade `quantidade` diz quantos
+- propriedades do mapa (no Tiled: Map > Map Properties): `nome` é o nome da zona que aparece ao entrar e
+  `seguro` marca zona segura
 
 Depois de salvar, reinicie o servidor e recarregue o jogo.
 
-![Mapa da vila inicial](docs/mapa.png)
+![Mapa do Refúgio de Guarapiranga](docs/mapa.png)
 
 Áreas de monstros no mapa: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci.
 

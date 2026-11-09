@@ -37,12 +37,19 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] Arte de verdade para personagens e monstros
 
+## ✅ Pindorama — a primeira zona
+- [x] Mundo aprovado: **Pindorama — Selva de Pedra** (São Paulo tomada pela floresta), tom "um pouco dos dois"
+  (colorido e vivo nas vilas, sombrio nas ruínas) — ver DESIGN.md
+- [x] A vila virou o **Refúgio de Guarapiranga**: vila flutuante com píeres e barcos, matas com ipês, brejo,
+  avenida em ruínas e a praça do Saci (arte nova: 26 tiles)
+- [x] Nome da zona aparece na tela ao entrar; o mapa diz o próprio nome e se é zona segura (propriedades `nome` e `seguro`)
+
 ## ⏭️ M2 — Progresso salvo
 - [ ] Conta com senha e personagem salvo em banco de dados (SQLite no começo)
 - [ ] Monstros deixam itens; inventário; equipamento que muda os atributos
 
 ## M3 — Mundo
-- [ ] Vários mapas ligados (portas e saídas)
+- [ ] Vários mapas ligados (portas e saídas): a avenida a leste do Refúgio leva às **Ruínas de Santo Amaro**
 - [ ] NPCs com diálogo (o Curupira!), missões simples, loja e ouro
 - [ ] Novas lendas: Iara no lago, Boitatá como chefe
 

@@ -47,6 +47,8 @@ export interface TiledLayer {
 export interface TiledMap {
   width: number;
   height: number;
+  /** Propriedades do mapa no Tiled (Map > Map Properties): `nome` (texto) e `seguro` (sem PvP). */
+  properties?: TiledProperty[];
   tilewidth: number;
   tileheight: number;
   orientation?: string;
@@ -90,6 +92,10 @@ export class GameMap implements Walkable {
   /** Onde os jogadores nascem (sempre um tile livre). */
   readonly spawn: Tile;
   readonly monsterZones: MonsterZone[];
+  /** Nome da zona (propriedade `nome` do mapa). */
+  readonly name: string;
+  /** Zona segura (propriedade `seguro`): sem PvP. */
+  readonly safe: boolean;
   private readonly blocked: Uint8Array;
   private readonly cover: Uint8Array;
   /** Tiles alcançáveis a pé a partir do ponto de nascimento (calculado na primeira consulta). */
@@ -102,7 +108,10 @@ export class GameMap implements Walkable {
     spawnHint: Tile,
     cover: Uint8Array = new Uint8Array(width * height),
     monsterZones: MonsterZone[] = [],
+    info: { name?: string; safe?: boolean } = {},
   ) {
+    this.name = info.name ?? 'Pindorama';
+    this.safe = info.safe ?? false;
     this.width = width;
     this.height = height;
     this.blocked = blocked;
@@ -189,7 +198,12 @@ export class GameMap implements Walkable {
       }
     }
 
-    return new GameMap(width, height, blocked, spawnHint ?? { x: width >> 1, y: height >> 1 }, cover, zones);
+    const prop = (name: string) => json.properties?.find((p) => p.name === name)?.value;
+    const mapName = prop('nome');
+    return new GameMap(width, height, blocked, spawnHint ?? { x: width >> 1, y: height >> 1 }, cover, zones, {
+      name: typeof mapName === 'string' && mapName.trim() ? mapName.trim() : undefined,
+      safe: prop('seguro') === true,
+    });
   }
 
   inside(x: number, y: number): boolean {

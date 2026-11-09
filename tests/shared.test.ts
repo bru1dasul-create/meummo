@@ -40,6 +40,16 @@ describe('GameMap', () => {
     expect(GameMap.fromTiled(json).isWalkable(0, 0)).toBe(false);
   });
 
+  it('lê o nome da zona e se ela é segura nas propriedades do mapa', () => {
+    const json = tiledFromAscii(['..']);
+    expect(GameMap.fromTiled(json)).toMatchObject({ name: 'Pindorama', safe: false });
+    json.properties = [
+      { name: 'nome', type: 'string', value: 'Refúgio de Teste' },
+      { name: 'seguro', type: 'bool', value: true },
+    ];
+    expect(GameMap.fromTiled(json)).toMatchObject({ name: 'Refúgio de Teste', safe: true });
+  });
+
   it('explica o erro quando o tileset é externo', () => {
     const json = tiledFromAscii(['..']);
     json.tilesets = [{ firstgid: 1, source: 'tiles.tsj' }];

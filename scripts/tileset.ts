@@ -185,6 +185,222 @@ function wallBase(p: Pixels, rng: Rng): void {
   }
 }
 
+// ---------- Refúgio de Guarapiranga: cores e desenhos ----------
+
+const G = {
+  deck: hex('#b8895a'),
+  deckDark: hex('#8e6539'),
+  deckLight: hex('#cfa06b'),
+  nail: hex('#5b3d22'),
+  post: hex('#5e3d22'),
+  postDark: hex('#3f2814'),
+  hull: hex('#8b5a2b'),
+  hullDark: hex('#5f3c1b'),
+  hullLight: hex('#a8743f'),
+  boatInside: hex('#c79a62'),
+  paintBlue: hex('#3f7fb5'),
+  paintRed: hex('#c0443a'),
+  stone: hex('#8a8a90'),
+  stoneDark: hex('#5f5f66'),
+  fire1: hex('#ffe066'),
+  fire2: hex('#ff9a2e'),
+  fire3: hex('#e0482b'),
+  ember: hex('#7a2a17'),
+  log: hex('#6b4a2b'),
+  asphalt: hex('#4b4c52'),
+  asphaltLight: hex('#5c5d64'),
+  asphaltDark: hex('#36373c'),
+  crack: hex('#2a2a2e'),
+  lane: hex('#c9b458'),
+  concrete: hex('#8f9196'),
+  concreteDark: hex('#6d6f74'),
+  concreteLight: hex('#abadb1'),
+  moss: hex('#55803d'),
+  mossDark: hex('#3f6630'),
+  rust: hex('#9c4a2a'),
+  graffiti: [hex('#ff4fa3'), hex('#2ec8e8'), hex('#ffd23f'), hex('#62e26b')],
+  carRust: hex('#a8562d'),
+  carRustDark: hex('#7a3a1c'),
+  carPaint: hex('#5b7fa3'),
+  carGlass: hex('#2f4a52'),
+  carGlassLight: hex('#5f8a94'),
+  tire: hex('#232326'),
+  pole: hex('#7b7f86'),
+  poleDark: hex('#555960'),
+  deep: hex('#2b5f9e'),
+  deepDark: hex('#244f86'),
+  deepLight: hex('#3d74b8'),
+  reed: hex('#4f8f3a'),
+  reedDark: hex('#3a6e2b'),
+  cattail: hex('#6b4426'),
+  mud: hex('#6e5434'),
+  mudDark: hex('#57412a'),
+  mudLight: hex('#80653f'),
+  puddle: hex('#4f7480'),
+  tin1: hex('#a3abb0'),
+  tin2: hex('#7f888d'),
+  tinRust: hex('#a65a33'),
+  tinBlue: hex('#4c7fa8'),
+  tinRed: hex('#b04a3a'),
+  plank: hex('#9b6b3d'),
+  plankDark: hex('#74502c'),
+  plankLight: hex('#b5834f'),
+  ipeYellow: hex('#f2c230'),
+  ipeYellowLight: hex('#ffe27a'),
+  ipeYellowDark: hex('#c99a1c'),
+  ipePink: hex('#e86fb0'),
+  ipePinkLight: hex('#ffa6d6'),
+  ipePinkDark: hex('#b94d88'),
+  bone: hex('#e9e2cf'),
+  boneDark: hex('#b9b09a'),
+};
+
+/** Deck da vila flutuante: tábuas deitadas, com pregos. */
+function drawDeck(p: Pixels, rng: Rng): void {
+  p.fill(G.deck);
+  for (let y = 3; y < T; y += 4) for (let x = 0; x < T; x++) p.set(x, y, G.deckDark);
+  for (let row = 0; row < 4; row++) {
+    const joint = (row % 2) * 7 + 4;
+    for (let y = row * 4; y < row * 4 + 3; y++) p.set(joint, y, G.deckDark);
+    p.set(joint - 1, row * 4 + 1, G.nail);
+    p.set(joint + 1, row * 4 + 1, G.nail);
+    for (let x = 0; x < T; x++) if (rng() < 0.2) p.set(x, row * 4, G.deckLight);
+  }
+  p.speckle(rng, [G.deckLight, G.deckDark], 8);
+}
+
+/** Píer de norte a sul: tábuas atravessadas, com corrimão de um lado (ou nenhum). */
+function pier(rail: 'left' | 'right' | 'none') {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(C.wood);
+    for (let y = 3; y < T; y += 4) for (let x = 0; x < T; x++) p.set(x, y, C.woodDark);
+    p.speckle(rng, [C.woodLight, C.woodDark], 12);
+    if (rail === 'none') return;
+    const x0 = rail === 'left' ? 0 : 14;
+    for (let y = 0; y < T; y++) {
+      p.set(x0, y, C.woodDarker);
+      p.set(x0 + 1, y, C.woodDark);
+    }
+    p.rect(rail === 'left' ? 0 : 13, 6, 3, 3, C.woodDarker); // poste do corrimão
+  };
+}
+
+/** Objetos de 2 tiles (barco, carro): desenha inteiro em 32x16 e pega a metade. */
+function halfOf(drawFull: (p: Pixels) => void, side: 0 | 1) {
+  return (p: Pixels) => {
+    const full = new Pixels(T * 2, T);
+    drawFull(full);
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) p.set(x, y, full.get(x + side * T, y));
+  };
+}
+
+function drawBoat(p: Pixels): void {
+  p.ellipse(16, 10, 14.5, 5, [10, 30, 60, 90]); // sombra na água
+  p.ellipse(16, 8.5, 14, 5.6, G.hullDark);
+  p.ellipse(16, 8.2, 12.8, 4.6, G.hull);
+  p.ellipse(16, 8.2, 11, 3.4, G.boatInside);
+  p.rect(10, 5, 2, 7, G.hullLight); // bancos
+  p.rect(20, 5, 2, 7, G.hullLight);
+  for (let x = 4; x < 28; x++) if (p.alpha(x, 3) === 255) p.set(x, 3, G.paintBlue);
+  p.rect(27, 7, 2, 2, G.paintRed); // remendo de tinta
+  p.outline(G.postDark);
+}
+
+function drawCar(p: Pixels): void {
+  p.ellipse(16, 13.5, 14, 2.5, C.shadow);
+  p.rect(2, 3, 28, 10, G.carRust);
+  p.rect(1, 4, 30, 8, G.carRust);
+  p.rect(3, 4, 26, 1, G.carRustDark);
+  p.rect(9, 5, 14, 6, G.carPaint); // teto com tinta velha
+  p.rect(7, 5, 2, 6, G.carGlass); // para-brisas
+  p.rect(23, 5, 2, 6, G.carGlass);
+  p.set(7, 6, G.carGlassLight);
+  p.set(24, 8, G.carGlassLight);
+  for (const [x, y] of [
+    [4, 2],
+    [25, 2],
+    [4, 12],
+    [25, 12],
+  ] as const) {
+    p.rect(x, y, 3, 2, G.tire);
+  }
+  for (let k = 0; k < 18; k++) p.set(2 + ((k * 7) % 28), 4 + ((k * 5) % 8), k % 2 ? G.carRustDark : G.rust);
+  for (const x of [12, 13, 19]) p.set(x, 4, G.moss); // mato crescendo em cima
+  p.outline(G.asphaltDark);
+}
+
+/** Muro de concreto quebrado, com musgo e ferros enferrujados (e pichação, se pedir). */
+function drawRuinWall(p: Pixels, rng: Rng, graffiti: boolean): void {
+  for (let x = 0; x < T; x++) {
+    const top = 2 + randInt(rng, 4); // borda de cima quebrada
+    p.rect(x, top, 1, T - top, G.concrete);
+    p.set(x, top, G.concreteLight);
+  }
+  for (const y of [7, 12]) for (let x = 0; x < T; x++) if (p.alpha(x, y) === 255) p.set(x, y, G.concreteDark);
+  p.speckle(rng, [G.concreteDark, G.concreteLight], 14, true);
+  for (let k = 0; k < 6; k++) p.set(randInt(rng, 16), 3 + randInt(rng, 3), rng() < 0.5 ? G.moss : G.mossDark);
+  p.rect(4, 0, 1, 3, G.rust); // vergalhões
+  p.rect(11, 1, 1, 3, G.rust);
+  if (graffiti) {
+    const colors = G.graffiti;
+    for (let x = 1; x < 15; x++) {
+      const y = 9 + Math.round(Math.sin(x * 0.9) * 1.5);
+      p.set(x, y, colors[Math.floor(x / 4) % colors.length]!);
+      p.set(x, y + 1, colors[(Math.floor(x / 4) + 1) % colors.length]!);
+    }
+  }
+  p.outline(G.asphaltDark);
+}
+
+/** Telhado de lata ondulada, remendado com pedaços de outras cores. */
+function drawTinRoof(p: Pixels, rng: Rng): void {
+  for (let x = 0; x < T; x++) for (let y = 0; y < T; y++) p.set(x, y, x % 3 === 0 ? G.tin2 : G.tin1);
+  const patchX = randInt(rng, 9);
+  const patchY = randInt(rng, 8);
+  const patch = rng() < 0.5 ? G.tinBlue : G.tinRed;
+  for (let x = patchX; x < patchX + 6; x++) for (let y = patchY; y < patchY + 5; y++) p.set(x, y, x % 3 === 0 ? G.rust : patch);
+  for (let x = 0; x < T; x++) {
+    p.set(x, 7, G.tin2);
+    if (rng() < 0.35) p.set(x, 8 + randInt(rng, 7), G.tinRust); // ferrugem escorrendo
+  }
+  for (const [x, y] of [
+    [1, 1],
+    [14, 1],
+    [1, 14],
+    [14, 14],
+  ] as const) {
+    p.set(x, y, G.postDark); // rebites
+  }
+}
+
+/** Parede de tábuas (casas da vila flutuante). */
+function drawWoodWall(p: Pixels, rng: Rng): void {
+  p.fill(G.plank);
+  for (let x = 3; x < T; x += 4) for (let y = 0; y < T; y++) p.set(x, y, G.plankDark);
+  p.speckle(rng, [G.plankLight, G.plankDark], 12);
+  for (let x = 0; x < T; x++) {
+    p.set(x, 0, G.postDark); // sombra do telhado
+    p.set(x, 1, G.plankDark);
+    p.set(x, 15, G.postDark);
+  }
+}
+
+/** Ipê florido (amarelo ou rosa): o colorido da floresta. */
+function drawIpe(p: Pixels, rng: Rng, flower: RGBA, light: RGBA, dark: RGBA): void {
+  p.ellipse(8, 14, 6, 2, C.shadow);
+  p.rect(7, 10, 2, 5, C.trunk);
+  p.rect(8, 10, 1, 5, C.trunkDark);
+  p.disc(8, 6.5, 5.8, flower);
+  for (let y = 0; y < T; y++) {
+    for (let x = 0; x < T; x++) {
+      if (p.alpha(x, y) === 255 && y < 12 && x - 8 + (y - 6.5) * 1.2 > 3) p.set(x, y, dark);
+    }
+  }
+  p.disc(6, 4.5, 2.2, light, true);
+  p.speckle(rng, [light, dark, C.leaf], 12, true);
+  p.outline(C.outline);
+}
+
 export const TILES: TileDef[] = [
   { key: 'grass', draw: grass(0) },
   { key: 'grass_tufts', draw: grass(1) },
@@ -409,6 +625,193 @@ export const TILES: TileDef[] = [
       p.set(6, 6, C.waterLight);
       p.set(7, 6, C.waterLight);
       p.outline(C.rockEdge);
+    },
+  },
+  // ---------- Refúgio de Guarapiranga ----------
+  { key: 'deck', draw: drawDeck },
+  {
+    key: 'water_posts', // água logo abaixo de um deck: estacas e sombra
+    collides: true,
+    shootOver: true,
+    draw(p, rng) {
+      water(0)(p, rng);
+      p.rect(0, 0, 16, 3, [12, 28, 55, 120]);
+      for (const x of [2, 12]) {
+        p.rect(x, 0, 2, 9, G.post);
+        p.rect(x + 1, 0, 1, 9, G.postDark);
+        p.rect(x - 1, 9, 4, 1, C.waterLight);
+      }
+    },
+  },
+  { key: 'pier_left', draw: pier('left') },
+  { key: 'pier_v', draw: pier('none') },
+  { key: 'pier_right', draw: pier('right') },
+  { key: 'boat_left', collides: true, shootOver: true, draw: halfOf(drawBoat, 0) },
+  { key: 'boat_right', collides: true, shootOver: true, draw: halfOf(drawBoat, 1) },
+  {
+    key: 'boat_wreck', // barco afundado pela metade
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 9, 7, 4, [10, 30, 60, 90]);
+      for (let x = 2; x <= 13; x++) {
+        const top = 6 + Math.round(Math.abs(x - 7.5) * 0.35);
+        p.rect(x, top, 1, 2, x % 3 === 0 ? G.hullLight : G.hull);
+      }
+      p.rect(4, 4, 1, 4, G.hullDark); // tábuas quebradas
+      p.rect(9, 3, 1, 5, G.hullDark);
+      p.rect(12, 5, 1, 3, G.hullLight);
+      for (const [x, y] of [
+        [1, 11],
+        [6, 12],
+        [11, 11],
+      ] as const) {
+        p.rect(x, y, 3, 1, C.waterLight);
+      }
+      p.outline(G.postDark);
+    },
+  },
+  {
+    key: 'campfire',
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 11, 7, 3, C.shadow);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        p.disc(8 + Math.cos(a) * 5.2, 10 + Math.sin(a) * 2.8, 1.4, i % 2 ? G.stone : G.stoneDark);
+      }
+      p.rect(4, 10, 8, 1, G.log);
+      p.rect(6, 9, 4, 3, G.ember);
+      p.ellipse(8, 7, 3, 4.5, G.fire3);
+      p.ellipse(8, 7.8, 2.2, 3.4, G.fire2);
+      p.ellipse(8, 8.6, 1.3, 2.2, G.fire1);
+      p.set(6, 3, G.fire2);
+      p.set(10, 4, G.fire3);
+    },
+  },
+  {
+    key: 'asphalt',
+    draw(p, rng) {
+      p.fill(G.asphalt);
+      p.speckle(rng, [G.asphaltLight, G.asphaltDark], 30);
+    },
+  },
+  {
+    key: 'asphalt_cracked',
+    draw(p, rng) {
+      p.fill(G.asphalt);
+      p.speckle(rng, [G.asphaltLight, G.asphaltDark], 26);
+      // rachaduras com mato nascendo
+      let x = randInt(rng, 16);
+      for (let y = 0; y < 16; y++) {
+        p.set(x, y, G.crack);
+        if (rng() < 0.3) p.set(x + 1, y, C.grassDark);
+        if (rng() < 0.15) p.set(x - 1, y, C.grassTuft);
+        x = Math.max(0, Math.min(15, x + randInt(rng, 3) - 1));
+      }
+      for (let k = 0; k < 4; k++) p.set(randInt(rng, 16), randInt(rng, 16), C.grassLight);
+      if (rng() < 0.5) p.rect(2, 7, 4, 1, G.lane); // pedaço da faixa antiga
+    },
+  },
+  { key: 'ruin_wall', collides: true, draw: (p, rng) => drawRuinWall(p, rng, false) },
+  { key: 'ruin_wall_graffiti', collides: true, draw: (p, rng) => drawRuinWall(p, rng, true) },
+  { key: 'car_left', collides: true, draw: halfOf(drawCar, 0) },
+  { key: 'car_right', collides: true, draw: halfOf(drawCar, 1) },
+  {
+    key: 'lamp_post', // poste antigo, torto, com cipó
+    collides: true,
+    shootOver: true,
+    draw(p) {
+      p.ellipse(8, 14.5, 3, 1.2, C.shadow);
+      p.rect(7, 4, 2, 11, G.pole);
+      p.rect(8, 4, 1, 11, G.poleDark);
+      p.rect(8, 2, 5, 2, G.pole);
+      p.rect(11, 4, 2, 1, G.poleDark); // luminária quebrada
+      for (const y of [6, 9, 12]) {
+        p.set(6, y, G.moss);
+        p.set(9, y + 1, G.mossDark);
+      }
+      p.outline(G.asphaltDark);
+    },
+  },
+  {
+    key: 'dark_water', // parte funda da represa
+    collides: true,
+    shootOver: true,
+    draw(p, rng) {
+      p.fill(G.deep);
+      p.speckle(rng, [G.deepDark], 22);
+      for (const [x, y] of [
+        [3, 5],
+        [10, 11],
+      ] as const) {
+        p.set(x, y, G.deepLight);
+        p.set(x + 1, y - 1, G.deepLight);
+        p.set(x + 2, y, G.deepLight);
+      }
+    },
+  },
+  {
+    key: 'reeds', // taboa na beira da água
+    draw(p, rng) {
+      for (let k = 0; k < 7; k++) {
+        const x = 1 + randInt(rng, 14);
+        const height = 6 + randInt(rng, 6);
+        const base = 14 + randInt(rng, 2);
+        for (let i = 0; i < height; i++) p.set(x, base - i, i < 2 ? G.reedDark : G.reed);
+        if (rng() < 0.7) p.rect(x, base - height - 2, 1, 3, G.cattail);
+      }
+    },
+  },
+  {
+    key: 'mud', // brejo
+    draw(p, rng) {
+      p.fill(G.mud);
+      p.speckle(rng, [G.mudDark, G.mudDark, G.mudLight], 34);
+      for (let k = 0; k < 2; k++) p.ellipse(3 + randInt(rng, 10), 3 + randInt(rng, 10), 2.2, 1.3, G.puddle);
+      for (let k = 0; k < 3; k++) p.set(randInt(rng, 16), randInt(rng, 16), C.grassDark);
+    },
+  },
+  { key: 'tin_roof', collides: true, draw: drawTinRoof },
+  { key: 'wood_wall', collides: true, draw: drawWoodWall },
+  {
+    key: 'wood_window',
+    collides: true,
+    draw(p, rng) {
+      drawWoodWall(p, rng);
+      p.rect(4, 4, 8, 7, G.postDark);
+      p.rect(5, 5, 6, 5, [255, 214, 120, 255]); // luz acesa lá dentro
+      p.rect(5, 5, 6, 1, [230, 170, 80, 255]);
+      p.rect(7, 5, 2, 5, G.postDark);
+      p.rect(3, 11, 10, 1, G.plankDark);
+    },
+  },
+  {
+    key: 'wood_door',
+    collides: true,
+    draw(p, rng) {
+      drawWoodWall(p, rng);
+      p.rect(4, 3, 8, 13, G.postDark);
+      p.rect(5, 4, 6, 12, G.hull);
+      p.rect(7, 4, 1, 12, G.hullDark);
+      p.set(9, 10, C.gold);
+    },
+  },
+  { key: 'ipe_yellow', collides: true, draw: (p, rng) => drawIpe(p, rng, G.ipeYellow, G.ipeYellowLight, G.ipeYellowDark) },
+  { key: 'ipe_pink', collides: true, draw: (p, rng) => drawIpe(p, rng, G.ipePink, G.ipePinkLight, G.ipePinkDark) },
+  {
+    key: 'bones', // ossada (aviso de perigo perto do Saci)
+    draw(p) {
+      p.rect(3, 11, 7, 1, G.bone);
+      p.rect(4, 13, 7, 1, G.boneDark);
+      p.set(2, 10, G.bone);
+      p.set(10, 12, G.bone);
+      p.disc(11.5, 9.5, 2.6, G.bone);
+      p.set(10, 9, G.postDark);
+      p.set(12, 9, G.postDark);
+      p.rect(11, 11, 1, 1, G.boneDark);
+      p.outline(G.asphaltDark);
     },
   },
 ];

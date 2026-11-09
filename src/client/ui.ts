@@ -223,6 +223,29 @@ export class ActionBar {
   }
 }
 
+/** Faixa com o nome da zona, que aparece ao entrar e some sozinha. */
+export class ZoneBanner {
+  private readonly root = byId<HTMLDivElement>('zone-banner');
+  private readonly name = byId<HTMLElement>('zone-name');
+  private readonly sub = byId<HTMLSpanElement>('zone-sub');
+  private timer: number | undefined;
+
+  show(name: string, subtitle: string): void {
+    this.name.textContent = name;
+    this.sub.textContent = subtitle;
+    this.root.hidden = true;
+    void this.root.offsetWidth; // reinicia a animação
+    this.root.hidden = false;
+    window.clearTimeout(this.timer);
+    this.timer = window.setTimeout(() => (this.root.hidden = true), 4600);
+  }
+
+  destroy(): void {
+    window.clearTimeout(this.timer);
+    this.root.hidden = true;
+  }
+}
+
 /** Aviso rápido no meio da tela ("Ainda recarregando..."). */
 export class Toast {
   private readonly el = byId<HTMLDivElement>('toast');

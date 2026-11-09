@@ -396,6 +396,50 @@ kbd {
   opacity: 1;
 }
 
+/* Nome da zona ao entrar */
+#zone-banner {
+  position: fixed;
+  top: calc(18% + env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  text-align: center;
+  text-shadow:
+    0 2px 6px #000,
+    0 0 3px #000;
+  animation: zone-in 4.5s ease-in-out forwards;
+}
+
+#zone-banner strong {
+  color: var(--accent);
+  font-size: clamp(22px, 5vw, 34px);
+  letter-spacing: 1px;
+}
+
+#zone-banner span {
+  color: var(--text);
+  font-size: 15px;
+}
+
+@keyframes zone-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  12%,
+  75% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Vermelho na borda quando apanha */
 #hurt {
   position: fixed;
@@ -627,6 +671,8 @@ kbd {
   .action {
     width: 66px;
     height: 58px;
+    padding: 2px;
+    font-size: 11px; /* "Bordunada" cabe com folga mesmo em fontes mais largas (Android) */
   }
 
   .action .key {

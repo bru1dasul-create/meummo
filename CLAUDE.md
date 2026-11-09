@@ -6,6 +6,9 @@
   com explicações simples — nem toda decisão técnica precisa de jargão.
 - Tema: **fantasia com folclore brasileiro** (Saci, Curupira, Iara...). Combate de ação: mira, atira, desvia;
   monstros avisam golpes no chão. O nome "MeuMMO" é provisório.
+- Mundo (aprovado): **Pindorama — Selva de Pedra**, São Paulo tomada pela floresta. Tom: "um pouco dos dois" —
+  colorido e vivo nas vilas, sombrio nas ruínas; sem violência explícita (quem perde a vida desmaia).
+  Zona atual: **Refúgio de Guarapiranga** (`public/assets/maps/world.tmj`). Lugares reais sim, **marcas não**.
 - Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
   Como funciona por dentro: `docs/ARQUITETURA.md`.
 - Tentativas anteriores de MMO não deram certo por excesso de escopo. Por isso: etapas pequenas, sempre jogáveis.
@@ -32,7 +35,9 @@
 - `npm run build && npm start` — produção: um servidor só, na porta 3000. **Reinicie o `npm start` depois de cada
   build** (o servidor guarda a lista de arquivos ao ligar).
 - `npm run bots -- 10` — bots passeando; `npm run bots -- 6 --cacar` — bots caçando monstros
-- `npm run gen:tiles` — redesenha a arte provisória (`scripts/tileset.ts` → `public/assets/tiles.png`)
+- `npm run gen:tiles` — redesenha a arte provisória (`scripts/tileset.ts` → `public/assets/tiles.png`).
+  Tiles novos sempre no fim da lista (os mapas guardam o número de cada tile).
+- `npm run gen:map -- --out arquivo.tmj` — gera o mapa do Refúgio em outro arquivo (veja a regra 9)
 - `npm run render:map` — desenha o mapa inteiro em `docs/mapa.png`
 
 ## Instalação no PC do dono do projeto (Windows)

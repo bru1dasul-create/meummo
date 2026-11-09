@@ -23,7 +23,7 @@ import { DASH_SLOT, type EntityState, type PlayerStats, type ServerMsg, type Wel
 import { SKILLS } from '../../shared/skills';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
-import { ActionBar, Feedback, Toast, type ActionSlot, type ChatBox, type Hud } from '../ui';
+import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
 import { KeyboardDirections, type HeldMove } from './input';
@@ -71,6 +71,7 @@ export class WorldScene extends Phaser.Scene {
   private actionBar!: ActionBar;
   private toast!: Toast;
   private feedback!: Feedback;
+  private zoneBanner!: ZoneBanner;
 
   // Previsão do próprio movimento: o personagem anda na hora e o servidor confirma depois.
   private predicted!: Pose;
@@ -143,6 +144,8 @@ export class WorldScene extends Phaser.Scene {
     this.effects = new Effects(this, this.map, (fromMonster) => this.shotTargets(fromMonster));
     this.toast = new Toast();
     this.feedback = new Feedback();
+    this.zoneBanner = new ZoneBanner();
+    this.zoneBanner.show(this.map.name, this.map.safe ? 'Zona segura' : 'Cuidado: zona perigosa');
     this.actionBar = new ActionBar(
       [
         { slot: 'shot', label: 'Estilingue', key: 'clique' },
@@ -851,6 +854,7 @@ export class WorldScene extends Phaser.Scene {
     this.effects?.destroy();
     this.actionBar?.destroy();
     this.toast?.destroy();
+    this.zoneBanner?.destroy();
     this.feedback?.destroy();
   }
 }

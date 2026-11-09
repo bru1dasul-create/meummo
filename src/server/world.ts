@@ -126,7 +126,7 @@ export class World {
     // As boas-vindas vão na hora; quem está por perto chega no próximo tick.
     conn.send([
       { t: 'welcome', id: player.id, you: player.state(), stats: player.stats(), stepMs: STEP_MS, online: this.players.size },
-      { t: 'sys', text: `Bem-vindo(a) ao mundo, ${name}!` },
+      { t: 'sys', text: `Bem-vindo(a), ${name}! Você está em: ${this.map.name}.` },
     ]);
     this.broadcast({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
     this.broadcast({ t: 'online', n: this.players.size });
