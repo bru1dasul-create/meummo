@@ -30,6 +30,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
 import { KeyboardDirections, type HeldMove } from './input';
+import { CanopyFader, createMapLayers, MapLights } from './mapDepth';
 
 export interface WorldSceneData {
   conn: Connection;
@@ -77,6 +78,10 @@ export class WorldScene extends Phaser.Scene {
   private me!: EntityView;
   private marker!: Phaser.GameObjects.Rectangle;
   private effects!: Effects;
+  /** Copas que ficam transparentes em cima de quem passa embaixo (null: o mapa não tem camada "acima"). */
+  private canopy: CanopyFader | null = null;
+  private mapLights!: MapLights;
+  private lastFrameAt = 0;
   private actionBar!: ActionBar;
   private toast!: Toast;
   private feedback!: Feedback;
@@ -147,9 +152,13 @@ export class WorldScene extends Phaser.Scene {
     const tilemap = this.make.tilemap({ key: this.mapKey });
     const tileset = tilemap.addTilesetImage('tiles', 'tiles');
     if (!tileset) throw new Error('O mapa precisa usar um tileset chamado "tiles".');
-    tilemap.layers.forEach((layer, i) => tilemap.createLayer(layer.name, tileset)?.setDepth(-100 + i));
+    // chão, sombras e enfeites embaixo dos personagens; a camada "acima" (copas, alto dos postes) por cima
+    const above = createMapLayers(tilemap, tileset);
+    this.canopy = above ? new CanopyFader(above) : null;
     // O mesmo arquivo que o servidor usa: cliente e servidor concordam sobre as paredes.
-    this.map = GameMap.fromTiled((this.cache.tilemap.get(this.mapKey) as { data: TiledMap }).data, this.welcome.map);
+    const mapJson = (this.cache.tilemap.get(this.mapKey) as { data: TiledMap }).data;
+    this.map = GameMap.fromTiled(mapJson, this.welcome.map);
+    this.mapLights = new MapLights(this, mapJson);
 
     this.labels = document.getElementById('labels')!;
     const you = this.welcome.you;
@@ -262,6 +271,25 @@ export class WorldScene extends Phaser.Scene {
     });
     this.effects.update(now);
     this.actionBar.update(now);
+    this.updateDepth(now);
+  }
+
+  /** Copas transparentes em cima de quem está embaixo delas (e dos avisos no chão), e as luzes tremulando. */
+  private updateDepth(now: number): void {
+    const delta = this.lastFrameAt ? now - this.lastFrameAt : 0;
+    this.lastFrameAt = now;
+    this.mapLights.update(now);
+    if (!this.canopy) return;
+    const view = this.cameras.main.worldView;
+    const near = (x: number, y: number) => x > view.x - 48 && x < view.right + 48 && y > view.y - 48 && y < view.bottom + 48;
+    const points: { x: number; y: number }[] = [];
+    for (const entity of [...this.entities.values(), ...this.dying]) {
+      const { x, y } = entity.sprite;
+      if (near(x, y)) points.push({ x, y: y - 12 });
+    }
+    for (const spot of this.effects.dangerSpots()) if (near(spot.x, spot.y)) points.push(spot);
+    if (this.marker.visible) points.push({ x: this.marker.x + T / 2, y: this.marker.y + T / 2 });
+    this.canopy.update(points, delta);
   }
 
   // ======================= movimento =======================

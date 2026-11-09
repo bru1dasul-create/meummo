@@ -37,6 +37,12 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] Arte de verdade para personagens e monstros
 - [ ] Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador)
+- [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
+  quando alguém passa embaixo), postes altos, mata fechada nas bordas, sombras de casas e prédios, água
+  balançando, fogueira crepitando com brilho em volta (camadas `sombras` e `acima` do Tiled)
+- [ ] Mapa, passo 2 — Refúgio caprichado: chão redesenhado, beiradas suaves entre água, areia e grama, casas na
+  escala dos personagens novos, enfeites de vila (redes de pesca, varais, lamparinas, flores)
+- [ ] Mapa, passo 3 — Santo Amaro caprichado: neblina, brasas perto da Mula, prédios mais altos, escombros
 
 ## ✅ Pindorama — a primeira zona
 - [x] Mundo aprovado: **Pindorama — Selva de Pedra** (São Paulo tomada pela floresta), tom "um pouco dos dois"

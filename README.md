@@ -144,8 +144,16 @@ Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito.
 `public/assets/maps`, e o nome do arquivo é o **id** do mapa: `refugio.tmj` (Refúgio de Guarapiranga, onde
 todo mundo começa) e `santo-amaro.tmj` (Ruínas de Santo Amaro). Em cada mapa:
 
-- camada `ground`: o chão; camada `decor`: árvores, casas, flores…
+- camadas de tiles, de baixo para cima: `ground` (o chão), `sombras` (sombra de casas e prédios), `decor`
+  (troncos, casas, flores…) e `acima`, que o jogo desenha **por cima dos personagens**: copa das árvores e alto
+  dos postes. Quem passa embaixo some atrás das folhas (a copa fica transparente para dar para ver). Nada que
+  bloqueia vai na `acima` — o que bloqueia é o tronco, na `decor`
+- as árvores grandes têm 2 tiles de largura e 3 de altura: os 4 de cima (`..._tl`, `_tr`, `_ml`, `_mr`) na
+  camada `acima` e os 2 do tronco (`..._bl`, `_br`) na `decor`; postes altos: `..._top` na `acima`, `..._base`
+  na `decor`
 - propriedade `colide` nos tiles: bloqueia a passagem; `bloqueiaTiro`: segura projéteis (a água não segura)
+- propriedades `luz` (uma cor, ex.: `#ffb04a`) e `luzRaio` (tamanho em pixels) num tile: ele brilha no jogo
+  (a fogueira e as janelas acesas). Tiles animados (água, fogueira) usam a animação do próprio Tiled
 - o ponto `spawn`, na camada `objects`, é onde os jogadores nascem
 - camada `monstros`: cada retângulo é uma área de monstros; o nome é o monstro (ex.: `jararaca`) e a
   propriedade `quantidade` diz quantos

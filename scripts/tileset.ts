@@ -70,6 +70,10 @@ export interface TileDef {
   collides?: boolean;
   /** Projéteis passam por cima, mesmo bloqueando a passagem (água). */
   shootOver?: boolean;
+  /** Animação (vira a `animation` do Tiled): os tiles de cada quadro e quanto tempo cada um fica. */
+  animation?: { key: string; ms: number }[];
+  /** Brilho em volta (fogueira, janela acesa): cor e raio em pixels (propriedades `luz` e `luzRaio`). */
+  light?: { color: string; radius: number };
   draw(p: Pixels, rng: Rng): void;
 }
 
@@ -99,8 +103,13 @@ function grass(variant: number) {
   };
 }
 
-function water(variant: number) {
-  return (p: Pixels, rng: Rng) => {
+/**
+ * Água da represa. `frame` 0, 1 ou 2: as ondinhas balançam de um lado para o outro (a animação vai
+ * 0-1-2-1). O fundo é o mesmo em todos os quadros, para só as ondas mexerem.
+ */
+function water(variant: number, frame = 0) {
+  return (p: Pixels) => {
+    const rng = mulberry32(310 + variant);
     p.fill(C.water);
     p.speckle(rng, [C.waterDark], 16);
     const waves =
@@ -117,17 +126,27 @@ function water(variant: number) {
             [10, 10],
             [5, 14],
           ];
-    for (const [x, y] of waves) {
-      p.set(x!, y!, C.waterLight);
-      p.set(x! + 1, y! - 1, C.waterLight);
-      p.set(x! + 2, y! - 1, C.waterLight);
-      p.set(x! + 3, y!, C.waterLight);
-    }
+    waves.forEach(([x, y], i) => wave(p, x! + (i % 2 === 0 ? frame : -frame), y!, C.waterLight));
     if (variant === 1) {
-      p.set(12, 4, C.foam);
-      p.set(4, 10, C.foam);
+      // brilho do sol na água: aparece, fica mais forte e some
+      const glint = frame === 1 ? C.foam : C.waterLight;
+      p.set(12, 4, frame === 0 ? C.foam : glint);
+      p.set(4, 10, frame === 2 ? C.foam : glint);
+      if (frame === 1) {
+        p.set(11, 4, C.waterLight);
+        p.set(13, 4, C.waterLight);
+      }
     }
   };
+}
+
+/** Ondinha (um arco de 4 pixels) que dá a volta na borda do tile, para emendar com o vizinho. */
+function wave(p: Pixels, x: number, y: number, color: RGBA): void {
+  const wrap = (v: number) => ((v % T) + T) % T;
+  p.set(wrap(x), y, color);
+  p.set(wrap(x + 1), y - 1, color);
+  p.set(wrap(x + 2), y - 1, color);
+  p.set(wrap(x + 3), y, color);
 }
 
 function planks(p: Pixels, rng: Rng): void {
@@ -554,6 +573,392 @@ function drawIpe(p: Pixels, rng: Rng, flower: RGBA, light: RGBA, dark: RGBA): vo
   p.outline(C.outline);
 }
 
+// ---------- Capricho no mapa, passo 1: animações, objetos altos, mata fechada e sombras ----------
+// Árvores grandes e postes altos são desenhados inteiros e cortados em tiles: a copa (ou o alto do poste)
+// vai na camada "acima" do Tiled, que passa por cima dos personagens — quem anda atrás da árvore some
+// embaixo das folhas — e o tronco vai na camada "decor" (bloqueia a passagem).
+
+/** Cores extras dos objetos altos. */
+const D = {
+  leafDeep: hex('#1b5a26'),
+  pineDeep: hex('#173f2a'),
+  trunkLight: hex('#8a6038'),
+  bark: hex('#4a3019'),
+  thicket: hex('#1f4f27'),
+  thicketDark: hex('#173d1e'),
+};
+
+/** Animação "vai e volta" de 3 desenhos (0-1-2-1), usada na água: `key`, `key_f1` e `key_f2`. */
+function swayFrames(key: string, ms = 320): { key: string; ms: number }[] {
+  return [
+    { key, ms },
+    { key: `${key}_f1`, ms },
+    { key: `${key}_f2`, ms },
+    { key: `${key}_f1`, ms },
+  ];
+}
+
+/** Água logo abaixo de um deck: estacas e sombra (as estacas ficam paradas; a água balança). */
+function waterPosts(frame: number) {
+  return (p: Pixels) => {
+    water(0, frame)(p);
+    p.rect(0, 0, 16, 3, [12, 28, 55, 120]);
+    for (const x of [2, 12]) {
+      p.rect(x, 0, 2, 9, G.post);
+      p.rect(x + 1, 0, 1, 9, G.postDark);
+      p.rect(x - 1 + (frame === 2 ? 1 : 0), 9, frame === 1 ? 4 : 3, 1, C.waterLight); // marola batendo na estaca
+    }
+  };
+}
+
+/** Parte funda da represa: mais escura, com ondas que balançam devagar. */
+function deepWater(frame: number) {
+  return (p: Pixels) => {
+    const rng = mulberry32(377);
+    p.fill(G.deep);
+    p.speckle(rng, [G.deepDark], 22);
+    for (const [x, y, dir] of [
+      [3, 5, 1],
+      [10, 11, -1],
+    ] as const) {
+      const sx = x + dir * frame;
+      p.set(sx, y, G.deepLight);
+      p.set(sx + 1, y - 1, G.deepLight);
+      p.set(sx + 2, y, G.deepLight);
+    }
+  };
+}
+
+/** Fogueira da vila. `frame` 0, 1 ou 2: as chamas mudam de forma (crepitando) e as faíscas sobem. */
+function campfire(frame: number) {
+  return (p: Pixels) => {
+    p.ellipse(8, 11, 7, 3, C.shadow);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      p.disc(8 + Math.cos(a) * 5.2, 10 + Math.sin(a) * 2.8, 1.4, i % 2 ? G.stone : G.stoneDark);
+    }
+    p.rect(4, 10, 8, 1, G.log);
+    p.rect(6, 9, 4, 3, G.ember);
+    const flame = [
+      { dx: 0, h: 4.5, w: 3 },
+      { dx: -0.6, h: 5.3, w: 2.6 },
+      { dx: 0.6, h: 3.9, w: 3.3 },
+    ][frame]!;
+    const cx = 8 + flame.dx;
+    p.ellipse(cx, 11.5 - flame.h, flame.w, flame.h, G.fire3);
+    p.ellipse(cx, 11.8 - flame.h * 0.8, flame.w * 0.73, flame.h * 0.76, G.fire2);
+    p.ellipse(cx, 12.2 - flame.h * 0.6, flame.w * 0.43, flame.h * 0.49, G.fire1);
+    const sparks = [
+      [
+        [6, 3],
+        [10, 4],
+      ],
+      [
+        [5, 2],
+        [9, 1],
+      ],
+      [
+        [11, 3],
+        [7, 2],
+      ],
+    ][frame]!;
+    sparks.forEach(([x, y], i) => p.set(x!, y!, i ? G.fire3 : G.fire2));
+  };
+}
+
+/** Tufo de folhas (ou de flores): claro em cima à esquerda (o sol vem de lá), escuro embaixo à direita. */
+function clump(p: Pixels, cx: number, cy: number, r: number, base: RGBA, light: RGBA, dark: RGBA): void {
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+      const dx = (x + 0.5 - cx) / r;
+      const dy = (y + 0.5 - cy) / r;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 1) continue;
+      const side = dx * 0.8 + dy;
+      p.set(x, y, side < -0.62 ? light : side > 0.5 || (d2 > 0.7 && dy > 0.3) ? dark : base);
+    }
+  }
+}
+
+/** Linha grossa (galho), de (x0, y0) até (x1, y1). */
+function limb(p: Pixels, x0: number, y0: number, x1: number, y1: number, width: number, color: RGBA): void {
+  const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1) * 2;
+  for (let i = 0; i <= steps; i++) {
+    const x = x0 + ((x1 - x0) * i) / steps;
+    const y = y0 + ((y1 - y0) * i) / steps;
+    for (let w = 0; w < width; w++) p.set(x + w, y, color);
+  }
+}
+
+/** Galho seco que se divide em dois, e de novo, até virar graveto. */
+function twig(p: Pixels, rng: Rng, x: number, y: number, angle: number, length: number, width: number, depth: number): void {
+  let cx = x;
+  let cy = y;
+  for (let i = 0; i < length; i++) {
+    cx += Math.cos(angle);
+    cy += Math.sin(angle);
+    for (let w = 0; w < width; w++) p.set(cx + w, cy, w === 0 && width > 1 ? S.deadWoodLight : S.deadWood);
+    angle += (rng() - 0.5) * 0.3;
+  }
+  if (depth <= 0) {
+    if (rng() < 0.6) p.set(cx, cy - 1, S.dry); // folha seca que ficou
+    return;
+  }
+  const spread = 0.45 + rng() * 0.3;
+  twig(p, rng, cx, cy, angle - spread, length * 0.62, Math.max(1, width - 1), depth - 1);
+  twig(p, rng, cx, cy, angle + spread, length * 0.62, Math.max(1, width - 1), depth - 1);
+}
+
+/** Tronco de árvore grande (vai até a linha 45): mais largo no pé, claro à esquerda, com veios. */
+function bigTrunk(p: Pixels, top: number, left: number, right: number, base: RGBA, light: RGBA, dark: RGBA, vein: RGBA): void {
+  for (let y = top; y <= 45; y++) {
+    const flare = Math.max(0, y - 42);
+    const x0 = left - flare;
+    const x1 = right + flare;
+    for (let x = x0; x <= x1; x++) p.set(x, y, x <= x0 + (flare ? 0 : 1) ? light : x >= x1 - 1 ? dark : base);
+  }
+  for (const [x, y0, len] of [
+    [left + 2, top + 4, 5],
+    [right - 2, top + 9, 4],
+    [left + 2, top + 14, 3],
+  ] as const) {
+    for (let y = y0; y < Math.min(44, y0 + len); y++) p.set(x, y, vein);
+  }
+}
+
+/** Escurece as folhas de baixo da copa (a sombra das próprias folhas em cima do tronco). */
+function shadeUnderside(p: Pixels, fromY: number, leaves: RGBA[], to: RGBA): void {
+  const same = (a: RGBA, b: RGBA) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+  for (let y = fromY; y < p.height; y++) {
+    for (let x = 0; x < p.width; x++) if (leaves.some((c) => same(p.get(x, y), c))) p.set(x, y, to);
+  }
+}
+
+/** Uns pontinhos de textura em cima das folhas (só onde já tem folha). */
+function leafTexture(p: Pixels, rng: Rng, leaves: RGBA[], dots: RGBA[], count: number, maxY: number): void {
+  const same = (a: RGBA, b: RGBA) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+  for (let k = 0; k < count; k++) {
+    const x = randInt(rng, p.width);
+    const y = randInt(rng, maxY);
+    if (leaves.some((c) => same(p.get(x, y), c))) p.set(x, y, dots[randInt(rng, dots.length)]!);
+  }
+}
+
+function drawBigRoundTree(): Pixels {
+  const p = new Pixels(32, 48);
+  const rng = mulberry32(5150);
+  p.ellipse(17, 44.5, 12.5, 3.2, C.shadow);
+  bigTrunk(p, 24, 13, 18, C.trunk, D.trunkLight, C.trunkDark, D.bark);
+  for (const [x, y, r] of [
+    [11, 9, 7],
+    [21, 8, 7.5],
+    [6, 17, 6.5],
+    [26, 17, 6],
+    [16, 15, 9],
+    [9, 25, 7],
+    [23, 25, 7],
+    [16, 28, 6.5],
+  ] as const) {
+    clump(p, x, y, r, C.leaf, C.leafLight, C.leafDark);
+  }
+  leafTexture(p, rng, [C.leaf], [C.leafLight, C.leafDark], 70, 34);
+  shadeUnderside(p, 32, [C.leaf, C.leafDark, C.leafLight], D.leafDeep);
+  p.outline(C.outline);
+  return p;
+}
+
+function drawBigPine(): Pixels {
+  const p = new Pixels(32, 48);
+  p.ellipse(16.5, 44.5, 10.5, 3, C.shadow);
+  bigTrunk(p, 30, 14, 17, C.trunk, D.trunkLight, C.trunkDark, D.bark);
+  // camadas de galhos: as de cima ficam por cima das de baixo (desenha de baixo para cima)
+  const tiers = [
+    [21, 36, 15],
+    [15, 29, 13],
+    [10, 22, 10.5],
+    [5, 16, 7.5],
+    [1, 10, 4.5],
+  ] as const;
+  for (const [top, bottom, half] of tiers) {
+    for (let y = top; y <= bottom; y++) {
+      const w = 0.8 + (half - 0.8) * ((y - top) / (bottom - top));
+      for (let x = Math.floor(16 - w); x < Math.ceil(16 + w); x++) {
+        if (y === bottom && (x & 1) === 1) continue; // pontas dos galhos: a base fica serrilhada
+        const rel = (x + 0.5 - 16) / w;
+        p.set(x, y, y >= bottom - 1 ? D.pineDeep : rel < -0.4 ? C.pineLight : rel > 0.3 ? C.pineDark : C.pine);
+      }
+    }
+  }
+  p.outline(C.outline);
+  return p;
+}
+
+function drawBigIpe(flower: RGBA, light: RGBA, dark: RGBA, seed: number): Pixels {
+  const p = new Pixels(32, 48);
+  const rng = mulberry32(seed);
+  p.ellipse(17, 44.5, 12, 3.1, C.shadow);
+  for (let k = 0; k < 18; k++) {
+    // flores caídas no chão, em volta do pé
+    const a = rng() * Math.PI * 2;
+    const r = 6 + rng() * 7;
+    p.set(16 + Math.cos(a) * r * 1.3, 44.3 + Math.sin(a) * r * 0.3, k % 3 ? flower : light);
+  }
+  bigTrunk(p, 26, 14, 17, C.trunk, D.trunkLight, C.trunkDark, D.bark);
+  // galhos abrindo em forquilha (aparecem nos buracos da copa)
+  limb(p, 14, 28, 7, 13, 2, C.trunkDark);
+  limb(p, 17, 28, 25, 12, 2, C.trunkDark);
+  limb(p, 15, 26, 16, 7, 2, C.trunk);
+  for (const [x, y, r] of [
+    [9, 10, 5.5],
+    [17, 6, 6],
+    [25, 10, 5.5],
+    [5, 18, 4.8],
+    [14, 15, 6],
+    [24, 18, 5.8],
+    [9, 24, 5.3],
+    [19, 25, 5.8],
+    [14, 30, 4.2],
+  ] as const) {
+    clump(p, x, y, r, flower, light, dark);
+  }
+  leafTexture(p, rng, [flower, dark], [light, C.leaf, C.leafDark], 46, 34);
+  p.outline(C.outline);
+  return p;
+}
+
+function drawBigDeadTree(): Pixels {
+  const p = new Pixels(32, 48);
+  const rng = mulberry32(6060);
+  p.ellipse(16.5, 44.5, 9, 2.6, C.shadow);
+  bigTrunk(p, 22, 14, 17, S.deadWood, S.deadWoodLight, S.deadWoodDark, S.deadWoodDark);
+  twig(p, rng, 15, 25, -Math.PI * 0.64, 10, 2, 3);
+  twig(p, rng, 17, 24, -Math.PI * 0.36, 11, 2, 3);
+  twig(p, rng, 15.5, 22, -Math.PI * 0.5, 9, 2, 3);
+  p.ellipse(15.5, 36, 1.5, 2.2, S.deadWoodDark); // oco no tronco
+  p.set(15, 36, S.wire);
+  p.outline(S.outline);
+  return p;
+}
+
+/** Poste antigo da avenida (alto: a luminária quebrada fica lá em cima), torto e com cipó subindo. */
+function drawTallLampPost(): Pixels {
+  const p = new Pixels(16, 32);
+  p.ellipse(8, 30.5, 3.5, 1.3, C.shadow);
+  p.rect(6, 27, 4, 4, G.poleDark); // base de concreto
+  p.rect(6, 27, 3, 1, G.pole);
+  for (let y = 5; y < 27; y++) {
+    const x = y < 12 ? 8 : 7; // torto lá em cima
+    p.set(x, y, G.pole);
+    p.set(x + 1, y, G.poleDark);
+  }
+  limb(p, 9, 5, 12, 3, 1, G.pole); // braço da luminária
+  p.rect(11, 3, 4, 2, G.poleDark);
+  p.rect(12, 5, 2, 1, G.carGlassLight); // vidro quebrado
+  for (let y = 8; y < 27; y += 3) {
+    p.set(y % 2 ? 6 : 9, y, G.moss); // cipó subindo em zigue-zague
+    p.set(y % 2 ? 6 : 9, y + 1, G.mossDark);
+  }
+  p.set(5, 12, C.leaf);
+  p.set(10, 18, C.leafLight);
+  p.outline(G.asphaltDark);
+  return p;
+}
+
+/** Poste de madeira com fios (alto: a travessa, os isoladores e o transformador ficam lá em cima). */
+function drawTallWirePole(): Pixels {
+  const p = new Pixels(16, 32);
+  p.ellipse(8, 30.5, 3, 1.2, C.shadow);
+  p.rect(7, 2, 2, 29, S.deadWood);
+  p.rect(8, 2, 1, 29, S.deadWoodDark);
+  p.rect(2, 4, 12, 1, S.deadWoodDark); // travessas
+  p.rect(4, 8, 8, 1, S.deadWoodDark);
+  for (const x of [2, 13]) p.set(x, 3, S.insulator);
+  for (const x of [4, 11]) p.set(x, 7, S.insulator);
+  p.rect(9, 10, 3, 5, S.ironLight); // transformador velho
+  p.rect(10, 10, 2, 5, S.iron);
+  p.rect(9, 15, 3, 1, S.rustDark);
+  for (let k = 0; k < 3; k++) {
+    p.set(1 - k, 4 + k, S.wire); // fios caindo para os lados
+    p.set(14 + k, 4 + k, S.wire);
+  }
+  for (let y = 9; y < 22; y++) p.set(12 + (y > 15 ? 1 : 0), y, S.wireRed); // fio solto pendurado
+  p.set(6, 22, S.moss);
+  p.set(9, 26, S.mossDark);
+  p.outline(S.outline);
+  return p;
+}
+
+/** Mata fechada: moitas de samambaia e arbusto bem juntas (bloqueia). Fica embaixo das copas, na borda das matas. */
+function drawThicket(p: Pixels, rng: Rng): void {
+  p.ellipse(8, 13.5, 7.5, 2.4, C.shadow);
+  for (const [x, y, r] of [
+    [4.5, 6, 4.2],
+    [11.5, 5, 4.2],
+    [8, 9.5, 4.8],
+    [3.5, 11.5, 3.6],
+    [12.5, 11.5, 3.6],
+  ] as const) {
+    clump(p, x + rng() - 0.5, y + rng() - 0.5, r, D.thicket, C.leafDark, D.thicketDark);
+  }
+  leafTexture(p, rng, [D.thicket], [C.leaf, C.leafDark], 14, T);
+  p.outline(C.outline);
+}
+
+/** Sombra no chão ao lado de paredes e prédios: ao sul (s), a leste (e) ou no canto (se). */
+function drawShade(kind: 's' | 'e' | 'se') {
+  return (p: Pixels) => {
+    for (let y = 0; y < T; y++) {
+      for (let x = 0; x < T; x++) {
+        const fy = Math.max(0, 1 - y / 11);
+        const fx = Math.max(0, 1 - x / 8);
+        const v = kind === 's' ? fy : kind === 'e' ? fx : Math.min(fx, fy);
+        const alpha = Math.round(92 * v ** 1.3);
+        if (alpha > 2) p.set(x, y, [8, 12, 24, alpha]);
+      }
+    }
+  };
+}
+
+/** Guarda o desenho grande (feito uma vez só) para cortar em tiles. */
+function once(draw: () => Pixels): () => Pixels {
+  let art: Pixels | null = null;
+  return () => (art ??= draw());
+}
+
+/** Um pedaço de 16x16 de um desenho grande. */
+function pieceOf(art: () => Pixels, col: number, row: number) {
+  return (p: Pixels) => {
+    const full = art();
+    for (let y = 0; y < T; y++) {
+      for (let x = 0; x < T; x++) {
+        const c = full.get(col * T + x, row * T + y);
+        if (c[3] > 0) p.set(x, y, c);
+      }
+    }
+  };
+}
+
+/** Os 6 tiles de uma árvore grande: copa (tl, tr, ml, mr, na camada "acima") e tronco (bl, br, que bloqueia). */
+function bigTreeTiles(prefix: string, art: () => Pixels): TileDef[] {
+  const parts = [
+    ['tl', 0, 0],
+    ['tr', 1, 0],
+    ['ml', 0, 1],
+    ['mr', 1, 1],
+    ['bl', 0, 2],
+    ['br', 1, 2],
+  ] as const;
+  return parts.map(([name, col, row]) => ({ key: `${prefix}_${name}`, collides: row === 2, draw: pieceOf(art, col, row) }));
+}
+
+/** Os 2 tiles de um poste alto: o alto (camada "acima") e o pé (bloqueia; o tiro passa). */
+function tallTiles(prefix: string, art: () => Pixels): TileDef[] {
+  return [
+    { key: `${prefix}_top`, draw: pieceOf(art, 0, 0) },
+    { key: `${prefix}_base`, collides: true, shootOver: true, draw: pieceOf(art, 0, 1) },
+  ];
+}
+
 export const TILES: TileDef[] = [
   { key: 'grass', draw: grass(0) },
   { key: 'grass_tufts', draw: grass(1) },
@@ -578,8 +983,8 @@ export const TILES: TileDef[] = [
       p.speckle(rng, [C.sandDark, C.sandDark, C.sandLight], 30);
     },
   },
-  { key: 'water', collides: true, shootOver: true, draw: water(0) },
-  { key: 'water_sparkle', collides: true, shootOver: true, draw: water(1) },
+  { key: 'water', collides: true, shootOver: true, animation: swayFrames('water'), draw: water(0) },
+  { key: 'water_sparkle', collides: true, shootOver: true, animation: swayFrames('water_sparkle'), draw: water(1) },
   {
     key: 'stone_floor',
     draw(p, rng) {
@@ -786,15 +1191,8 @@ export const TILES: TileDef[] = [
     key: 'water_posts', // água logo abaixo de um deck: estacas e sombra
     collides: true,
     shootOver: true,
-    draw(p, rng) {
-      water(0)(p, rng);
-      p.rect(0, 0, 16, 3, [12, 28, 55, 120]);
-      for (const x of [2, 12]) {
-        p.rect(x, 0, 2, 9, G.post);
-        p.rect(x + 1, 0, 1, 9, G.postDark);
-        p.rect(x - 1, 9, 4, 1, C.waterLight);
-      }
-    },
+    animation: swayFrames('water_posts'),
+    draw: waterPosts(0),
   },
   { key: 'pier_left', draw: pier('left') },
   { key: 'pier_v', draw: pier('none') },
@@ -828,20 +1226,14 @@ export const TILES: TileDef[] = [
     key: 'campfire',
     collides: true,
     shootOver: true,
-    draw(p) {
-      p.ellipse(8, 11, 7, 3, C.shadow);
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        p.disc(8 + Math.cos(a) * 5.2, 10 + Math.sin(a) * 2.8, 1.4, i % 2 ? G.stone : G.stoneDark);
-      }
-      p.rect(4, 10, 8, 1, G.log);
-      p.rect(6, 9, 4, 3, G.ember);
-      p.ellipse(8, 7, 3, 4.5, G.fire3);
-      p.ellipse(8, 7.8, 2.2, 3.4, G.fire2);
-      p.ellipse(8, 8.6, 1.3, 2.2, G.fire1);
-      p.set(6, 3, G.fire2);
-      p.set(10, 4, G.fire3);
-    },
+    animation: [
+      { key: 'campfire', ms: 140 },
+      { key: 'campfire_f1', ms: 110 },
+      { key: 'campfire_f2', ms: 150 },
+      { key: 'campfire_f1', ms: 120 },
+    ],
+    light: { color: '#ffb04a', radius: 46 },
+    draw: campfire(0),
   },
   {
     key: 'asphalt',
@@ -892,18 +1284,8 @@ export const TILES: TileDef[] = [
     key: 'dark_water', // parte funda da represa
     collides: true,
     shootOver: true,
-    draw(p, rng) {
-      p.fill(G.deep);
-      p.speckle(rng, [G.deepDark], 22);
-      for (const [x, y] of [
-        [3, 5],
-        [10, 11],
-      ] as const) {
-        p.set(x, y, G.deepLight);
-        p.set(x + 1, y - 1, G.deepLight);
-        p.set(x + 2, y, G.deepLight);
-      }
-    },
+    animation: swayFrames('dark_water'),
+    draw: deepWater(0),
   },
   {
     key: 'reeds', // taboa na beira da água
@@ -931,6 +1313,7 @@ export const TILES: TileDef[] = [
   {
     key: 'wood_window',
     collides: true,
+    light: { color: '#ffd27a', radius: 14 },
     draw(p, rng) {
       drawWoodWall(p, rng);
       p.rect(4, 4, 8, 7, G.postDark);
@@ -1183,6 +1566,28 @@ export const TILES: TileDef[] = [
   { key: 'bus_middle', collides: true, draw: sliceOf(3, drawBus, 1) },
   { key: 'bus_right', collides: true, draw: sliceOf(3, drawBus, 2) },
   { key: 'concrete_cracked', draw: (p, rng) => drawConcrete(p, rng, true, true) },
+  // ---- capricho no mapa, passo 1 ----
+  ...bigTreeTiles('tree_big', once(drawBigRoundTree)),
+  ...bigTreeTiles('pine_big', once(drawBigPine)),
+  ...bigTreeTiles('ipe_yellow_big', once(() => drawBigIpe(G.ipeYellow, G.ipeYellowLight, G.ipeYellowDark, 7301))),
+  ...bigTreeTiles('ipe_pink_big', once(() => drawBigIpe(G.ipePink, G.ipePinkLight, G.ipePinkDark, 7302))),
+  ...bigTreeTiles('dead_tree_big', once(drawBigDeadTree)),
+  ...tallTiles('lamp_post_tall', once(drawTallLampPost)),
+  ...tallTiles('pole_wires_tall', once(drawTallWirePole)),
+  { key: 'thicket', collides: true, draw: drawThicket },
+  { key: 'shade_s', draw: drawShade('s') },
+  { key: 'shade_e', draw: drawShade('e') },
+  { key: 'shade_se', draw: drawShade('se') },
+  { key: 'water_f1', collides: true, shootOver: true, draw: water(0, 1) },
+  { key: 'water_f2', collides: true, shootOver: true, draw: water(0, 2) },
+  { key: 'water_sparkle_f1', collides: true, shootOver: true, draw: water(1, 1) },
+  { key: 'water_sparkle_f2', collides: true, shootOver: true, draw: water(1, 2) },
+  { key: 'dark_water_f1', collides: true, shootOver: true, draw: deepWater(1) },
+  { key: 'dark_water_f2', collides: true, shootOver: true, draw: deepWater(2) },
+  { key: 'water_posts_f1', collides: true, shootOver: true, draw: waterPosts(1) },
+  { key: 'water_posts_f2', collides: true, shootOver: true, draw: waterPosts(2) },
+  { key: 'campfire_f1', collides: true, shootOver: true, draw: campfire(1) },
+  { key: 'campfire_f2', collides: true, shootOver: true, draw: campfire(2) },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));
@@ -1243,11 +1648,16 @@ export function tiledTileset(imagePath: string) {
     tilewidth: T,
     // Propriedades em português porque são editadas no Tiled:
     // colide = bloqueia a passagem; bloqueiaTiro = segura projéteis.
+    // luz = cor do brilho em volta e luzRaio = o tamanho dele (em pixels); animation = quadros da animação.
     tiles: TILES.flatMap((t, id) => {
-      const properties: { name: string; type: string; value: boolean }[] = [];
+      const properties: { name: string; type: string; value: boolean | string | number }[] = [];
       if (t.collides) properties.push({ name: 'colide', type: 'bool', value: true });
       if (t.collides && !t.shootOver) properties.push({ name: 'bloqueiaTiro', type: 'bool', value: true });
-      return properties.length > 0 ? [{ id, properties }] : [];
+      if (t.light) properties.push({ name: 'luz', type: 'string', value: t.light.color }, { name: 'luzRaio', type: 'int', value: t.light.radius });
+      const entry: { id: number; properties?: typeof properties; animation?: { tileid: number; duration: number }[] } = { id };
+      if (properties.length > 0) entry.properties = properties;
+      if (t.animation) entry.animation = t.animation.map((f) => ({ tileid: gid(f.key) - 1, duration: f.ms }));
+      return entry.properties || entry.animation ? [entry] : [];
     }),
   };
 }

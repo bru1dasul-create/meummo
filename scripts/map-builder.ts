@@ -1,6 +1,7 @@
 // Ajudas para gerar mapas do Tiled por código (usado por gen-santo-amaro.ts e pelos próximos geradores).
 // O mapa sai no mesmo formato que o Tiled salva, pronto para ser editado à mão depois.
 
+import { DepthLayers, depthTileLayers } from './map-depth';
 import { mulberry32 } from './pixels';
 import { gid, tiledTileset } from './tileset';
 
@@ -25,6 +26,8 @@ export class MapBuilder {
   /** Lugares onde não deve nascer nada aleatório (ruas, prédios, entradas...). */
   readonly reserved: Uint8Array;
   readonly rng: () => number;
+  /** Camadas "acima" (copas, alto dos postes) e "sombras". */
+  readonly depth: DepthLayers;
 
   constructor(
     readonly W: number,
@@ -35,6 +38,7 @@ export class MapBuilder {
     this.decor = new Array<number>(W * H).fill(0);
     this.reserved = new Uint8Array(W * H);
     this.rng = mulberry32(seed);
+    this.depth = new DepthLayers(W, H, this.decor);
   }
 
   idx(x: number, y: number): number {
@@ -96,7 +100,7 @@ export class MapBuilder {
     };
   }
 
-  /** Monta o JSON no formato do Tiled (camadas ground e decor, pontos, áreas de monstros e saídas). */
+  /** Monta o JSON no formato do Tiled (camadas ground, sombras, decor e acima; pontos, áreas de monstros e saídas). */
   toTiled(options: {
     properties: AreaObject['properties'];
     points: PointObject[];
@@ -139,9 +143,12 @@ export class MapBuilder {
       visible: true,
       objects,
     });
+    const { shade, above } = depthTileLayers(this.depth);
     const layers = [
       { id: 1, name: 'ground', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: this.ground },
+      shade,
       { id: 2, name: 'decor', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: this.decor },
+      above,
       group(3, 'objects', options.points.map(point)),
       group(4, 'monstros', options.monsters.map(area)),
       group(5, 'saidas', options.exits.map(area)),
@@ -158,7 +165,7 @@ export class MapBuilder {
       type: 'map',
       tilewidth: 16,
       tileheight: 16,
-      nextlayerid: 6,
+      nextlayerid: 8,
       nextobjectid: nextId,
       properties: options.properties,
       layers,

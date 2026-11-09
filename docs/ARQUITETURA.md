@@ -159,8 +159,14 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 ## Mapas (Tiled)
 - Arquivos: `public/assets/maps/<id>.tmj` (um por zona; o nome do arquivo é o id), cada um com o tileset
   embutido chamado `tiles` (imagem `public/assets/tiles.png`).
-- Camadas de tiles: `ground` (chão) e `decor` (árvores, casas, flores…). Pode criar outras.
-- Propriedades dos tiles: `colide` (bloqueia a passagem) e `bloqueiaTiro` (segura projéteis).
+- Camadas de tiles, de baixo para cima: `ground` (chão), `sombras`, `decor` (troncos, casas, flores…) e
+  `acima`. Para o servidor só importa se algum tile do lugar bloqueia (em qualquer camada); no navegador
+  (`src/client/game/mapDepth.ts`) a camada `acima` é desenhada por cima dos personagens (copas, alto dos postes)
+  e fica transparente perto de quem está embaixo dela e dos avisos/fogo no chão (`CanopyFader`). Pode criar
+  outras camadas (ficam embaixo dos personagens, na ordem do arquivo).
+- Propriedades dos tiles: `colide` (bloqueia a passagem), `bloqueiaTiro` (segura projéteis), `luz` (cor) e
+  `luzRaio` (pixels): um brilho em volta do tile (`MapLights`; tremula se o tile for animado).
+- Animação de tiles (água, fogueira): a `animation` do próprio Tiled no tileset; o Phaser 4 já anima sozinho.
 - Um objeto do tipo ponto chamado `spawn` marca onde os jogadores nascem.
 - Camada de objetos `monstros`: cada retângulo é uma área de nascimento. O nome do retângulo é o id do
   monstro em `data/monsters.json` (ex.: `jararaca`) e a propriedade inteira `quantidade` diz quantos.
@@ -177,4 +183,7 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   `scripts/map-builder.ts`). Gerar de novo por cima apaga as edições: gere com `--out outro.tmj` e compare.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
+  Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, ônibus) são desenhados inteiros e cortados em
+  pedaços; os geradores colocam cada pedaço na camada certa com `scripts/map-depth.ts` (árvores, postes e
+  sombras). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.

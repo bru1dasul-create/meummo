@@ -1,6 +1,7 @@
 // Desenha os mapas inteiros em imagens (útil para ver o mundo de cima e para a documentação).
 // Uso: npm run render:map                  (todos os mapas → docs/mapa-<id>.png)
 //      npm run render:map -- refugio x.png (um mapa só, na imagem que você escolher)
+//      npm run render:map -- outro.tmj x.png (um arquivo de mapa qualquer, ex.: o gerado com --out)
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -190,14 +191,11 @@ const ids = only
       .map((f) => f.slice(0, -4))
       .sort();
 for (const id of ids) {
+  const file = id.endsWith(".tmj") ? path.resolve(id) : path.join(MAPS, `${id}.tmj`);
+  const name = path.basename(id, ".tmj");
   const out = path.resolve(
-    only && process.argv[3] ? process.argv[3] : `docs/mapa-${id}.png`,
+    only && process.argv[3] ? process.argv[3] : `docs/mapa-${name}.png`,
   );
-  writeFileSync(
-    out,
-    render(
-      JSON.parse(readFileSync(path.join(MAPS, `${id}.tmj`), "utf8")) as MapJson,
-    ),
-  );
-  console.log(`mapa "${id}" desenhado em ${path.relative(process.cwd(), out)}`);
+  writeFileSync(out, render(JSON.parse(readFileSync(file, "utf8")) as MapJson));
+  console.log(`mapa "${name}" desenhado em ${path.relative(process.cwd(), out)}`);
 }

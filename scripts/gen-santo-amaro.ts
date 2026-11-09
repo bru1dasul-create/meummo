@@ -16,6 +16,7 @@ import path from 'node:path';
 import { GameMap, type TiledMap } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
 import { MapBuilder } from './map-builder';
+import { shuffled, type BigTree } from './map-depth';
 import { TILES } from './tileset';
 
 const outIndex = process.argv.indexOf('--out');
@@ -89,22 +90,18 @@ m.fill(PLAZA.x0, PLAZA.y0, PLAZA.x1, PLAZA.y1, (x, y) => {
   if (!inStreet(x, y)) m.setGround(x, y, m.rng() < 0.15 ? 'concrete_moss' : m.rng() < 0.12 ? 'concrete_cracked' : 'concrete');
 });
 m.setDecor(FOUNTAIN.x, FOUNTAIN.y, 'well');
-for (const [x, y] of [
-  [PLAZA.x0 + 1, PLAZA.y0 + 1],
-  [PLAZA.x1 - 1, PLAZA.y0 + 1],
-  [PLAZA.x0 + 1, PLAZA.y1 - 2],
-  [PLAZA.x1 - 1, PLAZA.y1 - 2],
-  [PLAZA.x0 + 4, PLAZA.y1 - 1],
-  [PLAZA.x1 - 4, PLAZA.y0 + 1],
-] as const) {
-  m.setDecor(x, y, m.rng() < 0.5 ? 'ipe_yellow' : 'ipe_pink');
+// ipês grandes nos quatro cantos (fora de onde a Mula corre) e duas árvores secas na beirada de baixo.
+// (sorteia 6 cores, como quando eram 6 ipês pequenos: assim o resto do mapa — prédios e áreas dos monstros — não muda)
+const ipeColors = Array.from({ length: 6 }, () => (m.rng() < 0.5 ? 'ipe_yellow_big' : 'ipe_pink_big') as BigTree);
+for (const [i, [x, y]] of [
+  [PLAZA.x0, PLAZA.y0 + 2],
+  [PLAZA.x1 - 1, PLAZA.y0 + 2],
+  [PLAZA.x0, PLAZA.y1 - 1],
+  [PLAZA.x1 - 1, PLAZA.y1 - 1],
+].entries()) {
+  m.depth.plantBigTree(ipeColors[i]!, x!, y!, () => true);
 }
-for (const [x, y] of [
-  [PLAZA.x0 + 6, PLAZA.y0 + 2],
-  [PLAZA.x1 - 6, PLAZA.y1 - 2],
-] as const) {
-  m.setDecor(x, y, 'dead_tree');
-}
+for (const x of [PLAZA.x0 + 5, PLAZA.x1 - 6]) m.depth.plantBigTree('dead_tree_big', x, PLAZA.y1 - 1, () => true);
 m.fill(PLAZA.x0 + 2, PLAZA.y0 + 2, PLAZA.x1 - 2, PLAZA.y1 - 2, (x, y) => {
   const d = Math.abs(x - FOUNTAIN.x) + Math.abs(y - FOUNTAIN.y);
   if (d >= 2 && d <= 3 && m.rng() < 0.55) m.setDecor(x, y, m.rng() < 0.7 ? 'herbs' : 'flowers_yellow');
@@ -151,6 +148,7 @@ for (let bx = 0; bx < blockXs.length; bx++) {
 }
 
 for (const b of standing) {
+  m.depth.shadeBlock(b.x0, b.y0, b.x1, b.y1, (x, y) => !m.hasDecor(x, y));
   m.fill(b.x0, b.y0, b.x1, b.y1, (x, y) => {
     m.setGround(x, y, 'concrete');
     if (y < b.y1) {
@@ -230,30 +228,43 @@ for (const sy of STREETS_Y) {
 m.fill(0, 0, W - 1, H - 1, (x, y) => {
   if (entrance(x, y) || m.hasDecor(x, y)) return;
   if (nearStreet(x, y)) {
-    if ((x + y * 3) % 8 === 0 && m.rng() < 0.7) m.setDecor(x, y, m.rng() < 0.55 ? 'pole_wires' : 'lamp_post');
+    // postes altos: o alto (fios, luminária) fica na camada "acima", por cima de quem passa
+    if ((x + y * 3) % 8 === 0 && m.rng() < 0.7) m.depth.tallPole(m.rng() < 0.55 ? 'pole_wires_tall' : 'lamp_post_tall', x, y);
     else if (m.rng() < 0.025) m.setDecor(x, y, m.pick(['rubble', 'tires', 'scrap']));
   } else if (inStreet(x, y) && m.rng() < 0.02) {
     m.setDecor(x, y, 'wires');
   }
 });
 
-// 6. A mata voltando: quintais e beiradas viram mato, e a borda do mapa é mata fechada (com árvores secas)
-m.fill(0, 0, W - 1, H - 1, (x, y) => {
-  if (m.isReserved(x, y) || m.hasDecor(x, y) || entrance(x, y)) return;
-  const edge = edgeDistance(x, y);
-  const thick = 2 + Math.round(border(x, y) * 3);
+// 6. A mata voltando: a borda do mapa é mata fechada (árvores grandes, com mato fechado embaixo das copas),
+//    e os quintais e beiradas viram mato, com uma árvore aqui e ali
+const thickness = (x: number, y: number) => 2 + Math.round(border(x, y) * 3);
+const canGrow = (x: number, y: number) => m.inside(x, y) && !m.isReserved(x, y) && !m.hasDecor(x, y) && !entrance(x, y);
+const treeKind = (): BigTree => {
   const r = m.rng();
-  if (edge < thick) {
-    m.setDecor(x, y, r < 0.45 ? 'tree' : r < 0.78 ? 'pine' : r < 0.93 ? 'dead_tree' : 'ipe_yellow');
-  } else if (overgrowth(x, y) > 0.64 && r < 0.4) {
-    m.setDecor(x, y, r < 0.18 ? 'tree' : r < 0.26 ? 'dead_tree' : r < 0.32 ? 'pine' : 'bush');
+  return r < 0.42 ? 'tree_big' : r < 0.74 ? 'pine_big' : r < 0.92 ? 'dead_tree_big' : 'ipe_yellow_big';
+};
+for (const i of shuffled([...Array(W * H).keys()], m.rng)) {
+  const x = i % W;
+  const y = Math.floor(i / W);
+  if (!canGrow(x, y) || !canGrow(x + 1, y)) continue;
+  const inBorder = Math.min(edgeDistance(x, y), edgeDistance(x + 1, y)) < thickness(x, y);
+  const chance = inBorder ? 1 : overgrowth(x, y) > 0.64 ? 0.22 : 0;
+  if (m.rng() < chance) m.depth.plantBigTree(treeKind(), x, y, (cx, cy) => !entrance(cx, cy));
+}
+m.fill(0, 0, W - 1, H - 1, (x, y) => {
+  if (!canGrow(x, y)) return;
+  const r = m.rng();
+  if (edgeDistance(x, y) < thickness(x, y)) {
+    m.setDecor(x, y, m.depth.covered(x, y) ? 'thicket' : r < 0.4 ? 'bush' : r < 0.7 ? 'dead_tree' : 'pine');
+  } else if (overgrowth(x, y) > 0.64 && r < 0.25) {
+    m.setDecor(x, y, r < 0.1 ? 'bush' : r < 0.16 ? 'dead_tree' : 'tall_grass');
   } else if (r < 0.05) {
     m.setDecor(x, y, 'tall_grass');
   } else if (r < 0.07) {
     m.setDecor(x, y, m.rng() < 0.6 ? 'herbs' : 'rock');
   }
 });
-
 // 7. A entrada (vindo do Refúgio) fica sempre livre
 m.fill(0, WEST_EXIT.y, 5, WEST_EXIT.y + WEST_EXIT.h - 1, (x, y) => {
   m.setDecor(x, y, null);
@@ -340,7 +351,7 @@ if (!ok) process.exit(1);
 
 mkdirSync(path.dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(map));
-const used = new Set([...m.ground, ...m.decor].filter(Boolean));
+const used = new Set([...m.ground, ...m.decor, ...m.depth.above, ...m.depth.shade].filter(Boolean));
 console.log(
   `mapa "${ZONE_NAME}" salvo em ${path.relative(process.cwd(), OUT)} (${W}x${H}, ${standing.length} prédios de pé, ` +
     `${collapsed.length} desabados — ${openRuins.length} com entrada; ${used.size} de ${TILES.length} tiles usados)`,
