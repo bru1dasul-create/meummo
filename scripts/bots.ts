@@ -1,19 +1,23 @@
-// Bots: jogadores automáticos que andam pela vila e conversam.
+// Bots: jogadores automáticos que andam pela vila e conversam — ou caçam monstros.
 // Servem para testar o servidor e para ver o mundo "cheio".
-// Uso: npm run bots -- [quantidade] [endereço]
+// Uso: npm run bots -- [quantidade] [endereço] [--cacar]
 //      npm run bots -- 10
+//      npm run bots -- 6 --cacar                (vão até os monstros e atiram neles)
 //      npm run bots -- 30 ws://localhost:3000/ws
 
 import WebSocket from 'ws';
 import { loadMap } from '../src/server/server';
-import { PROTOCOL_VERSION, STEP_MS } from '../src/shared/constants';
+import { SHOT_COOLDOWN_MS, PROTOCOL_VERSION, STEP_MS } from '../src/shared/constants';
+import { angleBetween, chebyshev } from '../src/shared/combat';
 import type { Dir } from '../src/shared/dir';
 import type { Tile } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
 
-const count = Number(process.argv[2] ?? 8);
-const url = process.argv[3] ?? 'ws://localhost:3000/ws';
+const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const hunting = process.argv.includes('--cacar');
+const count = Number(args[0] ?? 8);
+const url = args[1] ?? 'ws://localhost:3000/ws';
 const map = loadMap();
 
 const NAMES = [
@@ -26,17 +30,17 @@ const PHRASES = [
   'Esse poço parece mágico...',
   'Bora até o rio?',
   'Que dia bonito na vila',
-  'Vi umas pedras estranhas no norte',
-  'Quem chegou agora?',
-  'Partiu lago!',
+  'Dizem que o Saci mora depois do rio',
+  'Cuidado com as jararacas perto do lago!',
+  'Quem quer caçar sagui comigo?',
 ];
 
 function pick<T>(list: T[]): T {
   return list[Math.floor(Math.random() * list.length)]!;
 }
 
-/** Um destino aleatório perto da vila (para os bots não sumirem no mapa). */
-function randomTarget(): Tile | null {
+/** Um destino aleatório perto da vila (para os bots passeadores não sumirem no mapa). */
+function villageTarget(): Tile | null {
   for (let tries = 0; tries < 30; tries++) {
     const x = map.spawn.x + Math.round((Math.random() * 2 - 1) * 12);
     const y = map.spawn.y + Math.round((Math.random() * 2 - 1) * 9);
@@ -45,17 +49,29 @@ function randomTarget(): Tile | null {
   return null;
 }
 
+/** Um ponto livre perto de uma área de monstros (para os caçadores). */
+function huntingTarget(): Tile | null {
+  const zone = pick(map.monsterZones.filter((z) => z.monster !== 'saci'));
+  if (!zone) return villageTarget();
+  return map.nearestWalkable(zone.x - 3, zone.y + (zone.h >> 1));
+}
+
 class Bot {
   private ws!: WebSocket;
   private name: string;
-  private x = 0;
-  private y = 0;
+  private id = 0;
+  x = 0;
+  y = 0;
   private ready = false;
+  private dead = false;
   private waitingAck = false;
   private seq = 0;
+  private cid = 0;
   private path: Dir[] = [];
   private lastStepAt = 0;
+  private nextShotAt = 0;
   private restUntil = 0;
+  private readonly monsters = new Map<number, Tile>();
 
   constructor(name: string) {
     this.name = name;
@@ -72,41 +88,107 @@ class Bot {
   }
 
   private onMessage(msg: ServerMsg): void {
-    if (msg.t === 'welcome') {
-      this.x = msg.you.x;
-      this.y = msg.you.y;
-      this.ready = true;
-      console.log(`bot ${this.name} entrou`);
-    } else if (msg.t === 'reject') {
-      if (msg.reason === 'name_taken') {
-        this.name = `${this.name.slice(0, 12)}${Math.floor(Math.random() * 90 + 10)}`;
-        this.ws.removeAllListeners();
-        this.connect();
-      } else {
-        console.log(`bot ${this.name} recusado: ${msg.reason}`);
-      }
-    } else if (msg.t === 'ack') {
-      this.x = msg.x;
-      this.y = msg.y;
-      this.waitingAck = false;
+    switch (msg.t) {
+      case 'welcome':
+        this.id = msg.id;
+        this.x = msg.you.x;
+        this.y = msg.you.y;
+        this.ready = true;
+        console.log(`bot ${this.name} entrou${hunting ? ' (caçador)' : ''}`);
+        break;
+      case 'reject':
+        if (msg.reason === 'name_taken') {
+          this.name = `${this.name.slice(0, 12)}${Math.floor(Math.random() * 90 + 10)}`;
+          this.ws.removeAllListeners();
+          this.connect();
+        } else {
+          console.log(`bot ${this.name} recusado: ${msg.reason}`);
+        }
+        break;
+      case 'ack':
+        this.x = msg.x;
+        this.y = msg.y;
+        this.waitingAck = false;
+        break;
+      case 'teleport':
+        this.x = msg.x;
+        this.y = msg.y;
+        this.dead = false;
+        this.path = [];
+        this.waitingAck = false;
+        break;
+      case 'spawn':
+        if (msg.e.kind === 'monster') this.monsters.set(msg.e.id, { x: msg.e.x, y: msg.e.y });
+        break;
+      case 'move':
+        if (this.monsters.has(msg.id)) this.monsters.set(msg.id, { x: msg.x, y: msg.y });
+        break;
+      case 'despawn':
+        this.monsters.delete(msg.id);
+        break;
+      case 'death':
+        if (msg.id === this.id) {
+          this.dead = true;
+          console.log(`bot ${this.name} desmaiou`);
+        }
+        this.monsters.delete(msg.id);
+        break;
+      case 'levelup':
+        if (msg.id === this.id) console.log(`bot ${this.name} chegou ao nível ${msg.level}`);
+        break;
     }
   }
 
   tick(now: number): void {
-    if (!this.ready || this.waitingAck || now < this.restUntil || now - this.lastStepAt < STEP_MS) return;
+    if (!this.ready || this.dead) return;
+    if (hunting && this.fight(now)) return;
+    if (this.waitingAck || now < this.restUntil || now - this.lastStepAt < STEP_MS) return;
     if (this.path.length === 0) {
-      if (Math.random() < 0.3) {
+      if (!hunting && Math.random() < 0.3) {
         this.restUntil = now + 1000 + Math.random() * 3000; // para um pouquinho
         return;
       }
-      const target = randomTarget();
-      this.path = (target && findPath(map, this.x, this.y, target.x, target.y)) || [];
+      const target = hunting ? (this.nearestMonsterSpot() ?? huntingTarget()) : villageTarget();
+      this.path = (target && findPath(map, this.x, this.y, target.x, target.y, 20000)) || [];
       return;
     }
     this.send({ t: 'step', seq: ++this.seq, dir: this.path.shift()! });
     this.waitingAck = true;
     this.lastStepAt = now;
     if (Math.random() < 0.006) this.send({ t: 'chat', text: pick(PHRASES) });
+  }
+
+  /** Caçador: se tem monstro perto, para e atira nele. */
+  private fight(now: number): boolean {
+    let best: Tile | null = null;
+    let bestDistance = 6;
+    for (const monster of this.monsters.values()) {
+      const distance = chebyshev(monster, this);
+      if (distance <= bestDistance) {
+        best = monster;
+        bestDistance = distance;
+      }
+    }
+    if (!best) return false;
+    this.path = [];
+    if (now >= this.nextShotAt) {
+      this.nextShotAt = now + SHOT_COOLDOWN_MS + 50 + Math.random() * 200;
+      this.send({ t: 'shoot', cid: ++this.cid, a: angleBetween(this, best) });
+    }
+    return true;
+  }
+
+  private nearestMonsterSpot(): Tile | null {
+    let best: Tile | null = null;
+    let bestDistance = Infinity;
+    for (const monster of this.monsters.values()) {
+      const distance = chebyshev(monster, this);
+      if (distance < bestDistance) {
+        best = monster;
+        bestDistance = distance;
+      }
+    }
+    return best ? map.nearestWalkable(best.x - 4, best.y) : null;
   }
 
   send(msg: ClientMsg): void {
@@ -124,7 +206,7 @@ const timer = setInterval(() => {
   for (const bot of bots) bot.tick(now);
 }, 25);
 
-console.log(`${count} bots conectando em ${url} (Ctrl+C para parar)`);
+console.log(`${count} bots ${hunting ? 'caçadores ' : ''}conectando em ${url} (Ctrl+C para parar)`);
 process.on('SIGINT', () => {
   clearInterval(timer);
   for (const bot of bots) bot.close();

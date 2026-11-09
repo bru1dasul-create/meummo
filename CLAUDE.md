@@ -1,32 +1,37 @@
 # MeuMMO — instruções do projeto
 
 ## Contexto
-- MMORPG 2D (visão de cima, movimento em grade de tiles) que roda no navegador.
+- MMORPG de **ação** 2D (visão de cima, movimento em grade de tiles) que roda no navegador (PC e celular).
 - Time: o dono do projeto (ideias, design, testes) + Claude (código). Converse em **português do Brasil**,
   com explicações simples — nem toda decisão técnica precisa de jargão.
-- Tema provisório: fantasia medieval. O nome "MeuMMO" também é provisório.
-- Onde estamos e o que vem depois: `docs/ROADMAP.md`. Como funciona por dentro: `docs/ARQUITETURA.md`.
+- Tema: **fantasia com folclore brasileiro** (Saci, Curupira, Iara...). Combate de ação: mira, atira, desvia;
+  monstros avisam golpes no chão. O nome "MeuMMO" é provisório.
+- Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
+  Como funciona por dentro: `docs/ARQUITETURA.md`.
 - Tentativas anteriores de MMO não deram certo por excesso de escopo. Por isso: etapas pequenas, sempre jogáveis.
 
 ## Regras
 1. **Toda etapa termina jogável.** Nada quebrado na `main`.
-2. **Servidor autoritativo:** o cliente só envia intenções ("quero andar", "quero atacar"); o servidor decide.
-   Toda mensagem do cliente passa por `src/server/validate.ts`.
-3. **Regras compartilhadas** (movimento, mapa, protocolo, busca de caminho) ficam em `src/shared`,
-   que não pode importar nada de navegador, Phaser ou Node.
-4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`); monstros e itens virão em JSON. Evite conteúdo fixo no código.
+2. **Servidor autoritativo:** o cliente só envia intenções ("quero andar", "quero atirar"); o servidor decide
+   dano, recargas e posições. Toda mensagem do cliente passa por `src/server/validate.ts`.
+3. **Regras compartilhadas** (movimento, esquiva, mapa, combate/projéteis, progressão, protocolo, busca de
+   caminho) ficam em `src/shared`, que não pode importar nada de navegador, Phaser ou Node.
+4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`
+   (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
 5. Antes de commitar: `npm run check` (tipos + testes) precisa passar. Regra nova no servidor vem com teste em `tests/`.
 6. Mudou o formato das mensagens? Aumente `PROTOCOL_VERSION` em `src/shared/constants.ts`.
 7. Ao concluir algo do roteiro, marque em `docs/ROADMAP.md`.
 8. Comentários e textos do jogo em português; nomes no código em inglês.
-9. Não rode `npm run gen:map -- --force` sem pedir: apaga edições feitas no Tiled.
+9. Não rode `npm run gen:map -- --force` sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
+   arquivo com `--out` e compare as camadas antes de substituir.
 
 ## Comandos
 - `npm install` — instala dependências (Node 22+)
 - `npm run dev` — servidor (porta 3000, reinicia sozinho) + jogo (Vite, porta 5173, abre em http://localhost:5173)
 - `npm run check` — confere tipos e roda os testes
-- `npm run build && npm start` — produção: um servidor só, na porta 3000, entregando o jogo compilado
-- `npm run bots -- 10` — 10 jogadores automáticos andando e conversando (precisa do servidor ligado)
+- `npm run build && npm start` — produção: um servidor só, na porta 3000. **Reinicie o `npm start` depois de cada
+  build** (o servidor guarda a lista de arquivos ao ligar).
+- `npm run bots -- 10` — bots passeando; `npm run bots -- 6 --cacar` — bots caçando monstros
 - `npm run gen:tiles` — redesenha a arte provisória (`scripts/tileset.ts` → `public/assets/tiles.png`)
 - `npm run render:map` — desenha o mapa inteiro em `docs/mapa.png`
 
@@ -37,5 +42,7 @@
 - Se mudar algo que exige passo extra na instalação, atualize o `instalar-windows.ps1` e o `atualizar.bat`.
 
 ## Conferir no navegador
-Para ver de verdade (além dos testes): `npm run build && npm start`, ligue alguns bots e abra
+Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com um nome e tire prints (computador e celular).
+No navegador existe `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
+`__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)` — útil para testes automáticos.

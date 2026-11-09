@@ -14,25 +14,40 @@
     <div id="login" class="overlay">
       <form id="login-form" class="panel" autocomplete="off">
         <h1>MeuMMO</h1>
-        <p class="subtitle">Um mundo de fantasia para explorar junto.</p>
+        <p class="subtitle">Enfrente as lendas do folclore brasileiro com seus amigos.</p>
         <label for="name">Nome do personagem</label>
         <input id="name" name="name" maxlength="16" placeholder="Ex.: Aurora" required />
         <button id="login-button" type="submit">Entrar no mundo</button>
         <p id="login-error" class="error" role="alert"></p>
-        <ul class="controls">
-          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas para andar</li>
-          <li>Clique ou toque no chão para ir até lá</li>
-          <li><kbd>Enter</kbd> para conversar</li>
+        <ul class="controls desktop-only">
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>Espaço</kbd> esquiva</li>
+          <li>Mouse mira · <b>clique</b> atira com o estilingue</li>
+          <li><kbd>Q</kbd> Bordunada · <kbd>E</kbd> Fôlego (cura)</li>
+          <li>Botão direito: andar até lá · <kbd>Enter</kbd> conversar</li>
+        </ul>
+        <ul class="controls touch-only">
+          <li>Toque no chão para andar</li>
+          <li>Toque num monstro (ou segure <b>Estilingue</b>) para atirar</li>
+          <li>Botões: Bordunada, Fôlego (cura) e Esquiva</li>
         </ul>
       </form>
     </div>
 
     <div id="hud" hidden>
-      <span id="hud-name"></span>
-      <span class="sep">·</span>
-      <span id="hud-online"></span>
-      <span class="sep">·</span>
-      <span id="hud-ping">ping —</span>
+      <div class="hud-title"><span id="hud-name"></span> <span id="hud-level" class="badge">Nv 1</span></div>
+      <div class="bar hp"><div id="hud-hp-fill" class="fill ok"></div><span id="hud-hp-text"></span></div>
+      <div class="bar xp"><div id="hud-xp-fill" class="fill"></div><span id="hud-xp-text"></span></div>
+      <div class="hud-net"><span id="hud-online"></span> <span class="sep">·</span> <span id="hud-ping">ping —</span></div>
+    </div>
+
+    <div id="actions" hidden></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="hurt"></div>
+    <div id="death" hidden>
+      <div class="death-box">
+        <strong>Você desmaiou!</strong>
+        <span>Voltando para a vila...</span>
+      </div>
     </div>
 
     <div id="chat" hidden>

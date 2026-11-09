@@ -1,0 +1,64 @@
+{
+  "sagui": {
+    "nome": "Sagui Travesso",
+    "nivel": 1,
+    "vida": 22,
+    "xp": 8,
+    "passoMs": 260,
+    "agressivo": false,
+    "alcanceAgressao": 0,
+    "perseguicao": 9,
+    "renascerMs": 15000,
+    "ataque": {
+      "tipo": "projetil",
+      "alcance": 5,
+      "distanciaMinima": 2,
+      "preparoMs": 350,
+      "intervaloMs": 1700,
+      "dano": [2, 4],
+      "velocidade": 7,
+      "projetil": "fruta"
+    }
+  },
+  "jararaca": {
+    "nome": "Jararaca",
+    "nivel": 2,
+    "vida": 40,
+    "xp": 15,
+    "passoMs": 400,
+    "agressivo": true,
+    "alcanceAgressao": 4,
+    "perseguicao": 8,
+    "renascerMs": 20000,
+    "ataque": {
+      "tipo": "bote",
+      "alcance": 2,
+      "preparoMs": 650,
+      "intervaloMs": 1600,
+      "dano": [4, 8]
+    }
+  },
+  "saci": {
+    "nome": "Saci",
+    "nivel": 5,
+    "vida": 160,
+    "xp": 80,
+    "passoMs": 240,
+    "agressivo": true,
+    "alcanceAgressao": 4,
+    "perseguicao": 12,
+    "renascerMs": 90000,
+    "ataque": {
+      "tipo": "giro",
+      "alcance": 1,
+      "preparoMs": 800,
+      "intervaloMs": 2200,
+      "dano": [8, 14]
+    },
+    "redemoinho": {
+      "distancia": 4,
+      "cadaMs": 7000,
+      "falas": ["Hehehe!", "Pega eu se puder!", "Cadê meu cachimbo?", "Fiu-fiu!"]
+    }
+  }
+}

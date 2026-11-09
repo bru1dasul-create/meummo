@@ -101,7 +101,7 @@ describe('World — movimento autoritativo', () => {
     world.requestStep(player, 5, UP);
     world.requestStep(player, 5, UP);
     world.requestStep(player, 4, DOWN);
-    expect(player.queue).toEqual([{ seq: 5, dir: UP }]);
+    expect(player.queue).toEqual([{ seq: 5, dir: UP, dash: false }]);
   });
 
   it('descarta a fila e corrige o cliente quando chegam passos demais', () => {

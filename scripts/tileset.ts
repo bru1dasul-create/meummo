@@ -66,7 +66,10 @@ const C = {
 
 export interface TileDef {
   key: string;
+  /** Bloqueia a passagem. */
   collides?: boolean;
+  /** Projéteis passam por cima, mesmo bloqueando a passagem (água). */
+  shootOver?: boolean;
   draw(p: Pixels, rng: Rng): void;
 }
 
@@ -206,8 +209,8 @@ export const TILES: TileDef[] = [
       p.speckle(rng, [C.sandDark, C.sandDark, C.sandLight], 30);
     },
   },
-  { key: 'water', collides: true, draw: water(0) },
-  { key: 'water_sparkle', collides: true, draw: water(1) },
+  { key: 'water', collides: true, shootOver: true, draw: water(0) },
+  { key: 'water_sparkle', collides: true, shootOver: true, draw: water(1) },
   {
     key: 'stone_floor',
     draw(p, rng) {
@@ -466,8 +469,13 @@ export function tiledTileset(imagePath: string) {
     tilecount: COLUMNS * ROWS,
     tileheight: T,
     tilewidth: T,
-    tiles: TILES.flatMap((t, id) =>
-      t.collides ? [{ id, properties: [{ name: 'collides', type: 'bool', value: true }] }] : [],
-    ),
+    // Propriedades em português porque são editadas no Tiled:
+    // colide = bloqueia a passagem; bloqueiaTiro = segura projéteis.
+    tiles: TILES.flatMap((t, id) => {
+      const properties: { name: string; type: string; value: boolean }[] = [];
+      if (t.collides) properties.push({ name: 'colide', type: 'bool', value: true });
+      if (t.collides && !t.shootOver) properties.push({ name: 'bloqueiaTiro', type: 'bool', value: true });
+      return properties.length > 0 ? [{ id, properties }] : [];
+    }),
   };
 }

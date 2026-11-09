@@ -18,6 +18,22 @@ export function applyStep(map: Walkable, from: Pose, dir: Dir): Pose & { moved: 
   return { x: from.x, y: from.y, dir, moved: false };
 }
 
+/** Esquiva (rolamento): anda até `tiles` tiles em linha reta, parando antes de qualquer obstáculo. */
+export function applyDash(map: Walkable, from: Pose, dir: Dir, tiles: number): Pose & { moved: boolean } {
+  let x = from.x;
+  let y = from.y;
+  for (let i = 0; i < tiles && map.isWalkable(x + DX[dir], y + DY[dir]); i++) {
+    x += DX[dir];
+    y += DY[dir];
+  }
+  return { x, y, dir, moved: x !== from.x || y !== from.y };
+}
+
+/** Um pedido de movimento do jogador: passo normal ou esquiva. */
+export function applyInput(map: Walkable, from: Pose, dir: Dir, dash: boolean, dashTiles: number): Pose & { moved: boolean } {
+  return dash ? applyDash(map, from, dir, dashTiles) : applyStep(map, from, dir);
+}
+
 /**
  * Calcula quando o próximo passo pode acontecer.
  * Se o passo atual saiu só um pouquinho atrasado (até `slackMs`), mantém o ritmo original

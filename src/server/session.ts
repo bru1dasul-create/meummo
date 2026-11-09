@@ -51,7 +51,13 @@ export class Session {
 
     switch (msg.t) {
       case 'step':
-        this.world.requestStep(this.player, msg.seq, msg.dir);
+        this.world.requestStep(this.player, msg.seq, msg.dir, msg.dash === true);
+        break;
+      case 'shoot':
+        this.world.shoot(this.player, msg.cid, msg.a);
+        break;
+      case 'skill':
+        this.world.useSkill(this.player, msg.n, msg.a);
         break;
       case 'chat':
         this.world.chat(this.player, msg.text);

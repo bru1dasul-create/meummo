@@ -6,6 +6,10 @@ import type { ClientMsg } from '../shared/protocol';
 
 const MAX_RAW_LENGTH = 1024;
 
+function isAngle(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 10;
+}
+
 /** Transforma o texto recebido numa mensagem válida, ou null se vier qualquer coisa estranha. */
 export function parseClientMsg(raw: string): ClientMsg | null {
   if (raw.length > MAX_RAW_LENGTH) return null;
@@ -24,8 +28,16 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         ? { t: 'hello', name: msg.name, v: msg.v as number }
         : null;
     case 'step':
-      return isDir(msg.dir) && Number.isSafeInteger(msg.seq) && (msg.seq as number) >= 0
-        ? { t: 'step', dir: msg.dir, seq: msg.seq as number }
+      if (!isDir(msg.dir) || !Number.isSafeInteger(msg.seq) || (msg.seq as number) < 0) return null;
+      if (msg.dash !== undefined && msg.dash !== true) return null;
+      return msg.dash ? { t: 'step', dir: msg.dir, seq: msg.seq as number, dash: true } : { t: 'step', dir: msg.dir, seq: msg.seq as number };
+    case 'shoot':
+      return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
+        ? { t: 'shoot', cid: msg.cid as number, a: msg.a }
+        : null;
+    case 'skill':
+      return Number.isInteger(msg.n) && (msg.n as number) >= 0 && (msg.n as number) < 16 && isAngle(msg.a)
+        ? { t: 'skill', n: msg.n as number, a: msg.a }
         : null;
     case 'chat':
       return typeof msg.text === 'string' && msg.text.length <= CHAT_MAX_LENGTH * 4 ? { t: 'chat', text: msg.text } : null;

@@ -9,10 +9,21 @@ import { findPath } from '../src/shared/pathfind';
 import { mulberry32 } from './pixels';
 import { gid, TILES, tiledTileset } from './tileset';
 
-const OUT = path.resolve('public/assets/maps/world.tmj');
+// --out outro.tmj grava em outro arquivo (útil para comparar sem mexer no mapa de verdade)
+const outIndex = process.argv.indexOf('--out');
+const OUT = path.resolve(outIndex !== -1 && process.argv[outIndex + 1] ? process.argv[outIndex + 1]! : 'public/assets/maps/world.tmj');
 const W = 80;
 const H = 60;
 const SPAWN = { x: 40, y: 31 };
+
+/** Áreas onde nascem monstros (em tiles). O nome é o id em data/monsters.json. */
+const MONSTER_ZONES = [
+  { monster: 'sagui', x: 24, y: 8, w: 9, h: 7, count: 4 }, // bosque ao norte da vila
+  { monster: 'sagui', x: 46, y: 43, w: 9, h: 6, count: 3 }, // perto da plantação
+  { monster: 'jararaca', x: 22, y: 40, w: 9, h: 7, count: 3 }, // capinzal ao lado do lago
+  { monster: 'jararaca', x: 66, y: 22, w: 8, h: 6, count: 3 }, // do outro lado do rio
+  { monster: 'saci', x: 66, y: 36, w: 8, h: 5, count: 1 }, // campo depois do rio, ao sul do caminho
+];
 
 if (existsSync(OUT) && !process.argv.includes('--force')) {
   console.error(`O mapa ${path.relative(process.cwd(), OUT)} já existe (e pode ter edições feitas no Tiled).`);
@@ -205,8 +216,8 @@ const map = {
   type: 'map',
   tilewidth: 16,
   tileheight: 16,
-  nextlayerid: 4,
-  nextobjectid: 2,
+  nextlayerid: 5,
+  nextobjectid: 2 + MONSTER_ZONES.length,
   layers: [
     { id: 1, name: 'ground', type: 'tilelayer', width: W, height: H, x: 0, y: 0, opacity: 1, visible: true, data: ground },
     { id: 2, name: 'decor', type: 'tilelayer', width: W, height: H, x: 0, y: 0, opacity: 1, visible: true, data: decor },
@@ -233,6 +244,28 @@ const map = {
           visible: true,
         },
       ],
+    },
+    {
+      id: 4,
+      name: 'monstros',
+      type: 'objectgroup',
+      draworder: 'topdown',
+      x: 0,
+      y: 0,
+      opacity: 1,
+      visible: true,
+      objects: MONSTER_ZONES.map((zone, i) => ({
+        id: 2 + i,
+        name: zone.monster,
+        type: '',
+        x: zone.x * 16,
+        y: zone.y * 16,
+        width: zone.w * 16,
+        height: zone.h * 16,
+        rotation: 0,
+        visible: true,
+        properties: [{ name: 'quantidade', type: 'int', value: zone.count }],
+      })),
     },
   ],
   tilesets: [tiledTileset('../tiles.png')],

@@ -206,13 +206,17 @@ kbd {
   text-align: center;
 }
 
-/* Barra de informações */
+/* Painel do jogador */
 #hud {
   position: fixed;
   top: calc(8px + env(safe-area-inset-top));
   left: 8px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
   background: var(--panel);
   font-size: 13px;
   white-space: nowrap;
@@ -223,10 +227,313 @@ kbd {
   font-weight: 700;
 }
 
+.badge {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(233, 185, 65, 0.2);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bar {
+  position: relative;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bar.xp {
+  height: 8px;
+}
+
+.bar .fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.2s ease-out;
+}
+
+.bar.hp .fill.ok {
+  background: #4caf50;
+}
+
+.bar.hp .fill.mid {
+  background: #e0a526;
+}
+
+.bar.hp .fill.low {
+  background: #e5484d;
+}
+
+.bar.xp .fill {
+  background: #5aa9ff;
+}
+
+.bar span {
+  position: absolute;
+  inset: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+}
+
+.bar.xp span {
+  display: none;
+}
+
+.hud-net {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 #hud .sep {
-  margin: 0 4px;
+  margin: 0 2px;
   color: var(--muted);
 }
+
+/* Botões de ação (habilidades) */
+#actions {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+}
+
+.action {
+  position: relative;
+  width: 84px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  padding: 4px;
+  border: 1px solid rgba(233, 185, 65, 0.45);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.action:hover {
+  background: var(--panel);
+}
+
+.action.pressed {
+  border-color: var(--accent);
+  background: rgba(233, 185, 65, 0.25);
+}
+
+.action .label,
+.action .key {
+  position: relative;
+}
+
+.action .key {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* "relógio" de recarga: um véu escuro que vai baixando */
+.action .cd {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  transform: scaleY(0);
+  transform-origin: bottom;
+}
+
+.action.cooling {
+  color: var(--muted);
+}
+
+/* Aviso rápido */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.2s;
+}
+
+#toast.show {
+  opacity: 1;
+}
+
+/* Vermelho na borda quando apanha */
+#hurt {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(229, 72, 77, 0.85);
+}
+
+#hurt.on {
+  animation: hurt 0.45s ease-out;
+}
+
+@keyframes hurt {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Desmaiou */
+#death {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 4, 6, 0.55);
+  pointer-events: none;
+}
+
+.death-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 28px;
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 15px;
+}
+
+.death-box strong {
+  color: var(--danger);
+  font-size: 22px;
+}
+
+/* Nomes de monstros e barras de vida acima das cabeças */
+.tag.monster .name {
+  color: #f1e4c8;
+}
+
+.tag[data-threat='easy'] .name {
+  color: #a9c99a;
+}
+
+.tag[data-threat='hard'] .name {
+  color: #ffb057;
+}
+
+.tag[data-threat='deadly'] .name {
+  color: #ff6b6b;
+}
+
+.tag .lvl {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.hpbar {
+  width: 26px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.hpbar[hidden] {
+  display: none;
+}
+
+.hpbar > div {
+  height: 100%;
+  background: #4caf50;
+}
+
+.hpbar > div.mid {
+  background: #e0a526;
+}
+
+.hpbar > div.low {
+  background: #e5484d;
+}
+
+/* Números que sobem (dano, cura, XP) */
+.float {
+  position: absolute;
+  bottom: 100%;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 3px #000;
+  animation: float-up 1.05s ease-out forwards;
+}
+
+.float.dealt {
+  color: #ffe08a;
+}
+
+.float.taken {
+  color: #ff6b6b;
+}
+
+.float.other {
+  color: #e6e1d6;
+  font-size: 12px;
+}
+
+.float.heal {
+  color: #7dff9a;
+}
+
+.float.xp {
+  color: #8cc8ff;
+  font-size: 12px;
+}
+
+.float.level {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+@keyframes float-up {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -34px);
+  }
+}
+
+/* Cursor de mira no computador */
+#game canvas {
+  cursor: crosshair;
+}
+
+
 
 /* Chat */
 #chat {
@@ -272,4 +579,54 @@ kbd {
 
 #chat-input {
   background: var(--panel);
+}
+
+/* Celular e tablet (vem por último para valer sobre as regras acima) */
+.touch-only {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .touch-only {
+    display: block;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  #hud {
+    width: 170px;
+  }
+
+  /* Celular: botões grandes num quadrado no canto direito */
+  #actions {
+    left: auto;
+    right: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, 66px);
+    transform: none;
+  }
+
+  .action {
+    width: 66px;
+    height: 58px;
+  }
+
+  .action .key {
+    display: none;
+  }
+
+  #chat {
+    width: calc(100% - 170px);
+  }
+
+  #chat-log {
+    max-height: 18vh;
+    font-size: 12px;
+  }
+
+  #toast {
+    bottom: calc(150px + env(safe-area-inset-bottom));
+  }
 }

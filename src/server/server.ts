@@ -3,17 +3,16 @@
 import { existsSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import sirv from 'sirv';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { TICK_MS } from '../shared/constants';
 import { GameMap, type TiledMap } from '../shared/map';
+import { loadMonsterDefs } from './monsters';
+import { CLIENT_DIR, MAP_FILE } from './paths';
 import { Session } from './session';
 import { World } from './world';
 
-export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const MAP_FILE = path.join(ROOT, 'public/assets/maps/world.tmj');
-const CLIENT_DIR = path.join(ROOT, 'dist/client');
+export { MAP_FILE, ROOT } from './paths';
 const HEARTBEAT_MS = 30_000;
 
 export interface ServerOptions {
@@ -36,7 +35,7 @@ export function loadMap(file = MAP_FILE): GameMap {
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
   const log =
     options.log === false ? () => {} : (message: string) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${message}`);
-  const world = new World(loadMap(), { log });
+  const world = new World(loadMap(), { log, monsters: loadMonsterDefs() });
 
   // Em produção (depois do `npm run build`) o próprio servidor entrega o jogo.
   // Em desenvolvimento quem entrega é o Vite (porta 5173).
@@ -91,7 +90,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   });
   const address = httpServer.address();
   const port = typeof address === 'object' && address ? address.port : options.port;
-  log(`servidor no ar em http://localhost:${port} (mapa ${world.map.width}x${world.map.height})`);
+  log(`servidor no ar em http://localhost:${port} (mapa ${world.map.width}x${world.map.height}, ${world.monsters.size} monstros)`);
 
   return {
     port,
