@@ -188,7 +188,9 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   `scripts/map-builder.ts`). Gerar de novo por cima apaga as edições: gere com `--out outro.tmj` e compare.
 - A arte provisória dos tiles é desenhada por `scripts/tileset.ts` (`npm run gen:tiles`). Tiles novos entram
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
-  Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, ônibus) são desenhados inteiros e cortados em
-  pedaços; os geradores colocam cada pedaço na camada certa com `scripts/map-depth.ts` (árvores, postes e
-  sombras). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
+  Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, varal 3x2, ônibus) são desenhados inteiros e
+  cortados em pedaços; os geradores colocam cada pedaço na camada certa com `scripts/map-depth.ts` (árvores,
+  postes e sombras). Beiradas suaves entre terrenos: para cada par (ex.: areia que encosta na água) há 15 tiles
+  pelos lados que encostam (bits 1 norte, 2 leste, 4 sul, 8 oeste) e 4 de canto; `softenEdges` troca o chão no
+  fim do gerador (ou põe a beirada noutra camada, como a parte funda da represa na `sombras`). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.

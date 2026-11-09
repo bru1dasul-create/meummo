@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { GameMap, type TiledMap } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
-import { DepthLayers, depthTileLayers, shuffled, type BigTree } from './map-depth';
+import { DepthLayers, depthTileLayers, shuffled, softenEdges, type BigTree } from './map-depth';
 import { mulberry32 } from './pixels';
 import { gid, TILES, tiledTileset } from './tileset';
 
@@ -224,11 +224,20 @@ for (let start = 0; start < W * H; start++) {
   if (region.length >= 12) for (const cell of region) setGround(cell % W, Math.floor(cell / W), 'dark_water');
 }
 
-// casas de tábua com telhado de lata, em cima dos decks
+// casas de tábua pintada (palafitas coloridas) com telhado de lata, em cima dos decks: 5 de largura, 4 de altura
+// (2 de telhado e 2 de parede, com a porta no meio e uma janela acesa de cada lado)
+const HOUSE_COLORS = ['azul', 'verde', 'terracota', 'amarelo', 'verde', 'azul'] as const;
+let houses = 0;
 function house(x0: number, y0: number) {
-  for (let y = y0; y < y0 + 2; y++) for (let x = x0; x < x0 + 5; x++) setDecor(x, y, 'tin_roof');
-  ['wood_wall', 'wood_window', 'wood_door', 'wood_window', 'wood_wall'].forEach((key, i) => setDecor(x0 + i, y0 + 2, key));
-  depth.shadeBlock(x0, y0, x0 + 4, y0 + 2, (x, y) => !decor[idx(x, y)]);
+  const color = HOUSE_COLORS[houses++ % HOUSE_COLORS.length];
+  for (let i = 0; i < 5; i++) {
+    const side = i === 0 ? 'l' : i === 4 ? 'r' : (x0 + i) % 3 === 0 ? 'm2' : 'm';
+    setDecor(x0 + i, y0, `roof_top_${side}`);
+    setDecor(x0 + i, y0 + 1, `roof_eave_${side}`);
+  }
+  ['wall', 'window', 'door_top', 'window', 'wall'].forEach((part, i) => setDecor(x0 + i, y0 + 2, `house_${color}_${part}`));
+  ['base', 'base', 'door', 'base', 'base'].forEach((part, i) => setDecor(x0 + i, y0 + 3, `house_${color}_${part}`));
+  depth.shadeBlock(x0, y0, x0 + 4, y0 + 3, (x, y) => !decor[idx(x, y)]);
 }
 house(36, 24);
 house(44, 24);
@@ -237,6 +246,42 @@ house(53, 22);
 house(34, 37);
 house(46, 37);
 setDecor(42, 27, 'campfire');
+
+// enfeites da vila: lamparinas (com bandeirinhas de festa junina em volta da fogueira), varais, rede de pesca,
+// caixotes, barris e cestos de peixe — sempre deixando livres as passagens entre os decks e os píeres
+function lantern(x: number, y: number, flags: 'none' | 'left' | 'right' = 'none') {
+  setDecor(x, y, 'lantern_base');
+  depth.above[idx(x, y - 1)] = gid(flags === 'right' ? 'lantern_flags_r_top' : flags === 'left' ? 'lantern_flags_l_top' : 'lantern_top');
+}
+lantern(37, 30, 'right');
+lantern(47, 30, 'left');
+for (let x = 38; x <= 46; x++) depth.above[idx(x, 29)] = gid(['flags_a', 'flags_b', 'flags_c'][x % 3]!);
+function clothesline(x0: number, y: number) {
+  ['bl', 'bm', 'br'].forEach((part, i) => setDecor(x0 + i, y, `clothesline_${part}`));
+  ['tl', 'tm', 'tr'].forEach((part, i) => (depth.above[idx(x0 + i, y - 1)] = gid(`clothesline_${part}`)));
+}
+clothesline(28, 27);
+clothesline(54, 27);
+// lamparinas ao longo dos píeres compridos, no corrimão (o pier tem 3 de largura: sempre sobram 2 para passar)
+for (let x = westLanding + 3; x <= 24; x += 7) lantern(x, 25);
+for (let x = 62; x < eastLanding - 1; x += 7) lantern(x, 25);
+for (let y = northLanding + 3; y <= 22; y += 7) lantern(41, y);
+setDecor(39, 32, 'fishing_net_left');
+setDecor(40, 32, 'fishing_net_right');
+for (const [x, y, key] of [
+  [36, 28, 'crate'],
+  [48, 28, 'barrel'],
+  [44, 32, 'fish_basket'],
+  [45, 32, 'crate'],
+  [33, 41, 'barrel'],
+  [39, 41, 'crate'],
+  [45, 41, 'fish_basket'],
+  [51, 41, 'barrel'],
+  [26, 22, 'barrel'],
+  [58, 22, 'crate'],
+] as const) {
+  setDecor(x, y, key);
+}
 
 // barcos amarrados perto da vila e destroços nas beiradas
 const waterNextToVillage: number[] = [];
@@ -332,7 +377,13 @@ for (let y = 28; y <= 33; y++) for (let x = 82; x <= 84; x++) if (!decor[idx(x, 
 // 5. Trilhas: norte (mata), oeste (mata) e sul (brejo, rumo à Billings)
 for (let y = 2; y < northLanding; y++) for (let x = 41; x <= 43; x++) if (!isWater(x, y)) setGround(x, y, 'dirt');
 for (let x = 2; x < westLanding; x++) for (let y = 25; y <= 27; y++) if (!isWater(x, y)) setGround(x, y, 'dirt');
-for (let y = southLanding + 1; y < H - 1; y++) for (let x = 41; x <= 43; x++) if (!isWater(x, y)) setGround(x, y, rng() < 0.6 ? 'mud' : 'dirt');
+for (let y = southLanding + 1; y < H - 1; y++) {
+  for (let x = 41; x <= 43; x++) {
+    if (isWater(x, y)) continue;
+    rng(); // a trilha do sul sorteava lama ou terra; o sorteio fica, para o brejo e as matas não mudarem
+    setGround(x, y, 'dirt');
+  }
+}
 
 // 6. Brejo ao sul: lama, poças, taboas e capim alto
 fillRect(0, 48, W - 1, H - 1, (x, y) => {
@@ -399,7 +450,21 @@ for (let i = 0; i < W * H; i++) {
   else if (r < 0.076) setDecor(x, y, 'rock');
 }
 
-// 9. Monta o JSON no formato do Tiled
+// 9. Beiradas suaves entre os terrenos (no fim: depois disso, a areia da beira deixa de ser só "areia")
+const isGrass = (x: number, y: number) => groundIs(x, y, 'grass', 'grass_tufts', 'grass_dark');
+const wet = (x: number, y: number) => groundIs(x, y, ...WATERS, 'water_posts');
+softenEdges(ground, W, H, [
+  { base: ['sand'], set: 'shore', touches: wet },
+  { base: ['sand'], set: 'sand_grass', touches: isGrass },
+  { base: ['mud'], set: 'mud_shore', touches: wet },
+  { base: ['mud'], set: 'mud_grass', touches: isGrass },
+  { base: ['dirt'], set: 'dirt_grass', touches: isGrass },
+  { base: ['dirt'], set: 'dirt_mud', touches: (x, y) => groundIs(x, y, 'mud') },
+]);
+// a parte funda da represa vai escurecendo aos poucos (na camada "sombras", por cima da água que balança)
+softenEdges(ground, W, H, [{ base: ['water', 'water_sparkle'], set: 'deep_edge', touches: (x, y) => groundIs(x, y, 'dark_water') }], depth.shade);
+
+// 10. Monta o JSON no formato do Tiled
 const map = {
   compressionlevel: -1,
   height: H,
@@ -492,7 +557,7 @@ const map = {
   tilesets: [tiledTileset('../tiles.png')],
 };
 
-// 10. Confere se dá para chegar a pé em todos os lugares importantes
+// 11. Confere se dá para chegar a pé em todos os lugares importantes
 const game = GameMap.fromTiled(map as unknown as TiledMap);
 const checkpoints: Record<string, { x: number; y: number }> = {
   'fim da trilha norte': { x: 42, y: 3 },

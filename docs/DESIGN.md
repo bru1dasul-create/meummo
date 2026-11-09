@@ -108,8 +108,10 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
 ### Refúgio de Guarapiranga (feito)
-- **A vila** flutua no meio da represa: decks de madeira sobre palafitas, casas de tábua com telhado de zinco,
-  uma fogueira no centro e barcos velhos amarrados. É onde todo mundo nasce e volta depois de desmaiar.
+- **A vila** flutua no meio da represa: decks de madeira sobre palafitas, casas de tábua pintadas (azul, verde,
+  terracota, amarelo) com telhado de zinco e janelas acesas, uma fogueira no centro com bandeirinhas de festa
+  junina entre as lamparinas, varais de roupa, redes de pesca secando, cestos de peixe e barcos velhos
+  amarrados. É onde todo mundo nasce e volta depois de desmaiar.
 - **Quatro píeres** levam às margens. Ao norte, matas com ipês amarelos e rosas (saguis); ao sul, um brejo de
   lama e taboas (jararacas); a oeste, trilhas pela mata.
 - **A avenida a leste:** asfalto rachado, postes, carros enferrujados e muros pichados — a cidade antiga

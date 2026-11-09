@@ -44,8 +44,10 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
   quando alguém passa embaixo), postes altos, mata fechada nas bordas, sombras de casas e prédios, água
   balançando, fogueira crepitando com brilho em volta (camadas `sombras` e `acima` do Tiled)
-- [ ] **[mundo]** Mapa, passo 2 — Refúgio caprichado: chão redesenhado, beiradas suaves entre água, areia e grama, casas na
-  escala dos personagens novos, enfeites de vila (redes de pesca, varais, lamparinas, flores)
+- [x] **[mundo]** Mapa, passo 2 — Refúgio caprichado: beiradas suaves entre água, areia, grama, terra e lama
+  (com espuma na beira da represa), a parte funda escurecendo aos poucos, grama/areia/terra com mais detalhe, casas
+  coloridas na escala dos personagens novos (porta de 2 tiles, janelas acesas, floreiras), lamparinas nos píeres,
+  bandeirinhas de festa junina, varais, redes de pesca, caixotes, barris e cestos de peixe
 - [ ] **[mundo]** Mapa, passo 3 — Santo Amaro caprichado: neblina, brasas perto da Mula, prédios mais altos, escombros
 
 ## 🎨 Design (visual)
@@ -54,8 +56,8 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   para quem é novo; painéis num estilo só (madeira escura com borda dourada); nível em destaque e XP com números;
   botões de habilidade com ícones, tecla do atalho e segundos de recarga; chat que esmaece quando ninguém fala
   (no celular fica recolhido nas últimas linhas, um toque abre); faixa com o nome da zona (vermelha se for perigosa)
-- [x] **Cenário com profundidade:** coberto pelo "Mapa, passo 1" (sombras, copas por cima, água animada); segue
-  nos passos 2 e 3 do mapa
+- [x] **Cenário com profundidade:** coberto pelo "Mapa, passo 1" (sombras, copas por cima, água animada) e pelo
+  "Mapa, passo 2" (beiradas suaves, vila colorida); segue no passo 3 do mapa
 - [ ] **[dono]** Arte definitiva (depende de decidir: desenhar, contratar ou usar pacotes gratuitos)
 
 ## ✅ Pindorama — a primeira zona

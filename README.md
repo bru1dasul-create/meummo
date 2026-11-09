@@ -156,7 +156,10 @@ todo mundo começa) e `santo-amaro.tmj` (Ruínas de Santo Amaro). Em cada mapa:
   na `decor`
 - propriedade `colide` nos tiles: bloqueia a passagem; `bloqueiaTiro`: segura projéteis (a água não segura)
 - propriedades `luz` (uma cor, ex.: `#ffb04a`) e `luzRaio` (tamanho em pixels) num tile: ele brilha no jogo
-  (a fogueira e as janelas acesas). Tiles animados (água, fogueira) usam a animação do próprio Tiled
+  (a fogueira, as lamparinas e as janelas acesas). Tiles animados (água, fogueira) usam a animação do Tiled
+- beiradas entre terrenos (areia e água, grama e terra...) são tiles próprios, como `shore_3` (água ao norte e a
+  leste) ou `sand_grass_c_ne` (grama só no canto de cima à direita): o número diz os lados que encostam no
+  outro terreno (1 = norte, 2 = leste, 4 = sul, 8 = oeste, somados). Os geradores escolhem sozinhos
 - o ponto `spawn`, na camada `objects`, é onde os jogadores nascem
 - camada `monstros`: cada retângulo é uma área de monstros; o nome é o monstro (ex.: `jararaca`) e a
   propriedade `quantidade` diz quantos

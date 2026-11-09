@@ -80,7 +80,15 @@ export interface TileDef {
 function grass(variant: number) {
   return (p: Pixels, rng: Rng) => {
     p.fill(C.grass);
-    p.speckle(rng, [C.grassDark, C.grassDark, C.grassLight], 30);
+    p.speckle(rng, [C.grassDark, C.grassDark, C.grassLight], 22);
+    // folhinhas: tracinhos de 2 pixels (ponta clara em cima, pé escuro embaixo)
+    for (let k = 0; k < 10; k++) {
+      const x = randInt(rng, T);
+      const y = 1 + randInt(rng, T - 2);
+      p.set(x, y, C.grassLight);
+      p.set(x, y + 1, C.grassDark);
+      if (rng() < 0.4) p.set(x + (rng() < 0.5 ? 1 : -1), y, C.grassLight);
+    }
     if (variant === 1) {
       for (let k = 0; k < 3; k++) {
         const x = 2 + randInt(rng, 12);
@@ -147,6 +155,53 @@ function wave(p: Pixels, x: number, y: number, color: RGBA): void {
   p.set(wrap(x + 1), y - 1, color);
   p.set(wrap(x + 2), y - 1, color);
   p.set(wrap(x + 3), y, color);
+}
+
+/** Lama do brejo, com poças. */
+function drawMud(p: Pixels, rng: Rng): void {
+  p.fill(G.mud);
+  p.speckle(rng, [G.mudDark, G.mudDark, G.mudLight], 34);
+  for (let k = 0; k < 2; k++) p.ellipse(3 + randInt(rng, 10), 3 + randInt(rng, 10), 2.2, 1.3, G.puddle);
+  for (let k = 0; k < 3; k++) p.set(randInt(rng, 16), randInt(rng, 16), C.grassDark);
+}
+
+/** Terra batida das trilhas: grãos, pedrinhas (com brilho e sombra) e marcas de passos. */
+function drawDirt(p: Pixels, rng: Rng): void {
+  p.fill(C.dirt);
+  p.speckle(rng, [C.dirtDark, C.dirtDark, C.dirtLight], 30);
+  for (let k = 0; k < 4; k++) {
+    const x = 1 + randInt(rng, 13);
+    const y = 1 + randInt(rng, 13);
+    p.set(x, y, C.dirtLight);
+    p.set(x + 1, y, C.pebble);
+    p.set(x, y + 1, C.pebble);
+    p.set(x + 1, y + 1, C.dirtDark);
+  }
+  for (let k = 0; k < 2; k++) {
+    const x = 2 + randInt(rng, 11);
+    const y = 2 + randInt(rng, 11);
+    p.rect(x, y, 2, 1, C.dirtDark); // pegada
+    p.set(x + 1, y + 2, C.dirtDark);
+  }
+}
+
+/** Areia: grãos, marquinhas do vento e, às vezes, uma conchinha. */
+function drawSand(p: Pixels, rng: Rng): void {
+  p.fill(C.sand);
+  p.speckle(rng, [C.sandDark, C.sandDark, C.sandLight], 24);
+  for (let k = 0; k < 3; k++) {
+    const x = randInt(rng, 12);
+    const y = 2 + randInt(rng, 13);
+    for (let i = 0; i < 4; i++) p.set(x + i, y - (i === 1 || i === 2 ? 1 : 0), C.sandDark);
+    p.set(x + 1, y, C.sandLight);
+    p.set(x + 2, y, C.sandLight);
+  }
+  if (rng() < 0.35) {
+    const x = 2 + randInt(rng, 12);
+    const y = 2 + randInt(rng, 12);
+    p.set(x, y, C.white);
+    p.set(x + 1, y, [233, 196, 180, 255]);
+  }
 }
 
 function planks(p: Pixels, rng: Rng): void {
@@ -959,30 +1014,424 @@ function tallTiles(prefix: string, art: () => Pixels): TileDef[] {
   ];
 }
 
+// ---------- Capricho no mapa, passo 2: beiradas suaves entre terrenos ----------
+// Onde dois terrenos se encontram (areia e água, grama e terra...), o tile do terreno de baixo ganha uma
+// beirada irregular do vizinho entrando, em vez de um degrau quadrado. Cada tipo de beirada tem 15 tiles
+// (quais lados encostam no outro terreno: bits 1 = norte, 2 = leste, 4 = sul, 8 = oeste; ex.: `shore_3` =
+// água ao norte e a leste) e 4 de canto (o outro terreno só na diagonal: `shore_c_ne`...). Quem escolhe o tile
+// certo é o gerador do mapa, olhando os vizinhos (scripts/map-depth.ts).
+
+/** Os cantos, na ordem dos tiles: nordeste, sudeste, sudoeste, noroeste. */
+export const EDGE_CORNERS = ['ne', 'se', 'sw', 'nw'] as const;
+
+interface EdgeStyle {
+  /** O terreno do próprio tile (o de baixo: areia, terra, lama). */
+  base: (p: Pixels, rng: Rng) => void;
+  /** O terreno vizinho que entra pela beirada (água, grama). */
+  over: (p: Pixels, rng: Rng) => void;
+  /** Quantos pixels o vizinho entra. */
+  band: number;
+  /** Ondulação da beirada ao longo do lado (repete a cada 16 pixels, para emendar com o tile do lado). */
+  wobble: (t: number) => number;
+  /** Linha na beirada, do lado do vizinho (espuma, contorno da grama). */
+  rim: RGBA;
+  /** Linha do lado de dentro (areia molhada, sombra da grama). */
+  shade: RGBA;
+}
+
+/** Mínimo "arredondado": deixa os cantos das beiradas redondos em vez de quinas. */
+function smoothMin(values: number[], k: number): number {
+  if (values.length === 0) return Infinity;
+  return values.reduce((a, b) => {
+    const h = Math.max(k - Math.abs(a - b), 0) / k;
+    return Math.min(a, b) - (h * h * k) / 4;
+  });
+}
+
+const wavy = (amplitudes: [number, number, number][]) => (t: number) =>
+  amplitudes.reduce((sum, [amp, cycles, phase]) => sum + amp * Math.sin((t / T) * Math.PI * 2 * cycles + phase), 0);
+
+function edgeTile(style: EdgeStyle, mask: number, corner: number) {
+  return (p: Pixels) => {
+    const base = new Pixels(T, T);
+    style.base(base, mulberry32(4100 + mask * 13 + corner * 7));
+    const over = new Pixels(T, T);
+    style.over(over, mulberry32(4300 + mask * 17 + corner * 5));
+    const cornerAt = [
+      [T, 0],
+      [T, T],
+      [0, T],
+      [0, 0],
+    ];
+    for (let y = 0; y < T; y++) {
+      for (let x = 0; x < T; x++) {
+        const cx = x + 0.5;
+        const cy = y + 0.5;
+        const reach: number[] = [];
+        if (mask & 1) reach.push(cy - style.wobble(cx));
+        if (mask & 2) reach.push(T - cx - style.wobble(cy));
+        if (mask & 4) reach.push(T - cy - style.wobble(cx));
+        if (mask & 8) reach.push(cx - style.wobble(cy));
+        if (corner >= 0) reach.push(Math.hypot(cx - cornerAt[corner]![0]!, cy - cornerAt[corner]![1]!) - style.wobble(0));
+        const d = smoothMin(reach, 3.5) - style.band;
+        p.set(x, y, d < -1 ? over.get(x, y) : d < 0 ? style.rim : d < 1.5 ? style.shade : base.get(x, y));
+      }
+    }
+  };
+}
+
+/** Os 19 tiles de um tipo de beirada: `${name}_1` a `${name}_15` e `${name}_c_ne`, `_c_se`, `_c_sw`, `_c_nw`. */
+function edgeTiles(name: string, style: EdgeStyle): TileDef[] {
+  const tiles: TileDef[] = [];
+  for (let mask = 1; mask <= 15; mask++) tiles.push({ key: `${name}_${mask}`, draw: edgeTile(style, mask, -1) });
+  EDGE_CORNERS.forEach((corner, i) => tiles.push({ key: `${name}_c_${corner}`, draw: edgeTile(style, 0, i) }));
+  return tiles;
+}
+
+/** Água parada, sem ondinha (a beirada fica quieta; a água de verdade, no tile do lado, balança). */
+function stillWater(p: Pixels, rng: Rng): void {
+  p.fill(C.water);
+  p.speckle(rng, [C.waterDark], 10);
+}
+
+const SHORE_WOBBLE = wavy([
+  [0.9, 2, 0],
+  [0.5, 3, 1.3],
+]);
+const GRASS_WOBBLE = wavy([
+  [1.1, 3, 0.4],
+  [0.7, 5, 2.1],
+]);
+const GRASS_RIM = hex('#3d7a2e');
+
+const EDGE_STYLES: Record<string, EdgeStyle> = {
+  shore: { base: drawSand, over: stillWater, band: 4.5, wobble: SHORE_WOBBLE, rim: C.foam, shade: hex('#cdb46d') },
+  mud_shore: { base: drawMud, over: stillWater, band: 4, wobble: SHORE_WOBBLE, rim: hex('#8fb3b8'), shade: G.mudDark },
+  sand_grass: { base: drawSand, over: grass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: GRASS_RIM, shade: C.sandDark },
+  dirt_grass: { base: drawDirt, over: grass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: GRASS_RIM, shade: C.dirtDark },
+  mud_grass: { base: drawMud, over: grass(0), band: 3.5, wobble: GRASS_WOBBLE, rim: GRASS_RIM, shade: G.mudDark },
+  dirt_mud: { base: drawDirt, over: drawMud, band: 3, wobble: SHORE_WOBBLE, rim: G.mudDark, shade: C.dirtDark },
+};
+
+// ---------- Capricho no mapa, passo 2: a vila (casas coloridas, enfeites) e a parte funda da represa ----------
+
+/** Beirada que só escurece (fica na camada "sombras"): a parte funda da represa entrando na água rasa. */
+function fadeEdgeTile(color: RGBA, band: number, maxAlpha: number, mask: number, corner: number) {
+  return (p: Pixels) => {
+    const cornerAt = [
+      [T, 0],
+      [T, T],
+      [0, T],
+      [0, 0],
+    ];
+    for (let y = 0; y < T; y++) {
+      for (let x = 0; x < T; x++) {
+        const cx = x + 0.5;
+        const cy = y + 0.5;
+        const reach: number[] = [];
+        if (mask & 1) reach.push(cy - SHORE_WOBBLE(cx));
+        if (mask & 2) reach.push(T - cx - SHORE_WOBBLE(cy));
+        if (mask & 4) reach.push(T - cy - SHORE_WOBBLE(cx));
+        if (mask & 8) reach.push(cx - SHORE_WOBBLE(cy));
+        if (corner >= 0) reach.push(Math.hypot(cx - cornerAt[corner]![0]!, cy - cornerAt[corner]![1]!) - SHORE_WOBBLE(0));
+        const d = smoothMin(reach, 3.5);
+        if (d >= band) continue;
+        const alpha = Math.round(maxAlpha * Math.max(0, 1 - d / band) ** 1.2);
+        if (alpha > 2) p.set(x, y, [color[0], color[1], color[2], alpha]);
+      }
+    }
+  };
+}
+
+function fadeEdgeTiles(name: string, color: RGBA, band: number, maxAlpha: number): TileDef[] {
+  const tiles: TileDef[] = [];
+  for (let mask = 1; mask <= 15; mask++) tiles.push({ key: `${name}_${mask}`, draw: fadeEdgeTile(color, band, maxAlpha, mask, -1) });
+  EDGE_CORNERS.forEach((corner, i) => tiles.push({ key: `${name}_c_${corner}`, draw: fadeEdgeTile(color, band, maxAlpha, 0, i) }));
+  return tiles;
+}
+
+/** Cores das casas da vila (palafitas pintadas). */
+export const HOUSE_COLORS = {
+  azul: { plank: hex('#4f86b8'), dark: hex('#3a6690'), light: hex('#6fa2cf') },
+  verde: { plank: hex('#5a9a5e'), dark: hex('#437a47'), light: hex('#78b67b') },
+  terracota: { plank: hex('#c46a45'), dark: hex('#9a4f31'), light: hex('#dc8761') },
+  amarelo: { plank: hex('#d9b44a'), dark: hex('#b08e33'), light: hex('#ecca6a') },
+} as const;
+type HouseColor = (typeof HOUSE_COLORS)[keyof typeof HOUSE_COLORS];
+
+const V = {
+  trim: hex('#efe8d6'),
+  trimShade: hex('#c9c0a8'),
+  glow: hex('#ffd77a'),
+  glowDeep: hex('#f0a94a'),
+  door: hex('#6b4426'),
+  doorDark: hex('#4e2f19'),
+  doorLight: hex('#86593a'),
+  step: hex('#8d8a84'),
+  stepDark: hex('#6a6862'),
+  flowerBox: hex('#7a4a26'),
+  rope: hex('#d8c9a3'),
+  ropeDark: hex('#a8987a'),
+  cork: hex('#e8783a'),
+  net: hex('#c9bfa6'),
+  fish: hex('#c7d3dc'),
+  fishDark: hex('#8a9aa6'),
+  basket: hex('#b98b4e'),
+  basketDark: hex('#8a6332'),
+  hoop: hex('#55575c'),
+  flame: hex('#ffe08a'),
+  flags: [hex('#e2435a'), hex('#f6cf3e'), hex('#3f8fd8'), hex('#5ab55a'), hex('#ef8a2b'), hex('#9b59c9')],
+  clothes: [hex('#d9483b'), hex('#3f78c4'), hex('#f2d04a'), hex('#f5f3ee'), hex('#5ab55a')],
+};
+
+/** Tábuas na vertical, com frestas escuras e alguns pregos (a cor vem da casa). */
+function housePlanks(p: Pixels, rng: Rng, color: HouseColor): void {
+  p.fill(color.plank);
+  for (let x = 3; x < T; x += 4) for (let y = 0; y < T; y++) p.set(x, y, color.dark);
+  for (let x = 0; x < T; x += 4) p.set(x, 0, color.light);
+  p.speckle(rng, [color.light, color.dark], 10);
+  for (let k = 0; k < 3; k++) p.set(1 + randInt(rng, 4) * 4, 2 + randInt(rng, 12), G.postDark);
+}
+
+/** Parede de cima (logo embaixo do telhado): sombra da beirada no alto. */
+function houseWall(color: HouseColor) {
+  return (p: Pixels, rng: Rng) => {
+    housePlanks(p, rng, color);
+    p.rect(0, 0, T, 2, G.postDark);
+    p.rect(0, 2, T, 1, color.dark);
+  };
+}
+
+/** Parede de cima com janela acesa, venezianas abertas e uma floreira embaixo. */
+function houseWindow(color: HouseColor) {
+  return (p: Pixels, rng: Rng) => {
+    houseWall(color)(p, rng);
+    p.rect(1, 4, 2, 8, color.dark); // venezianas
+    p.rect(13, 4, 2, 8, color.dark);
+    p.rect(3, 4, 10, 9, V.trim); // moldura
+    p.rect(4, 5, 8, 7, V.glow); // luz lá dentro
+    p.rect(4, 5, 8, 2, V.glowDeep);
+    p.rect(7, 5, 2, 7, V.trimShade); // a cruz da janela
+    p.rect(4, 8, 8, 1, V.trimShade);
+    p.rect(3, 13, 10, 2, V.flowerBox); // floreira
+    for (const [x, c] of [
+      [4, C.red],
+      [6, C.yellow],
+      [8, C.red],
+      [10, C.white],
+      [11, C.yellow],
+    ] as const) {
+      p.set(x, 12, c);
+      p.set(x, 13, C.stem);
+    }
+  };
+}
+
+/** Parede de baixo: tábuas e a viga do pé, encostada no deck. */
+function houseBase(color: HouseColor) {
+  return (p: Pixels, rng: Rng) => {
+    housePlanks(p, rng, color);
+    p.rect(0, 12, T, 3, G.plankDark);
+    p.rect(0, 12, T, 1, G.plankLight);
+    p.rect(0, 15, T, 1, G.postDark);
+  };
+}
+
+/** Porta (2 tiles de altura): `top` = metade de cima, com a bandeira de vidro; senão a de baixo, com o degrau. */
+function houseDoor(color: HouseColor, top: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    (top ? houseWall(color) : houseBase(color))(p, rng);
+    if (top) {
+      p.rect(3, 4, 10, 12, V.trim); // batente
+      p.rect(4, 5, 8, 11, V.door);
+      p.rect(5, 6, 6, 3, V.glow); // vidrinho em cima da porta
+      p.rect(5, 6, 6, 1, V.glowDeep);
+      p.rect(7, 6, 2, 3, V.trimShade);
+      for (const x of [6, 9]) p.rect(x, 10, 1, 6, V.doorDark);
+    } else {
+      p.rect(3, 0, 10, 13, V.trim);
+      p.rect(4, 0, 8, 13, V.door);
+      for (const x of [6, 9]) p.rect(x, 0, 1, 13, V.doorDark);
+      p.rect(4, 0, 1, 13, V.doorLight);
+      p.set(10, 5, C.gold); // maçaneta
+      p.rect(2, 13, 12, 3, V.step); // degrau
+      p.rect(2, 13, 12, 1, hex('#a9a69f'));
+      p.rect(2, 15, 12, 1, V.stepDark);
+    }
+  };
+}
+
+/** Telhado de lata ondulada: `row` 0 = cumeeira (em cima), 1 = beirada; `side` diz se é a ponta da esquerda/direita. */
+function tinRoof(row: 0 | 1, side: 'l' | 'm' | 'r', rust: number) {
+  return (p: Pixels) => {
+    const rng = mulberry32(880 + rust * 31 + row * 7 + (side === 'l' ? 1 : side === 'r' ? 2 : 0));
+    for (let x = 0; x < T; x++) for (let y = 0; y < T; y++) p.set(x, y, x % 4 < 2 ? G.tin1 : G.tin2);
+    if (row === 0) {
+      p.rect(0, 0, T, 1, G.postDark);
+      p.rect(0, 1, T, 2, hex('#c3c9cd')); // cumeeira
+      p.rect(0, 3, T, 1, G.tin2);
+    } else {
+      p.rect(0, 12, T, 1, hex('#c3c9cd')); // beirada
+      p.rect(0, 13, T, 3, G.postDark);
+      p.rect(0, 13, T, 1, hex('#3a3f44'));
+    }
+    for (let k = 0; k < rust; k++) {
+      // ferrugem escorrendo pela ondulação
+      const x = randInt(rng, T);
+      const y0 = row === 0 ? 4 + randInt(rng, 6) : randInt(rng, 6);
+      for (let y = y0; y < Math.min(row === 0 ? T : 12, y0 + 3 + randInt(rng, 5)); y++) p.set(x, y, k % 2 ? G.tinRust : G.rust);
+    }
+    if (side !== 'm') {
+      const x = side === 'l' ? 0 : T - 2;
+      p.rect(x, 0, 2, row === 0 ? T : 13, hex('#5c6368')); // acabamento da ponta
+    }
+  };
+}
+
+/** Lamparina num poste de madeira (alta: o lampião fica lá em cima). `flags`: de onde sai o cordão das bandeirinhas. */
+function drawLantern(flags: 'none' | 'left' | 'right'): Pixels {
+  const p = new Pixels(16, 32);
+  p.ellipse(8, 30.5, 3.5, 1.3, C.shadow);
+  p.rect(7, 2, 2, 29, G.post);
+  p.rect(8, 2, 1, 29, G.postDark);
+  p.rect(6, 28, 4, 3, G.postDark); // pé
+  p.rect(6, 4, 1, 1, G.postDark);
+  const side = flags === 'right' ? -1 : 1; // o lampião fica do lado contrário ao cordão
+  const lx = side > 0 ? 10 : 3;
+  p.rect(side > 0 ? 9 : 5, 5, 3, 1, G.postDark); // braço
+  p.rect(lx, 6, 4, 1, G.postDark); // tampa
+  p.rect(lx, 7, 4, 4, V.flame);
+  p.rect(lx + 1, 8, 2, 2, hex('#fff6c8'));
+  p.rect(lx, 11, 4, 1, G.postDark);
+  if (flags !== 'none') {
+    const from = flags === 'right' ? 9 : 0;
+    const to = flags === 'right' ? T : 7;
+    for (let x = from; x < to; x++) p.set(x, 3, V.rope);
+  }
+  p.outline(G.postDark);
+  return p;
+}
+
+/** Cordão de bandeirinhas de festa junina (camada "acima"), caindo um pouco no meio de cada tile. */
+function drawFlags(offset: number) {
+  return (p: Pixels) => {
+    for (let x = 0; x < T; x++) {
+      const y = 3 + Math.round(2.2 * Math.sin((Math.PI * x) / T));
+      p.set(x, y, V.rope);
+    }
+    for (const [x0, i] of [
+      [2, 0],
+      [9, 1],
+    ] as const) {
+      const color = V.flags[(offset + i) % V.flags.length]!;
+      const top = 3 + Math.round(2.2 * Math.sin((Math.PI * (x0 + 2)) / T)) + 1;
+      for (let row = 0; row < 5; row++) for (let x = x0 + Math.ceil(row / 2); x <= x0 + 4 - Math.ceil(row / 2); x++) p.set(x, top + row, color);
+    }
+  };
+}
+
+/** Varal com roupa colorida (3 tiles de largura, 2 de altura: o cordão e o alto das roupas ficam "acima"). */
+function drawClothesline(): Pixels {
+  const p = new Pixels(48, 32);
+  const rng = mulberry32(2290);
+  p.ellipse(24, 30.5, 22, 1.6, C.shadow);
+  for (const x of [2, 45]) {
+    p.rect(x, 4, 2, 27, G.post);
+    p.rect(x + 1, 4, 1, 27, G.postDark);
+  }
+  const ropeY = (x: number) => 6 + Math.round(3 * Math.sin((Math.PI * (x - 3)) / 42));
+  for (let x = 3; x < 45; x++) p.set(x, ropeY(x), V.rope);
+  let x = 6;
+  V.clothes.forEach((color, i) => {
+    const w = 5 + randInt(rng, 3);
+    const top = ropeY(x + (w >> 1)) + 1;
+    const h = i % 2 ? 9 : 12; // camiseta mais curta, toalha/vestido mais comprido
+    p.rect(x, top, w, h, color);
+    if (i % 2 === 0) p.rect(x + 1, top + h, w - 2, 1, color);
+    for (let yy = top; yy < top + h; yy += 3) p.set(x + w - 1, yy, [0, 0, 0, 48]); // dobrinhas
+    p.set(x + 1, top - 1, G.postDark); // pregadores
+    p.set(x + w - 2, top - 1, G.postDark);
+    x += w + 2;
+  });
+  p.outline(G.postDark);
+  return p;
+}
+
+/** Rede de pesca secando num cavalete, com boias de cortiça (2 tiles de largura). */
+function drawFishingNet(p: Pixels): void {
+  p.ellipse(16, 14.5, 14, 1.6, C.shadow);
+  for (const x of [3, 28]) {
+    p.rect(x, 3, 2, 12, G.post);
+    p.rect(x + 1, 3, 1, 12, G.postDark);
+  }
+  p.rect(3, 3, 27, 2, G.postDark); // travessa
+  for (let y = 5; y < 13; y++) {
+    for (let x = 5; x < 28; x++) if ((x + y) % 3 === 0 || (x - y + 30) % 3 === 0) p.set(x, y, V.net);
+  }
+  for (let x = 6; x < 28; x += 4) p.set(x, 5, V.cork);
+  p.outline(G.postDark);
+}
+
+function drawCrate(p: Pixels, rng: Rng): void {
+  p.ellipse(8, 14.5, 7, 1.5, C.shadow);
+  p.rect(2, 3, 12, 11, G.plank);
+  for (const y of [3, 8, 13]) p.rect(2, y, 12, 1, G.plankDark);
+  p.rect(2, 3, 1, 11, G.plankLight);
+  p.rect(13, 3, 1, 11, G.plankDark);
+  for (let k = 0; k < 4; k++) p.set(3 + randInt(rng, 10), 4 + randInt(rng, 9), G.plankLight);
+  p.rect(5, 1, 6, 2, V.fish); // peixe aparecendo em cima
+  p.set(5, 1, V.fishDark);
+  p.outline(G.postDark);
+}
+
+function drawBarrel(p: Pixels): void {
+  p.ellipse(8, 14.5, 6.5, 1.5, C.shadow);
+  p.ellipse(8, 8.5, 5.5, 6, G.hull);
+  p.rect(4, 3, 8, 11, G.hull);
+  p.rect(4, 3, 2, 11, G.hullLight);
+  p.rect(10, 3, 2, 11, G.hullDark);
+  for (const y of [4, 8, 12]) p.rect(3, y, 10, 1, V.hoop);
+  p.ellipse(8, 3, 4, 1.4, G.hullDark); // tampa
+  p.outline(G.postDark);
+}
+
+function drawFishBasket(p: Pixels): void {
+  p.ellipse(8, 14.5, 7, 1.5, C.shadow);
+  p.ellipse(8, 10, 6.5, 4.5, V.basket);
+  for (let y = 7; y < 14; y += 2) for (let x = 2; x < 15; x++) if (p.alpha(x, y) === 255) p.set(x, y, V.basketDark);
+  for (const [x, y] of [
+    [4, 6],
+    [8, 5],
+    [11, 6],
+  ] as const) {
+    p.rect(x, y, 3, 2, V.fish); // peixes
+    p.set(x + 3, y, V.fishDark);
+    p.set(x, y, V.fishDark);
+  }
+  p.outline(G.postDark);
+}
+
+/** As peças da casa colorida de cada cor: parede, janela, pé da parede e as duas metades da porta. */
+function houseTiles(name: string, color: HouseColor): TileDef[] {
+  return [
+    { key: `house_${name}_wall`, collides: true, draw: houseWall(color) },
+    { key: `house_${name}_window`, collides: true, light: { color: '#ffd27a', radius: 14 }, draw: houseWindow(color) },
+    { key: `house_${name}_base`, collides: true, draw: houseBase(color) },
+    { key: `house_${name}_door_top`, collides: true, draw: houseDoor(color, true) },
+    { key: `house_${name}_door`, collides: true, draw: houseDoor(color, false) },
+  ];
+}
+
+const clothesline = once(drawClothesline);
+const lanternFlagsRight = once(() => drawLantern('right'));
+const lanternFlagsLeft = once(() => drawLantern('left'));
+
 export const TILES: TileDef[] = [
   { key: 'grass', draw: grass(0) },
   { key: 'grass_tufts', draw: grass(1) },
   { key: 'grass_dark', draw: grass(2) },
-  {
-    key: 'dirt',
-    draw(p, rng) {
-      p.fill(C.dirt);
-      p.speckle(rng, [C.dirtDark, C.dirtDark, C.dirtLight], 36);
-      for (let k = 0; k < 3; k++) {
-        const x = 1 + randInt(rng, 13);
-        const y = 1 + randInt(rng, 14);
-        p.set(x, y, C.pebble);
-        p.set(x + 1, y, C.dirtLight);
-      }
-    },
-  },
-  {
-    key: 'sand',
-    draw(p, rng) {
-      p.fill(C.sand);
-      p.speckle(rng, [C.sandDark, C.sandDark, C.sandLight], 30);
-    },
-  },
+  { key: 'dirt', draw: drawDirt },
+  { key: 'sand', draw: drawSand },
   { key: 'water', collides: true, shootOver: true, animation: swayFrames('water'), draw: water(0) },
   { key: 'water_sparkle', collides: true, shootOver: true, animation: swayFrames('water_sparkle'), draw: water(1) },
   {
@@ -1299,15 +1748,7 @@ export const TILES: TileDef[] = [
       }
     },
   },
-  {
-    key: 'mud', // brejo
-    draw(p, rng) {
-      p.fill(G.mud);
-      p.speckle(rng, [G.mudDark, G.mudDark, G.mudLight], 34);
-      for (let k = 0; k < 2; k++) p.ellipse(3 + randInt(rng, 10), 3 + randInt(rng, 10), 2.2, 1.3, G.puddle);
-      for (let k = 0; k < 3; k++) p.set(randInt(rng, 16), randInt(rng, 16), C.grassDark);
-    },
-  },
+  { key: 'mud', draw: drawMud }, // brejo
   { key: 'tin_roof', collides: true, draw: drawTinRoof },
   { key: 'wood_wall', collides: true, draw: drawWoodWall },
   {
@@ -1588,6 +2029,43 @@ export const TILES: TileDef[] = [
   { key: 'water_posts_f2', collides: true, shootOver: true, draw: waterPosts(2) },
   { key: 'campfire_f1', collides: true, shootOver: true, draw: campfire(1) },
   { key: 'campfire_f2', collides: true, shootOver: true, draw: campfire(2) },
+  // ---- capricho no mapa, passo 2: beiradas suaves ----
+  ...edgeTiles('shore', EDGE_STYLES.shore!),
+  ...edgeTiles('mud_shore', EDGE_STYLES.mud_shore!),
+  ...edgeTiles('sand_grass', EDGE_STYLES.sand_grass!),
+  ...edgeTiles('dirt_grass', EDGE_STYLES.dirt_grass!),
+  ...edgeTiles('mud_grass', EDGE_STYLES.mud_grass!),
+  ...fadeEdgeTiles('deep_edge', G.deep, 14, 235),
+  ...edgeTiles('dirt_mud', EDGE_STYLES.dirt_mud!),
+  { key: 'roof_top_l', collides: true, draw: tinRoof(0, 'l', 1) },
+  { key: 'roof_top_m', collides: true, draw: tinRoof(0, 'm', 0) },
+  { key: 'roof_top_m2', collides: true, draw: tinRoof(0, 'm', 2) },
+  { key: 'roof_top_r', collides: true, draw: tinRoof(0, 'r', 1) },
+  { key: 'roof_eave_l', collides: true, draw: tinRoof(1, 'l', 0) },
+  { key: 'roof_eave_m', collides: true, draw: tinRoof(1, 'm', 1) },
+  { key: 'roof_eave_m2', collides: true, draw: tinRoof(1, 'm', 3) },
+  { key: 'roof_eave_r', collides: true, draw: tinRoof(1, 'r', 0) },
+  ...houseTiles('azul', HOUSE_COLORS.azul),
+  ...houseTiles('verde', HOUSE_COLORS.verde),
+  ...houseTiles('terracota', HOUSE_COLORS.terracota),
+  ...houseTiles('amarelo', HOUSE_COLORS.amarelo),
+  ...tallTiles('lantern', once(() => drawLantern('none'))),
+  { key: 'lantern_flags_r_top', draw: pieceOf(lanternFlagsRight, 0, 0) },
+  { key: 'lantern_flags_l_top', draw: pieceOf(lanternFlagsLeft, 0, 0) },
+  { key: 'flags_a', draw: drawFlags(0) },
+  { key: 'flags_b', draw: drawFlags(2) },
+  { key: 'flags_c', draw: drawFlags(4) },
+  { key: 'clothesline_tl', draw: pieceOf(clothesline, 0, 0) },
+  { key: 'clothesline_tm', draw: pieceOf(clothesline, 1, 0) },
+  { key: 'clothesline_tr', draw: pieceOf(clothesline, 2, 0) },
+  { key: 'clothesline_bl', collides: true, shootOver: true, draw: pieceOf(clothesline, 0, 1) },
+  { key: 'clothesline_bm', collides: true, shootOver: true, draw: pieceOf(clothesline, 1, 1) },
+  { key: 'clothesline_br', collides: true, shootOver: true, draw: pieceOf(clothesline, 2, 1) },
+  { key: 'fishing_net_left', collides: true, shootOver: true, draw: halfOf(drawFishingNet, 0) },
+  { key: 'fishing_net_right', collides: true, shootOver: true, draw: halfOf(drawFishingNet, 1) },
+  { key: 'crate', collides: true, draw: drawCrate },
+  { key: 'barrel', collides: true, draw: drawBarrel },
+  { key: 'fish_basket', collides: true, shootOver: true, draw: drawFishBasket },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));

@@ -3,7 +3,7 @@
 // personagens (quem passa atrás some embaixo das folhas); o tronco, ou o pé do poste, vai na "decor" e
 // bloqueia a passagem. As sombras ficam numa camada entre o chão e a "decor".
 
-import { gid } from './tileset';
+import { EDGE_CORNERS, gid } from './tileset';
 
 /** Árvores grandes (2 tiles de largura e 3 de altura): o prefixo dos 6 tiles de cada uma. */
 export const BIG_TREES = ['tree_big', 'pine_big', 'ipe_yellow_big', 'ipe_pink_big', 'dead_tree_big'] as const;
@@ -93,4 +93,51 @@ export function shuffled<T>(list: readonly T[], rng: () => number): T[] {
 export function depthTileLayers(depth: DepthLayers): { shade: object; above: object } {
   const layer = (id: number, name: string, data: number[]) => ({ id, name, type: 'tilelayer', width: depth.W, height: depth.H, x: 0, y: 0, opacity: 1, visible: true, data });
   return { shade: layer(6, 'sombras', depth.shade), above: layer(7, 'acima', depth.above) };
+}
+
+/** Uma regra de beirada: tiles do terreno `base` que encostam no terreno de `touches` viram os tiles `set_...`. */
+export interface EdgeRule {
+  base: readonly string[];
+  set: string;
+  touches: (x: number, y: number) => boolean;
+}
+
+/**
+ * Troca o chão que encosta em outro terreno pelos tiles de beirada suave (vale a primeira regra que servir).
+ * Rode no fim do gerador: depois disso, a areia da beira deixa de ser "areia" e vira "areia com beirada".
+ * Com `out`, a beirada vai para outra camada (ex.: "sombras") e o chão fica como está. Devolve quantos tiles mudaram.
+ */
+export function softenEdges(ground: number[], W: number, H: number, rules: readonly EdgeRule[], out: number[] = ground): number {
+  const original = [...ground];
+  const sides = [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+  ] as const;
+  const corners = [
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+    [-1, -1],
+  ] as const;
+  let changed = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      for (const rule of rules) {
+        if (!rule.base.some((key) => original[i] === gid(key))) continue;
+        let mask = 0;
+        sides.forEach(([dx, dy], bit) => {
+          if (rule.touches(x + dx, y + dy)) mask |= 1 << bit;
+        });
+        const corner = mask ? -1 : corners.findIndex(([dx, dy]) => rule.touches(x + dx, y + dy));
+        if (!mask && corner < 0) continue;
+        out[i] = gid(mask ? `${rule.set}_${mask}` : `${rule.set}_c_${EDGE_CORNERS[corner]}`);
+        changed++;
+        break;
+      }
+    }
+  }
+  return changed;
 }
