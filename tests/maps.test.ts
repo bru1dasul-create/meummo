@@ -11,7 +11,7 @@ import { tiledFromAscii } from './helpers';
 
 const realMap = (id: string) => JSON.parse(readFileSync(`public/assets/maps/${id}.tmj`, 'utf8')) as TiledMap;
 const layerData = (map: TiledMap, name: string) => map.layers.find((l) => l.name === name)?.data as number[];
-const MAPS = ['refugio', 'santo-amaro', 'billings'];
+const MAPS = ['refugio', 'santo-amaro', 'billings', 'terminal-santo-amaro'];
 
 describe('camadas do mapa', () => {
   it('o que está na camada "acima" (copas) não bloqueia: dá para passar por baixo', () => {
@@ -55,7 +55,7 @@ describe('camadas do mapa', () => {
           }
         }
       }
-      expect(trees, id).toBeGreaterThan(40);
+      expect(trees, id).toBeGreaterThan(id === 'terminal-santo-amaro' ? 4 : 40); // o terminal é cidade: poucas árvores
     }
   });
 
@@ -96,6 +96,20 @@ describe('camadas do mapa', () => {
     const map = GameMap.fromTiled(billings, 'billings');
     expect(map).toMatchObject({ name: 'Represa Billings', safe: false, respawnMap: 'refugio' });
     expect(map.monsterZones.map((z) => z.monster)).not.toContain('iara');
+  });
+
+  it('o Terminal Santo Amaro liga com Santo Amaro (pela rua do meio, ao sul) e tem as quatro plataformas', () => {
+    const terminal = realMap('terminal-santo-amaro');
+    const santoAmaro = realMap('santo-amaro');
+    const objects = (map: TiledMap, layer: string) => map.layers.find((l) => l.name === layer)?.objects ?? [];
+    const prop = (obj: { properties?: { name: string; value: unknown }[] }, name: string) => obj.properties?.find((p) => p.name === name)?.value;
+    expect(objects(santoAmaro, 'saidas').map((e) => [prop(e, 'mapa'), prop(e, 'chegada')])).toContainEqual(['terminal-santo-amaro', 'norte']);
+    expect(objects(terminal, 'saidas').map((e) => [prop(e, 'mapa'), prop(e, 'chegada')])).toEqual([['santo-amaro', 'sul']]);
+    const above = layerData(terminal, 'acima');
+    for (const letter of ['a', 'b', 'c', 'd']) expect(above, `plataforma ${letter}`).toContain(gid(`terminal_roof_front_${letter}`));
+    const monsters = loadMonsterDefs();
+    for (const area of objects(terminal, 'monstros')) expect(monsters.has(area.name!), area.name).toBe(true);
+    expect(GameMap.fromTiled(terminal, 'terminal-santo-amaro')).toMatchObject({ name: 'Terminal Santo Amaro', safe: false, respawnMap: 'refugio' });
   });
 
   it('do deck da fogueira dá para ir direto aos decks dos lados e aos píeres (sem dar a volta no lago)', () => {

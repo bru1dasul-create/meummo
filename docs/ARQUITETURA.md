@@ -131,6 +131,28 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   tudo ou nada) e o limite de ouro (vende só o que cabe). A loja paga `compraPor`% do preço (`sellPrice`, mínimo 1).
   Recusa vem em `fail` (`no_gold`, `too_far`, `cant_trade`, `bag_full`, `dead`), com `item: true`.
 
+## Painel do administrador (`src/server/admin.ts` e `tuning.ts`)
+- `GET /admin` entrega a página (`src/server/admin/painel.html`, HTML e JavaScript sem nada externo); a página só
+  mostra e pede (`GET /admin/api/dados`, `POST /admin/api/ajustar`, `POST /admin/api/padrao`, `GET /admin/api/exportar`;
+  jogadores: `GET /admin/api/jogadores`, `POST /admin/api/jogador` com `acao` = `ouro`, `item`, `curar`, `levar` ou
+  `expulsar`, e `POST /admin/api/aviso`).
+- **Ferramentas de jogadores** ficam no `Realm` (`playersOnline`, `adminGiveGold`, `adminGiveItem`, `adminHeal`,
+  `adminMove`, `notice`) e no `World` de cada mapa; expulsar é `Session.end('kicked')` (o navegador mostra o motivo).
+  Cada ação vira uma linha na janela do servidor ("painel: ...") e uma mensagem no chat de quem recebeu.
+- **Travas** (`accessProblem`): só aceita quem pede do próprio computador (127.0.0.1/::1) e pelo nome `localhost`
+  (contra sites que se fingem de localhost); pedidos que mudam algo precisam do cabeçalho `X-MeuMMO-Admin: 1` e de
+  origem local (outro site não consegue mandar esse cabeçalho sem permissão). A página não abre dentro de outro
+  site. No M5 entram senha e HTTPS.
+- **Ajustes** (`Tuning`): os arquivos `data/*.json` são o padrão; os ajustes (só o que mudou, no mesmo formato em
+  português) ficam em `ajustes.json` ao lado do arquivo dos personagens e são misturados por cima. Cada ajuste é
+  montado e conferido pelos mesmos leitores de quando o servidor liga (`parseMonsterDefs`, `checkNpcs`...): erro =
+  recusa com a mensagem, nada muda. Aceito: os objetos que o jogo usa são atualizados no lugar (quem guardou a
+  referência — monstros vivos, mochilas, NPCs — vê o valor novo), o arquivo é gravado (temporário + troca) e o
+  `Realm.tuningChanged` avisa os mapas: vida dos monstros vivos acompanha na proporção, equipamentos recalculam,
+  e os jogadores recebem `items` e `npcs` com as listas novas.
+- Só campos de uma lista fechada (`MONSTER_FIELDS`, `ITEM_FIELDS`, `NPC_FIELDS`) podem ser ajustados; criar
+  monstro ou item novo continua sendo nos arquivos de dados.
+
 ## Personagens salvos (`src/server/accounts.ts`)
 - Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
   vem dentro do Node.js (`node:sqlite`, Node 22.13+): nada para instalar ou compilar, nem no Windows.
@@ -163,7 +185,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
 | servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
-| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, ou o servidor está desligando |
+| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar no mesmo mapa |
@@ -177,6 +199,8 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
 | servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / estes itens do monstro que caiu em (x, y) foram para a sua mochila |
 | servidor | `drop` / `pickup` / `drop_gone` | caiu ouro ou item no chão para você / você pegou / sumiu (o tempo acabou) |
+| servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
+| servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |
@@ -219,8 +243,9 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   acorda quem desmaia ali. Sem `nome`, a zona se chama "Pindorama".
 - Salve em formato CSV e não use mapa infinito (o servidor explica o erro se isso acontecer).
 - Os mapas atuais foram gerados por código e podem ser editados à mão no Tiled: Refúgio de Guarapiranga (96×72,
-  `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`) e Represa Billings (88×64,
-  `scripts/gen-billings.ts`), os dois últimos usando `scripts/map-builder.ts`. Gerar de novo por cima apaga as
+  `scripts/gen-map.ts`), Ruínas de Santo Amaro (80×60, `scripts/gen-santo-amaro.ts`), Represa Billings (88×64,
+  `scripts/gen-billings.ts`) e Terminal Santo Amaro (64×48, `scripts/gen-terminal.ts`), os três últimos usando
+  `scripts/map-builder.ts`. Gerar de novo por cima apaga as
   edições: gere com `--out outro.tmj` e compare. Cada gerador confere no fim se dá para chegar a pé nos lugares
   importantes; o da Billings também liga cada ilha à entrada com passarelas e guarda os caminhos antes de plantar
   as árvores. Mexeu num gerador? Cuidado com a ordem dos sorteios: um sorteio a mais (ou a menos) no meio muda
@@ -230,7 +255,8 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   sempre **no fim** da lista: os mapas guardam o número de cada tile, então mudar a ordem bagunça o mapa.
   Objetos maiores que um tile (árvores grandes 2x3, postes 1x2, varal 3x2, ônibus) são desenhados inteiros e
   cortados em pedaços; os geradores colocam cada pedaço na camada certa com `scripts/map-depth.ts` (árvores,
-  postes e sombras). Beiradas suaves entre terrenos: para cada par (ex.: areia que encosta na água) há 15 tiles
+  postes e sombras; `clearArea` tira árvores e postes inteiros de um retângulo, para abrir um caminho sem deixar
+  copa sem tronco). Beiradas suaves entre terrenos: para cada par (ex.: areia que encosta na água) há 15 tiles
   pelos lados que encostam (bits 1 norte, 2 leste, 4 sul, 8 oeste) e 4 de canto; `softenEdges` troca o chão no
   fim do gerador (ou põe a beirada noutra camada, como a parte funda da represa na `sombras`). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.

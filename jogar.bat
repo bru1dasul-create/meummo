@@ -22,6 +22,7 @@ if not exist node_modules\ (
 
 echo.
 echo Abrindo o MeuMMO no navegador: http://localhost:5173
+echo Painel do administrador (so neste computador): http://localhost:3000/admin
 echo Se o Windows perguntar sobre o firewall, pode permitir: e o servidor do jogo.
 echo Para desligar o jogo, feche esta janela.
 echo.

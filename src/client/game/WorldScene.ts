@@ -100,6 +100,8 @@ export class WorldScene extends Phaser.Scene {
   /** Andando até este NPC para negociar (abre a loja ao chegar perto). */
   private pendingNpc: number | null = null;
   private myGold = 0;
+  /** A última mochila que o servidor mandou (para redesenhar quando os itens mudam no painel do administrador). */
+  private lastInv!: InventoryState;
   /** Tipos de item (chegam nas boas-vindas). */
   private readonly items = new Map<string, ItemInfo>();
   /** O que estava equipado (para tocar o som de "equipou" só quando muda). */
@@ -194,6 +196,7 @@ export class WorldScene extends Phaser.Scene {
     this.bagEquipped = this.welcome.inv.equipped;
     this.hud.setGold(this.welcome.inv.gold ?? 0);
     this.myGold = this.welcome.inv.gold ?? 0;
+    this.lastInv = this.welcome.inv;
     this.drops = new GroundDrops(this, this.items);
     this.shop = new ShopWindow(this.items, this.welcome.inv, {
       buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
@@ -829,9 +832,29 @@ export class WorldScene extends Phaser.Scene {
         // na loja: ouro diminuiu = comprou ("ka-tching"); aumentou = vendeu (moedas na mão)
         if (this.shop.isOpen && msg.inv.gold !== this.myGold) this.sfx.play((msg.inv.gold ?? 0) < this.myGold ? 'buy' : 'sell');
         this.myGold = msg.inv.gold ?? 0;
+        this.lastInv = msg.inv;
         this.shop.setInventory(msg.inv);
         break;
       }
+      case 'notice':
+        // aviso do administrador para todo mundo
+        this.toast.show(msg.text, 7000);
+        this.chat.addSystem(`Aviso do administrador: ${msg.text}`);
+        this.sfx.play('levelup');
+        break;
+      case 'items':
+        // o administrador ajustou os itens (preço, cura, bônus): a mochila e a loja mostram os números novos
+        for (const item of msg.items) this.items.set(item.id, item);
+        this.bag.setState(this.lastInv);
+        this.shop.setInventory(this.lastInv);
+        break;
+      case 'npcs':
+        for (const npc of msg.npcs) {
+          this.npcInfo.set(npc.e.id, npc);
+          this.entities.get(npc.e.id)?.setSubtitle(npc.title);
+          if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
+        }
+        break;
       case 'gear':
         this.entities.get(msg.id)?.setGear(msg.gear);
         break;

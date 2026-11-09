@@ -15,6 +15,10 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 - Siga a avenida a leste até o fim e chegue nas **Ruínas de Santo Amaro** (níveis 4 a 8): quarteirões de prédios
   mortos e lojas fechadas. Nos prédios desabados vivem o **Corpo-Seco** e o **Capelobo**; no largo do chafariz seco,
   a chefe: a **Mula sem Cabeça**, que dá investidas em linha reta e deixa o chão pegando fogo
+- De Santo Amaro, desça a rua do meio até o fim e chegue no **Terminal Santo Amaro**: as plataformas cobertas
+  A, B, C e D continuam de pé, com a cobertura de concreto furada e cheia de cipó, e os ônibus enferrujados nunca
+  mais saíram das pistas. Na entrada, as catracas e a bilheteria; no fundo, a parte que desabou virou mato e
+  acampamento, com tambores de fogo (por enquanto quem anda por lá é o Corpo-Seco e o Capelobo)
 - Desça a trilha do brejo, ao sul, até a **Represa Billings**: um labirinto de canais de água verde e ilhas de
   mato ligadas por passarelas, com buritis, aguapés, casas afundadas, a usina velha, a ponte da rodovia quebrada
   no meio do lago e a prainha de frente para a pedra onde a **Iara** vai cantar (as criaturas de lá ainda estão
@@ -107,6 +111,34 @@ Cada personagem (nome + senha + progresso) fica no arquivo `saves/meummo.db`, de
   Ainda assim, por enquanto use uma senha só do jogo: na rede de casa ela viaja sem criptografia
   (isso muda quando o jogo for para a internet, no M5).
 
+## Painel do administrador (ajustar o jogo sem mexer em arquivos)
+
+Com o jogo ligado, abra **http://localhost:3000/admin** no navegador **do mesmo computador** onde o jogo está
+rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não consegue abrir o painel.
+
+- **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
+  sozinho, distância que percebe e persegue, tempo para renascer.
+- **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
+- **Loja e personagens:** o que a Dona Iracema diz, o que vende e quanto paga pelo que você vende.
+- **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **dar ouro**,
+  **dar item** (o que não couber na mochila fica no chão, ao lado), **curar**, **levar para** outro mapa ou posição
+  (x e y vazios = ponto de nascimento) e **expulsar** (o progresso fica salvo e dá para entrar de novo). No topo,
+  **aviso para todos** (aparece na tela de quem está jogando). Quem recebe vê no chat o que o administrador fez.
+  Tudo fica registrado na janela do servidor. Banir fica para quando o jogo for para a internet (M5).
+
+Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
+alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").
+Tempos são em milissegundos (1000 ms = 1 segundo).
+
+Os ajustes ficam em `saves/ajustes.json`, **fora do GitHub**: atualizar o jogo não apaga nem dá conflito. Cada
+número que você mudou aparece marcado, com o botão **voltar ao padrão**. Para um ajuste virar o padrão do projeto
+(para todo mundo e para quem instalar do zero), abra a aba **Meus ajustes**, clique em **Copiar meus ajustes** e
+mande para o chat "Estrutura e regras". Se uma atualização do jogo deixar algum ajuste sem sentido, o jogo liga
+com os valores padrão, avisa no painel e guarda os ajustes antigos em `saves/ajustes-antigos.json`.
+
+Os arquivos `data/*.json` continuam valendo como antes (são o padrão do projeto); o painel só põe os seus ajustes
+por cima deles.
+
 ## Ajustar os monstros (sem programar)
 
 Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` ([mínimo, máximo]),
@@ -170,7 +202,8 @@ o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão
 
 Os mapas são feitos no [Tiled](https://www.mapeditor.org/), um editor gratuito. Cada zona é um arquivo em
 `public/assets/maps`, e o nome do arquivo é o **id** do mapa: `refugio.tmj` (Refúgio de Guarapiranga, onde
-todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro) e `billings.tmj` (Represa Billings). Em cada mapa:
+todo mundo começa), `santo-amaro.tmj` (Ruínas de Santo Amaro), `billings.tmj` (Represa Billings) e
+`terminal-santo-amaro.tmj` (Terminal Santo Amaro). Em cada mapa:
 
 - camadas de tiles, de baixo para cima: `ground` (o chão), `sombras` (sombra de casas e prédios), `decor`
   (troncos, casas, flores…) e `acima`, que o jogo desenha **por cima dos personagens**: copa das árvores e alto
@@ -211,6 +244,8 @@ Se uma saída apontar para um mapa ou ponto que não existe, o servidor explica 
 ![Mapa das Ruínas de Santo Amaro](docs/mapa-santo-amaro.png)
 
 ![Mapa da Represa Billings](docs/mapa-billings.png)
+
+![Mapa do Terminal Santo Amaro](docs/mapa-terminal-santo-amaro.png)
 
 Nos mapas: **amarelo** = Sagui Travesso, **laranja** = Jararaca, **vermelho** = Saci, **azul-claro** = saída
 para outro mapa.

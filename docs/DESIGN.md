@@ -103,7 +103,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | Zona | Nível | Como é | Situação |
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
-| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | ✅ mapa e criaturas (níveis 4 a 8) |
+| **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. Ao sul, o Terminal Santo Amaro, com os ônibus parados para sempre. | ✅ mapa e criaturas (níveis 4 a 8) e o terminal |
 | **Represa Billings** (os Labirintos) | farm e perigo | Canais e pântanos ao sul do brejo, com jacarés mutantes e espíritos da água (Iara, Boto, Lobisomem da Mata). | ✅ mapa (criaturas provisórias) |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
@@ -157,6 +157,21 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 | Mula sem Cabeça | 8 (chefe) | o largo do chafariz | Agressiva, nota quem entra no largo | **Investida**: marca uma linha de 6 tiles, atravessa atropelando e deixa o chão pegando fogo por 2,5 s | Arruda (sempre), **Ferradura em Brasa** (lendária, +3 dano, +2 defesa) |
 
 Dica para a Mula: saia da linha vermelha **para o lado** (ou use a Esquiva no momento certo) e não pare em cima do fogo.
+
+### Terminal Santo Amaro (o mapa)
+- **A chegada:** a rua do meio de Santo Amaro desce para o sul, atravessa a mata da borda e chega na calçada larga
+  do terminal, com canteiros tomados pelo mato.
+- **A entrada:** o muro com as catracas no meio (e dois buracos nos lados, por onde o povo pulava) e a bilheteria
+  com o vidro quebrado.
+- **As plataformas A, B, C e D:** a cobertura de concreto ainda de pé, com a letra de cada plataforma na faixa
+  (passa por baixo dela, como nas copas), furada e cheia de cipó; pilares, bancos e a faixa amarela da beirada.
+  A última plataforma está mais destruída que as outras.
+- **As pistas:** ônibus enferrujados parados onde estavam no dia em que tudo parou; faixas de pedestre cruzando as
+  pistas e ruas dos lados ligando todas elas.
+- **O fundo:** a parte que desabou virou mato, com entulho, árvores secas, um ônibus tombado e um acampamento com
+  tambores de fogo (alguém ainda vive por ali?).
+- **O clima:** neblina e penumbra como em Santo Amaro, só que um pouco menos.
+- **Criaturas por enquanto:** Corpo-Seco nas plataformas e Capelobo no fundo. Quem desmaia aqui acorda no Refúgio.
 
 **Facções (PvP por território, mais adiante):**
 - **Tecnocratas — os Herdeiros da Pedra:** reconstroem a tecnologia antiga; armaduras de lataria de carro,

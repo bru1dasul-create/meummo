@@ -616,6 +616,86 @@ export class World {
     if (this.items.get(stack.item)?.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
   }
 
+  // ======================= ferramentas do administrador =======================
+
+  /** Dá itens a um jogador; o que não couber na mochila cai no chão, perto dele. Devolve quantos foram para a mochila. */
+  adminGiveItem(player: Player, item: string, n: number): number {
+    const added = player.inventory.add(item, n);
+    if (added > 0) player.invDirty = true;
+    if (added < n) this.dropOnGround(player, { x: player.x, y: player.y }, 0, { item, n: n - added }, this.now(), ITEM_DROP_MS);
+    player.outbox.push({ t: 'sys', text: `O administrador te deu: ${this.describe([{ item, n }])}.` });
+    return added;
+  }
+
+  adminGiveGold(player: Player, n: number): number {
+    const added = player.inventory.addGold(n);
+    if (added > 0) player.invDirty = true;
+    player.outbox.push({ t: 'sys', text: `O administrador te deu ${added} de ouro.` });
+    return added;
+  }
+
+  /** Vida cheia. */
+  adminHeal(player: Player): void {
+    const amount = player.maxHp - player.hp;
+    player.hp = player.maxHp;
+    if (amount > 0) this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
+    player.outbox.push({ t: 'sys', text: 'O administrador te curou.' });
+  }
+
+  /** Leva o jogador para outro lugar deste mesmo mapa. */
+  adminTeleport(player: Player, spot: Tile): void {
+    player.x = spot.x;
+    player.y = spot.y;
+    player.queue.length = 0;
+    player.nextStepAt = 0;
+    player.changed = true;
+    player.outbox.push({ t: 'teleport', x: player.x, y: player.y, dir: player.dir });
+    player.outbox.push({ t: 'sys', text: `O administrador te levou para (${spot.x}, ${spot.y}).` });
+  }
+
+  /** Um lugar livre neste mapa: (x, y) se der para ficar lá (ou o mais perto), ou o nascimento se não vier posição. */
+  freeSpot(x?: number, y?: number): Tile | null {
+    if (x === undefined || y === undefined) return this.arrivalSpot('spawn');
+    if (this.map.isWalkable(x, y) && this.map.isReachable(x, y)) return { x, y };
+    const near = this.map.nearestWalkable(x, y);
+    return near && this.map.isReachable(near.x, near.y) ? near : null;
+  }
+
+  // ======================= ajustes do administrador =======================
+
+  /** A vida dos monstros mudou no painel: os que estão no mapa acompanham (na mesma proporção). */
+  refreshMonsters(): void {
+    for (const monster of this.monsters.values()) {
+      const max = monster.def.hp;
+      if (max === monster.maxHp) continue;
+      monster.hp = Math.max(1, Math.min(max, Math.round((monster.hp / monster.maxHp) * max)));
+      monster.maxHp = max;
+      this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
+    }
+  }
+
+  /** Os itens mudaram no painel: refaz o que os equipamentos somam e manda a lista nova para quem está aqui. */
+  refreshItems(): void {
+    const items = [...this.items.values()];
+    for (const player of this.players.values()) {
+      player.bonus = player.inventory.bonus();
+      const maxHp = playerMaxHp(player);
+      if (maxHp !== player.maxHp) {
+        player.maxHp = maxHp;
+        player.hp = Math.min(player.hp, maxHp);
+        this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
+      }
+      player.statsDirty = true;
+      player.outbox.push({ t: 'items', items });
+    }
+  }
+
+  /** Os NPCs mudaram no painel (o que vendem, o que dizem): manda a lista nova para quem está aqui. */
+  refreshNpcs(): void {
+    const npcs = this.npcList();
+    for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
+  }
+
   // ======================= loja =======================
 
   /** Comprar `n` deste item do vendedor `npcId` (pelo `preco` de data/items.json). */

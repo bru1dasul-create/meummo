@@ -154,7 +154,8 @@ export class Monster {
   y: number;
   dir: Dir = DOWN;
   hp: number;
-  readonly maxHp: number;
+  /** Muda se o administrador ajustar a vida do monstro (veja World.refreshMonsters). */
+  maxHp: number;
   readonly level: number;
   mode: MonsterMode = 'idle';
   targetId: number | null = null;

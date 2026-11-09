@@ -41,6 +41,9 @@ const FOUNTAIN = { x: 41, y: 17 };
 /** Quem chega do Refúgio aparece aqui; a saída de volta fica na borda oeste. */
 const ARRIVAL = { x: 3, y: 26 };
 const WEST_EXIT = { x: 0, y: 22, w: 1, h: 9 };
+/** A rua do meio continua para o sul até a borda: é a saída para o Terminal Santo Amaro (e a chegada de lá). */
+const SOUTH_EXIT = { x: 40, y: H - 1, w: 3, h: 1 };
+const SOUTH_ARRIVAL = { x: 41, y: H - 5 };
 
 interface Rect {
   x0: number;
@@ -283,6 +286,12 @@ m.fill(0, WEST_EXIT.y, 5, WEST_EXIT.y + WEST_EXIT.h - 1, (x, y) => {
   if (!inStreet(x, y)) m.setGround(x, y, 'grass_gloom');
 });
 
+// 7a. A rua do meio atravessa a mata da borda sul até a saída para o terminal (sem sortear nada: o resto não muda)
+m.depth.clearArea(SOUTH_EXIT.x - 1, H - 7, SOUTH_EXIT.x + SOUTH_EXIT.w, H - 1);
+m.fill(SOUTH_EXIT.x, H - 7, SOUTH_EXIT.x + SOUTH_EXIT.w - 1, H - 1, (x, y) => m.setGround(x, y, (x + y) % 3 ? 'asphalt_cracked' : 'asphalt'));
+m.fill(SOUTH_EXIT.x - 1, H - 7, SOUTH_EXIT.x - 1, H - 1, (x, y) => m.setGround(x, y, 'concrete_cracked'));
+m.fill(SOUTH_EXIT.x + SOUTH_EXIT.w, H - 7, SOUTH_EXIT.x + SOUTH_EXIT.w, H - 1, (x, y) => m.setGround(x, y, 'concrete_cracked'));
+
 // 7b. Beiradas suaves: o mato escuro avançando por cima do concreto (no fim, depois de tudo estar no lugar)
 softenEdges(m.ground, W, H, [
   {
@@ -330,6 +339,7 @@ const map = m.toTiled({
   points: [
     { name: 'spawn', ...ARRIVAL },
     { name: 'oeste', ...ARRIVAL },
+    { name: 'sul', ...SOUTH_ARRIVAL },
   ],
   monsters: monsterAreas(),
   exits: [
@@ -339,6 +349,14 @@ const map = m.toTiled({
       properties: [
         { name: 'mapa', type: 'string', value: 'refugio' },
         { name: 'chegada', type: 'string', value: 'leste' },
+      ],
+    },
+    {
+      name: 'Terminal Santo Amaro',
+      ...SOUTH_EXIT,
+      properties: [
+        { name: 'mapa', type: 'string', value: 'terminal-santo-amaro' },
+        { name: 'chegada', type: 'string', value: 'norte' },
       ],
     },
   ],
@@ -351,6 +369,7 @@ const checkpoints: Record<string, { x: number; y: number }> = {
   'saída para o Refúgio': { x: 0, y: AVENUE_Y + 1 },
   'largo do chafariz': { x: FOUNTAIN.x, y: FOUNTAIN.y + 2 },
   'fim da avenida (leste)': { x: W - 6, y: AVENUE_Y + 1 },
+  'saída para o terminal (sul)': { x: SOUTH_EXIT.x + 1, y: H - 1 },
 };
 for (const sx of STREETS_X) {
   checkpoints[`rua x=${sx} (norte)`] = { x: sx + 1, y: 6 };
