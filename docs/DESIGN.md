@@ -137,9 +137,10 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
   caiu no meio (dá para andar até a ponta quebrada). Casas afundadas mostram só o telhado.
 - **A usina velha:** um prédio de concreto numa ilha do nordeste, com sucata em volta.
 - **A prainha da Iara:** areia de frente para uma pedra grande no meio d'água, onde ela vai cantar.
-- **Criaturas por enquanto:** Jararacas nas ilhas perto da entrada, Corpo-Seco no leste (usina e casas
-  afundadas) e Capelobo nas matas da beira do lago. As de lá (Iara, Boto, jacarés) estão marcadas no mapa e
-  entram quando forem criadas. Quem desmaia aqui acorda no Refúgio.
+- **Criaturas:** o Jacaré Mutante nos canais do oeste (3) e o Boto Encantado no lago das casas afundadas (2);
+  e as de fora: Jararacas nas ilhas perto da entrada, Corpo-Seco no leste (usina e casas afundadas) e Capelobo nas
+  matas da beira do lago. A área da Iara (a prainha e a pedra) está marcada no mapa e ela entra quando for criada.
+  Quem desmaia aqui acorda no Refúgio.
 - **As criaturas de lá** (em `data/monsters.json`):
 
   | Criatura | Nível | Jeito | Golpe | Deixa |

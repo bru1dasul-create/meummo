@@ -120,7 +120,8 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   12 lojas, supermercado, cinema e praça de alimentação), com criaturas provisórias (Corpo-Seco, Capelobo e Saci)
 - [x] **[estrutura]** Jacaré Mutante e Boto Encantado em `data/monsters.json` (golpes que já existem; o jacaré
   deixa o Dente de Jacaré, que vale ouro na loja)
-- [ ] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings
+- [x] **[mundo]** Passar as áreas do jacaré e do boto da camada `lendas` para `monstros` na Billings (3 jacarés nos
+  canais do oeste, 2 botos no lago das casas afundadas; a Iara continua marcada em `lendas`)
 - [ ] **[arte]** Desenhos do jacaré, do boto e da Iara; ícone do Dente de Jacaré (`icone: "dente"`)
 - [ ] **[estrutura + arte + mundo]** Iara, chefe da Billings: o canto puxa o jogador para a água e a esquiva quebra o
   encanto (área já marcada: camada `lendas`); depois, Boitatá como chefe

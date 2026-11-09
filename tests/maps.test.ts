@@ -82,7 +82,7 @@ describe('camadas do mapa', () => {
     expect(shore).toBeGreaterThan(100);
   });
 
-  it('a Billings liga com o Refúgio, usa só criaturas que existem e marca onde vão morar as lendas', () => {
+  it('a Billings liga com o Refúgio, tem o jacaré e o boto (criaturas que existem) e marca onde vai morar a Iara', () => {
     const billings = realMap('billings');
     const refugio = realMap('refugio');
     const objects = (map: TiledMap, layer: string) => map.layers.find((l) => l.name === layer)?.objects ?? [];
@@ -93,8 +93,9 @@ describe('camadas do mapa', () => {
     const areas = objects(billings, 'monstros');
     expect(areas.length).toBeGreaterThanOrEqual(5);
     for (const area of areas) expect(monsters.has(area.name!), area.name).toBe(true);
-    // as lendas (Iara, Boto, jacarés) ainda não existem: ficam numa camada que o servidor ignora
-    expect(objects(billings, 'lendas').map((a) => a.name)).toEqual(['iara', 'boto', 'jacare']);
+    // o jacaré e o boto já existem e moram lá; a Iara ainda não: fica numa camada que o servidor ignora
+    expect(areas.map((a) => a.name)).toEqual(expect.arrayContaining(['jacare', 'boto']));
+    expect(objects(billings, 'lendas').map((a) => a.name)).toEqual(['iara']);
     const map = GameMap.fromTiled(billings, 'billings');
     expect(map).toMatchObject({ name: 'Represa Billings', safe: false, respawnMap: 'refugio' });
     expect(map.monsterZones.map((z) => z.monster)).not.toContain('iara');

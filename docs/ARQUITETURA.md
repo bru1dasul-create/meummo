@@ -256,7 +256,7 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   importantes; o da Billings também liga cada ilha à entrada com passarelas e guarda os caminhos antes de plantar
   as árvores. Mexeu num gerador? Cuidado com a ordem dos sorteios: um sorteio a mais (ou a menos) no meio muda
   tudo o que vem depois (por isso alguns passos sorteiam "à toa", para o resto do mapa ficar igual).
-- Camada de objetos `lendas` (Billings): áreas de criaturas que ainda vão existir; o servidor ignora.
+- Camada de objetos `lendas` (Billings): áreas de criaturas que ainda vão existir (hoje, a Iara); o servidor ignora.
 - Mapa de dentro (o shopping): a planta sai de constantes no gerador (corredores, átrio, faixas de lojas) e cada
   loja tem a frente em duas linhas: o letreiro na camada `acima` (em cima da porta dá para passar por baixo dele;
   no resto da linha, a `decor` tem parede, que bloqueia) e a frente na `decor` (porta de aço, vitrine, entrada).
