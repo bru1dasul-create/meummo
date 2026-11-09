@@ -23,10 +23,13 @@ export function parseClientMsg(raw: string): ClientMsg | null {
   const msg = data as Record<string, unknown>;
 
   switch (msg.t) {
-    case 'hello':
-      return typeof msg.name === 'string' && msg.name.length <= 64 && Number.isSafeInteger(msg.v)
-        ? { t: 'hello', name: msg.name, v: msg.v as number }
+    case 'hello': {
+      // Sem senha ainda é aceito aqui: assim um jogo antigo recebe "versão desatualizada", e não silêncio.
+      const password = msg.password ?? '';
+      return typeof msg.name === 'string' && msg.name.length <= 64 && typeof password === 'string' && password.length <= 256 && Number.isSafeInteger(msg.v)
+        ? { t: 'hello', name: msg.name, password, v: msg.v as number }
         : null;
+    }
     case 'step':
       if (!isDir(msg.dir) || !Number.isSafeInteger(msg.seq) || (msg.seq as number) < 0) return null;
       if (msg.dash !== undefined && msg.dash !== true) return null;

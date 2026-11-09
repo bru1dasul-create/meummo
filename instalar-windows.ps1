@@ -33,11 +33,13 @@ function Install-MeuMMO {
     function Tem([string]$comando) {
         return [bool](Get-Command $comando -ErrorAction SilentlyContinue)
     }
+    # Versao do Node como numero: 22.13 vira 2213 (o jogo precisa de 22.13 ou mais novo, por causa do SQLite)
     function Versao-Node {
         if (-not (Tem 'node')) { return 0 }
-        $versao = (& node -v) -replace '^v', ''
-        return [int]($versao.Split('.')[0])
+        $partes = ((& node -v) -replace '^v', '').Split('.')
+        return [int]$partes[0] * 100 + [int]$partes[1]
     }
+    $nodeMinimo = 2213
 
     Write-Host ''
     Write-Host '=== Instalador do MeuMMO ===' -ForegroundColor Yellow
@@ -50,16 +52,25 @@ function Install-MeuMMO {
     }
 
     # 1. Node.js: roda o servidor e as ferramentas do jogo
-    if ((Versao-Node) -lt 22) {
+    if ((Versao-Node) -lt $nodeMinimo) {
         if (-not (Tem 'winget')) {
             Falha 'Nao consigo instalar o Node.js sozinho (o winget nao esta disponivel). Baixe a versao LTS em https://nodejs.org, instale e rode este instalador de novo.'
             return
         }
-        Passo 'Instalando o Node.js (se o Windows pedir permissao, clique em Sim)...'
-        winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+        if (Tem 'node') {
+            Passo "Atualizando o Node.js $(node -v), que e antigo demais para o jogo (se o Windows pedir permissao, clique em Sim)..."
+            winget upgrade -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+        } else {
+            Passo 'Instalando o Node.js (se o Windows pedir permissao, clique em Sim)...'
+            winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+        }
         Recarregar-Path
-        if ((Versao-Node) -lt 22) {
+        if ((Versao-Node) -eq 0) {
             Falha 'O Node.js nao ficou disponivel. Feche o PowerShell, abra de novo e cole o comando outra vez.'
+            return
+        }
+        if ((Versao-Node) -lt $nodeMinimo) {
+            Falha "O Node.js continua antigo ($(node -v)). Baixe a versao LTS em https://nodejs.org, instale e rode este instalador de novo."
             return
         }
     }

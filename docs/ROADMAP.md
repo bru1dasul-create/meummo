@@ -44,8 +44,10 @@ Tudo isto se ajusta mexendo em números, sem programar:
   avenida em ruínas e a praça do Saci (arte nova: 26 tiles)
 - [x] Nome da zona aparece na tela ao entrar; o mapa diz o próprio nome e se é zona segura (propriedades `nome` e `seguro`)
 
-## ⏭️ M2 — Progresso salvo
-- [ ] Conta com senha e personagem salvo em banco de dados (SQLite no começo)
+## 🔧 M2 — Progresso salvo
+- [x] Personagem com senha, salvo em banco de dados (SQLite que já vem no Node.js, arquivo `saves/meummo.db`):
+  nível, XP, vida, lugar e aparência. Salva ao sair, ao subir de nível, a cada 30 s e ao desligar o servidor
+- [x] Senhas protegidas (scrypt), freio para quem erra a senha muitas vezes, entrar de outro lugar tira a sessão antiga
 - [ ] Monstros deixam itens; inventário; equipamento que muda os atributos
 
 ## M3 — Mundo
@@ -57,7 +59,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada
 
 ## M5 — Teste fechado
-- [ ] Servidor na internet (VPS), domínio e HTTPS
+- [ ] Servidor na internet (VPS), domínio e HTTPS (a senha passa a viajar criptografada; atrás de um proxy,
+  usar o endereço real de cada jogador nos freios de senha)
 - [ ] Ferramentas de admin (expulsar, banir, avisos) e registros
 - [ ] 20 a 50 pessoas jogando juntas
 

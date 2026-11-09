@@ -5,3 +5,6 @@ dist/
 .env
 # arquivos temporários do Tiled
 *.tiled-session
+
+# personagens salvos (cada computador tem os seus)
+saves/

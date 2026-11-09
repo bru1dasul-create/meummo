@@ -1,7 +1,7 @@
 // Conexão com o servidor (WebSocket).
 
 import { PROTOCOL_VERSION } from '../shared/constants';
-import type { ClientMsg, RejectReason, ServerMsg, WelcomeMsg } from '../shared/protocol';
+import type { ByeReason, ClientMsg, RejectReason, ServerMsg, WelcomeMsg } from '../shared/protocol';
 
 export type JoinFailure = RejectReason | 'offline' | 'timeout';
 
@@ -17,7 +17,9 @@ export class Connection {
   /** Quem trata as mensagens. Enquanto ninguém escuta, elas ficam guardadas. */
   private handler: Handler | null = null;
   private buffer: ServerMsg[] = [];
-  onClose: (() => void) | null = null;
+  /** Motivo que o servidor deu antes de encerrar (null = a conexão simplesmente caiu). */
+  private byeReason: ByeReason | null = null;
+  onClose: ((reason: ByeReason | null) => void) | null = null;
 
   private constructor(private readonly ws: WebSocket) {
     ws.addEventListener('message', (event) => {
@@ -29,11 +31,12 @@ export class Connection {
       }
       if (!Array.isArray(batch)) return;
       for (const msg of batch as ServerMsg[]) {
+        if (msg.t === 'bye') this.byeReason = msg.reason;
         if (this.handler) this.handler(msg);
         else this.buffer.push(msg);
       }
     });
-    ws.addEventListener('close', () => this.onClose?.());
+    ws.addEventListener('close', () => this.onClose?.(this.byeReason));
   }
 
   static defaultUrl(): string {
@@ -41,8 +44,13 @@ export class Connection {
     return `${protocol}//${location.host}/ws`;
   }
 
-  /** Conecta e entra no mundo com o nome escolhido. */
-  static join(name: string, url = Connection.defaultUrl(), timeoutMs = 8000): Promise<{ conn: Connection; welcome: WelcomeMsg }> {
+  /** Conecta e entra no mundo com este personagem (o servidor cria se o nome ainda não existir). */
+  static join(
+    name: string,
+    password: string,
+    url = Connection.defaultUrl(),
+    timeoutMs = 10000,
+  ): Promise<{ conn: Connection; welcome: WelcomeMsg }> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
       const conn = new Connection(ws);
@@ -68,7 +76,7 @@ export class Connection {
           finish(new JoinError(msg.reason));
         }
       };
-      ws.addEventListener('open', () => conn.send({ t: 'hello', v: PROTOCOL_VERSION, name }));
+      ws.addEventListener('open', () => conn.send({ t: 'hello', v: PROTOCOL_VERSION, name, password }));
       ws.addEventListener('error', () => finish(new JoinError('offline')));
       ws.addEventListener('close', () => finish(new JoinError('offline')));
     });

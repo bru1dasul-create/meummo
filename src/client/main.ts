@@ -1,8 +1,18 @@
 // Ponto de entrada do jogo no navegador: tela de entrada → conexão → mundo.
 
 import Phaser from 'phaser';
-import { NAME_MAX, NAME_MIN, nameProblem, normalizeName, type NameProblem } from '../shared/names';
-import type { WelcomeMsg } from '../shared/protocol';
+import {
+  NAME_MAX,
+  NAME_MIN,
+  nameProblem,
+  normalizeName,
+  PASSWORD_MAX,
+  PASSWORD_MIN,
+  passwordProblem,
+  type NameProblem,
+  type PasswordProblem,
+} from '../shared/names';
+import type { ByeReason, WelcomeMsg } from '../shared/protocol';
 import { WorldScene } from './game/WorldScene';
 import { Connection, JoinError, type JoinFailure } from './net';
 import { Sfx } from './sfx';
@@ -13,6 +23,7 @@ const NAME_STORAGE_KEY = 'meummo:nome';
 const loginOverlay = document.getElementById('login') as HTMLDivElement;
 const loginForm = document.getElementById('login-form') as HTMLFormElement;
 const nameInput = document.getElementById('name') as HTMLInputElement;
+const passwordInput = document.getElementById('password') as HTMLInputElement;
 const loginButton = document.getElementById('login-button') as HTMLButtonElement;
 const loginError = document.getElementById('login-error') as HTMLParagraphElement;
 
@@ -22,13 +33,28 @@ const NAME_ERRORS: Record<NameProblem, string> = {
   chars: 'Use só letras, números, espaço ou _ (e pelo menos uma letra).',
 };
 
+const PASSWORD_ERRORS: Record<PasswordProblem, string> = {
+  short: `A senha precisa ter pelo menos ${PASSWORD_MIN} caracteres.`,
+  long: `A senha pode ter no máximo ${PASSWORD_MAX} caracteres.`,
+};
+
 const JOIN_ERRORS: Record<JoinFailure, string> = {
   name_invalid: 'Esse nome não é válido.',
   name_taken: 'Já tem alguém online com esse nome. Escolha outro!',
+  password_invalid: PASSWORD_ERRORS.short,
+  wrong_password: 'Senha errada para esse personagem. Se ele não for seu, escolha outro nome.',
+  too_many_attempts: 'Muitas tentativas com a senha errada. Espere alguns minutos e tente de novo.',
+  creation_limit: 'Muitos personagens novos criados daqui. Espere um pouco ou entre com um que você já tem.',
+  unavailable: 'O servidor não conseguiu abrir os personagens salvos. Tente de novo daqui a pouco.',
   full: 'O servidor está cheio agora. Tente de novo daqui a pouco.',
   version: 'Seu jogo está desatualizado. Recarregue a página.',
   offline: 'Não consegui falar com o servidor. Ele está ligado?',
   timeout: 'O servidor demorou demais para responder. Tente de novo.',
+};
+
+const BYE_MESSAGES: Record<ByeReason, string> = {
+  replaced: 'Você entrou com esse personagem em outro lugar (outra aba ou aparelho).',
+  shutdown: 'O servidor foi desligado ou reiniciou. Seu progresso está salvo: entre de novo daqui a pouco.',
 };
 
 let game: Phaser.Game | null = null;
@@ -36,7 +62,7 @@ const sfx = new Sfx();
 let session: { conn: Connection; chat: ChatBox; hud: Hud } | null = null;
 
 nameInput.value = loadSavedName();
-if (!matchMedia('(pointer: coarse)').matches) nameInput.focus();
+if (!matchMedia('(pointer: coarse)').matches) (nameInput.value ? passwordInput : nameInput).focus();
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -46,12 +72,18 @@ loginForm.addEventListener('submit', async (event) => {
     loginError.textContent = NAME_ERRORS[problem];
     return;
   }
+  const password = passwordInput.value;
+  const badPassword = passwordProblem(password);
+  if (badPassword) {
+    loginError.textContent = PASSWORD_ERRORS[badPassword];
+    return;
+  }
   loginError.textContent = '';
   sfx.unlock(); // clique do jogador: agora o navegador deixa tocar som
   loginButton.disabled = true;
   loginButton.textContent = 'Entrando...';
   try {
-    const { conn, welcome } = await Connection.join(name);
+    const { conn, welcome } = await Connection.join(name, password);
     saveName(name);
     startGame(conn, welcome);
   } catch (error) {
@@ -67,7 +99,7 @@ function startGame(conn: Connection, welcome: WelcomeMsg): void {
   const chat = new ChatBox((text) => conn.send({ t: 'chat', text }));
   const hud = new Hud(welcome.you.name);
   session = { conn, chat, hud };
-  conn.onClose = () => endGame('A conexão com o servidor caiu. Entre de novo.');
+  conn.onClose = (reason) => endGame(reason ? BYE_MESSAGES[reason] : 'A conexão com o servidor caiu. Entre de novo.');
 
   game = new Phaser.Game({
     type: Phaser.AUTO,

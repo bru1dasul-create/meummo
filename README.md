@@ -8,8 +8,10 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 ![A vila flutuante do Refúgio de Guarapiranga](docs/screenshot.png)
 
-## Onde estamos: M1 — Combate de ação ✅
+## Onde estamos: M1 — Combate de ação ✅ · M2 — Progresso salvo (começando)
 
+- Entre com **nome e senha**: na primeira vez o personagem nasce na hora; depois ele volta com o nível,
+  a XP, a vida e o lugar onde parou
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
@@ -45,7 +47,7 @@ e nunca apaga uma pasta que já tenha outras coisas.
 
 ## Como jogar no seu computador (qualquer sistema)
 
-Precisa do [Node.js](https://nodejs.org) versão 22 ou mais nova. No terminal, dentro da pasta do projeto:
+Precisa do [Node.js](https://nodejs.org) versão 22.13 ou mais nova. No terminal, dentro da pasta do projeto:
 
 ```bash
 npm install
@@ -77,9 +79,21 @@ npm run bots -- 6 --cacar
 | `npm run dev` | jogo + servidor em modo de desenvolvimento (recarregam sozinhos ao salvar) |
 | `npm run check` | confere os tipos e roda todos os testes automáticos |
 | `npm run build` e depois `npm start` | versão de produção: um único servidor na porta 3000 (reinicie o `npm start` depois de cada build) |
-| `npm run bots -- 10` | 10 jogadores automáticos andando e conversando (`--cacar` para caçarem monstros) |
+| `npm run bots -- 10` | 10 jogadores automáticos andando e conversando (`--cacar` para caçarem monstros); aparecem como "Bot ..." |
 | `npm run gen:tiles` | redesenha a arte provisória (`public/assets/tiles.png`) |
 | `npm run render:map` | desenha o mapa inteiro em `docs/mapa.png` |
+
+## Personagens salvos
+
+Cada personagem (nome + senha + progresso) fica no arquivo `saves/meummo.db`, dentro da pasta do jogo
+(no seu PC, `E:\mmorpg\saves`). Esse arquivo **não vai para o GitHub** e o **Atualizar MeuMMO não mexe nele**.
+
+- O jogo salva sozinho: ao sair, ao subir de nível, a cada 30 segundos e quando o servidor desliga.
+- **Cópia de segurança:** com o jogo fechado, copie a pasta `saves` para outro lugar.
+- **Começar do zero:** com o jogo fechado, apague a pasta `saves`.
+- As senhas não ficam escritas no arquivo: ficam embaralhadas (scrypt), e nem quem abre o arquivo consegue lê-las.
+  Ainda assim, por enquanto use uma senha só do jogo: na rede de casa ela viaja sem criptografia
+  (isso muda quando o jogo for para a internet, no M5).
 
 ## Ajustar os monstros (sem programar)
 

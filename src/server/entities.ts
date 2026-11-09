@@ -60,10 +60,13 @@ export class Player {
     y: number,
     readonly conn: Conn,
     now: number,
+    /** Número do personagem salvo (null = não salva, como nos testes do mundo). */
+    readonly characterId: number | null = null,
+    look = lookFromName(name),
   ) {
     this.x = x;
     this.y = y;
-    this.look = lookFromName(name);
+    this.look = look;
     this.maxHp = maxHpFor(this.level);
     this.hp = this.maxHp;
     // Até 4 mensagens seguidas; depois, uma a cada ~1,3 s.

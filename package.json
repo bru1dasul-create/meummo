@@ -5,7 +5,7 @@
   "type": "module",
   "description": "MMORPG 2D de fantasia que roda no navegador.",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
     "dev": "concurrently -k -n servidor,cliente -c blue,green \"npm:dev:server\" \"npm:dev:client\"",

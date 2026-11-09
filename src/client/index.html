@@ -12,11 +12,14 @@
     <div id="labels"></div>
 
     <div id="login" class="overlay">
-      <form id="login-form" class="panel" autocomplete="off">
+      <form id="login-form" class="panel">
         <h1>MeuMMO</h1>
         <p class="subtitle">Pindorama: a floresta tomou São Paulo e as lendas voltaram. Comece no Refúgio de Guarapiranga.</p>
         <label for="name">Nome do personagem</label>
-        <input id="name" name="name" maxlength="16" placeholder="Ex.: Aurora" required />
+        <input id="name" name="username" maxlength="16" placeholder="Ex.: Aurora" autocomplete="username" autocapitalize="words" spellcheck="false" required />
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" maxlength="64" autocomplete="current-password" required />
+        <p class="hint">Primeira vez? Escolha um nome e uma senha: o personagem nasce na hora e o progresso fica salvo.</p>
         <button id="login-button" type="submit">Entrar no mundo</button>
         <p id="login-error" class="error" role="alert"></p>
         <ul class="controls desktop-only">

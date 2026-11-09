@@ -41,12 +41,13 @@ import {
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
 import { applyInput, canStep, nextStepTime } from '../shared/movement';
-import { nameProblem, normalizeName } from '../shared/names';
+import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { damageRange, MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import type { FailReason, RejectReason, ServerMsg } from '../shared/protocol';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
+import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
 import { Monster, Player, type Conn, type Entity, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { sanitizeChat } from './validate';
@@ -55,6 +56,13 @@ export { Monster, Player, type Conn } from './entities';
 
 export type JoinResult = { ok: true; player: Player } | { ok: false; reason: RejectReason };
 
+/** Personagem salvo que está entrando (sem isto, entra um personagem novo que não é salvo). */
+export interface JoinProfile {
+  character: SavedCharacter;
+  /** Acabou de ser criado (muda a mensagem de boas-vindas). */
+  created: boolean;
+}
+
 export interface WorldOptions {
   /** Relógio em milissegundos (nos testes usamos um relógio falso). */
   now?: () => number;
@@ -62,6 +70,8 @@ export interface WorldOptions {
   log?: (message: string) => void;
   /** Tipos de monstro (de data/monsters.json). */
   monsters?: Map<string, MonsterDef>;
+  /** Onde guardar o progresso dos personagens (sem isto, nada é salvo). */
+  saver?: CharacterSaver;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -71,6 +81,8 @@ const SKILL_TOLERANCE_MS = 100;
 const LEASH_MARGIN = 4;
 /** Proteção depois de voltar para a vila. */
 const RESPAWN_PROTECTION_MS = 2000;
+/** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
+export const AUTOSAVE_MS = 30_000;
 
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
@@ -86,6 +98,8 @@ export class World {
   private readonly now: () => number;
   private readonly random: () => number;
   private readonly log: (message: string) => void;
+  private readonly saver: CharacterSaver | null;
+  private nextAutosaveAt: number;
 
   constructor(
     readonly map: GameMap,
@@ -94,7 +108,9 @@ export class World {
     this.now = options.now ?? (() => performance.now());
     this.random = options.random ?? Math.random;
     this.log = options.log ?? (() => {});
+    this.saver = options.saver ?? null;
     this.lastTickAt = this.now();
+    this.nextAutosaveAt = this.lastTickAt + AUTOSAVE_MS;
 
     const defs = options.monsters ?? new Map<string, MonsterDef>();
     for (const zone of map.monsterZones) {
@@ -111,22 +127,31 @@ export class World {
 
   // ======================= entrar e sair =======================
 
-  join(rawName: string, conn: Conn): JoinResult {
-    const name = normalizeName(rawName);
-    if (nameProblem(name)) return { ok: false, reason: 'name_invalid' };
+  join(rawName: string, conn: Conn, profile?: JoinProfile): JoinResult {
+    const saved = profile?.character;
+    // O nome salvo já foi conferido quando o personagem nasceu (e as regras podem mudar depois).
+    const name = saved ? saved.name : normalizeName(rawName);
+    if (!saved && nameProblem(name)) return { ok: false, reason: 'name_invalid' };
     if (this.players.size >= MAX_PLAYERS) return { ok: false, reason: 'full' };
-    const key = name.toLocaleLowerCase('pt-BR');
+    const key = nameKey(name);
     for (const other of this.players.values()) {
-      if (other.name.toLocaleLowerCase('pt-BR') === key) return { ok: false, reason: 'name_taken' };
+      if (nameKey(other.name) === key) return { ok: false, reason: 'name_taken' };
     }
 
-    const spot = this.pickSpawnTile();
-    const player = new Player(this.nextId++, name, spot.x, spot.y, conn, this.now());
+    const savedSpot = saved ? this.savedSpot(saved) : null;
+    const spot = savedSpot ?? this.pickSpawnTile();
+    const player = new Player(this.nextId++, name, spot.x, spot.y, conn, this.now(), saved?.id ?? null, saved?.look);
+    if (saved) this.restore(player, saved, savedSpot !== null);
     this.players.set(player.id, player);
+    const greeting = !profile
+      ? `Bem-vindo(a), ${name}!`
+      : profile.created
+        ? `Personagem criado: ${name}! Guarde a sua senha: é com ela que você volta.`
+        : `Bem-vindo(a) de volta, ${name}!`;
     // As boas-vindas vão na hora; quem está por perto chega no próximo tick.
     conn.send([
       { t: 'welcome', id: player.id, you: player.state(), stats: player.stats(), stepMs: STEP_MS, online: this.players.size },
-      { t: 'sys', text: `Bem-vindo(a), ${name}! Você está em: ${this.map.name}.` },
+      { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
     ]);
     this.broadcast({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
     this.broadcast({ t: 'online', n: this.players.size });
@@ -136,6 +161,7 @@ export class World {
 
   leave(player: Player): void {
     if (!this.players.delete(player.id)) return;
+    this.saveCharacters([player]);
     for (const other of this.players.values()) {
       if (other.known.delete(player.id)) other.outbox.push({ t: 'despawn', id: player.id });
     }
@@ -145,6 +171,49 @@ export class World {
     this.broadcast({ t: 'sys', text: `${player.name} saiu.` });
     this.broadcast({ t: 'online', n: this.players.size });
     this.log(`saiu: ${player.name} (online: ${this.players.size})`);
+  }
+
+  /** Salva o progresso de todo mundo que está online (também acontece sozinho a cada AUTOSAVE_MS). */
+  saveAll(): void {
+    this.saveCharacters([...this.players.values()]);
+  }
+
+  /** Coloca no jogador o progresso salvo, com cuidado: o arquivo pode ser de outra versão do jogo. */
+  private restore(player: Player, saved: SavedCharacter, samePlace: boolean): void {
+    let level = Math.min(MAX_LEVEL, Math.max(1, Math.floor(saved.level)));
+    let xp = Math.max(0, Math.floor(saved.xp));
+    // Se a conta de XP mudou e agora sobra XP, sobe de nível em vez de perder o que juntou.
+    while (level < MAX_LEVEL && xp >= xpToNext(level)) {
+      xp -= xpToNext(level);
+      level += 1;
+    }
+    player.level = level;
+    player.xp = level >= MAX_LEVEL ? 0 : xp;
+    player.maxHp = maxHpFor(level);
+    // Volta com a vida que tinha (sair do jogo não cura); na vila (ou sem vida salva), vida cheia.
+    player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
+    if (samePlace) player.dir = saved.dir;
+  }
+
+  /** Onde o personagem estava, se ainda dá para ficar lá (o mapa pode ter mudado). */
+  private savedSpot(saved: SavedCharacter): Tile | null {
+    const { x, y } = saved;
+    if (saved.zone !== this.map.name || x === null || y === null) return null;
+    return this.map.isWalkable(x, y) && this.map.isReachable(x, y) ? { x, y } : null;
+  }
+
+  private saveCharacters(players: Player[]): void {
+    if (!this.saver) return;
+    const list: { id: number; data: CharacterData }[] = [];
+    for (const player of players) {
+      if (player.characterId !== null) list.push({ id: player.characterId, data: characterData(player, this.map.name) });
+    }
+    if (list.length === 0) return;
+    try {
+      this.saver.save(list);
+    } catch (error) {
+      this.log(`ERRO ao salvar personagens: ${(error as Error).message}`);
+    }
   }
 
   // ======================= pedidos dos jogadores =======================
@@ -229,6 +298,10 @@ export class World {
     this.respawnMonsters(now);
 
     for (const player of this.players.values()) this.updateView(player);
+    if (now >= this.nextAutosaveAt) {
+      this.nextAutosaveAt = now + AUTOSAVE_MS;
+      this.saveAll();
+    }
     for (const player of this.players.values()) {
       if (player.statsDirty) {
         player.outbox.push({ t: 'stats', stats: player.stats() });
@@ -339,6 +412,7 @@ export class World {
       this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
       this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
       this.broadcast({ t: 'sys', text: `${player.name} chegou ao nível ${player.level}!` });
+      this.saveCharacters([player]); // subir de nível é importante demais para esperar o próximo salvamento
     }
     player.statsDirty = true;
   }
@@ -862,4 +936,12 @@ export class World {
     const options = this.map.walkableAround(this.map.spawn.x, this.map.spawn.y, 2);
     return options[Math.floor(this.random() * options.length)] ?? this.map.spawn;
   }
+}
+
+/** O que fica salvo de um jogador. */
+export function characterData(player: Player, zone: string): CharacterData {
+  const base = { level: player.level, xp: player.xp, look: player.look, zone };
+  // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
+  if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
+  return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };
 }

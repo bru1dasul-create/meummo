@@ -1,4 +1,10 @@
-import type { MonsterZone, TiledMap } from '../src/shared/map';
+import { vi } from 'vitest';
+import { CharacterStore, type HashCost } from '../src/server/accounts';
+import { LoginGuard, type GuardLimits } from '../src/server/login-guard';
+import type { Lobby, Session, Transport } from '../src/server/session';
+import { World, type WorldOptions } from '../src/server/world';
+import { PROTOCOL_VERSION } from '../src/shared/constants';
+import type { GameMap, MonsterZone, TiledMap } from '../src/shared/map';
 import type { ServerMsg } from '../src/shared/protocol';
 
 /**
@@ -86,4 +92,58 @@ export class FakeClock {
   advance(ms: number): void {
     this.time += ms;
   }
+}
+
+/** Custo baixo para proteger senhas: nos testes o que importa é rodar rápido. */
+export const FAST_HASH: HashCost = { N: 1024, r: 8, p: 1 };
+
+/** Tudo que uma Session precisa, com os personagens salvos só na memória (nada vai para o disco). */
+export function makeLobby(map: GameMap, clock: FakeClock, options: { world?: WorldOptions; guard?: GuardLimits } = {}): Lobby {
+  const store = new CharacterStore(':memory:', { cost: FAST_HASH });
+  const world = new World(map, { now: clock.now, random: () => 0, saver: store, ...options.world });
+  return { world, store, guard: new LoginGuard(clock.now, options.guard), online: new Map(), log: () => {} };
+}
+
+/** Canal falso para uma Session: guarda o que foi enviado e se a conexão foi fechada. */
+export class FakeTransport implements Transport {
+  readonly batches: ServerMsg[][] = [];
+  readonly closed: number[] = [];
+
+  send(data: string): void {
+    this.batches.push(JSON.parse(data) as ServerMsg[]);
+  }
+
+  close(code: number): void {
+    this.closed.push(code);
+  }
+
+  all(): ServerMsg[] {
+    return this.batches.flat();
+  }
+
+  ofType<T extends ServerMsg['t']>(t: T): Extract<ServerMsg, { t: T }>[] {
+    return this.all().filter((m): m is Extract<ServerMsg, { t: T }> => m.t === t);
+  }
+}
+
+/** Manda o "hello" e espera a resposta (conferir a senha é assíncrono): o welcome ou o reject. */
+export async function sendHello(
+  session: Session,
+  transport: FakeTransport,
+  name: string,
+  password: string,
+): Promise<Extract<ServerMsg, { t: 'welcome' | 'reject' }>> {
+  const before = transport.all().length;
+  session.handle(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, name, password }));
+  return vi.waitFor(
+    () => {
+      const answer = transport
+        .all()
+        .slice(before)
+        .find((m): m is Extract<ServerMsg, { t: 'welcome' | 'reject' }> => m.t === 'welcome' || m.t === 'reject');
+      if (!answer) throw new Error(`sem resposta para o hello de ${name}`);
+      return answer;
+    },
+    { timeout: 3000, interval: 2 },
+  );
 }

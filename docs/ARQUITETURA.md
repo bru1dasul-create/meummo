@@ -57,17 +57,36 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   Só nascem em tiles alcançáveis a pé a partir da vila.
 - **XP:** todo mundo que acertou o monstro ganha a XP inteira quando ele cai.
 
+## Personagens salvos (`src/server/accounts.ts`)
+- Ficam num arquivo SQLite (`saves/meummo.db`; `MEUMMO_SAVE=outro.db npm start` usa outro). O SQLite é o que já
+  vem dentro do Node.js (`node:sqlite`, Node 22.13+): nada para instalar ou compilar, nem no Windows.
+- Entrar = `hello` com nome e senha. Se o nome não existe, o personagem é criado com essa senha; se existe, a senha
+  precisa bater. "Ana", "ANA" e "ana" são o mesmo personagem.
+- Senhas: guardadas com **scrypt** e um "sal" aleatório (`scrypt$N$r$p$sal$resultado`), nunca o texto. Conferir
+  leva ~50 ms de propósito e roda fora da linha principal, então o jogo não engasga.
+- Freios (`src/server/login-guard.ts`): quem erra a senha muitas vezes (por endereço ou por personagem) espera uns
+  minutos; há limite de personagens novos por endereço.
+- O que salva: nível, XP, vida, zona, posição, direção e aparência. Quando: ao sair, ao subir de nível, a cada 30 s e
+  ao desligar o servidor (Ctrl+C ou fechar a janela). Quem sai desmaiado volta na vila com a vida cheia.
+- Ao carregar, tudo é conferido: se o lugar salvo virou parede (o mapa mudou) ou é de outra zona, o personagem nasce
+  na vila; se a conta de XP mudou, a XP que sobrar vira nível.
+- Entrar com o mesmo personagem em outro lugar: a sessão antiga recebe `bye` (`replaced`), sai do mundo e é salva
+  **antes** de a nova ler o progresso — nada se perde.
+- **Mudar o formato** (inventário, aparência escolhida...): acrescente um passo no fim de `MIGRATIONS`. A versão
+  do arquivo fica em `PRAGMA user_version` e quem já tem personagens é convertido ao ligar o servidor.
+
 ## Mensagens
 O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens por tick.
 
 | Quem envia | Mensagem | Para quê |
 |---|---|---|
-| cliente | `hello` | entrar com um nome |
+| cliente | `hello` | entrar com nome e senha (cria o personagem se o nome ainda não existir) |
 | cliente | `step` | pedir um passo (com número de sequência); com `dash: true` é a esquiva |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `chat` / `ping` | falar / medir a latência |
-| servidor | `welcome` / `reject` | entrou (com seus números) / recusado (nome inválido, repetido, servidor cheio, versão) |
+| servidor | `welcome` / `reject` | entrou (com seus números) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
+| servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, ou o servidor está desligando |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar |
@@ -87,6 +106,8 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 - Limite de mensagens por segundo e limite próprio para o chat; quem insiste em mandar lixo é desconectado.
 - Tiros, habilidades e esquiva respeitam as recargas no servidor (o cliente não consegue atirar mais rápido).
 - O chat é limpo no servidor e sempre mostrado como texto, nunca como HTML.
+- Senhas guardadas com scrypt; freio para quem erra a senha muitas vezes. Na rede local a senha ainda viaja sem
+  criptografia: antes de ir para a internet (M5), HTTPS/WSS.
 - Conexões "zumbis" são derrubadas a cada 30 segundos.
 
 ## Mapas (Tiled)

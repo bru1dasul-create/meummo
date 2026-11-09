@@ -23,13 +23,21 @@
    (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
 5. Antes de commitar: `npm run check` (tipos + testes) precisa passar. Regra nova no servidor vem com teste em `tests/`.
 6. Mudou o formato das mensagens? Aumente `PROTOCOL_VERSION` em `src/shared/constants.ts`.
+   Mudou o que fica salvo do personagem? Acrescente um passo em `MIGRATIONS` (`src/server/accounts.ts`) — nunca
+   edite um passo antigo: os personagens de quem já joga são convertidos por eles.
 7. Ao concluir algo do roteiro, marque em `docs/ROADMAP.md`.
 8. Comentários e textos do jogo em português; nomes no código em inglês.
 9. Não rode `npm run gen:map -- --force` sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
    arquivo com `--out` e compare as camadas antes de substituir.
 
+## Personagens salvos
+- Arquivo SQLite em `saves/meummo.db` (fora do Git; `MEUMMO_SAVE` troca o arquivo). Usa o `node:sqlite` embutido
+  (Node 22.13+), sem dependência nativa — importante para o PC Windows do dono do projeto.
+- Testes usam `':memory:'` e `FAST_HASH` (`tests/helpers.ts`); nunca o arquivo de verdade.
+- Os bots são personagens salvos ("Bot ...", senha `bots-do-meummo`).
+
 ## Comandos
-- `npm install` — instala dependências (Node 22+)
+- `npm install` — instala dependências (Node 22.13+)
 - `npm run dev` — servidor (porta 3000, reinicia sozinho) + jogo (Vite, porta 5173, abre em http://localhost:5173)
 - `npm run check` — confere tipos e roda os testes
 - `npm run build && npm start` — produção: um servidor só, na porta 3000. **Reinicie o `npm start` depois de cada
@@ -48,6 +56,6 @@
 
 ## Conferir no navegador
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
-http://localhost:3000 com o Playwright/Chromium, entre com um nome e tire prints (computador e celular).
+http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).
 No navegador existe `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
 `__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)` — útil para testes automáticos.

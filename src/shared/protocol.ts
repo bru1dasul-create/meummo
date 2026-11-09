@@ -37,14 +37,25 @@ export interface PlayerStats {
 
 /** Cliente → servidor. */
 export type ClientMsg =
-  | { t: 'hello'; v: number; name: string } // quero entrar com este nome
+  | { t: 'hello'; v: number; name: string; password: string } // quero entrar com este personagem (criado na hora se não existir)
   | { t: 'step'; seq: number; dir: Dir; dash?: true } // quero andar um tile (ou rolar, se dash)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
 
-export type RejectReason = 'name_invalid' | 'name_taken' | 'full' | 'version';
+export type RejectReason =
+  | 'name_invalid'
+  | 'name_taken'
+  | 'password_invalid' // senha curta ou longa demais
+  | 'wrong_password'
+  | 'too_many_attempts' // errou a senha vezes demais: espere uns minutos
+  | 'creation_limit' // personagens novos demais vindos do mesmo lugar
+  | 'unavailable' // o servidor não conseguiu ler os personagens salvos
+  | 'full'
+  | 'version';
+/** Por que o servidor encerrou a sua sessão. */
+export type ByeReason = 'replaced' | 'shutdown';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
@@ -54,6 +65,7 @@ export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind';
 export type ServerMsg =
   | { t: 'welcome'; id: number; you: EntityState; stats: PlayerStats; stepMs: number; online: number }
   | { t: 'reject'; reason: RejectReason }
+  | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
   | { t: 'despawn'; id: number } // alguém saiu da sua área de visão (ou do jogo)
   | { t: 'move'; id: number; x: number; y: number; dir: Dir; dash?: true }

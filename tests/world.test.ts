@@ -4,7 +4,7 @@ import { DOWN, DOWN_LEFT, RIGHT, UP } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
 import { Session } from '../src/server/session';
 import { World, type Player } from '../src/server/world';
-import { FakeClock, FakeConn, tiledFromAscii } from './helpers';
+import { FakeClock, FakeConn, FakeTransport, makeLobby, sendHello, tiledFromAscii } from './helpers';
 
 // Corredor largo: dá para testar a área de visão afastando os jogadores.
 const map = GameMap.fromTiled(
@@ -172,32 +172,32 @@ describe('World — chat', () => {
 
 describe('Session', () => {
   function session() {
-    const sent: unknown[][] = [];
-    const closed: number[] = [];
-    const s = new Session(world, { send: (data) => sent.push(JSON.parse(data)), close: (code) => closed.push(code) }, clock.now);
-    return { s, sent, closed };
+    const lobby = makeLobby(map, clock);
+    const transport = new FakeTransport();
+    const s = new Session(lobby, transport, '10.0.0.1', clock.now);
+    return { s, transport, lobby };
   }
 
   it('recusa versão de protocolo diferente', () => {
-    const { s, sent, closed } = session();
-    s.handle(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION + 1, name: 'Ana' }));
-    expect(sent).toEqual([[{ t: 'reject', reason: 'version' }]]);
-    expect(closed).toEqual([4000]);
+    const { s, transport } = session();
+    s.handle(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION + 1, name: 'Ana', password: 'segredo1' }));
+    expect(transport.batches).toEqual([[{ t: 'reject', reason: 'version' }]]);
+    expect(transport.closed).toEqual([4000]);
   });
 
-  it('entra, responde ping e remove o jogador ao desconectar', () => {
-    const { s, sent } = session();
-    s.handle(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, name: 'Ana' }));
-    expect(world.players.size).toBe(1);
+  it('entra, responde ping e remove o jogador ao desconectar', async () => {
+    const { s, transport, lobby } = session();
+    expect((await sendHello(s, transport, 'Ana', 'segredo1')).t).toBe('welcome');
+    expect(lobby.world.players.size).toBe(1);
     s.handle(JSON.stringify({ t: 'ping', id: 7 }));
-    expect(sent.at(-1)).toEqual([{ t: 'pong', id: 7 }]);
+    expect(transport.batches.at(-1)).toEqual([{ t: 'pong', id: 7 }]);
     s.disconnect();
-    expect(world.players.size).toBe(0);
+    expect(lobby.world.players.size).toBe(0);
   });
 
   it('desconecta quem manda lixo sem parar', () => {
-    const { s, closed } = session();
+    const { s, transport } = session();
     for (let i = 0; i < 25; i++) s.handle('isso não é json');
-    expect(closed).toEqual([4001]);
+    expect(transport.closed).toEqual([4001]);
   });
 });

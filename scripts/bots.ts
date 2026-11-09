@@ -1,5 +1,7 @@
 // Bots: jogadores automáticos que andam pela vila e conversam — ou caçam monstros.
 // Servem para testar o servidor e para ver o mundo "cheio".
+// Eles são personagens salvos como qualquer outro (nome "Bot ...", senha BOT_PASSWORD):
+// os caçadores continuam do nível em que pararam.
 // Uso: npm run bots -- [quantidade] [endereço] [--cacar]
 //      npm run bots -- 10
 //      npm run bots -- 6 --cacar                (vão até os monstros e atiram neles)
@@ -20,6 +22,8 @@ const count = Number(args[0] ?? 8);
 const url = args[1] ?? 'ws://localhost:3000/ws';
 const map = loadMap();
 
+/** Senha dos personagens dos bots (qualquer um pode entrar com eles: são só para testes). */
+const BOT_PASSWORD = 'bots-do-meummo';
 const NAMES = [
   'Aurora', 'Bento', 'Cora', 'Davi', 'Elis', 'Fausto', 'Gaia', 'Heitor', 'Iara', 'Joaquim',
   'Lis', 'Martim', 'Naiara', 'Otávio', 'Pérola', 'Ravi', 'Serena', 'Tomé', 'Valentina', 'Yuri',
@@ -27,7 +31,7 @@ const NAMES = [
 const PHRASES = [
   'Olá, aventureiros!',
   'Alguém quer explorar a floresta?',
-  'Esse poço parece mágico...',
+  'Essa represa esconde alguma coisa...',
   'Bora até o rio?',
   'Que dia bonito na vila',
   'Dizem que o Saci mora depois do rio',
@@ -80,7 +84,7 @@ class Bot {
 
   private connect(): void {
     this.ws = new WebSocket(url);
-    this.ws.on('open', () => this.send({ t: 'hello', v: PROTOCOL_VERSION, name: this.name }));
+    this.ws.on('open', () => this.send({ t: 'hello', v: PROTOCOL_VERSION, name: this.name, password: BOT_PASSWORD }));
     this.ws.on('message', (data) => {
       for (const msg of JSON.parse(data.toString()) as ServerMsg[]) this.onMessage(msg);
     });
@@ -97,13 +101,17 @@ class Bot {
         console.log(`bot ${this.name} entrou${hunting ? ' (caçador)' : ''}`);
         break;
       case 'reject':
-        if (msg.reason === 'name_taken') {
+        // Nome de alguém de verdade (outra senha) ou em uso: tenta com um número no fim.
+        if (msg.reason === 'wrong_password' || msg.reason === 'name_taken') {
           this.name = `${this.name.slice(0, 12)}${Math.floor(Math.random() * 90 + 10)}`;
           this.ws.removeAllListeners();
           this.connect();
         } else {
           console.log(`bot ${this.name} recusado: ${msg.reason}`);
         }
+        break;
+      case 'bye':
+        console.log(`bot ${this.name} saiu: ${msg.reason === 'replaced' ? 'entraram com ele em outro lugar' : 'servidor desligando'}`);
         break;
       case 'ack':
         this.x = msg.x;
@@ -200,7 +208,10 @@ class Bot {
   }
 }
 
-const bots = Array.from({ length: count }, (_, i) => new Bot(i < NAMES.length ? NAMES[i]! : `${pick(NAMES)}${i}`));
+// Passeadores usam os nomes do começo da lista e caçadores os do fim: dá para rodar os dois juntos.
+const botName = (i: number) =>
+  i < NAMES.length ? `Bot ${NAMES[hunting ? NAMES.length - 1 - i : i]}` : `Bot ${pick(NAMES).slice(0, 8)}${i}`;
+const bots = Array.from({ length: count }, (_, i) => new Bot(botName(i)));
 const timer = setInterval(() => {
   const now = performance.now();
   for (const bot of bots) bot.tick(now);
