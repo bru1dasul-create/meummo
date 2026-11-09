@@ -1856,6 +1856,170 @@ function drawSunkenRoof(p: Pixels): void {
   p.outline(G.postDark);
 }
 
+// ---------- Terminal Santo Amaro: plataformas cobertas, pilares, catracas e bilheteria ----------
+
+/** Letras de 3x5 pixels para as placas (só as letras das plataformas). */
+const LETTERS: Record<string, string[]> = {
+  A: ['.#.', '#.#', '###', '#.#', '#.#'],
+  B: ['##.', '#.#', '##.', '#.#', '##.'],
+  C: ['.##', '#..', '#..', '#..', '.##'],
+  D: ['##.', '#.#', '#.#', '#.#', '##.'],
+};
+function letter(p: Pixels, ch: string, x: number, y: number, color: RGBA): void {
+  LETTERS[ch]!.forEach((row, dy) => [...row].forEach((c, dx) => c === '#' && p.set(x + dx, y + dy, color)));
+}
+
+const TERM = {
+  floor: hex('#9b9a93'),
+  floorDark: hex('#85847d'),
+  floorLight: hex('#b0afa8'),
+  tactile: hex('#d9b43a'),
+  tactileDark: hex('#b08e2c'),
+  curb: hex('#6f6e69'),
+  roof: hex('#a9acaf'),
+  roofDark: hex('#8a8d91'),
+  roofLight: hex('#c3c6c9'),
+  band: hex('#3f8f8a'),
+  bandDark: hex('#2e6c68'),
+  steel: hex('#6d737a'),
+  steelDark: hex('#4b5056'),
+  steelLight: hex('#9aa1a8'),
+  seat: hex('#c0563f'),
+};
+
+/** Piso da plataforma: placas de concreto claro, gastas, com mato nas emendas. */
+function platformFloor(edge: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(TERM.floor);
+    p.speckle(rng, [TERM.floorDark, TERM.floorLight], 26);
+    for (let i = 0; i < T; i++) {
+      p.set(i, 0, TERM.floorDark);
+      p.set(0, i, TERM.floorDark);
+      p.set(8, i, TERM.floorDark);
+    }
+    if (rng() < 0.5) p.set(1 + randInt(rng, 14), 1, S.moss);
+    if (edge) {
+      // faixa amarela (piso tátil) e a guia da plataforma, que desce para a pista
+      p.rect(0, 9, T, 3, TERM.tactile);
+      for (let x = 1; x < T; x += 3) p.set(x, 10, TERM.tactileDark);
+      p.rect(0, 13, T, 1, TERM.floorLight);
+      p.rect(0, 14, T, 2, TERM.curb);
+    }
+  };
+}
+
+/** Faixa de pedestre no asfalto (listras na vertical: atravessa a pista de norte a sul). */
+function drawCrosswalk(p: Pixels, rng: Rng): void {
+  p.fill(G.asphalt);
+  p.speckle(rng, [G.asphaltLight, G.asphaltDark], 24);
+  for (let x = 1; x < T; x += 4) p.rect(x, 0, 2, T, hex('#cfcbbf'));
+  for (let k = 0; k < 10; k++) p.set(randInt(rng, T), randInt(rng, T), G.asphalt); // tinta descascada
+}
+
+/** Cobertura de concreto da plataforma vista de cima (camada "acima"): nervuras, manchas, às vezes um buraco. */
+function terminalRoof(hole: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    p.fill(TERM.roof);
+    p.speckle(rng, [TERM.roofDark, TERM.roofLight], 28);
+    for (let y = 3; y < T; y += 5) for (let x = 0; x < T; x++) p.set(x, y, TERM.roofDark); // nervuras
+    for (let k = 0; k < 3; k++) {
+      const x = randInt(rng, T);
+      for (let y = randInt(rng, 6); y < T; y += 1 + randInt(rng, 3)) p.set(x, y, hex('#7f8286')); // manchas escorrendo
+    }
+    if (hole) {
+      for (let y = 0; y < T; y++) {
+        for (let x = 0; x < T; x++) {
+          if (Math.hypot(x - 8, (y - 8) * 1.2) < 5 + Math.sin(x * 1.7 + y) * 0.8) p.set(x, y, [0, 0, 0, 0]); // dá para ver embaixo
+        }
+      }
+      for (let k = 0; k < 14; k++) {
+        const a = rng() * Math.PI * 2;
+        p.set(8 + Math.cos(a) * 6, 8 + Math.sin(a) * 5, k % 2 ? S.vine : S.vineLight); // cipó na beirada do buraco
+      }
+    }
+  };
+}
+
+/** A faixa da frente da cobertura (pintada, com ferrugem) e, se pedir, a letra da plataforma. */
+function terminalRoofFront(ch: string | null) {
+  return (p: Pixels, rng: Rng) => {
+    terminalRoof(false)(p, rng);
+    p.rect(0, 6, T, 8, TERM.band);
+    p.rect(0, 6, T, 1, hex('#5fb0aa'));
+    p.rect(0, 13, T, 1, TERM.bandDark);
+    p.rect(0, 14, T, 2, [20, 22, 26, 140]); // sombra embaixo da beirada
+    for (let k = 0; k < 4; k++) {
+      const x = randInt(rng, T);
+      for (let y = 8; y < 8 + 2 + randInt(rng, 5); y++) p.set(x, y, S.rust);
+    }
+    if (ch) {
+      p.rect(5, 7, 7, 7, hex('#f2efe4'));
+      letter(p, ch, 7, 8, TERM.bandDark);
+    }
+  };
+}
+
+/** Pilar de concreto que segura a cobertura (com cipó subindo, se pedir). */
+function drawPillar(vines: boolean) {
+  return (p: Pixels, rng: Rng) => {
+    p.ellipse(8.5, 14.5, 5, 1.5, C.shadow);
+    p.rect(5, 0, 6, 15, TERM.roofDark);
+    p.rect(5, 0, 2, 15, TERM.roofLight);
+    p.rect(10, 0, 1, 15, hex('#6f7276'));
+    p.rect(4, 13, 8, 2, TERM.curb); // pé
+    if (vines) {
+      let x = 6;
+      for (let y = 14; y >= 0; y--) {
+        p.set(x, y, S.vine);
+        if (rng() < 0.5) p.set(x + 1, y, rng() < 0.5 ? S.vineLight : S.vineDark);
+        if (rng() < 0.35) x = Math.max(5, Math.min(10, x + randInt(rng, 3) - 1));
+      }
+    }
+    p.outline(S.outline);
+  };
+}
+
+/** Banco de metal da plataforma (assento vermelho desbotado). */
+function drawBench(p: Pixels): void {
+  p.ellipse(8, 14, 7, 1.5, C.shadow);
+  p.rect(1, 6, 14, 3, TERM.seat);
+  p.rect(1, 6, 14, 1, hex('#d97a62'));
+  p.rect(1, 4, 14, 2, TERM.steel); // encosto
+  for (const x of [2, 13]) p.rect(x, 9, 1, 4, TERM.steelDark);
+  p.set(6, 7, S.rust);
+  p.set(10, 8, S.rust);
+  p.outline(S.outline);
+}
+
+/** Catraca de metal (a entrada do terminal). */
+function drawTurnstile(p: Pixels): void {
+  p.ellipse(8, 14.5, 6, 1.4, C.shadow);
+  p.rect(4, 4, 8, 10, TERM.steel);
+  p.rect(4, 4, 8, 2, TERM.steelLight);
+  p.rect(11, 4, 1, 10, TERM.steelDark);
+  p.rect(6, 7, 4, 2, hex('#2a2f35')); // leitor de cartão apagado
+  p.rect(1, 9, 3, 1, TERM.steelLight); // braços da catraca
+  p.rect(12, 9, 3, 1, TERM.steelLight);
+  p.set(8, 11, S.rust);
+  p.outline(S.outline);
+}
+
+/** Bilheteria (2 tiles): guichê com vidro quebrado e a placa sem nome. */
+function drawTicketBooth(p: Pixels): void {
+  p.ellipse(16, 14.5, 15, 1.6, C.shadow);
+  p.rect(1, 1, 30, 14, S.facade);
+  p.rect(1, 1, 30, 3, TERM.band);
+  p.rect(1, 1, 30, 1, hex('#5fb0aa'));
+  for (const x of [4, 18]) {
+    p.rect(x, 6, 10, 6, S.window); // guichês
+    p.rect(x, 6, 10, 1, S.glass);
+    p.set(x + 2, 8, S.glassLight);
+    p.rect(x, 12, 10, 1, S.concreteLight); // balcãozinho
+  }
+  for (let k = 0; k < 10; k++) p.set(2 + ((k * 7) % 28), 4 + ((k * 3) % 10), S.facadeDark);
+  p.outline(S.outline);
+}
+
 export const TILES: TileDef[] = [
   { key: 'grass', draw: grass(0) },
   { key: 'grass_tufts', draw: grass(1) },
@@ -2542,6 +2706,23 @@ export const TILES: TileDef[] = [
   { key: 'stall_front_l', collides: true, shootOver: true, draw: pieceOf(fruitStall, 0, 1) },
   { key: 'stall_front_m', collides: true, shootOver: true, draw: pieceOf(fruitStall, 1, 1) },
   { key: 'stall_front_r', collides: true, shootOver: true, draw: pieceOf(fruitStall, 2, 1) },
+  // ---- Terminal Santo Amaro ----
+  { key: 'platform_floor', draw: platformFloor(false) },
+  { key: 'platform_edge', draw: platformFloor(true) },
+  { key: 'crosswalk', draw: drawCrosswalk },
+  { key: 'terminal_roof', draw: terminalRoof(false) },
+  { key: 'terminal_roof_hole', draw: terminalRoof(true) },
+  { key: 'terminal_roof_front', draw: terminalRoofFront(null) },
+  { key: 'terminal_roof_front_a', draw: terminalRoofFront('A') },
+  { key: 'terminal_roof_front_b', draw: terminalRoofFront('B') },
+  { key: 'terminal_roof_front_c', draw: terminalRoofFront('C') },
+  { key: 'terminal_roof_front_d', draw: terminalRoofFront('D') },
+  { key: 'pillar', collides: true, draw: drawPillar(false) },
+  { key: 'pillar_vines', collides: true, draw: drawPillar(true) },
+  { key: 'bench', collides: true, shootOver: true, draw: drawBench },
+  { key: 'turnstile', collides: true, shootOver: true, draw: drawTurnstile },
+  { key: 'ticket_booth_left', collides: true, draw: halfOf(drawTicketBooth, 0) },
+  { key: 'ticket_booth_right', collides: true, draw: halfOf(drawTicketBooth, 1) },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));

@@ -21,6 +21,7 @@
     "gen:map": "tsx scripts/gen-map.ts",
     "gen:santo-amaro": "tsx scripts/gen-santo-amaro.ts",
     "gen:billings": "tsx scripts/gen-billings.ts",
+    "gen:terminal": "tsx scripts/gen-terminal.ts",
     "render:map": "tsx scripts/render-map.ts"
   },
   "dependencies": {

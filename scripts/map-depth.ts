@@ -3,7 +3,7 @@
 // personagens (quem passa atrás some embaixo das folhas); o tronco, ou o pé do poste, vai na "decor" e
 // bloqueia a passagem. As sombras ficam numa camada entre o chão e a "decor".
 
-import { EDGE_CORNERS, gid } from './tileset';
+import { EDGE_CORNERS, gid, TILES } from './tileset';
 
 /** Árvores grandes (2 tiles de largura e 3 de altura): o prefixo dos 6 tiles de cada uma. */
 export const BIG_TREES = ['tree_big', 'pine_big', 'ipe_yellow_big', 'ipe_pink_big', 'dead_tree_big', 'buriti_big'] as const;
@@ -66,6 +66,52 @@ export class DepthLayers {
     this.decor[y * this.W + x] = gid(`${prefix}_base`);
     if (this.inside(x, y - 1)) this.above[(y - 1) * this.W + x] = gid(`${prefix}_top`);
     return true;
+  }
+
+  /**
+   * Abre um caminho: tira tudo do retângulo (enfeites, mato) e as árvores grandes e postes altos que encostam nele
+   * (inteiros: tronco e copa, pé e alto). Não sorteia nada, então pode rodar no fim do gerador sem mudar o resto.
+   */
+  clearArea(x0: number, y0: number, x1: number, y1: number): void {
+    const keyAt = (layer: number[], x: number, y: number) => (this.inside(x, y) ? TILES[layer[y * this.W + x]! - 1]?.key : undefined);
+    const clear = (layer: number[], x: number, y: number) => {
+      if (this.inside(x, y)) layer[y * this.W + x] = 0;
+    };
+    const removeTree = (kind: string, x: number, y: number) => {
+      // (x, y) = o pé esquerdo do tronco
+      for (const [dx, dy, layer] of [
+        [0, 0, this.decor],
+        [1, 0, this.decor],
+        [0, -1, this.above],
+        [1, -1, this.above],
+        [0, -2, this.above],
+        [1, -2, this.above],
+      ] as const) {
+        if (keyAt(layer, x + dx, y + dy)?.startsWith(`${kind}_`)) clear(layer, x + dx, y + dy);
+      }
+    };
+    const trunkOffset: Record<string, [number, number]> = { tl: [0, 2], tr: [-1, 2], ml: [0, 1], mr: [-1, 1], bl: [0, 0], br: [-1, 0] };
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        for (const layer of [this.above, this.decor]) {
+          const key = keyAt(layer, x, y);
+          if (!key) continue;
+          const kind = BIG_TREES.find((k) => key.startsWith(`${k}_`));
+          if (kind) {
+            const [dx, dy] = trunkOffset[key.slice(kind.length + 1)] ?? [0, 0];
+            removeTree(kind, x + dx, y + dy);
+          } else if (key.endsWith('_tall_top')) {
+            clear(this.above, x, y);
+            clear(this.decor, x, y + 1);
+          } else if (key.endsWith('_tall_base')) {
+            clear(this.decor, x, y);
+            clear(this.above, x, y - 1);
+          } else {
+            clear(layer, x, y);
+          }
+        }
+      }
+    }
   }
 
   /** Sombra de um bloco (casa, prédio) que vai de (x0, y0) até (x1, y1): o sol vem do noroeste, então ela cai ao sul e a leste. */
