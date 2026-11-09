@@ -39,7 +39,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] **[dono → estrutura]** O Saci está forte demais para quem é nível 1? (ele é para nível 3+ ou para grupo)
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
 - [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
-- [ ] **[arte]** Arte de verdade para personagens e monstros
+- [ ] **[arte]** Arte de verdade para personagens e monstros (piloto do estilo desenhado com o Nano Banana: chave
+  pronta, esperando os exemplos de estilo do dono — veja `docs/ARTE.md`)
 - [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador;
   o jacaré e o boto já nasceram assim, em `monsterPaint.ts`)
 - [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
