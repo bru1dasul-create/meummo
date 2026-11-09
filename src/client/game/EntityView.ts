@@ -8,6 +8,8 @@ import type { EntityState } from '../../shared/protocol';
 import { characterFrame, characterTexture } from './characters';
 
 const BUBBLE_MS = 5000;
+/** Quanto um nome sobe (em pixels da tela) para cada outro personagem no mesmo tile. */
+const LABEL_STACK_PX = 16;
 
 /** Pixel dos pés do personagem no tile (x, y). */
 function feetOf(x: number, y: number): [number, number] {
@@ -90,10 +92,10 @@ export class EntityView {
     this.shadow.setDepth(y - 0.5);
   }
 
-  /** Posiciona nome e balão por cima do personagem, em pixels da tela. */
-  syncLabel(camera: Phaser.Cameras.Scene2D.Camera): void {
+  /** Posiciona nome e balão por cima do personagem, em pixels da tela. `stackIndex` sobe o nome quando há outros no mesmo tile. */
+  syncLabel(camera: Phaser.Cameras.Scene2D.Camera, stackIndex = 0): void {
     const x = (this.sprite.x - camera.worldView.x) * camera.zoom;
-    const y = (this.sprite.y - TILE_SIZE - camera.worldView.y) * camera.zoom;
+    const y = (this.sprite.y - TILE_SIZE - camera.worldView.y) * camera.zoom - stackIndex * LABEL_STACK_PX;
     this.tag.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
   }
 

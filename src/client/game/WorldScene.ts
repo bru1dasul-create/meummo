@@ -251,7 +251,14 @@ export class WorldScene extends Phaser.Scene {
   /** Depois de desenhar o quadro, posiciona os nomes (HTML) em cima dos personagens. */
   private syncLabels(): void {
     const camera = this.cameras.main;
-    for (const entity of this.entities.values()) entity.syncLabel(camera);
+    // Quem divide o mesmo tile ganha o nome um pouco mais acima, para os nomes não se embaralharem.
+    const perTile = new Map<number, number>();
+    for (const entity of this.entities.values()) {
+      const key = entity.tileY * this.map.width + entity.tileX;
+      const stackIndex = perTile.get(key) ?? 0;
+      perTile.set(key, stackIndex + 1);
+      entity.syncLabel(camera, stackIndex);
+    }
   }
 
   private sendPing(): void {
