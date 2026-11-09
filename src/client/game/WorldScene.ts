@@ -22,6 +22,7 @@ import { findPath } from '../../shared/pathfind';
 import { DASH_SLOT, type EntityState, type PlayerStats, type ServerMsg, type WelcomeMsg } from '../../shared/protocol';
 import { SKILLS } from '../../shared/skills';
 import type { Connection } from '../net';
+import type { Sfx } from '../sfx';
 import { ActionBar, Feedback, Toast, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
@@ -32,6 +33,7 @@ export interface WorldSceneData {
   welcome: WelcomeMsg;
   chat: ChatBox;
   hud: Hud;
+  sfx: Sfx;
 }
 
 /** Quantos tiles queremos ver no lado menor da tela (isso define o zoom). */
@@ -50,6 +52,10 @@ export class WorldScene extends Phaser.Scene {
   private welcome!: WelcomeMsg;
   private chat!: ChatBox;
   private hud!: Hud;
+  private sfx!: Sfx;
+  private soundButton: HTMLButtonElement | null = null;
+  /** Quando cada monstro levou a última pedrada sua (para tocar o som de vitória). */
+  private readonly lastHitByMe = new Map<number, number>();
   private stepMs = 200;
   private myId = 0;
 
@@ -101,6 +107,7 @@ export class WorldScene extends Phaser.Scene {
     this.welcome = data.welcome;
     this.chat = data.chat;
     this.hud = data.hud;
+    this.sfx = data.sfx;
     this.stepMs = data.welcome.stepMs;
     this.myId = data.welcome.id;
   }
@@ -144,6 +151,9 @@ export class WorldScene extends Phaser.Scene {
       ],
       (slot, down) => this.onActionButton(slot, down),
     );
+    this.soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
+    this.soundButton?.addEventListener('click', this.toggleSound);
+    this.updateSoundButton();
 
     this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
     window.addEventListener('keydown', this.onKeyDown);
@@ -250,6 +260,7 @@ export class WorldScene extends Phaser.Scene {
     this.seq += 1;
     this.pending.push({ seq: this.seq, dir, dash: true });
     this.conn.send({ t: 'step', seq: this.seq, dir, dash: true });
+    this.sfx.play('dash');
     const from = feetOf(this.predicted.x, this.predicted.y);
     this.predicted = { x: result.x, y: result.y, dir };
     this.nextStepAt = nextStepTime(now, this.nextStepAt, this.stepMs, TICK_MS);
@@ -322,6 +333,7 @@ export class WorldScene extends Phaser.Scene {
     this.nextShotAt = now + SHOT_COOLDOWN_MS + 15;
     const cid = ++this.shotCid;
     this.conn.send({ t: 'shoot', cid, a: round3(angle) });
+    this.sfx.play('shot');
     this.effects.addShot(
       { x: this.predicted.x + 0.5, y: this.predicted.y + 0.5, angle, speed: SHOT_SPEED, range: SHOT_RANGE, kind: 'pedra', fromMonster: false, cid },
       now,
@@ -345,6 +357,7 @@ export class WorldScene extends Phaser.Scene {
     this.actionBar.setCooldown(`skill${n}` as ActionSlot, this.skillReadyAt[n]!, skill.cooldownMs);
     this.conn.send({ t: 'skill', n, a: round3(angle) });
     if (skill.kind === 'arc') {
+      this.sfx.play('arc');
       this.face(dirFromAngle(angle));
       this.effects.flashTiles(arcTiles(this.predicted.x, this.predicted.y, angle), 0xffe08a, 220, now);
     }
@@ -411,6 +424,9 @@ export class WorldScene extends Phaser.Scene {
       case 'KeyE':
       case 'Digit2':
         if (!event.repeat) this.trySkill(1, 0, now);
+        break;
+      case 'KeyM':
+        if (!event.repeat) this.toggleSound();
         break;
     }
   };
@@ -512,6 +528,7 @@ export class WorldScene extends Phaser.Scene {
       case 'warn':
         this.entities.get(msg.id)?.windup(now, msg.ms);
         this.effects.warn(msg.tiles, msg.ms, now);
+        if (this.isMyTile(msg.tiles)) this.sfx.play('warn');
         break;
       case 'fx':
         this.onFx(msg.id, msg.kind, msg.a ?? 0, now);
@@ -523,7 +540,10 @@ export class WorldScene extends Phaser.Scene {
         const view = this.entities.get(msg.id);
         view?.setHp(msg.hp);
         view?.floatText(`+${msg.amount}`, 'heal');
-        if (msg.id === this.myId) this.setMyHp(msg.hp, this.myMaxHp);
+        if (msg.id === this.myId) {
+          this.setMyHp(msg.hp, this.myMaxHp);
+          this.sfx.play('heal');
+        }
         break;
       }
       case 'hp':
@@ -629,6 +649,10 @@ export class WorldScene extends Phaser.Scene {
     if (id === this.myId) {
       this.setMyHp(hp, this.myMaxHp);
       this.feedback.hurtFlash();
+      this.sfx.play('hurt');
+    } else if (by === this.myId) {
+      this.lastHitByMe.set(id, now);
+      this.sfx.play('hit');
     }
   }
 
@@ -640,11 +664,14 @@ export class WorldScene extends Phaser.Scene {
       this.me.setFainted(true);
       this.setMyHp(0, this.myMaxHp);
       this.feedback.showDeath();
+      this.sfx.play('death');
       return;
     }
     const view = this.entities.get(id);
     if (!view) return;
     if (view.kind === 'monster') {
+      if (now - (this.lastHitByMe.get(id) ?? -Infinity) < 2000) this.sfx.play('kill');
+      this.lastHitByMe.delete(id);
       view.die(now);
       this.entities.delete(id);
       this.dying.push(view);
@@ -662,6 +689,7 @@ export class WorldScene extends Phaser.Scene {
     this.myLevel = level;
     this.setMyHp(maxHp, maxHp);
     this.toast.show(`Você chegou ao nível ${level}!`, 2500);
+    this.sfx.play('levelup');
     for (const other of this.entities.values()) other.setThreat(level);
   }
 
@@ -704,6 +732,24 @@ export class WorldScene extends Phaser.Scene {
     this.myMaxHp = maxHp;
     this.hud.setHp(hp, maxHp);
     this.me.setHp(hp, maxHp);
+  }
+
+  /** O aviso de golpe cobre o tile onde você está? */
+  private isMyTile(tiles: number[]): boolean {
+    for (let i = 0; i + 1 < tiles.length; i += 2) {
+      if (tiles[i] === this.predicted.x && tiles[i + 1] === this.predicted.y) return true;
+    }
+    return false;
+  }
+
+  private readonly toggleSound = () => {
+    this.sfx.toggleMute();
+    this.updateSoundButton();
+    this.toast.show(this.sfx.muted ? 'Som desligado (M para ligar)' : 'Som ligado');
+  };
+
+  private updateSoundButton(): void {
+    if (this.soundButton) this.soundButton.textContent = this.sfx.muted ? '🔇' : '🔊';
   }
 
   private addEntity(state: EntityState, isSelf: boolean): EntityView {
@@ -755,6 +801,7 @@ export class WorldScene extends Phaser.Scene {
     this.keyboard?.destroy();
     this.keyboard = null;
     window.removeEventListener('keydown', this.onKeyDown);
+    this.soundButton?.removeEventListener('click', this.toggleSound);
     this.game.events.off(Phaser.Core.Events.POST_RENDER, this.syncLabels, this);
     this.scale.off(Phaser.Scale.Events.RESIZE, this.fitZoom, this);
     for (const view of [...this.entities.values(), ...this.dying]) view.destroy();

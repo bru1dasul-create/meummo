@@ -286,8 +286,24 @@ kbd {
 }
 
 .hud-net {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   color: var(--muted);
   font-size: 11px;
+}
+
+#hud-sound {
+  margin-left: auto;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+#hud-sound:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 #hud .sep {

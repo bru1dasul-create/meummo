@@ -5,6 +5,7 @@ import { NAME_MAX, NAME_MIN, nameProblem, normalizeName, type NameProblem } from
 import type { WelcomeMsg } from '../shared/protocol';
 import { WorldScene } from './game/WorldScene';
 import { Connection, JoinError, type JoinFailure } from './net';
+import { Sfx } from './sfx';
 import { ChatBox, Hud } from './ui';
 
 const NAME_STORAGE_KEY = 'meummo:nome';
@@ -31,6 +32,7 @@ const JOIN_ERRORS: Record<JoinFailure, string> = {
 };
 
 let game: Phaser.Game | null = null;
+const sfx = new Sfx();
 let session: { conn: Connection; chat: ChatBox; hud: Hud } | null = null;
 
 nameInput.value = loadSavedName();
@@ -45,6 +47,7 @@ loginForm.addEventListener('submit', async (event) => {
     return;
   }
   loginError.textContent = '';
+  sfx.unlock(); // clique do jogador: agora o navegador deixa tocar som
   loginButton.disabled = true;
   loginButton.textContent = 'Entrando...';
   try {
@@ -76,7 +79,7 @@ function startGame(conn: Connection, welcome: WelcomeMsg): void {
     audio: { noAudio: true },
     banner: false,
   });
-  game.scene.add('world', WorldScene, true, { conn, welcome, chat, hud });
+  game.scene.add('world', WorldScene, true, { conn, welcome, chat, hud, sfx });
 }
 
 function endGame(message: string): void {
