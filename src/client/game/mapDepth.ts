@@ -166,11 +166,31 @@ const numberProp = (json: TiledMap, name: string) => {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 };
 
-/** O clima do mapa: o lugar mais escuro (propriedade `escuro`, 0 a 1) e neblina passando devagar (`neblina`, 0 a 1). */
+interface Firefly {
+  core: Phaser.GameObjects.Rectangle;
+  halo: Phaser.GameObjects.Rectangle;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  phase: number;
+}
+
+/**
+ * O clima do mapa: o lugar mais escuro (propriedade `escuro`, 0 a 1), neblina passando devagar (`neblina`, 0 a 1)
+ * e vaga-lumes piscando por perto (`vagalumes`, 0 a 1: quantos).
+ */
 export class MapWeather {
   private readonly fog: Phaser.GameObjects.TileSprite | null = null;
+  private readonly fireflies: Firefly[] = [];
+  private readonly fireflyCount: number;
+  private lastAt = 0;
 
-  constructor(scene: Phaser.Scene, json: TiledMap) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    json: TiledMap,
+  ) {
+    this.fireflyCount = Math.round(numberProp(json, 'vagalumes') * 24);
     const width = json.width * T;
     const height = json.height * T;
     const dark = numberProp(json, 'escuro');
@@ -182,10 +202,49 @@ export class MapWeather {
     }
   }
 
-  update(now: number): void {
-    if (!this.fog) return;
-    this.fog.tilePositionX = now * 0.006;
-    this.fog.tilePositionY = now * 0.0025;
+  update(now: number, view: Phaser.Geom.Rectangle): void {
+    const delta = this.lastAt ? Math.min(100, now - this.lastAt) : 0;
+    this.lastAt = now;
+    if (this.fog) {
+      this.fog.tilePositionX = now * 0.006;
+      this.fog.tilePositionY = now * 0.0025;
+    }
+    this.updateFireflies(now, delta, view);
+  }
+
+  /** Vaga-lumes voando devagar e piscando, sempre perto da tela (os que saem de vista renascem do outro lado). */
+  private updateFireflies(now: number, delta: number, view: Phaser.Geom.Rectangle): void {
+    while (this.fireflies.length < this.fireflyCount) {
+      const x = view.x + Math.random() * view.width;
+      const y = view.y + Math.random() * view.height;
+      this.fireflies.push({
+        core: this.scene.add.rectangle(x, y, 1, 1, 0xf0ff9a).setBlendMode(Phaser.BlendModes.ADD).setDepth(SPARK_DEPTH),
+        halo: this.scene.add.rectangle(x, y, 3, 3, 0xb8ff5a, 0.3).setBlendMode(Phaser.BlendModes.ADD).setDepth(SPARK_DEPTH),
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 0.012,
+        vy: (Math.random() - 0.5) * 0.012,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+    for (const fly of this.fireflies) {
+      fly.vx += (Math.random() - 0.5) * 0.0012 * delta;
+      fly.vy += (Math.random() - 0.5) * 0.0012 * delta;
+      const speed = Math.hypot(fly.vx, fly.vy);
+      if (speed > 0.014) {
+        fly.vx *= 0.014 / speed;
+        fly.vy *= 0.014 / speed;
+      }
+      fly.x += fly.vx * delta;
+      fly.y += fly.vy * delta;
+      if (fly.x < view.x - 24) fly.x = view.right + 20;
+      if (fly.x > view.right + 24) fly.x = view.x - 20;
+      if (fly.y < view.y - 24) fly.y = view.bottom + 20;
+      if (fly.y > view.bottom + 24) fly.y = view.y - 20;
+      const glow = Math.max(0, Math.sin(now / 650 + fly.phase)) ** 2;
+      fly.core.setPosition(fly.x, fly.y).setAlpha(0.15 + 0.85 * glow);
+      fly.halo.setPosition(fly.x, fly.y).setAlpha(0.45 * glow);
+    }
   }
 }
 

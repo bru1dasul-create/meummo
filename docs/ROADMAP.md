@@ -91,7 +91,11 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   (visual da loja: [arte]; lugar do vendedor no mapa: [mundo])
 - [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
 - [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
-- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago, Boitatá como chefe
+- [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
+  buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,
+  neblina e vaga-lumes), com criaturas provisórias (Jararaca, Corpo-Seco, Capelobo)
+- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
+  Boto e jacarés na Billings, Boitatá como chefe
 
 ## M4 — Social
 - [ ] **[estrutura]** Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada

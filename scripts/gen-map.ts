@@ -26,6 +26,9 @@ const SPAWN = { x: 42, y: 29 };
 /** Saída no fim da avenida (leste) para as Ruínas de Santo Amaro, e onde chega quem volta de lá. */
 const EAST_EXIT = { x: W - 1, y: 22, w: 1, h: 9 };
 const EAST_ARRIVAL = { x: W - 4, y: 26 };
+/** Saída no fim da trilha do brejo (sul) para a Represa Billings, e onde chega quem volta de lá. */
+const SOUTH_EXIT = { x: 40, y: H - 1, w: 5, h: 1 };
+const SOUTH_ARRIVAL = { x: 42, y: H - 4 };
 
 /** Áreas onde nascem monstros (em tiles). O nome é o id em data/monsters.json. */
 const MONSTER_ZONES = [
@@ -450,6 +453,9 @@ for (let i = 0; i < W * H; i++) {
   else if (r < 0.076) setDecor(x, y, 'rock');
 }
 
+// a trilha do brejo continua até a borda: é a saída para a Billings (só agora, para não mudar o sorteio das matas)
+for (let x = 41; x <= 43; x++) setGround(x, H - 1, 'dirt');
+
 // 9. Beiradas suaves entre os terrenos (no fim: depois disso, a areia da beira deixa de ser só "areia")
 const isGrass = (x: number, y: number) => groundIs(x, y, 'grass', 'grass_tufts', 'grass_dark');
 const wet = (x: number, y: number) => groundIs(x, y, ...WATERS, 'water_posts');
@@ -478,7 +484,7 @@ const map = {
   tilewidth: 16,
   tileheight: 16,
   nextlayerid: 8,
-  nextobjectid: 4 + MONSTER_ZONES.length,
+  nextobjectid: 6 + MONSTER_ZONES.length,
   properties: [
     { name: 'nome', type: 'string', value: ZONE_NAME },
     { name: 'seguro', type: 'bool', value: true },
@@ -502,6 +508,8 @@ const map = {
         { id: 1, name: 'spawn', type: '', point: true, x: SPAWN.x * 16 + 8, y: SPAWN.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
         // quem volta de Santo Amaro aparece aqui, no fim da avenida
         { id: 2 + MONSTER_ZONES.length, name: 'leste', type: '', point: true, x: EAST_ARRIVAL.x * 16 + 8, y: EAST_ARRIVAL.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
+        // quem volta da Billings aparece aqui, no fim da trilha do brejo
+        { id: 4 + MONSTER_ZONES.length, name: 'sul', type: '', point: true, x: SOUTH_ARRIVAL.x * 16 + 8, y: SOUTH_ARRIVAL.y * 16 + 8, width: 0, height: 0, rotation: 0, visible: true },
       ],
     },
     {
@@ -551,6 +559,21 @@ const map = {
             { name: 'chegada', type: 'string', value: 'oeste' },
           ],
         },
+        {
+          id: 5 + MONSTER_ZONES.length,
+          name: 'Represa Billings',
+          type: '',
+          x: SOUTH_EXIT.x * 16,
+          y: SOUTH_EXIT.y * 16,
+          width: SOUTH_EXIT.w * 16,
+          height: SOUTH_EXIT.h * 16,
+          rotation: 0,
+          visible: true,
+          properties: [
+            { name: 'mapa', type: 'string', value: 'billings' },
+            { name: 'chegada', type: 'string', value: 'norte' },
+          ],
+        },
       ],
     },
   ],
@@ -562,7 +585,7 @@ const game = GameMap.fromTiled(map as unknown as TiledMap);
 const checkpoints: Record<string, { x: number; y: number }> = {
   'fim da trilha norte': { x: 42, y: 3 },
   'saída da avenida (Santo Amaro)': { x: W - 2, y: 26 },
-  'fim da trilha sul (Billings)': { x: 42, y: H - 2 },
+  'saída para a Billings': { x: 42, y: H - 1 },
   'fim da trilha oeste': { x: 3, y: 26 },
   'praça do Saci': { x: 83, y: 36 },
 };

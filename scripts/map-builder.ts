@@ -106,6 +106,8 @@ export class MapBuilder {
     points: PointObject[];
     monsters: (AreaObject & { name: string })[];
     exits: AreaObject[];
+    /** Camadas de objetos a mais (ex.: "lendas": áreas marcadas para criaturas que ainda vão existir). */
+    extraGroups?: { name: string; areas: AreaObject[] }[];
   }) {
     let nextId = 1;
     const point = (p: PointObject) => ({
@@ -152,6 +154,7 @@ export class MapBuilder {
       group(3, 'objects', options.points.map(point)),
       group(4, 'monstros', options.monsters.map(area)),
       group(5, 'saidas', options.exits.map(area)),
+      ...(options.extraGroups ?? []).map((g, i) => group(8 + i, g.name, g.areas.map(area))),
     ];
     return {
       compressionlevel: -1,
@@ -165,7 +168,7 @@ export class MapBuilder {
       type: 'map',
       tilewidth: 16,
       tileheight: 16,
-      nextlayerid: 8,
+      nextlayerid: 8 + (options.extraGroups?.length ?? 0),
       nextobjectid: nextId,
       properties: options.properties,
       layers,
