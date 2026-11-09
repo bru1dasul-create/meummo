@@ -56,7 +56,7 @@ com o dono, onde estamos e próximos passos): `docs/ESTRUTURA.md` da [estrutura]
 |---|---|---|
 | **[estrutura]** Estrutura e regras | "Estrutura e regras" | servidor (`src/server`), regras compartilhadas (`src/shared`: protocolo, `PROTOCOL_VERSION`, mapa, combate, progressão), dados (`data/*.json`), salvamento (`MIGRATIONS`), `tests/helpers.ts` e testes do servidor, `scripts/bots.ts`, `src/client/net.ts`, `src/client/game/input.ts` |
 | **[arte]** Arte e interface | "Arte e visual" | personagens (`characters.ts`), monstros (`monsterArt.ts`), ícones (`itemArt.ts`, `actionArt.ts`), efeitos (`effects.ts`), desenho das entidades (`EntityView.ts`), telas (`style.css`, `index.html`, `ui.ts`, `bag.ts`), sons (`sfx.ts`) |
-| **[mundo]** Mundo e mapas | "Criar jogo MMO RPG do zero" | mapas (`public/assets/maps/*.tmj`), tiles (`scripts/tileset.ts`, `public/assets/tiles.png`), `scripts/gen-*.ts`, `map-builder.ts`, `map-depth.ts`, `render-map.ts`, `src/client/game/mapDepth.ts`, `docs/mapa.png` |
+| **[mundo]** Mundo e mapas | "Criar jogo MMO RPG do zero" | mapas (`public/assets/maps/*.tmj`), tiles (`scripts/tileset.ts`, `public/assets/tiles.png`), `scripts/gen-*.ts`, `map-builder.ts`, `map-depth.ts`, `render-map.ts`, `src/client/game/mapDepth.ts`, `docs/mapa-*.png`, `docs/MUNDO.md` (caderno) |
 
 - **De todos** (só mudança pequena, e junta na `main` no mesmo dia): `WorldScene.ts`, `main.ts`, `CLAUDE.md`,
   `docs/*.md`, `README.md`. Dependência nova no `package.json` só com o dono de acordo (pesa na instalação do Windows).
