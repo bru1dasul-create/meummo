@@ -352,6 +352,8 @@ export interface MonsterMoment {
   windup: boolean;
   /** Logo depois de preparar: o golpe. */
   striking: boolean;
+  /** Golpe especial (o canto da Iara). */
+  special: boolean;
   /** Número da entidade, para os monstros parados não respirarem todos juntos. */
   seed: number;
 }
@@ -417,7 +419,8 @@ export function monsterLook(scene: Phaser.Scene, type: string): MonsterLook {
     top: art.top,
     shadow: art.shadow,
     pulse: 0.05,
-    frame: ({ now, moving, windup, striking, seed }) => {
+    frame: ({ now, moving, windup, striking, special, seed }) => {
+      if (special) return paintedFrame(art, "special", Math.floor(now / 260));
       if (windup) return paintedFrame(art, "windup", 0);
       if (striking) return paintedFrame(art, "attack", 0);
       if (moving)

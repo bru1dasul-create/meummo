@@ -50,6 +50,41 @@ const SPLASH_COLORS: Record<string, [hit: number, miss: number]> = { agua: [0xc8
 /** Distância (pixels) entre as gotinhas do rastro do jato d'água. */
 const TRAIL_GAP = 3.5;
 
+// Notas musicais (o canto da Iara): ♪ e ♫ em pixel art, brancas (o tom vem do tint) com contorno escuro.
+const NOTE_ROWS: string[][] = [
+  ['...XX...', '...XXX..', '...X.XX.', '...X..X.', '...X....', '...X....', '.XXX....', 'XXXX....', 'XXXX....', '.XX.....'],
+  ['..XXXXXX', '..XXXXXX', '..X....X', '..X....X', '..X....X', '.XX...XX', 'XXX..XXX', 'XXX..XXX', '.X....X.', '........'],
+];
+const NOTE_W = 10;
+const NOTE_H = 12;
+const NOTE_COLORS = [0xbfe8ff, 0x9ad8ff, 0xf7c9da, 0xfff2a8];
+
+/** Textura das notas (quadro 0 = ♪, 1 = ♫), criada uma vez. */
+function noteTexture(scene: Phaser.Scene): string {
+  const key = 'fx-notes';
+  if (scene.textures.exists(key)) return key;
+  const canvas = document.createElement('canvas');
+  canvas.width = NOTE_W * NOTE_ROWS.length;
+  canvas.height = NOTE_H;
+  const ctx = canvas.getContext('2d')!;
+  NOTE_ROWS.forEach((rows, f) => {
+    const solid = (x: number, y: number) => rows[y]?.[x] === 'X';
+    for (let y = -1; y <= rows.length; y++) {
+      for (let x = -1; x <= 8; x++) {
+        const px = f * NOTE_W + x + 1;
+        const py = y + 1;
+        if (solid(x, y)) ctx.fillStyle = '#ffffff';
+        else if (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1)) ctx.fillStyle = '#1d3a5e';
+        else continue;
+        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+  });
+  const texture = scene.textures.addCanvas(key, canvas)!;
+  NOTE_ROWS.forEach((_, f) => texture.add(f, 0, f * NOTE_W, 0, NOTE_W, NOTE_H));
+  return key;
+}
+
 /** Lista [x0, y0, x1, y1, ...] de tiles → o centro de cada um, em pixels. */
 function tileCenters(tiles: number[]): { x: number; y: number }[] {
   const centers: { x: number; y: number }[] = [];
@@ -192,6 +227,52 @@ export class Effects {
         return t < end;
       },
       destroy: () => circle.destroy(),
+    });
+  }
+
+  /**
+   * Canto da Iara: notas musicais saindo dela e se espalhando até a beira da área (`radius`, em pixels),
+   * subindo e balançando; um anel suave marca o alcance.
+   */
+  song(x: number, y: number, radius: number, now: number): void {
+    this.ring(x, y + 18, 0x9ad8ff, radius, 1300, now);
+    const key = noteTexture(this.scene);
+    const notes: { sprite: Phaser.GameObjects.Image; angle: number; delay: number; spin: number; far: number }[] = [];
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      notes.push({
+        sprite: this.scene.add
+          .image(x, y, key, i % 2)
+          .setTint(NOTE_COLORS[i % NOTE_COLORS.length]!)
+          .setDepth(4500)
+          .setAlpha(0),
+        angle: (i / count) * Math.PI * 2 + Math.random() * 0.4,
+        delay: (i % 4) * 140 + Math.random() * 120,
+        spin: Math.random() * Math.PI * 2,
+        far: radius * (0.55 + Math.random() * 0.4),
+      });
+    }
+    const LIFE = 1250;
+    const end = now + LIFE + 600;
+    this.effects.push({
+      update: (t) => {
+        for (const n of notes) {
+          const k = (t - now - n.delay) / LIFE;
+          if (k < 0) continue;
+          if (k >= 1) {
+            n.sprite.setVisible(false);
+            continue;
+          }
+          const ease = 1 - (1 - k) * (1 - k);
+          const wobble = Math.sin(n.spin + k * 9) * 3;
+          n.sprite
+            .setPosition(x + Math.cos(n.angle) * n.far * ease + wobble, y + Math.sin(n.angle) * n.far * ease * 0.7 - k * 14)
+            .setAlpha(k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1)
+            .setRotation(Math.sin(n.spin + k * 6) * 0.3);
+        }
+        return t < end;
+      },
+      destroy: () => notes.forEach((n) => n.sprite.destroy()),
     });
   }
 

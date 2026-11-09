@@ -73,6 +73,13 @@ export class EntityView {
   private flashUntil = 0;
   private windupUntil = 0;
   private windupStart = 0;
+  /** Golpe especial (o canto): mostra a pose própria e não mostra o "golpe" no fim. */
+  private specialUntil = 0;
+  private specialWindup = false;
+  /** Encantado pelo canto até este momento (o seu personagem): brilho azul e notinhas em volta. */
+  private charmUntil = 0;
+  private charmNotes: HTMLDivElement | null = null;
+  private charmRing: Phaser.GameObjects.Ellipse | null = null;
   private fadeStart = 0;
   private ghostUntil = 0;
   private fainted = false;
@@ -239,8 +246,9 @@ export class EntityView {
       this.drawCharacter(now, moving || now - this.lastMovingAt < WALK_GRACE_MS, t);
     } else if (this.monster) {
       const windup = now < this.windupUntil;
-      const striking = !windup && this.windupUntil > 0 && now < this.windupUntil + STRIKE_MS;
-      this.sprite.setFrame(this.monster.frame({ now, moving, windup, striking, seed: this.id }));
+      const striking = !windup && !this.specialWindup && this.windupUntil > 0 && now < this.windupUntil + STRIKE_MS;
+      const special = now < this.specialUntil;
+      this.sprite.setFrame(this.monster.frame({ now, moving, windup, striking, special, seed: this.id }));
       this.sprite.setFlipX(this.facingLeft);
     }
 
@@ -255,9 +263,26 @@ export class EntityView {
     if (now < this.flashUntil) {
       this.sprite.setTint(0xff6b6b);
       this.face?.setTint(0xff6b6b);
+    } else if (now < this.charmUntil) {
+      // encantado: brilho azul pulsando
+      const k = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(now / 130));
+      const tint = (Math.round(255 - 101 * k) << 16) | (Math.round(255 - 39 * k) << 8) | 255;
+      this.sprite.setTint(tint);
+      this.face?.setTint(tint);
     } else {
       this.sprite.clearTint();
       this.face?.clearTint();
+    }
+    if (now < this.charmUntil) {
+      // e um anel azul no chão, pulsando
+      if (!this.charmRing) this.charmRing = this.scene.add.ellipse(x, y - 1.5, 20, 8).setFillStyle(0x9ad8ff, 0.18).setStrokeStyle(1.5, 0xbfe8ff, 0.95);
+      const pulse = 1 + 0.12 * Math.sin(now / 110);
+      this.charmRing.setPosition(x, y - 1.5).setScale(pulse).setDepth(y - 0.4).setAlpha(0.65 + 0.35 * Math.sin(now / 160));
+    } else if (this.charmNotes || this.charmRing) {
+      this.charmNotes?.remove();
+      this.charmNotes = null;
+      this.charmRing?.destroy();
+      this.charmRing = null;
     }
 
     let alpha = 1;
@@ -387,6 +412,29 @@ export class EntityView {
   windup(now: number, ms: number): void {
     this.windupStart = now;
     this.windupUntil = now + ms;
+    this.specialWindup = false;
+  }
+
+  /** O preparo que está correndo é o golpe especial (o canto da Iara): usa a pose própria até o fim dele. */
+  special(now: number): void {
+    this.specialUntil = Math.max(this.windupUntil, now + 600);
+    this.specialWindup = true;
+  }
+
+  /** Encantado pelo canto por `ms` (0 = solto): brilho azul e notinhas em volta da cabeça. */
+  charm(now: number, ms: number): void {
+    this.charmUntil = ms > 0 ? now + ms : 0;
+    if (ms > 0 && !this.charmNotes) {
+      this.charmNotes = document.createElement('div');
+      this.charmNotes.className = 'charm-notes';
+      for (const note of ['♪', '♫', '♪', '♫']) {
+        const span = document.createElement('span');
+        span.textContent = note;
+        this.charmNotes.append(span);
+      }
+      this.tag.prepend(this.charmNotes);
+      this.cachedLabelWidth = null;
+    }
   }
 
   /** Meio transparente por um tempo (esquiva, proteção). */
@@ -442,6 +490,7 @@ export class EntityView {
     window.clearTimeout(this.bubbleTimer);
     this.sprite.destroy();
     this.face?.destroy();
+    this.charmRing?.destroy();
     if (this.textureKey) releaseCharacterTexture(this.scene, this.textureKey);
     if (this.pendingKey) releaseCharacterTexture(this.scene, this.pendingKey);
     this.shadow.destroy();

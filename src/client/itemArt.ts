@@ -55,6 +55,28 @@ const ICONS: Record<string, IconArt> = {
       "................",
     ],
   },
+  // escama da Iara: verde-água brilhante, com reflexo rosado de madrepérola
+  escama: {
+    colors: { a: "#2a6f6a", b: "#5fd0c0", B: "#3aa898", W: "#effffa", p: "#f4c4dc" },
+    rows: [
+      "................",
+      "................",
+      "...aaaaaaaaaa...",
+      "..aWWpbbbbbbBa..",
+      "..aWpbbbbbbbBa..",
+      "..abbbbbbbbbBa..",
+      "..aBbbbbbbbbBa..",
+      "..abBbbbbbbBBa..",
+      "...abBBBBBBBa...",
+      "...abbbbbbbBa...",
+      "....aBbbbbBa....",
+      ".....aBBBBa.....",
+      "......abba......",
+      ".......aa.......",
+      "................",
+      "................",
+    ],
+  },
   // dente de jacaré: grande, curvo e pontudo, com a raiz mais escura
   dente: {
     colors: { I: "#efe6c8", W: "#fffdf4", i: "#c9b98e", r: "#a8845a", R: "#7a5a3a" },

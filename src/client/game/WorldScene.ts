@@ -1084,8 +1084,9 @@ export class WorldScene extends Phaser.Scene {
         this.effects.whirlwind(center.x, center.y + 6, now);
         break;
       case 'song':
-        // o canto da Iara: um anel do tamanho da área (o aviso no chão vem junto, no 'warn')
-        this.effects.ring(center.x, center.y, 0x9ad8ff, (range ?? 5) * T, 900, now);
+        // o canto da Iara: ela troca para a pose de canto e saem notas pela área (o aviso no chão vem no 'warn')
+        view.special(now);
+        this.effects.song(center.x, center.y - 18, (range ?? 5) * T, now);
         break;
     }
   }
@@ -1181,6 +1182,7 @@ export class WorldScene extends Phaser.Scene {
   private onCharm(ms: number, now: number): void {
     const was = now < this.charmedUntil;
     this.charmedUntil = ms > 0 ? now + ms : 0;
+    this.me.charm(now, ms);
     if (ms > 0) {
       this.pending = [];
       this.clearPath();

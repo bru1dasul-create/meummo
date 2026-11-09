@@ -61,9 +61,10 @@ describe('monstros pintados', () => {
       const idle = paintedFrame(art, 'idle', 0);
       const walk = Array.from({ length: art.frames.walk }, (_, f) => paintedFrame(art, 'walk', f));
       for (let f = 1; f < walk.length; f++) expect(diff(sheet, art, walk[0]!, walk[f]!), `andando ${f}`).toBeGreaterThan(20);
-      // armando o golpe e golpeando: bem diferente de parado
+      // armando o golpe e golpeando (e o golpe especial, se tiver): bem diferente de parado
       expect(diff(sheet, art, idle, paintedFrame(art, 'windup', 0))).toBeGreaterThan(80);
       expect(diff(sheet, art, idle, paintedFrame(art, 'attack', 0))).toBeGreaterThan(80);
+      for (let f = 0; f < art.frames.special; f++) expect(diff(sheet, art, idle, paintedFrame(art, 'special', f)), `especial ${f}`).toBeGreaterThan(80);
     });
   }
 
@@ -73,5 +74,14 @@ describe('monstros pintados', () => {
     for (const anim of MONSTER_ANIMS) for (let f = 0; f < art.frames[anim]; f++) seen.add(paintedFrame(art, anim, f));
     expect(seen.size).toBe(paintedFrameCount(art));
     expect(paintedFrame(art, 'walk', art.frames.walk)).toBe(paintedFrame(art, 'walk', 0));
+    // sem golpe especial: usa o quadro de preparar
+    expect(art.frames.special).toBe(0);
+    expect(paintedFrame(art, 'special', 0)).toBe(paintedFrame(art, 'windup', 0));
+  });
+
+  it('a Iara é chefe: maior que um jogador e com o canto (quadros próprios)', () => {
+    const iara = PAINTED.iara!;
+    expect(iara.top).toBeGreaterThan(29); // o nome fica acima de um personagem com chapéu
+    expect(iara.frames.special).toBeGreaterThan(0);
   });
 });

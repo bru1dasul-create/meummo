@@ -120,8 +120,9 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   cabelo de fogo — penteado `fogo`, que tremula a cada quadro — e `feetBackward`/`barefoot`).
 - `npm run render:characters` desenha uma prancha de exemplo em `docs/personagens.png`.
 - Monstros novos usam o mesmo pincel (`src/client/game/monsterPaint.ts`): olham para a direita (o jogo espelha) e
-  têm quadros de parado, andando, armando o golpe (enquanto o aviso está no chão) e golpeando. `monsterArt.ts`
-  escolhe o quadro (`monsterLook`); monstro sem pintura usa o desenho antigo 16x16, e um sem desenho, a bolha.
+  têm quadros de parado, andando, armando o golpe (enquanto o aviso está no chão) e golpeando, e podem ter um golpe
+  especial (`special`: o canto da Iara, ligado pelo `fx` `song`). `monsterArt.ts` escolhe o quadro (`monsterLook`);
+  monstro sem pintura usa o desenho antigo 16x16, e um sem desenho, a bolha.
 
 ## NPCs e loja
 - Os NPCs vêm de `data/npcs.json` (lido por `src/server/npcs.ts`; `checkNpcs` confere ao ligar se o mapa existe,

@@ -1,6 +1,7 @@
 // Monstros pintados com o mesmo pincel dos personagens (doll/raster.ts): volume, sombra, contorno colorido
 // e o dobro de detalhe (aparecem na metade do tamanho, como os personagens). Olham para a direita (o jogo
-// espelha para a esquerda). Cada um tem quadros de parado, andando, preparando o golpe e golpeando.
+// espelha para a esquerda). Cada um tem quadros de parado, andando, preparando o golpe e golpeando (e, se
+// tiver, um golpe especial: o canto da Iara).
 //
 // COMO PINTAR UM MONSTRO NOVO
 // Escreva a função que desenha o monstro numa pose (veja o jacaré e o boto) e acrescente em PAINTED, com a
@@ -8,11 +9,12 @@
 // monsterArt.ts. Confira com `npm run render:characters` (os monstros ficam embaixo da prancha).
 
 import { darken, material } from './doll/palette';
-import { Canvas, type Vec } from './doll/raster';
+import { Canvas, joint, type Vec } from './doll/raster';
 import { Sheet } from './doll/sheet';
 
-export type MonsterAnim = 'idle' | 'walk' | 'windup' | 'attack';
-export const MONSTER_ANIMS: readonly MonsterAnim[] = ['idle', 'walk', 'windup', 'attack'];
+/** `special`: o golpe especial (o canto da Iara); quem não tem usa o quadro de preparar. */
+export type MonsterAnim = 'idle' | 'walk' | 'windup' | 'attack' | 'special';
+export const MONSTER_ANIMS: readonly MonsterAnim[] = ['idle', 'walk', 'windup', 'attack', 'special'];
 
 export interface PaintedMonster {
   /** Tamanho de cada quadro (pixels da textura: o dobro dos do mapa). */
@@ -24,7 +26,7 @@ export interface PaintedMonster {
   top: number;
   /** Largura da sombra no chão (pixels do mapa). */
   shadow: number;
-  /** Quantos quadros cada animação tem. */
+  /** Quantos quadros cada animação tem (o especial pode ter 0). */
   frames: Record<MonsterAnim, number>;
   /** Tempo de cada quadro parado e andando (ms). */
   idleMs: number;
@@ -293,7 +295,7 @@ const JACARE: PaintedMonster = {
   feet: 36,
   top: 15,
   shadow: 30,
-  frames: { idle: 4, walk: 4, windup: 1, attack: 1 },
+  frames: { idle: 4, walk: 4, windup: 1, attack: 1, special: 0 },
   idleMs: 420,
   walkMs: 140,
   draw: drawJacare,
@@ -522,20 +524,293 @@ const BOTO: PaintedMonster = {
   feet: 61,
   top: 29,
   shadow: 14,
-  frames: { idle: 4, walk: 4, windup: 1, attack: 1 },
+  frames: { idle: 4, walk: 4, windup: 1, attack: 1, special: 0 },
   idleMs: 300,
   walkMs: 90,
   draw: drawBoto,
+};
+
+
+// ======================= Iara =======================
+// A mãe-d'água, chefe da Billings: moça de cabelo preto comprido (com brilho verde de água), vitória-régia no
+// cabelo, conchas no peito e cauda de peixe verde-água com escamas. Maior que um jogador. Prepara uma bola
+// d'água na mão e atira; no canto, junta as mãos no peito, levanta o rosto e abre a boca (as notas são efeito).
+
+const IARA_SKIN = material('#b07850', 'skin');
+const IARA_HAIR = material('#22332e', 'hair');
+const IARA_TAIL = material('#3a9a8a', 'leaf');
+const IARA_FIN = material('#86d8c8', 'cloth');
+const IARA_SHELL = material('#f6ead8', 'cloth');
+const IARA_WEED = material('#4e8a3a', 'leaf');
+const IARA_LILY = '#f7c9da';
+const IARA_LILY_DARK = '#d98aa8';
+const IARA_LILY_MID = '#f2c94c';
+const IARA_EYE = '#1d1418';
+const IARA_LIP = '#c0505a';
+
+interface IaraPose {
+  /** Pulo na cauda (andando) e quanto encolhe para pegar impulso. */
+  lift: number;
+  squash: number;
+  /** O tronco vai para trás (−) ou para a frente (+). */
+  lean: number;
+  /** Respiração do tronco. */
+  bob: number;
+  /** Fase e força do balanço do cabelo e da cauda. */
+  sway: number;
+  swing: number;
+  /** Rosto para cima (−), em graus. */
+  tilt: number;
+  /** Mão de cá e mão de lá, em relação ao ombro. */
+  near: Vec;
+  far: Vec;
+  /** Bola d'água na mão (raio) e boca aberta (cantando). */
+  orb: number;
+  sing: boolean;
+  /** Cabelo flutuando (cantando). */
+  float: number;
+}
+
+function iaraPose(anim: MonsterAnim, f: number): IaraPose {
+  const base: IaraPose = { lift: 0, squash: 0, lean: 0, bob: 0, sway: 0, swing: 1, tilt: 0, near: [2.5, 13.5], far: [-3, 13.5], orb: 0, sing: false, float: 0 };
+  if (anim === 'idle') return { ...base, bob: [0, 0.5, 1, 0.5][f]!, sway: (f * Math.PI) / 2 };
+  if (anim === 'walk') {
+    return {
+      ...base,
+      lift: [0, 2, 3, 1][f]!,
+      squash: [1, 0, 0, 0.4][f]!,
+      lean: [0, 1, 1.5, 0.5][f]!,
+      sway: (f * Math.PI) / 2,
+      swing: 1.8,
+      near: ([[1, 13.5], [-1, 13], [-2, 12.5], [0, 13.5]] as Vec[])[f]!,
+      far: ([[-1, 13.5], [1, 13], [2, 12.5], [0, 13.5]] as Vec[])[f]!,
+    };
+  }
+  if (anim === 'windup') return { ...base, lean: -1.5, near: [9, 4.5], far: [-6, 10], orb: 3.2, sway: Math.PI / 2 };
+  if (anim === 'attack') return { ...base, lean: 2, near: [13.5, 1.5], far: [-7, 9], orb: 0, sway: Math.PI };
+  // cantando: mão de cá no peito, a de lá aberta para trás, rosto para cima e o cabelo flutuando
+  return { ...base, tilt: -11, near: [-1.5, 5.5], far: [-11, 2 - f], sing: true, float: 1 + f * 0.6, sway: f * Math.PI, swing: 1.4 };
+}
+
+/** Escamas: a borda de baixo de cada uma, mais escura (só onde bate luz), fileiras desencontradas. */
+function scales(x: number, y: number, tone: number): number {
+  const w = 4.6;
+  const h = 3.4;
+  const row = Math.floor(y / h);
+  const lx = ((((x + (row % 2) * (w / 2)) % w) + w) % w) - w / 2;
+  const ly = y - row * h;
+  const d = Math.hypot(lx, (ly + 0.6) * 1.1);
+  return tone >= 2 && d > w / 2 - 0.2 && d < w / 2 + 0.7 && ly > h * 0.35 ? tone - 1 : tone;
+}
+
+function drawIara(cv: Canvas, anim: MonsterAnim, frame: number): void {
+  const p = iaraPose(anim, frame);
+  // tudo 3 pixels acima do pé da moldura (a cauda deitada fica na linha do chão)
+  const Y = -3;
+  const ground = 92 + Y;
+  // cauda em "J": a ponta (com a barbatana) deitada no chão para trás, subindo até o quadril
+  const spine: Vec[] = [
+    [19, 86.5],
+    [28, 89.2],
+    [39, 89.6],
+    [48.5, 86],
+    [53.5, 78],
+    [52.5, 69.5],
+    [49.5, 62],
+  ];
+  const radii = [2.2, 3.6, 5.2, 6.6, 7.6, 8.1, 8.3];
+  const pts: Vec[] = spine.map(([x, y], i) => {
+    const k = Math.max(0, (i - 2) / (spine.length - 3));
+    const squashed = ground - (ground - y) * (1 - p.squash * 0.06);
+    const wave = i < 3 ? Math.sin(p.sway + i) * 0.6 * p.swing * (1 - i / 3) : 0;
+    // no pulo, a curva de baixo da cauda quase não sai do chão; o resto do corpo sobe
+    return [x + p.lean * k * 0.6, squashed + Y + wave - p.lift * (i < 2 ? 0.4 : i < 4 ? 0.6 : 1) - p.bob * k];
+  });
+  const tail = smoothSpine(pts, radii.map((r) => r * (1 + p.squash * 0.05)), 4);
+  const hip = pts[6]!;
+  // tronco: inclina e respira em cima do quadril
+  const up = (v: Vec, k = 1): Vec => [v[0] + p.lean * k, v[1] + Y - p.lift - p.bob];
+  const shoulderNear = up([52.5, 43]);
+  const shoulderFar = up([43.5, 43]);
+  const neck = up([48, 39]);
+  const head: Vec = up([48.5, 31.5]);
+
+  // ---- cabelo de trás (atrás de tudo): mechas compridas descendo pelas costas ----
+  const hairFlow = (k: number, t: number): Vec => {
+    const wave = Math.sin(p.sway + t * 3 + k) * (1 + t * 1.6) * p.swing * 0.8;
+    const lift = p.float * t * 4;
+    return [head[0] - 5 - t * 9 + wave - k * 2.2, head[1] + t * 34 - lift + k * 1.5];
+  };
+  for (let k = 0; k < 3; k++) {
+    cv.part(`hairback${k}`);
+    const lock: Vec[] = [0, 0.25, 0.5, 0.75, 1].map((t) => hairFlow(k, t));
+    const r = [4.6 - k * 0.6, 4 - k * 0.5, 3.4 - k * 0.4, 2.6 - k * 0.3, 1.4];
+    for (let i = 0; i < lock.length - 1; i++) cv.capsule(lock[i]!, lock[i + 1]!, r[i]!, r[i + 1]!, IARA_HAIR, { bias: -0.15 - k * 0.1 });
+    // um fio de brilho verde-água descendo pela mecha
+    const group = `hairback${k}`;
+    for (let i = 0; i < 18; i++) {
+      const t = 0.08 + (i / 18) * 0.7;
+      const [x, y] = hairFlow(k, t);
+      if (cv.ownedBy(Math.floor(x - 1), Math.floor(y), group)) cv.dot(x - 1, y, k === 0 ? '#4f8a76' : '#3f6f60');
+    }
+  }
+
+  // ---- braço de lá (atrás do corpo) ----
+  const arm = (shoulder: Vec, hand: Vec, far: boolean) => {
+    const target: Vec = [shoulder[0] + hand[0], shoulder[1] + hand[1]];
+    const elbow = joint(shoulder, target, 7.6, 7.2, far ? -1 : 1);
+    const o = { bias: far ? -0.4 : 0 };
+    cv.part(far ? 'farArm' : 'arm');
+    cv.capsule(shoulder, elbow, 2.1, 1.8, IARA_SKIN, o);
+    cv.capsule(elbow, target, 1.8, 1.5, IARA_SKIN, o);
+    cv.ellipse(target, 1.8, 1.7, IARA_SKIN, o);
+    return target;
+  };
+  arm(shoulderFar, p.far, true);
+
+  // ---- barbatana na ponta da cauda (um leque) ----
+  cv.part('fin');
+  const tip = pts[0]!;
+  const fin: Vec[] = [
+    [tip[0] + 1.5, tip[1] - 1.8],
+    [tip[0] - 7, tip[1] - 9 + Math.sin(p.sway) * p.swing],
+    [tip[0] - 9.5, tip[1] - 5],
+    [tip[0] - 6, tip[1] - 0.5],
+    [tip[0] - 10, tip[1] + 3.5],
+    [tip[0] - 6.5, tip[1] + 6.5 - Math.sin(p.sway) * p.swing * 0.6],
+    [tip[0] + 1.5, tip[1] + 1.8],
+  ];
+  cv.polygon(fin, IARA_FIN, { pattern: (x, y, t) => (Math.abs(((Math.atan2(y - tip[1], x - tip[0]) * 180) / Math.PI) % 18) < 3 ? t - 1 : t) });
+
+  // ---- cauda com escamas (barriga mais clara do lado de cá) ----
+  cv.part('tail');
+  for (let i = 0; i < tail.at.length - 1; i++) cv.capsule(tail.at[i]!, tail.at[i + 1]!, tail.r[i]!, tail.r[i + 1]!, IARA_TAIL, { pattern: scales });
+
+  // ---- tronco, pescoço, cinto de folhas e conchas ----
+  cv.part('body');
+  const torso: Vec[] = [
+    up([43.6, 62], 0.3),
+    up([44, 54], 0.7),
+    up([42.8, 47.5]),
+    up([42.6, 43]),
+    up([53.4, 43]),
+    up([54, 47.5]),
+    up([52.8, 54], 0.7),
+    up([55, 62], 0.3),
+  ];
+  cv.polygon(torso, IARA_SKIN);
+  cv.capsule(neck, up([48.2, 42]), 2.3, 2.6, IARA_SKIN);
+  // cintura: onde a pele vira cauda, um cinto de folhas de aguapé
+  cv.part('weed');
+  for (let i = 0; i < 6; i++) cv.ellipse([hip[0] - 5.5 + i * 2.2, hip[1] + (i % 2) * 0.8], 1.8, 1.4, IARA_WEED, { bias: i % 2 ? -0.1 : 0.05 });
+  // top de conchas: uma faixa clara no peito, com as conchinhas em leque (ranhuras)
+  cv.part('shells');
+  const top: Vec[] = [up([42.6, 43.8]), up([47.5, 43.2]), up([54, 44]), up([54.2, 49]), up([48, 49.6]), up([42.8, 49])];
+  cv.polygon(top, IARA_SHELL, { pattern: (x, y, t) => ((((x - y * 0.25) % 2.2) + 2.2) % 2.2 < 0.55 ? t - 1 : t) });
+  cv.detail('pearl');
+  const pearl = up([48.4, 46.4]);
+  cv.dot(pearl[0], pearl[1], '#ffffff');
+  cv.dot(pearl[0] + 1, pearl[1], '#e8dff0');
+
+  // ---- cabeça e rosto (de três quartos, olhando para a direita) ----
+  cv.part('body');
+  cv.ellipse(head, 6.2, 6.6, IARA_SKIN);
+  const face = (v: Vec): Vec => rot(v, head, p.tilt);
+  cv.detail('face');
+  const eye = face([head[0] + 3.2, head[1] - 0.4]);
+  const ex = Math.round(eye[0]);
+  const ey = Math.round(eye[1]);
+  cv.dot(ex - 1, ey - 1, IARA_EYE); // cílios
+  cv.dot(ex, ey - 1, IARA_EYE);
+  cv.dot(ex + 1, ey - 1, IARA_EYE);
+  cv.dot(ex - 1, ey, IARA_EYE);
+  cv.dot(ex, ey, '#3d8a6a'); // olho verde-água
+  cv.dot(ex + 1, ey, '#ffffff');
+  const cheek = face([head[0] + 3, head[1] + 2.6]);
+  cv.dot(cheek[0], cheek[1], '#d98a7a');
+  const mouth = face([head[0] + 3.6, head[1] + 4.2]);
+  if (p.sing) {
+    // boca aberta, cantando
+    cv.dot(mouth[0], mouth[1], '#5a1e28');
+    cv.dot(mouth[0] + 1, mouth[1], '#5a1e28');
+    cv.dot(mouth[0], mouth[1] + 1, '#7a2a34');
+    cv.dot(mouth[0] + 1, mouth[1] + 1, IARA_LIP);
+  } else {
+    cv.dot(mouth[0], mouth[1], IARA_LIP);
+    cv.dot(mouth[0] + 1, mouth[1], IARA_LIP);
+  }
+
+  // ---- cabelo de cima: topo, franja e uma mecha caindo pelo ombro ----
+  cv.part('hair');
+  cv.ellipse(face([head[0] - 0.8, head[1] - 3.4]), 6.8, 4.6, IARA_HAIR);
+  cv.ellipse(face([head[0] - 4.6, head[1] + 0.4]), 3.2, 5.2, IARA_HAIR, { bias: -0.1 });
+  cv.ellipse(face([head[0] + 2.6, head[1] - 4.6]), 3.6, 2.1, IARA_HAIR);
+  // sobrancelha
+  const brow = face([head[0] + 2.6, head[1] - 2.6]);
+  cv.detail('brow');
+  cv.dot(brow[0], brow[1], IARA_HAIR.ramp[0]);
+  cv.dot(brow[0] + 1, brow[1], IARA_HAIR.ramp[0]);
+  cv.dot(brow[0] + 2, brow[1] + 0.6, IARA_HAIR.ramp[0]);
+  // uma mecha caindo por trás do ombro (o peito fica livre para o top de conchas)
+  cv.part('hairFront');
+  const lockTop = face([head[0] - 3.4, head[1] + 3.5]);
+  const lockEnd: Vec = [shoulderFar[0] - 0.5 + Math.sin(p.sway + 1) * 0.8, shoulderFar[1] + 7 - p.float * 2.5];
+  cv.capsule(lockTop, lockEnd, 2.6, 1.2, IARA_HAIR, { bias: -0.05 });
+  // brilho verde-água no cabelo (uma faixa de luz)
+  cv.detail('sheen');
+  for (let i = 0; i < 4; i++) {
+    const q = face([head[0] - 3 + i * 1.6, head[1] - 6 + Math.abs(i - 1.5) * 0.5]);
+    cv.dot(q[0], q[1], '#5f9a86');
+  }
+
+  // vitória-régia no cabelo
+  cv.detail('lily');
+  const lily = face([head[0] - 4.2, head[1] - 5.2]);
+  const lx = Math.round(lily[0]);
+  const ly = Math.round(lily[1]);
+  for (const [dx, dy] of [[0, -2], [-2, -1], [2, -1], [-2, 1], [2, 1], [0, 2], [-1, -1], [1, -1], [-1, 1], [1, 1], [-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+    cv.dot(lx + dx, ly + dy, Math.abs(dx) + Math.abs(dy) >= 2 ? IARA_LILY : IARA_LILY_DARK);
+  }
+  cv.dot(lx, ly, IARA_LILY_MID);
+
+  // ---- braço de cá (na frente) e a bola d'água ----
+  const hand = arm(shoulderNear, p.near, false);
+  if (p.orb > 0) {
+    cv.part('orb');
+    cv.ellipse([hand[0] + 2.6, hand[1] - 1.4], p.orb, p.orb, WATER);
+    cv.detail('orbShine');
+    cv.dot(hand[0] + 1.6, hand[1] - 2.6, '#ffffff');
+  }
+  if (anim === 'attack') {
+    cv.part('splash');
+    cv.ellipse([hand[0] + 4.5, hand[1] - 0.5], 2, 1.6, WATER);
+    cv.ellipse([hand[0] + 7.5, hand[1] - 2], 1.3, 1.1, WATER);
+    cv.ellipse([hand[0] + 7, hand[1] + 1.8], 1, 1, WATER);
+  }
+}
+
+const IARA: PaintedMonster = {
+  width: 84,
+  height: 96,
+  feet: 93,
+  top: 40,
+  shadow: 22,
+  frames: { idle: 4, walk: 4, windup: 1, attack: 1, special: 2 },
+  idleMs: 340,
+  walkMs: 110,
+  draw: drawIara,
 };
 
 /** Monstros pintados, pela chave de data/monsters.json. */
 export const PAINTED: Record<string, PaintedMonster> = {
   jacare: JACARE,
   boto: BOTO,
+  iara: IARA,
 };
 
-/** Índice do quadro na folha: parado, andando, preparando e golpeando, um depois do outro. */
+/** Índice do quadro na folha: parado, andando, preparando, golpeando e o especial, um depois do outro. */
 export function paintedFrame(art: PaintedMonster, anim: MonsterAnim, frame: number): number {
+  if (art.frames[anim] === 0) return paintedFrame(art, anim === 'special' ? 'windup' : 'idle', frame);
   let index = 0;
   for (const a of MONSTER_ANIMS) {
     if (a === anim) return index + (frame % art.frames[a]);

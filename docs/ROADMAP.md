@@ -131,8 +131,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   fica é encantado (não anda e é puxado para perto dela) e a esquiva quebra o encanto; deixa a Escama da Iara.
   Números do canto em `data/monsters.json` (`canto`) e no painel do administrador
 - [ ] **[mundo]** Passar a área da Iara da camada `lendas` para `monstros` na Billings (quantidade 1)
-- [ ] **[arte]** Desenho da Iara, efeito do canto (notas no ar no lugar do anel azul), algo no jogador encantado
-  (hoje: texto "♪ encantado" e o aviso na tela) e o ícone da Escama da Iara (`icone: "escama"`)
+- [x] **[arte]** Desenho da Iara (sereia de cabelo comprido com vitória-régia, cauda verde-água; bola d'água na mão
+  e pose de canto própria), efeito do canto (notas coloridas se espalhando pela área, com um anel no alcance), o
+  jogador encantado (brilho azul, anel no chão e notinhas em cima do nome) e o ícone da Escama da Iara
 - [ ] **[estrutura + arte + mundo]** Boitatá como chefe
 
 ## 🛠️ Ferramentas do administrador
