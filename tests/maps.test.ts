@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadMonsterDefs } from '../src/server/monsters';
 import { GameMap, type TiledMap } from '../src/shared/map';
+import { findPath } from '../src/shared/pathfind';
 import { BIG_TREES } from '../scripts/map-depth';
 import { gid, IMAGE_HEIGHT, IMAGE_WIDTH, tiledTileset } from '../scripts/tileset';
 import { tiledFromAscii } from './helpers';
@@ -95,6 +96,27 @@ describe('camadas do mapa', () => {
     const map = GameMap.fromTiled(billings, 'billings');
     expect(map).toMatchObject({ name: 'Represa Billings', safe: false, respawnMap: 'refugio' });
     expect(map.monsterZones.map((z) => z.monster)).not.toContain('iara');
+  });
+
+  it('do deck da fogueira dá para ir direto aos decks dos lados e aos píeres (sem dar a volta no lago)', () => {
+    const map = GameMap.fromTiled(realMap('refugio'), 'refugio');
+    for (const [label, x, y] of [
+      ['deck oeste', 29, 26],
+      ['deck leste', 55, 26],
+      ['píer oeste', 24, 26],
+      ['píer leste', 60, 26],
+    ] as const) {
+      const steps = findPath(map, map.spawn.x, map.spawn.y, x, y, map.width * map.height * 2);
+      expect(steps?.length ?? Infinity, label).toBeLessThan(30);
+    }
+  });
+
+  it('todo NPC de data/npcs.json tem lugar no mapa dele (livre e alcançável a pé)', () => {
+    const npcs = JSON.parse(readFileSync('data/npcs.json', 'utf8')) as Record<string, { mapa: string; x: number; y: number }>;
+    for (const [id, npc] of Object.entries(npcs)) {
+      const map = GameMap.fromTiled(realMap(npc.mapa), npc.mapa);
+      expect(map.isWalkable(npc.x, npc.y) && map.isReachable(npc.x, npc.y), `${id} em (${npc.x}, ${npc.y})`).toBe(true);
+    }
   });
 
   it('as animações e as luzes do tileset apontam para tiles que existem', () => {

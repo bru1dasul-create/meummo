@@ -94,7 +94,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   onde fica em `data/npcs.json`). Clicar nela leva até ela e abre a loja; afastar-se fecha
 - [ ] **[arte]** Caprichar a loja e o ouro: moeda desenhada, som de moeda, janela da loja e a aparência da
   Dona Iracema (hoje é o personagem padrão com chapéu de palha)
-- [ ] **[mundo]** Uma barraquinha de frutas atrás da Dona Iracema, na praça do Refúgio (ela fica em (46, 28))
+- [x] **[mundo]** Barraquinha de frutas da Dona Iracema, na praça do Refúgio (ela fica em (46, 28)): toldo listrado
+  atrás dela e balcão com frutas na frente. De quebra: os píeres dos lados voltaram a encostar no deck da fogueira
+  (as casas maiores do passo 2 tinham fechado a passagem) e um teste confere que todo NPC tem lugar alcançável
 - [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
 - [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
 - [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,

@@ -256,9 +256,14 @@ function lantern(x: number, y: number, flags: 'none' | 'left' | 'right' = 'none'
   setDecor(x, y, 'lantern_base');
   depth.above[idx(x, y - 1)] = gid(flags === 'right' ? 'lantern_flags_r_top' : flags === 'left' ? 'lantern_flags_l_top' : 'lantern_top');
 }
-lantern(37, 30, 'right');
-lantern(47, 30, 'left');
-for (let x = 38; x <= 46; x++) depth.above[idx(x, 29)] = gid(['flags_a', 'flags_b', 'flags_c'][x % 3]!);
+lantern(37, 31, 'right');
+lantern(47, 31, 'left');
+for (let x = 38; x <= 46; x++) depth.above[idx(x, 30)] = gid(['flags_a', 'flags_b', 'flags_c'][x % 3]!);
+// a barraquinha de frutas da Dona Iracema (data/npcs.json põe a vendedora em 46, 28): toldo atrás dela, balcão na frente
+['l', 'm', 'r'].forEach((part, i) => {
+  setDecor(45 + i, 28, `stall_back_${part}`);
+  setDecor(45 + i, 29, `stall_front_${part}`);
+});
 function clothesline(x0: number, y: number) {
   ['bl', 'bm', 'br'].forEach((part, i) => setDecor(x0 + i, y, `clothesline_${part}`));
   ['tl', 'tm', 'tr'].forEach((part, i) => (depth.above[idx(x0 + i, y - 1)] = gid(`clothesline_${part}`)));
@@ -272,8 +277,7 @@ for (let y = northLanding + 3; y <= 22; y += 7) lantern(41, y);
 setDecor(39, 32, 'fishing_net_left');
 setDecor(40, 32, 'fishing_net_right');
 for (const [x, y, key] of [
-  [36, 28, 'crate'],
-  [48, 28, 'barrel'],
+  [40, 28, 'crate'],
   [44, 32, 'fish_basket'],
   [45, 32, 'crate'],
   [33, 41, 'barrel'],
@@ -455,6 +459,23 @@ for (let i = 0; i < W * H; i++) {
 
 // a trilha do brejo continua até a borda: é a saída para a Billings (só agora, para não mudar o sorteio das matas)
 for (let x = 41; x <= 43; x++) setGround(x, H - 1, 'dirt');
+// os píeres dos lados do deck da fogueira ganham mais uma fileira de tábuas (a 28): as casas de 4 de altura tapam as
+// fileiras 25 a 27, e é por essa fileira nova que se passa do deck da fogueira para os decks dos varais
+for (const [x0, x1] of [
+  [33, 35],
+  [49, 51],
+] as const) {
+  for (let x = x0; x <= x1; x++) {
+    for (const bx of [x - 1, x, x + 1]) {
+      // barco amarrado onde vai a tábua nova: sai inteiro (as duas metades)
+      const key = TILES[decor[idx(bx, 28)]! - 1]?.key;
+      if (key === 'boat_left' || key === 'boat_right') decor[idx(bx, 28)] = 0;
+    }
+    setGround(x, 27, 'bridge');
+    setGround(x, 28, 'bridge_bottom');
+    if (isWater(x, 29)) setGround(x, 29, 'water_posts');
+  }
+}
 
 // 9. Beiradas suaves entre os terrenos (no fim: depois disso, a areia da beira deixa de ser só "areia")
 const isGrass = (x: number, y: number) => groundIs(x, y, 'grass', 'grass_tufts', 'grass_dark');

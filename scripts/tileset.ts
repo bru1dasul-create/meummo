@@ -1478,6 +1478,7 @@ function houseTiles(name: string, color: HouseColor): TileDef[] {
 
 const clothesline = once(drawClothesline);
 const boulder = once(drawBoulder);
+const fruitStall = once(drawFruitStall);
 const lanternFlagsRight = once(() => drawLantern('right'));
 const lanternFlagsLeft = once(() => drawLantern('left'));
 
@@ -1749,6 +1750,58 @@ function drawBigBuriti(): Pixels {
     p.set(x - 1, y - 1, hex('#d07a4a'));
   }
   p.outline(C.outline);
+  return p;
+}
+
+/**
+ * Barraquinha de frutas da feira (3x2 tiles): em cima, o toldo listrado nos dois postes (a vendedora fica em pé no
+ * meio, na frente do toldo); embaixo, o balcão com caixotes de banana, laranja, abacaxi, melancia e mamão.
+ */
+function drawFruitStall(): Pixels {
+  const p = new Pixels(48, 32);
+  const rng = mulberry32(6262);
+  p.ellipse(24, 30.5, 22, 1.8, C.shadow);
+  for (const x of [3, 43]) {
+    p.rect(x, 3, 2, 26, G.post); // postes
+    p.rect(x + 1, 3, 1, 26, G.postDark);
+  }
+  // toldo listrado (vermelho e branco), com a beirada em ondinhas
+  for (let y = 1; y < 9; y++) {
+    for (let x = 1; x < 47; x++) p.set(x, y, Math.floor((x - 1) / 4) % 2 === 0 ? hex('#d9483b') : hex('#f2ede0'));
+  }
+  for (let x = 1; x < 47; x++) {
+    const red = Math.floor((x - 1) / 4) % 2 === 0;
+    if ((x - 1) % 4 !== 3) p.set(x, 9, red ? hex('#b23a2f') : hex('#d6cfbd'));
+  }
+  p.rect(1, 1, 46, 1, hex('#8e2f26'));
+  // cacho de banana pendurado e uma réstia de alho no poste
+  p.rect(8, 10, 3, 4, C.yellow);
+  p.set(9, 14, C.yellow);
+  p.rect(8, 10, 1, 4, hex('#c9a42a'));
+  p.rect(37, 10, 2, 5, V.trim);
+  // o balcão: tampo, frente de tábuas e uma lousinha
+  p.rect(1, 17, 46, 2, G.plankLight);
+  p.rect(1, 19, 46, 11, G.plank);
+  for (let x = 4; x < 46; x += 5) p.rect(x, 19, 1, 11, G.plankDark);
+  p.rect(1, 29, 46, 1, G.postDark);
+  p.rect(19, 21, 10, 6, hex('#2f3a33')); // lousinha (preço escrito a giz)
+  for (let x = 21; x < 27; x += 2) p.set(x, 23 + (x % 3 === 0 ? 1 : 0), V.trim);
+  // caixotes com frutas em cima do balcão
+  const crate = (x: number, fruit: RGBA, light: RGBA) => {
+    p.rect(x, 13, 9, 5, G.plankDark);
+    p.rect(x + 1, 12, 7, 2, fruit);
+    for (let k = 0; k < 5; k++) p.set(x + 1 + randInt(rng, 7), 12 + randInt(rng, 2), light);
+  };
+  crate(3, hex('#ef8a2b'), hex('#ffc070')); // laranja
+  crate(13, C.yellow, hex('#fff2a0')); // banana
+  crate(26, hex('#e8a23a'), hex('#5ab55a')); // mamão
+  p.ellipse(39.5, 14, 4, 3, hex('#3f8a3a')); // melancia, com uma fatia aberta
+  p.rect(37, 12, 3, 2, hex('#e2435a'));
+  p.set(38, 12, G.postDark);
+  p.rect(23, 9, 2, 4, hex('#d9b34a')); // abacaxi em pé
+  p.set(23, 8, C.stem);
+  p.set(24, 7, C.stem);
+  p.outline(G.postDark);
   return p;
 }
 
@@ -2481,6 +2534,14 @@ export const TILES: TileDef[] = [
   { key: 'boulder_tr', collides: true, draw: pieceOf(boulder, 1, 0) },
   { key: 'boulder_bl', collides: true, draw: pieceOf(boulder, 0, 1) },
   { key: 'boulder_br', collides: true, draw: pieceOf(boulder, 1, 1) },
+  // barraquinha de frutas (a da Dona Iracema): a fileira de trás (toldo e postes) é livre — a vendedora fica no meio
+  // e entra pelos lados; quem bloqueia é só o balcão (um NPC precisa de um lugar que dê para alcançar a pé)
+  { key: 'stall_back_l', draw: pieceOf(fruitStall, 0, 0) },
+  { key: 'stall_back_m', draw: pieceOf(fruitStall, 1, 0) },
+  { key: 'stall_back_r', draw: pieceOf(fruitStall, 2, 0) },
+  { key: 'stall_front_l', collides: true, shootOver: true, draw: pieceOf(fruitStall, 0, 1) },
+  { key: 'stall_front_m', collides: true, shootOver: true, draw: pieceOf(fruitStall, 1, 1) },
+  { key: 'stall_front_r', collides: true, shootOver: true, draw: pieceOf(fruitStall, 2, 1) },
 ];
 
 export const TILE_INDEX: Record<string, number> = Object.fromEntries(TILES.map((t, i) => [t.key, i]));
