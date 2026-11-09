@@ -38,6 +38,9 @@ export interface ItemInfo {
 /** Quantos espaços a mochila tem. */
 export const BAG_SIZE = 20;
 
+/** Ouro máximo que um personagem carrega (o que passar disso não entra). */
+export const MAX_GOLD = 1_000_000;
+
 export interface ItemStack {
   item: string;
   n: number;
@@ -47,6 +50,8 @@ export interface ItemStack {
 export interface InventoryState {
   slots: (ItemStack | null)[];
   equipped: Record<EquipSlot, string | null>;
+  /** Ouro (fica fora dos espaços da mochila: não ocupa lugar). */
+  gold: number;
 }
 
 /** O que aparece no personagem: o desenho (ícone) do que está equipado em cada parte. */

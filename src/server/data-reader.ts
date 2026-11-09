@@ -60,6 +60,16 @@ export class Reader {
     return value;
   }
 
+  /** Quantidade que pode ser zero (ex.: ouro): um número (ex.: 5) ou [mínimo, máximo] (ex.: [0, 3]). Sem o campo = [0, 0]. */
+  wholeRange(field: string): [number, number] {
+    const value = this.data[field] ?? 0;
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 0) return [value, value];
+    if (Array.isArray(value) && value.length === 2 && value.every((v) => Number.isInteger(v) && v >= 0) && value[0] <= value[1]) {
+      return [value[0], value[1]];
+    }
+    this.fail(field, 'precisa ser um número inteiro (ex.: 5) ou [mínimo, máximo] (ex.: [2, 6])');
+  }
+
   /** Quantidade: um número (ex.: 2) ou [mínimo, máximo] (ex.: [1, 3]). Sem o campo = 1. */
   amount(field: string): [number, number] {
     const value = this.data[field] ?? 1;

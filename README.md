@@ -115,6 +115,9 @@ O que cada monstro deixa fica na lista `itens` dele: `item` (o id em `data/items
 e `quantidade` (opcional: um número, ou [mínimo, máximo]). Exemplo:
 `"itens": [{ "item": "banana", "chance": 50, "quantidade": [1, 2] }]`. Cada um que ajudou sorteia os seus.
 
+O ouro que cada monstro deixa fica no campo `ouro`: um número (ex.: `"ouro": 5`) ou [mínimo, máximo]
+(ex.: `"ouro": [2, 6]`). Sem o campo, o monstro não deixa ouro. Como os itens, cada um que ajudou ganha o seu.
+
 ## Criar e ajustar itens (sem programar)
 
 Os itens ficam em [`data/items.json`](data/items.json). O nome de cada bloco é o **id** do item (sem acento e sem

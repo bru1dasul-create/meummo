@@ -177,6 +177,7 @@ export class WorldScene extends Phaser.Scene {
       you.look,
     );
     this.bagEquipped = this.welcome.inv.equipped;
+    this.hud.setGold(this.welcome.inv.gold ?? 0);
     this.applyStats(this.welcome.stats, false);
     this.hud.setOnline(this.welcome.online);
 
@@ -717,13 +718,14 @@ export class WorldScene extends Phaser.Scene {
         this.bagEquipped = msg.inv.equipped;
         if (JSON.stringify(msg.inv.equipped) !== before) this.sfx.play('equip');
         this.bag.setState(msg.inv);
+        this.hud.setGold(msg.inv.gold ?? 0);
         break;
       }
       case 'gear':
         this.entities.get(msg.id)?.setGear(msg.gear);
         break;
       case 'loot':
-        this.onLoot(msg.x, msg.y, msg.items, now);
+        this.onLoot(msg.x, msg.y, msg.items, msg.gold ?? 0, now);
         break;
       case 'zone':
         this.changeZone(msg);
@@ -887,9 +889,10 @@ export class WorldScene extends Phaser.Scene {
     this.travel({ ...this.welcome, map: msg.map, you: msg.you, stats: msg.stats, inv: msg.inv, online: msg.online }, this.seq);
   }
 
-  private onLoot(x: number, y: number, stacks: ItemStack[], now: number): void {
+  private onLoot(x: number, y: number, stacks: ItemStack[], gold: number, now: number): void {
     const from = { x: (x + 0.5) * T, y: (y + 0.5) * T };
     let precious = false;
+    if (gold > 0) window.setTimeout(() => this.me?.floatText(`+${gold} ouro`, 'gold-gain'), 450);
     stacks.forEach((stack, i) => {
       const def = this.items.get(stack.item);
       if (!def) return;

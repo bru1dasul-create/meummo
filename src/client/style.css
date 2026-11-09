@@ -1162,6 +1162,39 @@ kbd {
   font-size: 16px;
 }
 
+/* Ouro: número com uma moedinha na frente (painel e mochila) */
+.gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffd76a;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gold::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border: 1px solid #8a5a0c;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff2b0, #f2c23c 45%, #b8800f);
+}
+
+#hud-gold {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+#bag-gold {
+  margin-left: 8px;
+}
+
+.float.gold-gain {
+  color: #ffd76a;
+}
+
 .touch-only {
   display: none;
 }

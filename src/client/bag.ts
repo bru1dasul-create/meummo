@@ -55,6 +55,7 @@ export class Bag {
   private readonly button = byId<HTMLButtonElement>('bag-button');
   private readonly closeButton = byId<HTMLButtonElement>('bag-close');
   private readonly countEl = byId<HTMLSpanElement>('bag-count');
+  private readonly goldEl = byId<HTMLSpanElement>('bag-gold');
   private readonly gearEl = byId<HTMLDivElement>('bag-gear');
   private readonly statsEl = byId<HTMLDivElement>('bag-stats');
   private readonly gridEl = byId<HTMLDivElement>('bag-grid');
@@ -216,6 +217,7 @@ export class Bag {
   private render(): void {
     const used = this.state.slots.filter(Boolean).length;
     this.countEl.textContent = `${used}/${this.state.slots.length}`;
+    this.goldEl.textContent = (this.state.gold ?? 0).toLocaleString('pt-BR');
     for (const part of EQUIP_SLOTS) {
       const el = this.gearButtons.get(part)!;
       const def = this.state.equipped[part] ? this.items.get(this.state.equipped[part]!) : undefined;

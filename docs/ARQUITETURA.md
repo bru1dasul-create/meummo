@@ -86,6 +86,9 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
 - Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro: os itens vão direto para
   a mochila dele (`loot` para o efeito do item voando, `inv` com a mochila nova). Mochila cheia: o item se perde,
   com aviso. Item raro ou lendário salva o personagem na hora.
+- **Ouro:** cada um que ajudou também sorteia o `ouro` do monstro (`MonsterDef.gold`). O ouro fica em
+  `Inventory.gold` (não ocupa espaço; máximo `MAX_GOLD` em `src/shared/items.ts`), vai no `inv` (`gold`) e no
+  `loot` (`gold`, para o "+N ouro"), e é salvo dentro do JSON da mochila — save de antes do ouro entra com 0.
 - `src/server/inventory.ts`: 20 espaços com pilhas e 4 partes equipadas (`weapon`, `head`, `body`, `charm`).
   Equipar troca com o que estava naquela parte. A soma dos equipamentos (`Player.bonus`) entra na vida máxima,
   no dano do estilingue e da Bordunada e na defesa (cada golpe recebido perde `defesa`, mínimo 1).
@@ -142,7 +145,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
-| servidor | `inv` / `loot` | sua mochila mudou / você pegou estes itens do monstro que caiu em (x, y) |
+| servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / você pegou estes itens (e este ouro) do monstro que caiu em (x, y) |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |
 | servidor | `online` / `pong` | quantos estão online / resposta do ping |

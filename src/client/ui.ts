@@ -120,6 +120,7 @@ export class Hud {
   private readonly hpText = byId<HTMLSpanElement>('hud-hp-text');
   private readonly xpFill = byId<HTMLDivElement>('hud-xp-fill');
   private readonly xpText = byId<HTMLSpanElement>('hud-xp-text');
+  private readonly gold = byId<HTMLSpanElement>('hud-gold');
   private readonly online = byId<HTMLSpanElement>('hud-online');
   private readonly ping = byId<HTMLSpanElement>('hud-ping');
 
@@ -139,6 +140,10 @@ export class Hud {
     this.level.textContent = `Nv ${level}`;
     this.xpFill.style.width = `${xpNext > 0 ? ((xp / xpNext) * 100).toFixed(1) : 0}%`;
     this.xpText.textContent = `XP ${xp} / ${xpNext}`;
+  }
+
+  setGold(gold: number): void {
+    this.gold.textContent = gold.toLocaleString('pt-BR');
   }
 
   setOnline(count: number): void {

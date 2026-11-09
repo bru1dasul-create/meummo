@@ -437,11 +437,13 @@ export class World {
     this.emitToViewers(player, { t: 'gear', id: player.id, gear: player.inventory.look() });
   }
 
-  /** O monstro caiu: cada um que ajudou sorteia os itens dele (cada um tem os seus, ninguém rouba de ninguém). */
+  /** O monstro caiu: cada um que ajudou sorteia os itens e o ouro dele (cada um tem os seus, ninguém rouba de ninguém). */
   private giveLoot(player: Player, monster: Monster): void {
     const got: ItemStack[] = [];
     const lost: ItemStack[] = [];
     let precious = false;
+    const [goldMin, goldMax] = monster.def.gold;
+    const gold = goldMax > 0 ? player.inventory.addGold(this.rollRange(goldMin, goldMax)) : 0;
     for (const drop of monster.def.drops) {
       if (this.random() * 100 >= drop.chance) continue;
       const def = this.items.get(drop.item);
@@ -453,10 +455,11 @@ export class World {
       if (added > 0 && def.rarity !== 'common') precious = true;
       if (added > 0 && def.rarity === 'legendary') this.links.announce({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
     }
-    if (got.length > 0) {
+    if (got.length > 0 || gold > 0) {
       player.invDirty = true;
-      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got });
-      player.outbox.push({ t: 'sys', text: `Você pegou: ${this.describe(got)}.` });
+      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got, ...(gold > 0 ? { gold } : {}) });
+      const parts = [...(gold > 0 ? [`${gold} de ouro`] : []), ...(got.length > 0 ? [this.describe(got)] : [])];
+      player.outbox.push({ t: 'sys', text: `Você pegou: ${parts.join(', ')}.` });
       if (precious) this.saveCharacters([player]); // item raro não pode sumir se o servidor cair
     }
     if (lost.length > 0) player.outbox.push({ t: 'sys', text: `Mochila cheia! Ficou para trás: ${this.describe(lost)}.` });
