@@ -37,6 +37,16 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] Arte de verdade para personagens e monstros
 
+## 🎨 Design (visual)
+Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
+- [x] **Interface:** tela de entrada com cenário (selva sobre as ruínas e a represa), "Como jogar" que abre sozinho
+  para quem é novo; painéis num estilo só (madeira escura com borda dourada); nível em destaque e XP com números;
+  botões de habilidade com ícones, tecla do atalho e segundos de recarga; chat que esmaece quando ninguém fala
+  (no celular fica recolhido nas últimas linhas, um toque abre); faixa com o nome da zona (vermelha se for perigosa)
+- [ ] **Cenário com profundidade:** sombras embaixo de personagens, casas e árvores; tábuas e água com mais
+  variação (hoje o desenho se repete em grade); contorno no personagem para destacar do chão
+- [ ] Arte definitiva (depende de decidir: desenhar, contratar ou usar pacotes gratuitos)
+
 ## ✅ Pindorama — a primeira zona
 - [x] Mundo aprovado: **Pindorama — Selva de Pedra** (São Paulo tomada pela floresta), tom "um pouco dos dois"
   (colorido e vivo nas vilas, sombrio nas ruínas) — ver DESIGN.md

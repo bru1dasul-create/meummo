@@ -1,6 +1,10 @@
 // Interface em HTML por cima do jogo: barra de informações e chat.
 
+import { actionIconUrl } from './actionArt';
+
 const MAX_CHAT_LINES = 60;
+/** Sem mensagem nova por esse tempo, o chat fica mais transparente (para não esconder o jogo). */
+const CHAT_IDLE_MS = 9000;
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -13,6 +17,7 @@ export class ChatBox {
   private readonly log = byId<HTMLUListElement>('chat-log');
   private readonly form = byId<HTMLFormElement>('chat-form');
   private readonly input = byId<HTMLInputElement>('chat-input');
+  private idleTimer: number | undefined;
 
   constructor(private readonly onSend: (text: string) => void) {
     this.root.hidden = false;
@@ -20,6 +25,9 @@ export class ChatBox {
     this.input.placeholder = matchMedia('(pointer: coarse)').matches ? 'Conversar...' : 'Enter para conversar';
     this.form.addEventListener('submit', this.submit);
     window.addEventListener('keydown', this.keydown);
+    // No celular o chat fica recolhido (últimas linhas); um toque abre e outro fecha
+    if (matchMedia('(pointer: coarse)').matches) this.log.addEventListener('click', this.toggleOpen);
+    this.input.addEventListener('focus', this.wake);
   }
 
   isTyping(): boolean {
@@ -52,6 +60,10 @@ export class ChatBox {
   destroy(): void {
     this.form.removeEventListener('submit', this.submit);
     window.removeEventListener('keydown', this.keydown);
+    this.log.removeEventListener('click', this.toggleOpen);
+    this.input.removeEventListener('focus', this.wake);
+    window.clearTimeout(this.idleTimer);
+    this.root.classList.remove('idle', 'open');
     this.input.value = '';
     this.input.blur();
     this.root.hidden = true;
@@ -62,7 +74,23 @@ export class ChatBox {
     this.log.append(li);
     while (this.log.children.length > MAX_CHAT_LINES) this.log.firstElementChild?.remove();
     if (atBottom) this.log.scrollTop = this.log.scrollHeight;
+    this.wake();
   }
+
+  /** Mensagem nova ou jogador mexendo no chat: volta a ficar bem visível e esmaece depois. */
+  private readonly wake = () => {
+    this.root.classList.remove('idle');
+    window.clearTimeout(this.idleTimer);
+    this.idleTimer = window.setTimeout(() => {
+      if (!this.isTyping() && !this.root.classList.contains('open')) this.root.classList.add('idle');
+    }, CHAT_IDLE_MS);
+  };
+
+  private readonly toggleOpen = () => {
+    this.root.classList.toggle('open');
+    this.log.scrollTop = this.log.scrollHeight;
+    this.wake();
+  };
 
   private readonly submit = (event: SubmitEvent) => {
     event.preventDefault();
@@ -138,6 +166,8 @@ export interface ActionDef {
 interface ActionButton {
   el: HTMLButtonElement;
   cooldown: HTMLSpanElement;
+  secs: HTMLSpanElement;
+  shownSecs: number;
   readyAt: number;
   duration: number;
 }
@@ -157,6 +187,15 @@ export class ActionBar {
       el.className = 'action';
       el.tabIndex = -1; // não rouba o foco do teclado (Espaço não "clica" no botão)
       el.dataset.slot = def.slot;
+      el.title = `${def.label} (${def.key})`;
+      // Ícone com os segundos da recarga por cima (o véu escuro fica entre os dois)
+      const art = document.createElement('span');
+      art.className = 'art';
+      const icon = document.createElement('img');
+      icon.className = 'icon';
+      icon.src = actionIconUrl(def.slot);
+      icon.alt = '';
+      icon.draggable = false;
       const label = document.createElement('span');
       label.className = 'label';
       label.textContent = def.label;
@@ -165,9 +204,12 @@ export class ActionBar {
       key.textContent = def.key;
       const cooldown = document.createElement('span');
       cooldown.className = 'cd';
-      el.append(cooldown, label, key);
+      const secs = document.createElement('span');
+      secs.className = 'secs';
+      art.append(icon, secs);
+      el.append(art, cooldown, label, key);
       this.root.append(el);
-      this.buttons.set(def.slot, { el, cooldown, readyAt: 0, duration: 0 });
+      this.buttons.set(def.slot, { el, cooldown, secs, shownSecs: 0, readyAt: 0, duration: 0 });
 
       const down = (event: PointerEvent) => {
         event.preventDefault();
@@ -213,6 +255,12 @@ export class ActionBar {
       const fraction = button.duration > 0 ? remaining / button.duration : 0;
       button.cooldown.style.transform = `scaleY(${fraction.toFixed(3)})`;
       button.el.classList.toggle('cooling', remaining > 0);
+      // Segundos que faltam (só nas recargas longas; o estilingue recarrega rápido demais para isso)
+      const secs = button.duration >= 1500 && remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+      if (secs !== button.shownSecs) {
+        button.shownSecs = secs;
+        button.secs.textContent = secs > 0 ? String(secs) : '';
+      }
     }
   }
 
@@ -230,9 +278,10 @@ export class ZoneBanner {
   private readonly sub = byId<HTMLSpanElement>('zone-sub');
   private timer: number | undefined;
 
-  show(name: string, subtitle: string): void {
+  show(name: string, subtitle: string, danger = false): void {
     this.name.textContent = name;
     this.sub.textContent = subtitle;
+    this.root.classList.toggle('danger', danger);
     this.root.hidden = true;
     void this.root.offsetWidth; // reinicia a animação
     this.root.hidden = false;

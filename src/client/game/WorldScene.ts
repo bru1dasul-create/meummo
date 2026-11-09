@@ -164,7 +164,7 @@ export class WorldScene extends Phaser.Scene {
     this.toast = new Toast();
     this.feedback = new Feedback();
     this.zoneBanner = new ZoneBanner();
-    this.zoneBanner.show(this.map.name, this.map.safe ? 'Zona segura' : 'Cuidado: zona perigosa');
+    this.zoneBanner.show(this.map.name, this.map.safe ? 'Zona segura' : 'Cuidado: zona perigosa', !this.map.safe);
     this.actionBar = new ActionBar(
       [
         { slot: 'shot', label: 'Estilingue', key: 'clique' },

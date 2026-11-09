@@ -19,7 +19,9 @@
   personagens; `session.ts` cuida de uma conexão; `server.ts` liga HTTP, WebSocket e o relógio.
 - `src/client` — o jogo no navegador. `game/WorldScene.ts` é a cena principal; `game/effects.ts` desenha
   avisos, tiros e golpes; `game/EntityView.ts` desenha cada personagem/monstro; `ui.ts` é a interface em HTML;
-  `bag.ts` é a mochila e `itemArt.ts` desenha os ícones dos itens.
+  `bag.ts` é a mochila, `itemArt.ts` desenha os ícones dos itens e `actionArt.ts` os dos botões de habilidade.
+  O visual da interface (painéis de madeira com borda dourada, cores, fontes) fica em `style.css`, nas variáveis do
+  começo do arquivo (`--wood`, `--frame`...). O cenário da tela de entrada é um desenho em SVG dentro do `index.html`.
 - `data/monsters.json` — os números de cada monstro (vida, dano, velocidade, avisos, o que deixa), em português.
 - `data/items.json` — os itens (equipamentos, consumíveis e materiais), em português.
 

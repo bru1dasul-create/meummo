@@ -62,6 +62,8 @@ const sfx = new Sfx();
 let session: { conn: Connection; chat: ChatBox; hud: Hud } | null = null;
 
 nameInput.value = loadSavedName();
+// Quem nunca entrou vê "Como jogar" aberto; quem já joga, fechado (tela mais limpa)
+(document.getElementById('how-to') as HTMLDetailsElement | null)?.toggleAttribute('open', !nameInput.value);
 if (!matchMedia('(pointer: coarse)').matches) (nameInput.value ? passwordInput : nameInput).focus();
 
 loginForm.addEventListener('submit', async (event) => {
