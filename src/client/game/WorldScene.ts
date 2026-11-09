@@ -362,6 +362,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.bag.close();
     this.shop.open(info);
+    this.entities.get(id)?.talk(1800); // ela "fala" a frase do balão da janela
   }
 
   /** Copas transparentes em cima de quem está embaixo delas (e dos avisos no chão), e as luzes tremulando. */
@@ -825,7 +826,8 @@ export class WorldScene extends Phaser.Scene {
         this.bag.setState(msg.inv);
         this.hud.setGold(msg.inv.gold ?? 0);
         // comprou ou vendeu: tilintar de moedas
-        if (this.shop.isOpen && msg.inv.gold !== this.myGold) this.sfx.play('loot');
+        // na loja: ouro diminuiu = comprou ("ka-tching"); aumentou = vendeu (moedas na mão)
+        if (this.shop.isOpen && msg.inv.gold !== this.myGold) this.sfx.play((msg.inv.gold ?? 0) < this.myGold ? 'buy' : 'sell');
         this.myGold = msg.inv.gold ?? 0;
         this.shop.setInventory(msg.inv);
         break;

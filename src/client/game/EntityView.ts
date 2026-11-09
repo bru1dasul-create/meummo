@@ -206,6 +206,11 @@ export class EntityView {
     this.animator?.startAttack(kind, angle, now);
   }
 
+  /** Mexe a boca por um tempo, sem balão (ex.: a vendedora falando na janela da loja). */
+  talk(ms: number): void {
+    this.animator?.talk(performance.now(), ms);
+  }
+
   /** Cara de feliz por um tempo (subiu de nível, se curou). */
   cheer(now: number, ms: number): void {
     this.animator?.cheer(now, ms);
