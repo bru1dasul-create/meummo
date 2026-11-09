@@ -649,6 +649,277 @@ kbd {
 }
 
 /* Celular e tablet (vem por último para valer sobre as regras acima) */
+/* Mochila */
+#bag-button {
+  position: fixed;
+  z-index: 20;
+  top: calc(8px + env(safe-area-inset-top));
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+}
+
+#bag-button:hover,
+#bag-button.open {
+  border-color: var(--accent);
+  background: rgba(40, 32, 12, 0.92);
+}
+
+#bag-button img {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+
+#bag-button kbd {
+  margin-left: 2px;
+}
+
+/* Pulinho quando chega item novo */
+#bag-button.new {
+  animation: bag-new 0.6s ease-out 2;
+  border-color: var(--accent);
+}
+
+@keyframes bag-new {
+  30% {
+    transform: translateY(-4px) scale(1.06);
+  }
+}
+
+#bag {
+  position: fixed;
+  z-index: 20;
+  top: calc(52px + env(safe-area-inset-top));
+  right: 8px;
+  width: min(330px, calc(100vw - 16px));
+  max-height: calc(100vh - 130px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(14, 19, 16, 0.96);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+}
+
+.bag-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bag-head strong {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.bag-count {
+  color: var(--muted);
+}
+
+#bag-close {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+#bag-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.bag-gear {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.bag-stats {
+  color: var(--muted);
+  text-align: center;
+}
+
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.slot,
+.gear-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.slot:hover,
+.gear-slot:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.slot.empty {
+  cursor: default;
+}
+
+.slot img,
+.gear-slot img {
+  width: 72%;
+  height: 72%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.slot .count {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 2px #000;
+}
+
+.gear-slot .part {
+  position: absolute;
+  bottom: 2px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.gear-slot img {
+  width: 58%;
+  height: 58%;
+  margin-bottom: 8px;
+}
+
+.gear-slot.empty {
+  border-style: dashed;
+}
+
+.slot.selected,
+.gear-slot.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.slot.rarity-rare,
+.gear-slot.rarity-rare {
+  border-color: rgba(110, 176, 255, 0.85);
+}
+
+.slot.rarity-legendary,
+.gear-slot.rarity-legendary {
+  border-color: rgba(233, 185, 65, 0.95);
+  box-shadow: inset 0 0 10px rgba(233, 185, 65, 0.35);
+}
+
+.item-name.rarity-common {
+  color: var(--text);
+}
+
+.item-name.rarity-rare {
+  color: #8cc8ff;
+}
+
+.item-name.rarity-legendary {
+  color: var(--accent);
+}
+
+.bag-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 96px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.bag-hint {
+  margin: 0;
+  color: var(--muted);
+}
+
+.item-name {
+  font-size: 15px;
+}
+
+.item-kind {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.item-bonus {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #7dff9a;
+  font-weight: 600;
+}
+
+.item-desc {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.item-actions button {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.item-actions button.danger {
+  background: rgba(255, 143, 128, 0.16);
+  color: var(--danger);
+}
+
+.item-actions button.danger:hover {
+  background: rgba(255, 143, 128, 0.28);
+}
+
+.float.loot {
+  color: #ffe08a;
+  font-size: 13px;
+}
+
+.float.loot.rare {
+  color: #8cc8ff;
+}
+
+.float.loot.legendary {
+  color: var(--accent);
+  font-size: 16px;
+}
+
 .touch-only {
   display: none;
 }
@@ -697,5 +968,27 @@ kbd {
 
   #toast {
     bottom: calc(150px + env(safe-area-inset-bottom));
+  }
+
+  /* Celular: a mochila ocupa a tela (fecha no ✕ ou no botão Mochila) */
+  #bag {
+    top: calc(52px + env(safe-area-inset-top));
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: none;
+    background: rgb(14, 19, 16);
+  }
+
+  .bag-gear,
+  .bag-grid {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .item-actions button {
+    padding: 11px 10px;
   }
 }

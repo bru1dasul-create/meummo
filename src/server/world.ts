@@ -43,11 +43,13 @@ import type { GameMap, Tile } from '../shared/map';
 import { applyInput, canStep, nextStepTime } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
-import { damageRange, MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
-import type { FailReason, RejectReason, ServerMsg } from '../shared/protocol';
+import type { EquipSlot, ItemInfo, ItemStack } from '../shared/items';
+import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
+import type { FailReason, ItemAction, RejectReason, ServerMsg } from '../shared/protocol';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
+import { Inventory } from './inventory';
 import { Monster, Player, type Conn, type Entity, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { sanitizeChat } from './validate';
@@ -72,6 +74,8 @@ export interface WorldOptions {
   monsters?: Map<string, MonsterDef>;
   /** Onde guardar o progresso dos personagens (sem isto, nada é salvo). */
   saver?: CharacterSaver;
+  /** Tipos de item (de data/items.json). */
+  items?: ReadonlyMap<string, ItemInfo>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -81,6 +85,8 @@ const SKILL_TOLERANCE_MS = 100;
 const LEASH_MARGIN = 4;
 /** Proteção depois de voltar para a vila. */
 const RESPAWN_PROTECTION_MS = 2000;
+/** Folga para usar um consumível um pouquinho antes da hora (rede). */
+const ITEM_TOLERANCE_MS = 100;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
 export const AUTOSAVE_MS = 30_000;
 
@@ -91,6 +97,7 @@ export class World {
   readonly monsters = new Map<number, Monster>();
   readonly projectiles = new Map<number, Projectile>();
   readonly zones: ZoneState[] = [];
+  readonly items: ReadonlyMap<string, ItemInfo>;
   /** Tile → id do monstro que está nele (monstros não se empilham). */
   private readonly monsterAt = new Map<number, number>();
   private nextId = 1;
@@ -109,6 +116,7 @@ export class World {
     this.random = options.random ?? Math.random;
     this.log = options.log ?? (() => {});
     this.saver = options.saver ?? null;
+    this.items = options.items ?? new Map();
     this.lastTickAt = this.now();
     this.nextAutosaveAt = this.lastTickAt + AUTOSAVE_MS;
 
@@ -141,6 +149,12 @@ export class World {
     const savedSpot = saved ? this.savedSpot(saved) : null;
     const spot = savedSpot ?? this.pickSpawnTile();
     const player = new Player(this.nextId++, name, spot.x, spot.y, conn, this.now(), saved?.id ?? null, saved?.look);
+    const bag = Inventory.fromSaved(this.items, saved?.inventory ?? null);
+    player.inventory = bag.inventory;
+    if (bag.dropped.length > 0) this.log(`aviso: ${name} tinha itens que não existem mais em data/items.json: ${bag.dropped.join(', ')}`);
+    player.bonus = player.inventory.bonus();
+    player.maxHp = playerMaxHp(player);
+    player.hp = player.maxHp;
     if (saved) this.restore(player, saved, savedSpot !== null);
     this.players.set(player.id, player);
     const greeting = !profile
@@ -150,7 +164,16 @@ export class World {
         : `Bem-vindo(a) de volta, ${name}!`;
     // As boas-vindas vão na hora; quem está por perto chega no próximo tick.
     conn.send([
-      { t: 'welcome', id: player.id, you: player.state(), stats: player.stats(), stepMs: STEP_MS, online: this.players.size },
+      {
+        t: 'welcome',
+        id: player.id,
+        you: player.state(),
+        stats: player.stats(),
+        stepMs: STEP_MS,
+        online: this.players.size,
+        items: [...this.items.values()],
+        inv: player.inventory.state(),
+      },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
     ]);
     this.broadcast({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
@@ -189,7 +212,7 @@ export class World {
     }
     player.level = level;
     player.xp = level >= MAX_LEVEL ? 0 : xp;
-    player.maxHp = maxHpFor(level);
+    player.maxHp = playerMaxHp(player);
     // Volta com a vida que tinha (sair do jogo não cura); na vila (ou sem vida salva), vida cheia.
     player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
     if (samePlace) player.dir = saved.dir;
@@ -241,7 +264,7 @@ export class World {
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
     this.faceAngle(player, angle);
-    const [min, max] = damageRange(player.level);
+    const [min, max] = player.damage();
     this.spawnProjectile(player, angle, SHOT_SPEED, SHOT_RANGE, this.rollRange(min, max), 'pedra', cid);
   }
 
@@ -255,7 +278,7 @@ export class World {
     if (skill.kind === 'arc') {
       this.faceAngle(player, angle);
       const tiles = arcTiles(player.x, player.y, angle);
-      const [min, max] = damageRange(player.level);
+      const [min, max] = player.damage();
       this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'arc', a: round3(angle) }, player.id);
       for (const monster of [...this.monsters.values()]) {
         if (tileIn(tiles, monster.x, monster.y)) {
@@ -270,6 +293,87 @@ export class World {
     }
     player.skillReadyAt[n] = Math.max(now, player.skillReadyAt[n]!) + skill.cooldownMs;
     player.outbox.push({ t: 'cd', n, ms: skill.cooldownMs });
+  }
+
+  // ======================= mochila =======================
+
+  /** Equipar, usar (comer) ou jogar fora o item do espaço `i` da mochila. */
+  itemAction(player: Player, act: ItemAction, i: number): void {
+    const found = player.inventory.at(i);
+    if (!found) return; // espaço vazio (a mochila do navegador estava desatualizada): nada a fazer
+    if (player.dead) return this.fail(player, 'dead', true);
+    const { def } = found;
+    if (act === 'drop') {
+      const thrown = player.inventory.take(i, found.stack.n)!;
+      player.invDirty = true;
+      player.outbox.push({ t: 'sys', text: `Você jogou fora: ${this.describe([thrown])}.` });
+      return;
+    }
+    if (def.kind === 'equipment') {
+      if (player.inventory.equip(i)) this.gearChanged(player);
+      return;
+    }
+    if (act !== 'use' || def.kind !== 'consumable') return;
+    const now = this.now();
+    if (now < player.nextItemAt - ITEM_TOLERANCE_MS) return this.fail(player, 'cooldown', true);
+    if (player.hp >= player.maxHp) return this.fail(player, 'full_hp', true);
+    player.inventory.take(i, 1);
+    player.invDirty = true;
+    player.nextItemAt = Math.max(now, player.nextItemAt) + def.cooldownMs;
+    const amount = Math.min(player.maxHp - player.hp, def.heal);
+    player.hp += amount;
+    this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
+  }
+
+  /** Tira o que está equipado nesta parte e guarda na mochila. */
+  unequip(player: Player, part: EquipSlot): void {
+    if (!player.inventory.equipped[part]) return;
+    if (player.dead) return this.fail(player, 'dead', true);
+    if (!player.inventory.unequip(part)) return this.fail(player, 'bag_full', true);
+    this.gearChanged(player);
+  }
+
+  /** Os equipamentos mudaram: recalcula vida máxima e dano e avisa quem precisa saber. */
+  private gearChanged(player: Player): void {
+    player.bonus = player.inventory.bonus();
+    const maxHp = playerMaxHp(player);
+    if (maxHp !== player.maxHp) {
+      player.maxHp = maxHp;
+      player.hp = Math.min(player.hp, maxHp);
+      this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    }
+    player.invDirty = true;
+    player.statsDirty = true;
+  }
+
+  /** O monstro caiu: cada um que ajudou sorteia os itens dele (cada um tem os seus, ninguém rouba de ninguém). */
+  private giveLoot(player: Player, monster: Monster): void {
+    const got: ItemStack[] = [];
+    const lost: ItemStack[] = [];
+    let precious = false;
+    for (const drop of monster.def.drops) {
+      if (this.random() * 100 >= drop.chance) continue;
+      const def = this.items.get(drop.item);
+      if (!def) continue;
+      const n = this.rollRange(drop.min, drop.max);
+      const added = player.inventory.add(drop.item, n);
+      if (added > 0) got.push({ item: drop.item, n: added });
+      if (added < n) lost.push({ item: drop.item, n: n - added });
+      if (added > 0 && def.rarity !== 'common') precious = true;
+      if (added > 0 && def.rarity === 'legendary') this.broadcast({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
+    }
+    if (got.length > 0) {
+      player.invDirty = true;
+      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got });
+      player.outbox.push({ t: 'sys', text: `Você pegou: ${this.describe(got)}.` });
+      if (precious) this.saveCharacters([player]); // item raro não pode sumir se o servidor cair
+    }
+    if (lost.length > 0) player.outbox.push({ t: 'sys', text: `Mochila cheia! Ficou para trás: ${this.describe(lost)}.` });
+  }
+
+  /** "Banana ×2, Chapéu de Palha" */
+  private describe(stacks: ItemStack[]): string {
+    return stacks.map(({ item, n }) => `${this.items.get(item)?.name ?? item}${n > 1 ? ` ×${n}` : ''}`).join(', ');
   }
 
   chat(player: Player, raw: string): void {
@@ -306,6 +410,10 @@ export class World {
       if (player.statsDirty) {
         player.outbox.push({ t: 'stats', stats: player.stats() });
         player.statsDirty = false;
+      }
+      if (player.invDirty) {
+        player.outbox.push({ t: 'inv', inv: player.inventory.state() });
+        player.invDirty = false;
       }
       if (player.ackPending) {
         player.outbox.push({ t: 'ack', seq: player.ackSeq, x: player.x, y: player.y, dir: player.dir });
@@ -407,7 +515,7 @@ export class World {
     }
     if (player.level >= MAX_LEVEL) player.xp = 0;
     if (leveled) {
-      player.maxHp = maxHpFor(player.level);
+      player.maxHp = playerMaxHp(player);
       player.hp = player.maxHp;
       this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
       this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
@@ -484,6 +592,8 @@ export class World {
   private damage(target: Entity, amount: number, attackerId: number, now: number): void {
     if (target.hp <= 0) return;
     if (target.kind === 'player' && (target.dead || now < target.invulnerableUntil)) return;
+    // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
+    if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamagedAt = now;
     this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp });
@@ -539,7 +649,9 @@ export class World {
     // Todo mundo que ajudou leva a XP inteira (incentiva caçar em grupo).
     for (const id of monster.contributors) {
       const player = this.players.get(id);
-      if (player && !player.dead) this.giveXp(player, monster.def.xp);
+      if (!player || player.dead) continue;
+      this.giveXp(player, monster.def.xp);
+      this.giveLoot(player, monster);
     }
   }
 
@@ -897,8 +1009,8 @@ export class World {
     }
   }
 
-  private fail(player: Player, reason: FailReason): void {
-    player.outbox.push({ t: 'fail', reason });
+  private fail(player: Player, reason: FailReason, item = false): void {
+    player.outbox.push(item ? { t: 'fail', reason, item: true } : { t: 'fail', reason });
   }
 
   // ======================= ajudantes =======================
@@ -938,9 +1050,14 @@ export class World {
   }
 }
 
+/** Vida máxima: a do nível mais a dos equipamentos. */
+function playerMaxHp(player: Player): number {
+  return maxHpFor(player.level) + player.bonus.hp;
+}
+
 /** O que fica salvo de um jogador. */
 export function characterData(player: Player, zone: string): CharacterData {
-  const base = { level: player.level, xp: player.xp, look: player.look, zone };
+  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state() };
   // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
   if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
   return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };

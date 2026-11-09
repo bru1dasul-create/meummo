@@ -11,6 +11,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { DOWN, isDir, type Dir } from '../shared/dir';
+import type { SavedInventory } from './inventory';
 import { lookFromName } from '../shared/look';
 import { nameKey } from '../shared/names';
 
@@ -27,6 +28,8 @@ export interface CharacterData {
   dir: Dir;
   /** Semente da aparência. */
   look: number;
+  /** Mochila e equipamentos (null = vazia). Conferida pelo mundo ao carregar. */
+  inventory: SavedInventory | null;
 }
 
 export interface SavedCharacter extends CharacterData {
@@ -57,8 +60,11 @@ export const DEFAULT_HASH_COST: HashCost = { N: 16384, r: 8, p: 1 };
 const KEY_BYTES = 32;
 const SALT_BYTES = 16;
 
-/** Cada item cria ou converte o banco para a versão seguinte (a versão fica em PRAGMA user_version). */
-const MIGRATIONS: string[] = [
+/**
+ * Cada item cria ou converte o banco para a versão seguinte (a versão fica em PRAGMA user_version).
+ * Nunca mude um passo que já existe: os arquivos de quem já joga dependem dele. Acrescente no fim.
+ */
+export const MIGRATIONS: readonly string[] = [
   // versão 1: personagens com senha e progresso
   `CREATE TABLE characters (
     id INTEGER PRIMARY KEY,
@@ -77,6 +83,8 @@ const MIGRATIONS: string[] = [
     last_login_at TEXT,
     saved_at TEXT
   )`,
+  // versão 2: mochila e equipamentos (JSON); quem já existia começa com a mochila vazia
+  `ALTER TABLE characters ADD COLUMN inventory TEXT`,
 ];
 
 interface CharacterRow {
@@ -90,9 +98,10 @@ interface CharacterRow {
   y: number | null;
   dir: number;
   look: number;
+  inventory: string | null;
 }
 
-const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look';
+const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory';
 
 export class CharacterStore implements CharacterSaver {
   private readonly db: DatabaseSync;
@@ -126,7 +135,7 @@ export class CharacterStore implements CharacterSaver {
       'INSERT INTO characters (name, name_key, password_hash, look, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)',
     );
     this.update = this.db.prepare(
-      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, saved_at = ? WHERE id = ?',
+      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, saved_at = ? WHERE id = ?',
     );
     this.touch = this.db.prepare('UPDATE characters SET last_login_at = ? WHERE id = ?');
   }
@@ -171,6 +180,7 @@ export class CharacterStore implements CharacterSaver {
       y: row.y,
       dir: isDir(row.dir) ? row.dir : DOWN,
       look: row.look >>> 0,
+      inventory: parseJson(row.inventory) as SavedInventory | null,
     };
   }
 
@@ -182,7 +192,8 @@ export class CharacterStore implements CharacterSaver {
     this.db.exec('BEGIN');
     try {
       for (const { id, data } of list) {
-        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, now, id);
+        const inventory = data.inventory ? JSON.stringify(data.inventory) : null;
+        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, now, id);
       }
       this.db.exec('COMMIT');
     } catch (error) {
@@ -262,6 +273,16 @@ function migrate(db: DatabaseSync): void {
       db.exec('ROLLBACK');
       throw error;
     }
+  }
+}
+
+/** JSON guardado no banco; se estiver estragado, vale como vazio (melhor que o personagem não entrar). */
+function parseJson(text: string | null): unknown {
+  if (text === null) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
   }
 }
 

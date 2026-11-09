@@ -1,7 +1,20 @@
 // Efeitos sonoros sintetizados na hora (Web Audio), sem arquivos de som.
 // Quando tivermos sons de verdade, dá para trocar cada receita por um arquivo carregado.
 
-export type SoundName = 'shot' | 'hit' | 'hurt' | 'warn' | 'dash' | 'levelup' | 'death' | 'heal' | 'kill' | 'arc';
+export type SoundName =
+  | 'shot'
+  | 'hit'
+  | 'hurt'
+  | 'warn'
+  | 'dash'
+  | 'levelup'
+  | 'death'
+  | 'heal'
+  | 'kill'
+  | 'arc'
+  | 'loot'
+  | 'rare'
+  | 'equip';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -92,6 +105,17 @@ export class Sfx {
         break;
       case 'death':
         this.tone('sine', 440, 110, t, 0.7, 0.25);
+        break;
+      case 'loot': // plim: item na mochila
+        this.tone('triangle', 1319, 1319, t, 0.07, 0.14);
+        this.tone('triangle', 1760, 1760, t + 0.07, 0.12, 0.12);
+        break;
+      case 'rare': // item raro ou lendário: plim mais caprichado
+        [1047, 1319, 1568, 2093].forEach((f, i) => this.tone('triangle', f, f, t + i * 0.07, 0.16, 0.12));
+        break;
+      case 'equip': // fivela fechando
+        this.noise(t, 0.05, 'bandpass', 2600, 1700, 0.25);
+        this.tone('square', 330, 440, t + 0.03, 0.07, 0.07);
         break;
     }
   }

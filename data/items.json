@@ -1,0 +1,65 @@
+{
+  "banana": {
+    "nome": "Banana",
+    "tipo": "consumivel",
+    "cura": 15,
+    "recargaMs": 3000,
+    "pilha": 20,
+    "descricao": "Docinha e fácil de achar perto da represa.",
+    "icone": "banana"
+  },
+  "couro_jararaca": {
+    "nome": "Couro de Jararaca",
+    "tipo": "material",
+    "pilha": 20,
+    "descricao": "Fino e resistente. Os artesãos do Refúgio vão querer isso.",
+    "icone": "couro"
+  },
+  "chapeu_palha": {
+    "nome": "Chapéu de Palha",
+    "tipo": "equipamento",
+    "parte": "cabeca",
+    "vida": 10,
+    "descricao": "Trançado na vila flutuante. Segura o sol e uns arranhões.",
+    "icone": "chapeu_palha"
+  },
+  "estilingue_goiabeira": {
+    "nome": "Estilingue de Goiabeira",
+    "tipo": "equipamento",
+    "parte": "arma",
+    "dano": 2,
+    "raridade": "raro",
+    "descricao": "Forquilha de goiabeira e borracha de câmara de pneu. Atira mais forte.",
+    "icone": "estilingue"
+  },
+  "colar_presas": {
+    "nome": "Colar de Presas",
+    "tipo": "equipamento",
+    "parte": "amuleto",
+    "dano": 1,
+    "defesa": 1,
+    "raridade": "raro",
+    "descricao": "Presas de jararaca num cordão de embira. Dizem que afasta o azar.",
+    "icone": "colar"
+  },
+  "gibao_couro": {
+    "nome": "Gibão de Couro",
+    "tipo": "equipamento",
+    "parte": "corpo",
+    "vida": 8,
+    "defesa": 2,
+    "raridade": "raro",
+    "descricao": "Colete de couro de cobra, costurado à mão. Segura bem um bote.",
+    "icone": "gibao"
+  },
+  "gorro_saci": {
+    "nome": "Gorro Vermelho do Saci",
+    "tipo": "equipamento",
+    "parte": "cabeca",
+    "dano": 2,
+    "vida": 15,
+    "raridade": "lendario",
+    "descricao": "Quem tira o gorro do Saci ganha a força dele... e a raiva também.",
+    "icone": "gorro"
+  }
+}

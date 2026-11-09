@@ -44,11 +44,13 @@ Tudo isto se ajusta mexendo em números, sem programar:
   avenida em ruínas e a praça do Saci (arte nova: 26 tiles)
 - [x] Nome da zona aparece na tela ao entrar; o mapa diz o próprio nome e se é zona segura (propriedades `nome` e `seguro`)
 
-## 🔧 M2 — Progresso salvo
+## ✅ M2 — Progresso salvo
 - [x] Personagem com senha, salvo em banco de dados (SQLite que já vem no Node.js, arquivo `saves/meummo.db`):
   nível, XP, vida, lugar e aparência. Salva ao sair, ao subir de nível, a cada 30 s e ao desligar o servidor
 - [x] Senhas protegidas (scrypt), freio para quem erra a senha muitas vezes, entrar de outro lugar tira a sessão antiga
-- [ ] Monstros deixam itens; inventário; equipamento que muda os atributos
+- [x] Monstros deixam itens (cada um que ajudou sorteia os seus); mochila com 20 espaços; equipamentos em
+  4 partes que somam dano, vida e defesa; banana que cura. Tudo em `data/items.json`, salvo com o personagem
+- [ ] Ver o equipamento no personagem (chapéu, gorro do Saci...)
 
 ## M3 — Mundo
 - [ ] Vários mapas ligados (portas e saídas): a avenida a leste do Refúgio leva às **Ruínas de Santo Amaro**

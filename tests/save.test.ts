@@ -55,7 +55,7 @@ class FakeSaver implements CharacterSaver {
 }
 
 function saved(changes: Partial<SavedCharacter> = {}): SavedCharacter {
-  return { id: 7, name: 'Ana', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: DOWN, look: 123, ...changes };
+  return { id: 7, name: 'Ana', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: DOWN, look: 123, inventory: null, ...changes };
 }
 
 function joinSaved(world: World, character: SavedCharacter): { player: Player; conn: FakeConn } {
@@ -120,7 +120,17 @@ describe('arquivo de personagens', () => {
     const store = new CharacterStore(file, { cost: FAST_HASH });
     const login = await store.login('Lúcia', 'segredo1');
     if (!login.ok) throw new Error('não criou');
-    const data: CharacterData = { level: 4, xp: 33, hp: 50, zone: 'Refúgio', x: 12, y: 9, dir: LEFT, look: 4_000_000_000 };
+    const data: CharacterData = {
+      level: 4,
+      xp: 33,
+      hp: 50,
+      zone: 'Refúgio',
+      x: 12,
+      y: 9,
+      dir: LEFT,
+      look: 4_000_000_000,
+      inventory: { slots: [{ item: 'banana', n: 3 }, null], equipped: { head: 'chapeu_palha' } },
+    };
     store.save([{ id: login.id, data }]);
     store.close();
 

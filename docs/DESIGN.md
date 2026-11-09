@@ -65,10 +65,34 @@ desenhadas no mapa (camada `monstros`; veja `docs/mapa.png`).
 - **Cuca** — chefe de caverna (primeira "masmorra").
 - Bichos comuns: quati, capivara, tamanduá, arara e onça (elite).
 
+## Itens e equipamentos (feito no M2)
+Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `itens` de `data/monsters.json`.
+
+- **Cada um com o seu:** quando um monstro cai, cada pessoa que ajudou sorteia os itens dele e eles vão direto
+  para a mochila (ninguém rouba o item de ninguém, e no celular não precisa ficar catando coisa no chão).
+- **Mochila** com 20 espaços (itens iguais se empilham) e 4 partes para equipar: arma, cabeça, corpo e amuleto.
+- **Atributos:** equipamentos somam dano, vida e defesa. Defesa tira um pouco de cada golpe, mas sempre sobra 1.
+- **Consumíveis** curam; entre um e outro há uma pequena espera (a banana não substitui a esquiva).
+- **Lendário:** quando alguém consegue um, todo mundo vê no chat.
+
+| Item | Tipo | O que faz | Quem deixa |
+|---|---|---|---|
+| Banana | consumível | cura 15 | Sagui (50%, 1–2) e Saci (sempre, 2–3) |
+| Couro de Jararaca | material | (para trocas e missões, mais adiante) | Jararaca (45%) |
+| Chapéu de Palha | cabeça | +10 de vida | Sagui (6%) |
+| Estilingue de Goiabeira (raro) | arma | +2 de dano | Sagui (4%) |
+| Colar de Presas (raro) | amuleto | +1 de dano, +1 de defesa | Jararaca (6%) |
+| Gibão de Couro (raro) | corpo | +8 de vida, +2 de defesa | Jararaca (5%) |
+| Gorro Vermelho do Saci (lendário) | cabeça | +2 de dano, +15 de vida | Saci (30%) |
+
+Ideias para depois: ver o chapéu/gorro no personagem, loja e ouro (M3), artesãos que transformam couro em
+roupa, equipamentos com nível mínimo, poções do Curandeiro.
+
 ## Progressão no futuro
 - **Caminhos (classes)**, escolhidos depois de alguns níveis: Capoeirista (corpo a corpo, ágil),
   Curandeiro(a) (ervas, rezas e cura do grupo) e Caçador(a) (distância).
-- **Equipamentos** que mudam o jeito de jogar: estilingues melhores, bordunas, chapéu de palha, amuletos.
+- **Mais equipamentos** que mudam o jeito de jogar, não só os números: bordunas, estilingues que atiram duas
+  pedras, amuletos com poderes das lendas.
 
 ## O mundo: Pindorama — Selva de Pedra (ideia do dono do projeto, aprovada)
 São Paulo, muito tempo depois do fim do mundo como conhecemos: a floresta engoliu a cidade e as lendas

@@ -18,7 +18,12 @@
       "dano": [2, 4],
       "velocidade": 7,
       "projetil": "fruta"
-    }
+    },
+    "itens": [
+      { "item": "banana", "chance": 50, "quantidade": [1, 2] },
+      { "item": "chapeu_palha", "chance": 6 },
+      { "item": "estilingue_goiabeira", "chance": 4 }
+    ]
   },
   "jararaca": {
     "nome": "Jararaca",
@@ -36,7 +41,12 @@
       "preparoMs": 650,
       "intervaloMs": 1600,
       "dano": [4, 8]
-    }
+    },
+    "itens": [
+      { "item": "couro_jararaca", "chance": 45 },
+      { "item": "colar_presas", "chance": 6 },
+      { "item": "gibao_couro", "chance": 5 }
+    ]
   },
   "saci": {
     "nome": "Saci",
@@ -59,6 +69,10 @@
       "distancia": 4,
       "cadaMs": 7000,
       "falas": ["Hehehe!", "Pega eu se puder!", "Cadê meu cachimbo?", "Fiu-fiu!"]
-    }
+    },
+    "itens": [
+      { "item": "banana", "chance": 100, "quantidade": [2, 3] },
+      { "item": "gorro_saci", "chance": 30 }
+    ]
   }
 }

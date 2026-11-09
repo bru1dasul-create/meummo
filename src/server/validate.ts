@@ -2,6 +2,7 @@
 
 import { CHAT_MAX_LENGTH } from '../shared/constants';
 import { isDir } from '../shared/dir';
+import { BAG_SIZE, EQUIP_SLOTS, type EquipSlot } from '../shared/items';
 import type { ClientMsg } from '../shared/protocol';
 
 const MAX_RAW_LENGTH = 1024;
@@ -42,6 +43,15 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return Number.isInteger(msg.n) && (msg.n as number) >= 0 && (msg.n as number) < 16 && isAngle(msg.a)
         ? { t: 'skill', n: msg.n as number, a: msg.a }
         : null;
+    case 'item':
+      return (msg.act === 'equip' || msg.act === 'use' || msg.act === 'drop') &&
+        Number.isInteger(msg.i) &&
+        (msg.i as number) >= 0 &&
+        (msg.i as number) < BAG_SIZE
+        ? { t: 'item', act: msg.act, i: msg.i as number }
+        : null;
+    case 'unequip':
+      return EQUIP_SLOTS.includes(msg.part as EquipSlot) ? { t: 'unequip', part: msg.part as EquipSlot } : null;
     case 'chat':
       return typeof msg.text === 'string' && msg.text.length <= CHAT_MAX_LENGTH * 4 ? { t: 'chat', text: msg.text } : null;
     case 'ping':

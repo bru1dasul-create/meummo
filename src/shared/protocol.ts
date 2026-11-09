@@ -3,6 +3,7 @@
 // Posições são em tiles. Ângulos são em radianos (0 = direita, π/2 = baixo).
 
 import type { Dir } from './dir';
+import type { EquipSlot, InventoryState, ItemInfo, ItemStack } from './items';
 
 export type EntityKind = 'player' | 'monster';
 
@@ -32,7 +33,10 @@ export interface PlayerStats {
   xp: number;
   /** XP que falta juntar para subir de nível. */
   xpNext: number;
+  /** Já com o que os equipamentos somam. */
   maxHp: number;
+  damage: [number, number];
+  defense: number;
 }
 
 /** Cliente → servidor. */
@@ -41,8 +45,13 @@ export type ClientMsg =
   | { t: 'step'; seq: number; dir: Dir; dash?: true } // quero andar um tile (ou rolar, se dash)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
+  | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
+  | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
+
+/** equip = equipar; use = usar/comer; drop = jogar fora (a pilha inteira). */
+export type ItemAction = 'equip' | 'use' | 'drop';
 
 export type RejectReason =
   | 'name_invalid'
@@ -56,14 +65,24 @@ export type RejectReason =
   | 'version';
 /** Por que o servidor encerrou a sua sessão. */
 export type ByeReason = 'replaced' | 'shutdown';
-export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target';
+export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
 export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind';
 
 /** Servidor → cliente. O servidor sempre envia uma lista (um pacote por tick). */
 export type ServerMsg =
-  | { t: 'welcome'; id: number; you: EntityState; stats: PlayerStats; stepMs: number; online: number }
+  | {
+      t: 'welcome';
+      id: number;
+      you: EntityState;
+      stats: PlayerStats;
+      stepMs: number;
+      online: number;
+      /** Todos os tipos de item (de data/items.json). */
+      items: ItemInfo[];
+      inv: InventoryState;
+    }
   | { t: 'reject'; reason: RejectReason }
   | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
@@ -82,7 +101,9 @@ export type ServerMsg =
   | { t: 'death'; id: number }
   | { t: 'levelup'; id: number; level: number; maxHp: number }
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
-  | { t: 'fail'; reason: FailReason }
+  | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila)
+  | { t: 'inv'; inv: InventoryState } // sua mochila mudou
+  | { t: 'loot'; x: number; y: number; items: ItemStack[] } // você pegou isto do monstro que caiu em (x, y)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }
   | { t: 'sys'; text: string } // aviso do sistema

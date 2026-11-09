@@ -71,6 +71,9 @@ describe('servidor de verdade', () => {
     const beto = await TestClient.connect(server.port);
     ana.hello('Ana');
     const anaWelcome = await ana.waitFor('welcome');
+    // Os tipos de item chegam junto, para o navegador mostrar a mochila.
+    expect(anaWelcome.items.some((item) => item.id === 'banana')).toBe(true);
+    expect(anaWelcome.inv.equipped).toEqual({ weapon: null, head: null, body: null, charm: null });
     beto.hello('Beto');
     const betoWelcome = await beto.waitFor('welcome');
 

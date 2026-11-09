@@ -116,7 +116,8 @@ const BLOB: MonsterArt = {
 
 const ART: Record<string, MonsterArt> = { sagui: SAGUI, jararaca: JARARACA, saci: SACI };
 
-function outline(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+/** Contorno escuro de 1 pixel em volta do desenho (deixa a arte legível em qualquer chão). */
+export function outline(ctx: CanvasRenderingContext2D, width: number, height: number): void {
   const image = ctx.getImageData(0, 0, width, height);
   const d = image.data;
   const solid = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height && d[(y * width + x) * 4 + 3]! > 0;

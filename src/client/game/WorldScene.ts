@@ -20,7 +20,10 @@ import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { applyDash, applyInput, applyStep, nextStepTime, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
 import { DASH_SLOT, type EntityState, type PlayerStats, type ServerMsg, type WelcomeMsg } from '../../shared/protocol';
+import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
 import { SKILLS } from '../../shared/skills';
+import { Bag } from '../bag';
+import { itemTexture } from '../itemArt';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
@@ -72,6 +75,11 @@ export class WorldScene extends Phaser.Scene {
   private toast!: Toast;
   private feedback!: Feedback;
   private zoneBanner!: ZoneBanner;
+  private bag!: Bag;
+  /** Tipos de item (chegam nas boas-vindas). */
+  private readonly items = new Map<string, ItemInfo>();
+  /** O que estava equipado (para tocar o som de "equipou" só quando muda). */
+  private bagEquipped: InventoryState['equipped'] | null = null;
 
   // Previsão do próprio movimento: o personagem anda na hora e o servidor confirma depois.
   private predicted!: Pose;
@@ -131,6 +139,17 @@ export class WorldScene extends Phaser.Scene {
     this.me = this.addEntity(you, true);
     this.predicted = { x: you.x, y: you.y, dir: you.dir };
     this.myHp = you.hp;
+    for (const item of this.welcome.items) this.items.set(item.id, item);
+    this.bag = new Bag(
+      this.items,
+      this.welcome.inv,
+      {
+        item: (act, i) => this.conn.send({ t: 'item', act, i }),
+        unequip: (part) => this.conn.send({ t: 'unequip', part }),
+      },
+      this.welcome.stats,
+    );
+    this.bagEquipped = this.welcome.inv.equipped;
     this.applyStats(this.welcome.stats, false);
     this.hud.setOnline(this.welcome.online);
 
@@ -471,6 +490,12 @@ export class WorldScene extends Phaser.Scene {
       case 'KeyM':
         if (!event.repeat) this.toggleSound();
         break;
+      case 'KeyI':
+        if (!event.repeat) this.bag.toggle();
+        break;
+      case 'Escape':
+        if (this.bag.isOpen) this.bag.close();
+        break;
     }
   };
 
@@ -611,6 +636,10 @@ export class WorldScene extends Phaser.Scene {
         break;
       }
       case 'fail':
+        if (msg.item) {
+          this.onItemFail(msg.reason);
+          break;
+        }
         if (msg.reason === 'cooldown') this.toast.show('Ainda recarregando...');
         if (msg.reason === 'full_hp') {
           this.toast.show('Sua vida já está cheia');
@@ -621,6 +650,17 @@ export class WorldScene extends Phaser.Scene {
             }
           });
         }
+        break;
+      case 'inv': {
+        // Equipou ou tirou alguma coisa? (a mochila de antes x a de agora)
+        const before = JSON.stringify(this.bagEquipped);
+        this.bagEquipped = msg.inv.equipped;
+        if (JSON.stringify(msg.inv.equipped) !== before) this.sfx.play('equip');
+        this.bag.setState(msg.inv);
+        break;
+      }
+      case 'loot':
+        this.onLoot(msg.x, msg.y, msg.items, now);
         break;
       case 'say':
         this.entities.get(msg.id)?.say(msg.text);
@@ -703,6 +743,7 @@ export class WorldScene extends Phaser.Scene {
     if (id === this.myId) {
       this.dead = true;
       this.firing = null;
+      this.bag.close();
       this.clearPath();
       this.me.setFainted(true);
       this.setMyHp(0, this.myMaxHp);
@@ -758,6 +799,35 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  private onLoot(x: number, y: number, stacks: ItemStack[], now: number): void {
+    const from = { x: (x + 0.5) * T, y: (y + 0.5) * T };
+    let precious = false;
+    stacks.forEach((stack, i) => {
+      const def = this.items.get(stack.item);
+      if (!def) return;
+      if (def.rarity !== 'common') precious = true;
+      this.effects.loot(itemTexture(this, def.icon), from, () => this.lootTarget(), now, i * 150);
+      const label = `+${stack.n > 1 ? `${stack.n} ` : ''}${def.name}`;
+      window.setTimeout(() => this.me?.floatText(label, `loot ${def.rarity}`), 650 + i * 150);
+      if (def.rarity === 'legendary') this.toast.show(`Item lendário: ${def.name}!`, 3000);
+    });
+    this.sfx.play(precious ? 'rare' : 'loot');
+    this.bag.notifyNew();
+  }
+
+  /** Para onde o item voa: a cabeça do seu personagem. */
+  private lootTarget(): { x: number; y: number } {
+    const center = this.me.center(performance.now());
+    return { x: center.x, y: center.y - 6 };
+  }
+
+  private onItemFail(reason: string): void {
+    if (reason === 'cooldown') this.toast.show('Espere um pouquinho para usar outro item');
+    else if (reason === 'full_hp') this.toast.show('Sua vida já está cheia');
+    else if (reason === 'bag_full') this.toast.show('A mochila está cheia');
+    else if (reason === 'dead') this.toast.show('Desmaiado não dá para mexer na mochila');
+  }
+
   private applyStats(stats: PlayerStats, showGain: boolean): void {
     if (showGain) {
       const gained = stats.level > this.myLevel ? this.myXpNext - this.myXp + stats.xp : stats.xp - this.myXp;
@@ -767,6 +837,7 @@ export class WorldScene extends Phaser.Scene {
     this.myXp = stats.xp;
     this.myXpNext = stats.xpNext;
     this.myMaxHp = stats.maxHp;
+    this.bag?.setStats(stats);
     this.hud.setXp(stats.xp, stats.xpNext, stats.level);
     this.setMyHp(Math.min(this.myHp, stats.maxHp), stats.maxHp);
   }
@@ -855,6 +926,7 @@ export class WorldScene extends Phaser.Scene {
     this.actionBar?.destroy();
     this.toast?.destroy();
     this.zoneBanner?.destroy();
+    this.bag?.destroy();
     this.feedback?.destroy();
   }
 }

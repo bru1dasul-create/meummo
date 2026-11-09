@@ -77,6 +77,12 @@ export class Session {
       case 'skill':
         this.lobby.world.useSkill(this.player, msg.n, msg.a);
         break;
+      case 'item':
+        this.lobby.world.itemAction(this.player, msg.act, msg.i);
+        break;
+      case 'unequip':
+        this.lobby.world.unequip(this.player, msg.part);
+        break;
       case 'chat':
         this.lobby.world.chat(this.player, msg.text);
         break;

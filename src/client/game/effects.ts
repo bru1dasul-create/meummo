@@ -191,6 +191,32 @@ export class Effects {
     });
   }
 
+  /** Item saindo do monstro que caiu e voando até quem pegou (`to` segue o personagem andando). */
+  loot(texture: string, from: { x: number; y: number }, to: () => { x: number; y: number }, now: number, delay = 0): void {
+    const sprite = this.scene.add.image(from.x, from.y, texture).setDepth(1e6).setAlpha(0);
+    const start = now + delay;
+    const POP_MS = 280;
+    const FLY_MS = 420;
+    this.effects.push({
+      update: (t) => {
+        if (t < start) return true;
+        const k = t - start;
+        if (k < POP_MS) {
+          // sobe com um pulinho
+          const p = k / POP_MS;
+          sprite.setAlpha(1).setScale(0.5 + 0.5 * p).setPosition(from.x, from.y - 14 * Math.sin((p * Math.PI) / 2));
+          return true;
+        }
+        const p = Math.min(1, (k - POP_MS) / FLY_MS);
+        const target = to();
+        const e = p * p;
+        sprite.setPosition(from.x + (target.x - from.x) * e, from.y - 14 + (target.y - from.y + 14) * e).setScale(1 - 0.5 * p);
+        return p < 1;
+      },
+      destroy: () => sprite.destroy(),
+    });
+  }
+
   // ---------- quadro a quadro ----------
 
   update(now: number): void {

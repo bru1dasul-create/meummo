@@ -5,9 +5,11 @@ import { DOWN, type Dir } from '../shared/dir';
 import type { ShotPath } from '../shared/combat';
 import { lookFromName } from '../shared/look';
 import type { MonsterZone, Tile } from '../shared/map';
-import { maxHpFor, xpToNext } from '../shared/progression';
+import type { ItemBonus, ItemInfo } from '../shared/items';
+import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
 import type { EntityState, PlayerStats, ServerMsg } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
+import { Inventory } from './inventory';
 import type { AttackKind, MonsterDef } from './monsters';
 import { TokenBucket } from './rate-limit';
 
@@ -15,6 +17,8 @@ import { TokenBucket } from './rate-limit';
 export interface Conn {
   send(batch: ServerMsg[]): void;
 }
+
+const NO_ITEMS: ReadonlyMap<string, ItemInfo> = new Map();
 
 export class Player {
   readonly kind = 'player' as const;
@@ -41,6 +45,15 @@ export class Player {
   dashed = false;
   outbox: ServerMsg[] = [];
   readonly chatLimit: TokenBucket;
+
+  // mochila
+  inventory: Inventory = new Inventory(NO_ITEMS);
+  /** O que os equipamentos somam agora (recalculado quando a mochila muda). */
+  bonus: ItemBonus = { damage: 0, hp: 0, defense: 0 };
+  /** Quando dá para usar o próximo consumível (banana...). */
+  nextItemAt = 0;
+  /** A mochila mudou neste tick (o dono precisa saber). */
+  invDirty = false;
 
   // combate
   /** Diferente de 0: está desmaiado e volta para a vila nesse momento. */
@@ -93,8 +106,21 @@ export class Player {
     };
   }
 
+  /** Dano do estilingue (a Bordunada multiplica isto), já com os equipamentos. */
+  damage(): [number, number] {
+    const [min, max] = damageRange(this.level);
+    return [min + this.bonus.damage, max + this.bonus.damage];
+  }
+
   stats(): PlayerStats {
-    return { level: this.level, xp: this.xp, xpNext: xpToNext(this.level), maxHp: this.maxHp };
+    return {
+      level: this.level,
+      xp: this.xp,
+      xpNext: xpToNext(this.level),
+      maxHp: this.maxHp,
+      damage: this.damage(),
+      defense: this.bonus.defense,
+    };
   }
 }
 

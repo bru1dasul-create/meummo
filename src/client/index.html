@@ -61,6 +61,19 @@
       </form>
     </div>
 
+    <!-- Mochila por último: fica por cima do chat, dos botões e dos nomes -->
+    <button id="bag-button" type="button" hidden title="Mochila (I)"><img alt="" /><span>Mochila</span><kbd class="desktop-only">I</kbd></button>
+    <div id="bag" hidden>
+      <div class="bag-head">
+        <strong>Mochila</strong> <span id="bag-count" class="bag-count"></span>
+        <button id="bag-close" type="button" aria-label="Fechar a mochila" title="Fechar (I ou Esc)">✕</button>
+      </div>
+      <div id="bag-gear" class="bag-gear"></div>
+      <div id="bag-stats" class="bag-stats"></div>
+      <div id="bag-grid" class="bag-grid"></div>
+      <div id="bag-info" class="bag-info"></div>
+    </div>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

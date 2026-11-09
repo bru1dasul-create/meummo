@@ -2,6 +2,7 @@
 // balanceamento por quem não programa; aqui eles viram tipos do código e são conferidos.
 
 import { readFileSync } from 'node:fs';
+import { Reader } from './data-reader';
 import { MONSTERS_FILE } from './paths';
 
 export type AttackKind = 'bite' | 'strike' | 'spin' | 'projectile';
@@ -37,7 +38,19 @@ export interface MonsterDef {
   attack: MonsterAttack;
   /** Só o Saci (por enquanto): some num redemoinho e aparece em outro lugar. */
   whirlwind: { distance: number; everyMs: number; lines: string[] } | null;
+  /** O que ele pode deixar para quem ajudou a derrubá-lo. */
+  drops: MonsterDrop[];
 }
+
+/** Um item que o monstro pode deixar: `chance` em % (0 a 100), quantidade entre min e max. */
+export interface MonsterDrop {
+  item: string;
+  chance: number;
+  min: number;
+  max: number;
+}
+
+const FILE = 'data/monsters.json';
 
 const ATTACK_KINDS: Record<string, AttackKind> = {
   mordida: 'bite',
@@ -45,51 +58,6 @@ const ATTACK_KINDS: Record<string, AttackKind> = {
   giro: 'spin',
   projetil: 'projectile',
 };
-
-class Reader {
-  constructor(
-    private readonly data: Record<string, unknown>,
-    private readonly where: string,
-  ) {}
-
-  private fail(field: string, what: string): never {
-    throw new Error(`Erro em data/monsters.json (${this.where}): o campo "${field}" ${what}.`);
-  }
-
-  number(field: string, opts: { min?: number; fallback?: number } = {}): number {
-    const value = this.data[field] ?? opts.fallback;
-    if (typeof value !== 'number' || !Number.isFinite(value)) this.fail(field, 'precisa ser um número');
-    if (opts.min !== undefined && value < opts.min) this.fail(field, `precisa ser pelo menos ${opts.min}`);
-    return value;
-  }
-
-  bool(field: string, fallback?: boolean): boolean {
-    const value = this.data[field] ?? fallback;
-    if (typeof value !== 'boolean') this.fail(field, 'precisa ser true ou false');
-    return value;
-  }
-
-  text(field: string, fallback?: string): string {
-    const value = this.data[field] ?? fallback;
-    if (typeof value !== 'string' || !value.trim()) this.fail(field, 'precisa ser um texto');
-    return value.trim();
-  }
-
-  range(field: string): [number, number] {
-    const value = this.data[field];
-    if (!Array.isArray(value) || value.length !== 2 || !value.every((v) => typeof v === 'number' && v >= 0) || value[0] > value[1]) {
-      this.fail(field, 'precisa ser [mínimo, máximo], por exemplo [2, 5]');
-    }
-    return [value[0], value[1]];
-  }
-
-  object(field: string, optional = false): Record<string, unknown> | null {
-    const value = this.data[field];
-    if (value === undefined && optional) return null;
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) this.fail(field, 'precisa ser um objeto { ... }');
-    return value as Record<string, unknown>;
-  }
-}
 
 export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
   if (typeof json !== 'object' || json === null || Array.isArray(json)) {
@@ -99,15 +67,15 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
   for (const [rawId, raw] of Object.entries(json as Record<string, unknown>)) {
     const id = rawId.trim().toLowerCase();
     if (typeof raw !== 'object' || raw === null) throw new Error(`Erro em data/monsters.json: "${rawId}" precisa ser um objeto.`);
-    const r = new Reader(raw as Record<string, unknown>, `monstro "${rawId}"`);
-    const a = new Reader(r.object('ataque')!, `ataque do monstro "${rawId}"`);
+    const r = new Reader(raw as Record<string, unknown>, FILE, `monstro "${rawId}"`);
+    const a = new Reader(r.object('ataque')!, FILE, `ataque do monstro "${rawId}"`);
     const kindName = a.text('tipo');
     const kind = ATTACK_KINDS[kindName];
     if (!kind) throw new Error(`Erro em data/monsters.json (ataque do monstro "${rawId}"): tipo "${kindName}" não existe. Use: ${Object.keys(ATTACK_KINDS).join(', ')}.`);
     const whirl = r.object('redemoinho', true);
     let whirlwind: MonsterDef['whirlwind'] = null;
     if (whirl) {
-      const w = new Reader(whirl, `redemoinho do monstro "${rawId}"`);
+      const w = new Reader(whirl, FILE, `redemoinho do monstro "${rawId}"`);
       const lines = whirl.falas;
       whirlwind = {
         distance: w.number('distancia', { min: 2, fallback: 4 }),
@@ -137,9 +105,34 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         projectile: a.text('projetil', 'pedra'),
       },
       whirlwind,
+      drops: parseDrops(r.list('itens'), rawId),
     });
   }
   return defs;
+}
+
+function parseDrops(list: unknown[], monster: string): MonsterDrop[] {
+  return list.map((raw, i) => {
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      throw new Error(`Erro em ${FILE} (monstro "${monster}"): cada item de "itens" precisa ser { "item": ..., "chance": ... }.`);
+    }
+    const d = new Reader(raw as Record<string, unknown>, FILE, `item ${i + 1} do monstro "${monster}"`);
+    const chance = d.number('chance', { min: 0 });
+    if (chance > 100) throw new Error(`Erro em ${FILE} (item ${i + 1} do monstro "${monster}"): "chance" é em %, de 0 a 100.`);
+    const [min, max] = d.amount('quantidade');
+    return { item: d.text('item').toLowerCase(), chance, min, max };
+  });
+}
+
+/** Confere se todo item que os monstros deixam existe em data/items.json. */
+export function checkDrops(monsters: Map<string, MonsterDef>, items: ReadonlyMap<string, unknown>): void {
+  for (const def of monsters.values()) {
+    for (const drop of def.drops) {
+      if (!items.has(drop.item)) {
+        throw new Error(`Erro em ${FILE} (monstro "${def.id}"): o item "${drop.item}" não existe em data/items.json.`);
+      }
+    }
+  }
 }
 
 export function loadMonsterDefs(file = MONSTERS_FILE): Map<string, MonsterDef> {

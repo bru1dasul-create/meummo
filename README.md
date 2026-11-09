@@ -8,14 +8,16 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 ![A vila flutuante do Refúgio de Guarapiranga](docs/screenshot.png)
 
-## Onde estamos: M1 — Combate de ação ✅ · M2 — Progresso salvo (começando)
+## Onde estamos: M1 — Combate de ação ✅ · M2 — Progresso salvo ✅
 
 - Entre com **nome e senha**: na primeira vez o personagem nasce na hora; depois ele volta com o nível,
-  a XP, a vida e o lugar onde parou
+  a XP, a vida, a mochila e o lugar onde parou
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)
 - Os monstros **avisam** os golpes com quadrados vermelhos no chão: saia de lá ou use a esquiva
 - Ganhe XP, suba de nível e volte para a vila quando desmaiar
+- Monstros deixam **itens** para quem ajudou a derrubá-los: guarde na **Mochila**, equipe chapéus, estilingues,
+  coletes e amuletos (mais vida, dano e defesa) e coma bananas para recuperar vida
 - Funciona no computador (mouse e teclado) e no celular (toque e botões)
 
 ### Controles
@@ -28,6 +30,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 | Fôlego (cura) | `E` | botão **Fôlego** |
 | Esquiva | `Espaço` | botão **Esquiva** |
 | Conversar | `Enter` | toque na caixa de conversa |
+| Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
 | Som ligado/desligado | `M` ou 🔊 no painel | 🔊 no painel |
 
 A visão do jogo está em [docs/DESIGN.md](docs/DESIGN.md) e o que vem depois em [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -101,6 +104,30 @@ Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` 
 `passoMs` (tempo para andar um quadrado — menor é mais rápido), `alcanceAgressao`, `xp`, `renascerMs`
 e o `ataque` (`tipo`: `mordida`, `bote`, `giro` ou `projetil`; `preparoMs` é o tempo do aviso vermelho).
 Salve e reinicie o servidor. Se algo estiver errado no arquivo, o servidor explica o quê.
+
+O que cada monstro deixa fica na lista `itens` dele: `item` (o id em `data/items.json`), `chance` (em %, de 0 a 100)
+e `quantidade` (opcional: um número, ou [mínimo, máximo]). Exemplo:
+`"itens": [{ "item": "banana", "chance": 50, "quantidade": [1, 2] }]`. Cada um que ajudou sorteia os seus.
+
+## Criar e ajustar itens (sem programar)
+
+Os itens ficam em [`data/items.json`](data/items.json). O nome de cada bloco é o **id** do item (sem acento e sem
+espaço, ex.: `chapeu_palha`); é ele que os monstros usam na lista `itens`.
+
+| Campo | O que é |
+|---|---|
+| `nome` | o nome que aparece no jogo |
+| `tipo` | `equipamento`, `consumivel` (de comer/usar) ou `material` (para trocas e missões, no futuro) |
+| `parte` | só equipamento: `arma`, `cabeca`, `corpo` ou `amuleto` |
+| `dano`, `vida`, `defesa` | só equipamento: quanto soma ao personagem (defesa tira isso de cada golpe, mas sempre sobra 1) |
+| `cura`, `recargaMs` | só consumível: quanto de vida recupera e quanto tempo esperar até o próximo (padrão 3000) |
+| `pilha` | quantos cabem num espaço da mochila (padrão 20; equipamento é sempre 1) |
+| `raridade` | `comum`, `raro` (borda azul) ou `lendario` (dourado; todo mundo fica sabendo quando alguém pega) |
+| `descricao` | o textinho do item |
+| `icone` | o desenho: `banana`, `couro`, `chapeu_palha`, `estilingue`, `colar`, `gibao`, `gorro` ou `mochila` |
+
+Desenho novo para um ícone precisa de código (`src/client/itemArt.ts`) — é só pedir. Se um item for apagado do
+arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
 
 ## Editar o mapa
 

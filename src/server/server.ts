@@ -8,8 +8,9 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { TICK_MS } from '../shared/constants';
 import { GameMap, type TiledMap } from '../shared/map';
 import { CharacterStore, type HashCost } from './accounts';
+import { loadItemDefs } from './items';
 import { LoginGuard, type GuardLimits } from './login-guard';
-import { loadMonsterDefs } from './monsters';
+import { checkDrops, loadMonsterDefs } from './monsters';
 import { CLIENT_DIR, MAP_FILE } from './paths';
 import { Session, type Lobby } from './session';
 import { World } from './world';
@@ -43,8 +44,11 @@ export function loadMap(file = MAP_FILE): GameMap {
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
   const log =
     options.log === false ? () => {} : (message: string) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${message}`);
+  const items = loadItemDefs();
+  const monsters = loadMonsterDefs();
+  checkDrops(monsters, items);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const world = new World(loadMap(), { log, monsters: loadMonsterDefs(), saver: store });
+  const world = new World(loadMap(), { log, monsters, items, saver: store });
   const lobby: Lobby = {
     world,
     store,

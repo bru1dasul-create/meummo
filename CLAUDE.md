@@ -19,8 +19,10 @@
    dano, recargas e posições. Toda mensagem do cliente passa por `src/server/validate.ts`.
 3. **Regras compartilhadas** (movimento, esquiva, mapa, combate/projéteis, progressão, protocolo, busca de
    caminho) ficam em `src/shared`, que não pode importar nada de navegador, Phaser ou Node.
-4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`
-   (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
+4. **Conteúdo é dado:** mapas no Tiled (`public/assets/maps`), monstros em `data/monsters.json`, itens em
+   `data/items.json` (chaves em português, para o dono do projeto ajustar). Evite conteúdo fixo no código.
+   Arte provisória por código: tiles em `scripts/tileset.ts`, monstros em `src/client/game/monsterArt.ts`,
+   ícones de itens em `src/client/itemArt.ts`.
 5. Antes de commitar: `npm run check` (tipos + testes) precisa passar. Regra nova no servidor vem com teste em `tests/`.
 6. Mudou o formato das mensagens? Aumente `PROTOCOL_VERSION` em `src/shared/constants.ts`.
    Mudou o que fica salvo do personagem? Acrescente um passo em `MIGRATIONS` (`src/server/accounts.ts`) — nunca
