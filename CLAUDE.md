@@ -8,8 +8,10 @@
   monstros avisam golpes no chão. O nome "MeuMMO" é provisório.
 - Mundo (aprovado): **Pindorama — Selva de Pedra**, São Paulo tomada pela floresta. Tom: "um pouco dos dois" —
   colorido e vivo nas vilas, sombrio nas ruínas; sem violência explícita (quem perde a vida desmaia).
-  Zonas: **Refúgio de Guarapiranga** (`public/assets/maps/refugio.tmj`, inicial) e **Ruínas de Santo Amaro**
-  (`santo-amaro.tmj`, níveis 4 a 8, chefe: Mula sem Cabeça), ligadas pela avenida (camada `saidas`). Lugares reais sim, **marcas não**.
+  Zonas: **Refúgio de Guarapiranga** (`public/assets/maps/refugio.tmj`, inicial), **Ruínas de Santo Amaro**
+  (`santo-amaro.tmj`, níveis 4 a 8, chefe: Mula sem Cabeça), pela avenida a leste, e **Represa Billings**
+  (`billings.tmj`, labirinto de canais; a Iara vai morar lá), pela trilha do brejo ao sul (camada `saidas`).
+  Lugares reais sim, **marcas não**.
 - Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
   Como funciona por dentro: `docs/ARQUITETURA.md`.
 - Tentativas anteriores de MMO não deram certo por excesso de escopo. Por isso: etapas pequenas, sempre jogáveis.
@@ -34,7 +36,7 @@
    edite um passo antigo: os personagens de quem já joga são convertidos por eles.
 7. Ao concluir algo do roteiro, marque em `docs/ROADMAP.md`.
 8. Comentários e textos do jogo em português; nomes no código em inglês.
-9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro -- --force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
+9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro` ou `gen:billings` com `--force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
    arquivo com `--out` e compare as camadas antes de substituir.
 
 ## Divisão do trabalho (3 chats)
@@ -81,6 +83,7 @@ No roteiro (`docs/ROADMAP.md`) cada tarefa tem a etiqueta da frente: pegue só a
   Tiles novos sempre no fim da lista (os mapas guardam o número de cada tile).
 - `npm run gen:map -- --out arquivo.tmj` — gera o mapa do Refúgio em outro arquivo (veja a regra 9)
 - `npm run gen:santo-amaro -- --out arquivo.tmj` — idem para as Ruínas de Santo Amaro
+- `npm run gen:billings -- --out arquivo.tmj` — idem para a Represa Billings
 - `npm run render:map` — desenha todos os mapas em `docs/mapa-<id>.png` (azul-claro = saídas)
 
 ## Instalação no PC do dono do projeto (Windows)

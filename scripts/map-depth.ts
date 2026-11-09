@@ -6,7 +6,7 @@
 import { EDGE_CORNERS, gid } from './tileset';
 
 /** Árvores grandes (2 tiles de largura e 3 de altura): o prefixo dos 6 tiles de cada uma. */
-export const BIG_TREES = ['tree_big', 'pine_big', 'ipe_yellow_big', 'ipe_pink_big', 'dead_tree_big'] as const;
+export const BIG_TREES = ['tree_big', 'pine_big', 'ipe_yellow_big', 'ipe_pink_big', 'dead_tree_big', 'buriti_big'] as const;
 export type BigTree = (typeof BIG_TREES)[number];
 
 export class DepthLayers {

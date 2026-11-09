@@ -97,10 +97,16 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   onde fica em `data/npcs.json`). Clicar nela leva até ela e abre a loja; afastar-se fecha
 - [ ] **[arte]** Caprichar a loja e o ouro: moeda desenhada, som de moeda, janela da loja e a aparência da
   Dona Iracema (hoje é o personagem padrão com chapéu de palha)
-- [ ] **[mundo]** Uma barraquinha de frutas atrás da Dona Iracema, na praça do Refúgio (ela fica em (46, 28))
+- [x] **[mundo]** Barraquinha de frutas da Dona Iracema, na praça do Refúgio (ela fica em (46, 28)): toldo listrado
+  atrás dela e balcão com frutas na frente. De quebra: os píeres dos lados voltaram a encostar no deck da fogueira
+  (as casas maiores do passo 2 tinham fechado a passagem) e um teste confere que todo NPC tem lugar alcançável
 - [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
 - [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
-- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago, Boitatá como chefe
+- [x] **[mundo]** Represa Billings: zona nova ao sul do brejo (labirinto de canais e ilhas com passarelas,
+  buritis, aguapés, casas afundadas, usina, ponte da rodovia quebrada, prainha de frente para a pedra da Iara,
+  neblina e vaga-lumes), com criaturas provisórias (Jararaca, Corpo-Seco, Capelobo)
+- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago (área já marcada na Billings: camada `lendas`),
+  Boto e jacarés na Billings, Boitatá como chefe
 
 ## M4 — Social
 - [ ] **[estrutura]** Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada

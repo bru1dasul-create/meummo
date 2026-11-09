@@ -370,7 +370,7 @@ export class WorldScene extends Phaser.Scene {
     this.lastFrameAt = now;
     const view = this.cameras.main.worldView;
     this.mapLights.update(now);
-    this.mapWeather.update(now);
+    this.mapWeather.update(now, view);
     this.mapSparks.update(now, view);
     if (!this.canopy) return;
     const near = (x: number, y: number) => x > view.x - 48 && x < view.right + 48 && y > view.y - 48 && y < view.bottom + 48;

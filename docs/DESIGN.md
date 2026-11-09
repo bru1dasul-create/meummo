@@ -104,7 +104,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
 |---|---|---|---|
 | **Refúgio de Guarapiranga** | inicial (zona segura) | A represa virou um lago sagrado. Vilas flutuantes de madeira e restos de barcos, cercadas por floresta densa. Lugar para aprender a jogar. | ✅ é o mapa atual |
 | **Ruínas de Santo Amaro** | intermediário | O antigo centro comercial virou um labirinto de prédios caídos tomados pela vegetação. Sucata e fios da tecnologia antiga misturados com plantas medicinais. | ✅ mapa e criaturas (níveis 4 a 8) |
-| **Labirintos da Billings** | farm e perigo | Canais e pântanos no extremo sul, com jacarés mutantes e espíritos da água (Boto, Lobisomem da Mata). | depois |
+| **Represa Billings** (os Labirintos) | farm e perigo | Canais e pântanos ao sul do brejo, com jacarés mutantes e espíritos da água (Iara, Boto, Lobisomem da Mata). | ✅ mapa (criaturas provisórias) |
 | **Selva do Centro** (Paulista e Sé) | alto nível / fim de jogo | Arranha-céus viraram masmorras verticais: escalar as ruínas do MASP e das torres de antena até os chefes no topo. | fim de jogo |
 
 ### Refúgio de Guarapiranga (feito)
@@ -121,6 +121,19 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
   Barcos afundados aparecem pelo caminho.
 - Ao entrar, o nome da zona aparece na tela ("Refúgio de Guarapiranga — Zona segura"). O nome e o "zona
   segura" são propriedades do mapa no Tiled (`nome` e `seguro`), então cada zona nova já nasce com os seus.
+
+### Represa Billings (o mapa)
+- **A chegada:** a trilha do brejo do Refúgio desce até a borda de cima da Billings.
+- **O labirinto:** canais de água verde (cheia de vida depois de anos parada) cortam o mato de brejo em ilhas,
+  ligadas por passarelas de madeira — tem caminho que dá a volta e tem ilha que só se alcança pela passarela
+  certa. Buritis na beira d'água, aguapés com flor lilás boiando, taboas e vaga-lumes piscando na neblina.
+- **O lago:** a represa aberta, no sul, com a parte funda escurecendo. A ponte da rodovia antiga atravessa o lago e
+  caiu no meio (dá para andar até a ponta quebrada). Casas afundadas mostram só o telhado.
+- **A usina velha:** um prédio de concreto numa ilha do nordeste, com sucata em volta.
+- **A prainha da Iara:** areia de frente para uma pedra grande no meio d'água, onde ela vai cantar.
+- **Criaturas por enquanto:** Jararacas nas ilhas perto da entrada, Corpo-Seco no leste (usina e casas
+  afundadas) e Capelobo nas matas da beira do lago. As de lá (Iara, Boto, jacarés) estão marcadas no mapa e
+  entram quando forem criadas. Quem desmaia aqui acorda no Refúgio.
 
 ### Ruínas de Santo Amaro (o mapa)
 - **A entrada:** a avenida que sai do Refúgio continua pelo oeste e corta a zona inteira; carros e um ônibus
