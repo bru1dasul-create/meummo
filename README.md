@@ -23,6 +23,7 @@ Feito em dupla: ideias, design e testes de um lado, código do Claude do outro. 
 | Fôlego (cura) | `E` | botão **Fôlego** |
 | Esquiva | `Espaço` | botão **Esquiva** |
 | Conversar | `Enter` | toque na caixa de conversa |
+| Som ligado/desligado | `M` ou 🔊 no painel | 🔊 no painel |
 
 A visão do jogo está em [docs/DESIGN.md](docs/DESIGN.md) e o que vem depois em [docs/ROADMAP.md](docs/ROADMAP.md).
 

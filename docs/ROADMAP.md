@@ -32,7 +32,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] O dano e a vida estão justos? (`vida`, `dano` nos monstros; `src/shared/progression.ts` para o jogador)
 - [ ] Subir de nível está rápido ou devagar demais? (`xp` dos monstros e `xpToNext`)
 - [ ] O Saci está forte demais para quem é nível 1? (ele é para nível 3+ ou para grupo)
-- [ ] Sons (estilingue, acerto, aviso, desmaio) e música da vila
+- [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
+- [ ] Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [ ] Arte de verdade para personagens e monstros
 
 ## ⏭️ M2 — Progresso salvo

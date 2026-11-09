@@ -38,6 +38,7 @@ Para todas as idades.
 - **Desmaio:** com a vida zerada, você desmaia e volta para a vila em 3 s, com 2 s de proteção.
   Por enquanto não perde nada.
 - **Recuperação:** depois de 6 s sem apanhar, a vida volta sozinha.
+- **Sons:** cada ação tem um som curto; um bip avisa quando um golpe vai cair exatamente onde você está.
 - **Níveis:** cada nível dá mais vida e dano. A XP necessária cresce aos poucos (fórmula em
   `src/shared/progression.ts`).
 
