@@ -48,7 +48,9 @@ Tudo isto se ajusta mexendo em números, sem programar:
   (com espuma na beira da represa), a parte funda escurecendo aos poucos, grama/areia/terra com mais detalhe, casas
   coloridas na escala dos personagens novos (porta de 2 tiles, janelas acesas, floreiras), lamparinas nos píeres,
   bandeirinhas de festa junina, varais, redes de pesca, caixotes, barris e cestos de peixe
-- [ ] **[mundo]** Mapa, passo 3 — Santo Amaro caprichado: neblina, brasas perto da Mula, prédios mais altos, escombros
+- [x] **[mundo]** Mapa, passo 3 — Santo Amaro caprichado: prédios com fachada de 2 andares (mais altos que quem
+  passa: janelas, marquise, lojas fechadas, lambe-lambe, pichação, cipó), entulho caprichado, brasas soltando faíscas
+  e tambores com fogo no largo da Mula, mato escuro avançando no concreto, neblina e o lugar mais escuro
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
@@ -56,8 +58,8 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
   para quem é novo; painéis num estilo só (madeira escura com borda dourada); nível em destaque e XP com números;
   botões de habilidade com ícones, tecla do atalho e segundos de recarga; chat que esmaece quando ninguém fala
   (no celular fica recolhido nas últimas linhas, um toque abre); faixa com o nome da zona (vermelha se for perigosa)
-- [x] **Cenário com profundidade:** coberto pelo "Mapa, passo 1" (sombras, copas por cima, água animada) e pelo
-  "Mapa, passo 2" (beiradas suaves, vila colorida); segue no passo 3 do mapa
+- [x] **Cenário com profundidade:** coberto pelos passos 1 a 3 do mapa (sombras, copas por cima, água animada,
+  beiradas suaves, vila colorida, Santo Amaro com neblina e prédios de 2 andares)
 - [ ] **[dono]** Arte definitiva (depende de decidir: desenhar, contratar ou usar pacotes gratuitos)
 
 ## ✅ Pindorama — a primeira zona

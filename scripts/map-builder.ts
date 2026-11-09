@@ -17,7 +17,7 @@ export interface AreaObject {
   y: number;
   w: number;
   h: number;
-  properties: { name: string; type: 'string' | 'int' | 'bool'; value: string | number | boolean }[];
+  properties: { name: string; type: 'string' | 'int' | 'float' | 'bool'; value: string | number | boolean }[];
 }
 
 export class MapBuilder {
