@@ -7,7 +7,7 @@ import { outline } from "./game/monsterArt";
 
 const SIZE = 16;
 
-interface IconArt {
+export interface IconArt {
   colors: Record<string, string>;
   rows: string[];
 }
@@ -319,7 +319,13 @@ const urls = new Map<string, string>();
 function iconCanvas(icon: string): HTMLCanvasElement {
   const cached = canvases.get(icon);
   if (cached) return cached;
-  const art = ICONS[icon] ?? ICONS.mochila!;
+  const canvas = drawIcon(ICONS[icon] ?? ICONS.mochila!);
+  canvases.set(icon, canvas);
+  return canvas;
+}
+
+/** Desenha um ícone 16x16 (com contorno escuro). Também usado pelos botões de habilidade. */
+export function drawIcon(art: IconArt): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = SIZE;
   canvas.height = SIZE;
@@ -333,7 +339,6 @@ function iconCanvas(icon: string): HTMLCanvasElement {
     }
   });
   outline(ctx, SIZE, SIZE);
-  canvases.set(icon, canvas);
   return canvas;
 }
 

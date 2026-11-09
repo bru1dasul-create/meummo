@@ -1,6 +1,10 @@
 # Roteiro
 
 Cada etapa termina com algo jogável. Só passamos para a próxima quando a atual estiver boa de jogar.
+
+**Quem faz o quê:** cada tarefa aberta tem a etiqueta da frente — **[estrutura]** (servidor, regras, dados,
+salvamento), **[arte]** (personagens, monstros, ícones, telas, sons), **[mundo]** (mapas e tiles) ou **[dono]**
+(jogar e decidir). Cada chat pega só as suas; detalhes em `CLAUDE.md`, "Divisão do trabalho".
 A visão do jogo está em [DESIGN.md](DESIGN.md).
 
 ## ✅ M0 — Mundo vivo
@@ -28,23 +32,33 @@ A visão do jogo está em [DESIGN.md](DESIGN.md).
 ## 🔧 Refinamento do M1 (para jogar e ajustar juntos)
 Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Andar em 8 direções (W+D = diagonal), escorregando nas paredes; monstros e o clique para andar também usam diagonais
-- [ ] A velocidade do personagem e dos monstros está boa? (`STEP_MS` em `src/shared/constants.ts`; `passoMs` em `data/monsters.json`)
-- [ ] Os avisos dão tempo de desviar? (`preparoMs` de cada monstro)
-- [ ] O dano e a vida estão justos? (`vida`, `dano` nos monstros; `src/shared/progression.ts` para o jogador)
-- [ ] Subir de nível está rápido ou devagar demais? (`xp` dos monstros e `xpToNext`)
-- [ ] O Saci está forte demais para quem é nível 1? (ele é para nível 3+ ou para grupo)
+- [ ] **[dono → estrutura]** A velocidade do personagem e dos monstros está boa? (`STEP_MS` em `src/shared/constants.ts`; `passoMs` em `data/monsters.json`)
+- [ ] **[dono → estrutura]** Os avisos dão tempo de desviar? (`preparoMs` de cada monstro)
+- [ ] **[dono → estrutura]** O dano e a vida estão justos? (`vida`, `dano` nos monstros; `src/shared/progression.ts` para o jogador)
+- [ ] **[dono → estrutura]** Subir de nível está rápido ou devagar demais? (`xp` dos monstros e `xpToNext`)
+- [ ] **[dono → estrutura]** O Saci está forte demais para quem é nível 1? (ele é para nível 3+ ou para grupo)
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
-- [ ] Música da vila e sons de verdade (gravados ou de banco gratuito)
-- [ ] Arte de verdade para personagens e monstros
-- [ ] Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador)
+- [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
+- [ ] **[arte]** Arte de verdade para personagens e monstros
+- [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador)
 - [x] Mapa, passo 1 — profundidade e vida: árvores grandes (copa por cima do personagem, que fica transparente
   quando alguém passa embaixo), postes altos, mata fechada nas bordas, sombras de casas e prédios, água
   balançando, fogueira crepitando com brilho em volta (camadas `sombras` e `acima` do Tiled)
-- [x] Mapa, passo 2 — Refúgio caprichado: beiradas suaves entre água, areia, grama, terra e lama (com espuma na
-  beira da represa), a parte funda escurecendo aos poucos, grama/areia/terra com mais detalhe, casas coloridas
-  na escala dos personagens novos (porta de 2 tiles, janelas acesas, floreiras), lamparinas nos píeres,
+- [x] **[mundo]** Mapa, passo 2 — Refúgio caprichado: beiradas suaves entre água, areia, grama, terra e lama
+  (com espuma na beira da represa), a parte funda escurecendo aos poucos, grama/areia/terra com mais detalhe, casas
+  coloridas na escala dos personagens novos (porta de 2 tiles, janelas acesas, floreiras), lamparinas nos píeres,
   bandeirinhas de festa junina, varais, redes de pesca, caixotes, barris e cestos de peixe
-- [ ] Mapa, passo 3 — Santo Amaro caprichado: neblina, brasas perto da Mula, prédios mais altos, escombros
+- [ ] **[mundo]** Mapa, passo 3 — Santo Amaro caprichado: neblina, brasas perto da Mula, prédios mais altos, escombros
+
+## 🎨 Design (visual)
+Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
+- [x] **Interface:** tela de entrada com cenário (selva sobre as ruínas e a represa), "Como jogar" que abre sozinho
+  para quem é novo; painéis num estilo só (madeira escura com borda dourada); nível em destaque e XP com números;
+  botões de habilidade com ícones, tecla do atalho e segundos de recarga; chat que esmaece quando ninguém fala
+  (no celular fica recolhido nas últimas linhas, um toque abre); faixa com o nome da zona (vermelha se for perigosa)
+- [x] **Cenário com profundidade:** coberto pelo "Mapa, passo 1" (sombras, copas por cima, água animada) e pelo
+  "Mapa, passo 2" (beiradas suaves, vila colorida); segue no passo 3 do mapa
+- [ ] **[dono]** Arte definitiva (depende de decidir: desenhar, contratar ou usar pacotes gratuitos)
 
 ## ✅ Pindorama — a primeira zona
 - [x] Mundo aprovado: **Pindorama — Selva de Pedra** (São Paulo tomada pela floresta), tom "um pouco dos dois"
@@ -71,17 +85,20 @@ Tudo isto se ajusta mexendo em números, sem programar:
   fechadas, cipó, entulho, sucata, pneus, fios, postes, árvore seca, ervas, ônibus) e tom pesado
 - [x] Ruínas de Santo Amaro, passo 3: Corpo-Seco, Capelobo e a Mula sem Cabeça (chefe com investida e rastro de
   fogo), com itens novos (Arruda, Sucata, Faca de Sucata, Couraça de Lata, Ferradura em Brasa)
-- [ ] NPCs com diálogo (o Curupira!), missões simples, loja e ouro
-- [ ] Novas lendas: Iara no lago, Boitatá como chefe
+- [ ] **[estrutura]** Ouro e loja: monstros deixam ouro, um vendedor no Refúgio vende banana e equipamento
+  (visual da loja: [arte]; lugar do vendedor no mapa: [mundo])
+- [ ] **[estrutura]** NPCs com diálogo (o Curupira!), com as falas num arquivo de dados
+- [ ] **[estrutura]** Missões simples ("derrote 5 Saguis", "traga 3 couros"), também em arquivo de dados
+- [ ] **[estrutura + arte + mundo]** Novas lendas: Iara no lago, Boitatá como chefe
 
 ## M4 — Social
-- [ ] Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada
+- [ ] **[estrutura]** Grupo com XP dividido, guilda, troca entre jogadores e mensagem privada
 
 ## M5 — Teste fechado
-- [ ] Servidor na internet (VPS), domínio e HTTPS (a senha passa a viajar criptografada; atrás de um proxy,
+- [ ] **[estrutura]** Servidor na internet (VPS), domínio e HTTPS (a senha passa a viajar criptografada; atrás de um proxy,
   usar o endereço real de cada jogador nos freios de senha)
-- [ ] Ferramentas de admin (expulsar, banir, avisos) e registros
-- [ ] 20 a 50 pessoas jogando juntas
+- [ ] **[estrutura]** Ferramentas de admin (expulsar, banir, avisos) e registros
+- [ ] **[dono]** 20 a 50 pessoas jogando juntas
 
 ## Ideias para depois (só se o básico estiver divertido)
 Caminhos (Capoeirista, Curandeiro, Caçador), crafting, PvP em áreas específicas, chefões, eventos,
@@ -90,3 +107,6 @@ noite e dia (lendas da noite), montarias, casas de jogadores.
 ## Decisões pendentes
 - **Nome do jogo** ("MeuMMO" é provisório) — sugestões em DESIGN.md
 - **Arte definitiva:** hoje é arte provisória desenhada por código
+- **Qual personagem fica:** o da `main` ("Equipamento aparece no personagem e personagem redesenhado") ou o do ramo
+  `claude/blissful-meitner-hp1i5e` (camadas e animações)? Os dois fizeram a mesma tarefa ao mesmo tempo; a [arte]
+  mostra prints dos dois e o dono escolhe. Seja qual for, o trabalho continua a partir da `main`.
