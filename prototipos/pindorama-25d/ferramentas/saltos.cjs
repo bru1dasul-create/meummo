@@ -1,6 +1,7 @@
-// Procura "saltos" (coisa que pula de um quadro para o outro, em vez de se mover suave) no soco, no combo e andando.
-// Mede, a 60 quadros por segundo: o maior "tranco" (mudança brusca de velocidade, em cm por quadro²) do punho, do
-// cotovelo e da cabeça, o maior giro do peito e da cabeça num quadro e quanto a cabeça fica virada em relação ao peito.
+// Procura "saltos" (coisa que pula de um quadro para o outro, em vez de se mover suave) no soco, no combo, andando,
+// pulando e virando. Mede, a 60 quadros por segundo: o maior "tranco" (mudança brusca de velocidade, em cm por
+// quadro²) do punho, do cotovelo, da cabeça, do tornozelo e do joelho; se a ponta do pé entra no chão; o maior giro
+// do peito e da cabeça num quadro e quanto a cabeça fica virada em relação ao peito.
 // Movimento suave tem tranco pequeno; um salto aparece como tranco grande (perto do tamanho do próprio pulo).
 // Uso: node saltos.cjs
 const { chromium } = require('playwright');
@@ -19,6 +20,7 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
       const hist = {};
       const worst = {};
       let headVsChest = 0;
+      let below = 0;
       let maxChestTurn = 0;
       let maxHeadTurn = 0;
       let prevYaw = null;
@@ -39,6 +41,11 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
         for (let i = 0; i < 2; i++) {
           track('punho ' + (i ? 'D' : 'E'), rig.wrist[i], t);
           track('cotovelo ' + (i ? 'D' : 'E'), rig.elbow[i], t);
+          track('tornozelo ' + (i ? 'D' : 'E'), rig.ankle[i], t);
+          track('joelho ' + (i ? 'D' : 'E'), rig.knee[i], t);
+          // ponta do pé abaixo do chão?
+          const toe = M.at(rig.toe[i], 0, 15.6 - PD.BODY.ballFwd, -4.6 + PD.BODY.ankleHeight - 1.9);
+          below = Math.max(below, -(toe.z - (ch.groundZ || 0)));
         }
         track('cabeça', rig.head.o, t);
         const cy = yawOf(rig.chest);
@@ -50,8 +57,10 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
         prevYaw = { c: cy, h: hy };
         headVsChest = Math.max(headVsChest, Math.abs(M.angleDiff(cy, hy)) / M.DEG);
       }
-      const parts = Object.entries(worst).map(([k, w]) => `${k} ${w.j.toFixed(1)} (t=${w.t.toFixed(2)})`);
-      return `${name}\n   tranco máx (cm/quadro²): ${parts.join(' · ')}\n   giro máx num quadro: peito ${maxChestTurn.toFixed(1)}° · cabeça ${maxHeadTurn.toFixed(1)}° · cabeça virada em relação ao peito: até ${headVsChest.toFixed(1)}°`;
+      const fmt = (keys) => keys.map((k) => `${k} ${worst[k].j.toFixed(1)} (t=${worst[k].t.toFixed(2)})`).join(' · ');
+      const arms = Object.keys(worst).filter((k) => /punho|cotovelo|cabeça/.test(k));
+      const legs = Object.keys(worst).filter((k) => /tornozelo|joelho/.test(k));
+      return `${name}\n   tranco máx (cm/quadro²) braços: ${fmt(arms)}\n   pernas: ${fmt(legs)} · ponta do pé abaixo do chão: ${below > 0.3 ? below.toFixed(1) + ' cm' : 'não'}\n   giro máx num quadro: peito ${maxChestTurn.toFixed(1)}° · cabeça ${maxHeadTurn.toFixed(1)}° · cabeça virada em relação ao peito: até ${headVsChest.toFixed(1)}°`;
     };
     const click = (t, at) => Math.abs(t - at) < 0.5 / 60;
     const fwd = { x: 1, y: 0 };
@@ -64,6 +73,10 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
       run('andando reto', 3, () => ({ move: fwd })),
       run('correndo', 3, () => ({ move: fwd, run: true })),
       run('andando e parando', 3, (t) => ({ move: t < 1.5 ? fwd : null })),
+      run('pulo parado', 2, (t) => ({ jump: click(t, 0.5) })),
+      run('pulo andando', 2.2, (t) => ({ move: fwd, jump: click(t, 0.9) })),
+      run('pulo correndo', 2.4, (t) => ({ move: fwd, run: true, jump: click(t, 1.1) })),
+      run('virada de 180° correndo', 2.6, (t) => ({ move: t < 1.2 ? fwd : { x: -1, y: 0 }, run: true })),
     ].join('\n');
   });
   console.log(out);

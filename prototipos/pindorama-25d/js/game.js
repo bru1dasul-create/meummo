@@ -192,7 +192,7 @@
     get renderer() { return renderer; },
     get stats() { return { fps: stats.fps, ms: stats.workAvg, fases: world && world.timing }; },
     pause(v = true) { paused = v; },
-    setYaw(deg) { hero.yaw = deg * M.DEG; },
+    setYaw(deg) { hero.yaw = deg * M.DEG; hero.faceYaw = hero.yaw; },
     teleport(x, y) { hero.pos.x = x; hero.pos.y = y; camTarget = null; },
     setZoom,
     /** Teste da arquitetura de equipamentos: veste um capacete e botas de prova (some ao recarregar). */

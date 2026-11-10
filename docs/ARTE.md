@@ -47,7 +47,7 @@ protótipo não mexe no jogo nem no servidor.
 - **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
   segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
 - **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
-  (privada). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  (privada; versão 4 em 10/11, com o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
   o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
 - **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
   o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
@@ -73,69 +73,70 @@ protótipo não mexe no jogo nem no servidor.
   3. `Artifact` (publicar) com o mesmo `url`, `file_path` = `<scratchpad>/publicar/index.html` e `files` = a lista do
      passo 1.
 
-### Onde parei (10/11, antes de limpar a conversa): refino do personagem
-O dono testou a página e gostou ("ficou bom", "estamos chegando onde eu quero") e pediu **mais uma refinada**:
-1. "ainda tem alguns bugs quando ele bate";
-2. "a cabeça não gira com o corpo, fica meio estranho";
-3. "a forma de andar parece de um robô".
+### Refino do personagem (10/11): pedido do dono, o que mudou e como ficou
+O dono testou a página, gostou ("estamos chegando onde eu quero") e pediu mais uma refinada: (1) "ainda tem alguns
+bugs quando ele bate"; (2) "a cabeça não gira com o corpo, fica meio estranho"; (3) "a forma de andar parece de um
+robô". Medi antes de mexer (`saltos.cjs`, `passada.cjs`), corrigi, e uma revisão independente (outro agente, sem a
+minha conclusão) achou mais 10 problemas. Corrigi e pedi uma segunda passada: 6 itens confirmados como corrigidos, 3
+melhorados e 2 problemas novos (pernas em X ao virar andando e um pulinho com os dois pés no soco virado), que
+corrigi depois, junto com a emenda do combo, que ainda parava o punho por um quadro.
 
-Ele pediu para limpar a conversa antes de mexer. **O personagem ainda não foi alterado:** só medi e anotei aqui.
+**Antes → depois** (medido com as ferramentas de `prototipos/pindorama-25d/ferramentas/`):
 
-**Diagnóstico medido** com `saltos.cjs` e `passada.cjs` (números de antes do refino, para comparar depois):
-- **Tranco no soco:** o peito gira **37° num quadro só** (a 60 fps) na hora do golpe. O giro vai de +35° (armar) a
-  −40° em 0,075 s com `easeOut` (bloco do soco no `animator.js`, `twistT`). Punho e cotovelo: tranco de
-  42–46 cm/quadro² no golpe.
-- **A cabeça não acompanha:** no soco, `head.yaw -= twist * 1.05` anula o giro do peito (o peito gira 1,07 × twist:
-  0,75 na coluna + 0,32 na pelve). A cabeça fica parada enquanto o peito gira até **48,6°** em relação a ela.
-  Andando, ela anula 85% do giro do peito (`head.yaw = -chestYawAbs * 0.85`) e fica "no estabilizador".
-- **Virar para o mouse:** o corpo gira **27,6° num quadro** (`dampAngle(this.yaw, attack.dir, 22, dt)`). Socar para o
-  lado vira um pulo de pose.
-- **Combo** (clicar de novo): na troca de mão, os dois braços e o tronco pulam de pose (tranco de 56 cm/quadro² no
-  punho direito). O soco novo começa de poses fixas (`guardFront`, `guardRear`, giro 0), e não de onde o corpo está.
-  O pé da frente também troca a cada soco (`lead` depende da mão), e os pés se ajeitam no meio do combo.
-- **Fim do soco:** o `poleLocal` do cotovelo volta ao padrão de uma vez (o cotovelo pode estalar no último quadro).
-- **Andar curto e rápido:** **178 passos por minuto** com passo de 54 cm a 160 cm/s. Uma pessoa de ~1,75 m (a altura
-  dele) anda a 100–130 passos/min, com passo de 65–80 cm: o nosso parece passinho de brinquedo.
-- **Dois toques por passo:** em toda pisada o pé cai longe demais do quadril, e o "passo rápido de correção" puxa o
-  pé (9 correções em 9 pisadas andando, 13 em 12 correndo). A causa é a trava, que prende o **tornozelo** parado
-  durante todo o apoio. Com o quadril só 3,4 cm abaixo do de pé, a perna alcança ~22–25 cm na horizontal, e o passo
-  pede ~34 cm na frente. Gente de verdade ganha esse alcance rolando o pé (calcanhar → pé chato → ponta) e
-  abaixando um pouco o quadril quando os dois pés estão no chão.
-- **Jeito de máquina:** andando, o cotovelo fica sempre dobrado 44°–61° (braço solto dobra ~10°–35°). Pelve, peito,
-  braços e cabeça seguem a mesma senoide da fase, sem atraso entre eles. Correndo: 244 passos/min (correr de verdade:
-  160–190).
+| O que | Antes | Depois |
+|---|---|---|
+| Soco: maior giro do peito num quadro | 37° | 14° |
+| Soco: cabeça | parada (o peito girava até 49° embaixo dela) | gira 40% do giro do peito, com os olhos no alvo |
+| Virar para o mouse: maior giro num quadro | 27,6° | 12° (no máximo 720°/s) |
+| Combo: tranco do punho na troca de mão | 56 cm/quadro² | ≤ 15 |
+| Soco: pés | davam passo durante o golpe; a base trocava a cada soco | base fixa (pé esquerdo na frente); nenhum pé no ar no golpe nem os dois no ar juntos |
+| Virada de 135°–180° andando | pernas em X (tornozelos a −47 cm) | joelhos nunca cruzam; o pé no ar não passa para o lado do apoiado |
+| Rosto nas vistas de lado | sumia de uma vez (o cabelo inteiro pulava para a frente) | aparece e some aos poucos |
+| Andar: passos por minuto / passo | 178 / 54 cm | 150 / 64 cm |
+| Passos de correção do pé (em 3 s) | 9 andando, 13 correndo | 0 e 0 |
+| Joelho no meio do passo | ~30° dobrado (14°–24° parado) | quase esticado (4°) |
+| Cotovelo andando | 44°–61° | 12°–33° (solto) |
+| Correndo: passos por minuto | 244 | 220 |
+| Pulo | ponta do pé 27 cm dentro do chão; perna estalava; passinho no pouso | impulso pela ponta; dedos nunca entram no chão; pousa onde toca |
+| Escorregão do pé apoiado | 0,0 cm/s | 0,0 cm/s (medido no ponto que encosta) |
 
-**Plano** (nesta ordem; cada item conferido com as ferramentas e a prancha antes do seguinte):
-1. **Pé que rola:** a trava prende o ponto de contato (calcanhar ao pisar, ponta ao empurrar) e o tornozelo gira em
-   volta dele. O pé pisa sempre onde a perna alcança. Meta: **0 correções** andando e correndo, e o escorregão
-   continua em 0,0 cm/s.
-2. **Passada mais longa e mais lenta:** ~120–140 passos/min andando (passo de ~65–75 cm a 160 cm/s) e ~170–190
-   correndo. O quadril desce um pouco no apoio duplo e sobe no meio do apoio; o joelho dobra de leve ao receber o
-   peso.
-3. **Andar orgânico:**
-   - braços em pêndulo a partir do ombro, soltos (cotovelo 10°–35°), atrasados ~8–10% do ciclo em relação às
-     pernas, com a mão passando um pouco para dentro na frente;
-   - ombro sobe e desce ao contrário do quadril;
-   - peito gira menos (±4°–5°) e com atraso;
-   - leve inclinação para a frente.
-4. **Cabeça junto com o corpo:** segue boa parte do giro do peito (anula só ~30–40% andando), com uma mola (atraso
-   pequeno), e **vira primeiro** quando ele muda de direção (olha para onde vai). No soco, gira com os ombros
-   (~50–60% do giro), com os olhos no alvo.
-5. **Soco sem tranco:**
-   - giro em cadeia (quadril → peito → ombro → punho, 1–2 quadros entre um e outro);
-   - golpe um pouco mais longo (~0,10 s), com o giro numa curva suave;
-   - limite de giro por quadro (~12°–15°);
-   - virar para o mouse com velocidade máxima (~720°/s) em vez de pular.
-6. **Combo liso:** o soco novo começa da pose atual (guarda a pose e mistura em ~70 ms). A base dos pés fica a mesma
-   durante o combo inteiro, e o `poleLocal` do cotovelo se mistura na saída.
+**Como ficou por dentro** (`animator.js`, salvo onde indicado):
+- **Pé que rola:** a trava guarda o "pé chato"; o tornozelo gira em volta do calcanhar (ponta para cima) ou da base
+  dos dedos (calcanhar para cima), com `B.heelBack`/`B.ballFwd` (`body.js`); os dedos dobram (`toeBend` → `rig.toe`,
+  desenho em `renderer.js`) e nunca passam do chão.
+- **Balanço:** o pé sai do chão parado e pousa parado (velocidade zero no chão, curva `ease` com `b` 2 andando e 2,2
+  correndo); a correção do lugar de saída anda junto com o corpo.
+- **Pelve:** sobe no meio do apoio e desce no apoio duplo; depois de montar os pés, desce o que faltar para a perna
+  alcançar o pé (até 3 cm parado, 5,5 cm andando, rápido para descer e devagar para subir). Passo de emergência só se
+  ainda faltar alcance (`hipStand` 83,9 em `body.js`: perna quase esticada em pé).
+- **Braços e cabeça com peso:** braço em pêndulo (`armFK`) passando por uma mola; a cabeça segue parte do giro do
+  peito por uma mola, vai na frente nas curvas (`turnLead`) e, no soco, os olhos miram o alvo (`gazeX`).
+- **Soco:** giro em cadeia (quadril, peito, ombro); alvo calculado no espaço do corpo, descontando o giro e a
+  inclinação do peito (o punho vai reto, até agachado); o direto arma o punho no queixo com o cotovelo para baixo, e
+  o jab sai da guarda; o golpe espera o corpo virar para o alvo; a investida é um deslocamento de 7 cm só no chão e
+  fora da conta da passada; o clique nunca se perde (um soco na fila); o combo leva a diferença de pose e some em
+  0,1 s (inclusive o calcanhar de trás).
+- **Viradas:** pedir para ir muito para o lado ou para trás faz ele andar no máximo a 45° da própria frente, mais
+  devagar, enquanto vira; o corpo nunca passa de 55° na frente dos pés apoiados (a virada se divide em passos); o pé
+  no ar não cruza para o lado do pé apoiado (folga de 10 cm, entrando suave); quase parado numa virada grande, os pés
+  viram no lugar (passinhos); parado, o pé gira sobre a base dos dedos em viradas pequenas; ele termina a virada
+  mesmo soltando a tecla.
+- **Pulo:** o preparo agacha e começa a esticar antes de sair do chão; o impulso sai do pé que estava apoiado; na
+  descida o pé vai para onde vai pisar; o pouso amortece na velocidade da queda.
+- **Cabelo** (`renderer.js` e `HAIR.nape` em `body.js`): a massa fica sempre atrás da cabeça; a parte de trás que
+  cobre a cabeça é uma "touca da nuca", calculada pela câmera como a touca de cima.
 
-**Metas para entregar:**
-- `saltos.cjs` sem tranco grande: punho/cotovelo ≲ 15 cm/quadro², peito ≲ 15° por quadro, cabeça virada em relação
-  ao peito ≲ 25°;
-- `passada.cjs` com 0 correções; `escorregao.cjs` em 0,0 cm/s; `ossos.cjs` com variação 0,0000;
-- prancha nas 8 direções;
-- revisão por outro agente (mostre o código e os prints, sem a minha conclusão);
-- prints de PC e celular, e republicar no mesmo link.
+**Ainda pode melhorar (decisões de jogo ou detalhes):**
+- Socar para o lado ou para trás é mais lento: o golpe espera o corpo virar e os pés se acertarem (clique → impacto:
+  0,23 s até 30°, 0,37 s de 60° a 135°, 0,45 s para trás). Se o dono quiser mais rápido, dá para socar girando.
+- O soco agachado sai baixo, com o tronco bem inclinado.
+- A fila guarda um soco: cliques muito rápidos (a cada 0,08 s) viram 2 socos.
+- Correndo, o ritmo é de 220 passos por minuto (corrida de gente: 160–190) por causa das pernas curtas do modelo;
+  andando, 150 (a meta do plano era 120–140).
+
+**Ferramentas novas ou mudadas:** `saltos.cjs` (agora com pernas, ponta do pé, pulos e virada correndo), `tira.cjs`
+(tiras de 1/30 s: combo, soco para o lado, virada, parada, corrida, pulo, virada correndo, soco agachado),
+`cabeca.cjs` (cabeça girando 360°), `escorregao.cjs` (ponto que encosta; pé chato abaixo de 2°).
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):

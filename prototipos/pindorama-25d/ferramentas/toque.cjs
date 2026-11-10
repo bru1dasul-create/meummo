@@ -40,6 +40,7 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
   await page.waitForTimeout(600);
   r.agachar = await page.evaluate(() => __pd.hero.label);
   await page.evaluate(() => document.getElementById('t-run').dispatchEvent(new PointerEvent('pointerdown', { pointerId: 11, pointerType: 'touch', bubbles: true, cancelable: true })));
+  await page.waitForTimeout(150); // o botão liga no quadro seguinte do jogo
   r.correrLigado = await page.evaluate(() => document.getElementById('t-run').classList.contains('on'));
   console.log(JSON.stringify(r, null, 1));
   console.log(errors.length ? errors.join('\n') : 'sem erros');

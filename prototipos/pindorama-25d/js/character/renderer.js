@@ -87,7 +87,9 @@
       this.H = head;
       this.hs = hs;
       const headKey = this.keyOf(head.o);
-      const massKey = this.keyOf(at(head, 0, -6, 0)) - 0.5;
+      // a massa do cabelo fica sempre atrás da cabeça (se passasse para a frente inteira, cobria o rosto de uma vez
+      // nas vistas de lado); a parte de trás que cobre a cabeça é a touca da nuca, desenhada na frente
+      const massKey = Math.min(this.keyOf(at(head, 0, -6, 0)) - 0.5, headKey - 0.2);
       const faceAway = this.facing(rig.head.f) < 0;
 
       // ---- cabeça
@@ -128,6 +130,8 @@
 
       const facingFront = this.facing(rig.head.f);
       const frontSegs = [];
+      const nape = this._capPoly(head, MOD.HAIR.nape);
+      if (nape) frontSegs.push({ poly: nape.poly, path: nape.path, mat: PAL.hair, k: 0.22, isNape: true, concave: true });
       const cap = this._capPoly(head);
       if (cap) frontSegs.push({ poly: cap.poly, path: cap.path, mat: PAL.hair, k: 0.2, isCap: true, concave: true });
       for (const lk of MOD.HAIR.locks) {
@@ -138,8 +142,14 @@
         });
         frontSegs.push({ poly: this.hull(pts.map((p, j) => this.circle(p, lk.r[j] * hs))), circles: this._last, mat: PAL.hair, k: 0.34 });
       }
-      this._frontHair = frontSegs.map((sg) => sg.poly);
-      items.push({ name: 'cabeloFrente', key: headKey + 0.3, group: 'cabeloFrente', chain: true, segs: frontSegs, clipOut: massPoly, after: (segs) => this._hairSheen(rig, segs) });
+      this._frontHair = frontSegs.filter((sg) => !nape || sg.poly !== nape.poly).map((sg) => sg.poly);
+      items.push({
+        name: 'cabeloFrente', key: headKey + 0.3, group: 'cabeloFrente', chain: true, segs: frontSegs, clipOut: massPoly,
+        after: (segs) => {
+          if (nape) this._hairStrands(rig, nape.poly); // os fios continuam aparecendo na nuca
+          this._hairSheen(rig, segs);
+        },
+      });
 
       // ---- penas (lado direito da cabeça)
       const rightShows = this.facing(rig.head.r) > -0.3;
@@ -195,12 +205,16 @@
         const thCircles = MOD.THIGH.map((s) => this.circle(limbAt(th, s.t, s.f, s.o), s.r));
         const shCircles = MOD.SHIN.map((s) => this.circle(limbAt(sh, s.t, s.f, s.o), s.r));
         const ft = rig.foot[i];
-        const ftCircles = MOD.FOOT.map((s) => this.circle(at(ft, -side * s.s, s.f, s.u), s.r));
+        const toe = rig.toe[i];
+        // o que fica à frente da base dos dedos segue os dedos (deitados no chão quando o calcanhar sobe)
+        const BD = PD.BODY;
+        const footPt = (s) => (toe && s.f > BD.ballFwd + 1 ? at(toe, -side * s.s, s.f - BD.ballFwd, s.u + BD.ankleHeight) : at(ft, -side * s.s, s.f, s.u));
+        const ftCircles = MOD.FOOT.map((s) => this.circle(footPt(s), s.r));
         const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH[4].r * 2.2 * this.zoom };
         const ankle = { pt: this.P(rig.ankle[i]), r: MOD.SHIN[3].r * 1.5 * this.zoom };
         items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => this._castShadow(pelvisPoly, 3.2, 0.5) }] });
         items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._band(seg, sh, MOD.BODY_PAINT.calfBand, 5.5) }] });
-        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, joint: ankle, segs: [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._toes(seg, ft, side) }] });
+        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, joint: ankle, segs: [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._toes(seg, toe || ft, side, !!toe) }] });
       }
       return items;
     }
@@ -239,7 +253,7 @@
         for (const it of items) {
           if (!it.segs) continue;
           for (const s of it.segs) {
-            if (!s.poly || s.poly.length < 6 || s.isCap) continue;
+            if (!s.poly || s.poly.length < 6 || s.isCap || s.isNape) continue; // as toucas ficam dentro da silhueta
             if (s.circles) S.polyPath(this.outlinePoly(s, this.inkOut, true), 0, 0, all);
             else S.inkOutline(ctx, s.poly, ink, this.inkOut, this.light);
           }
@@ -731,8 +745,7 @@
 
     // ---------------------------------------------------------------- cabelo
     /** Região visível da "touca" (casca de esfera acima da linha do cabelo) na tela. */
-    _capPoly(head) {
-      const C = MOD.HAIR.cap;
+    _capPoly(head, C = MOD.HAIR.cap) {
       const hs = this.hs;
       const c = at(head, ...C.c);
       const n = norm(dirIn(head, ...C.n));
@@ -1149,17 +1162,20 @@
       ctx.globalAlpha = 1;
     }
 
-    _toes(seg, ft, side) {
+    _toes(seg, ft, side, fromToe) {
       if (!this.fine) return;
       const ctx = this.ctx;
       if (this.facing(ft.u) < -0.2) return;
+      // `ft` é o quadro dos dedos (origem na base dos dedos, no chão) ou, sem ele, o do pé (origem no tornozelo)
+      const df = fromToe ? -PD.BODY.ballFwd : 0;
+      const du = fromToe ? PD.BODY.ankleHeight : 0;
       ctx.strokeStyle = PAL.inkSoft;
       ctx.lineCap = 'round';
       ctx.lineWidth = Math.max(0.45, 0.42 * this.zoom);
       ctx.globalAlpha = 0.7;
       for (const s of [-1.6, 0.2, 1.9]) {
-        const a = this.P(at(ft, -side * s, 15.2, -1.2));
-        const b = this.P(at(ft, -side * s * 1.1, 19, -2.6));
+        const a = this.P(at(ft, -side * s, 15.2 + df, -1.2 + du));
+        const b = this.P(at(ft, -side * s * 1.1, 19 + df, -2.6 + du));
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);

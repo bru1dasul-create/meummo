@@ -64,7 +64,7 @@
     head = M.moved(head, add(neckBase, add(scale(head.u, B.neck * 0.93), scale(head.f, B.headForward))));
     const headBase = at(head, ...PD.MODEL.HEAD.neckBase);
 
-    const rig = { body, pelvis, waist, chest, neckBase, head, headBase, hip: [], knee: [], ankle: [], foot: [], shoulder: [], elbow: [], wrist: [], hand: [], thigh: [], shin: [], upperArm: [], forearm: [] };
+    const rig = { body, pelvis, waist, chest, neckBase, head, headBase, hip: [], knee: [], ankle: [], foot: [], toe: [], shoulder: [], elbow: [], wrist: [], hand: [], thigh: [], shin: [], upperArm: [], forearm: [] };
 
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? -1 : 1;
@@ -86,6 +86,9 @@
       let foot = M.frameFrom(leg.end, footF);
       foot = M.pitch(foot, -(ft.pitch || 0));
       rig.foot.push(foot);
+      // dedos: com o calcanhar subindo e a ponta no chão, eles dobram na base e ficam deitados
+      const toe = M.pitch(foot, -(ft.toeBend || 0));
+      rig.toe.push(M.moved(toe, at(foot, 0, B.ballFwd, -B.ankleHeight)));
 
       // ---- braço ----
       const shoulder = at(chest, side * B.shoulderHalf, B.shoulderBack + (pose.shoulderFwd ? pose.shoulderFwd[i] : 0), B.shoulderUp + (pose.shrug ? pose.shrug[i] : 0));
