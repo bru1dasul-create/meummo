@@ -98,7 +98,7 @@
         ctx.beginPath();
         ctx.rect(x0, cy, cellW, cellH);
         ctx.clip();
-        ctx.translate(x0 + cellW / 2 - root.x, cy + cellH - (cell.lift ? 12 : 26) * zoom / 1.45 - root.y + (cell.lift ? ch.pos.z * cam.cosP * zoom * 0.55 : 0));
+        ctx.translate(x0 + cellW / 2 - root.x, cy + cellH - (cell.lift ? 12 : 26) * zoom / 1.45 - root.y + (cell.lift ? ch.pos.z * cam.cosP * zoom * 0.95 : 0));
         // chão: losango e sombra
         ctx.save();
         ctx.transform(...cam.groundMatrix());
