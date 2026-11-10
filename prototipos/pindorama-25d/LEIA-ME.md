@@ -105,6 +105,24 @@ js/tools/sheet.js     a prancha
 - Uma revisão crítica independente (outro agente) apontou os problemas de rosto, cintura, pescoço, cabelo, penas,
   mãos, pés, tanga, pé escorregando, pulo, pouso, soco e a calçada de Copacabana; tudo isso foi corrigido.
 
+## Ferramentas de conferência (`ferramentas/`)
+
+Roteiros do Playwright (o navegador de teste) que abrem as páginas direto do disco. Rodam de qualquer pasta e gravam
+os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferramentas/<roteiro>`.
+
+| Roteiro | O que faz |
+|---|---|
+| `prancha.cjs [consulta] [saida.png] [escala]` | print da prancha (ex.: `'?zoom=3&ossos'` mostra o esqueleto; `linhas=` escolhe as linhas) |
+| `jogo.cjs <cena> <saida.png> [celular]` | abre o jogo, faz uma cena (andar, correr, soco, pulo, agachar, rua, esquina...) e tira print |
+| `conferir.cjs` | colisão com o prédio, 8 direções, estados e quadros por segundo com a CPU 4× mais lenta |
+| `toque.cjs [saida.png]` | celular: joystick e botões de toque |
+| `ossos.cjs` | comprimento dos ossos em 1.200 quadros (tem que variar 0,0000) |
+| `escorregao.cjs` | pé apoiado parado no chão (tem que dar 0,0 cm/s) |
+| `passada.cjs` | passos por minuto, tamanho do passo, joelho, cotovelo, balanço e passos de correção do pé |
+| `saltos.cjs` | procura trancos (coisa que pula de um quadro para o outro) no soco, no combo e andando |
+| `perfil.cjs` | funções que mais gastam CPU |
+| `montar_pagina.py <pasta>` | monta a versão da página publicada (veja `docs/ARTE.md`) |
+
 ## Desempenho
 
 - O chão é desenhado uma vez, em pedaços de 512 px, e só copiado; cada prédio, árvore e poste vira uma imagem
@@ -115,5 +133,8 @@ js/tools/sheet.js     a prancha
 ## Limites conhecidos (protótipo)
 
 - O personagem não tem corpo-a-corpo com nada ainda (o soco só mostra o impacto).
+- Vistos pelo dono e medidos (10/11), para o próximo refino: no soco o tronco gira 37° num quadro só e a cabeça
+  fica parada enquanto o peito gira; no combo os braços pulam de pose; andando, o passo é curto e rápido (178 por
+  minuto) e o pé dá um passinho de correção a cada pisada. Diagnóstico e plano em `docs/ARTE.md`.
 - No meio-fio, os dois pés sobem juntos (não há pé em altura diferente).
 - Fios dos postes são desenhados por cima de tudo (no mapa atual não há nada alto na frente deles).

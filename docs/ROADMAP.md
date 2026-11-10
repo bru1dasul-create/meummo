@@ -48,6 +48,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** Protótipo **Pindorama 2.5D** do protagonista, separado do jogo (`prototipos/pindorama-25d`): câmera
   isométrica, estilo HQ desenhado só por código (Canvas 2D), esqueleto 3D com IK, parado/andar/correr/agachar/pular/
   soco em 8 direções, esquina de São Paulo, controles de PC e celular, arquitetura de equipamento sem itens
+- [ ] **[arte]** Protótipo 2.5D, refino pedido pelo dono em 10/11: soco sem trancos, cabeça girando com o corpo e
+  andar menos robótico (diagnóstico medido e plano em `docs/ARTE.md`)
 - [ ] **[dono]** Decidir o rumo depois do protótipo: levar o personagem procedural para o jogo, mudar a câmera para
   isométrica (refaz todos os mapas) ou seguir só com o estilo
 - [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador;
