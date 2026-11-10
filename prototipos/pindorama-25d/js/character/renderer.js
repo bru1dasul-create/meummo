@@ -195,12 +195,16 @@
         const thCircles = MOD.THIGH.map((s) => this.circle(limbAt(th, s.t, s.f, s.o), s.r));
         const shCircles = MOD.SHIN.map((s) => this.circle(limbAt(sh, s.t, s.f, s.o), s.r));
         const ft = rig.foot[i];
-        const ftCircles = MOD.FOOT.map((s) => this.circle(at(ft, -side * s.s, s.f, s.u), s.r));
+        const toe = rig.toe[i];
+        // o que fica à frente da base dos dedos segue os dedos (deitados no chão quando o calcanhar sobe)
+        const BD = PD.BODY;
+        const footPt = (s) => (toe && s.f > BD.ballFwd + 1 ? at(toe, -side * s.s, s.f - BD.ballFwd, s.u + BD.ankleHeight) : at(ft, -side * s.s, s.f, s.u));
+        const ftCircles = MOD.FOOT.map((s) => this.circle(footPt(s), s.r));
         const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH[4].r * 2.2 * this.zoom };
         const ankle = { pt: this.P(rig.ankle[i]), r: MOD.SHIN[3].r * 1.5 * this.zoom };
         items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => this._castShadow(pelvisPoly, 3.2, 0.5) }] });
         items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._band(seg, sh, MOD.BODY_PAINT.calfBand, 5.5) }] });
-        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, joint: ankle, segs: [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._toes(seg, ft, side) }] });
+        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, joint: ankle, segs: [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._toes(seg, toe || ft, side, !!toe) }] });
       }
       return items;
     }
@@ -1149,17 +1153,20 @@
       ctx.globalAlpha = 1;
     }
 
-    _toes(seg, ft, side) {
+    _toes(seg, ft, side, fromToe) {
       if (!this.fine) return;
       const ctx = this.ctx;
       if (this.facing(ft.u) < -0.2) return;
+      // `ft` é o quadro dos dedos (origem na base dos dedos, no chão) ou, sem ele, o do pé (origem no tornozelo)
+      const df = fromToe ? -PD.BODY.ballFwd : 0;
+      const du = fromToe ? PD.BODY.ankleHeight : 0;
       ctx.strokeStyle = PAL.inkSoft;
       ctx.lineCap = 'round';
       ctx.lineWidth = Math.max(0.45, 0.42 * this.zoom);
       ctx.globalAlpha = 0.7;
       for (const s of [-1.6, 0.2, 1.9]) {
-        const a = this.P(at(ft, -side * s, 15.2, -1.2));
-        const b = this.P(at(ft, -side * s * 1.1, 19, -2.6));
+        const a = this.P(at(ft, -side * s, 15.2 + df, -1.2 + du));
+        const b = this.P(at(ft, -side * s * 1.1, 19 + df, -2.6 + du));
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);

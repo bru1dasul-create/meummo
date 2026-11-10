@@ -1,4 +1,4 @@
-// Uso: node escorregao.cjs   (pé apoiado tem que ficar em 0,0 cm/s em todos os casos)
+// Uso: node escorregao.cjs   (o ponto do pé apoiado que encosta no chão tem que ficar em 0,0 cm/s em todos os casos)
 // Mede o escorregão: velocidade horizontal do tornozelo enquanto o pé está apoiado (preso no chão).
 const { chromium } = require('playwright');
 const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..')).href + '/';
@@ -20,16 +20,22 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
         const rig = PD.rig.buildRig(ch.pose());
         ch.secondary(rig, dt);
         for (let i = 0; i < 2; i++) {
-          const a = rig.ankle[i];
+          // o tornozelo gira quando o pé rola: o que não pode escorregar é o ponto que encosta no chão
+          // (calcanhar com a ponta para cima, base dos dedos com o calcanhar para cima)
+          const pitch = ch.pose().feet[i].pitch;
+          const heel = M.at(rig.foot[i], 0, -PD.BODY.heelBack, -PD.BODY.ankleHeight);
+          const ball = M.at(rig.foot[i], 0, PD.BODY.ballFwd, -PD.BODY.ankleHeight);
           const st = ch.footLock[i];
           const planted = st.planted && !st.step && ch.jump.state !== 'ar';
           if (planted && prev[i] && t > 0.3) {
-            const v = Math.hypot(a.x - prev[i].x, a.y - prev[i].y) / dt;
+            const vh = Math.hypot(heel.x - prev[i].h.x, heel.y - prev[i].h.y) / dt;
+            const vb = Math.hypot(ball.x - prev[i].b.x, ball.y - prev[i].b.y) / dt;
+            const v = pitch > 1e-4 ? vh : pitch < -1e-4 ? vb : Math.min(vh, vb);
             max = Math.max(max, v);
             sum += v;
             n++;
           }
-          prev[i] = planted ? { x: a.x, y: a.y } : null;
+          prev[i] = planted ? { h: heel, b: ball } : null;
         }
       }
       return `${name.padEnd(34)} pé apoiado: máx ${max.toFixed(1).padStart(6)} cm/s · média ${(n ? sum / n : 0).toFixed(1).padStart(5)} cm/s`;

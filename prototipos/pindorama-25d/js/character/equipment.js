@@ -61,8 +61,13 @@
         const h = rig.hand[i];
         return { p: M.add(M.add(M.add(h.o, M.scale(h.a, s.a)), M.scale(h.d, s.d)), M.scale(h.s, s.s)), r: s.r };
       }
-      case 'pe':
+      case 'pe': {
+        // à frente da base dos dedos, a peça dobra junto com os dedos (igual ao pé)
+        const B = PD.BODY;
+        const toe = rig.toe && rig.toe[i];
+        if (toe && s.f > B.ballFwd + 1) return { p: M.at(toe, -side * s.s, s.f - B.ballFwd, s.u + B.ankleHeight), r: s.r };
         return { p: M.at(rig.foot[i], -side * s.s, s.f, s.u), r: s.r };
+      }
       default:
         throw new Error('osso desconhecido: ' + bone);
     }

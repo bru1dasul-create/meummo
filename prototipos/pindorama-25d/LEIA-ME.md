@@ -35,11 +35,19 @@ pergunta antes de fechar. Em **Tela cheia** o Chrome deixa o jogo segurar o Ctrl
 ## O que tem
 
 - **Animações:** parado (respira, troca o peso de perna, olha em volta, pisca), andar, correr (passada longa,
-  tronco inclinado, braços rápidos), agachar (com transição suave e andando agachado), pular (preparo,
-  impulso, subida, queda e pouso dobrando os joelhos) e soco (guarda, armar, golpe, recolher e voltar; clicar
-  de novo emenda o próximo soco com a outra mão).
-- **Pés presos no chão:** o pé que pisa fica parado até o próximo passo (não escorrega nem em curva fechada);
-  parado, ele dá um passinho para se ajeitar quando vira ou entra na guarda do soco.
+  tronco inclinado, braços rápidos, calcanhar subindo atrás), agachar (com transição suave e andando agachado),
+  pular (preparo, impulso, subida, queda e pouso dobrando os joelhos) e soco (guarda, armar, golpe, recolher e
+  voltar; clicar de novo emenda o próximo soco com a outra mão, saindo da pose em que o anterior estava).
+- **Pé que rola:** pisa com o calcanhar, fica chato e sai pela ponta, com os dedos dobrando no chão. O ponto que
+  encosta fica parado (não escorrega nem em curva fechada); o pé sai do chão parado e pousa parado. Parado, ele dá um
+  passinho para se ajeitar quando vira ou entra na guarda do soco.
+- **Corpo com peso:** a pelve sobe no meio do passo e desce quando os dois pés estão no chão (e desce um pouco mais
+  se a perna precisar alcançar); o tronco gira ao contrário da pelve, um pouco atrasado; braços em pêndulo soltos e
+  cabeça com "mola" (chegam um pouquinho depois do corpo). A cabeça vira junto com o corpo e vai na frente nas
+  curvas (olha para onde vai).
+- **Soco em cadeia:** o quadril gira primeiro, o peito logo atrás e o ombro por último; o punho vai reto para onde
+  o mouse aponta e os olhos ficam no alvo. O corpo vira para o alvo rápido, mas com velocidade máxima (nada de
+  pular de pose).
 - **Movimento secundário:** cabelo, penas, colar, cordão da tanga e brincos balançam com o vento e com o corpo.
 - **Cenário:** esquina com rua de asfalto (faixa amarela, faixa de pedestre, bueiros), calçadas com meio-fio de
   verdade (14 cm: o personagem sobe e desce), ladrilho hidráulico, prédios baixos com padaria, bar, mercadinho e
@@ -59,7 +67,9 @@ pergunta antes de fechar. Em **Tela cheia** o Chrome deixa o jogo segurar o Ctrl
    pernas. Braços e pernas usam **IK de dois ossos**: a animação diz onde o pé ou o punho deve estar e o IK
    acha o joelho ou o cotovelo — o osso nunca estica nem encolhe.
 3. **Animador procedural** (`js/character/animator.js`): calcula a pose a cada quadro. A passada avança pela
-   distância andada (o pé de apoio fica parado no chão, sem escorregar) e as mudanças são misturas suaves.
+   distância andada; o pé de apoio fica preso no chão e o tornozelo gira em volta do calcanhar ou da base dos
+   dedos (`heelBack` e `ballFwd` em `body.js`). Se uma perna apoiada ficaria esticada demais, a pelve desce o que
+   falta (e, se for muito, o pé dá um passo). Braços e cabeça passam por molas; as mudanças são misturas suaves.
 4. **Desenho** (`js/character/renderer.js`): cada parte (cabeça, tronco, braço esquerdo e direito, perna
    esquerda e direita) é um grupo de esferas; numa câmera isométrica uma esfera vira sempre um círculo, então o
    contorno da parte é o "casco" desses círculos — certo de qualquer ângulo. Por cima: sombra em meia-lua,
@@ -117,9 +127,10 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 | `conferir.cjs` | colisão com o prédio, 8 direções, estados e quadros por segundo com a CPU 4× mais lenta |
 | `toque.cjs [saida.png]` | celular: joystick e botões de toque |
 | `ossos.cjs` | comprimento dos ossos em 1.200 quadros (tem que variar 0,0000) |
-| `escorregao.cjs` | pé apoiado parado no chão (tem que dar 0,0 cm/s) |
+| `escorregao.cjs` | ponto do pé apoiado que encosta no chão (tem que dar 0,0 cm/s) |
 | `passada.cjs` | passos por minuto, tamanho do passo, joelho, cotovelo, balanço e passos de correção do pé |
 | `saltos.cjs` | procura trancos (coisa que pula de um quadro para o outro) no soco, no combo e andando |
+| `tira.cjs <cena> [saida.png] [zoom] [direção]` | tira de filme (um quadro a cada 1/30 s): combo, soco para o lado, virada, parada, corrida e parada, pulo |
 | `perfil.cjs` | funções que mais gastam CPU |
 | `montar_pagina.py <pasta>` | monta a versão da página publicada (veja `docs/ARTE.md`) |
 

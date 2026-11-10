@@ -18,6 +18,8 @@
     thigh: 40, // coxa (quadril → joelho)
     shin: 37.5, // canela (joelho → tornozelo)
     ankleHeight: 6.5, // tornozelo acima do chão, com o pé no chão
+    heelBack: 3.4, // calcanhar atrás do tornozelo: o pé gira em volta dele ao pisar (ponta para cima)
+    ballFwd: 10.4, // base dos dedos à frente do tornozelo: o pé gira em volta dela ao sair do chão
     footSide: 11.2, // pés afastados do meio (em pé, parado)
     toeOut: 7, // pés abertos para fora (graus)
     // tronco
