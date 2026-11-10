@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prancha do Pindorama</title>
+<style>
+  body { margin: 0; background: #1d1716; color: #f7ead2; font: 14px system-ui, sans-serif; }
+  header { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  .wrap { overflow-x: auto; padding: 0 16px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <b>Prancha do personagem</b>
+  <span>O mesmo modelo em todas as direções e animações.</span>
+  <label><input type="checkbox" id="bones"> mostrar esqueleto</label>
+</header>
+<div class="wrap"><canvas id="sheet"></canvas></div>
+<script src="js/core/math.js"></script>
+<script src="js/core/iso.js"></script>
+<script src="js/core/shapes.js"></script>
+<script src="js/character/body.js"></script>
+<script src="js/character/rig.js"></script>
+<script src="js/character/animator.js"></script>
+<script src="js/character/renderer.js"></script>
+<script src="js/character/equipment.js"></script>
+<script src="js/tools/sheet.js"></script>
+<script>
+  const canvas = document.getElementById('sheet');
+  const params = new URLSearchParams(location.search);
+  const draw = () => PD.sheet.render(canvas, {
+    bones: document.getElementById('bones').checked || params.has('ossos'),
+    zoom: parseFloat(params.get('zoom')) || undefined,
+    only: params.get('linhas') ? params.get('linhas').split(',').map(Number) : undefined,
+  });
+  document.getElementById('bones').addEventListener('change', draw);
+  try { draw(); window.__sheetReady = true; } catch (e) { window.__sheetError = String(e && e.stack || e); throw e; }
+</script>
+</body>
+</html>
