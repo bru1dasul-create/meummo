@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pindorama 2.5D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Baloo+2:wght@500;700;800&display=swap">
+<style>
+  /* Tela cheia do jogo; o painel são quadrinhos de HQ presos nos cantos (papel, tinta e sombra deslocada). */
+  :root {
+    --ink: #1b100d;
+    --paper: #f7ecd6;
+    --paper-dim: #eadbbd;
+    --urucum: #d8301e;
+    --ipe: #f4b818;
+    --arara: #2453c4;
+    --mata: #2f7a4f;
+    --night: #1a1416;
+    --font-display: "Bangers", "Impact", "Arial Black", sans-serif;
+    --font-ui: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--night);
+    color: var(--paper);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: var(--night); }
+  /* névoa nas bordas (foco no personagem) */
+  .vinheta { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 56%, rgba(40, 22, 30, 0) 52%, rgba(40, 22, 30, 0.36) 100%); }
+
+  .panel {
+    background: var(--paper);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 7px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .hud-top {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    left: calc(env(safe-area-inset-left, 0px) + 12px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .brand { padding: 4px 12px 6px; transform: rotate(-1.5deg); }
+  .brand h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: 1.5px;
+    color: var(--urucum);
+    -webkit-text-stroke: 1px var(--ink);
+    text-shadow: 2px 2px 0 var(--ink);
+  }
+  .brand p { margin: 2px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; color: var(--ink); }
+  .chip {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 1px;
+    padding: 2px 12px 0;
+    background: var(--ipe);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .chip[data-state="Atacando"] { background: var(--urucum); color: var(--paper); }
+  .chip[data-state="Correndo"] { background: #ef7d22; }
+  .chip[data-state="Pulando"] { background: #8fd3e8; }
+  .chip[data-state^="Agachado"], .chip[data-state="Andando agachado"] { background: #9ed27a; }
+
+  .hud-tools {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    right: calc(env(safe-area-inset-right, 0px) + 12px);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: calc(100vw - 200px);
+  }
+  .tool {
+    font: 700 14px var(--font-ui);
+    min-width: 38px;
+    min-height: 36px;
+    padding: 4px 10px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 7px;
+    box-shadow: 3px 3px 0 var(--ink);
+    cursor: pointer;
+  }
+  .tool:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .tool[aria-pressed="true"] { background: var(--ipe); }
+  .tool:focus-visible, .tbtn:focus-visible, .help button:focus-visible { outline: 3px solid var(--arara); outline-offset: 2px; }
+  .fps { flex-basis: 100%; text-align: right; font: 700 12px var(--font-ui); color: var(--paper); text-shadow: 1px 1px 0 var(--ink); }
+  .fps:empty { display: none; }
+
+  .help {
+    position: fixed;
+    left: calc(env(safe-area-inset-left, 0px) + 12px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    width: min(290px, calc(100vw - 48px));
+    padding: 8px 12px 10px;
+    font-size: 13px;
+    line-height: 1.3;
+  }
+  .help h2 { margin: 0 0 6px; font: 400 22px var(--font-display); letter-spacing: 1px; color: var(--mata); }
+  .help ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+  .help li { display: flex; gap: 8px; align-items: baseline; }
+  .keys-desktop li > span:first-child { white-space: nowrap; }
+  .keys-touch .help li, .keys-touch li { display: block; }
+  .help .what { color: var(--ink); }
+  .help .note { margin: 8px 0 0; font-size: 12px; color: #5a3b2c; }
+  kbd {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 5px;
+    font: 700 12px var(--font-ui);
+    text-align: center;
+    color: var(--ink);
+    background: #fffaf0;
+    border: 2px solid var(--ink);
+    border-bottom-width: 3px;
+    border-radius: 5px;
+  }
+  .help button {
+    margin-top: 10px;
+    font: 400 18px var(--font-display);
+    letter-spacing: 1px;
+    padding: 2px 14px 0;
+    background: var(--mata);
+    color: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 7px;
+    box-shadow: 3px 3px 0 var(--ink);
+    cursor: pointer;
+  }
+  .keys-touch { display: none; }
+  body.mode-touch .keys-touch { display: block; }
+  body.mode-touch .keys-desktop { display: none; }
+
+  /* controles de toque */
+  .touch { display: none; position: fixed; inset: 0; pointer-events: none; }
+  body.mode-touch .touch { display: block; }
+  .stick-hint {
+    position: fixed;
+    left: calc(env(safe-area-inset-left, 0px) + 28px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    border: 3px dashed rgba(247, 236, 214, 0.55);
+    display: grid;
+    place-items: center;
+    text-align: center;
+    font: 700 13px var(--font-ui);
+    color: var(--paper);
+    text-shadow: 1px 1px 0 var(--ink);
+  }
+  .stick-base {
+    position: fixed;
+    left: -64px;
+    top: -64px;
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    background: rgba(247, 236, 214, 0.22);
+    border: 3px solid var(--ink);
+    box-shadow: inset 0 0 0 3px rgba(247, 236, 214, 0.6);
+  }
+  .stick-knob {
+    position: absolute;
+    left: 34px;
+    top: 34px;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--ipe);
+    border: 3px solid var(--ink);
+    box-shadow: 2px 3px 0 var(--ink);
+  }
+  .actions {
+    position: fixed;
+    right: calc(env(safe-area-inset-right, 0px) + 18px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+    width: 210px;
+    height: 200px;
+  }
+  .tbtn {
+    position: absolute;
+    pointer-events: auto;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0;
+    width: 74px;
+    height: 74px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    box-shadow: 3px 4px 0 var(--ink);
+    font: 400 15px var(--font-display);
+    letter-spacing: 0.8px;
+    touch-action: none;
+  }
+  .tbtn span { margin-top: -2px; }
+  .tbtn canvas { display: block; }
+  .tbtn.down { transform: translate(2px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+  .tbtn.big { width: 96px; height: 96px; right: 0; bottom: 0; background: var(--urucum); color: var(--paper); font-size: 18px; }
+  #t-jump { right: 104px; bottom: 4px; background: var(--ipe); }
+  #t-crouch { right: 96px; bottom: 98px; width: 62px; height: 62px; font-size: 13px; }
+  #t-run { right: 12px; bottom: 112px; width: 62px; height: 62px; font-size: 13px; }
+  #t-crouch canvas, #t-run canvas { width: 34px !important; height: 34px !important; }
+  #t-run.on { background: #ef7d22; }
+  .tool .short { display: none; }
+  body.mode-touch .help { top: calc(env(safe-area-inset-top, 0px) + 92px); bottom: auto; left: 50%; margin-left: calc(min(290px, 100vw - 48px) / -2); }
+  @media (max-width: 560px), (max-height: 430px) {
+    .brand { padding: 3px 9px 4px; }
+    .brand h1 { font-size: 22px; letter-spacing: 1px; }
+    .brand p { font-size: 10px; }
+    .chip { font-size: 16px; padding: 1px 10px 0; }
+    .hud-tools { max-width: 172px; gap: 6px; }
+    .tool { min-width: 34px; min-height: 32px; padding: 2px 8px; font-size: 13px; }
+    .tool .long { display: none; }
+    .tool .short { display: inline; }
+  }
+  @media (max-height: 430px) {
+    .hud-tools { max-width: none; }
+    .help { width: min(300px, calc(100vw - 48px)); font-size: 13px; }
+    .actions { transform: scale(0.86); transform-origin: 100% 100%; }
+    .stick-hint { width: 110px; height: 110px; bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .brand { transform: none; }
+  }
+</style>
+</head>
+<body class="mode-keyboard">
+<canvas id="game" aria-label="Pindorama: o personagem numa esquina de São Paulo"></canvas>
+<div class="vinheta" aria-hidden="true"></div>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>PINDORAMA</h1><p>personagem base · protótipo 2.5D</p></div>
+  <div id="state" class="chip" data-state="Parado" aria-live="polite">Parado</div>
+</header>
+
+<div class="hud-tools">
+  <button id="btn-zoom-out" class="tool" type="button" aria-label="Afastar a câmera">−</button>
+  <button id="btn-zoom-in" class="tool" type="button" aria-label="Aproximar a câmera">+</button>
+  <button id="btn-bones" class="tool" type="button" aria-pressed="false"><span class="long">Esqueleto</span><span class="short">Ossos</span></button>
+  <button id="btn-full" class="tool" type="button"><span class="long">Tela cheia</span><span class="short">Tela</span></button>
+  <button id="btn-help" class="tool" type="button" aria-label="Como jogar">?</button>
+  <div id="fps" class="fps"></div>
+</div>
+
+<section id="help" class="help panel" aria-label="Como jogar">
+  <h2>Como jogar</h2>
+  <div class="keys-desktop">
+    <ul>
+      <li><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span class="what">andar (duas juntas = diagonal)</span></li>
+      <li><span><kbd>Shift</kbd></span><span class="what">segure para correr</span></li>
+      <li><span><kbd>Ctrl</kbd> ou <kbd>C</kbd></span><span class="what">agachar e levantar</span></li>
+      <li><span><kbd>Espaço</kbd></span><span class="what">pular</span></li>
+      <li><span>clique</span><span class="what">soco para onde o mouse aponta</span></li>
+      <li><span><kbd>J</kbd></span><span class="what">soco para a frente</span></li>
+      <li><span>roda, <kbd>+</kbd> <kbd>−</kbd></span><span class="what">zoom</span></li>
+      <li><span><kbd>B</kbd> · <kbd>H</kbd></span><span class="what">esqueleto · esta ajuda</span></li>
+    </ul>
+    <p class="note">O Ctrl agacha com um toque. Não segure Ctrl e aperte W: no Chrome isso fecha a aba. Em tela cheia não fecha.</p>
+  </div>
+  <div class="keys-touch">
+    <ul>
+      <li><span class="what">Arraste no lado esquerdo da tela para andar. Empurrar pouco anda devagar.</span></li>
+      <li><span class="what"><b>Soco</b> bate, <b>Pular</b> pula, <b>Agachar</b> e <b>Correr</b> ligam e desligam.</span></li>
+    </ul>
+  </div>
+  <button id="help-close" type="button">Entendi</button>
+</section>
+
+<div id="touch" class="touch">
+  <div class="stick-hint">arraste aqui<br>para andar</div>
+  <div id="stick-base" class="stick-base" hidden><div id="stick-knob" class="stick-knob"></div></div>
+  <div class="actions">
+    <button id="t-run" class="tbtn" type="button" aria-pressed="false"><canvas></canvas><span>Correr</span></button>
+    <button id="t-crouch" class="tbtn" type="button"><canvas></canvas><span>Agachar</span></button>
+    <button id="t-jump" class="tbtn" type="button"><canvas></canvas><span>Pular</span></button>
+    <button id="t-attack" class="tbtn big" type="button"><canvas></canvas><span>Soco</span></button>
+  </div>
+</div>
+
+<script src="js/core/math.js"></script>
+<script src="js/core/iso.js"></script>
+<script src="js/core/shapes.js"></script>
+<script src="js/character/body.js"></script>
+<script src="js/character/rig.js"></script>
+<script src="js/character/animator.js"></script>
+<script src="js/character/renderer.js"></script>
+<script src="js/character/equipment.js"></script>
+<script src="js/world/map.js"></script>
+<script src="js/world/ground.js"></script>
+<script src="js/world/props.js"></script>
+<script src="js/world/world.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

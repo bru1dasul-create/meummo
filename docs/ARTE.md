@@ -30,6 +30,111 @@ explicações simples, sem concordar só para agradar, e mando prints do navegad
 - **Dinheiro:** antes de gastar, digo o custo estimado e espero o "pode".
 - **Desenhos novos** sempre conferidos por imagem: prancha (`npm run render:characters`) e print do jogo.
 
+## Protótipo Pindorama 2.5D (10 de novembro de 2026)
+O dono pediu (com um zip de referência: sprites em pixel art do protagonista, 8 vistas e poses) um **protótipo
+separado** do protagonista de **PINDORAMA**: câmera isométrica fixa (tipo Albion), estilo HQ, **tudo desenhado por
+código em Canvas 2D**, sem engine, sem WebGL e sem imagens no jogo. Está em `prototipos/pindorama-25d/` (leia o
+`LEIA-ME.md` de lá), no ramo `claude/blissful-meitner-hp1i5e`, **fora da `main`** até o dono dizer "pode".
+- **Como é feito:** modelo único em `js/character/body.js` (medidas, cores, esferas); esqueleto 3D invisível com IK
+  de dois ossos (`rig.js`); animador procedural (`animator.js`: parado, andar, correr, agachar, pular, soco, 8
+  direções, molas de cabelo/penas/colar); desenho (`renderer.js`): cada parte é o casco das esferas projetadas, com
+  contorno de tinta (silhueta grossa, linhas de dentro finas), sombra e brilho por recorte de polígono convexo (sem
+  máscara: mais leve). Equipamento: arquitetura em `equipment.js`, sem itens (`__pd.provarEquipamento()` testa).
+- **Cenário:** esquina de SP em `js/world/` (mapa em dados em `map.js`; chão pré-desenhado em pedaços de 512 px;
+  prédios, árvores e postes viram imagens prontas; ordem isométrica pelo pé no chão; colisão).
+- **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
+  segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
+- **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
+  (privada). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
+- **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
+  o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
+  imagens, ~US$ 0,12. Estudos em `prototipos/pindorama-25d/referencias/`.
+- **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, 23 fps
+  (o celular de verdade desenha com a placa de vídeo — falta testar num aparelho real).
+- **Atenção:** Ctrl+W fecha a aba no Chrome; o agachar do Ctrl é de toque (liga/desliga) e há o C.
+- **Revisão crítica (agente) e o que mudou:** rosto com relevo (nariz, ponte, arco da sobrancelha, queixo),
+  franja aberta mostrando o "V", cintura menos fina, ombros baixos (pescoço aparece), braços mais longos e mão
+  aberta quando relaxado, pé com peito/maléolos, tanga com cava em V, cabelo largo com mechas finas e lisas
+  (sem "caroços"), penas de 20 a 27 cm em planos diferentes, contorno ≥ 1,6 px. Animação: **trava dos pés**
+  (o pé que pisa fica preso; parado dá passinhos; medido 0,0 cm/s de escorregão), pulo com perna esticada no
+  impulso e braços subindo, pouso mais fundo, soco com giro de 35°/40° e ombro avançando. Cenário: mosaico paulista
+  (mapa de SP) no lugar das ondas de Copacabana, "janela" em vez de copa transparente, câmera mais perto.
+- **Testes do protótipo** (Playwright): roteiros em `prototipos/pindorama-25d/ferramentas/` (tabela no `LEIA-ME.md`
+  de lá): prancha, cenas do jogo, colisão/8 direções/estados/desempenho, toque, ossos, escorregão, passada e trancos.
+  Rode de dentro do scratchpad (os prints vão para a pasta atual). Não há testes em `tests/` porque o protótipo não
+  faz parte do jogo.
+- **Republicar no mesmo link numa conversa nova:**
+  1. `python3 -I prototipos/pindorama-25d/ferramentas/montar_pagina.py <scratchpad>/publicar` (grava `index.html` e
+     mostra a lista dos JS).
+  2. `Artifact` com `action: "read"` e o `url` do link: sem ler antes, a publicação é recusada.
+  3. `Artifact` (publicar) com o mesmo `url`, `file_path` = `<scratchpad>/publicar/index.html` e `files` = a lista do
+     passo 1.
+
+### Onde parei (10/11, antes de limpar a conversa): refino do personagem
+O dono testou a página e gostou ("ficou bom", "estamos chegando onde eu quero") e pediu **mais uma refinada**:
+1. "ainda tem alguns bugs quando ele bate";
+2. "a cabeça não gira com o corpo, fica meio estranho";
+3. "a forma de andar parece de um robô".
+
+Ele pediu para limpar a conversa antes de mexer. **O personagem ainda não foi alterado:** só medi e anotei aqui.
+
+**Diagnóstico medido** com `saltos.cjs` e `passada.cjs` (números de antes do refino, para comparar depois):
+- **Tranco no soco:** o peito gira **37° num quadro só** (a 60 fps) na hora do golpe. O giro vai de +35° (armar) a
+  −40° em 0,075 s com `easeOut` (bloco do soco no `animator.js`, `twistT`). Punho e cotovelo: tranco de
+  42–46 cm/quadro² no golpe.
+- **A cabeça não acompanha:** no soco, `head.yaw -= twist * 1.05` anula o giro do peito (o peito gira 1,07 × twist:
+  0,75 na coluna + 0,32 na pelve). A cabeça fica parada enquanto o peito gira até **48,6°** em relação a ela.
+  Andando, ela anula 85% do giro do peito (`head.yaw = -chestYawAbs * 0.85`) e fica "no estabilizador".
+- **Virar para o mouse:** o corpo gira **27,6° num quadro** (`dampAngle(this.yaw, attack.dir, 22, dt)`). Socar para o
+  lado vira um pulo de pose.
+- **Combo** (clicar de novo): na troca de mão, os dois braços e o tronco pulam de pose (tranco de 56 cm/quadro² no
+  punho direito). O soco novo começa de poses fixas (`guardFront`, `guardRear`, giro 0), e não de onde o corpo está.
+  O pé da frente também troca a cada soco (`lead` depende da mão), e os pés se ajeitam no meio do combo.
+- **Fim do soco:** o `poleLocal` do cotovelo volta ao padrão de uma vez (o cotovelo pode estalar no último quadro).
+- **Andar curto e rápido:** **178 passos por minuto** com passo de 54 cm a 160 cm/s. Uma pessoa de ~1,75 m (a altura
+  dele) anda a 100–130 passos/min, com passo de 65–80 cm: o nosso parece passinho de brinquedo.
+- **Dois toques por passo:** em toda pisada o pé cai longe demais do quadril, e o "passo rápido de correção" puxa o
+  pé (9 correções em 9 pisadas andando, 13 em 12 correndo). A causa é a trava, que prende o **tornozelo** parado
+  durante todo o apoio. Com o quadril só 3,4 cm abaixo do de pé, a perna alcança ~22–25 cm na horizontal, e o passo
+  pede ~34 cm na frente. Gente de verdade ganha esse alcance rolando o pé (calcanhar → pé chato → ponta) e
+  abaixando um pouco o quadril quando os dois pés estão no chão.
+- **Jeito de máquina:** andando, o cotovelo fica sempre dobrado 44°–61° (braço solto dobra ~10°–35°). Pelve, peito,
+  braços e cabeça seguem a mesma senoide da fase, sem atraso entre eles. Correndo: 244 passos/min (correr de verdade:
+  160–190).
+
+**Plano** (nesta ordem; cada item conferido com as ferramentas e a prancha antes do seguinte):
+1. **Pé que rola:** a trava prende o ponto de contato (calcanhar ao pisar, ponta ao empurrar) e o tornozelo gira em
+   volta dele. O pé pisa sempre onde a perna alcança. Meta: **0 correções** andando e correndo, e o escorregão
+   continua em 0,0 cm/s.
+2. **Passada mais longa e mais lenta:** ~120–140 passos/min andando (passo de ~65–75 cm a 160 cm/s) e ~170–190
+   correndo. O quadril desce um pouco no apoio duplo e sobe no meio do apoio; o joelho dobra de leve ao receber o
+   peso.
+3. **Andar orgânico:**
+   - braços em pêndulo a partir do ombro, soltos (cotovelo 10°–35°), atrasados ~8–10% do ciclo em relação às
+     pernas, com a mão passando um pouco para dentro na frente;
+   - ombro sobe e desce ao contrário do quadril;
+   - peito gira menos (±4°–5°) e com atraso;
+   - leve inclinação para a frente.
+4. **Cabeça junto com o corpo:** segue boa parte do giro do peito (anula só ~30–40% andando), com uma mola (atraso
+   pequeno), e **vira primeiro** quando ele muda de direção (olha para onde vai). No soco, gira com os ombros
+   (~50–60% do giro), com os olhos no alvo.
+5. **Soco sem tranco:**
+   - giro em cadeia (quadril → peito → ombro → punho, 1–2 quadros entre um e outro);
+   - golpe um pouco mais longo (~0,10 s), com o giro numa curva suave;
+   - limite de giro por quadro (~12°–15°);
+   - virar para o mouse com velocidade máxima (~720°/s) em vez de pular.
+6. **Combo liso:** o soco novo começa da pose atual (guarda a pose e mistura em ~70 ms). A base dos pés fica a mesma
+   durante o combo inteiro, e o `poleLocal` do cotovelo se mistura na saída.
+
+**Metas para entregar:**
+- `saltos.cjs` sem tranco grande: punho/cotovelo ≲ 15 cm/quadro², peito ≲ 15° por quadro, cabeça virada em relação
+  ao peito ≲ 25°;
+- `passada.cjs` com 0 correções; `escorregao.cjs` em 0,0 cm/s; `ossos.cjs` com variação 0,0000;
+- prancha nas 8 direções;
+- revisão por outro agente (mostre o código e os prints, sem a minha conclusão);
+- prints de PC e celular, e republicar no mesmo link.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
