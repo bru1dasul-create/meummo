@@ -90,13 +90,17 @@ describe('movimento em 8 direções', () => {
     expect(applyStep(open, { x: 1, y: 1, dir: DOWN }, UP_LEFT)).toEqual({ x: 0, y: 0, dir: UP_LEFT, moved: true });
   });
 
-  it('não corta a quina de uma parede', () => {
+  it('passa rente à quina de uma parede, mas não espremido entre duas', () => {
     // o destino (1,0) é a própria parede
     expect(applyStep(corner, { x: 0, y: 1, dir: DOWN }, UP_RIGHT).moved).toBe(false);
-    // de (0,0) para (1,1) passaria rente à quina da parede (1,0): proibido
-    expect(canStep(corner, 0, 0, DOWN_RIGHT)).toBe(false);
+    // de (0,0) para (1,1) passa rente à quina da parede (1,0): pode (o outro lado, (0,1), está livre)
+    expect(canStep(corner, 0, 0, DOWN_RIGHT)).toBe(true);
     // de (0,2) para (1,1) os dois lados estão livres: pode
     expect(canStep(corner, 0, 2, UP_RIGHT)).toBe(true);
+    // paredes em (1,0) e (0,1): de (0,0) para (1,1) seria passar espremido entre as duas
+    const squeeze = GameMap.fromTiled(tiledFromAscii(['.#.', '#..', '...'], { x: 0, y: 0 }));
+    expect(canStep(squeeze, 0, 0, DOWN_RIGHT)).toBe(false);
+    expect(canStep(squeeze, 1, 1, UP_LEFT)).toBe(false);
   });
 
   it('a esquiva na diagonal rola 2 tiles (mais ou menos a mesma distância de 3 retos)', () => {
@@ -148,7 +152,7 @@ describe('findPath (A*)', () => {
       pos = next;
     }
     expect([pos.x, pos.y]).toEqual([2, 2]);
-    expect(path.length).toBe(8);
+    expect(path.length).toBe(6); // desce, passa rente às quinas de (1,3) na diagonal e sobe
   });
 
   it('devolve lista vazia quando já está no destino e null quando não dá para chegar', () => {

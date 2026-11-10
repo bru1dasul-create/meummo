@@ -32,6 +32,10 @@ A visão do jogo está em [DESIGN.md](DESIGN.md).
 ## 🔧 Refinamento do M1 (para jogar e ajustar juntos)
 Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Andar em 8 direções (W+D = diagonal), escorregando nas paredes; monstros e o clique para andar também usam diagonais
+- [x] **[estrutura]** Monstros que atacam (o dono jogou em 10/11: "só atacam se você ataca"): todos atacam sozinhos
+  (o sagui e o boto também) e percebem de mais longe (4 a 6 tiles); quem acabou de chegar de outro mapa, de acordar
+  ou de entrar onde tinha parado tem 3 s de folga. A diagonal passa rente à quina de árvores e paredes (acabou a
+  escadinha entre as árvores), mas não espremida entre duas
 - [ ] **[dono → estrutura]** A velocidade do personagem e dos monstros está boa? (`STEP_MS` em `src/shared/constants.ts`; `passoMs` em `data/monsters.json`)
 - [ ] **[dono → estrutura]** Os avisos dão tempo de desviar? (`preparoMs` de cada monstro)
 - [ ] **[dono → estrutura]** O dano e a vida estão justos? (`vida`, `dano` nos monstros; `src/shared/progression.ts` para o jogador)
@@ -53,6 +57,20 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[mundo]** Mapa, passo 3 — Santo Amaro caprichado: prédios com fachada de 2 andares (mais altos que quem
   passa: janelas, marquise, lojas fechadas, lambe-lambe, pichação, cipó), entulho caprichado, brasas soltando faíscas
   e tambores com fogo no largo da Mula, mato escuro avançando no concreto, neblina e o lugar mais escuro
+
+## 🎮 Sensação de jogo (pedido do dono em 10/11: "andar engessado, trava longe das coisas")
+Hoje o personagem anda de quadrado em quadrado e a colisão é do quadrado inteiro (uma árvore bloqueia 2 quadrados,
+mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogáveis:
+- [ ] **[estrutura]** Movimento livre, passo 1: o personagem anda solto (posição em fração de tile), com um "pé"
+  pequeno, deslizando nas paredes; servidor continua mandando (prevê no navegador, confirma no servidor). Os
+  monstros continuam andando de tile em tile por enquanto. Pede um ajuste pequeno da [arte] no `EntityView.ts`
+- [ ] **[mundo]** Movimento livre, passo 2: colisão do tamanho de cada objeto (tronco, poste, cesto, caixote), dita
+  no tileset; a [estrutura] lê e usa
+- [ ] **[estrutura + arte]** Movimento livre, passo 3: joystick na tela do celular (a [estrutura] faz funcionar, a
+  [arte] deixa bonito)
+- [ ] **[mundo]** Mapa e minimapa: minimapa no canto (terreno, você, monstros perto, NPCs e saídas) e o mapa grande na
+  tecla **M** (o som passa a ligar e desligar só pelo ícone 🔊 do painel)
+- [ ] **[arte]** Animações do personagem melhores (o dono achou feias; ele vai ver se consegue trocar)
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.

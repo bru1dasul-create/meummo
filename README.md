@@ -28,7 +28,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
   mato ligadas por passarelas, com buritis, aguapés, casas afundadas, a usina velha, a ponte da rodovia quebrada
   no meio do lago e a prainha de frente para a pedra onde a **Iara**, a chefe, canta (quem fica perto é encantado e
   puxado para ela; a esquiva solta). Nos canais do oeste, o **Jacaré Mutante** (lento na terra, mas a abocanhada
-  dói); no lago das casas afundadas, o **Boto Encantado**, que fica na dele até alguém mexer com ele. Também moram lá
+  dói); no lago das casas afundadas, o **Boto Encantado**, que cospe jatos d'água de longe. Também moram lá
   Jararaca, Corpo-Seco e Capelobo
 - Explore o Refúgio de Guarapiranga com outros jogadores, em tempo real, com chat: píeres, matas, brejo e uma avenida em ruínas
 - Enfrente o **Sagui Travesso** (joga frutas), a **Jararaca** (dá o bote) e o **Saci** (gira e some num redemoinho)

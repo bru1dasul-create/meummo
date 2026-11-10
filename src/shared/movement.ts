@@ -9,14 +9,14 @@ export interface Pose {
 
 /**
  * Dá para sair de (x, y) andando um tile na direção `dir`?
- * Na diagonal, os dois tiles "de lado" também precisam estar livres: ninguém passa espremido
- * entre duas árvores nem corta a quina de uma parede.
+ * Na diagonal, pelo menos um dos dois tiles "de lado" precisa estar livre: dá para passar rente à
+ * quina de uma árvore ou parede (sem virar escadinha), mas ninguém passa espremido entre duas.
  */
 export function canStep(map: Walkable, x: number, y: number, dir: Dir): boolean {
   const nx = x + DX[dir];
   const ny = y + DY[dir];
   if (!map.isWalkable(nx, ny)) return false;
-  if (isDiagonal(dir) && (!map.isWalkable(nx, y) || !map.isWalkable(x, ny))) return false;
+  if (isDiagonal(dir) && !map.isWalkable(nx, y) && !map.isWalkable(x, ny)) return false;
   return true;
 }
 

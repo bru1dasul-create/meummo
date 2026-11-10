@@ -150,11 +150,20 @@ describe('Santo Amaro de verdade', () => {
     const kinds = new Set(map.monsterZones.map((z) => z.monster));
     expect([...kinds].sort()).toEqual(['capelobo', 'corpo_seco', 'mula_sem_cabeca']);
     for (const zone of world.zones) expect(zone.alive.size).toBe(zone.zone.count);
-    // quem acabou de chegar pela avenida não está na mira de ninguém
-    const arrival = map.points.get('oeste')!;
-    for (const monster of world.monsters.values()) {
-      const distance = Math.max(Math.abs(monster.x - arrival.x), Math.abs(monster.y - arrival.y));
-      expect(distance, `${monster.def.id} em (${monster.x}, ${monster.y})`).toBeGreaterThan(monster.def.aggroRange);
+    // quem acabou de chegar pela avenida tem um tempinho antes de ser notado (há corpos-secos a uns 4 tiles dali)
+    const clock = new FakeClock();
+    const arriving = new World(map, { monsters, items, now: clock.now });
+    const joined = arriving.join('Ana', new FakeConn());
+    if (!joined.ok) throw new Error(joined.reason);
+    arriving.detach(joined.player);
+    arriving.adopt(joined.player, arriving.arrivalSpot('oeste'));
+    arriving.loaded(joined.player);
+    for (let t = 0; t < 2500; t += TICK_MS) {
+      clock.advance(TICK_MS);
+      arriving.tick();
+    }
+    for (const monster of arriving.monsters.values()) {
+      expect(monster.targetId, `${monster.def.id} em (${monster.x}, ${monster.y})`).toBeNull();
     }
   });
 });
