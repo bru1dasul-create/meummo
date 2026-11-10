@@ -54,7 +54,7 @@
     rows.push(['Caminhada — 8 direções', DIRS.map(([name, yaw]) => ({ label: name, make: (ch) => { ch.yaw = yaw * M.DEG; simulate(ch, 1.45, { move: moveDir(yaw) }); } }))]);
     rows.push(['Agachar (transição) e andando agachado', [0.04, 0.1, 0.18, 0.4].map((s, k) => ({ label: `agachando ${k + 1}`, make: (ch) => { ch.yaw = 20 * M.DEG; simulate(ch, 0.4, {}); simulate(ch, s, (t) => ({ crouchToggle: t === 0 })); } })).concat(
       [['agachado frente', 45], ['agachado lado', -45], ['agach. andando', -45], ['agach. costas', -135]].map(([label, yaw], k) => ({ label, make: (ch) => { ch.yaw = yaw * M.DEG; simulate(ch, 0.3, {}); simulate(ch, 1.2, (t) => ({ crouchToggle: t === 0, move: k === 2 ? moveDir(yaw) : null })); } })))]);
-    const jumpTimes = [0.06, 0.13, 0.2, 0.34, 0.48, 0.6, 0.7, 0.8];
+    const jumpTimes = [0.08, 0.17, 0.26, 0.42, 0.58, 0.67, 0.79, 0.98];
     const jumpNames = ['preparo', 'impulso', 'subindo', 'alto', 'caindo', 'chegando', 'pouso', 'levantando'];
     rows.push(['Pulo — oito quadros', jumpTimes.map((s, k) => ({ label: jumpNames[k], lift: true, make: (ch) => { ch.yaw = 10 * M.DEG; simulate(ch, 0.5, {}); simulate(ch, s, (t) => ({ jump: t === 0 })); } }))]);
     const pt = PD.PUNCH_AT;

@@ -35,8 +35,8 @@
       this.light = cam.lightScreen;
       this.toCam = cam.toCamera;
       // espessuras de linha (px): silhueta e linhas de dentro
-      this.inkOut = clamp(1.05 * this.zoom, 0.8, 3.4);
-      this.inkIn = clamp(0.55 * this.zoom, 0.5, 2);
+      this.inkOut = clamp(1.2 * this.zoom, 1.6, 3.6);
+      this.inkIn = clamp(0.62 * this.zoom, 0.9, 2.2);
       this.density = (cam.dpr || 1) * 0.9;
       // nível de detalhe: riscos miúdos (dedos, artelhos, músculos) só quando o personagem está grande
       this.fine = this.zoom * (cam.dpr || 1) >= 1.25;
@@ -87,6 +87,8 @@
       this.H = head;
       this.hs = hs;
       const headKey = this.keyOf(head.o);
+      const massKey = this.keyOf(at(head, 0, -6, 0)) - 0.5;
+      const faceAway = this.facing(rig.head.f) < 0;
 
       // ---- cabeça
       const headCircles = MOD.HEAD.spheres.map((s) => this.circle(at(head, ...s.p), s.r * hs));
@@ -98,7 +100,7 @@
         const e = MOD.HEAD.ear;
         const c = at(head, side * e.p[0], e.p[1], e.p[2]);
         const n = scale(rig.head.r, side);
-        const key = this.keyOf(c) - 3;
+        const key = faceAway ? Math.min(this.keyOf(c) - 3, massKey - 0.2) : this.keyOf(c) - 3;
         items.push({
           name: 'orelha', key, group: 'orelha' + i,
           segs: [{ poly: this.hull([this.circle(c, e.r * hs), this.circle(at(head, side * (e.p[0] - 1.4), e.p[1] + 0.6, e.p[2] - 2.2), e.r * 0.72 * hs)]), circles: this._last, mat: PAL.skin, k: 0.3, decal: (seg) => this._ear(seg, c, n, rig.head) }],
@@ -113,14 +115,15 @@
       const hairSegs = [{ poly: massPoly, mat: PAL.hair, k: 0.22 }];
       for (const sp of MOD.HAIR.spikes) {
         const root = at(head, ...sp.root);
-        const tipL = sp.tip;
-        const sway = 0.55 + (tipL[2] > 10 ? 0.3 : 0);
-        const tip = add(at(head, ...tipL), scale(wind, sway));
-        const mid = M.lerp3(root, tip, 0.55);
+        const sway = 0.55 + (sp.tip[2] > 10 ? 0.3 : 0);
+        const mid = add(at(head, ...sp.mid), scale(wind, sway * 0.4));
+        const tip = add(at(head, ...sp.tip), scale(wind, sway));
         const rootC = this.circle(root, sp.r * hs);
-        hairSegs.push({ poly: this.hull([rootC, this.circle(mid, sp.r * 0.58 * hs), this.circle(tip, 0.9)]), circles: this._last, mat: PAL.hair, k: 0.3, joint: { pt: rootC, r: rootC.r * 1.6 }, noInner: !this.fine || tipL[2] > -2 }); // só as mechas de baixo ganham linha
+        const midC = this.circle(mid, sp.r * 0.62 * hs);
+        // mechas com a cor lisa do cabelo: a luz e a sombra ficam na massa (senão cada mecha vira um caroço)
+        hairSegs.push({ poly: this.hull([rootC, midC]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
+        hairSegs.push({ poly: this.hull([midC, this.circle(tip, 0.8)]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
       }
-      const massKey = this.keyOf(at(head, 0, -6, 0)) - 0.5;
       items.push({ name: 'cabelo', key: massKey, group: 'cabeloTras', chain: true, segs: hairSegs, after: (segs) => this._hairStrands(rig, segs[0].poly) });
 
       const facingFront = this.facing(rig.head.f);
@@ -135,14 +138,17 @@
         });
         frontSegs.push({ poly: this.hull(pts.map((p, j) => this.circle(p, lk.r[j] * hs))), circles: this._last, mat: PAL.hair, k: 0.34 });
       }
+      this._frontHair = frontSegs.map((sg) => sg.poly);
       items.push({ name: 'cabeloFrente', key: headKey + 0.3, group: 'cabeloFrente', chain: true, segs: frontSegs, clipOut: massPoly, after: (segs) => this._hairSheen(rig, segs) });
 
       // ---- penas (lado direito da cabeça)
+      const rightShows = this.facing(rig.head.r) > -0.3;
       for (let j = 0; j < MOD.FEATHERS.list.length; j++) {
         const fd = this._feather(rig, look, j);
-        items.push({ name: 'pena', key: this.keyOf(fd.mid), group: 'pena' + j, segs: [{ poly: fd.poly, mat: fd.mat, k: 0.22, concave: true, decal: (seg) => this._featherDetail(seg, fd) }] });
+        const fk = rightShows ? Math.max(this.keyOf(fd.mid), massKey + 0.2 + j * 0.01) : this.keyOf(fd.mid);
+        items.push({ name: 'pena', key: fk, group: 'pena' + j, segs: [{ poly: fd.poly, mat: fd.mat, k: 0.22, concave: true, decal: (seg) => this._featherDetail(seg, fd) }] });
       }
-      items.push({ name: 'amarracao', key: this.keyOf(at(head, ...MOD.FEATHERS.root)) + 0.4, draw: () => this._featherTie(rig) });
+      items.push({ name: 'amarracao', key: (rightShows ? Math.max(this.keyOf(at(head, ...MOD.FEATHERS.root)), massKey + 0.2) : this.keyOf(at(head, ...MOD.FEATHERS.root))) + 0.4, draw: () => this._featherTie(rig) });
 
       // ---- pescoço (sempre atrás do peito e da cabeça)
       const chestKey = this.keyOf(rig.chest.o);
@@ -171,12 +177,17 @@
         const fa = rig.forearm[i];
         const uaCircles = MOD.UPPER_ARM.map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
         const faCircles = MOD.FOREARM.map((s) => this.circle(limbAt(fa, s.t, s.f, s.o), s.r));
-        const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM[3].r * 1.3 * this.zoom };
+        const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM[3].r * 2.2 * this.zoom };
         items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, segs: [{ poly: this.hull(uaCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._upperArmPaint(seg, rig, i) }] });
         items.push({ name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, segs: [{ poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._band(seg, fa, MOD.BODY_PAINT.forearmBand, 4.6) }] });
         const hd = rig.hand[i];
         const fistCenter = add(hd.o, scale(hd.a, 5));
-        const fistCircles = MOD.FIST.map((s) => this.circle(add(add(add(hd.o, scale(hd.a, s.a)), scale(hd.d, s.d)), scale(hd.s, s.s)), s.r));
+        const fk = clamp01(hd.fist ?? 1);
+        const fistCircles = MOD.FIST.map((s, k) => {
+          const o = MOD.OPEN_HAND[k];
+          const a = o.a + (s.a - o.a) * fk, d = o.d + (s.d - o.d) * fk, sv = o.s + (s.s - o.s) * fk, r = o.r + (s.r - o.r) * fk;
+          return this.circle(add(add(add(hd.o, scale(hd.a, a)), scale(hd.d, d)), scale(hd.s, sv)), r);
+        });
         items.push({ name: 'mao', key: this.keyOf(fistCenter) + 6, group: 'mao' + i, segs: [{ poly: this.hull(fistCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._fistDetail(seg, hd) }] });
 
         const th = rig.thigh[i];
@@ -185,9 +196,9 @@
         const shCircles = MOD.SHIN.map((s) => this.circle(limbAt(sh, s.t, s.f, s.o), s.r));
         const ft = rig.foot[i];
         const ftCircles = MOD.FOOT.map((s) => this.circle(at(ft, -side * s.s, s.f, s.u), s.r));
-        const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH[4].r * 1.3 * this.zoom };
+        const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH[4].r * 2.2 * this.zoom };
         const ankle = { pt: this.P(rig.ankle[i]), r: MOD.SHIN[3].r * 1.5 * this.zoom };
-        items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3 }] });
+        items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => this._castShadow(pelvisPoly, 3.2, 0.5) }] });
         items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._band(seg, sh, MOD.BODY_PAINT.calfBand, 5.5) }] });
         items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, joint: ankle, segs: [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3, decal: (seg) => this._toes(seg, ft, side) }] });
       }
@@ -442,7 +453,16 @@
         ctx.fill(p);
       }
 
-      // sombra embaixo do queixo / maçãs (dá volume ao rosto)
+      // sombra da franja e da linha do cabelo na testa (o sol vem do alto)
+      if (this._frontHair) {
+        const k = 2.4 * this.zoom;
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = PAL.skin.shade;
+        const sh = new Path2D();
+        for (const poly of this._frontHair) S.polyPath(poly, -this.light.x * k, -this.light.y * k, sh);
+        ctx.fill(sh);
+        ctx.globalAlpha = 1;
+      }
       // olhos e sobrancelhas
       for (const sx of [-1, 1]) this._eye(head, sx, look);
       // nariz: linha do lado da sombra + narina
@@ -832,7 +852,7 @@
         // traço que afina: dois traços, um grosso curto e um fino até a ponta
         ctx.lineWidth = Math.max(0.8, (light ? 0.9 : 1.15) * this.zoom);
         ctx.stroke(S.smoothLinePath(pts));
-        ctx.lineWidth = Math.max(1, (light ? 1.4 : 1.9) * this.zoom);
+        ctx.lineWidth = Math.max(0.9, (light ? 1.2 : 1.4) * this.zoom);
         ctx.stroke(S.smoothLinePath(pts.slice(0, Math.ceil(pts.length / 2))));
       }
       ctx.restore();
@@ -876,7 +896,7 @@
       const root = at(this.H, ...F.root);
       const sw = (look.featherSwing && look.featherSwing[j]) || { x: 0, y: 0, z: 0 };
       const dir = norm(add(dirIn(head, ...def.dir), sw));
-      const fanN = norm(dirIn(head, ...F.fanNormal));
+      const fanN = norm(dirIn(head, ...(def.n || F.fanNormal)));
       let wAxis = cross(fanN, dir);
       wAxis = norm(wAxis);
       const curl = norm(dirIn(head, 0, -1, -0.3));
@@ -1024,6 +1044,16 @@
       }
     }
 
+    /** Sombra de outra parte (que está por cima) caindo nesta (já recortada pela parte). */
+    _castShadow(poly, cm, alpha) {
+      const ctx = this.ctx;
+      const k = cm * this.zoom;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = PAL.skin.shade;
+      ctx.fill(S.polyPath(poly, -this.light.x * k, -this.light.y * k));
+      ctx.globalAlpha = 1;
+    }
+
     /** Faixa dupla de jenipapo em volta de um membro (duas listras finas, como nas referências). */
     _band(seg, lf, def, radius) {
       const ctx = this.ctx;
@@ -1038,7 +1068,7 @@
         }
         return pts;
       };
-      const stripe = 0.95 / lf.len; // listra de ~1 cm
+      const stripe = Math.max(0.95, 1.25 / this.zoom) / lf.len; // listra de ~1 cm (nunca mais fina que 1,25 px)
       const gap = def.w / 2 / lf.len;
       ctx.fillStyle = PAL.paintBlack;
       ctx.globalAlpha = 0.9;
@@ -1079,36 +1109,41 @@
       };
       ctx.globalAlpha = smoothstep(0.1, 0.35, f) * 0.92;
       ctx.strokeStyle = PAL.paintBlack;
-      ctx.lineWidth = Math.max(0.6, 0.85 * this.zoom);
+      ctx.lineWidth = Math.max(1.1, 0.9 * this.zoom);
       ctx.lineJoin = 'round';
       ctx.stroke(S.smoothClosedPath(ring(R)));
       // espiral dentro
       const sp = [];
       for (let k = 0; k <= 14; k++) {
-        const a = (k / 14) * M.TAU * 1.15 + side;
-        const r = R * 0.65 * (1 - k / 16);
+        const a = (k / 14) * M.TAU + side;
+        const r = R * 0.62 * (1 - k / 15);
         sp.push(this.P(add(c, add(scale(t1, Math.cos(a) * r), scale(t2, Math.sin(a) * r)))));
       }
-      ctx.lineWidth = Math.max(0.5, 0.6 * this.zoom);
+      ctx.lineWidth = Math.max(1, 0.75 * this.zoom);
       ctx.stroke(S.smoothLinePath(sp));
       ctx.globalAlpha = 1;
     }
 
     _fistDetail(seg, hd) {
-      // linhas dos dedos fechados
+      // linhas dos dedos: fechada (nós dos dedos) ou aberta (dedos soltos)
       if (!this.fine) return;
       const ctx = this.ctx;
       const f = this.facing(hd.d);
+      const fk = clamp01(hd.fist ?? 1);
       ctx.strokeStyle = PAL.inkSoft;
       ctx.lineCap = 'round';
-      ctx.lineWidth = Math.max(0.45, 0.4 * this.zoom);
+      ctx.lineWidth = Math.max(0.6, 0.42 * this.zoom);
       ctx.globalAlpha = 0.65;
-      for (const s of [-1.6, 0, 1.6]) {
-        const a = this.P(add(add(add(hd.o, scale(hd.a, 6.8)), scale(hd.d, f > 0 ? 2.2 : -2.2)), scale(hd.s, s)));
-        const b = this.P(add(add(add(hd.o, scale(hd.a, 9.2)), scale(hd.d, f > 0 ? 1.2 : -1.8)), scale(hd.s, s * 1.05)));
+      const P3 = (a, d, s2) => this.P(add(add(add(hd.o, scale(hd.a, a)), scale(hd.d, d)), scale(hd.s, s2)));
+      for (const s2 of [-1.5, 0, 1.4]) {
+        const a0 = fk > 0.5 ? 6.8 : 7.8;
+        const a1 = fk > 0.5 ? 9.2 : 11.2;
+        const d0 = (f > 0 ? 2 : -1.8) * (fk > 0.5 ? 1.1 : 0.6);
+        const p0 = P3(a0, d0, s2);
+        const p1 = P3(a1, d0 - (fk > 0.5 ? 0.9 : 1.6), s2 * 1.05);
         ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -1247,20 +1282,45 @@
         const p = add(fr.o, scale(dir, N.radius));
         beads.push({ p, n: norm(dirIn(ch, Math.sin(a), Math.cos(a), 0.15)), k });
       }
-      const vis = beads.filter((b) => this.facing(b.n) > -0.05);
+      const isVis = beads.map((b) => this.facing(b.n) > -0.05);
+      const vis = beads.filter((b, k) => isVis[k]);
       if (!vis.length) return;
       vis.sort((a, b) => this.keyOf(a.p) - this.keyOf(b.p));
-      // cordão
+      // cordão: um traço por trecho visível, indo uma conta além de cada ponta (some atrás do pescoço)
       ctx.strokeStyle = PAL.ink;
-      ctx.lineWidth = Math.max(0.6, 0.45 * this.zoom);
-      const ordered = beads.filter((b) => this.facing(b.n) > -0.05);
-      ctx.beginPath();
-      ordered.forEach((b, j) => {
-        const q = this.P(b.p);
-        if (j) ctx.lineTo(q.x, q.y);
-        else ctx.moveTo(q.x, q.y);
-      });
-      ctx.stroke();
+      ctx.lineWidth = Math.max(0.8, 0.5 * this.zoom);
+      ctx.lineJoin = 'round';
+      const n = beads.length;
+      const startK = isVis.findIndex((v, k) => v && !isVis[(k - 1 + n) % n]);
+      if (startK < 0) {
+        ctx.beginPath();
+        beads.forEach((b, j) => {
+          const q = this.P(b.p);
+          if (j) ctx.lineTo(q.x, q.y);
+          else ctx.moveTo(q.x, q.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        for (let k0 = 0; k0 < n; k0++) {
+          const k = (startK + k0) % n;
+          if (!isVis[k] || isVis[(k - 1 + n) % n]) continue;
+          const run = [beads[(k - 1 + n) % n]];
+          let j = k;
+          while (isVis[j] && run.length <= n) {
+            run.push(beads[j]);
+            j = (j + 1) % n;
+          }
+          run.push(beads[j]);
+          ctx.beginPath();
+          run.forEach((b, m) => {
+            const q = this.P(b.p);
+            if (m) ctx.lineTo(q.x, q.y);
+            else ctx.moveTo(q.x, q.y);
+          });
+          ctx.stroke();
+        }
+      }
       const r = N.beadR * this.zoom;
       for (const b of vis) {
         const q = this.P(b.p);
@@ -1285,20 +1345,14 @@
         const down = norm(add({ x: 0, y: 0, z: -1 }, add(scale(ch.f, 0.12), sw)));
         const side = norm(cross(down, ch.f));
         const L = N.pendant;
-        const pts = [];
-        for (let k = 0; k <= 8; k++) {
-          const t = k / 8;
-          const bend = Math.sin(t * Math.PI * 0.8) * 1.1;
-          const w = 1.25 * (1 - t) + 0.1;
-          pts.push({ c: add(add(top, scale(down, L * t)), scale(side, bend)), w });
-        }
-        const L1 = pts.map((p) => this.P(add(p.c, scale(side, p.w))));
-        const R1 = pts.map((p) => this.P(add(p.c, scale(side, -p.w))));
-        const poly = [];
-        for (const q of L1) poly.push(q.x, q.y);
-        for (let k = R1.length - 1; k >= 0; k--) poly.push(R1[k].x, R1[k].y);
-        S.inkOutline(ctx, poly, PAL.ink, Math.max(0.6, this.inkIn), null);
-        S.paintVolume(ctx, poly, PAL.tooth, this.light, 0.9 * this.zoom);
+        const c0 = this.circle(top, 1.25);
+        const c1 = this.circle(add(add(top, scale(down, L * 0.5)), scale(side, 0.9)), 0.95);
+        const c2 = this.circle(add(add(top, scale(down, L)), scale(side, 0.5)), 0.3);
+        const poly = this.hull([c0, c1, c2]);
+        const ow = Math.max(0.8, this.inkIn);
+        ctx.fillStyle = PAL.ink;
+        ctx.fill(S.polyPath(S.offsetConvex(poly, ow)));
+        S.paintConvex(ctx, poly, PAL.tooth, this.light, 0.8 * this.zoom);
         // capinha dourada
         const q = this.P(top);
         ctx.fillStyle = PAL.ink;

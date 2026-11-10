@@ -29,7 +29,7 @@
   function baseZoom() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    return M.clamp(Math.min(w * 1.45, h) / 950, 0.5, 1.3);
+    return M.clamp(Math.min(w * 1.45, h) / 790, 0.5, 1.4);
   }
 
   function resize() {

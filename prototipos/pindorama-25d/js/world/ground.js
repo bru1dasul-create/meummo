@@ -6,6 +6,8 @@
   const M = PD.math;
   const K = PD.ISO_K;
   const CHUNK = 512; // px de tela (CSS) por pedaço
+  /** Contorno simplificado do estado de São Paulo (o desenho do mosaico das calçadas paulistanas). */
+  const SP_MAP = [[0, 0.42], [0.1, 0.34], [0.22, 0.3], [0.34, 0.18], [0.47, 0.12], [0.58, 0.05], [0.7, 0.08], [0.8, 0.02], [0.92, 0.1], [1, 0.22], [0.96, 0.38], [0.86, 0.52], [0.74, 0.62], [0.6, 0.7], [0.48, 0.66], [0.36, 0.6], [0.24, 0.56], [0.12, 0.52]];
   const PAD = 1800; // o chão continua além do mapa (o personagem não chega lá, mas a câmera vê)
 
   const C = {
@@ -14,7 +16,7 @@
     sidewalk: '#cbc5b7', sidewalkJoint: '#aaa497', curbTop: '#dcd6c9', curbFace: '#8f897d', curbYellow: '#e2b53a',
     lot: '#9b8a6a', lotDark: '#857455', back: '#b8b1a2',
     grass: '#6f9a45', grassDark: '#5a8238', grassLight: '#8db457',
-    stone: '#e9e1cf', stoneDark: '#2c2a2e',
+    stone: '#e6decb', stoneDark: '#8c857c',
     shadow: 'rgba(26, 22, 44, 0.26)',
     ink: '#1b100d',
   };
@@ -247,17 +249,30 @@
             }
           }
         }
-        // praça: pedra portuguesa (ondas pretas e brancas), grama, círculo do despertar
+        // praça: mosaico paulista (o mapa do estado de São Paulo repetido em pedra portuguesa), em cinza
+        // médio para não brigar com o contorno do personagem; grama e o círculo do despertar por cima
         const sq = m.square;
         R(sq.x0, sq.y0 + 40, sq.x1 - 40, sq.y1, C.stone);
         ctx.fillStyle = C.stoneDark;
-        for (let y = sq.y0 + 80; y < sq.y1; y += 140) {
-          ctx.beginPath();
-          ctx.moveTo(sq.x0, y);
-          for (let x = sq.x0; x <= sq.x1 - 40; x += 20) ctx.lineTo(x, y + Math.sin(x / 90) * 34);
-          for (let x = sq.x1 - 40; x >= sq.x0; x -= 20) ctx.lineTo(x, y + 44 + Math.sin(x / 90) * 34);
-          ctx.closePath();
-          ctx.fill();
+        const T = 64; // lado da peça (cm)
+        for (let gy = 0; gy * T < sq.y1 - sq.y0 - 40; gy++) {
+          for (let gx = 0; gx * T < sq.x1 - sq.x0 - 40; gx++) {
+            const cx = sq.x0 + gx * T + T / 2;
+            const cy = sq.y0 + 40 + gy * T + T / 2;
+            const rot = ((gx + gy * 2) % 4) * (Math.PI / 2);
+            const cs = Math.cos(rot), sn = Math.sin(rot);
+            ctx.beginPath();
+            SP_MAP.forEach(([u, v], k) => {
+              const lx = (u - 0.5) * T * 0.78;
+              const ly = (v - 0.36) * T * 0.78;
+              const px = cx + lx * cs - ly * sn;
+              const py = cy + lx * sn + ly * cs;
+              if (k) ctx.lineTo(px, py);
+              else ctx.moveTo(px, py);
+            });
+            ctx.closePath();
+            ctx.fill();
+          }
         }
         // pedrinhas soltas no desenho (textura)
         const r5 = M.rng(9);

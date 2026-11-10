@@ -236,6 +236,7 @@
       for (const a of actors) a.drawShadow(ctx);
       // poeira no chão (antes do que está em pé)
       for (const p of this.particles) if (p.kind === 'poeira') this._drawParticle(ctx, p);
+      this._drawSparks(ctx);
       mark('sombra');
 
       const order = this._staticOrder().slice();
@@ -249,6 +250,8 @@
           if (behind(o, a)) idx = i + 1;
         }
         order.splice(idx, 0, { actor: a, fp: a.fp });
+        const bb = a.body || a.bounds;
+        this._window = { x: (bb.x0 + bb.x1) / 2, y: (bb.y0 + bb.y1) / 2, r: Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0) * 0.62 };
         // quem vem depois e cobre o personagem fica transparente (testa o corpo, não a caixa folgada)
         const body = a.body || a.bounds;
         for (let i = idx + 1; i < order.length; i++) {
@@ -270,9 +273,42 @@
           continue;
         }
         const target = o.hideTarget ?? 1;
-        o.alpha = M.damp(o.alpha, target, 10, this._dt || 1 / 60);
+        o.fade = M.damp(o.fade ?? 0, target < 1 ? 1 : 0, 10, this._dt || 1 / 60);
         o.hideTarget = 1;
+        if (o.fade < 0.02 || !this._window) {
+          o.alpha = 1;
+          o.draw(ctx, t);
+          continue;
+        }
+        // janela: fora do círculo em volta do personagem, inteiro; dentro, bem transparente (borda em 2 degraus)
+        const W = this._window;
+        const big = new Path2D();
+        big.rect(-1e6, -1e6, 2e6, 2e6);
+        big.moveTo(W.x + W.r, W.y);
+        big.arc(W.x, W.y, W.r, 0, M.TAU);
+        ctx.save();
+        ctx.clip(big, 'evenodd');
+        o.alpha = 1;
         o.draw(ctx, t);
+        ctx.restore();
+        const ring = new Path2D();
+        ring.moveTo(W.x + W.r, W.y);
+        ring.arc(W.x, W.y, W.r, 0, M.TAU);
+        ring.moveTo(W.x + W.r * 0.8, W.y);
+        ring.arc(W.x, W.y, W.r * 0.8, 0, M.TAU);
+        ctx.save();
+        ctx.clip(ring, 'evenodd');
+        o.alpha = 1 - o.fade * 0.45;
+        o.draw(ctx, t);
+        ctx.restore();
+        const inner = new Path2D();
+        inner.arc(W.x, W.y, W.r * 0.8, 0, M.TAU);
+        ctx.save();
+        ctx.clip(inner);
+        o.alpha = 1 - o.fade * 0.78;
+        o.draw(ctx, t);
+        ctx.restore();
+        o.alpha = 1;
       }
       mark('objetos');
       T.objetos -= actorMs * 0.05;
@@ -280,7 +316,6 @@
       this._drawWires(ctx);
       // por cima de tudo: soco, riscos, faíscas e pétalas
       for (const p of this.particles) if (p.kind !== 'poeira') this._drawParticle(ctx, p);
-      this._drawSparks(ctx);
       this._drawPetals(ctx);
       mark('cima');
     }
@@ -359,16 +394,16 @@
       const q = cam.p(p);
       const k = p.t / p.life;
       if (p.kind === 'poeira') {
-        const r = p.r * (0.6 + k * 1.2) * cam.zoom;
-        ctx.globalAlpha = (1 - k) * 0.75;
-        ctx.fillStyle = '#1b100d';
-        ctx.beginPath();
-        ctx.arc(q.x, q.y, r + Math.max(1, cam.zoom), 0, M.TAU);
-        ctx.fill();
-        ctx.fillStyle = '#e8dfcf';
-        ctx.beginPath();
-        ctx.arc(q.x, q.y, r, 0, M.TAU);
-        ctx.fill();
+        // nuvenzinha de poeira: três bolinhas claras, sem contorno, que crescem e somem
+        const r = p.r * (0.5 + k * 1.3) * cam.zoom;
+        ctx.globalAlpha = (1 - k) * (1 - k) * 0.55;
+        ctx.fillStyle = '#e9dfcb';
+        for (let j = 0; j < 3; j++) {
+          const a = j * 2.1 + p.vx * 0.01;
+          ctx.beginPath();
+          ctx.arc(q.x + Math.cos(a) * r * 0.45, q.y + Math.sin(a) * r * 0.25, r * (0.75 - j * 0.12), 0, M.TAU);
+          ctx.fill();
+        }
         ctx.globalAlpha = 1;
       } else if (p.kind === 'pow') {
         // estrela de HQ no ponto do soco

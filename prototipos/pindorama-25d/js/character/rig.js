@@ -72,9 +72,10 @@
       // ---- perna ----
       const hip = at(pelvis, side * B.hipHalf, 0, -B.pelvisUp);
       const ft = pose.feet[i];
-      const footYaw = pose.yaw + pv.yaw * 0.3 + side * B.toeOut * M.DEG + (ft.yawOff || 0);
+      // o pé pode vir com o ângulo travado no chão (ft.yaw); senão segue o corpo
+      const footYaw = ft.yaw !== undefined ? ft.yaw : pose.yaw + pv.yaw * 0.3 + side * B.toeOut * M.DEG + (ft.yawOff || 0);
       const footF = { x: Math.cos(footYaw), y: Math.sin(footYaw), z: 0 };
-      const kneePole = norm(add(add(footF, scale(out, 0.16)), scale(pelvis.f, 0.4)));
+      const kneePole = norm(add(add(footF, scale(out, 0.06)), scale(pelvis.f, 0.4)));
       const leg = solveTwoBone(hip, ft.pos, B.thigh, B.shin, kneePole);
       rig.hip.push(hip);
       rig.knee.push(leg.mid);
@@ -87,7 +88,7 @@
       rig.foot.push(foot);
 
       // ---- braço ----
-      const shoulder = at(chest, side * B.shoulderHalf, B.shoulderBack, B.shoulderUp + (pose.shrug ? pose.shrug[i] : 0));
+      const shoulder = at(chest, side * B.shoulderHalf, B.shoulderBack + (pose.shoulderFwd ? pose.shoulderFwd[i] : 0), B.shoulderUp + (pose.shrug ? pose.shrug[i] : 0));
       const hd = pose.hands[i];
       const armOut = scale(chest.r, side);
       // alvo do punho: no mundo (`pos`) ou relativo ao ombro, no espaço do peito (`local`: x = para fora)
@@ -108,7 +109,7 @@
       const ref = fa.out;
       const dorsal = M.rotate(ref, fa.a, side * (hd.twist || 0));
       const thumb = scale(norm(cross(fa.a, dorsal)), side);
-      rig.hand.push({ o: arm.end, a: fa.a, d: dorsal, s: thumb });
+      rig.hand.push({ o: arm.end, a: fa.a, d: dorsal, s: thumb, fist: hd.fist ?? 1 });
     }
     return rig;
   }

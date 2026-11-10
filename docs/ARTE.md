@@ -53,6 +53,15 @@ código em Canvas 2D**, sem engine, sem WebGL e sem imagens no jogo. Está em `p
 - **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, 23 fps
   (o celular de verdade desenha com a placa de vídeo — falta testar num aparelho real).
 - **Atenção:** Ctrl+W fecha a aba no Chrome; o agachar do Ctrl é de toque (liga/desliga) e há o C.
+- **Revisão crítica (agente) e o que mudou:** rosto com relevo (nariz, ponte, arco da sobrancelha, queixo),
+  franja aberta mostrando o "V", cintura menos fina, ombros baixos (pescoço aparece), braços mais longos e mão
+  aberta quando relaxado, pé com peito/maléolos, tanga com cava em V, cabelo largo com mechas finas e lisas
+  (sem "caroços"), penas de 20 a 27 cm em planos diferentes, contorno ≥ 1,6 px. Animação: **trava dos pés**
+  (o pé que pisa fica preso; parado dá passinhos; medido 0,0 cm/s de escorregão), pulo com perna esticada no
+  impulso e braços subindo, pouso mais fundo, soco com giro de 35°/40° e ombro avançando. Cenário: mosaico paulista
+  (mapa de SP) no lugar das ondas de Copacabana, "janela" em vez de copa transparente, câmera mais perto.
+- **Testes do protótipo** (Playwright, roteiros na conversa): colisão, 8 direções, estados, toque, comprimento dos
+  ossos constante e escorregão dos pés. Não há testes em `tests/` porque o protótipo não faz parte do jogo.
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
