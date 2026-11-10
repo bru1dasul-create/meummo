@@ -249,6 +249,21 @@ describe('inteligência dos monstros', () => {
     expect(cobra.hp).toBe(30);
   });
 
+  it('quem acabou de chegar de outro mapa tem um tempinho antes de ser notado', () => {
+    const world = makeWorld(OPEN, [{ monster: 'cobra', x: 5, y: 3, w: 1, h: 1 }]);
+    const ana = join(world);
+    world.detach(ana.player); // foi para outro mapa...
+    world.adopt(ana.player, { x: 2, y: 3 }); // ...e voltou, a 3 tiles da cobra
+    const cobra = firstMonster(world);
+    run(world, 1500); // o navegador ainda está carregando o mapa
+    expect(cobra.targetId).toBeNull();
+    world.loaded(ana.player);
+    run(world, 2500); // carregou: ainda dá tempo de se ajeitar
+    expect(cobra.targetId).toBeNull();
+    run(world, 800);
+    expect(cobra.targetId).toBe(ana.player.id); // agora ela percebe
+  });
+
   it('o Saci gira e depois some num redemoinho', () => {
     const world = makeWorld(OPEN, [{ monster: 'saci', x: 4, y: 3, w: 1, h: 1 }]);
     const ana = join(world);

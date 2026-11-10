@@ -30,7 +30,8 @@ O cliente nunca diz "estou na posição X". Ele pede "quero andar para a direita
 1. coloca o pedido na fila daquele jogador;
 2. a cada tick (20 por segundo) processa os passos no ritmo certo: no máximo 1 tile a cada 200 ms
    (na diagonal, 283 ms — √2 a mais — para a velocidade ser a mesma em qualquer direção);
-3. confere no mapa se o tile está livre (na diagonal, os dois tiles do lado também: ninguém corta quinas);
+3. confere no mapa se o tile está livre (na diagonal, pelo menos um dos dois tiles do lado também: dá para passar
+   rente à quina de uma árvore ou parede, mas não espremido entre duas);
 4. responde ao jogador com a posição oficial (`ack`) e avisa quem está vendo (`move`).
 
 Assim ninguém anda mais rápido nem atravessa parede, mesmo mexendo no código do navegador.
@@ -61,7 +62,8 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   a cada 0,5 s até apagar (a esquiva protege, como de qualquer golpe).
 - **Esquiva** entra na mesma fila dos passos (`step` com `dash`), então também é prevista no cliente e
   corrigida pelo servidor se precisar.
-- **Monstros** (`src/server/world.ts`): passeiam na área deles; os agressivos percebem quem chega perto;
+- **Monstros** (`src/server/world.ts`): passeiam na área deles; os agressivos percebem quem chega perto (menos
+  quem acabou de chegar de outro mapa, de acordar na vila ou de entrar onde tinha parado: 3 s de folga, `NOTICE_GRACE_MS`);
   perseguem com busca de caminho; desistem quando o alvo foge para longe e voltam para casa se curando.
   Só nascem em tiles alcançáveis a pé a partir da vila.
 - **XP:** todo mundo que acertou o monstro ganha a XP inteira quando ele cai.

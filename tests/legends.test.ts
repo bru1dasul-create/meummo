@@ -20,11 +20,11 @@ describe('criaturas da Represa Billings', () => {
     expect(monsters.get('jacare')!.stepMs).toBeGreaterThan(monsters.get('capelobo')!.stepMs); // mais lento que o capelobo
   });
 
-  it('boto: só ataca quem mexe com ele, mantém distância e lança jato d’água', () => {
+  it('boto: ataca quem chega perto, mantém distância e lança jato d’água', () => {
     expect(monsters.get('boto')).toMatchObject({
       name: 'Boto Encantado',
       level: 6,
-      aggressive: false,
+      aggressive: true,
       attack: { kind: 'projectile', projectile: 'agua', minDistance: 3 },
     });
   });
@@ -37,7 +37,7 @@ describe('criaturas da Represa Billings', () => {
 
 describe('jacaré e boto lutando de verdade (dados reais numa arena)', () => {
   // imports aqui embaixo para o teste ficar junto do que usa
-  it('o jacaré avisa e dá o bote em quem chega perto; o boto só revida depois de apanhar', async () => {
+  it('o jacaré avisa e dá o bote em quem chega perto; o boto lança jato d’água em quem chega perto', async () => {
     const { World } = await import('../src/server/world');
     const { GameMap } = await import('../src/shared/map');
     const { TICK_MS } = await import('../src/shared/constants');
@@ -59,7 +59,7 @@ describe('jacaré e boto lutando de verdade (dados reais numa arena)', () => {
       }
     };
 
-    // jacaré: agressivo, percebe a 3 tiles
+    // jacaré: agressivo, percebe a 5 tiles
     const lago = arena('jacare');
     const ana = new FakeConn();
     const joined = lago.join('Ana', ana);
@@ -70,18 +70,15 @@ describe('jacaré e boto lutando de verdade (dados reais numa arena)', () => {
     expect(ana.ofType('warn').length).toBeGreaterThan(0); // avisou o golpe no chão
     expect(ana.ofType('hit').some((h) => h.id === joined.player.id)).toBe(true); // e acertou (Ana ficou parada)
 
-    // boto: pacífico até apanhar
+    // boto: agressivo, percebe a 6 tiles e ataca de longe, sem ninguém mexer com ele
     const rio = arena('boto');
     const beto = new FakeConn();
     const b = rio.join('Beto', beto);
     if (!b.ok) throw new Error(b.reason);
     b.player.x = 1;
     b.player.y = 1;
-    run(rio, 3000);
-    expect(beto.ofType('shot').filter((s) => s.by !== b.player.id)).toHaveLength(0); // ninguém mexeu com ele
-    rio.shoot(b.player, 1, 0); // pedrada no boto
     run(rio, 4000);
-    expect(beto.ofType('shot').some((s) => s.kind === 'agua')).toBe(true); // revidou com jato d'água
+    expect(beto.ofType('shot').some((s) => s.kind === 'agua' && s.by !== b.player.id)).toBe(true);
   });
 });
 

@@ -74,6 +74,8 @@ export class Player {
   /** Diferente de 0: está desmaiado e volta para a vila nesse momento. */
   deadUntil = 0;
   invulnerableUntil = 0;
+  /** Até aqui os monstros não "percebem" este jogador sozinhos (acabou de entrar, chegar ou acordar). */
+  unnoticedUntil = 0;
   nextShotAt = 0;
   dashReadyAt = 0;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);

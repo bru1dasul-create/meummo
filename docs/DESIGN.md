@@ -50,7 +50,7 @@ desenhadas no mapa (camada `monstros`; veja `docs/mapa-refugio.png`).
 
 | Criatura | Nível | Onde vive | Jeito | Golpe |
 |---|---|---|---|---|
-| Sagui Travesso | 1 | matas ao norte da represa | Na dele até apanhar; depois mantém distância | Joga frutas (projétil lento, dá para desviar) |
+| Sagui Travesso | 1 | matas ao norte da represa | Implica com quem chega perto (4 quadrados) e mantém distância | Joga frutas (projétil lento, dá para desviar) |
 | Jararaca | 2 | brejo ao sul da represa | Agressiva e lenta | Bote em linha (2 quadrados), aviso de 0,65 s |
 | Saci | 5 (mini-chefe) | praça em ruínas perto da avenida, a leste | Agressivo e rápido | Giro em volta dele (3×3); depois some num redemoinho e reaparece longe. Se você fugir, ele surge do seu lado |
 
@@ -145,7 +145,7 @@ voltaram a andar por aí. O mapa começa pela Zona Sul.
   | Criatura | Nível | Jeito | Golpe | Deixa |
   |---|---|---|---|---|
   | Jacaré Mutante (`jacare`) | 5 | Agressivo de perto, lento na terra, não persegue longe da água | Abocanhada em linha (2 quadrados), aviso de 0,75 s, dano alto | Dente de Jacaré (vale ouro), arruda |
-  | Boto Encantado (`boto`) | 6 | Na dele até alguém mexer; mantém distância | Jato d'água (projétil) | Arruda, Colar de Presas (raro) |
+  | Boto Encantado (`boto`) | 6 | Ataca quem chega perto (6 quadrados) e mantém distância | Jato d'água (projétil) | Arruda, Colar de Presas (raro) |
   | Iara (`iara`, chefe) | 8 | Agressiva; fica a 2 tiles de quem enfrenta | Jato d'água forte; a cada 10 s **canta**: o chão em volta dela (5 tiles) fica marcado por 1,3 s e quem ficar é **encantado** por 3 s — não anda e é puxado um passo para perto dela a cada 0,45 s. A **esquiva** quebra o encanto na hora (e quem estiver esquivando quando o canto acaba escapa) | Escama da Iara (rara, vale 45 na loja), arruda, Colar de Presas |
 
 ### Ruínas de Santo Amaro (o mapa)

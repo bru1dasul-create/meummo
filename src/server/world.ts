@@ -116,6 +116,8 @@ const RESPAWN_PROTECTION_MS = 2000;
 const ITEM_TOLERANCE_MS = 100;
 /** Proteção para quem acabou de chegar de outro mapa (o navegador ainda está desenhando o mapa novo). */
 const ARRIVAL_PROTECTION_MS = 2000;
+/** Quem acabou de entrar, chegar de outro mapa (depois de carregar) ou acordar: tempo até os monstros notarem. */
+const NOTICE_GRACE_MS = 3000;
 /** Rastro de fogo: a primeira queimada demora um pouquinho (dá para sair), depois queima a cada FIRE_PULSE_MS. */
 const FIRE_FIRST_PULSE_MS = 350;
 const FIRE_PULSE_MS = 500;
@@ -259,6 +261,8 @@ export class World {
     player.maxHp = playerMaxHp(player);
     player.hp = player.maxHp;
     if (saved) this.restore(player, saved, savedSpot !== null);
+    // voltou onde tinha parado (pode ser no meio dos monstros): um tempinho para o jogo abrir
+    if (savedSpot) player.unnoticedUntil = this.now() + NOTICE_GRACE_MS;
     this.players.set(player.id, player);
     const greeting = !profile
       ? `Bem-vindo(a), ${name}!`
@@ -354,6 +358,7 @@ export class World {
   /** O navegador terminou de carregar o mapa novo: os pedidos dele voltam a valer. */
   loaded(player: Player): void {
     player.loading = false;
+    player.unnoticedUntil = this.now() + NOTICE_GRACE_MS;
   }
 
   /** Salva o progresso de todo mundo que está online (também acontece sozinho a cada AUTOSAVE_MS). */
@@ -1029,6 +1034,7 @@ export class World {
     player.dir = DOWN;
     player.nextStepAt = 0;
     player.invulnerableUntil = now + RESPAWN_PROTECTION_MS;
+    player.unnoticedUntil = now + NOTICE_GRACE_MS;
     player.lastDamagedAt = -Infinity;
     player.changed = true;
     player.outbox.push({ t: 'teleport', x: player.x, y: player.y, dir: player.dir });
@@ -1210,7 +1216,7 @@ export class World {
     }
 
     if (!target && def.aggressive && monster.mode !== 'return' && now >= monster.retargetAt) {
-      const found = this.nearestPlayer(monster, def.aggroRange);
+      const found = this.nearestPlayer(monster, def.aggroRange, now);
       if (found) {
         monster.targetId = found.id;
         monster.mode = 'chase';
@@ -1589,11 +1595,12 @@ export class World {
     return advanceShot(probe, distance, this.map) !== 'wall';
   }
 
-  private nearestPlayer(monster: Monster, range: number): Player | null {
+  /** O jogador mais perto que este monstro pode notar sozinho (quem acabou de chegar ainda não conta). */
+  private nearestPlayer(monster: Monster, range: number, now: number): Player | null {
     let best: Player | null = null;
     let bestDistance = Infinity;
     for (const player of this.players.values()) {
-      if (player.dead) continue;
+      if (player.dead || player.loading || now < player.unnoticedUntil) continue;
       const distance = chebyshev(monster, player);
       if (distance <= range && distance < bestDistance) {
         best = player;
