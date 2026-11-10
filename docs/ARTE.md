@@ -47,13 +47,15 @@ protótipo não mexe no jogo nem no servidor.
 - **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
   segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
 - **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
-  (privada; versão 4 em 10/11, com o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  (privada; versão 5 em 10/11, com o redesenho pela referência do dono; a 4 tinha o refino do andar, da cabeça e do
+  soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
   o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
 - **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
   o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
   imagens, ~US$ 0,12. Estudos em `prototipos/pindorama-25d/referencias/`.
-- **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, 23 fps
-  (o celular de verdade desenha com a placa de vídeo — falta testar num aparelho real).
+- **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, ~20 fps
+  em 1280×800 e 13 no celular emulado depois do redesenho (o celular de verdade desenha com a placa de vídeo — falta
+  testar num aparelho real).
 - **Atenção:** Ctrl+W fecha a aba no Chrome; o agachar do Ctrl é de toque (liga/desliga) e há o C.
 - **Revisão crítica (agente) e o que mudou:** rosto com relevo (nariz, ponte, arco da sobrancelha, queixo),
   franja aberta mostrando o "V", cintura menos fina, ombros baixos (pescoço aparece), braços mais longos e mão
@@ -137,6 +139,46 @@ corrigi depois, junto com a emenda do combo, que ainda parava o punho por um qua
 **Ferramentas novas ou mudadas:** `saltos.cjs` (agora com pernas, ponta do pé, pulos e virada correndo), `tira.cjs`
 (tiras de 1/30 s: combo, soco para o lado, virada, parada, corrida, pulo, virada correndo, soco agachado),
 `cabeca.cjs` (cabeça girando 360°), `escorregao.cjs` (ponto que encosta; pé chato abaixo de 2°).
+
+### Redesenho pela referência do dono (10/11)
+O dono gostou do refino e pediu: "melhorar o design do pé e da mão, melhorar o design do rosto, deixa mais imponente,
+arrumar o cabelo também", com uma referência (busto de um guerreiro indígena pintado: faixa trançada na testa,
+cabelo comprido com duas tranças amarradas, coroa de penas vermelhas, pretas e creme, urucum nos olhos com listras
+brancas e uma linha branca no queixo, brincos de contas com penas, colar de garras, capa de penas no ombro e uma
+aljava com flechas).
+- **O que veio da referência:** rosto (maçãs altas, mandíbula larga, queixo quadrado, nariz largo, arco da
+  sobrancelha pesado, olhar estreito), a pintura (faixa vermelha, listras brancas, linha do queixo), a faixa trançada
+  (losangos vermelhos com miolo preto, cordão dourado), cabelo comprido nas costas, as duas tranças com amarrações, a
+  coroa de 5 penas atrás da cabeça, brincos de contas com uma peninha e o colar de garras. Corpo mais imponente:
+  peitorais, dorsais e trapézio maiores, ombros mais largos (`shoulderHalf` 19,6), pescoço mais grosso, braço e
+  antebraço mais fortes.
+- **Mãos e pés:** a mão agora é palma + quatro dedos + polegar (`HAND` em `body.js`); ela fecha no soco e fica solta
+  parada, com linhas suaves entre os dedos no lado que aparece. O pé tem calcanhar, peito do pé, dedão e dedos menores
+  (`FOOT` e `TOES`); os dedos dobram no chão junto com o pé que rola.
+- **O que ficou de fora, de propósito:** a aljava (é arma) e a capa de penas (é peça de roupa por cima do corpo). A
+  regra do protótipo é personagem base sem arma e sem armadura; as duas podem virar equipamento na arquitetura que já
+  existe (`equipment.js`).
+- **Por dentro:** a faixa é um anel em volta da cabeça, calculado uma vez só (a distância até a superfície em cada
+  ângulo) e guardado; as tranças são uma curva suave do lado da cabeça ao peito, em gomos que alternam o lado; a coroa
+  de penas fica num plano atrás da cabeça. Os detalhes pequenos (dedos, gomos, músculos, miolo dos losangos, pontas
+  do cabelo) só aparecem com zoom × densidade da tela ≥ 1,1 (era 1,25: o zoom de começo de um monitor de PC comum,
+  ~1,2, ficava sem eles). Medido com a CPU 4× mais lenta, correndo pela rua, no navegador de teste (sem placa de
+  vídeo): 20 fps em 1280×800, 12 em 1920×950 e 13 no celular emulado — antes do redesenho, 19, 13 e 12. No celular, o
+  personagem ficou mais caro de desenhar (~12 → ~16 ms nesse teste), mas o resto do quadro pesa mais. A faixa é
+  calculada uma vez só e as tranças não têm linhas de dentro automáticas (só os riscos dos gomos): foi o que segurou.
+- **Achado na conferência de perto (zoom 6 a 7) e corrigido:** a faixa cobria as sobrancelhas e espremia os olhos; as
+  costeletas e o alto das tranças viravam "garras" pretas por cima do rosto nas vistas de 3/4 e de lado (vista de
+  cima, a raiz da trança, atrás da orelha, cai na altura dos olhos). Agora a faixa fica acima das sobrancelhas, com a
+  linha do cabelo por baixo dela (senão vira tiara); as costeletas saíram (na referência o cabelo passa por trás da
+  orelha); a cabeça esconde o alto das tranças (`hideInside` no desenho), que nascem embaixo da mandíbula; o brinco
+  fica na frente da trança.
+- **Conferido depois:** escorregão do pé 0,0 cm/s em todos os casos, ossos 0,0000, ponta do pé nunca dentro do chão,
+  passada 150 por minuto sem correção, estados, toque e prancha sem erro, cabeça girando 360° sem nada pulando.
+
+**Ainda pode melhorar:**
+- Na referência caem várias mechas soltas por cima da faixa; aqui são três (mais que isso embola no tamanho do jogo).
+- O rosto tem uma expressão só (a boca não mexe; o olhar e o piscar mexem).
+- Numa janela pequena (zoom × densidade abaixo de 1,1, como 1280×800 num monitor a 100%) a mão vira uma forma só.
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):

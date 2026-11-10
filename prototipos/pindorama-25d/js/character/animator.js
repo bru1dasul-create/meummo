@@ -149,7 +149,7 @@
       const z0 = { x: 0, y: 0, z: 0 };
       this.springs = {
         hair: new M.Spring3(z0),
-        feathers: [0, 1, 2, 3].map(() => new M.Spring3(z0)),
+        feathers: [0, 1, 2, 3, 4].map(() => new M.Spring3(z0)),
         pendant: new M.Spring3(z0),
         tassel: new M.Spring3(z0),
         earring: new M.Spring3(z0),
@@ -158,7 +158,7 @@
       this.headSpring = null; // a cabeça também: segue o peito com um atraso pequeno
       this.prevHead = null;
       this.headVel = { x: 0, y: 0, z: 0 };
-      this.look = { blink: 0, hairWind: z0, featherSwing: [z0, z0, z0, z0], pendantSwing: z0, tasselSwing: z0, earringSwing: z0, gazeX: 0, gazeY: 0, mouthOpen: 0, browRaise: 0 };
+      this.look = { blink: 0, hairWind: z0, featherSwing: [z0, z0, z0, z0, z0], pendantSwing: z0, tasselSwing: z0, earringSwing: z0, gazeX: 0, gazeY: 0, mouthOpen: 0, browRaise: 0 };
       this.radius = RADIUS;
       this.equipped = {}; // encaixe → id do item (vazio: o personagem começa sem nada)
       // trava dos pés: o pé que pisa fica preso no chão até o próximo passo (nada de escorregar).
@@ -912,7 +912,7 @@
         {
           const pr = pitch * DEG;
           const ballZ = pos.z + B.ballFwd * Math.sin(pr) - B.ankleHeight * Math.cos(pr);
-          const need = Math.asin(clamp((this.groundZ - ballZ) / 5.2, -1, 1)) / DEG - pitch;
+          const need = Math.asin(clamp((this.groundZ - ballZ) / 4.4, -1, 1)) / DEG - pitch; // dedão: 4,4 cm
           if (need > bend) bend = Math.min(need, 75);
         }
         feet.push({ pos, pitch: pitch * DEG, yaw: yawAbs, toeBend: bend * DEG });

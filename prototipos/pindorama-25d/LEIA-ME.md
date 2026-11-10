@@ -34,6 +34,14 @@ pergunta antes de fechar. Em **Tela cheia** o Chrome deixa o jogo segurar o Ctrl
 
 ## O que tem
 
+- **Visual (pela referência que o dono mandou):** rosto forte (maçãs altas, mandíbula larga, queixo quadrado, nariz
+  largo, sobrancelha grossa e baixa no meio), faixa de urucum nos olhos com listras brancas nas bochechas e uma
+  linha branca no queixo; faixa trançada na testa (losangos vermelhos com miolo preto e cordão dourado nas bordas);
+  cabelo comprido nas costas e duas tranças com amarrações, que nascem atrás da orelha e caem na frente dos ombros;
+  coroa de penas vermelhas e creme atrás da cabeça; brincos de contas com uma peninha; colar de garras com contas
+  vermelhas e pretas; ombros, peito e costas mais largos; mãos com quatro dedos e polegar (fechadas no soco, soltas
+  paradas) e pés com dedão e dedos que dobram no chão. **A aljava e a capa de penas da referência ficaram de fora:**
+  o personagem base não tem arma nem armadura (podem virar equipamento).
 - **Animações:** parado (respira, troca o peso de perna, olha em volta, pisca), andar, correr (passada longa,
   tronco inclinado, braços rápidos, calcanhar subindo atrás), agachar (com transição suave e andando agachado),
   pular (preparo, impulso, subida, queda e pouso dobrando os joelhos) e soco (guarda, armar, golpe, recolher e
@@ -116,6 +124,8 @@ js/tools/sheet.js     a prancha
 - Trancos (`saltos.cjs`): no soco e no combo, punho, cotovelo, joelho e tornozelo ≤ 15 cm/quadro² e o peito gira no
   máximo 14° por quadro; andando e correndo, ≤ 3 e ≤ 8.
 - Cabeça girando 360° (`cabeca.cjs`): o rosto aparece e some aos poucos, sem o cabelo pular para a frente dele.
+- Rosto de perto (zoom 6 a 7) de frente, de 3/4, de lado e de costas: a faixa não cobre as sobrancelhas, nenhuma
+  mecha cai na frente do rosto e as tranças nascem embaixo da mandíbula (o alto delas fica atrás da cabeça).
 - Colisão (anda contra um prédio e para na fachada, deslizando), as 8 direções (de 45° em 45°), os estados
   (correr, agachar, pular, atacar), o joystick e os botões de toque, celular em pé e deitado.
 - Uma revisão crítica independente (outro agente) apontou os problemas de rosto, cintura, pescoço, cabelo, penas,
@@ -146,7 +156,13 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 - O chão é desenhado uma vez, em pedaços de 512 px, e só copiado; cada prédio, árvore e poste vira uma imagem
   pronta. A cada quadro só se desenham o personagem, a copa balançando, o semáforo e os efeitos.
 - Resolução limitada a 2× (telas de celular muito densas não pesam à toa).
-- Medido no navegador de teste (computador): ~60 quadros por segundo, de 2 a 4 ms de trabalho por quadro.
+- Medido no navegador de teste (computador, sem placa de vídeo): ~60 quadros por segundo; o personagem leva ~3 ms
+  por quadro. Com a CPU 4× mais lenta, correndo pela rua: 20 quadros por segundo numa janela de 1280×800, 12 numa de
+  1920×950 e 13 no celular emulado (Pixel 7) — antes do redesenho eram 19, 13 e 12. Celular de verdade desenha com a
+  placa de vídeo: o número real só testando num aparelho.
+- Os detalhes pequenos (dedos separados, gomos da trança, músculos, miolo dos losangos da faixa, pontas do cabelo)
+  só são desenhados quando o personagem aparece grande o bastante na tela (zoom × densidade da tela ≥ 1,1: o zoom de
+  começo de um monitor comum de PC e o celular já passam disso); menor que isso, viram uma forma só.
 
 ## Limites conhecidos (protótipo)
 
