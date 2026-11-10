@@ -117,7 +117,8 @@
         const sway = 0.55 + (tipL[2] > 10 ? 0.3 : 0);
         const tip = add(at(head, ...tipL), scale(wind, sway));
         const mid = M.lerp3(root, tip, 0.55);
-        hairSegs.push({ poly: this.hull([this.circle(root, sp.r * hs), this.circle(mid, sp.r * 0.58 * hs), this.circle(tip, 0.9)]), circles: this._last, mat: PAL.hair, k: 0.3, noInner: true });
+        const rootC = this.circle(root, sp.r * hs);
+        hairSegs.push({ poly: this.hull([rootC, this.circle(mid, sp.r * 0.58 * hs), this.circle(tip, 0.9)]), circles: this._last, mat: PAL.hair, k: 0.3, joint: { pt: rootC, r: rootC.r * 1.6 }, noInner: !this.fine || tipL[2] > -2 }); // só as mechas de baixo ganham linha
       }
       const massKey = this.keyOf(at(head, 0, -6, 0)) - 0.5;
       items.push({ name: 'cabelo', key: massKey, group: 'cabeloTras', chain: true, segs: hairSegs, after: (segs) => this._hairStrands(rig, segs[0].poly) });
@@ -287,7 +288,10 @@
       const segs = [];
       const joints = [];
       for (const it of run) {
-        for (const s of it.segs) segs.push(Object.assign(s, { item: it }));
+        for (const s of it.segs) {
+          segs.push(Object.assign(s, { item: it }));
+          if (s.joint) joints.push(s.joint);
+        }
         if (it.joint) joints.push(it.joint);
       }
       const chain = run.length > 1 || run[0].chain;
@@ -800,29 +804,35 @@
       const head = this.H;
       ctx.save();
       ctx.clip(S.polyPath(massPoly));
-      ctx.strokeStyle = PAL.hair.shade;
       ctx.lineCap = 'round';
-      ctx.lineWidth = Math.max(0.7, 0.75 * this.zoom);
       const c = at(head, 0, -4, 2);
-      for (let k = 0; k < 9; k++) {
-        const phi = -2.6 + (5.2 * k) / 8; // em volta da cabeça (0 = frente)
-        if (Math.abs(phi) < 0.9) continue;
+      // mechas caindo: começam no meio da cabeça e afinam até a borda de baixo
+      for (let k = 0; k < 13; k++) {
+        const phi = -2.75 + (5.5 * k) / 12; // em volta da cabeça (0 = frente)
+        if (Math.abs(phi) < 1.0) continue;
         const pts = [];
         for (let j = 0; j <= 6; j++) {
-          const el = 1.15 - j * 0.3; // de cima para baixo
-          const rr = 18.2 - j * 0.4;
-          const lx = Math.sin(phi) * Math.cos(el) * rr;
-          const ly = Math.cos(phi) * Math.cos(el) * rr;
+          const el = 0.75 - j * 0.27; // de cima para baixo
+          const rr = 18.4 - j * 0.3;
+          const sway = Math.sin(k * 1.7) * 0.12 * (j / 6);
+          const lx = Math.sin(phi + sway) * Math.cos(el) * rr;
+          const ly = Math.cos(phi + sway) * Math.cos(el) * rr;
           const lz = Math.sin(el) * rr;
-          const p = add(c, dirIn(head, lx, ly, lz));
           const nrm = norm(dirIn(head, lx, ly, lz));
-          if (this.facing(nrm) < 0.12) {
+          if (this.facing(nrm) < 0.1) {
             if (pts.length) break;
             continue;
           }
-          pts.push(this.P(p));
+          pts.push(this.P(add(c, dirIn(head, lx, ly, lz))));
         }
-        if (pts.length >= 3) ctx.stroke(S.smoothLinePath(pts));
+        if (pts.length < 3) continue;
+        const light = k % 4 === 1 && phi < 0;
+        ctx.strokeStyle = light ? PAL.hair.light : PAL.hair.shade;
+        // traço que afina: dois traços, um grosso curto e um fino até a ponta
+        ctx.lineWidth = Math.max(0.8, (light ? 0.9 : 1.15) * this.zoom);
+        ctx.stroke(S.smoothLinePath(pts));
+        ctx.lineWidth = Math.max(1, (light ? 1.4 : 1.9) * this.zoom);
+        ctx.stroke(S.smoothLinePath(pts.slice(0, Math.ceil(pts.length / 2))));
       }
       ctx.restore();
     }

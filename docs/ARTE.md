@@ -30,6 +30,27 @@ explicações simples, sem concordar só para agradar, e mando prints do navegad
 - **Dinheiro:** antes de gastar, digo o custo estimado e espero o "pode".
 - **Desenhos novos** sempre conferidos por imagem: prancha (`npm run render:characters`) e print do jogo.
 
+## Protótipo Pindorama 2.5D (10 de novembro de 2026)
+O dono pediu (com um zip de referência: sprites em pixel art do protagonista, 8 vistas e poses) um **protótipo
+separado** do protagonista de **PINDORAMA**: câmera isométrica fixa (tipo Albion), estilo HQ, **tudo desenhado por
+código em Canvas 2D**, sem engine, sem WebGL e sem imagens no jogo. Está em `prototipos/pindorama-25d/` (leia o
+`LEIA-ME.md` de lá), no ramo `claude/blissful-meitner-hp1i5e`, **fora da `main`** até o dono dizer "pode".
+- **Como é feito:** modelo único em `js/character/body.js` (medidas, cores, esferas); esqueleto 3D invisível com IK
+  de dois ossos (`rig.js`); animador procedural (`animator.js`: parado, andar, correr, agachar, pular, soco, 8
+  direções, molas de cabelo/penas/colar); desenho (`renderer.js`): cada parte é o casco das esferas projetadas, com
+  contorno de tinta (silhueta grossa, linhas de dentro finas), sombra e brilho por recorte de polígono convexo (sem
+  máscara: mais leve). Equipamento: arquitetura em `equipment.js`, sem itens (`__pd.provarEquipamento()` testa).
+- **Cenário:** esquina de SP em `js/world/` (mapa em dados em `map.js`; chão pré-desenhado em pedaços de 512 px;
+  prédios, árvores e postes viram imagens prontas; ordem isométrica pelo pé no chão; colisão).
+- **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
+  segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
+- **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
+  o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
+  imagens, ~US$ 0,12. Estudos em `prototipos/pindorama-25d/referencias/`.
+- **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, 23 fps
+  (o celular de verdade desenha com a placa de vídeo — falta testar num aparelho real).
+- **Atenção:** Ctrl+W fecha a aba no Chrome; o agachar do Ctrl é de toque (liga/desliga) e há o C.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

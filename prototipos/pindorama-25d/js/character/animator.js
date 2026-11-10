@@ -325,15 +325,15 @@
       const pelvis = {
         dx: -lerp(1.7, 0.8, run) * s2 * g + idleSway + weight * 2.6,
         dy: 3 * run * g + this.leanPitch * 20,
-        dz: -lerp(3.4, 7.2, run) * g - 35 * crouch - 27 * J.crouch + bob + breath * 0.25 * idle - 0.4 * idle,
+        dz: -lerp(3.4, 5.6, run) * g - 35 * crouch - 27 * J.crouch + bob + breath * 0.25 * idle - 0.4 * idle,
         yaw: lerp(6, 11, run) * DEG * c2 * g,
-        pitch: (lerp(2, 8, run) * g + 16 * bend) * DEG + this.leanPitch * 0.5,
+        pitch: (lerp(2, 10, run) * g + 16 * bend) * DEG + this.leanPitch * 0.5,
         roll: lerp(3.2, 2.2, run) * DEG * s2 * g + idleSway * 0.012 - weight * 3.4 * DEG,
       };
       // ---- coluna (peito em relação à pelve)
       const chestYawAbs = lerp(-5, -13, run) * DEG * c2 * g;
       const spine = {
-        pitch: (lerp(2.5, 9, run) * g + 14 * crouch + 10 * J.crouch) * DEG + this.leanPitch - breath * 0.6 * DEG * idle,
+        pitch: (lerp(2.5, 12, run) * g + 14 * crouch + 10 * J.crouch) * DEG + this.leanPitch - breath * 0.6 * DEG * idle,
         yaw: chestYawAbs - pelvis.yaw,
         roll: -pelvis.roll * 0.6 - this.leanRoll + weight * 2.2 * DEG,
       };
@@ -363,8 +363,10 @@
             pitch = (s < 0.2 ? lerp(15, 0, s / 0.2) : 0) * (1 - run * 0.7) - (s > 0.62 ? Math.pow((s - 0.62) / 0.38, 2) * lerp(28, 38, run) : 0);
           } else {
             const s = (p - stance) / (1 - stance);
-            y = lerp((frontFrac - 1) * sweep, frontFrac * sweep, easeInOut(s)) - Math.sin(Math.PI * s) * sweep * 0.12 * run;
-            up = lift * Math.pow(Math.sin(Math.PI * Math.pow(s, lerp(1, 0.7, run))), 0.9);
+            y = lerp((frontFrac - 1) * sweep, frontFrac * sweep, easeInOut(s)) - Math.sin(Math.PI * s) * sweep * 0.06 * run;
+            up = lift * Math.pow(Math.sin(Math.PI * Math.pow(s, lerp(1, 0.55, run))), 0.85);
+            // correndo: o calcanhar sobe para trás logo depois de empurrar o chão (sem arrastar o joelho)
+            up += run * 20 * Math.sin(Math.PI * Math.min(1, s / 0.55)) * (s < 0.55 ? 1 : 0);
             pitch = lerp(-lerp(30, 40, run), 12, smoothstep(0, 0.85, s));
           }
           pitch *= g;
