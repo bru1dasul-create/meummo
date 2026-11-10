@@ -25,7 +25,19 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Testar sem caçar:** painel do administrador no servidor de teste — `/admin/api/jogador` (dar ouro e itens,
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
-## Onde estamos (9 de novembro de 2026)
+## Onde estamos (10 de novembro de 2026)
+O dono jogou e achou o jogo "horrível": andar engessado, trava longe das coisas, ruim entre as árvores, monstros
+que só atacam se você ataca, animações feias; e pediu mapa e minimapa. Ele aprovou o plano ("pode sim"):
+- **Feito (na `main`, 4ec21c7):** todos os monstros atacam sozinhos e percebem de mais longe; 3 s de folga para quem
+  chega (`NOTICE_GRACE_MS`); diagonal rente às quinas.
+- **Próximo, meu:** movimento livre, passo 1 (seção "🎮 Sensação de jogo" do roteiro). Depois: passo 2 com o
+  [mundo] (colisão do tamanho de cada objeto) e passo 3, o joystick.
+- **Pedido mandado** ao [mundo] (mapa e minimapa, tecla M) e aviso à [arte] (`EntityView.ts` no movimento livre).
+- **Documento do ChatGPT** (Godot, 3D isométrico "estilo Albion", 4 classes, Praça da Sé, São Paulo atual): dei a
+  minha leitura sincera — não recomendo trocar de ferramenta agora. Aproveitei no roteiro o que não depende de
+  decisão (celular deitado, modo leve, meta de quadros por segundo, Caminhos como M6). Esperando o dono decidir.
+
+Antes, em 9/11:
 Feito pela Estrutura, tudo na `main`:
 - Interface nova (tela de entrada, painel de vida, botões com ícones, chat discreto).
 - Ouro: cai no chão onde o monstro estava (cada um vê e pega o seu); item que não cabe na mochila também cai.
@@ -44,6 +56,8 @@ Números para não se perder: protocolo na versão **15**; `MIGRATIONS` no passo
 - O dono vai ligar o **Nano Banana** (gerador de imagens) para o chat de Arte.
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
+0. **Primeiro:** movimento livre (aprovado em 10/11). A recomendação de chamar os amigos (M5) ficou para depois de o
+   jogo estar gostoso de andar.
 1. **Equilíbrio:** o dono joga e ajusta no painel (itens "[dono → estrutura]" do roteiro); a Estrutura muda o
    padrão nos arquivos quando ele mandar os ajustes copiados do painel.
 2. **M5 — servidor na internet** para os amigos testarem: VPS, domínio, HTTPS, senha no painel do administrador,
