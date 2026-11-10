@@ -77,7 +77,9 @@ protótipo não mexe no jogo nem no servidor.
 O dono testou a página, gostou ("estamos chegando onde eu quero") e pediu mais uma refinada: (1) "ainda tem alguns
 bugs quando ele bate"; (2) "a cabeça não gira com o corpo, fica meio estranho"; (3) "a forma de andar parece de um
 robô". Medi antes de mexer (`saltos.cjs`, `passada.cjs`), corrigi, e uma revisão independente (outro agente, sem a
-minha conclusão) achou mais 10 problemas, que também foram corrigidos.
+minha conclusão) achou mais 10 problemas. Corrigi e pedi uma segunda passada: 6 itens confirmados como corrigidos, 3
+melhorados e 2 problemas novos (pernas em X ao virar andando e um pulinho com os dois pés no soco virado), que
+corrigi depois, junto com a emenda do combo, que ainda parava o punho por um quadro.
 
 **Antes → depois** (medido com as ferramentas de `prototipos/pindorama-25d/ferramentas/`):
 
@@ -87,7 +89,8 @@ minha conclusão) achou mais 10 problemas, que também foram corrigidos.
 | Soco: cabeça | parada (o peito girava até 49° embaixo dela) | gira 40% do giro do peito, com os olhos no alvo |
 | Virar para o mouse: maior giro num quadro | 27,6° | 12° (no máximo 720°/s) |
 | Combo: tranco do punho na troca de mão | 56 cm/quadro² | ≤ 15 |
-| Soco: pés | davam passo durante o golpe; a base trocava a cada soco | base fixa (pé esquerdo na frente); nenhum passo no golpe |
+| Soco: pés | davam passo durante o golpe; a base trocava a cada soco | base fixa (pé esquerdo na frente); nenhum pé no ar no golpe nem os dois no ar juntos |
+| Virada de 135°–180° andando | pernas em X (tornozelos a −47 cm) | joelhos nunca cruzam; o pé no ar não passa para o lado do apoiado |
 | Rosto nas vistas de lado | sumia de uma vez (o cabelo inteiro pulava para a frente) | aparece e some aos poucos |
 | Andar: passos por minuto / passo | 178 / 54 cm | 150 / 64 cm |
 | Passos de correção do pé (em 3 s) | 9 andando, 13 correndo | 0 e 0 |
@@ -113,12 +116,23 @@ minha conclusão) achou mais 10 problemas, que também foram corrigidos.
   o jab sai da guarda; o golpe espera o corpo virar para o alvo; a investida é um deslocamento de 7 cm só no chão e
   fora da conta da passada; o clique nunca se perde (um soco na fila); o combo leva a diferença de pose e some em
   0,1 s (inclusive o calcanhar de trás).
-- **Viradas:** pedir para ir muito para o lado ou para trás freia antes; parado ou devagar, ele vira rápido para
-  onde mandou e termina a virada mesmo soltando a tecla; parado, o pé gira sobre a base dos dedos em viradas pequenas.
+- **Viradas:** pedir para ir muito para o lado ou para trás faz ele andar no máximo a 45° da própria frente, mais
+  devagar, enquanto vira; o corpo nunca passa de 55° na frente dos pés apoiados (a virada se divide em passos); o pé
+  no ar não cruza para o lado do pé apoiado (folga de 10 cm, entrando suave); quase parado numa virada grande, os pés
+  viram no lugar (passinhos); parado, o pé gira sobre a base dos dedos em viradas pequenas; ele termina a virada
+  mesmo soltando a tecla.
 - **Pulo:** o preparo agacha e começa a esticar antes de sair do chão; o impulso sai do pé que estava apoiado; na
   descida o pé vai para onde vai pisar; o pouso amortece na velocidade da queda.
 - **Cabelo** (`renderer.js` e `HAIR.nape` em `body.js`): a massa fica sempre atrás da cabeça; a parte de trás que
   cobre a cabeça é uma "touca da nuca", calculada pela câmera como a touca de cima.
+
+**Ainda pode melhorar (decisões de jogo ou detalhes):**
+- Socar para o lado ou para trás é mais lento: o golpe espera o corpo virar e os pés se acertarem (clique → impacto:
+  0,23 s até 30°, 0,37 s de 60° a 135°, 0,45 s para trás). Se o dono quiser mais rápido, dá para socar girando.
+- O soco agachado sai baixo, com o tronco bem inclinado.
+- A fila guarda um soco: cliques muito rápidos (a cada 0,08 s) viram 2 socos.
+- Correndo, o ritmo é de 220 passos por minuto (corrida de gente: 160–190) por causa das pernas curtas do modelo;
+  andando, 150 (a meta do plano era 120–140).
 
 **Ferramentas novas ou mudadas:** `saltos.cjs` (agora com pernas, ponta do pé, pulos e virada correndo), `tira.cjs`
 (tiras de 1/30 s: combo, soco para o lado, virada, parada, corrida, pulo, virada correndo, soco agachado),

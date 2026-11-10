@@ -152,5 +152,7 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 
 - O personagem não tem corpo-a-corpo com nada ainda (o soco só mostra o impacto).
 - O soco agachado sai baixo, com o tronco bem inclinado (funciona, mas é o caso menos caprichado).
+- Socar para o lado ou para trás espera o corpo virar e os pés se acertarem: o impacto sai em 0,37 s a 0,45 s
+  (em frente: 0,23 s).
 - No meio-fio, os dois pés sobem juntos (não há pé em altura diferente).
 - Fios dos postes são desenhados por cima de tudo (no mapa atual não há nada alto na frente deles).
