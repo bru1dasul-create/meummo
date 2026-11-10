@@ -47,7 +47,7 @@ protótipo não mexe no jogo nem no servidor.
 - **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
   segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
 - **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
-  (privada). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  (privada; versão 4 em 10/11, com o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
   o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
 - **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
   o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
