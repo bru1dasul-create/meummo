@@ -87,7 +87,9 @@
       this.H = head;
       this.hs = hs;
       const headKey = this.keyOf(head.o);
-      const massKey = this.keyOf(at(head, 0, -6, 0)) - 0.5;
+      // a massa do cabelo fica sempre atrás da cabeça (se passasse para a frente inteira, cobria o rosto de uma vez
+      // nas vistas de lado); a parte de trás que cobre a cabeça é a touca da nuca, desenhada na frente
+      const massKey = Math.min(this.keyOf(at(head, 0, -6, 0)) - 0.5, headKey - 0.2);
       const faceAway = this.facing(rig.head.f) < 0;
 
       // ---- cabeça
@@ -128,6 +130,8 @@
 
       const facingFront = this.facing(rig.head.f);
       const frontSegs = [];
+      const nape = this._capPoly(head, MOD.HAIR.nape);
+      if (nape) frontSegs.push({ poly: nape.poly, path: nape.path, mat: PAL.hair, k: 0.22, isNape: true, concave: true });
       const cap = this._capPoly(head);
       if (cap) frontSegs.push({ poly: cap.poly, path: cap.path, mat: PAL.hair, k: 0.2, isCap: true, concave: true });
       for (const lk of MOD.HAIR.locks) {
@@ -138,8 +142,14 @@
         });
         frontSegs.push({ poly: this.hull(pts.map((p, j) => this.circle(p, lk.r[j] * hs))), circles: this._last, mat: PAL.hair, k: 0.34 });
       }
-      this._frontHair = frontSegs.map((sg) => sg.poly);
-      items.push({ name: 'cabeloFrente', key: headKey + 0.3, group: 'cabeloFrente', chain: true, segs: frontSegs, clipOut: massPoly, after: (segs) => this._hairSheen(rig, segs) });
+      this._frontHair = frontSegs.filter((sg) => !nape || sg.poly !== nape.poly).map((sg) => sg.poly);
+      items.push({
+        name: 'cabeloFrente', key: headKey + 0.3, group: 'cabeloFrente', chain: true, segs: frontSegs, clipOut: massPoly,
+        after: (segs) => {
+          if (nape) this._hairStrands(rig, nape.poly); // os fios continuam aparecendo na nuca
+          this._hairSheen(rig, segs);
+        },
+      });
 
       // ---- penas (lado direito da cabeça)
       const rightShows = this.facing(rig.head.r) > -0.3;
@@ -243,7 +253,7 @@
         for (const it of items) {
           if (!it.segs) continue;
           for (const s of it.segs) {
-            if (!s.poly || s.poly.length < 6 || s.isCap) continue;
+            if (!s.poly || s.poly.length < 6 || s.isCap || s.isNape) continue; // as toucas ficam dentro da silhueta
             if (s.circles) S.polyPath(this.outlinePoly(s, this.inkOut, true), 0, 0, all);
             else S.inkOutline(ctx, s.poly, ink, this.inkOut, this.light);
           }
@@ -735,8 +745,7 @@
 
     // ---------------------------------------------------------------- cabelo
     /** Região visível da "touca" (casca de esfera acima da linha do cabelo) na tela. */
-    _capPoly(head) {
-      const C = MOD.HAIR.cap;
+    _capPoly(head, C = MOD.HAIR.cap) {
       const hs = this.hs;
       const c = at(head, ...C.c);
       const n = norm(dirIn(head, ...C.n));

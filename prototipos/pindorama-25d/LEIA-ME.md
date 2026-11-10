@@ -108,8 +108,14 @@ js/tools/sheet.js     a prancha
 - Prancha das 8 direções e de todas as animações (`prancha.html`).
 - Comprimento dos ossos em 1.200 quadros de animação misturada: coxa, canela, braço, antebraço, pescoço, tronco e o
   tamanho da cabeça não variam (0,0000 cm) — o modelo é um só.
-- Pé apoiado no chão andando reto, em curva de 90°, devagar no analógico, correndo, parado e virando no lugar:
-  0,0 cm/s de escorregão.
+- Ponto do pé apoiado que encosta no chão (calcanhar ou base dos dedos) andando reto, em curva de 90°, devagar no
+  analógico, correndo, parado, virando no lugar e entrando na guarda: 0,0 cm/s de escorregão. A ponta do pé nunca
+  entra no chão (nem no pulo).
+- Passada: 150 passos por minuto andando (passo de 64 cm) e 220 correndo, sem nenhum passo de correção; joelho quase
+  esticado no meio do passo.
+- Trancos (`saltos.cjs`): no soco e no combo, punho, cotovelo, joelho e tornozelo ≤ 15 cm/quadro² e o peito gira no
+  máximo 14° por quadro; andando e correndo, ≤ 3 e ≤ 8.
+- Cabeça girando 360° (`cabeca.cjs`): o rosto aparece e some aos poucos, sem o cabelo pular para a frente dele.
 - Colisão (anda contra um prédio e para na fachada, deslizando), as 8 direções (de 45° em 45°), os estados
   (correr, agachar, pular, atacar), o joystick e os botões de toque, celular em pé e deitado.
 - Uma revisão crítica independente (outro agente) apontou os problemas de rosto, cintura, pescoço, cabelo, penas,
@@ -129,8 +135,9 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 | `ossos.cjs` | comprimento dos ossos em 1.200 quadros (tem que variar 0,0000) |
 | `escorregao.cjs` | ponto do pé apoiado que encosta no chão (tem que dar 0,0 cm/s) |
 | `passada.cjs` | passos por minuto, tamanho do passo, joelho, cotovelo, balanço e passos de correção do pé |
-| `saltos.cjs` | procura trancos (coisa que pula de um quadro para o outro) no soco, no combo e andando |
-| `tira.cjs <cena> [saida.png] [zoom] [direção]` | tira de filme (um quadro a cada 1/30 s): combo, soco para o lado, virada, parada, corrida e parada, pulo |
+| `saltos.cjs` | procura trancos (coisa que pula de um quadro para o outro) em braços, pernas e cabeça: soco, combo, andar, pulo, virada; e se a ponta do pé entra no chão |
+| `tira.cjs <cena> [saida.png] [zoom] [direção]` | tira de filme (um quadro a cada 1/30 s): combo, soco para o lado, virada, parada, corrida e parada, pulo, virada correndo, soco agachado |
+| `cabeca.cjs [saida.png] [zoom]` | a cabeça girando 360°, de 7,5° em 7,5° (o cabelo não pode cobrir o rosto nem pular) |
 | `perfil.cjs` | funções que mais gastam CPU |
 | `montar_pagina.py <pasta>` | monta a versão da página publicada (veja `docs/ARTE.md`) |
 
@@ -144,8 +151,6 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 ## Limites conhecidos (protótipo)
 
 - O personagem não tem corpo-a-corpo com nada ainda (o soco só mostra o impacto).
-- Vistos pelo dono e medidos (10/11), para o próximo refino: no soco o tronco gira 37° num quadro só e a cabeça
-  fica parada enquanto o peito gira; no combo os braços pulam de pose; andando, o passo é curto e rápido (178 por
-  minuto) e o pé dá um passinho de correção a cada pisada. Diagnóstico e plano em `docs/ARTE.md`.
+- O soco agachado sai baixo, com o tronco bem inclinado (funciona, mas é o caso menos caprichado).
 - No meio-fio, os dois pés sobem juntos (não há pé em altura diferente).
 - Fios dos postes são desenhados por cima de tudo (no mapa atual não há nada alto na frente deles).

@@ -30,7 +30,9 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
           if (planted && prev[i] && t > 0.3) {
             const vh = Math.hypot(heel.x - prev[i].h.x, heel.y - prev[i].h.y) / dt;
             const vb = Math.hypot(ball.x - prev[i].b.x, ball.y - prev[i].b.y) / dt;
-            const v = pitch > 1e-4 ? vh : pitch < -1e-4 ? vb : Math.min(vh, vb);
+            // pé quase chato (menos de 2°): calcanhar e base dos dedos encostam; vale o que estiver parado
+            const flat = 2 * M.DEG;
+            const v = pitch > flat ? vh : pitch < -flat ? vb : Math.min(vh, vb);
             max = Math.max(max, v);
             sum += v;
             n++;
@@ -47,7 +49,7 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
       run('andando devagar (analógico 30%)', 3, { move: dir(0, 0.3) }),
       run('correndo', 3, { move: dir(0), run: true }),
       run('parado (troca de peso)', 12, {}),
-      run('virando no lugar 180°', 3, (t, ch) => ({ move: t > 1 && t < 1.15 ? dir(180, 0.05) : null })),
+      run('virando no lugar 180° (toque curto)', 3, (t, ch) => ({ move: t > 1 && t < 1.08 ? dir(180, 0.5) : null })),
       run('entrando na guarda do soco', 2, (t) => ({ attack: Math.abs(t - 0.5) < 0.005, attackDir: 0 })),
     ].join('\n');
   });

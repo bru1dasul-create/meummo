@@ -13,7 +13,7 @@
 
   const BODY = {
     // pernas
-    hipStand: 83.2, // altura da articulação do quadril em pé (perna quase esticada; andando, a pelve desce)
+    hipStand: 83.9, // altura da articulação do quadril em pé (perna quase esticada; andando, a pelve desce)
     hipHalf: 9.4, // metade da distância entre os quadris
     thigh: 40, // coxa (quadril → joelho)
     shin: 37.5, // canela (joelho → tornozelo)
@@ -127,6 +127,9 @@
     ],
     // touca: casca de esfera acima do plano da linha do cabelo
     cap: { c: [0, -0.8, 0.8], r: 17.6, n: [0, -0.49, 0.87], d: 1.55 }, // linha do cabelo alta: a testa e o "V" aparecem
+    // nuca: a metade de trás de uma casca em volta da cabeça. É calculada pela câmera (como a touca), então aparece
+    // aos poucos quando a nuca vira para a câmera, em vez de a massa inteira pular para a frente do rosto
+    nape: { c: [0, -6.5, -1.5], r: 16, n: [0, -1, 0], d: 0 },
     // franja e costeletas: caminho (x, z) sobre a cabeça + quanto fica acima da pele (lift) + raio.
     // O y sai da superfície da cabeça (veja `surfaceY`), então nada fica flutuando na frente do rosto.
     locks: [

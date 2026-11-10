@@ -1,6 +1,6 @@
 // Tira de filme: o personagem num roteiro (combo, virada, parada...) desenhado quadro a quadro, a cada 1/30 s,
 // lado a lado. Serve para ver tranco e pose que pula, coisa que a prancha (quadros soltos) não mostra.
-// Uso: node tira.cjs <cena> [saida.png] [zoom] [direção em graus]   cenas: combo, virar, parar, soco-lado, correr-parar, pular
+// Uso: node tira.cjs <cena> [saida.png] [zoom] [direção em graus]   cenas: combo, virar, parar, soco-lado, correr-parar, pular, virar-correndo, soco-agachado
 //   direção: -45 = de lado (olhando para a direita da tela), 45 = de frente, 5 = 3/4
 const { chromium } = require('playwright');
 const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..')).href + '/';
@@ -24,6 +24,8 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
         parar: [0.2, 1.2, (t) => ({ move: t < 1.0 ? dir(Y) : null })],
         'correr-parar': [0.2, 1.3, (t) => ({ move: t < 1.0 ? dir(Y) : null, run: true })],
         pular: [0.2, 1.1, (t) => ({ jump: click(t, 0.3), move: dir(Y) })],
+        'virar-correndo': [0.6, 1.2, (t) => ({ move: t < 0.9 ? dir(Y) : dir(Y + 180), run: true })],
+        'soco-agachado': [0.2, 1.3, (t) => ({ crouchToggle: click(t, 0.25), attack: click(t, 0.8), attackDir: Y * M.DEG })],
       };
       const sc = SCENES[scene];
       if (!sc) return false;
