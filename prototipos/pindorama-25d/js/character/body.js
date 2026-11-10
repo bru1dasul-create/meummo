@@ -81,24 +81,29 @@
     spheres: [
       { name: 'cranio', p: [0, 0, 0], r: 15.5 },
       { name: 'testa', p: [0, 8.6, 4.4], r: 8.4 },
-      { name: 'macaE', p: [-8.7, 7.4, -1.9], r: 6.5 }, // maçãs do rosto altas
-      { name: 'macaD', p: [8.7, 7.4, -1.9], r: 6.5 },
-      { name: 'mandibulaE', p: [-7.5, 5.1, -10.6], r: 6.3 }, // mandíbula larga
-      { name: 'mandibulaD', p: [7.5, 5.1, -10.6], r: 6.3 },
+      // rosto largo e de frente reta: maçãs e boca para a frente, nariz curto. Com o nariz 6 cm à frente da boca e as
+      // maçãs recuadas, a cara virava um focinho (o dono: "parece um rato")
+      { name: 'macaE', p: [-8.9, 8.7, -2], r: 6.6 }, // maçãs do rosto altas
+      { name: 'macaD', p: [8.9, 8.7, -2], r: 6.6 },
+      { name: 'mandibulaE', p: [-7.9, 5.4, -10.4], r: 6.5 }, // mandíbula larga
+      { name: 'mandibulaD', p: [7.9, 5.4, -10.4], r: 6.5 },
+      { name: 'boca', p: [0, 11.2, -7.8], r: 5.2 }, // boca e lábio de cima (sem o vão embaixo do nariz)
       { name: 'queixo', p: [0, 10.7, -14], r: 5.6 }, // queixo forte e quadrado
       { name: 'queixoE', p: [-3, 10.1, -14.3], r: 4.8 },
       { name: 'queixoD', p: [3, 10.1, -14.3], r: 4.8 },
-      { name: 'nariz', p: [0, 17.9, -3.8], r: 2.9 },
-      { name: 'asaE', p: [-2.4, 16.4, -4.9], r: 2.05 }, // asas do nariz (nariz largo)
-      { name: 'asaD', p: [2.4, 16.4, -4.9], r: 2.05 },
-      { name: 'ponte', p: [0, 16.2, 2.8], r: 2.4 },
-      { name: 'arcoE', p: [-5.2, 15.3, 4.3], r: 3.5 }, // arco da sobrancelha pesado
-      { name: 'arcoD', p: [5.2, 15.3, 4.3], r: 3.5 },
+      { name: 'nariz', p: [0, 16.3, -3.5], r: 2.75 },
+      { name: 'asaE', p: [-2.55, 15, -4.7], r: 2.15 }, // asas do nariz (nariz largo)
+      { name: 'asaD', p: [2.55, 15, -4.7], r: 2.15 },
+      { name: 'ponte', p: [0, 15.4, 2.4], r: 2.3 },
+      { name: 'arcoE', p: [-5.4, 14.3, 4.1], r: 3.4 }, // arco da sobrancelha pesado
+      { name: 'arcoD', p: [5.4, 14.3, 4.1], r: 3.4 },
     ],
     neckBase: [0, -2.4, -13], // onde o pescoço entra na cabeça
-    ear: { p: [15.2, -0.6, -2.6], r: 3.5 }, // orelha direita (a esquerda é espelhada)
+    // orelha direita (a esquerda é espelhada): mais alta que larga e encostada na cabeça (de frente quase não sai do
+    // contorno; redonda e saltada, parecia orelha de rato). O alto na linha dos olhos, o lóbulo na base do nariz
+    ear: { top: { p: [14.3, -2.2, -0.6], r: 2.3 }, mid: { p: [14.6, -1.5, -2.7], r: 2.45 }, lobe: { p: [14.2, -0.5, -5.1], r: 1.75 } },
     // traços do rosto, no formato (x, z) da frente da cabeça; o y sai da superfície
-    eye: { x: 5.8, z: 0.7, w: 6.6, h: 2.55, iris: 1.45 }, // olhos mais estreitos: olhar firme
+    eye: { x: 5.9, z: 0.6, w: 6.9, h: 2.9, iris: 1.62 }, // olhar firme, mas grande o bastante para ler de longe
     brow: { inner: [2, 3.2], outer: [10.8, 5.5], thick: 2.7 }, // sobrancelha grossa e baixa no meio
     mouth: { x: 3.5, z: -10.1 },
     paintBand: { top: 3.4, bottom: -3.2, x: 15 }, // faixa vermelha nos olhos, de uma têmpora à outra
@@ -112,34 +117,29 @@
 
   // Cabelo: massa de trás (casco), pontas bagunçadas, "touca" do couro cabeludo e franja.
   const HAIR = {
+    // (de frente, nada dela passa da largura da cabeça: o cabelo é puxado para trás e a orelha fica à mostra)
     mass: [
-      { p: [0, -2.8, 5.6], r: 17 },
+      { p: [0, -4, 5.2], r: 16 },
       { p: [0, -8, -2.5], r: 15 },
-      { p: [-6.5, -9.5, -14], r: 9 },
-      { p: [6.5, -9.5, -14], r: 9 },
-      { p: [0, -11, -16], r: 9 },
-      { p: [-14, -4, -2], r: 10.2 },
-      { p: [14, -4, -2], r: 10.2 },
-      { p: [-11.5, -5, -11], r: 7.5 },
-      { p: [11.5, -5, -11], r: 7.5 },
+      { p: [-5, -10.5, -13], r: 8.4 },
+      { p: [5, -10.5, -13], r: 8.4 },
+      { p: [0, -11.5, -15], r: 9 },
+      { p: [-6, -10, -8], r: 7 },
+      { p: [6, -10, -8], r: 7 },
     ],
-    // mechas: raiz → meio → ponta. Poucas soltas no alto (cabelo meio bagunçado) e as compridas caindo dos lados
-    // do rosto e atrás, até o pescoço (o resto do comprimento é o "cabelo comprido", nas costas)
+    // mechas: raiz → meio → ponta. Poucas soltas no alto (cabelo meio bagunçado) e as compridas caindo atrás, até o
+    // pescoço (o resto do comprimento é o "cabelo comprido", nas costas). Nenhuma cai do lado do rosto: ali só as tranças
     spikes: [
       { root: [0, -6, 14], mid: [-2, -12, 18], tip: [-1, -19, 19], r: 4.2 },
       { root: [-7, -4, 13], mid: [-11, -9, 15.5], tip: [-14.5, -14, 14], r: 3.8 },
       { root: [7, -5, 13], mid: [11, -10, 15], tip: [14.5, -15, 13.5], r: 3.8 },
-      { root: [-14, 0, 3], mid: [-16.2, -1, -8], tip: [-15.6, -3, -18], r: 3 },
-      { root: [14, 0, 3], mid: [16.2, -1, -8], tip: [15.6, -3, -18], r: 3 },
-      { root: [-13, -5, 0], mid: [-15.2, -6, -11], tip: [-14.2, -8, -21], r: 3.3 },
-      { root: [13, -5, 0], mid: [15.2, -6, -11], tip: [14.2, -8, -21], r: 3.3 },
       { root: [-6, -13, 2], mid: [-8, -16, -12], tip: [-7, -15, -26], r: 4 },
       { root: [6, -13, 2], mid: [8, -16, -12], tip: [7, -15, -26], r: 4 },
       { root: [0, -14, 4], mid: [0, -17.5, -10], tip: [0, -16, -25], r: 4.2 },
     ],
     // cabelo comprido caindo nas costas: o alto preso à cabeça, o resto ao peito (até as omoplatas)
     long: {
-      head: [{ p: [0, -9, -4], r: 12.5 }, { p: [-7, -7.5, -9], r: 8.5 }, { p: [7, -7.5, -9], r: 8.5 }],
+      head: [{ p: [0, -9.5, -4], r: 12.5 }, { p: [-6, -9, -9], r: 8 }, { p: [6, -9, -9], r: 8 }],
       back: [{ p: [0, -9.4, 11], r: 9.2 }, { p: [-6, -8.6, 9], r: 6.8 }, { p: [6, -8.6, 9], r: 6.8 }, { p: [0, -9, 4], r: 6.4 }],
       // pontas soltas embaixo (x no peito, comprimento): o cabelo termina em mechas, não reto
       tips: [{ x: -5.6, len: 6.5 }, { x: -2.6, len: 9 }, { x: 0.6, len: 8 }, { x: 3.6, len: 9.5 }, { x: 6.2, len: 6 }],
@@ -151,7 +151,8 @@
     // por cima da linha do cabelo (cabelo em cima, pele embaixo — senão vira tiara)
     band: { front: [7.5, 10.6], back: [9.2, 12.4], out: 0.7 },
     // touca: casca de esfera acima do plano da linha do cabelo
-    cap: { c: [0, -0.8, 0.8], r: 17.6, n: [0, -0.49, 0.87], d: 0.6 }, // linha do cabelo encostada na faixa da testa
+    // (justa nos lados: cabelo puxado para trás, a orelha aparece)
+    cap: { c: [0, -0.8, 0.8], r: 16.6, n: [0, -0.49, 0.87], d: 0.6 }, // linha do cabelo encostada na faixa da testa
     // nuca: a metade de trás de uma casca em volta da cabeça. É calculada pela câmera (como a touca), então aparece
     // aos poucos quando a nuca vira para a câmera, em vez de a massa inteira pular para a frente do rosto
     nape: { c: [0, -6.5, -1.5], r: 16, n: [0, -1, 0], d: 0 },
@@ -192,13 +193,16 @@
     { p: [0, 4, -9.5], r: 10.8 },
     { p: [-8.2, 5.2, 1.8], r: 9.8 }, // peitorais
     { p: [8.2, 5.2, 1.8], r: 9.8 },
-    { p: [-11.6, -2.6, -3.2], r: 10 }, // dorsais (costas largas)
-    { p: [11.6, -2.6, -3.2], r: 10 },
+    { p: [-12.2, -2.8, -2.4], r: 10.2 }, // dorsais (costas largas: o tronco abre em V)
+    { p: [12.2, -2.8, -2.4], r: 10.2 },
     { p: [-6.4, -2.4, 13.2], r: 6.2 }, // trapézio subindo para o pescoço
     { p: [6.4, -2.4, 13.2], r: 6.2 },
     { p: [-10.8, -2.4, 9.4], r: 6.9 },
     { p: [10.8, -2.4, 9.4], r: 6.9 },
     { p: [0, 1.5, 7.4], r: 8.8 },
+    // alto do ombro: o trapézio desce liso até o deltoide (sem o "dente" entre o tronco e o braço)
+    { p: [-16.4, -1.6, 7.4], r: 5.6, shoulder: true },
+    { p: [16.4, -1.6, 7.4], r: 5.6, shoulder: true },
   ];
   const PELVIS = [
     { p: [0, 2.4, 8], r: 12.5 },
@@ -210,17 +214,22 @@
   ];
   const NECK = { r0: 8.1, r1: 7 }; // pescoço grosso
 
-  // Membros: esferas em (t, frente, fora, raio)
+  // Membros: esferas em (t, frente, fora, raio). O braço tem duas peças que se juntam sem emenda: o deltoide (capa
+  // do ombro que afina no meio do braço, por cima) e o braço (bíceps na frente, tríceps atrás). Numa peça só, o casco
+  // liso virava um tubo com uma bola em cima; separadas, a silhueta mostra o ombro e o bíceps
   const UPPER_ARM = [
-    { t: 0.05, f: 0.3, o: 1.2, r: 7.9 }, // deltoide
-    { t: 0.42, f: 1.6, o: 0, r: 5.9 }, // bíceps
-    { t: 0.36, f: -1.6, o: 0, r: 5.7 }, // tríceps
-    { t: 1, f: 0, o: 0, r: 4.1 }, // cotovelo
+    { t: 0.1, f: 0.3, o: 1.3, r: 6.9, part: 'deltoide' },
+    { t: 0.38, f: 0.6, o: 1.8, r: 4.9, part: 'deltoide' }, // ponta do deltoide, do lado de fora
+    { t: 0.24, f: 0.2, o: 0, r: 5.6 },
+    { t: 0.55, f: 2.1, o: 0.1, r: 5.6 }, // bíceps
+    { t: 0.46, f: -2, o: -0.1, r: 5.5 }, // tríceps
+    { t: 1, f: 0, o: 0, r: 4 }, // cotovelo
   ];
   const FOREARM = [
     { t: 0, f: 0, o: 0, r: 4.1 },
-    { t: 0.18, f: 0.7, o: 0.8, r: 5.5 },
-    { t: 1, f: 0, o: 0, r: 2.6 },
+    { t: 0.2, f: 0.8, o: 1, r: 5.4 }, // músculo do antebraço, perto do cotovelo
+    { t: 0.52, f: 0.3, o: 0.4, r: 4.1 }, // afina até o punho
+    { t: 1, f: 0, o: 0, r: 2.7 },
   ];
   // mão: palma, polegar e quatro dedos — (ao longo do antebraço a partir do punho, costas da mão, lado do polegar,
   // raio). Cada dedo sai da base e, aberto (relaxado), fica quase reto e um pouco curvo; fechado, dobra para dentro
@@ -240,14 +249,30 @@
     { t: 0.34, f: 1.6, o: 0, r: 7.3 },
     { t: 0.3, f: 0, o: 1.2, r: 6.9 },
     { t: 0.4, f: -1.3, o: 0, r: 6.8 },
+    { t: 0.8, f: 1.2, o: -1.4, r: 5.2 }, // "gota" do lado de dentro, em cima do joelho
     { t: 1, f: 0.5, o: 0, r: 4.9 },
   ];
   const SHIN = [
     { t: 0, f: 0.4, o: 0, r: 4.9 },
-    { t: 0.22, f: -3.2, o: 0, r: 6.3 },
+    { t: 0.22, f: -3.2, o: 0, r: 6.3 }, // panturrilha
+    { t: 0.3, f: -2.4, o: -1.5, r: 5.4 }, // a outra cabeça da panturrilha (dentro)
     { t: 0.58, f: -0.4, o: 0, r: 4.2 },
     { t: 1, f: 0, o: 0, r: 3.4 },
   ];
+  // linhas de músculo (finas, só no lado que olha para a câmera): pontos (t, ângulo em volta do osso, raio). Ângulo
+  // 0 = frente do osso (bíceps, frente da coxa), 90 = lado de fora, 180 = trás
+  const MUSCLE_LINES = {
+    braco: [
+      { pts: [[0.44, 96, 5.9], [0.62, 92, 5.6], [0.82, 86, 4.7]] }, // entre o bíceps e o tríceps
+      { pts: [[0.74, -38, 5.4], [0.84, 0, 5.7], [0.75, 38, 5.4]] }, // fim do bíceps, em cima do cotovelo
+    ],
+    antebraco: [{ pts: [[0.05, 75, 4.9], [0.3, 48, 5], [0.62, 22, 4]] }],
+    coxa: [
+      { pts: [[0.2, 42, 7.8], [0.5, 36, 7.2], [0.8, 22, 5.8]] }, // entre os músculos da frente
+      { pts: [[0.58, -42, 6.6], [0.74, -58, 6.2], [0.9, -30, 5.3], [0.93, -4, 5]] }, // contorno da "gota"
+    ],
+    canela: [{ pts: [[0.08, 138, 5.8], [0.27, 118, 6.7], [0.48, 128, 5]] }], // borda da panturrilha
+  };
   // pé: (lado de dentro, frente, cima, raio) a partir do tornozelo; o arco fica do lado de dentro (mais alto)
   const FOOT = [
     { s: 0, f: -3.5, u: -3.2, r: 3.3 }, // calcanhar
@@ -267,12 +292,13 @@
     ],
   };
 
-  // Pinturas no corpo (jenipapo): faixas nos braços e nas canelas, símbolo redondo nos ombros
+  // Pinturas no corpo (jenipapo): faixas nos braços e nas canelas. O símbolo redondo que ficava no ombro saiu: ele
+  // marcava o deltoide como uma bola (cara de junta de boneco); `shoulderMark: { r }` traz de volta
   const BODY_PAINT = {
     upperArmBand: { t: 0.5, w: 3.2 },
     forearmBand: { t: 0.44, w: 2.6 },
     calfBand: { t: 0.34, w: 3.2 },
-    shoulderMark: { r: 5 },
+    shoulderMark: null,
   };
 
   // Colar de contas (vermelhas, pretas e creme) com garras penduradas na frente
@@ -311,5 +337,5 @@
 
   PD.BODY = BODY;
   PD.PALETTE = PALETTE;
-  PD.MODEL = { HEAD, HAIR, FEATHERS, CHEST, PELVIS, NECK, UPPER_ARM, FOREARM, HAND, THIGH, SHIN, FOOT, TOES, BODY_PAINT, NECKLACE, LOINCLOTH, SLOTS, surfaceY };
+  PD.MODEL = { HEAD, HAIR, FEATHERS, CHEST, PELVIS, NECK, UPPER_ARM, FOREARM, HAND, THIGH, SHIN, MUSCLE_LINES, FOOT, TOES, BODY_PAINT, NECKLACE, LOINCLOTH, SLOTS, surfaceY };
 })(window.PD = window.PD || {});

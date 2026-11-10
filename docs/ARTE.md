@@ -47,8 +47,8 @@ protótipo não mexe no jogo nem no servidor.
 - **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
   segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
 - **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
-  (privada; versão 5 em 10/11, com o redesenho pela referência do dono; a 4 tinha o refino do andar, da cabeça e do
-  soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  (privada; versão 6 em 10/11, com os ajustes do dono em cima do redesenho: orelha, cabelo dos lados, rosto, ombros e
+  músculos; a 5 tinha o redesenho pela referência e a 4, o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
   o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
 - **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
   o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
@@ -179,6 +179,31 @@ aljava com flechas).
 - Na referência caem várias mechas soltas por cima da faixa; aqui são três (mais que isso embola no tamanho do jogo).
 - O rosto tem uma expressão só (a boca não mexe; o olhar e o piscar mexem).
 - Numa janela pequena (zoom × densidade abaixo de 1,1, como 1280×800 num monitor a 100%) a mão vira uma forma só.
+
+### Ajustes do dono depois da versão 5 (10/11)
+O dono viu a versão 5 e pediu: (1) "arruma a orelha dele, fica pra fora do cabelo como se tivesse bugado, ou diminui o
+cabelo dele na lateral, deixa apenas o cabelo caído pelo peito amarrado" ("é pra orelha aparecer"); (2) "a cara ainda
+parece de um rato"; (3) "arruma os ombros, está bem ruinzinho"; (4) "dá pra pôr músculo? Sem exagero!".
+- **Orelha e cabelo dos lados:** a massa do cabelo tinha esferas dos lados que passavam muito da cabeça (até 24 de
+  largura; a cabeça tem 15,5) e mechas caindo em cima da orelha; a orelha, redonda e saltada, ficava "colada" no preto.
+  Agora a massa e a touca são justas (de frente, nada passa da largura da cabeça), não há mecha do lado do rosto (só as
+  tranças) e a orelha é oval, mais alta que larga, encostada na cabeça, com a dobra de dentro (`HEAD.ear`: alto, meio e
+  lóbulo). O brinco pendura no lóbulo novo.
+- **Cara de rato:** o nariz ficava 6 cm à frente da boca (o dobro de um nariz de verdade), com um vão embaixo dele, e as
+  maçãs recuadas: um focinho. Somado à orelha redonda, virava rato. Agora o nariz é mais curto, a boca e o lábio de cima
+  têm volume (esfera `boca`), as maçãs vêm para a frente (rosto mais largo e reto) e os olhos estão um pouco maiores.
+- **Ombros:** o braço era uma peça só, com contorno inteiro, e o deltoide tinha um círculo com espiral pintado: lia como
+  junta de boneco. Agora o tronco tem o alto do ombro (o trapézio desce liso), o braço tem duas peças (o deltoide por
+  cima, afinando no meio do braço, e o braço com bíceps e tríceps), a borda do deltoide é uma linha suave, o contorno do
+  braço some no alto do ombro (`clipOut` no desenho) e o círculo saiu (`BODY_PAINT.shoulderMark: null`; com `{ r }`
+  volta).
+- **Músculos, sem exagero:** linhas finas e suaves (`MUSCLE_LINES` em `body.js`, só do lado que olha para a câmera e só
+  com o detalhe fino ligado) entre o bíceps e o tríceps, no fim do bíceps, no antebraço, na frente da coxa, na "gota" em
+  cima do joelho e na borda da panturrilha; sombra embaixo do peitoral, serrátil na costela, costas um pouco mais em V e
+  volume novo na "gota" do joelho e na outra cabeça da panturrilha.
+- **Conferido:** escorregão 0,0 cm/s, ossos 0,0000, ponta do pé nunca no chão, passada 150 e 220 por minuto sem
+  correção, estados, toque e prancha sem erro, cabeça girando 360° sem pulo. Desempenho com a CPU 4× mais lenta: o
+  personagem ficou ~1 ms mais caro; o jogo, na mesma faixa (18 fps em 1280×800, 12 em 1920×950 e no celular emulado).
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
