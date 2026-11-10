@@ -71,6 +71,11 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
 - [ ] **[mundo]** Mapa e minimapa: minimapa no canto (terreno, você, monstros perto, NPCs e saídas) e o mapa grande na
   tecla **M** (o som passa a ligar e desligar só pelo ícone 🔊 do painel)
 - [ ] **[arte]** Animações do personagem melhores (o dono achou feias; ele vai ver se consegue trocar)
+- [ ] **[arte]** Celular deitado (horizontal) como o jeito recomendado de jogar: joystick à esquerda, habilidades à
+  direita (vem junto com o joystick)
+- [ ] **[arte + mundo]** Modo leve para celular fraco: menos efeitos (neblina, luzes, faíscas), com opção nas
+  configurações
+- [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
@@ -175,12 +180,23 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [ ] **[estrutura]** Ferramentas de admin (expulsar, banir, avisos) e registros
 - [ ] **[dono]** 20 a 50 pessoas jogando juntas
 
+## M6 — Caminhos (classes)
+Ideia que voltou com o documento do ChatGPT (10/11). Só depois do movimento livre, e começando por um Caminho só.
+- [ ] **[dono]** Decidir os Caminhos. Proposta da [estrutura], com a cara do folclore: **Caçador da Mata** (arco,
+  agilidade, bichos), **Benzedeira/Benzedor** (cura e espíritos), **Guardião** (escudo e corpo a corpo) e
+  **Capoeirista** (rápido, esquiva e golpes; no lugar do "Ladino das Sombras")
+- [ ] **[estrutura]** Energia (barra azul) para as habilidades e o primeiro Caminho com 3 habilidades
+
 ## Ideias para depois (só se o básico estiver divertido)
-Caminhos (Capoeirista, Curandeiro, Caçador), crafting, PvP em áreas específicas, chefões, eventos,
+Crafting, PvP em áreas específicas, chefões, eventos,
 noite e dia (lendas da noite), montarias, casas de jogadores.
 
 ## Decisões pendentes
 - **Nome do jogo** ("MeuMMO" é provisório) — sugestões em DESIGN.md
 - **Arte definitiva:** hoje é arte provisória desenhada por código
+- **Godot e 3D isométrico** (documento do ChatGPT, 10/11): recomendação da [estrutura] — agora não; primeiro o jogo
+  gostoso de andar e com gente jogando. Se ainda quiser 3D depois, um teste pequeno e com prazo antes de decidir
+- **Mundo:** São Paulo atual com o folclore (documento do ChatGPT) ou a Selva de Pedra (os 5 mapas de hoje)? A Praça
+  da Sé como primeiro mapa ou como zona futura (no `DESIGN.md` ela já é o fim de jogo)?
 - ~~Qual personagem fica~~: decidido — o dono escolheu o personagem em camadas da [arte] (com animações de ataque,
   expressões e mais detalhe); ele substituiu o personagem 20x24 a partir da `main`.
