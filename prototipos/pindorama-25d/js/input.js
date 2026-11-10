@@ -73,7 +73,11 @@
           this.stick.id = e.pointerId;
           this.stick.ox = this.stick.x = e.clientX;
           this.stick.oy = this.stick.y = e.clientY;
-          this.canvas.setPointerCapture?.(e.pointerId);
+          try {
+            this.canvas.setPointerCapture?.(e.pointerId);
+          } catch {
+            // alguns navegadores recusam: o joystick segue funcionando sem a captura
+          }
           this.ui?.showStick(this.stick);
         } else if (e.clientX >= window.innerWidth * 0.55) {
           // toque no lado direito, fora dos botões: soco para a frente

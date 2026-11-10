@@ -8,7 +8,7 @@
   const MAP = {
     w: 4000,
     h: 3800,
-    spawn: { x: 1250, y: 3020 }, // a praça, no círculo onde ele acorda
+    spawn: { x: 1180, y: 2960 }, // a praça, no círculo onde ele acorda
     // ---- chão (desenhado uma vez só, em pedaços)
     street: { y0: 1400, y1: 2100 }, // rua principal (ao longo de x)
     avenue: { x0: 2600, x1: 3200 }, // travessa (ao longo de y)
@@ -28,7 +28,7 @@
       { x0: 150, x1: 900, y0: 3220, y1: 3650 },
       { x0: 1580, x1: 2180, y0: 3180, y1: 3650 },
     ],
-    awakening: { x: 1250, y: 3020, r: 210 },
+    awakening: { x: 1180, y: 2960, r: 210 },
     lot: { x0: 3500, x1: 4000, y0: 2400, y1: 3800 }, // terreno baldio
     tiles: [
       { x0: 140, x1: 690, y0: 1100, y1: 1400, a: '#d9c9a8', b: '#9a5a3c' }, // ladrilho hidráulico da padaria
@@ -58,7 +58,7 @@
       { x: 520, y: 2720, kind: 'ipe', r: 250, h: 560 },
       { x: 1900, y: 2760, kind: 'sibipiruna', r: 240, h: 530 },
       { x: 480, y: 3420, kind: 'sibipiruna', r: 230, h: 500 },
-      { x: 1880, y: 3420, kind: 'ipe', r: 220, h: 520 },
+      { x: 2120, y: 3650, kind: 'ipe', r: 210, h: 520 },
       { x: 3760, y: 3150, kind: 'sibipiruna', r: 230, h: 520 },
     ],
     // postes de concreto (com fiação entre eles) e o semáforo
@@ -87,7 +87,7 @@
       { kind: 'arbusto', x: 900, y: 2600, r: 60 },
       { kind: 'arbusto', x: 2120, y: 2960, r: 75 },
       { kind: 'arbusto', x: 200, y: 3300, r: 80 },
-      { kind: 'arbusto', x: 2130, y: 3560, r: 70 },
+      { kind: 'arbusto', x: 1720, y: 3600, r: 70 },
       { kind: 'arbusto', x: 3880, y: 2620, r: 80 },
       { kind: 'pedra', x: 760, y: 3300, r: 45 },
       { kind: 'pedra', x: 1650, y: 3330, r: 38 },

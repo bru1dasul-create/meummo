@@ -467,9 +467,10 @@
       // boca: séria, cantos um pouco para baixo; abre um pouco no esforço
       const mo = H.mouth;
       const open = clamp01(look.mouthOpen || 0);
-      const m0 = this._faceAt(head, -mo.x, mo.z - 0.5, 0.1);
-      const m1 = this._faceAt(head, 0, mo.z + 0.15, 0.1);
-      const m2 = this._faceAt(head, mo.x, mo.z - 0.5, 0.1);
+      // boca reta, cantos só um tiquinho para baixo (calmo e decidido)
+      const m0 = this._faceAt(head, -mo.x, mo.z - 0.18, 0.1);
+      const m1 = this._faceAt(head, 0, mo.z + 0.05, 0.1);
+      const m2 = this._faceAt(head, mo.x, mo.z - 0.18, 0.1);
       const m3 = this._faceAt(head, 0, mo.z - 0.9 - open * 1.8, 0.1);
       if (m0 && m1 && m2 && m3 && this.facing(m1.n) > 0.15) {
         const a = this.P(m0.pt), b = this.P(m1.pt), c = this.P(m2.pt), d = this.P(m3.pt);
