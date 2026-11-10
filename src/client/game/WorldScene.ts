@@ -36,6 +36,7 @@ import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
 import { KeyboardDirections, type HeldMove } from './input';
 import { CanopyFader, createMapLayers, MapLights, MapSparks, MapWeather } from './mapDepth';
+import { MapView, type MapDot, type MapNow } from './minimap';
 
 export interface WorldSceneData {
   conn: Connection;
@@ -88,6 +89,8 @@ export class WorldScene extends Phaser.Scene {
   private mapLights!: MapLights;
   private mapWeather!: MapWeather;
   private mapSparks!: MapSparks;
+  /** Minimapa no canto e mapa grande (tecla M). */
+  private mapView: MapView | null = null;
   private lastFrameAt = 0;
   private actionBar!: ActionBar;
   private toast!: Toast;
@@ -252,6 +255,8 @@ export class WorldScene extends Phaser.Scene {
       ],
       (slot, down) => this.onActionButton(slot, down),
     );
+    const tiles = this.textures.get('tiles').getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    this.mapView = new MapView(this.map, mapJson, tiles, () => this.mapNow());
     this.soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
     this.soundButton?.addEventListener('click', this.toggleSound);
     this.updateSoundButton();
@@ -329,6 +334,23 @@ export class WorldScene extends Phaser.Scene {
     this.actionBar.update(now);
     this.updateShop();
     this.updateDepth(now);
+    this.mapView?.update(now);
+  }
+
+  /** Para o minimapa: você e quem está por perto (posição do desenho, que anda suave entre os tiles). */
+  private mapNow(): MapNow {
+    const dots: MapDot[] = [];
+    for (const view of this.entities.values()) {
+      if (view === this.me) continue;
+      dots.push({
+        kind: view.kind,
+        x: view.sprite.x / T,
+        y: view.sprite.y / T - 0.5, // o desenho fica nos pés: o meio do tile é meio tile acima
+        name: view.name,
+        danger: view.kind === 'monster' && view.level - this.myLevel > 3,
+      });
+    }
+    return { you: { x: this.me.sprite.x / T, y: this.me.sprite.y / T - 0.5, angle: angleOfDir(this.predicted.dir) }, dots };
   }
 
   // ======================= NPCs e loja =======================
@@ -685,13 +707,14 @@ export class WorldScene extends Phaser.Scene {
         if (!event.repeat) this.trySkill(1, 0, now);
         break;
       case 'KeyM':
-        if (!event.repeat) this.toggleSound();
+        if (!event.repeat) this.mapView?.toggle();
         break;
       case 'KeyI':
         if (!event.repeat) this.bag.toggle();
         break;
       case 'Escape':
-        if (this.talk.isOpen) this.talk.close();
+        if (this.mapView?.isOpen) this.mapView.close();
+        else if (this.talk.isOpen) this.talk.close();
         else if (this.shop.isOpen) this.shop.close();
         else if (this.bag.isOpen) this.bag.close();
         break;
@@ -1232,7 +1255,7 @@ export class WorldScene extends Phaser.Scene {
   private readonly toggleSound = () => {
     this.sfx.toggleMute();
     this.updateSoundButton();
-    this.toast.show(this.sfx.muted ? 'Som desligado (M para ligar)' : 'Som ligado');
+    this.toast.show(this.sfx.muted ? 'Som desligado (o 🔇 no painel liga de novo)' : 'Som ligado');
   };
 
   private updateSoundButton(): void {
@@ -1324,6 +1347,8 @@ export class WorldScene extends Phaser.Scene {
     this.entities.clear();
     this.dying = [];
     this.effects?.destroy();
+    this.mapView?.destroy();
+    this.mapView = null;
     this.actionBar?.destroy();
     this.toast?.destroy();
     this.zoneBanner?.destroy();

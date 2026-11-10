@@ -2080,3 +2080,196 @@ kbd {
     padding: 11px 10px;
   }
 }
+
+/* ---------- Minimapa e mapa grande (frente [mundo]: visual simples, a [arte] deixa bonito) ---------- */
+
+/* Minimapa: no canto de cima à direita, embaixo do botão da Mochila (a mochila aberta fica por cima dele) */
+#minimap {
+  position: fixed;
+  z-index: 5;
+  top: calc(54px + env(safe-area-inset-top));
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 5px 3px;
+  border: 1px solid var(--frame);
+  border-radius: 10px;
+  background: var(--wood);
+  box-shadow: var(--frame-glow);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+#minimap canvas {
+  display: block;
+  width: 160px;
+  height: 160px;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+
+/* nome da zona embaixo do minimapa (nome comprido quebra em duas linhas) */
+.minimap-name {
+  max-width: 160px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+}
+
+/* tecla do atalho, no canto do minimapa */
+.minimap-key {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 16px;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  background: rgba(10, 8, 6, 0.7);
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* Mapa grande: no meio da tela, por cima de tudo (o jogo continua por trás) */
+#worldmap {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 7, 5, 0.55);
+}
+
+.worldmap-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--frame);
+  border-radius: 12px;
+  background: var(--wood);
+  box-shadow: var(--frame-glow);
+}
+
+.worldmap-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+}
+
+.worldmap-head strong {
+  font-family: var(--title-font);
+  color: var(--accent);
+  font-size: 19px;
+}
+
+.worldmap-head .safe {
+  color: #9ee08f;
+  font-size: 12px;
+}
+
+.worldmap-head .danger {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.worldmap-close {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--frame);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.worldmap-canvas {
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  image-rendering: pixelated;
+}
+
+.worldmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.worldmap-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border: 1px solid rgba(10, 8, 6, 0.85);
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+
+.legend-you::before {
+  background: #fff6d0;
+}
+
+.legend-player::before {
+  background: #a8d8ff;
+}
+
+.legend-monster::before {
+  background: #ff6a55;
+}
+
+.legend-npc::before {
+  background: #ffd34a;
+  border-radius: 2px !important;
+  transform: rotate(45deg) scale(0.85);
+}
+
+.legend-exit::before {
+  background: #ffd76a;
+  border-radius: 2px !important;
+}
+
+@media (pointer: coarse) {
+  #minimap canvas {
+    width: 108px;
+    height: 108px;
+  }
+
+  .minimap-name {
+    max-width: 108px;
+    font-size: 10px;
+  }
+
+  .worldmap-panel {
+    padding: 8px 8px 10px;
+  }
+
+  /* celular deitado: sobra pouca altura entre a Mochila e os botões (o nome da zona está no mapa grande) */
+  @media (max-height: 480px) {
+    #minimap canvas {
+      width: 96px;
+      height: 96px;
+    }
+
+    .minimap-name {
+      display: none;
+    }
+  }
+
+  .worldmap-head strong {
+    font-size: 16px;
+  }
+}
