@@ -100,12 +100,11 @@
     const z = -B.upperArm * Math.cos(lift) - B.forearm * Math.cos(lift + bend);
     return { x: out - z * Math.sin(abd), y, z: z * Math.cos(abd) };
   }
-  // poses do braço no pulo, por ângulos (graus): [braço para a frente, cotovelo, para fora, aberto para o lado]
-  const JUMP_ARMS = { tras: [-28, 18, 6, 6], cima: [128, 32, 7, 8], abertos: [22, 28, 3, 55] };
-  const jumpArm = (a, b, k) => {
-    const m = a.map((v, j) => v + (b[j] - v) * k);
-    return armFK(m[0] * DEG, m[1] * DEG, m[2], m[3] * DEG);
-  };
+  // mãos no pulo (alvo do punho a partir do ombro, no espaço do peito: x = para fora, y = frente, z = cima). Os dois
+  // braços fazem o mesmo: para trás no preparo, um balanço para a frente no impulso (cotovelo dobrado, punho na
+  // altura do peito) e, no ar, soltos, um pouco abertos e para a frente. Antes os braços ficavam esticados para a
+  // frente o voo inteiro (cara de zumbi) e depois abriam em "asa de avião"
+  const JUMP_HANDS = { tras: { x: 6, y: -16, z: -46 }, impulso: { x: 8, y: 26, z: -16 }, ar: { x: 14, y: 10, z: -36 } };
 
   /** Pelve montada igual ao esqueleto (para conferir o alcance das pernas antes de montar). */
   function pelvisFrame(body, pv) {
@@ -145,6 +144,7 @@
       this.stanceLead = 0; // pés em posição de luta (0..1)
       this.hipDrop = 0; // quanto a pelve desce para a perna de apoio alcançar o pé
       this.airArm = 0; // braços no jeito do pulo (0..1)
+      this.armFirm = 0; // firmeza da mola dos braços (0 no chão, 1 no pulo)
       // molas do movimento secundário (cabelo, penas, colar, cordão, brinco)
       const z0 = { x: 0, y: 0, z: 0 };
       this.springs = {
@@ -536,19 +536,26 @@
         let fist = lerp(lerp(0.15, 0.25, g), 0.7, run * g);
         fist = lerp(fist, 0.3, crouch);
         // pulo: braços para trás no preparo, sobem no impulso (acima da cabeça), abrem para equilibrar
-        if (J.state === 'preparo') a = mixV(a, jumpArm(JUMP_ARMS.tras, JUMP_ARMS.tras, 0), easeOut(J.t / 0.11));
+        if (J.state === 'preparo') a = mixV(a, JUMP_HANDS.tras, smoothstep(0, 0.12, J.t));
         if (J.state === 'ar') {
-          // braços: de trás jogam para cima e para a frente (em arco) e depois abrem para equilibrar a queda
+          // braços: de trás jogam para a frente no impulso e depois ficam soltos, equilibrando
           const tA = J.t;
-          const falling = clamp01(-this.vz / 300);
-          a = tA < 0.18 ? jumpArm(JUMP_ARMS.tras, JUMP_ARMS.cima, smoothstep(0, 0.18, tA)) : jumpArm(JUMP_ARMS.cima, JUMP_ARMS.abertos, clamp01(smoothstep(0.18, 0.45, tA) * 0.6 + falling * 0.4));
+          a = tA < 0.1 ? mixV(JUMP_HANDS.tras, JUMP_HANDS.impulso, smoothstep(0, 0.1, tA)) : mixV(JUMP_HANDS.impulso, JUMP_HANDS.ar, smoothstep(0.1, 0.3, tA));
         }
-        if (J.state === 'pouso') a = mixV(a, { x: 8, y: 16, z: -42 }, clamp01(J.crouch / 0.85));
+        if (J.state === 'pouso') {
+          // pousa com os braços de equilíbrio e volta aos poucos para o braço de andar/correr (sem salto de pose)
+          a = mixV(JUMP_HANDS.ar, a, smoothstep(0.04, 0.36, J.t));
+          a = mixV(a, { x: 8, y: 16, z: -42 }, clamp01(J.crouch / 0.85) * 0.7);
+        }
         fist = lerp(fist, 0.35, this.airArm);
         const poleLocal = mixPole(mixPole(POLE.solto, POLE.correndo, runPole), POLE.ar, this.airArm);
-        // mola: o braço é um pêndulo com peso — atrasa um pouco em relação ao corpo e assenta sozinho quando para
+        // mola: o braço é um pêndulo com peso — atrasa um pouco em relação ao corpo e assenta sozinho quando para. No
+        // pulo a mola é bem mais firme: o pulo inteiro dura meio segundo, e com a mola mole os braços nunca chegavam às
+        // poses (ficavam um na frente e o outro atrás, ainda no balanço da caminhada)
         if (!this.armSprings[i]) this.armSprings[i] = new M.Spring3(a);
-        a = this.armSprings[i].step(a, J.state === 'chao' ? 3.6 : 6.5, 0.72, dt);
+        // a firmeza da mola entra e sai aos poucos (trocar de uma vez dava um tranco no punho ao apertar o pulo)
+        if (i === 0) this.armFirm = damp(this.armFirm, J.state === 'preparo' || J.state === 'ar' ? 1 : J.state === 'pouso' ? 0.5 : 0, 14, dt);
+        a = this.armSprings[i].step(a, lerp(3.6, 11, this.armFirm), lerp(0.72, 0.85, this.armFirm), dt);
         hands.push({ local: a, twist: lerp(0, -0.35, run * g), poleLocal, fist });
         shoulderFwd[i] = lerp(1.2, 2.4, run) * w * g; // o ombro acompanha o braço
       }

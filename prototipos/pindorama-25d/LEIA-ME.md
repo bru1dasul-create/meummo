@@ -45,7 +45,8 @@ pergunta antes de fechar. Em **Tela cheia** o Chrome deixa o jogo segurar o Ctrl
   o personagem base não tem arma nem armadura (podem virar equipamento).
 - **Animações:** parado (respira, troca o peso de perna, olha em volta, pisca), andar, correr (passada longa,
   tronco inclinado, braços rápidos, calcanhar subindo atrás), agachar (com transição suave e andando agachado),
-  pular (preparo, impulso, subida, queda e pouso dobrando os joelhos) e soco (guarda, armar, golpe, recolher e
+  pular (preparo com os braços para trás, impulso com um balanço dos braços para a frente, subida, queda e pouso
+  dobrando os joelhos) e soco (guarda, armar, golpe, recolher e
   voltar; clicar de novo emenda o próximo soco com a outra mão, saindo da pose em que o anterior estava).
 - **Pé que rola:** pisa com o calcanhar, fica chato e sai pela ponta, com os dedos dobrando no chão. O ponto que
   encosta fica parado (não escorrega nem em curva fechada); o pé sai do chão parado e pousa parado. Parado, ele dá um
@@ -56,7 +57,7 @@ pergunta antes de fechar. Em **Tela cheia** o Chrome deixa o jogo segurar o Ctrl
   curvas (olha para onde vai).
 - **Soco em cadeia:** o quadril gira primeiro, o peito logo atrás e o ombro por último; o punho vai reto para onde
   o mouse aponta e os olhos ficam no alvo. O corpo vira para o alvo rápido, mas com velocidade máxima (nada de
-  pular de pose).
+  pular de pose). O impacto é uma estrela pequena com um anel; socando para longe da câmera, ele fica atrás do corpo.
 - **Movimento secundário:** cabelo, penas, colar, cordão da tanga e brincos balançam com o vento e com o corpo.
 - **Cenário:** esquina com rua de asfalto (faixa amarela, faixa de pedestre, bueiros), calçadas com meio-fio de
   verdade (14 cm: o personagem sobe e desce), ladrilho hidráulico, prédios baixos com padaria, bar, mercadinho e

@@ -174,11 +174,26 @@
       // o alto da trança aparecia por cima do rosto como uma garra. A cabeça esconde esse trecho, e a trança nasce
       // embaixo da mandíbula. O brinco do mesmo lado fica na frente dela.
       const headCover = S.offsetConvex(headPoly, this.inkIn * 0.9, 0, 0);
+      const chestKeyB = this.keyOf(rig.chest.o);
       for (let i = 0; i < 2; i++) {
         const br = this._braid(rig, look, i);
         if (!br) continue;
-        items.push({ name: 'tranca', key: br.key, group: 'tranca' + i, chain: true, segs: br.segs, hideInside: headCover, after: () => this._braidDetail(br) });
-        if (!faceAway) earrings[i].key = Math.max(earrings[i].key, br.key + 0.05);
+        const side = i === 0 ? -1 : 1;
+        // o trecho do ombro fica em cima do trapézio: a câmera vê de cima, então ele aparece de qualquer lado (sempre
+        // depois do peito e do colar). O trecho do peito fica na frente do peitoral; com o peitoral virado para longe
+        // da câmera, fica atrás do tronco (antes a ordem vinha do centro do peito e a trança do lado de perto aparecia
+        // por cima das costas). Com os dois trechos na frente, a trança é uma peça só (sem emenda no ombro)
+        const keyA = Math.max(this.keyOf(br.P1) + 0.5, chestKeyB + 0.6);
+        const pec = this.facing(norm(dirIn(rig.chest, side * 0.45, 1, 0.15)));
+        if (pec > 0) {
+          const key = Math.max(br.key, keyA);
+          items.push({ name: 'tranca', key, group: 'tranca' + i, chain: true, segs: br.segsA.concat(br.segsB), hideInside: headCover, after: () => this._braidDetail(br) });
+          if (!faceAway) earrings[i].key = Math.max(earrings[i].key, key + 0.05);
+        } else {
+          items.push({ name: 'tranca', key: keyA, group: 'trancaA' + i, chain: true, segs: br.segsA, hideInside: headCover, after: () => this._braidDetail(br, 0, br.split) });
+          items.push({ name: 'tranca', key: chestKeyB - 0.8, group: 'trancaB' + i, chain: true, segs: br.segsB, hideInside: headCover, after: () => this._braidDetail(br, br.split, br.pts.length) });
+          if (!faceAway) earrings[i].key = Math.max(earrings[i].key, keyA + 0.05);
+        }
       }
       items.push({
         name: 'cabeloFrente', key: headKey + 0.3, group: 'cabeloFrente', chain: true, segs: frontSegs, clipOut: massPoly,
@@ -208,9 +223,24 @@
       const chestPoly = this.hull(MOD.CHEST.map((s) => this.circle(at(rig.chest, ...s.p), s.r)));
       const pelvisPoly = this.hull(MOD.PELVIS.map((s) => this.circle(at(rig.pelvis, ...s.p), s.r)));
       const waistJoint = { pt: this.P(at(rig.chest, ...MOD.CHEST[0].p)), r: MOD.CHEST[0].r * 1.25 * this.zoom };
-      items.push({ name: 'peito', key: chestKey, group: 'tronco', order: 1, joint: waistJoint, segs: [{ poly: chestPoly, mat: PAL.skin, k: 0.26, decal: (seg) => this._chestDetail(seg, rig) }] });
+      // peito e pelve são uma peça só (pele contínua): se outra parte cair entre os dois na ordem de desenho, o contorno
+      // de um não pode aparecer em cima do outro (de costas, inclinado, a pelve virava um "ovo" nas costas)
+      // ponte do ombro: casco do trapézio ao deltoide, pintado com o tronco e antes do peito (só aparece no vão entre o
+      // peito e o braço). Fica com o tronco, e não com o braço, para a trança e o colar passarem por cima dela. Só de
+      // frente: de costas o cabelo cobre o trapézio; conforme o peito vira, ela encolhe para dentro do deltoide
+      const bridges = [];
+      const frontK = smoothstep(-0.3, 0.05, this.facing(rig.chest.f));
+      for (let i = 0; i < 2; i++) {
+        const side = i === 0 ? -1 : 1;
+        const d0 = MOD.UPPER_ARM.find((sp) => sp.part === 'deltoide');
+        const T = MOD.SHOULDER.trap;
+        const dc = limbAt(rig.upperArm[i], d0.t, d0.f, d0.o);
+        const trapEnd = M.lerp3(dc, at(rig.chest, side * T.p[0], T.p[1], T.p[2]), frontK);
+        bridges.push({ poly: this.hull([this.circle(trapEnd, lerp(d0.r * 0.9, T.r, frontK)), this.circle(dc, d0.r * 0.92)]), circles: this._last, mat: PAL.skin, k: 0.26 });
+      }
+      items.push({ name: 'peito', key: chestKey, group: 'tronco', order: 1, joint: waistJoint, clipOut: pelvisPoly, segs: bridges.concat([{ poly: chestPoly, mat: PAL.skin, k: 0.26, decal: (seg) => this._chestDetail(seg, rig) }]) });
       const pelvisKey = this.keyOf(rig.pelvis.o) + 1;
-      items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, segs: [{ poly: pelvisPoly, mat: PAL.skin, k: 0.26, decal: (seg) => this._loincloth(seg, rig, look) }] });
+      items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, clipOut: chestPoly, segs: [{ poly: pelvisPoly, mat: PAL.skin, k: 0.26, decal: (seg) => this._loincloth(seg, rig, look) }] });
       items.push({ name: 'colar', key: chestKey + 0.5, draw: () => this._necklace(rig, look) });
 
       // ---- braços e pernas (cada lado)
@@ -224,15 +254,17 @@
         const ua = rig.upperArm[i];
         const fa = rig.forearm[i];
         // alto do ombro: ali o contorno do braço some e o deltoide continua o trapézio (sem junta de boneco)
-        const shoulderTop = this.hull([this.circle(at(rig.chest, side * 18.2, -1.3, 9), 5.4)]);
+        const SH = MOD.SHOULDER;
+        const chestPt = (q) => at(rig.chest, side * q.p[0], q.p[1], q.p[2]);
+        const shoulderTop = this.hull(SH.clip.map((q) => this.circle(chestPt(q), q.r)));
         const armSph = (part) => MOD.UPPER_ARM.filter((s) => (s.part === 'deltoide') === (part === 'deltoide'));
-        const armCircles = armSph('braco').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
-        const armSeg = { poly: this.hull(armCircles), circles: this._last, mat: skin, k: 0.3, decal: () => this._upperArmPaint(rig, i) };
         const deltCircles = armSph('deltoide').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
-        // o deltoide por cima do braço, com a borda de baixo numa linha suave (o desenho do músculo)
-        const deltSeg = { poly: this.hull(deltCircles), circles: this._last, mat: skin, k: 0.3, inner: true, innerSoft: true, decal: () => this._shoulderMark(rig, i) };
+        const deltSeg = { poly: this.hull(deltCircles), circles: this._last, mat: skin, k: 0.3, decal: () => this._shoulderMark(rig, i) };
+        const armCircles = armSph('braco').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
+        const armSeg = { poly: this.hull(armCircles), circles: this._last, mat: skin, k: 0.3, noInner: true, decal: () => this._upperArmPaint(rig, i) };
         const faCircles = MOD.FOREARM.map((s) => this.circle(limbAt(fa, s.t, s.f, s.o), s.r));
         const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM.find((s) => s.t === 1).r * 2.2 * this.zoom };
+        // o deltoide por cima do braço (a sombra dele marca a borda, sem risco de "manga")
         items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, chain: true, clipOut: shoulderTop, segs: [armSeg, deltSeg] });
         items.push({
           name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, clipOut: shoulderTop,
@@ -341,8 +373,18 @@
           continue;
         }
         const run = [it];
-        while (i + 1 < items.length && items[i + 1].group && items[i + 1].group === it.group && items[i + 1].segs && Math.abs((items[i + 1].order ?? 0) - (run[run.length - 1].order ?? 0)) === 1) {
-          run.push(items[++i]);
+        // peças seguidas do mesmo grupo viram uma corrente. No tronco, o colar (desenhado à parte) pode cair entre o
+        // peito e a pelve: ele fica para depois, senão a pelve era desenhada sozinha, com contorno por cima das costas
+        const deferred = [];
+        for (;;) {
+          let k = i + 1;
+          const skipped = [];
+          while (it.group === 'tronco' && k < items.length && items[k].draw) skipped.push(items[k++]);
+          const nx = items[k];
+          if (!nx || !nx.group || nx.group !== it.group || !nx.segs || Math.abs((nx.order ?? 0) - (run[run.length - 1].order ?? 0)) !== 1) break;
+          run.push(nx);
+          deferred.push(...skipped);
+          i = k;
         }
         if (it.hideInside) {
           // escondida atrás de outra parte (o alto da trança atrás da cabeça): nada dela aparece dentro do polígono
@@ -353,9 +395,11 @@
           ctx.clip(p, 'evenodd');
           this._drawRun(run);
           ctx.restore();
+          for (const d of deferred) d.draw();
           continue;
         }
         this._drawRun(run);
+        for (const d of deferred) d.draw();
       }
 
       if (this.showBones) this._bones(rig);
@@ -434,12 +478,9 @@
         }
       }
       // linhas de dentro entre os pedaços da corrente (menos perto das juntas)
-      // braço, perna e tronco esticados não têm linha entre os pedaços (fica uma peça só), menos a que a peça pede
-      // (`inner`: a borda do deltoide)
-      const limbStraight = run[0].group && /^(braco|perna|tronco)/.test(run[0].group) && !run.some((it) => it.bent);
-      if (chain && segs.length > 1) {
+      if (chain && segs.length > 1 && !(run[0].group && /^(braco|perna|tronco)/.test(run[0].group) && !run.some((it) => it.bent))) {
         for (let i = 1; i < segs.length; i++) {
-          if (segs[i].noInner || segs[i].poly.length < 6 || (limbStraight && !segs[i].inner)) continue;
+          if (segs[i].noInner || segs[i].poly.length < 6) continue;
           ctx.save();
           const union = new Path2D();
           for (let j = 0; j < i; j++) S.polyPath(segs[j].poly, 0, 0, union);
@@ -455,10 +496,8 @@
             ctx.clip(hole, 'evenodd');
           }
           ctx.lineJoin = 'round';
-          const soft = segs[i].innerSoft;
-          ctx.strokeStyle = soft ? PAL.inkSoft : ink;
-          ctx.globalAlpha = soft ? 0.8 : 1;
-          ctx.lineWidth = this.inkIn * (soft ? 1.05 : 1.6);
+          ctx.strokeStyle = ink;
+          ctx.lineWidth = this.inkIn * 1.6;
           ctx.stroke(S.polyPath(segs[i].poly));
           ctx.restore();
         }
@@ -1219,16 +1258,20 @@
         const taper = t > 0.86 ? lerp(1, 0.55, (t - 0.86) / 0.14) : 1;
         return this.circle(add(p, scale(lat, (k % 2 ? 0.5 : -0.5) * R)), R * taper * (k === 0 ? 1.1 : 1));
       });
-      for (let k = 0; k < circ.length - 1; k++) segs.push({ poly: this.hull([circ[k], circ[k + 1]]), circles: this._last, mat: PAL.hair, k: 0.24, noInner: true });
+      // dois trechos: até o ombro (P1) e do ombro para baixo, no peito
+      const split = per;
+      const segsA = [];
+      const segsB = [];
+      for (let k = 0; k < circ.length - 1; k++) (k < split ? segsA : segsB).push({ poly: this.hull([circ[k], circ[k + 1]]), circles: this._last, mat: PAL.hair, k: 0.24, noInner: true });
       // ponta solta depois da amarração
       const tipDir = norm(sub(pts[pts.length - 1], pts[pts.length - 2]));
       const tip = add(P3, scale(tipDir, 3.4));
-      segs.push({ poly: this.hull([this.circle(P3, R * 0.75), this.circle(tip, 0.6)]), circles: this._last, mat: PAL.hair, k: 0.2, noInner: true });
-      // a trança fica na frente do peito vista de frente, atrás dele vista de costas
-      return { segs, pts, key: this.keyOf(P2) + 1.5, side };
+      segsB.push({ poly: this.hull([this.circle(P3, R * 0.75), this.circle(tip, 0.6)]), circles: this._last, mat: PAL.hair, k: 0.2, noInner: true });
+      return { segsA, segsB, split, pts, P1, key: this.keyOf(P2) + 1.5, side };
     }
 
-    _braidDetail(br) {
+    /** Gomos e amarrações da trança, só nos pontos de `k0` a `k1` (um trecho dela). */
+    _braidDetail(br, k0 = 0, k1 = br.pts.length) {
       const ctx = this.ctx;
       const z = this.zoom;
       // divisões dos gomos (traços curtos em diagonal, alternando o lado): o desenho de trança
@@ -1237,7 +1280,7 @@
         ctx.lineCap = 'round';
         ctx.lineWidth = Math.max(0.6, 0.5 * z);
         ctx.beginPath();
-        for (let k = 1; k < br.pts.length - 1; k++) {
+        for (let k = Math.max(1, k0); k < Math.min(br.pts.length - 1, k1); k++) {
           const a = this.P(br.pts[k - 1]);
           const b = this.P(br.pts[k + 1]);
           const c = this.P(br.pts[k]);
@@ -1254,6 +1297,7 @@
       // amarrações (cordão creme) perto da raiz e no fim
       for (const t of MOD.HAIR.braid.wraps) {
         const k = Math.min(br.pts.length - 2, Math.round(t * (br.pts.length - 1)));
+        if (k < k0 || k >= k1) continue;
         const a = this.P(br.pts[k]);
         const b = this.P(br.pts[k + 1]);
         const dx = b.x - a.x;

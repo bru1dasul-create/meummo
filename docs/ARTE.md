@@ -47,8 +47,8 @@ protótipo não mexe no jogo nem no servidor.
 - **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
   segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
 - **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
-  (privada; versão 6 em 10/11, com os ajustes do dono em cima do redesenho: orelha, cabelo dos lados, rosto, ombros e
-  músculos; a 5 tinha o redesenho pela referência e a 4, o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  (privada; versão 7 em 10/11: tronco na virada, ombro, efeito do soco e braços do pulo; a 6 teve orelha, cabelo dos
+  lados, rosto, ombros e músculos, a 5 o redesenho pela referência e a 4 o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
   o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
 - **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
   o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
@@ -204,6 +204,37 @@ parece de um rato"; (3) "arruma os ombros, está bem ruinzinho"; (4) "dá pra p�
 - **Conferido:** escorregão 0,0 cm/s, ossos 0,0000, ponta do pé nunca no chão, passada 150 e 220 por minuto sem
   correção, estados, toque e prancha sem erro, cabeça girando 360° sem pulo. Desempenho com a CPU 4× mais lenta: o
   personagem ficou ~1 ms mais caro; o jogo, na mesma faixa (18 fps em 1280×800, 12 em 1920×950 e no celular emulado).
+
+### Ajustes do dono depois da versão 6 (10/11)
+O dono pediu: (1) "o tronco ainda está com bug quando vira e está bem feio"; (2) "o ombro está ruim"; (3) "diminui o
+efeito do soco e melhora ele, pois quando está de costas cobre o corpo todo"; (4) "o pulo dele dá uns bugs estranhos".
+Achei as causas filmando quadro a quadro (giro do tronco de 15° em 15°, corrida de costas, pulo de lado e de 3/4, soco
+no jogo de costas e de lado) e desligando peça por peça:
+- **Tronco na virada:** três defeitos de ordem de desenho. (a) A trança do lado de perto era desenhada pela ordem do
+  centro do peito e aparecia por cima das costas: agora ela tem dois trechos, o do ombro (sempre visível, a câmera vê de
+  cima) e o do peito (só na frente quando o peitoral está virado para a câmera; senão, atrás do tronco); com os dois na
+  frente, a trança continua uma peça só (sem emenda). (b) De costas e inclinado (correndo), o alto da pelve subia nas
+  costas e o contorno dela aparecia como um "ovo" na lombar: o alto da pelve desceu (fica logo acima da tanga), peito e
+  pelve não desenham o contorno um em cima do outro (`clipOut`) e o colar, que caía entre os dois na ordem, fica para
+  depois (o tronco é desenhado numa peça só). (c) A ponte do ombro (abaixo) apagava o trecho da trança no ombro.
+- **Ombro:** o deltoide ficava pendurado embaixo de uma "prateleira" do tronco. Agora uma ponte (casco do trapézio ao
+  deltoide, `MOD.SHOULDER` em `body.js`) fecha o vão e a linha do ombro desce lisa do pescoço até o braço, acompanhando o
+  braço quando ele balança; ela é pintada com o tronco, antes do peito (só aparece no vão) e por baixo da trança e do
+  colar; de costas, encolhe para dentro do deltoide (o cabelo já cobre o trapézio). Deltoide um pouco menor e mais
+  baixo; o contorno do braço some no alto do ombro (`SHOULDER.clip`).
+- **Soco:** a estrela tinha ~80 cm (mais larga que o tronco) e era desenhada por cima de tudo. Agora tem ~30 cm, com um
+  anel que abre e some e 4 riscos curtos; o tremor da tela é menor. Soco para longe da câmera (de costas): o efeito é
+  desenhado antes do personagem (`behind` em `world.js`), então o corpo passa na frente dele.
+- **Pulo:** a mola dos braços era mole demais para um pulo de meio segundo: os braços nunca chegavam às poses e ficavam
+  um esticado na frente e o outro cruzado na cara (um "dab"), carregando o balanço da caminhada; depois abriam em "asa
+  de avião". Agora a mola fica firme no pulo (entrando aos poucos: trocar de uma vez dava tranco), os dois braços fazem
+  o mesmo (`JUMP_HANDS` em `animator.js`: para trás no preparo, um balanço para a frente no impulso, soltos e um pouco
+  abertos no ar) e o pouso volta para o braço de andar aos poucos. Trancos dos braços no pulo: 12,8 → 11,6 andando e
+  15,7 → 13,3 correndo (cm/quadro²).
+- **Conferido:** escorregão 0,0 cm/s, ossos 0,0000, ponta do pé nunca no chão, passada 150 e 220 por minuto sem
+  correção, estados, toque, prancha e equipamento de prova sem erro, cabeça girando 360° sem pulo, giro do tronco de 15°
+  em 15° (parado e andando) sem trança por cima das costas. Desempenho com a CPU 4× mais lenta: igual ao da versão 6
+  (17 a 21 fps em 1280×800 conforme a medida, 11 a 12 em 1920×950 e no celular emulado).
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):

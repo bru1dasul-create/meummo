@@ -200,12 +200,9 @@
     { p: [-10.8, -2.4, 9.4], r: 6.9 },
     { p: [10.8, -2.4, 9.4], r: 6.9 },
     { p: [0, 1.5, 7.4], r: 8.8 },
-    // alto do ombro: o trapézio desce liso até o deltoide (sem o "dente" entre o tronco e o braço)
-    { p: [-16.4, -1.6, 7.4], r: 5.6, shoulder: true },
-    { p: [16.4, -1.6, 7.4], r: 5.6, shoulder: true },
   ];
   const PELVIS = [
-    { p: [0, 2.4, 8], r: 12.5 },
+    { p: [0, 2.4, 0.5], r: 10.8 }, // o alto da pelve fica logo acima da tanga: em cima já é lombar (do tronco); mais alto, de costas e inclinado, virava um "ovo" nas costas
     { p: [-9.2, 0.4, 0.5], r: 8.8 },
     { p: [9.2, 0.4, 0.5], r: 8.8 },
     { p: [-5.5, -4.5, -5], r: 8.2 },
@@ -218,13 +215,20 @@
   // do ombro que afina no meio do braço, por cima) e o braço (bíceps na frente, tríceps atrás). Numa peça só, o casco
   // liso virava um tubo com uma bola em cima; separadas, a silhueta mostra o ombro e o bíceps
   const UPPER_ARM = [
-    { t: 0.1, f: 0.3, o: 1.3, r: 6.9, part: 'deltoide' },
-    { t: 0.38, f: 0.6, o: 1.8, r: 4.9, part: 'deltoide' }, // ponta do deltoide, do lado de fora
+    { t: 0.09, f: 0.3, o: 1, r: 6.2, part: 'deltoide' },
+    { t: 0.38, f: 0.6, o: 1.6, r: 4.8, part: 'deltoide' }, // ponta do deltoide, do lado de fora
     { t: 0.24, f: 0.2, o: 0, r: 5.6 },
     { t: 0.55, f: 2.1, o: 0.1, r: 5.6 }, // bíceps
     { t: 0.46, f: -2, o: -0.1, r: 5.5 }, // tríceps
     { t: 1, f: 0, o: 0, r: 4 }, // cotovelo
   ];
+  // ombro: uma "ponte" (casco entre o trapézio, no peito, e o deltoide, no braço) fecha o vão entre o tronco e o braço,
+  // então a linha do ombro desce lisa do pescoço até o braço, acompanhando o braço quando ele balança. Sem ela, o
+  // deltoide ficava pendurado embaixo de uma "prateleira" do tronco. Em `clip`, onde o contorno do braço some
+  const SHOULDER = {
+    trap: { p: [12, -2.4, 10.4], r: 6.6 },
+    clip: [{ p: [11.4, -2.2, 10.2], r: 7 }, { p: [18.6, -1.2, 8.4], r: 5.8 }],
+  };
   const FOREARM = [
     { t: 0, f: 0, o: 0, r: 4.1 },
     { t: 0.2, f: 0.8, o: 1, r: 5.4 }, // músculo do antebraço, perto do cotovelo
@@ -337,5 +341,5 @@
 
   PD.BODY = BODY;
   PD.PALETTE = PALETTE;
-  PD.MODEL = { HEAD, HAIR, FEATHERS, CHEST, PELVIS, NECK, UPPER_ARM, FOREARM, HAND, THIGH, SHIN, MUSCLE_LINES, FOOT, TOES, BODY_PAINT, NECKLACE, LOINCLOTH, SLOTS, surfaceY };
+  PD.MODEL = { HEAD, HAIR, FEATHERS, CHEST, PELVIS, NECK, UPPER_ARM, SHOULDER, FOREARM, HAND, THIGH, SHIN, MUSCLE_LINES, FOOT, TOES, BODY_PAINT, NECKLACE, LOINCLOTH, SLOTS, surfaceY };
 })(window.PD = window.PD || {});

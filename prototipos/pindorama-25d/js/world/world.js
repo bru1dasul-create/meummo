@@ -205,13 +205,17 @@
       const pose = hero.pose();
       const rig = PD.rig.buildRig(pose);
       const h = rig.hand[hand];
-      const p = M.add(h.o, M.scale(h.a, 9));
-      this.particles.push({ kind: 'pow', x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, t: 0, life: 0.26, r: 34, rot: Math.random() * 6 });
-      for (let i = 0; i < 6; i++) {
-        const a = hero.yaw + (Math.random() - 0.5) * 1.6;
-        this.particles.push({ kind: 'risco', x: p.x, y: p.y, z: p.z + (Math.random() - 0.5) * 20, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, vz: (Math.random() - 0.5) * 120, t: 0, life: 0.16 + Math.random() * 0.08, r: 3 });
+      const p = M.add(h.o, M.scale(h.a, 8));
+      // soco para longe da câmera (de costas): o punho fica atrás do corpo na tela, então o efeito é desenhado antes do
+      // personagem e o corpo passa na frente dele (antes a estrela, por cima de tudo, cobria o corpo inteiro)
+      const behind = M.dot(M.sub(p, rig.chest.o), this.cam.toCamera) < -3;
+      // estrela pequena (uns 30 cm) e um anel que abre e some; poucos riscos, curtos
+      this.particles.push({ kind: 'pow', x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, t: 0, life: 0.22, r: 15, rot: Math.random() * 6, behind });
+      for (let i = 0; i < 4; i++) {
+        const a = hero.yaw + (Math.random() - 0.5) * 1.3;
+        this.particles.push({ kind: 'risco', x: p.x, y: p.y, z: p.z + (Math.random() - 0.5) * 12, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, vz: (Math.random() - 0.5) * 80, t: 0, life: 0.12 + Math.random() * 0.06, r: 2, behind });
       }
-      this.shake = 0.12;
+      this.shake = 0.08;
     }
 
     // ---------------------------------------------------------------- desenho
@@ -265,6 +269,8 @@
       let actorMs = 0;
       for (const o of order) {
         if (o.actor) {
+          // efeitos que ficam atrás do personagem (soco para longe da câmera)
+          for (const p of this.particles) if (p.behind && p.kind !== 'poeira') this._drawParticle(ctx, p);
           if (this.forceFlush) ctx.getImageData(0, 0, 1, 1);
           const a0 = now();
           o.actor.draw(ctx);
@@ -314,8 +320,8 @@
       T.objetos -= actorMs * 0.05;
       T.personagem = T.personagem * 0.95 + actorMs * 0.05;
       this._drawWires(ctx);
-      // por cima de tudo: soco, riscos, faíscas e pétalas
-      for (const p of this.particles) if (p.kind !== 'poeira') this._drawParticle(ctx, p);
+      // por cima de tudo: soco (o que não ficou atrás do personagem), riscos, faíscas e pétalas
+      for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._drawPetals(ctx);
       mark('cima');
     }
@@ -406,13 +412,19 @@
         }
         ctx.globalAlpha = 1;
       } else if (p.kind === 'pow') {
-        // estrela de HQ no ponto do soco
-        const s = (0.5 + M.easeOutBack(Math.min(1, k * 2.5)) * 0.7) * p.r * cam.zoom;
-        ctx.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
+        // estrela de HQ pequena no ponto do soco, com um anel que abre e some
+        const s = (0.55 + M.easeOutBack(Math.min(1, k * 2.8)) * 0.6) * p.r * cam.zoom;
+        ctx.globalAlpha = (1 - k) * 0.85;
+        ctx.strokeStyle = '#fff7d6';
+        ctx.lineWidth = Math.max(1.2, 1.8 * cam.zoom * (1 - k));
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, p.r * cam.zoom * (0.7 + k * 1.4), 0, M.TAU);
+        ctx.stroke();
+        ctx.globalAlpha = k > 0.6 ? (1 - k) / 0.4 : 1;
         const star = (rad, inner) => {
           ctx.beginPath();
-          for (let i = 0; i < 20; i++) {
-            const a = p.rot + (i / 20) * M.TAU;
+          for (let i = 0; i < 16; i++) {
+            const a = p.rot + (i / 16) * M.TAU;
             const r = i % 2 ? rad * inner : rad;
             const x = q.x + Math.cos(a) * r;
             const y = q.y + Math.sin(a) * r;
