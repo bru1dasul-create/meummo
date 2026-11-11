@@ -11,12 +11,19 @@
 (function (PD) {
   'use strict';
 
+  // CÂNONE (conferido com ferramentas/medidas.cjs; mudar uma medida aqui muda todas as animações juntas):
+  //  - altura ~176 cm, cabeça grande de herói (~5,5 cabeças: a cabeça é a identidade dele e não muda)
+  //  - ombro em ~77% da altura, quadril em ~50%, joelho em ~27%; coxa e canela quase do mesmo tamanho
+  //  - queixo ~9 cm acima do ombro (pescoço curto e forte), cotovelo na altura da cintura, punho um pouco abaixo
+  //    do quadril e a mão com ~17 cm (~10% da altura), a ponta dos dedos no meio da coxa
+  // Antes: tronco e pernas curtos e pescoço comprido (ombro em 74%, quadril em 48%, joelho em 25%, queixo 12,7 cm
+  // acima do ombro, mão de 12,7 cm).
   const BODY = {
     // pernas
-    hipStand: 83.9, // altura da articulação do quadril em pé (perna quase esticada; andando, a pelve desce)
+    hipStand: 88.9, // altura da articulação do quadril em pé (perna quase esticada; andando, a pelve desce)
     hipHalf: 9.4, // metade da distância entre os quadris
-    thigh: 40, // coxa (quadril → joelho)
-    shin: 37.5, // canela (joelho → tornozelo)
+    thigh: 41.5, // coxa (quadril → joelho)
+    shin: 41, // canela (joelho → tornozelo)
     ankleHeight: 6.5, // tornozelo acima do chão, com o pé no chão
     heelBack: 3.4, // calcanhar atrás do tornozelo: o pé gira em volta dele ao pisar (ponta para cima)
     ballFwd: 10.4, // base dos dedos à frente do tornozelo: o pé gira em volta dela ao sair do chão
@@ -25,19 +32,22 @@
     // tronco
     pelvisUp: 2, // centro da pelve acima dos quadris
     waistUp: 15, // pelve → cintura
-    chestUp: 21, // cintura → peito
+    chestUp: 24, // cintura → peito
     shoulderHalf: 19.6, // metade da largura entre os ombros (articulação)
     shoulderUp: 5.5, // ombros acima do peito (baixo o bastante para o pescoço aparecer)
     shoulderBack: -1,
     neckBaseUp: 12.5, // peito → base do pescoço
-    neck: 26.5, // base do pescoço → centro da cabeça
+    neck: 22, // base do pescoço → centro da cabeça
     headForward: 0.5,
     headScale: 0.9, // tamanho da cabeça; muda tudo da cabeça junto: cabelo, penas, rosto (menor = mais imponente)
     // braços
-    upperArm: 28,
-    forearm: 25,
+    upperArm: 30,
+    forearm: 26,
   };
   BODY.legLength = BODY.thigh + BODY.shin;
+  BODY.armLength = BODY.upperArm + BODY.forearm;
+  // as animações foram afinadas com perna de 77,5 cm: alturas de passo, agachamento e passada escalam por aqui
+  BODY.legScale = BODY.legLength / 77.5;
 
   // ---- cores (tiradas da referência do dono: pele morena dourada, cabelo preto, tanga marrom) ----
   const PALETTE = {
@@ -130,9 +140,10 @@
     // mechas: raiz → meio → ponta. Poucas soltas no alto (cabelo meio bagunçado) e as compridas caindo atrás, até o
     // pescoço (o resto do comprimento é o "cabelo comprido", nas costas). Nenhuma cai do lado do rosto: ali só as tranças
     spikes: [
-      { root: [0, -6, 14], mid: [-2, -12, 18], tip: [-1, -19, 19], r: 4.2 },
-      { root: [-7, -4, 13], mid: [-11, -9, 15.5], tip: [-14.5, -14, 14], r: 3.8 },
-      { root: [7, -5, 13], mid: [11, -10, 15], tip: [14.5, -15, 13.5], r: 3.8 },
+      // (as três do alto ficam deitadas para trás: antes saíam do contorno da cabeça e viravam calombos)
+      { root: [0, -6, 13.5], mid: [-1.5, -12, 15.6], tip: [-1, -18, 14.6], r: 3.4 },
+      { root: [-7, -4, 12.6], mid: [-10.5, -9, 13.8], tip: [-13.5, -14, 11.6], r: 3.2 },
+      { root: [7, -5, 12.6], mid: [10.5, -10, 13.6], tip: [13.5, -15, 11.4], r: 3.2 },
       { root: [-6, -13, 2], mid: [-8, -16, -12], tip: [-7, -15, -26], r: 4 },
       { root: [6, -13, 2], mid: [8, -16, -12], tip: [7, -15, -26], r: 4 },
       { root: [0, -14, 4], mid: [0, -17.5, -10], tip: [0, -16, -25], r: 4.2 },
@@ -172,9 +183,12 @@
     ],
   };
 
-  // Penas: coroa atrás da cabeça, presas na faixa, abrindo em leque para cima (como na referência)
+  // Penas: coroa atrás da cabeça, presas na faixa, abrindo em leque para cima (como na referência). As hastes se juntam
+  // numa amarração de couro com cordão na faixa (`tie`): antes as penas brotavam do cabelo, sem nada que as prendesse
   const FEATHERS = {
     root: [0, -12.5, 10.5],
+    tie: { len: 5.2, r: 2.3, up: 1.2 }, // amarração: comprimento ao longo das hastes, raio, quanto sobe da raiz
+    quill: 0.13, // parte de baixo de cada pena que é só haste (a pena alarga depois)
     fanNormal: [0, -0.96, 0.25],
     list: [
       { dir: [-0.5, -0.36, 0.79], len: 29, w: 5.4, n: [-0.25, -0.94, 0.22], at: -6 },
@@ -187,14 +201,14 @@
 
   // Tronco: peito (do peito até a cintura) e pelve (com a tanga)
   const CHEST = [
-    { p: [0, 0.8, -17], r: 13.5 },
-    { p: [-8.8, 1, -13], r: 8 }, // oblíquos (cintura menos fina)
-    { p: [8.8, 1, -13], r: 8 },
-    { p: [0, 4, -9.5], r: 10.8 },
+    { p: [0, 0.8, -19.5], r: 13.5 },
+    { p: [-8.8, 1, -15], r: 8 }, // oblíquos (cintura menos fina)
+    { p: [8.8, 1, -15], r: 8 },
+    { p: [0, 4, -10.5], r: 10.8 },
     { p: [-8.2, 5.2, 1.8], r: 9.8 }, // peitorais
     { p: [8.2, 5.2, 1.8], r: 9.8 },
-    { p: [-12.2, -2.8, -2.4], r: 10.2 }, // dorsais (costas largas: o tronco abre em V)
-    { p: [12.2, -2.8, -2.4], r: 10.2 },
+    { p: [-11.6, -2.8, -2.6], r: 9.7 }, // dorsais (costas largas: o tronco abre em V, sem passar da largura do ombro)
+    { p: [11.6, -2.8, -2.6], r: 9.7 },
     { p: [-6.4, -2.4, 13.2], r: 6.2 }, // trapézio subindo para o pescoço
     { p: [6.4, -2.4, 13.2], r: 6.2 },
     { p: [-10.8, -2.4, 9.4], r: 6.9 },
@@ -214,10 +228,15 @@
   // Membros: esferas em (t, frente, fora, raio). O braço tem duas peças que se juntam sem emenda: o deltoide (capa
   // do ombro que afina no meio do braço, por cima) e o braço (bíceps na frente, tríceps atrás). Numa peça só, o casco
   // liso virava um tubo com uma bola em cima; separadas, a silhueta mostra o ombro e o bíceps
+  // deltoide com as três partes do músculo (lado, frente e trás) em volta da articulação, baixas e achatadas, e a
+  // ponta descendo até o meio do braço: antes era uma esfera só, redonda e alta, que parecia uma bola encaixada no
+  // tronco. O alto do ombro vem do trapézio (a ponte abaixo), não do deltoide
   const UPPER_ARM = [
-    { t: 0.09, f: 0.3, o: 1, r: 6.2, part: 'deltoide' },
-    { t: 0.38, f: 0.6, o: 1.6, r: 4.8, part: 'deltoide' }, // ponta do deltoide, do lado de fora
-    { t: 0.24, f: 0.2, o: 0, r: 5.6 },
+    { t: 0.13, f: 0, o: 1.5, r: 5.5, part: 'deltoide' }, // parte do lado (a primeira: a ponte do ombro liga nela)
+    { t: 0.16, f: 2.3, o: 0.6, r: 4.7, part: 'deltoide' }, // da frente
+    { t: 0.16, f: -2.3, o: 0.6, r: 4.7, part: 'deltoide' }, // de trás
+    { t: 0.42, f: 0.5, o: 1.4, r: 4.1, part: 'deltoide' }, // ponta, do lado de fora (onde o músculo prende no osso)
+    { t: 0.22, f: 0.2, o: 0, r: 5.5 },
     { t: 0.55, f: 2.1, o: 0.1, r: 5.6 }, // bíceps
     { t: 0.46, f: -2, o: -0.1, r: 5.5 }, // tríceps
     { t: 1, f: 0, o: 0, r: 4 }, // cotovelo
@@ -238,7 +257,13 @@
   // mão: palma, polegar e quatro dedos — (ao longo do antebraço a partir do punho, costas da mão, lado do polegar,
   // raio). Cada dedo sai da base e, aberto (relaxado), fica quase reto e um pouco curvo; fechado, dobra para dentro
   // da palma e os nós dos dedos fazem a frente do punho
+  // `size`: a mão de antes tinha 12,7 cm do punho à ponta dos dedos (~2/3 de uma mão de verdade); com 1,32 fica com
+  // ~17 cm (~10% da altura, o cânone). Os números abaixo são a forma; `size` é o tamanho (uma classe pode mudar)
   const HAND = {
+    size: 1.32,
+    // quanto cada dedo dobra a mais que o indicador numa mão solta (mindinho, anelar, médio, indicador): a cascata de
+    // uma mão relaxada de verdade (fechada, todos dobram igual)
+    curl: [0.32, 0.22, 0.12, 0],
     palm: [{ a: 2.4, d: 0.1, s: 0.2, r: 3.3 }, { a: 6.2, d: 0.35, s: -0.15, r: 3.15 }, { a: 4.2, d: -0.6, s: 1.6, r: 2.6 }],
     fingers: [
       { s: -2.45, base: 7.4, len: 3.7, r: 1.0 }, // mindinho
@@ -253,15 +278,16 @@
     { t: 0.34, f: 1.6, o: 0, r: 7.3 },
     { t: 0.3, f: 0, o: 1.2, r: 6.9 },
     { t: 0.4, f: -1.3, o: 0, r: 6.8 },
-    { t: 0.8, f: 1.2, o: -1.4, r: 5.2 }, // "gota" do lado de dentro, em cima do joelho
-    { t: 1, f: 0.5, o: 0, r: 4.9 },
+    { t: 0.97, f: 2.5, o: 0, r: 3.5 }, // patela: a frente do joelho mais marcada (e a parte de trás mais lisa)
+    { t: 1, f: 0.3, o: 0, r: 4.6 },
   ];
   const SHIN = [
-    { t: 0, f: 0.4, o: 0, r: 4.9 },
+    { t: 0, f: 0.3, o: 0, r: 4.6 },
     { t: 0.22, f: -3.2, o: 0, r: 6.3 }, // panturrilha
     { t: 0.3, f: -2.4, o: -1.5, r: 5.4 }, // a outra cabeça da panturrilha (dentro)
     { t: 0.58, f: -0.4, o: 0, r: 4.2 },
-    { t: 1, f: 0, o: 0, r: 3.4 },
+    { t: 0.84, f: -1.7, o: 0, r: 2.9 }, // tendão de Aquiles, atrás e acima do calcanhar
+    { t: 1, f: 0, o: 0, r: 3.1 }, // tornozelo mais fino (os ossinhos do lado vêm do pé)
   ];
   // linhas de músculo (finas, só no lado que olha para a câmera): pontos (t, ângulo em volta do osso, raio). Ângulo
   // 0 = frente do osso (bíceps, frente da coxa), 90 = lado de fora, 180 = trás
@@ -273,9 +299,12 @@
     antebraco: [{ pts: [[0.05, 75, 4.9], [0.3, 48, 5], [0.62, 22, 4]] }],
     coxa: [
       { pts: [[0.2, 42, 7.8], [0.5, 36, 7.2], [0.8, 22, 5.8]] }, // entre os músculos da frente
-      { pts: [[0.58, -42, 6.6], [0.74, -58, 6.2], [0.9, -30, 5.3], [0.93, -4, 5]] }, // contorno da "gota"
+      { pts: [[0.62, -40, 6.5], [0.78, -52, 5.9], [0.9, -30, 5]] }, // músculo de dentro, em cima do joelho (de leve)
     ],
-    canela: [{ pts: [[0.08, 138, 5.8], [0.27, 118, 6.7], [0.48, 128, 5]] }], // borda da panturrilha
+    canela: [
+      { pts: [[0.08, 138, 5.8], [0.27, 118, 6.7], [0.48, 128, 5]] }, // borda da panturrilha
+      { pts: [[0.74, 158, 3.9], [0.86, 168, 3.2], [0.97, 172, 3.1]] }, // tendão de Aquiles
+    ],
   };
   // pé: (lado de dentro, frente, cima, raio) a partir do tornozelo; o arco fica do lado de dentro (mais alto)
   const FOOT = [
@@ -284,8 +313,8 @@
     { s: 2.4, f: 9.9, u: -3.9, r: 2.65 }, // base do dedão
     { s: -2.2, f: 9.5, u: -4.05, r: 2.45 }, // base dos dedos de fora
     { s: -2.9, f: 4.8, u: -4.45, r: 2.05 }, // borda de fora (apoiada no chão)
-    { s: 2.1, f: 0.2, u: 0, r: 2.2 }, // maléolo de dentro
-    { s: -2.1, f: -0.2, u: -0.3, r: 2.2 }, // maléolo de fora
+    { s: 2.5, f: 0.4, u: 0.5, r: 2.0 }, // maléolo de dentro (mais alto e mais para a frente)
+    { s: -2.6, f: -0.7, u: -0.6, r: 2.0 }, // maléolo de fora (mais baixo e mais para trás)
   ];
   // dedos, no quadro dos dedos (origem na base dos dedos, no chão): o dedão separado dos outros
   const TOES = {
@@ -309,7 +338,9 @@
   const NECKLACE = { center: [0, 2.2, 8.2], radius: 12.6, tilt: 0.78, beads: 26, beadR: 1.45, claws: [-0.62, -0.31, 0, 0.31, 0.62], clawLen: 5.6 };
 
   // Tanga: cintura (anel na pelve) e o resto vem do casco da pelve
-  const LOINCLOTH = { ringZ: 3.6, ringFrontDrop: 1.6, rx: 15.6, ry: 12.6, band: 2.3 };
+  // abas de pano na frente e atrás (penduradas no cinto, balançam e as coxas empurram): sem elas a tanga era só pintura
+  // no quadril e ficava dura em qualquer movimento. w0/w1 = largura em cima/embaixo, len = comprimento (cm)
+  const LOINCLOTH = { ringZ: 3.6, ringFrontDrop: 1.6, rx: 15.6, ry: 12.6, band: 2.3, flap: { w0: 12.5, w1: 9.5, len: 21, lenBack: 18, gap: 1.2 } };
 
   /**
    * Encaixes para equipamento (ainda vazios). Cada item futuro diz em qual encaixe entra e traz suas
@@ -319,6 +350,9 @@
    *  - maoD / maoE: armas (presas no punho)            - acessorios: colar, penas, brinco, tanga
    */
   const SLOTS = ['cabeca', 'tronco', 'pernas', 'pes', 'maoD', 'maoE', 'acessorios'];
+  // partes do desenho do corpo (o que um equipamento pode esconder com `esconde`, ex.: um capacete esconde a franja)
+  const PARTS = ['cabeca', 'cabelo', 'cabeloFrente', 'franja', 'faixa', 'pena', 'amarracao', 'cabeloLongo', 'tranca', 'orelha', 'brinco',
+    'pescoco', 'peito', 'pelve', 'colar', 'abaFrente', 'abaTras', 'braco', 'antebraco', 'mao', 'coxa', 'canela', 'pe'];
 
   /** y da frente da cabeça no ponto (x, z) (o máximo entre as esferas da cabeça); null fora dela. */
   function surfaceY(x, z) {
@@ -341,5 +375,5 @@
 
   PD.BODY = BODY;
   PD.PALETTE = PALETTE;
-  PD.MODEL = { HEAD, HAIR, FEATHERS, CHEST, PELVIS, NECK, UPPER_ARM, SHOULDER, FOREARM, HAND, THIGH, SHIN, MUSCLE_LINES, FOOT, TOES, BODY_PAINT, NECKLACE, LOINCLOTH, SLOTS, surfaceY };
+  PD.MODEL = { HEAD, HAIR, FEATHERS, CHEST, PELVIS, NECK, UPPER_ARM, SHOULDER, FOREARM, HAND, THIGH, SHIN, MUSCLE_LINES, FOOT, TOES, BODY_PAINT, NECKLACE, LOINCLOTH, SLOTS, PARTS, surfaceY };
 })(window.PD = window.PD || {});

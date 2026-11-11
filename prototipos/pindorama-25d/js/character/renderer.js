@@ -14,12 +14,80 @@
   const { add, sub, scale, dot, norm, cross, at, dirIn, clamp, clamp01, smoothstep, mix, lerp } = M;
   const { limbAt } = PD.rig;
   const MOD = PD.MODEL;
-  const PAL = PD.PALETTE;
+  const BASE_PAL = PD.PALETTE;
+  let PAL = BASE_PAL; // a paleta do desenho atual (a da classe do personagem; veja draw)
   const K = PD.ISO_K;
   /** Peso da altura na ordem de desenho entre as partes do corpo (menor que o da câmera: veja `keyOf`). */
   const Z_WEIGHT = 0.15;
   /** Base da cabeça com os eixos esticados por `s`: tudo o que é da cabeça cresce junto (BODY.headScale). */
   const scaledFrame = (fr, s) => ({ o: fr.o, r: scale(fr.r, s), f: scale(fr.f, s), u: scale(fr.u, s) });
+
+  /** Pares em ordem fixa: o primeiro sempre antes (atrás) do segundo, sem medir. */
+  const FIXED_BEFORE = [
+    ['coxa', 'pelve'],
+    ['pescoco', 'peito'],
+    ['pescoco', 'cabeca'],
+  ];
+
+  /** Caixa (na tela) de uma parte do desenho. */
+  function bboxOf(it) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const sg of it.segs || []) {
+      const p = sg.poly;
+      if (!p) continue;
+      for (let k = 0; k < p.length; k += 2) {
+        if (p[k] < x0) x0 = p[k];
+        if (p[k] > x1) x1 = p[k];
+        if (p[k + 1] < y0) y0 = p[k + 1];
+        if (p[k + 1] > y1) y1 = p[k + 1];
+      }
+    }
+    return x1 > x0 ? { x0, y0, x1, y1 } : null;
+  }
+  /** Um ponto (na tela) onde duas partes se cobrem: o meio da maior interseção dos pedaços (todos convexos). */
+  const segBox = (sg) => {
+    if (sg._box) return sg._box;
+    const p = sg.poly;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let k = 0; k < p.length; k += 2) {
+      if (p[k] < x0) x0 = p[k];
+      if (p[k] > x1) x1 = p[k];
+      if (p[k + 1] < y0) y0 = p[k + 1];
+      if (p[k + 1] > y1) y1 = p[k + 1];
+    }
+    return (sg._box = { x0, y0, x1, y1 });
+  };
+  function overlapPoint(A, B) {
+    let best = null;
+    let bestA = 0;
+    for (const sa of A.segs) {
+      if (!sa.poly || sa.poly.length < 6 || sa.noDepth) continue;
+      const ba = segBox(sa);
+      for (const sb of B.segs) {
+        if (!sb.poly || sb.poly.length < 6 || sb.noDepth) continue;
+        const bb = segBox(sb);
+        if (ba.x1 < bb.x0 || bb.x1 < ba.x0 || ba.y1 < bb.y0 || bb.y1 < ba.y0) continue; // nem as caixas se cobrem
+        const c = S.clipConvex(sa.poly, sb.poly);
+        if (c.length < 6) continue;
+        let a = 0;
+        let cx = 0;
+        let cy = 0;
+        for (let k = 0; k < c.length; k += 2) {
+          const j = (k + 2) % c.length;
+          const cr = c[k] * c[j + 1] - c[j] * c[k + 1];
+          a += cr;
+          cx += (c[k] + c[j]) * cr;
+          cy += (c[k + 1] + c[j + 1]) * cr;
+        }
+        if (Math.abs(a) < 1e-6) continue;
+        if (Math.abs(a) > bestA) {
+          bestA = Math.abs(a);
+          best = { x: cx / (3 * a), y: cy / (3 * a) };
+        }
+      }
+    }
+    return bestA > 4 ? best : null;
+  }
 
   class CharacterRenderer {
     constructor(cam) {
@@ -55,7 +123,9 @@
     }
     circle(pt, r) {
       const q = this.P(pt);
-      return { x: q.x, y: q.y, r: r * this.zoom };
+      // d = profundidade do centro (cm, maior = mais perto da câmera) e rc = raio em cm: com eles dá para saber qual
+      // superfície está na frente num ponto da tela (veja _depthFix)
+      return { x: q.x, y: q.y, r: r * this.zoom, d: dot(pt, this.toCam), rc: r };
     }
     hull(circles) {
       this._last = circles;
@@ -97,7 +167,8 @@
       // ---- cabeça
       const headCircles = MOD.HEAD.spheres.map((s) => this.circle(at(head, ...s.p), s.r * hs));
       const headPoly = this.hull(headCircles);
-      items.push({ name: 'cabeca', key: headKey, group: 'cabeca', segs: [{ poly: headPoly, circles: this._last, mat: PAL.skin, k: 0.24, decal: (seg) => this._face(rig, look, seg) }] });
+      const headItem = { name: 'cabeca', key: headKey, group: 'cabeca', solid: true, anchor: true, segs: [{ poly: headPoly, circles: this._last, mat: PAL.skin, k: 0.24, decal: (seg) => this._face(rig, look, seg) }] };
+      items.push(headItem);
 
       // ---- orelhas
       const earrings = [];
@@ -107,7 +178,15 @@
         const ep = (q) => at(head, side * q.p[0], q.p[1], q.p[2]);
         const c = ep(e.mid);
         const n = scale(rig.head.r, side);
-        const key = faceAway ? Math.min(this.keyOf(c) - 3, massKey - 0.2) : this.keyOf(c) - 3;
+        // a orelha fica na frente da cabeça só se a superfície dela estiver na frente da do rosto naquele ponto (com
+        // folga, para não piscar); antes a chave do centro decidia e a orelha de lá pulava na frente da cara
+        const earC = this.circle(c, e.mid.r * hs);
+        const dHead = this._surfaceDepth(headItem, earC);
+        const was = this._earFront ? this._earFront[i] : false;
+        const front = dHead !== null && earC.d + e.mid.r * hs * 0.6 > dHead + (was ? -0.6 : 0.6);
+        (this._earFront || (this._earFront = [false, false]))[i] = front;
+        const behind = faceAway ? Math.min(this.keyOf(c) - 3, massKey - 0.2) : Math.min(this.keyOf(c) - 3, headKey - 0.15);
+        const key = front ? headKey + 0.12 : behind;
         items.push({
           name: 'orelha', key, group: 'orelha' + i,
           segs: [{ poly: this.hull([e.top, e.mid, e.lobe].map((q) => this.circle(ep(q), q.r * hs))), circles: this._last, mat: PAL.skin, k: 0.3, decal: () => this._ear(ep, n, rig.head) }],
@@ -128,13 +207,10 @@
         const tip = add(at(head, ...sp.tip), scale(wind, sway));
         const rootC = this.circle(root, sp.r * hs);
         const midC = this.circle(mid, sp.r * 0.62 * hs);
-        // mechas com a cor lisa do cabelo: a luz e a sombra ficam na massa (senão cada mecha vira um caroço)
-        if (this.fine) {
-          hairSegs.push({ poly: this.hull([rootC, midC]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
-          hairSegs.push({ poly: this.hull([midC, this.circle(tip, 0.8)]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
-        } else {
-          hairSegs.push({ poly: this.hull([rootC, midC, this.circle(tip, 0.8)]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
-        }
+        // mechas com a cor lisa do cabelo: a luz e a sombra ficam na massa (senão cada mecha vira um caroço). Duas peças em
+        // qualquer zoom (raiz → meio → ponta): de longe, uma peça só enchia a curva e a silhueta mudava com o zoom
+        hairSegs.push({ poly: this.hull([rootC, midC]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
+        hairSegs.push({ poly: this.hull([midC, this.circle(tip, 0.8)]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
       }
       items.push({ name: 'cabelo', key: massKey, group: 'cabeloTras', chain: true, segs: hairSegs, after: (segs) => this._hairStrands(rig, segs[0].poly) });
 
@@ -163,12 +239,12 @@
       const lhCircles = LH.head.map((c) => this.circle(at(head, ...c.p), c.r * hs)).concat(LH.back.map((c, k) => this.circle(add(at(rig.chest, ...c.p), scale(wind, k === 3 ? 2.6 : 1.6)), c.r)));
       const lhPoly = this.hull(lhCircles);
       const lhSegs = [{ poly: lhPoly, circles: this._last, mat: PAL.hair, k: 0.22 }];
-      for (const tp of this.fine ? LH.tips : []) {
+      for (const tp of LH.tips) { // as pontas em qualquer zoom (a silhueta não muda quando o zoom passa do limite)
         const a = add(at(rig.chest, tp.x, -9.2, 3), scale(wind, 2));
         const b = add(at(rig.chest, tp.x * 1.12, -8.6, 3 - tp.len), scale(wind, 3.2));
         lhSegs.push({ poly: this.hull([this.circle(a, 2.3), this.circle(b, 0.5)]), circles: this._last, mat: PAL.hair, k: 0, noInner: true });
       }
-      items.push({ name: 'cabeloLongo', key: this.keyOf(at(rig.chest, 0, -10, 9)), group: 'cabeloLongo', chain: true, segs: lhSegs, after: (segs) => this._longHair(rig, segs[0].poly) });
+      items.push({ name: 'cabeloLongo', key: this.keyOf(at(rig.chest, 0, -10, 9)), group: 'cabeloLongo', solid: true, chain: true, segs: lhSegs, after: (segs) => this._longHair(rig, segs[0].poly) });
 
       // tranças na frente dos ombros. Vista de cima, a raiz (atrás da orelha) cai na altura dos olhos: sem a tampa,
       // o alto da trança aparecia por cima do rosto como uma garra. A cabeça esconde esse trecho, e a trança nasce
@@ -212,16 +288,20 @@
         const fk = backKey + (Math.abs(j - (nF - 1) / 2) * 0.02) * (backKey > headKey ? 1 : -1);
         items.push({ name: 'pena', key: fk, group: 'pena' + j, segs: [{ poly: fd.poly, mat: fd.mat, k: 0.22, concave: true, decal: (seg) => this._featherDetail(seg, fd) }] });
       }
+      // amarração das penas na faixa: de costas, na frente das hastes; de frente, atrás (escondida pela cabeça)
+      if (MOD.FEATHERS.tie) items.push({ name: 'amarracao', key: backKey + (backKey > headKey ? 0.06 : -0.06), group: 'amarracao', segs: this._featherTie(rig) });
 
       // ---- pescoço (sempre atrás do peito e da cabeça)
       const chestKey = this.keyOf(rig.chest.o);
       const headBase = at(head, ...MOD.HEAD.neckBase);
       const neckPoly = this.hull([this.circle(rig.neckBase, MOD.NECK.r0), this.circle(M.lerp3(rig.neckBase, headBase, 0.5), (MOD.NECK.r0 + MOD.NECK.r1) / 2), this.circle(headBase, MOD.NECK.r1)]);
-      items.push({ name: 'pescoco', key: Math.min(headKey, chestKey) - 2, group: 'pescoco', segs: [{ poly: neckPoly, mat: PAL.skin, k: 0.32, decal: (seg) => this._neckShadow(seg, rig, headCircles) }] });
+      items.push({ name: 'pescoco', key: Math.min(headKey, chestKey) - 2, group: 'pescoco', solid: true, segs: [{ poly: neckPoly, circles: this._last, mat: PAL.skin, k: 0.32, decal: (seg) => this._neckShadow(seg, rig, headCircles) }] });
 
       // ---- tronco: peito e pelve (a tanga é pintada na pelve)
       const chestPoly = this.hull(MOD.CHEST.map((s) => this.circle(at(rig.chest, ...s.p), s.r)));
+      const chestCircles = this._last;
       const pelvisPoly = this.hull(MOD.PELVIS.map((s) => this.circle(at(rig.pelvis, ...s.p), s.r)));
+      const pelvisCircles = this._last;
       const waistJoint = { pt: this.P(at(rig.chest, ...MOD.CHEST[0].p)), r: MOD.CHEST[0].r * 1.25 * this.zoom };
       // peito e pelve são uma peça só (pele contínua): se outra parte cair entre os dois na ordem de desenho, o contorno
       // de um não pode aparecer em cima do outro (de costas, inclinado, a pelve virava um "ovo" nas costas)
@@ -236,12 +316,25 @@
         const T = MOD.SHOULDER.trap;
         const dc = limbAt(rig.upperArm[i], d0.t, d0.f, d0.o);
         const trapEnd = M.lerp3(dc, at(rig.chest, side * T.p[0], T.p[1], T.p[2]), frontK);
-        bridges.push({ poly: this.hull([this.circle(trapEnd, lerp(d0.r * 0.9, T.r, frontK)), this.circle(dc, d0.r * 0.92)]), circles: this._last, mat: PAL.skin, k: 0.26 });
+        // (noDepth: a ponte fica de fora da conta de quem está na frente — ela encosta no deltoide e empatava com o braço)
+        bridges.push({ poly: this.hull([this.circle(trapEnd, lerp(d0.r * 0.9, T.r, frontK)), this.circle(dc, d0.r * 0.92)]), circles: this._last, mat: PAL.skin, k: 0.26, noDepth: true });
       }
-      items.push({ name: 'peito', key: chestKey, group: 'tronco', order: 1, joint: waistJoint, clipOut: pelvisPoly, segs: bridges.concat([{ poly: chestPoly, mat: PAL.skin, k: 0.26, decal: (seg) => this._chestDetail(seg, rig) }]) });
+      const chestItem = { name: 'peito', key: chestKey, group: 'tronco', order: 1, solid: true, anchor: true, joint: waistJoint, clipOut: pelvisPoly, segs: bridges.concat([{ poly: chestPoly, circles: chestCircles, mat: PAL.skin, k: 0.26, decal: (seg) => this._chestDetail(seg, rig) }]) };
+      items.push(chestItem);
       const pelvisKey = this.keyOf(rig.pelvis.o) + 1;
-      items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, clipOut: chestPoly, segs: [{ poly: pelvisPoly, mat: PAL.skin, k: 0.26, decal: (seg) => this._loincloth(seg, rig, look) }] });
+      items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, solid: true, anchor: true, clipOut: chestPoly, segs: [{ poly: pelvisPoly, circles: pelvisCircles, mat: PAL.skin, k: 0.26, decal: (seg) => this._loincloth(seg, rig, look) }] });
       items.push({ name: 'colar', key: chestKey + 0.5, draw: () => this._necklace(rig, look) });
+      // abas da tanga: a da frente fica na frente das coxas quando a frente do quadril olha para a câmera (e atrás das
+      // pernas quando não olha); a de trás, o contrário
+      {
+        const fPv = this.facing(rig.pelvis.f);
+        const legMin = Math.min(...[0, 1].map((i) => this.keyOf(limbAt(rig.thigh[i], 0.5, 0, 0))));
+        for (const front of [true, false]) {
+          const seen = front ? fPv > -0.05 : fPv < 0.05;
+          const segs = this._flap(rig, look, front);
+          if (segs) items.push({ name: front ? 'abaFrente' : 'abaTras', key: seen ? pelvisKey + 0.4 : Math.min(legMin, pelvisKey) - 1.5, group: front ? 'abaFrente' : 'abaTras', segs });
+        }
+      }
 
       // ---- braços e pernas (cada lado)
       const thighKeys = [0, 1].map((i) => this.keyOf(limbAt(rig.thigh[i], 0.5, 0, 0)));
@@ -259,43 +352,44 @@
         const shoulderTop = this.hull(SH.clip.map((q) => this.circle(chestPt(q), q.r)));
         const armSph = (part) => MOD.UPPER_ARM.filter((s) => (s.part === 'deltoide') === (part === 'deltoide'));
         const deltCircles = armSph('deltoide').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
-        const deltSeg = { poly: this.hull(deltCircles), circles: this._last, mat: skin, k: 0.3, decal: () => this._shoulderMark(rig, i) };
+        const deltSeg = { poly: this.hull(deltCircles), circles: this._last, mat: skin, k: 0.3, ownShade: true, decal: () => this._shoulderMark(rig, i) };
         const armCircles = armSph('braco').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
         const armSeg = { poly: this.hull(armCircles), circles: this._last, mat: skin, k: 0.3, noInner: true, decal: () => this._upperArmPaint(rig, i) };
         const faCircles = MOD.FOREARM.map((s) => this.circle(limbAt(fa, s.t, s.f, s.o), s.r));
         const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM.find((s) => s.t === 1).r * 2.2 * this.zoom };
         // o deltoide por cima do braço (a sombra dele marca a borda, sem risco de "manga")
-        items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, chain: true, clipOut: shoulderTop, segs: [armSeg, deltSeg] });
+        items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, solid: true, chain: true, clipOut: shoulderTop, segs: [armSeg, deltSeg] });
         items.push({
-          name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, clipOut: shoulderTop,
+          name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, solid: true, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, clipOut: shoulderTop,
           segs: [{ poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._band(null, fa, MOD.BODY_PAINT.forearmBand, 4.6); this._muscleLines(fa, MOD.MUSCLE_LINES.antebraco); } }],
         });
         const hd = rig.hand[i];
-        const fistCenter = add(hd.o, scale(hd.a, 5));
-        const fk = clamp01(hd.fist ?? 1);
         const HM = MOD.HAND;
-        const HP = (a, d, s2) => add(add(add(hd.o, scale(hd.a, a)), scale(hd.d, d)), scale(hd.s, s2));
-        // dedos: aberto (relaxado, quase reto e um pouco curvo) ↔ fechado (dobrado para dentro da palma)
-        const fingers = HM.fingers.map((fg) => ({
-          base: HP(fg.base, 0.3, fg.s),
-          mid: M.lerp3(HP(fg.base + fg.len * 0.55, -0.3, fg.s * 1.03), HP(fg.base + 1.6, -1.9, fg.s), fk),
-          tip: M.lerp3(HP(fg.base + fg.len, -1.15, fg.s * 1.06), HP(fg.base - 0.2, -3, fg.s * 0.95), fk),
-          r: fg.r,
-        }));
-        const palmCircles = HM.palm.map((pc) => this.circle(HP(pc.a, pc.d, pc.s), pc.r));
-        const handSegs = [];
-        if (this.fine) {
-          handSegs.push({ poly: this.hull(palmCircles), circles: this._last, mat: skin, k: 0.3 });
-          // os dedos entram no contorno da mão; as divisões entre eles são linhas finas desenhadas depois
-          for (const f of fingers) handSegs.push({ poly: this.hull([this.circle(f.base, f.r * 1.05), this.circle(f.mid, f.r), this.circle(f.tip, f.r * 0.86)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
-        } else {
-          // de longe: a mão numa peça só (os dedos juntos)
-          handSegs.push({ poly: this.hull(palmCircles.concat(fingers.map((f) => this.circle(f.mid, f.r * 1.15)), fingers.slice(1, 3).map((f) => this.circle(f.tip, f.r * 1.1)))), circles: this._last, mat: skin, k: 0.3 });
-        }
+        const hk = HM.size || 1; // tamanho da mão (a forma é a mesma)
+        const hr = hk * 0.95; // a grossura cresce um tiquinho menos que o comprimento
+        const fistCenter = add(hd.o, scale(hd.a, 5 * hk));
+        const fk = clamp01(hd.fist ?? 1);
+        const HP = (a, d, s2) => add(add(add(hd.o, scale(hd.a, a * hk)), scale(hd.d, d * hk)), scale(hd.s, s2 * hk));
+        // dedos: aberto (relaxado, quase reto e um pouco curvo) ↔ fechado (dobrado para dentro da palma); numa mão solta,
+        // o mindinho dobra mais e o indicador menos (cascata)
+        const fingers = HM.fingers.map((fg, j) => {
+          const c = clamp01(fk + (HM.curl ? HM.curl[j] : 0) * (1 - fk) * 0.7);
+          return {
+            base: HP(fg.base, 0.3, fg.s),
+            mid: M.lerp3(HP(fg.base + fg.len * 0.55, -0.3, fg.s * 1.03), HP(fg.base + 1.6, -1.9, fg.s), c),
+            tip: M.lerp3(HP(fg.base + fg.len, -1.15, fg.s * 1.06), HP(fg.base - 0.2, -3, fg.s * 0.95), c),
+            r: fg.r * hr,
+          };
+        });
+        const palmCircles = HM.palm.map((pc) => this.circle(HP(pc.a, pc.d, pc.s), pc.r * hr));
+        // a mesma forma em qualquer zoom (palma, quatro dedos e polegar): antes, de longe, os dedos viravam um bloco
+        // só e a mão mudava de silhueta quando o zoom passava do limite. De longe só as linhas entre os dedos somem
+        const handSegs = [{ poly: this.hull(palmCircles), circles: this._last, mat: skin, k: 0.3 }];
+        for (const f of fingers) handSegs.push({ poly: this.hull([this.circle(f.base, f.r * 1.05), this.circle(f.mid, f.r), this.circle(f.tip, f.r * 0.86)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
         const T = HM.thumb;
         const thumbTip = M.lerp3(HP(T.open.a, T.open.d, T.open.s), HP(T.fist.a, T.fist.d, T.fist.s), fk);
-        handSegs.push({ poly: this.hull([this.circle(HP(T.base.a, T.base.d, T.base.s), T.base.r), this.circle(thumbTip, lerp(T.open.r, T.fist.r, fk))]), circles: this._last, mat: skin, k: 0.3, noInner: true });
-        items.push({ name: 'mao', key: this.keyOf(fistCenter) + 6, group: 'mao' + i, chain: true, segs: handSegs, after: () => this._handLines(hd, fingers, HP) });
+        handSegs.push({ poly: this.hull([this.circle(HP(T.base.a, T.base.d, T.base.s), T.base.r * hr), this.circle(thumbTip, lerp(T.open.r, T.fist.r, fk) * hr)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
+        items.push({ name: 'mao', key: this.keyOf(fistCenter) + 6, group: 'mao' + i, solid: true, chain: true, segs: handSegs, after: () => this._handLines(hd, fingers, HP) });
 
         const th = rig.thigh[i];
         const sh = rig.shin[i];
@@ -308,16 +402,13 @@
         const toeC = (t) => this.circle(at(toeFrame, -side * t.s, t.f, t.u), t.r);
         const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH.find((s) => s.t === 1).r * 2.2 * this.zoom };
         const ankle = { pt: this.P(rig.ankle[i]), r: MOD.SHIN.find((s) => s.t === 1).r * 1.5 * this.zoom };
-        items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._castShadow(pelvisPoly, 3.2, 0.5); this._muscleLines(th, MOD.MUSCLE_LINES.coxa); } }] });
-        items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); } }] });
+        items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, solid: true, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._castShadow(pelvisPoly, 3.2, 0.5); this._muscleLines(th, MOD.MUSCLE_LINES.coxa); } }] });
+        items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, solid: true, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); } }] });
+        // a mesma forma em qualquer zoom (pé, dedinhos e dedão): de longe só os riscos entre os dedos somem
         const footSegs = [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3 }];
-        if (this.fine) {
-          footSegs.push({ poly: this.hull(MOD.TOES.small.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
-          footSegs.push({ poly: this.hull(MOD.TOES.big.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
-        } else {
-          footSegs.push({ poly: this.hull(MOD.TOES.small.concat(MOD.TOES.big).map(toeC)), circles: this._last, mat: skin, k: 0.3 });
-        }
-        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, joint: ankle, segs: footSegs, after: () => this._toes(toeFrame, side) });
+        footSegs.push({ poly: this.hull(MOD.TOES.small.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        footSegs.push({ poly: this.hull(MOD.TOES.big.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, solid: true, joint: ankle, segs: footSegs, after: () => this._toes(toeFrame, side, ft) });
       }
       return items;
     }
@@ -327,7 +418,72 @@
      * Desenha o personagem. `look` traz piscar, vento no cabelo, molas das penas etc.;
      * `equipped` = { slot: id do item } (veja js/character/equipment.js).
      */
-    draw(ctx, rig, look, equipped) {
+    draw(ctx, rig, look, equipped, appearance) {
+      // exportação em camadas (js/tools/export.js): `this.layer` pode trazer
+      //  - items / units: as peças e as vezes de pintar já montadas para este quadro (de prepare() e _units());
+      //  - contorno: true → desenha só o contorno grosso de fora (o de todas as partes);
+      //  - pinta: (vez, índice) => bool → pinta só essas vezes, sem o contorno grosso (ele vem na camada do contorno).
+      // As juntas continuam medidas com todas as peças: empilhar as camadas dá o mesmo desenho
+      const layer = this.layer || null;
+      let items;
+      if (layer && layer.items) {
+        PAL = (appearance && appearance.paleta) || BASE_PAL;
+        this._setup(ctx);
+        items = layer.items;
+      } else items = this.prepare(ctx, rig, look, equipped, appearance);
+      const ink = PAL.ink;
+
+      const skip = this.debugSkip || {};
+      // 1) silhueta: contorno grosso de todas as partes
+      if (!skip.outline && !(layer && layer.pinta)) {
+        ctx.fillStyle = ink;
+        const all = new Path2D();
+        for (const it of items) {
+          if (!it.segs) continue;
+          for (const s of it.segs) {
+            if (!s.poly || s.poly.length < 6 || s.isCap || s.isNape || s.thinOnly) continue; // toucas e o pano fino ficam dentro da silhueta
+            if (s.circles) S.polyPath(this.outlinePoly(s, this.inkOut, true), 0, 0, all);
+            else S.inkOutline(ctx, s.poly, ink, this.inkOut, this.light);
+          }
+        }
+        ctx.fillStyle = ink;
+        ctx.fill(all);
+      }
+      if (layer && layer.contorno) return;
+
+      // juntas de cada membro (cotovelo, joelho, tornozelo): se os pedaços de um membro saírem em vezes diferentes, o
+      // contorno fino de um não aparece por cima do outro dentro da junta (nada de "bola" no joelho)
+      const joints = new Map();
+      for (const it of items) {
+        if (!it.group || it.order === undefined) continue;
+        if (!joints.has(it.group)) joints.set(it.group, { orders: new Set(), at: new Map() });
+        const g = joints.get(it.group);
+        g.orders.add(it.order);
+        if (it.joint) g.at.set(it.order, it.joint);
+      }
+      const holesFor = (run) => {
+        const g = run[0].group && joints.get(run[0].group);
+        if (!g || g.orders.size < 2) return null;
+        const R = new Set(run.map((it) => it.order));
+        const holes = [];
+        for (const [k, jt] of g.at) if (g.orders.has(k - 1) && R.has(k) !== R.has(k - 1)) holes.push(jt);
+        return holes.length ? holes : null;
+      };
+
+      // 2) parte por parte; partes vizinhas do mesmo membro viram uma corrente só (sem emenda na junta)
+      const units = (layer && layer.units) || this._units(items);
+      for (let u = 0; u < units.length; u++) {
+        if (layer && layer.pinta && !layer.pinta(units[u], u)) continue;
+        this._paintUnit(units[u], holesFor);
+      }
+
+      if (this.showBones) this._bones(rig);
+    }
+
+    /** Peças do personagem na ordem de desenho, com o equipamento encaixado (sem desenhar nada). */
+    prepare(ctx, rig, look, equipped, appearance) {
+      // cores da classe (as da identidade — pele, olhos, cabelo — são sempre as do modelo; veja classes.js)
+      PAL = (appearance && appearance.paleta) || BASE_PAL;
       this._setup(ctx);
       let items = this._sorted(this._items(rig, look));
       if (equipped && Object.keys(equipped).length && PD.equipment) {
@@ -346,35 +502,23 @@
           items.splice(idx + 1, 0, e);
         }
       }
-      const ink = PAL.ink;
+      return items;
+    }
 
-      const skip = this.debugSkip || {};
-      // 1) silhueta: contorno grosso de todas as partes
-      if (!skip.outline) {
-        ctx.fillStyle = ink;
-        const all = new Path2D();
-        for (const it of items) {
-          if (!it.segs) continue;
-          for (const s of it.segs) {
-            if (!s.poly || s.poly.length < 6 || s.isCap || s.isNape) continue; // as toucas ficam dentro da silhueta
-            if (s.circles) S.polyPath(this.outlinePoly(s, this.inkOut, true), 0, 0, all);
-            else S.inkOutline(ctx, s.poly, ink, this.inkOut, this.light);
-          }
-        }
-        ctx.fillStyle = ink;
-        ctx.fill(all);
-      }
-
-      // 2) parte por parte; partes vizinhas do mesmo membro viram uma corrente só (sem emenda na junta)
+    /**
+     * As vezes de pintar: peças seguidas do mesmo grupo viram uma corrente (uma peça só, sem emenda na junta). No
+     * tronco, o colar (desenhado à parte) pode cair entre o peito e a pelve: ele fica para depois, senão a pelve era
+     * desenhada sozinha, com contorno por cima das costas.
+     */
+    _units(items) {
+      const units = [];
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
         if (it.draw) {
-          it.draw();
+          units.push({ items: [it], run: null, deferred: [] });
           continue;
         }
         const run = [it];
-        // peças seguidas do mesmo grupo viram uma corrente. No tronco, o colar (desenhado à parte) pode cair entre o
-        // peito e a pelve: ele fica para depois, senão a pelve era desenhada sozinha, com contorno por cima das costas
         const deferred = [];
         for (;;) {
           let k = i + 1;
@@ -386,23 +530,29 @@
           deferred.push(...skipped);
           i = k;
         }
-        if (it.hideInside) {
-          // escondida atrás de outra parte (o alto da trança atrás da cabeça): nada dela aparece dentro do polígono
-          ctx.save();
-          const p = new Path2D();
-          p.rect(-1e5, -1e5, 2e5, 2e5);
-          S.polyPath(it.hideInside, 0, 0, p);
-          ctx.clip(p, 'evenodd');
-          this._drawRun(run);
-          ctx.restore();
-          for (const d of deferred) d.draw();
-          continue;
-        }
-        this._drawRun(run);
-        for (const d of deferred) d.draw();
+        units.push({ items: run.concat(deferred), run, deferred });
       }
+      return units;
+    }
 
-      if (this.showBones) this._bones(rig);
+    _paintUnit(un, holesFor) {
+      if (!un.run) {
+        un.items[0].draw();
+        return;
+      }
+      const it = un.run[0];
+      if (it.hideInside) {
+        // escondida atrás de outra parte (o alto da trança atrás da cabeça): nada dela aparece dentro do polígono
+        const ctx = this.ctx;
+        ctx.save();
+        const p = new Path2D();
+        p.rect(-1e5, -1e5, 2e5, 2e5);
+        S.polyPath(it.hideInside, 0, 0, p);
+        ctx.clip(p, 'evenodd');
+        this._drawRun(un.run, holesFor(un.run));
+        ctx.restore();
+      } else this._drawRun(un.run, holesFor(un.run));
+      for (const d of un.deferred) d.draw();
     }
 
     /**
@@ -419,21 +569,223 @@
         if (!groups.has(it.group)) groups.set(it.group, []);
         groups.get(it.group).push(it);
       }
+      // os pedaços de um membro ficam juntos na ordem base (uma peça só, sem emenda no joelho ou no cotovelo). Antes
+      // um limite de diferença de chave separava a perna da frente em três vezes (coxa atrás da pelve, canela e pé
+      // muito depois) mesmo sem nada para passar entre eles; agora quem separa um membro é _depthFix, e só quando
+      // outra parte precisa mesmo ficar entre os pedaços
       for (const [name, list] of groups) {
         const keys = list.map((it) => it.key);
-        const spread = Math.max(...keys) - Math.min(...keys);
-        const limit = name.startsWith('braco') ? 6 : 11;
-        if (spread > limit) continue;
         const gk = name.startsWith('perna') ? list.find((it) => it.name === 'coxa').key : Math.max(...keys);
         for (const it of list) {
           it.subKey = it.key;
           it.sortKey = gk;
         }
       }
-      return items.sort((a, b) => a.sortKey - b.sortKey || a.subKey - b.subKey);
+      items.sort((a, b) => a.sortKey - b.sortKey || a.subKey - b.subKey);
+      return this._depthFix(items);
     }
 
-    _drawRun(run) {
+    /**
+     * Correção da ordem pelas superfícies. Duas partes sólidas (tronco, braços, mãos, pernas) que se cobrem na tela
+     * ficam na ordem de quem tem a superfície mais perto da câmera NO PONTO em que se cobrem — medido pelas esferas do
+     * modelo (cada círculo guarda a profundidade e o raio em cm). A distância dos centros, usada antes, não diz isso: o
+     * braço do lado de perto passava para trás do peito no balanço da caminhada, a mão pulava na frente e atrás da coxa.
+     * Pedaços do mesmo membro continuam juntos quando dá (uma peça só, sem emenda no cotovelo ou no joelho); o que está
+     * preso a uma parte (colar, tranças, cabelo comprido, pescoço) fica do mesmo lado dela em que estava.
+     */
+    _depthFix(items) {
+      const solids = items.filter((it) => it.solid);
+      const n = solids.length;
+      if (n < 2) return items;
+      const id = (it) => it.name + ':' + it.group;
+      const memo = this._pairMemo || (this._pairMemo = new Map());
+      const seen = new Map();
+      for (const it of solids) it._bb = bboxOf(it);
+      // restrições: [quem vai antes, quem vai depois]
+      const cons = [];
+      for (let a = 0; a < n; a++) {
+        for (let b = a + 1; b < n; b++) {
+          const A = solids[a];
+          const Bi = solids[b];
+          if (A.group === Bi.group) continue; // dentro de um membro vale a ordem da corrente
+          if (A.anchor && Bi.anchor) continue; // entre cabeça e tronco vale a ordem base (eles não mudam de lugar)
+          // regras fixas (não medidas): as coxas ficam embaixo da tanga (a pelve cobre o alto delas); o pescoço fica
+          // atrás do peito e da cabeça. Tranças, colar e o resto do cabelo ficam com as regras deles (estão encostados
+          // na pele: a superfície empata com a do corpo e a medida não decide)
+          const rule = FIXED_BEFORE.find(([x, y]) => (A.name === x && Bi.name === y) || (A.name === y && Bi.name === x));
+          if (rule) {
+            cons.push(A.name === rule[0] ? [A, Bi, Infinity] : [Bi, A, Infinity]);
+            continue;
+          }
+          if (!A._bb || !Bi._bb || A._bb.x1 < Bi._bb.x0 || Bi._bb.x1 < A._bb.x0 || A._bb.y1 < Bi._bb.y0 || Bi._bb.y1 < A._bb.y0) continue;
+          const X = overlapPoint(A, Bi);
+          if (!X) continue;
+          const dA = this._surfaceDepth(A, X);
+          const dB = this._surfaceDepth(Bi, X);
+          if (dA === null || dB === null) continue;
+          // com folga: perto do empate fica a decisão do quadro anterior (senão a ordem tremia quadro a quadro)
+          const k = id(A) < id(Bi) ? id(A) + '|' + id(Bi) : id(Bi) + '|' + id(A);
+          const sgnAB = id(A) < id(Bi) ? 1 : -1;
+          const prev = memo.get(k);
+          let front = 0; // +1: A na frente, -1: B na frente
+          if (Math.abs(dA - dB) >= 1.2 || prev === undefined) front = Math.abs(dA - dB) < 0.4 ? 0 : Math.sign(dA - dB);
+          else front = prev * sgnAB;
+          if (!front) continue;
+          seen.set(k, front * sgnAB);
+          const w = Math.abs(dA - dB);
+          if (front > 0) cons.push([Bi, A, w]);
+          else cons.push([A, Bi, w]);
+        }
+      }
+      this._pairMemo = seen;
+      if (!cons.length) return items;
+      // as âncoras (cabeça e tronco) ficam na ordem base entre si: restrição fixa entre vizinhas
+      const anchors = solids.filter((it) => it.anchor);
+      for (let k = 0; k + 1 < anchors.length; k++) cons.push([anchors[k], anchors[k + 1], Infinity]);
+      // partes que se encaixam umas nas outras podem pedir uma ordem impossível (a mão na frente da pelve, a coxa na
+      // frente da mão e a coxa atrás da pelve): as restrições entram da mais forte para a mais fraca (as regras fixas
+      // primeiro) e a que fecharia um ciclo fica de fora
+      cons.sort((x, y) => y[2] - x[2]);
+      const next = new Map();
+      const reach = (from, to) => {
+        const stack = [from];
+        const vis = new Set();
+        while (stack.length) {
+          const u = stack.pop();
+          if (u === to) return true;
+          if (vis.has(u)) continue;
+          vis.add(u);
+          for (const v of next.get(u) || []) stack.push(v);
+        }
+        return false;
+      };
+      const accepted = [];
+      for (const c of cons) {
+        if (reach(c[1], c[0])) continue;
+        if (!next.has(c[0])) next.set(c[0], []);
+        next.get(c[0]).push(c[1]);
+        accepted.push(c);
+      }
+      // 1) uma ordem dos sólidos que cumpre as restrições (estável pela ordem base)
+      const solidIdx = new Map(solids.map((it, k) => [it, k]));
+      const indeg = new Array(n).fill(0);
+      const succ = solids.map(() => []);
+      for (const [X, Y] of accepted) {
+        succ[solidIdx.get(X)].push(solidIdx.get(Y));
+        indeg[solidIdx.get(Y)]++;
+      }
+      const done = new Array(n).fill(false);
+      const T = [];
+      for (let step = 0; step < n; step++) {
+        let pick = -1;
+        for (let k = 0; k < n && pick < 0; k++) if (!done[k] && indeg[k] === 0) pick = k;
+        if (pick < 0) for (let k = 0; k < n && pick < 0; k++) if (!done[k]) pick = k;
+        done[pick] = true;
+        T.push(solids[pick]);
+        for (const s2 of succ[pick]) indeg[s2]--;
+      }
+      // 2) tronco e cabeça ficam no lugar (colar, faixa, franja, penas e brincos dependem deles); o resto entra cada um
+      //    no lugar válido mais perto de onde estava (só se mexe o que precisa)
+      const isTorso = (it) => !!it.anchor;
+      const out = items.filter((it) => !it.solid || isTorso(it));
+      const baseNext = new Map(); // primeiro item que não é membro depois de cada membro, na ordem base
+      for (let k = 0; k < items.length; k++) {
+        const it = items[k];
+        if (!it.solid || isTorso(it)) continue;
+        let j = k + 1;
+        while (j < items.length && items[j].solid && !isTorso(items[j])) j++;
+        baseNext.set(it, j < items.length ? items[j] : null);
+      }
+      let prevPos = -1;
+      for (let k = 0; k < T.length; k++) {
+        const it = T[k];
+        if (isTorso(it)) {
+          prevPos = out.indexOf(it);
+          continue;
+        }
+        let hi = out.length;
+        for (let j = k + 1; j < T.length; j++) {
+          if (isTorso(T[j])) {
+            hi = out.indexOf(T[j]);
+            break;
+          }
+        }
+        const nx = baseNext.get(it);
+        let at = nx ? out.indexOf(nx) : out.length;
+        if (at < 0) at = out.length;
+        at = Math.min(Math.max(at, prevPos + 1), hi);
+        out.splice(at, 0, it);
+        prevPos = at;
+      }
+      return out;
+    }
+
+    /** Pinta vários pedaços convexos como um volume só: base, sombra do lado contrário à luz e o brilho na borda. */
+    _paintUnion(list) {
+      const ctx = this.ctx;
+      const L = this.light;
+      const mat = list[0].mat;
+      const k = Math.min(...list.map((s) => S.polyRadius(s.poly) * s.k));
+      const U = new Path2D();
+      for (const s of list) {
+        S.polyPath(s.poly, 0, 0, U);
+        s.path = S.polyPath(s.poly);
+        s._painted = true;
+      }
+      if (k <= 0.2) {
+        ctx.fillStyle = mat.base;
+        ctx.fill(U);
+        return;
+      }
+      const hk = mat.light ? k * 0.42 : 0;
+      ctx.fillStyle = mat.shade;
+      ctx.fill(U);
+      ctx.save();
+      ctx.clip(U);
+      const lit = new Path2D();
+      for (const s of list) S.polyPath(s.poly, L.x * k, L.y * k, lit);
+      ctx.clip(lit);
+      if (hk > 0) {
+        ctx.fillStyle = mat.light;
+        ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
+        const core = new Path2D();
+        for (const s of list) S.polyPath(s.poly, -L.x * hk, -L.y * hk, core);
+        ctx.clip(core);
+      }
+      ctx.fillStyle = mat.base;
+      ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
+      ctx.restore();
+    }
+
+    /** Profundidade (cm) da superfície de uma parte num ponto da tela: a esfera da frente que cobre o ponto. */
+    _surfaceDepth(it, X) {
+      let best = -Infinity;
+      let near = null;
+      let nd = Infinity;
+      for (const sg of it.segs) {
+        if (sg.noDepth) continue;
+        for (const c of sg.circles || []) {
+          if (c.d === undefined) continue;
+          const dx = X.x - c.x;
+          const dy = X.y - c.y;
+          const u2 = dx * dx + dy * dy;
+          if (u2 < c.r * c.r) {
+            const h = Math.sqrt(c.r * c.r - u2) / this.zoom;
+            if (c.d + h > best) best = c.d + h;
+          } else {
+            const dd = Math.sqrt(u2) - c.r;
+            if (dd < nd) {
+              nd = dd;
+              near = c;
+            }
+          }
+        }
+      }
+      if (best > -Infinity) return best;
+      return near ? near.d : null;
+    }
+
+    _drawRun(run, holes = null) {
       const ctx = this.ctx;
       const ink = PAL.ink;
       const segs = [];
@@ -455,6 +807,15 @@
         S.polyPath(clipOut, 0, 0, p);
         ctx.clip(p, 'evenodd');
       }
+      if (holes) {
+        for (const jt of holes) {
+          const p = new Path2D();
+          p.rect(-1e5, -1e5, 2e5, 2e5);
+          p.moveTo(jt.pt.x + jt.r, jt.pt.y);
+          p.arc(jt.pt.x, jt.pt.y, jt.r, 0, M.TAU);
+          ctx.clip(p, 'evenodd');
+        }
+      }
       const thin = new Path2D();
       for (const s of segs) {
         if (s.poly.length < 6) continue;
@@ -464,20 +825,43 @@
       ctx.fillStyle = ink;
       ctx.fill(thin);
       ctx.restore();
-      // pintura e detalhes
-      for (const s of segs) {
-        if (s.poly.length < 6) continue;
-        const r = S.polyRadius(s.poly);
-        // cascos são convexos: sombra e brilho sem máscara (bem mais leve); o resto usa a máscara
-        s.path = s.concave ? S.paintVolume(ctx, s.poly, s.mat, this.light, r * s.k, s.opts) : S.paintConvex(ctx, s.poly, s.mat, this.light, r * s.k, s.opts);
-        if (s.decal && !(this.debugSkip && this.debugSkip.decals)) {
-          ctx.save();
-          ctx.clip(s.path);
-          s.decal(s);
-          ctx.restore();
+      // pintura e detalhes. Braço e perna esticados: um volume só (a sombra e o brilho correm pelo membro inteiro).
+      // Antes cada pedaço tinha a própria meia-lua de sombra, e a da canela caía em cima da coxa: o joelho virava uma
+      // bola com um arco no meio. O deltoide continua com a sombra dele (é ela que desenha o músculo)
+      const unify = run[0].group && /^(perna|braco)/.test(run[0].group) && !run.some((it) => it.bent);
+      if (unify) {
+        const shared = segs.filter((s) => s.poly.length >= 6 && !s.ownShade && s.k > 0);
+        if (shared.length > 1) this._paintUnion(shared);
+        else unifyFallback(shared);
+      }
+      function unifyFallback(list) {
+        for (const s of list) s._painted = false;
+      }
+      // cada parte pinta, faz os detalhes dela e só então vem a próxima (a da frente cobre os detalhes da de trás: antes
+      // os riscos dos dedos do pé escondido atrás da canela saíam por cima do joelho)
+      const afterDone = new Set();
+      for (const it of run) {
+        for (const s of it.segs) {
+          if (s.poly.length < 6) continue;
+          const r = S.polyRadius(s.poly);
+          // cascos são convexos: sombra e brilho sem máscara (bem mais leve); o resto usa a máscara
+          if (!s._painted) s.path = s.concave ? S.paintVolume(ctx, s.poly, s.mat, this.light, r * s.k, s.opts) : S.paintConvex(ctx, s.poly, s.mat, this.light, r * s.k, s.opts);
+          s._painted = false;
+          if (s.decal && !(this.debugSkip && this.debugSkip.decals)) {
+            ctx.save();
+            ctx.clip(s.path);
+            s.decal(s);
+            ctx.restore();
+          }
+        }
+        // num membro dobrado (pedaços que se cobrem) o detalhe sai antes do pedaço seguinte; esticado, no fim
+        if (it.after && !unify && run.length > 1) {
+          it.after(it.segs);
+          afterDone.add(it);
         }
       }
       // linhas de dentro entre os pedaços da corrente (menos perto das juntas)
+      const limb = !!(run[0].group && /^(braco|perna)/.test(run[0].group));
       if (chain && segs.length > 1 && !(run[0].group && /^(braco|perna|tronco)/.test(run[0].group) && !run.some((it) => it.bent))) {
         for (let i = 1; i < segs.length; i++) {
           if (segs[i].noInner || segs[i].poly.length < 6) continue;
@@ -496,13 +880,17 @@
             ctx.clip(hole, 'evenodd');
           }
           ctx.lineJoin = 'round';
-          ctx.strokeStyle = ink;
-          ctx.lineWidth = this.inkIn * 1.6;
+          // num braço ou numa perna dobrados, a linha onde um pedaço passa na frente do outro é uma dobra de pele:
+          // traço suave e fino (o de tinta grossa fazia o joelho e o tornozelo parecerem peças encaixadas)
+          const crease = limb;
+          ctx.strokeStyle = crease ? PAL.inkSoft : ink;
+          ctx.globalAlpha = crease ? 0.75 : 1;
+          ctx.lineWidth = this.inkIn * (crease ? 1.05 : 1.6);
           ctx.stroke(S.polyPath(segs[i].poly));
           ctx.restore();
         }
       }
-      for (const it of run) if (it.after) it.after(it.segs);
+      for (const it of run) if (it.after && !afterDone.has(it)) it.after(it.segs);
     }
 
     // ---------------------------------------------------------------- rosto
@@ -1241,7 +1629,7 @@
         return { x: f(a.x, b.x, c.x, d.x), y: f(a.y, b.y, c.y, d.y), z: f(a.z, b.z, c.z, d.z) };
       };
       const pts = [];
-      const per = this.fine ? 3 : 2;
+      const per = 3; // gomos da trança: os mesmos em qualquer zoom (de longe só os riscos somem)
       for (let sgm = 0; sgm < 3; sgm++) {
         for (let k = 0; k < per; k++) pts.push(cr(ctrl[sgm], ctrl[sgm + 1], ctrl[sgm + 2], ctrl[sgm + 3], k / per));
       }
@@ -1379,7 +1767,9 @@
       for (let i = 0; i <= N; i++) {
         const s = i / N;
         const ctr = add(add(root, scale(dir, L * s)), scale(curl, 1.6 * s * s));
-        const hw = (W / 2) * Math.sin(Math.PI * Math.pow(s, 0.72)) * (1 - 0.1 * s);
+        // embaixo é só haste (presa na amarração); a pena alarga depois
+        const q = F.quill || 0;
+        const hw = (W / 2) * Math.sin(Math.PI * Math.pow(s, 0.72)) * (1 - 0.1 * s) * (q ? smoothstep(q * 0.4, q * 1.8, s) * 0.92 + 0.08 : 1);
         left.push(this.P(add(ctr, scale(wAxis, hw))));
         right.push(this.P(add(ctr, scale(wAxis, -hw))));
         rachis.push(this.P(ctr));
@@ -1389,6 +1779,52 @@
       for (let i = right.length - 1; i >= 0; i--) poly.push(right[i].x, right[i].y);
       const mat = PAL.feathers[j % PAL.feathers.length];
       return { poly, left, right, rachis, mat: { base: mat.base, shade: mat.tip, light: mat.light }, tip: mat.tip, light: mat.light, mid: add(root, scale(dir, L * 0.45)) };
+    }
+
+    /** Amarração de couro onde as hastes das penas se juntam, com duas voltas de cordão. */
+    _featherTie(rig) {
+      const F = MOD.FEATHERS;
+      const T = F.tie;
+      const hs = this.hs;
+      const mid = F.list[Math.floor(F.list.length / 2)];
+      const axis = norm(dirIn(rig.head, ...mid.dir));
+      const base = add(at(this.H, ...F.root), scale(axis, -T.up * hs * 0.3));
+      const top = add(base, scale(axis, T.len * hs));
+      const c0 = this.circle(base, T.r * hs);
+      const c1 = this.circle(top, T.r * 0.82 * hs);
+      const poly = this.hull([c0, c1]);
+      const circles = this._last;
+      return [
+        {
+          poly,
+          circles,
+          mat: PAL.clothBand,
+          k: 0.3,
+          decal: () => {
+            const ctx = this.ctx;
+            const z = this.zoom;
+            const A = this.P(base);
+            const Bq = this.P(top);
+            const dx = Bq.x - A.x;
+            const dy = Bq.y - A.y;
+            const l = Math.hypot(dx, dy) || 1;
+            const nx = -dy / l;
+            const ny = dx / l;
+            const w = T.r * hs * z * 1.05;
+            for (const t of [0.3, 0.62]) {
+              const cx = A.x + dx * t;
+              const cy = A.y + dy * t;
+              ctx.strokeStyle = PAL.cord.base;
+              ctx.lineWidth = Math.max(1, 0.75 * z);
+              ctx.lineCap = 'round';
+              ctx.beginPath();
+              ctx.moveTo(cx - nx * w, cy - ny * w);
+              ctx.lineTo(cx + nx * w, cy + ny * w);
+              ctx.stroke();
+            }
+          },
+        },
+      ];
     }
 
     _featherDetail(seg, fd) {
@@ -1470,17 +1906,18 @@
         // clavícula
         line([[sx * 2.6, 9.6, 11.2], [sx * 7.5, 8.2, 12.6], [sx * 12.5, 4.6, 12.2]], [sx * 0.2, 0.8, 0.6], 0.45, 0.55);
         // gomos da barriga
-        for (const zz of [-8.4, -12.6, -16.6]) line([[sx * 1, 14.1 + zz * 0.06, zz], [sx * 3.6, 13.9 + zz * 0.06, zz + 0.5], [sx * 5.8, 13.2 + zz * 0.06, zz + 1.2]], [sx * 0.15, 1, 0], 0.44, 0.6);
+        // (o tronco ficou 3 cm mais longo: a barriga desce junto)
+        for (const zz of [-9, -13.8, -18.4]) line([[sx * 1, 14.1 + zz * 0.06, zz], [sx * 3.6, 13.9 + zz * 0.06, zz + 0.5], [sx * 5.8, 13.2 + zz * 0.06, zz + 1.2]], [sx * 0.15, 1, 0], 0.44, 0.6);
         // lado da costela (oblíquo)
-        line([[sx * 8.8, 11.4, -9], [sx * 9.2, 10.6, -14], [sx * 8.4, 10, -18.5]], [sx * 0.6, 0.8, 0], 0.42, 0.45);
+        line([[sx * 8.8, 11.4, -9.5], [sx * 9.2, 10.6, -15], [sx * 8.4, 10, -20.5]], [sx * 0.6, 0.8, 0], 0.42, 0.45);
         // escápula (costas)
         line([[sx * 4, -11.6, 6], [sx * 9, -11, 1], [sx * 8, -10.6, -4]], [sx * 0.2, -1, 0.1], 0.5, 0.6);
       }
       line([[0, 14.5, 4], [0, 14.6, -1]], [0, 1, 0], 0.45, 0.5); // esterno
-      line([[0, 14.4, -6], [0, 14, -12], [0, 13.6, -19]], [0, 1, 0], 0.45, 0.55); // linha da barriga
-      line([[0, -11.8, 9], [0, -12, 0], [0, -11.6, -10], [0, -11, -18]], [0, -1, 0], 0.5, 0.6); // coluna
+      line([[0, 14.4, -6], [0, 14, -13], [0, 13.6, -21]], [0, 1, 0], 0.45, 0.55); // linha da barriga
+      line([[0, -11.8, 9], [0, -12, 0], [0, -11.6, -11], [0, -11, -20]], [0, -1, 0], 0.5, 0.6); // coluna
       // umbigo
-      const nb = at(ch, 0, 12.6, -20.6);
+      const nb = at(ch, 0, 13.4, -22.8);
       const nn = norm(dirIn(ch, 0, 1, -0.1));
       if (this.facing(nn) > 0.2) {
         const q = this.P(nb);
@@ -1642,10 +2079,31 @@
     }
 
     /** Linhas entre os dedos do pé: o dedão separado e os outros dedinhos (vistos de cima). */
-    _toes(toe, side) {
+    _toes(toe, side, ft) {
       if (!this.fine) return;
-      if (this.facing(toe.u) < -0.1) return;
       const ctx = this.ctx;
+      // ossinho do tornozelo do lado que aparece (um "c" suave)
+      if (ft) {
+        for (const sgn of [-1, 1]) {
+          const sp = MOD.FOOT.find((q) => Math.sign(q.s) === sgn && Math.abs(q.s) > 2 && Math.abs(q.f) < 1);
+          if (!sp) continue;
+          const nrm = scale(ft.r, -side * sgn);
+          const fc = this.facing(nrm);
+          if (fc < 0.25) continue;
+          const c = at(ft, -side * sp.s, sp.f, sp.u);
+          const pts = [-0.9, 0, 0.9].map((k) => this.P(add(add(c, scale(nrm, sp.r * 0.8)), add(scale(ft.f, sp.r * 0.75 * k), scale(ft.u, sp.r * 0.6 * (1 - Math.abs(k)))))));
+          ctx.strokeStyle = PAL.skin.shade;
+          ctx.globalAlpha = 0.8 * smoothstep(0.25, 0.55, fc);
+          ctx.lineCap = 'round';
+          ctx.lineWidth = Math.max(0.5, 0.45 * this.zoom);
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          ctx.quadraticCurveTo(pts[1].x, pts[1].y, pts[2].x, pts[2].y);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+      if (this.facing(toe.u) < -0.1) return;
       ctx.strokeStyle = PAL.inkSoft;
       ctx.lineCap = 'round';
       ctx.globalAlpha = 0.8;
@@ -1661,6 +2119,15 @@
       line(1.45, 0.2, 1.6, 3.6, 3.1, 0.55); // vão do dedão
       line(-0.45, 1.2, -0.5, 3.4, 2.6, 0.4);
       line(-2.1, 0.9, -2.2, 2.7, 2.35, 0.38);
+      ctx.globalAlpha = 1;
+      // unha do dedão
+      const big = MOD.TOES.big[MOD.TOES.big.length - 1];
+      const nail = this.P(at(toe, -side * big.s, big.f + big.r * 0.35, big.u + big.r * 0.75));
+      ctx.fillStyle = PAL.skin.light;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.ellipse(nail.x, nail.y, big.r * 0.55 * this.zoom, big.r * 0.38 * this.zoom, 0, 0, M.TAU);
+      ctx.fill();
       ctx.globalAlpha = 1;
     }
 
@@ -1762,6 +2229,85 @@
         ctx.arc(kq.x, kq.y, 1.9 * this.zoom, 0, M.TAU);
         ctx.fill();
       }
+    }
+
+    /** Aba de pano da tanga (frente ou trás): pendurada no cinto, desce pela gravidade, a coxa empurra e balança. */
+    _flap(rig, look, front) {
+      const pv = rig.pelvis;
+      const L = MOD.LOINCLOTH;
+      const F = L.flap;
+      if (!F) return null;
+      const sgn = front ? 1 : -1;
+      const len = front ? F.len : F.lenBack;
+      const sw = (look.flapSwing && look.flapSwing[front ? 0 : 1]) || { x: 0, y: 0, z: 0 };
+      const out = scale(pv.f, sgn); // para fora do corpo (frente ou trás)
+      const topY = sgn * (L.ry + 0.6);
+      const topZ = L.ringZ - (front ? L.ringFrontDrop : 0) - 0.4;
+      // três colunas (lado, meio, lado): o pano é curvo em volta do corpo (o meio mais para fora, os lados para dentro),
+      // então visto de lado continua com largura (um painel chato virava um palito)
+      const cols = [[], [], []];
+      for (const [c, sx] of [[0, -1], [1, 0], [2, 1]]) {
+        for (const t of [0, 0.45, 1]) {
+          const w = lerp(F.w0, F.w1, t) / 2;
+          const top = at(pv, sx * w, topY, topZ);
+          let p = { x: top.x, y: top.y, z: top.z - len * t };
+          p = add(p, scale(out, sx ? -1.3 * t : 1.1 * t));
+          if (t > 0) {
+            // a coxa empurra o pano para fora (ele nunca atravessa a perna), até um limite (senão, correndo, a coxa
+            // de trás jogava a aba longe do corpo)
+            let push = 0;
+            for (const i of [0, 1]) {
+              const th = rig.thigh[i];
+              const knee = rig.knee[i];
+              const hz = th.o.z - knee.z;
+              const tt = hz > 1 ? clamp((th.o.z - p.z) / hz, 0, 1) : 0.5;
+              const axisP = limbAt(th, tt, 0, 0);
+              const lat = Math.abs(dot(sub(p, axisP), pv.r));
+              const rr = 7.4 - tt * 1.6;
+              if (lat > rr + 1) continue;
+              const need = dot(sub(axisP, pv.o), out) + Math.sqrt(Math.max(0, rr * rr - lat * lat)) + F.gap;
+              const has = dot(sub(p, pv.o), out);
+              push = Math.max(push, need - has);
+            }
+            if (push > 0) p = add(p, scale(out, Math.min(push, 7)));
+            p = add(p, scale(sw, t));
+          }
+          cols[c].push(p);
+        }
+      }
+      // contorno: lado esquerdo de cima para baixo, barra de baixo, lado direito de baixo para cima, cinto
+      const outline = [cols[0][0], cols[0][1], cols[0][2], cols[1][2], cols[2][2], cols[2][1], cols[2][0], cols[1][0]];
+      const pts = outline.map((q) => this.P(q));
+      const poly = [];
+      for (const q of pts) poly.push(q.x, q.y);
+      return [
+        {
+          poly,
+          mat: PAL.cloth,
+          k: 0.22,
+          concave: true,
+          thinOnly: true, // sem o contorno grosso da silhueta (o pano é fino; o contorno de dentro basta)
+          decal: () => {
+            // barra de cima (o pano dobra no cinto) e uma dobra no meio. O ctx é o da hora de desenhar (as peças podem
+            // ser montadas antes e desenhadas em outra tela, como na exportação em camadas)
+            if (!this.fine) return;
+            const ctx = this.ctx;
+            const a = this.P(M.lerp3(cols[0][0], cols[0][1], 0.18));
+            const b = this.P(M.lerp3(cols[2][0], cols[2][1], 0.18));
+            ctx.strokeStyle = PAL.cloth.shade;
+            ctx.lineWidth = Math.max(0.6, 0.55 * this.zoom);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            const m0 = this.P(M.lerp3(cols[1][0], cols[1][1], 0.3));
+            const m1 = this.P(M.lerp3(cols[1][2], cols[1][1], 0.15));
+            ctx.moveTo(m0.x, m0.y);
+            ctx.lineTo(m1.x, m1.y);
+            ctx.stroke();
+          },
+        },
+      ];
     }
 
     _necklace(rig, look) {
@@ -1949,6 +2495,15 @@
         line(rig.hip[i], rig.knee[i], c);
         line(rig.knee[i], rig.ankle[i], c);
         line(rig.ankle[i], at(rig.foot[i], 0, 16, -3), c);
+      }
+      // alvo fora do alcance do IK (não devia acontecer): linha vermelha do alvo até onde a ponta chegou
+      if (rig.ik) {
+        ctx.setLineDash([4, 3]);
+        for (let i = 0; i < 2; i++) {
+          if (rig.ik.leg[i] && rig.ik.leg[i].err > 0.5) line(rig.ik.leg[i].target, rig.ankle[i], '#ff2a2a');
+          if (rig.ik.arm[i] && rig.ik.arm[i].err > 0.5) line(rig.ik.arm[i].target, rig.wrist[i], '#ff2a2a');
+        }
+        ctx.setLineDash([]);
       }
       ctx.fillStyle = '#ffffff';
       const joints = [rig.head.o, rig.neckBase, rig.chest.o, rig.waist, rig.pelvis.o, ...rig.shoulder, ...rig.elbow, ...rig.wrist, ...rig.hip, ...rig.knee, ...rig.ankle];

@@ -9,7 +9,9 @@
 
   /**
    * IK de dois ossos: da raiz `a` até o alvo, com ossos `l1` e `l2`; a articulação do meio dobra para o
-   * lado de `pole`. Devolve { mid, end, stretch } (stretch < 1 quando o alvo está longe demais).
+   * lado de `pole`. Devolve { mid, end, stretch, err }: `stretch` < 1 quando o alvo está longe demais e `err` = quanto
+   * a ponta ficou longe do alvo (cm). O animador garante o alcance antes (veja `softReach` em animator.js); `err` fica
+   * guardado no esqueleto (`rig.ik`) para os testes e para a vista de ossos mostrarem qualquer alvo fora do alcance.
    */
   function solveTwoBone(a, target, l1, l2, pole) {
     const d = sub(target, a);
@@ -24,7 +26,7 @@
     pp = norm(pp);
     const mid = add(a, add(scale(dir, l1 * cosA), scale(pp, l1 * sinA)));
     const end = add(a, scale(dir, dl));
-    return { mid, end, stretch: raw > 0 ? dl / raw : 1 };
+    return { mid, end, stretch: raw > 0 ? dl / raw : 1, err: Math.abs(raw - dl), target };
   }
 
   /** Base de um osso de membro: eixo ao longo do osso, "frente" do lado da dobra e "fora" do corpo. */
@@ -64,7 +66,7 @@
     head = M.moved(head, add(neckBase, add(scale(head.u, B.neck * 0.93), scale(head.f, B.headForward))));
     const headBase = at(head, ...PD.MODEL.HEAD.neckBase);
 
-    const rig = { body, pelvis, waist, chest, neckBase, head, headBase, hip: [], knee: [], ankle: [], foot: [], toe: [], shoulder: [], elbow: [], wrist: [], hand: [], thigh: [], shin: [], upperArm: [], forearm: [] };
+    const rig = { body, pelvis, waist, chest, neckBase, head, headBase, hip: [], knee: [], ankle: [], foot: [], toe: [], shoulder: [], elbow: [], wrist: [], hand: [], thigh: [], shin: [], upperArm: [], forearm: [], ik: { leg: [], arm: [] } };
 
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? -1 : 1;
@@ -77,6 +79,7 @@
       const footF = { x: Math.cos(footYaw), y: Math.sin(footYaw), z: 0 };
       const kneePole = norm(add(add(footF, scale(out, 0.06)), scale(pelvis.f, 0.4)));
       const leg = solveTwoBone(hip, ft.pos, B.thigh, B.shin, kneePole);
+      rig.ik.leg.push({ err: leg.err, target: ft.pos });
       rig.hip.push(hip);
       rig.knee.push(leg.mid);
       rig.ankle.push(leg.end);
@@ -99,6 +102,7 @@
       const pl = hd.poleLocal || [-0.95, 0.32, -0.15]; // [frente, fora, cima]: cotovelo para trás, um pouco para fora
       const elbowPole = norm(dirIn(chest, side * pl[1], pl[0], pl[2]));
       const arm = solveTwoBone(shoulder, target, B.upperArm, B.forearm, elbowPole);
+      rig.ik.arm.push({ err: arm.err, target });
       rig.shoulder.push(shoulder);
       rig.elbow.push(arm.mid);
       rig.wrist.push(arm.end);
@@ -108,11 +112,20 @@
       rig.upperArm.push(ua);
       const fa = limbFrame(arm.mid, arm.end, add(scale(ua.f, 0.6), scale(chest.f, 0.4)), armOut, B.forearm);
       rig.forearm.push(fa);
-      // mão (punho): eixo = antebraço; "costas da mão" gira com `twist`
+      // mão (punho): eixo = antebraço; "costas da mão" gira com `twist`; o punho dobra com `flex` (rad, + = para o
+      // lado da palma): a mão não fica mais travada reta no antebraço
       const ref = fa.out;
-      const dorsal = M.rotate(ref, fa.a, side * (hd.twist || 0));
+      let dorsal = M.rotate(ref, fa.a, side * (hd.twist || 0));
       const thumb = scale(norm(cross(fa.a, dorsal)), side);
-      rig.hand.push({ o: arm.end, a: fa.a, d: dorsal, s: thumb, fist: hd.fist ?? 1 });
+      let along = fa.a;
+      const fl = hd.flex || 0;
+      if (fl) {
+        const c = Math.cos(fl);
+        const sn = Math.sin(fl);
+        along = norm(add(scale(fa.a, c), scale(dorsal, -sn)));
+        dorsal = norm(add(scale(dorsal, c), scale(fa.a, sn)));
+      }
+      rig.hand.push({ o: arm.end, a: along, d: dorsal, s: thumb, fist: hd.fist ?? 1, flex: fl });
     }
     return rig;
   }

@@ -118,7 +118,7 @@
       bounds: renderer.bounds(rig),
       body: renderer.bounds(rig, 0.35),
       drawShadow: (c) => renderer.drawShadow(c, rig, hero.groundZ),
-      draw: (c) => renderer.draw(c, rig, hero.look, hero.equipped),
+      draw: (c) => renderer.draw(c, rig, hero.look, hero.equipped, PD.classes ? PD.classes.appearanceOf(hero) : null),
     };
     world.draw(ctx, [actor]);
     // a névoa nas bordas da tela é do CSS (#vinheta): o navegador desenha sem custo por quadro

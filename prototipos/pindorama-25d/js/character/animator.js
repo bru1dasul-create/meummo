@@ -55,12 +55,12 @@
   };
   const mixV = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t });
   const mixPole = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-  const copyHand = (h) => ({ local: { x: h.local.x, y: h.local.y, z: h.local.z }, twist: h.twist, poleLocal: h.poleLocal.slice(), fist: h.fist });
+  const copyHand = (h) => ({ local: { x: h.local.x, y: h.local.y, z: h.local.z }, twist: h.twist, poleLocal: h.poleLocal.slice(), fist: h.fist, flex: h.flex || 0 });
   // pose do soco como lista de números (para a emenda do combo somar posição e velocidade)
   const packPB = (b) => [b.chest, b.hips, b.push[0], b.push[1], b.dz, b.dy, b.pitch, b.heel];
   const unpackPB = (a) => ({ chest: a[0], hips: a[1], push: [a[2], a[3]], dz: a[4], dy: a[5], pitch: a[6], heel: a[7] });
-  const packHand = (h) => [h.local.x, h.local.y, h.local.z, h.twist, h.poleLocal[0], h.poleLocal[1], h.poleLocal[2], h.fist];
-  const unpackHand = (a) => ({ local: { x: a[0], y: a[1], z: a[2] }, twist: a[3], poleLocal: [a[4], a[5], a[6]], fist: a[7] });
+  const packHand = (h) => [h.local.x, h.local.y, h.local.z, h.twist, h.poleLocal[0], h.poleLocal[1], h.poleLocal[2], h.fist, h.flex || 0];
+  const unpackHand = (a) => ({ local: { x: a[0], y: a[1], z: a[2] }, twist: a[3], poleLocal: [a[4], a[5], a[6]], fist: a[7], flex: a[8] });
   const BLEND_W = 28; // rapidez com que a diferença da emenda some (1/s)
 
   /**
@@ -106,6 +106,16 @@
   // frente o voo inteiro (cara de zumbi) e depois abriam em "asa de avião"
   const JUMP_HANDS = { tras: { x: 6, y: -16, z: -46 }, impulso: { x: 8, y: 26, z: -16 }, ar: { x: 14, y: 10, z: -36 } };
 
+  /**
+   * Alcance suave (o "soft IK" dos animadores): perto do comprimento total da perna, a distância cresce cada vez mais
+   * devagar e nunca passa dele. Assim o joelho estica aos poucos (sem estalar) e o pé nunca fica longe do alvo.
+   */
+  function softReach(d, L, soft) {
+    const d0 = L - soft;
+    if (d <= d0) return d;
+    return d0 + soft * (1 - Math.exp(-(d - d0) / soft));
+  }
+
   /** Pelve montada igual ao esqueleto (para conferir o alcance das pernas antes de montar). */
   function pelvisFrame(body, pv) {
     const f = M.moved(body, M.at(body, pv.dx, pv.dy, B.hipStand + B.pelvisUp + pv.dz));
@@ -113,7 +123,9 @@
   }
 
   class Character {
-    constructor(x, y, yaw = Math.PI / 4) {
+    /** `opcoes.classe`: id de uma classe de js/character/classes.js (sem nada: 'semClasse', o personagem base). */
+    constructor(x, y, yaw = Math.PI / 4, opcoes = {}) {
+      this.classe = opcoes.classe || 'semClasse';
       this.pos = { x, y, z: 0 }; // z = altura do pulo (acima do chão)
       this.groundZ = 0; // altura do chão embaixo (calçada 14 cm, rua 0)
       this.vel = { x: 0, y: 0 };
@@ -143,6 +155,7 @@
       this.label = 'Parado';
       this.stanceLead = 0; // pés em posição de luta (0..1)
       this.hipDrop = 0; // quanto a pelve desce para a perna de apoio alcançar o pé
+      this.footAir = [0, 0]; // 0 = pé apoiado (alcance firme) → 1 = pé no ar há um tempo (alcance suave)
       this.airArm = 0; // braços no jeito do pulo (0..1)
       this.armFirm = 0; // firmeza da mola dos braços (0 no chão, 1 no pulo)
       // molas do movimento secundário (cabelo, penas, colar, cordão, brinco)
@@ -153,12 +166,15 @@
         pendant: new M.Spring3(z0),
         tassel: new M.Spring3(z0),
         earring: new M.Spring3(z0),
+        flaps: [new M.Spring3(z0), new M.Spring3(z0)], // abas da tanga (frente, trás)
       };
+      this.prevPelvis = null;
+      this.pelvisVel = { x: 0, y: 0, z: 0 };
       this.armSprings = [null, null]; // o braço é um pêndulo com peso
       this.headSpring = null; // a cabeça também: segue o peito com um atraso pequeno
       this.prevHead = null;
       this.headVel = { x: 0, y: 0, z: 0 };
-      this.look = { blink: 0, hairWind: z0, featherSwing: [z0, z0, z0, z0, z0], pendantSwing: z0, tasselSwing: z0, earringSwing: z0, gazeX: 0, gazeY: 0, mouthOpen: 0, browRaise: 0 };
+      this.look = { blink: 0, hairWind: z0, featherSwing: [z0, z0, z0, z0, z0], pendantSwing: z0, tasselSwing: z0, earringSwing: z0, flapSwing: [z0, z0], gazeX: 0, gazeY: 0, mouthOpen: 0, browRaise: 0 };
       this.radius = RADIUS;
       this.equipped = {}; // encaixe → id do item (vazio: o personagem começa sem nada)
       // trava dos pés: o pé que pisa fica preso no chão até o próximo passo (nada de escorregar).
@@ -169,6 +185,9 @@
       this._pose = null;
       this._punchOut = null; // a última pose do soco (o combo começa dela)
       this._punchPrev = null; // a do quadro anterior (para a velocidade na emenda)
+      // equipamento inicial da classe (se ela tiver)
+      const cls = PD.classes && PD.classes.get(this.classe);
+      if (cls) for (const [slot, id] of Object.entries(cls.equipamentoInicial || {})) this.equip(slot, id);
     }
 
     // ------------------------------------------------------------------ lógica (por quadro)
@@ -195,7 +214,7 @@
       // soco (com combinação: clicar de novo no fim do golpe emenda o próximo com a outra mão)
       if (input.attack) {
         const dir = input.attackDir != null ? input.attackDir : this.yaw;
-        if (!this.attack) this._startPunch(dir, false);
+        if (!this.attack) this._startAttack(dir, false);
         else if (!this.attack.queued) {
           this.attack.queued = true;
           this.attack.queuedDir = dir;
@@ -327,8 +346,10 @@
       const runT = this.speed > SPEED.walk * 1.12 ? smoothstep(SPEED.walk * 1.1, SPEED.run * 0.85, this.speed) : 0;
       this.runBlend = damp(this.runBlend, runT, 6, dt);
 
-      // agachar suave
-      this.crouch = damp(this.crouch, this.crouchWanted ? 1 : 0, 9, dt);
+      // agachar suave: mola sem balanço (sai do lugar e chega com velocidade zero). Antes era um "damp", que começava
+      // com a velocidade cheia no quadro em que se apertava o botão — um tranco no joelho em cada transição
+      if (!this.crouchSpring) this.crouchSpring = new M.Spring(this.crouch);
+      this.crouch = clamp01(this.crouchSpring.step(this.crouchWanted ? 1 : 0, 1.9, 1, dt));
 
       // pulo
       const J = this.jump;
@@ -388,7 +409,7 @@
           this.events.push({ type: 'impacto', hand: A.hand });
         }
         if (A.queued && A.t >= PUNCH_AT.recolher[0] + 0.05) {
-          this._startPunch(A.queuedDir, true);
+          this._startAttack(A.queuedDir, true);
         } else if (A.t >= PUNCH_AT.total) {
           this.attack = null;
           this._punchOut = null;
@@ -419,17 +440,47 @@
       this._pose = null;
     }
 
-    /** Veste um item num encaixe (veja js/character/equipment.js). */
+    /**
+     * Veste um item num encaixe (veja js/character/equipment.js). Confere encaixe, classe e itens que ocupam mais de um
+     * encaixe (ex.: uma arma de duas mãos tira o que estava nas duas). Devolve os ids que saíram.
+     */
     equip(slot, id) {
-      if (!PD.equipment || !PD.equipment.catalog.has(id)) throw new Error('item não existe: ' + id);
-      this.equipped[slot] = id;
+      if (!PD.equipment) throw new Error('sistema de equipamentos não carregado');
+      const ok = PD.equipment.canEquip(this, slot, id);
+      if (!ok.ok) throw new Error('não dá para vestir: ' + ok.motivo);
+      const item = PD.equipment.catalog.get(id);
+      const removed = [];
+      for (const s of item.ocupa || [slot]) {
+        const prev = this.equipped[s];
+        if (prev && !removed.includes(prev)) removed.push(prev);
+        // um item que ocupava vários encaixes sai de todos
+        const prevItem = prev && PD.equipment.catalog.get(prev);
+        if (prevItem && prevItem.ocupa) for (const o of prevItem.ocupa) if (this.equipped[o] === prev) delete this.equipped[o];
+        delete this.equipped[s];
+      }
+      for (const s of item.ocupa || [slot]) this.equipped[s] = id;
+      return removed;
     }
     unequip(slot) {
-      delete this.equipped[slot];
+      if (!PD.equipment.SLOTS.includes(slot)) throw new Error(`encaixe "${slot}" não existe`);
+      const id = this.equipped[slot];
+      const item = id && PD.equipment.catalog.get(id);
+      for (const s of (item && item.ocupa) || [slot]) if (this.equipped[s] === id) delete this.equipped[s];
+      return id || null;
     }
 
     attackBusy() {
       return !!(this.attack && this.attack.t < PUNCH_AT.recolher[1]);
+    }
+
+    /** O golpe do botão de ataque vem da classe (hoje todas socam; um golpe novo entra aqui e em PD.classes.GOLPES). */
+    _startAttack(dir, combo) {
+      const g = (PD.classes && PD.classes.get(this.classe).golpes.ataque) || 'soco';
+      switch (g) {
+        case 'soco':
+        default:
+          return this._startPunch(dir, combo);
+      }
     }
 
     _startPunch(dir, combo) {
@@ -446,9 +497,11 @@
     }
 
     _stepLength(speed) {
-      const walk = 0.25 * speed + 24; // 160 cm/s → passo de 64 cm (~150 passos por minuto)
-      const run = 0.2 * speed + 32; // 440 cm/s → passo de 120 cm
-      const crouch = 0.25 * speed + 14;
+      // perna mais longa = passo mais longo (a cadência cai): 160 cm/s → passo de ~66 cm (~145 passos por minuto)
+      const k = B.legScale;
+      const walk = (0.25 * speed + 24) * k;
+      const run = (0.2 * speed + 32) * k; // 440 cm/s → passo de ~125 cm
+      const crouch = (0.25 * speed + 14) * k;
       const s = lerp(walk, run, this.runBlend);
       return lerp(s, crouch, this.crouch);
     }
@@ -484,7 +537,7 @@
       const step = this._stepLength(this.speed);
       const sweep = S * 2 * step * g; // quanto o pé apoiado "anda para trás" em relação ao corpo
       const front = lerp(0.4, 0.42, run); // parte do apoio que acontece na frente do quadril
-      const lift = lerp(lerp(4.5, 7.5, speedK), 23, run) * (1 - 0.45 * crouch);
+      const lift = lerp(lerp(4.5, 7.5, speedK), 23, run) * (1 - 0.45 * crouch) * B.legScale;
       const heelStrike = lerp(16, 6, run) * (1 - 0.5 * crouch); // graus: pisa com o calcanhar (ponta para cima)
       const toeOff = lerp(48, 42, run) * (1 - 0.4 * crouch); // graus: sai do chão pela ponta (calcanhar para cima)
       const heelFrom = lerp(0.55, 0.4, run); // quando o calcanhar começa a subir (fração do apoio)
@@ -497,19 +550,22 @@
       const idleSway = M.noise1(t * 0.23) * 1.1 * idle;
       // parado: o peso fica mais numa perna (troca devagar) — quadril de um lado, ombros do outro
       const weight = clamp(0.55 + 0.6 * M.noise1(t * 0.07 + 1.7), -1, 1) * idle * (1 - crouch);
+      // agachado, o quadril vai para trás enquanto desce (o peso fica em cima do meio dos pés, como gente de verdade);
+      // antes ele descia reto, o tronco inclinava 44° e o centro de massa ficava na ponta dos pés (~11 cm à frente)
+      const sitBack = (14 * crouch + 6 * J.crouch) * B.legScale;
       const pelvis = {
         dx: -lerp(2, 0.9, run) * s2 * g + idleSway + weight * 2.6,
-        dy: 3 * run * g + this.leanPitch * 20,
-        dz: bob - 35 * crouch - 27 * J.crouch + breath * 0.25 * idle,
+        dy: 3 * run * g + this.leanPitch * 20 - sitBack,
+        dz: bob - (35 * crouch + 27 * J.crouch) * B.legScale + breath * 0.25 * idle,
         yaw: lerp(5, 10, run) * DEG * c2 * g,
-        pitch: (lerp(2, 10, run) * g + 24 * crouch + 16 * J.crouch) * DEG + this.leanPitch * 0.5,
+        pitch: (lerp(2, 10, run) * g + 21 * crouch + 14 * J.crouch) * DEG + this.leanPitch * 0.5,
         roll: lerp(3.4, 2.2, run) * DEG * s2 * g + idleSway * 0.012 - weight * 3.4 * DEG,
       };
       // ---- coluna (peito em relação à pelve): gira ao contrário da pelve, um pouco atrasado
       const chestYawAbs = lerp(-5, -11, run) * DEG * Math.cos(TAU * (ph - 0.035)) * g;
       const settle = (1 - Math.cos(4 * Math.PI * (ph - S / 2 - 0.05))) / 2; // o tronco "assenta" logo depois de pisar
       const spine = {
-        pitch: (lerp(4, 12, run) * g + 20 * crouch + 10 * J.crouch) * DEG + this.leanPitch - breath * 0.6 * DEG * idle + settle * 1.1 * DEG * g * (1 - run),
+        pitch: (lerp(4, 12, run) * g + 15 * crouch + 8 * J.crouch) * DEG + this.leanPitch - breath * 0.6 * DEG * idle + settle * 1.1 * DEG * g * (1 - run),
         yaw: chestYawAbs - pelvis.yaw,
         roll: -pelvis.roll * 0.75 - lerp(1.2, 0.8, run) * DEG * Math.sin(TAU * (ph - 0.11)) * g - this.leanRoll + weight * 2.2 * DEG,
       };
@@ -520,13 +576,19 @@
       const runPole = smoothstep(0.15, 0.65, run * g);
       this.airArm = damp(this.airArm, J.state === 'ar' ? 1 : 0, 14, dt);
       for (let i = 0; i < 2; i++) {
-        const w = i === 1 ? c2 : -c2; // +1 = braço na frente (vai junto com a perna do outro lado)
+        // cada braço balança um pouco diferente do outro e varia devagar de um passo para o outro (gente não é
+        // simétrica nem repete o mesmo movimento): ±7% de amplitude e um tiquinho de atraso. Antes os dois braços eram
+        // espelhos perfeitos e cada passo, cópia do anterior — o que dava o ar mecânico
+        const armVar = 1 + 0.07 * M.noise1(t * 0.37 + i * 7.3);
+        const armLag = (i === 0 ? 0.012 : -0.008) + 0.01 * M.noise1(t * 0.29 + i * 3.1);
+        const w = (i === 1 ? Math.cos(TAU * (ph - armLag)) : -Math.cos(TAU * (ph - armLag))) * armVar; // +1 = braço na frente
         const fw = (w + 1) / 2;
         // parado: braço solto ao lado do corpo, cotovelo pouco dobrado
-        const idleArm = armFK((2.5 + breath * 0.4) * DEG, (20 + M.noise1(t * 0.3 + i * 5) * 3) * DEG, 2.8 + breath * 0.3);
+        // os braços ficam um pouco afastados do corpo (as costas são largas): antes entravam 3-4 cm no tronco
+        const idleArm = armFK((2.5 + breath * 0.4) * DEG, (20 + M.noise1(t * 0.3 + i * 5) * 3) * DEG, 4.6 + breath * 0.3, 4 * DEG);
         // andando: pêndulo a partir do ombro; na frente o cotovelo dobra mais e a mão passa um pouco para dentro
         const swing = lerp(10, 23, speedK);
-        const walkArm = armFK((2 + w * swing) * DEG, (16 + 19 * Math.pow(Math.max(0, w), 1.3) + 3 * (1 - Math.abs(w))) * DEG, lerp(3, 0.8, fw));
+        const walkArm = armFK((2 + w * swing) * DEG, (16 + 19 * Math.pow(Math.max(0, w), 1.3) + 3 * (1 - Math.abs(w))) * DEG, lerp(4.4, 2.2, fw), 3 * DEG);
         // correndo: cotovelo perto de 90°, o punho sobe na frente; atrás o cotovelo não abre ("asa de galinha")
         const runArm = armFK((3 + w * 36) * DEG, (80 + 20 * Math.max(0, w)) * DEG, lerp(3, -0.5, fw));
         let a = mixV(walkArm, runArm, run);
@@ -556,7 +618,13 @@
         // a firmeza da mola entra e sai aos poucos (trocar de uma vez dava um tranco no punho ao apertar o pulo)
         if (i === 0) this.armFirm = damp(this.armFirm, J.state === 'preparo' || J.state === 'ar' ? 1 : J.state === 'pouso' ? 0.5 : 0, 14, dt);
         a = this.armSprings[i].step(a, lerp(3.6, 11, this.armFirm), lerp(0.72, 0.85, this.armFirm), dt);
-        hands.push({ local: a, twist: lerp(0, -0.35, run * g), poleLocal, fist });
+        // punho: a mão solta dobra um pouco para a palma e atrasa no balanço (vai para a frente → a mão fica para trás,
+        // e vice-versa); fechada correndo, quase não dobra. Antes a mão ficava travada reta no antebraço
+        const vy = this.armSprings[i].y.v;
+        const flexWant = (0.16 + M.noise1(t * 0.21 + i * 3) * 0.05) * (1 - 0.6 * run * g) - clamp(vy * 0.0016, -0.32, 0.32) * (1 - 0.6 * run * g);
+        if (!this._flex) this._flex = [flexWant, flexWant];
+        this._flex[i] = damp(this._flex[i], flexWant, 12, dt);
+        hands.push({ local: a, twist: lerp(0, -0.35, run * g), poleLocal, fist, flex: this._flex[i] });
         shoulderFwd[i] = lerp(1.2, 2.4, run) * w * g; // o ombro acompanha o braço
       }
 
@@ -576,10 +644,12 @@
         const rear = h !== A.lead; // mão de trás (direto): gira mais; mão da frente (jab): gira menos
         const baseH = hands[h];
         const baseO = hands[other];
-        const guardFront = { x: -7.5, y: 15, z: -13 };
-        const guardRear = { x: -6.5, y: 11, z: -8 };
-        // armar: o direto recolhe o punho até o queixo; o jab sai quase da guarda
-        const wound = rear ? { x: -4.5, y: 4, z: -9.5 } : { x: -6.5, y: 10, z: -11 };
+        // guarda na frente do peito (punho de trás perto do queixo). Antes os punhos ficavam 7 a 8 cm dentro do peito
+        // (e, com a ordem de desenho pela superfície, sumiam atrás dele)
+        const guardFront = { x: -8.5, y: 22, z: -9 };
+        const guardRear = { x: -9, y: 17, z: -3 };
+        // armar: o direto recolhe o punho até o lado do queixo; o jab sai quase da guarda
+        const wound = rear ? { x: -7.5, y: 14, z: 1 } : { x: -8, y: 18, z: -8 };
         const backMid = { x: 2.5, y: 8, z: -40 }; // volta pela lateral da coxa, não pela barriga
         const wIn = A.combo ? 1 : smoothstep(0, P.guarda[1], tt);
         const wOut = tt > P.voltar[0] ? 1 - easeInOut(ph2('voltar')) : 1;
@@ -665,8 +735,9 @@
           const fy = lat * Math.sin(cy) + df * Math.cos(cy);
           return { x: sideH * (lat * Math.cos(cy) - df * Math.sin(cy)), y: fy * Math.cos(cp) - z * Math.sin(cp), z: fy * Math.sin(cp) + z * Math.cos(cp) };
         };
-        const strike = reachTo(50.8, -1.5);
-        const over = reachTo(52.2, -1.2); // passa um tiquinho no impacto (sem esticar o cotovelo até travar)
+        // golpe com o braço quase todo esticado (96% do comprimento) e um tiquinho além no impacto (98,5%), sem travar
+        const strike = reachTo(B.armLength * 0.958, -1.5);
+        const over = reachTo(B.armLength * 0.985, -1.2);
         let fistL;
         if (tt < P.guarda[1]) fistL = mixV(baseH.local, guardFront, smoothstep(0, 1, ph2('guarda')));
         else if (tt < P.armar[1]) fistL = mixV(guardFront, wound, easeInOut(ph2('armar')));
@@ -681,12 +752,14 @@
         const hs = [null, null];
         hs[h] = {
           local: tt >= P.voltar[0] ? fistL : mixV(baseH.local, fistL, wArm),
+          flex: lerp(baseH.flex || 0, 0, wArm),
           twist: lerp(baseH.twist, -1.45, pronate),
           poleLocal: mixPole(baseH.poleLocal, mixPole(POLE.armado, POLE.golpe, smoothstep(P.golpe[0], P.golpe[1], tt) * (1 - smoothstep(P.recolher[0], P.recolher[1], tt))), wArm),
           fist: lerp(baseH.fist, 1, wArm),
         };
         hs[other] = {
           local: mixV(baseO.local, guardRear, wArm),
+          flex: lerp(baseO.flex || 0, 0.05, wArm),
           twist: lerp(baseO.twist, -0.4, wArm),
           poleLocal: mixPole(baseO.poleLocal, POLE.guarda, wArm),
           fist: lerp(baseO.fist, 1, wArm),
@@ -725,7 +798,10 @@
             const s = p / S;
             y = lerp(front * sweep, (front - 1) * sweep, s);
             const rise = clamp01((s - heelFrom) / (1 - heelFrom));
-            pitch = heelStrike * (1 - smoothstep(0, 0.16, s)) - toeOff * Math.pow(rise, 1.7);
+            // o calcanhar sobe devagar no começo e chega na ponta sem pressa: na saída do chão o pé não pode estar
+            // girando no máximo (antes, r^1,7, girava mais rápido justo no último instante e o balanço começava parado:
+            // o tornozelo trocava de velocidade de uma vez e o joelho, quase esticado, dava um tranco)
+            pitch = heelStrike * (1 - smoothstep(0, 0.16, s)) - toeOff * Math.pow(smoothstep(0, 1, rise), 1.15);
           } else {
             // balanço: o pé sai do chão parado e pousa parado (no chão, não em relação ao corpo): enquanto o corpo
             // anda `travel`, ele vai de trás para a frente numa curva suave; o calcanhar sobe para trás no começo
@@ -739,10 +815,12 @@
             const b = lerp(2, 2.2, run);
             const ease = 1 - Math.pow(1 - s, b) * (1 + b * s);
             y = y0 + (travel + front * sweep - y0) * ease - s * travel;
-            const upWalk = Math.pow(Math.sin(Math.PI * Math.pow(s, 0.65)), 1.2);
-            const upRun = Math.pow(Math.sin(Math.PI * Math.pow(s, 0.8)), 0.85);
-            up = lift * lerp(upWalk, upRun, run);
-            up += run * 17 * Math.pow(Math.sin(Math.PI * clamp01((s - 0.05) / 0.5)), 1.2);
+            // subida do pé no balanço: o pico vem cedo (o joelho dobra logo) e a curva começa com velocidade zero (antes
+            // s^0,65 começava "infinita": o pé dava um pulo de 2 cm no primeiro quadro fora do chão)
+            const upWalk = Math.pow(Math.sin(Math.PI * (1 - Math.pow(1 - s, 1.55))), 1.2);
+            const upRun = Math.pow(Math.sin(Math.PI * (1 - Math.pow(1 - s, 1.3))), 1.1);
+            up = lift * lerp(upWalk, upRun, run) * (1 + 0.09 * M.noise1(t * 0.41 + i * 5.7)); // cada passo um pouco diferente
+            up += run * 17 * B.legScale * Math.pow(Math.sin(Math.PI * clamp01((s - 0.05) / 0.5)), 1.2);
             pitch = lerp(-toeOff, heelStrike, smoothstep(0, 0.85, s));
             bend = toeOff * (1 - smoothstep(0, 0.3, s));
           }
@@ -816,7 +894,7 @@
                   st.yaw = yawAbs;
                 } else if (!other.step && J.state === 'chao' && Math.abs(angleDiff(st.yaw, yawAbs)) > 0.7) {
                   // virada fechada andando devagar: o corpo girou por cima do pé; ele dá um passo de virada
-                  st.step = { t: 0, dur: 0.15, fx: st.x, fy: st.y, fyaw: st.yaw };
+                  st.step = { t: 0, dur: 0.15, fx: st.x, fy: st.y, fyaw: st.yaw, p0: st.outPitch };
                   st.planted = false;
                 }
               } else {
@@ -838,7 +916,7 @@
               if (!st.planted) {
                 const landing = J.state === 'pouso' || J.state === 'preparo';
                 if (!landing && st.lastX !== null && Math.hypot(ref.x - st.lastX, ref.y - st.lastY) > 2) {
-                  st.step = { t: 0, dur: 0.18, fx: st.lastX, fy: st.lastY, fyaw: st.yaw };
+                  st.step = { t: 0, dur: 0.18, fx: st.lastX, fy: st.lastY, fyaw: st.yaw, p0: st.outPitch };
                 } else {
                   // pousando: o pé fica onde tocou o chão (ajeita depois, se precisar)
                   st.planted = true;
@@ -848,21 +926,24 @@
                 }
               }
               if (!st.step && st.planted) {
-                // virada pequena: gira o pé sobre a base dos dedos (a ponta fica parada no chão)
+                // virada pequena: o pé gira em volta do ponto que encosta no chão — a base dos dedos (pé chato ou com
+                // o calcanhar para cima) ou o calcanhar (pisando com a ponta para cima). Antes girava sempre na base
+                // dos dedos, e numa virada logo depois de pisar o calcanhar riscava o chão a 80 cm/s
                 const yawErr = angleDiff(st.yaw, yawAbs);
                 if (Math.abs(yawErr) > 0.01 && J.state === 'chao') {
                   const turn = clamp(yawErr, -(A ? 11 : 6) * dt, (A ? 11 : 6) * dt);
-                  const bx = st.x + Math.cos(st.yaw) * B.ballFwd;
-                  const by = st.y + Math.sin(st.yaw) * B.ballFwd;
+                  const pv = pitch * g > 2 ? -B.heelBack : B.ballFwd; // ponto de giro, à frente do tornozelo
+                  const bx = st.x + Math.cos(st.yaw) * pv;
+                  const by = st.y + Math.sin(st.yaw) * pv;
                   st.yaw += turn;
-                  st.x = bx - Math.cos(st.yaw) * B.ballFwd;
-                  st.y = by - Math.sin(st.yaw) * B.ballFwd;
+                  st.x = bx - Math.cos(st.yaw) * pv;
+                  st.y = by - Math.sin(st.yaw) * pv;
                 }
                 const striking = A && A.t > PUNCH_AT.golpe[0] - 0.02 && A.t < PUNCH_AT.recolher[1];
                 // no soco os pés só giram na ponta até ~70° e aguentam a base mais aberta (sem passinhos à toa)
                 const far = Math.hypot(ref.x - st.x, ref.y - st.y) > (A ? 14 : 9) || Math.abs(angleDiff(st.yaw, yawAbs)) > (A ? 1.2 : 0.75);
                 if (far && !other.step && !striking && J.state === 'chao' && (this.stepCooldown <= 0 || A)) {
-                  st.step = { t: 0, dur: A ? 0.11 : turningInPlace ? 0.15 : 0.2, fx: st.x, fy: st.y, fyaw: st.yaw };
+                  st.step = { t: 0, dur: A ? 0.11 : turningInPlace ? 0.15 : 0.2, fx: st.x, fy: st.y, fyaw: st.yaw, p0: st.outPitch };
                   st.planted = false;
                   this.stepCooldown = turningInPlace ? 0.03 : 0.08;
                 }
@@ -878,6 +959,8 @@
             ref.y = lerp(st.step.fy, ref.y, e);
             ref.z += 7 * Math.sin(Math.PI * k);
             pitch += -10 * Math.sin(Math.PI * k);
+            // começa do ângulo em que o pé estava (um calcanhar levantado não volta de uma vez)
+            if (st.step.p0 !== undefined) pitch = lerp(st.step.p0, pitch, smoothstep(0, 0.4, k));
             yawAbs = st.step.fyaw + angleDiff(st.step.fyaw, yawAbs) * e;
             bend = 0;
             if (k >= 1) {
@@ -922,7 +1005,7 @@
           const need = Math.asin(clamp((this.groundZ - ballZ) / 4.4, -1, 1)) / DEG - pitch; // dedão: 4,4 cm
           if (need > bend) bend = Math.min(need, 75);
         }
-        feet.push({ pos, pitch: pitch * DEG, yaw: yawAbs, toeBend: bend * DEG });
+        feet.push({ pos, pitch: pitch * DEG, yaw: yawAbs, toeBend: bend * DEG, land: !inAir && swingS > 0 && walkFeet ? smoothstep(0.72, 1, swingS) : 0 });
       }
 
       // ---- a perna nunca estica além da conta: se o pé apoiado ficou longe, a pelve desce um pouco. Longe demais
@@ -933,22 +1016,24 @@
         let need = 0;
         let worst = -1;
         for (let i = 0; i < 2; i++) {
-          if (!grounded[i]) continue;
+          const w = grounded[i] ? 1 : feet[i].land;
+          if (w <= 0) continue;
           const hip = M.at(pf, (i === 0 ? -1 : 1) * B.hipHalf, 0, -B.pelvisUp);
           const a = feet[i].pos;
           const horiz = Math.hypot(hip.x - a.x, hip.y - a.y);
-          const n = hip.z - a.z - Math.sqrt(Math.max(0, L * L - horiz * horiz));
+          const n = (hip.z - a.z - Math.sqrt(Math.max(0, L * L - horiz * horiz))) * w;
           if (n > need) {
             need = n;
-            worst = i;
+            worst = grounded[i] ? i : -1;
           }
         }
         const cap = lerp(3, 5.5, smoothstep(0.3, 0.9, g));
-        if (need > cap + 0.4 && walkFeet) {
+        if (need > cap + 0.4 && walkFeet && worst >= 0) {
           const st = this.footLock[worst];
           if (!this.footLock[1 - worst].step && !st.step) {
-            st.step = { t: 0, dur: 0.16, fx: st.x, fy: st.y, fyaw: st.yaw };
+            st.step = { t: 0, dur: 0.16, fx: st.x, fy: st.y, fyaw: st.yaw, p0: st.outPitch };
             st.planted = false;
+            grounded[worst] = false; // já saiu do chão neste quadro (o alcance abaixo trata como pé no ar)
           }
         }
         need = clamp(need, 0, cap);
@@ -958,13 +1043,68 @@
       }
       pelvis.dz -= this.hipDrop;
 
+      // ---- alcance: nenhum alvo de pé fica longe demais da perna. Antes o esqueleto esticava a perna até o limite e
+      // o pé ficava até 26 cm longe de onde o animador queria — no impulso do pulo o alvo ficava preso no chão
+      // enquanto o corpo já tinha subido. Agora: pé apoiado longe demais levanta o calcanhar (gira na base dos dedos,
+      // a ponta fica parada); pé no ar (balanço, impulso, voo) chega no limite por uma curva suave (o joelho estica
+      // aos poucos) — no impulso, o pé sai do chão quando a perna termina de esticar, como na vida real
+      {
+        // a pelve de verdade (o esqueleto monta o corpo na altura do pulo, não na do chão)
+        const pf = pelvisFrame(M.frameYaw({ x: this.pos.x, y: this.pos.y, z: this.groundZ + this.pos.z }, this.yaw), pelvis);
+        const L = B.legLength;
+        const Lr = L * 0.999;
+        for (let i = 0; i < 2; i++) {
+          const ft = feet[i];
+          const hip = M.at(pf, (i === 0 ? -1 : 1) * B.hipHalf, 0, -B.pelvisUp);
+          let d = M.dist(hip, ft.pos);
+          // pé apoiado longe: o pé gira no ponto que está no chão, o tanto exato para a perna alcançar. Pé atrás do
+          // quadril: o calcanhar sobe (gira na base dos dedos). Pé na frente: a ponta sobe (gira no calcanhar) — antes
+          // ele também levantava o calcanhar, e o pé que pousava esticado chegava no chão de ponta e pulava. É contínuo:
+          // antes ia de 2 em 2 graus e o joelho, quase esticado, aumentava cada pulinho
+          if (grounded[i] && d > Lr) {
+            const p0 = ft.pitch / DEG;
+            const ref = refOf(ft.pos, p0, ft.yaw);
+            const dAt = (p) => M.dist(hip, ankleOf(ref, p, ft.yaw));
+            const lim = dAt(p0 - 0.5) < dAt(p0 + 0.5) ? -58 : 35;
+            let p = lim;
+            if (dAt(lim) <= Lr) {
+              let a = p0; // perna longe
+              let b = lim; // perna alcança
+              for (let k = 0; k < 22; k++) {
+                const mid = (a + b) / 2;
+                if (dAt(mid) > Lr) a = mid;
+                else b = mid;
+              }
+              p = b;
+            }
+            ft.pos = ankleOf(ref, p, ft.yaw);
+            ft.pitch = p * DEG;
+            if (p < 0) ft.toeBend = Math.max(ft.toeBend, -p * DEG);
+            d = M.dist(hip, ft.pos);
+          }
+          // pé no ar chega no limite por uma curva suave. A suavidade cresce aos poucos depois que o pé sai do chão: antes
+          // ela trocava de 0,5 para 5,5 cm de um quadro para o outro e o tornozelo pulava 2 cm para perto do quadril (o
+          // joelho, quase esticado no fim do apoio, dava um tranco ao tirar o pé do chão)
+          // (no pulo continua de uma vez: a perna termina de esticar no impulso e o pé sai do chão)
+          this.footAir[i] = grounded[i] ? 0 : inAir ? 1 : Math.min(1, this.footAir[i] + dt / 0.3);
+          const soft = lerp(0.5, 5.5, smoothstep(0, 1, this.footAir[i]));
+          if (!grounded[i] || d > Lr) {
+            const dd = softReach(d, Lr, soft);
+            if (dd < d) ft.pos = M.add(hip, M.scale(M.sub(ft.pos, hip), dd / d));
+          }
+        }
+      }
+
+      for (let i = 0; i < 2; i++) this.footLock[i].outPitch = feet[i].pitch / DEG;
+
       // ---- cabeça: segue o peito (segura só uma parte do giro, como quem olha para a frente) com uma mola — a
       // cabeça tem peso e chega um pouquinho depois —, vai na frente nas curvas e, no soco, baixa o queixo
       const cYaw = pelvis.yaw + spine.yaw;
       const cPitch = pelvis.pitch + spine.pitch;
       const cRoll = pelvis.roll + spine.roll;
-      const lookYaw = M.noise1(t * 0.13 + 7) * 7 * DEG * idle;
-      const lookPitch = M.noise1(t * 0.11 + 3) * 3 * DEG * idle;
+      // olha em volta parado; andando, olhadinhas de leve (a cabeça não fica travada para a frente)
+      const lookYaw = M.noise1(t * 0.13 + 7) * (7 * idle + 3.5 * g * (1 - run)) * DEG * (A ? 0 : 1);
+      const lookPitch = M.noise1(t * 0.11 + 3) * (3 * idle + 1.5 * g * (1 - run)) * DEG * (A ? 0 : 1);
       const nod = settle * 0.9 * DEG * g * (1 - run);
       const hTarget = {
         x: cYaw * lerp(lerp(0.62, 0.5, run * g), 0.4, guardK) + lookYaw + this.turnLead,
@@ -1028,6 +1168,15 @@
       L.pendantSwing = S.pendant.step(target(0.05, 0.0004, 0.00012, 0.6), 2.4, 0.25, dt);
       L.tasselSwing = S.tassel.step(target(0.6, 0.004, 0.0009, 4), 2.2, 0.28, dt);
       L.earringSwing = S.earring.step(target(0.5, 0.002, 0.0006, 2.5), 2.6, 0.25, dt);
+      // abas da tanga: o pano fica para trás quando o quadril anda e balança com o passo (cm na ponta da aba)
+      const pp = rig.pelvis.o;
+      if (!this.prevPelvis) this.prevPelvis = pp;
+      const pvv = { x: (pp.x - this.prevPelvis.x) / dt, y: (pp.y - this.prevPelvis.y) / dt, z: (pp.z - this.prevPelvis.z) / dt };
+      const pva = clampV({ x: (pvv.x - this.pelvisVel.x) / dt, y: (pvv.y - this.pelvisVel.y) / dt, z: (pvv.z - this.pelvisVel.z) / dt }, 3000);
+      this.pelvisVel = pvv;
+      this.prevPelvis = pp;
+      const flapT = clampV({ x: wind.x * 0.8 - pvv.x * 0.012 - pva.x * 0.0016, y: wind.y * 0.8 - pvv.y * 0.012 - pva.y * 0.0016, z: -Math.abs(pvv.z) * 0.002 - pva.z * 0.0012 }, 7);
+      L.flapSwing = S.flaps.map((sp) => sp.step(flapT, 2.3, 0.34, dt));
     }
   }
 
