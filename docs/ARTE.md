@@ -236,6 +236,26 @@ no jogo de costas e de lado) e desligando peça por peça:
   em 15° (parado e andando) sem trança por cima das costas. Desempenho com a CPU 4× mais lenta: igual ao da versão 6
   (17 a 21 fps em 1280×800 conforme a medida, 11 a 12 em 1920×950 e no celular emulado).
 
+### Auditoria e correção pedida pelo dono (versão 8, 10–11/11)
+O dono mandou uma auditoria de 18 itens (anatomia, movimentação e estrutura), 10 testes e um padrão de exportação, com a
+regra "corrija primeiro o personagem, depois as animações e por último a arquitetura; preserve o personagem". Fiz uma
+auditoria com números antes de mexer (`ferramentas/auditoria.cjs` + `js/tools/audit.js`, 45 roteiros; roda também
+numa versão antiga, para comparar) e conferi tudo com ela no fim. O relatório completo (erro, causa, arquivos,
+solução, testes e pendências) está no documento "Pindorama 2.5D — Auditoria e correções (versão 8)".
+- **Personagem:** ombro (cabeças do deltoide no lugar da bola), joelho (patela e canela no lugar da "gota"; a perna
+  pintada como uma peça só), proporções pelo cânone (`BODY` em `body.js`; as animações escalam junto), mãos maiores com
+  dedos em cascata, tornozelo com os maléolos e o tendão, cabelo/penas com a mesma silhueta em todo zoom e amarração
+  das penas, tanga em três colunas que acompanha a coxa, mesma forma em todos os ângulos.
+- **Animações:** a causa do erro de 19–28 cm no pulo era o alcance da perna conferido na altura do chão, com o corpo
+  no ar; agora o alcance usa a pelve de verdade, o pé apoiado gira no ponto que está no chão (calcanhar sobe atrás,
+  ponta sobe na frente) e o pé no ar chega no limite por uma curva suave. Agachado com o peso para trás (centro do
+  corpo de +10,7 para −4 cm), saída do pé do chão sem tranco (andando 9,6 → 5,7 cm/quadro²), mola no agachar.
+- **Estrutura:** validação dos encaixes (`equipment.js`), perfis de classe (`classes.js`), ordem de desenho pelas
+  superfícies (`_depthFix` no `renderer.js`), exportação padronizada em camadas (`exportar.html`, `js/tools/export.js`,
+  `ferramentas/exportar.cjs`) e testes no Node (`ferramentas/testes.cjs`, 40 testes, ~3 s).
+- **Pendências:** tranco no joelho na primeira passada ao começar a correr (15,7; v7: 11,7), trocas de ordem
+  cabelo × trança/orelha, contorno mínimo no zoom bem pequeno, ~20% mais CPU que a versão 7, teste em celular de verdade.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

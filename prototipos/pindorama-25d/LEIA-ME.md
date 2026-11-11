@@ -100,6 +100,34 @@ antebraço, mão, coxa, canela, pé) — então acompanha qualquer animação se
 parte do corpo que veste. O arquivo tem um exemplo comentado (uma bota). Para testar a arquitetura, abra o
 console do navegador e rode `__pd.provarEquipamento()` (veste um capacete e botas de prova; some ao recarregar).
 
+Cada item é **conferido** ao ser definido (`define` recusa com a lista dos problemas, em português): encaixe e osso
+existentes, osso permitido para o encaixe (capacete só na cabeça, bota na canela e no pé, arma na mão e no
+antebraço), esferas com números e raio maior que zero, lado certo nos itens de mão, cores `#rrggbb`. Opcionais:
+`ocupa: ['maoD', 'maoE']` (duas mãos: tira o que estava nas duas), `classes: [...]` (só essas classes),
+`esconde: [...]` (partes do corpo que somem por baixo). `personagem.equip(encaixe, id)` devolve o que saiu.
+
+## Classes (arquitetura pronta; hoje só "sem classe")
+
+`js/character/classes.js`: uma classe é um **perfil** por cima do mesmo protagonista — muda as cores de pintura,
+pano e enfeites (pele, olhos e cabelo não: são a identidade dele), qual golpe o ataque faz, quais encaixes de
+equipamento usa e o equipamento inicial. O corpo, o esqueleto, as animações e o desenho são os mesmos para todas,
+então a cara dele não muda e os sprites exportados e as peças de equipamento servem para qualquer classe. Exemplo
+comentado no começo do arquivo; `new PD.Character(x, y, yaw, { classe: 'id' })`.
+
+## Exportar sprites (`exportar.html`)
+
+Abre no navegador, escolhe animações, direções, classe e escala e baixa um ZIP com os PNGs e o `manifest.json`.
+Padrão: quadro do mesmo tamanho para tudo (medido com todas as animações e direções; a 2 px/cm, 408×544),
+fundo transparente, **âncora** no chão embaixo do personagem sempre no mesmo pixel (todas as direções se alinham),
+pose sem sorteio (exportar de novo dá o mesmo), nomes `pindorama_<classe>_<animação>_<direção>_<NN>.png`.
+Animações: parado, andar, correr, agachado, andarAgachado, pular e soco, nas 8 direções (`s` = de frente).
+As de passada saem "no lugar": o manifesto diz quanto ele anda por ciclo e a velocidade (o jogo move o sprite nela e
+o pé não escorrega); no pulo e no soco o movimento vem desenhado. Também diz os pontos de encaixe (mãos, cabeça,
+peito, costas, quadril, pés) em pixels de cada quadro. Com **camadas**, cada quadro vem também em pedaços com o nome
+da parte (`..._<NN>__<CC>_<parte>.png`; 00 é o contorno): empilhados em ordem dão exatamente o quadro inteiro.
+Pela linha de comando: `node ferramentas/exportar.cjs <pasta> [--animacoes parado,andar] [--direcoes s,n]
+[--partes] [--escala 2] [--prancha conferencia.png]`.
+
 ## Arquivos
 
 ```
@@ -110,28 +138,29 @@ js/character/         modelo, esqueleto + IK, animador, desenho e equipamentos
 js/world/             mapa (dados), chão (pré-desenhado em pedaços), objetos do cenário e o mundo
 js/input.js, ui.js    controles (teclado, mouse, toque) e painel
 js/game.js            laço do jogo (requestAnimationFrame, tempo real entre quadros)
+js/character/classes.js  perfis de classe (cores, golpe, encaixes, equipamento inicial)
 js/tools/sheet.js     a prancha
+js/tools/audit.js     auditoria com números (IK, escorregão, trancos, interseções, ordem de desenho, zoom)
+js/tools/export.js    exportação de sprites padronizados (usada por exportar.html e ferramentas/exportar.cjs)
+exportar.html         página de exportação de sprites
 ```
 
-## Conferido (testes automáticos no navegador)
+## Conferido (testes automáticos)
 
-- Prancha das 8 direções e de todas as animações (`prancha.html`).
-- Comprimento dos ossos em 1.200 quadros de animação misturada: coxa, canela, braço, antebraço, pescoço, tronco e o
-  tamanho da cabeça não variam (0,0000 cm) — o modelo é um só.
-- Ponto do pé apoiado que encosta no chão (calcanhar ou base dos dedos) andando reto, em curva de 90°, devagar no
-  analógico, correndo, parado, virando no lugar e entrando na guarda: 0,0 cm/s de escorregão. A ponta do pé nunca
-  entra no chão (nem no pulo).
-- Passada: 150 passos por minuto andando (passo de 64 cm) e 220 correndo, sem nenhum passo de correção; joelho quase
-  esticado no meio do passo.
-- Trancos (`saltos.cjs`): no soco e no combo, punho, cotovelo, joelho e tornozelo ≤ 15 cm/quadro² e o peito gira no
-  máximo 14° por quadro; andando e correndo, ≤ 3 e ≤ 8.
-- Cabeça girando 360° (`cabeca.cjs`): o rosto aparece e some aos poucos, sem o cabelo pular para a frente dele.
-- Rosto de perto (zoom 6 a 7) de frente, de 3/4, de lado e de costas: a faixa não cobre as sobrancelhas, nenhuma
-  mecha cai na frente do rosto e as tranças nascem embaixo da mandíbula (o alto delas fica atrás da cabeça).
-- Colisão (anda contra um prédio e para na fachada, deslizando), as 8 direções (de 45° em 45°), os estados
-  (correr, agachar, pular, atacar), o joystick e os botões de toque, celular em pé e deitado.
-- Uma revisão crítica independente (outro agente) apontou os problemas de rosto, cintura, pescoço, cabelo, penas,
-  mãos, pés, tanga, pé escorregando, pulo, pouso, soco e a calçada de Copacabana; tudo isso foi corrigido.
+Auditoria da versão 8 (`ferramentas/auditoria.cjs`, 45 roteiros: parado, andando e correndo nas 8 direções,
+agachado, pulos, viradas, zigue-zague, transições e socos) e testes no Node (`ferramentas/testes.cjs`, 40 testes):
+- O pé e o punho chegam no alvo do IK em todos os roteiros (0,0 cm; antes o pulo chegava a 20–28 cm de erro).
+- Pé apoiado não escorrega (0,0 cm/s em todos; antes 31,6 na virada de 180° e 12,8 no zigue-zague) e não entra no
+  chão; ossos com 0,0000 cm de variação; joelho nunca dobra para trás, cotovelo nunca ao contrário.
+- Agachado: o centro do corpo fica sobre os pés (−4 cm, igual a parado; antes +10,7 cm, caindo para a frente).
+- Trancos de perna (cm/quadro² a 60 Hz): andando 5,7 (v7: 4,7), correndo 9,9 (14,5), pulo parado 13,5 (21,2),
+  virada de 180° andando 14,7 (30,9); soma dos 45 roteiros 327 (v7: 419).
+- Passada: andando ~141 passos/min (passo ~68 cm), correndo ~207 (passo ~127 cm), sem passos de correção.
+- Ordem de desenho: trocas com as partes se cobrindo caíram de 436 para 285 nos roteiros medidos; perna desenhada em
+  pedaços de 59–90% dos quadros para 12–42%.
+- Exportação: todos os quadros do mesmo tamanho, cantos transparentes, nada encostando na borda, camadas
+  empilhadas = quadro inteiro (0,0% de diferença); ZIP baixado pela página abre sem erro (PC e celular emulado).
+- Colisão, 8 direções, estados, joystick e botões de toque, celular em pé e deitado (`conferir.cjs`, `toque.cjs`).
 
 ## Ferramentas de conferência (`ferramentas/`)
 
@@ -151,6 +180,9 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 | `tira.cjs <cena> [saida.png] [zoom] [direção]` | tira de filme (um quadro a cada 1/30 s): combo, soco para o lado, virada, parada, corrida e parada, pulo, virada correndo, soco agachado |
 | `cabeca.cjs [saida.png] [zoom]` | a cabeça girando 360°, de 7,5° em 7,5° (o cabelo não pode cobrir o rosto nem pular) |
 | `perfil.cjs` | funções que mais gastam CPU |
+| `auditoria.cjs [pasta] [saida.json] [filtro]` | auditoria com números em 45 roteiros (a pasta pode ser uma versão antiga, para comparar) |
+| `testes.cjs` | testes no Node, sem navegador: encaixes, classes, IK/escorregão/ossos em todos os roteiros, exportação |
+| `exportar.cjs <pasta> [opções]` | exporta os sprites padronizados (veja "Exportar sprites") |
 | `montar_pagina.py <pasta>` | monta a versão da página publicada (veja `docs/ARTE.md`) |
 
 ## Desempenho
@@ -158,10 +190,11 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
 - O chão é desenhado uma vez, em pedaços de 512 px, e só copiado; cada prédio, árvore e poste vira uma imagem
   pronta. A cada quadro só se desenham o personagem, a copa balançando, o semáforo e os efeitos.
 - Resolução limitada a 2× (telas de celular muito densas não pesam à toa).
-- Medido no navegador de teste (computador, sem placa de vídeo): ~60 quadros por segundo; o personagem leva ~3 ms
-  por quadro. Com a CPU 4× mais lenta, correndo pela rua: 18 a 20 quadros por segundo numa janela de 1280×800, 12 numa
-  de 1920×950 e 12 a 13 no celular emulado (Pixel 7) — antes do redesenho eram 19, 13 e 12. Celular de verdade desenha
-  com a placa de vídeo: o número real só testando num aparelho.
+- Medido no navegador de teste (computador, sem placa de vídeo): ~60 quadros por segundo; o personagem leva ~4 ms
+  por quadro. Com a CPU 4× mais lenta, correndo pela rua: 16 a 17 quadros por segundo numa janela de 1280×800, 12 numa
+  de 1920×950 e 12 no celular emulado (Pixel 7) — na versão 7 eram 18, 13 e 13 (a ordem de desenho pelas superfícies
+  e as mãos e pés com a mesma forma em todo zoom custam ~20% a mais). Celular de verdade desenha com a placa de vídeo:
+  o número real só testando num aparelho.
 - Os detalhes pequenos (dedos separados, gomos da trança, músculos, miolo dos losangos da faixa, pontas do cabelo)
   só são desenhados quando o personagem aparece grande o bastante na tela (zoom × densidade da tela ≥ 1,1: o zoom de
   começo de um monitor comum de PC e o celular já passam disso); menor que isso, viram uma forma só.
@@ -174,3 +207,8 @@ os prints na pasta de onde forem chamados: `node prototipos/pindorama-25d/ferram
   (em frente: 0,23 s).
 - No meio-fio, os dois pés sobem juntos (não há pé em altura diferente).
 - Fios dos postes são desenhados por cima de tudo (no mapa atual não há nada alto na frente deles).
+- Na primeira passada ao começar a correr (e ao levantar do agachado direto para a corrida) o joelho ainda dá um
+  tranco (15,7 cm/quadro²; na v7 eram 11,7 e 9,0): a pelve desce de uma vez quando o pé da frente vai pousar longe.
+- Trocas de ordem que sobraram: cabelo com trança e com a orelha (encostados) e braço passando atrás do peito no
+  balanço da corrida (essa é de verdade). A perna agachada sai em pedaços porque a mão fica entre os joelhos.
+- Muito pequeno na tela (zoom 0,6), a silhueta muda um pouco (contorno de 1,6 px no mínimo, para continuar legível).
