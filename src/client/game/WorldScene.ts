@@ -17,7 +17,7 @@ import {
 import { angleBetween, angleOfDir, arcTiles, chebyshev, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
 import { ALL_DIRS, DX, DY, type Dir } from '../../shared/dir';
 import { GameMap, type MapExit, type Tile, type TiledMap } from '../../shared/map';
-import { bodySpotIn, bodyWalkable, degreesOfDir, degreesToward, footTile, steerDegrees, sweepBody, walkDistance, walkSlice, type Pose } from '../../shared/movement';
+import { bodySpotIn, bodyWalkable, degreesOfDir, degreesToward, finalApproach, footTile, steerDegrees, sweepBody, walkDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
 import { DASH_SLOT, type EntityState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
@@ -473,10 +473,17 @@ export class WorldScene extends Phaser.Scene {
     }
     while (this.route.length > 0) {
       const next = this.route[0]!;
-      const last = this.route.length === 1;
-      const distance = Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y);
-      // chegou perto do ponto: segue para o próximo (o último precisa chegar mais perto)
-      if (distance <= (last ? 0.13 : 0.35)) {
+      if (this.route.length === 1) {
+        // ponto final: só anda enquanto o pedaço aproxima de verdade (senão passaria do ponto e voltaria sem parar)
+        const degrees = finalApproach(this.map, this.predicted, next, this.sliceTiles);
+        if (degrees === null) {
+          this.route.shift();
+          continue;
+        }
+        return degrees;
+      }
+      // chegou perto do ponto: segue para o próximo
+      if (Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y) <= 0.35) {
         this.route.shift();
         continue;
       }

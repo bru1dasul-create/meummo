@@ -111,6 +111,21 @@ export function steerDegrees(fromX: number, fromY: number, toX: number, toY: num
   return degreesToward(fromX, fromY, toX, toY);
 }
 
+/**
+ * Chegando no ponto final de um caminho: para onde dar o último pedaço, ou null se nenhum pedaço aproxima mais
+ * (já chegou o mais perto que dá). Sem isto, perto do ponto o personagem passaria para um lado e para o outro sem
+ * nunca chegar (e mandando pedido de andar sem parar).
+ */
+export function finalApproach(map: Walkable, from: Pose, target: { x: number; y: number }, distance: number): number | null {
+  const now = Math.hypot(target.x - from.x, target.y - from.y);
+  // primeiro a mira "reta" (ajuda a entrar em vãos), depois a mira exata no ponto
+  for (const degrees of [steerDegrees(from.x, from.y, target.x, target.y), degreesToward(from.x, from.y, target.x, target.y)]) {
+    const after = walkSlice(map, from, degrees, distance);
+    if (Math.hypot(target.x - after.x, target.y - after.y) < now - 0.005) return degrees;
+  }
+  return null;
+}
+
 /** Quanto se anda num pedaço de caminhada (WALK_SLICE_MS), no ritmo de `stepMs` por tile. */
 export function walkDistance(sliceMs: number, stepMs: number): number {
   return sliceMs / stepMs;

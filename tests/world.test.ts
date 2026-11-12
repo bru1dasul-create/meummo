@@ -203,6 +203,19 @@ describe('Session', () => {
     expect(lobby.realm.start.players.size).toBe(0);
   });
 
+  it('andar sem parar (20 pedidos por segundo, com tiro e ping) não derruba ninguém', async () => {
+    const { s, transport } = session();
+    expect((await sendHello(s, transport, 'Ana', 'segredo1')).t).toBe('welcome');
+    let seq = 0;
+    for (let t = 0; t < 60_000; t += WALK_SLICE_MS) {
+      clock.advance(WALK_SLICE_MS);
+      s.handle(JSON.stringify({ t: 'walk', seq: ++seq, a: seq % 2 === 0 ? 0 : 180 }));
+      if (t % 500 === 0) s.handle(JSON.stringify({ t: 'shoot', cid: seq, a: 0 }));
+      if (t % 2000 === 0) s.handle(JSON.stringify({ t: 'ping', id: seq }));
+    }
+    expect(transport.closed).toEqual([]);
+  });
+
   it('desconecta quem manda lixo sem parar', () => {
     const { s, transport } = session();
     for (let i = 0; i < 25; i++) s.handle('isso não é json');

@@ -46,8 +46,9 @@ export class Session {
     private readonly ip: string,
     private readonly now: () => number = () => performance.now(),
   ) {
-    // Até 30 mensagens de uma vez, 15 por segundo em média (andar usa ~5/s).
-    this.limiter = new TokenBucket(30, 15, now());
+    // Até 60 mensagens de uma vez, 40 por segundo em média. Andar solto usa 20 por segundo (um pedaço a cada 50 ms),
+    // e ainda tem tiro, habilidade, ping e chat. (Com 15/s, quem andava sem parar uns 10 s era desconectado.)
+    this.limiter = new TokenBucket(60, 40, now());
   }
 
   get playerName(): string | null {
