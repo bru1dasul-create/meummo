@@ -273,3 +273,34 @@ describe('mapa do formato novo: o mundo', () => {
     expect(join('refugio', false)).toBe('refugio');
   });
 });
+
+describe('mapa do formato novo: formas do Tiled', () => {
+  const poly = (layer: 'colisao' | 'seguro', shape: 'polygon' | 'polyline') => {
+    const map = metricMap();
+    const target = map.layers.find((l) => l.name === layer)!;
+    target.objects = [{ id: 77, x: 4 * PX, y: 4 * PX, width: 0, height: 0, [shape]: [{ x: 0, y: 0 }, { x: 3 * PX, y: 0 }, { x: 0, y: 3 * PX }] }];
+    return map;
+  };
+
+  it('polígono ou linha na colisão ou na área segura dá erro claro (não some calado)', () => {
+    expect(() => GameMap.fromTiled(poly('colisao', 'polygon'), 'teste')).toThrow(/objeto 77 da camada "colisao".*só aceita retângulos/);
+    expect(() => GameMap.fromTiled(poly('seguro', 'polyline'), 'teste')).toThrow(/só aceita retângulos/);
+  });
+
+  it('polígono, elipse e trilha no chão (só desenho) não atrapalham o servidor; elipse na colisão vale como o retângulo', () => {
+    const map = metricMap({ solids: [rect(10, 4, 2, 2, { ellipse: true })] });
+    map.layers.unshift({
+      type: 'objectgroup',
+      name: 'chao',
+      objects: [
+        { id: 1, type: 'agua', x: 2 * PX, y: 2 * PX, width: 0, height: 0, polygon: [{ x: 0, y: 0 }, { x: 4 * PX, y: 0 }, { x: 2 * PX, y: 3 * PX }] },
+        { id: 2, type: 'grama', x: 6 * PX, y: 6 * PX, width: 3 * PX, height: 2 * PX, ellipse: true },
+        { id: 3, type: 'trilha', x: 0, y: 0, width: 0, height: 0, polyline: [{ x: PX, y: PX }, { x: 9 * PX, y: 9 * PX }], properties: [{ name: 'largura', type: 'float', value: 2.5 }] },
+      ],
+    });
+    const game = GameMap.fromTiled(map, 'teste');
+    expect(game.isWalkable(3, 3)).toBe(true); // o chão não bloqueia
+    expect(bodyFits(game, 10.5, 4.6)).toBe(false); // a elipse da colisão bloqueia como a caixa em volta
+    expect(bodyFits(game, 13, 4.6)).toBe(true);
+  });
+});

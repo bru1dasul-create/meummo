@@ -126,6 +126,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   para os mapas do formato novo (`hello` com `mundo: 'novo'`, protocolo 17)
 - [x] **[estrutura]** Velocidade no mundo novo (decisão do dono, 13/11): correr é o normal (4,5 m/s) e andar devagar
   (2 m/s) é segurando Shift ou empurrando pouco o joystick (protocolo 18). O jogo de hoje continua igual
+- [ ] **[estrutura]** Combate no jogo novo, passo 1 (antes ou junto com os monstros da etapa 4a do [mundo]): ver os
+  golpes dos monstros (aviso no chão, tiro, dano), a vida baixar, desmaiar e voltar, e atacar com o estilingue. Hoje,
+  no `/?novo`, os saguis atacam e nada disso aparece (a vida na tela só muda com a regeneração). Depois, passo 2: as
+  regras da revisão 17 (pedra com carga, defesa com energia, esquiva e recuo)
 - [ ] **[arte]** O desenho de verdade no jogo novo: `PD.View` com a interface `WorldView` (`src/client/novo/view.ts`),
   carregado em `src/client/novo/arte.ts` (o motor troca o provisório por ele sozinho)
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
