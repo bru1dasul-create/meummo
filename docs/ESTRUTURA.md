@@ -52,6 +52,14 @@ valendo. Esperando o dono decidir.
 Guarapiranga depois, Santo Amaro e Billings em seguida e o centro (Sé) no fim. Esperando a escolha dele. Avisei o
 [mundo] para pausar o minimapa dos mapas atuais.
 
+**12/11 — Mapa 01 (decisões do dono, repassadas pelo [mundo]; confirmar com o dono quando chegar a hora):** o
+[mundo] faz em etapas (câmera, planta, uma tela jogável só com a clareira, o resto em 3 pedaços, atmosferas,
+minimapa); o meu trabalho no mapa novo começa na etapa 3, e ele avisa. Ficam comigo: a Budega como a vendinha da
+praça da Vila do Capão (NPC e loja nos dados; sem "Tabacaria" e sem tabaco), a zona segura por área, a primeira
+missão (acordar, Curupira, portão, vila, mata) e os saguis "encantados" (a missão é acalmar ou afastar, não
+matar; o monstro continua o mesmo, mudam a história e o texto). O nome do mundo continua "Selva de Pedra". O
+ritual de classe na figueira fica para depois.
+
 **13/11 — movimento livre, passo 1, na `main`:** jogadores andam soltos (pedaços de 50 ms, orçamento de tempo no
 servidor, caixa do pé de 0,6 × 0,4 na faixa de baixo do tile, desliza e escorrega 0,3 na quina). Mexi em poucas
 linhas do `EntityView.ts` (da [arte]: a perna acompanha a distância) e avisei. Próximos: passo 2 com o [mundo]
