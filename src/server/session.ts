@@ -70,8 +70,8 @@ export class Session {
     }
 
     switch (msg.t) {
-      case 'step':
-        this.lobby.realm.requestStep(this.player, msg.seq, msg.dir, msg.dash === true);
+      case 'walk':
+        this.lobby.realm.requestWalk(this.player, msg.seq, msg.a, msg.dash === true);
         break;
       case 'shoot':
         this.lobby.realm.shoot(this.player, msg.cid, msg.a);

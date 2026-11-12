@@ -1,6 +1,8 @@
 // Formato das mensagens entre o navegador e o servidor (JSON via WebSocket).
 // Regra de ouro: o cliente só pede ("quero andar", "quero atirar"); quem decide é o servidor.
-// Posições são em tiles. Ângulos são em radianos (0 = direita, π/2 = baixo).
+// Posições são em tiles (1 tile = 1 metro), "de canto": quem está parado no meio do tile (x, y) tem posição (x, y),
+// e o centro do pé fica em (x + 0.5, y + 0.5). Monstros e NPCs andam de tile em tile (números inteiros); jogadores
+// andam soltos (números quebrados). Ângulos são em radianos (0 = direita, π/2 = baixo); o `a` do `walk` é em graus.
 
 import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
@@ -57,7 +59,7 @@ export interface PlayerStats {
 /** Cliente → servidor. */
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; password: string } // quero entrar com este personagem (criado na hora se não existir)
-  | { t: 'step'; seq: number; dir: Dir; dash?: true } // quero andar um tile (ou rolar, se dash)
+  | { t: 'walk'; seq: number; a: number; dash?: true } // quero andar um pedaço (WALK_SLICE_MS) na direção `a` (graus inteiros); com dash, rolar
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila

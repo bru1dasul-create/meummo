@@ -68,9 +68,11 @@ Tudo isto se ajusta mexendo em números, sem programar:
 ## 🎮 Sensação de jogo (pedido do dono em 10/11: "andar engessado, trava longe das coisas")
 Hoje o personagem anda de quadrado em quadrado e a colisão é do quadrado inteiro (uma árvore bloqueia 2 quadrados,
 mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogáveis:
-- [ ] **[estrutura]** Movimento livre, passo 1: o personagem anda solto (posição em fração de tile), com um "pé"
-  pequeno, deslizando nas paredes; servidor continua mandando (prevê no navegador, confirma no servidor). Os
-  monstros continuam andando de tile em tile por enquanto. Pede um ajuste pequeno da [arte] no `EntityView.ts`
+- [x] **[estrutura]** Movimento livre, passo 1: o personagem anda solto (posição em fração de tile, 1 tile = 1 metro),
+  com um pé pequeno (caixa de 0,6 × 0,4 onde o pé é desenhado) que desliza nas paredes e escorrega de raspão para
+  entrar em passagens; 360 direções (pronto para o joystick); o servidor continua mandando (pedaços de 50 ms com
+  "orçamento" de tempo, previsão no navegador). Monstros continuam de tile em tile. No `EntityView.ts` (da [arte]),
+  só a perna passou a acompanhar a distância andada
 - [ ] **[mundo]** Movimento livre, passo 2: colisão do tamanho de cada objeto (tronco, poste, cesto, caixote), dita
   no tileset; a [estrutura] lê e usa
 - [ ] **[estrutura + arte]** Movimento livre, passo 3: joystick na tela do celular (a [estrutura] faz funcionar, a

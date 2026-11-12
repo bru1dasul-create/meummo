@@ -68,7 +68,9 @@ export class EntityView {
   private toY: number;
   private moveStart = 0;
   private moveDuration = 0;
-  private steps = 0;
+  /** Distância andada (tiles) antes do movimento atual e o tamanho dele: a perna anda 1 passo por tile. */
+  private walkedBefore = 0;
+  private moveLength = 0;
   private facingLeft = false;
   private flashUntil = 0;
   private windupUntil = 0;
@@ -173,9 +175,10 @@ export class EntityView {
     this.fromY = current.y;
     this.toX = px;
     this.toY = py;
+    this.walkedBefore += this.moveLength * current.t;
+    this.moveLength = length;
     this.moveStart = now;
     this.moveDuration = options.durationMs ?? Math.round(stepMs * length);
-    this.steps++;
   }
 
   /** Pula direto para um tile (voltar para a vila, teleporte). */
@@ -302,12 +305,14 @@ export class EntityView {
 
   /** Escolhe o quadro do corpo e a expressão, e cola o rosto em cima da cabeça desse quadro. */
   private drawCharacter(now: number, moving: boolean, progress: number): void {
+    // a perna acompanha a distância andada (anda solto, em pedacinhos, ou de tile em tile: dá na mesma)
+    const walked = this.walkedBefore + this.moveLength * progress;
     const pick = this.animator!.pick({
       now,
       dir: this.dir,
       moving,
-      progress,
-      steps: this.steps,
+      progress: walked - Math.floor(walked),
+      steps: Math.floor(walked),
       dashing: this.dashing,
       fainted: this.fainted,
     });

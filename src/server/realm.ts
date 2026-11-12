@@ -3,7 +3,6 @@
 // na vila depois de desmaiar num mapa sem vila, e o chat e os avisos que valem para todo mundo.
 
 import { MAX_PLAYERS } from '../shared/constants';
-import type { Dir } from '../shared/dir';
 import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
@@ -122,8 +121,8 @@ export class Realm {
 
   // ---------- pedidos do jogador: vão para o mapa onde ele está ----------
 
-  requestStep(player: Player, seq: number, dir: Dir, dash = false): void {
-    this.worldOf(player)?.requestStep(player, seq, dir, dash);
+  requestWalk(player: Player, seq: number, degrees: number, dash = false): void {
+    this.worldOf(player)?.requestWalk(player, seq, degrees, dash);
   }
 
   shoot(player: Player, cid: number, angle: number): void {

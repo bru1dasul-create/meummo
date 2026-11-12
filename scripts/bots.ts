@@ -9,10 +9,11 @@
 
 import WebSocket from 'ws';
 import { loadMap } from '../src/server/server';
-import { SHOT_COOLDOWN_MS, PROTOCOL_VERSION, STEP_MS } from '../src/shared/constants';
+import { SHOT_COOLDOWN_MS, PROTOCOL_VERSION, WALK_SLICE_MS } from '../src/shared/constants';
 import { angleBetween, chebyshev } from '../src/shared/combat';
-import type { Dir } from '../src/shared/dir';
+import { DX, DY } from '../src/shared/dir';
 import type { GameMap, Tile } from '../src/shared/map';
+import { degreesToward, footTile } from '../src/shared/movement';
 import { findPath } from '../src/shared/pathfind';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
 
@@ -78,7 +79,8 @@ class Bot {
   private waitingAck = false;
   private seq = 0;
   private cid = 0;
-  private path: Dir[] = [];
+  /** Pontos do caminho (o meio de cada tile até o destino). */
+  private path: Tile[] = [];
   private lastStepAt = 0;
   private nextShotAt = 0;
   private restUntil = 0;
@@ -169,17 +171,26 @@ class Bot {
   tick(now: number): void {
     if (!this.ready || this.dead) return;
     if (hunting && this.fight(now)) return;
-    if (this.waitingAck || now < this.restUntil || now - this.lastStepAt < STEP_MS) return;
+    if (this.waitingAck || now < this.restUntil || now - this.lastStepAt < WALK_SLICE_MS) return;
+    // anda solto, como gente: um pedaço de caminhada por vez, mirando no próximo ponto do caminho
+    while (this.path.length > 0 && Math.hypot(this.path[0]!.x - this.x, this.path[0]!.y - this.y) <= 0.3) this.path.shift();
     if (this.path.length === 0) {
       if (!hunting && Math.random() < 0.3) {
         this.restUntil = now + 1000 + Math.random() * 3000; // para um pouquinho
         return;
       }
       const target = hunting ? (this.nearestMonsterSpot() ?? huntingTarget(this.map)) : villageTarget(this.map);
-      this.path = (target && findPath(this.map, this.x, this.y, target.x, target.y, 20000)) || [];
+      let { x, y } = footTile(this.x, this.y);
+      const dirs = (target && findPath(this.map, x, y, target.x, target.y, 20000)) || [];
+      this.path = dirs.map((dir) => {
+        x += DX[dir];
+        y += DY[dir];
+        return { x, y };
+      });
       return;
     }
-    this.send({ t: 'step', seq: ++this.seq, dir: this.path.shift()! });
+    const next = this.path[0]!;
+    this.send({ t: 'walk', seq: ++this.seq, a: degreesToward(this.x, this.y, next.x, next.y) });
     this.waitingAck = true;
     this.lastStepAt = now;
     if (Math.random() < 0.006) this.send({ t: 'chat', text: pick(PHRASES) });

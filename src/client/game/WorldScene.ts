@@ -6,19 +6,18 @@ import {
   DASH_COOLDOWN_MS,
   DASH_INVULNERABLE_MS,
   DASH_TILES,
-  MAX_PENDING_STEPS,
+  MAX_PENDING_WALKS,
   SHOT_COOLDOWN_MS,
   SHOT_RANGE,
   SHOT_SPEED,
-  STEP_TOLERANCE_MS,
-  TICK_MS,
   TILE_SIZE,
   TRADE_RANGE,
+  WALK_SLICE_MS,
 } from '../../shared/constants';
 import { angleBetween, angleOfDir, arcTiles, chebyshev, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
-import { ALL_DIRS, DX, DY, stepDuration, type Dir } from '../../shared/dir';
+import { ALL_DIRS, DX, DY, type Dir } from '../../shared/dir';
 import { GameMap, type MapExit, type Tile, type TiledMap } from '../../shared/map';
-import { applyDash, applyInput, applyStep, nextStepTime, type Pose } from '../../shared/movement';
+import { degreesOfDir, degreesToward, footTile, sweepBody, walkDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
 import { DASH_SLOT, type EntityState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
@@ -34,7 +33,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import { GroundDrops } from './drops';
 import { Effects } from './effects';
 import { EntityView, feetOf } from './EntityView';
-import { KeyboardDirections, type HeldMove } from './input';
+import { KeyboardDirections } from './input';
 import { CanopyFader, createMapLayers, MapLights, MapSparks, MapWeather } from './mapDepth';
 
 export interface WorldSceneData {
@@ -59,8 +58,6 @@ const DEFAULT_MONSTER_STEP_MS = 320;
 const LABEL_HEIGHT = 20;
 const T = TILE_SIZE;
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
-
-type StepResult = 'moved' | 'turned' | 'blocked' | 'wait';
 
 export class WorldScene extends Phaser.Scene {
   private conn!: Connection;
@@ -115,12 +112,18 @@ export class WorldScene extends Phaser.Scene {
   private bagEquipped: InventoryState['equipped'] | null = null;
 
   // Previsão do próprio movimento: o personagem anda na hora e o servidor confirma depois.
+  /** Posição exata prevista ("de canto": o centro do pé fica em x + 0.5, y + 0.5). */
   private predicted!: Pose;
-  private pending: { seq: number; dir: Dir; dash: boolean }[] = [];
+  /** Pedaços de caminhada (e esquivas) mandados e ainda não confirmados. */
+  private pending: { seq: number; a: number; dash: boolean }[] = [];
   private seq = 0;
-  private nextStepAt = 0;
-  /** Caminho do "clique para andar". */
-  private path: Dir[] = [];
+  /** Tempo de caminhada acumulado: a cada WALK_SLICE_MS sai um pedido de andar um pedaço. */
+  private walkCredit = WALK_SLICE_MS;
+  private walkAt = 0;
+  /** Caminho do "clique para andar": o meio de cada tile até o destino. */
+  private route: Tile[] = [];
+  /** Pedaços seguidos em que o "clique para andar" não saiu do lugar (bateu em algo): desiste. */
+  private stuckSlices = 0;
 
   // Combate
   private myLevel = 1;
@@ -299,7 +302,7 @@ export class WorldScene extends Phaser.Scene {
       get zone() {
         return scene.welcome.map;
       },
-      walking: () => scene.path.length > 0,
+      walking: () => scene.route.length > 0,
       /** Encantado pelo canto (Iara) agora. */
       charmed: () => performance.now() < scene.charmedUntil,
       /** O que está no chão esperando você pegar. */
@@ -337,24 +340,24 @@ export class WorldScene extends Phaser.Scene {
   private updateShop(): void {
     if (this.pendingNpc !== null) {
       const view = this.entities.get(this.pendingNpc);
-      if (view && chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) <= TRADE_RANGE) {
+      if (view && chebyshev(this.here(), { x: view.tileX, y: view.tileY }) <= TRADE_RANGE) {
         const id = this.pendingNpc;
         this.pendingNpc = null;
         this.clearPath();
         this.openNpc(id);
-      } else if (!view || this.path.length === 0) {
+      } else if (!view || this.route.length === 0) {
         this.pendingNpc = null; // parou de andar antes de chegar
       }
     }
     const talking = this.talk.npcId;
     if (talking !== null) {
       const view = this.entities.get(talking);
-      if (!view || chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) > TRADE_RANGE + 1) this.talk.close();
+      if (!view || chebyshev(this.here(), { x: view.tileX, y: view.tileY }) > TRADE_RANGE + 1) this.talk.close();
     }
     const open = this.shop.npcId;
     if (open !== null) {
       const view = this.entities.get(open);
-      if (!view || chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) > TRADE_RANGE + 1) {
+      if (!view || chebyshev(this.here(), { x: view.tileX, y: view.tileY }) > TRADE_RANGE + 1) {
         this.shop.close();
         this.toast.show('Você se afastou da loja');
       }
@@ -377,12 +380,12 @@ export class WorldScene extends Phaser.Scene {
   private talkTo(id: number): void {
     const view = this.entities.get(id);
     if (!view) return;
-    if (chebyshev(this.predicted, { x: view.tileX, y: view.tileY }) <= TRADE_RANGE) {
+    if (chebyshev(this.here(), { x: view.tileX, y: view.tileY }) <= TRADE_RANGE) {
       this.openNpc(id);
       return;
     }
     this.walkTo(view.tileX, view.tileY);
-    this.pendingNpc = this.path.length > 0 ? id : null;
+    this.pendingNpc = this.route.length > 0 ? id : null;
   }
 
   private openNpc(id: number): void {
@@ -425,100 +428,130 @@ export class WorldScene extends Phaser.Scene {
   }
 
   // ======================= movimento =======================
+  // Movimento livre: enquanto você segura uma direção (ou segue o "clique para andar"), sai um pedido de andar
+  // um pedaço (WALK_SLICE_MS) a cada WALK_SLICE_MS. O personagem anda na hora (previsão, com as mesmas regras
+  // do servidor em src/shared/movement.ts) e o servidor confirma ou corrige depois (onAck).
+
+  /** Quanto se anda num pedaço de caminhada (tiles). */
+  private get sliceTiles(): number {
+    return walkDistance(WALK_SLICE_MS, this.stepMs);
+  }
+
+  /** O tile onde você está agora (pela previsão). */
+  private here(): Tile {
+    return footTile(this.predicted.x, this.predicted.y);
+  }
 
   private handleMovementInput(now: number): void {
+    const delta = this.walkAt > 0 ? Math.min(250, now - this.walkAt) : 0;
+    this.walkAt = now;
     if (now < this.charmedUntil) {
-      // encantado: o servidor recusaria os passos (a esquiva continua valendo, pelo tryDash)
+      // encantado: o servidor recusaria a caminhada (a esquiva continua valendo, pelo tryDash)
       this.clearPath();
+      this.walkCredit = WALK_SLICE_MS;
       return;
     }
+    let degrees = this.wantedDegrees();
+    if (degrees === null) {
+      this.walkCredit = WALK_SLICE_MS; // parado: o primeiro pedaço sai na hora em que você mexer
+      return;
+    }
+    this.walkCredit = Math.min(this.walkCredit + delta, WALK_SLICE_MS * 3);
+    while (degrees !== null && this.walkCredit >= WALK_SLICE_MS && this.pending.length < MAX_PENDING_WALKS) {
+      this.walkCredit -= WALK_SLICE_MS;
+      this.walkOnce(degrees, now);
+      degrees = this.wantedDegrees();
+    }
+  }
+
+  /** Para onde você quer andar agora (graus), ou null: a tecla segurada vale mais que o "clique para andar". */
+  private wantedDegrees(): number | null {
     const held = this.keyboard?.current() ?? null;
     if (held !== null) {
       this.clearPath();
-      this.tryHeldStep(held, now);
+      return degreesOfDir(held.dir);
+    }
+    while (this.route.length > 0) {
+      const next = this.route[0]!;
+      const last = this.route.length === 1;
+      const distance = Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y);
+      // chegou perto do ponto: segue para o próximo (o último precisa chegar mais perto)
+      if (distance <= (last ? 0.13 : 0.35)) {
+        this.route.shift();
+        continue;
+      }
+      return degreesToward(this.predicted.x, this.predicted.y, next.x, next.y);
+    }
+    this.marker?.setVisible(false);
+    return null;
+  }
+
+  /** Anda um pedaço: mostra na hora (previsão) e avisa o servidor. */
+  private walkOnce(degrees: number, now: number): void {
+    const result = walkSlice(this.map, this.predicted, degrees, this.sliceTiles);
+    if (!result.moved && result.dir === this.predicted.dir) {
+      // parado contra a parede, olhando para ela: não precisa avisar ninguém
+      this.noteStuck();
       return;
     }
-    if (this.path.length === 0) return;
-    const result = this.tryStep(this.path[0]!, now);
-    if (result === 'moved') {
-      this.path.shift();
-      if (this.path.length === 0) this.marker.setVisible(false);
-    } else if (result !== 'wait') {
-      this.clearPath();
-    }
-  }
-
-  /**
-   * Passo pelo teclado. Na diagonal (ex.: W+D), se tiver parede no caminho, "escorrega"
-   * para o lado que estiver livre em vez de travar.
-   */
-  private tryHeldStep(held: HeldMove, now: number): void {
-    if (now < this.nextStepAt - STEP_TOLERANCE_MS || this.pending.length >= MAX_PENDING_STEPS) return;
-    for (const dir of [held.dir, ...held.fallbacks]) {
-      if (applyStep(this.map, this.predicted, dir).moved) {
-        this.tryStep(dir, now);
-        return;
-      }
-    }
-    this.tryStep(held.dir, now); // tudo bloqueado: só vira para lá
-  }
-
-  /** Tenta dar um passo: mostra na hora (previsão) e avisa o servidor. */
-  private tryStep(dir: Dir, now: number): StepResult {
-    if (now < this.nextStepAt - STEP_TOLERANCE_MS || this.pending.length >= MAX_PENDING_STEPS) return 'wait';
-    const result = applyStep(this.map, this.predicted, dir);
-    if (!result.moved && result.dir === this.predicted.dir) return 'blocked';
-
     this.seq += 1;
-    this.pending.push({ seq: this.seq, dir, dash: false });
-    this.conn.send({ t: 'step', seq: this.seq, dir });
+    this.pending.push({ seq: this.seq, a: degrees, dash: false });
+    this.conn.send({ t: 'walk', seq: this.seq, a: degrees });
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
-    if (result.moved) this.nextStepAt = nextStepTime(now, this.nextStepAt, stepDuration(dir, this.stepMs), TICK_MS);
     this.me.moveTo(result.x, result.y, result.dir, now, this.stepMs);
-    return result.moved ? 'moved' : 'turned';
+    if (result.moved) this.stuckSlices = 0;
+    else this.noteStuck();
+  }
+
+  /** O "clique para andar" bateu em algo e não sai do lugar: desiste (senão fica empurrando a parede). */
+  private noteStuck(): void {
+    if (this.route.length === 0) return;
+    this.stuckSlices += 1;
+    if (this.stuckSlices >= 4) this.clearPath();
   }
 
   /**
    * Para onde rolar: a tecla que você segura; senão, para onde está andando;
    * senão, para longe do monstro mais perto (é o que se quer quando um golpe vem vindo).
    */
-  private dashDirection(): Dir {
+  private dashDegrees(): number {
     const held = this.keyboard?.current() ?? null;
-    if (held !== null) return held.dir;
-    if (this.path.length > 0) return this.path[0]!;
+    if (held !== null) return degreesOfDir(held.dir);
+    const next = this.route[0];
+    if (next) return degreesToward(this.predicted.x, this.predicted.y, next.x, next.y);
     const threat = this.nearestMonster(this.predicted.x + 0.5, this.predicted.y + 0.5, 4.5);
-    if (!threat) return this.predicted.dir;
-    let best = this.predicted.dir;
+    if (!threat) return degreesOfDir(this.predicted.dir);
+    let best = degreesOfDir(this.predicted.dir);
     let bestDistance = -Infinity;
     for (const dir of ALL_DIRS) {
-      const landing = applyDash(this.map, this.predicted, dir, DASH_TILES);
+      const degrees = degreesOfDir(dir);
+      const landing = sweepBody(this.map, this.predicted, degrees, DASH_TILES);
       if (!landing.moved) continue;
       const distance = Math.hypot(landing.x - threat.tileX, landing.y - threat.tileY);
       if (distance > bestDistance) {
-        best = dir;
+        best = degrees;
         bestDistance = distance;
       }
     }
     return best;
   }
 
-  /** Esquiva: rola 3 tiles (veja dashDirection). */
+  /** Esquiva: rola 3 tiles (veja dashDegrees), deslizando encostado no que tiver no caminho. */
   private tryDash(now: number): void {
-    if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_STEPS) return;
-    const dir = this.dashDirection();
-    const result = applyDash(this.map, this.predicted, dir, DASH_TILES);
+    if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_WALKS) return;
+    const degrees = this.dashDegrees();
+    const result = sweepBody(this.map, this.predicted, degrees, DASH_TILES);
     if (!result.moved) {
       this.toast.show('Sem espaço para rolar aí');
       return;
     }
     this.seq += 1;
-    this.pending.push({ seq: this.seq, dir, dash: true });
-    this.conn.send({ t: 'step', seq: this.seq, dir, dash: true });
+    this.pending.push({ seq: this.seq, a: degrees, dash: true });
+    this.conn.send({ t: 'walk', seq: this.seq, a: degrees, dash: true });
     this.sfx.play('dash');
     const from = feetOf(this.predicted.x, this.predicted.y);
-    this.predicted = { x: result.x, y: result.y, dir };
-    this.nextStepAt = nextStepTime(now, this.nextStepAt, stepDuration(dir, this.stepMs), TICK_MS);
-    this.me.moveTo(result.x, result.y, dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140, dash: true });
+    this.predicted = { x: result.x, y: result.y, dir: result.dir };
+    this.me.moveTo(result.x, result.y, result.dir, now, this.stepMs, { snapBeyond: DASH_TILES + 1, durationMs: 140, dash: true });
     this.me.ghost(now, DASH_INVULNERABLE_MS);
     const to = feetOf(result.x, result.y);
     this.effects.trail(this.me.sprite, { x: from[0], y: from[1] }, { x: to[0], y: to[1] }, now);
@@ -528,14 +561,15 @@ export class WorldScene extends Phaser.Scene {
     this.charmedUntil = 0; // a esquiva quebra o encanto (o servidor confirma)
   }
 
-  /** O servidor confirmou nossos passos até `seq`. Se a previsão errou, corrige. */
+  /** O servidor confirmou nossa caminhada até `seq`. Refaz o que ainda falta confirmar; se a previsão errou, corrige. */
   private onAck(seq: number, server: Pose, now: number): void {
     this.pending = this.pending.filter((p) => p.seq > seq);
     let pose: Pose = server;
-    for (const p of this.pending) pose = applyInput(this.map, pose, p.dir, p.dash, DASH_TILES);
-    if (pose.x !== this.predicted.x || pose.y !== this.predicted.y) {
+    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceTiles);
+    const off = Math.hypot(pose.x - this.predicted.x, pose.y - this.predicted.y);
+    if (off > 1e-6) {
       this.predicted = { x: pose.x, y: pose.y, dir: pose.dir };
-      this.clearPath();
+      if (off > 0.75) this.clearPath(); // correção grande (bateu em algo que só o servidor viu): recomeça
       this.me.moveTo(pose.x, pose.y, pose.dir, now, this.stepMs);
     }
   }
@@ -546,12 +580,19 @@ export class WorldScene extends Phaser.Scene {
       this.clearPath();
       return;
     }
-    this.path = target.path;
+    // o caminho vira uma lista de pontos: o meio de cada tile, até o destino
+    let { x, y } = this.here();
+    this.route = target.path.map((dir) => {
+      x += DX[dir];
+      y += DY[dir];
+      return { x, y };
+    });
+    this.stuckSlices = 0;
     this.marker.setPosition(target.goal.x * T, target.goal.y * T).setVisible(true);
   }
 
   private pathTo(tx: number, ty: number): { path: Dir[]; goal: Tile } | null {
-    const { x, y } = this.predicted;
+    const { x, y } = this.here();
     const direct = findPath(this.map, x, y, tx, ty);
     if (direct) return { path: direct, goal: { x: tx, y: ty } };
     // Clicou num obstáculo (árvore, casa...): vai até o vizinho livre mais perto.
@@ -567,7 +608,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private clearPath(): void {
-    this.path = [];
+    this.route = [];
     this.marker?.setVisible(false);
   }
 
@@ -618,7 +659,7 @@ export class WorldScene extends Phaser.Scene {
       this.face(dirFromAngle(angle));
       // o servidor não manda o efeito da Bordunada de volta para quem golpeou: anima aqui mesmo
       this.me.attack('swing', angle, now);
-      this.effects.flashTiles(arcTiles(this.predicted.x, this.predicted.y, angle), 0xffe08a, 220, now);
+      this.effects.flashTiles(arcTiles(this.here().x, this.here().y, angle), 0xffe08a, 220, now);
     }
   }
 
@@ -889,7 +930,7 @@ export class WorldScene extends Phaser.Scene {
         // o canto te puxou um passo: desliza até lá (sem a previsão de passos, que o servidor recusaria)
         this.pending = [];
         this.predicted = { x: msg.x, y: msg.y, dir: msg.dir };
-        this.nextStepAt = 0;
+        this.walkCredit = WALK_SLICE_MS;
         this.clearPath();
         this.me.moveTo(msg.x, msg.y, msg.dir, now, this.stepMs);
         break;
@@ -984,7 +1025,7 @@ export class WorldScene extends Phaser.Scene {
   private onTeleport(x: number, y: number, dir: Dir, now: number): void {
     this.pending = [];
     this.predicted = { x, y, dir };
-    this.nextStepAt = 0;
+    this.walkCredit = WALK_SLICE_MS;
     this.clearPath();
     this.firing = null;
     this.me.teleportTo(x, y, dir);

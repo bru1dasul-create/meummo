@@ -10,6 +10,7 @@ import { CharacterStore } from '../src/server/accounts';
 import { startServer, type RunningServer } from '../src/server/server';
 import { PROTOCOL_VERSION } from '../src/shared/constants';
 import { DX, DY, type Dir } from '../src/shared/dir';
+import { degreesOfDir } from '../src/shared/movement';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
 import { FAST_HASH } from './helpers';
 
@@ -84,9 +85,9 @@ describe('servidor de verdade', () => {
     const map = server.world.map;
     const { x, y } = anaWelcome.you;
     const dir = ([0, 1, 2, 3] as Dir[]).find((d) => map.isWalkable(x + DX[d], y + DY[d]))!;
-    ana.send({ t: 'step', seq: 1, dir });
+    ana.send({ t: 'walk', seq: 1, a: degreesOfDir(dir) }); // um pedaço de caminhada (1/4 de tile)
     const ack = await ana.waitFor('ack', (m) => m.seq === 1);
-    expect([ack.x, ack.y]).toEqual([x + DX[dir], y + DY[dir]]);
+    expect([ack.x, ack.y]).toEqual([x + DX[dir] * 0.25, y + DY[dir] * 0.25]);
     await beto.waitFor('move', (m) => m.id === anaWelcome.id && m.x === ack.x && m.y === ack.y);
 
     ana.send({ t: 'chat', text: 'Olá, Beto!' });

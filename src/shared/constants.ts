@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 15;
+export const PROTOCOL_VERSION = 16;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -10,17 +10,23 @@ export const TILE_SIZE = 16;
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
 
-/** Tempo para andar um tile, em milissegundos. 200 ms = 5 tiles por segundo. */
+/** Tempo para andar um tile, em milissegundos. 200 ms = 5 tiles por segundo (1 tile = 1 metro). */
 export const STEP_MS = 200;
 
-/** Folga para aceitar um passo um pouquinho antes da hora (não muda a velocidade média). */
-export const STEP_TOLERANCE_MS = TICK_MS / 2;
+/**
+ * Movimento livre: o navegador manda um pedido de andar a cada WALK_SLICE_MS (um "pedaço" de caminhada)
+ * e o servidor anda esse pedaço quando chega a vez dele (no máximo no ritmo do relógio).
+ */
+export const WALK_SLICE_MS = TICK_MS;
 
-/** Quantos passos o servidor guarda na fila de cada jogador. Mais que isso = bug ou trapaça. */
-export const MAX_QUEUED_STEPS = 8;
+/** Quantos pedaços de caminhada o servidor guarda na fila de cada jogador. Mais que isso = bug ou trapaça. */
+export const MAX_QUEUED_WALKS = 12;
 
-/** Quantos passos o cliente pode dar "adiantado", sem confirmação do servidor. */
-export const MAX_PENDING_STEPS = 5;
+/** Folga de tempo que o servidor acumula para pedidos que chegam juntos (a rede atrasa e depois entrega de uma vez). */
+export const WALK_BUDGET_MAX_MS = 200;
+
+/** Quantos pedaços o navegador pode andar "adiantado", sem confirmação do servidor (1 s de caminhada). */
+export const MAX_PENDING_WALKS = 20;
 
 /** Área de visão, em tiles a partir do jogador. O servidor só envia o que está dentro dela. */
 export const VIEW_RADIUS_X = 20;

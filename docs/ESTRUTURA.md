@@ -52,6 +52,11 @@ valendo. Esperando o dono decidir.
 Guarapiranga depois, Santo Amaro e Billings em seguida e o centro (Sé) no fim. Esperando a escolha dele. Avisei o
 [mundo] para pausar o minimapa dos mapas atuais.
 
+**13/11 — movimento livre, passo 1, na `main`:** jogadores andam soltos (pedaços de 50 ms, orçamento de tempo no
+servidor, caixa do pé de 0,6 × 0,4 na faixa de baixo do tile, desliza e escorrega 0,3 na quina). Mexi em poucas
+linhas do `EntityView.ts` (da [arte]: a perna acompanha a distância) e avisei. Próximos: passo 2 com o [mundo]
+(colisão por formas, formato proposto) e o joystick; depois, o combate da revisão 17 (carga, defesa com energia).
+
 **12/11 — decidido pelo dono:** nascer no Parque Santo Dias; capítulo 1 = Capão Redondo e o parque → Guarapiranga →
 Santo Amaro (Largo Treze, Terminal, Shopping do Largo Treze) → Billings → centro no fim. Ele quer a Budega
 Distribuidora (o negócio dele) no Capão; recomendei sem "Tabacaria" e sem produtos de tabaco (Lei 9.294/1996).
@@ -75,7 +80,8 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **15**; `MIGRATIONS` no passo **3** (coluna `quests`).
+Números para não se perder: protocolo na versão **16** (movimento livre: `walk` no lugar de `step`); `MIGRATIONS` no
+passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes
 - Nada pendente para a [estrutura]. A [arte] entregou tudo que estava pedido (Curupira, jacaré, boto, Iara, canto,

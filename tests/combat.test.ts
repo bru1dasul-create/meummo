@@ -8,7 +8,7 @@ import { loadMonsterDefs, parseMonsterDefs } from '../src/server/monsters';
 import { loadMap } from '../src/server/server';
 import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
-import { FakeClock, FakeConn, tiledFromAscii, type TestZone } from './helpers';
+import { deg, FakeClock, FakeConn, tiledFromAscii, walkTiles, type TestZone } from './helpers';
 
 const VALID_ATTACK = { tipo: 'mordida', preparoMs: 500, intervaloMs: 1000, dano: [5, 5] };
 
@@ -178,8 +178,8 @@ describe('golpes com aviso', () => {
     const ana = join(world);
     world.tick();
     run(world, 300);
-    world.requestStep(ana.player, 1, UP); // desvia
-    run(world, 650);
+    walkTiles(world, clock, ana.player, UP, 1); // desvia (sai do quadrado marcado em 100 ms)
+    run(world, 450);
     expect(ana.player.y).toBe(2);
     expect(ana.player.hp).toBe(60);
     expect(ana.conn.ofType('fx').some((f) => f.kind === 'strike')).toBe(true);
@@ -190,25 +190,25 @@ describe('esquiva', () => {
   it('rola 3 tiles, deixa invencível por um instante e entra em recarga', () => {
     const world = makeWorld(OPEN, []);
     const ana = join(world);
-    world.requestStep(ana.player, 1, RIGHT, true);
+    world.requestWalk(ana.player, 1, deg(RIGHT), true);
     run(world, TICK_MS);
-    expect([ana.player.x, ana.player.y]).toEqual([5, 3]);
+    expect([ana.player.fx, ana.player.fy]).toEqual([5, 3]);
     expect(ana.player.invulnerableUntil).toBe(clock.time + DASH_INVULNERABLE_MS);
     expect(ana.conn.ofType('cd')).toContainEqual({ t: 'cd', n: DASH_SLOT, ms: DASH_COOLDOWN_MS });
 
-    // Outra esquiva antes da recarga vira um passo normal.
+    // Outra esquiva antes da recarga vira um pedaço de caminhada normal.
     run(world, 300);
-    world.requestStep(ana.player, 2, RIGHT, true);
+    world.requestWalk(ana.player, 2, deg(RIGHT), true);
     run(world, TICK_MS);
-    expect(ana.player.x).toBe(6);
+    expect(ana.player.fx).toBe(5.25);
   });
 
   it('para antes de paredes', () => {
     const world = makeWorld(withTile(OPEN, 4, 3, '#'), []);
     const ana = join(world);
-    world.requestStep(ana.player, 1, RIGHT, true);
+    world.requestWalk(ana.player, 1, deg(RIGHT), true);
     run(world, TICK_MS);
-    expect(ana.player.x).toBe(3);
+    expect(ana.player.x).toBe(3); // encostado na parede, sem entrar
   });
 });
 
@@ -222,9 +222,9 @@ describe('desmaio', () => {
     expect(ana.player.dead).toBe(true);
     expect(ana.conn.ofType('death')).toContainEqual({ t: 'death', id: ana.player.id });
 
-    world.requestStep(ana.player, 1, UP);
+    world.requestWalk(ana.player, 1, deg(UP));
     run(world, TICK_MS);
-    expect(ana.player.y).toBe(3);
+    expect(ana.player.fy).toBe(3);
 
     run(world, DEATH_MS);
     expect(ana.player.dead).toBe(false);
@@ -339,24 +339,22 @@ describe('correções da revisão (não deixar voltar)', () => {
     expect(ana.conn.ofType('shot').length).toBeLessThanOrEqual(Math.floor((19 * 400) / SHOT_COOLDOWN_MS) + 1);
   });
 
-  it('a esquiva acontece na hora, mesmo logo depois de um passo', () => {
+  it('a esquiva não espera o relógio da caminhada: vem logo depois do pedaço que chegou antes dela', () => {
     const world = makeWorld(OPEN, []);
     const ana = join(world);
-    world.requestStep(ana.player, 1, RIGHT);
-    run(world, TICK_MS);
-    expect(ana.player.x).toBe(3);
-    world.requestStep(ana.player, 2, RIGHT, true);
-    run(world, TICK_MS); // não espera o tempo do passo anterior acabar
-    expect(ana.player.x).toBe(6);
+    world.requestWalk(ana.player, 1, deg(RIGHT));
+    world.requestWalk(ana.player, 2, deg(RIGHT), true);
+    run(world, TICK_MS); // a caminhada gastou a folga do tick, mas a esquiva tem a recarga dela
+    expect(ana.player.fx).toBe(2 + 0.25 + 3);
     expect(ana.player.invulnerableUntil).toBeGreaterThan(clock.time);
   });
 
   it('rolar contra a parede não dá invencibilidade nem gasta a esquiva', () => {
     const world = makeWorld(withTile(OPEN, 3, 3, '#'), []);
     const ana = join(world);
-    world.requestStep(ana.player, 1, RIGHT, true);
+    world.requestWalk(ana.player, 1, deg(RIGHT), true);
     run(world, TICK_MS);
-    expect(ana.player.x).toBe(2);
+    expect(ana.player.fx).toBe(2);
     expect(ana.player.invulnerableUntil).toBe(0);
     expect(ana.conn.ofType('cd')).toHaveLength(0);
   });
@@ -416,7 +414,11 @@ describe('dados e validação', () => {
     expect(parseClientMsg('{"t":"shoot","cid":3,"a":"x"}')).toBeNull();
     expect(parseClientMsg('{"t":"skill","n":1,"a":0}')).toEqual({ t: 'skill', n: 1, a: 0 });
     expect(parseClientMsg('{"t":"skill","n":99,"a":0}')).toBeNull();
-    expect(parseClientMsg('{"t":"step","seq":1,"dir":2,"dash":true}')).toEqual({ t: 'step', seq: 1, dir: 2, dash: true });
-    expect(parseClientMsg('{"t":"step","seq":1,"dir":2,"dash":"sim"}')).toBeNull();
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":90,"dash":true}')).toEqual({ t: 'walk', seq: 1, a: 90, dash: true });
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":90}')).toEqual({ t: 'walk', seq: 1, a: 90 });
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":90,"dash":"sim"}')).toBeNull();
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":360}')).toBeNull();
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":45.5}')).toBeNull();
+    expect(parseClientMsg('{"t":"step","seq":1,"dir":2}')).toBeNull(); // o pedido antigo (de tile em tile) não existe mais
   });
 });

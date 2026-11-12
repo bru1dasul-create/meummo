@@ -3,8 +3,11 @@ import { CharacterStore, type HashCost } from '../src/server/accounts';
 import { LoginGuard, type GuardLimits } from '../src/server/login-guard';
 import { Realm, type RealmOptions } from '../src/server/realm';
 import type { Lobby, Session, Transport } from '../src/server/session';
-import { PROTOCOL_VERSION } from '../src/shared/constants';
+import type { Player } from '../src/server/entities';
+import { PROTOCOL_VERSION, STEP_MS, TICK_MS, WALK_SLICE_MS } from '../src/shared/constants';
+import type { Dir } from '../src/shared/dir';
 import type { GameMap, MonsterZone, TiledMap } from '../src/shared/map';
+import { degreesOfDir } from '../src/shared/movement';
 import type { ServerMsg } from '../src/shared/protocol';
 
 /**
@@ -146,4 +149,31 @@ export async function sendHello(
     },
     { timeout: 3000, interval: 2 },
   );
+}
+
+// ---------- movimento livre ----------
+
+/** Quantos pedaços de caminhada (WALK_SLICE_MS) dão um tile. */
+export const SLICES_PER_TILE = STEP_MS / WALK_SLICE_MS;
+
+/** Ângulo (graus) de uma direção, para os pedidos de caminhada (`walk`). */
+export const deg = degreesOfDir;
+
+/** Quem sabe receber pedidos de caminhada e andar o relógio (World ou Realm). */
+interface Walker {
+  requestWalk(player: Player, seq: number, degrees: number, dash?: boolean): void;
+  tick(): void;
+}
+
+/**
+ * Anda `tiles` tiles na direção `dir` como o navegador faz: um pedaço de caminhada por tick, com o relógio
+ * andando junto. Devolve o próximo número de sequência.
+ */
+export function walkTiles(world: Walker, clock: FakeClock, player: Player, dir: Dir, tiles: number, seq = 1): number {
+  for (let i = 0; i < tiles * SLICES_PER_TILE; i++) {
+    world.requestWalk(player, seq++, degreesOfDir(dir));
+    clock.advance(TICK_MS);
+    world.tick();
+  }
+  return seq;
 }

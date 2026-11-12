@@ -5,6 +5,7 @@ import { DOWN, type Dir } from '../shared/dir';
 import type { ShotPath } from '../shared/combat';
 import { lookFromName } from '../shared/look';
 import type { MonsterZone, Tile } from '../shared/map';
+import { footTile } from '../shared/movement';
 import type { GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
 import type { EntityState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
@@ -24,8 +25,12 @@ const NO_ITEMS: ReadonlyMap<string, ItemInfo> = new Map();
 
 export class Player {
   readonly kind = 'player' as const;
-  x: number;
-  y: number;
+  /**
+   * Posição exata ("de canto", em tiles com fração): o jogador anda solto. `x` e `y` são o tile onde ele
+   * está (o que monstros, saídas, área de visão e salvamento usam); escrever neles põe o jogador no meio do tile.
+   */
+  fx: number;
+  fy: number;
   dir: Dir = DOWN;
   level = 1;
   /** XP dentro do nível atual. */
@@ -35,9 +40,12 @@ export class Player {
   readonly look: number;
   /** Ids de quem este jogador está vendo agora. */
   readonly known = new Set<number>();
-  /** Passos/esquivas pedidos e ainda não processados (o servidor anda no ritmo dele). */
-  readonly queue: { seq: number; dir: Dir; dash: boolean }[] = [];
-  nextStepAt = 0;
+  /** Pedaços de caminhada/esquivas pedidos e ainda não processados (o servidor anda no ritmo dele). */
+  readonly queue: { seq: number; a: number; dash: boolean }[] = [];
+  /** Quanto tempo de caminhada o jogador ainda pode gastar agora (enche com o relógio, até um limite). */
+  walkBudget = 0;
+  /** Quando o orçamento de caminhada foi enchido pela última vez (0 = ainda não). */
+  walkClock = 0;
   lastSeq = -1;
   ackSeq = -1;
   ackPending = false;
@@ -94,8 +102,8 @@ export class Player {
     readonly characterId: number | null = null,
     look = lookFromName(name),
   ) {
-    this.x = x;
-    this.y = y;
+    this.fx = x;
+    this.fy = y;
     this.look = look;
     this.maxHp = maxHpFor(this.level);
     this.hp = this.maxHp;
@@ -107,14 +115,28 @@ export class Player {
     return this.deadUntil > 0;
   }
 
+  /** O tile onde o jogador está. Escrever põe ele no meio desse tile. */
+  get x(): number {
+    return footTile(this.fx, this.fy).x;
+  }
+  set x(value: number) {
+    this.fx = value;
+  }
+  get y(): number {
+    return footTile(this.fx, this.fy).y;
+  }
+  set y(value: number) {
+    this.fy = value;
+  }
+
   state(): EntityState {
     return {
       id: this.id,
       kind: 'player',
       type: 'player',
       name: this.name,
-      x: this.x,
-      y: this.y,
+      x: this.fx,
+      y: this.fy,
       dir: this.dir,
       look: this.look,
       level: this.level,

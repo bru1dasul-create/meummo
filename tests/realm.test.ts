@@ -5,11 +5,11 @@ import type { CharacterData } from '../src/server/accounts';
 import { checkLinks, Realm } from '../src/server/realm';
 import { loadMaps } from '../src/server/server';
 import type { Player } from '../src/server/world';
-import { STEP_MS, TICK_MS } from '../src/shared/constants';
+import { TICK_MS, WALK_SLICE_MS } from '../src/shared/constants';
 import { DOWN, LEFT, RIGHT, type Dir } from '../src/shared/dir';
 import { GameMap, type Tile, type TiledProperty } from '../src/shared/map';
 import { findPath } from '../src/shared/pathfind';
-import { FakeClock, FakeConn, tiledFromAscii } from './helpers';
+import { deg, FakeClock, FakeConn, SLICES_PER_TILE, tiledFromAscii } from './helpers';
 
 interface ExitDef {
   x: number;
@@ -97,10 +97,11 @@ function run(ms: number): void {
   }
 }
 
+/** Anda `steps` tiles na direção `dir`, um pedaço de caminhada por tick (como o navegador). */
 function walk(player: Player, dir: Dir, steps: number): void {
-  for (let i = 0; i < steps; i++) {
-    realm.requestStep(player, ++seq, dir);
-    run(STEP_MS);
+  for (let i = 0; i < steps * SLICES_PER_TILE; i++) {
+    realm.requestWalk(player, ++seq, deg(dir));
+    run(WALK_SLICE_MS);
   }
 }
 
