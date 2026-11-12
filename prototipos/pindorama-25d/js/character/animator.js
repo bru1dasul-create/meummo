@@ -19,7 +19,8 @@
   // giro máximo do corpo, em graus por segundo: vira rápido, mas sem pular de pose de um quadro para o outro
   const TURN = { still: 480, run: 420, attack: 720 };
   // Agilidade apenas na inversão sobre a base de apoio; a marcha mantém seu ritmo.
-  const PIVOT = { turn: 600, footTurn: 7.2, step: 0.14, release: 50 };
+  // turnAccel: o giro do pivô acelera até `turn` (graus/s²); começar já no máximo dava um tranco no corpo todo
+  const PIVOT = { turn: 600, turnAccel: 15000, footTurn: 7.2, step: 0.14, release: 50 };
   const DODGE = { total: 0.4, distance: 100, moveStart: 0.018, moveEnd: 0.245, cooldown: 0.2 };
   const DEATH = { total: 1.35, impact: 0.64 };
   const HIT = { total: 0.64, lock: 0.22 };
@@ -409,6 +410,16 @@
         const maxStep = (this.attack ? TURN.attack : this.turnInPlace ? PIVOT.turn : lerp(TURN.still, TURN.run, fast)) * DEG * dt;
         const next = dampAngle(this.yaw, wantYaw, lambda, dt);
         let d = clamp(angleDiff(this.yaw, next), -maxStep, maxStep);
+        // na inversão (pivô), o giro parte da velocidade que o corpo já tinha e acelera até o máximo em ~0,04 s (antes
+        // ia de 0 a 600°/s num quadro: o punho dava um tranco de 14 cm/quadro² no começo da virada). Só a subida é
+        // limitada: frear continua na hora (o limite dos pés logo abaixo manda parar). Fora do pivô, ou socando, fica
+        // como estava: uma rampa ali atrasava a troca de lado e as pernas cruzavam (testes lateral e refino do movimento)
+        if (this.turnInPlace && !this.attack && dt > 0) {
+          const w0 = (this._yawStep || 0) / (this._yawStepDt || dt);
+          const w = d / dt;
+          const acc = PIVOT.turnAccel * DEG * dt;
+          if (Math.abs(w) > Math.abs(w0) + acc) d = Math.sign(w) * (Math.abs(w0) * (Math.sign(w) === Math.sign(w0) ? 1 : 0) + acc) * dt;
+        }
         // o corpo não passa de ~55° na frente dos pés apoiados (senão as pernas cruzam): numa virada fechada ele
         // espera o próximo passo e a virada se divide em passos, como gente fazendo a curva
         if (onGround) {
@@ -449,6 +460,10 @@
           }
         }
         this.yaw += d;
+        this._yawStep = d;
+        this._yawStepDt = dt;
+      } else {
+        this._yawStep = 0;
       }
       this.yawRate = damp(this.yawRate, dt > 0 ? angleDiff(prevYaw, this.yaw) / dt : 0, 10, dt);
       // a cabeça vai na frente nas curvas: olha para onde o corpo vai virar
@@ -458,7 +473,10 @@
       // passada: avança pela distância (o pé no chão não escorrega)
       const step = this._stepLength(this.speed);
       if (onGround) this.phase = (this.phase + moved / (2 * step)) % 1;
-      const gaitWant = smoothstep(5, 70, this.speed) * (this.turnInPlace ? 0 : onGround ? 1 : 0.4);
+      // o pivô desliga a passada aos poucos (uma mola a mais na frente do amortecimento): antes a passada caía 21% já
+      // no primeiro quadro da virada, e braços e pernas trocavam de velocidade de uma vez
+      this.pivotK = damp(this.pivotK || 0, this.turnInPlace ? 1 : 0, 20, dt);
+      const gaitWant = smoothstep(5, 70, this.speed) * (1 - this.pivotK) * (onGround ? 1 : 0.4);
       this.gait = damp(this.gait, gaitWant, gaitWant < this.gait ? 14 : 9, dt);
       const runT = this.speed > SPEED.walk * 1.12 ? smoothstep(SPEED.walk * 1.1, SPEED.run * 0.85, this.speed) : 0;
       const runRequest = !!input.run;
@@ -524,11 +542,16 @@
         PD.slingshot.update(this, dt, input);
       } else if (this.attack) {
         const A = this.attack;
+        let rateWant = 1;
         if (mag < 0.02 && this.speed < 30 && A.t > PUNCH_AT.armar[0] && A.t < PUNCH_AT.armar[1]) {
           const off = Math.abs(angleDiff(this.yaw, A.dir));
-          this._attackRate = lerp(1, 0.12, smoothstep(4 * DEG, 25 * DEG, off));
-          if (this.footLock[0].step || this.footLock[1].step) this._attackRate = Math.min(this._attackRate, 0.3);
+          rateWant = lerp(1, 0.12, smoothstep(4 * DEG, 25 * DEG, off));
+          if (this.footLock[0].step || this.footLock[1].step) rateWant = Math.min(rateWant, 0.3);
         }
+        // o relógio do soco desacelera em poucos quadros (antes caía de 1 para 0,12 de uma vez e o braço, que vinha
+        // rápido na preparação, parava no ar: cotovelo com tranco de ~20 cm/quadro² no soco para o lado)
+        A.rate = damp(A.rate ?? 1, rateWant, 25, dt);
+        this._attackRate = A.rate;
         A.t += dt * this._attackRate;
         if (!A.hit && A.t >= PUNCH_AT.golpe[1]) {
           A.hit = true;
@@ -1166,7 +1189,9 @@
                 if (Math.abs(yawErr) > 0.01 && J.state === 'chao') {
                   const footTurn = A ? 11 : this.turnInPlace ? PIVOT.footTurn : 6;
                   const turn = clamp(yawErr, -footTurn * dt, footTurn * dt);
-                  const pv = pitch * g > 2 ? -B.heelBack : B.ballFwd; // ponto de giro, à frente do tornozelo
+                  // ponto de giro, à frente do tornozelo. `pitch` já vem multiplicado pela passada: antes multiplicava de
+                  // novo e, com a passada pela metade (pivô), girava na ponta com o calcanhar no chão (ele riscava)
+                  const pv = pitch > 2 ? -B.heelBack : B.ballFwd;
                   const bx = st.x + Math.cos(st.yaw) * pv;
                   const by = st.y + Math.sin(st.yaw) * pv;
                   st.yaw += turn;
@@ -1189,12 +1214,20 @@
             if (st.step.fz === undefined) {
               st.step.fz = st.lastDrawnRef ? st.lastDrawnRef.z : this.groundZ + B.ankleHeight;
               st.step.vz = st.refVelocity ? clamp(st.refVelocity.z, -160, 160) : 0;
+              // o passo também herda a velocidade de lado do pé (até 9 m/s): um pé que vinha no balanço da corrida
+              // (inversão, freada) não para de uma vez — antes o tornozelo dava um tranco de ~14 cm/quadro²
+              const v = st.refVelocity || { x: 0, y: 0 };
+              const m = Math.hypot(v.x, v.y);
+              const s = m > 900 ? 900 / m : 1;
+              st.step.vx = v.x * s;
+              st.step.vy = v.y * s;
             }
             st.step.t += dt / st.step.dur;
             const k = clamp01(st.step.t);
             const e = easeInOut(k);
-            ref.x = lerp(st.step.fx, ref.x, e);
-            ref.y = lerp(st.step.fy, ref.y, e);
+            const carry = st.step.dur * k * Math.pow(1 - k, 3); // sai com a velocidade herdada e chega parado
+            ref.x = lerp(st.step.fx, ref.x, e) + st.step.vx * carry;
+            ref.y = lerp(st.step.fy, ref.y, e) + st.step.vy * carry;
             ref.z = Math.max(this.groundZ + B.ankleHeight,
               lerp(st.step.fz, this.groundZ + B.ankleHeight, smoother(k)) + st.step.vz * st.step.dur * k * Math.pow(1 - k, 3) + 7 * Math.pow(Math.sin(Math.PI * k), 2));
             pitch += -10 * Math.sin(Math.PI * k);
