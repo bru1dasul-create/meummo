@@ -58,7 +58,8 @@ export interface PlayerStats {
 
 /** Cliente → servidor. */
 export type ClientMsg =
-  | { t: 'hello'; v: number; name: string; password: string } // quero entrar com este personagem (criado na hora se não existir)
+  // quero entrar com este personagem (criado na hora se não existir); mundo 'novo' = o jogo 2.5D (só os mapas do formato novo)
+  | { t: 'hello'; v: number; name: string; password: string; mundo?: 'novo' }
   | { t: 'walk'; seq: number; a: number; dash?: true } // quero andar um pedaço (WALK_SLICE_MS) na direção `a` (graus inteiros); com dash, rolar
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`

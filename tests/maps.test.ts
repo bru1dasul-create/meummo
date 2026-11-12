@@ -1,9 +1,10 @@
 // Camadas do mapa (sombras e "acima"), árvores grandes, postes altos, animações e luzes do tileset.
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadMonsterDefs } from '../src/server/monsters';
 import { GameMap, type TiledMap } from '../src/shared/map';
+import { bodyFits, cornerAtFeet } from '../src/shared/movement';
 import { findPath } from '../src/shared/pathfind';
 import { BIG_TREES } from '../scripts/map-depth';
 import { gid, IMAGE_HEIGHT, IMAGE_WIDTH, tiledTileset } from '../scripts/tileset';
@@ -173,8 +174,13 @@ describe('camadas do mapa', () => {
   it('todo NPC de data/npcs.json tem lugar no mapa dele (livre e alcançável a pé)', () => {
     const npcs = JSON.parse(readFileSync('data/npcs.json', 'utf8')) as Record<string, { mapa: string; x: number; y: number }>;
     for (const [id, npc] of Object.entries(npcs)) {
-      const map = GameMap.fromTiled(realMap(npc.mapa), npc.mapa);
-      expect(map.isWalkable(npc.x, npc.y) && map.isReachable(npc.x, npc.y), `${id} em (${npc.x}, ${npc.y})`).toBe(true);
+      // o mundo novo (2.5D) fica em maps-iso e diz onde fica o pé, exato e com fração: o corpo do NPC tem que caber ali
+      const iso = existsSync(`public/assets/maps-iso/${npc.mapa}.tmj`);
+      const json = JSON.parse(readFileSync(`public/assets/${iso ? 'maps-iso' : 'maps'}/${npc.mapa}.tmj`, 'utf8')) as TiledMap;
+      const map = GameMap.fromTiled(json, npc.mapa);
+      const corner = cornerAtFeet(npc.x, npc.y);
+      const fits = iso ? bodyFits(map, corner.x, corner.y) : map.isWalkable(npc.x, npc.y);
+      expect(fits && map.isReachable(Math.floor(npc.x), Math.floor(npc.y)), `${id} em (${npc.x}, ${npc.y})`).toBe(true);
     }
   });
 

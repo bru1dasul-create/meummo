@@ -12,6 +12,13 @@
 // - pontos com nome (em qualquer camada de objetos) são lugares de chegada;
 // - propriedades do mapa: `nome`, `seguro`, `inicial` (onde todo mundo começa) e `renascerEm`
 //   (em que mapa acorda quem desmaia aqui; sem isso, no próprio mapa).
+//
+// Formato novo (mundo 2.5D, combinado com o [mundo]): tile de 32 px no Tiled, só como grade — 1 tile = 1 metro.
+// - camada de objetos `colisao`: retângulos que bloqueiam o pé, exatos (tronco, poste, muro...). Propriedade
+//   `bloqueiaTiro` (bool; sem ela, true). Para os monstros e a busca de caminho, o tile que um retângulo toca
+//   fica bloqueado inteiro (monstro nunca atravessa árvore);
+// - camada de objetos `seguro`: retângulos de área segura (monstro não entra, não nota e não acerta quem está lá);
+// - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai).
 
 import { TILE_SIZE } from './constants';
 import { DX, DY } from './dir';
@@ -62,11 +69,35 @@ export interface TiledMap {
   tilesets: TiledTileset[];
 }
 
+/** Retângulo (em tiles = metros) que segura o pé: camada `colisao`. */
+export interface SolidRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** Segura projéteis também (`bloqueiaTiro`). */
+  shot: boolean;
+}
+
+/** Retângulo (em tiles = metros) de área segura: camada `seguro`. */
+export interface SafeArea {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  name: string;
+}
+
 /** O mínimo que movimento e busca de caminho precisam saber sobre um mapa. */
 export interface Walkable {
   readonly width: number;
   readonly height: number;
+  /** Tile livre para quem anda de tile em tile (monstros, busca de caminho). */
   isWalkable(x: number, y: number): boolean;
+  /** Movimento livre: este tile bloqueia o pé inteiro (tile com `colide`, ou fora do mapa)? Sem isto: !isWalkable. */
+  isSolidTile?(x: number, y: number): boolean;
+  /** Movimento livre: os retângulos exatos (camada `colisao`) que encostam neste tile. */
+  solidsAt?(x: number, y: number): readonly SolidRect[];
 }
 
 export interface Tile {
@@ -97,6 +128,14 @@ export interface MapInfo {
   respawnMap?: string | null;
   exits?: MapExit[];
   points?: ReadonlyMap<string, Tile>;
+  /** Pontos com nome, exatos (em tiles = metros, com fração). */
+  spots?: ReadonlyMap<string, { x: number; y: number }>;
+  /** Formato novo: 1 tile = 1 metro e pontos/NPCs dizem onde fica o pé, exato. */
+  metric?: boolean;
+  /** Retângulos que seguram o pé (camada `colisao`). */
+  solids?: SolidRect[];
+  /** Áreas seguras (camada `seguro`). */
+  safeAreas?: SafeArea[];
 }
 
 /** Área (em tiles) onde nascem monstros de um tipo. */
@@ -111,6 +150,7 @@ export interface MonsterZone {
 
 /** O Tiled guarda espelhamento/rotação nos bits altos do número do tile. */
 const GID_MASK = 0x0fffffff;
+const NO_SOLIDS: readonly SolidRect[] = [];
 
 function boolProp(props: TiledProperty[] | undefined, ...names: string[]): boolean {
   return props?.some((p) => names.includes(p.name) && p.value === true) ?? false;
@@ -136,7 +176,18 @@ export class GameMap implements Walkable {
   readonly exits: MapExit[];
   /** Pontos com nome (lugares de chegada). Os nomes ficam em minúsculas. */
   readonly points: ReadonlyMap<string, Tile>;
+  /** Os mesmos pontos, exatos (com fração). */
+  readonly spots: ReadonlyMap<string, { x: number; y: number }>;
+  /** Formato novo (1 tile = 1 metro; pontos e NPCs dizem onde fica o pé, exato). */
+  readonly metric: boolean;
+  /** Áreas seguras (camada `seguro`). */
+  readonly safeAreas: readonly SafeArea[];
+  /** Tiles bloqueados para quem anda de tile em tile: os de `colide` e os que algum retângulo de `colisao` toca. */
   private readonly blocked: Uint8Array;
+  /** Tiles bloqueados inteiros para o pé (só os de `colide`). */
+  private readonly solidTiles: Uint8Array;
+  /** Retângulos de `colisao` que encostam em cada tile. */
+  private readonly solidsByTile: (SolidRect[] | undefined)[];
   private readonly cover: Uint8Array;
   /** Tiles alcançáveis a pé a partir do ponto de nascimento (calculado na primeira consulta). */
   private reachable: Uint8Array | null = null;
@@ -157,10 +208,26 @@ export class GameMap implements Walkable {
     this.respawnMap = info.respawnMap ?? null;
     this.exits = info.exits ?? [];
     this.points = info.points ?? new Map();
+    this.spots = info.spots ?? new Map();
+    this.metric = info.metric ?? false;
+    this.safeAreas = info.safeAreas ?? [];
     this.width = width;
     this.height = height;
-    this.blocked = blocked;
+    this.solidTiles = blocked;
+    this.blocked = new Uint8Array(blocked);
     this.cover = cover;
+    this.solidsByTile = new Array(width * height);
+    for (const rect of info.solids ?? []) {
+      // o tile que o retângulo toca (com área) fica bloqueado para os monstros e, se segura tiro, para os projéteis
+      for (let ty = Math.max(0, Math.floor(rect.y0)); ty <= Math.min(height - 1, Math.ceil(rect.y1) - 1); ty++) {
+        for (let tx = Math.max(0, Math.floor(rect.x0)); tx <= Math.min(width - 1, Math.ceil(rect.x1) - 1); tx++) {
+          const i = ty * width + tx;
+          this.blocked[i] = 1;
+          if (rect.shot) this.cover[i] = 1;
+          (this.solidsByTile[i] ??= []).push(rect);
+        }
+      }
+    }
     this.monsterZones = monsterZones;
     const spawn = this.nearestWalkable(spawnHint.x, spawnHint.y);
     if (!spawn) throw new Error('O mapa não tem nenhum tile livre perto do ponto de nascimento.');
@@ -175,9 +242,11 @@ export class GameMap implements Walkable {
     if (json.orientation && json.orientation !== 'orthogonal') {
       throw new Error('Só mapas ortogonais (quadriculados) são suportados.');
     }
-    if (json.tilewidth !== TILE_SIZE || json.tileheight !== TILE_SIZE) {
-      throw new Error(`Os tiles do mapa precisam ter ${TILE_SIZE}x${TILE_SIZE} pixels.`);
+    if (json.tilewidth !== json.tileheight || json.tilewidth <= 0) {
+      throw new Error('Os tiles do mapa precisam ser quadrados (no Tiled: largura e altura do tile iguais).');
     }
+    // Formato novo (mundo 2.5D): tile de 32 px só como grade, 1 tile = 1 metro, tudo em camadas de objetos.
+    const metric = json.tilewidth !== TILE_SIZE;
 
     const { width, height } = json;
     const colliding = new Set<number>();
@@ -200,6 +269,13 @@ export class GameMap implements Walkable {
     const zones: MonsterZone[] = [];
     const exits: MapExit[] = [];
     const points = new Map<string, Tile>();
+    const spots = new Map<string, { x: number; y: number }>();
+    const solids: SolidRect[] = [];
+    const safeAreas: SafeArea[] = [];
+    const tw = json.tilewidth;
+    const th = json.tileheight;
+    /** O retângulo do objeto, em tiles (elipse: o retângulo em volta dela). */
+    const rectOf = (obj: TiledObject) => ({ x0: obj.x / tw, y0: obj.y / th, x1: (obj.x + (obj.width ?? 0)) / tw, y1: (obj.y + (obj.height ?? 0)) / th });
     let spawnHint: Tile | null = null;
     const pending = [...json.layers];
     while (pending.length > 0) {
@@ -224,10 +300,24 @@ export class GameMap implements Walkable {
         const layerName = layer.name.toLowerCase();
         const isMonsterLayer = layerName === 'monstros';
         const isExitLayer = layerName === 'saidas' || layerName === 'saídas';
+        const isSolidLayer = layerName === 'colisao' || layerName === 'colisão';
+        const isSafeLayer = layerName === 'seguro';
         for (const obj of layer.objects ?? []) {
           const objName = obj.name?.trim().toLowerCase();
           if (obj.point && objName) {
             points.set(objName, { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) });
+            spots.set(objName, { x: obj.x / tw, y: obj.y / th });
+          }
+          if (isSolidLayer && !obj.point) {
+            const rect = rectOf(obj);
+            const shot = obj.properties?.find((p) => p.name === 'bloqueiaTiro')?.value;
+            if (rect.x1 > rect.x0 && rect.y1 > rect.y0) solids.push({ ...rect, shot: shot !== false });
+            continue;
+          }
+          if (isSafeLayer && !obj.point) {
+            const rect = rectOf(obj);
+            if (rect.x1 > rect.x0 && rect.y1 > rect.y0) safeAreas.push({ ...rect, name: obj.name?.trim() ?? '' });
+            continue;
           }
           if (objName === 'spawn') {
             spawnHint = { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) };
@@ -277,6 +367,10 @@ export class GameMap implements Walkable {
       respawnMap: typeof respawnMap === 'string' && respawnMap.trim() ? respawnMap.trim().toLowerCase() : null,
       exits,
       points,
+      spots,
+      metric,
+      solids,
+      safeAreas,
     });
   }
 
@@ -286,6 +380,27 @@ export class GameMap implements Walkable {
 
   isWalkable(x: number, y: number): boolean {
     return this.inside(x, y) && this.blocked[y * this.width + x] === 0;
+  }
+
+  /** Movimento livre: o tile bloqueia o pé inteiro (tile com `colide`, ou fora do mapa)? */
+  isSolidTile(x: number, y: number): boolean {
+    return !this.inside(x, y) || this.solidTiles[y * this.width + x] === 1;
+  }
+
+  /** Movimento livre: os retângulos exatos (camada `colisao`) que encostam neste tile. */
+  solidsAt(x: number, y: number): readonly SolidRect[] {
+    if (!this.inside(x, y)) return NO_SOLIDS;
+    return this.solidsByTile[y * this.width + x] ?? NO_SOLIDS;
+  }
+
+  /** Este ponto (em tiles, com fração) está numa área segura? */
+  isSafeAt(x: number, y: number): boolean {
+    return this.safeAreas.some((a) => x >= a.x0 && x < a.x1 && y >= a.y0 && y < a.y1);
+  }
+
+  /** Este tile encosta numa área segura? (Monstro não entra.) */
+  touchesSafeArea(x: number, y: number): boolean {
+    return this.safeAreas.some((a) => x + 1 > a.x0 && x < a.x1 && y + 1 > a.y0 && y < a.y1);
   }
 
   /** Dá para chegar a pé até aqui saindo do ponto de nascimento? (Evita monstros presos em bolsões.) */

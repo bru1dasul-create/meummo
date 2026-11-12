@@ -17,7 +17,7 @@ import {
 import { angleBetween, angleOfDir, arcTiles, chebyshev, dir8FromAngle, dirFromAngle, reachableLine } from '../../shared/combat';
 import { ALL_DIRS, DX, DY, type Dir } from '../../shared/dir';
 import { GameMap, type MapExit, type Tile, type TiledMap } from '../../shared/map';
-import { degreesOfDir, degreesToward, footTile, sweepBody, walkDistance, walkSlice, type Pose } from '../../shared/movement';
+import { bodySpotIn, bodyWalkable, degreesOfDir, degreesToward, footTile, steerDegrees, sweepBody, walkDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findPath } from '../../shared/pathfind';
 import { DASH_SLOT, type EntityState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
@@ -480,7 +480,7 @@ export class WorldScene extends Phaser.Scene {
         this.route.shift();
         continue;
       }
-      return degreesToward(this.predicted.x, this.predicted.y, next.x, next.y);
+      return steerDegrees(this.predicted.x, this.predicted.y, next.x, next.y);
     }
     this.marker?.setVisible(false);
     return null;
@@ -518,7 +518,7 @@ export class WorldScene extends Phaser.Scene {
     const held = this.keyboard?.current() ?? null;
     if (held !== null) return degreesOfDir(held.dir);
     const next = this.route[0];
-    if (next) return degreesToward(this.predicted.x, this.predicted.y, next.x, next.y);
+    if (next) return steerDegrees(this.predicted.x, this.predicted.y, next.x, next.y);
     const threat = this.nearestMonster(this.predicted.x + 0.5, this.predicted.y + 0.5, 4.5);
     if (!threat) return degreesOfDir(this.predicted.dir);
     let best = degreesOfDir(this.predicted.dir);
@@ -580,12 +580,12 @@ export class WorldScene extends Phaser.Scene {
       this.clearPath();
       return;
     }
-    // o caminho vira uma lista de pontos: o meio de cada tile, até o destino
+    // o caminho vira uma lista de pontos: onde o pé cabe em cada tile (o meio, ou um pouco de lado num vão estreito)
     let { x, y } = this.here();
     this.route = target.path.map((dir) => {
       x += DX[dir];
       y += DY[dir];
-      return { x, y };
+      return bodySpotIn(this.map, x, y) ?? { x, y };
     });
     this.stuckSlices = 0;
     this.marker.setPosition(target.goal.x * T, target.goal.y * T).setVisible(true);
@@ -593,15 +593,17 @@ export class WorldScene extends Phaser.Scene {
 
   private pathTo(tx: number, ty: number): { path: Dir[]; goal: Tile } | null {
     const { x, y } = this.here();
-    const direct = findPath(this.map, x, y, tx, ty);
+    // o caminho do jogador passa onde o pé cabe (mais solto que a grade dos monstros: entra nos vãos entre troncos)
+    const walkable = bodyWalkable(this.map);
+    const direct = findPath(walkable, x, y, tx, ty);
     if (direct) return { path: direct, goal: { x: tx, y: ty } };
     // Clicou num obstáculo (árvore, casa...): vai até o vizinho livre mais perto.
     const neighbors = [0, 1, 2, 3]
       .map((d) => ({ x: tx + DX[d]!, y: ty + DY[d]! }))
-      .filter((p) => this.map.isWalkable(p.x, p.y))
+      .filter((p) => walkable.isWalkable(p.x, p.y))
       .sort((a, b) => Math.abs(a.x - x) + Math.abs(a.y - y) - (Math.abs(b.x - x) + Math.abs(b.y - y)));
     for (const goal of neighbors) {
-      const path = findPath(this.map, x, y, goal.x, goal.y);
+      const path = findPath(walkable, x, y, goal.x, goal.y);
       if (path) return { path, goal };
     }
     return null;

@@ -71,7 +71,7 @@ describe('data/npcs.json', () => {
 
   it('explica o erro em português', () => {
     const bad = (npc: Record<string, unknown>) => () => parseNpcDefs({ teste: { ...VENDEDORA, ...npc } });
-    expect(bad({ x: 2.5 })).toThrow(/"x" precisa ser um número inteiro/);
+    expect(bad({ x: -1 })).toThrow(/"x"/);
     expect(bad({ mapa: undefined })).toThrow(/"mapa" precisa ser um texto/);
     expect(bad({ loja: { vende: ['fruta'], compraPor: 150 } })).toThrow(/"compraPor" é em %, de 0 a 100/);
     expect(bad({ loja: { vende: 'fruta' } })).toThrow(/"vende" precisa ser uma lista/);
@@ -82,6 +82,8 @@ describe('data/npcs.json', () => {
     const check = (npc: Record<string, unknown>) => () => checkNpcs(parseNpcDefs({ teste: { ...VENDEDORA, ...npc } }), items, maps);
     expect(check({})).not.toThrow();
     expect(check({ mapa: 'cidade' })).toThrow(/o mapa "cidade" não existe. Use um destes: vila/);
+    // posição com fração só nos mapas do formato novo (onde é o ponto exato do pé, em metros)
+    expect(check({ x: 2.5 })).toThrow(/precisam ser números inteiros/);
     expect(check({ loja: { vende: ['frutaa'] } })).toThrow(/a loja vende "frutaa", que não existe em data\/items.json/);
     expect(check({ loja: { vende: ['pedra'] } })).toThrow(/a loja vende "pedra", mas esse item não tem "preco"/);
     expect(check({ veste: ['fruta'] })).toThrow(/só dá para vestir equipamento/);

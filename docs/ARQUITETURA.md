@@ -48,6 +48,36 @@ saídas, área de visão e salvamento usam; no servidor, `player.x`/`player.y` d
 
 Assim ninguém anda mais rápido nem atravessa parede, mesmo mexendo no código do navegador.
 
+## Mapas do mundo 2.5D (formato novo)
+Os mapas novos ficam em `public/assets/maps-iso/` (o servidor lê esta pasta e a `public/assets/maps/` de hoje). São
+`.tmj` ortogonais com tile de 32 px só como grade: **1 tile = 1 metro**, e tudo vem em camadas de objetos:
+- `colisao`: retângulos exatos (tronco, poste, muro...). O pé do jogador usa o retângulo exato (`isSolidTile` e
+  `solidsAt` em `GameMap`); os monstros, a busca de caminho deles e os tiros usam a grade de 1 m, em que o tile que um
+  retângulo toca fica bloqueado inteiro. `bloqueiaTiro: false` (grade, portão de ferro) deixa a pedra passar.
+- `seguro`: áreas seguras. Dentro delas monstro não entra, não nota, não acerta (pedra passa reto, golpe não
+  machuca) e quem entra se livra de quem estava atrás. A propriedade `seguro` do mapa continua sendo só a faixa e o PvP.
+- Pontos com nome (`spawn`, chegadas) e a posição dos NPCs no `data/npcs.json` dizem **onde fica o pé**, exato, com
+  fração (`cornerAtFeet` converte para a posição "de canto"). Quem nasce fica a até 0,8 m do `spawn`, para ninguém
+  nascer em cima do outro.
+- O "clique para andar" do jogador usa `bodyWalkable`: um tile vale se o pé cabe parado em algum lugar dele, então o
+  caminho entra nos vãos entre troncos que a grade dos monstros fecha; `steerDegrees` anda reto quando está quase
+  alinhado, para o escorregão da quina ajudar a entrar no vão.
+- Para testar o mundo novo: `MEUMMO_MAPA_INICIAL=capao` faz os personagens novos começarem nele (o Refúgio continua
+  sendo de quem já joga). O jogo de hoje (Phaser) não desenha esses mapas: quem desenha é o jogo 2.5D novo.
+
+## O jogo 2.5D novo (`src/client/novo/`)
+Abre em `http://localhost:3000/?novo` (o jogo de hoje continua em `/`). A tela de entrada, o painel de vida e o chat
+são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o personagem num mapa do formato novo
+(o jogo de hoje nunca recebe esses mapas, e vice-versa).
+- `engine.ts` (da [estrutura]): o motor. Conversa com o servidor, prevê o próprio andar (as mesmas regras de
+  `src/shared/movement.ts`), lê o teclado e o joystick (que andam **pela tela**: W é para cima na tela, e a view diz
+  qual direção do chão é essa), toque/clique no chão para andar e no NPC para conversar, e avisa ao entrar e sair da
+  área segura. `window.__mundoNovo` serve aos testes automáticos (como o `__meummo` do jogo de hoje).
+- `view.ts`: a interface `WorldView` (posições em metros, no pé) e o desenho provisório (`ProvisionalView`).
+- `arte.ts` (da [arte]): carrega os scripts do protótipo que definem o desenho de verdade, o `PD.View`; com ele
+  carregado, o motor usa ele no lugar do provisório.
+- `joystick.ts`: o joystick do celular (metade esquerda da tela).
+
 ## Por que não tem atraso ao andar
 Esperar a resposta do servidor para mover o personagem daria sensação de lag. Por isso o cliente
 **prevê**: anda na hora usando a mesma função do servidor e guarda os pedaços ainda não confirmados. Quando

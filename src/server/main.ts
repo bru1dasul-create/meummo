@@ -5,10 +5,12 @@ const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST || undefined; // vazio = aceita conexões de qualquer interface
 // MEUMMO_SAVE troca o arquivo dos personagens (ex.: para testar com um mundo vazio).
 const saveFile = process.env.MEUMMO_SAVE || SAVE_FILE;
+// MEUMMO_MAPA_INICIAL faz os personagens novos começarem em outro mapa (ex.: capao, para testar o mundo novo).
+const startMap = process.env.MEUMMO_MAPA_INICIAL || undefined;
 
 let server: RunningServer;
 try {
-  server = await startServer({ port, host, saveFile });
+  server = await startServer({ port, host, saveFile, startMap });
 } catch (error) {
   const err = error as NodeJS.ErrnoException;
   console.error(

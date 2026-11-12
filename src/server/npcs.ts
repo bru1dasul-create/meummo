@@ -45,11 +45,8 @@ export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
     }
     if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new Error(`Erro em ${FILE}: "${rawId}" precisa ser um objeto.`);
     const r = new Reader(raw as Record<string, unknown>, FILE, `personagem "${rawId}"`);
-    const tile = (field: string) => {
-      const value = r.number(field, { min: 0 });
-      if (!Number.isInteger(value)) r.fail(field, 'precisa ser um número inteiro (a posição em tiles, como no Tiled)');
-      return value;
-    };
+    // Em tiles, como no Tiled. Nos mapas do formato novo (1 tile = 1 metro) pode ter fração: é onde fica o pé.
+    const tile = (field: string) => r.number(field, { min: 0 });
     const shopData = r.object('loja', true);
     let shop: NpcShop | null = null;
     if (shopData) {
@@ -91,6 +88,10 @@ export function checkNpcs(npcs: ReadonlyMap<string, NpcDef>, items: ReadonlyMap<
     const where = `Erro em ${FILE} (personagem "${npc.id}")`;
     if (!mapIds.has(npc.map)) {
       throw new Error(`${where}: o mapa "${npc.map}" não existe. Use um destes: ${[...mapIds].join(', ')}.`);
+    }
+    const map = maps.find((m) => m.id === npc.map)!;
+    if (!map.metric && (!Number.isInteger(npc.x) || !Number.isInteger(npc.y))) {
+      throw new Error(`${where}: "x" e "y" precisam ser números inteiros (a posição em tiles, como no Tiled). Com fração, só nos mapas do formato novo.`);
     }
     for (const item of npc.shop?.sells ?? []) {
       const def = items.get(item);

@@ -1,0 +1,461 @@
+// O motor do jogo 2.5D (o mundo novo): conversa com o servidor, lê teclado/joystick/toque, prevê o próprio andar
+// (com as mesmas regras do servidor, em src/shared/movement.ts) e manda o desenho (view.ts) mostrar tudo.
+// O desenho de verdade é da [arte]; enquanto ele não chega, a ProvisionalView mostra o básico.
+// Abre em http://localhost:3000/?novo (o jogo de hoje continua em http://localhost:3000).
+
+import { DASH_TILES, MAX_PENDING_WALKS, TRADE_RANGE, WALK_SLICE_MS } from '../../shared/constants';
+import { DX, DY, type Dir } from '../../shared/dir';
+import { GameMap, type Tile, type TiledMap } from '../../shared/map';
+import {
+  bodyFits,
+  bodySpotIn,
+  bodyWalkable,
+  cornerAtFeet,
+  feetAt,
+  footCenter,
+  footTile,
+  steerDegrees,
+  sweepBody,
+  walkDistance,
+  walkSlice,
+  type Pose,
+} from '../../shared/movement';
+import { findPath } from '../../shared/pathfind';
+import type { EntityState, NpcInfo, PlayerStats, ServerMsg, WelcomeMsg, ZoneMsg } from '../../shared/protocol';
+import { KeyboardDirections } from '../game/input';
+import type { Connection } from '../net';
+import { Toast, ZoneBanner, type ChatBox, type Hud } from '../ui';
+import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
+import { Joystick } from './joystick';
+import { ProvisionalView, type WorldView } from './view';
+
+export interface NewWorldDeps {
+  conn: Connection;
+  welcome: WelcomeMsg;
+  chat: ChatBox;
+  hud: Hud;
+}
+
+export interface NewWorldGame {
+  destroy(): void;
+}
+
+const PING_EVERY_MS = 2000;
+
+/** Liga o jogo 2.5D. Recusa (com o motivo) se o mapa não for do formato novo. */
+export async function startNewWorld(deps: NewWorldDeps): Promise<NewWorldGame> {
+  const game = new NewWorld(deps);
+  await game.enter(deps.welcome, false);
+  return game;
+}
+
+/** Lê o mapa do mundo novo (public/assets/maps-iso). */
+async function loadMap(id: string): Promise<TiledMap> {
+  const response = await fetch(`/assets/maps-iso/${id}.tmj`);
+  if (!response.ok) throw new Error(`O mapa "${id}" ainda não existe no jogo novo.`);
+  return (await response.json()) as TiledMap;
+}
+
+/** O desenho: o da [arte] (PD.View, quando estiver carregado) ou o provisório. */
+function createView(container: HTMLElement, map: TiledMap): WorldView {
+  const pd = (window as unknown as { PD?: { View?: new (container: HTMLElement, map: TiledMap) => WorldView } }).PD;
+  return pd?.View ? new pd.View(container, map) : new ProvisionalView(container, map);
+}
+
+class NewWorld implements NewWorldGame {
+  private readonly conn: Connection;
+  private readonly chat: ChatBox;
+  private readonly hud: Hud;
+  private readonly container = document.getElementById('game') as HTMLElement;
+  private readonly keyboard: KeyboardDirections;
+  private readonly joystick: Joystick;
+  private readonly toast = new Toast();
+  private readonly zoneBanner = new ZoneBanner();
+  private map!: GameMap;
+  private view: WorldView | null = null;
+  private myId = 0;
+  private stepMs = 200;
+
+  // Previsão do próprio andar (como no jogo de hoje): anda na hora e o servidor confirma depois.
+  private predicted!: Pose;
+  private pending: { seq: number; a: number; dash: boolean }[] = [];
+  private seq = 0;
+  private walkCredit = WALK_SLICE_MS;
+  private walkAt = 0;
+  /** "Tocar no chão para andar": pontos até o destino. */
+  private route: Tile[] = [];
+  private stuckSlices = 0;
+  /** Indo conversar com este NPC (fala quando chegar perto). */
+  private goingToNpc: number | null = null;
+
+  private readonly entities = new Map<number, EntityState>();
+  private readonly npcs = new Map<number, NpcInfo>();
+  private wasSafe: boolean | null = null;
+  private raf = 0;
+  private pingTimer = 0;
+  private pingId = 0;
+  private readonly pings = new Map<number, number>();
+  private destroyed = false;
+
+  constructor(deps: NewWorldDeps) {
+    this.conn = deps.conn;
+    this.chat = deps.chat;
+    this.hud = deps.hud;
+    this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
+    this.joystick = new Joystick(this.container);
+    this.container.addEventListener('pointerdown', this.onPointerDown);
+    this.pingTimer = window.setInterval(() => this.ping(), PING_EVERY_MS);
+    this.exposeDebug();
+  }
+
+  /**
+   * Para testes automáticos (como o window.__meummo do jogo de hoje): só lê o estado e usa o mesmo
+   * "andar até" do toque — não dá vantagem, quem manda é o servidor.
+   */
+  private exposeDebug(): void {
+    const game = this;
+    (window as unknown as { __mundoNovo?: unknown }).__mundoNovo = {
+      get me() {
+        if (!game.predicted) return null; // ainda carregando o mapa
+        const feet = feetAt(game.predicted.x, game.predicted.y);
+        return { id: game.myId, x: game.predicted.x, y: game.predicted.y, feetX: feet.x, feetY: feet.y, map: game.map?.id };
+      },
+      walkTo: (x: number, y: number) => game.walkToPoint(x, y),
+      walking: () => game.route.length > 0,
+      safe: () => game.wasSafe,
+      entities: () => [...game.entities.values()].map((e) => ({ id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y })),
+      screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
+    };
+  }
+
+  /** Entra num mapa (no começo ou trocando de mapa). */
+  async enter(msg: WelcomeMsg | ZoneMsg, arrived: boolean): Promise<void> {
+    this.conn.hold(); // as mensagens esperam o mapa carregar
+    const json = await loadMap(msg.map);
+    if (this.destroyed) return;
+    this.map = GameMap.fromTiled(json, msg.map);
+    this.view?.destroy();
+    this.view = createView(this.container, json);
+    this.entities.clear();
+    this.npcs.clear();
+    this.pending = [];
+    this.route = [];
+    this.goingToNpc = null;
+    this.wasSafe = null;
+    if (msg.t === 'welcome') {
+      this.myId = msg.id;
+      this.stepMs = msg.stepMs;
+      this.hud.setGold(msg.inv.gold ?? 0);
+    }
+    const you = msg.you;
+    this.predicted = { x: you.x, y: you.y, dir: you.dir };
+    this.addEntity(you, true);
+    this.view.follow(this.myId);
+    for (const npc of msg.npcs) {
+      this.npcs.set(npc.e.id, npc);
+      this.addEntity(npc.e, false);
+    }
+    this.applyStats(msg.stats);
+    this.hud.setHp(you.hp, you.maxHp);
+    this.hud.setOnline(msg.online);
+    if (arrived) this.conn.send({ t: 'loaded' });
+    this.conn.listen((m) => this.onMessage(m));
+    cancelAnimationFrame(this.raf);
+    this.raf = requestAnimationFrame(this.loop);
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    cancelAnimationFrame(this.raf);
+    clearInterval(this.pingTimer);
+    this.container.removeEventListener('pointerdown', this.onPointerDown);
+    this.keyboard.destroy();
+    this.joystick.destroy();
+    this.toast.destroy();
+    this.zoneBanner.destroy();
+    this.view?.destroy();
+    this.view = null;
+  }
+
+  // ======================= laço =======================
+
+  private readonly loop = (now: number) => {
+    if (this.destroyed || !this.view) return;
+    this.handleMovement(now);
+    this.checkNpcArrival();
+    this.checkSafeArea();
+    this.view.frame(now);
+    this.raf = requestAnimationFrame(this.loop);
+  };
+
+  private addEntity(e: EntityState, me: boolean): void {
+    this.entities.set(e.id, e);
+    const feet = feetAt(e.x, e.y);
+    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, dir: e.dir, me });
+  }
+
+  // ======================= andar =======================
+
+  private get sliceTiles(): number {
+    return walkDistance(WALK_SLICE_MS, this.stepMs);
+  }
+
+  private here(): Tile {
+    return footTile(this.predicted.x, this.predicted.y);
+  }
+
+  private handleMovement(now: number): void {
+    const delta = this.walkAt > 0 ? Math.min(250, now - this.walkAt) : 0;
+    this.walkAt = now;
+    let degrees = this.wantedDegrees();
+    if (degrees === null) {
+      this.walkCredit = WALK_SLICE_MS; // parado: o primeiro pedaço sai na hora em que mexer
+      return;
+    }
+    this.walkCredit = Math.min(this.walkCredit + delta, WALK_SLICE_MS * 3);
+    while (degrees !== null && this.walkCredit >= WALK_SLICE_MS && this.pending.length < MAX_PENDING_WALKS) {
+      this.walkCredit -= WALK_SLICE_MS;
+      this.walkOnce(degrees);
+      degrees = this.wantedDegrees();
+    }
+  }
+
+  /** Direção (graus no chão) de uma direção da tela: o teclado e o joystick andam pela tela (W = para cima). */
+  private screenDegrees(dx: number, dy: number): number {
+    const ground = this.view!.groundDirOfScreen(dx, dy);
+    return ((Math.round((Math.atan2(ground.y, ground.x) * 180) / Math.PI) % 360) + 360) % 360;
+  }
+
+  private wantedDegrees(): number | null {
+    const held = this.keyboard.current();
+    if (held !== null) {
+      this.clearRoute();
+      return this.screenDegrees(DX[held.dir], DY[held.dir]);
+    }
+    const stick = this.joystick.direction();
+    if (stick) {
+      this.clearRoute();
+      return this.screenDegrees(stick.dx, stick.dy);
+    }
+    while (this.route.length > 0) {
+      const next = this.route[0]!;
+      const last = this.route.length === 1;
+      if (Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y) <= (last ? 0.13 : 0.35)) {
+        this.route.shift();
+        continue;
+      }
+      return steerDegrees(this.predicted.x, this.predicted.y, next.x, next.y);
+    }
+    return null;
+  }
+
+  private walkOnce(degrees: number): void {
+    const result = walkSlice(this.map, this.predicted, degrees, this.sliceTiles);
+    if (!result.moved && result.dir === this.predicted.dir) {
+      this.noteStuck();
+      return;
+    }
+    this.seq += 1;
+    this.pending.push({ seq: this.seq, a: degrees, dash: false });
+    this.conn.send({ t: 'walk', seq: this.seq, a: degrees });
+    this.predicted = { x: result.x, y: result.y, dir: result.dir };
+    this.showMe(WALK_SLICE_MS);
+    if (result.moved) this.stuckSlices = 0;
+    else this.noteStuck();
+  }
+
+  private noteStuck(): void {
+    if (this.route.length === 0) return;
+    this.stuckSlices += 1;
+    if (this.stuckSlices >= 4) this.clearRoute();
+  }
+
+  private showMe(durationMs: number): void {
+    const feet = feetAt(this.predicted.x, this.predicted.y);
+    this.view?.moveActor(this.myId, feet.x, feet.y, this.predicted.dir, { durationMs });
+  }
+
+  private onAck(seq: number, server: Pose): void {
+    this.pending = this.pending.filter((p) => p.seq > seq);
+    let pose: Pose = server;
+    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceTiles);
+    const off = Math.hypot(pose.x - this.predicted.x, pose.y - this.predicted.y);
+    if (off > 1e-6) {
+      this.predicted = { x: pose.x, y: pose.y, dir: pose.dir };
+      if (off > 0.75) this.clearRoute();
+      this.showMe(100);
+    }
+  }
+
+  private placeMe(x: number, y: number, dir: Dir): void {
+    this.pending = [];
+    this.predicted = { x, y, dir };
+    this.walkCredit = WALK_SLICE_MS;
+    this.clearRoute();
+    this.showMe(0);
+  }
+
+  /** Tocar/clicar no chão: anda até lá (pelo caminho onde o pé cabe). */
+  private walkToPoint(x: number, y: number): void {
+    const goal = cornerAtFeet(x, y);
+    const target = footTile(goal.x, goal.y);
+    const start = this.here();
+    const path = findPath(bodyWalkable(this.map), start.x, start.y, target.x, target.y);
+    if (!path) {
+      this.toast.show('Não dá para chegar aí');
+      return;
+    }
+    let tx = start.x;
+    let ty = start.y;
+    this.route = path.map((dir) => {
+      tx += DX[dir];
+      ty += DY[dir];
+      return bodySpotIn(this.map, tx, ty) ?? { x: tx, y: ty };
+    });
+    // o último ponto é exatamente onde tocou (se o pé couber lá)
+    if (bodyFits(this.map, goal.x, goal.y)) {
+      if (this.route.length > 0) this.route[this.route.length - 1] = goal;
+      else this.route = [goal];
+    }
+    this.stuckSlices = 0;
+  }
+
+  private clearRoute(): void {
+    this.route = [];
+  }
+
+  private readonly onPointerDown = (event: PointerEvent) => {
+    if (!this.view || event.button > 0 || this.joystick.owns(event)) return;
+    if (event.pointerType !== 'mouse' && event.clientX <= window.innerWidth * 0.45) return; // é o joystick
+    const point = this.view.toWorld(event.clientX, event.clientY);
+    // tocou perto de um NPC: vai conversar
+    for (const [id, npc] of this.npcs) {
+      const feet = feetAt(npc.e.x, npc.e.y);
+      if (Math.hypot(feet.x - point.x, feet.y - point.y) <= 1.2) {
+        this.goingToNpc = id;
+        this.walkToPoint(feet.x, feet.y + 1);
+        return;
+      }
+    }
+    this.goingToNpc = null;
+    this.walkToPoint(point.x, point.y);
+  };
+
+  /** Chegou perto do NPC que foi procurar: ele fala. */
+  private checkNpcArrival(): void {
+    if (this.goingToNpc === null) return;
+    const npc = this.npcs.get(this.goingToNpc);
+    if (!npc) {
+      this.goingToNpc = null;
+      return;
+    }
+    const me = feetAt(this.predicted.x, this.predicted.y);
+    const feet = feetAt(npc.e.x, npc.e.y);
+    if (Math.hypot(me.x - feet.x, me.y - feet.y) > TRADE_RANGE) {
+      if (this.route.length === 0) this.goingToNpc = null; // desistiu no caminho
+      return;
+    }
+    this.goingToNpc = null;
+    this.clearRoute();
+    if (npc.line) {
+      this.view?.say(npc.e.id, npc.line);
+      this.chat.addSystem(`${npc.e.name}: ${npc.line}`);
+    }
+  }
+
+  /** Avisa quando entra ou sai de uma área segura. */
+  private checkSafeArea(): void {
+    if (this.map.safeAreas.length === 0) return;
+    const at = footCenter(this.predicted.x, this.predicted.y);
+    const safe = this.map.isSafeAt(at.x, at.y);
+    if (safe === this.wasSafe) return;
+    const first = this.wasSafe === null;
+    this.wasSafe = safe;
+    const area = this.map.safeAreas.find((a) => at.x >= a.x0 && at.x < a.x1 && at.y >= a.y0 && at.y < a.y1);
+    if (safe) this.zoneBanner.show(area?.name || this.map.name, 'Zona segura');
+    else this.zoneBanner.show(this.map.name, first ? 'Cuidado: aqui tem perigo' : 'Saiu da zona segura: cuidado', true);
+  }
+
+  // ======================= servidor =======================
+
+  private ping(): void {
+    this.pingId += 1;
+    this.pings.set(this.pingId, performance.now());
+    this.conn.send({ t: 'ping', id: this.pingId });
+  }
+
+  private applyStats(stats: PlayerStats): void {
+    this.hud.setXp(stats.xp, stats.xpNext, stats.level);
+  }
+
+  private onMessage(msg: ServerMsg): void {
+    switch (msg.t) {
+      case 'spawn':
+        if (msg.e.id !== this.myId) this.addEntity(msg.e, false);
+        break;
+      case 'despawn':
+        this.entities.delete(msg.id);
+        this.view?.removeActor(msg.id);
+        break;
+      case 'move': {
+        const e = this.entities.get(msg.id);
+        if (!e || msg.id === this.myId) break;
+        e.x = msg.x;
+        e.y = msg.y;
+        e.dir = msg.dir;
+        const feet = feetAt(msg.x, msg.y);
+        const duration = e.kind === 'monster' ? (e.stepMs ?? 320) : 120;
+        this.view?.moveActor(msg.id, feet.x, feet.y, msg.dir, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
+        break;
+      }
+      case 'ack':
+        this.onAck(msg.seq, { x: msg.x, y: msg.y, dir: msg.dir });
+        break;
+      case 'teleport':
+      case 'pull':
+        this.placeMe(msg.x, msg.y, msg.dir);
+        break;
+      case 'zone':
+        void this.enter(msg, true).catch((error: Error) => this.toast.show(error.message, 6000));
+        break;
+      case 'say':
+        this.view?.say(msg.id, msg.text);
+        break;
+      case 'chat':
+        this.chat.addChat(msg.name, msg.text, msg.id === this.myId);
+        this.view?.say(msg.id, msg.text);
+        break;
+      case 'sys':
+        this.chat.addSystem(msg.text);
+        break;
+      case 'notice':
+        this.toast.show(msg.text, 7000);
+        this.chat.addSystem(`Aviso do administrador: ${msg.text}`);
+        break;
+      case 'hp':
+        if (msg.id === this.myId) this.hud.setHp(msg.hp, msg.maxHp);
+        break;
+      case 'stats':
+        this.applyStats(msg.stats);
+        break;
+      case 'inv':
+        this.hud.setGold(msg.inv.gold ?? 0);
+        break;
+      case 'npcs':
+        for (const npc of msg.npcs) this.npcs.set(npc.e.id, npc);
+        break;
+      case 'online':
+        this.hud.setOnline(msg.n);
+        break;
+      case 'pong': {
+        const sentAt = this.pings.get(msg.id);
+        this.pings.delete(msg.id);
+        if (sentAt !== undefined) this.hud.setPing(performance.now() - sentAt);
+        break;
+      }
+      default:
+        // combate, loja, missões...: chegam nas próximas etapas do mundo novo
+        break;
+    }
+  }
+}

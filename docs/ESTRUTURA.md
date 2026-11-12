@@ -52,6 +52,13 @@ valendo. Esperando o dono decidir.
 Guarapiranga depois, Santo Amaro e Billings em seguida e o centro (Sé) no fim. Esperando a escolha dele. Avisei o
 [mundo] para pausar o minimapa dos mapas atuais.
 
+**13/11 — Mapa 01, etapa 3 (a clareira jogável), parte da [estrutura] na `main`:** o servidor lê o formato novo
+(`maps-iso/`, colisão por retângulos, área segura, pé no ponto exato), o Curupira está na clareira
+(`curupira_capao`) e o **motor do jogo 2.5D** roda em `/?novo` (`src/client/novo/`), com desenho provisório. Falta a
+[arte] ligar o `PD.View` em `src/client/novo/arte.ts` (interface `WorldView` em `view.ts`). Protocolo **17** (`hello`
+com `mundo: 'novo'`: o servidor manda o jogo novo para os mapas do formato novo e o de hoje para os de sempre).
+Próximos: o combate da revisão 17 no servidor (pedra com carga, defesa com energia) e, no jogo novo, loja e missões.
+
 **12/11 — Mapa 01 (decisões do dono, repassadas pelo [mundo]; confirmar com o dono quando chegar a hora):** o
 [mundo] faz em etapas (câmera, planta, uma tela jogável só com a clareira, o resto em 3 pedaços, atmosferas,
 minimapa); o meu trabalho no mapa novo começa na etapa 3, e ele avisa. Ficam comigo: a Budega como a vendinha da
@@ -88,7 +95,7 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **16** (movimento livre: `walk` no lugar de `step`); `MIGRATIONS` no
+Números para não se perder: protocolo na versão **17** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`); `MIGRATIONS` no
 passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes

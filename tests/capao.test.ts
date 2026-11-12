@@ -3,6 +3,8 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { GameMap, type TiledMap } from '../src/shared/map';
+import { bodyFits, cornerAtFeet } from '../src/shared/movement';
 
 interface TiledObject {
   name: string;
@@ -66,8 +68,16 @@ function reachable(): { cells: Set<string>; step: number } {
 }
 
 describe('Mapa 01 (Capão): formato do mapa novo', () => {
-  it('fica fora da pasta que o servidor de hoje carrega (ele ainda exige tile de 16 px)', () => {
+  it('fica na pasta do mundo novo (maps-iso), separado dos mapas do jogo antigo (maps)', () => {
     expect(existsSync('public/assets/maps/capao.tmj')).toBe(false);
+  });
+
+  it('o lugar do Curupira (42,5; 44,5), ao lado do círculo, é livre e dá para chegar a pé', () => {
+    const game = GameMap.fromTiled(map as unknown as TiledMap, 'capao');
+    const corner = cornerAtFeet(42.5, 44.5);
+    expect(bodyFits(game, corner.x, corner.y)).toBe(true);
+    expect(game.isReachable(42, 44)).toBe(true);
+    expect(footFree(42.5, 44.5)).toBe(true);
   });
 
   it('tem 96 × 80 metros, tile de 32 px e as camadas combinadas', () => {

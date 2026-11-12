@@ -10,7 +10,7 @@ import { GameMap, type TiledMap } from '../shared/map';
 import { CharacterStore, type HashCost } from './accounts';
 import { createAdminHandler } from './admin';
 import { LoginGuard, type GuardLimits } from './login-guard';
-import { CLIENT_DIR, MAPS_DIR } from './paths';
+import { CLIENT_DIR, ISO_MAPS_DIR, MAPS_DIR } from './paths';
 import { Realm } from './realm';
 import { checkQuests, loadQuestDefs, nameQuestGoals } from './quests';
 import { Session, type Lobby } from './session';
@@ -29,6 +29,8 @@ export interface ServerOptions {
   saveFile: string;
   /** Custo para proteger as senhas (os testes usam um menor, para rodar rápido). */
   hashCost?: HashCost;
+  /** Mapa onde os personagens novos começam (para testar um mapa novo); sem isto, o que tem `inicial`. */
+  startMap?: string;
   /** Limites de tentativas de senha e de personagens novos. */
   guardLimits?: GuardLimits;
   /**
@@ -58,12 +60,19 @@ export function loadMap(id = 'refugio', dir = MAPS_DIR): GameMap {
   }
 }
 
-/** Lê todos os mapas de public/assets/maps. */
-export function loadMaps(dir = MAPS_DIR): GameMap[] {
-  return readdirSync(dir)
-    .filter((file) => file.endsWith('.tmj'))
-    .sort()
-    .map((file) => loadMap(file.slice(0, -4), dir));
+/**
+ * Lê todos os mapas: os de public/assets/maps (o mundo de hoje) e os de public/assets/maps-iso (o mundo 2.5D novo,
+ * no formato novo). Os ids (nome do arquivo) não podem se repetir entre as pastas.
+ */
+export function loadMaps(dirs: string | string[] = [MAPS_DIR, ISO_MAPS_DIR]): GameMap[] {
+  return (Array.isArray(dirs) ? dirs : [dirs])
+    .filter((dir) => existsSync(dir))
+    .flatMap((dir) =>
+      readdirSync(dir)
+        .filter((file) => file.endsWith('.tmj'))
+        .sort()
+        .map((file) => loadMap(file.slice(0, -4), dir)),
+    );
 }
 
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
@@ -78,7 +87,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   checkQuests(quests, tuning);
   nameQuestGoals(quests, tuning);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, quests, saver: store });
+  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, quests, saver: store, startMap: options.startMap });
   tuning.onChange = (changed) => realm.tuningChanged(changed);
   const sessions = new Set<Session>();
   const admin = createAdminHandler({

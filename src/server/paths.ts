@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 /** Os mapas (um arquivo .tmj do Tiled por zona; o nome do arquivo é o id do mapa). */
 export const MAPS_DIR = path.join(ROOT, 'public/assets/maps');
+/** Os mapas do mundo 2.5D novo (formato novo: 1 tile = 1 metro, colisão por retângulos). O servidor lê as duas pastas. */
+export const ISO_MAPS_DIR = path.join(ROOT, 'public/assets/maps-iso');
 export const MONSTERS_FILE = path.join(ROOT, 'data/monsters.json');
 export const ITEMS_FILE = path.join(ROOT, 'data/items.json');
 export const NPCS_FILE = path.join(ROOT, 'data/npcs.json');

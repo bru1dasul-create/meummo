@@ -25,5 +25,13 @@
     "x": 45,
     "y": 12,
     "fala": "Psiu! Os pés virados pra trás confundem os caçadores, não os amigos da mata. Precisa de trabalho?"
+  },
+  "curupira_capao": {
+    "nome": "Curupira",
+    "titulo": "guardião da mata",
+    "mapa": "capao",
+    "x": 42.5,
+    "y": 44.5,
+    "fala": "Acordou, desperto? Calma, firma as pernas. A mata voltou pela cidade e anda tudo desequilibrado. Aqui no círculo você está seguro."
   }
 }
