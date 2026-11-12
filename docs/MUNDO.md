@@ -30,7 +30,48 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   abaixo) e só então copie por cima. Antes, veja `git log -- public/assets/maps/<id>.tmj`: se alguém além do Claude
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
-## Onde estamos (9 de novembro de 2026)
+## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Decisão do dono (12/11, roteiro "🗺️ Mundo novo"):** o visual vira o do protótipo 2.5D da [arte]
+  (`prototipos/pindorama-25d/`, isométrico, estilo HQ) e os mapas são refeitos do zero. Os 5 mapas de hoje saem quando
+  o capítulo 1 novo estiver jogável; o motor (servidor, regras, salvamento) fica. Capítulo 1: Capão Redondo e o Parque
+  Santo Dias → Guarapiranga → Santo Amaro (Largo Treze, Terminal, Shopping do Largo Treze) → Billings → a Sé no fim.
+  Tom "bem selvagem" (a mata volta pelo sul); lugar real sim, marca não.
+- **Budega Distribuidora** (o negócio do dono, no Capão): **não desenhar** até ele confirmar o formato. Sem a palavra
+  "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco). Se ele confirmar, pode ser a vendinha da praça.
+- **Primeiro mapa: desenho no papel mandado ao dono em 12/11, esperando o "pode".** Uns 96 × 80 m (x para o leste,
+  y para o sul, em metros; na tela, x desce para a direita e y desce para a esquerda: o fundo da tela é o noroeste):
+  - mata do parque em x 0 a 48, com o muro do parque em x = 48 e o **Portão I** em y 41 a 47 (lá fora, a Travessa
+    Jasmim da Beirada, x 49,5 a 56);
+  - **clareira do despertar** com centro em (37, 43) e raio 8, onde fica o círculo (spawn); figueira gigante em
+    (39; 33,5); lago em volta de (16, 23), com aguapé e capivaras; trilha em volta do lago;
+  - **Vila do Capão** (zona segura) em x 48 a 96: rua do portão para o leste (y 41 a 47); praça em (61 a 79, 49 a 59),
+    com vendinha, fogueira e árvore; casas de bloco com laje e caixa d'água do lado norte da rua (y 29 a 40); campinho
+    de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78);
+  - **viaduto da Linha 5-Lilás** no fundo (y 2 a 6, x 48 a 96, a 8 m de altura, com o trem lilás parado) e um ônibus
+    velho embaixo. Regra: o que é alto fica no fundo da tela (noroeste), o que é baixo fica na frente;
+  - saídas: sul (x 88 a 94, y = 80) → Guarapiranga (próximo mapa); leste (x = 96, y 41 a 47) → Estação Capão Redondo
+    (depois);
+  - criaturas: saguis perto da clareira, em volta de (33, 19) (nível 1 a 2; existem saguis de verdade no parque);
+    jararacas no sudoeste, em volta de (16, 63) (nível 2 a 3); Saci no fundo da mata, em (8,5; 6) (depois);
+  - NPCs: Curupira no Portão I (46; 44,5) e vendinha na praça (64; 52,5). Capivaras são só enfeite.
+  - O rascunho (planta isométrica feita por um script com SVG e duas ilustrações do Nano Banana) ficou na pasta
+    temporária da conversa. Se sumir, as medidas acima bastam para refazer.
+- **Formato do mapa novo** (combinado com a [estrutura] em 12/11, no roteiro): `.tmj` ortogonal, 1 tile = 1 m (tile
+  de 32 px no Tiled, só como grade); `colisao` com retângulos (`bloqueiaTiro`, padrão true; água com false) que **o meu
+  gerador** tira do cenário (tronco 0,4 a 0,6 m, poste 0,3 m, base de casa e muro, lago em retângulos de ~0,5 m);
+  `seguro` com retângulos (zona segura por área: monstro não entra, não nota e não acerta); `saidas`, `monstros`,
+  pontos e propriedades de sempre; `chao` e `cenario` só para o desenho (o formato delas eu combino com a [arte]).
+  Medidas para o pé de 0,6 × 0,4: passagem com pelo menos 1,5 m e 1,2 m entre troncos.
+- **Minimapa:** protótipo pronto no ramo `mundo/minimapa` (commit 1c94ebe), **pausado** até o mapa novo existir. A
+  janela, o mapa grande (tecla M), as marcações e os nomes que não se sobrepõem servem para o mapa novo; o terreno hoje
+  sai da cor dos tiles (`terrainImage`) e vai precisar ler `chao`/`cenario`.
+- **Nano Banana** funciona nesta nuvem (chave nos Segredos de rede):
+  `python3 -I scripts/nano-banana.py --model gemini-nano-banana-2.1 --aspect 16:9 --size 1K --out x.png --ref estilo.png
+  arranjo.png --prompt "..."` (~US$ 0,034 por imagem). Bom jeito: um print do protótipo como estilo e uma planta sem
+  texto como arranjo. Gastei 2 imagens (~US$ 0,07) em 12/11; o crédito de US$ 5 é dividido com a [arte], e cada
+  máquina conta o seu gasto em `saves/nano-banana.json`.
+
+## Antes, em 9 de novembro de 2026 (os mapas de hoje, que vão sair)
 Feito pelo [mundo], tudo na `main`:
 - **Mapa, passos 1 a 3:** profundidade (copas e alto dos postes na camada `acima`, que fica transparente perto de quem
   passa), água e fogo animados, luzes, sombras; Refúgio caprichado (beiradas suaves, vila colorida, barraquinha da
@@ -86,13 +127,23 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
-- Nada bloqueando o [mundo]. A [arte] já desenhou o Curupira, o jacaré, o boto e a Iara (na `main` em 9/11).
+- **[estrutura]:** ler o formato novo (`colisao`, tile de 32 px, `seguro` por área) antes do primeiro mapa novo ir para
+  o jogo. O movimento livre, passo 1, já está na `main` (3ec6b08).
+- **[arte]:** o desenho do mapa novo em 2.5D: combinar com ela o formato de `chao` e `cenario`.
+- A [arte] já desenhou o Curupira, o jacaré, o boto e a Iara (na `main` em 9/11).
 - Combinado com a [arte]: o personagem novo tem ~1,6 tile de altura e o zoom ficou sempre par. Se a cabeça ou o
   chapéu sumirem embaixo das copas ou dos letreiros do shopping, eles me avisam. Aí eu ajusto `FADE_NEAR`/`FADE_FAR`
   em `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
 
 ## Próximos passos possíveis (o dono escolhe)
-Perguntei ao dono qual dos dois primeiros prefere e ainda não houve resposta.
+**Agora (mundo novo):**
+1. **Depois do "pode" do desenho no papel:** construir o primeiro mapa novo com um gerador meu (ex.: `gen-capao.ts` →
+   `public/assets/maps/capao.tmj`), com as camadas combinadas (`chao`, `cenario`, `colisao` tirada do cenário,
+   `seguro`, `saidas`, `monstros`, pontos) e testes em `tests/` (passagens largas, NPC alcançável, saídas, zona segura).
+2. **Formato de `chao` e `cenario`** com a [arte] (árvore, casa, poste, muro... com altura e cor).
+3. **Minimapa no mapa novo** (retomar o ramo `mundo/minimapa`).
+
+**Suspenso (era para os mapas de hoje, que vão sair):**
 1. **Enfeite em volta do Curupira** (roteiro, opcional): árvore oca ou cantinho de mata fechada em volta de (45, 12),
    sem bloquear o tile dele (o teste dos NPCs confere).
 2. **Chefe do cinema do shopping:** uma lenda nova. A [estrutura] cria e eu marco a área no cinema (x 22-41, y 3-11).

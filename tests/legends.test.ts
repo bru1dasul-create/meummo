@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { loadItemDefs } from '../src/server/items';
 import { loadMonsterDefs } from '../src/server/monsters';
 import { sellPrice } from '../src/shared/items';
+import { degreesOfDir } from '../src/shared/movement';
 
 describe('criaturas da Represa Billings', () => {
   const monsters = loadMonsterDefs();
@@ -132,7 +133,7 @@ describe('Iara: o canto que puxa para a água', () => {
     // tentar andar não adianta
     const { LEFT } = await import('../src/shared/dir');
     const before = { x: player.x, y: player.y };
-    world.requestStep(player, 1, LEFT);
+    world.requestWalk(player, 1, degreesOfDir(LEFT));
     run(100);
     expect(conn.ofType('pull').length === 0 ? { x: player.x, y: player.y } : before).toEqual(before);
     // vai sendo puxado para perto dela
@@ -151,7 +152,7 @@ describe('Iara: o canto que puxa para a água', () => {
     expect(conn.ofType('charm')[0]?.ms).toBe(3000);
     const { LEFT } = await import('../src/shared/dir');
     const x = player.x;
-    world.requestStep(player, 1, LEFT, true); // esquiva para longe
+    world.requestWalk(player, 1, degreesOfDir(LEFT), true); // esquiva para longe
     run(100);
     expect(conn.ofType('charm').at(-1)).toEqual({ t: 'charm', ms: 0 });
     expect(player.charmedBy).toBeNull();
@@ -162,7 +163,7 @@ describe('Iara: o canto que puxa para a água', () => {
     const a = await arena();
     a.run(1200); // quase no fim do aviso
     const { LEFT } = await import('../src/shared/dir');
-    a.world.requestStep(a.player, 1, LEFT, true); // esquiva: invencível bem na hora
+    a.world.requestWalk(a.player, 1, degreesOfDir(LEFT), true); // esquiva: invencível bem na hora
     a.run(300);
     expect(a.conn.ofType('charm')).toHaveLength(0);
 

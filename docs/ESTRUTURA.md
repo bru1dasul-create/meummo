@@ -37,6 +37,47 @@ que só atacam se você ataca, animações feias; e pediu mapa e minimapa. Ele a
   minha leitura sincera — não recomendo trocar de ferramenta agora. Aproveitei no roteiro o que não depende de
   decisão (celular deitado, modo leve, meta de quadros por segundo, Caminhos como M6). Esperando o dono decidir.
 
+**12/11 — protótipo 2.5D da [arte]** (`prototipos/pindorama-25d/`, já na `main`; versão 8 no ramo da [arte]):
+personagem desenhado por código com esqueleto 3D, câmera isométrica parecida com a do Albion, uma esquina da São
+Paulo de hoje e um exportador de sprites (PNG em 8 direções, com âncora e camadas). Ele não tem servidor, outros
+jogadores, monstros, dano, itens nem salvamento. O dono acha que vamos "largar o jogo atual". Minha recomendação:
+largar o **visual** de hoje (mapas vistos de cima, boneco em pixel, monstros 16x16), mas manter o **motor** (servidor,
+regras, multiplayer, salvamento, painel, dados e testes). Antes de migrar tudo, uma **fatia de teste**: a esquina do
+protótipo como primeiro mapa isométrico do jogo, o herói em sprites exportados, outros jogadores, um monstro e o
+ataque, tudo ligado ao servidor atual, medido no celular do dono. O movimento livre (meu próximo passo) continua
+valendo. Esperando o dono decidir.
+
+**12/11 — o dono trocou o visual** ("trocamos o visual") e quer refazer os mapas do zero, perto do Capão Redondo,
+"bem selvagens". Propus: nascer na Estação Capão Redondo (fim da Linha 5-Lilás), Parque Santo Dias como primeira mata,
+Guarapiranga depois, Santo Amaro e Billings em seguida e o centro (Sé) no fim. Esperando a escolha dele. Avisei o
+[mundo] para pausar o minimapa dos mapas atuais.
+
+**12/11 — Mapa 01 (decisões do dono, repassadas pelo [mundo]; confirmar com o dono quando chegar a hora):** o
+[mundo] faz em etapas (câmera, planta, uma tela jogável só com a clareira, o resto em 3 pedaços, atmosferas,
+minimapa); o meu trabalho no mapa novo começa na etapa 3, e ele avisa. Ficam comigo: a Budega como a vendinha da
+praça da Vila do Capão (NPC e loja nos dados; sem "Tabacaria" e sem tabaco), a zona segura por área, a primeira
+missão (acordar, Curupira, portão, vila, mata) e os saguis "encantados" (a missão é acalmar ou afastar, não
+matar; o monstro continua o mesmo, mudam a história e o texto). O nome do mundo continua "Selva de Pedra". O
+ritual de classe na figueira fica para depois.
+
+**13/11 — movimento livre, passo 1, na `main`:** jogadores andam soltos (pedaços de 50 ms, orçamento de tempo no
+servidor, caixa do pé de 0,6 × 0,4 na faixa de baixo do tile, desliza e escorrega 0,3 na quina). Mexi em poucas
+linhas do `EntityView.ts` (da [arte]: a perna acompanha a distância) e avisei. Próximos: passo 2 com o [mundo]
+(colisão por formas, formato proposto) e o joystick; depois, o combate da revisão 17 (carga, defesa com energia).
+
+**12/11 — decidido pelo dono:** nascer no Parque Santo Dias; capítulo 1 = Capão Redondo e o parque → Guarapiranga →
+Santo Amaro (Largo Treze, Terminal, Shopping do Largo Treze) → Billings → centro no fim. Ele quer a Budega
+Distribuidora (o negócio dele) no Capão; recomendei sem "Tabacaria" e sem produtos de tabaco (Lei 9.294/1996).
+Mandei as decisões ao [mundo] (roteiro, seção "🗺️ Mundo novo").
+
+**12/11 — o ChatGPT evoluiu o protótipo até a revisão 17** (ZIP enviado pelo dono, fora do repositório): duelo de
+treino com vida, soco, estilingue com carga (até 1,1 s, dano 20 a 40, alcance 6,5 a 9,5 m), defesa frontal com
+energia (100; arco de 140°; bloqueia ~75%; quebra sem energia), esquiva no Q, recuo pela força e aviso laranja do
+rival. Os números estão no `LEIA-ME.md` da revisão 17. No MMO, essas regras vão para o servidor, com os mesmos
+números: o movimento livre usa a escala do protótipo (metros), para eles servirem direto. Uma regra não serve para
+MMO: o corpo caído bloquear a passagem. Recomendei ao dono tornar a revisão 17 a oficial e levá-la para o
+repositório pelo chat de Arte, só com o código e o LEIA-ME, sem os 19,6 MB de relatórios.
+
 Antes, em 9/11:
 Feito pela Estrutura, tudo na `main`:
 - Interface nova (tela de entrada, painel de vida, botões com ícones, chat discreto).
@@ -47,7 +88,8 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **15**; `MIGRATIONS` no passo **3** (coluna `quests`).
+Números para não se perder: protocolo na versão **16** (movimento livre: `walk` no lugar de `step`); `MIGRATIONS` no
+passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes
 - Nada pendente para a [estrutura]. A [arte] entregou tudo que estava pedido (Curupira, jacaré, boto, Iara, canto,

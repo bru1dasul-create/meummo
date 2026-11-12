@@ -1,7 +1,8 @@
 # MeuMMO — instruções do projeto
 
 ## Contexto
-- MMORPG de **ação** 2D (visão de cima, movimento em grade de tiles) que roda no navegador (PC e celular).
+- MMORPG de **ação** 2D (visão de cima; jogadores andam soltos, monstros andam de tile em tile) que roda no navegador
+  (PC e celular). O visual está mudando para o 2.5D isométrico do protótipo (`prototipos/pindorama-25d/`).
 - Time: o dono do projeto (ideias, design, testes) + Claude (código). Converse em **português do Brasil**,
   com explicações simples — nem toda decisão técnica precisa de jargão.
 - Tema: **fantasia com folclore brasileiro** (Saci, Curupira, Iara...). Combate de ação: mira, atira, desvia;

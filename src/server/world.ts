@@ -10,7 +10,7 @@ import {
   GOLD_DROP_MS,
   ITEM_DROP_MS,
   MAX_PLAYERS,
-  MAX_QUEUED_STEPS,
+  MAX_QUEUED_WALKS,
   PICKUP_RANGE,
   REGEN_DELAY_MS,
   REGEN_EVERY_MS,
@@ -20,12 +20,13 @@ import {
   SHOT_RANGE,
   SHOT_SPEED,
   STEP_MS,
-  STEP_TOLERANCE_MS,
   TICK_MS,
   TRADE_RANGE,
   VIEW_HYSTERESIS,
   VIEW_RADIUS_X,
   VIEW_RADIUS_Y,
+  WALK_BUDGET_MAX_MS,
+  WALK_SLICE_MS,
 } from '../shared/constants';
 import {
   advanceShot,
@@ -44,7 +45,7 @@ import {
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
-import { applyInput, canStep, nextStepTime } from '../shared/movement';
+import { canStep, degreesToward, sweepBody, walkDistance, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
@@ -147,6 +148,8 @@ export const DROP_READY_MS = 400;
 export const AUTOSAVE_MS = 30_000;
 
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
+/** Onde a entidade está exatamente ("de canto"): jogadores andam soltos; monstros e NPCs, de tile em tile. */
+const spotOf = (e: Entity): Tile => (e.kind === 'player' ? { x: e.fx, y: e.fy } : { x: e.x, y: e.y });
 
 export class World {
   readonly players = new Map<number, Player>();
@@ -325,7 +328,7 @@ export class World {
     player.x = spot.x;
     player.y = spot.y;
     player.queue.length = 0;
-    player.nextStepAt = 0;
+    player.walkBudget = 0;
     player.known.clear();
     player.changed = true;
     player.invulnerableUntil = now + ARRIVAL_PROTECTION_MS;
@@ -426,19 +429,22 @@ export class World {
 
   // ======================= pedidos dos jogadores =======================
 
-  /** O cliente pediu para andar (ou rolar). Entra na fila e é processado no ritmo certo, no tick. */
-  requestStep(player: Player, seq: number, dir: Dir, dash = false): void {
+  /**
+   * O cliente pediu para andar um pedaço (WALK_SLICE_MS) na direção `degrees` (ou rolar, se dash).
+   * Entra na fila e é processado no tick, no ritmo do relógio.
+   */
+  requestWalk(player: Player, seq: number, degrees: number, dash = false): void {
     if (player.loading || seq <= player.lastSeq) return;
     player.lastSeq = seq;
     if (player.dead) return;
-    if (player.queue.length >= MAX_QUEUED_STEPS) {
-      // Passos demais de uma vez (bug ou trapaça): descarta a fila e manda o cliente se corrigir.
+    if (player.queue.length >= MAX_QUEUED_WALKS) {
+      // Pedidos demais de uma vez (bug ou trapaça): descarta a fila e manda o cliente se corrigir.
       player.queue.length = 0;
       player.ackSeq = seq;
       player.ackPending = true;
       return;
     }
-    player.queue.push({ seq, dir, dash });
+    player.queue.push({ seq, a: degrees, dash });
   }
 
   /** Estilingue: atira uma pedrinha na direção do ângulo. */
@@ -679,9 +685,9 @@ export class World {
     player.x = spot.x;
     player.y = spot.y;
     player.queue.length = 0;
-    player.nextStepAt = 0;
+    player.walkBudget = 0;
     player.changed = true;
-    player.outbox.push({ t: 'teleport', x: player.x, y: player.y, dir: player.dir });
+    player.outbox.push({ t: 'teleport', x: player.fx, y: player.fy, dir: player.dir });
     player.outbox.push({ t: 'sys', text: `O administrador te levou para (${spot.x}, ${spot.y}).` });
   }
 
@@ -921,7 +927,7 @@ export class World {
         player.questsDirty = false;
       }
       if (player.ackPending) {
-        player.outbox.push({ t: 'ack', seq: player.ackSeq, x: player.x, y: player.y, dir: player.dir });
+        player.outbox.push({ t: 'ack', seq: player.ackSeq, x: player.fx, y: player.fy, dir: player.dir });
         player.ackPending = false;
       }
     }
@@ -951,15 +957,23 @@ export class World {
       return;
     }
     if (player.charmedBy !== null) this.updateCharm(player, now);
-    this.processSteps(player, now);
+    this.processWalks(player, now);
     this.regenPlayer(player, now);
   }
 
-  private processSteps(player: Player, now: number): void {
+  /**
+   * Anda os pedaços de caminhada da fila. Cada pedaço gasta WALK_SLICE_MS do "orçamento" do jogador, que
+   * enche com o relógio (até WALK_BUDGET_MAX_MS): ninguém anda mais rápido que a velocidade, mas pedidos que
+   * a rede atrasou e entregou juntos ainda passam na hora. A esquiva não gasta orçamento (tem a recarga dela).
+   */
+  private processWalks(player: Player, now: number): void {
+    const elapsed = player.walkClock > 0 ? now - player.walkClock : TICK_MS;
+    player.walkClock = now;
+    player.walkBudget = Math.min(WALK_BUDGET_MAX_MS, player.walkBudget + Math.max(0, elapsed));
     while (player.queue.length > 0) {
       const input = player.queue[0]!;
-      // Esquiva pronta não espera o passo anterior terminar (no cliente ela também acontece na hora).
-      // Esquiva ainda recarregando vira um passo normal (o cliente se corrige com o ack).
+      // Esquiva pronta não espera a caminhada (no cliente ela também acontece na hora).
+      // Esquiva ainda recarregando vira um pedaço de caminhada normal (o cliente se corrige com o ack).
       const dash = input.dash && now >= player.dashReadyAt - SKILL_TOLERANCE_MS;
       if (!dash && now < player.charmedUntil) {
         // Encantado: não anda (só a esquiva solta). O navegador corrige a posição pelo ack.
@@ -972,10 +986,11 @@ export class World {
         }
         continue;
       }
-      if (!dash && now < player.nextStepAt - STEP_TOLERANCE_MS) break;
+      if (!dash && player.walkBudget < WALK_SLICE_MS) break;
       player.queue.shift();
-      const result = applyInput(this.map, player, input.dir, dash, DASH_TILES);
-      if (result.moved) player.nextStepAt = nextStepTime(now, player.nextStepAt, stepDuration(input.dir, STEP_MS), TICK_MS);
+      const from = { x: player.fx, y: player.fy, dir: player.dir };
+      const result = dash ? sweepBody(this.map, from, input.a, DASH_TILES) : walkSlice(this.map, from, input.a, walkDistance(WALK_SLICE_MS, STEP_MS));
+      if (!dash) player.walkBudget -= WALK_SLICE_MS;
       // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
       if (dash && result.moved) {
         player.dashReadyAt = Math.max(now, player.dashReadyAt) + DASH_COOLDOWN_MS;
@@ -986,8 +1001,8 @@ export class World {
         this.breakCharm(player); // a esquiva quebra o encanto
       }
       if (result.moved || result.dir !== player.dir) player.changed = true;
-      player.x = result.x;
-      player.y = result.y;
+      player.fx = result.x;
+      player.fy = result.y;
       player.dir = result.dir;
       player.ackSeq = input.seq;
       player.ackPending = true;
@@ -1032,12 +1047,12 @@ export class World {
     player.x = spot.x;
     player.y = spot.y;
     player.dir = DOWN;
-    player.nextStepAt = 0;
+    player.walkBudget = 0;
     player.invulnerableUntil = now + RESPAWN_PROTECTION_MS;
     player.unnoticedUntil = now + NOTICE_GRACE_MS;
     player.lastDamagedAt = -Infinity;
     player.changed = true;
-    player.outbox.push({ t: 'teleport', x: player.x, y: player.y, dir: player.dir });
+    player.outbox.push({ t: 'teleport', x: player.fx, y: player.fy, dir: player.dir });
     this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
   }
 
@@ -1066,7 +1081,7 @@ export class World {
 
   private spawnProjectile(owner: Entity, angle: number, speed: number, range: number, damage: number, kind: string, cid?: number): void {
     const shot: Projectile = {
-      ...makeShot(owner, angle, speed, range),
+      ...makeShot(spotOf(owner), angle, speed, range),
       id: this.links.nextId(),
       ownerId: owner.id,
       fromMonster: owner.kind === 'monster',
@@ -1119,7 +1134,7 @@ export class World {
   private playerTouchedBy(x: number, y: number, now: number): Player | null {
     for (const player of this.players.values()) {
       if (player.dead || now < player.invulnerableUntil) continue;
-      if (shotTouches(x, y, player.x, player.y, SHOT_HIT_RADIUS)) return player;
+      if (shotTouches(x, y, player.fx, player.fy, SHOT_HIT_RADIUS)) return player;
     }
     return null;
   }
@@ -1262,7 +1277,7 @@ export class World {
         return;
       }
       this.face(monster, dirTowards(monster, target));
-      if (now >= monster.nextAttackAt) this.startWindup(monster, attack, [], angleBetween(monster, target), now);
+      if (now >= monster.nextAttackAt) this.startWindup(monster, attack, [], angleBetween(monster, spotOf(target)), now);
       return;
     }
 
@@ -1331,15 +1346,14 @@ export class World {
     if (now < player.nextPullAt) return;
     player.nextPullAt = now + (charmer.def.song?.pullEveryMs ?? 450);
     if (chebyshev(player, charmer) <= 1) return; // já está colado nela
-    const dir = dirTowards8(player, charmer);
-    if (dir === null) return;
-    const result = applyInput(this.map, player, dir, false, DASH_TILES);
+    const degrees = degreesToward(player.fx, player.fy, charmer.x, charmer.y);
+    const result = sweepBody(this.map, { x: player.fx, y: player.fy, dir: player.dir }, degrees, 1);
     if (!result.moved) return;
-    player.x = result.x;
-    player.y = result.y;
+    player.fx = result.x;
+    player.fy = result.y;
     player.dir = result.dir;
     player.changed = true;
-    player.outbox.push({ t: 'pull', x: player.x, y: player.y, dir: player.dir });
+    player.outbox.push({ t: 'pull', x: player.fx, y: player.fy, dir: player.dir });
   }
 
   /** Solta o encanto (esquivou, acabou o tempo, ou quem cantou sumiu). */
@@ -1365,7 +1379,7 @@ export class World {
     if (windup.kind === 'projectile') {
       // Mira onde o alvo está agora: o projétil é lento e dá para desviar.
       const target = monster.targetId !== null ? this.players.get(monster.targetId) : undefined;
-      const angle = target && !target.dead ? angleBetween(monster, target) : windup.angle;
+      const angle = target && !target.dead ? angleBetween(monster, spotOf(target)) : windup.angle;
       this.spawnProjectile(monster, angle, attack.speed, attack.range + 1.5, this.rollRange(...attack.damage), attack.projectile);
       return;
     }
@@ -1649,7 +1663,8 @@ export class World {
         player.outbox.push({ t: 'despawn', id: other.id });
       } else if (other.changed) {
         const dashed = other.dashed;
-        player.outbox.push({ t: 'move', id: other.id, x: other.x, y: other.y, dir: other.dir, ...(dashed ? { dash: true as const } : {}) });
+        const at = spotOf(other);
+        player.outbox.push({ t: 'move', id: other.id, x: round3(at.x), y: round3(at.y), dir: other.dir, ...(dashed ? { dash: true as const } : {}) });
       }
     } else if (dx <= VIEW_RADIUS_X && dy <= VIEW_RADIUS_Y) {
       player.known.add(other.id);

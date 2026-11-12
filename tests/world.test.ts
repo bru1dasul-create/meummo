@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MAX_QUEUED_STEPS, PROTOCOL_VERSION, STEP_MS, TICK_MS, VIEW_RADIUS_X } from '../src/shared/constants';
-import { DOWN, DOWN_LEFT, RIGHT, UP } from '../src/shared/dir';
+import { MAX_QUEUED_WALKS, PROTOCOL_VERSION, TICK_MS, VIEW_RADIUS_X, WALK_BUDGET_MAX_MS, WALK_SLICE_MS } from '../src/shared/constants';
+import { DOWN, DOWN_RIGHT, RIGHT, UP } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
 import { Session } from '../src/server/session';
 import { World, type Player } from '../src/server/world';
-import { FakeClock, FakeConn, FakeTransport, makeLobby, sendHello, tiledFromAscii } from './helpers';
+import { deg, FakeClock, FakeConn, FakeTransport, makeLobby, sendHello, tiledFromAscii } from './helpers';
 
 // Corredor largo: dá para testar a área de visão afastando os jogadores.
 const map = GameMap.fromTiled(
@@ -62,78 +62,86 @@ describe('World — entrar e sair', () => {
   });
 });
 
-describe('World — movimento autoritativo', () => {
+describe('World — movimento autoritativo (movimento livre)', () => {
+  const slice = 0.25; // um pedaço de caminhada (50 ms) a 5 tiles por segundo
+
   it('não deixa andar mais rápido que a velocidade permitida', () => {
-    const { player, conn } = join('Ana');
-    const start = player.x;
-    world.requestStep(player, 1, RIGHT);
-    world.requestStep(player, 2, RIGHT);
-    world.requestStep(player, 3, RIGHT);
-
+    const { player } = join('Ana');
+    const start = player.fx;
+    for (let seq = 1; seq <= 10; seq++) world.requestWalk(player, seq, deg(RIGHT)); // 500 ms de caminhada de uma vez
     world.tick();
-    expect(player.x).toBe(start + 1); // só um passo, mesmo com três pedidos
-
+    expect(player.fx).toBe(start + slice); // acabou de entrar: só o pedaço deste tick
     clock.advance(TICK_MS);
     world.tick();
-    expect(player.x).toBe(start + 1); // ainda não deu o tempo do passo
-
-    clock.advance(STEP_MS - TICK_MS);
+    expect(player.fx).toBe(start + 2 * slice); // um pedaço por tick, no ritmo do relógio
+    clock.advance(TICK_MS / 2);
     world.tick();
-    expect(player.x).toBe(start + 2);
-
-    clock.advance(STEP_MS);
-    world.tick();
-    expect(player.x).toBe(start + 3);
-    expect(conn.ofType('ack').at(-1)).toEqual({ t: 'ack', seq: 3, x: start + 3, y: player.y, dir: RIGHT });
+    expect(player.fx).toBe(start + 2 * slice); // meio tick não paga outro pedaço
   });
 
-  it('anda na diagonal no ritmo certo (√2 mais devagar por passo)', () => {
+  it('pedidos que a rede atrasou passam juntos, mas só até a folga', () => {
     const { player } = join('Ana');
-    const start = { x: player.x, y: player.y }; // (2, 0)
-    world.requestStep(player, 1, DOWN_LEFT);
-    world.requestStep(player, 2, DOWN_LEFT);
+    for (let t = 0; t < 1000; t += TICK_MS) {
+      clock.advance(TICK_MS);
+      world.tick(); // parado um tempo: a folga enche até o limite
+    }
+    const start = player.fx;
+    for (let seq = 1; seq <= 8; seq++) world.requestWalk(player, seq, deg(RIGHT));
+    clock.advance(TICK_MS);
     world.tick();
-    expect([player.x, player.y]).toEqual([start.x - 1, start.y + 1]);
-    clock.advance(STEP_MS); // 200 ms ainda não basta para outra diagonal (283 ms)
-    world.tick();
-    expect([player.x, player.y]).toEqual([start.x - 1, start.y + 1]);
-    clock.advance(100);
-    world.tick();
-    expect([player.x, player.y]).toEqual([start.x - 2, start.y + 2]);
+    expect(player.fx).toBe(start + (WALK_BUDGET_MAX_MS / WALK_SLICE_MS) * slice);
+    expect(player.queue.length).toBe(8 - WALK_BUDGET_MAX_MS / WALK_SLICE_MS);
   });
 
-  it('bloqueia passos contra paredes, mas o personagem vira', () => {
+  it('anda solto na diagonal, na mesma velocidade', () => {
+    const { player } = join('Ana');
+    const start = { x: player.fx, y: player.fy };
+    for (let seq = 1; seq <= 4; seq++) {
+      world.requestWalk(player, seq, deg(DOWN_RIGHT));
+      clock.advance(TICK_MS);
+      world.tick();
+    }
+    expect(Math.hypot(player.fx - start.x, player.fy - start.y)).toBeCloseTo(1, 2);
+    expect(player.dir).toBe(DOWN_RIGHT);
+  });
+
+  it('para encostado na parede, mas o personagem vira', () => {
     const { player } = join('Ana');
     player.x = 3;
     player.y = 2;
-    world.requestStep(player, 1, RIGHT); // (4, 2) é parede
-    world.tick();
+    for (let seq = 1; seq <= 3; seq++) {
+      world.requestWalk(player, seq, deg(RIGHT)); // (4, 2) é parede
+      clock.advance(TICK_MS);
+      world.tick();
+    }
     expect([player.x, player.y, player.dir]).toEqual([3, 2, RIGHT]);
+    expect(player.fx).toBeGreaterThan(3); // chegou perto da parede
   });
 
   it('ignora pedidos repetidos ou fora de ordem', () => {
     const { player } = join('Ana');
-    world.requestStep(player, 5, UP);
-    world.requestStep(player, 5, UP);
-    world.requestStep(player, 4, DOWN);
-    expect(player.queue).toEqual([{ seq: 5, dir: UP, dash: false }]);
+    world.requestWalk(player, 5, deg(UP));
+    world.requestWalk(player, 5, deg(UP));
+    world.requestWalk(player, 4, deg(DOWN));
+    expect(player.queue).toEqual([{ seq: 5, a: deg(UP), dash: false }]);
   });
 
-  it('descarta a fila e corrige o cliente quando chegam passos demais', () => {
+  it('descarta a fila e corrige o cliente quando chegam pedidos demais', () => {
     const { player, conn } = join('Ana');
-    for (let seq = 1; seq <= MAX_QUEUED_STEPS + 1; seq++) world.requestStep(player, seq, RIGHT);
+    for (let seq = 1; seq <= MAX_QUEUED_WALKS + 1; seq++) world.requestWalk(player, seq, deg(RIGHT));
     expect(player.queue).toEqual([]);
     world.tick();
-    expect(conn.ofType('ack').at(-1)?.seq).toBe(MAX_QUEUED_STEPS + 1);
+    expect(conn.ofType('ack').at(-1)?.seq).toBe(MAX_QUEUED_WALKS + 1);
   });
 
-  it('avisa quem está vendo quando alguém anda', () => {
+  it('confirma a posição exata e avisa quem está vendo', () => {
     const ana = join('Ana');
     const beto = join('Beto');
     world.tick();
-    world.requestStep(beto.player, 1, DOWN);
+    world.requestWalk(beto.player, 1, deg(DOWN));
     world.tick();
-    expect(ana.conn.ofType('move').at(-1)).toMatchObject({ id: beto.player.id, x: beto.player.x, y: beto.player.y });
+    expect(beto.conn.ofType('ack').at(-1)).toMatchObject({ seq: 1, x: beto.player.fx, y: beto.player.fy });
+    expect(ana.conn.ofType('move').at(-1)).toMatchObject({ id: beto.player.id, x: beto.player.fx, y: beto.player.fy });
   });
 });
 

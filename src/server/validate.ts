@@ -1,7 +1,7 @@
 // Nunca confie no que vem do cliente: tudo passa por aqui antes de chegar no mundo.
 
 import { CHAT_MAX_LENGTH } from '../shared/constants';
-import { isDir } from '../shared/dir';
+import { isWalkAngle } from '../shared/movement';
 import { BAG_SIZE, EQUIP_SLOTS, type EquipSlot } from '../shared/items';
 import type { ClientMsg } from '../shared/protocol';
 
@@ -42,10 +42,10 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         ? { t: 'hello', name: msg.name, password, v: msg.v as number }
         : null;
     }
-    case 'step':
-      if (!isDir(msg.dir) || !Number.isSafeInteger(msg.seq) || (msg.seq as number) < 0) return null;
+    case 'walk':
+      if (!isWalkAngle(msg.a) || !Number.isSafeInteger(msg.seq) || (msg.seq as number) < 0) return null;
       if (msg.dash !== undefined && msg.dash !== true) return null;
-      return msg.dash ? { t: 'step', dir: msg.dir, seq: msg.seq as number, dash: true } : { t: 'step', dir: msg.dir, seq: msg.seq as number };
+      return msg.dash ? { t: 'walk', a: msg.a, seq: msg.seq as number, dash: true } : { t: 'walk', a: msg.a, seq: msg.seq as number };
     case 'shoot':
       return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
         ? { t: 'shoot', cid: msg.cid as number, a: msg.a }

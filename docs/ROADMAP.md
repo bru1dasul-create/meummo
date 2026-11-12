@@ -78,9 +78,11 @@ Tudo isto se ajusta mexendo em números, sem programar:
 ## 🎮 Sensação de jogo (pedido do dono em 10/11: "andar engessado, trava longe das coisas")
 Hoje o personagem anda de quadrado em quadrado e a colisão é do quadrado inteiro (uma árvore bloqueia 2 quadrados,
 mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogáveis:
-- [ ] **[estrutura]** Movimento livre, passo 1: o personagem anda solto (posição em fração de tile), com um "pé"
-  pequeno, deslizando nas paredes; servidor continua mandando (prevê no navegador, confirma no servidor). Os
-  monstros continuam andando de tile em tile por enquanto. Pede um ajuste pequeno da [arte] no `EntityView.ts`
+- [x] **[estrutura]** Movimento livre, passo 1: o personagem anda solto (posição em fração de tile, 1 tile = 1 metro),
+  com um pé pequeno (caixa de 0,6 × 0,4 onde o pé é desenhado) que desliza nas paredes e escorrega de raspão para
+  entrar em passagens; 360 direções (pronto para o joystick); o servidor continua mandando (pedaços de 50 ms com
+  "orçamento" de tempo, previsão no navegador). Monstros continuam de tile em tile. No `EntityView.ts` (da [arte]),
+  só a perna passou a acompanhar a distância andada
 - [ ] **[mundo]** Movimento livre, passo 2: colisão do tamanho de cada objeto (tronco, poste, cesto, caixote), dita
   no tileset; a [estrutura] lê e usa
 - [ ] **[estrutura + arte]** Movimento livre, passo 3: joystick na tela do celular (a [estrutura] faz funcionar, a
@@ -93,6 +95,25 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
 - [ ] **[arte + mundo]** Modo leve para celular fraco: menos efeitos (neblina, luzes, faíscas), com opção nas
   configurações
 - [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC
+
+## 🗺️ Mundo novo (2.5D isométrico) — decidido pelo dono em 12/11
+O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas são refeitos do zero; o motor
+(servidor, regras, salvamento, dados) fica. Os 5 mapas atuais saem quando o capítulo 1 novo estiver jogável.
+- [x] **[dono]** Região: zona sul de SP, perto do Capão Redondo, com mapas "bem selvagens" (a mata volta pelo sul)
+- [x] **[dono]** Nascimento no **Parque Santo Dias** (Capão Redondo). Capítulo 1, do mais fácil ao mais difícil:
+  Capão Redondo e o parque → Guarapiranga → Santo Amaro (Largo Treze, Terminal e o Shopping do Largo Treze, sem
+  o nome da rede) → Billings → o centro (Sé) no fim do jogo
+- [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
+  até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Desenho no papel primeiro
+- [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
+  32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
+  partir do cenário; `saidas`, `monstros`, pontos e propriedades de sempre; `chao` e `cenario` só para o desenho.
+  Falta na [estrutura]: ler `colisao` (o pé usa o retângulo exato; a grade de 1 m dos monstros bloqueia se qualquer
+  retângulo encostar), aceitar tile de 32 px e a **zona segura por área** (camada `seguro`: monstro não entra, não
+  nota e não acerta quem está dentro; a vila do Capão é segura no mesmo mapa da mata)
+- [ ] **[dono]** A **Budega Distribuidora** (o negócio do dono) no Capão: decidir o formato. Recomendação da
+  [estrutura]: sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco), como a
+  loja e o ponto de troca da vila
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.

@@ -4,8 +4,8 @@
  Navegador (Phaser)                          Servidor (Node.js)
  ┌───────────────────────┐   WebSocket   ┌──────────────────────────┐
  │ src/client            │ ────────────► │ src/server               │
- │ desenha, lê teclado,  │  "quero andar"│ fila de passos, colisão, │
- │ prevê o próprio passo │ ◄──────────── │ área de visão, chat      │
+ │ desenha, lê teclado,  │  "quero andar"│ fila de caminhada,       │
+ │ prevê a própria andada│ ◄──────────── │ colisão, visão, chat     │
  └───────────────────────┘  o que mudou  └──────────────────────────┘
               └──────── src/shared (regras iguais nos dois lados) ────────┘
 ```
@@ -25,22 +25,37 @@
 - `data/monsters.json` — os números de cada monstro (vida, dano, velocidade, avisos, o que deixa), em português.
 - `data/items.json` — os itens (equipamentos, consumíveis e materiais), em português.
 
-## O servidor manda
-O cliente nunca diz "estou na posição X". Ele pede "quero andar para a direita" (`step`). O servidor:
-1. coloca o pedido na fila daquele jogador;
-2. a cada tick (20 por segundo) processa os passos no ritmo certo: no máximo 1 tile a cada 200 ms
-   (na diagonal, 283 ms — √2 a mais — para a velocidade ser a mesma em qualquer direção);
-3. confere no mapa se o tile está livre (na diagonal, pelo menos um dos dois tiles do lado também: dá para passar
-   rente à quina de uma árvore ou parede, mas não espremido entre duas);
-4. responde ao jogador com a posição oficial (`ack`) e avisa quem está vendo (`move`).
+## O servidor manda (movimento livre)
+Os jogadores andam soltos, não de tile em tile: a posição é um número quebrado (em tiles, 1 tile = 1 metro) e o
+pé é uma caixinha de 0,6 × 0,4 que fica na faixa de baixo do tile, onde o pé é desenhado. Os monstros continuam
+andando de tile em tile.
+
+O cliente nunca diz "estou na posição X". Enquanto você segura uma direção, ele pede, a cada 50 ms, "quero andar um
+pedaço nesta direção" (`walk`, com a direção em graus inteiros: 360 direções, para o joystick e o clique). O servidor:
+1. coloca o pedido na fila daquele jogador (no máximo `MAX_QUEUED_WALKS`; mais que isso descarta e corrige);
+2. a cada tick (20 por segundo) anda os pedaços da fila, cada um gastando 50 ms de um "orçamento" que enche com o
+   relógio (até `WALK_BUDGET_MAX_MS`): ninguém anda mais rápido que 5 tiles por segundo, mas pedidos que a rede
+   atrasou e entregou juntos ainda passam na hora;
+3. anda a caixa do pé com `walkSlice` (`src/shared/movement.ts`): primeiro na horizontal, depois na vertical,
+   parando encostado no tile bloqueado — então ela **desliza** ao longo das paredes. Andando reto e batendo de raspão
+   na quina de uma passagem, escorrega de lado até 0,3 tile para entrar nela (menos do que precisaria para contornar
+   um tile inteiro). Na diagonal não passa espremida entre duas paredes;
+4. responde ao jogador com a posição oficial exata (`ack`) e avisa quem está vendo (`move`).
+
+O "tile onde o jogador está" (`footTile`, o tile do centro da caixa do pé) é o que monstros, avisos de golpe,
+saídas, área de visão e salvamento usam; no servidor, `player.x`/`player.y` devolvem esse tile e
+`player.fx`/`player.fy` são a posição exata. Personagens salvos guardam o tile (voltam no meio dele).
 
 Assim ninguém anda mais rápido nem atravessa parede, mesmo mexendo no código do navegador.
 
 ## Por que não tem atraso ao andar
 Esperar a resposta do servidor para mover o personagem daria sensação de lag. Por isso o cliente
-**prevê**: anda na hora usando a mesma função do servidor (`src/shared/movement.ts`) e guarda os passos
-ainda não confirmados. Quando chega o `ack`, refaz as contas a partir da posição oficial; se o servidor
-discordou (raro), o personagem é corrigido.
+**prevê**: anda na hora usando a mesma função do servidor e guarda os pedaços ainda não confirmados. Quando
+chega o `ack`, refaz as contas a partir da posição oficial; se o servidor discordou (raro), o personagem é corrigido.
+Para o navegador e o servidor chegarem exatamente no mesmo número, os senos e cossenos vêm de uma tabela arredondada
+(programas diferentes podem errar a última casa de `Math.cos`). O desenho anda suave entre um pedaço e outro, e a
+perna do personagem acompanha a distância andada (`EntityView.ts`).
+O "clique para andar" calcula o caminho em tiles (busca de caminho) e vai mirando no meio de cada tile do caminho.
 
 ## Área de visão
 Cada jogador só recebe notícias de quem está a até 20 tiles na horizontal e 16 na vertical.
@@ -60,8 +75,9 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   corre até o fim (para antes de parede, de outro monstro e de cima de alguém). Os viewers recebem `fx`
   (`charge`), o `move` com `dash` (corrida rápida) e `fire` com os tiles do caminho, que queimam quem fica em cima
   a cada 0,5 s até apagar (a esquiva protege, como de qualquer golpe).
-- **Esquiva** entra na mesma fila dos passos (`step` com `dash`), então também é prevista no cliente e
-  corrigida pelo servidor se precisar.
+- **Esquiva** entra na mesma fila da caminhada (`walk` com `dash`): rola 3 tiles em linha reta, deslizando no que
+  tiver no caminho (`sweepBody`), sem gastar o orçamento da caminhada (tem a recarga dela). Também é prevista no
+  cliente e corrigida pelo servidor se precisar. Rolar colado na parede não conta como esquiva.
 - **Monstros** (`src/server/world.ts`): passeiam na área deles; os agressivos percebem quem chega perto (menos
   quem acabou de chegar de outro mapa, de acordar na vila ou de entrar onde tinha parado: 3 s de folga, `NOTICE_GRACE_MS`);
   perseguem com busca de caminho; desistem quando o alvo foge para longe e voltam para casa se curando.
@@ -142,11 +158,12 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 - Monstro com `canto` (`MonsterDef.song`), de tempos em tempos (`nextSpecialAt`), com alguém a até `alcance` tiles,
   para e canta: `warn` com a área em volta dele, `fx` `song` e um balão. No fim do aviso, quem está na área e não
   está invencível (esquivando) fica **encantado**: `Player.charmedBy`/`charmedUntil` e a mensagem `charm` (ms).
-- Encantado: os passos são recusados (o servidor manda `charm` de novo para o navegador se acertar) e, a cada
-  `puxaACadaMs`, o servidor move o jogador um passo na direção de quem cantou (`pull`, e `move` para quem vê).
+- Encantado: a caminhada é recusada (o servidor manda `charm` de novo para o navegador se acertar) e, a cada
+  `puxaACadaMs`, o servidor puxa o jogador 1 tile em linha reta na direção de quem cantou, deslizando no que tiver
+  no caminho (`pull`, e `move` para quem vê).
   A esquiva que de fato rola solta na hora (`charm` 0); acabar o tempo, desmaiar ou quem cantou sumir também.
-- No navegador: enquanto `charmedUntil` não passa, não anda nem prevê passos (só a esquiva); o `pull` desliza o
-  personagem um tile.
+- No navegador: enquanto `charmedUntil` não passa, não anda nem prevê a caminhada (só a esquiva); o `pull` desliza
+  o personagem até a posição nova.
 
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
@@ -209,7 +226,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | Quem envia | Mensagem | Para quê |
 |---|---|---|
 | cliente | `hello` | entrar com nome e senha (cria o personagem se o nome ainda não existir) |
-| cliente | `step` | pedir um passo (com número de sequência); com `dash: true` é a esquiva |
+| cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
@@ -221,7 +238,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
-| servidor | `ack` / `teleport` | sua posição oficial depois do passo `seq` / você foi levado para outro lugar no mesmo mapa |
+| servidor | `ack` / `teleport` | sua posição oficial (exata) depois do pedido `seq` / você foi levado para outro lugar no mesmo mapa |
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
