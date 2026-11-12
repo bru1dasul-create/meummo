@@ -38,7 +38,7 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
         prevPh = ch.phase;
         for (let i = 0; i < 2; i++) {
           const st = ch.footLock[i];
-          if (st.step && !prevStep[i]) quick++;
+          if (st.step && st.step.kind === 'ajuste' && !prevStep[i]) quick++;
           prevStep[i] = st.step;
           track('joelho', angAt(rig.hip[i], rig.knee[i], rig.ankle[i]));
           track('cotovelo', angAt(rig.shoulder[i], rig.elbow[i], rig.wrist[i]));

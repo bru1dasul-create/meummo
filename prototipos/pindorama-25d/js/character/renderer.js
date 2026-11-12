@@ -323,6 +323,10 @@
       items.push(chestItem);
       const pelvisKey = this.keyOf(rig.pelvis.o) + 1;
       items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, solid: true, anchor: true, clipOut: chestPoly, segs: [{ poly: pelvisPoly, circles: pelvisCircles, mat: PAL.skin, k: 0.26, decal: (seg) => this._loincloth(seg, rig, look) }] });
+      // A pele recebe uma única iluminação, mesmo quando um braço separa peito e pelve
+      // na ordem de desenho. Cada passagem continua recortada ao seu próprio volume.
+      const torsoSegments = items.filter((it) => it.group === 'tronco').flatMap((it) => it.segs);
+      for (const seg of torsoSegments) seg.shadePeers = torsoSegments;
       items.push({ name: 'colar', key: chestKey + 0.5, draw: () => this._necklace(rig, look) });
       // abas da tanga: a da frente fica na frente das coxas quando a frente do quadril olha para a câmera (e atrás das
       // pernas quando não olha); a de trás, o contrário
@@ -489,6 +493,10 @@
       if (equipped && Object.keys(equipped).length && PD.equipment) {
         // cada peça entra logo depois da parte do corpo que ela veste
         const eq = PD.equipment.drawItems(this, rig, equipped, items);
+        if (PD.slingshot && equipped.maoE === 'estilingue') {
+          eq.items = eq.items.filter(item => item.name !== 'equip:estilingue');
+          eq.items.push(...PD.slingshot.drawItems(this, rig, look, items.find(item => item.name === 'mao' && item.group === 'mao0')));
+        }
         if (eq.hides.size) items = items.filter((it) => !eq.hides.has(it.name));
         for (const e of eq.items) {
           let idx = items.indexOf(e.host);
@@ -721,20 +729,25 @@
     }
 
     /** Pinta vários pedaços convexos como um volume só: base, sombra do lado contrário à luz e o brilho na borda. */
-    _paintUnion(list) {
+    _paintUnion(list, peers = list) {
       const ctx = this.ctx;
       const L = this.light;
       const mat = list[0].mat;
-      const k = Math.min(...list.map((s) => S.polyRadius(s.poly) * s.k));
+      const k = Math.min(...peers.map((s) => S.polyRadius(s.poly) * s.k));
       const U = new Path2D();
+      for (const s of peers) S.polyPath(s.poly, 0, 0, U);
+      const region = new Path2D();
       for (const s of list) {
-        S.polyPath(s.poly, 0, 0, U);
+        S.polyPath(s.poly, 0, 0, region);
         s.path = S.polyPath(s.poly);
         s._painted = true;
       }
+      ctx.save();
+      ctx.clip(region);
       if (k <= 0.2) {
         ctx.fillStyle = mat.base;
         ctx.fill(U);
+        ctx.restore();
         return;
       }
       const hk = mat.light ? k * 0.42 : 0;
@@ -743,17 +756,18 @@
       ctx.save();
       ctx.clip(U);
       const lit = new Path2D();
-      for (const s of list) S.polyPath(s.poly, L.x * k, L.y * k, lit);
+      for (const s of peers) S.polyPath(s.poly, L.x * k, L.y * k, lit);
       ctx.clip(lit);
       if (hk > 0) {
         ctx.fillStyle = mat.light;
         ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
         const core = new Path2D();
-        for (const s of list) S.polyPath(s.poly, -L.x * hk, -L.y * hk, core);
+        for (const s of peers) S.polyPath(s.poly, -L.x * hk, -L.y * hk, core);
         ctx.clip(core);
       }
       ctx.fillStyle = mat.base;
       ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
+      ctx.restore();
       ctx.restore();
     }
 
@@ -828,10 +842,11 @@
       // pintura e detalhes. Braço e perna esticados: um volume só (a sombra e o brilho correm pelo membro inteiro).
       // Antes cada pedaço tinha a própria meia-lua de sombra, e a da canela caía em cima da coxa: o joelho virava uma
       // bola com um arco no meio. O deltoide continua com a sombra dele (é ela que desenha o músculo)
-      const unify = run[0].group && /^(perna|braco)/.test(run[0].group) && !run.some((it) => it.bent);
+      const unify = run[0].group && /^(perna|braco|tronco)/.test(run[0].group) && !run.some((it) => it.bent);
       if (unify) {
         const shared = segs.filter((s) => s.poly.length >= 6 && !s.ownShade && s.k > 0);
-        if (shared.length > 1) this._paintUnion(shared);
+        if (shared.length && shared[0].shadePeers) this._paintUnion(shared, shared[0].shadePeers);
+        else if (shared.length > 1) this._paintUnion(shared);
         else unifyFallback(shared);
       }
       function unifyFallback(list) {
@@ -1764,15 +1779,16 @@
       const right = [];
       const rachis = [];
       const N = 12;
+      const aboveGround = (p) => look.restGround === undefined ? p : { ...p, z: Math.max(p.z, look.restGround + 0.2) };
       for (let i = 0; i <= N; i++) {
         const s = i / N;
         const ctr = add(add(root, scale(dir, L * s)), scale(curl, 1.6 * s * s));
         // embaixo é só haste (presa na amarração); a pena alarga depois
         const q = F.quill || 0;
         const hw = (W / 2) * Math.sin(Math.PI * Math.pow(s, 0.72)) * (1 - 0.1 * s) * (q ? smoothstep(q * 0.4, q * 1.8, s) * 0.92 + 0.08 : 1);
-        left.push(this.P(add(ctr, scale(wAxis, hw))));
-        right.push(this.P(add(ctr, scale(wAxis, -hw))));
-        rachis.push(this.P(ctr));
+        left.push(this.P(aboveGround(add(ctr, scale(wAxis, hw)))));
+        right.push(this.P(aboveGround(add(ctr, scale(wAxis, -hw)))));
+        rachis.push(this.P(aboveGround(ctr)));
       }
       const poly = [];
       for (const q of left) poly.push(q.x, q.y);
@@ -2136,18 +2152,26 @@
       const ctx = this.ctx;
       const pv = rig.pelvis;
       const L = MOD.LOINCLOTH;
-      // anel da cintura: a parte de baixo dele na tela é a borda da tanga
-      const ring = [];
+      const resting = Number.isFinite(look.restGround);
+      const projectedDown = this.cam.pDir(scale(pv.u, -1));
+      const downLength = Math.hypot(projectedDown.x, projectedDown.y);
+      const down = resting && downLength > 1e-5 ? { x: projectedDown.x / downLength, y: projectedDown.y / downLength } : { x: 0, y: 1 };
+      const across = { x: down.y, y: -down.x };
+      // O cinto pertence ao quadril. Na queda, a borda visível é a mais
+      // próxima da câmera; a mais baixa na tela pode ser a borda de trás.
+      const ring = [], ringWorld = [];
       for (let k = 0; k < 36; k++) {
         const a = (k / 36) * M.TAU;
         const front = Math.max(0, Math.sin(a)); // frente = +y
-        ring.push(this.P(at(pv, Math.cos(a) * L.rx, Math.sin(a) * L.ry + 1.5, L.ringZ - front * L.ringFrontDrop)));
+        const p = at(pv, Math.cos(a) * L.rx, Math.sin(a) * L.ry + 1.5, L.ringZ - front * L.ringFrontDrop);
+        ringWorld.push(p); ring.push(this.P(p));
       }
       // metade de baixo do anel (de ponta a ponta na tela, passando por baixo)
       let iMin = 0, iMax = 0;
       ring.forEach((q, k) => {
-        if (q.x < ring[iMin].x) iMin = k;
-        if (q.x > ring[iMax].x) iMax = k;
+        const along = p => p.x * across.x + p.y * across.y;
+        if (along(q) < along(ring[iMin])) iMin = k;
+        if (along(q) > along(ring[iMax])) iMax = k;
       });
       const lower = [];
       const walk = (from, to, dir) => {
@@ -2160,16 +2184,19 @@
       };
       const pathA = walk(iMin, iMax, 1);
       const pathB = walk(iMin, iMax, -1);
-      const avgY = (pts) => pts.reduce((s, q) => s + q.y, 0) / pts.length;
-      const arc = avgY(pathA) > avgY(pathB) ? pathA : pathB;
+      const mean = pts => pts.reduce((sum, q) => sum + (resting ? dot(ringWorld[ring.indexOf(q)], this.toCam) : q.y), 0) / pts.length;
+      const arc = mean(pathA) > mean(pathB) ? pathA : pathB;
       for (const q of arc) lower.push(q);
       const big = 400 * this.zoom;
       const region = new Path2D();
-      region.moveTo(lower[0].x - big, lower[0].y);
+      const left = { x: lower[0].x - across.x * big, y: lower[0].y - across.y * big };
+      const last = lower[lower.length - 1];
+      const right = { x: last.x + across.x * big, y: last.y + across.y * big };
+      region.moveTo(left.x, left.y);
       for (const q of lower) region.lineTo(q.x, q.y);
-      region.lineTo(lower[lower.length - 1].x + big, lower[lower.length - 1].y);
-      region.lineTo(lower[lower.length - 1].x + big, lower[lower.length - 1].y + big);
-      region.lineTo(lower[0].x - big, lower[0].y + big);
+      region.lineTo(right.x, right.y);
+      region.lineTo(right.x + down.x * big, right.y + down.y * big);
+      region.lineTo(left.x + down.x * big, left.y + down.y * big);
       region.closePath();
       ctx.save();
       ctx.clip(region);
@@ -2193,11 +2220,11 @@
       ctx.strokeStyle = PAL.clothBand.base;
       ctx.lineWidth = L.band * this.zoom;
       ctx.lineCap = 'round';
-      const band = lower.map((q) => ({ x: q.x, y: q.y + L.band * this.zoom * 0.45 }));
+      const band = lower.map((q) => ({ x: q.x + down.x * L.band * this.zoom * 0.45, y: q.y + down.y * L.band * this.zoom * 0.45 }));
       ctx.stroke(S.linePath(band));
       ctx.strokeStyle = PAL.clothBand.light;
       ctx.lineWidth = Math.max(0.5, L.band * this.zoom * 0.3);
-      ctx.stroke(S.linePath(band.map((q) => ({ x: q.x, y: q.y - L.band * this.zoom * 0.2 }))));
+      ctx.stroke(S.linePath(band.map((q) => ({ x: q.x - down.x * L.band * this.zoom * 0.2, y: q.y - down.y * L.band * this.zoom * 0.2 }))));
       // nó do cordão no quadril esquerdo, com as duas pontas balançando
       const knotN = norm(dirIn(pv, -0.55, 0.83, 0));
       if (this.facing(knotN) > 0) {
@@ -2241,6 +2268,11 @@
       const len = front ? F.len : F.lenBack;
       const sw = (look.flapSwing && look.flapSwing[front ? 0 : 1]) || { x: 0, y: 0, z: 0 };
       const out = scale(pv.f, sgn); // para fora do corpo (frente ou trás)
+      const resting = Number.isFinite(look.restGround);
+      const drape = resting ? smoothstep(0.15, 0.8, 1 - Math.abs(pv.u.z)) : 0;
+      // Deitado, o pano apoia no quadril e segue para as pernas. Continuar
+      // pendurando só no eixo vertical fazia a aba atravessar a barriga.
+      const down = norm(M.lerp3({ x: 0, y: 0, z: -1 }, scale(pv.u, -1), drape * 0.78));
       const topY = sgn * (L.ry + 0.6);
       const topZ = L.ringZ - (front ? L.ringFrontDrop : 0) - 0.4;
       // três colunas (lado, meio, lado): o pano é curvo em volta do corpo (o meio mais para fora, os lados para dentro),
@@ -2250,7 +2282,7 @@
         for (const t of [0, 0.45, 1]) {
           const w = lerp(F.w0, F.w1, t) / 2;
           const top = at(pv, sx * w, topY, topZ);
-          let p = { x: top.x, y: top.y, z: top.z - len * t };
+          let p = add(top, scale(down, len * t));
           p = add(p, scale(out, sx ? -1.3 * t : 1.1 * t));
           if (t > 0) {
             // a coxa empurra o pano para fora (ele nunca atravessa a perna), até um limite (senão, correndo, a coxa
@@ -2270,8 +2302,9 @@
               push = Math.max(push, need - has);
             }
             if (push > 0) p = add(p, scale(out, Math.min(push, 7)));
-            p = add(p, scale(sw, t));
+            p = add(p, scale(sw, t * (1 - drape)));
           }
+          if (resting) p.z = Math.max(p.z, look.restGround + 0.35);
           cols[c].push(p);
         }
       }

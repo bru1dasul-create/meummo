@@ -16,6 +16,7 @@ const FILES = [
   'js/character/renderer.js',
   'js/character/equipment.js',
   'js/character/classes.js',
+  'js/guard.js',
   'js/tools/export.js',
   'js/tools/audit.js',
 ];

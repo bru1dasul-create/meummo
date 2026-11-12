@@ -60,6 +60,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** Protótipo 2.5D, auditoria do dono (versão 8): ombro, joelho, proporções, mãos, pés, cabelo, penas e
   tanga; pulo sem erro no IK (era 19–28 cm), agachado com peso para trás, transições; validação de encaixes, perfis de
   classe, ordem de desenho pelas superfícies e exportação de sprites padronizados em camadas (`exportar.html`)
+- [x] **[arte]** Protótipo 2.5D: revisão 17 do dono (combate de treino com estilingue, carga, guarda com energia,
+  esquiva, queda e som) no repositório como a oficial, só código, LEIA-ME e dados dos testes
 - [ ] **[dono]** Decidir o rumo depois do protótipo: levar o personagem procedural para o jogo, mudar a câmera para
   isométrica (refaz todos os mapas) ou seguir só com o estilo
 - [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador;

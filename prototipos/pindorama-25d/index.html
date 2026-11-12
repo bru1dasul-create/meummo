@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Pindorama 2.5D</title>
+<title>Pindorama 2.5D — treino de combate</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,9 +84,35 @@
     border-radius: 999px;
     box-shadow: 3px 3px 0 var(--ink);
   }
+  .chip[data-state="Defendendo"] { background: #aee5ef; }
   .chip[data-state="Atacando"] { background: var(--urucum); color: var(--paper); }
   .chip[data-state="Correndo"] { background: #ef7d22; }
   .chip[data-state="Pulando"] { background: #8fd3e8; }
+  .chip[data-state="Esquivando"] { background: #8fd3e8; }
+  .chip[data-state="Recebendo impacto"] { background: #e9a17a; }
+  .chip[data-state="Morrendo"], .chip[data-state="Morto"] { background: var(--night); color: var(--paper); }
+  .demo-actions { display: flex; flex-wrap: wrap; gap: 8px; pointer-events: auto; max-width: min(340px, calc(100vw - 24px)); }
+  .tool:disabled, .tbtn:disabled { opacity: .5; cursor: default; }
+  .weapon-select { display: flex; gap: 7px; flex-wrap: wrap; margin: 9px 0 0; }
+  .weapon-select .tool { font-size: 12px; min-height: 34px; }
+  .weapon-select [aria-pressed="true"] { background: var(--ipe); box-shadow: inset 0 0 0 1px var(--ink); }
+  .chip[data-state="Disparando pedra"] { background: #d2ac70; }
+  .chip[data-state="Carregando estilingue"] { background: #e6b258; }
+  .energy { margin-top: 8px; }
+  .energy-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 1.3; }
+  .energy-meta > span:first-child { white-space: nowrap; }
+  #guard-state { text-align: right; }
+  .energy-track { height: 7px; border: 1px solid var(--ink); border-radius: 4px; overflow: hidden; background: #bbafa0; margin-top: 3px; }
+  .energy-track span { display: block; height: 100%; background: #4383b7; width: 100%; }
+  .energy[data-low="true"] .energy-track span { background: #cf7537; }
+  #t-guard { right: 8px; bottom: 190px; width: 70px; height: 70px; background: #b5dae9; font-size: 13px; }
+  #t-guard canvas { width: 32px !important; height: 32px !important; }
+  #t-guard[aria-pressed="true"] { background: #75bad5; }
+  .charge-wrap { margin-top: 8px; font-size: 11px; }
+  .charge-track { height: 7px; overflow: hidden; margin-top: 4px; border: 1px solid var(--ink); border-radius: 4px; background: #c6b99e; }
+  .charge-track span { display: block; height: 100%; width: 0; background: #d77425; }
+  .charge-wrap[data-full="true"] .charge-track { box-shadow: 0 0 8px #e3ac48; }
+  .charge-wrap[data-full="true"] .charge-track span { background: #f4c75d; }
   .chip[data-state^="Agachado"], .chip[data-state="Andando agachado"] { background: #9ed27a; }
 
   .hud-tools {
@@ -116,6 +142,24 @@
   .tool:focus-visible, .tbtn:focus-visible, .help button:focus-visible { outline: 3px solid var(--arara); outline-offset: 2px; }
   .fps { flex-basis: 100%; text-align: right; font: 700 12px var(--font-ui); color: var(--paper); text-shadow: 1px 1px 0 var(--ink); }
   .fps:empty { display: none; }
+  .combat-panel { position: fixed; z-index: 2; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 50%; transform: translateX(-50%); width: min(410px, calc(100vw - 40px)); box-sizing: border-box; padding: 8px 11px; }
+  .combat-meta, .health-label { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .combat-meta { font-size: 14px; margin-bottom: 5px; }
+  .combat-meta small { font-size: 11px; color: #775344; }
+  .combat-vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .health-label { font-size: 11px; font-weight: 700; }
+  .health-track { height: 8px; border: 2px solid var(--ink); background: #bfae93; border-radius: 4px; overflow: hidden; }
+  .health-fill { display: block; width: 100%; height: 100%; background: var(--mata); transition: width .12s ease-out; }
+  #enemy-health-fill { background: var(--urucum); }
+  .combat-action { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  #btn-training { background: var(--ipe); min-height: 40px; white-space: nowrap; box-shadow: 2px 2px 0 var(--ink); }
+  #combat-hint { font-size: 11px; line-height: 1.25; margin: 0; }
+  #combat-status[data-phase="won"] { color: var(--mata); }
+  #combat-status[data-phase="lost"] { color: #a33528; }
+  .help { z-index: 5; max-height: calc(100dvh - 45px); box-sizing: border-box; overflow-y: auto; touch-action: pan-y; }
+  .animation-tests { margin-top: 10px; border-top: 1px solid #b7a58b; padding-top: 7px; }
+  .animation-tests summary { cursor: pointer; font-weight: 700; }
+  .animation-tests .tool { font: 700 12px var(--font-ui); margin-top: 5px; min-height: 36px; padding: 3px 8px; background: var(--paper); color: var(--ink); }
 
   .help {
     position: fixed;
@@ -206,7 +250,7 @@
     right: calc(env(safe-area-inset-right, 0px) + 18px);
     bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
     width: 210px;
-    height: 200px;
+    height: 260px;
   }
   .tbtn {
     position: absolute;
@@ -236,6 +280,8 @@
   #t-run { right: 12px; bottom: 112px; width: 62px; height: 62px; font-size: 13px; }
   #t-crouch canvas, #t-run canvas { width: 34px !important; height: 34px !important; }
   #t-run.on { background: #ef7d22; }
+  #t-dodge { right: 96px; bottom: 174px; width: 66px; height: 66px; font-size: 13px; background: #8fd3e8; }
+  #t-dodge canvas { width: 32px !important; height: 32px !important; }
   .tool .short { display: none; }
   body.mode-touch .help { top: calc(env(safe-area-inset-top, 0px) + 92px); bottom: auto; left: 50%; margin-left: calc(min(290px, 100vw - 48px) / -2); }
   @media (max-width: 560px), (max-height: 430px) {
@@ -256,37 +302,74 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .brand { transform: none; }
+    .health-fill { transition: none; }
+  }
+  @media (max-width: 900px) {
+    .hud-top .brand { display: none; }
+    .combat-panel { top: calc(env(safe-area-inset-top, 0px) + 54px); width: min(500px, calc(100vw - 24px)); }
+    .hud-tools { max-width: calc(100vw - 140px); }
+    #btn-training { min-height: 44px; }
+    .combat-meta small { max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    body.mode-touch .help { max-height: calc(100dvh - 115px); }
+  }
+  @media (max-height: 430px) {
+    .hud-top .brand { display: none; }
+    .hud-top { top: calc(env(safe-area-inset-top, 0px) + 143px); }
+    .combat-panel { top: calc(env(safe-area-inset-top, 0px) + 12px); left: calc(env(safe-area-inset-left, 0px) + 12px); transform: none; width: 220px; }
+    #combat-hint, .combat-meta small { display: none; }
+    .combat-action { justify-content: center; }
+    #btn-training { min-height: 36px; }
   }
 </style>
 </head>
 <body class="mode-keyboard">
-<canvas id="game" aria-label="Pindorama: o personagem numa esquina de São Paulo"></canvas>
+<canvas id="game" aria-label="Pindorama: treino de combate numa praça de São Paulo"></canvas>
 <div class="vinheta" aria-hidden="true"></div>
 
 <header class="hud-top">
-  <div class="brand panel"><h1>PINDORAMA</h1><p>personagem base · protótipo 2.5D</p></div>
+  <div class="brand panel"><h1>PINDORAMA</h1><p>treino de combate · 2.5D</p></div>
   <div id="state" class="chip" data-state="Parado" aria-live="polite">Parado</div>
 </header>
+
+<section class="combat-panel panel" aria-label="Treino de combate">
+  <div class="combat-meta"><strong id="combat-status" aria-live="polite">Pronto para treinar?</strong><small id="enemy-state">Rival de treino</small></div>
+  <div class="combat-vitals">
+    <div><div class="health-label"><b>VOCÊ</b><span id="hero-health-value">100 / 100</span></div><div id="hero-health" class="health-track" role="progressbar" aria-label="Sua vida" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span id="hero-health-fill" class="health-fill"></span></div></div>
+    <div><div class="health-label"><b>RIVAL</b><span id="enemy-health-value">80 / 80</span></div><div id="enemy-health" class="health-track" role="progressbar" aria-label="Vida do rival" aria-valuemin="0" aria-valuemax="80" aria-valuenow="80"><span id="enemy-health-fill" class="health-fill"></span></div></div>
+  </div>
+  <div id="energy-wrap" class="energy" data-low="false"><div class="energy-meta"><span><b>ENERGIA</b> <span id="energy-value">100 / 100</span></span><span id="guard-state" aria-live="polite">F ou botão direito: defender</span></div><div id="energy-meter" class="energy-track" role="progressbar" aria-label="Sua energia de defesa" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span id="energy-fill"></span></div></div>
+  <div class="combat-action"><button id="btn-training" class="tool" type="button">Começar treino</button><p id="combat-hint">Enter ou o botão iniciam o treino com o rival de roupa vermelha.</p></div>
+  <div class="weapon-select" role="group" aria-label="Escolher arma"><button id="weapon-fists" class="tool" type="button" aria-pressed="true">1 · Punhos</button><button id="weapon-slingshot" class="tool" type="button" aria-pressed="false">2 · Estilingue</button></div>
+  <div id="charge-wrap" class="charge-wrap" hidden><span id="charge-value">Segure J, clique ou Pedra; solte para atirar</span><div id="charge-bar" class="charge-track" role="progressbar" aria-label="Força do estilingue" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="charge-fill"></span></div></div>
+</section>
 
 <div class="hud-tools">
   <button id="btn-zoom-out" class="tool" type="button" aria-label="Afastar a câmera">−</button>
   <button id="btn-zoom-in" class="tool" type="button" aria-label="Aproximar a câmera">+</button>
   <button id="btn-bones" class="tool" type="button" aria-pressed="false"><span class="long">Esqueleto</span><span class="short">Ossos</span></button>
   <button id="btn-full" class="tool" type="button"><span class="long">Tela cheia</span><span class="short">Tela</span></button>
+  <button id="btn-sound" class="tool" type="button" aria-pressed="true" aria-label="Desligar efeitos de som">Som ligado</button>
   <button id="btn-help" class="tool" type="button" aria-label="Como jogar">?</button>
   <div id="fps" class="fps"></div>
 </div>
 
 <section id="help" class="help panel" aria-label="Como jogar">
   <h2>Como jogar</h2>
+  <p class="note">Enfrente o rival de roupa vermelha. A marca laranja avisa o disparo: esquive ou saia da linha de tiro. Depois da vitória, você pode continuar andando e atirando. Enter ou R começam outra rodada após a queda.</p>
   <div class="keys-desktop">
     <ul>
+      <li><span><kbd>Enter</kbd></span><span class="what">começar, retomar ou repetir o treino</span></li>
       <li><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span class="what">andar (duas juntas = diagonal)</span></li>
       <li><span><kbd>Shift</kbd></span><span class="what">segure para correr</span></li>
       <li><span><kbd>Ctrl</kbd> ou <kbd>C</kbd></span><span class="what">agachar e levantar</span></li>
       <li><span><kbd>Espaço</kbd></span><span class="what">pular</span></li>
-      <li><span>clique</span><span class="what">soco para onde o mouse aponta</span></li>
-      <li><span><kbd>J</kbd></span><span class="what">soco para a frente</span></li>
+      <li><span><kbd>F</kbd> ou botão direito</span><span class="what">segure para defender; a guarda frontal reduz dano e gasta energia, que se recupera ao baixar os braços</span></li>
+      <li><span><kbd>Q</kbd> + direção</span><span class="what">esquiva; mantenha direção + Shift para continuar correndo</span></li>
+      <li><span><kbd>R</kbd></span><span class="what">recomeçar a rodada</span></li>
+      <li><span><kbd>1</kbd> · <kbd>2</kbd></span><span class="what">punhos · estilingue</span></li>
+      <li><span>clique ou <kbd>J</kbd></span><span class="what">com estilingue, segure para carregar e solte para atirar; com punhos, dá soco</span></li>
+      <li><span>força</span><span class="what">carregue até a barra encher para dar mais dano; a mira laranja avisa a pedra do rival</span></li>
+      <li><span>som</span><span class="what">os efeitos começam no primeiro toque ou tecla; o botão Som liga e desliga</span></li>
       <li><span>roda, <kbd>+</kbd> <kbd>−</kbd></span><span class="what">zoom</span></li>
       <li><span><kbd>B</kbd> · <kbd>H</kbd></span><span class="what">esqueleto · esta ajuda</span></li>
     </ul>
@@ -295,9 +378,11 @@
   <div class="keys-touch">
     <ul>
       <li><span class="what">Arraste no lado esquerdo da tela para andar. Empurrar pouco anda devagar.</span></li>
-      <li><span class="what"><b>Soco</b> bate, <b>Pular</b> pula, <b>Agachar</b> e <b>Correr</b> ligam e desligam.</span></li>
+      <li><span class="what">Escolha <b>Punhos</b> ou <b>Estilingue</b> no painel. Segure <b>Pedra</b> para carregar e solte para disparar. <b>Defender</b> mantém a guarda enquanto você segura; solte para recuperar energia. <b>Esquiva</b> usa a direção do joystick. <b>Agachar</b> e <b>Correr</b> ligam e desligam.</span></li>
+      <li><span class="what"><b>Começar treino</b> libera o rival. Depois, use o mesmo botão para repetir a rodada.</span></li>
     </ul>
   </div>
+  <details class="animation-tests"><summary>Animações de teste</summary><p class="note">E demonstra o impacto; K demonstra a morte. R recomeça após a queda.</p><div class="demo-actions"><button id="btn-hit" class="tool" type="button">Testar impacto · E</button><button id="btn-death" class="tool" type="button">Testar morte · K</button><button id="btn-restart" class="tool" type="button" hidden>Recomeçar · R</button></div></details>
   <button id="help-close" type="button">Entendi</button>
 </section>
 
@@ -306,27 +391,33 @@
   <div id="stick-base" class="stick-base" hidden><div id="stick-knob" class="stick-knob"></div></div>
   <div class="actions">
     <button id="t-run" class="tbtn" type="button" aria-pressed="false"><canvas></canvas><span>Correr</span></button>
+    <button id="t-guard" class="tbtn" type="button" aria-pressed="false" aria-label="Segure para defender"><canvas></canvas><span>Defender</span></button>
+    <button id="t-dodge" class="tbtn" type="button"><canvas></canvas><span>Esquiva</span></button>
     <button id="t-crouch" class="tbtn" type="button"><canvas></canvas><span>Agachar</span></button>
     <button id="t-jump" class="tbtn" type="button"><canvas></canvas><span>Pular</span></button>
-    <button id="t-attack" class="tbtn big" type="button"><canvas></canvas><span>Soco</span></button>
+    <button id="t-attack" class="tbtn big" type="button"><canvas></canvas><span id="t-attack-label">Soco</span></button>
   </div>
 </div>
 
-<script src="js/core/math.js"></script>
-<script src="js/core/iso.js"></script>
-<script src="js/core/shapes.js"></script>
-<script src="js/character/body.js"></script>
-<script src="js/character/rig.js"></script>
-<script src="js/character/animator.js"></script>
-<script src="js/character/renderer.js"></script>
-<script src="js/character/equipment.js"></script>
-<script src="js/character/classes.js"></script>
-<script src="js/world/map.js"></script>
-<script src="js/world/ground.js"></script>
-<script src="js/world/props.js"></script>
-<script src="js/world/world.js"></script>
-<script src="js/input.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game.js"></script>
+<script src="js/core/math.js?v=guarda-impacto-r17"></script>
+<script src="js/core/iso.js?v=guarda-impacto-r17"></script>
+<script src="js/core/shapes.js?v=guarda-impacto-r17"></script>
+<script src="js/character/body.js?v=guarda-impacto-r17"></script>
+<script src="js/character/rig.js?v=guarda-impacto-r17"></script>
+<script src="js/character/animator.js?v=guarda-impacto-r17"></script>
+<script src="js/character/renderer.js?v=guarda-impacto-r17"></script>
+<script src="js/character/equipment.js?v=guarda-impacto-r17"></script>
+<script src="js/character/classes.js?v=guarda-impacto-r17"></script>
+<script src="js/slingshot.js?v=guarda-impacto-r17"></script>
+<script src="js/guard.js?v=guarda-impacto-r17"></script>
+<script src="js/world/map.js?v=guarda-impacto-r17"></script>
+<script src="js/world/ground.js?v=guarda-impacto-r17"></script>
+<script src="js/world/props.js?v=guarda-impacto-r17"></script>
+<script src="js/world/world.js?v=guarda-impacto-r17"></script>
+<script src="js/combat.js?v=guarda-impacto-r17"></script>
+<script src="js/input.js?v=guarda-impacto-r17"></script>
+<script src="js/ui.js?v=guarda-impacto-r17"></script>
+<script src="js/audio.js?v=guarda-impacto-r17"></script>
+<script src="js/game.js?v=guarda-impacto-r17"></script>
 </body>
 </html>

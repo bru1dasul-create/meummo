@@ -134,15 +134,17 @@
       for (const p of this.props) p.spriteKey = '';
     }
 
-    update(dt, hero) {
+    update(dt, hero, others = []) {
       this.time += dt;
       const t = this.time;
       // eventos do personagem: poeira e soco
-      for (const ev of hero.events) {
-        if (ev.type === 'poeira') this._dust(ev.x, ev.y, hero.groundZ || 0, ev.strength);
-        if (ev.type === 'impacto') this._impact(hero, ev.hand);
+      for (const character of [hero, ...others]) {
+        for (const ev of character.events) {
+          if (ev.type === 'poeira') this._dust(ev.x, ev.y, character.groundZ || 0, ev.strength);
+          if (ev.type === 'impacto') this._impact(character, ev.hand, ev);
+        }
+        character.events.length = 0;
       }
-      hero.events.length = 0;
       // poeira de quem corre
       if (hero.runBlend > 0.6 && hero.jump.state === 'chao') {
         const k = Math.floor(hero.phase * 2);
@@ -201,21 +203,22 @@
       }
     }
 
-    _impact(hero, hand) {
+    _impact(hero, hand, event = {}) {
       const pose = hero.pose();
       const rig = PD.rig.buildRig(pose);
       const h = rig.hand[hand];
-      const p = M.add(h.o, M.scale(h.a, 8));
+      const p = event.contact || M.add(h.o, M.scale(h.a, 8));
       // soco para longe da câmera (de costas): o punho fica atrás do corpo na tela, então o efeito é desenhado antes do
       // personagem e o corpo passa na frente dele (antes a estrela, por cima de tudo, cobria o corpo inteiro)
       const behind = M.dot(M.sub(p, rig.chest.o), this.cam.toCamera) < -3;
       // estrela pequena (uns 30 cm) e um anel que abre e some; poucos riscos, curtos
-      this.particles.push({ kind: 'pow', x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, t: 0, life: 0.22, r: 15, rot: Math.random() * 6, behind });
+      const hit = !event.combatResult || event.combatResult === 'hit';
+      if (hit) this.particles.push({ kind: 'pow', x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, t: 0, life: 0.22, r: 15, rot: Math.random() * 6, behind, owner: hero });
       for (let i = 0; i < 4; i++) {
         const a = hero.yaw + (Math.random() - 0.5) * 1.3;
-        this.particles.push({ kind: 'risco', x: p.x, y: p.y, z: p.z + (Math.random() - 0.5) * 12, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, vz: (Math.random() - 0.5) * 80, t: 0, life: 0.12 + Math.random() * 0.06, r: 2, behind });
+        this.particles.push({ kind: 'risco', x: p.x, y: p.y, z: p.z + (Math.random() - 0.5) * 12, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, vz: (Math.random() - 0.5) * 80, t: 0, life: 0.12 + Math.random() * 0.06, r: 2, behind, owner: hero });
       }
-      this.shake = 0.08;
+      if (hit) this.shake = 0.08;
     }
 
     // ---------------------------------------------------------------- desenho
@@ -244,18 +247,30 @@
       mark('sombra');
 
       const order = this._staticOrder().slice();
+      for (const o of order) { o.hideTarget = 1; o.hideWindow = null; }
       // encaixa cada personagem na ordem: depois de tudo que está atrás dele
       for (const a of actors) {
         let idx = 0;
+        let beforeActor = order.length;
         for (let i = 0; i < order.length; i++) {
           const o = order[i];
-          if (o.actor) continue;
+          if (o.actor) {
+            // Um corpo rente ao chão fica sob quem está de pé na mesma região da imagem.
+            const sameImage = overlap(o.actor.bounds, a.bounds);
+            const below = sameImage && !!o.actor.groundedCorpse !== !!a.groundedCorpse
+              ? !!o.actor.groundedCorpse : behind(o, a);
+            if (below) idx = i + 1;
+            else if (sameImage) beforeActor = Math.min(beforeActor, i);
+            continue;
+          }
           if (!overlap(o.bounds, a.bounds)) continue;
           if (behind(o, a)) idx = i + 1;
         }
+        idx = Math.min(idx, beforeActor);
         order.splice(idx, 0, { actor: a, fp: a.fp });
         const bb = a.body || a.bounds;
-        this._window = { x: (bb.x0 + bb.x1) / 2, y: (bb.y0 + bb.y1) / 2, r: Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0) * 0.62 };
+        const window = { x: (bb.x0 + bb.x1) / 2, y: (bb.y0 + bb.y1) / 2, r: Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0) * 0.62 };
+        if (a.primary || a === actors[0]) this._window = window;
         // quem vem depois e cobre o personagem fica transparente (testa o corpo, não a caixa folgada)
         const body = a.body || a.bounds;
         for (let i = idx + 1; i < order.length; i++) {
@@ -263,14 +278,17 @@
           if (o.actor || !o.fades) continue;
           let hide = overlap(o.bounds, body);
           if (hide && o.overhead && o.cover) hide = o.cover(body);
-          o.hideTarget = hide ? (o.overhead ? 0.42 : 0.5) : 1;
+          if (hide) {
+            o.hideTarget = Math.min(o.hideTarget, o.overhead ? 0.42 : 0.5);
+            if (!o.hideWindow || a.primary) o.hideWindow = o._lastHideWindow = window;
+          }
         }
       }
       let actorMs = 0;
       for (const o of order) {
         if (o.actor) {
           // efeitos que ficam atrás do personagem (soco para longe da câmera)
-          for (const p of this.particles) if (p.behind && p.kind !== 'poeira') this._drawParticle(ctx, p);
+          for (const p of this.particles) if (p.behind && p.kind !== 'poeira' && (!o.actor.entity || !p.owner || p.owner === o.actor.entity)) this._drawParticle(ctx, p);
           if (this.forceFlush) ctx.getImageData(0, 0, 1, 1);
           const a0 = now();
           o.actor.draw(ctx);
@@ -287,7 +305,7 @@
           continue;
         }
         // janela: fora do círculo em volta do personagem, inteiro; dentro, bem transparente (borda em 2 degraus)
-        const W = this._window;
+        const W = o.hideWindow || o._lastHideWindow || this._window;
         const big = new Path2D();
         big.rect(-1e6, -1e6, 2e6, 2e6);
         big.moveTo(W.x + W.r, W.y);

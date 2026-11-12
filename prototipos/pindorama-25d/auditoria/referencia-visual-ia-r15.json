@@ -1,0 +1,10 @@
+{
+  "revision": 15,
+  "files": {
+    "js/character/body.js": "17ff15f1d4f2990aa0cb7be3905a6fca682dcba820e3f91dff553e8f1aa8d616",
+    "js/character/rig.js": "cc670d098c4efd5ea17e5097a02915bb27207b309b608b9b5d285fc789c0ab07",
+    "js/character/renderer.js": "a4ffb3cd3c9ccd4d0dd5c72bc587a30f16e7256e000fbfa7856f636bd23ab9d2",
+    "js/core/shapes.js": "f2e8a0f2af2b01338208c86445b82cbc632a823a53d5d671ba98846a774ccf62"
+  },
+  "enemyMethodsSHA256": "45fcc990f5ca66238fb972849de71ed9e37aa5c455bb19a51b04b3c04300f60d"
+}

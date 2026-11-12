@@ -256,6 +256,23 @@ solução, testes e pendências) está no documento "Pindorama 2.5D — Auditori
 - **Pendências:** tranco no joelho na primeira passada ao começar a correr (15,7; v7: 11,7), trocas de ordem
   cabelo × trança/orelha, contorno mínimo no zoom bem pequeno, ~20% mais CPU que a versão 7, teste em celular de verdade.
 
+### Revisão 17 — a oficial (12/11)
+O dono continuou o protótipo em outra ferramenta, em cima da minha versão 8, até a **revisão 17**, que passou a ser a
+oficial (combinado entre o dono e a [estrutura]). Ela acrescenta um treino de combate: rival com estilingue, pedra com
+carga (segurar e soltar), defesa frontal com energia, esquiva, queda e som. No repositório entram só o código, o
+`LEIA-ME.md` e, em `prototipos/pindorama-25d/auditoria/`, os arquivos que os testes leem (`medir.cjs`,
+`medir-ritmo.cjs`, `renderer-r8-referencia.js` e 7 `.json` de referência, 248 KB). Os relatórios, PDFs, GIFs e imagens
+(19,6 MB) ficam com o dono.
+- **Conferido aqui:** os meus 40 testes no Node passam; a auditoria (45 roteiros) não acha erro: pé no alvo do IK,
+  ossos sem esticar, pé sem escorregar (no máximo 0,1 cm/s). Dos testes da revisão, 21 passam, 2 não rodam (pedem o
+  pacote `@napi-rs/canvas`, que o projeto não tem) e o `teste-resposta.cjs` falha porque compara com poses das
+  revisões 2 e 3, e o movimento mudou depois. O jogo abre sem erro e os botões de toque funcionam.
+- **Comparado com a versão 8** (tranco das pernas, cm/quadro²): andar 5,7 → 3,0; primeira passada ao começar a
+  correr 15,7 → 8,0 (resolveu a minha pendência); pulo parado 13,5 → 7,3. Piorou: virada de 180° correndo (pernas 9,9
+  → 17,2, braços 3,1 → 14,3, corpo 22 cm à frente dos pés), pulo correndo 11,8 → 15,5 e o tranco dos braços somado
+  (+24%). Desempenho com a CPU 4× mais lenta: 12 quadros por segundo (versão 8: 16).
+- **Atenção para levar ao jogo:** o protótipo chama a queda de "Morrendo/Morto"; no MeuMMO quem perde a vida desmaia.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

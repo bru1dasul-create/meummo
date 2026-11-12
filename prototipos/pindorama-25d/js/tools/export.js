@@ -40,10 +40,14 @@
     { nome: 'parado', quadros: 8, duracao: BREATH, repete: true, tipo: 'tempo', entrada: () => ({}) },
     { nome: 'andar', quadros: 8, repete: true, tipo: 'passada', entrada: (d) => ({ move: d }) },
     { nome: 'correr', quadros: 8, repete: true, tipo: 'passada', entrada: (d) => ({ move: d, run: true }) },
+    { nome: 'defender', quadros: 8, duracao: BREATH, repete: true, tipo: 'tempo', entrada: () => ({ guardHeld: true }) },
     { nome: 'agachado', quadros: 8, duracao: BREATH, repete: true, tipo: 'tempo', agachar: true, entrada: () => ({}) },
     { nome: 'andarAgachado', quadros: 8, repete: true, tipo: 'passada', agachar: true, entrada: (d) => ({ move: d }) },
     { nome: 'pular', quadros: 12, duracao: 1.2, repete: false, tipo: 'pulo', entrada: () => ({}) },
     { nome: 'soco', quadros: 8, duracao: PD.PUNCH_AT ? PD.PUNCH_AT.total : 0.8, repete: false, tipo: 'soco', entrada: () => ({}) },
+    { nome: 'esquiva', quadros: 12, duracao: 0.64, repete: false, tipo: 'esquiva', entrada: () => ({}) },
+    { nome: 'morte', quadros: 20, duracao: 1.6, repete: false, tipo: 'morte', entrada: () => ({}) },
+    { nome: 'impacto', quadros: 12, duracao: 0.8, repete: false, tipo: 'impacto', entrada: () => ({}) },
   ];
 
   // partes do corpo (nomes fixos). 0 = esquerda (E), 1 = direita (D). A tanga de trás e o cabelo comprido ficam
@@ -86,7 +90,7 @@
     };
     const snap = (rig) => {
       const look = JSON.parse(JSON.stringify(ch.look));
-      look.blink = 0; // de olho aberto em todos os quadros
+      if (!ch.death && !ch.hurt) look.blink = 0; // preserva o fechamento dos olhos na morte e no impacto
       return { rig, look, equipado: { ...ch.equipped }, raiz: { x: ch.pos.x, y: ch.pos.y, z: ch.groundZ } };
     };
     const quadros = [];
@@ -145,7 +149,9 @@
       // pulo e soco: do começo ao fim, com a âncora parada onde ele começou (a investida de ~7 cm do soco fica
       // desenhada no sprite, com os pés firmes; o jogo não precisa mover o personagem durante o golpe)
       for (let t = 0; t < 1.5; t += dt) step({});
-      step(anim.tipo === 'pulo' ? { jump: true } : { attack: true, attackDir: dir.yaw * M.DEG });
+      const action = anim.tipo === 'pulo' ? { jump: true } : anim.tipo === 'soco' ? { attack: true, attackDir: dir.yaw * M.DEG } :
+        anim.tipo === 'esquiva' ? { dodge: true } : anim.tipo === 'impacto' ? { hit: true } : { die: true };
+      step(action);
       porTempo({}, anim.duracao);
       const r0 = quadros[0].raiz;
       const r1 = quadros[quadros.length - 1].raiz;
@@ -279,8 +285,8 @@
         }
       };
       const scratch = document.createElement('canvas');
-      scratch.width = Math.ceil(300 * escala);
-      scratch.height = Math.ceil(420 * escala);
+      scratch.width = Math.ceil(420 * escala);
+      scratch.height = Math.ceil(520 * escala);
       const sc = scratch.getContext('2d', { willReadFrequently: true });
       // cada sequência tem o próprio desenhista: a ordem das partes perto do empate lembra o quadro anterior, então ele
       // "ensaia" a sequência antes (numa animação que repete, o quadro 0 vem depois do último)
@@ -308,7 +314,7 @@
       let medida = MEDIDAS.get(chave);
       if (!medida) {
         const todas = await simular(ANIMACOES, DIRECOES, 0, 0.15);
-        const A0 = { x: Math.round(scratch.width / 2), y: scratch.height - Math.ceil(60 * escala) };
+        const A0 = { x: Math.round(scratch.width / 2), y: scratch.height - Math.ceil(140 * escala) };
         let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
         let n = 0;
         const nTotal = todas.reduce((s, q) => s + q.quadros.length, 0);
@@ -370,38 +376,44 @@
           // as peças e as vezes de pintar montadas uma vez só: o quadro inteiro e as camadas usam exatamente as mesmas
           const items = r.prepare(c.getContext('2d'), p.rig, p.look, p.equipado, aparencia);
           const units = r._units(items);
-          desenhar(r, c.getContext('2d'), p, ancora.x, ancora.y, { items, units });
+          const partes = units.map((un) => parteDe(un.items[0].host || un.items[0]) || 'outros');
+          const masks = units.map((un, u) => {
+            const ctx = mk.getContext('2d', { willReadFrequently: true });
+            ctx.clearRect(0, 0, W, H);
+            desenhar(r, ctx, p, ancora.x, ancora.y, { items, units, pinta: (x, i) => i === u });
+            return mascara(mk);
+          });
+          const grupos = agrupar(partes, masks);
+          const cc = novo();
+          desenhar(r, cc.getContext('2d'), p, ancora.x, ancora.y, { items, units, contorno: true });
+          const full = c.getContext('2d');
+          full.drawImage(cc, 0, 0);
           arquivos.push({ nome, canvas: c });
           const g = cam.p(p.raiz);
           const origem = { x: g.x - ancora.x, y: g.y - ancora.y };
           const q = { arquivo: nome, animacao: seq.a.nome, direcao: seq.d.nome, quadro: k, pontos: pontos(cam, p.rig, origem) };
-          if (comPartes(seq.a)) {
-            const partes = units.map((un) => parteDe(un.items[0].host || un.items[0]) || 'outros');
-            const masks = units.map((un, u) => {
-              const ctx = mk.getContext('2d', { willReadFrequently: true });
-              ctx.clearRect(0, 0, W, H);
-              desenhar(r, ctx, p, ancora.x, ancora.y, { items, units, pinta: (x, i) => i === u });
-              return mascara(mk);
-            });
-            const grupos = agrupar(partes, masks);
-            // camada 00: o contorno grosso de fora; depois as peças, de trás para a frente. Empilhar na ordem dos
-            // números dá o quadro inteiro
-            q.camadas = [];
-            const cc = novo();
-            desenhar(r, cc.getContext('2d'), p, ancora.x, ancora.y, { items, units, contorno: true });
+          const layers = comPartes(seq.a);
+          if (layers) {
             const n0 = nomeArquivo(classe, seq.a.nome, seq.d.nome, k, { ordem: 0, parte: 'contorno' });
             arquivos.push({ nome: n0, canvas: cc });
-            q.camadas.push({ arquivo: n0, parte: 'contorno', pecas: [] });
-            grupos.forEach((gr, j) => {
-              const set = new Set(gr.vezes);
-              const pc = novo();
-              desenhar(r, pc.getContext('2d'), p, ancora.x, ancora.y, { items, units, pinta: (x, i) => set.has(i) });
+            q.camadas = [{ arquivo: n0, parte: 'contorno', pecas: [] }];
+          }
+          // O PNG inteiro e as camadas usam a MESMA composição de superfícies
+          // transparentes. O arredondamento do alfa não depende da opção "partes".
+          grupos.forEach((gr, j) => {
+            const set = new Set(gr.vezes);
+            const pc = novo();
+            desenhar(r, pc.getContext('2d'), p, ancora.x, ancora.y, { items, units, pinta: (x, i) => set.has(i) });
+            full.drawImage(pc, 0, 0);
+            if (layers) {
               const pn = nomeArquivo(classe, seq.a.nome, seq.d.nome, k, { ordem: j + 1, parte: gr.parte });
               arquivos.push({ nome: pn, canvas: pc });
               const pecas = [];
               for (const i of gr.vezes) for (const it of units[i].items) if (!pecas.includes(it.name)) pecas.push(it.name);
               q.camadas.push({ arquivo: pn, parte: gr.parte, pecas });
-            });
+            }
+          });
+          if (layers) {
             const vistas = grupos.map((gr) => gr.parte);
             q.partesDivididas = [...new Set(vistas.filter((pt, i) => vistas.indexOf(pt) !== i))];
           }

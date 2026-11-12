@@ -1,0 +1,294 @@
+{
+  "revision": 2,
+  "criterion": "Retomar 25% da velocidade nominal na dire\u00e7\u00e3o oposta, ap\u00f3s 1 s em linha reta.",
+  "rows": [
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 0,
+      "moving": 0.33333333333333326
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 45,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 90,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 135,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 180,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 225,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 270,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 315,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 0,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 45,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 90,
+      "moving": 0.6333333333333333
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 135,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 180,
+      "moving": 0.6333333333333333
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 225,
+      "moving": 0.3666666666666667
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 270,
+      "moving": 0.6333333333333333
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 315,
+      "moving": 0.6333333333333333
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 0,
+      "moving": 0.33333333333333326
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 45,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 90,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 135,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 180,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 225,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 270,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 315,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 0,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 45,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 90,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 135,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 180,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 225,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 270,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 315,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 0,
+      "moving": 0.33333333333333326
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 45,
+      "moving": 0.34166666666666656
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 90,
+      "moving": 0.5249999999999999
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 135,
+      "moving": 0.34166666666666656
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 180,
+      "moving": 0.5249999999999999
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 225,
+      "moving": 0.34166666666666656
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 270,
+      "moving": 0.5249999999999999
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 315,
+      "moving": 0.5333333333333334
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 0,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 45,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 90,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 135,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 180,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 225,
+      "moving": 0.3500000000000001
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 270,
+      "moving": 0.6166666666666667
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 315,
+      "moving": 0.6166666666666667
+    }
+  ]
+}
