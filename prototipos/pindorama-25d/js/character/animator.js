@@ -288,6 +288,8 @@
       const mag = clamp01(Math.hypot(mv.x, mv.y));
       if (mag > 0.02) this.faceYaw = Math.atan2(mv.y, mv.x);
       let maxSpeed = this.crouchWanted ? SPEED.crouch : input.run ? SPEED.run : SPEED.walk;
+      // quem anima pela posição do servidor (PD.View) pode pedir um pouco mais de velocidade para não ficar para trás
+      if (input.speedScale > 1) maxSpeed *= Math.min(input.speedScale, 1.35);
       // pediu para ir muito para o lado ou para trás de onde está virado: anda no máximo a 45° da própria frente, e
       // mais devagar, enquanto vira (faz a curva em vez de andar de lado com as pernas cruzando)
       let moveDir = mag > 0.02 ? this.faceYaw : null;

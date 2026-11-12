@@ -2,12 +2,12 @@
 // (src/client/novo/engine.ts, página /?novo) conecta ao servidor, lê os controles e chama esta peça pela interface
 // `WorldView` (src/client/novo/view.ts):
 //   new PD.View(container, tmj)        container = a caixa da página (ou um <canvas> pronto); tmj = o JSON do mapa
-//   addActor(id, { kind, type, name, look, x, y, dir, me })    kind: 'player' | 'npc' | 'monster'
-//   moveActor(id, x, y, dir, { durationMs, dash, angle })       a posição nova do pé, a cada ~50–120 ms
+//   addActor(id, { kind, type, name, look, x, y, angle, me })  kind: 'player' | 'npc' | 'monster'
+//   moveActor(id, x, y, angle, { durationMs, dash })           a posição nova do pé, a cada ~50–120 ms
 //   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
-// `dir` é uma das 8 direções do chão (src/shared/dir.ts); `angle` (graus, opcional) vira para um ângulo exato.
+// `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
 // escolhe parado, andando ou correndo pela velocidade de verdade. Desenha também o nome em cima de cada um (o seu em
 // dourado, NPC em verde-água, como no jogo de hoje) e os balões de fala.
@@ -19,24 +19,10 @@
   // ser combinados com o dono: por enquanto, até "perto" (1,4) e uns 9 m de largura com o celular em pé
   const ZOOM = { min: 0.7, max: 1.4, portraitMeters: 9 };
 
-  // as 8 direções do chão (src/shared/dir.ts): 0 norte (-y), 1 leste (+x), 2 sul, 3 oeste, 4 nordeste, 5 sudeste,
-  // 6 sudoeste, 7 noroeste
   // cor do nome em cima da cabeça (as mesmas do jogo de hoje, src/client/style.css)
   const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', monster: '#f1e4c8' };
   const UI_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-
-  const DIR_X = [0, 1, 0, -1, 1, 1, -1, -1];
-  const DIR_Y = [-1, 0, 1, 0, -1, 1, 1, -1];
-  const dirToRad = (d) => Math.atan2(DIR_Y[d] ?? 1, DIR_X[d] ?? 0);
-  /** Ângulo (graus) → a direção do chão mais perto (para quem só sabe as 8). */
-  function dirOfAngle(deg) {
-    let best = 0, bestD = Infinity;
-    for (let d = 0; d < 8; d++) {
-      const diff = Math.abs(M.angleDiff((deg * Math.PI) / 180, dirToRad(d)));
-      if (diff < bestD) { bestD = diff; best = d; }
-    }
-    return best;
-  }
+  const rad = (deg) => (deg * Math.PI) / 180;
 
   class View {
     constructor(container, tmj, opts = {}) {
@@ -66,6 +52,7 @@
         this._ro = new ResizeObserver(() => this._resize());
         this._ro.observe(canvas);
       }
+      PD.view = this; // a view em uso, para os testes automáticos (só leitura)
     }
 
     /** Ponto de nascimento do mapa (metros). */
@@ -76,7 +63,7 @@
     // ------------------------------------------------------------ personagens
     addActor(id, a) {
       if (this.actors.has(id)) this.removeActor(id);
-      const yaw = a.angle !== undefined ? (a.angle * Math.PI) / 180 : a.dir !== undefined ? dirToRad(a.dir) : Math.PI / 4;
+      const yaw = Number.isFinite(a.angle) ? rad(a.angle) : Math.PI / 4;
       const ch = new PD.Character(a.x * 100, a.y * 100, yaw);
       ch.faceYaw = yaw;
       const actor = {
@@ -102,13 +89,12 @@
       return actor;
     }
 
-    /** `dir`: direção do chão (0–7); `opts.angle` (graus) vira para um ângulo exato. */
-    moveActor(id, x, y, dir, opts = {}) {
+    /** Nova posição do pé (metros) e para onde olha (graus). `durationMs` não é usado: anda pela velocidade. */
+    moveActor(id, x, y, angle, opts = {}) {
       const a = this.actors.get(id);
       if (!a) return;
       a.target = { x: x * 100, y: y * 100 };
-      if (opts && typeof opts.angle === 'number') a.angle = (opts.angle * Math.PI) / 180;
-      else if (dir !== undefined && dir !== null) a.angle = dirToRad(dir);
+      if (Number.isFinite(angle)) a.angle = rad(angle);
       a.dash = !!(opts && opts.dash);
     }
 
@@ -138,6 +124,7 @@
     }
 
     destroy() {
+      if (PD.view === this) PD.view = null;
       if (this._ro) this._ro.disconnect();
       this.actors.clear();
       if (this._ownCanvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
@@ -166,13 +153,17 @@
         a.dash = false;
       }
       const S = PD.SPEED || { walk: 160, run: 440 };
-      // velocidade para alcançar o alvo em ~0,12 s (o servidor manda posição a cada 50 ms)
-      const want = Math.min(d / 0.12, S.run * 1.15);
+      // velocidade para alcançar o alvo em ~0,12 s (o servidor manda posição a cada 50 ms). O jogo corre a 4,5 m/s
+      // (um pouco mais que a corrida do protótipo) e, atrasado numa virada (ele gira plantando os pés, o servidor
+      // inverte na hora), precisa recuperar: até 35% mais rápido, sem escorregar o pé. O passo (andar ou correr) sai
+      // da velocidade de verdade: a 2 m/s (Shift) ele anda.
+      const want = Math.min(d / 0.12, S.run * 1.35);
       let input = {};
       if (d > 3) {
         const run = want > S.walk * 1.05;
-        const mag = Math.min(1, want / (run ? S.run : S.walk));
-        input = { move: { x: (dx / d) * mag, y: (dy / d) * mag }, run };
+        const top = run ? S.run : S.walk;
+        const mag = Math.min(1, want / top);
+        input = { move: { x: (dx / d) * mag, y: (dy / d) * mag }, run, speedScale: Math.max(1, want / top) };
       }
       ch.update(dt, input, null);
       // parado: vira para o ângulo que veio
@@ -404,5 +395,4 @@
 
   PD.View = View;
   PD.VIEW_ZOOM = ZOOM;
-  PD.viewDirOfAngle = dirOfAngle;
 })(window.PD = window.PD || {});

@@ -126,7 +126,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[arte]** O desenho de verdade no jogo novo: `PD.View` com a interface `WorldView` (`src/client/novo/view.ts`),
   carregado em `src/client/novo/arte.ts` (o motor troca o provisório por ele sozinho). Desenha também o nome em cima
   de cada um (o seu em dourado, NPC em verde-água) e os balões de fala, que não saem da tela e desviam dos nomes e uns
-  dos outros. Ainda não usa o `look` (todo jogador sai com o protagonista) nem o `durationMs` (anda pela velocidade)
+  dos outros; recebe para onde cada um olha em graus e anda pela velocidade de verdade (2 m/s anda, 4,5 m/s corre).
+  Ainda não usa o `look` (todo jogador sai com o protagonista) nem o `durationMs`
+- [ ] **[dono]** Virada no jogo 2.5D: hoje o personagem gira plantando os pés e, numa virada de 180° correndo, fica
+  até ~1,75 m atrás da posição de verdade por ~1,3 s. Escolher: virada mais ágil (menos realista) ou um pouco de
+  inércia na virada do servidor
 - [ ] **[arte]** O Curupira no 2.5D (hoje é o protagonista com outra roupa), a luz do poste e pedras com cara de pedra
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
   32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a

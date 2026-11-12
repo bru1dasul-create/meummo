@@ -297,9 +297,18 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - **No jogo de verdade** (`/?novo`): `src/client/novo/arte.ts` (da [arte], combinado com a [estrutura]) importa os
   scripts do protótipo na ordem de `view-scripts.json`; com `PD.View` carregado, o motor usa ele sozinho. Interface
   `WorldView` (`src/client/novo/view.ts`): `new PD.View(caixa, tmj)` (cria o próprio `canvas.mundo-novo`; aceita
-  também um canvas pronto), `addActor(id, { kind, type, name, look, x, y, dir, me })`, `moveActor(id, x, y, dir,
-  { durationMs, dash })` (a mais: `angle` em graus), `removeActor`, `say`, `follow`, `frame`, `toWorld`, `toScreen`,
-  `groundDirOfScreen` (teclado e joystick andam pela tela) e `destroy`. `dir` = as 8 direções do chão (0 norte...).
+  também um canvas pronto), `addActor(id, { kind, type, name, look, x, y, angle, me })`, `moveActor(id, x, y, angle,
+  { durationMs, dash })`, `removeActor`, `say`, `follow`, `frame`, `toWorld`, `toScreen`, `groundDirOfScreen`
+  (teclado e joystick andam pela tela) e `destroy`. `angle` = graus no chão (0 = leste, 90 = sul), como o `walk`
+  (a [estrutura] trocou as 8 direções pelo ângulo em 12/11, a pedido da [arte]). `PD.view` = a view em uso (testes).
+- **Velocidade** (decisão do dono, 13/11): correr é o normal (4,5 m/s), Shift anda (2 m/s). A view anda pela
+  velocidade de verdade: a 2 m/s o passo é de caminhada (mistura de corrida ~4%); a 4,5 m/s, corrida, com até 35% a
+  mais para alcançar depois de uma virada (`input.speedScale` no animador, só a view usa).
+- **Atraso medido** (`prototipos/pindorama-25d/ferramentas/seguir.cjs`): correndo reto ~64 cm atrás da posição de
+  verdade (0,14 s); andando ~28 cm; ao parar não passa do ponto; pé apoiado escorrega 0,0 cm/s em tudo. Numa virada
+  de 180° correndo fica até ~1,75 m atrás e alcança em ~1,3 s; zigue-zague correndo, até ~1,45 m: ele gira plantando
+  os pés (como gente) e o servidor inverte na hora. **Decisão do dono pendente:** virada mais ágil no jogo (menos
+  realista, mais resposta) ou um pouco de inércia na virada do servidor ([estrutura]).
 - **Nomes e balões** são da view (o motor não desenha etiqueta): nome em cima da cabeça (o seu `#ffe08a`, NPC
   `#8fe3c8`, monstro `#f1e4c8`, como no `style.css`); o balão fica acima do nome, até 6 linhas (passou, "…"), não sai
   da tela e desvia dos nomes e dos outros balões (o de quem está mais à frente fica no lugar, os outros sobem e o

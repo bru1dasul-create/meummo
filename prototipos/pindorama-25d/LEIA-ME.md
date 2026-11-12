@@ -14,16 +14,16 @@ Extraia a pasta e abra index.html. Não é necessário instalar dependências pa
 
 `js/view.js` é o desenho 2.5D do jogo de verdade (página `/?novo`): o motor da [estrutura] (`src/client/novo/`)
 conecta ao servidor e chama, pela interface `WorldView` (`src/client/novo/view.ts`), `new PD.View(caixa, tmj)`,
-`addActor(id, { kind, type, name, look, x, y, dir, me })`, `moveActor(id, x, y, dir, { durationMs, dash })` (posição
-do pé em metros, a cada ~50 ms; `angle` em graus é opcional), `removeActor`, `say`, `follow`, `frame`, `toWorld`,
-`toScreen`, `groundDirOfScreen` e `destroy`. A view desenha também o nome em cima de cada um e os balões de fala.
+`addActor(id, { kind, type, name, look, x, y, angle, me })`, `moveActor(id, x, y, angle, { durationMs, dash })`
+(posição do pé em metros, a cada ~50 ms; `angle` em graus no chão, 0 = leste e 90 = sul), `removeActor`, `say`,
+`follow`, `frame`, `toWorld`, `toScreen`, `groundDirOfScreen` e `destroy`. A view desenha também o nome em cima de cada um e os balões de fala.
 Os scripts que ela precisa, na ordem, estão em `view-scripts.json`; no jogo, quem os carrega é
 `src/client/novo/arte.ts`. O mapa vem do `.tmj` do [mundo] (`public/assets/maps-iso/capao.tmj`), lido por
 `js/world/tmj.js`: chão (mata, grama, terra, asfalto, trilhas e o círculo ancestral que acende), árvores por espécie
 (a Figueira dos Despertos com raízes e símbolos que brilham, ipês, mata), arbustos, pedras, gradil, Portão I, pilares,
 poste e os pontos do Véu. Para testar sem o servidor: `clareira.html`, aberta por um servidor (com o jogo ligado,
-`npm run dev` e `http://localhost:5173/prototipos/pindorama-25d/clareira.html`). Um "servidor de mentira" anda a
-2 m/s (4,5 m/s com Shift) e manda a posição a cada 50 ms, como o motor de verdade.
+`npm run dev` e `http://localhost:5173/prototipos/pindorama-25d/clareira.html`). Um "servidor de mentira" corre a
+4,5 m/s (anda a 2 m/s com Shift, como o jogo) e manda a posição a cada 50 ms, como o motor de verdade.
 
 ## Controles
 
