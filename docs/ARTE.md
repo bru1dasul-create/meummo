@@ -294,8 +294,23 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   mundo, o chão e os objetos aceitam esse mapa sem mudar o da esquina de São Paulo (o jogo do protótipo segue igual).
 - Câmera: "médio" = 1 (padrão), "longe" = 0,7 (mínimo). Provisório até o dono decidir: aproximar até 1,4 e, com o
   celular em pé, uns 9 m de largura (o médio mostraria 5,5 m).
+- **No jogo de verdade** (`/?novo`): `src/client/novo/arte.ts` (da [arte], combinado com a [estrutura]) importa os
+  scripts do protótipo na ordem de `view-scripts.json`; com `PD.View` carregado, o motor usa ele sozinho. Interface
+  `WorldView` (`src/client/novo/view.ts`): `new PD.View(caixa, tmj)` (cria o próprio `canvas.mundo-novo`; aceita
+  também um canvas pronto), `addActor(id, { kind, type, name, look, x, y, dir, me })`, `moveActor(id, x, y, dir,
+  { durationMs, dash })` (a mais: `angle` em graus), `removeActor`, `say`, `follow`, `frame`, `toWorld`, `toScreen`,
+  `groundDirOfScreen` (teclado e joystick andam pela tela) e `destroy`. `dir` = as 8 direções do chão (0 norte...).
+- **Nomes e balões** são da view (o motor não desenha etiqueta): nome em cima da cabeça (o seu `#ffe08a`, NPC
+  `#8fe3c8`, monstro `#f1e4c8`, como no `style.css`); o balão fica acima do nome, até 6 linhas (passou, "…"), não sai
+  da tela e desvia dos nomes e dos outros balões (o de quem está mais à frente fica no lugar, os outros sobem e o
+  bico estica por baixo).
+- Ainda não usa: `look` (todo jogador sai com o protagonista), `durationMs` (a view anda pela velocidade de verdade)
+  e `type` (o NPC sai com a roupa vermelha).
 - Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5), a luz do poste e
   as pedras com cara de pedra. A copa da figueira fica acima da tela no médio (o [mundo] planejou assim).
+- Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página; no celular deitado o
+  pé do Curupira pode ficar embaixo do chat (tocar nele ali não funciona) e a faixa da zona cobre o personagem
+  enquanto aparece.
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):

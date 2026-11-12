@@ -12,10 +12,13 @@ Extraia a pasta e abra index.html. Não é necessário instalar dependências pa
 
 ## Mundo novo: a PD.View e a clareira (Etapa 3 do Mapa 01)
 
-`js/view.js` é o desenho 2.5D do jogo de verdade: o motor da [estrutura] (`src/client/novo/`) conecta ao servidor e
-chama `new PD.View(canvas, tmj)`, `addActor`, `moveActor` (posição em metros, ângulo em graus, a cada ~50 ms),
-`removeActor`, `follow`, `frame`, `toWorld` e `toScreen`. Os scripts que ela precisa, na ordem, estão em
-`view-scripts.json`. O mapa vem do `.tmj` do [mundo] (`public/assets/maps-iso/capao.tmj`), lido por
+`js/view.js` é o desenho 2.5D do jogo de verdade (página `/?novo`): o motor da [estrutura] (`src/client/novo/`)
+conecta ao servidor e chama, pela interface `WorldView` (`src/client/novo/view.ts`), `new PD.View(caixa, tmj)`,
+`addActor(id, { kind, type, name, look, x, y, dir, me })`, `moveActor(id, x, y, dir, { durationMs, dash })` (posição
+do pé em metros, a cada ~50 ms; `angle` em graus é opcional), `removeActor`, `say`, `follow`, `frame`, `toWorld`,
+`toScreen`, `groundDirOfScreen` e `destroy`. A view desenha também o nome em cima de cada um e os balões de fala.
+Os scripts que ela precisa, na ordem, estão em `view-scripts.json`; no jogo, quem os carrega é
+`src/client/novo/arte.ts`. O mapa vem do `.tmj` do [mundo] (`public/assets/maps-iso/capao.tmj`), lido por
 `js/world/tmj.js`: chão (mata, grama, terra, asfalto, trilhas e o círculo ancestral que acende), árvores por espécie
 (a Figueira dos Despertos com raízes e símbolos que brilham, ipês, mata), arbustos, pedras, gradil, Portão I, pilares,
 poste e os pontos do Véu. Para testar sem o servidor: `clareira.html`, aberta por um servidor (com o jogo ligado,

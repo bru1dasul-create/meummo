@@ -8,9 +8,6 @@
   :root { color-scheme: dark; }
   html, body { margin: 0; height: 100%; background: #0f1a12; overflow: hidden; font: 14px system-ui, sans-serif; color: #f2ead6; }
   #tela { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  #nomes { position: fixed; inset: 0; pointer-events: none; }
-  .nome { position: absolute; transform: translate(-50%, -100%); padding: 1px 7px; border-radius: 8px; background: rgba(10, 20, 14, 0.72); color: #f2ead6; font-weight: 700; font-size: 12px; white-space: nowrap; }
-  .nome.npc { color: #ffd36b; }
   #ajuda { position: fixed; left: 12px; bottom: 12px; max-width: min(420px, calc(100% - 24px)); background: rgba(10, 20, 14, 0.8); border-radius: 10px; padding: 8px 12px; line-height: 1.4; }
   #ajuda b { color: #7ff5e6; }
   #zoom { position: fixed; right: 12px; top: 12px; display: flex; gap: 6px; }
@@ -21,7 +18,6 @@
 </head>
 <body>
 <canvas id="tela"></canvas>
-<div id="nomes"></div>
 <div id="faixa">Clareira dos Despertos · zona segura</div>
 <div id="zoom"><button id="mais" aria-label="Aproximar">+</button><button id="menos" aria-label="Afastar">−</button></div>
 <div id="ajuda"><b>Teste da PD.View</b> (o desenho 2.5D do jogo novo). WASD ou setas andam, <b>Shift</b> corre; toque ou clique no chão para andar até lá; roda do mouse ou +/− para o zoom. Um "servidor de mentira" manda a posição a cada 50 ms, como o motor de verdade vai mandar.</div>
@@ -52,7 +48,7 @@
   const canvas = document.getElementById('tela');
   const view = new PD.View(canvas, tmj);
   const nascer = view.spawn;
-  view.addActor('heroi', { kind: 'player', name: 'Você', x: nascer.x, y: nascer.y, angle: 45 });
+  view.addActor('heroi', { kind: 'player', name: 'Você', x: nascer.x, y: nascer.y, angle: 45, me: true });
   view.addActor('curupira', { kind: 'npc', type: 'curupira', name: 'Curupira', x: 42.5, y: 44.5, angle: 200 });
   view.follow('heroi');
 
@@ -70,13 +66,14 @@
   document.getElementById('menos').onclick = () => view.setZoom(view.zoom / 1.15);
 
   function passo(dt) {
-    // direção na tela → no chão (câmera isométrica: para cima na tela = -x -y)
+    // direção na tela → no chão, pela própria câmera da view (como o motor faz)
     let sx = 0, sy = 0;
     if (teclas.has('KeyA') || teclas.has('ArrowLeft')) sx -= 1;
     if (teclas.has('KeyD') || teclas.has('ArrowRight')) sx += 1;
     if (teclas.has('KeyW') || teclas.has('ArrowUp')) sy -= 1;
     if (teclas.has('KeyS') || teclas.has('ArrowDown')) sy += 1;
-    let wx = (sx + sy) / Math.SQRT2, wy = (sy - sx) / Math.SQRT2;
+    let wx = 0, wy = 0;
+    if (sx || sy) { const g = view.groundDirOfScreen(sx, sy); wx = g.x; wy = g.y; }
     if (sx || sy) eu.alvo = null;
     else if (eu.alvo) {
       wx = eu.alvo.x - eu.x; wy = eu.alvo.y - eu.y;
@@ -91,22 +88,14 @@
     eu.x = c.x / 100; eu.y = c.y / 100;
     eu.angulo = (Math.atan2(wy, wx) * 180) / Math.PI;
   }
-  setInterval(() => { passo(0.05); view.moveActor('heroi', eu.x, eu.y, eu.angulo); }, 50);
+  // como o motor de verdade: direção do chão (0–7) e, a mais, o ângulo exato
+  setInterval(() => { passo(0.05); view.moveActor('heroi', eu.x, eu.y, PD.viewDirOfAngle(eu.angulo), { durationMs: 50, angle: eu.angulo }); }, 50);
 
-  // ---- nomes por cima (HTML, como o motor vai fazer)
-  const nomes = document.getElementById('nomes');
-  const tag = (id, texto, npc) => { const d = document.createElement('div'); d.className = 'nome' + (npc ? ' npc' : ''); d.textContent = texto; nomes.appendChild(d); return d; };
-  const etiquetas = { heroi: tag('heroi', 'Você'), curupira: tag('curupira', 'Curupira', true) };
+  // o Curupira fala de vez em quando (o balão sai em cima do nome, que a própria view desenha)
+  setTimeout(() => view.say('curupira', 'Ei, você! Acordou agora? Venha falar comigo.'), 1500);
 
   function quadro(agora) {
     view.frame(agora);
-    for (const a of view.debug()) {
-      const el = etiquetas[a.id];
-      if (!el) continue;
-      const p = view.toScreen(a.x, a.y, 2.15);
-      el.style.left = p.x + 'px';
-      el.style.top = p.y + 'px';
-    }
     requestAnimationFrame(quadro);
   }
   requestAnimationFrame(quadro);

@@ -1,14 +1,16 @@
 // PD.View: o desenho 2.5D do jogo de verdade (Etapa 3 do Mapa 01). A [arte] desenha; o motor da [estrutura]
-// (src/client/novo/) conecta ao servidor, lê os controles e chama esta peça. Interface combinada em 12/11:
-//   const view = new PD.View(canvas, tmj)      tmj = o JSON do mapa (public/assets/maps-iso/capao.tmj)
-//   view.addActor(id, { kind, type, name, look, x, y, angle })    kind: 'player' | 'npc' | 'monster'
-//   view.moveActor(id, x, y, angle, { dash })   a posição nova (do servidor ou a prevista), a cada ~50 ms
-//   view.removeActor(id) · view.follow(id) · view.frame(agora)   (o laço é do motor)
-//   view.toWorld(xTela, yTela) → { x, y }   ·   view.toScreen(x, y, z) → { x, y }   (px da tela, para HTML)
-//   view.setZoom(f): 1 = "médio" (o padrão do dono), 0,7 = "longe" (o mínimo)
-// Posições em METROS, no pé do personagem; ângulos em GRAUS, como o pedido `walk` do servidor (0 = +x/leste,
-// 90 = +y/sul). A view não decide nada do jogo: ela anima o andar até a posição que recebe (perna pela distância,
-// sem escorregar) e escolhe parado, andando ou correndo pela velocidade de verdade.
+// (src/client/novo/engine.ts, página /?novo) conecta ao servidor, lê os controles e chama esta peça pela interface
+// `WorldView` (src/client/novo/view.ts):
+//   new PD.View(container, tmj)        container = a caixa da página (ou um <canvas> pronto); tmj = o JSON do mapa
+//   addActor(id, { kind, type, name, look, x, y, dir, me })    kind: 'player' | 'npc' | 'monster'
+//   moveActor(id, x, y, dir, { durationMs, dash, angle })       a posição nova do pé, a cada ~50–120 ms
+//   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
+//   toWorld(xTela, yTela) → { x, y } · toScreen(x, y) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
+// Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
+// `dir` é uma das 8 direções do chão (src/shared/dir.ts); `angle` (graus, opcional) vira para um ângulo exato.
+// A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
+// escolhe parado, andando ou correndo pela velocidade de verdade. Desenha também o nome em cima de cada um (o seu em
+// dourado, NPC em verde-água, como no jogo de hoje) e os balões de fala.
 (function (PD) {
   'use strict';
   const M = PD.math;
@@ -17,8 +19,36 @@
   // ser combinados com o dono: por enquanto, até "perto" (1,4) e uns 9 m de largura com o celular em pé
   const ZOOM = { min: 0.7, max: 1.4, portraitMeters: 9 };
 
+  // as 8 direções do chão (src/shared/dir.ts): 0 norte (-y), 1 leste (+x), 2 sul, 3 oeste, 4 nordeste, 5 sudeste,
+  // 6 sudoeste, 7 noroeste
+  // cor do nome em cima da cabeça (as mesmas do jogo de hoje, src/client/style.css)
+  const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', monster: '#f1e4c8' };
+  const UI_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+  const DIR_X = [0, 1, 0, -1, 1, 1, -1, -1];
+  const DIR_Y = [-1, 0, 1, 0, -1, 1, 1, -1];
+  const dirToRad = (d) => Math.atan2(DIR_Y[d] ?? 1, DIR_X[d] ?? 0);
+  /** Ângulo (graus) → a direção do chão mais perto (para quem só sabe as 8). */
+  function dirOfAngle(deg) {
+    let best = 0, bestD = Infinity;
+    for (let d = 0; d < 8; d++) {
+      const diff = Math.abs(M.angleDiff((deg * Math.PI) / 180, dirToRad(d)));
+      if (diff < bestD) { bestD = diff; best = d; }
+    }
+    return best;
+  }
+
   class View {
-    constructor(canvas, tmj, opts = {}) {
+    constructor(container, tmj, opts = {}) {
+      let canvas = container;
+      if (!(typeof HTMLCanvasElement !== 'undefined' && container instanceof HTMLCanvasElement)) {
+        // o motor dá a caixa da página: a tela é nossa (e sai no destroy)
+        canvas = document.createElement('canvas');
+        canvas.className = 'mundo-novo';
+        canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;';
+        container.append(canvas);
+        this._ownCanvas = true;
+      }
       this.canvas = canvas;
       this.ctx = canvas.getContext('2d', { alpha: false });
       this.cam = new PD.IsoCamera();
@@ -46,7 +76,7 @@
     // ------------------------------------------------------------ personagens
     addActor(id, a) {
       if (this.actors.has(id)) this.removeActor(id);
-      const yaw = ((a.angle ?? 45) * Math.PI) / 180;
+      const yaw = a.angle !== undefined ? (a.angle * Math.PI) / 180 : a.dir !== undefined ? dirToRad(a.dir) : Math.PI / 4;
       const ch = new PD.Character(a.x * 100, a.y * 100, yaw);
       ch.faceYaw = yaw;
       const actor = {
@@ -54,6 +84,7 @@
         kind: a.kind || 'player',
         type: a.type || '',
         name: a.name || '',
+        me: !!a.me,
         look: a.look || null,
         ch,
         renderer: new PD.CharacterRenderer(this.cam),
@@ -64,22 +95,52 @@
         appearance: a.kind === 'player' ? null : { paleta: { ...PD.PALETTE, cloth: { base: '#7c2b22', shade: '#521a14', light: '#9b4334' } } },
       };
       actor.rig = PD.rig.buildRig(ch.pose());
+      actor.speech = '';
+      actor.speechUntil = 0;
       this.actors.set(id, actor);
-      if (this.followId === null) this.follow(id);
+      if (a.me || this.followId === null) this.follow(id);
       return actor;
     }
 
-    moveActor(id, x, y, angle, opts = {}) {
+    /** `dir`: direção do chão (0–7); `opts.angle` (graus) vira para um ângulo exato. */
+    moveActor(id, x, y, dir, opts = {}) {
       const a = this.actors.get(id);
       if (!a) return;
       a.target = { x: x * 100, y: y * 100 };
-      if (angle !== undefined && angle !== null) a.angle = (angle * Math.PI) / 180;
+      if (opts && typeof opts.angle === 'number') a.angle = (opts.angle * Math.PI) / 180;
+      else if (dir !== undefined && dir !== null) a.angle = dirToRad(dir);
       a.dash = !!(opts && opts.dash);
     }
 
     removeActor(id) {
       this.actors.delete(id);
       if (this.followId === id) this.followId = null;
+    }
+
+    /** Fala curta em cima do personagem. */
+    say(id, text) {
+      const a = this.actors.get(id);
+      if (!a) return;
+      a.speech = String(text || '');
+      a.speechUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 2500 + a.speech.length * 60;
+    }
+
+    /** Uma direção na tela (ex.: "para cima") vira qual direção no chão, nesta câmera. */
+    groundDirOfScreen(dx, dy) {
+      const cam = this.cam;
+      const K = PD.ISO_K;
+      const u = dx / K;
+      const v = dy / (K * cam.sinP);
+      const x = (u + v) / 2;
+      const y = (v - u) / 2;
+      const l = Math.hypot(x, y) || 1;
+      return { x: x / l, y: y / l };
+    }
+
+    destroy() {
+      if (this._ro) this._ro.disconnect();
+      this.actors.clear();
+      if (this._ownCanvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
     }
 
     follow(id) {
@@ -210,6 +271,90 @@
       ctx.setTransform(dpr, 0, 0, dpr, -cam.viewX * dpr, -cam.viewY * dpr);
       const actors = [...this.actors.values()].map((a) => this._actorDrawable(a));
       this.world.draw(ctx, actors);
+      this._drawNames(ctx);
+      this._drawSpeech(ctx);
+    }
+
+    /** Ponto da tela logo acima da cabeça (penas incluídas): onde ficam o nome e o balão. Segue o agachar e o pulo. */
+    _overHead(a) {
+      const h = a.rig && a.rig.head ? a.rig.head.o : { x: a.ch.pos.x, y: a.ch.pos.y, z: 172 };
+      return this.cam.p({ x: h.x, y: h.y, z: h.z + 46 });
+    }
+
+    /** Nomes em cima da cabeça (por cima de tudo, como as etiquetas do jogo de hoje). */
+    _drawNames(ctx) {
+      this._nameRects = [];
+      ctx.save();
+      ctx.font = '700 13px ' + UI_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = 'rgba(8, 12, 10, 0.85)';
+      for (const a of this.actors.values()) {
+        if (!a.name) continue;
+        const q = this._overHead(a);
+        ctx.strokeText(a.name, q.x, q.y);
+        ctx.fillStyle = a.me ? NAME_COLOR.me : NAME_COLOR[a.kind] || NAME_COLOR.player;
+        ctx.fillText(a.name, q.x, q.y);
+        const half = ctx.measureText(a.name).width / 2 + 3;
+        this._nameRects.push({ id: a.id, x0: q.x - half, x1: q.x + half, y0: q.y - 15, y1: q.y + 4 });
+      }
+      ctx.restore();
+    }
+
+    /**
+     * Balões de fala (por cima de tudo). O bico aponta para quem fala, logo acima do nome; perto da beirada, o balão
+     * chega para dentro da tela. Um balão não cobre o nome de ninguém nem outro balão: quem está mais à frente fica
+     * com o balão no lugar, o dos outros sobe (e o bico estica).
+     */
+    _drawSpeech(ctx) {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const talking = [...this.actors.values()].filter((a) => a.speech && now <= a.speechUntil);
+      if (!talking.length) return;
+      ctx.save();
+      ctx.font = '600 14px ' + UI_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cam = this.cam;
+      const left = cam.viewX + 8, right = cam.viewX + cam.viewW - 8, top = cam.viewY + 8;
+      const taken = (this._nameRects || []).slice();
+      const items = talking.map((a) => ({ a, q: this._overHead(a) })).sort((p, r) => r.q.y - p.q.y);
+      const placed = [];
+      for (const { a, q } of items) {
+        const tip = q.y - (a.name ? 17 : 2);
+        const lines = wrap(ctx, a.speech, 220, 6);
+        const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 20;
+        const h = lines.length * 18 + 12;
+        const x = Math.max(left, Math.min(right - w, q.x - w / 2));
+        let y = tip - 9 - h;
+        for (let i = 0; i < 8; i++) {
+          const hit = taken.find((r) => r.id !== a.id && x < r.x1 && x + w > r.x0 && y < r.y1 && y + h > r.y0);
+          if (!hit) break;
+          y = hit.y0 - h - 6;
+        }
+        y = Math.max(top, y);
+        taken.push({ id: a.id, x0: x - 3, y0: y - 3, x1: x + w + 3, y1: y + h + 3 });
+        placed.push({ q, tip, lines, x, y, w, h });
+      }
+      // os que subiram (de trás) primeiro: o bico comprido passa por baixo do balão da frente, não por cima do texto
+      for (let i = placed.length - 1; i >= 0; i--) {
+        const { q, tip, lines, x, y, w, h } = placed[i];
+        const tx = Math.max(x + 14, Math.min(x + w - 14, q.x));
+        ctx.fillStyle = 'rgba(250, 244, 228, 0.96)';
+        ctx.strokeStyle = '#1b100d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 9);
+        ctx.moveTo(tx - 7, y + h);
+        ctx.lineTo(q.x, Math.max(y + h + 9, tip));
+        ctx.lineTo(tx + 7, y + h);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#2a1d16';
+        lines.forEach((l, k) => ctx.fillText(l, x + w / 2, y + 6 + 9 + k * 18));
+      }
+      ctx.restore();
     }
 
     _actorDrawable(a) {
@@ -236,6 +381,28 @@
     }
   }
 
+  /** Quebra o texto em linhas de até `max` px; passou de `maxLines`, a última termina em "…". */
+  function wrap(ctx, text, max, maxLines = 4) {
+    const words = text.split(/\s+/);
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      const t = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(t).width > max && cur) {
+        lines.push(cur);
+        cur = w;
+      } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    if (lines.length <= maxLines) return lines;
+    const cut = lines.slice(0, maxLines);
+    let last = cut[maxLines - 1];
+    while (last.length > 1 && ctx.measureText(last + '…').width > max) last = last.slice(0, -1);
+    cut[maxLines - 1] = last.replace(/[\s,.;:]+$/, '') + '…';
+    return cut;
+  }
+
   PD.View = View;
   PD.VIEW_ZOOM = ZOOM;
+  PD.viewDirOfAngle = dirOfAngle;
 })(window.PD = window.PD || {});
