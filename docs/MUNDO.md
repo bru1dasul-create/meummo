@@ -56,6 +56,21 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   - NPCs: Curupira no Portão I (46; 44,5) e vendinha na praça (64; 52,5). Capivaras são só enfeite.
   - O rascunho (planta isométrica feita por um script com SVG e duas ilustrações do Nano Banana) ficou na pasta
     temporária da conversa. Se sumir, as medidas acima bastam para refazer.
+- **Pacote do dono (12/11, noite):** ele trouxe do ChatGPT um pacote de aprovação do Mapa 01 (16 pranchas, notas de
+  direção de arte e checklist), feito em cima da minha planta. A **arte conceitual aprovada** virou o padrão:
+  `docs/referencias/mapa-01-arte-aprovada.jpg` ("2.5D estilizado e sombrio": mata fria em verde profundo e teal com
+  brilho espiritual, vila quente com luz âmbar; dia, entardecer e noite mudam o clima, nunca a leitura do combate e
+  dos caminhos). Notas que valem para o mapa: trilhas principais de 2 a 3 m (mínimo 1,5 m); Curupira junto da
+  clareira, a caminho do portão; Figueira dos Despertos com símbolos que brilham; mata rasa e mata profunda (neblina,
+  alto risco); "Véu Ancestral" em pontos certos, não no mundo todo; campinho é ambientação, não arena.
+- **Decisões do dono (12/11):** Budega = vendinha da praça; o nome fica "Selva de Pedra" (o pacote dizia "Selva de
+  Concreto"); saguis encantados, missão de acalmar ou afastar; ritual de classe depois. **Câmera:** padrão no médio
+  (herói ~260 px em Full HD, ~14 m de chão na largura), afastando até o longe (~185 px, ~20 m); a [arte] aplica.
+  Conta certa: chão na largura da tela = largura em px ÷ zoom (px por cm) — no protótipo em Full HD, 1920 ÷ 136,7.
+- **Escopo aprovado (uma etapa por vez, cada uma com o "pode" dele):** 1) câmera ✔; 2) planta final no papel (a
+  seguir); 3) uma tela jogável (só a clareira, no jogo de verdade); 4) o resto do mapa em 3 pedaços; 5) atmosferas;
+  6) minimapa. Ele pediu: **"antes de criar tudo me entrega escopo para eu ir aprovando"** e **"o que não for da sua
+  responsabilidade passe para os outros chats"**.
 - **Formato do mapa novo** (combinado com a [estrutura] em 12/11, no roteiro): `.tmj` ortogonal, 1 tile = 1 m (tile
   de 32 px no Tiled, só como grade); `colisao` com retângulos (`bloqueiaTiro`, padrão true; água com false) que **o meu
   gerador** tira do cenário (tronco 0,4 a 0,6 m, poste 0,3 m, base de casa e muro, lago em retângulos de ~0,5 m);
