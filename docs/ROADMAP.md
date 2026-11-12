@@ -112,15 +112,16 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
-  (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (só a clareira, no jogo de verdade) — os dados da
-  clareira estão prontos (`npm run gen:capao` → `public/assets/maps-iso/capao.tmj`, prévia em
-  `docs/referencias/mapa-01-clareira-previa.jpg`), esperando o desenho 2.5D e o servidor lendo o formato; 4) o resto
-  do mapa em 3 pedaços (mata e lago; portão e vila; campinho, viaduto e saídas); 5) atmosferas (dia, entardecer e
-  noite); 6) minimapa. Padrão: a arte conceitual aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D
-  estilizado e sombrio")
+  (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (a clareira, em `/?novo`) ✔ (`npm run gen:capao` →
+  `public/assets/maps-iso/capao.tmj`); 4) o resto do mapa em 3 pedaços: mata e lago ✔ (12/11; os saguis encantados e
+  as jararacas estão prontos no gerador, desligados até o combate do jogo novo, escolha do dono), portão e vila,
+  campinho, viaduto e saídas; 5) atmosferas (dia, entardecer e noite); 6) minimapa. Padrão: a arte conceitual
+  aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
   (`prototipos/pindorama-25d/js/view.js`); teste sozinho em `clareira.html`
+- [ ] **[arte]** Etapa 4a no 2.5D: o lago (`agua`), a lama, a mata profunda (com `neblina` e `escuro` na camada
+  `areas`), aguapés, capivaras, troncos caídos, a Pedra do Véu (`pedra` com `ancestral`) e os véus
 - [x] **[estrutura]** Motor do jogo 2.5D (`src/client/novo/`, abre em `/?novo`): entrada, rede, previsão do andar,
   teclado e joystick (andam pela tela), tocar no chão para andar, falar com NPC, aviso de zona segura, outros jogadores;
   com um desenho provisório (bonecos e caixas) até o da [arte] chegar. O servidor manda quem entra pelo jogo novo
@@ -147,10 +148,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   retângulo encostar), tile de 32 px, a **zona segura por área** (camada `seguro`: monstro não entra, não nota e não
   acerta quem está dentro), pontos e NPCs no ponto exato do pé, e a pasta `maps-iso/` (`MEUMMO_MAPA_INICIAL=capao`
   para testar). O Curupira já está na clareira (`curupira_capao` em `data/npcs.json`)
-- [ ] **[estrutura]** Combate no jogo novo, passo 1 (antes ou junto com os monstros da etapa 4a do [mundo]): ver os
-  golpes dos monstros (aviso no chão, tiro, dano), a vida baixar, desmaiar e voltar, e atacar com o estilingue. Hoje,
-  no `/?novo`, os saguis atacam e nada disso aparece (a vida na tela só muda com a regeneração). Depois, passo 2: as
-  regras da revisão 17 (pedra com carga, defesa com energia, esquiva e recuo)
+- [ ] **[estrutura]** Combate no jogo novo, passo 1: ver os golpes dos monstros (aviso no chão, tiro, dano), a vida
+  baixar, desmaiar e voltar, e atacar com o estilingue. Na prévia da etapa 4a, no `/?novo`, os saguis atacavam e nada
+  disso aparecia (a vida na tela só mudava com a regeneração); por isso a 4a entrou sem os monstros, e o [mundo] religa
+  os saguis e as jararacas no gerador quando este passo chegar. Depois, passo 2: as regras da revisão 17 (pedra com
+  carga, defesa com energia, esquiva e recuo)
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

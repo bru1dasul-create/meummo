@@ -36,55 +36,52 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   o capítulo 1 novo estiver jogável; o motor (servidor, regras, salvamento) fica. Capítulo 1: Capão Redondo e o Parque
   Santo Dias → Guarapiranga → Santo Amaro (Largo Treze, Terminal, Shopping do Largo Treze) → Billings → a Sé no fim.
   Tom "bem selvagem" (a mata volta pelo sul); lugar real sim, marca não.
-- **Budega Distribuidora** (o negócio do dono, no Capão): **não desenhar** até ele confirmar o formato. Sem a palavra
-  "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco). Se ele confirmar, pode ser a vendinha da praça.
-- **Primeiro mapa: desenho no papel mandado ao dono em 12/11, esperando o "pode".** Uns 96 × 80 m (x para o leste,
-  y para o sul, em metros; na tela, x desce para a direita e y desce para a esquerda: o fundo da tela é o noroeste):
-  - mata do parque em x 0 a 48, com o muro do parque em x = 48 e o **Portão I** em y 41 a 47 (lá fora, a Travessa
-    Jasmim da Beirada, x 49,5 a 56);
-  - **clareira do despertar** com centro em (37, 43) e raio 8, onde fica o círculo (spawn); figueira gigante em
-    (39; 33,5); lago em volta de (16, 23), com aguapé e capivaras; trilha em volta do lago;
-  - **Vila do Capão** (zona segura) em x 48 a 96: rua do portão para o leste (y 41 a 47); praça em (61 a 79, 49 a 59),
-    com vendinha, fogueira e árvore; casas de bloco com laje e caixa d'água do lado norte da rua (y 29 a 40); campinho
-    de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78);
-  - **viaduto da Linha 5-Lilás** no fundo (y 2 a 6, x 48 a 96, a 8 m de altura, com o trem lilás parado) e um ônibus
-    velho embaixo. Regra: o que é alto fica no fundo da tela (noroeste), o que é baixo fica na frente;
-  - saídas: sul (x 88 a 94, y = 80) → Guarapiranga (próximo mapa); leste (x = 96, y 41 a 47) → Estação Capão Redondo
-    (depois);
-  - criaturas: saguis perto da clareira, em volta de (33, 19) (nível 1 a 2; existem saguis de verdade no parque);
-    jararacas no sudoeste, em volta de (16, 63) (nível 2 a 3); Saci no fundo da mata, em (8,5; 6) (depois);
-  - NPCs: Curupira no Portão I (46; 44,5) e vendinha na praça (64; 52,5). Capivaras são só enfeite.
-  - O rascunho (planta isométrica feita por um script com SVG e duas ilustrações do Nano Banana) ficou na pasta
-    temporária da conversa. Se sumir, as medidas acima bastam para refazer.
-- **Pacote do dono (12/11, noite):** ele trouxe do ChatGPT um pacote de aprovação do Mapa 01 (16 pranchas, notas de
-  direção de arte e checklist), feito em cima da minha planta. A **arte conceitual aprovada** virou o padrão:
-  `docs/referencias/mapa-01-arte-aprovada.jpg` ("2.5D estilizado e sombrio": mata fria em verde profundo e teal com
-  brilho espiritual, vila quente com luz âmbar; dia, entardecer e noite mudam o clima, nunca a leitura do combate e
-  dos caminhos). Notas que valem para o mapa: trilhas principais de 2 a 3 m (mínimo 1,5 m); Curupira junto da
-  clareira, a caminho do portão; Figueira dos Despertos com símbolos que brilham; mata rasa e mata profunda (neblina,
-  alto risco); "Véu Ancestral" em pontos certos, não no mundo todo; campinho é ambientação, não arena.
-- **Decisões do dono (12/11):** Budega = vendinha da praça; o nome fica "Selva de Pedra" (o pacote dizia "Selva de
-  Concreto"); saguis encantados, missão de acalmar ou afastar; ritual de classe depois. **Câmera:** padrão no médio
-  (herói ~260 px em Full HD, ~14 m de chão na largura), afastando até o longe (~185 px, ~20 m); a [arte] aplica.
-  Conta certa: chão na largura da tela = largura em px ÷ zoom (px por cm) — no protótipo em Full HD, 1920 ÷ 136,7.
-- **Escopo aprovado (uma etapa por vez, cada uma com o "pode" dele):** 1) câmera ✔; 2) planta final no papel (a
-  seguir); 3) uma tela jogável (só a clareira, no jogo de verdade); 4) o resto do mapa em 3 pedaços; 5) atmosferas;
-  6) minimapa. Ele pediu: **"antes de criar tudo me entrega escopo para eu ir aprovando"** e **"o que não for da sua
-  responsabilidade passe para os outros chats"**.
-- **Etapa 2 aprovada** ("blz, pode seguir"): a planta final está em `docs/referencias/mapa-01-planta.jpg`. A figueira
-  ficou em (36,5; 38), a 5 m do círculo, mais colada do que na planta. O Curupira fica em (42,5; 44,5). A zona
-  segura da clareira vai de 31,5 a 44 × 39 a 48,5 e a da vila é x ≥ 49,5. A mata profunda fica nas pontas noroeste e
-  sudoeste. A Budega fica na praça (62 a 67 × 49,5 a 52,5), com postes de luz quente na rua da vila.
-- **Etapa 3 (a clareira), a minha parte, pronta:** `scripts/gen-capao.ts` → `public/assets/maps-iso/capao.tmj`.
-  Só a clareira é andável. Um anel de arbustos `fechado` (raio 12,6 a 14,4 em volta do círculo) e o portão fechado
-  seguram o jogador. Na etapa 4, o `ETAPA` do gerador vira 4: o anel sai, o portão abre e entram a vila, o lago, as
-  trilhas e as criaturas.
-  O gerador não planta árvore alta que, vista pela câmera, cubra a clareira, o círculo ou a trilha (`hidesView`).
-  Isso abre uma "janela" na mata ao sul e a leste da clareira.
-  Prévia: um script de rascunho meu (SVG isométrico lido do `.tmj`, com a colisão em vermelho) ainda fora do
-  repositório. Imagens em `docs/referencias/mapa-01-clareira-*.jpg`.
-  Esperando: o desenho 2.5D da [arte] e a [estrutura] lendo o formato. Quando o servidor ler, o arquivo vai para
-  `public/assets/maps/` e o teste "fica fora da pasta" muda.
+- **Decisões do dono (12/11):** a **Budega Distribuidora** (o negócio dele) é a vendinha da praça, sem a palavra
+  "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome fica **"Selva de Pedra"** (o pacote
+  do ChatGPT dizia "Selva de Concreto"); os saguis são **encantados** e a missão é acalmar ou afastar, não matar; o
+  ritual de classe na figueira fica para depois. **Câmera:** padrão no médio (herói ~260 px em Full HD, ~14 m de chão
+  na largura), afastando até o longe (~185 px, ~20 m); a [arte] aplica. Conta certa: chão na largura da tela =
+  largura em px ÷ zoom (px por cm) — no protótipo em Full HD, 1920 ÷ 136,7.
+- **Padrão de arte:** `docs/referencias/mapa-01-arte-aprovada.jpg` (do pacote que o dono trouxe do ChatGPT, feito em
+  cima da minha planta): "2.5D estilizado e sombrio", mata fria em verde profundo e teal com brilho espiritual, vila
+  quente com luz âmbar; dia, entardecer e noite mudam o clima, nunca a leitura do combate e dos caminhos. Notas que
+  valem: trilhas principais de 2 a 3 m (mínimo 1,5 m); Curupira junto da clareira, a caminho do portão; Figueira dos
+  Despertos com símbolos que brilham; mata rasa e mata profunda (neblina, alto risco); "Véu Ancestral" em pontos
+  certos, não no mundo todo; campinho é ambientação, não arena.
+- **Escopo aprovado do Mapa 01 (uma etapa por vez, cada uma com o "pode" dele):** 1) câmera ✔; 2) planta final ✔
+  (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (a clareira) ✔; 4) o resto do mapa em 3 pedaços:
+  **4a mata e lago ✔ (12/11, sem as criaturas)**, 4b portão e vila (a próxima), 4c campinho, viaduto e saídas;
+  5) atmosferas (dia, entardecer e noite); 6) minimapa. Ele pediu: **"antes de criar tudo me entrega escopo para eu
+  ir aprovando"** e **"o que não for da sua responsabilidade passe para os outros chats"**. Meu jeito: prévia
+  (imagem) primeiro, o "pode" dele, depois o jogo.
+- **Mapa 01 (Parque Santo Dias + Vila do Capão), 96 × 80 m** (x para o leste, y para o sul, em metros; na tela, x
+  desce para a direita e y desce para a esquerda: o fundo da tela é o noroeste). Gerador `scripts/gen-capao.ts` →
+  `public/assets/maps-iso/capao.tmj` (`npm run gen:capao -- --out arquivo.tmj`; sem `--force` ele não sobrescreve,
+  regra 9). A etapa é a constante `STAGE` ('3', '4a', '4b', '4c'): cada uma liga o que a anterior não tinha.
+  - **Pronto (3 + 4a):** clareira do despertar com centro (37, 43) e raio 9, círculo (spawn) de raio 3 e a Figueira
+    dos Despertos em (36,5; 38); Curupira em (42,5; 44,5) (`curupira_capao`, da [estrutura]); zona segura da clareira
+    31,5 a 44 × 39 a 48,5. Muro do parque em x = 48 com gradil e o **Portão I** (y 41 a 47, ainda fechado). Trilha da
+    clareira ao portão (3 m) e trilha em volta do lago (2,2 m). **Lago** em volta de (16, 23) (polígono `agua`, com
+    colisão em faixas de 0,5 m que não bloqueiam tiro), lama na margem, 14 aguapés, 3 capivaras (enfeite, não
+    bloqueiam), 3 troncos caídos, pedras em grupos, a **Pedra do Véu** (`pedra` ancestral em (7,5; 9,5)) e 4 véus
+    (figueira, círculo, pedra e beira do lago). **Mata profunda** nas pontas noroeste e sudoeste (polígonos
+    `mata-profunda` e áreas com `neblina` e `escuro`), fechada por arbustos que bloqueiam; mata fechada nas bordas.
+    O gerador não planta árvore alta que, vista pela câmera, cubra a clareira, o círculo, a trilha ou o lago
+    (`hidesView`), e deixa 1,2 m entre troncos.
+  - **Criaturas (prontas, desligadas):** `CREATURES = false` no gerador. Saguis encantados em x 24 a 40 × y 12 a 28
+    (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Escolha do dono em 12/11 ("opção a"): a 4a entrou sem elas porque o
+    jogo novo ainda não mostra golpe, dano nem desmaio, e o jogador apanharia sem ver. Religar (`CREATURES = true` e
+    gerar de novo) quando o combate do jogo novo, passo 1, da [estrutura] chegar; o teste das zonas volta sozinho.
+  - **4b (a próxima):** o portão abre; Travessa Jasmim da Beirada (x 49,5 a 56); rua do portão para o leste (y 41 a
+    47); praça em (61 a 79, 49 a 59) com a Budega (vendinha, 62 a 67 × 49,5 a 52,5), fogueira e árvore; casas de
+    bloco com laje e caixa d'água ao norte da rua (y 29 a 40); postes de luz quente; zona segura da vila em x ≥ 49,5.
+  - **4c:** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
+    5-Lilás no fundo (y 2 a 6, x 48 a 96, 8 m de altura, com o trem lilás parado) e um ônibus velho embaixo; saídas
+    sul (x 88 a 94, y = 80) → Guarapiranga e leste (x = 96, y 41 a 47) → Estação Capão Redondo (depois). Regra: o que
+    é alto fica no fundo da tela (noroeste), o que é baixo fica na frente. Saci no fundo da mata, em (8,5; 6) (depois).
+  - **Prévias:** um script de rascunho meu (`previa-capao.mjs`: SVG isométrico lido do `.tmj`, com a colisão em
+    vermelho) na pasta temporária da conversa. Se sumir, refazer: é só desenhar `chao` e `cenario` em isométrico.
+    As imagens que o dono aprovou ficam em `docs/referencias/mapa-01-*.jpg`.
 - **Formato do mapa novo** (combinado com a [estrutura] em 12/11, no roteiro): `.tmj` ortogonal, 1 tile = 1 m (tile
   de 32 px no Tiled, só como grade); `colisao` com retângulos (`bloqueiaTiro`, padrão true; água com false) que **o meu
   gerador** tira do cenário (tronco 0,4 a 0,6 m, poste 0,3 m, base de casa e muro, lago em retângulos de ~0,5 m);
@@ -98,7 +95,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   `python3 -I scripts/nano-banana.py --model gemini-nano-banana-2.1 --aspect 16:9 --size 1K --out x.png --ref estilo.png
   arranjo.png --prompt "..."` (~US$ 0,034 por imagem). Bom jeito: um print do protótipo como estilo e uma planta sem
   texto como arranjo. Gastei 2 imagens (~US$ 0,07) em 12/11; o crédito de US$ 5 é dividido com a [arte], e cada
-  máquina conta o seu gasto em `saves/nano-banana.json`.
+  máquina conta o seu gasto em `saves/nano-banana.json` (até 12/11 gastei US$ 0,25 em 4 imagens, uma delas em 4K).
 
 ## Antes, em 9 de novembro de 2026 (os mapas de hoje, que vão sair)
 Feito pelo [mundo], tudo na `main`:
@@ -156,21 +153,21 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
-- **[estrutura]:** ler o formato novo (`colisao`, tile de 32 px, `seguro` por área) antes do primeiro mapa novo ir para
-  o jogo. O movimento livre, passo 1, já está na `main` (3ec6b08).
-- **[arte]:** o desenho do mapa novo em 2.5D: combinar com ela o formato de `chao` e `cenario`.
-- A [arte] já desenhou o Curupira, o jacaré, o boto e a Iara (na `main` em 9/11).
-- Combinado com a [arte]: o personagem novo tem ~1,6 tile de altura e o zoom ficou sempre par. Se a cabeça ou o
-  chapéu sumirem embaixo das copas ou dos letreiros do shopping, eles me avisam. Aí eu ajusto `FADE_NEAR`/`FADE_FAR`
-  em `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
+- **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
+  chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
+- **[arte]:** o desenho 2.5D do mapa novo a partir de `chao` e `cenario` (clareira, figueira, mata, gradil, portão e,
+  da 4a, lago, lama, mata profunda com neblina, aguapés, capivaras, troncos caídos, Pedra do Véu e véus). O dono achou
+  a figueira "bugada" e não reconheceu a pedra no desenho de hoje: mandei sugestões para ela.
+- Dos mapas de hoje (valem até eles saírem): o personagem novo tem ~1,6 tile de altura e o zoom ficou sempre par. Se a
+  cabeça ou o chapéu sumirem embaixo das copas ou dos letreiros do shopping, ajusto `FADE_NEAR`/`FADE_FAR` em
+  `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
 
 ## Próximos passos possíveis (o dono escolhe)
 **Agora (mundo novo):**
-1. **Depois do "pode" do desenho no papel:** construir o primeiro mapa novo com um gerador meu (ex.: `gen-capao.ts` →
-   `public/assets/maps/capao.tmj`), com as camadas combinadas (`chao`, `cenario`, `colisao` tirada do cenário,
-   `seguro`, `saidas`, `monstros`, pontos) e testes em `tests/` (passagens largas, NPC alcançável, saídas, zona segura).
-2. **Formato de `chao` e `cenario`** com a [arte] (árvore, casa, poste, muro... com altura e cor).
-3. **Minimapa no mapa novo** (retomar o ramo `mundo/minimapa`).
+1. **Etapa 4b (portão e vila):** prévia primeiro, o "pode" do dono, depois o jogo.
+2. **Etapa 4c**, depois a 5 (atmosferas) e a 6 (minimapa no mapa novo: retomar o ramo `mundo/minimapa`; o terreno
+   vai precisar ler `chao`/`cenario`).
+3. **Religar as criaturas** da 4a quando o combate do jogo novo chegar.
 
 **Suspenso (era para os mapas de hoje, que vão sair):**
 1. **Enfeite em volta do Curupira** (roteiro, opcional): árvore oca ou cantinho de mata fechada em volta de (45, 12),
