@@ -19,6 +19,8 @@ import { Sfx } from './sfx';
 import { ChatBox, Hud } from './ui';
 
 const NAME_STORAGE_KEY = 'meummo:nome';
+/** http://localhost:3000/?novo abre o jogo 2.5D novo (o mundo novo, ainda em construção). */
+const NEW_WORLD = new URLSearchParams(location.search).has('novo');
 
 const loginOverlay = document.getElementById('login') as HTMLDivElement;
 const loginForm = document.getElementById('login-form') as HTMLFormElement;
@@ -61,6 +63,8 @@ const BYE_MESSAGES: Record<ByeReason, string> = {
 let game: Phaser.Game | null = null;
 const sfx = new Sfx();
 let session: { conn: Connection; chat: ChatBox; hud: Hud } | null = null;
+/** O jogo 2.5D novo, quando é ele que está aberto. */
+let newWorld: { destroy(): void } | null = null;
 /** A cena do mapa atual (cada mapa ganha uma cena nova, com uma chave nova). */
 let sceneKey: string | null = null;
 let scenes = 0;
@@ -89,9 +93,10 @@ loginForm.addEventListener('submit', async (event) => {
   loginButton.disabled = true;
   loginButton.textContent = 'Entrando...';
   try {
-    const { conn, welcome } = await Connection.join(name, password);
+    const { conn, welcome } = await Connection.join(name, password, undefined, undefined, NEW_WORLD);
     saveName(name);
-    startGame(conn, welcome);
+    if (NEW_WORLD) await startNewWorldGame(conn, welcome);
+    else startGame(conn, welcome);
   } catch (error) {
     loginError.textContent = error instanceof JoinError ? JOIN_ERRORS[error.reason] : 'Algo deu errado. Tente de novo.';
   } finally {
@@ -120,6 +125,21 @@ function startGame(conn: Connection, welcome: WelcomeMsg): void {
   showWorld(conn, welcome, 0, false);
 }
 
+/** O jogo 2.5D novo (src/client/novo): carrega só quando é ele que vai abrir. */
+async function startNewWorldGame(conn: Connection, welcome: WelcomeMsg): Promise<void> {
+  loginOverlay.hidden = true;
+  const chat = new ChatBox((text) => conn.send({ t: 'chat', text }));
+  const hud = new Hud(welcome.you.name);
+  session = { conn, chat, hud };
+  conn.onClose = (reason) => endGame(reason ? BYE_MESSAGES[reason] : 'A conexão com o servidor caiu. Entre de novo.');
+  try {
+    const { startNewWorld } = await import('./novo/engine');
+    newWorld = await startNewWorld({ conn, welcome, chat, hud });
+  } catch (error) {
+    endGame((error as Error).message);
+  }
+}
+
 /** Mostra o mapa de `welcome.map` (trocando de cena quando o personagem muda de mapa). */
 function showWorld(conn: Connection, welcome: WelcomeMsg, seq: number, arrived: boolean): void {
   if (!game || !session) return;
@@ -141,6 +161,8 @@ function showWorld(conn: Connection, welcome: WelcomeMsg, seq: number, arrived: 
 function endGame(message: string): void {
   game?.destroy(true);
   game = null;
+  newWorld?.destroy();
+  newWorld = null;
   sceneKey = null;
   if (session) {
     session.conn.close();

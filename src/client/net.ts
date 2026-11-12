@@ -50,6 +50,8 @@ export class Connection {
     password: string,
     url = Connection.defaultUrl(),
     timeoutMs = 10000,
+    /** Entrar pelo jogo 2.5D novo (o servidor manda para os mapas do formato novo). */
+    newWorld = false,
   ): Promise<{ conn: Connection; welcome: WelcomeMsg }> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
@@ -76,7 +78,9 @@ export class Connection {
           finish(new JoinError(msg.reason));
         }
       };
-      ws.addEventListener('open', () => conn.send({ t: 'hello', v: PROTOCOL_VERSION, name, password }));
+      ws.addEventListener('open', () =>
+        conn.send(newWorld ? { t: 'hello', v: PROTOCOL_VERSION, name, password, mundo: 'novo' } : { t: 'hello', v: PROTOCOL_VERSION, name, password }),
+      );
       ws.addEventListener('error', () => finish(new JoinError('offline')));
       ws.addEventListener('close', () => finish(new JoinError('offline')));
     });

@@ -65,6 +65,19 @@ Os mapas novos ficam em `public/assets/maps-iso/` (o servidor lê esta pasta e a
 - Para testar o mundo novo: `MEUMMO_MAPA_INICIAL=capao` faz os personagens novos começarem nele (o Refúgio continua
   sendo de quem já joga). O jogo de hoje (Phaser) não desenha esses mapas: quem desenha é o jogo 2.5D novo.
 
+## O jogo 2.5D novo (`src/client/novo/`)
+Abre em `http://localhost:3000/?novo` (o jogo de hoje continua em `/`). A tela de entrada, o painel de vida e o chat
+são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o personagem num mapa do formato novo
+(o jogo de hoje nunca recebe esses mapas, e vice-versa).
+- `engine.ts` (da [estrutura]): o motor. Conversa com o servidor, prevê o próprio andar (as mesmas regras de
+  `src/shared/movement.ts`), lê o teclado e o joystick (que andam **pela tela**: W é para cima na tela, e a view diz
+  qual direção do chão é essa), toque/clique no chão para andar e no NPC para conversar, e avisa ao entrar e sair da
+  área segura. `window.__mundoNovo` serve aos testes automáticos (como o `__meummo` do jogo de hoje).
+- `view.ts`: a interface `WorldView` (posições em metros, no pé) e o desenho provisório (`ProvisionalView`).
+- `arte.ts` (da [arte]): carrega os scripts do protótipo que definem o desenho de verdade, o `PD.View`; com ele
+  carregado, o motor usa ele no lugar do provisório.
+- `joystick.ts`: o joystick do celular (metade esquerda da tela).
+
 ## Por que não tem atraso ao andar
 Esperar a resposta do servidor para mover o personagem daria sensação de lag. Por isso o cliente
 **prevê**: anda na hora usando a mesma função do servidor e guarda os pedaços ainda não confirmados. Quando

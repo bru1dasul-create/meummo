@@ -65,7 +65,7 @@ export class Session {
       if (msg.t !== 'hello') return this.strike('precisa entrar primeiro');
       if (msg.v !== PROTOCOL_VERSION) return this.reject('version');
       this.authenticating = true;
-      void this.login(msg.name, msg.password);
+      void this.login(msg.name, msg.password, msg.mundo === 'novo');
       return;
     }
 
@@ -127,7 +127,7 @@ export class Session {
     this.close(4002, reason);
   }
 
-  private async login(rawName: string, rawPassword: string): Promise<void> {
+  private async login(rawName: string, rawPassword: string, newWorld: boolean): Promise<void> {
     const name = normalizeName(rawName);
     if (nameProblem(name)) return this.reject('name_invalid');
     const password = rawPassword.normalize('NFC'); // o mesmo acento digitado em aparelhos diferentes vira a mesma senha
@@ -165,7 +165,7 @@ export class Session {
     }
     if (!character) return this.reject('unavailable');
 
-    const joined = realm.join(character.name, { send: (batch) => this.sendBatch(batch) }, { character, created: result.created });
+    const joined = realm.join(character.name, { send: (batch) => this.sendBatch(batch) }, { character, created: result.created, newWorld });
     if (!joined.ok) return this.reject(joined.reason);
     this.player = joined.player;
     this.characterId = result.id;

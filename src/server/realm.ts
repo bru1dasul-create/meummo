@@ -63,6 +63,8 @@ export class Realm {
   readonly worlds = new Map<string, World>();
   /** Onde os personagens novos começam (o mapa com a propriedade `inicial`). */
   readonly start: World;
+  /** Onde começa quem entra pelo jogo 2.5D novo (o mapa do formato novo com `inicial`, ou o primeiro deles). */
+  readonly newStart: World;
   private nextId = 1;
   /** Id do jogador → mapa onde ele está agora. */
   private readonly where = new Map<number, World>();
@@ -88,10 +90,17 @@ export class Realm {
     if (options.startMap && !this.worlds.has(options.startMap)) {
       throw new Error(`O mapa inicial "${options.startMap}" não existe. Use um destes: ${[...this.worlds.keys()].join(', ')}.`);
     }
-    this.start =
-      (options.startMap ? this.worlds.get(options.startMap) : undefined) ??
-      [...this.worlds.values()].find((w) => w.map.start) ??
-      this.worlds.values().next().value!;
+    const all = [...this.worlds.values()];
+    const chosen = options.startMap ? this.worlds.get(options.startMap) : undefined;
+    // o jogo de hoje não desenha os mapas do formato novo: o mapa escolhido só vale para o jogo do formato dele
+    this.start = (chosen && !chosen.map.metric ? chosen : undefined) ?? all.find((w) => w.map.start && !w.map.metric) ?? all.find((w) => !w.map.metric) ?? all[0]!;
+    const metric = all.filter((w) => w.map.metric);
+    this.newStart = (chosen?.map.metric ? chosen : undefined) ?? metric.find((w) => w.map.start) ?? metric[0] ?? this.start;
+  }
+
+  /** Tem algum mapa do formato novo (mundo 2.5D)? */
+  private get hasMetric(): boolean {
+    return [...this.worlds.values()].some((w) => w.map.metric);
   }
 
   /** Quantos estão online, somando todos os mapas. */
@@ -117,7 +126,11 @@ export class Realm {
       for (const other of world.players.values()) if (nameKey(other.name) === key) return { ok: false, reason: 'name_taken' };
     }
     const zone = saved?.zone;
-    const world = (zone && [...this.worlds.values()].find((w) => w.map.id === zone || w.map.name === zone)) || this.start;
+    const savedWorld = zone ? [...this.worlds.values()].find((w) => w.map.id === zone || w.map.name === zone) : undefined;
+    // Cada jogo só abre os mapas do seu formato: o 2.5D novo, os do formato novo; o de hoje, os de sempre.
+    const newWorld = profile?.newWorld === true;
+    const fits = (w: World) => w.map.metric === newWorld || (!this.hasMetric && newWorld);
+    const world = (savedWorld && fits(savedWorld) ? savedWorld : undefined) ?? (newWorld ? this.newStart : this.start);
     const result = world.join(name, conn, profile);
     if (result.ok) this.where.set(result.player.id, world);
     return result;

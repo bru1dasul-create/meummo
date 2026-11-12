@@ -116,8 +116,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   estilizado e sombrio")
 - [ ] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas
-- [ ] **[estrutura + arte]** Jogo 2.5D ligado ao servidor (hoje o protótipo roda sozinho): o desenho 2.5D no lugar do
-  Phaser, com a rede, a previsão do movimento e os outros jogadores — a dividir entre as duas frentes
+- [x] **[estrutura]** Motor do jogo 2.5D (`src/client/novo/`, abre em `/?novo`): entrada, rede, previsão do andar,
+  teclado e joystick (andam pela tela), tocar no chão para andar, falar com NPC, aviso de zona segura, outros jogadores;
+  com um desenho provisório (bonecos e caixas) até o da [arte] chegar. O servidor manda quem entra pelo jogo novo
+  para os mapas do formato novo (`hello` com `mundo: 'novo'`, protocolo 17)
+- [ ] **[arte]** O desenho de verdade no jogo novo: `PD.View` com a interface `WorldView` (`src/client/novo/view.ts`),
+  carregado em `src/client/novo/arte.ts` (o motor troca o provisório por ele sozinho)
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
   32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
   partir do cenário; `saidas`, `monstros`, pontos e propriedades de sempre; `chao` e `cenario` só para o desenho.

@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { checkNpcs, type NpcDef } from '../src/server/npcs';
 import { Realm } from '../src/server/realm';
 import { parseMonsterDefs } from '../src/server/monsters';
+import { parseClientMsg } from '../src/server/validate';
 import { World } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
 import { DX, DY, RIGHT } from '../src/shared/dir';
@@ -215,11 +216,32 @@ describe('mapa do formato novo: o mundo', () => {
     expect(() => checkNpcs(new Map([['c', curupira]]), new Map(), [map])).not.toThrow();
   });
 
-  it('dá para escolher o mapa onde os personagens novos começam (para testar o mapa novo)', () => {
+  it('a entrada diz se é o jogo 2.5D novo', () => {
+    expect(parseClientMsg('{"t":"hello","v":17,"name":"Ana","password":"segredo1","mundo":"novo"}')).toEqual({ t: 'hello', v: 17, name: 'Ana', password: 'segredo1', mundo: 'novo' });
+    expect(parseClientMsg('{"t":"hello","v":17,"name":"Ana","password":"segredo1"}')).toEqual({ t: 'hello', v: 17, name: 'Ana', password: 'segredo1' });
+    expect(parseClientMsg('{"t":"hello","v":17,"name":"Ana","password":"segredo1","mundo":"velho"}')).toBeNull();
+  });
+
+  it('cada jogo começa no mapa do seu formato: o 2.5D novo no mapa novo, o de hoje no Refúgio', () => {
     const velho = GameMap.fromTiled({ ...tiledFromAscii(['.....'], { x: 0, y: 0 }), properties: [{ name: 'inicial', type: 'bool', value: true }] }, 'refugio');
     const novo = GameMap.fromTiled(metricMap(), 'capao');
-    expect(new Realm([velho, novo]).start.map.id).toBe('refugio');
-    expect(new Realm([velho, novo], { startMap: 'capao' }).start.map.id).toBe('capao');
+    const realm = new Realm([velho, novo]);
+    expect(realm.start.map.id).toBe('refugio');
+    expect(realm.newStart.map.id).toBe('capao');
+    expect(new Realm([velho, novo], { startMap: 'capao' }).start.map.id).toBe('refugio'); // o jogo de hoje não abre o mapa novo
     expect(() => new Realm([velho, novo], { startMap: 'nada' })).toThrow(/não existe/);
+
+    // quem entra pelo jogo novo vai para o mapa novo, mesmo tendo parado no Refúgio (e vice-versa)
+    const saved = (zone: string) => ({ id: 1, name: 'Ana', level: 1, xp: 0, hp: 60, zone, x: 2, y: 0, look: null, inventory: null, gold: 0, quests: null });
+    const join = (zone: string, newWorld: boolean) => {
+      const r = new Realm([velho, novo]);
+      const result = r.join('Ana', new FakeConn(), { character: saved(zone) as never, created: false, newWorld });
+      if (!result.ok) throw new Error(result.reason);
+      return r.worldOf(result.player)!.map.id;
+    };
+    expect(join('refugio', true)).toBe('capao');
+    expect(join('capao', false)).toBe('refugio');
+    expect(join('capao', true)).toBe('capao');
+    expect(join('refugio', false)).toBe('refugio');
   });
 });

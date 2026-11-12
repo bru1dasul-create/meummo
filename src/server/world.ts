@@ -45,7 +45,7 @@ import {
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
-import { bodyFits, canStep, cornerAtFeet, degreesToward, footCenter, sweepBody, walkDistance, walkSlice } from '../shared/movement';
+import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, footCenter, sweepBody, walkDistance, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
@@ -70,6 +70,8 @@ export interface JoinProfile {
   character: SavedCharacter;
   /** Acabou de ser criado (muda a mensagem de boas-vindas). */
   created: boolean;
+  /** Entrou pelo jogo 2.5D novo: só os mapas do formato novo (e vice-versa). */
+  newWorld?: boolean;
 }
 
 /**
@@ -421,6 +423,8 @@ export class World {
     const { x, y } = saved;
     // A zona é guardada pelo id do mapa (saves antigos guardavam o nome, que também vale).
     if ((saved.zone !== this.map.id && saved.zone !== this.map.name) || x === null || y === null) return null;
+    // Formato novo: volta no lugar do tile onde o pé cabe (pode ser colado num tronco, que a grade dos monstros fecha).
+    if (this.map.metric) return bodySpotIn(this.map, x, y);
     return this.map.isWalkable(x, y) && this.map.isReachable(x, y) ? { x, y } : null;
   }
 
