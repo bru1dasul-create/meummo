@@ -84,6 +84,21 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   configurações
 - [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC
 
+## 🗺️ Mundo novo (2.5D isométrico) — decidido pelo dono em 12/11
+O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas são refeitos do zero; o motor
+(servidor, regras, salvamento, dados) fica. Os 5 mapas atuais saem quando o capítulo 1 novo estiver jogável.
+- [x] **[dono]** Região: zona sul de SP, perto do Capão Redondo, com mapas "bem selvagens" (a mata volta pelo sul)
+- [x] **[dono]** Nascimento no **Parque Santo Dias** (Capão Redondo). Capítulo 1, do mais fácil ao mais difícil:
+  Capão Redondo e o parque → Guarapiranga → Santo Amaro (Largo Treze, Terminal e o Shopping do Largo Treze, sem
+  o nome da rede) → Billings → o centro (Sé) no fim do jogo
+- [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
+  até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Desenho no papel primeiro
+- [ ] **[estrutura + mundo]** Formato do mapa novo: colisão por formas (para o movimento livre), saídas e áreas
+  de monstros
+- [ ] **[dono]** A **Budega Distribuidora** (o negócio do dono) no Capão: decidir o formato. Recomendação da
+  [estrutura]: sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco), como a
+  loja e o ponto de troca da vila
+
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
 - [x] **Interface:** tela de entrada com cenário (selva sobre as ruínas e a represa), "Como jogar" que abre sozinho
