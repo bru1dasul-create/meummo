@@ -158,12 +158,14 @@
       // inverte na hora), precisa recuperar: até 35% mais rápido, sem escorregar o pé. O passo (andar ou correr) sai
       // da velocidade de verdade: a 2 m/s (Shift) ele anda.
       const want = Math.min(d / 0.12, S.run * 1.35);
-      let input = {};
+      // virada ágil (escolha do dono): o servidor muda de direção na hora, o desenho vira mais depressa que no protótipo
+      const agile = this.agile !== false;
+      let input = { agile };
       if (d > 3) {
         const run = want > S.walk * 1.05;
         const top = run ? S.run : S.walk;
         const mag = Math.min(1, want / top);
-        input = { move: { x: (dx / d) * mag, y: (dy / d) * mag }, run, speedScale: Math.max(1, want / top) };
+        input = { move: { x: (dx / d) * mag, y: (dy / d) * mag }, run, speedScale: Math.max(1, want / top), agile };
       }
       ch.update(dt, input, null);
       // parado: vira para o ângulo que veio

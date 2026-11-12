@@ -21,6 +21,11 @@
   // Agilidade apenas na inversão sobre a base de apoio; a marcha mantém seu ritmo.
   // turnAccel: o giro do pivô acelera até `turn` (graus/s²); começar já no máximo dava um tranco no corpo todo
   const PIVOT = { turn: 600, turnAccel: 15000, footTurn: 7.2, step: 0.14, release: 50 };
+  // Virada ágil (escolha do dono para o jogo, 12/11): quem a PD.View move vira mais depressa. É a mesma coreografia
+  // (freia, gira sobre os pés com passinhos, sai correndo), com mais aceleração, giro e pivô mais rápidos e passos do
+  // pivô mais curtos; o pivô só começa abaixo de `pivotSpeed` (cm/s): parar de girar ainda correndo dava solavanco no
+  // joelho. Só com `input.agile`: o jogo do protótipo não muda. Medido em ferramentas/seguir.cjs.
+  const AGILE = { accel: 1.8, turn: 1.6, pivot: 1.8, step: 0.85, release: 75, pivotSpeed: 150 };
   const DODGE = { total: 0.4, distance: 100, moveStart: 0.018, moveEnd: 0.245, cooldown: 0.2 };
   const DEATH = { total: 1.35, impact: 0.64 };
   const HIT = { total: 0.64, lock: 0.22 };
@@ -286,6 +291,7 @@
       // movimento desejado
       const mv = input.move || { x: 0, y: 0 };
       const mag = clamp01(Math.hypot(mv.x, mv.y));
+      const ag = (this._ag = input.agile ? AGILE : null);
       if (mag > 0.02) this.faceYaw = Math.atan2(mv.y, mv.x);
       let maxSpeed = this.crouchWanted ? SPEED.crouch : input.run ? SPEED.run : SPEED.walk;
       // quem anima pela posição do servidor (PD.View) pode pedir um pouco mais de velocidade para não ficar para trás
@@ -295,8 +301,8 @@
       let moveDir = mag > 0.02 ? this.faceYaw : null;
       if (moveDir !== null && this.jump.state === 'chao') {
         const angle = Math.abs(angleDiff(this.yaw, moveDir));
-        if (angle > 100 * DEG) this.turnInPlace = true;
-        if (angle < PIVOT.release * DEG && this.turnInPlace) {
+        if (angle > 100 * DEG && (!ag || this.speed < ag.pivotSpeed)) this.turnInPlace = true;
+        if (angle < (ag ? ag.release : PIVOT.release) * DEG && this.turnInPlace) {
           this.turnInPlace = false;
           // A saída da freada começa em apoio duplo, não no meio de um balanço antigo.
           this.phase = 0;
@@ -331,7 +337,10 @@
         const dy = want.y - this.vel.y;
         const d = Math.hypot(dx, dy);
         const braking = Math.hypot(want.x, want.y) < Math.hypot(this.vel.x, this.vel.y);
-        const a = (onGround ? (braking ? ACCEL.brake : ACCEL.ground) : ACCEL.air) * dt;
+        // ágil: acelera e freia mais forte, menos na freada do pivô (parar de uma vez com os pés no chão dava um
+        // solavanco no joelho)
+        const agA = ag && !(braking && this.turnInPlace) ? ag.accel : 1;
+        const a = (onGround ? (braking ? ACCEL.brake : ACCEL.ground) * agA : ACCEL.air) * dt;
         if (d <= a) {
           this.vel.x = want.x;
           this.vel.y = want.y;
@@ -408,8 +417,9 @@
       else if (this.faceYaw !== null) wantYaw = this.faceYaw; // devagar ou parado: vira para onde mandou (e termina)
       if (wantYaw !== null) {
         const fast = clamp01(this.speed / SPEED.run);
-        const lambda = this.attack ? 18 : lerp(14, 9, fast);
-        const maxStep = (this.attack ? TURN.attack : this.turnInPlace ? PIVOT.turn : lerp(TURN.still, TURN.run, fast)) * DEG * dt;
+        const agT = this._ag && !this.attack ? this._ag : null;
+        const lambda = this.attack ? 18 : lerp(14, 9, fast) * (agT ? agT.turn : 1);
+        const maxStep = (this.attack ? TURN.attack : this.turnInPlace ? PIVOT.turn * (agT ? agT.pivot : 1) : lerp(TURN.still, TURN.run, fast) * (agT ? agT.turn : 1)) * DEG * dt;
         const next = dampAngle(this.yaw, wantYaw, lambda, dt);
         let d = clamp(angleDiff(this.yaw, next), -maxStep, maxStep);
         // na inversão (pivô), o giro parte da velocidade que o corpo já tinha e acelera até o máximo em ~0,04 s (antes
@@ -419,7 +429,7 @@
         if (this.turnInPlace && !this.attack && dt > 0) {
           const w0 = (this._yawStep || 0) / (this._yawStepDt || dt);
           const w = d / dt;
-          const acc = PIVOT.turnAccel * DEG * dt;
+          const acc = PIVOT.turnAccel * (agT ? agT.pivot : 1) * DEG * dt;
           if (Math.abs(w) > Math.abs(w0) + acc) d = Math.sign(w) * (Math.abs(w0) * (Math.sign(w) === Math.sign(w0) ? 1 : 0) + acc) * dt;
         }
         // o corpo não passa de ~55° na frente dos pés apoiados (senão as pernas cruzam): numa virada fechada ele
@@ -987,7 +997,8 @@
       const velocity = this._lastPushVelocity ? { x: this.vel.x - this._lastPushVelocity.x, y: this.vel.y - this._lastPushVelocity.y } : this.vel;
       const want = this._moveTarget || velocity;
       const dv = { x: want.x - velocity.x, y: want.y - velocity.y };
-      const acceleration = airborne ? ACCEL.air : Math.hypot(want.x, want.y) < Math.hypot(velocity.x, velocity.y) ? ACCEL.brake : ACCEL.ground;
+      const braking = Math.hypot(want.x, want.y) < Math.hypot(velocity.x, velocity.y);
+      const acceleration = airborne ? ACCEL.air : (braking ? ACCEL.brake : ACCEL.ground) * (this._ag && !(braking && this.turnInPlace) ? this._ag.accel : 1);
       const reach = Math.hypot(dv.x, dv.y) / acceleration;
       const ramp = Math.min(seconds, reach);
       const result = { x: this.pos.x, y: this.pos.y, z: this.groundZ };
@@ -1174,7 +1185,7 @@
               if (!st.planted) {
                 const landing = J.state === 'pouso' || J.state === 'preparo';
                 if (!landing && st.lastX !== null && Math.hypot(ref.x - st.lastX, ref.y - st.lastY) > 2) {
-                  st.step = { t: 0, dur: this.turnInPlace ? PIVOT.step : 0.18, fx: st.lastX, fy: st.lastY, fyaw: st.yaw, p0: st.outPitch };
+                  st.step = { t: 0, dur: this.turnInPlace ? PIVOT.step * (this._ag ? this._ag.step : 1) : 0.18, fx: st.lastX, fy: st.lastY, fyaw: st.yaw, p0: st.outPitch };
                 } else {
                   // pousando: o pé fica onde tocou o chão (ajeita depois, se precisar)
                   st.planted = true;
@@ -1189,7 +1200,7 @@
                 // dos dedos, e numa virada logo depois de pisar o calcanhar riscava o chão a 80 cm/s
                 const yawErr = angleDiff(st.yaw, yawAbs);
                 if (Math.abs(yawErr) > 0.01 && J.state === 'chao') {
-                  const footTurn = A ? 11 : this.turnInPlace ? PIVOT.footTurn : 6;
+                  const footTurn = A ? 11 : this.turnInPlace ? PIVOT.footTurn * (this._ag ? this._ag.pivot : 1) : 6;
                   const turn = clamp(yawErr, -footTurn * dt, footTurn * dt);
                   // ponto de giro, à frente do tornozelo. `pitch` já vem multiplicado pela passada: antes multiplicava de
                   // novo e, com a passada pela metade (pivô), girava na ponta com o calcanhar no chão (ele riscava)
@@ -1204,7 +1215,7 @@
                 // no soco os pés só giram na ponta até ~70° e aguentam a base mais aberta (sem passinhos à toa)
                 const far = Math.hypot(ref.x - st.x, ref.y - st.y) > (A ? 14 : 9) || Math.abs(angleDiff(st.yaw, yawAbs)) > (A ? 1.2 : 0.75);
                 if (far && !other.step && !striking && J.state === 'chao' && (this.stepCooldown <= 0 || A)) {
-                  st.step = { t: 0, dur: A ? 0.11 : this.turnInPlace ? PIVOT.step : turningInPlace ? 0.15 : 0.2, fx: st.x, fy: st.y, fyaw: st.yaw, p0: st.outPitch };
+                  st.step = { t: 0, dur: A ? 0.11 : this.turnInPlace ? PIVOT.step * (this._ag ? this._ag.step : 1) : turningInPlace ? 0.15 : 0.2, fx: st.x, fy: st.y, fyaw: st.yaw, p0: st.outPitch };
                   st.planted = false;
                   this.stepCooldown = turningInPlace ? 0.03 : 0.08;
                 }
@@ -1846,6 +1857,7 @@
 
   PD.Character = Character;
   PD.SPEED = SPEED;
+  PD.AGILE = AGILE; // para os testes da virada ágil
   PD.PUNCH_AT = PUNCH_AT;
   PD.DODGE = DODGE;
   PD.DEATH = DEATH;

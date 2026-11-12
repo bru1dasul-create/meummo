@@ -132,9 +132,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   de cada um (o seu em dourado, NPC em verde-água) e os balões de fala, que não saem da tela e desviam dos nomes e uns
   dos outros; recebe para onde cada um olha em graus e anda pela velocidade de verdade (2 m/s anda, 4,5 m/s corre).
   Ainda não usa o `look` (todo jogador sai com o protagonista) nem o `durationMs`
-- [ ] **[dono]** Virada no jogo 2.5D: hoje o personagem gira plantando os pés e, numa virada de 180° correndo, fica
-  até ~1,75 m atrás da posição de verdade por ~1,3 s. Escolher: virada mais ágil (menos realista) ou um pouco de
-  inércia na virada do servidor
+- [x] **[dono]** Virada no jogo 2.5D (12/11): o dono escolheu a virada mais ágil só no jogo (opção b)
+- [x] **[arte]** Virada ágil no jogo 2.5D: na virada de 180° correndo, o desenho fica até 0,91 m atrás da posição de
+  verdade (era 1,75 m) e alcança em 0,53 s (era 1,32 s); pernas sem cruzar e pé apoiado sem escorregar
+  (`ferramentas/seguir.cjs`). O jogo do protótipo não muda
 - [ ] **[arte]** O Curupira no 2.5D (hoje é o protagonista com outra roupa), a luz do poste e pedras com cara de pedra
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
   32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
