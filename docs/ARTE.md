@@ -272,6 +272,15 @@ carga (segurar e soltar), defesa frontal com energia, esquiva, queda e som. No r
   → 17,2, braços 3,1 → 14,3, corpo 22 cm à frente dos pés), pulo correndo 11,8 → 15,5 e o tranco dos braços somado
   (+24%). Desempenho com a CPU 4× mais lenta: 12 quadros por segundo (versão 8: 16).
 - **Atenção para levar ao jogo:** o protótipo chama a queda de "Morrendo/Morto"; no MeuMMO quem perde a vida desmaia.
+- **Correções depois da revisão 17 (13/11, com o aval do dono):** a virada de 180° correndo dava um tranco no começo
+  porque três coisas ligavam no mesmo quadro: o giro já a 600°/s, a passada caindo 21% e o pé do balanço virando um
+  passo que começava parado. Agora o giro do pivô acelera em ~0,04 s (fora do soco: com soco a rampa fazia as pernas
+  cruzarem), a passada sai aos poucos e o passo herda a velocidade do pé (até 9 m/s). Também: o relógio do soco
+  desacelera em poucos quadros ao esperar o corpo virar, e o ponto de giro do pé apoiado usa a inclinação real (antes
+  multiplicava a passada duas vezes e, com o pivô, o calcanhar riscava o chão). Virada de 180° correndo: pernas 17,2 →
+  14,0, braços 14,3 → 5,4, corpo 22 → 9 cm à frente dos pés; soma dos braços 207 → 194, das pernas 252 → 243; nenhum
+  roteiro piorou. Testes da revisão: todos passam menos o `teste-resposta` (as mesmas 2 falhas de antes). Desempenho:
+  cada personagem custa o mesmo que na versão 8; a queda de quadros é o rival (um segundo personagem) e os efeitos.
 - **Na main e no link:** juntei na `main` com o "pode" do dono (12/11) e o link jogável do dono foi para a revisão 17
   (versão 9 da página). A revisão 17 pede os scripts com `?v=…`; o `montar_pagina.py` agora tira esse sufixo da
   página publicada (os arquivos vão sem ele).
