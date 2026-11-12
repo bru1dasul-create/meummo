@@ -47,6 +47,19 @@ protótipo como primeiro mapa isométrico do jogo, o herói em sprites exportado
 ataque, tudo ligado ao servidor atual, medido no celular do dono. O movimento livre (meu próximo passo) continua
 valendo. Esperando o dono decidir.
 
+**12/11 — o dono trocou o visual** ("trocamos o visual") e quer refazer os mapas do zero, perto do Capão Redondo,
+"bem selvagens". Propus: nascer na Estação Capão Redondo (fim da Linha 5-Lilás), Parque Santo Dias como primeira mata,
+Guarapiranga depois, Santo Amaro e Billings em seguida e o centro (Sé) no fim. Esperando a escolha dele. Avisei o
+[mundo] para pausar o minimapa dos mapas atuais.
+
+**12/11 — o ChatGPT evoluiu o protótipo até a revisão 17** (ZIP enviado pelo dono, fora do repositório): duelo de
+treino com vida, soco, estilingue com carga (até 1,1 s, dano 20 a 40, alcance 6,5 a 9,5 m), defesa frontal com
+energia (100; arco de 140°; bloqueia ~75%; quebra sem energia), esquiva no Q, recuo pela força e aviso laranja do
+rival. Os números estão no `LEIA-ME.md` da revisão 17. No MMO, essas regras vão para o servidor, com os mesmos
+números: o movimento livre usa a escala do protótipo (metros), para eles servirem direto. Uma regra não serve para
+MMO: o corpo caído bloquear a passagem. Recomendei ao dono tornar a revisão 17 a oficial e levá-la para o
+repositório pelo chat de Arte, só com o código e o LEIA-ME, sem os 19,6 MB de relatórios.
+
 Antes, em 9/11:
 Feito pela Estrutura, tudo na `main`:
 - Interface nova (tela de entrada, painel de vida, botões com ícones, chat discreto).
