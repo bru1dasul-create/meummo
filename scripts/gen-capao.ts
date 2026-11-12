@@ -38,6 +38,11 @@ const PX = 32;
 const STAGES = ['3', '4a', '4b', '4c'] as const;
 const STAGE: (typeof STAGES)[number] = '4a';
 const reached = (stage: (typeof STAGES)[number]) => STAGES.indexOf(STAGE) >= STAGES.indexOf(stage);
+/**
+ * As criaturas da mata (saguis encantados e jararacas) só entram quando o jogo novo tiver combate: sem ele, o
+ * jogador apanha sem ver o golpe e desmaia sem saber por quê (escolha do dono em 12/11: a 4a vai sem elas).
+ */
+const CREATURES = false;
 const W = 96;
 const H = 80;
 const SEED = 20261113;
@@ -353,7 +358,7 @@ areas.push(rect('area', PARK_X, W, 0, H, undefined, 'Vila do Capão'));
 pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
 /** Áreas de criaturas (camada "monstros"): o nome é o id em data/monsters.json; os saguis são os "encantados". */
 const monstros: Shape[] = [];
-if (reached('4a')) {
+if (reached('4a') && CREATURES) {
   monstros.push(rect('area', 24, 40, 12, 28, { quantidade: 4 }, 'sagui'));
   monstros.push(rect('area', 6, 22, 56, 74, { quantidade: 3 }, 'jararaca'));
 }

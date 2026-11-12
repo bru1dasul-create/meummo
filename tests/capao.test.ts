@@ -120,7 +120,8 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
 
   it('tem 96 × 80 metros, tile de 32 px e as camadas combinadas', () => {
     expect([map.width, map.height, map.tilewidth, map.tileheight]).toEqual([96, 80, 32, 32]);
-    expect(map.layers.map((l) => l.name)).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos', 'monstros']);
+    // a camada "monstros" só aparece quando as criaturas estão ligadas no gerador (CREATURES)
+    expect(map.layers.map((l) => l.name).filter((n) => n !== 'monstros')).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos']);
     expect(map.layers.every((l) => l.type === 'objectgroup')).toBe(true);
   });
 
@@ -206,7 +207,8 @@ describe('Mapa 01 (Capão), etapa 4a: a mata e o lago', () => {
     expect(layer('cenario').filter((o) => o.type === 'veu').length).toBe(4); // círculo, figueira, lago e a pedra
   });
 
-  it('as criaturas (saguis encantados e jararacas) moram em lugar alcançável, fora das zonas seguras', () => {
+  // desligadas até o jogo novo ter combate (CREATURES no gerador); quando voltarem, este teste volta a valer
+  it.runIf(map.layers.some((l) => l.name === 'monstros'))('as criaturas (saguis encantados e jararacas) moram em lugar alcançável, fora das zonas seguras', () => {
     const game = GameMap.fromTiled(map as unknown as TiledMap, 'capao');
     const zones = layer('monstros');
     expect(zones.map((z) => [z.name, prop(z, 'quantidade')])).toEqual([
