@@ -437,6 +437,13 @@
     areia: { base: '#b89a66', dots: ['#a88a58', '#c8ab78', '#9a7d4c'], n: 6, size: [3, 7] },
     agua: { base: '#22484f', dots: ['#2b5960', '#1b3b42', '#3a6f72'], n: 3, size: [8, 20] },
     circulo: { base: '#8b867b', dots: ['#7a756b', '#9c978b', '#6c675e'], n: 5, size: [6, 12], edge: '#4f4b44' },
+    // os que o [mundo] vai usar na etapa 4 (lago, lama, mata profunda, vila) — já com cara, para não virar terra
+    'mata-profunda': { base: '#13251a', dots: ['#1a3021', '#0e1b13', '#22382a', '#2b2a1f'], n: 7, size: [6, 16] },
+    lama: { base: '#4a3826', dots: ['#3c2d1e', '#5a4530', '#2f2418', '#5b5a4c'], n: 6, size: [5, 14] },
+    clareira: { base: '#4b7a3a', dots: ['#5a8a44', '#3f6b31', '#6a9a4e', '#365e2b'], n: 9, size: [4, 9], flowers: ['#e9d36a', '#f3f0e2'] },
+    calcada: { base: '#8f8c82', dots: ['#7f7c73', '#a19e93', '#6f6c64'], n: 6, size: [3, 7] },
+    rua: { base: '#3f4247', dots: ['#4a4d53', '#35383c', '#55585e'], n: 7, size: [3, 7] },
+    pedra: { base: '#77736b', dots: ['#67635c', '#8a867d', '#5a564f'], n: 5, size: [6, 12] },
   };
   const matOf = (t) => MAT[t] || MAT.terra;
 
