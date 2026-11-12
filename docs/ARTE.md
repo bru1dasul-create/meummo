@@ -316,14 +316,26 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - **Nomes e balões** são da view (o motor não desenha etiqueta): nome em cima da cabeça (o seu `#ffe08a`, NPC
   `#8fe3c8`, monstro `#f1e4c8`, como no `style.css`); o balão fica acima do nome, até 6 linhas (passou, "…"), não sai
   da tela e desvia dos nomes e dos outros balões (o de quem está mais à frente fica no lugar, os outros sobem e o
-  bico estica por baixo).
+  bico estica por baixo; se não cabe em cima, como no celular deitado, vai para o lado do que atrapalha).
 - Ainda não usa: `look` (todo jogador sai com o protagonista), `durationMs` (a view anda pela velocidade de verdade)
   e `type` (o NPC sai com a roupa vermelha).
-- Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5), a luz do poste e
-  as pedras com cara de pedra. A copa da figueira fica acima da tela no médio (o [mundo] planejou assim).
-- Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página; no celular deitado o
-  pé do Curupira pode ficar embaixo do chat (tocar nele ali não funciona) e a faixa da zona cobre o personagem
-  enquanto aparece.
+- **Figueira redesenhada** (reclamação do dono, 12/11: "a árvore está bugada", tronco chapado e copa em "pirulito"):
+  o tronco é um cilindro de fatias (cada fatia, um círculo deitado que a câmera mostra como elipse r × r·sinP), com
+  base redonda entrando no chão, luz à esquerda e sulcos que contornam o cilindro; raízes grossas meio enterradas
+  saindo da base; 4 galhos que saem do meio do topo (desenhados depois do tronco, contorno de todos antes do recheio,
+  senão pareciam cruzar em "X") e raízes aéreas penduradas; copa de 50 cachos menores, mais larga que alta, com o tom
+  pela altura (embaixo escuro, em cima claro) e os cachos da frente erguidos até 60% da altura para o tronco e a
+  forquilha aparecerem. O tronco da figueira também fica transparente quando esconde o personagem.
+- **Pedras** ("isso é uma pedra?"): rocha facetada de contorno irregular (anel de base enterrado, anel de cima menor e
+  uma coroa), cada face com o tom pela luz, musgo no topo iluminado e fiapos de grama na base da frente; cada pedra
+  sai diferente (sorteio pela posição).
+- **Celular no `/?novo`** (aviso da [estrutura]): o chat vira uma caixinha no canto de baixo à direita (a esquerda é
+  do joystick), as falas aparecem em cima sem segurar o toque e somem; tocar na caixinha abre o chat (CSS com
+  `body:has(canvas.mundo-novo)`, o jogo de hoje não muda). No celular deitado, a faixa da zona fica no alto e menor
+  (vale para os dois jogos).
+- Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5) e a luz do poste.
+- Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página, tocar no Curupira
+  funciona nos três (no deitado o chat segurava o toque) e os balões não se cobrem.
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):

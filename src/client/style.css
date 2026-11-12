@@ -2080,3 +2080,69 @@ kbd {
     padding: 11px 10px;
   }
 }
+
+/* Jogo 2.5D novo (/?novo) no celular: a metade esquerda é do joystick e o resto da tela serve para tocar no chão ou
+   num personagem. O chat vira uma caixinha no canto de baixo à direita; as últimas falas aparecem em cima dela sem
+   segurar o toque e somem quando ninguém fala; tocar na caixinha abre o chat inteiro para escrever. */
+@media (pointer: coarse) {
+  body:has(canvas.mundo-novo) #chat {
+    left: auto;
+    right: calc(8px + env(safe-area-inset-right));
+    width: min(320px, 48vw);
+    align-items: flex-end;
+    pointer-events: none; /* só a caixinha de escrever segura o toque; o resto passa para o jogo */
+  }
+
+  body:has(canvas.mundo-novo) #chat-form {
+    pointer-events: auto;
+  }
+
+  body:has(canvas.mundo-novo) #chat-log {
+    align-self: stretch;
+    max-height: calc(2 * 1.4em + 12px);
+    pointer-events: none;
+  }
+
+  body:has(canvas.mundo-novo) #chat.idle #chat-log {
+    opacity: 0;
+  }
+
+  body:has(canvas.mundo-novo) #chat-form {
+    width: 150px;
+    transition: width 0.2s;
+  }
+
+  /* a letra continua em 16px: menor que isso o iPhone dá zoom sozinho ao tocar para escrever */
+  body:has(canvas.mundo-novo) #chat-input {
+    padding-block: 6px;
+  }
+
+  body:has(canvas.mundo-novo) #chat:focus-within #chat-form {
+    width: 100%;
+  }
+
+  body:has(canvas.mundo-novo) #chat:focus-within #chat-log {
+    max-height: 40vh;
+    opacity: 1;
+    pointer-events: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* Celular deitado (tela baixa): a faixa com o nome da zona vai para o alto e fica menor, sem cobrir o herói */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  #zone-banner {
+    top: calc(6px + env(safe-area-inset-top));
+    width: min(420px, 50vw);
+    padding: 4px 16px 5px;
+  }
+
+  #zone-banner strong {
+    font-size: 20px;
+  }
+
+  #zone-banner span {
+    font-size: 10px;
+  }
+}

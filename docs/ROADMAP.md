@@ -136,7 +136,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[arte]** Virada ágil no jogo 2.5D: na virada de 180° correndo, o desenho fica até 0,91 m atrás da posição de
   verdade (era 1,75 m) e alcança em 0,53 s (era 1,32 s); pernas sem cruzar e pé apoiado sem escorregar
   (`ferramentas/seguir.cjs`). O jogo do protótipo não muda
-- [ ] **[arte]** O Curupira no 2.5D (hoje é o protagonista com outra roupa), a luz do poste e pedras com cara de pedra
+- [x] **[arte]** Figueira dos Despertos e pedras redesenhadas (reclamação do dono, 12/11): tronco com volume e base
+  entrando no chão, sapopemas, galhos até a copa, raízes aéreas, copa de vários cachos; pedras facetadas com musgo.
+  No celular, chat compacto no `/?novo` e faixa da zona no alto (celular deitado)
+- [ ] **[arte]** O Curupira no 2.5D (hoje é o protagonista com outra roupa) e a luz do poste
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
   32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
   partir do cenário; `saidas`, `monstros`, pontos e propriedades de sempre; `chao` e `cenario` só para o desenho.

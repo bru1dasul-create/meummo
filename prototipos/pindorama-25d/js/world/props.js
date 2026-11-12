@@ -602,18 +602,19 @@
   class TreeTrunk extends Prop {
     constructor(world, t) {
       const rr = Math.max(22, t.trunk || 0);
-      super(world, { x0: t.x - rr, x1: t.x + rr, y0: t.y - rr, y1: t.y + rr }, { fades: false });
+      // a figueira é larga (tronco de 2 m e galhos): fica transparente se esconder o personagem, como a copa
+      super(world, { x0: t.x - rr, x1: t.x + rr, y0: t.y - rr, y1: t.y + rr }, { fades: t.kind === 'figueira' });
       this.t = t;
       this.collider = { type: 'circle', x: t.x, y: t.y, r: t.trunk ? t.trunk + 4 : 26 };
     }
     screenBox() {
       const t = this.t;
-      const roots = t.kind === 'figueira' ? (t.trunk || 60) * 2.6 : 40;
+      const roots = t.kind === 'figueira' ? (t.trunk || 60) * 4.2 : 40;
       return bbox([this.P(t.x, t.y, this.z0), this.P(t.x, t.y, this.z0 + t.h * 0.72)], Math.max(40, roots) * this.cam.zoom);
     }
     shadow(path) {
       const t = this.t;
-      lineShadow(path, this.cam, t.x, t.y, t.h * 0.6, 16);
+      lineShadow(path, this.cam, t.x, t.y, t.h * 0.6, t.kind === 'figueira' ? (t.trunk || 60) * 1.6 : 16);
       circleShadow(path, this.cam, t.x, t.y, t.r * 0.95, t.h * 0.72);
     }
     paint(ctx) {
@@ -629,8 +630,7 @@
       const lean = (k) => Math.sin(k * 1.3 + t.x) * (t.trunk ? 3 : 6);
       const bark = BARK[t.kind];
       if (t.kind === 'figueira') {
-        this._figRoots(ctx, r0);
-        this._figTrunk(ctx, r0, top);
+        this._figPaint(ctx);
         return;
       }
       for (let k = 0; k <= N; k++) {
@@ -675,116 +675,230 @@
     }
   }
 
-  /** Raízes da figueira: aletas grossas que se espalham pelo chão em volta do tronco. */
-  TreeTrunk.prototype._figRoots = function (ctx, r0) {
+  // ------------------------------------------------------------------ Figueira dos Despertos
+  // O tronco é um cilindro feito de fatias (cada fatia é um círculo deitado, que a câmera mostra como uma elipse de
+  // r × r·sinP): por isso a base é redonda e entra no chão, sem a linha reta de antes. As sapopemas (raízes em aleta)
+  // saem do próprio tronco, quatro galhos grossos sobem da forquilha até a copa e soltam raízes aéreas.
+  const FIG = { fork: 0.42, bark: { light: '#a48d72', base: '#7c6a57', shade: '#574838', dark: '#3a2e23' } };
+
+  TreeTrunk.prototype._figPaint = function (ctx) {
     const cam = this.cam;
     const t = this.t;
     const z0 = this.z0;
-    const rnd = M.rng(Math.round(t.x + t.y * 3));
-    const roots = [];
-    for (let k = 0; k < 9; k++) {
-      const a = (k / 9) * M.TAU + rnd() * 0.4;
-      const len = r0 * (1.5 + rnd() * 1.1);
-      const pts = [];
-      for (let s = 0; s <= 6; s++) {
-        const u = s / 6;
-        const d = r0 * 0.7 + (len - r0 * 0.7) * u;
-        const w = a + Math.sin(u * 3 + k) * 0.12;
-        pts.push({ p: cam.p({ x: t.x + Math.cos(w) * d, y: t.y + Math.sin(w) * d, z: z0 + (1 - u) * r0 * 0.55 }), w: (1 - u * 0.8) * r0 * 0.28 * cam.zoom });
-      }
-      roots.push({ pts, depth: Math.cos(a) + Math.sin(a) });
+    const zoom = cam.zoom;
+    const R = t.trunk || 100;
+    const zf = t.h * FIG.fork; // forquilha: onde o tronco vira galhos
+    const rnd = M.rng(Math.round(t.x * 7 + t.y * 3));
+    const lean = rnd() * M.TAU;
+    // perfil: alarga bem na base (as sapopemas fundidas ao tronco) e afina um pouco até a forquilha
+    const slices = [];
+    const N = 24;
+    for (let k = 0; k <= N; k++) {
+      const u = k / N;
+      const flare = u < 0.32 ? Math.pow(1 - u / 0.32, 2) * 0.55 : 0;
+      const r = R * (0.78 + 0.22 * (1 - u) + flare) * (1 + Math.sin(u * 9 + lean) * 0.03);
+      const off = Math.sin(u * 2.2 + lean) * R * 0.12 * u;
+      const c = cam.p({ x: t.x + Math.cos(lean) * off, y: t.y + Math.sin(lean) * off, z: z0 + zf * u });
+      slices.push({ c, r, u });
     }
-    // as de trás primeiro
-    roots.sort((a, b) => a.depth - b.depth);
-    const BARKF = BARK.figueira;
-    for (const r of roots) {
-      for (const [color, extra] of [[INK, this.ink * 2.2], [BARKF[1], 0]]) {
-        ctx.strokeStyle = color;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        for (let s = 0; s + 1 < r.pts.length; s++) {
-          ctx.lineWidth = r.pts[s].w * 2 + extra;
-          ctx.beginPath();
-          ctx.moveTo(r.pts[s].p.x, r.pts[s].p.y);
-          ctx.lineTo(r.pts[s + 1].p.x, r.pts[s + 1].p.y);
-          ctx.stroke();
-        }
-      }
-      // luz em cima da raiz
-      ctx.strokeStyle = BARKF[0];
-      for (let s = 0; s + 1 < r.pts.length; s++) {
-        ctx.lineWidth = r.pts[s].w * 0.9;
+    const roots = [];
+    for (let k = 0, n = 8; k < n; k++) {
+      roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (1.6 + rnd() * 1.0), zr: R * (0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
+    }
+    const limbs = [];
+    const turn = rnd() * M.TAU;
+    for (let k = 0; k < 4; k++) {
+      limbs.push({ a: turn + (k / 4) * M.TAU + (rnd() - 0.5) * 0.7, reach: R * (2.5 + rnd() * 1.2), rise: t.h * (0.2 + rnd() * 0.1), w0: R * (0.5 - k * 0.05), w1: R * 0.15, seed: rnd() * 10, hang: 2 + Math.floor(rnd() * 2) });
+    }
+    // raízes de trás antes e as da frente depois do tronco; os galhos saem todos do meio do topo do tronco, depois dele:
+    // primeiro os de trás, depois os da frente, cada grupo com o contorno de todos antes do recheio (senão a borda de um
+    // galho riscava o outro e os dois pareciam cruzar em "X")
+    const front = (a) => Math.cos(a) + Math.sin(a) > 0;
+    for (const r of roots) if (!front(r.a)) this._figRoot(ctx, r, R);
+    this._figTrunkBody(ctx, slices);
+    for (const r of roots) if (front(r.a)) this._figRoot(ctx, r, R);
+    this._figLimbs(ctx, limbs.filter((l) => !front(l.a)), R, zf, rnd);
+    this._figLimbs(ctx, limbs.filter((l) => front(l.a)), R, zf, rnd);
+    // símbolos na frente do tronco (na superfície: a frente do cilindro fica r·sinP abaixo do centro da fatia)
+    const onFace = (s) => ({ c: { x: s.c.x - s.r * zoom * 0.12, y: s.c.y + s.r * cam.sinP * zoom * 0.95 }, r: 0 });
+    this._figGlyphs(ctx, [null, onFace(slices[6]), onFace(slices[11]), onFace(slices[16])]);
+  };
+
+  /** Corpo do tronco: fatias em tinta (contorno), depois a casca com luz à esquerda e sulcos que contornam o cilindro. */
+  TreeTrunk.prototype._figTrunkBody = function (ctx, slices) {
+    const cam = this.cam;
+    const zoom = cam.zoom;
+    const sinP = cam.sinP;
+    const B = FIG.bark;
+    const ell = (s, grow) => {
+      const rx = s.r * zoom + grow;
+      ctx.moveTo(s.c.x + rx, s.c.y);
+      ctx.ellipse(s.c.x, s.c.y, rx, s.r * sinP * zoom + grow, 0, 0, M.TAU);
+    };
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    for (const s of slices) ell(s, this.ink * 1.3);
+    ctx.fill();
+    let x0 = Infinity, x1 = -Infinity;
+    for (const s of slices) {
+      x0 = Math.min(x0, s.c.x - s.r * zoom);
+      x1 = Math.max(x1, s.c.x + s.r * zoom);
+    }
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, B.light);
+    g.addColorStop(0.3, B.base);
+    g.addColorStop(0.7, B.shade);
+    g.addColorStop(1, B.dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    for (const s of slices) ell(s, 0);
+    ctx.fill();
+    // sulcos: as raízes fundidas subindo pelo tronco, desenhadas na superfície da frente (x = r·a, y desce r·sinP·√(1−a²))
+    const rnd = M.rng(Math.round(this.t.x + this.t.y * 11));
+    ctx.lineCap = 'round';
+    for (let f = 0; f < 9; f++) {
+      const across = -0.86 + (f / 8) * 1.72 + (rnd() - 0.5) * 0.08;
+      const lit = across < 0.1;
+      const line = (shift) => {
         ctx.beginPath();
-        ctx.moveTo(r.pts[s].p.x, r.pts[s].p.y - r.pts[s].w * 0.4);
-        ctx.lineTo(r.pts[s + 1].p.x, r.pts[s + 1].p.y - r.pts[s + 1].w * 0.4);
+        slices.forEach((s, k) => {
+          const a = Math.max(-0.98, Math.min(0.98, across + shift + Math.sin(k * 0.7 + f * 1.3) * 0.035));
+          const x = s.c.x + s.r * zoom * a;
+          const y = s.c.y + s.r * sinP * zoom * Math.sqrt(1 - a * a);
+          k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        });
+        ctx.stroke();
+      };
+      ctx.strokeStyle = lit ? 'rgba(58, 44, 32, 0.5)' : 'rgba(24, 18, 13, 0.55)';
+      ctx.lineWidth = Math.max(1, (2 + rnd() * 1.8) * zoom);
+      line(0);
+      if (lit) {
+        ctx.strokeStyle = 'rgba(190, 168, 136, 0.35)';
+        ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
+        line(-0.05);
+      }
+    }
+  };
+
+  /** Sapopema: raiz grossa que nasce da base alargada do tronco, desce serpenteando e afunda no chão (meio enterrada). */
+  TreeTrunk.prototype._figRoot = function (ctx, r, R) {
+    const cam = this.cam;
+    const t = this.t;
+    const z0 = this.z0;
+    const zoom = cam.zoom;
+    const ink = this.ink;
+    const B = FIG.bark;
+    const L = cam.lightScreen;
+    const S = 12;
+    const pts = [];
+    for (let s = 0; s <= S; s++) {
+      const u = s / S;
+      const d = R * 0.85 + (r.len - R * 0.85) * u;
+      const a = r.a + Math.sin(u * 3 + r.wig) * 0.12;
+      const w = r.w * (1 - 0.85 * Math.pow(u, 0.8));
+      const z = z0 + r.zr * Math.pow(1 - u, 2) + w * 0.25;
+      pts.push({ p: cam.p({ x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, z }), r: w * zoom });
+    }
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // contorno só a partir de um pouco fora do tronco (a junta com a casca fica sem risco)
+    for (const [color, grow, from] of [[INK, ink * 2.2, 2], [B.base, 0, 0]]) {
+      ctx.strokeStyle = color;
+      for (let s = from; s + 1 < pts.length; s++) {
+        ctx.lineWidth = pts[s].r * 2 + grow;
+        ctx.beginPath();
+        ctx.moveTo(pts[s].p.x, pts[s].p.y);
+        ctx.lineTo(pts[s + 1].p.x, pts[s + 1].p.y);
+        ctx.stroke();
+      }
+    }
+    for (const [color, side, k] of [[B.shade, -1, 0.5], [B.light, 1, 0.28]]) {
+      ctx.strokeStyle = color;
+      for (let s = 0; s + 1 < pts.length; s++) {
+        const o = pts[s].r * 0.5 * side;
+        ctx.lineWidth = Math.max(0.6, pts[s].r * 2 * k);
+        ctx.beginPath();
+        ctx.moveTo(pts[s].p.x + L.x * o, pts[s].p.y + L.y * o);
+        ctx.lineTo(pts[s + 1].p.x + L.x * o, pts[s + 1].p.y + L.y * o);
         ctx.stroke();
       }
     }
   };
-  /** Tronco da figueira: base alargada, contorno irregular e sulcos das raízes que se fundiram ao tronco. */
-  TreeTrunk.prototype._figTrunk = function (ctx, R, top) {
+
+  /** Galhos grossos: saem do meio do topo do tronco, abrem para fora subindo até a copa, afinando; soltam raízes aéreas. */
+  TreeTrunk.prototype._figLimbs = function (ctx, group, R, zf, rnd) {
+    if (!group.length) return;
     const cam = this.cam;
     const t = this.t;
     const z0 = this.z0;
+    const zoom = cam.zoom;
     const ink = this.ink;
-    const [BASE, SHADE] = BARK.figueira;
-    const N = 12;
-    const rnd = M.rng(Math.round(t.x * 5 + t.y));
-    const wob = Array.from({ length: N + 1 }, () => (rnd() - 0.5) * 0.12);
-    const pts = [];
-    for (let k = 0; k <= N; k++) {
-      const u = k / N;
-      const flare = Math.pow(Math.max(0, 1 - u / 0.22), 2) * 0.55;
-      const r = R * (0.6 + 0.4 * Math.pow(1 - u, 0.8) + flare + wob[k]);
-      const c = cam.p({ x: t.x + Math.sin(u * 2.4 + t.y) * 10, y: t.y, z: z0 + top * u });
-      pts.push({ c, r: r * cam.zoom });
-    }
-    const left = pts.map((p) => ({ x: p.c.x - p.r, y: p.c.y }));
-    const right = pts.map((p) => ({ x: p.c.x + p.r, y: p.c.y })).reverse();
-    const shape = left.concat(right);
-    poly(ctx, shape, null, INK, ink * 2.4);
-    poly(ctx, shape, BASE);
-    // lado da sombra
-    poly(ctx, pts.map((p) => ({ x: p.c.x + p.r * 0.25, y: p.c.y })).concat(right), SHADE);
-    // sulcos: raízes fundidas subindo pelo tronco
+    const B = FIG.bark;
+    const L = cam.lightScreen;
+    const S = 14;
+    const all = group.map((l) => {
+      const pts = [];
+      for (let s = 0; s <= S; s++) {
+        const u = s / S;
+        const d = (l.reach * Math.pow(u, 0.9));
+        const a = l.a + Math.sin(u * 2 + l.seed) * 0.15;
+        const w = { x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, z: z0 + zf - R * 0.2 + l.rise * (1 - Math.pow(1 - u, 2)) + R * 0.3 * u };
+        pts.push({ w, p: cam.p(w), r: (l.w0 + (l.w1 - l.w0) * Math.pow(u, 0.8)) * zoom });
+      }
+      // raízes aéreas penduradas: algumas chegam ao chão, outras param no ar
+      const hangs = [];
+      for (let k = 0; k < l.hang; k++) {
+        const s = Math.floor(S * (0.45 + 0.5 * rnd()));
+        const reach = rnd() < 0.5 ? 0 : 60 + rnd() * 160;
+        hangs.push({ s, end: z0 + reach, sway: (rnd() - 0.5) * 30, w: (2.4 + rnd() * 1.6) * zoom });
+      }
+      return { pts, hangs };
+    });
     ctx.lineCap = 'round';
-    for (let f = 0; f < 7; f++) {
-      const across = -0.85 + (f / 6) * 1.7 + (rnd() - 0.5) * 0.1;
-      const lit = across < 0.25;
-      ctx.strokeStyle = lit ? 'rgba(52, 40, 30, 0.55)' : 'rgba(30, 22, 16, 0.6)';
-      ctx.lineWidth = Math.max(1, (2.2 + rnd() * 1.6) * cam.zoom);
-      ctx.beginPath();
-      pts.forEach((p, k) => {
-        const x = p.c.x + p.r * (across + Math.sin(k * 0.9 + f) * 0.05);
-        k ? ctx.lineTo(x, p.c.y) : ctx.moveTo(x, p.c.y);
-      });
-      ctx.stroke();
-      if (lit) {
-        // luz na quina de cada sulco
-        ctx.strokeStyle = 'rgba(176, 156, 128, 0.35)';
-        ctx.lineWidth = Math.max(0.8, 1.2 * cam.zoom);
-        ctx.beginPath();
-        pts.forEach((p, k) => {
-          const x = p.c.x + p.r * (across - 0.06 + Math.sin(k * 0.9 + f) * 0.05);
-          k ? ctx.lineTo(x, p.c.y) : ctx.moveTo(x, p.c.y);
-        });
-        ctx.stroke();
+    ctx.lineJoin = 'round';
+    for (const { pts, hangs } of all) {
+      for (const h of hangs) {
+        const top = pts[h.s];
+        const end = cam.p({ x: top.w.x + h.sway, y: top.w.y, z: h.end });
+        const mid = cam.p({ x: top.w.x + h.sway * 0.4, y: top.w.y, z: (top.w.z + h.end) / 2 });
+        for (const [color, extra] of [[INK, ink * 1.6], [B.shade, 0]]) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = h.w + extra;
+          ctx.beginPath();
+          ctx.moveTo(top.p.x, top.p.y);
+          ctx.quadraticCurveTo(mid.x, mid.y, end.x, end.y);
+          ctx.stroke();
+        }
       }
     }
-    // galhos grossos entrando na copa
-    const ctop = pts[N].c;
-    for (const [dx, dz, w] of [[-R * 0.9, R * 0.9, R * 0.22], [R * 0.85, R * 1.1, R * 0.2], [R * 0.1, R * 1.4, R * 0.18]]) {
-      const e = cam.p({ x: t.x + dx, y: t.y - dx * 0.3, z: z0 + top + dz });
-      for (const [color, extra] of [[INK, ink * 2], [BASE, 0]]) {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = w * cam.zoom + extra;
-        ctx.beginPath();
-        ctx.moveTo(ctop.x, ctop.y + pts[N].r * 0.3);
-        ctx.quadraticCurveTo((ctop.x + e.x) / 2, (ctop.y + e.y) / 2 - 20 * cam.zoom, e.x, e.y);
-        ctx.stroke();
+    const pass = (color, grow) => {
+      ctx.strokeStyle = color;
+      for (const { pts } of all) {
+        for (let s = 0; s + 1 < pts.length; s++) {
+          ctx.lineWidth = pts[s].r * 2 + grow;
+          ctx.beginPath();
+          ctx.moveTo(pts[s].p.x, pts[s].p.y);
+          ctx.lineTo(pts[s + 1].p.x, pts[s + 1].p.y);
+          ctx.stroke();
+        }
+      }
+    };
+    pass(INK, ink * 2.4);
+    pass(B.base, 0);
+    // sombra embaixo e luz em cima de cada galho (começa um pouco depois da junta, para a forquilha não riscar)
+    for (const [color, side, k] of [[B.shade, -1, 0.45], [B.light, 1, 0.3]]) {
+      ctx.strokeStyle = color;
+      for (const { pts } of all) {
+        for (let s = 2; s + 1 < pts.length; s++) {
+          const o = pts[s].r * 0.55 * side;
+          ctx.lineWidth = Math.max(0.6, pts[s].r * 2 * k);
+          ctx.beginPath();
+          ctx.moveTo(pts[s].p.x + L.x * o, pts[s].p.y + L.y * o);
+          ctx.lineTo(pts[s + 1].p.x + L.x * o, pts[s + 1].p.y + L.y * o);
+          ctx.stroke();
+        }
       }
     }
-    this._figGlyphs(ctx, pts.filter((p, k) => k % 2 === 0));
   };
 
   /** Símbolos entalhados no tronco da figueira, que brilham em verde-água. */
@@ -799,7 +913,7 @@
     ctx.lineCap = 'round';
     for (const [k, s] of [[1, 34], [2, 28], [3, 22]]) {
       const p = pts[k].c;
-      const x = p.x - pts[k].r * 0.15;
+      const x = p.x - (pts[k].r || 0) * 0.15;
       const y = p.y;
       const r = s * z;
       ctx.beginPath(); // losango com um olho no meio
@@ -834,7 +948,7 @@
     }
     get center() {
       const t = this.t;
-      return { x: t.x, y: t.y, z: this.z0 + t.h * 0.78 };
+      return { x: t.x, y: t.y, z: this.z0 + t.h * (t.kind === 'figueira' ? 0.8 : 0.78) };
     }
     screenBox() {
       const t = this.t;
@@ -850,19 +964,22 @@
       const r = M.rng(Math.round(t.x * 3 + t.y));
       // bolotas numa cúpula achatada; as de trás/baixo escuras, as de cima/frente claras
       const blobs = [];
-      const n = 13;
-      for (let k = 0; k < n; k++) {
-        const a = (k / n) * M.TAU + r() * 0.5;
-        const d = (k === 0 ? 0 : 0.35 + r() * 0.5) * t.r * 0.62;
-        const z = (r() - 0.35) * t.r * 0.45;
-        const p = { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: c.z + z };
-        blobs.push({ p, r: t.r * (0.34 + r() * 0.16), depth: cam.depth(p) + z * 0.3 });
+      if (t.kind === 'figueira') this._figBlobs(blobs, c, r);
+      else {
+        const n = 13;
+        for (let k = 0; k < n; k++) {
+          const a = (k / n) * M.TAU + r() * 0.5;
+          const d = (k === 0 ? 0 : 0.35 + r() * 0.5) * t.r * 0.62;
+          const z = (r() - 0.35) * t.r * 0.45;
+          const p = { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: c.z + z };
+          blobs.push({ p, r: t.r * (0.34 + r() * 0.16), depth: cam.depth(p) + z * 0.3 });
+        }
+        blobs.push({ p: { x: c.x, y: c.y, z: c.z + t.r * 0.32 }, r: t.r * 0.46, depth: cam.depth({ x: c.x, y: c.y, z: c.z + t.r * 0.32 }) + 40 });
       }
-      blobs.push({ p: { x: c.x, y: c.y, z: c.z + t.r * 0.32 }, r: t.r * 0.46, depth: cam.depth({ x: c.x, y: c.y, z: c.z + t.r * 0.32 }) + 40 });
       blobs.sort((a, b) => a.depth - b.depth);
       const circles = blobs.map((b) => {
         const q = cam.p(b.p);
-        return { x: q.x, y: q.y, r: b.r * cam.zoom };
+        return { x: q.x, y: q.y, r: b.r * cam.zoom, tier: b.tier };
       });
       // contorno da copa toda
       for (const ci of circles) {
@@ -873,7 +990,8 @@
       }
       const L = cam.lightScreen;
       circles.forEach((ci, k) => {
-        const back = k < circles.length * 0.4;
+        // cachos de baixo/trás escuros; na figueira o tom vem da altura do cacho (tier 0 embaixo, 2 em cima)
+        const back = ci.tier !== undefined ? ci.tier === 0 : k < circles.length * 0.4;
         ctx.fillStyle = back ? this.colors.shade : this.colors.base;
         ctx.beginPath();
         ctx.arc(ci.x, ci.y, ci.r, 0, M.TAU);
@@ -894,10 +1012,11 @@
         ctx.arc(ci.x + L.x * ci.r * 0.42, ci.y + L.y * ci.r * 0.42, ci.r, 0, M.TAU, true);
         ctx.fill('evenodd');
         if (!back) {
+          const lift = ci.tier === 2 ? 0.4 : 0.25;
           ctx.fillStyle = this.colors.light;
           ctx.beginPath();
           ctx.arc(ci.x, ci.y, ci.r, 0, M.TAU);
-          ctx.arc(ci.x - L.x * ci.r * 0.25, ci.y - L.y * ci.r * 0.25, ci.r, 0, M.TAU, true);
+          ctx.arc(ci.x - L.x * ci.r * lift, ci.y - L.y * ci.r * lift, ci.r, 0, M.TAU, true);
           ctx.fill('evenodd');
         }
         ctx.restore();
@@ -910,6 +1029,32 @@
         ctx.beginPath();
         ctx.arc(ci.x + Math.cos(a) * ci.r * 0.7, ci.y + Math.sin(a) * ci.r * 0.7, Math.max(1.2, 4 * cam.zoom), 0, M.TAU);
         ctx.fill();
+      }
+    }
+    /**
+     * Copa da figueira: muitos cachos menores numa cúpula larga e baixa (mais larga do que alta). Na frente do tronco os
+     * cachos sobem até a altura dos galhos, para o tronco e a forquilha aparecerem embaixo da copa (sem o "pirulito").
+     */
+    _figBlobs(blobs, c, r) {
+      const cam = this.cam;
+      const t = this.t;
+      const R = t.trunk || 100;
+      const n = 50;
+      const limitY = cam.p({ x: t.x, y: t.y, z: this.z0 + t.h * 0.6 }).y; // a copa não desce na frente do tronco além disto
+      const trunkX = cam.p({ x: t.x, y: t.y, z: this.z0 }).x;
+      for (let k = 0; k < n; k++) {
+        const a = r() * M.TAU;
+        const q = k < 4 ? r() * 0.3 : Math.sqrt(0.08 + r() * 0.92);
+        const d = q * t.r * 0.95;
+        const z = t.r * (0.24 * (1 - q * q) - 0.06) + (r() - 0.5) * t.r * 0.08;
+        const p = { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: c.z + z };
+        const br = t.r * (0.14 + r() * 0.08);
+        const s = cam.p(p);
+        const near = 1 - M.smoothstep(R * 1.3, R * 2.8, Math.abs(s.x - trunkX) / cam.zoom);
+        const bottom = s.y + br * cam.zoom;
+        if (near > 0 && bottom > limitY) p.z += ((bottom - limitY) / (cam.cosP * cam.zoom)) * near;
+        const rel = (p.z - c.z) / t.r;
+        blobs.push({ p, r: br, depth: cam.depth(p) + (p.z - c.z) * 0.3, tier: rel < -0.02 ? 0 : rel > 0.13 ? 2 : 1 });
       }
     }
     /** A copa (círculo na tela) cobre a caixa do corpo? */
@@ -1132,6 +1277,9 @@
   }
 
   // ------------------------------------------------------------------ miudezas
+  // pedra: tons da rocha (do lado escuro ao topo iluminado), musgo e a grama que cobre a base
+  const ROCK = { dark: [74, 70, 64], light: [206, 200, 186], moss: ['#5d8a3e', '#46733a', '#7aa54d'], grass: ['#4b7c3a', '#3d6a32', '#5b8d43'] };
+
   class Small extends Prop {
     constructor(world, d) {
       const fp = d.x0 !== undefined ? { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 } : { x0: d.x - (d.r || 30), x1: d.x + (d.r || 30), y0: d.y - (d.r || 30), y1: d.y + (d.r || 30) };
@@ -1325,9 +1473,7 @@
           break;
         }
         case 'pedra': {
-          const c = P(d.x, d.y, z0 + d.r * 0.35);
-          const circles = [{ x: c.x, y: c.y, r: d.r * cam.zoom }, { x: c.x + d.r * 0.5 * cam.zoom, y: c.y + d.r * 0.2 * cam.zoom, r: d.r * 0.7 * cam.zoom }];
-          blobCluster(ctx, circles, { base: '#9a948a', shade: '#6f6a62', light: '#c2bcb0' }, ink, cam.lightScreen);
+          this._rock(ctx);
           break;
         }
         case 'poste-praca': {
@@ -1354,6 +1500,120 @@
       }
     }
   }
+  /**
+   * Pedra: rocha de contorno irregular e facetada. Um anel de base (enterrado uns centímetros) e um anel de cima menor;
+   * as faces que a câmera vê ganham tom pela luz (topo claro, lado longe da luz escuro). Musgo no topo iluminado e
+   * fiapos de grama cobrindo a base da frente, para ela parecer meio enterrada. Cada pedra sai diferente (pela posição).
+   */
+  Small.prototype._rock = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const z0 = this.z0;
+    const zoom = cam.zoom;
+    const ink = this.ink;
+    const rnd = M.rng(Math.round(d.x * 13 + d.y * 7));
+    const R = d.r || 40;
+    const H = R * (0.7 + rnd() * 0.35);
+    const N = 7;
+    const rot = rnd() * M.TAU;
+    const lean = { x: (rnd() - 0.5) * R * 0.3, y: (rnd() - 0.5) * R * 0.3 };
+    const base = [];
+    const top = [];
+    for (let k = 0; k < N; k++) {
+      const a = rot + (k / N) * M.TAU + (rnd() - 0.5) * 0.45;
+      const rb = R * (0.82 + rnd() * 0.22);
+      const rt = rb * (0.42 + rnd() * 0.22);
+      base.push({ x: d.x + Math.cos(a) * rb, y: d.y + Math.sin(a) * rb, z: z0 - 5 });
+      top.push({ x: d.x + lean.x + Math.cos(a + 0.2) * rt, y: d.y + lean.y + Math.sin(a + 0.2) * rt, z: z0 + H * (0.78 + rnd() * 0.22) });
+    }
+    const crown = { x: d.x + lean.x * 1.2, y: d.y + lean.y * 1.2, z: z0 + H * 1.04 };
+    // faces: lados (quadriláteros base→topo) e o topo em leque em volta da coroa
+    const faces = [];
+    for (let k = 0; k < N; k++) {
+      const j = (k + 1) % N;
+      faces.push([base[k], base[j], top[j], top[k]]);
+      faces.push([top[k], top[j], crown]);
+    }
+    const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+    const cross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+    const center = { x: d.x, y: d.y, z: z0 + H * 0.4 };
+    const shaded = [];
+    for (const f of faces) {
+      let n = cross(sub(f[1], f[0]), sub(f[2], f[0]));
+      const c = f.reduce((acc, q) => ({ x: acc.x + q.x / f.length, y: acc.y + q.y / f.length, z: acc.z + q.z / f.length }), { x: 0, y: 0, z: 0 });
+      const out = sub(c, center);
+      if (n.x * out.x + n.y * out.y + n.z * out.z < 0) n = { x: -n.x, y: -n.y, z: -n.z }; // normal para fora
+      const l = Math.hypot(n.x, n.y, n.z) || 1;
+      n = { x: n.x / l, y: n.y / l, z: n.z / l };
+      if (n.x * cam.toCamera.x + n.y * cam.toCamera.y + n.z * cam.toCamera.z <= 0) continue; // de costas para a câmera
+      const lit = M.clamp01(0.5 + 0.6 * (n.x * cam.light.x + n.y * cam.light.y + n.z * cam.light.z));
+      const tone = ROCK.dark.map((v, i) => Math.round(v + (ROCK.light[i] - v) * lit));
+      shaded.push({ pts: f.map((q) => cam.p(q)), color: `rgb(${tone.join(',')})`, depth: cam.depth(c), up: n.z, lit });
+    }
+    shaded.sort((a, b) => a.depth - b.depth);
+    // contorno: o casco de todos os pontos na tela
+    const all = base.concat(top, [crown]).map((q) => cam.p(q));
+    const hull = convexHull(all);
+    poly(ctx, hull, ROCK_EDGE, INK, ink * 2.4);
+    for (const f of shaded) {
+      poly(ctx, f.pts, f.color);
+      ctx.strokeStyle = 'rgba(27, 16, 13, 0.28)';
+      ctx.lineWidth = Math.max(0.6, ink * 0.7);
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+    // musgo nas faces de cima, do lado da luz
+    const tops = shaded.filter((f) => f.up > 0.45 && f.lit > 0.55);
+    for (let k = 0; k < Math.min(4, tops.length); k++) {
+      const f = tops[Math.floor(rnd() * tops.length)];
+      const c = f.pts.reduce((acc, q) => ({ x: acc.x + q.x / f.pts.length, y: acc.y + q.y / f.pts.length }), { x: 0, y: 0 });
+      ctx.fillStyle = ROCK.moss[k % ROCK.moss.length];
+      ctx.beginPath();
+      ctx.ellipse(c.x + (rnd() - 0.5) * R * 0.25 * zoom, c.y + (rnd() - 0.5) * R * 0.12 * zoom, R * (0.12 + rnd() * 0.1) * zoom, R * (0.07 + rnd() * 0.05) * zoom, 0, 0, M.TAU);
+      ctx.fill();
+    }
+    // fiapos de grama na base da frente (a pedra parece meio enterrada)
+    ctx.lineCap = 'round';
+    const depth0 = cam.depth({ x: d.x, y: d.y, z: z0 });
+    for (let k = 0; k < N; k++) {
+      const q = base[k];
+      if (cam.depth(q) < depth0) continue;
+      const j = (k + 1) % N;
+      for (let b = 0; b < 3; b++) {
+        const u = rnd();
+        const g = { x: q.x + (base[j].x - q.x) * u, y: q.y + (base[j].y - q.y) * u, z: z0 };
+        const p0 = cam.p(g);
+        const hgt = (7 + rnd() * 9) * zoom;
+        ctx.strokeStyle = ROCK.grass[b % ROCK.grass.length];
+        ctx.lineWidth = Math.max(1, 2.4 * zoom);
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y + 1);
+        ctx.quadraticCurveTo(p0.x + (rnd() - 0.5) * 4 * zoom, p0.y - hgt * 0.6, p0.x + (rnd() - 0.5) * 7 * zoom, p0.y - hgt);
+        ctx.stroke();
+      }
+    }
+  };
+  const ROCK_EDGE = '#5f5a52';
+  /** Casco convexo de pontos na tela (cadeia monótona). */
+  function convexHull(points) {
+    const p = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+    const turn = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const lower = [];
+    for (const q of p) {
+      while (lower.length >= 2 && turn(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+      lower.push(q);
+    }
+    const upper = [];
+    for (let i = p.length - 1; i >= 0; i--) {
+      const q = p[i];
+      while (upper.length >= 2 && turn(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
+      upper.push(q);
+    }
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+  }
+
   function blobCluster(ctx, circles, colors, ink, L) {
     for (const ci of circles) {
       ctx.fillStyle = INK;

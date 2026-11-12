@@ -319,14 +319,25 @@
         const lines = wrap(ctx, a.speech, 220, 6);
         const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 20;
         const h = lines.length * 18 + 12;
-        const x = Math.max(left, Math.min(right - w, q.x - w / 2));
-        let y = tip - 9 - h;
+        let x = Math.max(left, Math.min(right - w, q.x - w / 2));
+        const y0 = tip - 9 - h;
+        const hits = (bx, by) => taken.find((r) => r.id !== a.id && bx < r.x1 && bx + w > r.x0 && by < r.y1 && by + h > r.y0);
+        let y = y0;
         for (let i = 0; i < 8; i++) {
-          const hit = taken.find((r) => r.id !== a.id && x < r.x1 && x + w > r.x0 && y < r.y1 && y + h > r.y0);
+          const hit = hits(x, y);
           if (!hit) break;
           y = hit.y0 - h - 6;
         }
-        y = Math.max(top, y);
+        if (y < top) {
+          // não cabe empilhado (tela baixa, celular deitado): tenta ao lado do que atrapalha, na altura de sempre
+          const hit = hits(x, Math.max(top, y0));
+          const yy = Math.max(top, y0);
+          const sides = hit ? [hit.x1 + 6, hit.x0 - 6 - w].filter((bx) => bx >= left && bx + w <= right && !hits(bx, yy)) : [];
+          if (sides.length) {
+            x = sides.reduce((b, c) => (Math.abs(c + w / 2 - q.x) < Math.abs(b + w / 2 - q.x) ? c : b));
+            y = yy;
+          } else y = Math.max(top, y);
+        }
         taken.push({ id: a.id, x0: x - 3, y0: y - 3, x1: x + w + 3, y1: y + h + 3 });
         placed.push({ q, tip, lines, x, y, w, h });
       }
