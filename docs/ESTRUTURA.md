@@ -37,6 +37,16 @@ que só atacam se você ataca, animações feias; e pediu mapa e minimapa. Ele a
   minha leitura sincera — não recomendo trocar de ferramenta agora. Aproveitei no roteiro o que não depende de
   decisão (celular deitado, modo leve, meta de quadros por segundo, Caminhos como M6). Esperando o dono decidir.
 
+**12/11 — protótipo 2.5D da [arte]** (`prototipos/pindorama-25d/`, já na `main`; versão 8 no ramo da [arte]):
+personagem desenhado por código com esqueleto 3D, câmera isométrica parecida com a do Albion, uma esquina da São
+Paulo de hoje e um exportador de sprites (PNG em 8 direções, com âncora e camadas). Ele não tem servidor, outros
+jogadores, monstros, dano, itens nem salvamento. O dono acha que vamos "largar o jogo atual". Minha recomendação:
+largar o **visual** de hoje (mapas vistos de cima, boneco em pixel, monstros 16x16), mas manter o **motor** (servidor,
+regras, multiplayer, salvamento, painel, dados e testes). Antes de migrar tudo, uma **fatia de teste**: a esquina do
+protótipo como primeiro mapa isométrico do jogo, o herói em sprites exportados, outros jogadores, um monstro e o
+ataque, tudo ligado ao servidor atual, medido no celular do dono. O movimento livre (meu próximo passo) continua
+valendo. Esperando o dono decidir.
+
 Antes, em 9/11:
 Feito pela Estrutura, tudo na `main`:
 - Interface nova (tela de entrada, painel de vida, botões com ícones, chat discreto).
