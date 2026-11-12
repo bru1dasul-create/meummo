@@ -11,7 +11,10 @@ import type { ItemInfo } from '../shared/items';
 import type { TuningFile } from './tuning';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
 
-export type RealmOptions = Omit<WorldOptions, 'links'>;
+export type RealmOptions = Omit<WorldOptions, 'links'> & {
+  /** Id do mapa onde os personagens novos começam (para testar um mapa novo); sem isto, o de `inicial`. */
+  startMap?: string;
+};
 
 /** Um jogador online, como o painel do administrador mostra. */
 export interface AdminPlayer {
@@ -82,7 +85,13 @@ export class Realm {
       if (this.worlds.has(map.id)) throw new Error(`Dois mapas com o mesmo id: "${map.id}".`);
       this.worlds.set(map.id, new World(map, { ...options, links }));
     }
-    this.start = [...this.worlds.values()].find((w) => w.map.start) ?? this.worlds.values().next().value!;
+    if (options.startMap && !this.worlds.has(options.startMap)) {
+      throw new Error(`O mapa inicial "${options.startMap}" não existe. Use um destes: ${[...this.worlds.keys()].join(', ')}.`);
+    }
+    this.start =
+      (options.startMap ? this.worlds.get(options.startMap) : undefined) ??
+      [...this.worlds.values()].find((w) => w.map.start) ??
+      this.worlds.values().next().value!;
   }
 
   /** Quantos estão online, somando todos os mapas. */

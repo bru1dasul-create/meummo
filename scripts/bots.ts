@@ -13,7 +13,7 @@ import { SHOT_COOLDOWN_MS, PROTOCOL_VERSION, WALK_SLICE_MS } from '../src/shared
 import { angleBetween, chebyshev } from '../src/shared/combat';
 import { DX, DY } from '../src/shared/dir';
 import type { GameMap, Tile } from '../src/shared/map';
-import { degreesToward, footTile } from '../src/shared/movement';
+import { footTile, steerDegrees } from '../src/shared/movement';
 import { findPath } from '../src/shared/pathfind';
 import type { ClientMsg, ServerMsg } from '../src/shared/protocol';
 
@@ -190,7 +190,7 @@ class Bot {
       return;
     }
     const next = this.path[0]!;
-    this.send({ t: 'walk', seq: ++this.seq, a: degreesToward(this.x, this.y, next.x, next.y) });
+    this.send({ t: 'walk', seq: ++this.seq, a: steerDegrees(this.x, this.y, next.x, next.y) });
     this.waitingAck = true;
     this.lastStepAt = now;
     if (Math.random() < 0.006) this.send({ t: 'chat', text: pick(PHRASES) });

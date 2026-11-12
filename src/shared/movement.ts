@@ -1,5 +1,5 @@
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, isDiagonal, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
-import type { Walkable } from './map';
+import type { SolidRect, Walkable } from './map';
 
 // Dois jeitos de andar:
 // - os MONSTROS andam de tile em tile (grade), com `canStep` e a busca de caminho;
@@ -97,12 +97,37 @@ export function degreesToward(fromX: number, fromY: number, toX: number, toY: nu
   return ((degrees % 360) + 360) % 360;
 }
 
+/**
+ * Para onde mirar seguindo um caminho (clique para andar): quase alinhado com o ponto, vai reto. Assim, batendo de
+ * raspão na quina de um vão, o escorregão de lado (que só vale andando reto) ajuda a entrar, em vez de a mira
+ * puxar de volta para a quina.
+ */
+export function steerDegrees(fromX: number, fromY: number, toX: number, toY: number): number {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  if (Math.abs(dx) <= 0.12 && Math.abs(dy) > Math.abs(dx)) return dy > 0 ? 90 : 270;
+  if (Math.abs(dy) <= 0.12 && Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 0 : 180;
+  return degreesToward(fromX, fromY, toX, toY);
+}
+
 /** Quanto se anda num pedaço de caminhada (WALK_SLICE_MS), no ritmo de `stepMs` por tile. */
 export function walkDistance(sliceMs: number, stepMs: number): number {
   return sliceMs / stepMs;
 }
 
-/** A caixa do pé com centro em (cx, cy) encosta em algum tile bloqueado (ou sai do mapa)? */
+/** O tile bloqueia o pé inteiro? (Mapa sem o movimento livre exato: o tile que não é andável.) */
+function solidTile(map: Walkable, tx: number, ty: number): boolean {
+  return map.isSolidTile ? map.isSolidTile(tx, ty) : !map.isWalkable(tx, ty);
+}
+
+const NO_RECTS: readonly SolidRect[] = [];
+
+/** O retângulo encosta (com área) na caixa? */
+function overlaps(r: SolidRect, x0: number, y0: number, x1: number, y1: number): boolean {
+  return r.x0 < x1 && r.x1 > x0 && r.y0 < y1 && r.y1 > y0;
+}
+
+/** A caixa do pé com centro em (cx, cy) encosta em algo que bloqueia (tile, retângulo de colisão, fora do mapa)? */
 function boxBlocked(map: Walkable, cx: number, cy: number): boolean {
   const x0 = cx - BODY_HALF_W;
   const x1 = cx + BODY_HALF_W;
@@ -110,7 +135,8 @@ function boxBlocked(map: Walkable, cx: number, cy: number): boolean {
   const y1 = cy + BODY_HALF_H;
   for (let ty = Math.floor(y0); ty <= Math.ceil(y1) - 1; ty++) {
     for (let tx = Math.floor(x0); tx <= Math.ceil(x1) - 1; tx++) {
-      if (!map.isWalkable(tx, ty)) return true;
+      if (solidTile(map, tx, ty)) return true;
+      for (const r of map.solidsAt?.(tx, ty) ?? NO_RECTS) if (overlaps(r, x0, y0, x1, y1)) return true;
     }
   }
   return false;
@@ -129,12 +155,15 @@ function slideAxis(map: Walkable, cx: number, cy: number, d: number, horizontal:
   const y0 = ny - BODY_HALF_H;
   const y1 = ny + BODY_HALF_H;
   let limit = horizontal ? nx : ny;
+  // encosta na borda do que bloqueia e vem primeiro nesta direção (tile inteiro ou retângulo exato)
+  const stopAt = (bx0: number, by0: number, bx1: number, by1: number) => {
+    if (horizontal) limit = d > 0 ? Math.min(limit, bx0 - BODY_HALF_W - GAP) : Math.max(limit, bx1 + BODY_HALF_W + GAP);
+    else limit = d > 0 ? Math.min(limit, by0 - BODY_HALF_H - GAP) : Math.max(limit, by1 + BODY_HALF_H + GAP);
+  };
   for (let ty = Math.floor(y0); ty <= Math.ceil(y1) - 1; ty++) {
     for (let tx = Math.floor(x0); tx <= Math.ceil(x1) - 1; tx++) {
-      if (map.isWalkable(tx, ty)) continue;
-      // encosta na borda do tile bloqueado que vem primeiro nesta direção
-      if (horizontal) limit = d > 0 ? Math.min(limit, tx - BODY_HALF_W - GAP) : Math.max(limit, tx + 1 + BODY_HALF_W + GAP);
-      else limit = d > 0 ? Math.min(limit, ty - BODY_HALF_H - GAP) : Math.max(limit, ty + 1 + BODY_HALF_H + GAP);
+      if (solidTile(map, tx, ty)) stopAt(tx, ty, tx + 1, ty + 1);
+      for (const r of map.solidsAt?.(tx, ty) ?? NO_RECTS) if (overlaps(r, x0, y0, x1, y1)) stopAt(r.x0, r.y0, r.x1, r.y1);
     }
   }
   const from = horizontal ? cx : cy;
@@ -217,6 +246,49 @@ export function sweepBody(map: Walkable, from: Pose, degrees: number, distance: 
 /** A caixa do pé cabe aqui (posição "de canto")? Para conferir pontos de chegada e teleportes. */
 export function bodyFits(map: Walkable, x: number, y: number): boolean {
   return !boxBlocked(map, x + TO_CENTER_X, y + TO_CENTER_Y);
+}
+
+/** Posição "de canto" de quem está com o pé exatamente no ponto (x, y) (em tiles = metros). */
+export function cornerAtFeet(x: number, y: number): { x: number; y: number } {
+  return { x: x - TO_CENTER_X, y: y - (TO_CENTER_Y + BODY_HALF_H) };
+}
+
+/** O ponto do pé (o meio da beirada de baixo da caixa) de quem está nesta posição "de canto". */
+export function feetAt(x: number, y: number): { x: number; y: number } {
+  return { x: x + TO_CENTER_X, y: y + TO_CENTER_Y + BODY_HALF_H };
+}
+
+/** O centro da caixa do pé (para saber se a pessoa está numa área, como a segura). */
+export function footCenter(x: number, y: number): { x: number; y: number } {
+  return { x: x + TO_CENTER_X, y: y + TO_CENTER_Y };
+}
+
+/** Deslocamentos (dentro do tile) para procurar onde o pé cabe: primeiro o lugar de sempre, depois um pouco de lado. */
+const SPOT_OFFSETS: readonly [number, number][] = [
+  [0, 0],
+  [0.3, 0],
+  [-0.3, 0],
+  [0, -0.3],
+  [0.3, -0.3],
+  [-0.3, -0.3],
+];
+
+/**
+ * Onde o pé cabe parado dentro do tile (tx, ty), em posição "de canto" (ou null). Tenta primeiro o meio da faixa
+ * de baixo do tile e depois um pouco de lado: num vão estreito entre dois troncos, o pé cabe fora do meio do tile.
+ */
+export function bodySpotIn(map: Walkable, tx: number, ty: number): { x: number; y: number } | null {
+  if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) return null;
+  for (const [ox, oy] of SPOT_OFFSETS) if (bodyFits(map, tx + ox, ty + oy)) return { x: tx + ox, y: ty + oy };
+  return null;
+}
+
+/**
+ * Para o "clique para andar" do jogador: um tile vale se o pé cabe parado em algum lugar dele. É mais solto que a
+ * grade dos monstros (que bloqueia o tile inteiro que um retângulo toca), então o caminho passa nos vãos entre troncos.
+ */
+export function bodyWalkable(map: Walkable): Walkable {
+  return { width: map.width, height: map.height, isWalkable: (x, y) => bodySpotIn(map, x, y) !== null };
 }
 
 /** Quanto falta para chegar a um ponto (distância em linha reta). */

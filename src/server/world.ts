@@ -45,7 +45,7 @@ import {
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
-import { canStep, degreesToward, sweepBody, walkDistance, walkSlice } from '../shared/movement';
+import { bodyFits, canStep, cornerAtFeet, degreesToward, footCenter, sweepBody, walkDistance, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
@@ -216,8 +216,11 @@ export class World {
 
   /** Põe o NPC no lugar dele (ou no chão livre mais perto, se o mapa mudou e o lugar ficou bloqueado). */
   private placeNpc(def: NpcDef): void {
-    let tile: Tile | null = { x: def.x, y: def.y };
-    if (!this.map.isWalkable(def.x, def.y) || !this.map.isReachable(def.x, def.y)) {
+    // Formato novo: a posição do data/npcs.json é onde fica o pé, em metros (pode ter fração).
+    const exact = this.map.metric ? cornerAtFeet(def.x, def.y) : null;
+    if (exact && bodyFits(this.map, exact.x, exact.y)) return this.addNpc(def, exact);
+    let tile: Tile | null = { x: Math.floor(def.x), y: Math.floor(def.y) };
+    if (!this.map.isWalkable(tile.x, tile.y) || !this.map.isReachable(tile.x, tile.y)) {
       tile = this.map.nearestWalkable(def.x, def.y);
       if (tile && !this.map.isReachable(tile.x, tile.y)) tile = null;
       this.log(
@@ -227,12 +230,16 @@ export class World {
       );
       if (!tile) return;
     }
+    this.addNpc(def, tile);
+  }
+
+  private addNpc(def: NpcDef, spot: Tile): void {
     const worn = emptyEquipment();
     for (const id of def.wears) {
       const slot = this.items.get(id)?.slot;
       if (slot) worn[slot] = id;
     }
-    const npc = new Npc(this.links.nextId(), def, tile.x, tile.y, gearLookOf(worn, this.items));
+    const npc = new Npc(this.links.nextId(), def, spot.x, spot.y, gearLookOf(worn, this.items));
     this.npcs.set(npc.id, npc);
   }
 
@@ -354,7 +361,14 @@ export class World {
 
   /** Onde aparece quem chega por `arrival`: o ponto com esse nome no mapa ('spawn' = perto do nascimento). */
   arrivalSpot(arrival: string): Tile {
-    const point = arrival === 'spawn' ? undefined : this.map.points.get(arrival);
+    if (arrival === 'spawn') return this.pickSpawnTile();
+    // Formato novo: o ponto diz onde fica o pé, exato.
+    const exact = this.map.metric ? this.map.spots.get(arrival) : undefined;
+    if (exact) {
+      const corner = cornerAtFeet(exact.x, exact.y);
+      if (bodyFits(this.map, corner.x, corner.y)) return corner;
+    }
+    const point = this.map.points.get(arrival);
     return (point && this.map.nearestWalkable(point.x, point.y)) || this.pickSpawnTile();
   }
 
@@ -1133,7 +1147,7 @@ export class World {
 
   private playerTouchedBy(x: number, y: number, now: number): Player | null {
     for (const player of this.players.values()) {
-      if (player.dead || now < player.invulnerableUntil) continue;
+      if (player.dead || now < player.invulnerableUntil || this.inSafeArea(player)) continue;
       if (shotTouches(x, y, player.fx, player.fy, SHOT_HIT_RADIUS)) return player;
     }
     return null;
@@ -1143,7 +1157,7 @@ export class World {
 
   private damage(target: Entity, amount: number, attackerId: number, now: number): void {
     if (target.hp <= 0) return;
-    if (target.kind === 'player' && (target.dead || now < target.invulnerableUntil)) return;
+    if (target.kind === 'player' && (target.dead || now < target.invulnerableUntil || this.inSafeArea(target))) return;
     // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
     if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
     target.hp = Math.max(0, target.hp - amount);
@@ -1223,6 +1237,7 @@ export class World {
       monster.targetId !== null &&
       (!target ||
         target.dead ||
+        this.inSafeArea(target) ||
         chebyshev(monster, target) > def.chaseRange ||
         this.zoneDistance(monster) > def.chaseRange + LEASH_MARGIN)
     ) {
@@ -1328,7 +1343,7 @@ export class World {
     if (!song) return; // o administrador tirou o canto no meio
     monster.nextAttackAt = Math.max(monster.nextAttackAt, now + 600);
     for (const player of this.players.values()) {
-      if (player.dead || player.loading || now < player.invulnerableUntil) continue;
+      if (player.dead || player.loading || now < player.invulnerableUntil || this.inSafeArea(player)) continue;
       if (chebyshev(monster, player) > song.range) continue;
       player.charmedUntil = now + song.durationMs;
       player.charmedBy = monster.id;
@@ -1598,6 +1613,7 @@ export class World {
   /** Monstros não entram em parede, em outro monstro nem em cima de jogador. */
   private canMonsterEnter(x: number, y: number): boolean {
     if (!this.map.isWalkable(x, y) || this.monsterAt.has(this.tileKey(x, y))) return false;
+    if (this.map.safeAreas.length > 0 && this.map.touchesSafeArea(x, y)) return false; // área segura: monstro não entra
     for (const player of this.players.values()) if (!player.dead && player.x === x && player.y === y) return false;
     return true;
   }
@@ -1614,7 +1630,7 @@ export class World {
     let best: Player | null = null;
     let bestDistance = Infinity;
     for (const player of this.players.values()) {
-      if (player.dead || player.loading || now < player.unnoticedUntil) continue;
+      if (player.dead || player.loading || now < player.unnoticedUntil || this.inSafeArea(player)) continue;
       const distance = chebyshev(monster, player);
       if (distance <= range && distance < bestDistance) {
         best = player;
@@ -1723,8 +1739,25 @@ export class World {
 
   /** Espalha quem nasce para não ficar todo mundo empilhado no mesmo tile. */
   private pickSpawnTile(): { x: number; y: number } {
+    // Formato novo: nasce com o pé perto do ponto exato (um pouquinho espalhado, para ninguém nascer em cima do outro).
+    const exact = this.map.metric ? this.map.spots.get('spawn') : undefined;
+    if (exact) {
+      for (let i = 0; i < 8; i++) {
+        const angle = this.random() * Math.PI * 2;
+        const radius = i === 7 ? 0 : this.random() * 0.8;
+        const corner = cornerAtFeet(exact.x + Math.cos(angle) * radius, exact.y + Math.sin(angle) * radius);
+        if (bodyFits(this.map, corner.x, corner.y)) return corner;
+      }
+    }
     const options = this.map.walkableAround(this.map.spawn.x, this.map.spawn.y, 2);
     return options[Math.floor(this.random() * options.length)] ?? this.map.spawn;
+  }
+
+  /** O jogador está numa área segura (camada `seguro` do mapa)? Lá monstro não entra, não nota e não acerta. */
+  private inSafeArea(player: Player): boolean {
+    if (this.map.safeAreas.length === 0) return false;
+    const at = footCenter(player.fx, player.fy);
+    return this.map.isSafeAt(at.x, at.y);
   }
 }
 
