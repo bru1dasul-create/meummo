@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exportar sprites do Pindorama</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #1d1716; color: #f7ead2; font: 14px system-ui, sans-serif; }
+  header { padding: 12px 16px 4px; }
+  header p { margin: 4px 0 0; color: #cdbfa6; max-width: 70ch; }
+  form { padding: 8px 16px; display: grid; gap: 10px; }
+  fieldset { border: 1px solid #4a3c35; border-radius: 6px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  legend { padding: 0 4px; color: #e6c98f; }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button { font: inherit; padding: 8px 14px; border-radius: 6px; border: 0; background: #c8642c; color: #fff; cursor: pointer; }
+  button[disabled] { opacity: 0.5; cursor: default; }
+  button.sec { background: #4a3c35; }
+  progress { width: min(420px, 100%); }
+  #status { color: #cdbfa6; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; padding: 8px 16px 24px; }
+  #grid figure { margin: 0; background: repeating-conic-gradient(#2a2220 0 25%, #332a27 0 50%) 0 0 / 16px 16px; border-radius: 4px; }
+  #grid img { width: 100%; display: block; }
+  #grid figcaption { font-size: 11px; color: #cdbfa6; padding: 2px 4px; word-break: break-all; }
+  select, input[type=number] { font: inherit; background: #2a2220; color: #f7ead2; border: 1px solid #4a3c35; border-radius: 4px; padding: 3px 6px; }
+</style>
+</head>
+<body>
+<header>
+  <b>Exportar sprites do personagem</b>
+  <p>Quadros do mesmo tamanho, na mesma escala, com fundo transparente e o pé sempre no mesmo ponto (âncora) em todas as
+  direções. Sai um ZIP com os PNGs e o <code>manifest.json</code> (tamanho, âncora, velocidade, ordem das partes e pontos
+  de encaixe das mãos, cabeça, peito e pés). Com as camadas, cada quadro vem também em pedaços com o nome da parte:
+  empilhados na ordem dos números, dão o quadro inteiro.</p>
+</header>
+<form id="f" onsubmit="return false">
+  <fieldset id="anims"><legend>Animações</legend></fieldset>
+  <fieldset id="dirs"><legend>Direções (s = de frente para a câmera)</legend></fieldset>
+  <div class="row">
+    <label>Classe <select id="classe"></select></label>
+    <label>Escala <input id="escala" type="number" min="0.5" max="4" step="0.25" value="2"> px por cm</label>
+    <label><input type="checkbox" id="partes"> também em camadas por parte (cabeça, cabelo, tronco, braços, pernas)</label>
+  </div>
+  <div class="row">
+    <button id="gerar">Gerar</button>
+    <button id="baixar" class="sec" disabled>Baixar ZIP</button>
+    <progress id="prog" max="1" value="0"></progress>
+    <span id="status"></span>
+  </div>
+</form>
+<div id="grid"></div>
+<script src="js/core/math.js?v=guarda-impacto-r17"></script>
+<script src="js/core/iso.js?v=guarda-impacto-r17"></script>
+<script src="js/core/shapes.js?v=guarda-impacto-r17"></script>
+<script src="js/character/body.js?v=guarda-impacto-r17"></script>
+<script src="js/character/rig.js?v=guarda-impacto-r17"></script>
+<script src="js/character/animator.js?v=guarda-impacto-r17"></script>
+<script src="js/character/renderer.js?v=guarda-impacto-r17"></script>
+<script src="js/character/equipment.js?v=guarda-impacto-r17"></script>
+<script src="js/character/classes.js?v=guarda-impacto-r17"></script>
+<script src="js/guard.js?v=guarda-impacto-r17"></script>
+<script src="js/tools/export.js?v=guarda-impacto-r17"></script>
+<script>
+  const X = PD.exporter;
+  const $ = (id) => document.getElementById(id);
+  const box = (parent, name, value, checked) => {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${value}" ${checked ? 'checked' : ''}> ${name}`;
+    parent.appendChild(l);
+  };
+  X.ANIMACOES.forEach((a) => box($('anims'), a.nome, a.nome, true));
+  X.DIRECOES.forEach((d) => box($('dirs'), d.nome, d.nome, true));
+  for (const c of PD.classes.list()) $('classe').insertAdjacentHTML('beforeend', `<option value="${c.id}">${c.nome}</option>`);
+  const marcados = (id) => [...$(id).querySelectorAll('input:checked')].map((i) => i.value);
+  let ultimo = null;
+
+  async function gerar(opts) {
+    $('gerar').disabled = true;
+    $('baixar').disabled = true;
+    $('grid').innerHTML = '';
+    try {
+      const out = await X.gerar({ ...opts, aoAndar: (f, txt) => { $('prog').value = f; $('status').textContent = txt; } });
+      ultimo = out;
+      const m = out.manifest;
+      $('status').textContent = `${out.arquivos.length} imagens · quadro ${m.quadro.largura}×${m.quadro.altura} px · âncora (${m.ancora.x}, ${m.ancora.y})`;
+      // prévia: o primeiro quadro de cada animação em cada direção
+      for (const q of m.quadros) {
+        if (q.quadro !== 0) continue;
+        const a = out.arquivos.find((f) => f.nome === q.arquivo);
+        const fig = document.createElement('figure');
+        const img = new Image();
+        img.src = a.canvas.toDataURL('image/png');
+        fig.appendChild(img);
+        fig.insertAdjacentHTML('beforeend', `<figcaption>${q.animacao} · ${q.direcao}</figcaption>`);
+        $('grid').appendChild(fig);
+      }
+      $('baixar').disabled = false;
+      return out;
+    } catch (e) {
+      $('status').textContent = 'Erro: ' + (e && e.message ? e.message : e);
+      throw e;
+    } finally {
+      $('gerar').disabled = false;
+    }
+  }
+
+  function zipDe(out) {
+    const files = out.arquivos.map((f) => ({ nome: 'sprites/' + f.nome, dados: X.pngBytes(f.canvas) }));
+    files.push({ nome: 'manifest.json', dados: new TextEncoder().encode(JSON.stringify(out.manifest, null, 1)) });
+    return X.zip(files);
+  }
+
+  $('gerar').addEventListener('click', () =>
+    gerar({
+      classe: $('classe').value,
+      pxPorCm: parseFloat($('escala').value) || 2,
+      animacoes: marcados('anims'),
+      direcoes: marcados('dirs'),
+      partes: $('partes').checked,
+    }).catch(() => {})
+  );
+  $('baixar').addEventListener('click', () => {
+    if (!ultimo) return;
+    const blob = new Blob([zipDe(ultimo)], { type: 'application/zip' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `pindorama_${ultimo.manifest.classe}_sprites.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  });
+  // para a ferramenta de linha de comando (ferramentas/exportar.cjs)
+  window.__export = { gerar, zipDe };
+  window.__exportReady = true;
+</script>
+</body>
+</html>

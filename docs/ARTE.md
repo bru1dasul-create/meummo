@@ -47,13 +47,15 @@ protótipo não mexe no jogo nem no servidor.
 - **Conferir:** `prancha.html` (8 direções e todas as animações) e `index.html` (o jogo; `?fps` mostra quadros por
   segundo). No navegador: `window.__pd` (herói, mundo, câmera, `teleport`, `setZoom`, `pause`).
 - **Página publicada** (para o dono testar no PC e no celular): https://claude.ai/artifact/TfaqVQmFHT1H7YQDMW7dC3
-  (privada; versão 4 em 10/11, com o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
+  (privada; versão 7 em 10/11: tronco na virada, ombro, efeito do soco e braços do pulo; a 6 teve orelha, cabelo dos
+  lados, rosto, ombros e músculos, a 5 o redesenho pela referência e a 4 o refino do andar, da cabeça e do soco). Para republicar no mesmo link: monte a página sem `<!doctype>/<html>/<head>/<body>` (a publicação põe
   o esqueleto), mande os `js/*.js` em `files` e passe esse link como `url`.
 - **Nano Banana:** o dono pôs US$ 5 de crédito pré-pago em 10/11. Os modelos novos (2.1 e 2) davam 503 (lotados);
   o `gemini-2.5-flash-image` funcionou. Sem mandar a referência em pixel (só texto), ele sai no estilo HQ. Gasto: 3
   imagens, ~US$ 0,12. Estudos em `prototipos/pindorama-25d/referencias/`.
-- **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, 23 fps
-  (o celular de verdade desenha com a placa de vídeo — falta testar num aparelho real).
+- **Desempenho (navegador de teste, sem placa de vídeo):** ~60 fps no computador; com a CPU 4× mais lenta, ~20 fps
+  em 1280×800 e 13 no celular emulado depois do redesenho (o celular de verdade desenha com a placa de vídeo — falta
+  testar num aparelho real).
 - **Atenção:** Ctrl+W fecha a aba no Chrome; o agachar do Ctrl é de toque (liga/desliga) e há o C.
 - **Revisão crítica (agente) e o que mudou:** rosto com relevo (nariz, ponte, arco da sobrancelha, queixo),
   franja aberta mostrando o "V", cintura menos fina, ombros baixos (pescoço aparece), braços mais longos e mão
@@ -137,6 +139,139 @@ corrigi depois, junto com a emenda do combo, que ainda parava o punho por um qua
 **Ferramentas novas ou mudadas:** `saltos.cjs` (agora com pernas, ponta do pé, pulos e virada correndo), `tira.cjs`
 (tiras de 1/30 s: combo, soco para o lado, virada, parada, corrida, pulo, virada correndo, soco agachado),
 `cabeca.cjs` (cabeça girando 360°), `escorregao.cjs` (ponto que encosta; pé chato abaixo de 2°).
+
+### Redesenho pela referência do dono (10/11)
+O dono gostou do refino e pediu: "melhorar o design do pé e da mão, melhorar o design do rosto, deixa mais imponente,
+arrumar o cabelo também", com uma referência (busto de um guerreiro indígena pintado: faixa trançada na testa,
+cabelo comprido com duas tranças amarradas, coroa de penas vermelhas, pretas e creme, urucum nos olhos com listras
+brancas e uma linha branca no queixo, brincos de contas com penas, colar de garras, capa de penas no ombro e uma
+aljava com flechas).
+- **O que veio da referência:** rosto (maçãs altas, mandíbula larga, queixo quadrado, nariz largo, arco da
+  sobrancelha pesado, olhar estreito), a pintura (faixa vermelha, listras brancas, linha do queixo), a faixa trançada
+  (losangos vermelhos com miolo preto, cordão dourado), cabelo comprido nas costas, as duas tranças com amarrações, a
+  coroa de 5 penas atrás da cabeça, brincos de contas com uma peninha e o colar de garras. Corpo mais imponente:
+  peitorais, dorsais e trapézio maiores, ombros mais largos (`shoulderHalf` 19,6), pescoço mais grosso, braço e
+  antebraço mais fortes.
+- **Mãos e pés:** a mão agora é palma + quatro dedos + polegar (`HAND` em `body.js`); ela fecha no soco e fica solta
+  parada, com linhas suaves entre os dedos no lado que aparece. O pé tem calcanhar, peito do pé, dedão e dedos menores
+  (`FOOT` e `TOES`); os dedos dobram no chão junto com o pé que rola.
+- **O que ficou de fora, de propósito:** a aljava (é arma) e a capa de penas (é peça de roupa por cima do corpo). A
+  regra do protótipo é personagem base sem arma e sem armadura; as duas podem virar equipamento na arquitetura que já
+  existe (`equipment.js`).
+- **Por dentro:** a faixa é um anel em volta da cabeça, calculado uma vez só (a distância até a superfície em cada
+  ângulo) e guardado; as tranças são uma curva suave do lado da cabeça ao peito, em gomos que alternam o lado; a coroa
+  de penas fica num plano atrás da cabeça. Os detalhes pequenos (dedos, gomos, músculos, miolo dos losangos, pontas
+  do cabelo) só aparecem com zoom × densidade da tela ≥ 1,1 (era 1,25: o zoom de começo de um monitor de PC comum,
+  ~1,2, ficava sem eles). Medido com a CPU 4× mais lenta, correndo pela rua, no navegador de teste (sem placa de
+  vídeo): 20 fps em 1280×800, 12 em 1920×950 e 13 no celular emulado — antes do redesenho, 19, 13 e 12. No celular, o
+  personagem ficou mais caro de desenhar (~12 → ~16 ms nesse teste), mas o resto do quadro pesa mais. A faixa é
+  calculada uma vez só e as tranças não têm linhas de dentro automáticas (só os riscos dos gomos): foi o que segurou.
+- **Achado na conferência de perto (zoom 6 a 7) e corrigido:** a faixa cobria as sobrancelhas e espremia os olhos; as
+  costeletas e o alto das tranças viravam "garras" pretas por cima do rosto nas vistas de 3/4 e de lado (vista de
+  cima, a raiz da trança, atrás da orelha, cai na altura dos olhos). Agora a faixa fica acima das sobrancelhas, com a
+  linha do cabelo por baixo dela (senão vira tiara); as costeletas saíram (na referência o cabelo passa por trás da
+  orelha); a cabeça esconde o alto das tranças (`hideInside` no desenho), que nascem embaixo da mandíbula; o brinco
+  fica na frente da trança.
+- **Conferido depois:** escorregão do pé 0,0 cm/s em todos os casos, ossos 0,0000, ponta do pé nunca dentro do chão,
+  passada 150 por minuto sem correção, estados, toque e prancha sem erro, cabeça girando 360° sem nada pulando.
+
+**Ainda pode melhorar:**
+- Na referência caem várias mechas soltas por cima da faixa; aqui são três (mais que isso embola no tamanho do jogo).
+- O rosto tem uma expressão só (a boca não mexe; o olhar e o piscar mexem).
+- Numa janela pequena (zoom × densidade abaixo de 1,1, como 1280×800 num monitor a 100%) a mão vira uma forma só.
+
+### Ajustes do dono depois da versão 5 (10/11)
+O dono viu a versão 5 e pediu: (1) "arruma a orelha dele, fica pra fora do cabelo como se tivesse bugado, ou diminui o
+cabelo dele na lateral, deixa apenas o cabelo caído pelo peito amarrado" ("é pra orelha aparecer"); (2) "a cara ainda
+parece de um rato"; (3) "arruma os ombros, está bem ruinzinho"; (4) "dá pra pôr músculo? Sem exagero!".
+- **Orelha e cabelo dos lados:** a massa do cabelo tinha esferas dos lados que passavam muito da cabeça (até 24 de
+  largura; a cabeça tem 15,5) e mechas caindo em cima da orelha; a orelha, redonda e saltada, ficava "colada" no preto.
+  Agora a massa e a touca são justas (de frente, nada passa da largura da cabeça), não há mecha do lado do rosto (só as
+  tranças) e a orelha é oval, mais alta que larga, encostada na cabeça, com a dobra de dentro (`HEAD.ear`: alto, meio e
+  lóbulo). O brinco pendura no lóbulo novo.
+- **Cara de rato:** o nariz ficava 6 cm à frente da boca (o dobro de um nariz de verdade), com um vão embaixo dele, e as
+  maçãs recuadas: um focinho. Somado à orelha redonda, virava rato. Agora o nariz é mais curto, a boca e o lábio de cima
+  têm volume (esfera `boca`), as maçãs vêm para a frente (rosto mais largo e reto) e os olhos estão um pouco maiores.
+- **Ombros:** o braço era uma peça só, com contorno inteiro, e o deltoide tinha um círculo com espiral pintado: lia como
+  junta de boneco. Agora o tronco tem o alto do ombro (o trapézio desce liso), o braço tem duas peças (o deltoide por
+  cima, afinando no meio do braço, e o braço com bíceps e tríceps), a borda do deltoide é uma linha suave, o contorno do
+  braço some no alto do ombro (`clipOut` no desenho) e o círculo saiu (`BODY_PAINT.shoulderMark: null`; com `{ r }`
+  volta).
+- **Músculos, sem exagero:** linhas finas e suaves (`MUSCLE_LINES` em `body.js`, só do lado que olha para a câmera e só
+  com o detalhe fino ligado) entre o bíceps e o tríceps, no fim do bíceps, no antebraço, na frente da coxa, na "gota" em
+  cima do joelho e na borda da panturrilha; sombra embaixo do peitoral, serrátil na costela, costas um pouco mais em V e
+  volume novo na "gota" do joelho e na outra cabeça da panturrilha.
+- **Conferido:** escorregão 0,0 cm/s, ossos 0,0000, ponta do pé nunca no chão, passada 150 e 220 por minuto sem
+  correção, estados, toque e prancha sem erro, cabeça girando 360° sem pulo. Desempenho com a CPU 4× mais lenta: o
+  personagem ficou ~1 ms mais caro; o jogo, na mesma faixa (18 fps em 1280×800, 12 em 1920×950 e no celular emulado).
+
+### Ajustes do dono depois da versão 6 (10/11)
+O dono pediu: (1) "o tronco ainda está com bug quando vira e está bem feio"; (2) "o ombro está ruim"; (3) "diminui o
+efeito do soco e melhora ele, pois quando está de costas cobre o corpo todo"; (4) "o pulo dele dá uns bugs estranhos".
+Achei as causas filmando quadro a quadro (giro do tronco de 15° em 15°, corrida de costas, pulo de lado e de 3/4, soco
+no jogo de costas e de lado) e desligando peça por peça:
+- **Tronco na virada:** três defeitos de ordem de desenho. (a) A trança do lado de perto era desenhada pela ordem do
+  centro do peito e aparecia por cima das costas: agora ela tem dois trechos, o do ombro (sempre visível, a câmera vê de
+  cima) e o do peito (só na frente quando o peitoral está virado para a câmera; senão, atrás do tronco); com os dois na
+  frente, a trança continua uma peça só (sem emenda). (b) De costas e inclinado (correndo), o alto da pelve subia nas
+  costas e o contorno dela aparecia como um "ovo" na lombar: o alto da pelve desceu (fica logo acima da tanga), peito e
+  pelve não desenham o contorno um em cima do outro (`clipOut`) e o colar, que caía entre os dois na ordem, fica para
+  depois (o tronco é desenhado numa peça só). (c) A ponte do ombro (abaixo) apagava o trecho da trança no ombro.
+- **Ombro:** o deltoide ficava pendurado embaixo de uma "prateleira" do tronco. Agora uma ponte (casco do trapézio ao
+  deltoide, `MOD.SHOULDER` em `body.js`) fecha o vão e a linha do ombro desce lisa do pescoço até o braço, acompanhando o
+  braço quando ele balança; ela é pintada com o tronco, antes do peito (só aparece no vão) e por baixo da trança e do
+  colar; de costas, encolhe para dentro do deltoide (o cabelo já cobre o trapézio). Deltoide um pouco menor e mais
+  baixo; o contorno do braço some no alto do ombro (`SHOULDER.clip`).
+- **Soco:** a estrela tinha ~80 cm (mais larga que o tronco) e era desenhada por cima de tudo. Agora tem ~30 cm, com um
+  anel que abre e some e 4 riscos curtos; o tremor da tela é menor. Soco para longe da câmera (de costas): o efeito é
+  desenhado antes do personagem (`behind` em `world.js`), então o corpo passa na frente dele.
+- **Pulo:** a mola dos braços era mole demais para um pulo de meio segundo: os braços nunca chegavam às poses e ficavam
+  um esticado na frente e o outro cruzado na cara (um "dab"), carregando o balanço da caminhada; depois abriam em "asa
+  de avião". Agora a mola fica firme no pulo (entrando aos poucos: trocar de uma vez dava tranco), os dois braços fazem
+  o mesmo (`JUMP_HANDS` em `animator.js`: para trás no preparo, um balanço para a frente no impulso, soltos e um pouco
+  abertos no ar) e o pouso volta para o braço de andar aos poucos. Trancos dos braços no pulo: 12,8 → 11,6 andando e
+  15,7 → 13,3 correndo (cm/quadro²).
+- **Conferido:** escorregão 0,0 cm/s, ossos 0,0000, ponta do pé nunca no chão, passada 150 e 220 por minuto sem
+  correção, estados, toque, prancha e equipamento de prova sem erro, cabeça girando 360° sem pulo, giro do tronco de 15°
+  em 15° (parado e andando) sem trança por cima das costas. Desempenho com a CPU 4× mais lenta: igual ao da versão 6
+  (17 a 21 fps em 1280×800 conforme a medida, 11 a 12 em 1920×950 e no celular emulado).
+
+### Auditoria e correção pedida pelo dono (versão 8, 10–11/11)
+O dono mandou uma auditoria de 18 itens (anatomia, movimentação e estrutura), 10 testes e um padrão de exportação, com a
+regra "corrija primeiro o personagem, depois as animações e por último a arquitetura; preserve o personagem". Fiz uma
+auditoria com números antes de mexer (`ferramentas/auditoria.cjs` + `js/tools/audit.js`, 45 roteiros; roda também
+numa versão antiga, para comparar) e conferi tudo com ela no fim. O relatório completo (erro, causa, arquivos,
+solução, testes e pendências) está no documento "Pindorama 2.5D — Auditoria e correções (versão 8)".
+- **Personagem:** ombro (cabeças do deltoide no lugar da bola), joelho (patela e canela no lugar da "gota"; a perna
+  pintada como uma peça só), proporções pelo cânone (`BODY` em `body.js`; as animações escalam junto), mãos maiores com
+  dedos em cascata, tornozelo com os maléolos e o tendão, cabelo/penas com a mesma silhueta em todo zoom e amarração
+  das penas, tanga em três colunas que acompanha a coxa, mesma forma em todos os ângulos.
+- **Animações:** a causa do erro de 19–28 cm no pulo era o alcance da perna conferido na altura do chão, com o corpo
+  no ar; agora o alcance usa a pelve de verdade, o pé apoiado gira no ponto que está no chão (calcanhar sobe atrás,
+  ponta sobe na frente) e o pé no ar chega no limite por uma curva suave. Agachado com o peso para trás (centro do
+  corpo de +10,7 para −4 cm), saída do pé do chão sem tranco (andando 9,6 → 5,7 cm/quadro²), mola no agachar.
+- **Estrutura:** validação dos encaixes (`equipment.js`), perfis de classe (`classes.js`), ordem de desenho pelas
+  superfícies (`_depthFix` no `renderer.js`), exportação padronizada em camadas (`exportar.html`, `js/tools/export.js`,
+  `ferramentas/exportar.cjs`) e testes no Node (`ferramentas/testes.cjs`, 40 testes, ~3 s).
+- **Pendências:** tranco no joelho na primeira passada ao começar a correr (15,7; v7: 11,7), trocas de ordem
+  cabelo × trança/orelha, contorno mínimo no zoom bem pequeno, ~20% mais CPU que a versão 7, teste em celular de verdade.
+
+### Revisão 17 — a oficial (12/11)
+O dono continuou o protótipo em outra ferramenta, em cima da minha versão 8, até a **revisão 17**, que passou a ser a
+oficial (combinado entre o dono e a [estrutura]). Ela acrescenta um treino de combate: rival com estilingue, pedra com
+carga (segurar e soltar), defesa frontal com energia, esquiva, queda e som. No repositório entram só o código, o
+`LEIA-ME.md` e, em `prototipos/pindorama-25d/auditoria/`, os arquivos que os testes leem (`medir.cjs`,
+`medir-ritmo.cjs`, `renderer-r8-referencia.js` e 7 `.json` de referência, 248 KB). Os relatórios, PDFs, GIFs e imagens
+(19,6 MB) ficam com o dono.
+- **Conferido aqui:** os meus 40 testes no Node passam; a auditoria (45 roteiros) não acha erro: pé no alvo do IK,
+  ossos sem esticar, pé sem escorregar (no máximo 0,1 cm/s). Dos testes da revisão, 21 passam, 2 não rodam (pedem o
+  pacote `@napi-rs/canvas`, que o projeto não tem) e o `teste-resposta.cjs` falha porque compara com poses das
+  revisões 2 e 3, e o movimento mudou depois. O jogo abre sem erro e os botões de toque funcionam.
+- **Comparado com a versão 8** (tranco das pernas, cm/quadro²): andar 5,7 → 3,0; primeira passada ao começar a
+  correr 15,7 → 8,0 (resolveu a minha pendência); pulo parado 13,5 → 7,3. Piorou: virada de 180° correndo (pernas 9,9
+  → 17,2, braços 3,1 → 14,3, corpo 22 cm à frente dos pés), pulo correndo 11,8 → 15,5 e o tranco dos braços somado
+  (+24%). Desempenho com a CPU 4× mais lenta: 12 quadros por segundo (versão 8: 16).
+- **Atenção para levar ao jogo:** o protótipo chama a queda de "Morrendo/Morto"; no MeuMMO quem perde a vida desmaia.
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):

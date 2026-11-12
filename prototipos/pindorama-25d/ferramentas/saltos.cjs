@@ -44,7 +44,7 @@ const BASE = require('url').pathToFileURL(require('path').resolve(__dirname, '..
           track('tornozelo ' + (i ? 'D' : 'E'), rig.ankle[i], t);
           track('joelho ' + (i ? 'D' : 'E'), rig.knee[i], t);
           // ponta do pé abaixo do chão?
-          const toe = M.at(rig.toe[i], 0, 15.6 - PD.BODY.ballFwd, -4.6 + PD.BODY.ankleHeight - 1.9);
+          const toe = M.at(rig.toe[i], 0, 4.3, 1.55 - 1.55); // ponta do dedão, embaixo
           below = Math.max(below, -(toe.z - (ch.groundZ || 0)));
         }
         track('cabeça', rig.head.o, t);

@@ -1,0 +1,342 @@
+{
+  "rows": [
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 0,
+      "moving": 0.30000000000000004,
+      "minGap": 12.156050335597232
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 45,
+      "moving": 0.30000000000000004,
+      "minGap": 12.156050335597227
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 90,
+      "moving": 0.3999999999999999,
+      "minGap": 8.084424735162761
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 135,
+      "moving": 0.30000000000000004,
+      "minGap": 12.156050335597278
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 180,
+      "moving": 0.3999999999999999,
+      "minGap": 8.084424735162761
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 225,
+      "moving": 0.30000000000000004,
+      "minGap": 12.156050335597268
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 270,
+      "moving": 0.3999999999999999,
+      "minGap": 8.084424735162743
+    },
+    {
+      "hz": 30,
+      "run": false,
+      "direction": 315,
+      "moving": 0.3999999999999999,
+      "minGap": 8.084424735162752
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 0,
+      "moving": 0.30000000000000004,
+      "minGap": 16.05373145962789
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 45,
+      "moving": 0.30000000000000004,
+      "minGap": 16.05373145962782
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 90,
+      "moving": 0.5,
+      "minGap": 6.779960456679717
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 135,
+      "moving": 0.30000000000000004,
+      "minGap": 16.053731459627883
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 180,
+      "moving": 0.5,
+      "minGap": 6.779960456679721
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 225,
+      "moving": 0.30000000000000004,
+      "minGap": 16.053731459627862
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 270,
+      "moving": 0.5,
+      "minGap": 6.779960456679731
+    },
+    {
+      "hz": 30,
+      "run": true,
+      "direction": 315,
+      "moving": 0.5,
+      "minGap": 6.77996045667945
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 0,
+      "moving": 0.28333333333333344,
+      "minGap": 11.988396918031254
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 45,
+      "moving": 0.28333333333333344,
+      "minGap": 11.988396918031235
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 90,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162761
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 135,
+      "moving": 0.28333333333333344,
+      "minGap": 11.988396918031237
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 180,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162761
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 225,
+      "moving": 0.28333333333333344,
+      "minGap": 11.98839691803125
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 270,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162743
+    },
+    {
+      "hz": 60,
+      "run": false,
+      "direction": 315,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162752
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 0,
+      "moving": 0.28333333333333344,
+      "minGap": 16.049446124577372
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 45,
+      "moving": 0.28333333333333344,
+      "minGap": 16.04944612457729
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 90,
+      "moving": 0.4833333333333334,
+      "minGap": 6.6617506461732034
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 135,
+      "moving": 0.28333333333333344,
+      "minGap": 16.04944612457736
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 180,
+      "moving": 0.4833333333333334,
+      "minGap": 6.661750646173175
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 225,
+      "moving": 0.28333333333333344,
+      "minGap": 16.049446124577344
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 270,
+      "moving": 0.4833333333333334,
+      "minGap": 6.661750646173189
+    },
+    {
+      "hz": 60,
+      "run": true,
+      "direction": 315,
+      "moving": 0.4833333333333334,
+      "minGap": 6.661750646173057
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 0,
+      "moving": 0.2749999999999999,
+      "minGap": 11.562986049957926
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 45,
+      "moving": 0.2749999999999999,
+      "minGap": 11.562986049957994
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 90,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162761
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 135,
+      "moving": 0.2749999999999999,
+      "minGap": 11.562986049958017
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 180,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162761
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 225,
+      "moving": 0.2749999999999999,
+      "minGap": 11.562986049958011
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 270,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162743
+    },
+    {
+      "hz": 120,
+      "run": false,
+      "direction": 315,
+      "moving": 0.3833333333333333,
+      "minGap": 8.084424735162752
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 0,
+      "moving": 0.2749999999999999,
+      "minGap": 16.04876416689654
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 45,
+      "moving": 0.2749999999999999,
+      "minGap": 16.048764166896483
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 90,
+      "moving": 0.4833333333333334,
+      "minGap": 6.601220063011155
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 135,
+      "moving": 0.2749999999999999,
+      "minGap": 16.048764166896554
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 180,
+      "moving": 0.4833333333333334,
+      "minGap": 6.601220063011148
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 225,
+      "moving": 0.2749999999999999,
+      "minGap": 16.048764166896536
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 270,
+      "moving": 0.4833333333333334,
+      "minGap": 6.601220063011176
+    },
+    {
+      "hz": 120,
+      "run": true,
+      "direction": 315,
+      "moving": 0.4833333333333334,
+      "minGap": 6.6012200630109374
+    }
+  ],
+  "maxDelta": 0,
+  "failures": []
+}

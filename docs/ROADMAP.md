@@ -50,6 +50,18 @@ Tudo isto se ajusta mexendo em números, sem programar:
   soco em 8 direções, esquina de São Paulo, controles de PC e celular, arquitetura de equipamento sem itens
 - [x] **[arte]** Protótipo 2.5D, refino pedido pelo dono em 10/11: soco sem trancos, cabeça girando com o corpo e
   andar menos robótico (diagnóstico medido e plano em `docs/ARTE.md`)
+- [x] **[arte]** Protótipo 2.5D, redesenho pela referência do dono (10/11): rosto mais forte com pintura de urucum,
+  faixa trançada, cabelo comprido com duas tranças, coroa de penas, brincos e colar de garras, corpo mais largo,
+  mãos com dedos e pés com dedos (sem arma e sem armadura: a aljava e a capa de penas ficam para equipamento)
+- [x] **[arte]** Protótipo 2.5D, ajustes do dono na versão 5: orelha à mostra (cabelo dos lados puxado para trás),
+  rosto sem "focinho", ombros sem junta de boneco e músculos sem exagero
+- [x] **[arte]** Protótipo 2.5D, ajustes do dono na versão 6: tronco sem defeitos na virada (trança e lombar), ombro
+  liso do pescoço ao braço, efeito do soco menor (e atrás do corpo de costas) e braços do pulo sem "dab"
+- [x] **[arte]** Protótipo 2.5D, auditoria do dono (versão 8): ombro, joelho, proporções, mãos, pés, cabelo, penas e
+  tanga; pulo sem erro no IK (era 19–28 cm), agachado com peso para trás, transições; validação de encaixes, perfis de
+  classe, ordem de desenho pelas superfícies e exportação de sprites padronizados em camadas (`exportar.html`)
+- [x] **[arte]** Protótipo 2.5D: revisão 17 do dono (combate de treino com estilingue, carga, guarda com energia,
+  esquiva, queda e som) no repositório como a oficial, só código, LEIA-ME e dados dos testes
 - [ ] **[dono]** Decidir o rumo depois do protótipo: levar o personagem procedural para o jogo, mudar a câmera para
   isométrica (refaz todos os mapas) ou seguir só com o estilo
 - [ ] **[arte]** Monstros redesenhados no mesmo capricho dos personagens novos (hoje são 16x16, menores que um jogador;

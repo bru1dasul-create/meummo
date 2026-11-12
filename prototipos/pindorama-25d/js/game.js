@@ -17,6 +17,8 @@
   let paused = false;
   let last = 0;
   let rig = null;
+  let combat = null, rival = null, rivalRig = null, rivalRenderer = null;
+  let audio = null;
   const stats = { frames: 0, acc: 0, fps: 0, work: 0, workAvg: 0 };
   let showFps = false;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -66,22 +68,39 @@
     const t0 = performance.now();
 
     const inp = input.frame(hero);
+    if (inp.other.weapon) combat.selectWeapon(inp.other.weapon);
     if (inp.other.bones) renderer.showBones = !renderer.showBones;
-    if (inp.other.help) ui.toggleHelp();
+    if (inp.other.help) toggleHelp();
     if (inp.other.zoomIn) setZoom(zoomUser * 1.12);
     if (inp.other.zoomOut) setZoom(zoomUser / 1.12);
+    if (inp.other.start) mainAction();
+    if (inp.other.restart) restart();
+    if ((inp.attack || inp.attackHeld || inp.guardHeld) && inp.aimPoint) {
+      const b = rivalRenderer.bounds(rivalRig), x = inp.aimPoint.x + cam.viewX, y = inp.aimPoint.y + cam.viewY;
+      if (x >= b.x0 - 10 && x <= b.x1 + 10 && y >= b.y0 - 10 && y <= b.y1 + 10) {
+        const target = rival.death ? rivalRig.chest.o : rival.pos;
+        inp.attackDir = Math.atan2(target.y - hero.pos.y, target.x - hero.pos.x);
+        if (inp.guardHeld) inp.guardDir = inp.attackDir;
+        if (inp.attack) inp.attackTarget = 'enemy';
+      }
+    }
 
-    if (!paused) {
-      hero.update(dt, inp, world);
+    if (!paused && !combat.paused) {
+      combat.update(dt, inp);
+      audio?.update(combat, false);
       rig = PD.rig.buildRig(hero.pose());
       hero.secondary(rig, dt);
+      rivalRig = PD.rig.buildRig(rival.pose());
+      rival.secondary(rivalRig, dt);
       world._dt = dt;
-      world.update(dt, hero);
-    }
+      world.update(dt, hero, [rival]);
+    } else audio?.silence();
 
     // câmera: segue o personagem com suavidade, olhando um pouco para onde ele vai
     const lead = { x: hero.vel.x * 0.22, y: hero.vel.y * 0.22, z: 0 };
-    const goal = { x: hero.pos.x + lead.x, y: hero.pos.y + lead.y, z: 0 };
+    const distance = Math.hypot(rival.pos.x - hero.pos.x, rival.pos.y - hero.pos.y);
+    const pair = combat.phase === 'active' && !rival.death ? 0.32 * (1 - M.smoothstep(420, 800, distance)) : 0;
+    const goal = { x: hero.pos.x + lead.x + (rival.pos.x - hero.pos.x) * pair, y: hero.pos.y + lead.y + (rival.pos.y - hero.pos.y) * pair, z: 0 };
     camTarget = camTarget ? M.damp3(camTarget, goal, 5.5, dt) : goal;
     cam.follow(camTarget);
     if (world.shake > 0 && !reducedMotion) {
@@ -104,6 +123,8 @@
       if (showFps) ui.setFps(`${Math.round(stats.fps)} fps · ${stats.workAvg.toFixed(1)} ms`);
     }
     ui.setLabel(hero.label);
+    ui.setLife(hero);
+    ui.setCombat(combat);
   }
 
   function draw() {
@@ -112,32 +133,74 @@
     ctx.fillStyle = '#4b4e57';
     ctx.fillRect(0, 0, cam.viewW, cam.viewH);
     ctx.setTransform(dpr, 0, 0, dpr, -cam.viewX * dpr, -cam.viewY * dpr);
-    const r = hero.radius;
-    const actor = {
-      fp: { x0: hero.pos.x - r, x1: hero.pos.x + r, y0: hero.pos.y - r, y1: hero.pos.y + r },
-      bounds: renderer.bounds(rig),
-      body: renderer.bounds(rig, 0.35),
-      drawShadow: (c) => renderer.drawShadow(c, rig, hero.groundZ),
-      draw: (c) => renderer.draw(c, rig, hero.look, hero.equipped),
+    const actors = [makeActor(hero, rig, renderer, true), makeActor(rival, rivalRig, rivalRenderer, false)];
+    if (PD.slingshot) for (const stone of combat.projectiles) actors.push(PD.slingshot.actor(stone, cam));
+    world.draw(ctx, actors);
+    for (const e of combat.effects) {
+      if (e.kind === 'stoneImpact') { PD.slingshot.drawImpact(ctx, e, cam, reducedMotion); continue; }
+      if (e.kind === 'block' || e.kind === 'guardBreak') PD.guard?.drawImpact(ctx, e, cam, reducedMotion);
+      if (e.kind === 'block' && e.broke) continue;
+      const q = cam.p({ x: e.x, y: e.y, z: e.z + e.t * 38 });
+      ctx.save(); ctx.globalAlpha = Math.min(1, (e.life - e.t) * 5);
+      ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3;
+      ctx.strokeStyle = '#1b100d'; ctx.fillStyle = e.kind === 'dodge' || e.kind === 'block' ? '#aee5ef' : e.kind === 'guardBreak' ? '#f5aa65' : '#fff0b5';
+      const text = e.kind === 'dodge' ? 'ESQUIVA' : e.kind === 'block' ? 'BLOQUEIO' : e.kind === 'guardBreak' ? 'GUARDA QUEBRADA' : `−${e.amount}`;
+      ctx.strokeText(text, q.x, q.y); ctx.fillText(text, q.x, q.y); ctx.restore();
+    }
+    // a névoa nas bordas da tela é do CSS (#vinheta)
+  }
+
+  function makeActor(character, skeleton, painter, primary) {
+    const r = character.radius;
+    const points = character.death ? [skeleton.head.o, skeleton.chest.o, skeleton.pelvis.o, ...skeleton.knee, ...skeleton.ankle] : null;
+    const footprint = points ? {
+      x0: Math.min(...points.map(p => p.x)) - 14, x1: Math.max(...points.map(p => p.x)) + 14,
+      y0: Math.min(...points.map(p => p.y)) - 14, y1: Math.max(...points.map(p => p.y)) + 14,
+    } : { x0: character.pos.x - r, x1: character.pos.x + r, y0: character.pos.y - r, y1: character.pos.y + r };
+    return {
+      entity: character, primary,
+      groundedCorpse: !!character.death && character.pos.z < 1 && Math.abs(skeleton.chest.u.z) < 0.25,
+      fp: footprint,
+      bounds: painter.bounds(skeleton),
+      body: painter.bounds(skeleton, 0.35),
+      drawShadow: (c) => {
+        if (!primary && !character.death) {
+          c.save(); c.translate(0, -character.groundZ * cam.cosP * cam.zoom); c.transform(...cam.groundMatrix());
+          c.strokeStyle = '#c14e40'; c.lineWidth = 2.5 / cam.zoom;
+          c.beginPath(); c.arc(character.pos.x, character.pos.y, 33, 0, Math.PI * 2); c.stroke();
+          const warning = combat.telegraph;
+          if (warning) {
+            const range = warning.kind === 'stone' ? warning.range : 105, cone = warning.kind === 'stone' ? 0.075 : 0.48;
+            c.fillStyle = 'rgba(177,47,26,0.14)'; c.strokeStyle = '#a12d22'; c.lineWidth = 3 / cam.zoom;
+            c.beginPath(); c.moveTo(character.pos.x, character.pos.y); c.arc(character.pos.x, character.pos.y, range, warning.dir - cone, warning.dir + cone); c.closePath(); c.fill(); c.stroke();
+            c.fillStyle = 'rgba(242,136,35,0.5)';
+            c.beginPath(); c.moveTo(character.pos.x, character.pos.y); c.arc(character.pos.x, character.pos.y, range * warning.progress, warning.dir - cone, warning.dir + cone); c.closePath(); c.fill();
+          }
+          c.restore();
+        }
+        painter.drawShadow(c, skeleton, character.groundZ);
+      },
+      draw: (c) => {
+        painter.draw(c, skeleton, character.look, character.equipped, primary ? PD.classes.appearanceOf(character) : combat.rivalAppearance);
+        PD.slingshot?.drawCharge(c, character, skeleton, cam, reducedMotion);
+      },
     };
-    world.draw(ctx, [actor]);
-    // a névoa nas bordas da tela é do CSS (#vinheta): o navegador desenha sem custo por quadro
   }
 
   function start() {
     resize();
+    if (PD.GameAudio) audio = new PD.GameAudio();
     world = new PD.World(cam);
     world._dpr = cam.dpr;
-    const sp = PD.MAP.spawn;
-    hero = new PD.Character(sp.x, sp.y, Math.PI / 4);
-    hero.groundZ = world.heightAt(sp.x, sp.y);
-    renderer = new PD.CharacterRenderer(cam);
+    createRound(false);
     input = new PD.Input(canvas, cam, ui);
     ui.setMode(input.mode);
     input.onMode = (m) => ui.setMode(m);
     rig = PD.rig.buildRig(hero.pose());
     window.addEventListener('resize', resize);
     window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+    window.addEventListener('blur', () => { input.cancelActions(); combat.setPaused(true); audio?.silence(); ui.setCombat(combat); });
+    document.addEventListener?.('visibilitychange', () => { if (document.hidden) { input.cancelActions(); combat.setPaused(true); audio?.silence(); ui.setCombat(combat); } });
     // não perde o jogo sem querer (ex.: Ctrl+W): o navegador pergunta antes de fechar
     window.addEventListener('beforeunload', (e) => {
       if (hero && hero.time > 3) {
@@ -156,8 +219,14 @@
       renderer.showBones = !renderer.showBones;
       document.getElementById('btn-bones').setAttribute('aria-pressed', renderer.showBones ? 'true' : 'false');
     });
-    on('btn-help', () => ui.toggleHelp());
-    on('help-close', () => ui.toggleHelp(false));
+    on('btn-help', toggleHelp);
+    on('btn-death', () => { ui.toggleHelp(false); combat.setPaused(false); hero.die(); });
+    on('btn-hit', () => { ui.toggleHelp(false); combat.setPaused(false); hero.reactToHit(); });
+    on('btn-restart', restart);
+    on('btn-training', mainAction);
+    on('weapon-fists', () => { combat.selectWeapon('fists'); ui.setCombat(combat); });
+    on('weapon-slingshot', () => { combat.selectWeapon('slingshot'); ui.setCombat(combat); });
+    on('help-close', () => { ui.toggleHelp(false); combat.setPaused(false); });
     on('btn-zoom-in', () => setZoom(zoomUser * 1.15));
     on('btn-zoom-out', () => setZoom(zoomUser / 1.15));
     on('btn-full', async () => {
@@ -184,9 +253,51 @@
     }
   }
 
+  function toggleHelp() {
+    ui.toggleHelp();
+    if (!ui.help.hidden) input.cancelActions();
+    combat.setPaused(!ui.help.hidden);
+    if (!ui.help.hidden) audio?.silence();
+  }
+
+  function mainAction() {
+    input?.cancelActions();
+    ui.toggleHelp(false);
+    if (combat.paused) { combat.setPaused(false); return; }
+    if (combat.phase === 'ready') combat.start();
+    else restart();
+  }
+
+  function createRound(active) {
+    audio?.reset();
+    const sp = PD.MAP.spawn, equipped = { ...(hero && hero.equipped) }, classe = hero && hero.classe;
+    if (world.particles) world.particles.length = 0;
+    world.shake = 0;
+    hero = new PD.Character(sp.x, sp.y, Math.PI / 4, { classe });
+    hero.equipped = equipped;
+    hero.groundZ = world.heightAt(sp.x, sp.y);
+    rig = PD.rig.buildRig(hero.pose());
+    combat = new PD.TrainingCombat(hero, world, { enemyWeapon: 'slingshot' });
+    rival = combat.enemy.character;
+    rivalRig = PD.rig.buildRig(rival.pose());
+    renderer = new PD.CharacterRenderer(cam); rivalRenderer = new PD.CharacterRenderer(cam);
+    if (active) combat.start();
+    camTarget = null;
+  }
+
+  function restart() {
+    if (!combat.canReset) return;
+    input?.cancelActions();
+    ui.toggleHelp(false);
+    createRound(combat.hasStarted);
+    ui.setLife(hero); ui.setCombat(combat);
+  }
+
   // Para testes automáticos (só leitura e comandos simples)
   window.__pd = {
     get hero() { return hero; },
+    get enemy() { return rival; },
+    get combat() { return combat; },
     get world() { return world; },
     get cam() { return cam; },
     get renderer() { return renderer; },
@@ -195,6 +306,7 @@
     setYaw(deg) { hero.yaw = deg * M.DEG; hero.faceYaw = hero.yaw; },
     teleport(x, y) { hero.pos.x = x; hero.pos.y = y; camTarget = null; },
     setZoom,
+    startTraining: mainAction,
     /** Teste da arquitetura de equipamentos: veste um capacete e botas de prova (some ao recarregar). */
     provarEquipamento() {
       const E = PD.equipment;
