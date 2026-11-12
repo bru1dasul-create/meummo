@@ -272,6 +272,9 @@ carga (segurar e soltar), defesa frontal com energia, esquiva, queda e som. No r
   → 17,2, braços 3,1 → 14,3, corpo 22 cm à frente dos pés), pulo correndo 11,8 → 15,5 e o tranco dos braços somado
   (+24%). Desempenho com a CPU 4× mais lenta: 12 quadros por segundo (versão 8: 16).
 - **Atenção para levar ao jogo:** o protótipo chama a queda de "Morrendo/Morto"; no MeuMMO quem perde a vida desmaia.
+- **Na main e no link:** juntei na `main` com o "pode" do dono (12/11) e o link jogável do dono foi para a revisão 17
+  (versão 9 da página). A revisão 17 pede os scripts com `?v=…`; o `montar_pagina.py` agora tira esse sufixo da
+  página publicada (os arquivos vão sem ele).
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
