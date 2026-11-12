@@ -95,8 +95,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   o nome da rede) → Billings → o centro (Sé) no fim do jogo
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Desenho no papel primeiro
-- [ ] **[estrutura + mundo]** Formato do mapa novo: colisão por formas (para o movimento livre), saídas e áreas
-  de monstros
+- [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
+  32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
+  partir do cenário; `saidas`, `monstros`, pontos e propriedades de sempre; `chao` e `cenario` só para o desenho.
+  Falta na [estrutura]: ler `colisao` (o pé usa o retângulo exato; a grade de 1 m dos monstros bloqueia se qualquer
+  retângulo encostar), aceitar tile de 32 px e a **zona segura por área** (camada `seguro`: monstro não entra, não
+  nota e não acerta quem está dentro; a vila do Capão é segura no mesmo mapa da mata)
 - [ ] **[dono]** A **Budega Distribuidora** (o negócio do dono) no Capão: decidir o formato. Recomendação da
   [estrutura]: sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco), como a
   loja e o ponto de troca da vila
