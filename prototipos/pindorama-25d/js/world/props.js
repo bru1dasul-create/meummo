@@ -1286,8 +1286,9 @@
       super(world, fp, { fades: d.kind === 'banca' });
       this.d = d;
       const r = d.r || 30;
-      this.collider = d.x0 !== undefined ? { type: 'box', ...fp } : { type: 'circle', x: d.x, y: d.y, r: d.kind === 'arbusto' ? r * 0.8 : d.kind === 'pedra' ? r : d.kind === 'mesa' ? 60 : 22 };
-      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40 }[d.kind] || 80;
+      const decor = d.kind === 'aguape' || d.kind === 'capivara'; // enfeites: não seguram ninguém
+      this.collider = decor ? null : d.x0 !== undefined ? { type: 'box', ...fp } : { type: 'circle', x: d.x, y: d.y, r: d.kind === 'arbusto' ? r * 0.8 : d.kind === 'pedra' ? r : d.kind === 'mesa' ? 60 : 22 };
+      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60 }[d.kind] || 80;
     }
     screenBox() {
       const f = this.fp;
@@ -1299,7 +1300,9 @@
       const f = this.fp;
       const d = this.d;
       if (d.kind === 'arbusto' || d.kind === 'pedra') circleShadow(path, this.cam, d.x, d.y, d.r * 0.9, this.height * 0.5);
-      else if (d.kind === 'banca' || d.kind === 'banco') boxShadow(path, this.cam, f.x0, f.x1, f.y0, f.y1, this.height);
+      else if (d.kind === 'aguape') return; // boia na água: sem sombra
+      else if (d.kind === 'capivara') circleShadow(path, this.cam, d.x, d.y, 42, 30);
+      else if (d.kind === 'banca' || d.kind === 'banco' || d.kind === 'tronco-caido') boxShadow(path, this.cam, f.x0, f.x1, f.y0, f.y1, this.height);
       else if (d.kind === 'mesa') circleShadow(path, this.cam, d.x, d.y, 45, 60);
       else lineShadow(path, this.cam, d.x, d.y, this.height, 12);
     }
@@ -1474,8 +1477,18 @@
         }
         case 'pedra': {
           this._rock(ctx);
+          if (d.ancestral) this._rockGlyph(ctx);
           break;
         }
+        case 'tronco-caido':
+          this._log(ctx);
+          break;
+        case 'aguape':
+          this._hyacinth(ctx);
+          break;
+        case 'capivara':
+          this._capybara(ctx);
+          break;
         case 'poste-praca': {
           const base = P(d.x, d.y, z0);
           const top = P(d.x, d.y, z0 + (d.h || 340));
@@ -1594,6 +1607,309 @@
     }
   };
   const ROCK_EDGE = '#5f5a52';
+
+  /** Pedra do Véu (pedra ancestral): o mesmo símbolo da figueira, brilhando em verde-água na face da frente. */
+  Small.prototype._rockGlyph = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const R = d.r || 120;
+    const c = cam.p({ x: d.x + R * 0.45, y: d.y + R * 0.45, z: this.z0 + R * 0.42 });
+    const z = cam.zoom;
+    const r = R * 0.3 * z;
+    ctx.save();
+    ctx.shadowColor = '#3fd6c8';
+    ctx.shadowBlur = 12 * z;
+    ctx.strokeStyle = '#7ff5e6';
+    ctx.lineWidth = Math.max(1.2, 3.4 * z);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y - r);
+    ctx.lineTo(c.x + r * 0.7, c.y);
+    ctx.lineTo(c.x, c.y + r);
+    ctx.lineTo(c.x - r * 0.7, c.y);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, r * 0.25, 0, M.TAU);
+    ctx.stroke();
+    // riscos que saem do símbolo, como rachaduras acesas
+    for (const [dx, dy] of [[-1.3, 0.5], [1.2, 0.7], [0.2, -1.4]]) {
+      ctx.beginPath();
+      ctx.moveTo(c.x + dx * r * 0.55, c.y + dy * r * 0.55);
+      ctx.lineTo(c.x + dx * r * 1.05, c.y + dy * r * 1.05);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  // tronco caído e capivara: tons de casca, madeira cortada e pelo
+  const LOG = { base: '#5b4632', shade: '#3c2e21', light: '#7d654a', cut: '#c9a776', ring: '#9a7850', moss: ['#5d8a3e', '#46733a'] };
+  const CAPY = { base: '#8a6a45', shade: '#68502f', light: '#a8865b', dark: '#3b2c1c', nose: '#4a3626' };
+
+  /**
+   * Tronco caído: um cilindro deitado ao longo do lado comprido da caixa (na tela, um cilindro tem sempre a largura do
+   * diâmetro, de qualquer lado que se olhe: um traço grosso resolve o corpo). A ponta que fica virada para a câmera
+   * mostra a madeira cortada com os anéis; musgo por cima e um toco de galho.
+   */
+  Small.prototype._log = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const z0 = this.z0;
+    const zoom = cam.zoom;
+    const ink = this.ink;
+    const L = cam.lightScreen;
+    const rnd = M.rng(Math.round(d.x0 * 5 + d.y0 * 9));
+    const alongX = d.x1 - d.x0 >= d.y1 - d.y0;
+    const r = Math.min((d.h || 60) / 2, (alongX ? d.y1 - d.y0 : d.x1 - d.x0) / 2);
+    const cx = (d.x0 + d.x1) / 2;
+    const cy = (d.y0 + d.y1) / 2;
+    const half = (alongX ? d.x1 - d.x0 : d.y1 - d.y0) / 2 - r * 0.3;
+    const ax = alongX ? 1 : 0;
+    const ay = alongX ? 0 : 1;
+    // a ponta de trás (longe da câmera) e a da frente; o tronco afina um pouco para a de trás
+    const A = { x: cx - ax * half, y: cy - ay * half, z: z0 + r * 0.92 };
+    const B = { x: cx + ax * half, y: cy + ay * half, z: z0 + r * 0.92 };
+    const S = 10;
+    const pts = [];
+    for (let k = 0; k <= S; k++) {
+      const u = k / S;
+      const q = { x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u, z: A.z - r * 0.06 * (1 - u) };
+      pts.push({ p: cam.p(q), r: r * (0.88 + 0.12 * u) * zoom });
+    }
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const pass = (color, grow, off, k) => {
+      ctx.strokeStyle = color;
+      for (let s = 0; s + 1 < pts.length; s++) {
+        const o = pts[s].r * off;
+        ctx.lineWidth = Math.max(0.6, pts[s].r * 2 * k + grow);
+        ctx.beginPath();
+        ctx.moveTo(pts[s].p.x + L.x * o, pts[s].p.y + L.y * o);
+        ctx.lineTo(pts[s + 1].p.x + L.x * o, pts[s + 1].p.y + L.y * o);
+        ctx.stroke();
+      }
+    };
+    // toco de galho (atrás do corpo, saindo para cima)
+    const sb = { x: cx - ax * half * 0.2 - ay * r * 0.6, y: cy - ay * half * 0.2 - ax * r * 0.6, z: z0 + r * 1.3 };
+    const se = { x: sb.x - ay * r * 0.9, y: sb.y - ax * r * 0.9, z: sb.z + r * 1.4 };
+    const p0 = cam.p(sb), p1 = cam.p(se);
+    for (const [color, w] of [[INK, r * 0.5 * zoom + ink * 2], [LOG.base, r * 0.5 * zoom]]) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+    }
+    pass(INK, ink * 2.4, 0, 1);
+    pass(LOG.base, 0, 0, 1);
+    pass(LOG.shade, 0, -0.5, 0.48);
+    pass(LOG.light, 0, 0.5, 0.26);
+    // estrias da casca ao longo do tronco
+    ctx.strokeStyle = 'rgba(30, 22, 15, 0.45)';
+    ctx.lineWidth = Math.max(0.8, 1.6 * zoom);
+    for (const f of [-0.35, 0.05, 0.4]) {
+      ctx.beginPath();
+      pts.forEach((q, k) => {
+        const x = q.p.x - L.y * q.r * f;
+        const y = q.p.y + L.x * q.r * f;
+        k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.stroke();
+    }
+    // musgo por cima
+    for (let k = 0; k < 4; k++) {
+      const q = pts[1 + Math.floor(rnd() * (S - 2))];
+      ctx.fillStyle = LOG.moss[k % 2];
+      ctx.beginPath();
+      ctx.ellipse(q.p.x + L.x * q.r * 0.45, q.p.y + L.y * q.r * 0.45, q.r * (0.35 + rnd() * 0.25), q.r * (0.18 + rnd() * 0.1), 0, 0, M.TAU);
+      ctx.fill();
+    }
+    // a ponta da frente: a seção do tronco (círculo no plano de pé, perpendicular a ele) com os anéis da madeira
+    const ring = (rr) => {
+      const out = [];
+      for (let k = 0; k < 24; k++) {
+        const t = (k / 24) * M.TAU;
+        const u = Math.cos(t) * rr;
+        const w = Math.sin(t) * rr;
+        out.push(cam.p({ x: B.x + (alongX ? 0 : u), y: B.y + (alongX ? u : 0), z: B.z + w }));
+      }
+      return out;
+    };
+    poly(ctx, ring(r), LOG.cut, INK, ink * 2.2);
+    for (const k of [0.68, 0.42, 0.18]) poly(ctx, ring(r * k), null, LOG.ring, Math.max(0.8, 1.3 * zoom));
+  };
+
+  /** Aguapé: um tapete de folhas redondas boiando (círculos deitados na água) com flores lilás no meio. */
+  Small.prototype._hyacinth = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const z0 = this.z0 + 2;
+    const zoom = cam.zoom;
+    const ink = this.ink;
+    const rnd = M.rng(Math.round(d.x * 3 + d.y * 17));
+    const R = d.r || 70;
+    const leaves = [];
+    const n = 5 + Math.floor(R / 14);
+    for (let k = 0; k < n; k++) {
+      const a = rnd() * M.TAU;
+      const dist = Math.sqrt(rnd()) * R * 0.72;
+      const q = { x: d.x + Math.cos(a) * dist, y: d.y + Math.sin(a) * dist, z: z0 };
+      leaves.push({ q, r: R * (0.2 + rnd() * 0.12), notch: rnd() * M.TAU, depth: cam.depth(q) });
+    }
+    leaves.sort((p, q) => p.depth - q.depth);
+    for (const l of leaves) {
+      const c = cam.p(l.q);
+      const rx = l.r * zoom;
+      const ry = l.r * cam.sinP * zoom;
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, rx + ink * 1.2, ry + ink * 1.2, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#3f7a34';
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, rx, ry, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#5c9a45';
+      ctx.beginPath();
+      ctx.ellipse(c.x - rx * 0.18, c.y - ry * 0.22, rx * 0.66, ry * 0.6, 0, 0, M.TAU);
+      ctx.fill();
+      // nervura do centro até a borda
+      ctx.strokeStyle = 'rgba(28, 52, 24, 0.7)';
+      ctx.lineWidth = Math.max(0.6, 1 * zoom);
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(c.x + Math.cos(l.notch) * rx, c.y + Math.sin(l.notch) * ry);
+      ctx.stroke();
+    }
+    // flores: cachinhos lilás um pouco acima das folhas
+    const flowers = R > 60 ? 2 : 1;
+    for (let f = 0; f < flowers; f++) {
+      const a = rnd() * M.TAU;
+      const base = { x: d.x + Math.cos(a) * R * 0.2, y: d.y + Math.sin(a) * R * 0.2, z: z0 };
+      const top = { ...base, z: z0 + 22 + rnd() * 8 };
+      const b = cam.p(base), t = cam.p(top);
+      ctx.strokeStyle = '#2f5f2a';
+      ctx.lineWidth = Math.max(1, 2.2 * zoom);
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.stroke();
+      for (let k = 0; k < 6; k++) {
+        const ang = (k / 6) * M.TAU;
+        const px = t.x + Math.cos(ang) * 4.5 * zoom;
+        const py = t.y + Math.sin(ang) * 3.2 * zoom - 3 * zoom;
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.arc(px, py, 3.4 * zoom + ink * 0.6, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = k % 2 ? '#b892dc' : '#9f74cc';
+        ctx.beginPath();
+        ctx.arc(px, py, 3.4 * zoom, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#f2d34a';
+      ctx.beginPath();
+      ctx.arc(t.x, t.y - 3 * zoom, 1.8 * zoom, 0, M.TAU);
+      ctx.fill();
+    }
+  };
+
+  /**
+   * Capivara (enfeite): corpo de barril deitado na direção em que olha (bolas ao longo do corpo, que ficam redondas de
+   * qualquer lado; contorno de todas antes do recheio), cabeça quadradona mais baixa na frente, focinho escuro, olho e
+   * orelhinhas; perninhas curtas.
+   */
+  Small.prototype._capybara = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const z0 = this.z0;
+    const zoom = cam.zoom;
+    const ink = this.ink;
+    const a = ((d.angle || 0) * Math.PI) / 180;
+    const fx = Math.cos(a);
+    const fy = Math.sin(a);
+    const sx = -fy; // para o lado
+    const sy = fx;
+    const at = (along, side, z) => ({ x: d.x + fx * along + sx * side, y: d.y + fy * along + sy * side, z: z0 + z });
+    // fatias de pé, perpendiculares ao corpo: [onde, raio, altura do centro]
+    const body = [];
+    for (let k = 0; k <= 10; k++) {
+      const u = k / 10;
+      body.push({ c: at(-48 + u * 78, 0, 32 + Math.sin(u * Math.PI) * 4), r: 26 * Math.pow(Math.sin(Math.PI * (0.12 + 0.82 * u)), 0.6) });
+    }
+    const head = [];
+    for (let k = 0; k <= 6; k++) {
+      const u = k / 6;
+      head.push({ c: at(30 + u * 30, 0, 36 - u * 6), r: 16 - u * 4 });
+    }
+
+    // perninhas
+    ctx.lineCap = 'round';
+    for (const [along, side] of [[-34, -12], [-34, 12], [16, -11], [16, 11]]) {
+      const top = cam.p(at(along, side, 20));
+      const foot = cam.p(at(along, side, 1));
+      for (const [color, w] of [[INK, 7 * zoom + ink * 2], [CAPY.dark, 7 * zoom]]) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(top.x, top.y);
+        ctx.lineTo(foot.x, foot.y);
+        ctx.stroke();
+      }
+    }
+    // a cabeça vai na frente ou atrás do corpo, conforme o lado para onde olha
+    const headFront = fx + fy > 0;
+    const drawSlices = (list, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (const sl of list) {
+        const q = cam.p(sl.c);
+        const rr = sl.r * zoom + (color === INK ? ink * 1.3 : 0);
+        ctx.moveTo(q.x + rr, q.y);
+        ctx.arc(q.x, q.y, rr, 0, M.TAU);
+      }
+      ctx.fill();
+    };
+    const parts = headFront ? [body, head] : [head, body];
+    for (const part of parts) {
+      drawSlices(part, INK);
+      drawSlices(part, part === head ? CAPY.shade : CAPY.base);
+    }
+    // luz no lombo
+    const L = cam.lightScreen;
+    ctx.strokeStyle = CAPY.light;
+    ctx.lineWidth = Math.max(1, 9 * zoom);
+    ctx.beginPath();
+    body.slice(2, 9).forEach((sl, i) => {
+      const q = cam.p({ ...sl.c, z: sl.c.z + sl.r * 0.55 });
+      i ? ctx.lineTo(q.x + L.x * 3 * zoom, q.y + L.y * 3 * zoom) : ctx.moveTo(q.x + L.x * 3 * zoom, q.y + L.y * 3 * zoom);
+    });
+    ctx.stroke();
+    // focinho, olho e orelhas
+    const snout = cam.p(at(61, 0, 30));
+    ctx.fillStyle = CAPY.nose;
+    ctx.beginPath();
+    ctx.ellipse(snout.x, snout.y, 7 * zoom, 5.5 * zoom, 0, 0, M.TAU);
+    ctx.fill();
+    const side = cam.toCamera.x * sx + cam.toCamera.y * sy > 0 ? 1 : -1; // o lado da cabeça que a câmera vê
+    const eye = cam.p(at(46, side * 9, 42));
+    ctx.fillStyle = '#120c08';
+    ctx.beginPath();
+    ctx.arc(eye.x, eye.y, Math.max(1.2, 2.6 * zoom), 0, M.TAU);
+    ctx.fill();
+    for (const s of [-1, 1]) {
+      const ear = cam.p(at(36, s * 9, 52));
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(ear.x, ear.y, 4.6 * zoom + ink * 0.8, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = CAPY.dark;
+      ctx.beginPath();
+      ctx.arc(ear.x, ear.y, 4.6 * zoom, 0, M.TAU);
+      ctx.fill();
+    }
+  };
   /** Casco convexo de pontos na tela (cadeia monótona). */
   function convexHull(points) {
     const p = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);

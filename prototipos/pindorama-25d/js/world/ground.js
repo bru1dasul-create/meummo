@@ -539,8 +539,19 @@
           ctx.stroke();
         }
         shapePath(ctx, sh);
-        ctx.fillStyle = mat.base;
+        ctx.fillStyle = sh.color || mat.base;
         ctx.fill();
+        if (sh.type === 'agua') {
+          // reflexo claro junto da margem
+          ctx.save();
+          shapePath(ctx, sh);
+          ctx.clip();
+          shapePath(ctx, sh);
+          ctx.strokeStyle = 'rgba(160, 235, 220, 0.16)';
+          ctx.lineWidth = 70;
+          ctx.stroke();
+          ctx.restore();
+        }
       }
       this._texture(ctx, sh, box, n + 1);
       if (sh.type === 'circulo') this._circleStone(ctx, sh);

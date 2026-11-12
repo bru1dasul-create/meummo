@@ -120,8 +120,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
   (`prototipos/pindorama-25d/js/view.js`); teste sozinho em `clareira.html`
-- [ ] **[arte]** Etapa 4a no 2.5D: o lago (`agua`), a lama, a mata profunda (com `neblina` e `escuro` na camada
-  `areas`), aguapés, capivaras, troncos caídos, a Pedra do Véu (`pedra` com `ancestral`) e os véus
+- [x] **[arte]** Etapa 4a no 2.5D: o lago (`agua`, na `cor` do mapa, com reflexo na margem), a lama, a mata profunda,
+  aguapés (folhas boiando com flor lilás), capivaras (enfeite, nas 8 direções), troncos caídos (deitados, com a ponta
+  cortada e anéis; eles bloqueiam no servidor), a Pedra do Véu (`pedra` com `ancestral`, símbolo aceso) e os véus
+- [ ] **[arte]** Neblina e escuro dentro das áreas com `neblina`/`escuro` (a mata profunda): junto com as atmosferas
+  (Etapa 5)
 - [x] **[estrutura]** Motor do jogo 2.5D (`src/client/novo/`, abre em `/?novo`): entrada, rede, previsão do andar,
   teclado e joystick (andam pela tela), tocar no chão para andar, falar com NPC, aviso de zona segura, outros jogadores;
   com um desenho provisório (bonecos e caixas) até o da [arte] chegar. O servidor manda quem entra pelo jogo novo

@@ -2,7 +2,8 @@
 // "Mapas do mundo novo"): 1 tile = 1 metro, tile de 32 px, tudo em camadas de objetos. Transforma o .tmj no mapa que
 // o mundo do protótipo desenha (medidas em centímetros, x desce para a direita na tela e y desce para a esquerda —
 // as mesmas direções do Tiled visto de cima).
-//  - "chao": áreas do chão, na ordem de desenho (mata, grama, terra, asfalto, trilha em polilinha com `largura`,
+//  - "chao": áreas do chão, na ordem de desenho (mata, grama, terra, asfalto, trilha em polilinha com `largura`, `cor`
+//    opcional, como a da água do lago,
 //    `circulo` com `brilho`);
 //  - "cenario": árvores (`especie`, `copa`, `altura`, `tronco`, em metros), arbusto, pedra, poste, gradil, portão,
 //    pilar e `veu` (pontos do Véu Ancestral);
@@ -53,7 +54,7 @@
       const pr = props(o);
       if (o.polyline) {
         const pts = o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
-        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100 });
+        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor });
       } else if (o.ellipse) {
         const r = rect(o);
         const s = { type: k, kind: 'ellipse', cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2, rx: (r.x1 - r.x0) / 2, ry: (r.y1 - r.y0) / 2 };
@@ -61,9 +62,9 @@
         if (k === 'circulo') map.awakening = { x: s.cx, y: s.cy, r: Math.min(s.rx, s.ry), color: pr.brilho || '#3fd6c8' };
       } else if (o.polygon) {
         const pts = o.polygon.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
-        map.shapes.push({ type: k, kind: 'poly', pts });
+        map.shapes.push({ type: k, kind: 'poly', pts, color: pr.cor });
       } else {
-        map.shapes.push({ type: k, kind: 'rect', ...rect(o) });
+        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor });
       }
     }
 
@@ -77,7 +78,15 @@
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {
-        map.props.push({ kind: 'pedra', x, y, r: (pr.raio || 0.4) * 100 });
+        map.props.push({ kind: 'pedra', x, y, r: (pr.raio || 0.4) * 100, ancestral: !!pr.ancestral, name: o.name || '' });
+      } else if (k === 'tronco-caido') {
+        // deitado ao longo do lado comprido da caixa
+        map.props.push({ kind: 'tronco-caido', ...rect(o), h: (pr.altura || 0.6) * 100 });
+      } else if (k === 'aguape') {
+        map.props.push({ kind: 'aguape', x, y, r: (pr.raio || 0.7) * 100 });
+      } else if (k === 'capivara') {
+        // enfeite (não bloqueia); `olhando` em graus no chão (0 = leste, 90 = sul)
+        map.props.push({ kind: 'capivara', x, y, angle: pr.olhando || 0 });
       } else if (k === 'poste') {
         map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6' });
       } else if (k === 'gradil' || k === 'portao') {

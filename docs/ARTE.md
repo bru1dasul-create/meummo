@@ -333,7 +333,15 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   do joystick), as falas aparecem em cima sem segurar o toque e somem; tocar na caixinha abre o chat (CSS com
   `body:has(canvas.mundo-novo)`, o jogo de hoje não muda). No celular deitado, a faixa da zona fica no alto e menor
   (vale para os dois jogos).
-- Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5) e a luz do poste.
+- **Etapa 4a** (mata e lago, do [mundo]): `tmj.js` lê `tronco-caido` (caixa; deita no lado comprido),
+  `aguape` (ponto com `raio`), `capivara` (ponto com `olhando` em graus; enfeite, sem colisão), `pedra` com
+  `ancestral` e a `cor` das formas do chão (o lago usa '#2f6f6a'). Desenhos em `props.js`: tronco caído (cilindro
+  deitado: na tela tem sempre a largura do diâmetro, então um traço grosso faz o corpo; a ponta virada para a câmera
+  mostra os anéis), aguapé (círculos deitados na água e flor lilás), capivara (bolas ao longo do corpo, que ficam
+  redondas de qualquer lado; com fatias de pé ela virava listras olhando a 135° e 315°) e o símbolo aceso da Pedra do
+  Véu. A água ganhou reflexo claro na margem. Prancha de conferência em `scratchpad` (não fica no repositório).
+- Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5, com a neblina da
+  mata profunda) e a luz do poste.
 - Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página, tocar no Curupira
   funciona nos três (no deitado o chat segurava o toque) e os balões não se cobrem.
 
