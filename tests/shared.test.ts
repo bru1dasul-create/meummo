@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { combineDirs, DOWN, DOWN_LEFT, DOWN_RIGHT, facingOf, LEFT, RIGHT, splitDiagonal, stepDuration, UP, UP_LEFT, UP_RIGHT } from '../src/shared/dir';
+import { combineDirs, type Dir, DOWN, DOWN_LEFT, DOWN_RIGHT, facingOf, LEFT, RIGHT, splitDiagonal, stepDuration, UP, UP_LEFT, UP_RIGHT } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
-import { applyStep, BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, canStep, degreesOfDir, dirOfDegrees, footTile, sweepBody, walkSlice } from '../src/shared/movement';
+import { applyStep, BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, canStep, degreesOfDir, dirOfDegrees, finalApproach, footTile, sweepBody, walkSlice } from '../src/shared/movement';
 import { nameProblem, normalizeName } from '../src/shared/names';
 import { findPath } from '../src/shared/pathfind';
 import { tiledFromAscii } from './helpers';
@@ -220,6 +220,28 @@ describe('movimento livre (jogadores)', () => {
     // colado na parede: não conta como esquiva e não sai do lugar
     const stuck = sweepBody(wall, { x: 3.1, y: 0, dir: DOWN }, degreesOfDir(RIGHT), 3);
     expect(stuck).toMatchObject({ x: 3.1, y: 0, moved: false });
+  });
+
+  it('chegando ao ponto final do "andar até", para em vez de passar do ponto para lá e para cá', () => {
+    // o caso que o [mundo] achou: alvo em x = 46,7 com o personagem um pouco de lado (pedaço de 0,25)
+    const big = GameMap.fromTiled(tiledFromAscii(Array.from({ length: 60 }, () => '.'.repeat(60)), { x: 0, y: 0 }));
+    for (const [sx, sy, tx, ty, piece] of [
+      [46.58, 43.05, 46.7, 43, 0.25],
+      [40, 40, 46.7, 43, 0.25],
+      [40.3, 41.9, 44.15, 41.33, 0.225],
+      [10, 10, 10.07, 10.02, 0.1],
+    ] as const) {
+      let pose: { x: number; y: number; dir: Dir } = { x: sx, y: sy, dir: DOWN };
+      let slices = 0;
+      for (;;) {
+        const degrees = finalApproach(big, pose, { x: tx, y: ty }, piece);
+        if (degrees === null) break;
+        pose = { ...walkSlice(big, pose, degrees, piece) };
+        slices += 1;
+        expect(slices).toBeLessThan(60); // nunca fica indo e voltando
+      }
+      expect(Math.hypot(tx - pose.x, ty - pose.y)).toBeLessThanOrEqual(piece / 2 + 0.01);
+    }
   });
 
   it('o tile de quem está entre dois tiles é o do centro da caixa do pé', () => {

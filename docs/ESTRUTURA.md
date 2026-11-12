@@ -59,6 +59,12 @@ Guarapiranga depois, Santo Amaro e Billings em seguida e o centro (Sé) no fim. 
 com `mundo: 'novo'`: o servidor manda o jogo novo para os mapas do formato novo e o de hoje para os de sempre).
 Próximos: o combate da revisão 17 no servidor (pedra com carga, defesa com energia) e, no jogo novo, loja e missões.
 
+**13/11 — duas correções do andar (achadas pelo [mundo]), valem para os dois jogos:** a trava de mensagens por
+conexão (`session.ts`) era 15 por segundo e o andar solto manda 20 (um pedaço a cada 50 ms): quem andava sem parar
+uns 10 s caía (código 4001, "mensagens demais"). Agora 40 por segundo, com folga de 60 (teste em `world.test.ts`). E
+o "andar até" ficava indo e voltando perto do destino: o último ponto da rota usa `finalApproach` (`movement.ts`),
+que para quando nenhum pedaço aproxima mais (e aí o navegador para de mandar `walk`).
+
 **12/11 — Mapa 01 (decisões do dono, repassadas pelo [mundo]; confirmar com o dono quando chegar a hora):** o
 [mundo] faz em etapas (câmera, planta, uma tela jogável só com a clareira, o resto em 3 pedaços, atmosferas,
 minimapa); o meu trabalho no mapa novo começa na etapa 3, e ele avisa. Ficam comigo: a Budega como a vendinha da

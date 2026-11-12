@@ -10,6 +10,7 @@ import {
   bodyFits,
   bodySpotIn,
   degreesOfDir,
+  finalApproach,
   bodyWalkable,
   cornerAtFeet,
   feetAt,
@@ -278,8 +279,13 @@ class NewWorld implements NewWorldGame {
     this.slow = this.shiftDown; // "andar até" com Shift segurado vai devagar
     while (this.route.length > 0) {
       const next = this.route[0]!;
-      const last = this.route.length === 1;
-      if (Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y) <= (last ? 0.13 : 0.35)) {
+      if (this.route.length === 1) {
+        // ponto final: só anda enquanto o pedaço aproxima de verdade (senão passaria do ponto e voltaria sem parar)
+        const degrees = finalApproach(this.map, this.predicted, next, this.sliceOf(this.slow));
+        if (degrees === null) this.route.shift();
+        return degrees;
+      }
+      if (Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y) <= 0.35) {
         this.route.shift();
         continue;
       }
