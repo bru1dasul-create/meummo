@@ -4,7 +4,7 @@
 //
 // Tudo em METROS, no chão: x para o leste, y para o sul (como o servidor). As posições são do PÉ do personagem.
 
-import type { TiledMap } from '../../shared/map';
+import type { TiledMap, TiledObject } from '../../shared/map';
 
 export interface ActorInfo {
   kind: 'player' | 'npc' | 'monster';
@@ -42,12 +42,34 @@ export interface WorldView {
 
 // ======================= desenho provisório =======================
 
+/** Uma forma do mapa, em metros: retângulo, elipse (dentro da caixa), polígono ou linha com largura (trilha). */
 interface Shape {
   x0: number;
   y0: number;
   x1: number;
   y1: number;
   kind: string;
+  ellipse?: boolean;
+  /** Pontos do polígono (fechado) ou da linha (aberta). */
+  points?: { x: number; y: number }[];
+  /** Linha: largura em metros (propriedade `largura`). */
+  lineWidth?: number;
+}
+
+/** Objeto do Tiled → forma em metros. */
+function shapeOf(o: TiledObject, px: number): Shape {
+  const kind = typeOf(o);
+  const pts = o.polygon ?? o.polyline;
+  if (pts && pts.length > 0) {
+    const points = pts.map((p) => ({ x: (o.x + p.x) / px, y: (o.y + p.y) / px }));
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const box = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys), kind, points };
+    if (!o.polyline) return box;
+    const width = o.properties?.find((p) => p.name === 'largura')?.value;
+    return { ...box, lineWidth: typeof width === 'number' && width > 0 ? width : 2 };
+  }
+  return { x0: o.x / px, y0: o.y / px, x1: (o.x + (o.width ?? 0)) / px, y1: (o.y + (o.height ?? 0)) / px, kind, ellipse: o.ellipse === true };
 }
 
 interface Actor extends ActorInfo {
@@ -72,12 +94,18 @@ const GROUND: Record<string, string> = {
   agua: '#2f6f9f',
   clareira: '#5a8a3c',
   pedra: '#7d7a72',
+  'mata-profunda': '#163b1c',
+  lama: '#4d3a24',
+  asfalto: '#3e3f44',
+  circulo: '#8d9b97',
 };
+/** Coisas da camada `colisao` que ficam no nível do chão (não viram caixa): a beira da água. */
+const FLAT: Record<string, string> = { agua: 'rgba(47, 111, 159, 0.85)' };
 /** Altura (metros) de cada tipo de coisa que bloqueia (camada `colisao`). */
-const HEIGHT: Record<string, number> = { tronco: 1.6, poste: 3, pedra: 0.5, gradil: 1, portao: 2.2, pilar: 2.6, 'mata-fechada': 2.5 };
+const HEIGHT: Record<string, number> = { tronco: 1.6, poste: 3, pedra: 0.5, gradil: 1, portao: 2.2, pilar: 2.6, 'mata-fechada': 2.5, 'tronco-caido': 0.6 };
 const ACTOR_COLORS = { me: '#f2c14e', player: '#6fa8ff', npc: '#7bd389', monster: '#ff6b6b' };
 
-const typeOf = (o: { type?: string; class?: string }) => o.type ?? o.class ?? '';
+const typeOf = (o: { type?: string; class?: string }) => o.type || o.class || '';
 
 export class ProvisionalView implements WorldView {
   private readonly canvas: HTMLCanvasElement;
@@ -85,6 +113,8 @@ export class ProvisionalView implements WorldView {
   private readonly actors = new Map<number, Actor>();
   private readonly ground: Shape[] = [];
   private readonly solids: Shape[] = [];
+  /** Colisão no nível do chão (água): desenhada junto com o chão. */
+  private readonly flat: Shape[] = [];
   private readonly safe: Shape[] = [];
   private readonly canopies: { x: number; y: number; r: number }[] = [];
   private followId: number | null = null;
@@ -103,11 +133,11 @@ export class ProvisionalView implements WorldView {
     const px = map.tilewidth;
     for (const layer of map.layers) {
       for (const o of layer.objects ?? []) {
-        const shape = { x0: o.x / px, y0: o.y / px, x1: (o.x + (o.width ?? 0)) / px, y1: (o.y + (o.height ?? 0)) / px, kind: typeOf(o as never) };
+        const shape = shapeOf(o, px);
         if (layer.name === 'chao' && !o.point) this.ground.push(shape);
-        else if (layer.name === 'colisao' && !o.point) this.solids.push(shape);
+        else if (layer.name === 'colisao' && !o.point) (FLAT[shape.kind] ? this.flat : this.solids).push(shape);
         else if (layer.name === 'seguro' && !o.point) this.safe.push(shape);
-        else if (layer.name === 'cenario' && typeOf(o as never) === 'arvore') {
+        else if (layer.name === 'cenario' && typeOf(o) === 'arvore') {
           const copa = (o.properties?.find((p) => p.name === 'copa')?.value as number | undefined) ?? 3;
           this.canopies.push({ x: o.x / px, y: o.y / px, r: copa / 2 });
         }
@@ -190,13 +220,16 @@ export class ProvisionalView implements WorldView {
     ctx.fillRect(0, 0, w, h);
 
     for (const g of this.ground) this.fillFootprint(g, GROUND[g.kind] ?? '#355c2c');
+    for (const f of this.flat) this.fillFootprint(f, FLAT[f.kind]!);
     ctx.setLineDash([6, 6]);
     for (const area of this.safe) this.strokeFootprint(area, 'rgba(255, 236, 160, 0.55)');
     ctx.setLineDash([]);
 
     // coisas altas e personagens na ordem de quem está mais atrás (menor x + y) para a frente
     const items: { depth: number; draw: () => void }[] = [];
-    for (const s of this.solids) items.push({ depth: s.x1 + s.y1, draw: () => this.drawBox(s, HEIGHT[s.kind] ?? 1.2) });
+    for (const s of this.solids) {
+      if (this.onScreen((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, w, h)) items.push({ depth: s.x1 + s.y1, draw: () => this.drawBox(s, HEIGHT[s.kind] ?? 1.2) });
+    }
     for (const [id, a] of this.actors) {
       const at = this.position(a, now);
       items.push({ depth: at.x + at.y, draw: () => this.drawActor(id, a, at.x, at.y, now) });
@@ -207,6 +240,7 @@ export class ProvisionalView implements WorldView {
     // copas por cima (transparentes perto do seu personagem)
     const me = target ? this.position(target, now) : null;
     for (const c of this.canopies) {
+      if (!this.onScreen(c.x, c.y, w, h)) continue;
       const center = this.toScreen(c.x, c.y);
       const near = me && Math.hypot(me.x - c.x, me.y - c.y) < c.r + 1;
       ctx.fillStyle = near ? 'rgba(40, 110, 50, 0.25)' : 'rgba(40, 110, 50, 0.75)';
@@ -240,6 +274,47 @@ export class ProvisionalView implements WorldView {
     return [this.toScreen(s.x0, s.y0), this.toScreen(s.x1, s.y0), this.toScreen(s.x1, s.y1), this.toScreen(s.x0, s.y1)];
   }
 
+  /** O contorno da forma na tela (retângulo, elipse ou polígono). */
+  private outline(s: Shape): { x: number; y: number }[] {
+    if (s.points) return s.points.map((p) => this.toScreen(p.x, p.y));
+    if (s.ellipse) return this.ellipsePoints((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, (s.x1 - s.x0) / 2, (s.y1 - s.y0) / 2, 40);
+    return this.corners(s);
+  }
+
+  /** Elipse no chão (metros) → pontos na tela. */
+  private ellipsePoints(cx: number, cy: number, rx: number, ry: number, n: number): { x: number; y: number }[] {
+    return Array.from({ length: n }, (_, i) => {
+      const t = (i / n) * Math.PI * 2;
+      return this.toScreen(cx + Math.cos(t) * rx, cy + Math.sin(t) * ry);
+    });
+  }
+
+  /** Perto o bastante da tela para valer a pena desenhar (com folga para o que é alto). */
+  private onScreen(x: number, y: number, w: number, h: number): boolean {
+    const p = this.toScreen(x, y);
+    const margin = 4 * this.scale;
+    return p.x > -margin && p.x < w + margin && p.y > -margin && p.y < h + margin * 1.5;
+  }
+
+  /** Linha com largura no chão (trilha): um pedaço por trecho e um círculo em cada curva. */
+  private fillLine(s: Shape): void {
+    const points = s.points ?? [];
+    const half = (s.lineWidth ?? 2) / 2;
+    for (let i = 0; i + 1 < points.length; i++) {
+      const a = points[i]!;
+      const b = points[i + 1]!;
+      const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const nx = (-(b.y - a.y) / length) * half;
+      const ny = ((b.x - a.x) / length) * half;
+      this.path([this.toScreen(a.x + nx, a.y + ny), this.toScreen(b.x + nx, b.y + ny), this.toScreen(b.x - nx, b.y - ny), this.toScreen(a.x - nx, a.y - ny)]);
+      this.ctx.fill();
+    }
+    for (const p of points) {
+      this.path(this.ellipsePoints(p.x, p.y, half, half, 16));
+      this.ctx.fill();
+    }
+  }
+
   private path(points: { x: number; y: number }[], lift = 0): void {
     const ctx = this.ctx;
     ctx.beginPath();
@@ -249,14 +324,15 @@ export class ProvisionalView implements WorldView {
 
   private fillFootprint(s: Shape, color: string): void {
     this.ctx.fillStyle = color;
-    this.path(this.corners(s));
+    if (s.lineWidth !== undefined) return this.fillLine(s);
+    this.path(this.outline(s));
     this.ctx.fill();
   }
 
   private strokeFootprint(s: Shape, color: string): void {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = 2;
-    this.path(this.corners(s));
+    this.path(this.outline(s));
     this.ctx.stroke();
   }
 

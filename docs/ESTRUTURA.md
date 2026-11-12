@@ -65,6 +65,16 @@ uns 10 s caía (código 4001, "mensagens demais"). Agora 40 por segundo, com fol
 o "andar até" ficava indo e voltando perto do destino: o último ponto da rota usa `finalApproach` (`movement.ts`),
 que para quando nenhum pedaço aproxima mais (e aí o navegador para de mandar `walk`).
 
+**13/11 — o dono já está no jogo novo** ("eu ja estou nesse"): não mexer mais no jogo antigo (só o que for do servidor
+e valer para os dois). Ele estava usando a `clareira.html` da [arte] (servidor de mentira); o jogo de verdade com
+esse visual é o `/?novo` com a `PD.View`, pronto no ramo da [arte] e esperando o "pode" dele (testei: funciona).
+Propus: depois que a [arte] juntar, o endereço normal abre o jogo novo e o antigo vai para `?antigo` (esperando a
+resposta). Pedido do [mundo] feito: o desenho provisório mostra polígono, elipse e trilha (linha com `largura`) do
+chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `seguro` dá erro (antes sumia calado).
+**Achado importante:** com os monstros da etapa 4a (ramo `mundo/etapa-4a`), no `/?novo` os saguis atacam e o
+jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
+novo, passo 1 (roteiro). Avisei o [mundo].
+
 **12/11 — Mapa 01 (decisões do dono, repassadas pelo [mundo]; confirmar com o dono quando chegar a hora):** o
 [mundo] faz em etapas (câmera, planta, uma tela jogável só com a clareira, o resto em 3 pedaços, atmosferas,
 minimapa); o meu trabalho no mapa novo começa na etapa 3, e ele avisa. Ficam comigo: a Budega como a vendinha da

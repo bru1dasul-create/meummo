@@ -15,8 +15,9 @@
 //
 // Formato novo (mundo 2.5D, combinado com o [mundo]): tile de 32 px no Tiled, só como grade — 1 tile = 1 metro.
 // - camada de objetos `colisao`: retângulos que bloqueiam o pé, exatos (tronco, poste, muro...). Propriedade
-//   `bloqueiaTiro` (bool; sem ela, true). Para os monstros e a busca de caminho, o tile que um retângulo toca
-//   fica bloqueado inteiro (monstro nunca atravessa árvore);
+//   `bloqueiaTiro` (bool; sem ela, true). Só retângulos: elipse vale como o retângulo em volta e polígono dá
+//   erro. Para os monstros e a busca de caminho, o tile que um retângulo toca fica bloqueado inteiro (monstro
+//   nunca atravessa árvore);
 // - camada de objetos `seguro`: retângulos de área segura (monstro não entra, não nota e não acerta quem está lá);
 // - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai).
 
@@ -47,6 +48,13 @@ export interface TiledObject {
   width?: number;
   height?: number;
   point?: boolean;
+  /** Tipo do objeto no Tiled ("Class"; nas versões antigas, "Type"). */
+  type?: string;
+  class?: string;
+  /** Formas além do retângulo: elipse (dentro de x/y/width/height) e pontos relativos a x, y. */
+  ellipse?: boolean;
+  polygon?: { x: number; y: number }[];
+  polyline?: { x: number; y: number }[];
   properties?: TiledProperty[];
 }
 export interface TiledLayer {
@@ -307,6 +315,10 @@ export class GameMap implements Walkable {
           if (obj.point && objName) {
             points.set(objName, { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) });
             spots.set(objName, { x: obj.x / tw, y: obj.y / th });
+          }
+          if ((isSolidLayer || isSafeLayer) && (obj.polygon || obj.polyline)) {
+            // sem isto o polígono sumiria calado (largura 0) e a parede ou a área segura não existiria no jogo
+            throw new Error(`O objeto ${obj.id} da camada "${layer.name}" do mapa "${id}" é um polígono ou uma linha: essa camada só aceita retângulos.`);
           }
           if (isSolidLayer && !obj.point) {
             const rect = rectOf(obj);
