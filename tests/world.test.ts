@@ -123,7 +123,7 @@ describe('World — movimento autoritativo (movimento livre)', () => {
     world.requestWalk(player, 5, deg(UP));
     world.requestWalk(player, 5, deg(UP));
     world.requestWalk(player, 4, deg(DOWN));
-    expect(player.queue).toEqual([{ seq: 5, a: deg(UP), dash: false }]);
+    expect(player.queue).toEqual([{ seq: 5, a: deg(UP), dash: false, slow: false }]);
   });
 
   it('descarta a fila e corrige o cliente quando chegam pedidos demais', () => {

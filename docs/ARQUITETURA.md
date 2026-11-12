@@ -77,6 +77,9 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
 - `arte.ts` (da [arte]): carrega os scripts do protótipo que definem o desenho de verdade, o `PD.View`; com ele
   carregado, o motor usa ele no lugar do provisório.
 - `joystick.ts`: o joystick do celular (metade esquerda da tela).
+- **Velocidade** (decisão do dono em 13/11): no mundo novo, correr é o normal (`RUN_SPEED`, 4,5 m/s) e andar devagar
+  (`WALK_SPEED`, 2 m/s) é segurando Shift ou empurrando pouco o joystick; o pedido `walk` leva `slow: true` (protocolo
+  18) e o servidor anda o pedaço do tamanho certo (`sliceDistance`). No jogo de hoje continua 5 tiles por segundo.
 
 ## Por que não tem atraso ao andar
 Esperar a resposta do servidor para mover o personagem daria sensação de lag. Por isso o cliente

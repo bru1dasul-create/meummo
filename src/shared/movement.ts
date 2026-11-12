@@ -1,4 +1,5 @@
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, isDiagonal, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
+import { RUN_SPEED, WALK_SLICE_MS, WALK_SPEED } from './constants';
 import type { SolidRect, Walkable } from './map';
 
 // Dois jeitos de andar:
@@ -113,6 +114,15 @@ export function steerDegrees(fromX: number, fromY: number, toX: number, toY: num
 /** Quanto se anda num pedaço de caminhada (WALK_SLICE_MS), no ritmo de `stepMs` por tile. */
 export function walkDistance(sliceMs: number, stepMs: number): number {
   return sliceMs / stepMs;
+}
+
+/**
+ * Quanto um pedaço de caminhada anda. No mundo novo (`metric`), correndo (RUN_SPEED) ou, devagar, andando
+ * (WALK_SPEED); no jogo de hoje, sempre no ritmo de `stepMs` por tile.
+ */
+export function sliceDistance(metric: boolean, slow: boolean, stepMs: number): number {
+  if (!metric) return walkDistance(WALK_SLICE_MS, stepMs);
+  return ((slow ? WALK_SPEED : RUN_SPEED) * WALK_SLICE_MS) / 1000;
 }
 
 /** O tile bloqueia o pé inteiro? (Mapa sem o movimento livre exato: o tile que não é andável.) */

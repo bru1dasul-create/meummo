@@ -17,7 +17,7 @@ import {
   footTile,
   steerDegrees,
   sweepBody,
-  walkDistance,
+  sliceDistance,
   walkSlice,
   type Pose,
 } from '../../shared/movement';
@@ -79,7 +79,10 @@ class NewWorld implements NewWorldGame {
 
   // Previsão do próprio andar (como no jogo de hoje): anda na hora e o servidor confirma depois.
   private predicted!: Pose;
-  private pending: { seq: number; a: number; dash: boolean }[] = [];
+  private pending: { seq: number; a: number; dash: boolean; slow: boolean }[] = [];
+  /** Andando devagar agora (Shift segurado, ou o joystick empurrado só um pouco); o normal é correr. */
+  private slow = false;
+  private shiftDown = false;
   private seq = 0;
   private walkCredit = WALK_SLICE_MS;
   private walkAt = 0;
@@ -109,6 +112,9 @@ class NewWorld implements NewWorldGame {
     this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
     this.joystick = new Joystick(this.container);
     this.container.addEventListener('pointerdown', this.onPointerDown);
+    window.addEventListener('keydown', this.onKey);
+    window.addEventListener('keyup', this.onKey);
+    window.addEventListener('blur', this.onBlur);
     this.pingTimer = window.setInterval(() => this.ping(), PING_EVERY_MS);
     this.exposeDebug();
   }
@@ -176,6 +182,9 @@ class NewWorld implements NewWorldGame {
     cancelAnimationFrame(this.raf);
     clearInterval(this.pingTimer);
     this.container.removeEventListener('pointerdown', this.onPointerDown);
+    window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('keyup', this.onKey);
+    window.removeEventListener('blur', this.onBlur);
     this.keyboard.destroy();
     this.joystick.destroy();
     this.toast.destroy();
@@ -215,9 +224,17 @@ class NewWorld implements NewWorldGame {
 
   // ======================= andar =======================
 
-  private get sliceTiles(): number {
-    return walkDistance(WALK_SLICE_MS, this.stepMs);
+  /** Quanto anda um pedaço: correndo (o normal) ou devagar (Shift / joystick empurrado de leve). */
+  private sliceOf(slow: boolean): number {
+    return sliceDistance(this.map.metric, slow, this.stepMs);
   }
+
+  private readonly onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Shift') this.shiftDown = event.type === 'keydown';
+  };
+  private readonly onBlur = () => {
+    this.shiftDown = false;
+  };
 
   private here(): Tile {
     return footTile(this.predicted.x, this.predicted.y);
@@ -249,13 +266,16 @@ class NewWorld implements NewWorldGame {
     const held = this.keyboard.current();
     if (held !== null) {
       this.clearRoute();
+      this.slow = this.shiftDown;
       return this.screenDegrees(DX[held.dir], DY[held.dir]);
     }
     const stick = this.joystick.direction();
     if (stick) {
       this.clearRoute();
+      this.slow = stick.light;
       return this.screenDegrees(stick.dx, stick.dy);
     }
+    this.slow = this.shiftDown; // "andar até" com Shift segurado vai devagar
     while (this.route.length > 0) {
       const next = this.route[0]!;
       const last = this.route.length === 1;
@@ -269,14 +289,15 @@ class NewWorld implements NewWorldGame {
   }
 
   private walkOnce(degrees: number): void {
-    const result = walkSlice(this.map, this.predicted, degrees, this.sliceTiles);
+    const slow = this.slow;
+    const result = walkSlice(this.map, this.predicted, degrees, this.sliceOf(slow));
     if (!result.moved && result.dir === this.predicted.dir) {
       this.noteStuck();
       return;
     }
     this.seq += 1;
-    this.pending.push({ seq: this.seq, a: degrees, dash: false });
-    this.conn.send({ t: 'walk', seq: this.seq, a: degrees });
+    this.pending.push({ seq: this.seq, a: degrees, dash: false, slow });
+    this.conn.send(slow ? { t: 'walk', seq: this.seq, a: degrees, slow: true } : { t: 'walk', seq: this.seq, a: degrees });
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
     this.myAngle = degrees;
     this.showMe(WALK_SLICE_MS);
@@ -298,7 +319,7 @@ class NewWorld implements NewWorldGame {
   private onAck(seq: number, server: Pose): void {
     this.pending = this.pending.filter((p) => p.seq > seq);
     let pose: Pose = server;
-    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceTiles);
+    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceOf(p.slow));
     const off = Math.hypot(pose.x - this.predicted.x, pose.y - this.predicted.y);
     if (off > 1e-6) {
       this.predicted = { x: pose.x, y: pose.y, dir: pose.dir };

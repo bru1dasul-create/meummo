@@ -44,8 +44,14 @@ export function parseClientMsg(raw: string): ClientMsg | null {
     }
     case 'walk':
       if (!isWalkAngle(msg.a) || !Number.isSafeInteger(msg.seq) || (msg.seq as number) < 0) return null;
-      if (msg.dash !== undefined && msg.dash !== true) return null;
-      return msg.dash ? { t: 'walk', a: msg.a, seq: msg.seq as number, dash: true } : { t: 'walk', a: msg.a, seq: msg.seq as number };
+      if ((msg.dash !== undefined && msg.dash !== true) || (msg.slow !== undefined && msg.slow !== true)) return null;
+      return {
+        t: 'walk',
+        a: msg.a,
+        seq: msg.seq as number,
+        ...(msg.dash ? { dash: true as const } : {}),
+        ...(msg.slow ? { slow: true as const } : {}),
+      };
     case 'shoot':
       return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
         ? { t: 'shoot', cid: msg.cid as number, a: msg.a }

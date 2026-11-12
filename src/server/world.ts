@@ -45,7 +45,7 @@ import {
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
-import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, footCenter, sweepBody, walkDistance, walkSlice } from '../shared/movement';
+import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
@@ -451,7 +451,7 @@ export class World {
    * O cliente pediu para andar um pedaço (WALK_SLICE_MS) na direção `degrees` (ou rolar, se dash).
    * Entra na fila e é processado no tick, no ritmo do relógio.
    */
-  requestWalk(player: Player, seq: number, degrees: number, dash = false): void {
+  requestWalk(player: Player, seq: number, degrees: number, dash = false, slow = false): void {
     if (player.loading || seq <= player.lastSeq) return;
     player.lastSeq = seq;
     if (player.dead) return;
@@ -462,7 +462,7 @@ export class World {
       player.ackPending = true;
       return;
     }
-    player.queue.push({ seq, a: degrees, dash });
+    player.queue.push({ seq, a: degrees, dash, slow });
   }
 
   /** Estilingue: atira uma pedrinha na direção do ângulo. */
@@ -1007,7 +1007,9 @@ export class World {
       if (!dash && player.walkBudget < WALK_SLICE_MS) break;
       player.queue.shift();
       const from = { x: player.fx, y: player.fy, dir: player.dir };
-      const result = dash ? sweepBody(this.map, from, input.a, DASH_TILES) : walkSlice(this.map, from, input.a, walkDistance(WALK_SLICE_MS, STEP_MS));
+      const result = dash
+        ? sweepBody(this.map, from, input.a, DASH_TILES)
+        : walkSlice(this.map, from, input.a, sliceDistance(this.map.metric, input.slow, STEP_MS));
       if (!dash) player.walkBudget -= WALK_SLICE_MS;
       // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
       if (dash && result.moved) {
