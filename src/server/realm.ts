@@ -143,8 +143,8 @@ export class Realm {
 
   // ---------- pedidos do jogador: vão para o mapa onde ele está ----------
 
-  requestWalk(player: Player, seq: number, degrees: number, dash = false): void {
-    this.worldOf(player)?.requestWalk(player, seq, degrees, dash);
+  requestWalk(player: Player, seq: number, degrees: number, dash = false, slow = false): void {
+    this.worldOf(player)?.requestWalk(player, seq, degrees, dash, slow);
   }
 
   shoot(player: Player, cid: number, angle: number): void {

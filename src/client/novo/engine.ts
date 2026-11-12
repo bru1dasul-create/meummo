@@ -9,6 +9,7 @@ import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import {
   bodyFits,
   bodySpotIn,
+  degreesOfDir,
   bodyWalkable,
   cornerAtFeet,
   feetAt,
@@ -16,7 +17,7 @@ import {
   footTile,
   steerDegrees,
   sweepBody,
-  walkDistance,
+  sliceDistance,
   walkSlice,
   type Pose,
 } from '../../shared/movement';
@@ -78,7 +79,10 @@ class NewWorld implements NewWorldGame {
 
   // Previsão do próprio andar (como no jogo de hoje): anda na hora e o servidor confirma depois.
   private predicted!: Pose;
-  private pending: { seq: number; a: number; dash: boolean }[] = [];
+  private pending: { seq: number; a: number; dash: boolean; slow: boolean }[] = [];
+  /** Andando devagar agora (Shift segurado, ou o joystick empurrado só um pouco); o normal é correr. */
+  private slow = false;
+  private shiftDown = false;
   private seq = 0;
   private walkCredit = WALK_SLICE_MS;
   private walkAt = 0;
@@ -89,6 +93,10 @@ class NewWorld implements NewWorldGame {
   private goingToNpc: number | null = null;
 
   private readonly entities = new Map<number, EntityState>();
+  /** Para onde cada um olha (graus), para o desenho girar contínuo. */
+  private readonly facing = new Map<number, number>();
+  /** Direção do seu último pedido de andar (graus): é para onde o seu personagem olha. */
+  private myAngle = 90;
   private readonly npcs = new Map<number, NpcInfo>();
   private wasSafe: boolean | null = null;
   private raf = 0;
@@ -104,6 +112,9 @@ class NewWorld implements NewWorldGame {
     this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
     this.joystick = new Joystick(this.container);
     this.container.addEventListener('pointerdown', this.onPointerDown);
+    window.addEventListener('keydown', this.onKey);
+    window.addEventListener('keyup', this.onKey);
+    window.addEventListener('blur', this.onBlur);
     this.pingTimer = window.setInterval(() => this.ping(), PING_EVERY_MS);
     this.exposeDebug();
   }
@@ -137,6 +148,7 @@ class NewWorld implements NewWorldGame {
     this.view?.destroy();
     this.view = createView(this.container, json);
     this.entities.clear();
+    this.facing.clear();
     this.npcs.clear();
     this.pending = [];
     this.route = [];
@@ -149,6 +161,7 @@ class NewWorld implements NewWorldGame {
     }
     const you = msg.you;
     this.predicted = { x: you.x, y: you.y, dir: you.dir };
+    this.myAngle = degreesOfDir(you.dir);
     this.addEntity(you, true);
     this.view.follow(this.myId);
     for (const npc of msg.npcs) {
@@ -169,6 +182,9 @@ class NewWorld implements NewWorldGame {
     cancelAnimationFrame(this.raf);
     clearInterval(this.pingTimer);
     this.container.removeEventListener('pointerdown', this.onPointerDown);
+    window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('keyup', this.onKey);
+    window.removeEventListener('blur', this.onBlur);
     this.keyboard.destroy();
     this.joystick.destroy();
     this.toast.destroy();
@@ -191,14 +207,34 @@ class NewWorld implements NewWorldGame {
   private addEntity(e: EntityState, me: boolean): void {
     this.entities.set(e.id, e);
     const feet = feetAt(e.x, e.y);
-    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, dir: e.dir, me });
+    this.facing.set(e.id, degreesOfDir(e.dir));
+    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me });
+  }
+
+  /**
+   * Para onde alguém olha, em graus: o servidor manda só uma das 8 direções, então quem anda olha para onde
+   * andou (o 2.5D gira contínuo); parado, vale a direção do servidor.
+   */
+  private facingOf(id: number, fromX: number, fromY: number, toX: number, toY: number, dir: Dir): number {
+    const moved = Math.hypot(toX - fromX, toY - fromY) > 0.01;
+    const angle = moved ? (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI : degreesOfDir(dir);
+    this.facing.set(id, angle);
+    return angle;
   }
 
   // ======================= andar =======================
 
-  private get sliceTiles(): number {
-    return walkDistance(WALK_SLICE_MS, this.stepMs);
+  /** Quanto anda um pedaço: correndo (o normal) ou devagar (Shift / joystick empurrado de leve). */
+  private sliceOf(slow: boolean): number {
+    return sliceDistance(this.map.metric, slow, this.stepMs);
   }
+
+  private readonly onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Shift') this.shiftDown = event.type === 'keydown';
+  };
+  private readonly onBlur = () => {
+    this.shiftDown = false;
+  };
 
   private here(): Tile {
     return footTile(this.predicted.x, this.predicted.y);
@@ -230,13 +266,16 @@ class NewWorld implements NewWorldGame {
     const held = this.keyboard.current();
     if (held !== null) {
       this.clearRoute();
+      this.slow = this.shiftDown;
       return this.screenDegrees(DX[held.dir], DY[held.dir]);
     }
     const stick = this.joystick.direction();
     if (stick) {
       this.clearRoute();
+      this.slow = stick.light;
       return this.screenDegrees(stick.dx, stick.dy);
     }
+    this.slow = this.shiftDown; // "andar até" com Shift segurado vai devagar
     while (this.route.length > 0) {
       const next = this.route[0]!;
       const last = this.route.length === 1;
@@ -250,15 +289,17 @@ class NewWorld implements NewWorldGame {
   }
 
   private walkOnce(degrees: number): void {
-    const result = walkSlice(this.map, this.predicted, degrees, this.sliceTiles);
+    const slow = this.slow;
+    const result = walkSlice(this.map, this.predicted, degrees, this.sliceOf(slow));
     if (!result.moved && result.dir === this.predicted.dir) {
       this.noteStuck();
       return;
     }
     this.seq += 1;
-    this.pending.push({ seq: this.seq, a: degrees, dash: false });
-    this.conn.send({ t: 'walk', seq: this.seq, a: degrees });
+    this.pending.push({ seq: this.seq, a: degrees, dash: false, slow });
+    this.conn.send(slow ? { t: 'walk', seq: this.seq, a: degrees, slow: true } : { t: 'walk', seq: this.seq, a: degrees });
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
+    this.myAngle = degrees;
     this.showMe(WALK_SLICE_MS);
     if (result.moved) this.stuckSlices = 0;
     else this.noteStuck();
@@ -272,13 +313,13 @@ class NewWorld implements NewWorldGame {
 
   private showMe(durationMs: number): void {
     const feet = feetAt(this.predicted.x, this.predicted.y);
-    this.view?.moveActor(this.myId, feet.x, feet.y, this.predicted.dir, { durationMs });
+    this.view?.moveActor(this.myId, feet.x, feet.y, this.myAngle, { durationMs });
   }
 
   private onAck(seq: number, server: Pose): void {
     this.pending = this.pending.filter((p) => p.seq > seq);
     let pose: Pose = server;
-    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceTiles);
+    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceOf(p.slow));
     const off = Math.hypot(pose.x - this.predicted.x, pose.y - this.predicted.y);
     if (off > 1e-6) {
       this.predicted = { x: pose.x, y: pose.y, dir: pose.dir };
@@ -290,6 +331,7 @@ class NewWorld implements NewWorldGame {
   private placeMe(x: number, y: number, dir: Dir): void {
     this.pending = [];
     this.predicted = { x, y, dir };
+    this.myAngle = degreesOfDir(dir);
     this.walkCredit = WALK_SLICE_MS;
     this.clearRoute();
     this.showMe(0);
@@ -395,17 +437,19 @@ class NewWorld implements NewWorldGame {
         break;
       case 'despawn':
         this.entities.delete(msg.id);
+        this.facing.delete(msg.id);
         this.view?.removeActor(msg.id);
         break;
       case 'move': {
         const e = this.entities.get(msg.id);
         if (!e || msg.id === this.myId) break;
+        const angle = this.facingOf(msg.id, e.x, e.y, msg.x, msg.y, msg.dir);
         e.x = msg.x;
         e.y = msg.y;
         e.dir = msg.dir;
         const feet = feetAt(msg.x, msg.y);
         const duration = e.kind === 'monster' ? (e.stepMs ?? 320) : 120;
-        this.view?.moveActor(msg.id, feet.x, feet.y, msg.dir, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
+        this.view?.moveActor(msg.id, feet.x, feet.y, angle, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
         break;
       }
       case 'ack':

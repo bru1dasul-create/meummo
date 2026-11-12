@@ -26,12 +26,15 @@ export class Joystick {
     window.addEventListener('pointercancel', this.up);
   }
 
-  /** Para onde o joystick aponta (na tela, de -1 a 1), ou null se está solto ou no centro. */
-  direction(): { dx: number; dy: number } | null {
+  /**
+   * Para onde o joystick aponta (na tela, de -1 a 1) e se está empurrado só um pouco (`light`: andar devagar),
+   * ou null se está solto ou no centro.
+   */
+  direction(): { dx: number; dy: number; light: boolean } | null {
     if (this.pointerId === null) return null;
     const length = Math.hypot(this.dx, this.dy);
     if (length < DEAD_ZONE) return null;
-    return { dx: this.dx / length, dy: this.dy / length };
+    return { dx: this.dx / length, dy: this.dy / length, light: length < RADIUS * 0.55 };
   }
 
   /** O toque começou no joystick (o jogo não deve tratar como toque no chão). */

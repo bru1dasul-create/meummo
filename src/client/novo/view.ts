@@ -4,7 +4,6 @@
 //
 // Tudo em METROS, no chão: x para o leste, y para o sul (como o servidor). As posições são do PÉ do personagem.
 
-import type { Dir } from '../../shared/dir';
 import type { TiledMap } from '../../shared/map';
 
 export interface ActorInfo {
@@ -15,15 +14,16 @@ export interface ActorInfo {
   look: number;
   x: number;
   y: number;
-  dir: Dir;
+  /** Para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk`: o personagem gira contínuo. */
+  angle: number;
   /** É o seu personagem (a câmera segue, desenho destacado). */
   me?: boolean;
 }
 
 export interface WorldView {
   addActor(id: number, info: ActorInfo): void;
-  /** Nova posição do pé (metros). A view anima até lá em `durationMs` (ou pula, se for longe). */
-  moveActor(id: number, x: number, y: number, dir: Dir, options?: { durationMs?: number; dash?: boolean }): void;
+  /** Nova posição do pé (metros) e para onde olha (graus). A view anima até lá em `durationMs` (ou pula, se for longe). */
+  moveActor(id: number, x: number, y: number, angle: number, options?: { durationMs?: number; dash?: boolean }): void;
   removeActor(id: number): void;
   /** Fala curta em cima do personagem. */
   say(id: number, text: string): void;
@@ -121,7 +121,7 @@ export class ProvisionalView implements WorldView {
     this.actors.set(id, { ...info, fromX: info.x, fromY: info.y, toX: info.x, toY: info.y, start: 0, duration: 0, speech: '', speechUntil: 0 });
   }
 
-  moveActor(id: number, x: number, y: number, dir: Dir, options: { durationMs?: number; dash?: boolean } = {}): void {
+  moveActor(id: number, x: number, y: number, angle: number, options: { durationMs?: number; dash?: boolean } = {}): void {
     const a = this.actors.get(id);
     if (!a) return;
     const now = performance.now();
@@ -131,7 +131,7 @@ export class ProvisionalView implements WorldView {
     a.fromY = far ? y : at.y;
     a.toX = x;
     a.toY = y;
-    a.dir = dir;
+    a.angle = angle;
     a.start = now;
     a.duration = far ? 0 : (options.durationMs ?? 100);
   }
@@ -297,7 +297,7 @@ export class ProvisionalView implements WorldView {
     ctx.fill();
     ctx.stroke();
     // para onde olha: um tracinho no chão
-    const look = this.groundDirOfDir(a.dir);
+    const look = { x: Math.cos((a.angle * Math.PI) / 180), y: Math.sin((a.angle * Math.PI) / 180) };
     const tip = this.toScreen(x + look.x * 0.5, y + look.y * 0.5);
     ctx.strokeStyle = color;
     ctx.beginPath();
@@ -324,13 +324,4 @@ export class ProvisionalView implements WorldView {
     void id;
   }
 
-  /** Direção no chão de uma das 8 direções do jogo (que são do chão: 0 = norte/−y, 1 = leste/+x...). */
-  private groundDirOfDir(dir: Dir): { x: number; y: number } {
-    const DXS = [0, 1, 0, -1, 1, 1, -1, -1];
-    const DYS = [-1, 0, 1, 0, -1, 1, 1, -1];
-    const x = DXS[dir]!;
-    const y = DYS[dir]!;
-    const length = Math.hypot(x, y) || 1;
-    return { x: x / length, y: y / length };
-  }
 }

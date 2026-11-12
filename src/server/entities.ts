@@ -41,7 +41,7 @@ export class Player {
   /** Ids de quem este jogador está vendo agora. */
   readonly known = new Set<number>();
   /** Pedaços de caminhada/esquivas pedidos e ainda não processados (o servidor anda no ritmo dele). */
-  readonly queue: { seq: number; a: number; dash: boolean }[] = [];
+  readonly queue: { seq: number; a: number; dash: boolean; slow: boolean }[] = [];
   /** Quanto tempo de caminhada o jogador ainda pode gastar agora (enche com o relógio, até um limite). */
   walkBudget = 0;
   /** Quando o orçamento de caminhada foi enchido pela última vez (0 = ainda não). */

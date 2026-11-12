@@ -216,6 +216,34 @@ describe('mapa do formato novo: o mundo', () => {
     expect(() => checkNpcs(new Map([['c', curupira]]), new Map(), [map])).not.toThrow();
   });
 
+  it('no mundo novo correr é o normal (4,5 m/s) e andar devagar é com Shift (2 m/s); o jogo de hoje não muda', () => {
+    const clock = new FakeClock();
+    const map = GameMap.fromTiled(metricMap(), 'teste');
+    const world = new World(map, { now: clock.now, random: () => 0 });
+    const joined = world.join('Ana', new FakeConn());
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    const step = (slow: boolean, seq: number) => {
+      const before = player.fx;
+      world.requestWalk(player, seq, degreesOfDir(RIGHT), false, slow);
+      clock.advance(TICK_MS);
+      world.tick();
+      return player.fx - before;
+    };
+    expect(step(false, 1)).toBeCloseTo(4.5 * 0.05, 9); // 0,225 m em 50 ms
+    expect(step(true, 2)).toBeCloseTo(2 * 0.05, 9); // 0,1 m em 50 ms
+
+    const old = new World(GameMap.fromTiled(tiledFromAscii(['..........'], { x: 0, y: 0 }), 'velho'), { now: clock.now, random: () => 0 });
+    const ana = old.join('Ana', new FakeConn());
+    if (!ana.ok) throw new Error(ana.reason);
+    old.requestWalk(ana.player, 1, degreesOfDir(RIGHT), false, true);
+    clock.advance(TICK_MS);
+    old.tick();
+    expect(ana.player.fx).toBe(0.25); // no jogo de hoje, sempre 5 tiles por segundo
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":0,"slow":true}')).toEqual({ t: 'walk', seq: 1, a: 0, slow: true });
+    expect(parseClientMsg('{"t":"walk","seq":1,"a":0,"slow":"sim"}')).toBeNull();
+  });
+
   it('a entrada diz se é o jogo 2.5D novo', () => {
     expect(parseClientMsg('{"t":"hello","v":17,"name":"Ana","password":"segredo1","mundo":"novo"}')).toEqual({ t: 'hello', v: 17, name: 'Ana', password: 'segredo1', mundo: 'novo' });
     expect(parseClientMsg('{"t":"hello","v":17,"name":"Ana","password":"segredo1"}')).toEqual({ t: 'hello', v: 17, name: 'Ana', password: 'segredo1' });
