@@ -3,24 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Clareira dos Despertos — teste da PD.View</title>
+<title>Clareira dos Despertos</title>
 <style>
-  :root { color-scheme: dark; }
-  html, body { margin: 0; height: 100%; background: #0f1a12; overflow: hidden; font: 14px system-ui, sans-serif; color: #f2ead6; }
+  /* tela de jogo, sempre escura (a mata à noite): fundo, painéis, texto, destaque verde-água */
+  :root {
+    color-scheme: dark;
+    --fundo: #0f1a12;
+    --painel: rgba(10, 20, 14, 0.82);
+    --texto: #f2ead6;
+    --destaque: #7ff5e6;
+    --borda: #3fd6c8;
+    --faixa: #bff7ef;
+  }
+  html, body { margin: 0; height: 100%; background: var(--fundo); overflow: hidden; font: 14px system-ui, sans-serif; color: var(--texto); }
   #tela { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  #ajuda { position: fixed; left: 12px; bottom: 12px; max-width: min(420px, calc(100% - 24px)); background: rgba(10, 20, 14, 0.8); border-radius: 10px; padding: 8px 12px; line-height: 1.4; }
-  #ajuda b { color: #7ff5e6; }
-  #zoom { position: fixed; right: 12px; top: 12px; display: flex; gap: 6px; }
-  #zoom button { font: inherit; font-weight: 700; width: 40px; height: 40px; border-radius: 10px; border: 0; background: rgba(10, 20, 14, 0.8); color: #f2ead6; }
-  #faixa { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(10, 20, 14, 0.78); border: 1px solid #3fd6c8; color: #bff7ef; border-radius: 999px; padding: 4px 14px; font-weight: 700; }
+  #ajuda { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: min(420px, calc(100% - 24px)); background: var(--painel); border-radius: 10px; padding: 8px 12px; line-height: 1.4; }
+  #ajuda b { color: var(--destaque); }
+  #ajuda button { margin-top: 6px; }
+  #botoes { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: flex; gap: 6px; }
+  button { font: inherit; font-weight: 700; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; background: var(--painel); color: var(--texto); cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+  button[aria-pressed="true"] { border-color: var(--borda); color: var(--destaque); }
+  #faixa { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--painel); border: 1px solid var(--borda); color: var(--faixa); border-radius: 999px; padding: 4px 14px; font-weight: 700; white-space: nowrap; }
   #erro { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 24px; }
+  @media (max-width: 560px) { #faixa { top: calc(60px + env(safe-area-inset-top, 0px)); } }
 </style>
 </head>
 <body>
 <canvas id="tela"></canvas>
 <div id="faixa">Clareira dos Despertos · zona segura</div>
-<div id="zoom"><button id="mais" aria-label="Aproximar">+</button><button id="menos" aria-label="Afastar">−</button></div>
-<div id="ajuda"><b>Teste da PD.View</b> (o desenho 2.5D do jogo novo). WASD ou setas correm, <b>Shift</b> anda devagar; toque ou clique no chão para andar até lá; roda do mouse ou +/− para o zoom. Um "servidor de mentira" manda a posição a cada 50 ms, como o motor de verdade vai mandar.</div>
+<div id="botoes"><button id="devagar" type="button" aria-pressed="false">Devagar</button><button id="mais" type="button" aria-label="Aproximar">+</button><button id="menos" type="button" aria-label="Afastar">−</button></div>
+<div id="ajuda"><b>Teste do desenho 2.5D</b> do jogo novo. WASD ou setas correm (4,5 m/s); <b>Shift</b> ou o botão <b>Devagar</b> anda (2 m/s). Toque ou clique no chão para ir até lá. Roda do mouse ou +/− para o zoom. Um "servidor de mentira" manda a posição a cada 50 ms, como o jogo de verdade.<br><button id="entendi" type="button">Entendi</button></div>
 <div id="erro"><div><b>Abra esta página por um servidor</b><br>(por exemplo, com o jogo ligado: <code>npm run dev</code> e depois <code>http://localhost:5173/prototipos/pindorama-25d/clareira.html</code>).<br>Direto do disco o navegador não deixa ler o mapa.</div></div>
 <script src="js/core/math.js"></script>
 <script src="js/core/iso.js"></script>
@@ -62,6 +75,10 @@
   const toque = (e) => { const p = view.toWorld(e.clientX, e.clientY); eu.alvo = p; };
   canvas.addEventListener('pointerdown', toque);
   canvas.addEventListener('wheel', (e) => { e.preventDefault(); view.setZoom(view.zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)); }, { passive: false });
+  let devagar = false;
+  const botaoDevagar = document.getElementById('devagar');
+  botaoDevagar.onclick = () => { devagar = !devagar; botaoDevagar.setAttribute('aria-pressed', String(devagar)); };
+  document.getElementById('entendi').onclick = () => { document.getElementById('ajuda').hidden = true; };
   document.getElementById('mais').onclick = () => view.setZoom(view.zoom * 1.15);
   document.getElementById('menos').onclick = () => view.setZoom(view.zoom / 1.15);
 
@@ -81,7 +98,7 @@
     }
     const n = Math.hypot(wx, wy);
     if (!n) return;
-    const v = teclas.has('ShiftLeft') || teclas.has('ShiftRight') ? VEL.andar : VEL.correr;
+    const v = devagar || teclas.has('ShiftLeft') || teclas.has('ShiftRight') ? VEL.andar : VEL.correr;
     const d = Math.min(v * dt, eu.alvo ? Math.hypot(eu.alvo.x - eu.x, eu.alvo.y - eu.y) : Infinity);
     const nx = eu.x + (wx / n) * d, ny = eu.y + (wy / n) * d;
     const c = view.world.collide(nx * 100, ny * 100, 30);
