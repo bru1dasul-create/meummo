@@ -25,9 +25,10 @@
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
   class World {
-    constructor(cam) {
+    /** `map`: o mapa já pronto (PD.MAP, a esquina de São Paulo, ou um mapa do mundo novo lido por PD.tmj.toMap). */
+    constructor(cam, map) {
       this.cam = cam;
-      this.map = PD.MAP;
+      this.map = map || PD.MAP;
       this.time = 0;
       this.props = [];
       this.ground = new PD.Ground(cam, this.map, this.props);
@@ -41,16 +42,19 @@
     _build() {
       const m = this.map;
       const add = (p) => (this.props.push(p), p);
-      for (const b of m.buildings) add(new P.Building(this, b));
-      for (const w of m.walls) add(new P.Wall(this, w));
-      for (const t of m.trees) {
+      for (const b of m.buildings || []) add(new P.Building(this, b));
+      for (const w of m.walls || []) add(new P.Wall(this, w));
+      for (const t of m.trees || []) {
         add(new P.TreeTrunk(this, t));
         add(new P.TreeCanopy(this, t));
       }
-      this.poles = m.poles.map((p) => add(new P.Pole(this, p)));
-      add(new P.TrafficLight(this, m.trafficLight));
-      for (const d of m.props) add(new P.Small(this, d));
-      this.colliders = this.props.filter((p) => p.collider).map((p) => p.collider);
+      this.poles = (m.poles || []).map((p) => add(new P.Pole(this, p)));
+      if (m.trafficLight) add(new P.TrafficLight(this, m.trafficLight));
+      for (const d of m.props || []) add(new P.Small(this, d));
+      for (const f of m.fences || []) for (const part of P.Fence.split(f)) add(new P.Fence(this, part));
+      for (const b of m.pillars || []) add(new P.Pillar(this, b));
+      // no mundo novo, a colisão é a do próprio mapa (as mesmas caixas que o servidor usa)
+      this.colliders = m.colliders && m.colliders.length ? m.colliders : this.props.filter((p) => p.collider).map((p) => p.collider);
     }
 
     heightAt(x, y) {
@@ -163,8 +167,9 @@
       }
       this.particles = this.particles.filter((p) => p.t < p.life);
       // pétalas do ipê caindo (com o vento)
-      for (const tr of this.map.trees) {
-        if (tr.kind !== 'ipe') continue;
+      for (const tr of this.map.trees || []) {
+        if (tr.kind !== 'ipe' && tr.kind !== 'ipe-amarelo' && tr.kind !== 'ipe-roxo') continue;
+        if (this.map.kind === 'tmj' && Math.random() > 0.15) continue; // muitas árvores: poucas soltam pétala
         if (Math.random() < dt * 1.6 && this.petals.length < 70) {
           const a = Math.random() * M.TAU;
           const d = Math.random() * tr.r * 0.8;
@@ -181,7 +186,7 @@
       this.petals = this.petals.filter((p) => p.z > 14);
       // faíscas do círculo do despertar
       const aw = this.map.awakening;
-      if (Math.random() < dt * 9 && this.sparks.length < 60) {
+      if (aw && Math.random() < dt * 9 && this.sparks.length < 60) {
         const a = Math.random() * M.TAU;
         const d = Math.sqrt(Math.random()) * aw.r;
         this.sparks.push({ x: aw.x + Math.cos(a) * d, y: aw.y + Math.sin(a) * d, z: 16, t: 0, life: 1.6 + Math.random() * 1.6, hue: Math.random() });
@@ -347,13 +352,46 @@
     _drawAwakening(ctx) {
       const cam = this.cam;
       const aw = this.map.awakening;
+      if (!aw) return;
       const t = this.time;
-      const z = this.map.curb;
+      const z = this.map.curb || 0;
       ctx.save();
       ctx.translate(0, -z * cam.cosP * cam.zoom);
       ctx.transform(...cam.groundMatrix());
       const pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
       const g = ctx.createRadialGradient(aw.x, aw.y, aw.r * 0.2, aw.x, aw.y, aw.r * 1.05);
+      if (aw.color) {
+        // mundo novo: brilho espiritual verde-água (o entalhe da estrela acende junto)
+        const [r, gg, b] = [1, 3, 5].map((i) => parseInt(aw.color.slice(i, i + 2), 16));
+        g.addColorStop(0, `rgba(${r}, ${gg}, ${b}, ${0.2 + pulse * 0.1})`);
+        g.addColorStop(0.75, `rgba(${r}, ${gg}, ${b}, ${0.12 + pulse * 0.06})`);
+        g.addColorStop(1, `rgba(${r}, ${gg}, ${b}, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(aw.x, aw.y, aw.r * 1.05, 0, M.TAU);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = `rgba(${r}, ${gg}, ${b}, ${0.35 + pulse * 0.4})`;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (let k = 0; k <= 16; k++) {
+          const a = (k / 16) * M.TAU;
+          const rr = (k % 2 ? 0.2 : 0.42) * aw.r;
+          k ? ctx.lineTo(aw.x + Math.cos(a) * rr, aw.y + Math.sin(a) * rr) : ctx.moveTo(aw.x + Math.cos(a) * rr, aw.y + Math.sin(a) * rr);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(${r}, ${gg}, ${b}, ${0.3 + pulse * 0.3})`;
+        ctx.lineWidth = 6;
+        ctx.setLineDash([26, 18]);
+        ctx.lineDashOffset = -t * 30;
+        ctx.beginPath();
+        ctx.arc(aw.x, aw.y, aw.r * 0.64, 0, M.TAU);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        this._drawVeils(ctx);
+        return;
+      }
       g.addColorStop(0, `rgba(255, 236, 150, ${0.22 + pulse * 0.1})`);
       g.addColorStop(0.7, `rgba(120, 230, 200, ${0.16 + pulse * 0.08})`);
       g.addColorStop(1, 'rgba(120, 230, 200, 0)');
@@ -369,6 +407,28 @@
       ctx.arc(aw.x, aw.y, aw.r * 0.82, 0, M.TAU);
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    /** Pontos do Véu Ancestral: um brilho verde-água que respira no chão (a figueira, o círculo...). */
+    _drawVeils(ctx) {
+      const veils = this.map.veils || [];
+      if (!veils.length) return;
+      const cam = this.cam;
+      const t = this.time;
+      ctx.save();
+      ctx.transform(...cam.groundMatrix());
+      ctx.globalCompositeOperation = 'lighter';
+      veils.forEach((v, i) => {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + i * 1.9);
+        const g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, v.r);
+        g.addColorStop(0, `rgba(63, 214, 200, ${0.16 + pulse * 0.1})`);
+        g.addColorStop(1, 'rgba(63, 214, 200, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, v.r, 0, M.TAU);
+        ctx.fill();
+      });
       ctx.restore();
     }
 
@@ -396,7 +456,8 @@
           ctx.stroke();
         }
       }
-      // o "gato": emaranhado de fios num poste (típico da cidade)
+      // o "gato": emaranhado de fios num poste (típico da cidade); mapas sem postes de fiação não têm
+      if (!this.poles[1]) return;
       const p = this.poles[1].p;
       const z0 = this.poles[1].z0 + 640;
       ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);

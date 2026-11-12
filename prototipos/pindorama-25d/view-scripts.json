@@ -1,0 +1,19 @@
+{
+  "comentario": "Scripts da PD.View (desenho 2.5D do jogo novo), na ordem de carregar, relativos a prototipos/pindorama-25d/. Todos definem o PD global.",
+  "scripts": [
+    "js/core/math.js",
+    "js/core/iso.js",
+    "js/core/shapes.js",
+    "js/character/body.js",
+    "js/character/rig.js",
+    "js/character/animator.js",
+    "js/character/renderer.js",
+    "js/character/equipment.js",
+    "js/character/classes.js",
+    "js/world/tmj.js",
+    "js/world/ground.js",
+    "js/world/props.js",
+    "js/world/world.js",
+    "js/view.js"
+  ]
+}

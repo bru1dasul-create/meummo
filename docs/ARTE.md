@@ -285,6 +285,18 @@ carga (segurar e soltar), defesa frontal com energia, esquiva, queda e som. No r
   (versão 9 da página). A revisão 17 pede os scripts com `?v=…`; o `montar_pagina.py` agora tira esse sufixo da
   página publicada (os arquivos vão sem ele).
 
+### Etapa 3 do Mapa 01: a PD.View e a clareira (12/11)
+Divisão aprovada pelo dono: a [arte] faz o desenho 2.5D (`PD.View`, no protótipo), a [estrutura] faz o motor
+(`src/client/novo/`, página `/novo`). Interface combinada por mensagem com a [estrutura]: posições em metros no pé,
+ângulo em graus (como o `walk` do servidor), `moveActor` a cada ~50 ms; a view anima o andar até a posição (perna
+pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s, correr ~4,5 m/s com Shift.
+- `js/world/tmj.js` lê o `.tmj` do [mundo] (1 tile = 1 m; px ÷ 32 = metros) e monta o mapa do protótipo (cm); o
+  mundo, o chão e os objetos aceitam esse mapa sem mudar o da esquina de São Paulo (o jogo do protótipo segue igual).
+- Câmera: "médio" = 1 (padrão), "longe" = 0,7 (mínimo). Provisório até o dono decidir: aproximar até 1,4 e, com o
+  celular em pé, uns 9 m de largura (o médio mostraria 5,5 m).
+- Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5), a luz do poste e
+  as pedras com cara de pedra. A copa da figueira fica acima da tela no médio (o [mundo] planejou assim).
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

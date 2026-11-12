@@ -114,8 +114,9 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   do mapa em 3 pedaços (mata e lago; portão e vila; campinho, viaduto e saídas); 5) atmosferas (dia, entardecer e
   noite); 6) minimapa. Padrão: a arte conceitual aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D
   estilizado e sombrio")
-- [ ] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
-  o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas
+- [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
+  o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
+  (`prototipos/pindorama-25d/js/view.js`) com a interface combinada com a [estrutura]; teste em `clareira.html`
 - [ ] **[estrutura + arte]** Jogo 2.5D ligado ao servidor (hoje o protótipo roda sozinho): o desenho 2.5D no lugar do
   Phaser, com a rede, a previsão do movimento e os outros jogadores — a dividir entre as duas frentes
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
@@ -131,7 +132,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[dono]** Câmera (12/11): padrão no **médio** (herói com ~260 px numa tela Full HD e ~14 m de chão na largura),
   e o jogador pode afastar até o **longe** (~185 px, ~20 m). Comparação em `docs/referencias/mapa-01-camera.jpg`
 - [ ] **[arte]** Aplicar a câmera decidida no 2.5D (no protótipo: zoom do jogador com padrão 1,0, afastando até 0,7) e
-  combinar com o dono o enquadramento no celular (em pé, a tela mostra só uns 6 m de largura)
+  combinar com o dono o enquadramento no celular (em pé, a tela mostra só uns 6 m de largura) — na `PD.View` já está
+  assim; provisório até o dono decidir: aproximar até 1,4 e, em pé, uns 9 m de largura
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.

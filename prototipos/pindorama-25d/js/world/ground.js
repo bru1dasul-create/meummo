@@ -31,9 +31,10 @@
       this.maxChunks = 90;
     }
 
-    /** Altura do chão no ponto (rua 0, resto 14 cm). */
+    /** Altura do chão no ponto (rua 0, resto 14 cm). Nos mapas do mundo novo o chão é todo no nível 0. */
     heightAt(x, y) {
       const m = this.map;
+      if (m.kind === 'tmj') return 0;
       const inStreet = y > m.street.y0 && y < m.street.y1;
       const inAvenue = x > m.avenue.x0 && x < m.avenue.x1;
       return inStreet || inAvenue ? 0 : m.curb;
@@ -91,6 +92,7 @@
 
     // ------------------------------------------------------------ pintura
     _paint(ctx, view) {
+      if (this.map.kind === 'tmj') return this._paintShapes(ctx, view);
       const cam = this.cam;
       const m = this.map;
       const lift = m.curb * cam.cosP * cam.zoom; // quanto o nível da calçada sobe na tela
@@ -423,6 +425,216 @@
       void rnd;
     }
   }
+
+  // ------------------------------------------------------------ chão dos mapas do mundo novo (.tmj)
+  // cores do Mapa 01 ("2.5D estilizado e sombrio"): mata fria e funda, grama viva na clareira, terra e trilha quentes
+  const MAT = {
+    mata: { base: '#1d3123', dots: ['#26402a', '#162619', '#2f4d2c', '#3d3424', '#213a26'], n: 7, size: [6, 16] },
+    grama: { base: '#3d6a32', dots: ['#4b7c3a', '#335c2a', '#5b8d43', '#2e5226'], n: 9, size: [4, 9], edge: '#2a4a24', flowers: ['#e9d36a', '#e7a5c9', '#f3f0e2'] },
+    terra: { base: '#6a4e34', dots: ['#5a412b', '#7b5c3e', '#857d70', '#4d3824'], n: 6, size: [4, 10] },
+    trilha: { base: '#7a5c3c', dots: ['#694d31', '#8c6c48', '#9a9283', '#5a412b'], n: 6, size: [3, 8], edge: '#4e3923' },
+    asfalto: { base: '#3d4045', dots: ['#474a50', '#33363a', '#52555b'], n: 7, size: [3, 7] },
+    areia: { base: '#b89a66', dots: ['#a88a58', '#c8ab78', '#9a7d4c'], n: 6, size: [3, 7] },
+    agua: { base: '#22484f', dots: ['#2b5960', '#1b3b42', '#3a6f72'], n: 3, size: [8, 20] },
+    circulo: { base: '#8b867b', dots: ['#7a756b', '#9c978b', '#6c675e'], n: 5, size: [6, 12], edge: '#4f4b44' },
+  };
+  const matOf = (t) => MAT[t] || MAT.terra;
+
+  /** O ponto (x, y) está dentro da forma? */
+  function inside(sh, x, y) {
+    if (sh.kind === 'rect') return x >= sh.x0 && x <= sh.x1 && y >= sh.y0 && y <= sh.y1;
+    if (sh.kind === 'ellipse') {
+      const dx = (x - sh.cx) / sh.rx;
+      const dy = (y - sh.cy) / sh.ry;
+      return dx * dx + dy * dy <= 1;
+    }
+    if (sh.kind === 'line') {
+      const h = sh.width / 2;
+      for (let i = 0; i + 1 < sh.pts.length; i++) {
+        const a = sh.pts[i], b = sh.pts[i + 1];
+        const vx = b.x - a.x, vy = b.y - a.y;
+        const l2 = vx * vx + vy * vy || 1;
+        const t = M.clamp(((x - a.x) * vx + (y - a.y) * vy) / l2, 0, 1);
+        const qx = a.x + vx * t - x, qy = a.y + vy * t - y;
+        if (qx * qx + qy * qy <= h * h) return true;
+      }
+      return false;
+    }
+    if (sh.kind === 'poly') {
+      let c = false;
+      const p = sh.pts;
+      for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+        if (p[i].y > y !== p[j].y > y && x < ((p[j].x - p[i].x) * (y - p[i].y)) / (p[j].y - p[i].y) + p[i].x) c = !c;
+      }
+      return c;
+    }
+    return false;
+  }
+  function shapeBox(sh) {
+    if (sh.kind === 'rect') return sh;
+    if (sh.kind === 'ellipse') return { x0: sh.cx - sh.rx, x1: sh.cx + sh.rx, y0: sh.cy - sh.ry, y1: sh.cy + sh.ry };
+    const pad = sh.kind === 'line' ? sh.width / 2 : 0;
+    const xs = sh.pts.map((p) => p.x), ys = sh.pts.map((p) => p.y);
+    return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad };
+  }
+  function shapePath(ctx, sh) {
+    ctx.beginPath();
+    if (sh.kind === 'rect') ctx.rect(sh.x0, sh.y0, sh.x1 - sh.x0, sh.y1 - sh.y0);
+    else if (sh.kind === 'ellipse') ctx.ellipse(sh.cx, sh.cy, sh.rx, sh.ry, 0, 0, M.TAU);
+    else {
+      sh.pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      if (sh.kind === 'poly') ctx.closePath();
+    }
+  }
+  // número fixo por metro quadrado: o mesmo pontinho sai igual em qualquer pedaço da tela
+  const cellRng = (i, j, s) => M.rng(((i * 73856093) ^ (j * 19349663) ^ (s * 83492791)) >>> 0);
+
+  Ground.prototype._paintShapes = function (ctx, view) {
+    const cam = this.cam;
+    const m = this.map;
+    // o pedaço da tela volta para o chão: só pinta o que cai nele
+    const inv = (sx, sy) => {
+      const a = sx / (K * cam.zoom);
+      const b = sy / (K * cam.sinP * cam.zoom);
+      return { x: (a + b) / 2, y: (b - a) / 2 };
+    };
+    const cs = [inv(view.x, view.y), inv(view.x + view.w, view.y), inv(view.x, view.y + view.h), inv(view.x + view.w, view.y + view.h)];
+    const box = { x0: Math.min(...cs.map((c) => c.x)) - 40, x1: Math.max(...cs.map((c) => c.x)) + 40, y0: Math.min(...cs.map((c) => c.y)) - 40, y1: Math.max(...cs.map((c) => c.y)) + 40 };
+    ctx.save();
+    ctx.transform(...cam.groundMatrix());
+    // em volta de tudo, mata (a câmera vê além da borda do mapa)
+    ctx.fillStyle = MAT.mata.base;
+    ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
+    this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
+    m.shapes.forEach((sh, n) => {
+      const b = shapeBox(sh);
+      if (b.x1 < box.x0 || b.x0 > box.x1 || b.y1 < box.y0 || b.y0 > box.y1) return;
+      const mat = matOf(sh.type);
+      if (sh.kind === 'line') {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        if (mat.edge) {
+          shapePath(ctx, sh);
+          ctx.strokeStyle = mat.edge;
+          ctx.lineWidth = sh.width + 24;
+          ctx.stroke();
+        }
+        shapePath(ctx, sh);
+        ctx.strokeStyle = mat.base;
+        ctx.lineWidth = sh.width;
+        ctx.stroke();
+      } else {
+        if (mat.edge) {
+          // borda um pouco mais escura (a grama "pisa" na mata, a pedra do círculo tem beirada)
+          shapePath(ctx, sh);
+          ctx.strokeStyle = mat.edge;
+          ctx.lineWidth = sh.type === 'circulo' ? 26 : 30;
+          ctx.stroke();
+        }
+        shapePath(ctx, sh);
+        ctx.fillStyle = mat.base;
+        ctx.fill();
+      }
+      this._texture(ctx, sh, box, n + 1);
+      if (sh.type === 'circulo') this._circleStone(ctx, sh);
+    });
+    // sombras do que fica em pé (fixas), só das coisas perto deste pedaço
+    ctx.fillStyle = C.shadow;
+    const shade = new Path2D();
+    const reach = 1200; // a sombra de uma árvore alta cai longe
+    for (const p of this.props) {
+      const f = p.fp;
+      if (!p.shadow || f.x1 < box.x0 - reach || f.x0 > box.x1 + reach || f.y1 < box.y0 - reach || f.y0 > box.y1 + reach) continue;
+      p.shadow(shade);
+    }
+    ctx.fill(shade);
+    ctx.restore();
+  };
+
+  /** Pontinhos de textura da forma, só dentro dela e dentro do pedaço. */
+  Ground.prototype._texture = function (ctx, sh, box, seed) {
+    const mat = matOf(sh.type);
+    const b = shapeBox(sh);
+    const i0 = Math.floor(Math.max(b.x0, box.x0) / 100), i1 = Math.floor(Math.min(b.x1, box.x1) / 100);
+    const j0 = Math.floor(Math.max(b.y0, box.y0) / 100), j1 = Math.floor(Math.min(b.y1, box.y1) / 100);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const r = cellRng(i, j, seed + 7);
+        for (let k = 0; k < mat.n; k++) {
+          const x = (i + r()) * 100;
+          const y = (j + r()) * 100;
+          const c = mat.dots[Math.floor(r() * mat.dots.length)];
+          const w = mat.size[0] + r() * (mat.size[1] - mat.size[0]);
+          if (!inside(sh, x, y)) continue;
+          ctx.fillStyle = c;
+          ctx.beginPath();
+          ctx.ellipse(x, y, w, w * (0.5 + r() * 0.5), r() * 3, 0, M.TAU);
+          ctx.fill();
+        }
+        // florzinhas na grama
+        if (mat.flowers && r() < 0.18) {
+          const x = (i + r()) * 100, y = (j + r()) * 100;
+          if (inside(sh, x, y)) {
+            ctx.fillStyle = mat.flowers[Math.floor(r() * mat.flowers.length)];
+            for (let f = 0; f < 3; f++) {
+              ctx.beginPath();
+              ctx.arc(x + (r() - 0.5) * 30, y + (r() - 0.5) * 30, 2.6, 0, M.TAU);
+              ctx.fill();
+            }
+          }
+        }
+      }
+    }
+  };
+
+  /** O círculo ancestral no chão: pedra com anéis e rachaduras entalhadas (o brilho vem do mundo, animado). */
+  Ground.prototype._circleStone = function (ctx, sh) {
+    const r = Math.min(sh.rx, sh.ry);
+    const glow = (this.map.awakening && this.map.awakening.color) || '#3fd6c8';
+    ctx.save();
+    ctx.strokeStyle = '#4f4b44';
+    ctx.lineWidth = 7;
+    for (const k of [0.78, 0.5]) {
+      ctx.beginPath();
+      ctx.ellipse(sh.cx, sh.cy, r * k, r * k, 0, 0, M.TAU);
+      ctx.stroke();
+    }
+    // lajotas: raios entre os anéis
+    ctx.lineWidth = 4;
+    for (let a = 0; a < 16; a++) {
+      const t = (a / 16) * M.TAU + 0.1;
+      ctx.beginPath();
+      ctx.moveTo(sh.cx + Math.cos(t) * r * 0.78, sh.cy + Math.sin(t) * r * 0.78);
+      ctx.lineTo(sh.cx + Math.cos(t) * r * 0.98, sh.cy + Math.sin(t) * r * 0.98);
+      ctx.stroke();
+    }
+    // entalhes (o desenho que acende): uma estrela de oito pontas e rachaduras saindo dela
+    ctx.strokeStyle = M.mix ? M.mix('#2a3a38', glow, 0.35) : '#2f6f6a';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    for (let k = 0; k <= 16; k++) {
+      const t = (k / 16) * M.TAU;
+      const rr = (k % 2 ? 0.2 : 0.42) * r;
+      const x = sh.cx + Math.cos(t) * rr, y = sh.cy + Math.sin(t) * rr;
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+    const rnd = M.rng(Math.round(sh.cx + sh.cy));
+    ctx.lineWidth = 3.5;
+    for (let k = 0; k < 9; k++) {
+      let t = rnd() * M.TAU;
+      let d = r * 0.44;
+      ctx.beginPath();
+      ctx.moveTo(sh.cx + Math.cos(t) * d, sh.cy + Math.sin(t) * d);
+      for (let s = 0; s < 4; s++) {
+        d += r * (0.08 + rnd() * 0.08);
+        t += (rnd() - 0.5) * 0.35;
+        ctx.lineTo(sh.cx + Math.cos(t) * d, sh.cy + Math.sin(t) * d);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
 
   PD.Ground = Ground;
   PD.GROUND_COLORS = C;
