@@ -317,3 +317,19 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   pelos lados que encostam (bits 1 norte, 2 leste, 4 sul, 8 oeste) e 4 de canto; `softenEdges` troca o chão no
   fim do gerador (ou põe a beirada noutra camada, como a parte funda da represa na `sombras`). `npm run render:map -- arquivo.tmj saida.png` desenha qualquer arquivo de mapa (bom para comparar).
 - O servidor lê o mapa e os monstros quando liga: depois de editar, reinicie o servidor e recarregue o jogo.
+
+## Mapas do mundo novo (2.5D isométrico)
+- Formato combinado entre a [estrutura] e o [mundo] (12/11): Tiled ortogonal, **1 tile = 1 metro** (tile de 32 px,
+  só como grade), tudo em camadas de objetos, sem tiles. A câmera isométrica é só o jeito de desenhar: para o
+  servidor, o mapa é visto de cima.
+- Camadas: `chao` (áreas do chão, de baixo para cima: mata, grama, terra, asfalto, trilha em polilinha com
+  `largura`, `circulo`), `cenario` (coisas com altura: `arvore` com `especie`, `copa`, `altura` e `tronco` em metros,
+  `gradil`, `portao`, `pilar`, `arbusto`, `pedra`, `poste`, `veu`…), `colisao` (retângulos onde o pé bate;
+  `bloqueiaTiro` false onde a pedrinha passa), `seguro` (zona segura por área), `areas` (nome do lugar para a faixa)
+  e `pontos` (`spawn` e chegadas). `chao` e `cenario` são do desenho (o servidor ignora).
+- A `colisao` sai do gerador a partir do `cenario` (tronco, poste, pedra, gradil, portão…), para desenho e colisão
+  nunca desencontrarem. Medidas para o pé de 0,6 × 0,4: passagem com pelo menos 1,5 m e 1,2 m entre troncos.
+- Mapa 01 (Parque Santo Dias e Vila do Capão, 96 × 80 m): `scripts/gen-capao.ts` (`npm run gen:capao`) →
+  `public/assets/maps-iso/capao.tmj`, fora da pasta que o servidor de hoje carrega (o leitor ainda exige tile de
+  16 px). Câmera: o gerador não planta árvore alta que, vista de cima na diagonal, cubra a clareira, o círculo ou a
+  trilha (`hidesView`). Testes em `tests/capao.test.ts` (inclusive por onde o pé consegue ir a partir do nascimento).

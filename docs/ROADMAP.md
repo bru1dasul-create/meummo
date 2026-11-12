@@ -107,10 +107,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   o nome da rede) → Billings → o centro (Sé) no fim do jogo
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
-  em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel;
-  3) uma tela jogável (só a clareira, no jogo de verdade); 4) o resto do mapa em 3 pedaços (mata e lago; portão e
-  vila; campinho, viaduto e saídas); 5) atmosferas (dia, entardecer e noite); 6) minimapa. Padrão: a arte conceitual
-  aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
+  em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
+  (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (só a clareira, no jogo de verdade) — os dados da
+  clareira estão prontos (`npm run gen:capao` → `public/assets/maps-iso/capao.tmj`, prévia em
+  `docs/referencias/mapa-01-clareira-previa.jpg`), esperando o desenho 2.5D e o servidor lendo o formato; 4) o resto
+  do mapa em 3 pedaços (mata e lago; portão e vila; campinho, viaduto e saídas); 5) atmosferas (dia, entardecer e
+  noite); 6) minimapa. Padrão: a arte conceitual aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D
+  estilizado e sombrio")
+- [ ] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
+  o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas
+- [ ] **[estrutura + arte]** Jogo 2.5D ligado ao servidor (hoje o protótipo roda sozinho): o desenho 2.5D no lugar do
+  Phaser, com a rede, a previsão do movimento e os outros jogadores — a dividir entre as duas frentes
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
   32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
   partir do cenário; `saidas`, `monstros`, pontos e propriedades de sempre; `chao` e `cenario` só para o desenho.
