@@ -126,10 +126,6 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   para os mapas do formato novo (`hello` com `mundo: 'novo'`, protocolo 17)
 - [x] **[estrutura]** Velocidade no mundo novo (decisão do dono, 13/11): correr é o normal (4,5 m/s) e andar devagar
   (2 m/s) é segurando Shift ou empurrando pouco o joystick (protocolo 18). O jogo de hoje continua igual
-- [ ] **[estrutura]** Combate no jogo novo, passo 1 (antes ou junto com os monstros da etapa 4a do [mundo]): ver os
-  golpes dos monstros (aviso no chão, tiro, dano), a vida baixar, desmaiar e voltar, e atacar com o estilingue. Hoje,
-  no `/?novo`, os saguis atacam e nada disso aparece (a vida na tela só muda com a regeneração). Depois, passo 2: as
-  regras da revisão 17 (pedra com carga, defesa com energia, esquiva e recuo)
 - [ ] **[arte]** O desenho de verdade no jogo novo: `PD.View` com a interface `WorldView` (`src/client/novo/view.ts`),
   carregado em `src/client/novo/arte.ts` (o motor troca o provisório por ele sozinho)
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
@@ -139,6 +135,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   retângulo encostar), tile de 32 px, a **zona segura por área** (camada `seguro`: monstro não entra, não nota e não
   acerta quem está dentro), pontos e NPCs no ponto exato do pé, e a pasta `maps-iso/` (`MEUMMO_MAPA_INICIAL=capao`
   para testar). O Curupira já está na clareira (`curupira_capao` em `data/npcs.json`)
+- [ ] **[estrutura]** Combate no jogo novo, passo 1 (antes ou junto com os monstros da etapa 4a do [mundo]): ver os
+  golpes dos monstros (aviso no chão, tiro, dano), a vida baixar, desmaiar e voltar, e atacar com o estilingue. Hoje,
+  no `/?novo`, os saguis atacam e nada disso aparece (a vida na tela só muda com a regeneração). Depois, passo 2: as
+  regras da revisão 17 (pedra com carga, defesa com energia, esquiva e recuo)
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou
