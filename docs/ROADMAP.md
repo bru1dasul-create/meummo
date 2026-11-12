@@ -106,16 +106,32 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   Capão Redondo e o parque → Guarapiranga → Santo Amaro (Largo Treze, Terminal e o Shopping do Largo Treze, sem
   o nome da rede) → Billings → o centro (Sé) no fim do jogo
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
-  até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Desenho no papel primeiro
+  até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
+  em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
+  (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (só a clareira, no jogo de verdade) — os dados da
+  clareira estão prontos (`npm run gen:capao` → `public/assets/maps-iso/capao.tmj`, prévia em
+  `docs/referencias/mapa-01-clareira-previa.jpg`), esperando o desenho 2.5D e o servidor lendo o formato; 4) o resto
+  do mapa em 3 pedaços (mata e lago; portão e vila; campinho, viaduto e saídas); 5) atmosferas (dia, entardecer e
+  noite); 6) minimapa. Padrão: a arte conceitual aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D
+  estilizado e sombrio")
+- [ ] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
+  o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas
+- [ ] **[estrutura + arte]** Jogo 2.5D ligado ao servidor (hoje o protótipo roda sozinho): o desenho 2.5D no lugar do
+  Phaser, com a rede, a previsão do movimento e os outros jogadores — a dividir entre as duas frentes
 - [ ] **[estrutura + mundo]** Formato do mapa novo (combinado em 12/11): `.tmj` ortogonal, 1 tile = 1 metro (tile de
   32 px no Tiled, só como grade); camada `colisao` com retângulos (`bloqueiaTiro`, padrão true) gerada pelo [mundo] a
   partir do cenário; `saidas`, `monstros`, pontos e propriedades de sempre; `chao` e `cenario` só para o desenho.
   Falta na [estrutura]: ler `colisao` (o pé usa o retângulo exato; a grade de 1 m dos monstros bloqueia se qualquer
   retângulo encostar), aceitar tile de 32 px e a **zona segura por área** (camada `seguro`: monstro não entra, não
   nota e não acerta quem está dentro; a vila do Capão é segura no mesmo mapa da mata)
-- [ ] **[dono]** A **Budega Distribuidora** (o negócio do dono) no Capão: decidir o formato. Recomendação da
-  [estrutura]: sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco), como a
-  loja e o ponto de troca da vila
+- [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
+  Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
+  **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou
+  afastar, não matar (muda a história e o texto, o monstro continua); o ritual de classe na figueira fica para depois
+- [x] **[dono]** Câmera (12/11): padrão no **médio** (herói com ~260 px numa tela Full HD e ~14 m de chão na largura),
+  e o jogador pode afastar até o **longe** (~185 px, ~20 m). Comparação em `docs/referencias/mapa-01-camera.jpg`
+- [ ] **[arte]** Aplicar a câmera decidida no 2.5D (no protótipo: zoom do jogador com padrão 1,0, afastando até 0,7) e
+  combinar com o dono o enquadramento no celular (em pé, a tela mostra só uns 6 m de largura)
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
