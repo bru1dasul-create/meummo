@@ -614,6 +614,22 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   itens; levar a loja e a conversa para o mesmo painel. A barra embaixo do pé (do `combat.ts`) é verde; a da HUD é azul
   como o arco da defesa: combinar com a [estrutura].
 
+### Etapa 4c (13/11): o fundo do Capão (`js/world/fundo.js`)
+- Os tipos novos do mapa do [mundo] (`mundo/etapa-4c`) viram `map.props` no `tmj.js` e o desenho fica no `fundo.js`,
+  pendurado em `PD.city.small` (como as plantas da flora): `trave`, `muro`, `viaduto` (+ `viaduto-mureta`, a mureta da
+  frente), `pilar-viaduto`, `vagao` (o `trem` vira um por vagão), `cipo`, `onibus`, `barreira` e `placa`; a `casa` com
+  `arvoreDentro` ganha a árvore rompendo a laje (`treeThroughRoof` no `props.js`) e a `arvore` com `abraca: 'viaduto'`
+  manda as raízes para o pedaço do viaduto mais perto (`hug`).
+- **Pedaços:** muro e viaduto de até 4 m e ônibus de até 6 m (`pieces` no `tmj.js`); cada pedaço sabe o todo (`whole`)
+  e desenha a sua parte do mural/das janelas, sem risco de tinta na emenda. Na beira leste do mapa o viaduto segue 9 m
+  mata adentro e some aos poucos (`extend` + `fadeOut`).
+- **Ordem de desenho:** `lift` no `behind()` do `world.js`: com os pés se cruzando, o de baixo primeiro (pilar 0,
+  tabuleiro 1, mureta da frente e vagões 2). A mureta da frente é outro objeto para ficar na frente da base do trem.
+- **Câmera:** o tabuleiro fica a 8 m: na tela ele sobe ~550 px acima do chão dele (zoom 0,8), mais que a meia tela.
+  Só aparece com o herói embaixo, na beira norte. Para fotografar de longe: `PD.view.focus({ x, y })` num ponto ~10 m
+  ao norte (o `scratchpad/exptools/foto-alto.cjs` faz isso). Se o dono quiser ver o trem andando pela vila, o caminho
+  é o [mundo] baixar o viaduto (uns 5 m) ou trazê-lo mais para o sul.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

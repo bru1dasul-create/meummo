@@ -149,6 +149,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   com árvore pelo telhado, caminho de terra no fundo, o campinho com o mato entrando, traves enferrujadas com a rede
   rasgada, o muro com cipó, cadeiras de quem assiste, a rua para Guarapiranga com faixa apagada, rachaduras, buracos
   e raízes, e a Figueira do Viaduto. Entra com o desenho da 4c pela [arte]
+- [x] **[arte]** O desenho da 4c (13/11, `prototipos/pindorama-25d/js/world/fundo.js`): as traves com a rede rasgada,
+  a ferrugem e o cipó; o muro com o grafite "CAPÃO", o sol e as manchas de tinta, musgo e cipó; o viaduto da linha
+  lilás (o tabuleiro com a mureta, a brita, os dormentes e os trilhos, mato e arvorezinhas, a face manchada e pichada, a
+  ponta quebrada com o ferro aparecendo e, na beira do mapa, seguindo mata adentro); os pilares pichados com musgo e
+  cipó; o cipó pendurado; o trem lilás de 3 vagões (janelas quebradas com planta saindo, a cabine com o vidro trincado,
+  moitas e arvorezinhas no teto); o ônibus amarelo com a horta de caixotes no teto; a casa abandonada com a árvore
+  rompendo a laje; a barreira de concreto com listras; as placas GUARAPIRANGA e ESTAÇÃO CAPÃO REDONDO; e as raízes da
+  Figueira do Viaduto abraçando a ponta. Coisa comprida vem em pedaços (uma imagem cada) e o trem fica por cima do
+  viaduto (`lift`). Conferido com o mapa do ramo `mundo/etapa-4c` no PC e no celular (sem erros, uns 55 a 59 quadros
+  por segundo). **Atenção:** com a câmera de hoje, o tabuleiro a 8 m (e o trem em cima) só aparece na tela quando o
+  herói anda embaixo dele, na beira norte; de longe, aparecem os pilares e o cipó
 - [x] **[mundo + arte]** Faixa de pedestre na esquina (fora do cruzamento) e o semáforo quebrado soltando faísca na
   esquina do portão (pedido do dono, 13/11; **na main em 13/11**, "pode, junta"): a faixa atravessa a travessa na
   esquina (antes ficava no meio do cruzamento) e o `semaforo` (`quebrado`, `faiscas`) fica na ponta da calçada das

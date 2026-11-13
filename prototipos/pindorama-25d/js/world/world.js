@@ -20,6 +20,8 @@
     if (B.x1 <= A.x0 + 0.5 || B.y1 <= A.y0 + 0.5) return false;
     // pés se cruzam: copa de árvore fica por cima de quem está embaixo dela
     if (!!a.overhead !== !!b.overhead) return !a.overhead;
+    // coisa em cima de coisa (o trem em cima do viaduto, o viaduto em cima dos pilares): a de baixo primeiro
+    if ((a.lift || 0) !== (b.lift || 0)) return (a.lift || 0) < (b.lift || 0);
     return A.x0 + A.x1 + A.y0 + A.y1 < B.x0 + B.x1 + B.y0 + B.y1;
   }
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
