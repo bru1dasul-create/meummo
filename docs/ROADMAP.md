@@ -136,8 +136,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   as jararacas voltaram em 13/11, com o combate do jogo novo), portão e vila ✔ (13/11: a Budega Distribuidora na praça,
   desenhada pela [arte]), campinho, viaduto e saídas; 5) atmosferas (dia, entardecer e noite); 6) minimapa.
   Mata nova (pedido do dono, 13/11: 50% maior para o sul, menos árvores, trilhas sem copa, plantas variadas, mais
-  sombria): aprovada pelo dono (13/11), no ramo `mundo/mata-nova`; entra depois do desenho das plantas novas pela
-  [arte]. Dá para aumentar de novo depois (cresce para o sul sem mudar nada de lugar). Padrão: a arte conceitual
+  sombria): aprovada pelo dono (13/11) e **na main em 13/11**, junto com o desenho da [arte] (árvores de verdade,
+  árvore seca, jerivá, embaúba, xaxim, bananeira, bambu, plantas, cogumelos, deque, pinguela, véus, escuro e neblina). Dá para aumentar de novo depois (cresce para o sul sem mudar nada de lugar). Padrão: a arte conceitual
   aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`

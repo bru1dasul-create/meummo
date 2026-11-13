@@ -103,7 +103,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     beira da vila fechada por mata. Regras novas: a câmera não pode ter o portão, a rua, o balcão, o letreiro e a
     fogueira tampados (por isso a árvore da praça ficou no canto sudeste), e nenhum vão de 0,3 a 1,2 m entre duas
     coisas sólidas de frente uma para a outra (um orelhão a 40 cm de um poste entalou o personagem).
-  - **Mata nova (pedido do dono em 13/11; aprovada por ele no mesmo dia; ramo `mundo/mata-nova`):** o dono não gostou da
+  - **Mata nova (pedido do dono em 13/11; aprovada por ele no mesmo dia; na `main` em 13/11 com o desenho da [arte], conferida no jogo no PC e no celular):** o dono não gostou da
     mata ("muito pequena, muita árvore, caminho sem árvore, cores fortes, plantas diferentes, mais sombria, árvore normal
     e não redonda, árvore seca") e escolheu: 50% maior para o sul (o mapa passa a 96 × 120 e a vila continua até y = 80;
     o pedaço ao sul da vila é mata fechada de enfeite), todas as plantas e "mudar a trilha e o lago" para a figueira não
