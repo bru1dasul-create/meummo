@@ -84,7 +84,7 @@ describe('data/missoes.json', () => {
   it('explica o erro em português', () => {
     const base = QUESTS.espantar;
     const bad = (quest: Record<string, unknown>) => () => parseQuestDefs({ teste: { ...base, ...quest } });
-    expect(bad({ objetivo: { tipo: 'pescar', monstro: 'bicho' } })).toThrow(/"tipo" precisa ser "derrotar" \(monstros\) ou "entregar" \(itens\)/);
+    expect(bad({ objetivo: { tipo: 'pescar', monstro: 'bicho' } })).toThrow(/"tipo" precisa ser "derrotar" \(monstros\), "entregar" \(itens\) ou "falar"/);
     expect(bad({ objetivo: { tipo: 'derrotar', monstro: 'bicho', quantidade: 0 } })).toThrow(/"quantidade" precisa ser pelo menos 1/);
     expect(bad({ recompensa: { xp: 1.5 } })).toThrow(/"xp" precisa ser um número inteiro/);
     expect(bad({ pedido: undefined })).toThrow(/"pedido" precisa ser um texto/);
@@ -308,5 +308,56 @@ describe('arquivo de personagens de antes das missões', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('missão de falar com alguém', () => {
+  const talkNpcs = parseNpcDefs({
+    velho: { nome: 'Seu Velho', titulo: 'do mato', mapa: 'vila', x: 2, y: 0, fala: 'Oi!' },
+    dona: { nome: 'Dona Venda', titulo: 'do balcão', mapa: 'vila', x: 6, y: 0, fala: 'Opa!' },
+  });
+  const talkQuests = parseQuestDefs({
+    recado: {
+      nome: 'O Recado',
+      quemDa: 'velho',
+      pedido: 'Vá falar com a Dona Venda.',
+      concluida: 'Ah, foi o Seu Velho que te mandou!',
+      objetivo: { tipo: 'falar', com: 'dona', rotulo: 'Falar com a Dona Venda, no balcão' },
+      recompensa: { xp: 9 },
+    },
+  });
+
+  it('lê o objetivo "falar" (com quem e o texto) e confere se a pessoa existe', () => {
+    expect(talkQuests.get('recado')).toMatchObject({ goal: { kind: 'talk', npc: 'dona', count: 1 }, goalName: 'dona', goalLabel: 'Falar com a Dona Venda, no balcão' });
+    const game = { npcs: talkNpcs, monsters, items };
+    expect(() => checkQuests(talkQuests, game)).not.toThrow();
+    const ghost = parseQuestDefs({ x: { nome: 'X', quemDa: 'velho', pedido: '...', objetivo: { tipo: 'falar', com: 'ninguem' } } });
+    expect(() => checkQuests(ghost, game)).toThrow(/manda falar com "ninguem", que não existe/);
+  });
+
+  it('aceita com quem dá e conclui com a pessoa procurada, nunca com quem deu', () => {
+    const map = GameMap.fromTiled(tiledFromAscii(['........', '........', '........'], { x: 1, y: 1 }), 'vila');
+    const world = new World(map, { now: clock.now, random: () => 0, monsters, items, npcs: talkNpcs, quests: talkQuests });
+    const { player, conn } = join(world);
+    const idOf = (key: string) => [...world.npcs.values()].find((n) => n.def.id === key)!.id;
+    world.questAction(player, 'accept', 'recado', idOf('dona')); // a Dona não dá esta missão
+    expect(player.quests.recado).toBeUndefined();
+    world.questAction(player, 'accept', 'recado', idOf('velho'));
+    expect(player.quests.recado).toEqual({ state: 'active', count: 0 });
+    world.questAction(player, 'complete', 'recado', idOf('velho')); // concluir é com a pessoa procurada
+    expect(player.quests.recado!.state).toBe('active');
+    player.x = 5; // foi até o balcão dela
+    world.questAction(player, 'complete', 'recado', idOf('dona'));
+    expect(player.quests.recado).toEqual({ state: 'done', count: 1 });
+    expect(player.xp).toBe(9);
+    world.tick();
+    expect(conn.ofType('sys').some((m) => m.text.includes('Missão concluída: O Recado'))).toBe(true);
+  });
+
+  it('a primeira missão do jogo novo: o Curupira manda falar com a Budega, e a Budega pede os saguis', () => {
+    const real = loadQuestDefs();
+    expect(real.get('o_despertar')).toMatchObject({ giver: 'curupira_capao', goal: { kind: 'talk', npc: 'budega' } });
+    expect(real.get('saguis_encantados')).toMatchObject({ giver: 'budega', after: 'o_despertar', goal: { kind: 'kill', monster: 'sagui', count: 4 } });
+    expect(() => checkQuests(real, { npcs: loadNpcDefs(), monsters: loadMonsterDefs(), items: loadItemDefs() })).not.toThrow();
   });
 });

@@ -431,7 +431,8 @@ if (reached('4b')) {
 
   // as casas e a Budega (uma casa com comércio: letreiro e toldo na frente, que dá para a praça)
   for (const h of HOUSES) cenario.push(rect('casa', h.x0, h.x1, h.y0, h.y1, { altura: h.altura, andares: h.andares, cor: h.cor, caixaDagua: true, ...h.extra }));
-  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 2.6, andares: 1, cor: '#d4553a', caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA DISTRIBUIDORA', toldo: '#f1c84a' }, 'Budega'));
+  // o logo da Budega (o escudo dourado do dono, sem tabacaria e sem narguilé) vai na fachada; o letreiro fica de reserva
+  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 2.6, andares: 1, cor: '#d4553a', caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA DISTRIBUIDORA', logo: 'budega', toldo: '#f1c84a' }, 'Budega'));
 
   // a praça: fogueira com bancos em volta (virados para o fogo), mesas ao lado da Budega (sem fechar o caminho até o
   // balcão) e luz quente; o orelhão e a lixeira ficam encostados nas paredes da Budega (sem vão para o pé entalar)

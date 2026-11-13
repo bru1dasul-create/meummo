@@ -52,6 +52,8 @@ export interface WorldView {
   actorPosition?(id: number): { x: number; y: number } | null;
   /** Zoom do jogador (1 = o "médio"; menos = mais longe). A view limita e devolve o que ficou valendo. */
   setZoom?(factor: number): number;
+  /** Sinal de missão em cima de um NPC: '!' tem missão nova, '?' tem missão para concluir, '' nada. */
+  mark?(id: number, mark: '!' | '?' | ''): void;
 }
 
 // ======================= desenho provisório =======================
