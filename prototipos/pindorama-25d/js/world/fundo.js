@@ -1259,15 +1259,24 @@
     return { lines, W, Hh };
   }
   small.placa = {
-    height: (d) => (d.pole ? 300 : 140),
+    fades: true, // a grande (3,3 m) fica transparente quando o herói passa atrás dela
+    height: (d) => (d.big ? 335 : d.pole ? 300 : 140),
     blocks: 0,
-    shadow: (p, cam, d) => H.lineShadow(p, cam, d.x, d.y, d.pole ? 300 : 120, 5),
+    shadow(p, cam, d) {
+      if (d.big) {
+        for (const dy of [-95, 95]) H.lineShadow(p, cam, d.x, d.y + dy, 320, 7);
+        return;
+      }
+      H.lineShadow(p, cam, d.x, d.y, d.pole ? 300 : 120, 5);
+    },
     box(cam, d, z0) {
+      if (d.big) return volBox(cam, d.x - 20, d.x + 30, d.y - 128, d.y + 128, z0, z0 + 345, 20);
       const pl = plateOf(d);
       const zt = z0 + (d.pole ? 300 : 140);
       return volBox(cam, d.x - pl.W / 2 - 10, d.x + pl.W / 2 + 10, d.y - 10, d.y + 10, z0, zt + 10, 16);
     },
     paint(ctx, cam, d, z0, ink) {
+      if (d.big) return bigSign(ctx, cam, d, z0, ink);
       const P = (x, y, z) => cam.p({ x, y, z });
       const pl = plateOf(d);
       const rnd = seeded(d.x, d.y, 2201);
@@ -1313,4 +1322,81 @@
       if (!d.pole) for (let k = 0; k < 2; k++) grass(ctx, cam, d.x + (rnd() - 0.5) * pl.W * 0.8, d.y + 14, z0, 24, rnd, ink);
     },
   };
+  /**
+   * A placa grande da entrada do parque: tábua de madeira escura no alto de dois postes (acima do gradil e dos pilares do
+   * portão, como na imagem aprovada), virada para a rua (o leste, +x), com o nome em letras claras em duas linhas;
+   * `mato`: musgo em cima, cipó pendurado e subindo um poste, capim nos pés.
+   */
+  function bigSign(ctx, cam, d, z0, ink) {
+    const rnd = seeded(d.x, d.y, 2251);
+    const WOOD = { front: '#6b4a2e', side: '#553a24', top: '#7c5836' };
+    const POST = { front: '#5a3d26', side: '#47301e', top: '#6b4a2e' };
+    const y0 = d.y - 118, y1 = d.y + 118;
+    const zb = z0 + 246, zt = z0 + 320;
+    if (d.weeds) for (const dy of [-95, 95]) grass(ctx, cam, d.x - 10, d.y + dy - 10, z0, 22, rnd, ink);
+    // os postes (atrás da tábua)
+    for (const dy of [-95, 95]) H.box(ctx, cam, d.x - 7, d.x + 7, d.y + dy - 7, d.y + dy + 7, z0, z0 + 328, POST, ink);
+    // a tábua, na frente dos postes
+    const bx0 = d.x + 8, bx1 = d.x + 15;
+    const board = H.box(ctx, cam, bx0, bx1, y0, y1, zb, zt, WOOD, ink);
+    H.onWall(ctx, cam, { x: bx1, y: y1, z: zt }, { x: 0, y: -1 }, () => {
+      const W = y1 - y0, Hh = zt - zb;
+      // tábuas (três faixas), a moldura mais clara e o desgaste
+      ctx.strokeStyle = 'rgba(40, 26, 14, 0.55)';
+      ctx.lineWidth = 2;
+      for (let k = 1; k < 3; k++) {
+        ctx.beginPath();
+        ctx.moveTo(0, (Hh * k) / 3);
+        ctx.lineTo(W, (Hh * k) / 3 + (rnd() - 0.5) * 3);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#8f6a44';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(6, 6, W - 12, Hh - 12);
+      for (let k = 0; k < 14; k++) {
+        ctx.fillStyle = rnd() < 0.5 ? 'rgba(40, 26, 14, 0.3)' : 'rgba(150, 110, 70, 0.25)';
+        ctx.fillRect(rnd() * W, rnd() * Hh, 8 + rnd() * 20, 1.5 + rnd() * 2);
+      }
+      // o nome: primeira palavra numa linha, o resto na outra
+      const words = (d.text || '').split(' ');
+      const lines = words.length > 1 ? [words[0], words.slice(1).join(' ')] : [d.text || ''];
+      const FONT = H.FONT_SIGN || '"Impact", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      lines.forEach((line, i) => {
+        const size = lines.length > 1 ? 27 : 34;
+        ctx.font = `${size}px ${FONT}`;
+        const y = lines.length > 1 ? Hh * (0.33 + i * 0.37) : Hh / 2;
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#2a1a0c';
+        ctx.strokeText(line, W / 2, y);
+        ctx.fillStyle = '#efe2c0';
+        ctx.fillText(line, W / 2, y);
+      });
+    });
+    if (!d.weeds) return;
+    // musgo em cima da tábua e dos postes
+    const top = board.top;
+    for (let k = 0; k < 9; k++) {
+      const u = rnd();
+      const x = top[0].x + (top[1].x - top[0].x) * 0.5 + (top[3].x - top[0].x) * u;
+      const y = top[0].y + (top[1].y - top[0].y) * 0.5 + (top[3].y - top[0].y) * u;
+      ctx.fillStyle = rnd() < 0.5 ? 'rgba(86, 128, 58, 0.9)' : 'rgba(64, 104, 48, 0.85)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, (6 + rnd() * 8) * cam.zoom, (3 + rnd() * 3) * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+    }
+    // cipó pendurado da beira de cima (na frente) e subindo o poste da frente
+    for (let k = 0; k < 4; k++) {
+      const y = y0 + 20 + rnd() * (y1 - y0 - 40);
+      const down = 30 + rnd() * 70;
+      const pts = [];
+      for (let j = 0; j <= 5; j++) pts.push({ x: bx1 + 2, y: y + Math.sin(j + k) * 4, z: zt + 2 - (down * j) / 5 });
+      vine3d(ctx, cam, pts, rnd, ink);
+    }
+    const climb = [];
+    for (let j = 0; j <= 12; j++) climb.push({ x: d.x + 8, y: d.y + 95 + Math.sin(j * 1.5) * 5, z: z0 + (300 * j) / 12 });
+    vine3d(ctx, cam, climb, rnd, ink);
+  }
 })(window.PD = window.PD || {});

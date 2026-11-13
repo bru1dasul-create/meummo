@@ -185,10 +185,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   geladeira na ponta do balcão fechando a passagem para trás dele, 1,25 m atrás do balcão para a Xiovanna, engradados
   nos cantos da porta e nenhum vão de entalar; a lixeira saiu da frente da porta. A Xiovanna fica com o pé em
   (64,6; 51), onde nenhuma copa a cobre na tela (a [estrutura] muda o `data/npcs.json` logo depois do mapa)
-- [ ] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
+- [x] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
   `barra`, `remada`) são novos; `placa` (a da 4c) com `tamanho: 'grande'` e `mato`; `banco` com `material: 'concreto'`
   e `mato`; `lixeira` com `mato`; `poste-praca` com `apagado`, `torto` e `cipo`; e a pista (`calcada` em polígono com
-  `desenho: 'placas'` e `quebrada`). Tudo com `ferrugem`/`musgo`/`cipo` onde o mapa disser
+  `desenho: 'placas'` e `quebrada`). Tudo com `ferrugem`/`musgo`/`cipo` onde o mapa disser. **Feito (13/11):** a placa
+  PARQUE SANTO DIAS de madeira no alto de dois postes (acima dos pilares do portão, como na imagem aprovada; fica
+  transparente quando o herói passa atrás), o bebedouro de concreto com a cuba lascada, a torneira torta e musgo, os
+  bancos de concreto com encosto, musgo e quina lascada, as lixeiras verdes, os postes tortos e apagados (vidro trincado)
+  com cipó, os três aparelhos de cano azul com ferrugem e cipó (o simulador de caminhada, a barra em arco e a remada com o
+  banco laranja) e as placas soltas da calçada velha (terra e capim nas frestas, umas faltando). Desenho em
+  `js/world/parque.js` (novo), `fundo.js`, `props.js` e `street.js`; com o mapa de hoje nada muda. Conferido com o mapa
+  do `mundo/parque-antigo` no PC e no celular, sem erros e sem perder quadros por segundo
 - [x] **[arte]** O chão no padrão novo (13/11, `js/world/street.js`): asfalto de verdade (grão, manchas e trincas; mais
   trincas no `estado` rachado), calçada de placas de cimento (juntas, trincas, placas levantadas perto de raiz, mato
   nas frestas), meio-fio com sarjeta (a face aparece quando a rua fica do lado da câmera), faixa amarela apagada,

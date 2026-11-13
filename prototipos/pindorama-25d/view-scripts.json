@@ -17,6 +17,7 @@
     "js/world/flora.js",
     "js/world/city.js",
     "js/world/fundo.js",
+    "js/world/parque.js",
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",

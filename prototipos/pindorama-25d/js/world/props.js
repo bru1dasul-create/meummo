@@ -2886,7 +2886,7 @@
       const r = d.r || 30;
       const decor = d.kind === 'aguape' || d.kind === 'capivara'; // enfeites: não seguram ninguém
       this.collider = decor ? null : d.x0 !== undefined ? { type: 'box', ...fp } : { type: 'circle', x: d.x, y: d.y, r: d.kind === 'arbusto' ? r * 0.8 : d.kind === 'pedra' ? r : d.kind === 'mesa' ? 60 : 22 };
-      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.tree ? 520 : d.h || 140, fogueira: 40 }[d.kind] || 80;
+      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: d.material === 'concreto' ? 96 : 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.tree ? 520 : d.h || 140, fogueira: 40 }[d.kind] || 80;
     }
     screenBox() {
       if (this.fl && this.fl.box) return this.fl.box(this.cam, this.d, this.z0, this.height);
@@ -2907,6 +2907,7 @@
       else if (d.kind === 'aguape') return; // boia na água: sem sombra
       else if (d.kind === 'capivara') circleShadow(path, this.cam, d.x, d.y, 42, 30);
       else if (d.kind === 'banca' || d.kind === 'banco' || d.kind === 'tronco-caido' || d.kind === 'carro') boxShadow(path, this.cam, f.x0, f.x1, f.y0, f.y1, this.height);
+      else if (d.kind === 'lixeira' && d.weeds) boxShadow(path, this.cam, d.x - 24, d.x + 24, d.y - 24, d.y + 24, 86);
       else if (d.kind === 'fogueira') return; // o fogo clareia o chão (o clarão sai em _flames)
       else if (d.kind === 'mesa') circleShadow(path, this.cam, d.x, d.y, 45, 60);
       else lineShadow(path, this.cam, d.x, d.y, this.height, 12);
@@ -2983,6 +2984,10 @@
           break;
         }
         case 'lixeira': {
+          if (d.weeds) {
+            this._parkBin(ctx);
+            break;
+          }
           const top = P(d.x, d.y, z0 + 95);
           const base = P(d.x, d.y, z0);
           ctx.strokeStyle = INK;
@@ -3065,6 +3070,10 @@
         }
         case 'banco': {
           const f = this.fp;
+          if (d.material === 'concreto') {
+            this._concreteBench(ctx);
+            break;
+          }
           if (d.angle === undefined) {
             box(ctx, cam, f.x0, f.x1, f.y0, f.y1, z0, z0 + 45, { front: '#bfb7a6', side: '#9b9383', top: '#d8d1c1' }, ink);
             break;
@@ -3109,6 +3118,10 @@
           this._capybara(ctx);
           break;
         case 'poste-praca': {
+          if (d.off || d.bent || d.vine) {
+            this._oldLamp(ctx);
+            break;
+          }
           const base = P(d.x, d.y, z0);
           const top = P(d.x, d.y, z0 + (d.h || 340));
           ctx.strokeStyle = INK;
@@ -3266,6 +3279,178 @@
     }
     void seat;
     if (!restFirst) drawRest();
+  };
+
+  // concreto velho do parque (lado da frente, lado de lado, topo) e o musgo em cima dele
+  const CONCRETE_OLD = { front: '#aea89a', side: '#8f897c', top: '#c4beb0' };
+  /** Manchas de musgo num quadrilátero do topo (pontos na tela). */
+  function mossPatches(ctx, quad, rnd, n, zoom) {
+    for (let k = 0; k < n; k++) {
+      const u = rnd(), v = rnd();
+      const a = quad[0], b = quad[1], c = quad[2], dd = quad[3];
+      const x = (a.x * (1 - u) + b.x * u) * (1 - v) + (dd.x * (1 - u) + c.x * u) * v;
+      const y = (a.y * (1 - u) + b.y * u) * (1 - v) + (dd.y * (1 - u) + c.y * u) * v;
+      ctx.fillStyle = rnd() < 0.5 ? 'rgba(86, 128, 58, 0.85)' : 'rgba(64, 104, 48, 0.8)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, (4 + rnd() * 6) * zoom, (2 + rnd() * 3) * zoom, rnd() * 3, 0, M.TAU);
+      ctx.fill();
+    }
+  }
+  /**
+   * Banco de concreto do parque antigo: dois pés de laje, o assento e o encosto (do lado de trás, pelo `olhando`),
+   * musgo em cima, uma quina lascada, trinca e capim nos pés.
+   */
+  Small.prototype._concreteBench = function (ctx) {
+    const cam = this.cam;
+    const f = this.fp;
+    const d = this.d;
+    const z0 = this.z0;
+    const ink = this.ink;
+    const rnd = M.rng(Math.round(f.x0 * 3 + f.y0 * 7));
+    const a = ((((d.angle || 90) % 360) + 360) % 360);
+    const alongX = f.x1 - f.x0 >= f.y1 - f.y0;
+    const C = CONCRETE_OLD;
+    // pés: duas lajes em pé nas pontas
+    const legs = alongX
+      ? [[f.x0 + 8, f.x0 + 22], [f.x1 - 22, f.x1 - 8]].map(([x0, x1]) => ({ x0, x1, y0: f.y0 + 4, y1: f.y1 - 4 }))
+      : [[f.y0 + 8, f.y0 + 22], [f.y1 - 22, f.y1 - 8]].map(([y0, y1]) => ({ x0: f.x0 + 4, x1: f.x1 - 4, y0, y1 }));
+    const grass = (x, y) => PD.city && PD.city.grass && PD.city.grass(ctx, cam.p({ x, y, z: z0 }), 22 * cam.zoom, rnd, ink);
+    if (d.weeds) for (const l of legs) grass((l.x0 + l.x1) / 2 - 10, (l.y0 + l.y1) / 2 - 10);
+    for (const l of legs) box(ctx, cam, l.x0, l.x1, l.y0, l.y1, z0, z0 + 42, C, ink);
+    // o encosto fica do lado de trás: olhando para o sul (90°), as costas ficam no norte (y0), e assim por diante
+    const back = alongX ? (a > 180 ? 'y1' : 'y0') : (a > 90 && a < 270 ? 'x1' : 'x0');
+    const rest = { ...f };
+    if (back === 'y0') rest.y1 = f.y0 + 10;
+    if (back === 'y1') rest.y0 = f.y1 - 10;
+    if (back === 'x0') rest.x1 = f.x0 + 10;
+    if (back === 'x1') rest.x0 = f.x1 - 10;
+    const drawRest = () => {
+      const r = box(ctx, cam, rest.x0, rest.x1, rest.y0, rest.y1, z0 + 50, z0 + 96, C, ink);
+      if (d.weeds) mossPatches(ctx, r.top, rnd, 4, cam.zoom);
+    };
+    const restFirst = back === 'y0' || back === 'x0';
+    if (restFirst) drawRest();
+    const seat = box(ctx, cam, f.x0, f.x1, f.y0, f.y1, z0 + 42, z0 + 51, C, ink);
+    if (d.weeds) mossPatches(ctx, seat.top, rnd, 6, cam.zoom);
+    // trinca no assento e uma quina lascada (o pedaço que falta, escuro)
+    const q = seat.top;
+    ctx.strokeStyle = 'rgba(70, 64, 56, 0.7)';
+    ctx.lineWidth = Math.max(0.8, 1.2 * cam.zoom);
+    ctx.beginPath();
+    const t0 = 0.3 + rnd() * 0.4;
+    ctx.moveTo(q[0].x + (q[1].x - q[0].x) * t0, q[0].y + (q[1].y - q[0].y) * t0);
+    ctx.lineTo(q[3].x + (q[2].x - q[3].x) * (t0 + 0.08), q[3].y + (q[2].y - q[3].y) * (t0 + 0.08));
+    ctx.stroke();
+    const chip = seat.fy[1];
+    ctx.fillStyle = '#6f6a60';
+    ctx.beginPath();
+    ctx.moveTo(chip.x, chip.y);
+    ctx.lineTo(chip.x - 9 * cam.zoom, chip.y - 2 * cam.zoom);
+    ctx.lineTo(chip.x - 3 * cam.zoom, chip.y - 7 * cam.zoom);
+    ctx.closePath();
+    ctx.fill();
+    if (!restFirst) drawRest();
+    if (d.weeds) for (const l of legs) grass((l.x0 + l.x1) / 2 + 12, (l.y0 + l.y1) / 2 + 12);
+  };
+
+  /** Lixeira verde do parque (caixa com tampa e a boca escura na frente), suja de ferrugem, com capim em volta. */
+  Small.prototype._parkBin = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const z0 = this.z0;
+    const ink = this.ink;
+    const rnd = M.rng(Math.round(d.x * 5 + d.y * 3));
+    const s = 22;
+    const grass = (x, y, k) => PD.city && PD.city.grass && PD.city.grass(ctx, cam.p({ x, y, z: z0 }), k * cam.zoom, rnd, ink);
+    grass(d.x - 14, d.y - 18, 20);
+    const body = box(ctx, cam, d.x - s, d.x + s, d.y - s, d.y + s, z0, z0 + 76, { front: '#3f6b4c', side: '#2f523a', top: '#4d7d5a' }, ink);
+    const lid = box(ctx, cam, d.x - s - 3, d.x + s + 3, d.y - s - 3, d.y + s + 3, z0 + 76, z0 + 86, { front: '#355c41', side: '#284632', top: '#4a7656' }, ink);
+    // a boca escura na frente (+y), em cima
+    const P = (x, y, z) => cam.p({ x, y, z });
+    const mouth = [P(d.x - s + 7, d.y + s, z0 + 70), P(d.x + s - 7, d.y + s, z0 + 70), P(d.x + s - 7, d.y + s, z0 + 56), P(d.x - s + 7, d.y + s, z0 + 56)];
+    poly(ctx, mouth, '#15201a');
+    // ferrugem e sujeira escorrendo
+    for (let k = 0; k < 5; k++) {
+      const u = rnd();
+      const q = P(d.x - s + u * 2 * s, d.y + s, z0 + 8 + rnd() * 50);
+      ctx.fillStyle = rnd() < 0.5 ? 'rgba(140, 84, 40, 0.55)' : 'rgba(60, 52, 36, 0.45)';
+      ctx.fillRect(q.x, q.y, 2.4 * cam.zoom, (6 + rnd() * 12) * cam.zoom);
+    }
+    mossPatches(ctx, lid.top, rnd, 3, cam.zoom);
+    void body;
+    grass(d.x + 18, d.y + 22, 24);
+    grass(d.x - 22, d.y + 20, 18);
+  };
+
+  /** Poste velho do parque: torto (inclinado para um lado), apagado (vidro escuro e trincado) e com cipó subindo. */
+  Small.prototype._oldLamp = function (ctx) {
+    const cam = this.cam;
+    const d = this.d;
+    const z0 = this.z0;
+    const ink = this.ink;
+    const rnd = M.rng(Math.round(d.x * 11 + d.y * 3));
+    const h = d.h || 340;
+    const lean = d.bent ? 22 + rnd() * 14 : 0;
+    const la = rnd() * M.TAU;
+    const tx = d.x + Math.cos(la) * lean, ty = d.y + Math.sin(la) * lean;
+    const base = cam.p({ x: d.x, y: d.y, z: z0 });
+    const top = cam.p({ x: tx, y: ty, z: z0 + h });
+    // base de concreto
+    box(ctx, cam, d.x - 12, d.x + 12, d.y - 12, d.y + 12, z0, z0 + 16, CONCRETE_OLD, ink);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 7 * cam.zoom + ink * 2;
+    ctx.beginPath();
+    ctx.moveTo(base.x, base.y);
+    ctx.lineTo(top.x, top.y);
+    ctx.stroke();
+    ctx.strokeStyle = '#3a4a40';
+    ctx.lineWidth = 7 * cam.zoom;
+    ctx.stroke();
+    // ferrugem no cano
+    for (let k = 0; k < 4; k++) {
+      const u = 0.1 + rnd() * 0.8;
+      ctx.fillStyle = 'rgba(140, 84, 40, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(base.x + (top.x - base.x) * u, base.y + (top.y - base.y) * u, 3 * cam.zoom, 2 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+    }
+    // a luminária: caixa com o vidro escuro (apagada) e trinca, o chapéu em cima
+    const w = 16 * cam.zoom, hh = 38 * cam.zoom;
+    ctx.fillStyle = INK;
+    ctx.fillRect(top.x - w - ink, top.y - hh - ink, 2 * w + 2 * ink, hh + 2 * ink);
+    ctx.fillStyle = d.off ? '#3d464c' : d.light || '#ffe9a6';
+    ctx.fillRect(top.x - w, top.y - hh, 2 * w, hh);
+    if (d.off) {
+      ctx.strokeStyle = 'rgba(200, 210, 214, 0.6)';
+      ctx.lineWidth = Math.max(0.8, 1.2 * cam.zoom);
+      ctx.beginPath();
+      ctx.moveTo(top.x - w * 0.4, top.y - hh * 0.8);
+      ctx.lineTo(top.x + w * 0.1, top.y - hh * 0.45);
+      ctx.lineTo(top.x - w * 0.2, top.y - hh * 0.15);
+      ctx.moveTo(top.x + w * 0.1, top.y - hh * 0.45);
+      ctx.lineTo(top.x + w * 0.6, top.y - hh * 0.55);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.fillRect(top.x - w * 0.8, top.y - hh * 0.95, w * 0.35, hh * 0.85);
+    }
+    ctx.fillStyle = INK;
+    ctx.fillRect(top.x - w * 1.45 - ink, top.y - hh - 8 * cam.zoom - ink, w * 2.9 + 2 * ink, 9 * cam.zoom + 2 * ink);
+    ctx.fillStyle = '#34443a';
+    ctx.fillRect(top.x - w * 1.45, top.y - hh - 8 * cam.zoom, w * 2.9, 9 * cam.zoom);
+    if (d.vine && PD.city && PD.city.vine) {
+      // cipó enrolando no cano até perto da luminária, e um pedaço pendurado do chapéu
+      const pts = [];
+      for (let j = 0; j <= 12; j++) {
+        const u = (j / 12) * 0.9;
+        const wob = Math.sin(j * 1.7) * 5 * cam.zoom;
+        pts.push({ x: base.x + (top.x - base.x) * u + wob, y: base.y + (top.y - base.y) * u });
+      }
+      PD.city.vine(ctx, pts, rnd, cam.zoom, ink);
+      const hang = [];
+      for (let j = 0; j <= 5; j++) hang.push({ x: top.x + w * 1.2 + Math.sin(j) * 2 * cam.zoom, y: top.y - hh - 4 * cam.zoom + j * 9 * cam.zoom });
+      PD.city.vine(ctx, hang, rnd, cam.zoom, ink);
+    }
   };
 
   /** Fogueira (a parte parada, que vai no desenho guardado): roda de pedras, lenha cruzada, brasa e cinza. */

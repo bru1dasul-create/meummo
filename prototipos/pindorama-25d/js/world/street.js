@@ -184,6 +184,7 @@
   // placas de ~1 m ao longo da calçada, cada uma de um tom; juntas escuras; umas trincadas, umas com mancha de musgo;
   // perto de raiz (ou ao acaso, poucas) a placa levanta (borda escura do lado da câmera); mato nas frestas
   texture.calcada = (ctx, sh, box, seed, g, map) => {
+    if (sh.pattern === 'placas' && sh.kind === 'poly') return loosePlates(ctx, sh, box, g);
     if (sh.pattern !== 'placas' || sh.kind !== 'rect') return false;
     const b = sh;
     const cb = clipBox(b, box);
@@ -245,6 +246,93 @@
     ctx.restore();
     return true;
   };
+
+  /**
+   * Calçada velha do parque (polígono com `desenho: 'placas'`): placas de cimento soltas de uns 60 cm, meio tortas, com
+   * terra e capim nas frestas; `quebrada`: falta uma ou outra placa (só terra e mato), trincas e quinas lascadas. A
+   * beira da placa do lado da câmera aparece (ela fica um pouco acima da terra).
+   */
+  function loosePlates(ctx, sh, box, g) {
+    const xs = sh.pts.map((q) => q.x), ys = sh.pts.map((q) => q.y);
+    const b = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    if (!clipBox(b, box)) return true;
+    const k = liftOf(g.cam, 1);
+    const r = seeded(b.x0, b.y0, 233);
+    ctx.save();
+    G.shapePath(ctx, sh);
+    ctx.clip();
+    // a terra por baixo (com um pouco de grama)
+    ctx.fillStyle = '#6b5a43';
+    ctx.fillRect(b.x0 - 10, b.y0 - 10, b.x1 - b.x0 + 20, b.y1 - b.y0 + 20);
+    ctx.fillStyle = 'rgba(78, 112, 52, 0.55)';
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.ellipse(b.x0 + r() * (b.x1 - b.x0), b.y0 + r() * (b.y1 - b.y0), 14 + r() * 26, 8 + r() * 16, r() * 3, 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    // as placas, numa grade de ~62 cm com folga, do fundo para a frente (a beira de uma não cobre a de trás)
+    const S = 62;
+    const cells = [];
+    for (let x = b.x0 - S * 0.3; x < b.x1; x += S) for (let y = b.y0 - S * 0.3; y < b.y1; y += S) cells.push([x, y]);
+    cells.sort((p, q) => p[0] + p[1] - (q[0] + q[1]));
+    const tufts = [];
+    for (const [x, y] of cells) {
+      const rr = seeded(x, y, 239);
+      if (sh.broken && rr() < 0.22) {
+        // a placa que falta: só terra, um caco e capim
+        tufts.push([x + S / 2, y + S / 2, 14 + rr() * 8, rr]);
+        continue;
+      }
+      // quadrilátero meio torto, menor que a célula (a fresta)
+      const gap = 5 + rr() * 5;
+      const jit = () => (rr() - 0.5) * 10;
+      const quad = [
+        { x: x + gap + jit(), y: y + gap + jit() },
+        { x: x + S - gap + jit(), y: y + gap + jit() },
+        { x: x + S - gap + jit(), y: y + S - gap + jit() },
+        { x: x + gap + jit(), y: y + S - gap + jit() },
+      ];
+      // só se o meio dela cair dentro do polígono (a calçada termina em placas inteiras, não cortadas)
+      const cx = (quad[0].x + quad[2].x) / 2, cy = (quad[0].y + quad[2].y) / 2;
+      if (!G.inside(sh, cx, cy)) continue;
+      const lift = k * (3 + rr() * 4);
+      // a beira do lado da câmera (+x e +y), escura
+      ctx.fillStyle = '#5c584f';
+      poly(ctx, [quad[1], { x: quad[1].x + lift, y: quad[1].y + lift }, { x: quad[2].x + lift, y: quad[2].y + lift }, { x: quad[3].x + lift, y: quad[3].y + lift }, quad[3], quad[2]]);
+      ctx.fill();
+      ctx.fillStyle = M.shade(sh.color || '#9a968a', (rr() - 0.5) * 0.14);
+      poly(ctx, quad);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(52, 48, 42, 0.55)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      // desgaste, trinca e (quebrada) a quina que lascou
+      ctx.fillStyle = 'rgba(90, 86, 76, 0.28)';
+      for (let q = 0; q < 5; q++) ctx.fillRect(cx - S / 3 + rr() * S * 0.6, cy - S / 3 + rr() * S * 0.6, 2 + rr() * 2, 2 + rr() * 2);
+      if (rr() < 0.55) crack(ctx, cx + (rr() - 0.5) * 20, cy + (rr() - 0.5) * 20, rr() * M.TAU, S * (0.4 + rr() * 0.4), rr, 1.3, '#5f5b52', 1);
+      if (sh.broken && rr() < 0.4) {
+        const c = quad[Math.floor(rr() * 4)];
+        ctx.fillStyle = '#6b5a43';
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y);
+        ctx.lineTo(c.x + (cx - c.x) * 0.35 + (rr() - 0.5) * 8, c.y + (cy - c.y) * 0.12);
+        ctx.lineTo(c.x + (cx - c.x) * 0.1, c.y + (cy - c.y) * 0.38 + (rr() - 0.5) * 8);
+        ctx.closePath();
+        ctx.fill();
+      }
+      if (rr() < 0.35) {
+        ctx.fillStyle = 'rgba(78, 110, 54, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(quad[3].x + 10, quad[3].y - 8, 9 + rr() * 10, 5 + rr() * 6, rr() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+      // capim na fresta
+      if (rr() < 0.6) tufts.push([quad[rr() < 0.5 ? 1 : 3].x, quad[rr() < 0.5 ? 1 : 3].y, 11 + rr() * 9, rr]);
+    }
+    for (const [x, y, s, rr] of tufts) tuft(ctx, x, y, s, rr, g.cam, false);
+    return true;
+  }
 
   // ------------------------------------------------------------------ meio-fio com sarjeta
   // a pedra do meio-fio (o tampo claro, com as juntas), a sarjeta do lado da rua (cimento sujo, folha e terra) e, quando

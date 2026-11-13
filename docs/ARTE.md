@@ -614,6 +614,17 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   itens; levar a loja e a conversa para o mesmo painel. A barra embaixo do pé (do `combat.ts`) é verde; a da HUD é azul
   como o arco da defesa: combinar com a [estrutura].
 
+### Parque antigo (13/11): `js/world/parque.js` e variações dos objetos da vila
+- Do mapa do [mundo] (`mundo/parque-antigo`): `bebedouro` e `academia` são novos (`parque.js`, em `PD.city.small`); o
+  `banco` com `material: 'concreto'` (`_concreteBench`), a `lixeira` com `mato` (`_parkBin`, verde) e o `poste-praca`
+  com `apagado`/`torto`/`cipo` (`_oldLamp`) são variações no `props.js`; a `placa` com `tamanho: 'grande'` é a de
+  madeira em dois postes (`bigSign` no `fundo.js`), virada para a rua (+x) e com a tábua a 2,5–3,2 m (antes, a 1,4 m,
+  ficava atrás do pilar do portão); a `calcada` em polígono com `desenho: 'placas'` vira placas soltas (`loosePlates`
+  no `street.js`; `quebrada` tira umas e lasca quinas).
+- Os canos da academia são 1,45× a medida do aparelho (de longe, o cano fino sumia).
+- Desempenho: na clareira (44; 43) o teste dá ~35 quadros por segundo com e sem os objetos do parque (o lugar já é
+  pesado no computador de teste; o custo do quadro fica em 7–8 ms).
+
 ### Tela inicial: uma lua só (13/11)
 - O dono achou três luas ("ficou 3 lua kkkk"): a cheia do fundo, uma pequena ao lado do prédio alto e a vermelha de
   trás do logo. Ficou só a cheia. Em `public/assets/ui`: a pequena foi coberta com o céu em volta (o prédio continua),
