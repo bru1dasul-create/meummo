@@ -1126,7 +1126,7 @@
         poly(ctx, wl.concat(wr), '#efe9dc');
         poly(ctx, pts.slice(0, wz + 1).map((p) => ({ x: p.c.x + p.r * 0.2, y: p.c.y })).concat(wr), '#cfc6b4');
       }
-      if (t.kind === 'figueira') this._figGlyphs(ctx, pts);
+      if (t.kind === 'figueira' && this._sacred()) this._figGlyphs(ctx, pts);
       if (crown) return; // os galhos saem da forquilha na copa (crownPaint)
       // galhos para dentro da copa
       ctx.strokeStyle = INK;
@@ -1193,7 +1193,19 @@
     this._figLimbs(ctx, limbs.filter((l) => front(l.a)), R, zf, rnd);
     // símbolos na frente do tronco (na superfície: a frente do cilindro fica r·sinP abaixo do centro da fatia)
     const onFace = (s) => ({ c: { x: s.c.x - s.r * zoom * 0.12, y: s.c.y + s.r * cam.sinP * zoom * 0.95 }, r: 0 });
-    this._figGlyphs(ctx, [null, onFace(slices[6]), onFace(slices[11]), onFace(slices[16])]);
+    if (this._sacred()) this._figGlyphs(ctx, [null, onFace(slices[6]), onFace(slices[11]), onFace(slices[16])]);
+  };
+
+  /**
+   * Figueira sagrada (com os símbolos que brilham): a que tem um ponto do Véu perto. A Figueira da Esquina, que rompeu
+   * a rua (`rompendo`), é só uma árvore grande da cidade. No protótipo antigo (sem véus no mapa), todas são.
+   */
+  TreeTrunk.prototype._sacred = function () {
+    const t = this.t;
+    if (t.breaks) return false;
+    const map = this.world.map;
+    if (!map || map.kind !== 'tmj') return true;
+    return (map.veils || []).some((v) => Math.hypot(v.x - t.x, v.y - t.y) < 400);
   };
 
   /** Corpo do tronco: fatias em tinta (contorno), depois a casca com luz à esquerda e sulcos que contornam o cilindro. */

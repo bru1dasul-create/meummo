@@ -12,6 +12,7 @@ import '../../../prototipos/pindorama-25d/js/character/equipment.js';
 import '../../../prototipos/pindorama-25d/js/character/classes.js';
 import '../../../prototipos/pindorama-25d/js/world/tmj.js';
 import '../../../prototipos/pindorama-25d/js/world/ground.js';
+import '../../../prototipos/pindorama-25d/js/world/street.js';
 import '../../../prototipos/pindorama-25d/js/world/props.js';
 import '../../../prototipos/pindorama-25d/js/world/flora.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';

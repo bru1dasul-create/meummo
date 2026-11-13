@@ -12,6 +12,7 @@
     "js/character/classes.js",
     "js/world/tmj.js",
     "js/world/ground.js",
+    "js/world/street.js",
     "js/world/props.js",
     "js/world/flora.js",
     "js/world/world.js",

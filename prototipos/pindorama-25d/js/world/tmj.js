@@ -58,17 +58,22 @@
       const pr = props(o);
       if (o.polyline) {
         const pts = o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
-        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor });
+        // linhas da rua (meio-fio, faixa-rua, rachadura, raiz): altura, tracejada, apagada, sarjeta e mato
+        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor, height: pr.altura != null ? pr.altura * 100 : null, dashed: !!pr.tracejada, faded: !!pr.apagada, gutter: !!pr.sarjeta, weeds: !!pr.mato });
       } else if (o.ellipse) {
         const r = rect(o);
-        const s = { type: k, kind: 'ellipse', cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2, rx: (r.x1 - r.x0) / 2, ry: (r.y1 - r.y0) / 2 };
+        const s = { type: k, kind: 'ellipse', cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2, rx: (r.x1 - r.x0) / 2, ry: (r.y1 - r.y0) / 2, color: pr.cor };
         map.shapes.push(s);
         if (k === 'circulo') map.awakening = { x: s.cx, y: s.cy, r: Math.min(s.rx, s.ry), color: pr.brilho || '#3fd6c8' };
       } else if (o.polygon) {
         const pts = o.polygon.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
         map.shapes.push({ type: k, kind: 'poly', pts, color: pr.cor });
+      } else if (o.point || (!o.width && !o.height)) {
+        // pontos no chão (bueiro, tampa, buraco, capim): `raio`, `olhando`, `agua`, `tipo`
+        map.shapes.push({ type: k, kind: 'point', x: o.x * CM, y: o.y * CM, r: pr.raio ? pr.raio * 100 : null, angle: pr.olhando || 0, water: !!pr.agua, plant: pr.tipo || null, color: pr.cor });
       } else {
-        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras });
+        // `estado` (asfalto rachado), `musgo` (praça) e `linhas` (campinho)
+        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras, state: pr.estado || null, moss: !!pr.musgo, lines: !!pr.linhas });
       }
     }
 
@@ -79,7 +84,7 @@
       const x = o.x * CM;
       const y = o.y * CM;
       if (k === 'arvore') {
-        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '' });
+        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo });
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {

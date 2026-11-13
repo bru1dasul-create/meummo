@@ -389,6 +389,28 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
       para 26 quadros por segundo com três passadas na tela inteira e voltou para 29 assim.
   - **Medido na área dos saguis do mapa de hoje** (PC/celular): árvores antigas sem clima, 27/23 quadros por
     segundo; árvores novas com clima, 25/25.
+- **Rua no padrão novo, o chão (13/11):** referências aprovadas `padrao-rua-floresta.jpg`, `rua-budega-aprovada.jpg` e
+  a planta `rua-budega-planta.jpg`. Tudo em `js/world/street.js` (carrega logo depois do `ground.js`; está nas três
+  listas de scripts), pintado no chão uma vez por pedaço da tela:
+  - `PD.street.texture[tipo]` troca a textura de superfície: asfalto (grão miúdo, manchas fracas de tom e de óleo,
+    trincas; o `estado` 'rachado' tem mais, com "couro de jacaré"), calçada com `desenho` 'placas' (placas de ~70 cm,
+    juntas escuras, umas trincadas, manchas de musgo, levantadas perto de raiz, mato nas frestas) e o campinho (terra
+    batida, grama nas beiradas e as linhas de cal se tiver `linhas`). A praça com `musgo` ganha musgo e capim, mais
+    nas beiradas.
+  - `PD.street.paint[tipo]` desenha as formas que são só detalhe: meio-fio (o lado da rua é achado pelo asfalto
+    vizinho; tampo claro com juntas, sarjeta suja e, quando a rua fica do lado da câmera, a face do meio-fio descendo:
+    a rua parece mais baixa), faixa-rua (tracejada e apagada), remendo, buraco (com água), poça, rachadura (com mato),
+    bueiro (a grade deitada ao longo do meio-fio, `olhando` = para onde a boca dá), tampa, raiz (cordão que afina, com
+    sombra, lado de cima claro e o chão trincado em volta) e capim (planta `capim` na camada do chão).
+  - Capim e mato sobem na tela: no chão, subir `h` cm é andar (-k·h, -k·h), com k = cosP / (2·K·sinP).
+  - `PD.street.breaks` quebra o chão em volta da árvore com `rompendo` (terra, pedaços levantados, trincas).
+  - O leitor do mapa (`tmj.js`) passa as propriedades novas: nas linhas `altura`, `tracejada`, `apagada`, `sarjeta`,
+    `mato`; nos retângulos `estado`, `musgo`, `linhas`; os pontos do chão (`raio`, `olhando`, `agua`, `tipo`); e o
+    `rompendo` da árvore.
+  - A figueira só tem os símbolos que brilham se tiver um véu a menos de 4 m (a Figueira da Esquina é só uma árvore
+    grande da cidade).
+  - Custo de um pedaço do chão (512 px) na rua: 6,6 ms no PC e 24,6 ms no celular de teste, quase o mesmo de antes
+    (6,5 e 23,6 ms).
 - **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
   de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
   - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a
