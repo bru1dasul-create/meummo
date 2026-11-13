@@ -80,6 +80,9 @@ export class Session {
       case 'guard':
         this.lobby.realm.guard(this.player, msg.on, msg.a);
         break;
+      case 'gm':
+        this.lobby.realm.gm(this.player, msg.cmd);
+        break;
       case 'shoot':
         this.lobby.realm.shoot(this.player, msg.cid, msg.a);
         break;

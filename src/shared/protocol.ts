@@ -66,6 +66,7 @@ export type ClientMsg =
   | { t: 'walk'; seq: number; a: number; dash?: true; slow?: true }
   | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
   | { t: 'guard'; on: boolean; a: number } // segurando (ou soltei) a defesa, virada para o ângulo `a` (radianos)
+  | { t: 'gm'; cmd: GmCommand } // poder do administrador (o servidor confere se é administrador mesmo)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
@@ -82,6 +83,18 @@ export type QuestAction = 'accept' | 'complete' | 'abandon';
 
 /** equip = equipar; use = usar/comer; drop = jogar fora (a pilha inteira). */
 export type ItemAction = 'equip' | 'use' | 'drop';
+
+/**
+ * Poderes do administrador (menu ADM): criar monstros onde está, derrubar os de perto, voar (atravessa tudo), ficar
+ * invencível, ir até um ponto (metros, o pé) e curar.
+ */
+export type GmCommand =
+  | { do: 'spawn'; monster: string; n: number }
+  | { do: 'clear' }
+  | { do: 'fly'; on: boolean }
+  | { do: 'god'; on: boolean }
+  | { do: 'tp'; x: number; y: number }
+  | { do: 'heal' };
 
 /** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
 export type LoginMode = 'login' | 'create';
@@ -148,6 +161,8 @@ export type ServerMsg =
   | { t: 'guard'; id: number; on: boolean; a: number } // outro jogador levantou (ou baixou) a defesa, virada para `a`
   // a sua energia (0 a 100) e a defesa: baixada, levantada ou quebrada (solte e espere a energia voltar)
   | { t: 'energy'; v: number; g: GuardState }
+  // você é administrador (o menu ADM aparece), com o voo e o invencível ligados ou não e os monstros que dá para criar
+  | { t: 'gm'; admin: boolean; fly: boolean; god: boolean; monsters: { id: string; name: string }[] }
   | { t: 'heal'; id: number; amount: number; hp: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }

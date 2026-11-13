@@ -7,6 +7,7 @@
 import {
   DASH_COOLDOWN_MS,
   DASH_TILES,
+  GM_FLY_FACTOR,
   GUARD_MAX_ENERGY,
   GUARD_WALK_FACTOR,
   MAX_PENDING_WALKS,
@@ -19,7 +20,7 @@ import {
 import { DX, DY, type Dir } from '../../shared/dir';
 import { pickQuickItem, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
-import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
+import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
@@ -34,6 +35,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { angleDiff, chargedRange, chargeFraction } from '../../shared/combat';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
+import { GmPanel } from './gm';
 import { GuardButton } from './guard';
 import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
@@ -154,7 +156,7 @@ class NewWorld implements NewWorldGame {
   // Previsão do próprio andar (como no jogo de hoje): anda na hora e o servidor confirma depois.
   private predicted!: Pose;
   /** `guard`: segurava a defesa quando mandou (anda devagar; o servidor conta igual, na ordem das mensagens). */
-  private pending: { seq: number; a: number; dash: boolean; slow: boolean; guard: boolean }[] = [];
+  private pending: { seq: number; a: number; dash: boolean; slow: boolean; guard: boolean; fly: boolean }[] = [];
   /** Andando devagar agora (Shift segurado, ou o joystick empurrado só um pouco); o normal é correr. */
   private slow = false;
   private shiftDown = false;
@@ -206,6 +208,10 @@ class NewWorld implements NewWorldGame {
   private lastWalkDegrees = 90;
   private lastWalkAt = 0;
   private readonly guardButton: GuardButton;
+  /** Menu ADM (só administrador): voando atravessa tudo; "teleporte ao clicar" troca o andar até pelo ir até lá. */
+  private readonly gmPanel: GmPanel;
+  private gmFly = false;
+  private gmTeleport = false;
   /** `?fps` no endereço: quadros por segundo e o custo de cada quadro, para medir no aparelho de verdade. */
   private readonly fpsMeter = new URLSearchParams(location.search).has('fps') ? new FpsMeter() : null;
   /** Conversa aberta (missão ou loja): com quem. A câmera vai até ele e volta quando fecha. */
@@ -290,6 +296,21 @@ class NewWorld implements NewWorldGame {
       () => this.startGuard(performance.now()),
       () => this.stopGuard(),
     );
+    this.gmPanel = new GmPanel({
+      spawn: (monster, n) => this.conn.send({ t: 'gm', cmd: { do: 'spawn', monster, n } }),
+      clear: () => this.conn.send({ t: 'gm', cmd: { do: 'clear' } }),
+      // o voo vale na hora também aqui (os próximos passos já saem voando, na mesma ordem que o servidor conta)
+      fly: (on) => {
+        this.gmFly = on;
+        this.clearRoute();
+        this.conn.send({ t: 'gm', cmd: { do: 'fly', on } });
+      },
+      god: (on) => this.conn.send({ t: 'gm', cmd: { do: 'god', on } }),
+      heal: () => this.conn.send({ t: 'gm', cmd: { do: 'heal' } }),
+      teleportMode: (on) => {
+        this.gmTeleport = on;
+      },
+    });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
     this.container.addEventListener('pointermove', this.onPointerMove);
@@ -419,6 +440,7 @@ class NewWorld implements NewWorldGame {
     this.bag.destroy();
     this.quick.destroy();
     this.guardButton.destroy();
+    this.gmPanel.destroy();
     this.fpsMeter?.destroy();
     this.shop.destroy();
     this.talk.destroy();
@@ -471,7 +493,8 @@ class NewWorld implements NewWorldGame {
    * Quanto anda um pedaço: correndo (o normal), devagar (Shift / joystick empurrado de leve) ou, segurando a defesa,
    * devagar × GUARD_WALK_FACTOR.
    */
-  private sliceOf(slow: boolean, guard = this.guardHeld): number {
+  private sliceOf(slow: boolean, guard = this.guardHeld, fly = this.gmFly): number {
+    if (fly) return sliceDistance(this.map.metric, false, this.stepMs) * GM_FLY_FACTOR;
     if (guard) return sliceDistance(this.map.metric, true, this.stepMs) * GUARD_WALK_FACTOR;
     return sliceDistance(this.map.metric, slow, this.stepMs);
   }
@@ -512,6 +535,9 @@ class NewWorld implements NewWorldGame {
         break;
       case 'KeyF':
         if (!event.repeat) this.startGuard(now);
+        break;
+      case 'KeyG':
+        if (!event.repeat) this.gmPanel.toggle(); // só abre para administrador
         break;
       case 'KeyM':
         if (!event.repeat) this.toggleSound();
@@ -581,18 +607,27 @@ class NewWorld implements NewWorldGame {
     }
     this.slow = this.shiftDown; // "andar até" com Shift segurado vai devagar
     if (this.route.length === 0) return null;
+    if (this.gmFly) {
+      // voando: em linha reta até o ponto, atravessando tudo
+      const goal = this.route[this.route.length - 1]!;
+      if (Math.hypot(goal.x - this.predicted.x, goal.y - this.predicted.y) <= this.sliceOf(false) / 2 + 0.01) {
+        this.clearRoute();
+        return null;
+      }
+      return degreesToward(this.predicted.x, this.predicted.y, goal.x, goal.y);
+    }
     return followRoute(this.map, this.predicted, this.route, this.sliceOf(this.slow));
   }
 
   private walkOnce(degrees: number): void {
     const slow = this.slow;
-    const result = walkSlice(this.map, this.predicted, degrees, this.sliceOf(slow));
+    const result = this.gmFly ? flySlice(this.map, this.predicted, degrees, this.sliceOf(slow)) : walkSlice(this.map, this.predicted, degrees, this.sliceOf(slow));
     if (!result.moved && result.dir === this.predicted.dir) {
       this.noteStuck();
       return;
     }
     this.seq += 1;
-    this.pending.push({ seq: this.seq, a: degrees, dash: false, slow, guard: this.guardHeld });
+    this.pending.push({ seq: this.seq, a: degrees, dash: false, slow, guard: this.guardHeld, fly: this.gmFly });
     this.conn.send(slow ? { t: 'walk', seq: this.seq, a: degrees, slow: true } : { t: 'walk', seq: this.seq, a: degrees });
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
     this.lastWalkDegrees = degrees;
@@ -632,7 +667,11 @@ class NewWorld implements NewWorldGame {
   private onAck(seq: number, server: Pose): void {
     this.pending = this.pending.filter((p) => p.seq > seq);
     let pose: Pose = server;
-    for (const p of this.pending) pose = p.dash ? sweepBody(this.map, pose, p.a, DASH_TILES) : walkSlice(this.map, pose, p.a, this.sliceOf(p.slow, p.guard));
+    for (const p of this.pending) {
+      if (p.dash) pose = sweepBody(this.map, pose, p.a, DASH_TILES);
+      else if (p.fly) pose = flySlice(this.map, pose, p.a, this.sliceOf(p.slow, p.guard, true));
+      else pose = walkSlice(this.map, pose, p.a, this.sliceOf(p.slow, p.guard, false));
+    }
     const off = Math.hypot(pose.x - this.predicted.x, pose.y - this.predicted.y);
     if (off > 1e-6) {
       this.predicted = { x: pose.x, y: pose.y, dir: pose.dir };
@@ -656,6 +695,13 @@ class NewWorld implements NewWorldGame {
    */
   private walkToPoint(x: number, y: number): void {
     const goal = cornerAtFeet(x, y);
+    if (this.gmFly) {
+      // voando não precisa de caminho: vai reto (veja nextDirection)
+      this.stuckSlices = 0;
+      this.route = [goal];
+      this.routeGoal = goal;
+      return;
+    }
     const found = findRoute(this.map, this.predicted, goal);
     this.stuckSlices = 0;
     this.replans = 0;
@@ -756,6 +802,11 @@ class NewWorld implements NewWorldGame {
     }
     const point = this.view.toWorld(clientX, clientY);
     this.goingToNpc = null;
+    if (this.gmTeleport && this.gmPanel.admin) {
+      this.clearRoute();
+      this.conn.send({ t: 'gm', cmd: { do: 'tp', x: round3(point.x), y: round3(point.y) } });
+      return;
+    }
     this.walkToPoint(point.x, point.y);
   }
 
@@ -1206,7 +1257,7 @@ class NewWorld implements NewWorldGame {
     }
     this.cancelCharge(); // a esquiva solta a pedra que estava puxando (o servidor faz o mesmo)
     this.seq += 1;
-    this.pending.push({ seq: this.seq, a: degrees, dash: true, slow: false, guard: this.guardHeld });
+    this.pending.push({ seq: this.seq, a: degrees, dash: true, slow: false, guard: this.guardHeld, fly: this.gmFly });
     this.conn.send({ t: 'walk', seq: this.seq, a: degrees, dash: true });
     this.sfx.play('dash');
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
@@ -1579,6 +1630,11 @@ class NewWorld implements NewWorldGame {
         }
         break;
       }
+      case 'gm':
+        this.gmFly = msg.admin && msg.fly;
+        if (!msg.admin) this.gmTeleport = false;
+        this.gmPanel.set(msg);
+        break;
       case 'guard':
         this.combat.setGuard(msg.id, msg.on ? msg.a : null, performance.now());
         this.view?.action?.(msg.id, msg.on ? 'guard' : 'guard-end', toDegrees(msg.a));

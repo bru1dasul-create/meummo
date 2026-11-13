@@ -642,9 +642,37 @@
           }
         };
         const password = el('div', { class: 'notice', id: 'password-reset' }, el('strong', { text: 'Trocar senha' }), pwName, pwValue, el('button', { class: 'act', type: 'button', text: 'Trocar', onclick: changePassword }));
+        // Administradores: têm o menu ADM dentro do jogo (criar e derrubar monstros, voar, invencível, teleporte).
+        const admName = el('input', { type: 'text', maxlength: '32', placeholder: 'Nome do personagem', autocomplete: 'off' });
+        const setAdmin = async (admin) => {
+          const nome = admName.value.trim();
+          if (!nome) return toast('Escreva o nome do personagem.', true);
+          try {
+            const res = await fetch('/admin/api/adm', { method: 'POST', headers: HEADERS, body: JSON.stringify({ nome, admin }) });
+            const result = await res.json();
+            toast(result.ok ? result.texto : `Não deu: ${result.erro}`, !result.ok);
+            if (result.ok) {
+              admName.value = '';
+              await loadPlayers();
+              render();
+            }
+          } catch (error) {
+            toast(`Não consegui falar com o servidor: ${error.message}`, true);
+          }
+        };
+        const admins = state.players.administradores || [];
+        const adminBox = el(
+          'div',
+          { class: 'notice', id: 'admins' },
+          el('strong', { text: 'Administradores' }),
+          admName,
+          el('button', { class: 'act', type: 'button', text: 'Tornar administrador', onclick: () => setAdmin(true) }),
+          el('button', { class: 'act soft', type: 'button', text: 'Tirar', onclick: () => setAdmin(false) }),
+        );
+        const adminList = el('div', { class: 'stats', text: admins.length ? `Hoje: ${admins.join(', ')}. No jogo, a tecla G (ou o botão ADM) abre o menu.` : 'Ninguém é administrador ainda. Quem for ganha o menu ADM no jogo (tecla G).' });
         const list = el('div', { class: 'cards', id: 'players' });
         for (const p of state.players.jogadores) list.append(playerCard(p));
-        content.replaceChildren(notice, password, state.players.jogadores.length ? list : el('p', { class: 'empty', id: 'players', text: 'Ninguém online agora.' }));
+        content.replaceChildren(notice, password, adminBox, adminList, state.players.jogadores.length ? list : el('p', { class: 'empty', id: 'players', text: 'Ninguém online agora.' }));
       }
 
       /** Atualiza só os números (posição, vida, ouro) sem apagar o que você está digitando; quem entrou ou saiu redesenha. */

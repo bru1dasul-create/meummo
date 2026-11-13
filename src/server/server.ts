@@ -96,6 +96,12 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     tuning,
     realm,
     log,
+    setAdmin: (name, admin) => {
+      const saved = store.setAdmin(name, admin);
+      if (saved) realm.setAdmin(saved, admin); // se ele está jogando, vale na hora
+      return saved;
+    },
+    admins: () => store.admins(),
     setPassword: async (name, password) => {
       const saved = await store.setPassword(name, password);
       if (saved) guard.forgive(nameKey(saved)); // as tentativas erradas de antes não travam a senha nova

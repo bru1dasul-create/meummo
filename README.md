@@ -142,6 +142,12 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   do personagem e a senha nova (vale para qualquer personagem salvo, mesmo quem não está online) e passe a senha nova
   para a pessoa. Quem recebe vê no chat o que o administrador fez. Tudo fica registrado na janela do servidor (a
   senha nunca aparece lá). Banir fica para quando o jogo for para a internet (M5).
+- **Administradores (menu ADM dentro do jogo):** na aba Jogadores, escreva o nome do seu personagem e clique em
+  **Tornar administrador** (vale na hora, mesmo jogando, e até do celular: a senha dele protege). No jogo aparece o
+  botão **ADM** (ou tecla **G**), com: **criar monstros** onde você está (até 10 por vez; eles não renascem),
+  **derrubar os monstros perto** (você ganha a XP), **voar** (atravessa parede e árvore, rápido; ao pousar dentro de
+  algo, vai para o chão livre), **invencível** (não leva dano e os monstros te ignoram), **teleporte ao clicar** (o
+  clique no chão te leva até lá) e **curar**. Tudo fica registrado na janela do servidor.
 
 Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
 alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").

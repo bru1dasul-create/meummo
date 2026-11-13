@@ -319,6 +319,16 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
   golpe fecha a conversa. O motor avisa a view: `focus(ponto)` (olhar para quem fala; a provisória já centraliza) e
   `talk(id, ms)` (quanto tempo a boca mexe: a fala ao abrir e a resposta ao entregar, aceitar ou desistir)
+- [x] **[estrutura]** Menu ADM, passo 1 (13/11, pedido do dono: "menu administrativo para pôr mais bicho, matar,
+  voar, fazer coisas que player normal não faz"): quem é administrador fica salvo no personagem (`MIGRATIONS` passo 4)
+  e é marcado no painel (aba Jogadores, vale na hora). No jogo, botão ADM / tecla G: criar monstros onde está (até
+  10 por vez e 60 por mapa; não renascem), derrubar os de perto (a XP vai para ele), voar (atravessa tudo, 2,5× o
+  correr; pousando dentro de algo vai para o chão livre), invencível (sem dano, monstros e canto ignoram), teleporte
+  ao clicar e curar. Mensagem `gm` (protocolo 24), conferida no servidor e registrada. Visual provisório
+  (`src/client/novo/gm.ts`) para a [arte] caprichar
+- [ ] **[dono → estrutura]** Menu ADM, passo 2 (o dono escolhe): o painel já ajusta monstros, itens, loja e jogadores;
+  dá para pôr também missões, onde e quantos monstros nascem, os números do combate (carga, defesa, recuo), a
+  posição dos NPCs, nível/XP de um jogador e "ver como o servidor vê" (colisões) no jogo
 - [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem
   `docs/referencias/tela-inicial.webp`; fundo e logo em `tela-inicial-fundo.webp` e `tela-inicial-logo.webp`): "Entrar"
   só entra com personagem que já existe (antes, nome digitado errado criava um personagem novo sem querer) e "Criar uma

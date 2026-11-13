@@ -31,6 +31,10 @@ export interface AdminOptions {
   kick?: (playerId: number) => boolean;
   /** Troca a senha de um personagem salvo (para quem esqueceu). Devolve o nome salvo, ou null se não existir. */
   setPassword?: (name: string, password: string) => Promise<string | null>;
+  /** Marca (ou desmarca) um personagem salvo como administrador (menu ADM no jogo). Devolve o nome, ou null. */
+  setAdmin?: (name: string, admin: boolean) => string | null;
+  /** Os administradores de hoje (nomes). */
+  admins?: () => string[];
   log?: (message: string) => void;
 }
 
@@ -181,6 +185,7 @@ export function createAdminHandler(options: AdminOptions): (req: http.IncomingMe
     if (route === 'GET /admin/api/jogadores' && realm) {
       sendJson(res, 200, {
         jogadores: realm.playersOnline(),
+        administradores: options.admins?.() ?? [],
         mapas: [...realm.worlds.values()].map((w) => ({ id: w.map.id, nome: w.map.name, largura: w.map.width, altura: w.map.height })),
         itens: [...tuning.items.values()].map((i) => ({ id: i.id, nome: i.name })),
       });
@@ -194,6 +199,25 @@ export function createAdminHandler(options: AdminOptions): (req: http.IncomingMe
           const result = runPlayerAction(action, realm, tuning, options.kick);
           if (result.ok) log(`painel: ${result.texto}`);
           sendJson(res, result.ok ? 200 : 400, result);
+        })
+        .catch((error: Error) => sendJson(res, 400, { ok: false, erro: error.message }));
+      return true;
+    }
+    if (route === 'POST /admin/api/adm' && options.setAdmin) {
+      const setAdmin = options.setAdmin;
+      readBody(req)
+        .then((body) => {
+          const data = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
+          const nome = typeof data.nome === 'string' ? normalizeName(data.nome) : '';
+          if (!nome || nameProblem(nome)) return sendJson(res, 400, { ok: false, erro: 'Escreva o nome do personagem.' });
+          if (typeof data.admin !== 'boolean') return sendJson(res, 400, { ok: false, erro: 'Pedido incompleto.' });
+          const saved = setAdmin(nome, data.admin);
+          if (!saved) return sendJson(res, 400, { ok: false, erro: `Não existe personagem chamado "${nome}".` });
+          log(`painel: ${saved} ${data.admin ? 'agora é administrador' : 'não é mais administrador'}`);
+          sendJson(res, 200, {
+            ok: true,
+            texto: data.admin ? `${saved} agora é administrador: no jogo, a tecla G (ou o botão ADM) abre o menu.` : `${saved} não é mais administrador.`,
+          });
         })
         .catch((error: Error) => sendJson(res, 400, { ok: false, erro: error.message }));
       return true;

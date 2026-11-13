@@ -42,8 +42,11 @@ export class Player {
   /** Ids de quem este jogador está vendo agora. */
   readonly known = new Set<number>();
   /** Pedaços de caminhada/esquivas pedidos e ainda não processados (o servidor anda no ritmo dele). */
-  /** `guard`: segurava a defesa quando pediu este pedaço (anda devagar; vale a ordem das mensagens, como no navegador). */
-  readonly queue: { seq: number; a: number; dash: boolean; slow: boolean; guard: boolean }[] = [];
+  /**
+   * `guard`: segurava a defesa quando pediu este pedaço (anda devagar); `fly`: estava voando (administrador). Vale a
+   * ordem das mensagens, como no navegador.
+   */
+  readonly queue: { seq: number; a: number; dash: boolean; slow: boolean; guard: boolean; fly: boolean }[] = [];
   /** Quanto tempo de caminhada o jogador ainda pode gastar agora (enche com o relógio, até um limite). */
   walkBudget = 0;
   /** Quando o orçamento de caminhada foi enchido pela última vez (0 = ainda não). */
@@ -89,6 +92,10 @@ export class Player {
   nextShotAt = 0;
   /** Puxando o estilingue desde quando (pedra com carga), ou null. Esquiva, golpe recebido e desmaio cancelam. */
   chargeStart: number | null = null;
+  /** Administrador (marcado no painel): tem o menu ADM. Voando: atravessa tudo e anda rápido. Invencível: sem dano. */
+  admin = false;
+  fly = false;
+  god = false;
   /** Defesa (passo 2b): segurando o botão? Virada para onde (radianos)? Levantada desde quando (null = baixada)? */
   guardWanted = false;
   guardAngle = 0;
@@ -192,6 +199,8 @@ export interface ZoneState {
   alive: Set<number>;
   /** Momentos em que monstros mortos voltam (em ordem). */
   respawnAt: number[];
+  /** Criados pelo administrador (menu ADM): não renascem. */
+  temporary?: boolean;
 }
 
 /** Golpe sendo preparado (o aviso vermelho já apareceu no chão). */

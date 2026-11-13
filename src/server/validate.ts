@@ -3,11 +3,36 @@
 import { CHAT_MAX_LENGTH } from '../shared/constants';
 import { isWalkAngle } from '../shared/movement';
 import { BAG_SIZE, EQUIP_SLOTS, type EquipSlot } from '../shared/items';
-import type { ClientMsg } from '../shared/protocol';
+import type { ClientMsg, GmCommand } from '../shared/protocol';
 
 const MAX_RAW_LENGTH = 1024;
 /** Maior quantidade numa compra ou venda (maior que qualquer pilha). */
 const MAX_TRADE = 999;
+
+/** Um poder do administrador bem formado (se ele é administrador, o mundo confere). */
+function parseGmCommand(raw: unknown): GmCommand | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const c = raw as Record<string, unknown>;
+  switch (c.do) {
+    case 'spawn':
+      return typeof c.monster === 'string' && c.monster.length > 0 && c.monster.length <= 40 && Number.isInteger(c.n) && (c.n as number) >= 1 && (c.n as number) <= 99
+        ? { do: 'spawn', monster: c.monster, n: c.n as number }
+        : null;
+    case 'clear':
+      return { do: 'clear' };
+    case 'heal':
+      return { do: 'heal' };
+    case 'fly':
+    case 'god':
+      return typeof c.on === 'boolean' ? { do: c.do, on: c.on } : null;
+    case 'tp':
+      return typeof c.x === 'number' && typeof c.y === 'number' && Number.isFinite(c.x) && Number.isFinite(c.y) && Math.abs(c.x) < 100000 && Math.abs(c.y) < 100000
+        ? { do: 'tp', x: c.x, y: c.y }
+        : null;
+    default:
+      return null;
+  }
+}
 
 function isAngle(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 10;
@@ -60,6 +85,10 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return { t: 'charge' };
     case 'guard':
       return typeof msg.on === 'boolean' && isAngle(msg.a) ? { t: 'guard', on: msg.on, a: msg.a } : null;
+    case 'gm': {
+      const cmd = parseGmCommand(msg.cmd);
+      return cmd ? { t: 'gm', cmd } : null;
+    }
     case 'shoot':
       return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
         ? { t: 'shoot', cid: msg.cid as number, a: msg.a }

@@ -39,6 +39,8 @@ export interface CharacterData {
 export interface SavedCharacter extends CharacterData {
   id: number;
   name: string;
+  /** Administrador: tem o menu ADM no jogo (marcado no painel do administrador). */
+  admin?: boolean;
 }
 
 /** Quem salva personagens (o mundo só conhece isto; nos testes dá para usar um falso). */
@@ -91,6 +93,8 @@ export const MIGRATIONS: readonly string[] = [
   `ALTER TABLE characters ADD COLUMN inventory TEXT`,
   // versão 3: progresso nas missões (JSON); quem já existia começa sem missões
   `ALTER TABLE characters ADD COLUMN quests TEXT`,
+  // versão 4: administrador (menu ADM no jogo); quem já existia começa como jogador normal
+  `ALTER TABLE characters ADD COLUMN admin INTEGER NOT NULL DEFAULT 0`,
 ];
 
 interface CharacterRow {
@@ -106,9 +110,10 @@ interface CharacterRow {
   look: number;
   inventory: string | null;
   quests: string | null;
+  admin: number;
 }
 
-const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests';
+const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests, admin';
 
 export class CharacterStore implements CharacterSaver {
   private readonly db: DatabaseSync;
@@ -190,6 +195,21 @@ export class CharacterStore implements CharacterSaver {
     return row.name;
   }
 
+  /** Marca (ou desmarca) o personagem `name` como administrador. Devolve o nome salvo, ou null se não existir. */
+  setAdmin(name: string, admin: boolean): string | null {
+    this.assertOpen();
+    const row = this.db.prepare('SELECT id, name FROM characters WHERE name_key = ?').get(nameKey(name)) as { id: number; name: string } | undefined;
+    if (!row) return null;
+    this.db.prepare('UPDATE characters SET admin = ? WHERE id = ?').run(admin ? 1 : 0, row.id);
+    return row.name;
+  }
+
+  /** Os nomes dos administradores, em ordem. */
+  admins(): string[] {
+    this.assertOpen();
+    return (this.db.prepare('SELECT name FROM characters WHERE admin = 1 ORDER BY name').all() as { name: string }[]).map((r) => r.name);
+  }
+
   /** O personagem salvo (ou null se não existir). */
   load(id: number): SavedCharacter | null {
     const row = this.findId.get(id) as CharacterRow | undefined;
@@ -207,6 +227,7 @@ export class CharacterStore implements CharacterSaver {
       look: row.look >>> 0,
       inventory: parseJson(row.inventory) as SavedInventory | null,
       quests: parseJson(row.quests) as QuestLog | null,
+      admin: row.admin === 1,
     };
   }
 

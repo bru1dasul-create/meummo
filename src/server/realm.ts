@@ -6,7 +6,7 @@ import { MAX_PLAYERS } from '../shared/constants';
 import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
-import type { ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
+import type { GmCommand, ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
 import type { ItemInfo } from '../shared/items';
 import type { TuningFile } from './tuning';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
@@ -153,6 +153,20 @@ export class Realm {
 
   guard(player: Player, on: boolean, angle: number): void {
     this.worldOf(player)?.guard(player, on, angle);
+  }
+
+  gm(player: Player, cmd: GmCommand): void {
+    this.worldOf(player)?.gm(player, cmd);
+  }
+
+  /** O painel marcou (ou desmarcou) alguém como administrador: se ele está jogando, vale na hora. */
+  setAdmin(name: string, admin: boolean): void {
+    const key = nameKey(name);
+    for (const world of this.worlds.values()) {
+      for (const player of world.players.values()) {
+        if (nameKey(player.name) === key) world.setAdmin(player, admin);
+      }
+    }
   }
 
   shoot(player: Player, cid: number, angle: number): void {

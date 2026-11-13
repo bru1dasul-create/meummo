@@ -307,6 +307,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
 | cliente | `charge` | começar a puxar o estilingue (a carga conta até o `shoot`) |
 | cliente | `guard` | segurar (`on: true`) ou soltar a defesa, virada para o ângulo `a` |
+| cliente | `gm` | poder do administrador (`cmd`: criar monstros, derrubar os de perto, voar, invencível, ir até um ponto, curar); o servidor confere se ele é administrador e registra |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
@@ -325,6 +326,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
 | servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho, investida), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
+| servidor | `gm` | você é administrador: o menu ADM aparece, com o voo, o invencível e os monstros que dá para criar (só administrador recebe) |
 | servidor | `guard` / `energy` | outro jogador levantou ou baixou a defesa / a sua energia e a defesa (baixada, levantada, quebrada); no `hit`, `blk` diz se a defesa segurou (1) ou segurou e quebrou (2) |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
