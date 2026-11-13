@@ -314,7 +314,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     20 de energia. Defendendo, anda a 70% do andar devagar e não atira nem usa habilidade; levantar solta a pedra.
     Fogo no chão não tem direção: a defesa não segura. Protocolo 22 (`guard`, `energy`, `blk` no `hit`). Desenho
     provisório: arco azul-claro no chão, faísca no bloqueio, barra de energia embaixo do pé, "defesa quebrou!" e o
-    botão `#guard-button` (`src/client/novo/guard.ts`); a barra verde da HUD nova é essa energia ([arte])
+    botão `#guard-button` (`src/client/novo/guard.ts`); a barra azul da HUD nova é essa energia ([arte]; a verde é a
+    XP), e a barra embaixo do pé também ficou azul
   - [x] **2c — recuo** (13/11): golpe de monstro empurra o jogador na direção em que andava, o quanto o monstro diz
     (`"recuo"` no ataque, em cm; padrão pelo tipo: fruta 12, mordida 16, bote 22, giro 26, investida 34; também no
     painel do administrador). Defesa que segura deixa 25% do empurrão; a que quebra, 50%; parede segura. Medido no
@@ -327,6 +328,23 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
   golpe fecha a conversa. O motor avisa a view: `focus(ponto)` (olhar para quem fala; a provisória já centraliza) e
   `talk(id, ms)` (quanto tempo a boca mexe: a fala ao abrir e a resposta ao entregar, aceitar ou desistir)
+- [x] **[estrutura]** Menu ADM, passo 1 (13/11, pedido do dono: "menu administrativo para pôr mais bicho, matar,
+  voar, fazer coisas que player normal não faz"): quem é administrador fica salvo no personagem (`MIGRATIONS` passo 4)
+  e é marcado no painel (aba Jogadores, vale na hora). No jogo, botão ADM / tecla G: criar monstros onde está (até
+  10 por vez e 60 por mapa; não renascem), derrubar os de perto (a XP vai para ele), voar (atravessa tudo, 2,5× o
+  correr; pousando dentro de algo vai para o chão livre), invencível (sem dano, monstros e canto ignoram), teleporte
+  ao clicar e curar. Mensagem `gm` (protocolo 24), conferida no servidor e registrada. Visual provisório
+  (`src/client/novo/gm.ts`) para a [arte] caprichar
+- [x] **[estrutura]** Registros (13/11, pedido do dono: "logs para ter correções mais fácil"): arquivo por dia em
+  `saves/registros/` (14 dias), aba **Registros** no painel (filtro, "Só erros", "Copiar tudo"), erros do servidor com
+  o caminho (o tick e as mensagens não derrubam mais o servidor) e os erros do navegador de quem joga (mensagem `oops`,
+  protocolo 25, com o aparelho)
+- [x] **[estrutura]** Menu ADM, passo 2 (o dono escolheu "todos", 13/11): nível e XP de um jogador (cartão no
+  painel), a posição dos NPCs (mapa, x e y no painel; "Trazer para cá" no menu ADM; vale na hora, com o boneco
+  andando na tela de quem joga), os monstros por área (aba "Áreas de monstros": qual monstro e quantos, `mapa#n`),
+  as missões (aba "Missões": textos, quantos, nível, repetir e recompensa; até com a conversa aberta) e os números
+  do combate (aba "Combate": carga, defesa e quanto do empurrão a defesa segura; protocolo 28). Tudo vale na hora.
+  "Ver como o servidor vê" (colisões) dentro do jogo ficou de fora: por enquanto, o `?provisorio` mostra as caixas
 - [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem
   `docs/referencias/tela-inicial.webp`; fundo e logo em `tela-inicial-fundo.webp` e `tela-inicial-logo.webp`): "Entrar"
   só entra com personagem que já existe (antes, nome digitado errado criava um personagem novo sem querer) e "Criar uma
@@ -345,6 +363,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   (`#talk.cinema`, só no jogo 2.5D): o nome numa plaquinha, a fala escrita aos poucos no ritmo da boca (tocar mostra
   tudo), os cartões das missões e botões grandes (Aceitar, Entregar/Conversar, Desistir, Ver a loja, Tchau), no PC
   e no celular. A loja do jogo 2.5D também fica sem o retrato. O jogo antigo (`?antigo`) continua igual
+- [x] **[arte]** Interface nova do jogo 2.5D, no traço da HUD de referência do dono (13/11): o retrato com o herói 2.5D
+  de verdade na moldura de madeira com folhas e penas, as barras brilhantes de vida (vermelha), energia da defesa
+  (azul) e XP (verde) e o nível no selo; a barra de habilidades com o espiral vermelho (estilingue, bordunada, fôlego,
+  esquiva, a defesa no 5º quadrado e o 6º vazio, com as teclas nas etiquetas); os frascos em anéis de corda para
+  comida (3) e remédio (4); a mochila num botão redondo; a missão em andamento num painel escuro com o losango; o chat
+  com a borda de bronze; e a mochila aberta com o herói 2.5D (gira no clique). Ícones novos pintados com brilho (as 5
+  habilidades, banana, água de coco, arruda, garrafada e mochila; os outros itens seguem em pixel art, aumentada). As
+  molduras são recortes da imagem do dono, limpos (`public/assets/ui/hud`). No celular: retrato menor e botões soltos
+  em quadros dourados perto do polegar. O jogo antigo (`?antigo`) continua igual. Falta a [estrutura] ligar a barra
+  azul (`hud.setEnergy(valor, máximo)`); até lá ela mostra a energia cheia
+- [ ] **[arte]** Interface, próximos passos: pintar os outros ícones de item, e a loja e a conversa no mesmo painel
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

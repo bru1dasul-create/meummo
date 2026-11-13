@@ -6,7 +6,7 @@ import { MAX_PLAYERS } from '../shared/constants';
 import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
-import type { ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
+import type { GmCommand, ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
 import type { ItemInfo } from '../shared/items';
 import type { TuningFile } from './tuning';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
@@ -155,6 +155,20 @@ export class Realm {
     this.worldOf(player)?.guard(player, on, angle);
   }
 
+  gm(player: Player, cmd: GmCommand): void {
+    this.worldOf(player)?.gm(player, cmd);
+  }
+
+  /** O painel marcou (ou desmarcou) alguém como administrador: se ele está jogando, vale na hora. */
+  setAdmin(name: string, admin: boolean): void {
+    const key = nameKey(name);
+    for (const world of this.worlds.values()) {
+      for (const player of world.players.values()) {
+        if (nameKey(player.name) === key) world.setAdmin(player, admin);
+      }
+    }
+  }
+
   shoot(player: Player, cid: number, angle: number): void {
     this.worldOf(player)?.shoot(player, cid, angle);
   }
@@ -256,6 +270,24 @@ export class Realm {
     };
   }
 
+  /** Muda o nível de quem está online (a XP do nível começa do zero; a vida enche). */
+  adminSetLevel(id: number, level: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    found.world.adminSetLevel(found.player, level);
+    return { ok: true, texto: `${found.player.name} agora está no nível ${found.player.level}.` };
+  }
+
+  /** Dá XP para quem está online (sobe de nível se passar, como caçando). */
+  adminGiveXp(id: number, amount: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    const before = found.player.level;
+    found.world.adminGiveXp(found.player, amount);
+    const up = found.player.level > before ? ` e subiu para o nível ${found.player.level}` : '';
+    return { ok: true, texto: `${found.player.name} ganhou ${amount} de XP${up}.` };
+  }
+
   adminHeal(id: number): AdminResult {
     const found = this.findOnline(id);
     if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
@@ -299,6 +331,9 @@ export class Realm {
       if (changed.has('monstros')) world.refreshMonsters();
       if (changed.has('itens')) world.refreshItems();
       if (changed.has('npcs')) world.refreshNpcs();
+      if (changed.has('areas')) world.refreshAreas();
+      if (changed.has('missoes')) world.refreshQuests();
+      if (changed.has('combate')) world.refreshCombat();
     }
   }
 

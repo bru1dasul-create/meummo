@@ -932,6 +932,11 @@ export class WorldScene extends Phaser.Scene {
       case 'quests':
         this.onQuestLog(msg.log);
         break;
+      case 'questDefs':
+        // o painel mudou as missões: troca dentro da mesma lista (a conversa e a lista na tela usam ela)
+        this.questList.splice(0, this.questList.length, ...msg.quests);
+        this.refreshQuests();
+        break;
       case 'charm':
         this.onCharm(msg.ms, now);
         break;

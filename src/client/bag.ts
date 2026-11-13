@@ -4,6 +4,7 @@
 import { EQUIP_SLOTS, gearLookOf, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
 import type { ItemAction, PlayerStats } from '../shared/protocol';
 import { characterPortrait } from './game/characters';
+import { drawHeroPortrait, hasHeroPortrait } from './heroPortrait';
 import { itemIconUrl } from './itemArt';
 
 const PART_LABELS: Record<EquipSlot, string> = { weapon: 'Arma', head: 'Cabeça', body: 'Corpo', charm: 'Amuleto' };
@@ -18,6 +19,8 @@ const DOLL_TURNS: readonly { frame: number; mirror: boolean }[] = [
   { frame: 0, mirror: false },
   { frame: 3, mirror: true },
 ];
+/** No jogo 2.5D o boneco é o herói de verdade: para onde ele olha em cada clique (graus no chão; 45 = de frente). */
+const HERO_TURNS = [30, -40, -140, 125] as const;
 
 type Selection = { kind: 'bag'; i: number } | { kind: 'gear'; part: EquipSlot } | null;
 
@@ -63,6 +66,8 @@ export class Bag {
   private readonly gearButtons = new Map<EquipSlot, HTMLButtonElement>();
   private readonly doll = document.createElement('button');
   private readonly dollImg = document.createElement('img');
+  /** Jogo 2.5D: o herói desenhado pelo 2.5D (sem armadura nem arma), no lugar do boneco de pixel. */
+  private readonly heroCanvas = hasHeroPortrait() ? document.createElement('canvas') : null;
   private dollTurn = 0;
   private dollKey = '';
   private readonly slotButtons: HTMLButtonElement[] = [];
@@ -86,7 +91,12 @@ export class Bag {
     this.doll.title = 'Seu personagem (clique para girar)';
     this.dollImg.alt = 'Seu personagem com o equipamento';
     this.dollImg.draggable = false;
-    this.doll.append(this.dollImg);
+    if (this.heroCanvas) {
+      this.heroCanvas.className = 'bag-hero';
+      this.heroCanvas.setAttribute('aria-label', 'Seu personagem');
+      this.doll.classList.add('hero');
+      this.doll.append(this.heroCanvas);
+    } else this.doll.append(this.dollImg);
     this.doll.addEventListener('click', this.turnDoll);
     this.gearEl.append(this.doll);
     for (const part of EQUIP_SLOTS) {
@@ -180,6 +190,14 @@ export class Bag {
 
   /** Desenha o boneco com o que está equipado agora (só refaz a imagem quando algo muda). */
   private renderDoll(): void {
+    if (this.heroCanvas) {
+      // só dá para desenhar com a mochila aberta (o canvas precisa ter tamanho na tela)
+      const yaw = HERO_TURNS[this.dollTurn % HERO_TURNS.length]!;
+      const box = this.heroCanvas.getBoundingClientRect();
+      const key = `heroi|${yaw}|${Math.round(box.width)}x${Math.round(box.height)}`;
+      if (this.isOpen && key !== this.dollKey && drawHeroPortrait(this.heroCanvas, { mode: 'full', yaw })) this.dollKey = key;
+      return;
+    }
     const gear = gearLookOf(this.state.equipped, this.items);
     const turn = DOLL_TURNS[this.dollTurn]!;
     const key = `${JSON.stringify(gear)}|${turn.frame}`;

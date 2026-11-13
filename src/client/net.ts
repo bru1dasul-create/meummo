@@ -5,6 +5,39 @@ import type { ByeReason, ClientMsg, LoginMode, RejectReason, ServerMsg, WelcomeM
 
 export type JoinFailure = RejectReason | 'offline' | 'timeout';
 
+/** Quantos erros do navegador mandar por sessão (os repetidos não contam). */
+const MAX_ERROR_REPORTS = 10;
+
+/**
+ * Erros que acontecerem nesta página vão para os registros do servidor (aba Registros do painel), com onde
+ * aconteceram e o aparelho: assim dá para corrigir sem precisar que alguém descreva o problema. Devolve quem desliga.
+ */
+export function reportErrors(conn: Connection): () => void {
+  const sent = new Set<string>();
+  const device = navigator.userAgent.replace(/\s+/g, ' ').slice(0, 140);
+  const report = (text: string) => {
+    const key = text.slice(0, 200);
+    if (sent.has(key) || sent.size >= MAX_ERROR_REPORTS) return;
+    sent.add(key);
+    conn.send({ t: 'oops', text: `${text} | ${location.pathname}${location.search} | ${innerWidth}x${innerHeight} | ${device}`.slice(0, 700) }); // com folga para o limite de 1024 da mensagem inteira
+  };
+  const onError = (event: ErrorEvent) => {
+    const where = event.filename ? ` (${event.filename.replace(/^.*\//, '')}:${event.lineno}:${event.colno})` : '';
+    const stack = event.error instanceof Error && event.error.stack ? ` — ${event.error.stack.split('\n').slice(1, 4).map((l) => l.trim()).join(' / ')}` : '';
+    report(`${event.message}${where}${stack}`);
+  };
+  const onRejection = (event: PromiseRejectionEvent) => {
+    const reason = event.reason instanceof Error ? `${event.reason.message} — ${(event.reason.stack ?? '').split('\n').slice(1, 4).map((l) => l.trim()).join(' / ')}` : String(event.reason);
+    report(`promessa sem tratamento: ${reason}`);
+  };
+  window.addEventListener('error', onError);
+  window.addEventListener('unhandledrejection', onRejection);
+  return () => {
+    window.removeEventListener('error', onError);
+    window.removeEventListener('unhandledrejection', onRejection);
+  };
+}
+
 export class JoinError extends Error {
   constructor(readonly reason: JoinFailure) {
     super(reason);

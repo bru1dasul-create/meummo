@@ -21,6 +21,14 @@ try {
   process.exit(1);
 }
 
+// Erro que escapou de tudo: fica nos registros (com o caminho do erro) antes de o servidor desligar.
+process.on('uncaughtException', (error) => {
+  server?.logbook.error('GRAVE, o servidor vai desligar', error);
+  console.error(error);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => server?.logbook.error('sem tratamento (promessa)', reason));
+
 let stopping = false;
 async function shutdown(): Promise<void> {
   if (stopping) return;

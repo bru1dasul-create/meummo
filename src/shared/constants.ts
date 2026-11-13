@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 23;
+export const PROTOCOL_VERSION = 28;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -94,6 +94,15 @@ export const GUARD_WALK_FACTOR = 0.7;
  */
 export const GUARD_PUSH_FACTOR = 0.25;
 export const GUARD_BREAK_PUSH_FACTOR = 0.5;
+/**
+ * Poderes do administrador (menu ADM no jogo): voando, anda GM_FLY_FACTOR vezes o correr e atravessa tudo; cria até
+ * GM_SPAWN_MAX monstros por vez, até GM_SPAWN_MAP_MAX criados por mapa (eles não renascem); derruba os monstros a até
+ * GM_CLEAR_RANGE metros.
+ */
+export const GM_FLY_FACTOR = 2.5;
+export const GM_SPAWN_MAX = 10;
+export const GM_SPAWN_MAP_MAX = 60;
+export const GM_CLEAR_RANGE = 8;
 
 /** Esquiva: quantos tiles o rolamento anda, de quanto em quanto tempo e quanto tempo fica invencível. */
 export const DASH_TILES = 3;

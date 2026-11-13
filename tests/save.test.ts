@@ -136,7 +136,7 @@ describe('arquivo de personagens', () => {
     store.close();
 
     const again = new CharacterStore(file, { cost: FAST_HASH });
-    expect(again.load(login.id)).toEqual({ id: login.id, name: 'Lúcia', ...data });
+    expect(again.load(login.id)).toEqual({ id: login.id, name: 'Lúcia', admin: false, ...data });
     expect(await again.login('lúcia', 'segredo1')).toMatchObject({ ok: true, created: false });
     again.close();
   });

@@ -1,9 +1,12 @@
 // Ícones dos itens desenhados por código (pixel art 16x16), como os monstros.
 // Cada item de data/items.json diz qual desenho usar no campo "icone". Ícone sem desenho vira uma trouxinha.
+// No jogo 2.5D, os itens que já ganharam pintura (paintedIcons.ts) aparecem pintados; os outros, em pixel art
+// aumentada 4x (a tela reduz liso sem borrar o pixel).
 // Para trocar por arte de verdade: carregue uma imagem com a mesma chave (`item-<icone>`).
 
 import type Phaser from "phaser";
 import { outline } from "./game/monsterArt";
+import { paintedItemIcon } from "./paintedIcons";
 
 const SIZE = 16;
 
@@ -386,12 +389,28 @@ export function drawIcon(art: IconArt): HTMLCanvasElement {
   return canvas;
 }
 
+/** No jogo 2.5D: a pintura do item, ou a pixel art aumentada 4x (64 px, pixel nítido). */
+function newWorldCanvas(icon: string): HTMLCanvasElement {
+  const painted = paintedItemIcon(icon);
+  if (painted) return painted;
+  const small = iconCanvas(icon);
+  const big = document.createElement("canvas");
+  big.width = SIZE * 4;
+  big.height = SIZE * 4;
+  const ctx = big.getContext("2d")!;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(small, 0, 0, big.width, big.height);
+  return big;
+}
+
 /** O ícone como imagem para usar no HTML (mochila). */
 export function itemIconUrl(icon: string): string {
-  let url = urls.get(icon);
+  const novo = document.body.classList.contains("jogo-novo");
+  const key = novo ? `novo:${icon}` : icon;
+  let url = urls.get(key);
   if (!url) {
-    url = iconCanvas(icon).toDataURL();
-    urls.set(icon, url);
+    url = (novo ? newWorldCanvas(icon) : iconCanvas(icon)).toDataURL();
+    urls.set(key, url);
   }
   return url;
 }
