@@ -458,6 +458,15 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   - A Figueira dos Despertos também ganhou o pé novo (o dono aprovou em 13/11): na mata, `breaks` só pinta a terra
     escura e as raízes (`plain`: sem trincas, lascas nem placas), mais curtas; nenhuma raiz entra no círculo do
     despertar, em casa ou no pé de poste e de semáforo (`blocked`). As raízes antigas em garra (`_figRoot`) saíram.
+- **Conversa com NPC, parte 2 (13/11).** `PD.View.focus(ponto|null)`: a câmera mira um ponto do chão um pouco mais
+  perto da câmera que o pé de quem fala (16% da altura da tela; 20% no celular em pé), então a pessoa fica acima do
+  meio e a fala embaixo não a cobre; o NPC parado vira para você. `talk(id, ms)`: gente abre e fecha a boca em
+  sílabas (`look.mouthOpen`) e levanta a sobrancelha; criatura usa o `talk` dela (a Xiovanna já tinha). O seu
+  personagem entre a câmera e quem fala fica com 32% de opacidade (`_conversationAlpha`). A janela (`talk.ts`)
+  liga o modo `cinema` quando a página tem o `canvas.mundo-novo`: plaquinha do nome na cor de NPC, a fala grande
+  escrita no ritmo da boca (55 ms por letra, até 7 s; tocar mostra tudo), o pedido da missão nova vira a fala (não
+  repete no cartão), rodapé com Ver a loja e Tchau. CSS: `#talk.cinema` (embaixo, 760 px, até 46% da altura; no
+  celular, a largura toda até 54%) e `.shop-portrait` escondido no jogo 2.5D.
 - **Semáforo quebrado (13/11, pedido do dono: "coloca um semáforo aí quebrado saindo faísca").** `semaforo` no mapa
   (ponto: `altura`, `olhando` em graus, `quebrado`, `faiscas`) vira `map.trafficLights` e um `TrafficLight` com `rig`
   (props.js): poste cinza de São Paulo com ferrugem e cipó, o braço sobre a rua (vai para o lado que tem asfalto a

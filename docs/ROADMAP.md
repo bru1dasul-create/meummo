@@ -294,9 +294,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   jogo estar na internet, "Entrar com Google", e-mail, "Esqueceu sua senha?" e "Sair do Jogo"
 - [ ] **[arte]** Tela inicial nova, o visual: fundo, logo e o painel de madeira com cipós da imagem do dono, no PC e
   no celular, com os ids combinados (`#login-title`, `#password2`, `#mode-toggle`, mais os de sempre)
-- [ ] **[arte]** Conversa com NPC, parte 2: a `PD.View` centraliza em quem fala (`focus`, mesmo sendo criatura) e mexe
-  a boca (`talk`); a fala "por cima" da cena no lugar do painel com o retrato antigo, com os botões (Aceitar,
-  Desistir, Entregar, Ver a loja), no PC e no celular
+- [x] **[arte]** Conversa com NPC, parte 2 (13/11): a `PD.View` leva a câmera até quem fala (`focus`, gente ou
+  criatura), que fica um pouco acima do meio da tela, vira para você e mexe a boca enquanto fala (`talk`); o seu
+  personagem parado na frente dele fica transparente. A fala vem embaixo, por cima da cena, sem o retrato antigo
+  (`#talk.cinema`, só no jogo 2.5D): o nome numa plaquinha, a fala escrita aos poucos no ritmo da boca (tocar mostra
+  tudo), os cartões das missões e botões grandes (Aceitar, Entregar/Conversar, Desistir, Ver a loja, Tchau), no PC
+  e no celular. A loja do jogo 2.5D também fica sem o retrato. O jogo antigo (`?antigo`) continua igual
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

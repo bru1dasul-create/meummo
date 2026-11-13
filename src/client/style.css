@@ -1875,6 +1875,121 @@ kbd {
   background: linear-gradient(180deg, #6a4c30, #4a3420);
 }
 
+/* Jogo 2.5D: a conversa é a fala por cima da cena, embaixo da tela (a câmera mostra quem fala, então sem
+   retrato): o nome numa plaquinha, a fala grande escrita aos poucos, os cartões das missões e botões grandes */
+#talk.cinema {
+  top: auto;
+  left: 50%;
+  right: auto;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(760px, calc(100vw - 24px));
+  max-height: 46vh;
+  gap: 10px;
+  padding: 12px 16px 14px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0 22px, rgba(0, 0, 0, 0.16) 22px 24px),
+    linear-gradient(180deg, rgba(58, 42, 28, 0.985), rgba(30, 22, 15, 0.99));
+  font-size: 14px;
+  animation: talk-cine-in 0.22s ease-out;
+}
+
+@keyframes talk-cine-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.talk-cine-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.talk-cine-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 4px 12px 5px;
+  border: 1px solid rgba(255, 220, 150, 0.3);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* a mesma cor do nome de NPC em cima da cabeça */
+.talk-cine-name strong {
+  color: #8fe3c8;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
+.talk-cine-name span {
+  color: #d9c7a0;
+  font-size: 12px;
+}
+
+#talk.cinema .shop-close {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.talk-cine-line {
+  margin: 0;
+  min-height: 2.9em;
+  color: #fbf1d8;
+  font-size: 17px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.talk-cine-line.talk-reply {
+  color: #c9f2d9;
+}
+
+#talk.cinema .talk-quest button,
+#talk.cinema .talk-cine-foot button {
+  min-height: 42px;
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 15px;
+}
+
+.talk-cine-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#talk.cinema .talk-shop {
+  align-self: auto;
+  margin-top: 0;
+}
+
+/* Tchau: de madeira, como o Ver a loja (o botão apagado parecia desligado) */
+#talk.cinema .talk-bye {
+  border: 1px solid rgba(255, 220, 150, 0.25);
+  background: linear-gradient(180deg, #5a4028, #3e2c1c);
+  color: #f3e3c4;
+}
+
+#talk.cinema .talk-bye:hover {
+  background: linear-gradient(180deg, #6a4c30, #4a3420);
+}
+
+/* no jogo 2.5D a loja também fica sem o retrato antigo: a câmera já mostra quem vende */
+body:has(canvas.mundo-novo) .shop-portrait {
+  display: none;
+}
+
 /* Missões em andamento, embaixo do painel de vida: nome, objetivo e uma barrinha */
 #quest-tracker {
   position: fixed;
@@ -2183,5 +2298,22 @@ kbd {
   /* a faixa fica no alto por uns segundos: as falas recolhidas do jogo novo dão licença enquanto isso */
   body:has(canvas.mundo-novo):has(#zone-banner:not([hidden])) #chat:not(:focus-within) #chat-log {
     opacity: 0;
+  }
+}
+
+/* Celular: a fala do jogo 2.5D ocupa a largura, embaixo, até um pouco mais da metade da tela (quem fala fica em
+   cima); vem depois da regra que abre a conversa em tela cheia */
+@media (pointer: coarse) {
+  #talk.cinema {
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
+    max-height: 54vh;
+  }
+
+  .talk-cine-line {
+    font-size: 16px;
   }
 }

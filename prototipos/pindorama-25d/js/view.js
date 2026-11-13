@@ -8,6 +8,8 @@
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
 //   action(id, tipo, angulo)  golpes e reações; por enquanto só nas criaturas (js/creatures: o sagui)
+//   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
+//   talk(id, ms)              quem fala mexe a boca (e a sobrancelha) por `ms`, sem balão; 0 para
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -45,6 +47,7 @@
       this.actors = new Map();
       this.followId = null;
       this.camTarget = null;
+      this.focusPoint = null;
       this.last = 0;
       this.background = opts.background || '#16241a';
       this._resize();
@@ -124,6 +127,24 @@
       if (a && a.creature) a.creature.action(kind, Number.isFinite(angle) ? rad(angle) : undefined);
     }
 
+    /**
+     * Conversa com NPC (WorldView.focus): a câmera vai, com suavidade, olhar para este ponto do chão (metros; o pé de
+     * quem fala), que fica um pouco acima do meio da tela: a fala aparece embaixo, por cima da cena. null volta a
+     * seguir o seu personagem. O zoom é do motor (setZoom).
+     */
+    focus(point) {
+      this.focusPoint = point && Number.isFinite(point.x) && Number.isFinite(point.y) ? { x: point.x * 100, y: point.y * 100 } : null;
+    }
+
+    /** `id` fala por `ms` (WorldView.talk): a boca abre e fecha, a sobrancelha acompanha; sem balão. 0 para. */
+    talk(id, ms) {
+      const a = this.actors.get(id);
+      if (!a) return;
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      a.talkUntil = ms > 0 ? now + ms : 0;
+      if (a.creature) a.creature.talk(Math.max(0, ms || 0));
+    }
+
     /** Fala curta em cima do personagem. */
     say(id, text) {
       const a = this.actors.get(id);
@@ -198,6 +219,20 @@
       ch.update(dt, input, null);
       // parado: vira para o ângulo que veio
       if (d <= 3 && a.angle !== undefined) ch.faceYaw = a.angle;
+      // conversa: o NPC com quem você fala vira para você
+      const fp = this.focusPoint;
+      if (fp && a.kind === 'npc' && d <= 3 && Math.hypot(ch.pos.x - fp.x, ch.pos.y - fp.y) < 80) {
+        const me = this.actors.get(this.followId);
+        if (me && me !== a) ch.faceYaw = Math.atan2(me.ch.pos.y - ch.pos.y, me.ch.pos.x - ch.pos.x);
+      }
+      // falando: a boca abre e fecha em sílabas (ritmo que muda um pouco), a sobrancelha sobe de vez em quando
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (a.talkUntil && now < a.talkUntil && ch.look) {
+        const t = now / 1000;
+        const syl = Math.abs(Math.sin(t * 13.5 + a.id)) * (0.6 + 0.4 * Math.sin(t * 3.1 + a.id * 1.7));
+        ch.look.mouthOpen = Math.max(ch.look.mouthOpen || 0, 0.1 + 0.55 * Math.max(0, syl));
+        ch.look.browRaise = Math.max(ch.look.browRaise || 0, 0.3 * Math.max(0, Math.sin(t * 2.2 + a.id)));
+      }
       a.rig = PD.rig.buildRig(ch.pose());
       ch.secondary(a.rig, dt);
     }
@@ -274,7 +309,15 @@
         this.world.update(dt, hero.ch, others);
         // câmera: segue com suavidade, olhando um pouco para onde ele vai
         const ch = hero.ch;
-        const goal = { x: ch.pos.x + ch.vel.x * 0.22, y: ch.pos.y + ch.vel.y * 0.22, z: 0 };
+        let goal = { x: ch.pos.x + ch.vel.x * 0.22, y: ch.pos.y + ch.vel.y * 0.22, z: 0 };
+        if (this.focusPoint) {
+          // conversa: quem fala fica um pouco acima do meio da tela (a fala aparece embaixo); a câmera mira um ponto
+          // mais perto dela no chão (andar d em x e em y desce 2·d·K·sinP na tela)
+          const cam = this.cam;
+          const portrait = cam.viewH > cam.viewW * 1.15;
+          const d = (cam.viewH * (portrait ? 0.2 : 0.16)) / (2 * PD.ISO_K * cam.sinP * cam.zoom);
+          goal = { x: this.focusPoint.x + d, y: this.focusPoint.y + d, z: 0 };
+        }
         this.camTarget = this.camTarget ? M.damp3(this.camTarget, goal, 5.5, dt) : goal;
         this.cam.follow(this.camTarget);
       } else {
@@ -604,6 +647,24 @@
       ctx.restore();
     }
 
+    /**
+     * Na conversa, o seu personagem parado na frente de quem fala (entre ele e a câmera, que não gira) fica
+     * transparente, com suavidade, para a pessoa aparecer falando.
+     */
+    _conversationAlpha(a) {
+      const fp = this.focusPoint;
+      let want = 1;
+      if (fp && a.id === this.followId) {
+        const cam = this.cam;
+        const q = cam.p({ x: a.ch.pos.x, y: a.ch.pos.y, z: 0 });
+        const n = cam.p({ x: fp.x, y: fp.y, z: 0 });
+        const dy = q.y - n.y;
+        if (dy > 0 && dy < 210 * cam.zoom && Math.abs(q.x - n.x) < 75 * cam.zoom) want = 0.32;
+      }
+      a.convAlpha = a.convAlpha === undefined ? want : a.convAlpha + (want - a.convAlpha) * 0.18;
+      return a.convAlpha;
+    }
+
     _actorDrawable(a) {
       if (a.creature) return a.creature.drawable(this.cam, a.id === this.followId);
       const ch = a.ch;
@@ -611,6 +672,8 @@
       const rig = a.rig;
       const painter = a.renderer;
       const cam = this.cam;
+      const alpha = this._conversationAlpha(a);
+      const paint = (c) => painter.draw(c, rig, ch.look, ch.equipped, a.appearance || PD.classes.appearanceOf(ch));
       return {
         entity: ch,
         primary: a.id === this.followId,
@@ -618,7 +681,13 @@
         bounds: painter.bounds(rig),
         body: painter.bounds(rig, 0.35),
         drawShadow: (c) => painter.drawShadow(c, rig, ch.groundZ),
-        draw: (c) => painter.draw(c, rig, ch.look, ch.equipped, a.appearance || PD.classes.appearanceOf(ch)),
+        draw: (c) => {
+          if (alpha > 0.98) return paint(c);
+          c.save();
+          c.globalAlpha *= alpha;
+          paint(c);
+          c.restore();
+        },
         cam,
       };
     }
