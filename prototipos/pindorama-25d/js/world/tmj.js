@@ -6,8 +6,9 @@
 //    opcional, como a da água do lago,
 //    `circulo` com `brilho`);
 //  - "cenario": árvores (`especie`, `copa` = raio, `altura`, `tronco` = diâmetro, em metros), arbusto, pedra, poste
-//    (alto = de concreto, com `fiacao`), poste-praca, gradil, portão, pilar, `veu`, tronco-caido, aguape, capivara e a
-//    vila: casa (frente ao sul), banco, mesa, fogueira, orelhao, lixeira e carro;
+//    (alto = de concreto, com `fiacao`), poste-praca, gradil, portão, pilar, `veu`, tronco-caido, aguape, capivara, a
+//    vila: casa (frente ao sul), banco, mesa, fogueira, orelhao, lixeira e carro; e a etapa 4c (desenho em fundo.js):
+//    trave, muro, viaduto, pilar-viaduto, trem, cipo, onibus, barreira e placa;
 //  - "colisao": caixas onde o pé bate (as mesmas do servidor); "seguro", "areas" e "pontos" (o nascimento).
 (function (PD) {
   'use strict';
@@ -21,6 +22,19 @@
   }
   const kindOf = (o) => o.type || o.class || '';
   const rect = (o) => ({ x0: o.x * CM, y0: o.y * CM, x1: (o.x + o.width) * CM, y1: (o.y + o.height) * CM });
+  /** A caixa em pedaços de até `max` cm ao longo do lado comprido (coisa grande vira várias imagens menores). */
+  function pieces(r, max) {
+    const alongX = r.x1 - r.x0 >= r.y1 - r.y0;
+    const L = alongX ? r.x1 - r.x0 : r.y1 - r.y0;
+    const n = Math.max(1, Math.ceil(L / max - 1e-6));
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const a = (alongX ? r.x0 : r.y0) + (L * i) / n;
+      const b = (alongX ? r.x0 : r.y0) + (L * (i + 1)) / n;
+      out.push(alongX ? { x0: a, x1: b, y0: r.y0, y1: r.y1, piece: i, pieces: n } : { x0: r.x0, x1: r.x1, y0: a, y1: b, piece: i, pieces: n });
+    }
+    return out;
+  }
 
   /** Mapa do protótipo a partir de um .tmj já lido (JSON). */
   function toMap(tmj) {
@@ -87,7 +101,7 @@
       const x = o.x * CM;
       const y = o.y * CM;
       if (k === 'arvore') {
-        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo });
+        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo, hugs: pr.abraca || null });
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {
@@ -140,6 +154,8 @@
           garage: !!pr.portao,
           // dá para entrar (a Budega): com o herói dentro, o telhado e a frente saem e aparece o que tem lá dentro
           interior: !!pr.interior,
+          // a árvore que nasceu dentro da casa abandonada e rompeu a laje (etapa 4c)
+          treeInside: !!pr.arvoreDentro,
         });
       } else if (k === 'predio') {
         // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje
@@ -191,10 +207,75 @@
       } else if (k === 'planta') {
         // samambaia, helicônia, taboa e cogumelo (com `brilho`): enfeite, não bloqueia
         map.props.push({ kind: 'planta-' + (pr.tipo || 'samambaia'), x, y, r: (pr.raio || 0.5) * 100, glow: pr.brilho || null });
+      } else if (k === 'trave') {
+        // trave do campinho (caixa fina ao longo do gol): `olhando` = para onde a boca do gol dá (a rede fica atrás)
+        const r0 = rect(o);
+        const along = r0.y1 - r0.y0 >= r0.x1 - r0.x0;
+        const back = ((pr.olhando || 0) + 180) % 360; // a rede vai para trás
+        const bx = Math.round(Math.cos((back * Math.PI) / 180)), by = Math.round(Math.sin((back * Math.PI) / 180));
+        const depth = 110;
+        const f = { x0: r0.x0 + Math.min(0, bx * depth), x1: r0.x1 + Math.max(0, bx * depth), y0: r0.y0 + Math.min(0, by * depth), y1: r0.y1 + Math.max(0, by * depth) };
+        map.props.push({ kind: 'trave', ...f, post: along ? { x: (r0.x0 + r0.x1) / 2, a: r0.y0, b: r0.y1 } : { y: (r0.y0 + r0.y1) / 2, a: r0.x0, b: r0.x1 }, along, back: { x: bx, y: by }, depth, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, net: pr.rede || 'inteira' });
+      } else if (k === 'muro') {
+        // muro em pedaços de até 4 m (cada pedaço é uma imagem): `grafite` ('cores') no `lado` (leste, sul...), `cipo`
+        // (0 a 1), `musgo`; `whole` = o muro inteiro (o desenho do grafite continua de um pedaço para o outro)
+        const whole = rect(o);
+        for (const part of pieces(whole, 400)) map.props.push({ kind: 'muro', ...part, whole, h: (pr.altura || 2.2) * 100, color: pr.cor || '#c9c2b6', graffiti: pr.grafite || null, side: pr.lado || 'sul', vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0, moss: !!pr.musgo });
+      } else if (k === 'viaduto') {
+        // o viaduto da linha lilás, em pedaços de 4 m: `altura` = embaixo do tabuleiro, `espessura`, `quebrado`
+        // (o lado da ponta quebrada), `mato`, `cipo` (0 a 1) e `arvoresNoTopo`
+        const whole = rect(o);
+        for (const part of pieces(whole, 400)) map.props.push({ kind: 'viaduto', ...part, whole, z: (pr.altura || 8) * 100, thick: (pr.espessura || 1.4) * 100, broken: pr.quebrado || null, weeds: !!pr.mato, vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0, trees: !!pr.arvoresNoTopo });
+      } else if (k === 'pilar-viaduto') {
+        map.props.push({ kind: 'pilar-viaduto', ...rect(o), h: (pr.altura || 8) * 100, pixo: !!pr.pixo, moss: !!pr.musgo, vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0 });
+      } else if (k === 'trem') {
+        // o trem parado em cima do viaduto: `vagoes` (um objeto cada), `base` = a altura do trilho, `cor`, `cipo`,
+        // `plantas` (no teto) e `janelasQuebradas`; a cabine fica na ponta leste
+        const r0 = rect(o);
+        const n = Math.max(1, pr.vagoes || 3);
+        const along = r0.x1 - r0.x0 >= r0.y1 - r0.y0;
+        for (let i = 0; i < n; i++) {
+          const a0 = along ? r0.x0 + ((r0.x1 - r0.x0) * i) / n : r0.y0 + ((r0.y1 - r0.y0) * i) / n;
+          const a1 = along ? r0.x0 + ((r0.x1 - r0.x0) * (i + 1)) / n : r0.y0 + ((r0.y1 - r0.y0) * (i + 1)) / n;
+          const part = along ? { x0: a0, x1: a1, y0: r0.y0, y1: r0.y1 } : { x0: r0.x0, x1: r0.x1, y0: a0, y1: a1 };
+          map.props.push({ kind: 'vagao', ...part, index: i, count: n, along, base: (pr.base || 0) * 100, h: (pr.altura || 2.6) * 100, color: pr.cor || '#7d5ca8', vine: !!pr.cipo, plants: !!pr.plantas, broken: !!pr.janelasQuebradas });
+        }
+      } else if (k === 'cipo') {
+        // cipó pendurado (ponto): de `base` (altura em m) até `comprimento` m abaixo
+        map.props.push({ kind: 'cipo', x, y, r: 5, top: (pr.base || 6) * 100, len: (pr.comprimento || 3) * 100 });
+      } else if (k === 'onibus') {
+        // ônibus velho em pedaços de até 6 m (a frente fica na ponta leste): `cor`, `mato`, `horta` (canteiros no teto)
+        const whole = rect(o);
+        for (const part of pieces(whole, 600)) map.props.push({ kind: 'onibus', ...part, whole, h: (pr.altura || 3) * 100, color: pr.cor || '#d7b14a', weeds: !!pr.mato, garden: !!pr.horta });
+      } else if (k === 'barreira') {
+        map.props.push({ kind: 'barreira', ...rect(o), h: (pr.altura || 1.1) * 100 });
+      } else if (k === 'placa') {
+        // placa de direção (ponto): `texto`, `seta` (norte, sul, leste, oeste) e `poste` (num poste; sem ele, no chão)
+        map.props.push({ kind: 'placa', x, y, r: 14, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste });
       } else if (k === 'deque' || k === 'pinguela') {
         // dá para andar em cima: o lado comprido diz a direção
         map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100 });
       }
+    }
+    // etapa 4c: a mureta da frente de cada pedaço do viaduto (outro objeto, desenhado depois do trem), o pedaço onde o
+    // trem está (lá não nasce árvore) e a figueira que abraça o viaduto (as raízes vão no pedaço mais perto dela)
+    const deck = map.props.filter((p) => p.kind === 'viaduto');
+    const cars = map.props.filter((p) => p.kind === 'vagao');
+    for (const p of deck) {
+      p.train = cars.some((c) => c.x0 < p.x1 && c.x1 > p.x0 && c.y0 < p.y1 && c.y1 > p.y0);
+      // na beira do mapa (leste) o tabuleiro segue mata adentro no desenho, em vez de terminar no ar
+      if (p.piece === p.pieces - 1 && p.x1 >= map.w - 50) p.extend = 900;
+      map.props.push({ ...p, kind: 'viaduto-mureta', y0: p.y1 - 18 });
+    }
+    for (const t of map.trees) {
+      if (t.hugs !== 'viaduto' || !deck.length) continue;
+      let best = null, bd = Infinity;
+      for (const p of deck) {
+        const dx = Math.max(p.x0 - t.x, 0, t.x - p.x1), dy = Math.max(p.y0 - t.y, 0, t.y - p.y1);
+        const dd = Math.hypot(dx, dy);
+        if (dd < bd) { bd = dd; best = p; }
+      }
+      if (best && bd < 800) best.hug = { x: t.x, y: t.y, trunk: t.trunk };
     }
     // fiação: cada trecho da polilinha liga os dois postes mais perto das pontas (os fios saem das cruzetas)
     const poleNear = (q) => {

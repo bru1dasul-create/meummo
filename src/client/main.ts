@@ -86,8 +86,10 @@ let sceneKey: string | null = null;
 let scenes = 0;
 
 nameInput.value = loadSavedName();
-// Quem nunca entrou vê "Como jogar" aberto; quem já joga, fechado (tela mais limpa)
-(document.getElementById('how-to') as HTMLDetailsElement | null)?.toggleAttribute('open', !nameInput.value);
+// Quem nunca entrou vê "Como jogar" aberto; quem já joga, fechado (tela mais limpa). No celular deitado começa fechado:
+// aberto, ele cobria o logo (o botão "Como jogar" fica à vista no canto)
+const lowLandscape = matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+(document.getElementById('how-to') as HTMLDetailsElement | null)?.toggleAttribute('open', !nameInput.value && !lowLandscape);
 if (!matchMedia('(pointer: coarse)').matches) (nameInput.value ? passwordInput : nameInput).focus();
 
 /** Entrar ou criar uma conta (só na tela nova, que tem o link). Quem nunca entrou neste aparelho começa criando. */

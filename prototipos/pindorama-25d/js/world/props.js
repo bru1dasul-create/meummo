@@ -322,7 +322,7 @@
       super(world, b);
       const wall = b.block ? BLOCK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
       // a laje com árvore ou varal precisa de mais espaço em cima na imagem
-      const topExtra = b.roofTree ? 640 : b.clothes ? 300 : 220;
+      const topExtra = b.treeInside ? 980 : b.roofTree ? 640 : b.clothes ? 300 : 220;
       this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38), topExtra };
       if (b.interior) {
         // casa que dá para entrar (a Budega, pedido do dono: "igual HumanitZ"): na ordem de desenho ela é a parede da
@@ -920,6 +920,93 @@
     }
     crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
   }
+  /**
+   * Árvore que nasceu dentro da casa abandonada e rompeu a laje: buraco de bordas quebradas com ferro torto, pedaços
+   * de laje soltos, o tronco grosso saindo do buraco, raízes que escorrem pela laje e descem pela parede, e a copa.
+   */
+  function treeThroughRoof(ctx, cam, b, x, y, z, ink) {
+    const r = M.rng(Math.round(b.x0 * 3 + b.y0 * 7) + 41);
+    const P = (px, py, pz) => cam.p({ x: px, y: py, z: pz });
+    // o buraco: contorno irregular, escuro por dentro, com a borda da laje aparecendo
+    const hole = [];
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * M.TAU;
+      const rr = 92 + r() * 46;
+      hole.push(P(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.9, z));
+    }
+    poly(ctx, hole, '#2a241e', INK, ink * 2);
+    // ferro da laje torto saindo da beirada
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const a = r() * M.TAU;
+      const p0 = P(x + Math.cos(a) * 100, y + Math.sin(a) * 92, z);
+      const p1 = P(x + Math.cos(a) * (60 + r() * 30), y + Math.sin(a) * (55 + r() * 30), z + 20 + r() * 50);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = Math.max(1.6, 3.4 * cam.zoom);
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a4a2a';
+      ctx.lineWidth = Math.max(1, 1.8 * cam.zoom);
+      ctx.stroke();
+    }
+    // pedaços de laje soltos em volta
+    for (let i = 0; i < 5; i++) {
+      const a = r() * M.TAU;
+      const d = 120 + r() * 60;
+      const cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d * 0.9;
+      const s = 18 + r() * 16;
+      box(ctx, cam, cx - s, cx + s, cy - s * 0.7, cy + s * 0.7, z, z + 9, { front: '#9d978b', side: '#7f796e', top: '#b9b3a6' }, ink);
+    }
+    // raízes que escorrem pela laje até a beirada e descem pela parede da frente
+    const W = b.x1 - b.x0, D = b.y1 - b.y0;
+    const ends = [
+      [b.x0 + W * 0.2, b.y1],
+      [b.x0 + W * 0.66, b.y1],
+      [b.x1, b.y0 + D * 0.7],
+      [b.x0 + W * 0.1, b.y0 + D * 0.3],
+    ];
+    for (const [ex, ey] of ends) {
+      const pts = [];
+      for (let k = 0; k <= 6; k++) {
+        const u = k / 6;
+        pts.push(P(x + (ex - x) * u + (r() - 0.5) * 18, y + (ey - y) * u + (r() - 0.5) * 18, z + 4));
+      }
+      if (ey === b.y1 || ex === b.x1) for (let k = 1; k <= 4; k++) pts.push(P(ex + (r() - 0.5) * 10, ey, z - k * 55));
+      ctx.strokeStyle = INK;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = Math.max(3, 15 * cam.zoom);
+      ctx.beginPath();
+      pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.stroke();
+      ctx.strokeStyle = BARK.figueira[0];
+      ctx.lineWidth = Math.max(2, 11 * cam.zoom);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 240, 210, 0.22)';
+      ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+      ctx.stroke();
+    }
+    // o tronco grosso saindo do buraco, abrindo em galhos
+    const t = { x, y, kind: 'mata', r: 250, h: 560, trunk: 16 };
+    const fork = { x, y, z: z + t.h * FORK };
+    const b0 = P(x, y, z - 10), b1 = cam.p(fork);
+    const w0 = 30 * cam.zoom, w1 = 14 * cam.zoom;
+    const shape = [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
+    poly(ctx, shape, null, INK, ink * 2.4);
+    poly(ctx, shape, BARK.figueira[0]);
+    ctx.strokeStyle = 'rgba(40, 30, 20, 0.5)';
+    ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+    for (let k = 0; k < 3; k++) {
+      const f = (k + 1) / 4;
+      ctx.beginPath();
+      ctx.moveTo(b0.x - w0 + 2 * w0 * f, b0.y);
+      ctx.lineTo(b1.x - w1 + 2 * w1 * f, b1.y);
+      ctx.stroke();
+    }
+    crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
+  }
   /** Varal na laje: dois postinhos, o fio caindo um pouco e as roupas penduradas (viradas para a frente). */
   function clothesLine(ctx, cam, b, z, ink) {
     const W = b.x1 - b.x0, D = b.y1 - b.y0;
@@ -998,6 +1085,11 @@
     if (b.roofTree) {
       const rx = b.x0 + W * 0.28, ry = b.y0 + D * 0.42;
       items.push({ k: rx + ry, draw: () => roofTree(ctx, cam, rx, ry, z, ink) });
+    }
+    if (b.treeInside) {
+      // a árvore nasceu dentro da casa e rompeu a laje (etapa 4c, a casa abandonada do terreno do fundo)
+      const rx = b.x0 + W * 0.48, ry = b.y0 + D * 0.5;
+      items.push({ k: rx + ry, draw: () => treeThroughRoof(ctx, cam, b, rx, ry, z, ink) });
     }
     if (b.plants && PD.flora) {
       const r = M.rng(Math.round(b.x0 * 7 + b.y0 * 3));
@@ -2785,6 +2877,8 @@
         // desenho da flora: ela diz a altura, se segura o jogador e como desenha
         this.fl = fl;
         this.height = fl.height(d);
+        // empilhado (o trem em cima do viaduto): com os pés se cruzando, o de baixo é desenhado antes (world.js)
+        this.lift = fl.lift ? fl.lift(d) : 0;
         const r = d.r || 30;
         this.collider = fl.blocks ? { type: 'circle', x: d.x, y: d.y, r: r * fl.blocks } : null;
         return;
@@ -4353,6 +4447,6 @@
   PD.props = {
     Prop, Building, House, HouseBack, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly,
     // para as plantas da mata (flora.js) e as coisas da cidade (city.js) desenharem com o mesmo traço
-    help: { INK, CANOPY_INK, BARK, tuftPath, limbPoly, circleShadow, lineShadow, boxShadow, box, onWall },
+    help: { INK, CANOPY_INK, BARK, CANOPY, FONT_SIGN, tuftPath, limbPoly, circleShadow, lineShadow, boxShadow, box, onWall, pixo, crownPaint, roofTree },
   };
 })(window.PD = window.PD || {});
