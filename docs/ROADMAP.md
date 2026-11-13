@@ -138,7 +138,23 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   rasgada, o muro com cipó, cadeiras de quem assiste, a rua para Guarapiranga com faixa apagada, rachaduras, buracos
   e raízes, e a Figueira do Viaduto. Entra com o desenho da 4c pela [arte]
 - [ ] **[mundo + arte]** Faixa de pedestre na esquina (fora do cruzamento) e o semáforo quebrado soltando faísca na
-  esquina da figueira (pedido do dono, 13/11): mapa no ramo `mundo/rua-semaforo`; entra com o desenho do `semaforo`
+  esquina do portão (pedido do dono, 13/11): mapa no ramo `mundo/rua-semaforo`; o desenho do `semaforo` já está na
+  main (7c75c95) e os dois juntos foram conferidos no PC e no celular. Entra com o "pode" do dono
+- [x] **[mundo]** A Figueira da Esquina vai para a calçada da casa rosa (**na main em 13/11**, aprovado pelo dono:
+  "pode seguir com as alterações"): na esquina do portão, a copa alta tampava, na tela, 19 m da trilha do norte do
+  parque, onde andam os saguis (o dono pediu "o caminho sem árvore"); na esquina ela tampa em qualquer tamanho. Fica com
+  as mesmas raízes (caminhos novos, na calçada e na rua) e o poste da casa rosa vai para a divisa com a casa azul. O
+  gerador confere as trilhas do parque e um teste garante que nenhuma árvore da vila as tampa
+- [ ] **[mundo]** A mata no padrão novo: o Parque Santo Dias de antes, engolido pela floresta. Planta aprovada pelo
+  dono em 13/11 ("pode seguir com as alterações"; `docs/referencias/parque-antigo-planta.jpg`,
+  `parque-academia-planta.jpg` e os alvos `parque-antigo-aprovado.jpg` e `parque-academia-aprovado.jpg`; as imagens
+  da IA só dão o clima). No ramo `mundo/parque-antigo` (por cima da 4c): a placa da entrada, o bebedouro quebrado,
+  bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
+  academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. Entra com o desenho da [arte]
+- [ ] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
+  `barra`, `remada`) são novos; `placa` (a da 4c) com `tamanho: 'grande'` e `mato`; `banco` com `material: 'concreto'`
+  e `mato`; `lixeira` com `mato`; `poste-praca` com `apagado`, `torto` e `cipo`; e a pista (`calcada` em polígono com
+  `desenho: 'placas'` e `quebrada`). Tudo com `ferrugem`/`musgo`/`cipo` onde o mapa disser
 - [x] **[arte]** O chão no padrão novo (13/11, `js/world/street.js`): asfalto de verdade (grão, manchas e trincas; mais
   trincas no `estado` rachado), calçada de placas de cimento (juntas, trincas, placas levantadas perto de raiz, mato
   nas frestas), meio-fio com sarjeta (a face aparece quando a rua fica do lado da câmera), faixa amarela apagada,
