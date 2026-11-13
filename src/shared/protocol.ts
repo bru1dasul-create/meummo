@@ -7,6 +7,7 @@
 import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
+import type { CombatRules } from './combatRules';
 
 export type EntityKind = 'player' | 'monster' | 'npc';
 
@@ -67,6 +68,7 @@ export type ClientMsg =
   | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
   | { t: 'guard'; on: boolean; a: number } // segurando (ou soltei) a defesa, virada para o ângulo `a` (radianos)
   | { t: 'gm'; cmd: GmCommand } // poder do administrador (o servidor confere se é administrador mesmo)
+  | { t: 'oops'; text: string } // deu erro no navegador: o servidor anota nos registros (para corrigir depois)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
@@ -94,7 +96,8 @@ export type GmCommand =
   | { do: 'fly'; on: boolean }
   | { do: 'god'; on: boolean }
   | { do: 'tp'; x: number; y: number }
-  | { do: 'heal' };
+  | { do: 'heal' }
+  | { do: 'npc'; npc: string }; // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
 
 /** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
 export type LoginMode = 'login' | 'create';
@@ -140,6 +143,8 @@ export type ServerMsg =
       /** Todas as missões (de data/missoes.json) e o seu progresso. */
       quests: QuestInfo[];
       questLog: QuestLog;
+      /** Os números do combate que valem (carga, defesa, empurrão), com os ajustes do painel. */
+      combat: CombatRules;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
@@ -183,6 +188,8 @@ export type ServerMsg =
   | { t: 'sys'; text: string } // aviso do sistema
   | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
   | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
+  | { t: 'questDefs'; quests: QuestInfo[] } // o painel do administrador mudou as missões (textos, objetivo, recompensa)
+  | { t: 'combat'; rules: CombatRules } // o painel do administrador mudou os números do combate (carga, defesa, empurrão)
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }

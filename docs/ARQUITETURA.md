@@ -119,6 +119,15 @@ Cada jogador só recebe notícias de quem está a até 20 tiles na horizontal e 
 Quando alguém entra na visão chega um `spawn`; quando sai, um `despawn`. É isso que permite
 muita gente no mesmo servidor sem mandar tudo para todo mundo.
 
+## Registros (logs)
+Tudo o que o servidor anota passa pelo `Logbook` (`src/server/logbook.ts`): a tela (a janela do servidor), um
+arquivo por dia ao lado dos personagens salvos (`saves/registros/AAAA-MM-DD.log`, os últimos 14 dias) e as últimas
+2000 linhas na memória, para a aba **Registros** do painel (`GET /admin/api/registros?filtro=...`). Erros: o passo do
+mundo (tick) e o tratamento de cada mensagem estão protegidos; o erro fica anotado com o caminho (`logbook.error`, o
+mesmo erro repetindo só uma vez por minuto) e o servidor continua. O que escapar de tudo é anotado antes de desligar
+(`main.ts`). No navegador, `reportErrors` (`net.ts`) manda os erros da página na mensagem `oops` (até 10 por sessão,
+sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depois 1 a cada 10 s).
+
 ## Combate (servidor manda, cliente desenha)
 - **Projéteis** (estilingue, frutas do Sagui) são simulados no servidor a cada tick, em pedacinhos de
   1/4 de tile, com a mesma função que o cliente usa para desenhar (`advanceShot` em `src/shared/combat.ts`).
@@ -131,6 +140,10 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   `CHARGE_FULL_MS`). A carga dá o dano (`chargedDamage`: até o dobro) e, no mapa novo, o alcance (`chargedRange`:
   6,5 a 9,5 m), em `src/shared/combat.ts`. Esquiva, golpe recebido e desmaio zeram a carga; o toque rápido manda
   `charge` e `shoot` juntos (pedra sem carga). Quem não manda `charge` (o jogo antigo) atira como sempre.
+- **Números do combate (carga, defesa, empurrão):** ficam num objeto só, `CombatRules` (`src/shared/combatRules.ts`;
+  o padrão vem das constantes `CHARGE_*`/`GUARD_*`). As funções de `src/shared/combat.ts` recebem esse objeto; o
+  servidor usa o do painel (`Tuning.combat`, mudado no lugar, aba "Combate") e manda ao navegador no `welcome`
+  (`combat`) e, quando muda, na mensagem `combat`. O navegador usa os mesmos (andar com defesa, anel da carga, arco).
 - **Defesa com energia (jogo novo):** `guard` (on/off e o ângulo) marca `Player.guardWanted`; a cada tick,
   `updateGuard` levanta a defesa (se não estiver quebrada e tiver energia), gasta e devolve energia e quebra quando
   ela acaba. O `damage` recebe para onde o golpe anda (`travel`): se a defesa já protege (`GUARD_READY_MS`) e o golpe
@@ -307,6 +320,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
 | cliente | `charge` | começar a puxar o estilingue (a carga conta até o `shoot`) |
 | cliente | `guard` | segurar (`on: true`) ou soltar a defesa, virada para o ângulo `a` |
+| cliente | `oops` | deu erro no navegador: o texto do erro (onde foi, a tela e o aparelho) vai para os registros do servidor |
 | cliente | `gm` | poder do administrador (`cmd`: criar monstros, derrubar os de perto, voar, invencível, ir até um ponto, curar); o servidor confere se ele é administrador e registra |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
@@ -335,6 +349,8 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
 | servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
 | servidor | `quests` | seu progresso nas missões mudou |
+| servidor | `questDefs` | o administrador ajustou as missões (textos, objetivo, recompensa): use a lista nova |
+| servidor | `combat` | o administrador ajustou os números do combate (carga, defesa, empurrão): use os novos |
 | servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |

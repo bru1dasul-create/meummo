@@ -9,7 +9,6 @@ import {
   DASH_TILES,
   GM_FLY_FACTOR,
   GUARD_MAX_ENERGY,
-  GUARD_WALK_FACTOR,
   MAX_PENDING_WALKS,
   SHOT_COOLDOWN_MS,
   SHOT_SPEED,
@@ -34,6 +33,7 @@ import { npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { angleDiff, chargedRange, chargeFraction } from '../../shared/combat';
+import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
 import { GmPanel } from './gm';
 import { GuardButton } from './guard';
@@ -129,6 +129,8 @@ class NewWorld implements NewWorldGame {
   private readonly sfx: Sfx;
   private readonly feedback = new Feedback();
   private readonly combat: CombatLayer;
+  /** Os números do combate que valem (vêm do servidor; o painel do administrador pode mudar com o jogo rodando). */
+  private readonly rules: CombatRules;
   private readonly actionBar: ActionBar;
   private readonly soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
   // mochila, loja e conversa com missões (as janelas do jogo de sempre; a [arte] deixa no jeito do 2.5D depois)
@@ -244,7 +246,9 @@ class NewWorld implements NewWorldGame {
       this.usingTouch = true;
       this.tapAt(x, y);
     });
-    this.combat = new CombatLayer(this.container);
+    // os números do combate: o mesmo objeto aqui e no desenho do combate (o servidor manda os novos, se mudarem)
+    this.rules = { ...defaultCombatRules(), ...deps.welcome.combat };
+    this.combat = new CombatLayer(this.container, this.rules);
     this.actionBar = new ActionBar(
       [
         { slot: 'shot', label: 'Estilingue', key: 'J' }, // segurar puxa, soltar atira (pedra com carga)
@@ -310,6 +314,7 @@ class NewWorld implements NewWorldGame {
       teleportMode: (on) => {
         this.gmTeleport = on;
       },
+      npc: (id) => this.conn.send({ t: 'gm', cmd: { do: 'npc', npc: id } }),
     });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
@@ -355,6 +360,8 @@ class NewWorld implements NewWorldGame {
       // sinais de missão em cima dos NPCs ('!' nova, '?' para concluir)
       marks: () => [...game.npcs.values()].map((n) => ({ name: n.e.name, type: n.e.type, mark: npcMark(n.e.type, game.questList, game.questContext()) })),
       zoom: () => game.zoom,
+      // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
+      combat: () => ({ ...game.rules }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -399,6 +406,7 @@ class NewWorld implements NewWorldGame {
       this.npcs.set(npc.e.id, npc);
       this.addEntity(npc.e, false);
     }
+    this.gmPanel.setNpcs(msg.npcs.map((npc) => ({ id: npc.e.type, name: npc.e.name })));
     this.applyStats(msg.stats);
     this.myHp = you.hp;
     this.myMaxHp = you.maxHp;
@@ -491,11 +499,11 @@ class NewWorld implements NewWorldGame {
 
   /**
    * Quanto anda um pedaço: correndo (o normal), devagar (Shift / joystick empurrado de leve) ou, segurando a defesa,
-   * devagar × GUARD_WALK_FACTOR.
+   * devagar × guardWalkFactor (o mesmo número do servidor).
    */
   private sliceOf(slow: boolean, guard = this.guardHeld, fly = this.gmFly): number {
     if (fly) return sliceDistance(this.map.metric, false, this.stepMs) * GM_FLY_FACTOR;
-    if (guard) return sliceDistance(this.map.metric, true, this.stepMs) * GUARD_WALK_FACTOR;
+    if (guard) return sliceDistance(this.map.metric, true, this.stepMs) * this.rules.guardWalkFactor;
     return sliceDistance(this.map.metric, slow, this.stepMs);
   }
 
@@ -987,7 +995,7 @@ class NewWorld implements NewWorldGame {
     this.combat.setCharge(this.myId, null);
     // durante a recarga, sai assim que der, com a carga contada até lá (o servidor conta igual, até o tiro chegar)
     if (now < this.nextShotAt) this.pendingShot = { at: this.nextShotAt, aim: charging.aim, since: charging.since };
-    else if (!this.fireAim(charging.aim, chargeFraction(now - charging.since), now)) this.view?.action?.(this.myId, 'sling-cancel');
+    else if (!this.fireAim(charging.aim, chargeFraction(now - charging.since, this.rules), now)) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   /** Solta a pedra sem atirar (esquiva, golpe recebido, desmaio, troca de mapa, janela sem foco). */
@@ -1004,7 +1012,7 @@ class NewWorld implements NewWorldGame {
     const pending = this.pendingShot;
     if (!pending || now < pending.at) return;
     this.pendingShot = null;
-    if (!this.fireAim(pending.aim, chargeFraction(now - pending.since), now)) this.view?.action?.(this.myId, 'sling-cancel');
+    if (!this.fireAim(pending.aim, chargeFraction(now - pending.since, this.rules), now)) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   /** Atira para onde a mira manda: no monstro (onde ele está de verdade), para o mouse, ou no mais perto. */
@@ -1017,7 +1025,7 @@ class NewWorld implements NewWorldGame {
       angle = this.mouseAim();
     }
     // a mira automática procura até onde esta pedra chega (com carga cheia, mais longe)
-    return this.tryShoot(angle ?? this.autoAim(chargedRange(charge, this.map.metric) + AUTO_AIM_SLACK), now, charge);
+    return this.tryShoot(angle ?? this.autoAim(chargedRange(charge, this.map.metric, this.rules) + AUTO_AIM_SLACK), now, charge);
   }
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
@@ -1025,6 +1033,38 @@ class NewWorld implements NewWorldGame {
     if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt) return;
     this.conn.send({ t: 'charge' }); // zera a carga no servidor: o toque rápido é uma pedra sem carga
     this.tryShoot(angle, now, 0);
+  }
+
+  /**
+   * A lista de NPCs deste mapa mudou (painel ou menu ADM): quem mudou de lugar anda até lá, quem chegou aparece, quem
+   * foi embora some. Loja ou conversa aberta mostra o que mudou.
+   */
+  private onNpcList(list: NpcInfo[]): void {
+    const fresh = new Set<number>();
+    for (const npc of list) {
+      fresh.add(npc.e.id);
+      const old = this.entities.get(npc.e.id);
+      this.npcs.set(npc.e.id, npc);
+      if (!old) {
+        this.addEntity(npc.e, false);
+      } else if (old.x !== npc.e.x || old.y !== npc.e.y) {
+        this.entities.set(npc.e.id, npc.e);
+        const feet = feetAt(npc.e.x, npc.e.y);
+        this.view?.moveActor(npc.e.id, feet.x, feet.y, degreesOfDir(npc.e.dir), { durationMs: 0 });
+      }
+      if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
+      if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
+    }
+    for (const id of [...this.npcs.keys()]) {
+      if (fresh.has(id)) continue;
+      this.npcs.delete(id);
+      this.entities.delete(id);
+      this.view?.removeActor(id);
+      if (this.talk.npcId === id) this.talk.close();
+      if (this.shop.npcId === id) this.shop.close();
+    }
+    this.gmPanel.setNpcs([...this.npcs.values()].map((npc) => ({ id: npc.e.type, name: npc.e.name })));
+    this.refreshQuests(); // os sinais ! e ? em cima de quem chegou
   }
 
   // ======================= conversa =======================
@@ -1186,7 +1226,7 @@ class NewWorld implements NewWorldGame {
     this.conn.send({ t: 'shoot', cid, a: round3(angle) });
     const feet = this.myFeet();
     const origin = shotOriginOfFeet(feet.x, feet.y);
-    this.combat.myShot(cid, origin.x, origin.y, angle, SHOT_SPEED, chargedRange(charge, this.map.metric), now);
+    this.combat.myShot(cid, origin.x, origin.y, angle, SHOT_SPEED, chargedRange(charge, this.map.metric, this.rules), now);
     this.sfx.play('shot');
     this.faceAngle(toDegrees(angle));
     this.view?.action?.(this.myId, 'shoot', toDegrees(angle));
@@ -1721,12 +1761,16 @@ class NewWorld implements NewWorldGame {
       case 'quests':
         this.onQuestLog(msg.log);
         break;
+      case 'combat':
+        Object.assign(this.rules, msg.rules); // o desenho do combate usa o mesmo objeto
+        break;
+      case 'questDefs':
+        // o painel mudou as missões: troca dentro da mesma lista (a conversa e a lista na tela usam ela)
+        this.questList.splice(0, this.questList.length, ...msg.quests);
+        this.refreshQuests();
+        break;
       case 'npcs':
-        for (const npc of msg.npcs) {
-          this.npcs.set(npc.e.id, npc);
-          if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
-          if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
-        }
+        this.onNpcList(msg.npcs);
         break;
       case 'online':
         this.hud.setOnline(msg.n);

@@ -134,8 +134,22 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
 - **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
   sozinho, distância que percebe e persegue, tempo para renascer.
 - **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
-- **Loja e personagens:** o que a Dona Iracema diz, o que vende e quanto paga pelo que você vende.
-- **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **dar ouro**,
+- **Áreas de monstros:** cada área de cada mapa (nome, onde fica e o padrão do mapa): **qual monstro** nasce ali e
+  **quantos** (0 a 50). Vale na hora: os monstros da área completam, somem ou trocam de tipo. O lugar da área é o do
+  mapa (quem desenha os mapas muda no Tiled).
+- **Missões:** nome, o que o personagem diz ao pedir e ao concluir, o objetivo que aparece na tela (vazio = o texto
+  automático), **quantos** (e qual monstro ou item), nível mínimo, se dá para fazer de novo e a **recompensa** (XP,
+  ouro e itens com quantidade). Vale na hora, até numa conversa aberta; quem já está fazendo a missão continua com o
+  que já fez (se a quantidade baixar, já pode entregar). Quem dá a missão e a ordem delas ficam em `data/missoes.json`.
+- **Combate:** a **pedra com carga** (tempo para carregar, dano e alcance com a carga cheia), a **defesa** (quanto do
+  golpe segura, o ângulo que cobre, o tempo para subir, a energia que gasta e que volta, o tempo quebrada e a
+  velocidade andando com ela) e quanto do **empurrão** a defesa segura. Vale na hora para quem está jogando; o
+  empurrão de cada monstro fica na aba Monstros.
+- **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
+  vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
+  (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).
+- **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **mudar o nível**
+  (a XP do nível começa do zero e a vida enche), **dar XP** (sobe de nível como caçando), **dar ouro**,
   **dar item** (o que não couber na mochila fica no chão, ao lado), **curar**, **levar para** outro mapa ou posição
   (x e y vazios = ponto de nascimento) e **expulsar** (o progresso fica salvo e dá para entrar de novo). No topo,
   **aviso para todos** (aparece na tela de quem está jogando) e **trocar senha**, para quem esqueceu: escreva o nome
@@ -148,6 +162,10 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   **derrubar os monstros perto** (você ganha a XP), **voar** (atravessa parede e árvore, rápido; ao pousar dentro de
   algo, vai para o chão livre), **invencível** (não leva dano e os monstros te ignoram), **teleporte ao clicar** (o
   clique no chão te leva até lá) e **curar**. Tudo fica registrado na janela do servidor.
+- **Registros:** o que o servidor anota (quem entrou e saiu, o que o administrador fez, avisos e **erros**, inclusive
+  os que acontecerem no navegador de quem joga, no PC ou no celular, com o aparelho e onde foi). Filtre por "erro" e
+  use **Copiar tudo** para mandar a quem vai corrigir. Também ficam num arquivo por dia em `saves/registros/` (os
+  últimos 14 dias). Um erro dentro do jogo agora fica anotado e não derruba mais o servidor.
 
 Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
 alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").

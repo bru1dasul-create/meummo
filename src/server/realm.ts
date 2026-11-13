@@ -270,6 +270,24 @@ export class Realm {
     };
   }
 
+  /** Muda o nível de quem está online (a XP do nível começa do zero; a vida enche). */
+  adminSetLevel(id: number, level: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    found.world.adminSetLevel(found.player, level);
+    return { ok: true, texto: `${found.player.name} agora está no nível ${found.player.level}.` };
+  }
+
+  /** Dá XP para quem está online (sobe de nível se passar, como caçando). */
+  adminGiveXp(id: number, amount: number): AdminResult {
+    const found = this.findOnline(id);
+    if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
+    const before = found.player.level;
+    found.world.adminGiveXp(found.player, amount);
+    const up = found.player.level > before ? ` e subiu para o nível ${found.player.level}` : '';
+    return { ok: true, texto: `${found.player.name} ganhou ${amount} de XP${up}.` };
+  }
+
   adminHeal(id: number): AdminResult {
     const found = this.findOnline(id);
     if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
@@ -313,6 +331,9 @@ export class Realm {
       if (changed.has('monstros')) world.refreshMonsters();
       if (changed.has('itens')) world.refreshItems();
       if (changed.has('npcs')) world.refreshNpcs();
+      if (changed.has('areas')) world.refreshAreas();
+      if (changed.has('missoes')) world.refreshQuests();
+      if (changed.has('combate')) world.refreshCombat();
     }
   }
 

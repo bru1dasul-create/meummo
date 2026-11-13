@@ -3,32 +3,23 @@
 
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
 import type { Tile, Walkable } from './map';
-import {
-  CHARGE_DAMAGE_BONUS,
-  CHARGE_FULL_MS,
-  CHARGE_RANGE_MAX,
-  CHARGE_RANGE_MIN,
-  GUARD_DAMAGE_FACTOR,
-  GUARD_HALF_ARC,
-  GUARD_HIT_COST,
-  GUARD_HIT_DAMAGE_COST,
-  SHOT_RANGE,
-} from './constants';
+import { SHOT_RANGE } from './constants';
+import type { CombatRules } from './combatRules';
 import { canStep } from './movement';
 
 /** Quanto da carga do estilingue (0 a 1) depois de puxar `heldMs`. */
-export function chargeFraction(heldMs: number): number {
-  return Math.max(0, Math.min(1, heldMs / CHARGE_FULL_MS));
+export function chargeFraction(heldMs: number, rules: CombatRules): number {
+  return rules.chargeFullMs > 0 ? Math.max(0, Math.min(1, heldMs / rules.chargeFullMs)) : 1;
 }
 
-/** Alcance da pedra com esta carga: no mapa novo, de CHARGE_RANGE_MIN a CHARGE_RANGE_MAX; no antigo, o de sempre. */
-export function chargedRange(charge: number, metric: boolean): number {
-  return metric ? CHARGE_RANGE_MIN + (CHARGE_RANGE_MAX - CHARGE_RANGE_MIN) * charge : SHOT_RANGE;
+/** Alcance da pedra com esta carga: no mapa novo, do alcance sem carga ao da carga cheia; no antigo, o de sempre. */
+export function chargedRange(charge: number, metric: boolean, rules: CombatRules): number {
+  return metric ? rules.chargeRangeMin + (rules.chargeRangeMax - rules.chargeRangeMin) * charge : SHOT_RANGE;
 }
 
-/** Dano da pedra com esta carga (carga cheia: o dobro). */
-export function chargedDamage(base: number, charge: number): number {
-  return Math.round(base * (1 + CHARGE_DAMAGE_BONUS * charge));
+/** Dano da pedra com esta carga (carga cheia, no padrão: o dobro). */
+export function chargedDamage(base: number, charge: number, rules: CombatRules): number {
+  return Math.round(base * (1 + rules.chargeDamageBonus * charge));
 }
 
 /** Diferença entre dois ângulos (radianos), de -π a π. */
@@ -41,24 +32,25 @@ export function angleDiff(a: number, b: number): number {
 
 /**
  * A defesa virada para `guardAngle` pega um golpe que vem andando na direção `travel` (radianos)? Só se ele chegar
- * pela frente: até GUARD_HALF_ARC para cada lado (140° ao todo). Laterais mais abertas e costas levam o golpe inteiro.
+ * pela frente: até guardHalfArc para cada lado (no padrão, 140° ao todo). Laterais mais abertas e costas levam o
+ * golpe inteiro.
  */
-export function guardCovers(guardAngle: number, travel: number): boolean {
-  return Math.abs(angleDiff(guardAngle, travel + Math.PI)) <= GUARD_HALF_ARC + 1e-9;
+export function guardCovers(guardAngle: number, travel: number, rules: CombatRules): boolean {
+  return Math.abs(angleDiff(guardAngle, travel + Math.PI)) <= rules.guardHalfArc + 1e-9;
 }
 
 /**
  * Um golpe de `damage` na defesa levantada com `energy`: o dano que passa, a energia que sobra e se a defesa quebrou.
- * Com energia de sobra, passa GUARD_DAMAGE_FACTOR do dano (pelo menos 1). Sem energia para o golpe inteiro, protege
+ * Com energia de sobra, passa guardDamageFactor do dano (pelo menos 1). Sem energia para o golpe inteiro, protege
  * em parte (na proporção da energia que tinha) e quebra; zerar a energia também quebra.
  */
-export function blockHit(energy: number, damage: number): { damage: number; energy: number; broke: boolean } {
-  const cost = GUARD_HIT_COST + GUARD_HIT_DAMAGE_COST * damage;
+export function blockHit(energy: number, damage: number, rules: CombatRules): { damage: number; energy: number; broke: boolean } {
+  const cost = rules.guardHitCost + rules.guardHitDamageCost * damage;
   const spent = Math.min(Math.max(0, energy), cost);
-  const fraction = spent / cost;
+  const fraction = cost > 0 ? spent / cost : 1; // golpe que não gasta energia: segura inteiro
   const left = energy - spent;
   const broke = fraction < 1 - 1e-9 || left <= 1e-9;
-  const through = damage * (1 - (1 - GUARD_DAMAGE_FACTOR) * fraction);
+  const through = damage * (1 - (1 - rules.guardDamageFactor) * fraction);
   return { damage: Math.max(1, Math.ceil(through - 1e-9)), energy: broke ? 0 : left, broke };
 }
 
