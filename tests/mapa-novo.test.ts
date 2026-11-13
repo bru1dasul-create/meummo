@@ -3,7 +3,8 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { checkNpcs, type NpcDef } from '../src/server/npcs';
+import { parseItemDefs } from '../src/server/items';
+import { checkNpcs, parseNpcDefs, type NpcDef } from '../src/server/npcs';
 import { Realm } from '../src/server/realm';
 import { parseMonsterDefs } from '../src/server/monsters';
 import { parseClientMsg } from '../src/server/validate';
@@ -352,5 +353,31 @@ describe('mapa do formato novo: a pedra', () => {
     const noShot = { properties: [{ name: 'bloqueiaTiro', type: 'bool', value: false }] };
     const map = GameMap.fromTiled(metricMap({ solids: [rect(9, 5, 3, 1, noShot)] }), 'teste');
     expect(fly(map, 5.5).result).toBe('range');
+  });
+});
+
+describe('mapa do formato novo: loja', () => {
+  it('compra de quem está no balcão (pé com fração, como a Budega) de perto, e de longe não', () => {
+    const clock = new FakeClock();
+    const map = GameMap.fromTiled(metricMap(), 'teste');
+    const items = parseItemDefs({ coco: { nome: 'Água de Coco', preco: 8, tipo: 'consumivel', cura: 20, pilha: 20 } });
+    const npcs = parseNpcDefs({ venda: { nome: 'Atendente', mapa: 'teste', x: 6.5, y: 6.3, fala: 'Opa!', loja: { vende: ['coco'], compraPor: 50 } } });
+    const world = new World(map, { now: clock.now, random: () => 0, items, npcs });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    player.inventory.addGold(50);
+    const npc = [...world.npcs.values()][0]!;
+    player.x = 6; // em frente ao balcão, a menos de 2 m do pé da atendente
+    player.y = 7;
+    world.buy(player, npc.id, 'coco', 2);
+    expect(player.inventory.gold).toBe(34);
+    expect(player.inventory.slots.find((stack) => stack?.item === 'coco')?.n).toBe(2);
+    player.x = 14; // longe
+    world.buy(player, npc.id, 'coco', 1);
+    world.tick();
+    expect(player.inventory.gold).toBe(34);
+    expect(conn.ofType('fail').at(-1)).toMatchObject({ reason: 'too_far', item: true });
   });
 });

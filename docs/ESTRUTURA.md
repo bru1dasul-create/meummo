@@ -75,6 +75,14 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — mochila, loja e câmera no jogo novo:** as janelas de sempre (mochila, loja, conversa com missões) ligadas no
+motor; NPC com loja abre a loja ao chegar. O dono achou a câmera perto demais: o motor começa no zoom 0,7 (o mais longe
+da view) e a roda do mouse e as teclas − e + ajustam. Budega: o dono deixou eu escolher o que ela vende (sem tabaco)
+→ Banana, Arruda, Água de Coco e Garrafada (novas em `data/items.json`) e Chapéu de Palha; compra pela metade. O
+atendente é provisório (o dono vai inspirar em alguém da equipe dele, depois). O NPC entra quando a vila (4b) entrar na
+`main` (o [mundo] avisa; antes disso o teste dos NPCs quebraria). A HUD nova do dono (imagem) foi para a [arte]; minhas
+observações: sem mana (barra verde = energia da revisão 17), sem botões de coisas que não existem, versão de celular.
+
 **13/11 — ajustes do combate (relato do [mundo] depois de religar os monstros, a878d34):** a pedra parava na grade de
 1 m dos troncos (213 árvores na mata) → no formato novo ela bate pelo retângulo exato embaixo dela
 (`blocksShotAt`); no celular, o toque no sagui agora vale onde ele está desenhado e onde ele está de verdade, com mais

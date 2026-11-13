@@ -84,6 +84,10 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
 - `arte.ts` (da [arte]): carrega os scripts do protótipo que definem o desenho de verdade, o `PD.View`; com ele
   carregado, o motor usa ele no lugar do provisório.
 - `joystick.ts`: o joystick do celular (metade esquerda da tela).
+- Mochila, loja e conversa com missões: as mesmas janelas do jogo antigo (`bag.ts`, `shop.ts`, `talk.ts`), ligadas
+  pelo motor; chegar perto de um NPC abre a missão, a loja ou a fala dele, e afastar fecha. Câmera: o motor chama
+  `setZoom` da view (opcional na `WorldView`), começando em 0,7 (longe), com roda do mouse e teclas − e +, e guarda
+  a escolha no aparelho (`meummo:zoom`).
 - `combat.ts`: o combate desenhado por cima (uma tela transparente sobre a view): aviso no chão, anel laranja de
   quem prepara um golpe, pedras e frutas, números de dano e cura, barras de vida, clarão dos golpes de perto e ouro
   no chão. Contas que batem com o servidor (há teste em `tests/combate-novo.test.ts`): o pé de quem está no tile
