@@ -295,6 +295,7 @@
       const actors = [...this.actors.values()].map((a) => this._actorDrawable(a));
       this.world.draw(ctx, actors);
       this._drawAtmosphere(ctx);
+      this._drawVeilMotes(ctx);
       this._drawNames(ctx);
       this._drawSpeech(ctx);
     }
@@ -389,6 +390,71 @@
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.drawImage(this._atmLayer, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    /**
+     * Véus (pedido do [mundo], 13/11): luzinhas que sobem devagar, como vaga-lumes espirituais (3 a 6 por véu, mais
+     * no maior), e uma cortina de luz quase invisível que pulsa a cada ~4 s. Ficam por cima do escuro (são luz), mas
+     * fracas e pequenas: não atrapalham ver quem está ali. O tamanho do véu (`raio`) dá a força: o círculo (3 m) é o
+     * mais forte e a ponta do deque (1 m) a mais discreta. `coluna` (no mapa, em metros) deixa a coluna mais alta,
+     * para chamar a atenção de longe (a Ilha do Véu).
+     */
+    _drawVeilMotes(ctx) {
+      const veils = this.map.veils || [];
+      if (!veils.length) return;
+      const cam = this.cam;
+      const t = this.world.time || 0;
+      const z = cam.zoom;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      veils.forEach((v, i) => {
+        const s = M.clamp(v.r / 300, 0.35, 1);
+        const H = v.h || 140 + v.r * 0.5;
+        const base = cam.p({ x: v.x, y: v.y, z: 0 });
+        const top = cam.p({ x: v.x, y: v.y, z: H });
+        const m = v.r * z * 1.5;
+        if (base.x < cam.viewX - m || base.x > cam.viewX + cam.viewW + m || top.y > cam.viewY + cam.viewH + m || base.y < cam.viewY - m) return;
+        // cortina: faixas finas de luz subindo do chão, balançando e pulsando devagar
+        const pulse = 0.5 + 0.5 * Math.sin((t * M.TAU) / 4 + i * 1.7);
+        for (let k = 0; k < 3; k++) {
+          const off = (k - 1) * v.r * 0.35 + Math.sin(t * 0.6 + k * 2.1 + i) * v.r * 0.08;
+          const a = cam.p({ x: v.x + off * 0.7, y: v.y - off * 0.7, z: 0 });
+          const b = cam.p({ x: v.x + off * 0.7, y: v.y - off * 0.7, z: H * 0.9 });
+          const g = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          g.addColorStop(0, `rgba(63, 214, 200, ${(0.05 + 0.06 * pulse) * s})`);
+          g.addColorStop(1, 'rgba(63, 214, 200, 0)');
+          ctx.strokeStyle = g;
+          ctx.lineWidth = Math.max(2, v.r * 0.22 * z);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+        // luzinhas: cada uma sobe do chão, acende no meio do caminho e some no alto
+        const n = Math.round(3 + 3 * s);
+        for (let k = 0; k < n; k++) {
+          const h1 = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453;
+          const r1 = h1 - Math.floor(h1);
+          const period = 4.5 + r1 * 2.5;
+          const u = ((t + r1 * period) / period) % 1;
+          const ang = r1 * M.TAU * 3 + k;
+          const rr = v.r * 0.6 * Math.sqrt((r1 * 7.31) % 1);
+          const sway = Math.sin(t * 0.9 + k * 1.3 + i) * 12;
+          const p = cam.p({ x: v.x + Math.cos(ang) * rr + sway, y: v.y + Math.sin(ang) * rr, z: 20 + u * H });
+          const alpha = Math.sin(Math.PI * u) * (0.35 + 0.45 * s);
+          const R = (2.2 + 1.6 * s) * Math.max(0.6, z) * 3;
+          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);
+          g.addColorStop(0, `rgba(220, 255, 250, ${alpha})`);
+          g.addColorStop(0.3, `rgba(63, 214, 200, ${alpha * 0.7})`);
+          g.addColorStop(1, 'rgba(63, 214, 200, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, R, 0, M.TAU);
+          ctx.fill();
+        }
+      });
       ctx.restore();
     }
 

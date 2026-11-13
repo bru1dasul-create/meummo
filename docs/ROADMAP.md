@@ -207,7 +207,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   (candelabro com guarda-chuvas de folhas em mão, prateadas), xaxim (tronco de fibra e coroa rendada), bananeira
   (leque rasgado, folha velha, cacho com coração roxo e filhote no pé), bambu (moita em chafariz), samambaia,
   helicônia, taboa, cogumelo que brilha, deque, pinguela (tronco com o corte à mostra) e o brilho dos cogumelos e dos
-  véus por cima do escuro; os arbustos viraram tufos de folhas recortadas. E o jogo só prepara a imagem dos objetos
+  véus por cima do escuro (nos véus, luzinhas subindo e uma cortina de luz bem fraca); os arbustos viraram tufos de
+  folhas recortadas. E o jogo só prepara a imagem dos objetos
   perto da tela: no mapa novo (1.107 objetos) entrar caiu de ~2 s para 0,1–0,2 s e a memória das imagens, de
   240–325 MB para 20–70 MB
 - [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o

@@ -413,6 +413,10 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   - **Brilho:** `PD.flora.glows(mapa)` lista cogumelos e véus; a `_drawGlows` (`view.js`), na mesma camada pequena do
     escuro, abre um buraco no escuro em volta de cada um e tinge o ar da cor do brilho, respirando devagar. Só
     aparece onde a área tem escuro ou neblina.
+  - **Véus** (`_drawVeilMotes` em `view.js`, ideia do [mundo]): além do brilho no chão, 3 a 6 luzinhas sobem devagar
+    (vaga-lumes espirituais) e três faixas finas de luz (a "cortina" entre os mundos) pulsam a cada 4 s. A força vem
+    do raio: o círculo (3 m) é o mais forte, a ponta do deque (1 m) a mais discreta. `coluna` (m) no véu do mapa deixa
+    a coluna mais alta (para a Ilha do Véu do Mapa 02, vista de longe). Fracas e pequenas, para não atrapalhar o combate.
   - **Imagens só perto da tela** (`props.js` e `world.js`): antes, o jogo fazia a imagem de todos os objetos do mapa
     de uma vez (ao entrar e a cada zoom). No mapa da mata nova (1.107 objetos) isso travava ~2 s e as imagens somavam
     238 MB no celular e 325 MB no PC (o iPhone tem limite perto disso). Agora:

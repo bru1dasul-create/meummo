@@ -130,7 +130,7 @@
       } else if (k === 'pilar') {
         map.pillars.push({ ...rect(o), h: (pr.altura || 2.4) * 100 });
       } else if (k === 'veu') {
-        map.veils.push({ x, y, r: (pr.raio || 1.5) * 100 });
+        map.veils.push({ x, y, r: (pr.raio || 1.5) * 100, h: pr.coluna ? pr.coluna * 100 : null });
       } else if (k === 'bambu') {
         // moita de bambu (bloqueia): `raio` e `altura` em metros
         map.props.push({ kind: 'bambu', x, y, r: (pr.raio || 1.2) * 100, h: (pr.altura || 7) * 100 });
