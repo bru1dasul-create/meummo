@@ -482,14 +482,21 @@ describe('Mapa 01 (Capão): a rua e a praça da Budega no padrão novo (a flores
     expect(reach(at(predio).x, at(predio).y)).toBe(false);
   });
 
-  it('sem poste nem fio na frente das casas da rua do portão (pedido do dono: "menos poluído"); eles ficam na Travessa e na rua de baixo', () => {
-    const inMainStreet = (x: number, y: number) => x > 56.5 && x < 87 && y > 39.5 && y < 48.5;
-    for (const o of cenario.filter((c) => c.type === 'poste')) expect(inMainStreet(at(o).x, at(o).y), `poste em (${at(o).x}, ${at(o).y})`).toBe(false);
+  it('na rua do portão, os postes e os fios ficam na calçada das casas (atrás de quem anda na rua, para a câmera), nunca na da praça nem atravessando a rua', () => {
+    // pedido do dono (13/11): "os postes era pra pôr nessa rua que não fica na frente do personagem"
+    const between = (x: number) => x > 56.5 && x < 87;
+    for (const o of cenario.filter((c) => c.type === 'poste' && between(at(c).x))) expect(at(o).y, `poste em (${at(o).x}, ${at(o).y})`).toBeLessThan(41.1);
     for (const w of cenario.filter((c) => c.type === 'fiacao')) {
       const pts = w.polyline!.map((p) => [(w.x + p.x) / M, (w.y + p.y) / M] as const);
-      // nenhum trecho de fio atravessa a rua do portão
-      for (let i = 0; i + 1 < pts.length; i++) for (let t = 0; t <= 1; t += 0.05) expect(inMainStreet(pts[i]![0] + (pts[i + 1]![0] - pts[i]![0]) * t, pts[i]![1] + (pts[i + 1]![1] - pts[i]![1]) * t)).toBe(false);
+      for (let i = 0; i + 1 < pts.length; i++) {
+        for (let k = 0; k <= 20; k++) {
+          const [x, y] = [pts[i]![0] + ((pts[i + 1]![0] - pts[i]![0]) * k) / 20, pts[i]![1] + ((pts[i + 1]![1] - pts[i]![1]) * k) / 20];
+          if (between(x)) expect(y, `fio em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBeLessThan(41.1);
+        }
+      }
     }
+    // e a calçada das casas continua passando entre o poste e a parede
+    for (const x of [61.5, 70, 80]) expect(reachNear(x, 40.1, 0.2), `calçada no poste de x = ${x}`).toBe(true);
   });
 
   it('a vida na rua: moto, placa de rua, cadeiras, vasos, lixo e bandeirinhas, sem fechar a calçada da casa amarela nem a roda da fogueira', () => {
