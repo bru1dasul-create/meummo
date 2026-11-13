@@ -8,9 +8,10 @@
   const C = PD.creatures;
   const { tube } = C;
 
-  /** Tamanho: o sagui de verdade tem uns 20 cm de corpo; no jogo ele é maior (sentado, uns 65 cm), para ler bem no
-   *  celular, onde o herói tem uns 80 px de altura. */
-  const S = 1.35;
+  /** Tamanho: o sagui de verdade tem uns 20 cm de corpo; no jogo ele é bem maior (sentado, uns 75 cm, quase metade do
+   *  herói), para ler no celular com a câmera longe (zoom 0,7), onde o herói tem uns 55 px de altura. No jogo antigo
+   *  o monstro tinha o tamanho do personagem. */
+  const S = 1.6;
   const COL = {
     fur: { base: '#8c7d6c', shade: '#5f5448', light: '#b5a790' },
     back: { base: '#7a6c5c', shade: '#544a3f', light: '#a0927e' },
