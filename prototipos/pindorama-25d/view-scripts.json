@@ -21,6 +21,7 @@
     "js/creatures/sagui.js",
     "js/creatures/jararaca.js",
     "js/creatures/xiovanna.js",
-    "js/view.js"
+    "js/view.js",
+    "js/portrait.js"
   ]
 }

@@ -25,6 +25,8 @@ const NAME_STORAGE_KEY = 'meummo:nome';
  * O `?novo` de antes continua abrindo o novo.
  */
 const NEW_WORLD = !new URLSearchParams(location.search).has('antigo');
+// a interface do jogo 2.5D (HUD com moldura, barra de habilidades...) só vale nele: style.css usa body.jogo-novo
+document.body.classList.toggle('jogo-novo', NEW_WORLD);
 
 const loginOverlay = document.getElementById('login') as HTMLDivElement;
 const loginForm = document.getElementById('login-form') as HTMLFormElement;

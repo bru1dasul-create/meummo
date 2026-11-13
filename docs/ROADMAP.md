@@ -352,6 +352,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   (`#talk.cinema`, só no jogo 2.5D): o nome numa plaquinha, a fala escrita aos poucos no ritmo da boca (tocar mostra
   tudo), os cartões das missões e botões grandes (Aceitar, Entregar/Conversar, Desistir, Ver a loja, Tchau), no PC
   e no celular. A loja do jogo 2.5D também fica sem o retrato. O jogo antigo (`?antigo`) continua igual
+- [x] **[arte]** Interface nova do jogo 2.5D, no traço da HUD de referência do dono (13/11): o retrato com o herói 2.5D
+  de verdade na moldura de madeira com folhas e penas, as barras brilhantes de vida (vermelha), energia da defesa
+  (azul) e XP (verde) e o nível no selo; a barra de habilidades com o espiral vermelho (estilingue, bordunada, fôlego,
+  esquiva, a defesa no 5º quadrado e o 6º vazio, com as teclas nas etiquetas); os frascos em anéis de corda para
+  comida (3) e remédio (4); a mochila num botão redondo; a missão em andamento num painel escuro com o losango; o chat
+  com a borda de bronze; e a mochila aberta com o herói 2.5D (gira no clique). Ícones novos pintados com brilho (as 5
+  habilidades, banana, água de coco, arruda, garrafada e mochila; os outros itens seguem em pixel art, aumentada). As
+  molduras são recortes da imagem do dono, limpos (`public/assets/ui/hud`). No celular: retrato menor e botões soltos
+  em quadros dourados perto do polegar. O jogo antigo (`?antigo`) continua igual. Falta a [estrutura] ligar a barra
+  azul (`hud.setEnergy(valor, máximo)`); até lá ela mostra a energia cheia
+- [ ] **[arte]** Interface, próximos passos: pintar os outros ícones de item, e a loja e a conversa no mesmo painel
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou
