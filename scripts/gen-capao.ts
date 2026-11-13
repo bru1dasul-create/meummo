@@ -552,6 +552,23 @@ for (let i = 0; i < 80 && cenario.filter((o) => o.type === 'aguape').length < 14
   const [x, y] = [round(LAKE.x + Math.cos(a) * LAKE.rx * k), round(LAKE.y + Math.sin(a) * LAKE.ry * k)];
   if (isWater(x, y)) cenario.push(point('aguape', x, y, { raio: round(0.5 + rng() * 0.5) }));
 }
+// nenhum aguapé encostado no deque ou na pinguela (a folha boiando ficava desenhada por cima das tábuas): empurra para
+// a água livre mais perto, sem sortear nada (o resto da mata não muda); se não couber, tira
+for (const o of cenario.filter((c) => c.type === 'aguape')) {
+  const raio = Number(o.props!.raio);
+  const clear = (x: number, y: number) =>
+    isWater(x, y) && [DECK, PINGUELA].every((r) => Math.hypot(Math.max(0, r.x0 - x, x - r.x1), Math.max(0, r.y0 - y, y - r.y1)) >= raio + 0.3);
+  if (clear(o.x, o.y)) continue;
+  let best: [number, number] | undefined;
+  for (let d = 0.25; d <= 2.5 && !best; d += 0.25) {
+    for (let k = 0; k < 16 && !best; k++) {
+      const [x, y] = [round(o.x + Math.cos((k / 16) * Math.PI * 2) * d), round(o.y + Math.sin((k / 16) * Math.PI * 2) * d)];
+      if (clear(x, y)) best = [x, y];
+    }
+  }
+  if (best) [o.x, o.y] = best;
+  else cenario.splice(cenario.indexOf(o), 1);
+}
 for (let i = 0, n = 0; i < 3000 && n < 24; i++) {
   const spot = [...DEEP, { x: NOOK.x, y: NOOK.y, rx: 4, ry: 4 }, { x: ANCESTRAL.x, y: ANCESTRAL.y, rx: 4, ry: 4 }][i % 4]!;
   const [x, y] = [spot.x + (rng() * 2 - 1) * spot.rx, spot.y + (rng() * 2 - 1) * spot.ry];
