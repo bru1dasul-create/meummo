@@ -147,9 +147,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   simples (a [arte] deixa no jeito do 2.5D). Tecla I ou o botão Mochila; tocar no NPC com loja abre a loja. Câmera
   (o dono achou perto demais): começa no mais longe que a view deixa (0,7) e o jogador ajusta com a roda do mouse ou
   as teclas − e + (fica guardado no aparelho)
-- [ ] **[estrutura]** A Budega no balcão da praça (64,5; 53,3), quando a vila (4b) entrar na `main`: vende Banana,
+- [x] **[estrutura]** A Budega no balcão da praça (64,5; 53,3) (13/11, `budega` em `data/npcs.json`): vende Banana,
   Ramo de Arruda, Água de Coco, Garrafada e Chapéu de Palha, e compra o que se pega na mata pela metade do preço.
-  Atendente provisório; o dono troca depois por um personagem inspirado em alguém da equipe dele
+  Atendente provisório; o dono troca depois por um personagem inspirado em alguém da equipe dele. No mapa novo, a
+  distância para negociar é do pé ao pé (até 3,5 m: o balcão deixa o jogador a uns 3 m dela)
 - [ ] **[arte]** Ícones da Água de Coco (`agua_coco`) e da Garrafada (`garrafada`), já em `data/items.json`
 - [x] **[arte]** O desenho de verdade no jogo novo: `PD.View` com a interface `WorldView` (`src/client/novo/view.ts`),
   carregado em `src/client/novo/arte.ts` (o motor troca o provisório por ele sozinho). Desenha também o nome em cima

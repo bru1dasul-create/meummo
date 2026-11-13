@@ -33,5 +33,24 @@
     "x": 42.5,
     "y": 44.5,
     "fala": "Acordou, desperto? Calma, firma as pernas. A mata voltou pela cidade e anda tudo desequilibrado. Aqui no círculo você está seguro."
+  },
+  "budega": {
+    "nome": "Atendente",
+    "titulo": "Budega Distribuidora",
+    "mapa": "capao",
+    "x": 64.5,
+    "y": 53.3,
+    "fala": "Bem-vindo à Budega! Água de coco geladinha, garrafada da benzedeira e banana fresca. Compro também o que você trouxer da mata.",
+    "veste": [],
+    "loja": {
+      "vende": [
+        "banana",
+        "agua_coco",
+        "erva_arruda",
+        "garrafada",
+        "chapeu_palha"
+      ],
+      "compraPor": 50
+    }
   }
 }

@@ -75,6 +75,11 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — a Budega abriu** (`budega`, depois da 4b do [mundo] na `main`): no balcão (64,5; 53,3), "Atendente"
+provisório. Achado no teste: o servidor media a distância para negociar misturando o tile do jogador com a posição
+da vendedora (dava 3,7 com o jogador a 3 m, no balcão) → no mapa novo, do pé ao pé, até TRADE_RANGE + TRADE_SLACK
+(3,5 m); o navegador abre a loja a 3 m e fecha a 3,5 m. Teste em `mapa-novo.test.ts`.
+
 **13/11 — mochila, loja e câmera no jogo novo:** as janelas de sempre (mochila, loja, conversa com missões) ligadas no
 motor; NPC com loja abre a loja ao chegar. O dono achou a câmera perto demais: o motor começa no zoom 0,7 (o mais longe
 da view) e a roda do mouse e as teclas − e + ajustam. Budega: o dono deixou eu escolher o que ela vende (sem tabaco)

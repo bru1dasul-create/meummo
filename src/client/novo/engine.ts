@@ -4,7 +4,17 @@
 // chão, pedras, dano, barras de vida) é desenhado por cima, em combat.ts.
 // É o que abre em http://localhost:3000 (o jogo antigo, visto de cima, fica em ?antigo).
 
-import { DASH_COOLDOWN_MS, DASH_TILES, MAX_PENDING_WALKS, SHOT_COOLDOWN_MS, SHOT_RANGE, SHOT_SPEED, TRADE_RANGE, WALK_SLICE_MS } from '../../shared/constants';
+import {
+  DASH_COOLDOWN_MS,
+  DASH_TILES,
+  MAX_PENDING_WALKS,
+  SHOT_COOLDOWN_MS,
+  SHOT_RANGE,
+  SHOT_SPEED,
+  TRADE_RANGE,
+  TRADE_SLACK,
+  WALK_SLICE_MS,
+} from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
 import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
@@ -719,7 +729,7 @@ class NewWorld implements NewWorldGame {
       const npc = this.npcs.get(id);
       const me = feetAt(this.predicted.x, this.predicted.y);
       const feet = npc ? feetAt(npc.e.x, npc.e.y) : null;
-      if (!feet || Math.hypot(me.x - feet.x, me.y - feet.y) > TRADE_RANGE + 1) {
+      if (!feet || Math.hypot(me.x - feet.x, me.y - feet.y) > TRADE_RANGE + TRADE_SLACK) {
         window.close();
         if (window === this.shop) this.toast.show('Você se afastou da loja');
       }

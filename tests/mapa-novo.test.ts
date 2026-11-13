@@ -374,10 +374,18 @@ describe('mapa do formato novo: loja', () => {
     world.buy(player, npc.id, 'coco', 2);
     expect(player.inventory.gold).toBe(34);
     expect(player.inventory.slots.find((stack) => stack?.item === 'coco')?.n).toBe(2);
+    // do outro lado do balcão: o pé a 3,2 m do pé dela (o caso da Budega) ainda compra
+    player.fx = 6;
+    player.fy = 6.3 + 3.2 - 1; // pé em y = 9,5
+    world.buy(player, npc.id, 'coco', 1);
+    expect(player.inventory.gold).toBe(26);
+    // a 3,8 m já não (o navegador fecha a loja antes disso)
+    player.fy = 6.3 + 3.8 - 1;
+    world.buy(player, npc.id, 'coco', 1);
     player.x = 14; // longe
     world.buy(player, npc.id, 'coco', 1);
     world.tick();
-    expect(player.inventory.gold).toBe(34);
+    expect(player.inventory.gold).toBe(26);
     expect(conn.ofType('fail').at(-1)).toMatchObject({ reason: 'too_far', item: true });
   });
 });
