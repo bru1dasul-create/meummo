@@ -3,6 +3,7 @@
 // de plástico, o vaso de espada-de-são-jorge, os sacos de lixo, as bandeirinhas da praça e o cipó subindo pelos postes e
 // pendurado nos fios. Mesmo traço do resto do cenário (contorno de tinta, lado da sombra mais escuro).
 //   PD.city.small[tipo]           = { height, blocks, box, shadow, paint }   (o props.js usa como as plantas)
+//   (inclui os móveis de dentro da Budega: prateleira, geladeira, balcão e engradado)
 //   PD.city.bunting(ctx, cam, b, t) → um cordão de bandeirinhas (a cada quadro: elas balançam)
 //   PD.city.wireVines(ctx, cam, pts, seed, t) → cipó pendurado num fio
 //   PD.city.poleVine(ctx, cam, p, z0, h, ink) → cipó subindo pelo poste
@@ -508,5 +509,246 @@
   }
 
   // capim e cipó também para o carro tomado pela mata (props.js)
+  // ------------------------------------------------------------------ móveis de dentro da Budega
+  // A Budega dá para entrar (pedido do dono: "igual HumanitZ"): prateleiras com mercadoria (bebida, mercearia,
+  // limpeza — nada de cigarro ou tabaco, pedido do dono e lei), a geladeira de porta de vidro, o balcão com a caixa
+  // registradora e o baleiro, e os engradados empilhados. Retângulos do mapa; `olhando` diz para onde a frente dá
+  // (90 = sul, +y; 0 = leste, +x: os dois lados que a câmera vê). Só aparecem com o herói lá dentro (props.js).
+  const B3 = (ctx, cam, x0, x1, y0, y1, z0, z1, colors, ink) => H.box(ctx, cam, x0, x1, y0, y1, z0, z1, colors, ink);
+  /** Caixinha num referencial do móvel: `a` ao longo da frente (0 = ponta da frente), `d` da parede (0) para a frente. */
+  function frameOf(d) {
+    const east = (d.angle ?? 90) === 0;
+    const len = east ? d.y1 - d.y0 : d.x1 - d.x0;
+    const depth = east ? d.x1 - d.x0 : d.y1 - d.y0;
+    const at = (a0, a1, d0, d1) => (east ? { x0: d.x0 + d0, x1: d.x0 + d1, y0: d.y1 - a1, y1: d.y1 - a0 } : { x0: d.x0 + a0, x1: d.x0 + a1, y0: d.y0 + d0, y1: d.y0 + d1 });
+    // a frente (o plano que a câmera vê de frente) para pintar com onWall
+    const face = (dz, h) => (east ? [{ x: d.x1 + dz, y: d.y1, z: h }, { x: 0, y: -1 }] : [{ x: d.x0, y: d.y1 + dz, z: h }, { x: 1, y: 0 }]);
+    return { east, len, depth, at, face };
+  }
+  const boxOf = (d, extra = 0) => (cam, dd, z0, h) =>
+    bboxOf([cam.p({ x: dd.x0, y: dd.y1, z: z0 }), cam.p({ x: dd.x1, y: dd.y1, z: z0 }), cam.p({ x: dd.x1, y: dd.y0, z: z0 }), cam.p({ x: dd.x0, y: dd.y0, z: z0 + h + extra }), cam.p({ x: dd.x1, y: dd.y0, z: z0 + h + extra }), cam.p({ x: dd.x0, y: dd.y1, z: z0 + h + extra })], 16 * cam.zoom);
+  const GOODS = [
+    // [cor, cor do lado, largura, altura] — garrafas, latas, pacotes de arroz e café, biscoito, detergente
+    ['#2f8f4e', '#1f6a38', 7, 30],
+    ['#b3392b', '#8a2a20', 7, 30],
+    ['#d9d2c2', '#b5ad9c', 14, 22],
+    ['#c9a227', '#9c7c1c', 12, 18],
+    ['#e9e6dc', '#c7c3b6', 9, 12],
+    ['#3a6fb5', '#2b5288', 13, 16],
+    ['#e2732c', '#b45a21', 12, 14],
+    ['#f1d64a', '#c4ab33', 8, 24],
+    ['#7a3fa0', '#5c2f78', 10, 16],
+  ];
+  small.prateleira = {
+    height: (d) => d.h || 200,
+    blocks: 0,
+    box: boxOf(),
+    shadow: (path, cam, d, h) => H.boxShadow(path, cam, d.x0, d.x1, d.y0, d.y1, h * 0.4),
+    paint(ctx, cam, d, z0, ink) {
+      const F = frameOf(d);
+      const h = d.h || 200;
+      const rnd = seeded(d.x0, d.y0, 1201);
+      const wood = { front: '#8a6a45', side: '#6b5034', top: '#a4825a' };
+      // fundo (madeira escura) e as tábuas, de baixo para cima, cada uma com a mercadoria em cima
+      const back = F.at(0, F.len, 0, 3);
+      B3(ctx, cam, back.x0, back.x1, back.y0, back.y1, z0, z0 + h, { front: '#4a3524', side: '#3a2a1c', top: '#6b5034' }, ink);
+      const levels = 4;
+      for (let k = 0; k < levels; k++) {
+        const zb = 12 + k * ((h - 30) / levels);
+        const board = F.at(0, F.len, 3, F.depth);
+        B3(ctx, cam, board.x0, board.x1, board.y0, board.y1, z0 + zb - 3, z0 + zb, wood, ink * 0.7);
+        if (k === levels - 1 && h > 170 && rnd() < 0.5) continue; // a de cima às vezes vazia (estoque acabando)
+        let a = 4 + rnd() * 4;
+        while (a < F.len - 10) {
+          const g = GOODS[Math.floor(rnd() * GOODS.length)];
+          const n = 1 + Math.floor(rnd() * 3);
+          for (let i = 0; i < n && a + g[2] < F.len - 4; i++) {
+            const dd = F.depth * (0.35 + rnd() * 0.2);
+            const c = F.at(a, a + g[2], dd - g[2] * 0.8, dd);
+            B3(ctx, cam, c.x0, c.x1, c.y0, c.y1, z0 + zb, z0 + zb + g[3], { front: g[0], side: g[1], top: M.shade(g[0], 0.18) }, ink * 0.35);
+            a += g[2] + 1.5;
+          }
+          a += 3 + rnd() * 5;
+        }
+      }
+      // tábua de cima e as laterais (a que a câmera vê) por cima de tudo
+      const top = F.at(0, F.len, 0, F.depth);
+      B3(ctx, cam, top.x0, top.x1, top.y0, top.y1, z0 + h - 4, z0 + h, wood, ink);
+      const sideP = F.at(F.len - 3, F.len, 0, F.depth);
+      const sideQ = F.at(0, 3, 0, F.depth);
+      B3(ctx, cam, (F.east ? sideQ : sideP).x0, (F.east ? sideQ : sideP).x1, (F.east ? sideQ : sideP).y0, (F.east ? sideQ : sideP).y1, z0, z0 + h, wood, ink);
+    },
+  };
+  small.geladeira = {
+    height: (d) => d.h || 190,
+    blocks: 0,
+    box: boxOf(),
+    shadow: (path, cam, d, h) => H.boxShadow(path, cam, d.x0, d.x1, d.y0, d.y1, h * 0.4),
+    paint(ctx, cam, d, z0, ink) {
+      const F = frameOf(d);
+      const h = d.h || 190;
+      B3(ctx, cam, d.x0, d.x1, d.y0, d.y1, z0 + 6, z0 + h, { front: '#e9ecee', side: '#c3c9cd', top: '#f5f7f8' }, ink);
+      const [o, dir] = F.face(0.5, z0 + h);
+      H.onWall(ctx, cam, o, dir, () => {
+        const W = F.len;
+        const hh = h - 6;
+        // a placa de cima (sem marca) e a porta de vidro com as bebidas geladas e a luz de dentro
+        ctx.fillStyle = '#c0392b';
+        ctx.fillRect(4, 4, W - 8, 26);
+        ctx.fillStyle = '#fff6e8';
+        ctx.font = '700 15px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('GELADO', W / 2, 23);
+        const gx = 8, gy = 36, gw = W - 16, gh = hh - 52;
+        const glow = ctx.createLinearGradient(0, gy, 0, gy + gh);
+        glow.addColorStop(0, '#dff3fb');
+        glow.addColorStop(1, '#a7d3e6');
+        ctx.fillStyle = glow;
+        ctx.fillRect(gx, gy, gw, gh);
+        const rnd = seeded(d.x0, d.y0, 1203);
+        const BOTTLE = ['#2f8f4e', '#b3392b', '#d9a325', '#f2f2f2', '#3a6fb5', '#8e5a2b'];
+        for (let s = 0; s < 4; s++) {
+          const sy = gy + 14 + s * (gh / 4);
+          ctx.fillStyle = '#9fb3bd';
+          ctx.fillRect(gx, sy + gh / 4 - 12, gw, 3);
+          for (let x = gx + 4; x < gx + gw - 8; x += 9) {
+            const bh = 16 + rnd() * 10;
+            ctx.fillStyle = BOTTLE[Math.floor(rnd() * BOTTLE.length)];
+            ctx.fillRect(x, sy + gh / 4 - 12 - bh, 6, bh);
+            ctx.fillRect(x + 1.5, sy + gh / 4 - 12 - bh - 5, 3, 5);
+          }
+        }
+        // reflexo no vidro, o puxador e a borracha da porta
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(gx + gw * 0.15, gy);
+        ctx.lineTo(gx + gw * 0.32, gy);
+        ctx.lineTo(gx + gw * 0.08, gy + gh);
+        ctx.lineTo(gx, gy + gh);
+        ctx.lineTo(gx, gy + gh * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#5d666c';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(gx, gy, gw, gh);
+        ctx.fillStyle = '#5d666c';
+        ctx.fillRect(gx + gw - 9, gy + gh * 0.35, 5, gh * 0.3);
+      });
+    },
+  };
+  small.balcao = {
+    height: (d) => d.h || 100,
+    blocks: 0,
+    box: boxOf(null, 60),
+    shadow: (path, cam, d, h) => H.boxShadow(path, cam, d.x0, d.x1, d.y0, d.y1, h * 0.5),
+    paint(ctx, cam, d, z0, ink) {
+      const F = frameOf(d);
+      const h = d.h || 100;
+      // o corpo de madeira (tábuas na frente) e o tampo claro, um pouco para fora
+      B3(ctx, cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + h - 5, { front: '#8a5a34', side: '#6d4628', top: '#a4744a' }, ink);
+      const [o, dir] = F.face(0.5, z0 + h - 5);
+      H.onWall(ctx, cam, o, dir, () => {
+        ctx.strokeStyle = 'rgba(40, 24, 12, 0.55)';
+        ctx.lineWidth = 2;
+        for (let x = 18; x < F.len; x += 18) {
+          ctx.beginPath();
+          ctx.moveTo(x, 6);
+          ctx.lineTo(x, h - 5);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fillRect(0, 0, F.len, 10);
+      });
+      const top = F.at(-4, F.len + 4, -2, F.depth + 5);
+      B3(ctx, cam, top.x0, top.x1, top.y0, top.y1, z0 + h - 5, z0 + h, { front: '#cdb88f', side: '#ad9a74', top: '#e3d2ad' }, ink);
+      const zt = z0 + h;
+      // a caixa registradora, o baleiro (balas coloridas no vidro) e o bloquinho de anotar o fiado
+      if (d.register) {
+        const r = F.at(F.len * 0.62, F.len * 0.62 + 36, F.depth * 0.2, F.depth * 0.2 + 30);
+        B3(ctx, cam, r.x0, r.x1, r.y0, r.y1, zt, zt + 14, { front: '#4a4f55', side: '#3a3e43', top: '#5f656c' }, ink);
+        const s = F.at(F.len * 0.62 + 4, F.len * 0.62 + 32, F.depth * 0.2 + 2, F.depth * 0.2 + 12);
+        B3(ctx, cam, s.x0, s.x1, s.y0, s.y1, zt + 14, zt + 26, { front: '#2b2f33', side: '#22262a', top: '#3a3f44' }, ink * 0.8);
+        const [so, sd] = F.east ? [{ x: s.x1 + 0.5, y: s.y1, z: zt + 26 }, { x: 0, y: -1 }] : [{ x: s.x0, y: s.y1 + 0.5, z: zt + 26 }, { x: 1, y: 0 }];
+        H.onWall(ctx, cam, so, sd, () => {
+          ctx.fillStyle = '#7ee08a';
+          ctx.fillRect(3, 3, 22, 6);
+        });
+        const kx = F.at(F.len * 0.62 + 4, F.len * 0.62 + 32, F.depth * 0.2 + 16, F.depth * 0.2 + 28);
+        const keys = [cam.p({ x: kx.x0, y: kx.y0, z: zt + 14.5 }), cam.p({ x: kx.x1, y: kx.y0, z: zt + 14.5 }), cam.p({ x: kx.x1, y: kx.y1, z: zt + 14.5 }), cam.p({ x: kx.x0, y: kx.y1, z: zt + 14.5 })];
+        poly(ctx, keys);
+        ctx.fillStyle = '#d9d4c7';
+        ctx.fill();
+      }
+      const jarC = F.at(F.len * 0.2, F.len * 0.2 + 1, F.depth * 0.5, F.depth * 0.5 + 1);
+      const jc = { x: jarC.x0, y: jarC.y0 };
+      const jb = cam.p({ x: jc.x, y: jc.y, z: zt });
+      const jt = cam.p({ x: jc.x, y: jc.y, z: zt + 26 });
+      const rx = 11 * cam.zoom;
+      const ry = rx * cam.sinP;
+      ctx.fillStyle = 'rgba(210, 236, 240, 0.55)';
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 1.2;
+      ctx.beginPath();
+      ctx.ellipse(jb.x, jb.y, rx, ry, 0, 0, Math.PI);
+      ctx.lineTo(jt.x - rx, jt.y);
+      ctx.ellipse(jt.x, jt.y, rx, ry, 0, Math.PI, 0, true);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      const rnd = seeded(d.x0, d.y0, 1205);
+      const CANDY = ['#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#e67e22', '#ff7fb0'];
+      for (let k = 0; k < 18; k++) {
+        ctx.fillStyle = CANDY[Math.floor(rnd() * CANDY.length)];
+        ctx.beginPath();
+        ctx.arc(jb.x + (rnd() - 0.5) * rx * 1.5, jb.y - (jb.y - jt.y) * rnd() * 0.75 - 2 * cam.zoom, Math.max(1, 2 * cam.zoom), 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#c0392b';
+      ctx.beginPath();
+      ctx.ellipse(jt.x, jt.y, rx * 0.9, ry * 0.9, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.stroke();
+      const n = F.at(F.len * 0.38, F.len * 0.38 + 16, F.depth * 0.45, F.depth * 0.45 + 12);
+      B3(ctx, cam, n.x0, n.x1, n.y0, n.y1, zt, zt + 2, { front: '#f7f2e4', side: '#ddd6c4', top: '#fbf8ee' }, ink * 0.6);
+    },
+  };
+  small.engradado = {
+    height: (d) => (d.stack || 3) * 28,
+    blocks: 0,
+    box: boxOf(),
+    shadow: (path, cam, d, h) => H.boxShadow(path, cam, d.x0, d.x1, d.y0, d.y1, h * 0.5),
+    paint(ctx, cam, d, z0, ink) {
+      const n = Math.max(1, Math.min(6, d.stack || 3));
+      const rnd = seeded(d.x0, d.y0, 1207);
+      const COLORS = ['#c0392b', '#e1b12c', '#2e86c1', '#27ae60'];
+      for (let k = 0; k < n; k++) {
+        const c = COLORS[(Math.floor(rnd() * 4) + k) % COLORS.length];
+        const za = z0 + k * 28, zb = za + 26;
+        const dx = (rnd() - 0.5) * 4, dy = (rnd() - 0.5) * 4;
+        B3(ctx, cam, d.x0 + dx, d.x1 + dx, d.y0 + dy, d.y1 + dy, za, zb, { front: c, side: M.shade(c, -0.22), top: M.shade(c, 0.12) }, ink);
+        // as alças (furos escuros) da frente e do lado
+        for (const [o, dir, len] of [[{ x: d.x0 + dx, y: d.y1 + dy + 0.5, z: zb }, { x: 1, y: 0 }, d.x1 - d.x0], [{ x: d.x1 + dx + 0.5, y: d.y1 + dy, z: zb }, { x: 0, y: -1 }, d.y1 - d.y0]]) {
+          H.onWall(ctx, cam, o, dir, () => {
+            ctx.fillStyle = 'rgba(20, 12, 8, 0.55)';
+            ctx.fillRect(len * 0.3, 5, len * 0.4, 6);
+            for (let x = 6; x < len - 6; x += 9) ctx.fillRect(x, 15, 5, 7);
+          });
+        }
+      }
+      // as tampinhas das garrafas no de cima
+      const zt = z0 + n * 28 - 2;
+      const caps = ['#d9d9d9', '#c0392b', '#f1c40f'];
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 3; j++) {
+          const p = cam.p({ x: d.x0 + (d.x1 - d.x0) * ((i + 0.5) / 4), y: d.y0 + (d.y1 - d.y0) * ((j + 0.5) / 3), z: zt + 4 });
+          ctx.fillStyle = caps[(i + j) % caps.length];
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, 3.2 * cam.zoom, 3.2 * cam.zoom * cam.sinP, 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+    },
+  };
+
   PD.city = { small, bunting, wireVines, poleVine, grass: grassTuft, vine: vineStrand };
 })(window.PD = window.PD || {});
