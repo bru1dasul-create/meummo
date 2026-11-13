@@ -338,6 +338,22 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   O registro do chat (`ui.ts`) segue a última fala e só para quando o **jogador** rola (roda, dedo ou barra): a
   conta antiga ("está no fim?") se enganava quando o chat mudava de tamanho e o celular pequeno mostrava a fala
   velha. Conferido em Pixel 7 e num celular de 320 px, em pé e deitado (`chat-celular.cjs` no scratchpad).
+- **Criaturas (monstros que não são gente), 13/11:** `js/creatures/creature.js` é a base. A criatura anda de casa
+  em casa no tempo do passo do servidor, em linha reta, e vira suave. O jeito de andar sai da velocidade suavizada.
+  Os golpes chegam por `view.action` ('windup', 'shoot', 'hurt'...). O desenho é o da capivara: bolas com contorno
+  de tinta, a meia-lua escura do lado da sombra e o brilho do lado da luz. A ordem entre as partes vai pela posição
+  no chão e pouco pela altura, como no corpo da gente. Detalhes de rosto e listras são "decalques" achatados pela
+  câmera, que somem de costas. Para criar uma: `PD.creatures.define('tipo', Classe)` e pôr o arquivo em
+  `view-scripts.json`, `clareira.html` e `src/client/novo/arte.ts`; o tipo é a chave do monstro em `data/monsters.json`.
+  **Sagui** (`sagui.js`), em tamanho de jogo (`S` = 1,35; sentado, uns 65 cm):
+  - corpo cinza-amarronzado com o lombo rajado e a barriga clara;
+  - rosto escuro com a mancha branca na testa e o focinho curto;
+  - olhos amarelos acesos com a pupila em fenda e dois pontinhos lilás rodando (o encanto);
+  - tufos brancos em leque dos lados da cabeça e o rabo de anéis.
+  Parado, senta e olha em volta. Correndo, vai de quatro aos saltos. No aviso, senta e ergue a fruta verde (a mesma
+  cor da fruta que voa) atrás da cabeça; no tiro, arremessa por cima. Ao apanhar, pisca branco e encolhe. Prancha
+  de conferência: `prancha-sagui.cjs` no scratchpad (8 lados × sentado, correndo, preparo, arremesso, apanhando).
+  A câmera olha de cima, então o rosto fica alto na cabeça; embaixo, o focinho escondia os olhos.
 - **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
   outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).
   `world.js` junta as janelas em `o.hideWindows` e recorta uma de cada vez.

@@ -172,6 +172,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[mundo]** Religar os saguis e as jararacas da etapa 4a no gerador (o combate do jogo novo chegou): 4 saguis
   encantados no norte do parque e 3 jararacas na mata profunda do sudoeste (13/11). Com a mata fechada de hoje elas
   ficam escondidas embaixo das copas; a mata nova (mais aberta) resolve
+- [x] **[arte]** Sagui Travesso com corpo próprio no 2.5D (13/11, escolha do dono: monstros antes do Curupira):
+  sagui-de-tufo-branco encantado (rosto escuro, mancha branca, tufos brancos, olhos amarelos, rabo de anéis); sentado
+  olhando em volta, correndo de quatro aos saltos, ergue a fruta no aviso e arremessa no tiro, pisca ao apanhar.
+  `PD.creatures` (`js/creatures/`): o monstro com desenho lá deixa de sair com o corpo de gente
+- [ ] **[arte]** Jararaca com corpo próprio no 2.5D (rasteja em S, enrola e ergue a cabeça no aviso, bote)
 - [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
   esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
