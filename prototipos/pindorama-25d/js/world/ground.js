@@ -488,7 +488,8 @@
       return { x0: sh.x - r, x1: sh.x + r, y0: sh.y - r, y1: sh.y + r };
     }
     if (sh.kind === 'ellipse') return { x0: sh.cx - sh.rx, x1: sh.cx + sh.rx, y0: sh.cy - sh.ry, y1: sh.cy + sh.ry };
-    const pad = sh.kind === 'line' ? sh.width / 2 : 0;
+    // (as raízes da rua soltam galhos além da linha do mapa: PD.street.reach diz até onde)
+    const pad = sh.kind === 'line' ? sh.width / 2 + ((PD.street && PD.street.reach && PD.street.reach[sh.type]) || 0) : 0;
     const xs = sh.pts.map((p) => p.x), ys = sh.pts.map((p) => p.y);
     return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad };
   }

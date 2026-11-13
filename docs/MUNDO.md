@@ -50,6 +50,12 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   portas. Vem aí (aprovado pelo dono, na fila da [arte] depois da conversa com NPC): **a Budega com interior**, como
   no HumanitZ (o telhado e as paredes da frente somem quando se entra); a minha parte será o chão de dentro, a porta
   aberta na colisão e a Xiovanna atrás do balcão.
+- **O resto do Capão (4c) no padrão novo, aprovado (13/11, "pode mandar pra arte"):** no ramo `mundo/etapa-4c` (bloco
+  `reached('4c') && FLORESTA`, sorteio `SEED + 12`). Propriedades novas: `viaduto` (`cipo`, `arvoresNoTopo`),
+  `pilar-viaduto` (`pixo`, `musgo`, `cipo`), `trem` (`cipo`, `plantas`, `janelasQuebradas`), `onibus` (`horta`),
+  `casa` abandonada (`arvoreDentro`), `trave` (`ferrugem`, `cipo`, `rede`), `muro` (`cipo`, `musgo`), e a `arvore`
+  'Figueira do Viaduto' (`abraca: 'viaduto'`). Referências: `docs/referencias/capao-*-planta.jpg` e
+  `capao-*-aprovado.jpg`. Em espera também: `mundo/rua-semaforo` (faixa na esquina e o semáforo quebrado).
 - **A planta da rua da Budega foi aprovada (13/11, "pode mandar se for essa aqui, show"):** a imagem do Nano Banana
   feita por cima da minha prévia de perto (`docs/referencias/rua-budega-aprovada.jpg`, com a planta numerada em
   `rua-budega-planta.jpg`) é o alvo. No gerador, a constante `FLORESTA` (sorteio `SEED + 11`, nada muda de lugar); ramo
