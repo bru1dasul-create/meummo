@@ -51,9 +51,18 @@
       this.thr = 0;
       this.top = 62 * S;
       this.acts = { windup: { dur: 0.3, hold: 0.9 }, shoot: { dur: 0.3, hold: 0.22 } };
+      /** Caiu: desmaia de bruços (pose própria, sem tombar de lado). */
+      this.ownDeath = true;
     }
 
     animate(dt) {
+      if (this.dying !== null) {
+        this.run = 0;
+        this.up = M.damp(this.up, 0, 12, dt);
+        this.armK = M.damp(this.armK, 0, 12, dt);
+        this.label = 'caído';
+        return;
+      }
       this.run = M.smoothstep(30, 150, this.speed);
       const act = this.act;
       const busy = act && (act.kind === 'windup' || act.kind === 'shoot');
@@ -83,6 +92,9 @@
       const wind = throwing ? 0 : armK; // preparo (para o outro braço e a cabeça)
       const thr = this.thr;
       const hurt = this.hurtT < 0.35 ? 1 - this.hurtT / 0.35 : 0;
+      // desmaio: despenca de bruços, braços para a frente, pernas para trás e o rabo largado no chão
+      const slump = this.dying === null ? 0 : M.easeOut(this.dying / 0.28);
+      const D = (v, lying) => M.lerp(v, lying, slump);
       const L = (a, b) => M.lerp(a, b, up); // de quatro → sentado
       const bounce = 3.5 * Math.max(0, Math.sin(ph)) * run * (1 - up);
       // para trás no susto e no preparo; para a frente no arremesso
@@ -91,8 +103,8 @@
       const at = (a, s, z) => this.at(a * S, s * S, z * S);
 
       // espinha: quadril → peito
-      const hip = at(L(-9, -2) + lean * 0.3, 0, L(19, 12) + bounce - hurt * 2);
-      const chest = at(L(7, 1) + lean, 0, L(18, 30) + bounce + breath - hurt * 3);
+      const hip = at(L(-9, -2) + lean * 0.3, 0, D(L(19, 12) + bounce - hurt * 2, 8.5));
+      const chest = at(L(7, 1) + lean, 0, D(L(18, 30) + bounce + breath - hurt * 3, 8.5));
       const flex = 1 + 0.12 * Math.cos(ph) * run * (1 - up);
       const mid = M.lerp3(hip, chest, 0.5);
       const hipF = M.add(mid, M.scale(M.sub(hip, mid), flex));
@@ -101,7 +113,7 @@
       // cabeça: olha em volta quando está sentado e parado
       const look = (M.noise1(t * 0.35 + this.seed * 20) - 0.5) * 1.3 * up * (1 - wind) * (1 - run);
       const hy = this.yaw + look;
-      const headC = at(L(17, 3) + lean * 1.2, 0, L(27, 44) + bounce + breath * 1.4 - hurt * 4);
+      const headC = at(D(L(17, 3) + lean * 1.2, 19), 0, D(L(27, 44) + bounce + breath * 1.4 - hurt * 4, 9.5));
       const rh = 10.5 * S;
       const fwd = { x: Math.cos(hy), y: Math.sin(hy), z: 0 };
       const side = { x: -Math.sin(hy), y: Math.cos(hy), z: 0 };
@@ -129,7 +141,7 @@
         const u = k / n;
         const wave = Math.sin(u * 3 - ph * (run > 0.2 ? 1 : 0) - t * 1.2) * 4 * u;
         const runA = -9 - 40 * u;
-        const runZ = 17 + bounce - 7 * u + 7 * u * u * u;
+        const runZ = D(17 + bounce - 7 * u + 7 * u * u * u, 3.2);
         const sitA = -6 - 15 * u + 6 * Math.max(0, u - 0.7);
         const sitZ = u < 0.32 ? 11 - 25 * u : u < 0.78 ? 3 : 3 + (u - 0.78) * 46;
         const sitS = 20 * u * u + sway * 3 * u;
@@ -142,7 +154,7 @@
       // pernas de trás: coxa grossa, joelho para a frente; sentado, os joelhos ficam erguidos na frente
       for (const sg of [-1, 1]) {
         const pf = ph + Math.PI + (sg > 0 ? 0.35 : 0);
-        const footRun = [-12 - 7 * Math.cos(pf) * run, 6.5 * sg, Math.max(0, Math.sin(pf)) * 6 * run];
+        const footRun = [D(-12 - 7 * Math.cos(pf) * run, -18), D(6.5, 9) * sg, D(Math.max(0, Math.sin(pf)) * 6 * run, 1)];
         const footSit = [10, 7 * sg, 1];
         const hipJ = M.add(hipF, M.scale(this._side(), 6 * S * sg));
         const foot = at(L(footRun[0], footSit[0]), L(footRun[1], footSit[1]), L(footRun[2], footSit[2]));
@@ -159,7 +171,7 @@
       let fruitAt = null;
       for (const sg of [-1, 1]) {
         const pf = ph + (sg > 0 ? 0.3 : 0);
-        const handRun = [11 - 6 * Math.cos(pf) * run, 5 * sg, Math.max(0, Math.sin(pf)) * 5 * run];
+        const handRun = [D(11 - 6 * Math.cos(pf) * run, 20), D(5, 9) * sg, D(Math.max(0, Math.sin(pf)) * 5 * run, 1.5)];
         const fid = Math.sin(t * 3 + sg) * 0.8;
         let handSit = [8 + fid, 4.5 * sg, 20 + breath];
         const thrower = sg > 0;
@@ -211,14 +223,16 @@
       }
 
       // o encanto: dois pontinhos lilás rodando em volta da cabeça
+      const gone = this.dying === null ? 0 : M.clamp01(this.dying / 0.7);
       const after = (ctx) => {
         const z = cam.zoom;
-        for (let k = 0; k < 2; k++) {
-          const a = t * 1.7 + k * Math.PI + this.seed * 7;
-          const p = cam.p(M.add(headC, { x: Math.cos(a) * 16 * S, y: Math.sin(a) * 16 * S, z: 6 * S + Math.sin(t * 2.3 + k * 2) * 4 * S }));
-          const s = (2.2 + Math.sin(t * 5 + k * 3)) * z;
+        for (let k = 0; k < (gone ? 4 : 2); k++) {
+          const a = t * 1.7 + (k * M.TAU) / (gone ? 4 : 2) + this.seed * 7;
+          const rr = (16 + 14 * gone) * S;
+          const p = cam.p(M.add(headC, { x: Math.cos(a) * rr, y: Math.sin(a) * rr, z: (6 + 50 * gone) * S + Math.sin(t * 2.3 + k * 2) * 4 * S }));
+          const s = (2.2 + Math.sin(t * 5 + k * 3) + 1.2 * gone) * z;
           ctx.save();
-          ctx.globalAlpha = 0.45 + 0.35 * Math.sin(t * 4 + k * 2.4);
+          ctx.globalAlpha *= (0.45 + 0.35 * Math.sin(t * 4 + k * 2.4)) * (1 - gone * gone);
           ctx.fillStyle = MOTE;
           ctx.shadowColor = MOTE;
           ctx.shadowBlur = 5 * z;
@@ -269,10 +283,14 @@
       out.push({ ...mask, ...tangent(mask.n), ru: 0.62 * rh, rv: 0.6 * rh, color: FACE, minFacing: -0.1 });
       const blaze = on(0.55, 0, 0.84, 0.96);
       out.push({ ...blaze, ...tangent(blaze.n), ru: 0.27 * rh, rv: 0.2 * rh, color: '#f4f1ea' });
-      // olhos amarelos acesos (o encanto) com a pupila em fenda e um pontinho de luz
+      // olhos amarelos acesos (o encanto) com a pupila em fenda e um pontinho de luz; caído, fechados
       for (const sg of [-1, 1]) {
         const eye = on(0.86, 0.38 * sg, 0.42, 0.98);
         const tg = tangent(eye.n);
+        if (this.dying !== null) {
+          out.push({ ...eye, ...tg, ru: 0.19 * rh, rv: 0.035 * rh, color: '#1b100d' });
+          continue;
+        }
         out.push({ ...eye, ...tg, ru: 0.2 * rh, rv: 0.2 * rh, color: EYE, glow: EYE_GLOW });
         out.push({ ...eye, ...tg, c: M.add(eye.c, M.scale(eye.n, 0.01 * rh)), ru: 0.05 * rh, rv: 0.15 * rh, color: '#1b100d' });
         out.push({ ...eye, ...tg, c: M.add(eye.c, M.add(M.scale(tg.u, -0.07 * rh), M.scale(tg.v, 0.08 * rh))), ru: 0.045 * rh, rv: 0.045 * rh, color: '#fffbe8' });

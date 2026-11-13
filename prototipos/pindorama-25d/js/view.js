@@ -315,7 +315,7 @@
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = 'rgba(8, 12, 10, 0.85)';
       for (const a of this.actors.values()) {
-        if (!a.name) continue;
+        if (!a.name || (a.creature && a.creature.dying !== null)) continue; // caído: o nome sai junto
         const q = this._overHead(a);
         ctx.strokeText(a.name, q.x, q.y);
         ctx.fillStyle = a.me ? NAME_COLOR.me : NAME_COLOR[a.kind] || NAME_COLOR.player;

@@ -351,8 +351,12 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   - olhos amarelos acesos com a pupila em fenda e dois pontinhos lilás rodando (o encanto);
   - tufos brancos em leque dos lados da cabeça e o rabo de anéis.
   Parado, senta e olha em volta. Correndo, vai de quatro aos saltos. No aviso, senta e ergue a fruta verde (a mesma
-  cor da fruta que voa) atrás da cabeça; no tiro, arremessa por cima. Ao apanhar, pisca branco e encolhe. Prancha
-  de conferência: `prancha-sagui.cjs` no scratchpad (8 lados × sentado, correndo, preparo, arremesso, apanhando).
+  cor da fruta que voa) atrás da cabeça; no tiro, arremessa por cima. Ao apanhar, pisca branco e encolhe.
+  Ao cair ('die'), desmaia de bruços em 0,3 s, com os olhos fechados e o rabo largado; o encanto sobe e some, o
+  nome sai e o desenho apaga até o motor tirar, 0,7 s depois. Tombar de lado girando o corpo todo (`_fall`, da base)
+  ficou confuso no sagui; fica para quem não tiver pose própria (`ownDeath`).
+  Prancha de conferência: `prancha-sagui.cjs` no scratchpad (8 lados × sentado, correndo, preparo, arremesso,
+  apanhando, caindo).
   A câmera olha de cima, então o rosto fica alto na cabeça; embaixo, o focinho escondia os olhos.
 - **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
   outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).

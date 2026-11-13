@@ -174,7 +174,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   ficam escondidas embaixo das copas; a mata nova (mais aberta) resolve
 - [x] **[arte]** Sagui Travesso com corpo próprio no 2.5D (13/11, escolha do dono: monstros antes do Curupira):
   sagui-de-tufo-branco encantado (rosto escuro, mancha branca, tufos brancos, olhos amarelos, rabo de anéis); sentado
-  olhando em volta, correndo de quatro aos saltos, ergue a fruta no aviso e arremessa no tiro, pisca ao apanhar.
+  olhando em volta, correndo de quatro aos saltos, ergue a fruta no aviso e arremessa no tiro, pisca ao apanhar e
+  desmaia de bruços ao cair (o encanto sai).
   `PD.creatures` (`js/creatures/`): o monstro com desenho lá deixa de sair com o corpo de gente
 - [ ] **[arte]** Jararaca com corpo próprio no 2.5D (rasteja em S, enrola e ergue a cabeça no aviso, bote)
 - [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,

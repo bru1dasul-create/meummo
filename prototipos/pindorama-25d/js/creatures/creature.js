@@ -37,10 +37,13 @@
       this.hurtT = 9;
       /** Altura de cima da cabeça (cm), para o nome e o balão. */
       this.top = 50;
+      /** Caiu ('die'): segundos desde a queda (null = de pé). O motor tira o desenho 0,7 s depois. */
+      this.dying = null;
     }
 
     /** Novo ponto do pé (cm) vindo do servidor: chega lá no tempo do passo, em linha reta. */
     moveTo(x, y, yaw, durationMs, dash) {
+      if (this.dying !== null) return;
       if (dash || Math.hypot(x - this.pos.x, y - this.pos.y) > 300) {
         this.pos.x = x;
         this.pos.y = y;
@@ -58,6 +61,13 @@
 
     /** Golpe ou reação: cada criatura diz quanto dura cada um em `acts` ({ tipo: { dur, hold } }). */
     action(kind, yaw) {
+      if (this.dying !== null) return;
+      if (kind === 'die') {
+        this.dying = 0;
+        this.act = null;
+        this._t = this._dur;
+        return;
+      }
       if (kind === 'hurt') {
         this.hurtT = 0;
         return;
@@ -71,6 +81,7 @@
     update(dt) {
       this.time += dt;
       this.hurtT += dt;
+      if (this.dying !== null) this.dying += dt;
       const px = this.pos.x;
       const py = this.pos.y;
       if (this._t < this._dur) {
@@ -103,7 +114,16 @@
 
     /** Peça para a PD.World: ordem de desenho, caixas, sombra e desenho. */
     drawable(cam, primary) {
-      const parts = this.parts(cam);
+      // caiu: quem tem pose de desmaio (ownDeath) desenha a sua; as outras tombam de lado
+      const parts = this.dying !== null && !this.ownDeath ? this._fall(this.parts(cam)) : this.parts(cam);
+      const alpha = this.dying !== null ? 1 - M.smoothstep(0.4, 0.7, this.dying) : 1;
+      const faded = (paint) => (ctx) => {
+        if (alpha >= 1) return paint(ctx);
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        paint(ctx);
+        ctx.restore();
+      };
       const box = boxOf(cam, parts.groups);
       const body = boxOf(cam, parts.groups.filter((g) => g.body));
       const r = this.radius;
@@ -113,13 +133,38 @@
         fp: { x0: this.pos.x - r, x1: this.pos.x + r, y0: this.pos.y - r, y1: this.pos.y + r },
         bounds: pad(box, 8 * cam.zoom),
         body: body || box,
-        drawShadow: (ctx) => drawShadow(ctx, cam, parts.groups, this.groundZ),
-        draw: (ctx) => {
+        drawShadow: faded((ctx) => drawShadow(ctx, cam, parts.groups, this.groundZ)),
+        draw: faded((ctx) => {
           paintGroups(ctx, cam, parts.groups, this.flash());
           if (parts.after) parts.after(ctx);
-        },
+        }),
         cam,
       };
+    }
+
+    /** Caiu: tomba de lado em volta do pé (girando no sentido do corpo) e fica rente ao chão. */
+    _fall(parts) {
+      const k = M.easeInOut(M.clamp01(this.dying / 0.32));
+      if (k <= 0) return parts;
+      const f = { x: Math.cos(this.yaw), y: Math.sin(this.yaw), z: 0 };
+      const o = { x: this.pos.x, y: this.pos.y, z: this.groundZ };
+      const ang = k * 1.42;
+      const rot = (p) => M.add(o, M.rotate(M.sub(p, o), f, ang));
+      const rotD = (d) => M.rotate(d, f, ang);
+      let low = Infinity;
+      for (const g of parts.groups) {
+        g.balls = g.balls.map((b) => {
+          const c = rot(b.c);
+          low = Math.min(low, c.z - b.r);
+          return { ...b, c };
+        });
+        if (g.ref) g.ref = rot(g.ref);
+        if (g.decals) g.decals = g.decals.map((dc) => ({ ...dc, c: rot(dc.c), n: dc.n && rotD(dc.n), u: rotD(dc.u), v: rotD(dc.v) }));
+      }
+      // o lado que tomba não entra no chão
+      const lift = Math.max(0, this.groundZ - low);
+      if (lift > 0) for (const g of parts.groups) g.balls = g.balls.map((b) => ({ ...b, c: { ...b.c, z: b.c.z + lift } }));
+      return parts;
     }
 
     /** Clarão branco logo depois de apanhar (0 = nada). */
