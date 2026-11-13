@@ -125,6 +125,23 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   da Linha 5-Lilás, ônibus velho e as saídas, fechadas com placa até os próximos mapas existirem): aprovada pelo dono
   (13/11), no ramo `mundo/etapa-4c`; entra depois da mata nova e do desenho dessas coisas pela [arte]. Padrão: a arte conceitual
   aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
+- [ ] **[mundo]** Mapa 02, a Represa de Guarapiranga (120 × 100 m): proposta aprovada pelo dono em 13/11 ("pode seguir
+  com a ideia geral e a Caipora"; planta em `docs/referencias/mapa-02-planta.jpg`). Em pedaços, cada um com o "pode"
+  dele: a) a chegada pela Estrada do M'Boi Mirim e o **Refúgio**, a vila sobre palafitas — pronto no ramo
+  `mundo/guarapiranga` (13/11, prévia para o dono; a rua do sul do Capão leva até lá e volta, conferido no jogo);
+  entra na main depois da 4c e do desenho da [arte]; b) o Parque Ecológico do Guarapiranga (a Caipora) e o brejo
+  (jararacas); c) a orla, o clube náutico em ruínas (Corpo-Seco), a praça do Saci (mini-chefe) e a barragem de 1909
+  (saída para Santo Amaro, o Mapa 03). A Ilha do Véu (de barco) fica para depois
+- [ ] **[estrutura]** Mapa 02: a **Caipora** (criatura nova, chave `caipora`, nível 3: protetora dos bichos da mata,
+  montada num porco-do-mato; mora no parque, pedaço b do [mundo]), a **Dona Iracema** vendendo na quitanda do Refúgio
+  (balcão em (57,5; 50,6) do mapa `guarapiranga`) e o **Barqueiro** no atracadouro (49,6; 62,4), que dá as missões e,
+  depois, leva de barco até a Ilha do Véu
+- [ ] **[arte]** Mapa 02 (a) no 2.5D: o deque sobre palafitas (`deque` com `palafitas`, também o píer), as casas de
+  tábua (`casa` com `material` tabua, `telhado` zinco; a frente é o sul), a quitanda (`comercio` quitanda, letreiro
+  QUITANDA DONA IRACEMA, toldo), `barco` (canoa, voadeira, `afundado`), `bandeirinhas` (polilinha com `altura`),
+  `barril`, `caixote`, `ponto-onibus` (virado para a estrada), `poste` com `apagado`, `tronco-caido` com `galhos`, a
+  estrada em polilinha (`asfalto` e `calcada` com `largura`) e a Caipora. Referência:
+  `docs/referencias/mapa-02-refugio-conceito.jpg`
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
   (`prototipos/pindorama-25d/js/view.js`); teste sozinho em `clareira.html`

@@ -401,3 +401,14 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   nem casa que, vista de cima na diagonal, cubra a clareira, o círculo, a trilha, o lago, o portão, a rua da vila ou o
   balcão da Budega (`hidesView`, `canopyHides`, `boxHides`). Testes em `tests/capao.test.ts` (inclusive por onde o pé
   consegue ir a partir do nascimento).
+- Mapa 02 (Represa de Guarapiranga, 120 × 100 m): `scripts/gen-guarapiranga.ts` (`npm run gen:guarapiranga`) →
+  `public/assets/maps-iso/guarapiranga.tmj`, com as peças comuns dos geradores do mundo novo em `scripts/iso-map.ts`
+  (formas, margem suave da água, conta da câmera, faixas de água, conferência de vão de entalar que ignora vão já
+  tapado por outra coisa, escrita do `.tmj`). Coisas novas no `cenario`: `deque` com `palafitas` (o chão da vila
+  sobre a água; a colisão da água deixa ele de fora), `casa` com `material` (`tabua`), `telhado` (`zinco`) e
+  `palafita`, `comercio` `quitanda`, `barco` (`tipo` canoa ou voadeira, `cor`, `afundado`; enfeite na água, sem
+  colisão), `bandeirinhas` (polilinha com `altura`), `barril` e `caixote` (baixos: a pedrinha passa), `ponto-onibus`
+  (com `olhando`), `poste` com `apagado` e `tronco-caido` com `galhos`; no `chao`, `asfalto` e `calcada` também em
+  polilinha com `largura`. Camada `saidas` no formato novo (retângulo em metros, `mapa` e `chegada`): a beira de cima
+  leva ao Capão (`chegada-guarapiranga`) e a rua do sul do Capão traz para cá (`chegada-capao`). Testes em
+  `tests/guarapiranga.test.ts`.

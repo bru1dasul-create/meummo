@@ -152,10 +152,15 @@ const TRAIN = { x0: 70, x1: 88, y0: 2.8, y1: 5.2 };
 const BUS = { x0: 70, x1: 86, y0: 12.5, y1: 15.5 };
 /**
  * A rua para Guarapiranga continua para o sul, pela mata, até a beira do mapa. Até o Mapa 02 existir, uma barreira com
- * placa fecha a rua perto do fim; a saída leste (Estação Capão Redondo, depois) também fica numa barreira.
+ * placa fechava a rua perto do fim; com o Mapa 02 (a), a beira do mapa vira a saída para lá (GUARA_LINK). A saída leste
+ * (Estação Capão Redondo, depois) termina no mato.
  */
 const ROAD_GUARA = { x0: ROAD_S.x0, x1: ROAD_S.x1, y0: VILLAGE_S, y1: H };
 const SOUTH_BARRIER_Y = 114.5;
+/** O Mapa 02 (Guarapiranga) existe: a rua do sul leva até ele (a saída na beira do mapa) e quem volta chega aqui. */
+const GUARA_LINK = true;
+const GUARA_EXIT = { x0: ROAD_GUARA.x0, x1: ROAD_GUARA.x1, y0: H - 0.6, y1: H };
+const GUARA_ARRIVAL = { x: (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, y: H - 3.5 };
 
 /**
  * Entre duas coisas sólidas da vila o vão é zero (encostadas) ou de pelo menos este tanto: num vão menor que isso o
@@ -707,13 +712,18 @@ if (reached('4c')) {
   // a rua para Guarapiranga pela mata (rachada, com mato), fechada por uma barreira com placa perto do fim
   chao.push(rect('asfalto', ROAD_GUARA.x0, ROAD_GUARA.x1, ROAD_GUARA.y0, ROAD_GUARA.y1, { estado: 'rachado' }));
   for (const [cx, cy, rx, ry] of [[90, 95, 1.6, 4], [92.6, 106, 1.3, 3], [89.6, 86, 1.2, 2.5]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.2) });
-  cenario.push(rect('barreira', ROAD_GUARA.x0, ROAD_GUARA.x1, SOUTH_BARRIER_Y, SOUTH_BARRIER_Y + 0.5, { altura: 1.1 }));
-  cenario.push(point('placa', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 0.3, { texto: 'GUARAPIRANGA', seta: 'sul' }));
+  if (GUARA_LINK) {
+    // a rua segue até a beira do mapa (a saída para o Mapa 02); a placa fica num poste na beira oeste, colada na mata
+    cenario.push(point('placa', ROAD_GUARA.x0 + 0.35, SOUTH_BARRIER_Y - 4.5, { texto: 'GUARAPIRANGA', seta: 'sul', poste: true }));
+  } else {
+    cenario.push(rect('barreira', ROAD_GUARA.x0, ROAD_GUARA.x1, SOUTH_BARRIER_Y, SOUTH_BARRIER_Y + 0.5, { altura: 1.1 }));
+    cenario.push(point('placa', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 0.3, { texto: 'GUARAPIRANGA', seta: 'sul' }));
+  }
   // paredes de mata dos dois lados da rua: a mata ao sul da vila continua só de enfeite
   for (let y = VILLAGE_S + 0.6; y < H; y += 1.1) {
     for (const x of [ROAD_GUARA.x0 - 0.7, ROAD_GUARA.x1 + 0.7]) cenario.push(point('arbusto', round(x), round(y), { raio: round(0.9 + crng() * 0.25), fechado: true }));
   }
-  for (let x = ROAD_GUARA.x0 + 1; x <= ROAD_GUARA.x1 - 1; x += 1) for (let y = VILLAGE_S; y < SOUTH_BARRIER_Y; y += 2) VILLAGE_KEYS.push([x, y, 0]);
+  for (let x = ROAD_GUARA.x0 + 1; x <= ROAD_GUARA.x1 - 1; x += 1) for (let y = VILLAGE_S; y < (GUARA_LINK ? H : SOUTH_BARRIER_Y); y += 2) VILLAGE_KEYS.push([x, y, 0]);
   // a saída leste (Estação Capão Redondo) fica para depois: a rua da vila termina no mato, com uma placa num poste na
   // beira norte da rua (longe o bastante do mato e da casa para não ficar vão de entalar)
   cenario.push(point('placa', 92.9, STREET.y0 + 0.3, { texto: 'ESTAÇÃO CAPÃO REDONDO', seta: 'leste', poste: true }));
@@ -823,6 +833,12 @@ areas.push(rect('area', BANANA.x - BANANA.r - 2, BANANA.x + BANANA.r + 2, BANANA
 for (const d of DEEP) areas.push(rect('area', Math.max(0, d.x - d.rx), d.x + d.rx, Math.max(0, d.y - d.ry), Math.min(H, d.y + d.ry), { escuro: 0.5, neblina: 0.45 }, 'Mata Profunda'));
 areas.push(rect('area', PARK_X, W, 0, VILLAGE_S, undefined, 'Vila do Capão'));
 pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
+/** Saídas para outros mapas (camada "saidas"): `mapa` é o arquivo de lá e `chegada` o ponto onde se aparece. */
+const saidas: Shape[] = [];
+if (reached('4c') && GUARA_LINK) {
+  pontos.push(point('ponto', GUARA_ARRIVAL.x, GUARA_ARRIVAL.y, undefined, 'chegada-guarapiranga'));
+  saidas.push(rect('saida', GUARA_EXIT.x0, GUARA_EXIT.x1, GUARA_EXIT.y0, GUARA_EXIT.y1, { mapa: 'guarapiranga', chegada: 'chegada-capao' }, "Estrada do M'Boi Mirim"));
+}
 /** Áreas de criaturas (camada "monstros"): o nome é o id em data/monsters.json; os saguis são os "encantados". */
 const monstros: Shape[] = [];
 if (CREATURES) {
@@ -866,6 +882,7 @@ const LAYERS: [string, Shape[]][] = [
   ['seguro', seguro],
   ['areas', areas],
   ['pontos', pontos],
+  ...(saidas.length > 0 ? ([['saidas', saidas]] as [string, Shape[]][]) : []),
   ...(monstros.length > 0 ? ([['monstros', monstros]] as [string, Shape[]][]) : []),
 ];
 const layers = LAYERS.map(([name, shapes], i) => ({

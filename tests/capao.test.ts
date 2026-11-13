@@ -122,7 +122,7 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
   it('tem 96 × 120 metros (o parque cresceu para o sul), tile de 32 px e as camadas combinadas', () => {
     expect([map.width, map.height, map.tilewidth, map.tileheight]).toEqual([96, 120, 32, 32]);
     // a camada "monstros" só aparece quando as criaturas estão ligadas no gerador (CREATURES)
-    expect(map.layers.map((l) => l.name).filter((n) => n !== 'monstros')).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos']);
+    expect(map.layers.map((l) => l.name).filter((n) => n !== 'monstros')).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos', 'saidas']);
     expect(map.layers.every((l) => l.type === 'objectgroup')).toBe(true);
   });
 
@@ -454,9 +454,14 @@ describe('Mapa 01 (Capão), etapa 4c: campinho, viaduto e saídas', () => {
     expect(prop(cenario.find((o) => o.type === 'trem')!, 'cor')).toBe('#7d5ca8'); // lilás
   });
 
-  it('a rua para Guarapiranga atravessa a mata até a barreira com placa; a mata dos lados continua fechada; a rua leste termina no mato com a placa da estação', () => {
-    for (let y = 81; y <= 113; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
-    expect(reach(91, 116.5)).toBe(false); // depois da barreira (a saída abre quando o Mapa 02 existir)
+  it('a rua para Guarapiranga atravessa a mata até a saída para o Mapa 02, com placa; a mata dos lados continua fechada; a rua leste termina no mato com a placa da estação', () => {
+    for (let y = 81; y <= 119; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
+    const game = GameMap.fromTiled(map as unknown as TiledMap, 'capao');
+    expect(game.exits.map((e) => ({ to: e.to, arrival: e.arrival, y: e.y }))).toEqual([{ to: 'guarapiranga', arrival: 'chegada-capao', y: 119 }]);
+    const arrival = layer('pontos').find((o) => o.name === 'chegada-guarapiranga')!;
+    expect(reach(arrival.x / M, arrival.y / M)).toBe(true); // quem volta de lá aparece na rua, fora da saída
+    expect(game.exitAt(arrival.x / M, arrival.y / M)).toBeNull();
+    expect(cenario.some((o) => o.type === 'barreira')).toBe(false);
     expect(reach(84, 100)).toBe(false); // a mata ao sul da vila
     const placas = cenario.filter((o) => o.type === 'placa').map((o) => prop(o, 'texto'));
     expect(placas).toEqual(expect.arrayContaining(['GUARAPIRANGA', 'ESTAÇÃO CAPÃO REDONDO']));

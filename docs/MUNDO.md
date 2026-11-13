@@ -100,7 +100,9 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     dele (pintura virada para o campo); `viaduto` da Linha 5-Lilás (y 2 a 6, a 8 m, quebrado na ponta do parque, com
     mato), 4 `pilar-viaduto`, o `trem` lilás (3 vagões) e `cipo`; o `onibus` velho (70 a 86 × 12,5 a 15,5); a rua para
     Guarapiranga segue pela mata ao sul da vila (x 88 a 94) até uma `barreira` com `placa` em y 114,5 (a saída abre
-    quando o Mapa 02 existir) e a rua leste termina no mato com a placa "ESTAÇÃO CAPÃO REDONDO". O plano antigo era:
+    quando o Mapa 02 existir: no ramo `mundo/guarapiranga` a barreira sai, a placa vai para um poste na beira e a beira
+    do mapa vira a saída, com `GUARA_LINK`) e a rua leste termina no mato com a placa "ESTAÇÃO CAPÃO REDONDO". O plano
+    antigo era:
   - **4c (plano de 12/11):** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
     5-Lilás no fundo (y 2 a 6, x 48 a 96, 8 m de altura, com o trem lilás parado) e um ônibus velho embaixo; saídas
     sul (x 88 a 94, y = 80) → Guarapiranga e leste (x = 96, y 41 a 47) → Estação Capão Redondo (depois). Regra: o que
@@ -108,6 +110,36 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   - **Prévias:** um script de rascunho meu (`previa-capao.mjs`: SVG isométrico lido do `.tmj`, com a colisão em
     vermelho) na pasta temporária da conversa. Se sumir, refazer: é só desenhar `chao` e `cenario` em isométrico.
     As imagens que o dono aprovou ficam em `docs/referencias/mapa-01-*.jpg`.
+- **Ordem para juntar na `main`:** mata nova (`mundo/mata-nova`) → 4c (`mundo/etapa-4c`, por cima dela) → Mapa 02
+  (`mundo/guarapiranga`, por cima da 4c). Cada uma só depois do desenho da [arte] das coisas novas dela (senão o deque
+  parece água e barril, caixote e ponto de ônibus viram paredes invisíveis). Mantenha os três ramos em dia com a
+  `main` (junte a `main` na mata nova, a mata nova na 4c e a 4c no Mapa 02).
+- **Mapa 02 (Represa de Guarapiranga), 120 × 100 m** (proposta aprovada em 13/11: "pode seguir com a ideia geral e a
+  Caipora"; nas perguntas sem resposta segui a proposta: Dona Iracema vendendo, um Barqueiro, 120 × 100). Planta em
+  `docs/referencias/mapa-02-planta.jpg` e a ilustração do Refúgio (Nano Banana) em
+  `docs/referencias/mapa-02-refugio-conceito.jpg`. Lugares: 1) chegada pela Estrada do M'Boi Mirim (do Capão, pela
+  beira de cima); 2) Parque Ecológico do Guarapiranga (trilhas, mirante, a **Caipora**, nível 3, criatura nova);
+  3) **o Refúgio**, a vila sobre palafitas (segura); 4) brejo (jararacas); 5) clube náutico em ruínas (Corpo-Seco, 4);
+  6) praça em ruínas (Saci, 5, mini-chefe); 7) a barragem de 1909 (saída para Santo Amaro, Mapa 03); 8) a Ilha do Véu
+  (de barco, depois). Em pedaços, cada um com o "pode" dele: **a) chegada e Refúgio**, b) parque e brejo, c) orla,
+  clube, praça do Saci e barragem. Gerador `scripts/gen-guarapiranga.ts` (`npm run gen:guarapiranga`; peças comuns
+  em `scripts/iso-map.ts`, que o `gen-capao.ts` pode passar a usar depois) → `public/assets/maps-iso/guarapiranga.tmj`;
+  testes em `tests/guarapiranga.test.ts`. A etapa é `STAGE` ('a', 'b', 'c').
+  - **(a), no ramo `mundo/guarapiranga` (13/11, prévia para o dono):** a estrada (asfalto rachado de 6 m com calçada,
+    polilinha) desce da beira de cima (saída para o Capão em x 14,5 a 25, `chegada-capao` em (19,9; 4)) e vira para o
+    leste; ponto de ônibus ("ponto final"), placas GUARAPIRANGA e REFÚGIO, postes apagados com fiação. O **Caminho da
+    Represa** (trilha de 3 m) desce pela margem oeste até o **píer** (40,5 a 47 × 55 a 57). O Refúgio: deque sobre
+    palafitas (miolo 47 a 69 × 45 a 60, atracadouro 47 a 52,5 × 60 a 63,5 e deque sudeste 60 a 69 × 60 a 66), 5 casas
+    de tábua coloridas (`material` tabua, telhado de zinco), a **Quitanda da Dona Iracema** (54,5 a 60,5 × 45 a 49,8,
+    balcão em (57,5; 50,6)), o **Barqueiro** no atracadouro (49,6; 62,4), fogueira com 4 bancos em (57; 55,3),
+    lampiões, bandeirinhas, barris e caixotes, canoas e a voadeira do Barqueiro, barcos afundados, aguapés e taboas.
+    Zonas seguras: a chegada e o Refúgio inteiro; `spawn` (quem desmaia aqui) em (54,6; 58,8). Fechado nesta etapa: a
+    estrada para o leste (uma árvore caída em x = 49), o parque (mata fechada no lado oeste do caminho e no sul da
+    estrada), a mata do norte e o brejo. A orla e a Ilha do Véu (com o brilho) já aparecem, só de enfeite. Conferido
+    no jogo (13/11): do Capão pela rua do sul até aqui, a margem, o píer, a praça (segura), o balcão, o atracadouro e
+    a volta; a árvore caída segura. A PD.View de hoje desenha as casas (como de bloco), a fogueira, os bancos e os
+    lampiões; o deque ainda não (o personagem parece andar na água), nem barco, bandeirinha, barril, caixote e ponto
+    de ônibus.
 - **Formato do mapa novo** (combinado com a [estrutura] em 12/11, no roteiro): `.tmj` ortogonal, 1 tile = 1 m (tile
   de 32 px no Tiled, só como grade); `colisao` com retângulos (`bloqueiaTiro`, padrão true; água com false) que **o meu
   gerador** tira do cenário (tronco 0,4 a 0,6 m, poste 0,3 m, base de casa e muro, lago em retângulos de ~0,5 m);
@@ -179,6 +211,11 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
+- **Mapa 02 (13/11):** a [estrutura] faz a Caipora (`caipora`, nível 3, no parque, pedaço b), a Dona Iracema vendendo
+  na quitanda (57,5; 50,6) e o Barqueiro no atracadouro (49,6; 62,4) com as missões; a [arte] desenha o deque com
+  palafitas, as casas de tábua (`material` tabua, `telhado` zinco), a quitanda, `barco` (canoa, voadeira, afundado),
+  `bandeirinhas`, `barril`, `caixote`, `ponto-onibus`, `poste` com `apagado`, `tronco-caido` com `galhos`, a estrada
+  em polilinha (`asfalto` e `calcada` com `largura`) e a Caipora.
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois
@@ -193,10 +230,11 @@ Feito pelo [mundo], tudo na `main`:
 
 ## Próximos passos possíveis (o dono escolhe)
 **Agora (mundo novo):**
-1. **Etapa 4b (portão e vila):** prévia primeiro, o "pode" do dono, depois o jogo.
-2. **Etapa 4c**, depois a 5 (atmosferas) e a 6 (minimapa no mapa novo: retomar o ramo `mundo/minimapa`; o terreno
-   vai precisar ler `chao`/`cenario`).
-3. **Religar as criaturas** da 4a quando o combate do jogo novo chegar.
+1. **Juntar na `main`** a mata nova, a 4c e o Mapa 02 (a), nessa ordem, conforme o desenho da [arte] chegar.
+2. **Mapa 02 (a):** o "pode" do dono na prévia; depois os pedaços (b) parque e brejo e (c) orla, clube, praça do Saci
+   e barragem (cada um com prévia).
+3. Depois: etapa 5 (atmosferas) e 6 (minimapa no mapa novo: retomar o ramo `mundo/minimapa`; o terreno vai precisar
+   ler `chao`/`cenario`).
 
 **Suspenso (era para os mapas de hoje, que vão sair):**
 1. **Enfeite em volta do Curupira** (roteiro, opcional): árvore oca ou cantinho de mata fechada em volta de (45, 12),
