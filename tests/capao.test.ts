@@ -128,7 +128,7 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
 
   it('cada coisa sólida do cenário tem a sua colisão (tronco, poste, pedra, gradil, pilar, mata fechada, casa, banco...)', () => {
     const covered = (x: number, y: number) => boxes.some((b) => x >= b.x0 - 1e-6 && x <= b.x1 + 1e-6 && y >= b.y0 - 1e-6 && y <= b.y1 + 1e-6);
-    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca'];
+    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
       const solid = SOLID.includes(o.type) || (o.type === 'portao' && prop(o, 'aberto') !== true) || (o.type === 'arbusto' && prop(o, 'fechado') === true);
@@ -424,10 +424,92 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     expect(cenario.some((o) => o.type === 'arvore' && o.name === 'Árvore da Praça')).toBe(true);
     expect(cenario.filter((o) => o.type === 'mesa')).toHaveLength(2);
     expect(cenario.filter((o) => o.type === 'orelhao')).toHaveLength(1);
-    const wire = cenario.find((o) => o.type === 'fiacao') as TiledObject & { polyline: { x: number; y: number }[] };
+    // cada fio liga postes de verdade, e todo poste tem fio
+    const wires = cenario.filter((o) => o.type === 'fiacao') as (TiledObject & { polyline: { x: number; y: number }[] })[];
     const posts = cenario.filter((o) => o.type === 'poste').map(at);
-    expect(wire.polyline).toHaveLength(posts.length);
-    for (const p of wire.polyline) expect(posts.some((q) => Math.hypot(q.x - p.x / M, q.y - p.y / M) < 0.01), `fio em (${p.x / M}, ${p.y / M})`).toBe(true);
+    expect(wires.length).toBeGreaterThan(0);
+    for (const wire of wires) for (const p of wire.polyline) expect(posts.some((q) => Math.hypot(q.x - p.x / M, q.y - p.y / M) < 0.01), `fio em (${p.x / M}, ${p.y / M})`).toBe(true);
+    for (const q of posts) expect(wires.some((w) => w.polyline.some((p) => Math.hypot(q.x - p.x / M, q.y - p.y / M) < 0.01)), `poste em (${q.x}, ${q.y})`).toBe(true);
+  });
+});
+
+describe('Mapa 01 (Capão): a rua e a praça da Budega no padrão novo (a floresta reinando, aprovado em 13/11)', () => {
+  const cenario = layer('cenario');
+  const chao = layer('chao');
+  const of = (type: string) => chao.filter((o) => o.type === type);
+  const ptsOf = (o: TiledObject) => (o.polyline ?? o.polygon)!.map((p) => [(o.x + p.x) / M, (o.y + p.y) / M] as [number, number]);
+  const asphalt = chao.filter((o) => o.type === 'asfalto' && !o.polyline && !o.polygon);
+  const onAsphalt = (x: number, y: number) => asphalt.some((a) => x >= a.x / M && x <= (a.x + a.width) / M && y >= a.y / M && y <= (a.y + a.height) / M);
+
+  it('a rua parece rua: meio-fio em toda beira, faixa apagada no meio, remendos, buracos, rachaduras, bueiros e tampas no asfalto', () => {
+    expect(of('meio-fio').length).toBeGreaterThanOrEqual(4);
+    for (const c of of('meio-fio')) expect(Number(prop(c, 'altura'))).toBeCloseTo(0.15);
+    // o meio-fio passa na beira de cada calçada que encosta no asfalto da rua do portão (y = 41 e y = 47)
+    const curbY = (y: number) => of('meio-fio').some((c) => ptsOf(c).some(([, py], i, all) => py === y && all[i + 1]?.[1] === y));
+    expect(curbY(41) && curbY(47)).toBe(true);
+    expect(of('faixa-rua').length).toBeGreaterThanOrEqual(3);
+    for (const type of ['remendo', 'buraco', 'rachadura', 'bueiro', 'tampa']) expect(of(type).length, type).toBeGreaterThan(2);
+    for (const o of [...of('buraco'), ...of('bueiro'), ...of('tampa')]) expect(onAsphalt(o.x / M, o.y / M), `${o.type} em (${o.x / M}, ${o.y / M})`).toBe(true);
+    for (const r of of('rachadura')) for (const [x, y] of ptsOf(r)) expect(onAsphalt(x, y), `rachadura em (${x}, ${y})`).toBe(true);
+    // a calçada é de placas de cimento e a praça tem musgo
+    for (const c of of('calcada')) expect(prop(c, 'desenho')).toBe('placas');
+    expect(prop(of('praca')[0]!, 'musgo')).toBe(true);
+    // nada disso segura o pé
+    expect(boxes.some((b) => ['meio-fio', 'faixa-rua', 'remendo', 'buraco', 'rachadura', 'bueiro', 'tampa', 'raiz', 'poca'].includes(b.type))).toBe(false);
+  });
+
+  it('a Figueira da Esquina rompe a calçada na esquina do portão sem fechar a passagem, e as raízes passam por cima da rua', () => {
+    const fig = cenario.find((o) => o.name === 'Figueira da Esquina')!;
+    expect(prop(fig, 'especie')).toBe('figueira');
+    expect(prop(fig, 'rompendo')).toBe(true);
+    const { x, y } = at(fig);
+    expect(Math.hypot(x - 57, y - 38.6)).toBeLessThan(0.01);
+    // do portão até a rua continua livre, e a faixa de pedestre também
+    for (const [px, py] of [[49, 44], [52.75, 44], [56.5, 42], [60, 44]] as const) expect(reach(px, py), `(${px}, ${py})`).toBe(true);
+    expect(of('raiz').length).toBeGreaterThanOrEqual(4);
+    expect(reachNear(58.2, 41.4, 0.3)).toBe(true); // em cima de uma raiz, na rua
+  });
+
+  it('a mata tomando a vila: cipó nos postes, nos fios e nas casas, plantas nas lajes, e o prédio do conjunto no fundo', () => {
+    for (const o of cenario.filter((c) => c.type === 'poste' || c.type === 'fiacao')) expect(prop(o, 'cipo'), `${o.type} em (${o.x / M}, ${o.y / M})`).toBe(true);
+    const houses = cenario.filter((c) => c.type === 'casa');
+    expect(houses.filter((h) => prop(h, 'plantas') === true).length).toBe(houses.length);
+    expect(houses.filter((h) => Number(prop(h, 'cipo') ?? 0) > 0).length).toBeGreaterThanOrEqual(6);
+    // árvore na laje só nas casas ao norte da rua (atrás dela: não tampam a rua)
+    for (const h of houses.filter((c) => prop(c, 'arvoreNaLaje') === true)) expect((h.y + h.height) / M).toBeLessThanOrEqual(41);
+    const predio = cenario.find((o) => o.type === 'predio')!;
+    expect(Number(prop(predio, 'andares'))).toBe(5);
+    expect((predio.y + predio.height) / M).toBeLessThan(29); // no fundo, atrás das casas da rua
+    expect(reach(at(predio).x, at(predio).y)).toBe(false);
+  });
+
+  it('na rua do portão, os postes e os fios ficam na calçada das casas (atrás de quem anda na rua, para a câmera), nunca na da praça nem atravessando a rua', () => {
+    // pedido do dono (13/11): "os postes era pra pôr nessa rua que não fica na frente do personagem"
+    const W_MAP = map.width;
+    const between = (x: number) => x > 56.5 && x < W_MAP;
+    for (const o of cenario.filter((c) => c.type === 'poste' && between(at(c).x) && at(c).y < 50)) expect(at(o).y, `poste em (${at(o).x}, ${at(o).y})`).toBeLessThan(41.1);
+    for (const w of cenario.filter((c) => c.type === 'fiacao')) {
+      const pts = w.polyline!.map((p) => [(w.x + p.x) / M, (w.y + p.y) / M] as const);
+      for (let i = 0; i + 1 < pts.length; i++) {
+        for (let k = 0; k <= 20; k++) {
+          const [x, y] = [pts[i]![0] + ((pts[i + 1]![0] - pts[i]![0]) * k) / 20, pts[i]![1] + ((pts[i + 1]![1] - pts[i]![1]) * k) / 20];
+          if (between(x) && y < 50) expect(y, `fio em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBeLessThan(41.1);
+        }
+      }
+    }
+    // e a calçada das casas continua passando entre o poste e a parede
+    for (const x of [61.5, 70, 80, 90.5]) expect(reachNear(x, 40.1, 0.2), `calçada no poste de x = ${x}`).toBe(true);
+  });
+
+  it('a vida na rua: moto, placa de rua, cadeiras, vasos, lixo e bandeirinhas, sem fechar a calçada da casa amarela nem a roda da fogueira', () => {
+    for (const type of ['moto', 'placa-rua', 'cadeira', 'vaso', 'lixo', 'bandeirinhas']) expect(cenario.some((o) => o.type === type), type).toBe(true);
+    const sign = cenario.find((o) => o.type === 'placa-rua')!;
+    expect([prop(sign, 'texto'), prop(sign, 'texto2')]).toEqual(['R. SANTO DIAS', 'TV. JASMIM DA BEIRADA']);
+    expect(reachNear(84.2, 40.6, 0.4)).toBe(true); // entre as cadeiras e a moto, na calçada
+    // as cadeiras da casa amarela ficam ao lado da porta (a porta é na ponta oeste da fachada, x 81,9 a 82,8), não na frente
+    for (const c of cenario.filter((o) => o.type === 'cadeira' && at(o).y < 41)) expect(at(c).x - 0.25).toBeGreaterThan(82.8);
+    expect(reachNear(82.35, 40.3, 0.3)).toBe(true); // a frente da porta, livre
+    for (const [x, y] of [[69.5, 52.9], [69.5, 59.1], [66.2, 56], [72.8, 56]] as const) expect(reachNear(x, y, 0.5), `roda da fogueira (${x}, ${y})`).toBe(true);
   });
 });
 

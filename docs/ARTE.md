@@ -389,6 +389,57 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
       para 26 quadros por segundo com três passadas na tela inteira e voltou para 29 assim.
   - **Medido na área dos saguis do mapa de hoje** (PC/celular): árvores antigas sem clima, 27/23 quadros por
     segundo; árvores novas com clima, 25/25.
+- **Rua no padrão novo, o chão (13/11):** referências aprovadas `padrao-rua-floresta.jpg`, `rua-budega-aprovada.jpg` e
+  a planta `rua-budega-planta.jpg`. Tudo em `js/world/street.js` (carrega logo depois do `ground.js`; está nas três
+  listas de scripts), pintado no chão uma vez por pedaço da tela:
+  - `PD.street.texture[tipo]` troca a textura de superfície: asfalto (grão miúdo, manchas fracas de tom e de óleo,
+    trincas; o `estado` 'rachado' tem mais, com "couro de jacaré"), calçada com `desenho` 'placas' (placas de ~70 cm,
+    juntas escuras, umas trincadas, manchas de musgo, levantadas perto de raiz, mato nas frestas) e o campinho (terra
+    batida, grama nas beiradas e as linhas de cal se tiver `linhas`). A praça com `musgo` ganha musgo e capim, mais
+    nas beiradas.
+  - `PD.street.paint[tipo]` desenha as formas que são só detalhe: meio-fio (o lado da rua é achado pelo asfalto
+    vizinho; tampo claro com juntas, sarjeta suja e, quando a rua fica do lado da câmera, a face do meio-fio descendo:
+    a rua parece mais baixa), faixa-rua (tracejada e apagada), remendo, buraco (com água), poça, rachadura (com mato),
+    bueiro (a grade deitada ao longo do meio-fio, `olhando` = para onde a boca dá), tampa, raiz (cordão que afina, com
+    sombra, lado de cima claro e o chão trincado em volta) e capim (planta `capim` na camada do chão).
+  - Capim e mato sobem na tela: no chão, subir `h` cm é andar (-k·h, -k·h), com k = cosP / (2·K·sinP).
+  - `PD.street.breaks` quebra o chão em volta da árvore com `rompendo` (terra, pedaços levantados, trincas).
+  - O leitor do mapa (`tmj.js`) passa as propriedades novas: nas linhas `altura`, `tracejada`, `apagada`, `sarjeta`,
+    `mato`; nos retângulos `estado`, `musgo`, `linhas`; os pontos do chão (`raio`, `olhando`, `agua`, `tipo`); e o
+    `rompendo` da árvore.
+  - A figueira só tem os símbolos que brilham se tiver um véu a menos de 4 m (a Figueira da Esquina é só uma árvore
+    grande da cidade).
+  - Custo de um pedaço do chão (512 px) na rua: 6,6 ms no PC e 24,6 ms no celular de teste, quase o mesmo de antes
+    (6,5 e 23,6 ms).
+- **Rua no padrão novo, as coisas em pé (13/11):** `js/world/city.js` (carrega depois do `flora.js`; nas três listas de
+  scripts) e mudanças no `props.js`.
+  - `PD.city.small[tipo]` (o `Small` pergunta a ele depois da flora): `placa-rua` (poste fino e duas plaquinhas azuis
+    cruzadas no alto, `texto` ao longo de x e `texto2` ao longo de y, desenhadas na parede de cada uma com
+    `cam.wallMatrix`; a largura sai do tamanho do texto), `moto` (referencial girado pelo `olhando`, inclinada no
+    descanso; rodas no plano de pé, tanque, banco, motor, guidão e farol; com `mato`, cipó por cima e capim em volta),
+    `cadeira` (de plástico; encosto e pernas na ordem certa conforme a frente vira para a câmera ou não), `vaso` (barro
+    com espadas-de-são-jorge: verde-escuro com faixas claras e borda amarela) e `lixo` (sacos pretos com brilho e nó).
+  - `PD.city.bunting`: o cordão de bandeirinhas (`bandeirinhas` no mapa, polilinha com `altura`), caindo no meio,
+    as bandeirinhas a cada 38 cm, de cores alternadas, balançando (desenhadas a cada quadro, depois dos fios).
+  - `PD.city.wireVines` (fio com `cipo`): folhas enroladas no fio do meio e fiapos pendurados que balançam;
+    `PD.city.poleVine` (poste com `cipo`): espiral de cipó subindo e fiapos caindo da cruzeta.
+  - Casa (`props.js`): `cipo` (0 a 1) = cortinas de cipó caindo da laje e ramos subindo do chão (`overgrowth`),
+    `musgo` (manchas de chuva escorrendo e musgo no rodapé e na beirada), `portao` (portão de garagem de ferro com
+    frisos e ferrugem), e na laje (`roofItems`, do fundo para a frente) a caixa d'água, `plantas` (samambaias e
+    arbustos da flora), `arvoreNaLaje` (árvore pequena com tronco e copa de tufos) e `varal` (roupas na parede
+    imaginária do fio). O escudo da Budega é desenhado depois da laje (planta nenhuma fica na frente da marca).
+  - `predio` (no mapa) vira uma casa alta (`tower`): 5 andares, varandas embaixo das janelas, a entrada no meio com a
+    marquise e a placa do bloco (o nome do prédio, "Bloco B"), o cipó sem cobrir a entrada e duas caixas d'água.
+  - Carro com `arvore`: o tronco sai pelo teto (o teto rasgado em volta) e a copa abre em cima.
+- **Correções do dono na rua (13/11):** a Figueira da Esquina (`rompendo`) tem raízes do tronco curtas e baixas. As
+  `raiz` do chão foram refeitas ("tá feio demais essa raiz": grossas por igual e de outra cor, pareciam um cano): a raiz
+  sai grossa e afina, se divide em raízes menores (dois níveis, poucos galhinhos para não virar graveto), tem a cor da
+  casca da figueira, é um pouco alta (lado de cima claro, sombra no chão, sulco da casca) e entra no asfalto num trecho
+  e sai adiante (o buraco escuro e pedrinhas). O chão quebrado em volta da árvore vai antes dos detalhes do chão (as
+  raízes passam por cima dos pedaços). A caixa d'água virou a
+  de plástico das lajes (corpo que abre para cima com dois anéis, tampa com cúpula e pegador, cano branco, calço de
+  madeira). O carro foi refeito: perfil de sedã esticado na largura, portas, vidros (um quebrado), faróis, rodas
+  murchas, ferrugem; o mato virou musgo no teto e no capô, cipó e capim (antes eram bolas verdes).
 - **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
   de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
   - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a
