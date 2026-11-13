@@ -118,7 +118,7 @@ http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`
 Na tela inicial nova (quando tiver o link `#mode-toggle`), quem nunca entrou naquele navegador começa em "Criar uma conta":
 para criar, preencha também `#password2` (repita a senha); para entrar com um personagem que já existe, clique antes em
 `#mode-toggle` ("Já tenho conta").
-O jogo 2.5D novo é o que abre em http://localhost:3000 (`window.__mundoNovo`: `me`, `walkTo(x, y)` em metros, `walking()`,
+O jogo 2.5D novo é o que abre em http://localhost:3000 (`window.__mundoNovo`: `me` (com `angle`, para onde olha, em graus), `walkTo(x, y)` em metros, `walking()`,
 `safe()`, `entities()` (com a vida e o pé: `feetX`, `feetY`), `hp()`, `dead()`, `zoom()`, `marks()` (! e ? dos NPCs), `combat()` (os números do combate que valem), `screenOf(x, y)` — do pé, em metros); `?provisorio` mostra as caixas de colisão no lugar do desenho; `?fps` mostra quadros por segundo e quanto cada quadro custa (`#fps-meter`). Menu ADM nos testes: marque o personagem com `POST /admin/api/adm` (`{ nome, admin: true }`); aparecem `#gm-button` e `#gm-panel` (tecla G). Erros da página (e do servidor) aparecem em `GET /admin/api/registros?filtro=erro`. O jogo antigo
 (visto de cima) fica em `?antigo` e tem `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
 `__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)`, `__meummo.drops()` (ouro e itens no chão),
