@@ -270,7 +270,7 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
       else if (['arvore', 'bambu', 'arbusto', 'pedra', 'tronco-caido', 'capivara'].includes(o.type)) expect(inPolygon(x, y, lake), `${o.type} em (${x}, ${y})`).toBe(false);
     }
     expect(cenario.filter((o) => o.type === 'aguape').length).toBeGreaterThanOrEqual(8);
-    expect(cenario.filter((o) => o.type === 'capivara').length).toBe(3);
+    expect(cenario.filter((o) => o.type === 'capivara' && inPark(o)).length).toBe(3); // as do lago (as outras pastam no campinho)
   });
 
   it('o deque e a pinguela: dá para andar até a ponta do deque, em cima da água, e atravessar o riacho', () => {
@@ -359,7 +359,8 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
   it('a vila termina no mato (beiradas fechadas) e ninguém entra nas casas', () => {
     for (let x = 49; x <= 95; x += 0.5) {
       expect(reach(x, 0.75), `beira norte em x = ${x}`).toBe(false);
-      expect(reach(x, 80 - 0.75), `beira sul em x = ${x}`).toBe(false); // a vila vai até y = 80; ao sul dela é mata fechada
+      // a vila vai até y = 80; ao sul dela é mata fechada, menos a rua para Guarapiranga (x 88 a 94, a partir da 4c)
+      if (x < 87.5 || x > 94.5) expect(reach(x, 80 - 0.75), `beira sul em x = ${x}`).toBe(false);
     }
     for (let y = 1; y <= 80 - 1; y += 0.5) expect(reach(map.width - 0.75, y), `beira leste em y = ${y}`).toBe(false);
     expect(houses.length).toBe(8); // 7 casas e a Budega
@@ -411,7 +412,7 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
 
   it('a praça: fogueira com 4 bancos virados para ela, a árvore da praça, mesas, orelhão e a fiação ligando os postes', () => {
     const fire = cenario.find((o) => o.type === 'fogueira')!;
-    const benches = cenario.filter((o) => o.type === 'banco');
+    const benches = cenario.filter((o) => o.type === 'banco' && Math.hypot(at(o).x - fire.x / M, at(o).y - fire.y / M) < 4);
     expect(benches).toHaveLength(4);
     for (const b of benches) {
       const { x, y } = at(b);
@@ -426,5 +427,38 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     const posts = cenario.filter((o) => o.type === 'poste').map(at);
     expect(wire.polyline).toHaveLength(posts.length);
     for (const p of wire.polyline) expect(posts.some((q) => Math.hypot(q.x - p.x / M, q.y - p.y / M) < 0.01), `fio em (${p.x / M}, ${p.y / M})`).toBe(true);
+  });
+});
+
+describe('Mapa 01 (Capão), etapa 4c: campinho, viaduto e saídas', () => {
+  const cenario = layer('cenario');
+
+  it('o campinho de várzea: dá para andar no campo, as traves só seguram nos postes e o muro com grafite fica virado para o campo', () => {
+    const field = layer('chao').find((o) => o.type === 'campinho')!;
+    const [x0, y0, x1, y1] = [field.x / M, field.y / M, (field.x + field.width) / M, (field.y + field.height) / M];
+    expect(reach((x0 + x1) / 2, (y0 + y1) / 2)).toBe(true);
+    expect(cenario.filter((o) => o.type === 'trave')).toHaveLength(2);
+    expect(boxes.filter((b) => b.type === 'trave')).toHaveLength(4); // dois postes por trave
+    const muro = cenario.find((o) => o.type === 'muro')!;
+    expect(prop(muro, 'grafite')).toBeTruthy();
+    expect((muro.x + muro.width) / M).toBeLessThanOrEqual(x0); // o muro fica a oeste do campo...
+    expect(prop(muro, 'lado')).toBe('leste'); // ...com a pintura virada para ele (o lado que a câmera vê)
+  });
+
+  it('o viaduto da Linha 5-Lilás: o tabuleiro e o trem lá em cima não seguram ninguém; os pilares e o ônibus seguram', () => {
+    expect(boxes.some((b) => b.type === 'viaduto' || b.type === 'trem' || b.type === 'cipo')).toBe(false);
+    expect(boxes.filter((b) => b.type === 'pilar-viaduto')).toHaveLength(4);
+    expect(boxes.filter((b) => b.type === 'onibus')).toHaveLength(1);
+    expect(reachNear(63, 4, 0.5)).toBe(true); // embaixo do viaduto, entre dois pilares
+    expect(prop(cenario.find((o) => o.type === 'trem')!, 'cor')).toBe('#7d5ca8'); // lilás
+  });
+
+  it('a rua para Guarapiranga atravessa a mata até a barreira com placa; a mata dos lados continua fechada; a rua leste termina no mato com a placa da estação', () => {
+    for (let y = 81; y <= 113; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
+    expect(reach(91, 116.5)).toBe(false); // depois da barreira (a saída abre quando o Mapa 02 existir)
+    expect(reach(84, 100)).toBe(false); // a mata ao sul da vila
+    const placas = cenario.filter((o) => o.type === 'placa').map((o) => prop(o, 'texto'));
+    expect(placas).toEqual(expect.arrayContaining(['GUARAPIRANGA', 'ESTAÇÃO CAPÃO REDONDO']));
+    expect(reach(95.25, 44)).toBe(false); // o fim da rua da vila (a estação fica para depois)
   });
 });
