@@ -444,6 +444,9 @@
     calcada: { base: '#8f8c82', dots: ['#7f7c73', '#a19e93', '#6f6c64'], n: 6, size: [3, 7] },
     rua: { base: '#3f4247', dots: ['#4a4d53', '#35383c', '#55585e'], n: 7, size: [3, 7] },
     pedra: { base: '#77736b', dots: ['#67635c', '#8a867d', '#5a564f'], n: 5, size: [6, 12] },
+    // vila (etapa 4b): praça de pedra portuguesa e faixa de pedestre (pintores próprios logo abaixo)
+    praca: { base: '#e6e0d2', dots: [], n: 0, size: [0, 0], edge: '#8f8c82' },
+    faixa: { base: '#3d4045', dots: [], n: 0, size: [0, 0] },
   };
   const matOf = (t) => MAT[t] || MAT.terra;
 
@@ -541,17 +544,6 @@
         shapePath(ctx, sh);
         ctx.fillStyle = sh.color || mat.base;
         ctx.fill();
-        if (sh.type === 'agua') {
-          // reflexo claro junto da margem
-          ctx.save();
-          shapePath(ctx, sh);
-          ctx.clip();
-          shapePath(ctx, sh);
-          ctx.strokeStyle = 'rgba(160, 235, 220, 0.16)';
-          ctx.lineWidth = 70;
-          ctx.stroke();
-          ctx.restore();
-        }
       }
       this._texture(ctx, sh, box, n + 1);
       if (sh.type === 'circulo') this._circleStone(ctx, sh);
@@ -571,6 +563,9 @@
 
   /** Pontinhos de textura da forma, só dentro dela e dentro do pedaço. */
   Ground.prototype._texture = function (ctx, sh, box, seed) {
+    if (sh.type === 'agua') return this._water(ctx, sh, box, seed);
+    if (sh.type === 'praca') return this._portuguese(ctx, sh, seed);
+    if (sh.type === 'faixa') return this._crosswalk(ctx, sh);
     const mat = matOf(sh.type);
     const b = shapeBox(sh);
     const i0 = Math.floor(Math.max(b.x0, box.x0) / 100), i1 = Math.floor(Math.min(b.x1, box.x1) / 100);
@@ -603,6 +598,129 @@
         }
       }
     }
+  };
+
+  /**
+   * Água (o dono achou o lago "cheio de pintinhas"): funda e escura no meio, clareando em faixas suaves até a margem,
+   * uma linha de espuma na beira e marolas finas aqui e ali. Tudo em cm do chão (o pedaço já está na projeção do chão,
+   * então um arco de círculo vira a marola achatada da câmera).
+   */
+  Ground.prototype._water = function (ctx, sh, box, seed) {
+    const base = sh.color || MAT.agua.base;
+    ctx.save();
+    shapePath(ctx, sh);
+    ctx.clip();
+    ctx.fillStyle = M.shade(base, -0.38);
+    shapePath(ctx, sh);
+    ctx.fill();
+    // da parte funda para a margem: cada faixa (o traço dentro da forma recortada) um pouco mais clara
+    ctx.lineJoin = 'round';
+    // muitas faixas com passo pequeno: a passagem do fundo para a margem fica suave (sem degraus de mapa de relevo)
+    const N = 16;
+    for (let k = 0; k < N; k++) {
+      const u = k / (N - 1);
+      ctx.strokeStyle = M.shade(base, -0.34 + u * 0.56);
+      ctx.lineWidth = 1400 * Math.pow(1 - u, 1.6) + 70;
+      shapePath(ctx, sh);
+      ctx.stroke();
+    }
+    // espuma na beira
+    ctx.strokeStyle = 'rgba(214, 246, 238, 0.42)';
+    ctx.lineWidth = 16;
+    shapePath(ctx, sh);
+    ctx.stroke();
+    // marolas: arcos finos e claros, poucos
+    const b = shapeBox(sh);
+    const i0 = Math.floor(Math.max(b.x0, box.x0) / 200), i1 = Math.floor(Math.min(b.x1, box.x1) / 200);
+    const j0 = Math.floor(Math.max(b.y0, box.y0) / 200), j1 = Math.floor(Math.min(b.y1, box.y1) / 200);
+    ctx.lineCap = 'round';
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const r = cellRng(i, j, seed + 31);
+        if (r() > 0.42) continue;
+        const x = (i + r()) * 200;
+        const y = (j + r()) * 200;
+        if (!inside(sh, x, y)) continue;
+        const rad = 30 + r() * 45;
+        const a0 = -2.4 + r() * 0.6;
+        ctx.strokeStyle = `rgba(206, 244, 236, ${0.2 + r() * 0.14})`;
+        ctx.lineWidth = 4 + r() * 2;
+        ctx.beginPath();
+        ctx.arc(x, y, rad, a0, a0 + 1 + r() * 0.5);
+        ctx.stroke();
+        if (r() < 0.5) {
+          ctx.beginPath();
+          ctx.arc(x + 14, y + 10, rad * 0.62, a0 + 0.2, a0 + 1.1);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  };
+
+  /**
+   * Praça de pedra portuguesa: chão claro de pedrinhas com as ondas pretas (o desenho 'ondas', como o calçadão de
+   * Copacabana), cada onda uma faixa larga e ondulada; as pedrinhas aparecem como pontinhos de junta.
+   */
+  Ground.prototype._portuguese = function (ctx, sh, seed) {
+    ctx.save();
+    shapePath(ctx, sh);
+    ctx.clip();
+    const b = shapeBox(sh);
+    const dark = '#2b2a28';
+    const amp = 55;
+    const wave = 260; // comprimento de uma onda (cm)
+    const band = 70; // largura da faixa preta
+    // as ondas correm no sentido x; uma a cada 2 m em y
+    ctx.fillStyle = dark;
+    for (let y0 = b.y0 - 120; y0 < b.y1 + 120; y0 += 200) {
+      ctx.beginPath();
+      for (let x = b.x0 - 20; x <= b.x1 + 20; x += 10) {
+        const y = y0 + Math.sin(((x - b.x0) / wave) * M.TAU) * amp;
+        x === b.x0 - 20 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      for (let x = b.x1 + 20; x >= b.x0 - 20; x -= 10) ctx.lineTo(x, y0 + band + Math.sin(((x - b.x0) / wave) * M.TAU) * amp);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // juntas das pedrinhas: pontinhos regulares, mais visíveis no claro
+    const r = cellRng(Math.floor(b.x0 / 100), Math.floor(b.y0 / 100), seed + 5);
+    ctx.fillStyle = 'rgba(120, 112, 98, 0.35)';
+    for (let x = b.x0; x < b.x1; x += 14) {
+      for (let y = b.y0; y < b.y1; y += 14) {
+        if (r() < 0.55) ctx.fillRect(x + r() * 4, y + r() * 4, 2.4, 2.4);
+      }
+    }
+    // marcas de uso e algumas pedras soltas
+    ctx.fillStyle = 'rgba(60, 54, 44, 0.12)';
+    for (let k = 0; k < 6; k++) {
+      ctx.beginPath();
+      ctx.ellipse(b.x0 + r() * (b.x1 - b.x0), b.y0 + r() * (b.y1 - b.y0), 60 + r() * 90, 30 + r() * 50, r() * 3, 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  /** Faixa de pedestre: listras brancas e gastas sobre o asfalto, compridas no sentido da propriedade `listras`. */
+  Ground.prototype._crosswalk = function (ctx, sh) {
+    ctx.save();
+    shapePath(ctx, sh);
+    ctx.clip();
+    const b = shapeBox(sh);
+    const alongY = (sh.stripes || 'y') === 'y';
+    const step = 60, w = 34;
+    ctx.fillStyle = 'rgba(236, 232, 220, 0.88)';
+    if (alongY) for (let x = b.x0 + 12; x < b.x1 - 10; x += step) ctx.fillRect(x, b.y0 + 10, w, b.y1 - b.y0 - 20);
+    else for (let y = b.y0 + 12; y < b.y1 - 10; y += step) ctx.fillRect(b.x0 + 10, y, b.x1 - b.x0 - 20, w);
+    // tinta gasta: falhas escuras nas listras
+    const r = cellRng(Math.floor(b.x0 / 100), Math.floor(b.y0 / 100), 77);
+    ctx.fillStyle = 'rgba(61, 64, 69, 0.55)';
+    for (let k = 0; k < (b.x1 - b.x0) * (b.y1 - b.y0) / 2500; k++) {
+      ctx.beginPath();
+      ctx.ellipse(b.x0 + r() * (b.x1 - b.x0), b.y0 + r() * (b.y1 - b.y0), 4 + r() * 10, 3 + r() * 6, r() * 3, 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.restore();
   };
 
   /** O círculo ancestral no chão: pedra com anéis e rachaduras entalhadas (o brilho vem do mundo, animado). */

@@ -84,6 +84,10 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
 - `arte.ts` (da [arte]): carrega os scripts do protótipo que definem o desenho de verdade, o `PD.View`; com ele
   carregado, o motor usa ele no lugar do provisório.
 - `joystick.ts`: o joystick do celular (metade esquerda da tela).
+- Mochila, loja e conversa com missões: as mesmas janelas do jogo antigo (`bag.ts`, `shop.ts`, `talk.ts`), ligadas
+  pelo motor; chegar perto de um NPC abre a missão, a loja ou a fala dele, e afastar fecha. Câmera: o motor chama
+  `setZoom` da view (opcional na `WorldView`), começando em 0,7 (longe), com roda do mouse e teclas − e +, e guarda
+  a escolha no aparelho (`meummo:zoom`).
 - `combat.ts`: o combate desenhado por cima (uma tela transparente sobre a view): aviso no chão, anel laranja de
   quem prepara um golpe, pedras e frutas, números de dano e cura, barras de vida, clarão dos golpes de perto e ouro
   no chão. Contas que batem com o servidor (há teste em `tests/combate-novo.test.ts`): o pé de quem está no tile
@@ -91,7 +95,10 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   (sx, sy + 0,5), na altura do peito; mirar é do seu pé ao pé do alvo. A view pode ajudar com dois métodos
   opcionais: `action(id, tipo, ângulo)` (animações: 'windup', 'shoot', 'arc', 'dash', 'hurt', 'faint', 'revive' e os
   golpes dos monstros) e `actorPosition(id)` (onde o pé está desenhado, para barra e número seguirem o desenho).
-  O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada).
+  O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada). No formato novo, a pedra
+  bate pelo retângulo exato da `colisao` (com `bloqueiaTiro`) embaixo dela (`GameMap.blocksShotAt`, `SHOT_FEET_DY`):
+  um tronco de 0,3 m segura a pedra só nos 0,3 m dele. Tocar/clicar num monstro vale tanto onde ele está desenhado
+  quanto onde o servidor diz que ele está, com mais folga no dedo.
 - **Velocidade** (decisão do dono em 13/11): no mundo novo, correr é o normal (`RUN_SPEED`, 4,5 m/s) e andar devagar
   (`WALK_SPEED`, 2 m/s) é segurando Shift ou empurrando pouco o joystick; o pedido `walk` leva `slow: true` (protocolo
   18) e o servidor anda o pedaço do tamanho certo (`sliceDistance`). No jogo de hoje continua 5 tiles por segundo.

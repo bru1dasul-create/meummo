@@ -116,7 +116,7 @@ com o dono, onde estamos e próximos passos): `docs/ESTRUTURA.md` da [estrutura]
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).
 O jogo 2.5D novo é o que abre em http://localhost:3000 (`window.__mundoNovo`: `me`, `walkTo(x, y)` em metros, `walking()`,
-`safe()`, `entities()` (com a vida), `hp()`, `dead()`, `screenOf(x, y)`); `?provisorio` mostra as caixas de colisão no lugar do desenho. O jogo antigo
+`safe()`, `entities()` (com a vida e o pé: `feetX`, `feetY`), `hp()`, `dead()`, `zoom()`, `screenOf(x, y)` — do pé, em metros); `?provisorio` mostra as caixas de colisão no lugar do desenho. O jogo antigo
 (visto de cima) fica em `?antigo` e tem `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
 `__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)`, `__meummo.drops()` (ouro e itens no chão),
 `__meummo.charmed()` (encantado pelo canto) — útil para testes automáticos. Para testar com ouro, itens ou em outro

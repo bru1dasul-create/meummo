@@ -6,6 +6,9 @@ import { installCoinStyle } from './coinArt';
 const MAX_CHAT_LINES = 60;
 /** Sem mensagem nova por esse tempo, o chat fica mais transparente (para não esconder o jogo). */
 const CHAT_IDLE_MS = 9000;
+/** Gestos do jogador que rolam o registro do chat; a rolagem que vem logo depois deles é dele (inclui o embalo do dedo). */
+const USER_SCROLL_EVENTS = ['wheel', 'touchmove', 'pointerdown'] as const;
+const USER_SCROLL_MS = 1500;
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -19,6 +22,12 @@ export class ChatBox {
   private readonly form = byId<HTMLFormElement>('chat-form');
   private readonly input = byId<HTMLInputElement>('chat-input');
   private idleTimer: number | undefined;
+  /** O registro acompanha a última fala, a não ser que o jogador tenha rolado para cima para ler as antigas. */
+  private stickToBottom = true;
+  /** Quando o jogador mexeu na rolagem do registro pela última vez (roda do mouse, dedo ou barra). */
+  private userScrollAt = -Infinity;
+  /** O chat muda de tamanho (jogo novo carregando, abrir para escrever, girar o celular): continua na última fala. */
+  private readonly resize = new ResizeObserver(() => this.followBottom());
 
   constructor(private readonly onSend: (text: string) => void) {
     this.root.hidden = false;
@@ -29,6 +38,10 @@ export class ChatBox {
     // No celular o chat fica recolhido (últimas linhas); um toque abre e outro fecha
     if (matchMedia('(pointer: coarse)').matches) this.log.addEventListener('click', this.toggleOpen);
     this.input.addEventListener('focus', this.wake);
+    this.log.addEventListener('scroll', this.onScroll, { passive: true });
+    for (const type of USER_SCROLL_EVENTS) this.log.addEventListener(type, this.markUserScroll, { passive: true });
+    this.input.addEventListener('blur', this.backToBottom);
+    this.resize.observe(this.log);
   }
 
   isTyping(): boolean {
@@ -63,6 +76,10 @@ export class ChatBox {
     window.removeEventListener('keydown', this.keydown);
     this.log.removeEventListener('click', this.toggleOpen);
     this.input.removeEventListener('focus', this.wake);
+    this.log.removeEventListener('scroll', this.onScroll);
+    for (const type of USER_SCROLL_EVENTS) this.log.removeEventListener(type, this.markUserScroll);
+    this.input.removeEventListener('blur', this.backToBottom);
+    this.resize.disconnect();
     window.clearTimeout(this.idleTimer);
     this.root.classList.remove('idle', 'open');
     this.input.value = '';
@@ -71,12 +88,32 @@ export class ChatBox {
   }
 
   private append(li: HTMLLIElement): void {
-    const atBottom = this.log.scrollHeight - this.log.scrollTop - this.log.clientHeight < 24;
     this.log.append(li);
     while (this.log.children.length > MAX_CHAT_LINES) this.log.firstElementChild?.remove();
-    if (atBottom) this.log.scrollTop = this.log.scrollHeight;
+    this.followBottom();
     this.wake();
   }
+
+  private followBottom(): void {
+    if (this.stickToBottom) this.log.scrollTop = this.log.scrollHeight;
+  }
+
+  private readonly markUserScroll = () => {
+    this.userScrollAt = performance.now();
+  };
+
+  /** Só a rolagem feita pelo jogador decide se o registro para de acompanhar a última fala; a do próprio chat e a
+   *  que o navegador faz quando o chat muda de tamanho chegam atrasadas e enganariam a conta. */
+  private readonly onScroll = () => {
+    if (performance.now() - this.userScrollAt > USER_SCROLL_MS || this.log.clientHeight === 0) return;
+    this.stickToBottom = this.log.scrollHeight - this.log.scrollTop - this.log.clientHeight < 24;
+  };
+
+  /** Terminou de escrever (ou fechou o chat): o registro recolhido volta a mostrar as últimas falas. */
+  private readonly backToBottom = () => {
+    this.stickToBottom = true;
+    this.followBottom();
+  };
 
   /** Mensagem nova ou jogador mexendo no chat: volta a ficar bem visível e esmaece depois. */
   private readonly wake = () => {
@@ -89,7 +126,7 @@ export class ChatBox {
 
   private readonly toggleOpen = () => {
     this.root.classList.toggle('open');
-    this.log.scrollTop = this.log.scrollHeight;
+    this.backToBottom();
     this.wake();
   };
 

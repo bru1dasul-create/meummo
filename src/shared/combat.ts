@@ -131,7 +131,10 @@ export interface ShotPath {
 
 export interface ShotBlocker {
   blocksShot(x: number, y: number): boolean;
+  /** Mapa do formato novo: bate em algo no ponto exato (x, y) da pedra? (Sem isto, vale o tile inteiro.) */
+  blocksShotAt?(x: number, y: number): boolean;
 }
+
 
 export function makeShot(fromTile: Point, angle: number, speed: number, range: number): ShotPath {
   return { x: fromTile.x + 0.5, y: fromTile.y + 0.5, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, traveled: 0 };
@@ -155,7 +158,7 @@ export function advanceShot(
     shot.y += shot.dy * step;
     shot.traveled += step;
     remaining -= step;
-    if (map.blocksShot(Math.floor(shot.x), Math.floor(shot.y))) return 'wall';
+    if (map.blocksShotAt ? map.blocksShotAt(shot.x, shot.y) : map.blocksShot(Math.floor(shot.x), Math.floor(shot.y))) return 'wall';
     if (hits?.(shot.x, shot.y)) return 'hit';
     if (shot.traveled >= shot.range - 1e-9) return 'range';
   }

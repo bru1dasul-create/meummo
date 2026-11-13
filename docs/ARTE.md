@@ -329,10 +329,18 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - **Pedras** ("isso é uma pedra?"): rocha facetada de contorno irregular (anel de base enterrado, anel de cima menor e
   uma coroa), cada face com o tom pela luz, musgo no topo iluminado e fiapos de grama na base da frente; cada pedra
   sai diferente (sorteio pela posição).
-- **Celular no `/?novo`** (aviso da [estrutura]): o chat vira uma caixinha no canto de baixo à direita (a esquerda é
-  do joystick), as falas aparecem em cima sem segurar o toque e somem; tocar na caixinha abre o chat (CSS com
-  `body:has(canvas.mundo-novo)`, o jogo de hoje não muda). No celular deitado, a faixa da zona fica no alto e menor
-  (vale para os dois jogos).
+- **Celular no jogo novo** (avisos da [estrutura]): o chat vira uma caixinha no canto de **cima** à direita (a esquerda
+  é do joystick e o canto de baixo à direita é dos botões Fôlego e Esquiva, que ela cobria; lá em cima o teclado do
+  celular também não cobre), ao lado do painel do canto (largura `100vw - 196px`, até 300 px). As duas últimas falas
+  aparecem logo abaixo sem segurar o toque e somem; tocar na caixinha abre o chat na largura da tela, com fundo opaco
+  por cima do painel. CSS com `body:has(canvas.mundo-novo)`; o jogo antigo não muda. No celular deitado, a faixa da
+  zona fica no alto e menor (vale para os dois jogos) e as falas recolhidas dão licença enquanto ela aparece.
+  O registro do chat (`ui.ts`) segue a última fala e só para quando o **jogador** rola (roda, dedo ou barra): a
+  conta antiga ("está no fim?") se enganava quando o chat mudava de tamanho e o celular pequeno mostrava a fala
+  velha. Conferido em Pixel 7 e num celular de 320 px, em pé e deitado (`chat-celular.cjs` no scratchpad).
+- **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
+  outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).
+  `world.js` junta as janelas em `o.hideWindows` e recorta uma de cada vez.
 - **Etapa 4a** (mata e lago, do [mundo]): `tmj.js` lê `tronco-caido` (caixa; deita no lado comprido),
   `aguape` (ponto com `raio`), `capivara` (ponto com `olhando` em graus; enfeite, sem colisão), `pedra` com
   `ancestral` e a `cor` das formas do chão (o lago usa '#2f6f6a'). Desenhos em `props.js`: tronco caído (cilindro
@@ -340,6 +348,23 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   mostra os anéis), aguapé (círculos deitados na água e flor lilás), capivara (bolas ao longo do corpo, que ficam
   redondas de qualquer lado; com fatias de pé ela virava listras olhando a 135° e 315°) e o símbolo aceso da Pedra do
   Véu. A água ganhou reflexo claro na margem. Prancha de conferência em `scratchpad` (não fica no repositório).
+- **Crítica do dono à mata (13/11, repassada pelo [mundo])**: "bolas verdes enormes empilhadas que enchem a tela" e
+  lago "cheio de pintinhas". Copas: cachos menores numa cúpula achatada (10 + raio/32 cachos), tom pela altura,
+  tufos de folha do lado da luz com beirada escura, vãos escuros do lado da sombra, contorno verde quase preto
+  (`CANOPY_INK`) e cada árvore com um tom um pouco diferente. Água (`Ground._water`): sem pintas; funda e escura no
+  meio, clareando em 16 faixas até a margem, espuma na beira e marolas finas. A quantidade de árvores, as trilhas sem
+  copa, tirar os ipês e a margem do lago são do [mundo].
+- **Vila da etapa 4b** (lista final do [mundo], aprovada pelo dono em 13/11): `tmj.js` lê `casa` (→ `map.houses`,
+  classe `House`: frente ao sul, 1 ou 2 andares, `cor` ou `bloco` aparente, `caixaDagua`, `pixo`, `abandonada` com
+  janela quebrada, porta de tábuas e cipó, ferros esperando a próxima laje nas de 2 andares; a Budega é `comercio`
+  'vendinha' com porta de enrolar meio aberta, prateleiras acesas sem nada de tabaco, letreiro e toldo listrado), `poste`
+  alto (≥ 5 m → poste de concreto `Pole` com luminária; `fiacao` liga os postes mais perto de cada ponta da polilinha),
+  `poste-praca`, `banco` de madeira com encosto do lado contrário de `olhando`, `mesa`, `fogueira` (pedras, lenha e
+  brasa no desenho guardado; chamas, faíscas e clarão no chão a cada quadro em `Small.draw`), `orelhao`, `lixeira`,
+  `carro` com `mato` (carroceria, cabine, vidro quebrado, ferrugem, pneus murchos e tufos de mato) e a `sibipiruna`
+  (verde com florzinha amarela miúda). Portão `aberto`: as duas folhas giradas 75° para o lado da câmera. Chão:
+  `praca` em pedra portuguesa com as ondas pretas, `faixa` de pedestre gasta e `calcada`. Testado com o mapa do ramo
+  `mundo/etapa-4b` (sem commitar o mapa, que é do [mundo]); com o mapa de hoje nada muda.
 - Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5, com a neblina da
   mata profunda) e a luz do poste.
 - Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página, tocar no Curupira

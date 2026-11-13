@@ -6,14 +6,19 @@
 
 import { DASH_COOLDOWN_MS, DASH_TILES, MAX_PENDING_WALKS, SHOT_COOLDOWN_MS, SHOT_RANGE, SHOT_SPEED, TRADE_RANGE, WALK_SLICE_MS } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
+import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
+import type { QuestInfo, QuestLog } from '../../shared/quests';
 import { SKILLS } from '../../shared/skills';
+import { Bag } from '../bag';
 import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
+import { ShopWindow } from '../shop';
+import { QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
@@ -38,6 +43,15 @@ const toDegrees = (radians: number) => ((Math.round((radians * 180) / Math.PI) %
 const AUTO_AIM_RANGE = SHOT_RANGE + 0.5;
 /** Alcance da mira automática da Bordunada (golpe de perto). */
 const MELEE_AIM_RANGE = 2.5;
+/** Monstro que caiu: tempo para a view mostrar a queda ('die') antes de o desenho sair. */
+const DIE_MS = 700;
+/**
+ * Zoom da câmera: começa longe (o dono achou o "médio" perto demais) e o jogador ajusta (roda do mouse, teclas − e +).
+ * A escolha fica guardada neste aparelho. A view limita (a da [arte] vai de 0,7 a 1,4).
+ */
+const DEFAULT_ZOOM = 0.7;
+const ZOOM_KEY = 'meummo:zoom';
+const ZOOM_STEP = 1.1;
 
 export interface NewWorldGame {
   destroy(): void;
@@ -83,6 +97,19 @@ class NewWorld implements NewWorldGame {
   private readonly combat: CombatLayer;
   private readonly actionBar: ActionBar;
   private readonly soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
+  // mochila, loja e conversa com missões (as janelas do jogo de sempre; a [arte] deixa no jeito do 2.5D depois)
+  private readonly items = new Map<string, ItemInfo>();
+  private readonly bag: Bag;
+  private readonly shop: ShopWindow;
+  private readonly talk: TalkWindow;
+  private readonly tracker: QuestTracker;
+  private readonly questList: QuestInfo[];
+  private questLog: QuestLog;
+  private lastInv: InventoryState;
+  private myGold = 0;
+  private myLevel = 1;
+  /** O que estava equipado (para tocar o som de equipar quando muda). */
+  private equippedBefore = '';
   private map!: GameMap;
   private view: WorldView | null = null;
   private myId = 0;
@@ -133,6 +160,8 @@ class NewWorld implements NewWorldGame {
   /** Outros jogadores desmaiados (acordam quando a vida volta). */
   private readonly fainted = new Set<number>();
   private safeToastAt = 0;
+  /** Zoom da câmera escolhido pelo jogador (veja DEFAULT_ZOOM). */
+  private zoom = DEFAULT_ZOOM;
   private raf = 0;
   private pingTimer = 0;
   private pingId = 0;
@@ -145,7 +174,10 @@ class NewWorld implements NewWorldGame {
     this.hud = deps.hud;
     this.sfx = deps.sfx;
     this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
-    this.joystick = new Joystick(this.container, (x, y) => this.tapAt(x, y));
+    this.joystick = new Joystick(this.container, (x, y) => {
+      this.usingTouch = true;
+      this.tapAt(x, y);
+    });
     this.combat = new CombatLayer(this.container);
     this.actionBar = new ActionBar(
       [
@@ -157,10 +189,50 @@ class NewWorld implements NewWorldGame {
     );
     this.soundButton?.addEventListener('click', this.toggleSound);
     this.updateSoundButton();
+    const welcome = deps.welcome;
+    for (const item of welcome.items) this.items.set(item.id, item);
+    this.lastInv = welcome.inv;
+    this.myGold = welcome.inv.gold ?? 0;
+    this.myLevel = welcome.stats.level;
+    this.equippedBefore = JSON.stringify(welcome.inv.equipped);
+    this.bag = new Bag(
+      this.items,
+      welcome.inv,
+      {
+        item: (act, i) => this.conn.send({ t: 'item', act, i }),
+        unequip: (part) => this.conn.send({ t: 'unequip', part }),
+      },
+      welcome.stats,
+      welcome.you.look,
+    );
+    this.shop = new ShopWindow(this.items, welcome.inv, {
+      buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
+      sell: (npc, i, n) => this.conn.send({ t: 'sell', npc, i, n }),
+    });
+    this.questList = welcome.quests ?? [];
+    this.questLog = welcome.questLog ?? {};
+    this.talk = new TalkWindow(this.questList, this.items, {
+      accept: (npc, id) => this.conn.send({ t: 'quest', act: 'accept', id, npc }),
+      complete: (npc, id) => this.conn.send({ t: 'quest', act: 'complete', id, npc }),
+      abandon: (id) => this.conn.send({ t: 'quest', act: 'abandon', id }),
+      openShop: (npc) => {
+        this.talk.close();
+        this.bag.close();
+        this.shop.open(npc);
+      },
+    });
+    this.tracker = new QuestTracker(this.questList);
     this.container.addEventListener('pointerdown', this.onPointerDown);
     this.container.addEventListener('pointermove', this.onPointerMove);
     this.container.addEventListener('contextmenu', this.onContextMenu);
+    this.container.addEventListener('wheel', this.onWheel, { passive: false });
     window.addEventListener('pointerup', this.onPointerUp);
+    try {
+      const saved = Number(localStorage.getItem(ZOOM_KEY));
+      if (saved > 0) this.zoom = saved;
+    } catch {
+      // sem acesso ao armazenamento (janela anônima...): começa no padrão
+    }
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKey);
     window.addEventListener('blur', this.onBlur);
@@ -183,8 +255,14 @@ class NewWorld implements NewWorldGame {
       walkTo: (x: number, y: number) => game.walkToPoint(x, y),
       walking: () => game.route.length > 0,
       safe: () => game.wasSafe,
-      entities: () => [...game.entities.values()].map((e) => ({ id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp })),
+      // x, y: posição "de canto" (a do servidor); feetX, feetY: o pé, em metros (é o que o screenOf espera)
+      entities: () =>
+        [...game.entities.values()].map((e) => {
+          const feet = feetAt(e.x, e.y);
+          return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp };
+        }),
       hp: () => ({ hp: game.myHp, maxHp: game.myMaxHp }),
+      zoom: () => game.zoom,
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -198,6 +276,7 @@ class NewWorld implements NewWorldGame {
     this.map = GameMap.fromTiled(json, msg.map);
     this.view?.destroy();
     this.view = createView(this.container, json);
+    this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
     this.combat.clear();
     this.combat.raise(); // por cima do desenho novo
     this.entities.clear();
@@ -228,6 +307,13 @@ class NewWorld implements NewWorldGame {
     this.myHp = you.hp;
     this.myMaxHp = you.maxHp;
     this.hud.setHp(you.hp, you.maxHp);
+    if (msg.t === 'zone') {
+      this.shop.close();
+      this.talk.close();
+      this.questLog = msg.questLog;
+      this.onInventory(msg.inv, false);
+    }
+    this.refreshQuests();
     this.hud.setOnline(msg.online);
     if (arrived) this.conn.send({ t: 'loaded' });
     this.conn.listen((m) => this.onMessage(m));
@@ -242,6 +328,7 @@ class NewWorld implements NewWorldGame {
     this.container.removeEventListener('pointerdown', this.onPointerDown);
     this.container.removeEventListener('pointermove', this.onPointerMove);
     this.container.removeEventListener('contextmenu', this.onContextMenu);
+    this.container.removeEventListener('wheel', this.onWheel);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
@@ -254,6 +341,10 @@ class NewWorld implements NewWorldGame {
     this.actionBar.destroy();
     this.feedback.destroy();
     this.combat.destroy();
+    this.bag.destroy();
+    this.shop.destroy();
+    this.talk.destroy();
+    this.tracker.destroy();
     this.view?.destroy();
     this.view = null;
   }
@@ -265,6 +356,7 @@ class NewWorld implements NewWorldGame {
     this.handleMovement(now);
     this.handleFiring(now);
     this.checkNpcArrival();
+    this.checkNpcDistance();
     this.checkSafeArea();
     this.view.frame(now);
     this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
@@ -316,6 +408,22 @@ class NewWorld implements NewWorldGame {
         break;
       case 'KeyM':
         if (!event.repeat) this.toggleSound();
+        break;
+      case 'KeyI':
+        if (!event.repeat) this.bag.toggle();
+        break;
+      case 'Minus':
+      case 'NumpadSubtract':
+        this.zoomBy(1 / ZOOM_STEP);
+        break;
+      case 'Equal':
+      case 'NumpadAdd':
+        this.zoomBy(ZOOM_STEP);
+        break;
+      case 'Escape':
+        if (this.talk.isOpen) this.talk.close();
+        else if (this.shop.isOpen) this.shop.close();
+        else if (this.bag.isOpen) this.bag.close();
         break;
     }
   };
@@ -496,15 +604,32 @@ class NewWorld implements NewWorldGame {
   /** O botão direito é do jogo (atirar), não do menu do navegador. */
   private readonly onContextMenu = (event: Event) => event.preventDefault();
 
+  /** Roda do mouse: afasta ou aproxima a câmera. */
+  private readonly onWheel = (event: WheelEvent) => {
+    if (!this.view?.setZoom) return;
+    event.preventDefault();
+    this.zoomBy(event.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP);
+  };
+
+  /** Muda o zoom da câmera (multiplica) e guarda a escolha neste aparelho. */
+  zoomBy(step: number): void {
+    if (!this.view?.setZoom) return;
+    this.zoom = this.view.setZoom(this.zoom * step);
+    try {
+      localStorage.setItem(ZOOM_KEY, String(Math.round(this.zoom * 1000) / 1000));
+    } catch {
+      // sem armazenamento: vale só nesta visita
+    }
+  }
+
   /** Tocou/clicou na tela neste ponto: atira no monstro que está ali, vai conversar com o NPC ou anda até lá. */
   private tapAt(clientX: number, clientY: number): void {
     if (!this.view || this.dead) return;
-    if (this.usingTouch) {
-      const monster = this.actorAtScreen(clientX, clientY, 'monster');
-      if (monster !== null) {
-        this.shootAt(monster, performance.now());
-        return;
-      }
+    // (o clique do mouse já olhou o monstro antes de chegar aqui; o toque olha agora)
+    const monster = this.actorAtScreen(clientX, clientY, 'monster');
+    if (monster !== null) {
+      this.shootAt(monster, performance.now());
+      return;
     }
     const npcId = this.actorAtScreen(clientX, clientY, 'npc');
     const npc = npcId !== null ? this.npcs.get(npcId) : undefined;
@@ -520,24 +645,28 @@ class NewWorld implements NewWorldGame {
   }
 
   /**
-   * Quem está desenhado neste ponto da tela (o corpo, do pé até a cabeça), deste tipo, ou null. Funciona com
-   * qualquer câmera: usa só o toScreen da view.
+   * Quem está neste ponto da tela (o corpo, do pé até a cabeça), deste tipo, ou null. Vale tanto onde ele está
+   * desenhado quanto onde o servidor diz que ele está (o desenho anda um pouco atrás de quem corre). No dedo, a folga
+   * é maior. Funciona com qualquer câmera: usa só o toScreen da view.
    */
   private actorAtScreen(clientX: number, clientY: number, kind: 'monster' | 'npc'): number | null {
     if (!this.view) return null;
+    const point = { x: clientX, y: clientY };
     let best: number | null = null;
-    let bestDistance = Infinity;
+    let bestScore = Infinity;
     for (const e of this.entities.values()) {
       if (e.kind !== kind) continue;
-      const feet = this.drawnFeet(e.id);
-      if (!feet) continue;
-      const foot = this.view.toScreen(feet.x, feet.y, 0);
-      const head = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT);
-      const reach = Math.max(18, Math.hypot(head.x - foot.x, head.y - foot.y) * 0.4);
-      const distance = distanceToSegment({ x: clientX, y: clientY }, foot, head);
-      if (distance <= reach && distance < bestDistance) {
-        best = e.id;
-        bestDistance = distance;
+      for (const feet of [this.drawnFeet(e.id), feetAt(e.x, e.y)]) {
+        if (!feet) continue;
+        const foot = this.view.toScreen(feet.x, feet.y, 0);
+        const head = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT);
+        const height = Math.hypot(head.x - foot.x, head.y - foot.y);
+        const reach = this.usingTouch ? Math.max(32, height * 0.6) : Math.max(18, height * 0.4);
+        const score = distanceToSegment(point, foot, head) / reach;
+        if (score <= 1 && score < bestScore) {
+          best = e.id;
+          bestScore = score;
+        }
       }
     }
     return best;
@@ -559,9 +688,41 @@ class NewWorld implements NewWorldGame {
     }
     this.goingToNpc = null;
     this.clearRoute();
+    this.openNpc(npc);
+  }
+
+  /** Perto do NPC: missão (conversa), loja ou só a fala dele. */
+  private openNpc(npc: NpcInfo): void {
+    if (this.talk.hasQuests(npc)) {
+      this.bag.close();
+      this.shop.close();
+      this.talk.open(npc, this.questContext());
+      return;
+    }
+    if (npc.shop) {
+      this.bag.close();
+      this.shop.open(npc);
+      if (npc.line) this.view?.say(npc.e.id, npc.line);
+      return;
+    }
     if (npc.line) {
       this.view?.say(npc.e.id, npc.line);
       this.chat.addSystem(`${npc.e.name}: ${npc.line}`);
+    }
+  }
+
+  /** Loja ou conversa aberta e você se afastou: fecha (o servidor recusaria a compra de longe). */
+  private checkNpcDistance(): void {
+    for (const window of [this.shop, this.talk]) {
+      const id = window.npcId;
+      if (id === null) continue;
+      const npc = this.npcs.get(id);
+      const me = feetAt(this.predicted.x, this.predicted.y);
+      const feet = npc ? feetAt(npc.e.x, npc.e.y) : null;
+      if (!feet || Math.hypot(me.x - feet.x, me.y - feet.y) > TRADE_RANGE + 1) {
+        window.close();
+        if (window === this.shop) this.toast.show('Você se afastou da loja');
+      }
     }
   }
 
@@ -842,12 +1003,21 @@ class NewWorld implements NewWorldGame {
     }
     const e = this.entities.get(id);
     if (e?.kind === 'monster') {
-      // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão)
+      // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão). A view que anima
+      // ('die') ganha um instante para mostrar a queda antes de o desenho sair.
       const feet = this.drawnFeet(id);
       if (feet) this.combat.poof(feet.x, feet.y, now);
       this.entities.delete(id);
       this.facing.delete(id);
-      this.view?.removeActor(id);
+      const view = this.view;
+      if (view?.action) {
+        view.action(id, 'die');
+        window.setTimeout(() => {
+          if (this.view === view) view.removeActor(id);
+        }, DIE_MS);
+      } else {
+        view?.removeActor(id);
+      }
       if (this.firing?.by === 'target' && this.firing.id === id) this.firing = null;
       this.sfx.play('kill');
       return;
@@ -868,6 +1038,9 @@ class NewWorld implements NewWorldGame {
       this.goingToNpc = null;
       this.feedback.showDeath();
       this.view?.action?.(this.myId, 'faint');
+      this.bag.close();
+      this.shop.close();
+      this.talk.close();
     } else {
       this.feedback.hideDeath();
       this.view?.action?.(this.myId, 'revive');
@@ -894,6 +1067,83 @@ class NewWorld implements NewWorldGame {
 
   private applyStats(stats: PlayerStats): void {
     this.hud.setXp(stats.xp, stats.xpNext, stats.level);
+    this.myLevel = stats.level;
+    this.bag?.setStats(stats);
+    if (this.talk) this.refreshQuests(); // nível novo pode liberar missões
+  }
+
+  /** A mochila mudou (comprou, vendeu, pegou, comeu, equipou). */
+  private onInventory(inv: InventoryState, sounds = true): void {
+    const equipped = JSON.stringify(inv.equipped);
+    if (sounds && equipped !== this.equippedBefore) this.sfx.play('equip');
+    this.equippedBefore = equipped;
+    const gold = inv.gold ?? 0;
+    // na loja: ouro diminuiu = comprou ("ka-tching"); aumentou = vendeu
+    if (sounds && this.shop.isOpen && gold !== this.myGold) this.sfx.play(gold < this.myGold ? 'buy' : 'sell');
+    this.myGold = gold;
+    this.lastInv = inv;
+    this.hud.setGold(gold);
+    this.bag.setState(inv);
+    this.shop.setInventory(inv);
+    this.refreshQuests(); // missão de entregar conta pela mochila
+  }
+
+  private questContext(): QuestContext {
+    return {
+      log: this.questLog,
+      level: this.myLevel,
+      inBag: (item) => this.lastInv.slots.reduce((n, stack) => n + (stack?.item === item ? stack.n : 0), 0),
+    };
+  }
+
+  /** O diário, o nível ou a mochila mudaram: a lista de missões na tela e a conversa aberta. */
+  private refreshQuests(): void {
+    const ctx = this.questContext();
+    this.tracker.update(ctx);
+    this.talk.update(ctx);
+  }
+
+  private onQuestLog(log: QuestLog): void {
+    const before = this.questLog;
+    this.questLog = log;
+    for (const quest of this.questList) {
+      const was = before[quest.id];
+      const now = log[quest.id];
+      if (quest.goal.kind === 'kill' && was?.state === 'active' && now?.state === 'active' && now.count > was.count) {
+        this.combat.floater(this.myId, `${quest.goalName} ${now.count}/${quest.goal.count}`, '#9fd3ff', performance.now());
+        if (now.count === quest.goal.count) this.toast.show(`Missão pronta: ${quest.name}`, 2500);
+      }
+      if (was?.state === 'active' && now?.state === 'done') {
+        this.toast.show(`Missão concluída: ${quest.name}!`, 3000);
+        this.sfx.play('rare');
+      }
+    }
+    this.refreshQuests();
+  }
+
+  /** Itens que vieram do monstro direto para a mochila. */
+  private onLoot(stacks: ItemStack[]): void {
+    let precious = false;
+    stacks.forEach((stack, i) => {
+      const def = this.items.get(stack.item);
+      if (!def) return;
+      if (def.rarity !== 'common') precious = true;
+      const label = `+${stack.n > 1 ? `${stack.n} ` : ''}${def.name}`;
+      window.setTimeout(() => this.combat.floater(this.myId, label, def.rarity === 'common' ? '#f4ead2' : '#f2c14e', performance.now()), 300 + i * 200);
+      if (def.rarity === 'legendary') this.toast.show(`Item lendário: ${def.name}!`, 3000);
+    });
+    this.sfx.play(precious ? 'rare' : 'loot');
+    this.bag.notifyNew();
+  }
+
+  private onItemFail(reason: string): void {
+    if (reason === 'cooldown') this.toast.show('Espere um pouquinho para usar outro item');
+    else if (reason === 'full_hp') this.toast.show('Sua vida já está cheia');
+    else if (reason === 'bag_full') this.toast.show('A mochila está cheia');
+    else if (reason === 'dead') this.toast.show('Desmaiado não dá para mexer na mochila');
+    else if (reason === 'no_gold') this.toast.show('Ouro insuficiente');
+    else if (reason === 'too_far') this.toast.show('Chegue mais perto');
+    else if (reason === 'cant_trade') this.toast.show('Isso não dá para negociar aqui');
   }
 
   private onMessage(msg: ServerMsg): void {
@@ -916,6 +1166,7 @@ class NewWorld implements NewWorldGame {
         const feet = feetAt(msg.x, msg.y);
         const duration = e.kind === 'monster' ? (e.stepMs ?? 320) : 120;
         this.view?.moveActor(msg.id, feet.x, feet.y, angle, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
+        if (msg.dash) this.view?.action?.(msg.id, 'dash', angle);
         break;
       }
       case 'ack':
@@ -1027,7 +1278,10 @@ class NewWorld implements NewWorldGame {
         break;
       }
       case 'fail':
-        if (msg.item) break; // mochila e loja ainda não chegaram no jogo novo
+        if (msg.item) {
+          this.onItemFail(msg.reason);
+          break;
+        }
         if (msg.reason === 'cooldown') this.toast.show('Ainda recarregando...');
         else if (msg.reason === 'dead') this.toast.show('Você está desmaiado');
         else if (msg.reason === 'full_hp') {
@@ -1046,21 +1300,35 @@ class NewWorld implements NewWorldGame {
         this.combat.removeDrop(msg.id);
         this.sfx.play('coin');
         if (msg.gold) this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', performance.now());
+        if (msg.item) this.bag.notifyNew();
         break;
       case 'drop_gone':
         this.combat.removeDrop(msg.id);
         break;
       case 'loot':
-        this.sfx.play('coins'); // o servidor também manda o texto ("Você pegou: ...") no chat
+        this.onLoot(msg.items); // o servidor também manda o texto ("Você pegou: ...") no chat
         break;
       case 'charm':
         if (msg.ms > 0) this.toast.show('Você foi encantado pelo canto! A esquiva solta.', 2500);
         break;
       case 'inv':
-        this.hud.setGold(msg.inv.gold ?? 0);
+        this.onInventory(msg.inv);
+        break;
+      case 'items':
+        // o administrador ajustou os itens (preço, cura, bônus): a mochila e a loja mostram os números novos
+        for (const item of msg.items) this.items.set(item.id, item);
+        this.bag.setState(this.lastInv);
+        this.shop.setInventory(this.lastInv);
+        break;
+      case 'quests':
+        this.onQuestLog(msg.log);
         break;
       case 'npcs':
-        for (const npc of msg.npcs) this.npcs.set(npc.e.id, npc);
+        for (const npc of msg.npcs) {
+          this.npcs.set(npc.e.id, npc);
+          if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
+          if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
+        }
         break;
       case 'online':
         this.hud.setOnline(msg.n);

@@ -79,6 +79,26 @@
     "descricao": "Erva de cura que teima em nascer no meio do concreto.",
     "icone": "erva"
   },
+  "agua_coco": {
+    "nome": "Água de Coco",
+    "preco": 8,
+    "tipo": "consumivel",
+    "cura": 20,
+    "recargaMs": 3000,
+    "pilha": 20,
+    "descricao": "Geladinha, direto do coco, da Budega da praça. Mata a sede e dá um fôlego.",
+    "icone": "agua_coco"
+  },
+  "garrafada": {
+    "nome": "Garrafada",
+    "preco": 35,
+    "tipo": "consumivel",
+    "cura": 60,
+    "recargaMs": 3000,
+    "pilha": 10,
+    "descricao": "Remédio de ervas na garrafa, receita de benzedeira. Cura de verdade.",
+    "icone": "garrafada"
+  },
   "sucata": {
     "nome": "Sucata",
     "preco": 4,

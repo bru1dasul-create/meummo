@@ -72,7 +72,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Ficaram desligadas de 12/11 ("opção a" do dono) até o combate do jogo
     novo, passo 1, da [estrutura] chegar (9de98f5). Conferi no jogo: os saguis atacam, as pedras acertam e a vida cai;
     mas na mata fechada eles ficam escondidos embaixo das copas e muita pedra bate nas árvores: a mata nova resolve.
-  - **4b (aprovada pelo dono em 13/11; entra na `main` junto com o desenho da vila pela [arte]):** o Portão I abre; faixa de pedestre
+  - **4b (na `main` em 13/11, depois do desenho da vila pela [arte]):** o Portão I abre; faixa de pedestre
     atravessando a Travessa; rua do portão para o leste (y 41 a 47) e rua de baixo (x 88 a 94, ainda fechada no mato
     lá no fim); calçadas estreitas; praça de pedra portuguesa (61 a 79 × 48,5 a 59) com a Budega (vendinha,
     letreiro "BUDEGA DISTRIBUIDORA", escolha do dono, 62 a 67 × 49,5 a 52,5; balcão em (64,5; 53,3), onde a [estrutura] põe quem atende), fogueira
@@ -82,7 +82,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     beira da vila fechada por mata. Regras novas: a câmera não pode ter o portão, a rua, o balcão, o letreiro e a
     fogueira tampados (por isso a árvore da praça ficou no canto sudeste), e nenhum vão de 0,3 a 1,2 m entre duas
     coisas sólidas de frente uma para a outra (um orelhão a 40 cm de um poste entalou o personagem).
-  - **Mata nova (pedido do dono em 13/11; prévia pronta no ramo `mundo/mata-nova`, por cima da 4b):** o dono não gostou da
+  - **Mata nova (pedido do dono em 13/11; prévia pronta no ramo `mundo/mata-nova`):** o dono não gostou da
     mata ("muito pequena, muita árvore, caminho sem árvore, cores fortes, plantas diferentes, mais sombria, árvore normal
     e não redonda, árvore seca") e escolheu: 50% maior para o sul (o mapa passa a 96 × 120 e a vila continua até y = 80;
     o pedaço ao sul da vila é mata fechada de enfeite), todas as plantas e "mudar a trilha e o lago" para a figueira não

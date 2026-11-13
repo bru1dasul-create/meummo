@@ -42,13 +42,16 @@ export interface WorldView {
   // ---- opcionais (combate): a view que não tiver, o motor segue sem ----
   /**
    * Animação curta de alguém: 'windup' (preparando um golpe), 'shoot' (estilingue, ou o monstro jogando algo),
-   * 'arc' (Bordunada), 'dash' (esquiva), 'hurt' (levou golpe),
+   * 'arc' (Bordunada), 'dash' (esquiva, sua ou de outro jogador), 'hurt' (levou golpe), 'die' (monstro caiu: o motor
+   * tira o desenho 0,7 s depois),
    * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou) e os golpes dos monstros ('bite', 'strike',
    * 'charge', 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
    */
   action?(id: number, kind: string, angle?: number): void;
   /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */
   actorPosition?(id: number): { x: number; y: number } | null;
+  /** Zoom do jogador (1 = o "médio"; menos = mais longe). A view limita e devolve o que ficou valendo. */
+  setZoom?(factor: number): number;
 }
 
 // ======================= desenho provisório =======================
@@ -141,8 +144,9 @@ export class ProvisionalView implements WorldView {
   private followId: number | null = null;
   private camX = 0;
   private camY = 0;
-  /** Pixels por metro (muda com o tamanho da tela). */
+  /** Pixels por metro (muda com o tamanho da tela e com o zoom do jogador). */
   private scale = 40;
+  private zoomUser = 1;
   /** Hora do último quadro (para actorPosition e action). */
   private lastNow = 0;
   private readonly onResize = () => this.resize();
@@ -224,7 +228,7 @@ export class ProvisionalView implements WorldView {
     const a = this.actors.get(id);
     if (!a) return;
     if (kind === 'hurt') a.hurtUntil = this.lastNow + 180;
-    else if (kind === 'faint') a.fainted = true;
+    else if (kind === 'faint' || kind === 'die') a.fainted = true;
     else if (kind === 'revive') a.fainted = false;
   }
 
@@ -302,7 +306,13 @@ export class ProvisionalView implements WorldView {
     this.canvas.width = Math.round(w * devicePixelRatio);
     this.canvas.height = Math.round(h * devicePixelRatio);
     // a escolha do dono: no normal, uns 14 × 16 m de chão na tela
-    this.scale = Math.max(22, Math.min(70, Math.min(w / 16, h / 10)));
+    this.scale = Math.max(22, Math.min(70, Math.min(w / 16, h / 10))) * this.zoomUser;
+  }
+
+  setZoom(factor: number): number {
+    this.zoomUser = Math.max(0.5, Math.min(1.4, factor));
+    this.resize();
+    return this.zoomUser;
   }
 
   private position(a: Actor, now: number): { x: number; y: number } {

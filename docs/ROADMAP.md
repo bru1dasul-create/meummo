@@ -117,8 +117,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
   (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (a clareira, em `/?novo`) ✔ (`npm run gen:capao` →
   `public/assets/maps-iso/capao.tmj`); 4) o resto do mapa em 3 pedaços: mata e lago ✔ (12/11; os saguis encantados e
-  as jararacas estão prontos no gerador, desligados até o combate do jogo novo, escolha do dono), portão e vila,
-  campinho, viaduto e saídas; 5) atmosferas (dia, entardecer e noite); 6) minimapa. Padrão: a arte conceitual
+  as jararacas voltaram em 13/11, com o combate do jogo novo), portão e vila ✔ (13/11: a Budega Distribuidora na praça,
+  desenhada pela [arte]), campinho, viaduto e saídas; 5) atmosferas (dia, entardecer e noite); 6) minimapa.
+  Mata nova (pedido do dono, 13/11: 50% maior para o sul, menos árvores, trilhas sem copa, plantas variadas, mais
+  sombria): prévia no ramo `mundo/mata-nova`, entra depois do desenho das plantas novas pela [arte]. Padrão: a arte conceitual
   aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
@@ -128,6 +130,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   cortada e anéis; eles bloqueiam no servidor), a Pedra do Véu (`pedra` com `ancestral`, símbolo aceso) e os véus
 - [ ] **[arte]** Neblina e escuro dentro das áreas com `neblina`/`escuro` (a mata profunda): junto com as atmosferas
   (Etapa 5)
+- [x] **[arte]** Desenho da vila da etapa 4b no 2.5D: casas (andares, cor, bloco aparente, caixa d'água, pichação,
+  abandonada), a Budega (porta de enrolar, letreiro BUDEGA DISTRIBUIDORA, toldo), postes de concreto com luminária e
+  fiação, poste de praça, bancos virados para a fogueira (com chamas), mesa, orelhão, lixeira, carro largado com mato,
+  sibipiruna, portão aberto, praça em pedra portuguesa e faixa de pedestre. Entra na main antes da 4b do [mundo]
+- [x] **[arte]** Crítica do dono à mata (13/11): copas com folhagem (sem as "bolas verdes enormes") e lago sem pintas
 - [x] **[estrutura]** Motor do jogo 2.5D (`src/client/novo/`, abre em `/?novo`): entrada, rede, previsão do andar,
   teclado e joystick (andam pela tela), tocar no chão para andar, falar com NPC, aviso de zona segura, outros jogadores;
   com um desenho provisório (bonecos e caixas) até o da [arte] chegar. O servidor manda quem entra pelo jogo novo
@@ -136,6 +143,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   (2 m/s) é segurando Shift ou empurrando pouco o joystick (protocolo 18). O jogo de hoje continua igual
 - [x] **[estrutura]** O endereço normal abre o jogo novo (decisão do dono, 13/11): http://localhost:5173 (e a porta
   3000) é o 2.5D; o jogo antigo, visto de cima, fica em `?antigo`, só para consulta, até o capítulo 1 novo ficar pronto
+- [x] **[estrutura]** Mochila, loja e conversa com missões no jogo novo (13/11): as janelas de sempre, com o visual
+  simples (a [arte] deixa no jeito do 2.5D). Tecla I ou o botão Mochila; tocar no NPC com loja abre a loja. Câmera
+  (o dono achou perto demais): começa no mais longe que a view deixa (0,7) e o jogador ajusta com a roda do mouse ou
+  as teclas − e + (fica guardado no aparelho)
+- [ ] **[estrutura]** A Budega no balcão da praça (64,5; 53,3), quando a vila (4b) entrar na `main`: vende Banana,
+  Ramo de Arruda, Água de Coco, Garrafada e Chapéu de Palha, e compra o que se pega na mata pela metade do preço.
+  Atendente provisório; o dono troca depois por um personagem inspirado em alguém da equipe dele
+- [ ] **[arte]** Ícones da Água de Coco (`agua_coco`) e da Garrafada (`garrafada`), já em `data/items.json`
 - [x] **[arte]** O desenho de verdade no jogo novo: `PD.View` com a interface `WorldView` (`src/client/novo/view.ts`),
   carregado em `src/client/novo/arte.ts` (o motor troca o provisório por ele sozinho). Desenha também o nome em cima
   de cada um (o seu em dourado, NPC em verde-água) e os balões de fala, que não saem da tela e desviam dos nomes e uns

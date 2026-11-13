@@ -5,7 +5,8 @@
 //   addActor(id, { kind, type, name, look, x, y, angle, me })  kind: 'player' | 'npc' | 'monster'
 //   moveActor(id, x, y, angle, { durationMs, dash })           a posição nova do pé, a cada ~50–120 ms
 //   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
-//   toWorld(xTela, yTela) → { x, y } · toScreen(x, y) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
+//   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
+//   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -377,6 +378,12 @@
         draw: (c) => painter.draw(c, rig, ch.look, ch.equipped, a.appearance || PD.classes.appearanceOf(ch)),
         cam,
       };
+    }
+
+    /** Onde o pé de alguém está DESENHADO agora (metros): o motor põe a barra de vida e o dano em cima do desenho. */
+    actorPosition(id) {
+      const a = this.actors.get(id);
+      return a ? { x: a.ch.pos.x / 100, y: a.ch.pos.y / 100 } : null;
     }
 
     /** Para o motor saber o que está acontecendo (testes): posição de cada personagem em metros. */

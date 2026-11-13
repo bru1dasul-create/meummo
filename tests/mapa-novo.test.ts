@@ -3,11 +3,13 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { checkNpcs, type NpcDef } from '../src/server/npcs';
+import { parseItemDefs } from '../src/server/items';
+import { checkNpcs, parseNpcDefs, type NpcDef } from '../src/server/npcs';
 import { Realm } from '../src/server/realm';
 import { parseMonsterDefs } from '../src/server/monsters';
 import { parseClientMsg } from '../src/server/validate';
 import { World } from '../src/server/world';
+import { advanceShot, makeShot } from '../src/shared/combat';
 import { TICK_MS } from '../src/shared/constants';
 import { DX, DY, RIGHT } from '../src/shared/dir';
 import { GameMap, type TiledMap, type TiledObject } from '../src/shared/map';
@@ -326,5 +328,56 @@ describe('mapa do formato novo: formas do Tiled', () => {
     expect(game.isWalkable(3, 3)).toBe(true); // o chão não bloqueia
     expect(bodyFits(game, 10.5, 4.6)).toBe(false); // a elipse da colisão bloqueia como a caixa em volta
     expect(bodyFits(game, 13, 4.6)).toBe(true);
+  });
+});
+
+describe('mapa do formato novo: a pedra', () => {
+  /** Uma pedra para o leste com o ponto do chão embaixo dela em y = groundY; devolve como acabou e onde. */
+  function fly(map: GameMap, groundY: number) {
+    const shot = makeShot({ x: 4.5, y: groundY - 1 }, 0, 14, 10); // makeShot soma 0,5; o chão fica 0,5 abaixo da pedra
+    let result: ReturnType<typeof advanceShot> = 'flying';
+    for (let i = 0; i < 100 && result === 'flying'; i++) result = advanceShot(shot, 0.05, map);
+    return { result, x: shot.x };
+  }
+
+  it('para no tronco de verdade, e não no metro inteiro em volta dele', () => {
+    const map = GameMap.fromTiled(metricMap({ solids: [rect(10, 5, 0.3, 0.3)] }), 'teste');
+    const through = fly(map, 5.15); // o chão embaixo da pedra passa pelo tronco
+    expect(through.result).toBe('wall');
+    expect(through.x).toBeGreaterThan(9.9);
+    expect(through.x).toBeLessThan(10.6);
+    expect(fly(map, 5.6).result).toBe('range'); // passa ao lado do tronco, no mesmo metro: antes parava no ar
+  });
+
+  it('passa por cima da água e da grade (bloqueiaTiro falso)', () => {
+    const noShot = { properties: [{ name: 'bloqueiaTiro', type: 'bool', value: false }] };
+    const map = GameMap.fromTiled(metricMap({ solids: [rect(9, 5, 3, 1, noShot)] }), 'teste');
+    expect(fly(map, 5.5).result).toBe('range');
+  });
+});
+
+describe('mapa do formato novo: loja', () => {
+  it('compra de quem está no balcão (pé com fração, como a Budega) de perto, e de longe não', () => {
+    const clock = new FakeClock();
+    const map = GameMap.fromTiled(metricMap(), 'teste');
+    const items = parseItemDefs({ coco: { nome: 'Água de Coco', preco: 8, tipo: 'consumivel', cura: 20, pilha: 20 } });
+    const npcs = parseNpcDefs({ venda: { nome: 'Atendente', mapa: 'teste', x: 6.5, y: 6.3, fala: 'Opa!', loja: { vende: ['coco'], compraPor: 50 } } });
+    const world = new World(map, { now: clock.now, random: () => 0, items, npcs });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    player.inventory.addGold(50);
+    const npc = [...world.npcs.values()][0]!;
+    player.x = 6; // em frente ao balcão, a menos de 2 m do pé da atendente
+    player.y = 7;
+    world.buy(player, npc.id, 'coco', 2);
+    expect(player.inventory.gold).toBe(34);
+    expect(player.inventory.slots.find((stack) => stack?.item === 'coco')?.n).toBe(2);
+    player.x = 14; // longe
+    world.buy(player, npc.id, 'coco', 1);
+    world.tick();
+    expect(player.inventory.gold).toBe(34);
+    expect(conn.ofType('fail').at(-1)).toMatchObject({ reason: 'too_far', item: true });
   });
 });
