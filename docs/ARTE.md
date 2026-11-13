@@ -614,6 +614,12 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   itens; levar a loja e a conversa para o mesmo painel. A barra embaixo do pé (do `combat.ts`) é verde; a da HUD é azul
   como o arco da defesa: combinar com a [estrutura].
 
+### Tela inicial: uma lua só (13/11)
+- O dono achou três luas ("ficou 3 lua kkkk"): a cheia do fundo, uma pequena ao lado do prédio alto e a vermelha de
+  trás do logo. Ficou só a cheia. Em `public/assets/ui`: a pequena foi coberta com o céu em volta (o prédio continua),
+  e a vermelha saiu do logo separando o que é lua do que é prédio ou folha (a lua vira transparente; fica um brilho
+  quente baixo, de cidade). As imagens originais do dono continuam em `docs/referencias/tela-inicial-*.webp`.
+
 ### Etapa 4c (13/11): o fundo do Capão (`js/world/fundo.js`)
 - Os tipos novos do mapa do [mundo] (`mundo/etapa-4c`) viram `map.props` no `tmj.js` e o desenho fica no `fundo.js`,
   pendurado em `PD.city.small` (como as plantas da flora): `trave`, `muro`, `viaduto` (+ `viaduto-mureta`, a mureta da
