@@ -65,6 +65,8 @@ const GUARD_AIM_RANGE = 8;
 /** Defesa levantada: manda a direção nova quando ela muda mais que isto, no máximo a cada GUARD_RESEND_MS. */
 const GUARD_RESEND_ANGLE = (10 * Math.PI) / 180;
 const GUARD_RESEND_MS = 120;
+/** Puxando o estilingue: a mira nova vai para a view quando muda mais que isto (o corpo e os braços acompanham). */
+const PULL_AIM_RESEND = (5 * Math.PI) / 180;
 /** A barra de energia anda até o valor do servidor nesta velocidade (pontos por segundo). */
 const ENERGY_ANIM_PER_S = 80;
 /** Número do dano que passou pela defesa (azul-claro, a cor da defesa). */
@@ -193,7 +195,8 @@ class NewWorld implements NewWorldGame {
   private dashReadyAt = 0;
   private readonly skillReadyAt = SKILLS.map(() => 0);
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
-  private charging: { since: number; aim: Aim } | null = null;
+  /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
+  private charging: { since: number; aim: Aim; sentAngle: number } | null = null;
   /** Soltou durante a recarga do estilingue: a pedra sai assim que der. */
   private pendingShot: { at: number; aim: Aim; since: number } | null = null;
   /** Defesa (passo 2b): segurando F ou o botão? Virada para onde (radianos)? O que já foi mandado ao servidor. */
@@ -345,7 +348,7 @@ class NewWorld implements NewWorldGame {
       get me() {
         if (!game.predicted) return null; // ainda carregando o mapa
         const feet = feetAt(game.predicted.x, game.predicted.y);
-        return { id: game.myId, x: game.predicted.x, y: game.predicted.y, feetX: feet.x, feetY: feet.y, map: game.map?.id };
+        return { id: game.myId, x: game.predicted.x, y: game.predicted.y, feetX: feet.x, feetY: feet.y, angle: game.myAngle, map: game.map?.id };
       },
       walkTo: (x: number, y: number) => game.walkToPoint(x, y),
       walking: () => game.route.length > 0,
@@ -427,6 +430,7 @@ class NewWorld implements NewWorldGame {
 
   destroy(): void {
     this.destroyed = true;
+    this.sfx.stopCharge(); // saiu no meio da puxada: o zumbido do elástico não fica tocando
     cancelAnimationFrame(this.raf);
     clearInterval(this.pingTimer);
     this.container.removeEventListener('pointerdown', this.onPointerDown);
@@ -464,6 +468,7 @@ class NewWorld implements NewWorldGame {
     const workStart = performance.now();
     this.handleMovement(now);
     this.handlePendingShot(now);
+    this.updateCharge(now);
     this.updateGuard(now);
     this.updateConversation(now);
     this.checkNpcArrival();
@@ -981,10 +986,35 @@ class NewWorld implements NewWorldGame {
     if (this.dead || this.charging || this.guardHeld) return; // defendendo, as mãos estão ocupadas
     if (this.refuseInSafeArea(now)) return;
     this.pendingShot = null;
-    this.charging = { since: now, aim };
+    const angle = this.aimFor(aim, 0);
+    this.charging = { since: now, aim, sentAngle: angle };
     this.conn.send({ t: 'charge' });
     this.combat.setCharge(this.myId, now);
-    this.view?.action?.(this.myId, 'sling-pull');
+    this.view?.action?.(this.myId, 'sling-pull', toDegrees(angle)); // já puxa para a mira
+    this.faceStill(angle, now);
+  }
+
+  /**
+   * A cada quadro, puxando: o som do elástico sobe com a carga, e a mira acompanha o alvo (ou o mouse): a view vira
+   * os braços e o corpo quando ela muda mais que PULL_AIM_RESEND. O servidor só fica sabendo da direção no tiro.
+   */
+  private updateCharge(now: number): void {
+    const charging = this.charging;
+    if (!charging) return;
+    const charge = chargeFraction(now - charging.since, this.rules);
+    this.sfx.charge(charge);
+    const angle = this.aimFor(charging.aim, charge);
+    if (Math.abs(angleDiff(charging.sentAngle, angle)) > PULL_AIM_RESEND) {
+      charging.sentAngle = angle;
+      this.view?.action?.(this.myId, 'sling-pull', toDegrees(angle));
+    }
+    this.faceStill(angle, now);
+  }
+
+  /** Parado, o corpo vira para `angle` (andando, o andar cuida de para onde ele olha). */
+  private faceStill(angle: number, now: number): void {
+    if (now - this.lastWalkAt <= 200) return;
+    if (Math.abs(angleDiff((this.myAngle * Math.PI) / 180, angle)) > 0.05) this.faceAngle(toDegrees(angle));
   }
 
   /** Soltou: a pedra sai com a carga que juntou (durante a recarga, sai assim que der). */
@@ -992,6 +1022,7 @@ class NewWorld implements NewWorldGame {
     const charging = this.charging;
     if (!charging) return;
     this.charging = null;
+    this.sfx.stopCharge();
     this.combat.setCharge(this.myId, null);
     // durante a recarga, sai assim que der, com a carga contada até lá (o servidor conta igual, até o tiro chegar)
     if (now < this.nextShotAt) this.pendingShot = { at: this.nextShotAt, aim: charging.aim, since: charging.since };
@@ -1003,6 +1034,7 @@ class NewWorld implements NewWorldGame {
     const pulling = this.charging !== null || this.pendingShot !== null;
     this.charging = null;
     this.pendingShot = null;
+    this.sfx.stopCharge();
     this.combat.setCharge(this.myId, null);
     // a view volta da pose de puxar (o 'sling-pull' começa a pose; o 'shoot' ou este 'sling-cancel' terminam)
     if (pulling) this.view?.action?.(this.myId, 'sling-cancel');
@@ -1017,6 +1049,11 @@ class NewWorld implements NewWorldGame {
 
   /** Atira para onde a mira manda: no monstro (onde ele está de verdade), para o mouse, ou no mais perto. */
   private fireAim(aim: Aim, charge: number, now: number): boolean {
+    return this.tryShoot(this.aimFor(aim, charge), now, charge);
+  }
+
+  /** Para onde a mira manda agora (a mesma conta na puxada e no tiro). */
+  private aimFor(aim: Aim, charge: number): number {
     let angle: number | null = null;
     if (aim.by === 'target') {
       const target = this.entities.get(aim.id);
@@ -1025,7 +1062,7 @@ class NewWorld implements NewWorldGame {
       angle = this.mouseAim();
     }
     // a mira automática procura até onde esta pedra chega (com carga cheia, mais longe)
-    return this.tryShoot(angle ?? this.autoAim(chargedRange(charge, this.map.metric, this.rules) + AUTO_AIM_SLACK), now, charge);
+    return angle ?? this.autoAim(chargedRange(charge, this.map.metric, this.rules) + AUTO_AIM_SLACK);
   }
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
@@ -1136,7 +1173,6 @@ class NewWorld implements NewWorldGame {
     this.guardHeld = true;
     this.guardAngle = this.guardAim(now, true);
     this.sendGuard(now);
-    this.view?.action?.(this.myId, 'guard', toDegrees(this.guardAngle));
   }
 
   /** Soltou: baixa a defesa (a energia volta um pouco depois). */
@@ -1153,10 +1189,12 @@ class NewWorld implements NewWorldGame {
     this.guardButton.reset();
   }
 
+  /** Manda a defesa (e a direção dela) ao servidor; a view vira os braços para lá (ao levantar e quando a mira muda). */
   private sendGuard(now: number): void {
     this.guardSentAngle = this.guardAngle;
     this.guardSentAt = now;
     this.conn.send({ t: 'guard', on: true, a: round3(this.guardAngle) });
+    this.view?.action?.(this.myId, 'guard', toDegrees(this.guardAngle));
   }
 
   /**
@@ -1365,7 +1403,8 @@ class NewWorld implements NewWorldGame {
       this.myHp = hp;
       this.hud.setHp(hp, this.myMaxHp);
       if (blocked) {
-        this.sfx.play('hit'); // pancada na defesa (sem o vermelho na tela)
+        // pancada seca na defesa (sem o vermelho na tela); se quebrou, o som da quebra vem com a energia ('energy')
+        if (blocked === 1) this.sfx.play('block');
         this.combat.floater(id, `-${dmg}`, BLOCKED_COLOR, now);
         return;
       }
@@ -1668,6 +1707,7 @@ class NewWorld implements NewWorldGame {
           // a energia acabou: a defesa cai (solte e espere a energia voltar para levantar de novo)
           this.combat.note(this.myId, 'defesa quebrou!', '#f3a25b', performance.now());
           this.view?.action?.(this.myId, 'guard-break');
+          this.sfx.play('guard-break'); // quebrou num golpe ou segurando até acabar a energia: o mesmo som
         }
         break;
       }

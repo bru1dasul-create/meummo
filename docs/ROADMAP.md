@@ -353,10 +353,13 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   para os outros jogadores também (o tiro deles mostra a puxada curta e o soltar). Sons novos no `sfx.ts`: zumbido do
   elástico subindo com a carga e o "plim" da carga cheia, pancada da defesa e a defesa quebrando — ligados pela
   [estrutura] no motor (pedido enviado). Conferido no PC e no celular (botão Estilingue), sem erros
-- [ ] **[estrutura]** Ligar o combate do herói no motor (pedido da [arte], 13/11): `sfx.charge(carga)` a cada quadro da
-  puxada e `sfx.stopCharge()` ao soltar/cancelar/desmaiar; `sfx.play('block')` e `sfx.play('guard-break')` no lugar do
-  `'hit'` na defesa; o ângulo da mira no `'sling-pull'` (e de novo quando a mira mudar) e no `'guard'` quando a defesa
-  vira
+- [x] **[estrutura]** Ligar o combate do herói no motor (pedido da [arte], 13/11): `sfx.charge(carga)` a cada quadro da
+  puxada e `sfx.stopCharge()` ao soltar/cancelar/desmaiar (e ao sair do jogo); `'block'` quando a defesa segura e
+  `'guard-break'` quando ela quebra (um som só, na mensagem `energy`, quebrando num golpe ou segurando até acabar); a
+  mira no `'sling-pull'` desde o começo e de novo quando muda mais de 5° (a mesma conta do tiro: alvo, mouse ou o
+  mais perto); parado, o corpo vira junto (a view vira o parado para o ângulo do motor); o `'guard'` vai com o ângulo
+  sempre que a defesa é reenviada. Conferido no PC e no celular: puxando perto de um sagui, o herói vira para ele
+  antes de soltar (`__mundoNovo.me.angle`)
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
