@@ -95,7 +95,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     x 16 a 26 × y 92 a 112. Entra na `main` depois da 4b e do desenho dessas coisas pela [arte] (senão o bambu vira
     parede invisível e o deque parece água). Para aumentar de novo depois (o dono perguntou): subir `H` e pôr as
     coisas novas no sul; o que existe não muda de lugar, nem os NPCs (`data/npcs.json`).
-  - **4c (prévia no ramo `mundo/etapa-4c`, por cima da mata nova, esperando o "pode" do dono):** campinho de várzea
+  - **4c (aprovada pelo dono em 13/11; ramo `mundo/etapa-4c`, por cima da mata nova; espera o desenho da [arte]):** campinho de várzea
     (60 a 85 × 63 a 78, `campinho` com linhas, duas `trave`, capivaras pastando, bancos) e o `muro` com grafite a oeste
     dele (pintura virada para o campo); `viaduto` da Linha 5-Lilás (y 2 a 6, a 8 m, quebrado na ponta do parque, com
     mato), 4 `pilar-viaduto`, o `trem` lilás (3 vagões) e `cipo`; o `onibus` velho (70 a 86 × 12,5 a 15,5); a rua para
