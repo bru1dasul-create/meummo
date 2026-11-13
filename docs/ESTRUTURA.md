@@ -75,6 +75,18 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — tela inicial nova (imagem do dono), a parte do servidor:** o dono confirmou o nome (**Selva de Pedra**; a
+primeira imagem dizia "Selva de Concreto" por engano) e concordou em deixar fora o que só funciona com o jogo na
+internet (Google, e-mail, "esqueceu a senha") e o "Sair do Jogo". Mandou o fundo limpo e o logo (em
+`docs/referencias/`; o fundo veio com alfa de 170 a 250, avisei a [arte]). Feito por mim: `mode` no `hello`
+(protocolo 23): 'login' não cria (nome errado deixava de criar personagem sem querer), 'create' não entra (nome com
+dono = `name_exists`, sem conferir a senha); sem `mode`, como sempre (tela de hoje e bots). No `main.ts`, a troca
+Entrar/Criar liga sozinha quando a [arte] puser `#mode-toggle`, `#login-title` e `#password2`; quem nunca entrou no
+aparelho começa em Criar. Painel: **trocar senha** de qualquer personagem salvo (`POST /admin/api/senha`; a senha não
+vai para o registro; as tentativas erradas daquele nome são esquecidas). Teste em `tests/conta.test.ts`; no navegador,
+conferido com os elementos colocados pelo teste (o `route.fulfill` do Playwright não serve: o Chromium trata a
+página como de fora e bloqueia o WebSocket local — `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`; use `addInitScript`).
+
 **13/11 — conversa com NPC, parte 1 (pedido do dono no meio do 2c):** "a câmera deve se posicionar na Xiovanna e
 vir a msg por cima com ela falando (mexendo a boca)", igual ao aceitar/desistir e em qualquer conversa direta. Minha
 parte: modo conversa no motor (`updateConversation`): ao abrir missão ou loja, zoom suave até 1,25 e `focus` na
@@ -196,10 +208,10 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **22** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+Números para não se perder: protocolo na versão **23** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
 `slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo; 20: objetivo `talk` e
 `goalLabel` nas missões; 21: `charge`, começar a puxar o estilingue; 22: `guard` e `energy`, a defesa, e `blk` no
-`hit`); `MIGRATIONS` no
+`hit`; 23: `mode` no `hello`, entrar ou criar conta); `MIGRATIONS` no
 passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes

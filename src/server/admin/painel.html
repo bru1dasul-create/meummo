@@ -624,9 +624,27 @@
         };
         message.addEventListener('keydown', (event) => event.key === 'Enter' && sendNotice());
         const notice = el('div', { class: 'notice' }, el('strong', { text: 'Aviso para todos' }), message, el('button', { class: 'act', type: 'button', text: 'Enviar', onclick: sendNotice }));
+        // Trocar senha (quem esqueceu): vale para qualquer personagem salvo, online ou não. A senha não vai para o registro.
+        const pwName = el('input', { type: 'text', maxlength: '32', placeholder: 'Nome do personagem', autocomplete: 'off' });
+        const pwValue = el('input', { type: 'text', maxlength: '64', placeholder: 'Senha nova (6 ou mais)', autocomplete: 'off' });
+        const changePassword = async () => {
+          const nome = pwName.value.trim();
+          const senha = pwValue.value;
+          if (!nome || !senha) return toast('Escreva o nome do personagem e a senha nova.', true);
+          if (!confirm(`Trocar a senha de ${nome}? A senha antiga deixa de valer.`)) return;
+          try {
+            const res = await fetch('/admin/api/senha', { method: 'POST', headers: HEADERS, body: JSON.stringify({ nome, senha }) });
+            const result = await res.json();
+            toast(result.ok ? result.texto : `Não deu: ${result.erro}`, !result.ok);
+            if (result.ok) pwValue.value = '';
+          } catch (error) {
+            toast(`Não consegui falar com o servidor: ${error.message}`, true);
+          }
+        };
+        const password = el('div', { class: 'notice', id: 'password-reset' }, el('strong', { text: 'Trocar senha' }), pwName, pwValue, el('button', { class: 'act', type: 'button', text: 'Trocar', onclick: changePassword }));
         const list = el('div', { class: 'cards', id: 'players' });
         for (const p of state.players.jogadores) list.append(playerCard(p));
-        content.replaceChildren(notice, state.players.jogadores.length ? list : el('p', { class: 'empty', id: 'players', text: 'Ninguém online agora.' }));
+        content.replaceChildren(notice, password, state.players.jogadores.length ? list : el('p', { class: 'empty', id: 'players', text: 'Ninguém online agora.' }));
       }
 
       /** Atualiza só os números (posição, vida, ouro) sem apagar o que você está digitando; quem entrou ou saiu redesenha. */

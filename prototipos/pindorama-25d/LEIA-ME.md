@@ -21,8 +21,9 @@ Os scripts que ela precisa, na ordem, estão em `view-scripts.json`; no jogo, qu
 `src/client/novo/arte.ts`. No jogo, o personagem vira mais depressa que no treino (virada ágil, escolha do dono:
 o servidor muda de direção na hora); `node ferramentas/seguir.cjs` mede o atraso e o pé na virada normal e na ágil. O mapa vem do `.tmj` do [mundo] (`public/assets/maps-iso/capao.tmj`), lido por
 `js/world/tmj.js`: chão (mata, grama, terra, asfalto, trilhas e o círculo ancestral que acende), árvores por espécie
-(a Figueira dos Despertos com raízes e símbolos que brilham, ipês, mata), arbustos, pedras, gradil, Portão I, pilares,
-poste e os pontos do Véu. Para testar sem o servidor: `clareira.html`, aberta por um servidor (com o jogo ligado,
+(a Figueira dos Despertos com raízes e símbolos que brilham, ipês, mata, seca), arbustos, pedras, gradil, Portão I, pilares,
+poste e os pontos do Véu. A flora da mata nova (jerivá, embaúba, xaxim, bananeira, bambu, samambaia, helicônia,
+taboa, cogumelo, deque e pinguela) é desenhada em `js/world/flora.js`. Para testar sem o servidor: `clareira.html`, aberta por um servidor (com o jogo ligado,
 `npm run dev` e `http://localhost:5173/prototipos/pindorama-25d/clareira.html`). Um "servidor de mentira" corre a
 4,5 m/s (anda a 2 m/s com Shift, como o jogo) e manda a posição a cada 50 ms, como o motor de verdade.
 
