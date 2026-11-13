@@ -599,6 +599,90 @@ for (const y of [GATE.y0, GATE.y1]) cenario.push(rect('pilar', PARK_X - 0.3, PAR
 // poste com luz quente do lado de fora do portão (aparece entre as grades)
 cenario.push(point('poste', POSTS[0]![0], POSTS[0]![1], { altura: reached('4b') ? 7 : 4.2, luz: '#ffd36b' }));
 
+// ---------------- padrão novo no parque (13/11): o Parque Santo Dias de antes, engolido pela floresta ----------------
+// A cidade tomada pela mata também dentro do parque: a placa da entrada, bancos de concreto, postes de parque apagados e
+// tortos, lixeiras, um bebedouro, pedaços da pista de caminhada de cimento e a academia ao ar livre enferrujada na
+// Clareira das Bananeiras. Tudo fora das trilhas e sem vão de entalar (sorteio SEED + 13: a mata não muda).
+if (FLORESTA) {
+  /** As caixas sólidas do parque que já existem (troncos, pedras, moitas, gradil, pilares), para não encostar errado. */
+  const solids: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const sq = (x: number, y: number, side: number) => ({ x0: x - side / 2, x1: x + side / 2, y0: y - side / 2, y1: y + side / 2 });
+  for (const s of cenario) {
+    const p = s.props ?? {};
+    if (s.type === 'arvore') solids.push(sq(s.x, s.y, Number(p.tronco)));
+    else if (s.type === 'pedra') solids.push(sq(s.x, s.y, round(Number(p.raio) * 1.5)));
+    else if (s.type === 'arbusto' && p.fechado) solids.push(sq(s.x, s.y, round(Number(p.raio) * 1.8)));
+    else if (s.type === 'bambu') solids.push(sq(s.x, s.y, round(Number(p.raio) * 1.6)));
+    else if (s.type === 'poste') solids.push(sq(s.x, s.y, 0.3));
+    else if (['tronco-caido', 'gradil', 'pilar', 'portao'].includes(s.type)) solids.push({ x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! });
+  }
+  /** Cabe aqui sem encostar errado: longe da trilha e da água, e nenhum vão de 0 a 1,2 m de frente para outra coisa sólida. */
+  const fits = (r: { x0: number; x1: number; y0: number; y1: number }, trailMargin: number) => {
+    const [cx, cy] = [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2];
+    const half = Math.max(r.x1 - r.x0, r.y1 - r.y0) / 2;
+    if (trailGap(cx, cy) < half + trailMargin || waterGap(cx, cy) < half + 0.6) return false;
+    return solids.every((s) => {
+      const dx = Math.max(0, s.x0 - r.x1, r.x0 - s.x1);
+      const dy = Math.max(0, s.y0 - r.y1, r.y0 - s.y1);
+      return (dx > 0 && dy > 0) || dx + dy >= MIN_GAP;
+    });
+  };
+  /** Procura, perto de (x, y), o primeiro lugar onde a caixa cabe (anda em espiral, de 0,25 em 0,25 m). */
+  function near(x: number, y: number, w: number, h: number, trailMargin: number): [number, number] {
+    for (let d = 0; d <= 3; d += 0.25) {
+      for (let k = 0; k < (d === 0 ? 1 : 16); k++) {
+        const [px, py] = [round(x + Math.cos((k / 16) * Math.PI * 2) * d), round(y + Math.sin((k / 16) * Math.PI * 2) * d)];
+        const r = { x0: px - w / 2, x1: px + w / 2, y0: py - h / 2, y1: py + h / 2 };
+        if (fits(r, trailMargin)) {
+          solids.push(r);
+          return [px, py];
+        }
+      }
+    }
+    throw new Error(`Não achei lugar para uma coisa do parque antigo perto de (${x}, ${y}).`);
+  }
+  // a placa da entrada, do lado de dentro do portão (atrás da trilha, para a câmera)
+  {
+    const [x, y] = near(46.2, 40, 0.2, 0.2, 0.6);
+    cenario.push(point('placa', x, y, { texto: 'PARQUE SANTO DIAS', poste: true, tamanho: 'grande', mato: true }));
+  }
+  // o bebedouro, perto do portão
+  {
+    const [x, y] = near(45.3, 46.8, 0.5, 0.5, 0.4);
+    cenario.push(point('bebedouro', x, y, { quebrado: true, musgo: true }));
+  }
+  // bancos de concreto com mato na beira das trilhas (virados para a trilha), cada um com a sua lixeira encostada
+  for (const [tx, ty, olhando] of [[40.8, 17.2, 180], [21.4, 36.6, 90], [31.7, 62.5, 180]] as [number, number, number][]) {
+    const along = olhando === 90 || olhando === 270; // o banco é comprido no sentido da trilha
+    const [w, h] = along ? [1.6, 0.5] : [0.5, 1.6];
+    const [x, y] = near(tx, ty, w + (along ? 0.5 : 0), h + (along ? 0 : 0.5), 0.35); // (com o lugar da lixeira)
+    const bench = along ? { x0: x - 1.05, x1: x + 0.55, y0: y - 0.25, y1: y + 0.25 } : { x0: x - 0.25, x1: x + 0.25, y0: y - 1.05, y1: y + 0.55 };
+    cenario.push(rect('banco', bench.x0, bench.x1, bench.y0, bench.y1, { olhando, material: 'concreto', mato: true }));
+    const bin = along ? [x + 0.8, y] : [x, y + 0.8];
+    cenario.push(point('lixeira', bin[0]!, bin[1]!, { mato: true }));
+  }
+  // postes de parque apagados, tortos e com cipó, na beira das trilhas
+  for (const [tx, ty] of [[45.8, 35.5], [26, 37.6], [31.8, 55.2]] as const) {
+    const [x, y] = near(tx, ty, 0.25, 0.25, 0.35);
+    cenario.push(point('poste-praca', x, y, { altura: 3.2, apagado: true, torto: true, cipo: true }));
+  }
+  // a academia ao ar livre enferrujada, no lado leste da Clareira das Bananeiras (fora da trilha)
+  for (const [tx, ty, aparelho] of [[30.4, 77.2, 'simulador-caminhada'], [31.2, 80.2, 'barra'], [30.4, 83.2, 'remada']] as const) {
+    const [x, y] = near(tx, ty, 1.2, 0.8, 0.5);
+    cenario.push(rect('academia', x - 0.6, x + 0.6, y - 0.4, y + 0.4, { aparelho, ferrugem: true, cipo: true, altura: 1.6 }));
+  }
+  // pedaços da pista de caminhada de cimento, rachados, na beira da trilha do portão e no começo da trilha do norte
+  const prng = mulberry32(SEED + 13);
+  for (const [cx, cy] of [[40, 45.2], [43.2, 42.9], [45.6, 44.9], [43.9, 38], [44.3, 33.5]] as const) {
+    const pts: [number, number][] = Array.from({ length: 6 }, (_, i) => {
+      const a = (i / 6) * Math.PI * 2 + prng() * 0.4;
+      const r = 0.6 + prng() * 0.5;
+      return [round(cx + Math.cos(a) * r * 1.3), round(cy + Math.sin(a) * r * 0.9)];
+    });
+    chao.push({ type: 'calcada', x: 0, y: 0, polygon: pts, props: { desenho: 'placas', quebrada: true, cor: '#8f8c82' } });
+  }
+}
+
 // ---------------- etapa 4b: o Portão I abre para a Vila do Capão ----------------
 /**
  * Pontos da vila que a câmera precisa ver (x, y, altura): o portão, a Travessa, a rua, o balcão e o letreiro da Budega
@@ -1050,6 +1134,9 @@ for (const s of cenario) {
   else if (s.type === 'moto' || s.type === 'lixo') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'placa-rua') colisao.push(block('placa-rua', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.6 }));
   else if (s.type === 'cadeira') colisao.push(block('cadeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 }));
+  // o parque antigo: a academia ao ar livre e o bebedouro são baixos (a pedrinha passa)
+  else if (s.type === 'academia') colisao.push(rect('academia', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'bebedouro') colisao.push(block('bebedouro', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 1 }));
   else if (s.type === 'vaso') colisao.push(block('vaso', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.6 }));
 }
 // na vila, nenhum vão estreito entre duas coisas sólidas de frente uma para a outra: abaixo de 0,3 m o pé nem entra; de
