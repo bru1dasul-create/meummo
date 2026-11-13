@@ -753,6 +753,8 @@ if (reached('4b') && FLORESTA) {
   // a calçada é de placas de cimento (com juntas); a praça de pedra portuguesa ganha musgo nas frestas
   for (const c of chao.filter((o) => o.type === 'calcada')) c.props = { ...c.props, desenho: 'placas' };
   for (const c of chao.filter((o) => o.type === 'praca')) c.props = { ...c.props, musgo: true };
+  // (as linhas e manchas novas levam `largura` e `cor`: um desenho que ainda não conhece o tipo mostra só um traço fino
+  // na cor certa, e não uma faixa larga de terra)
   /** O meio-fio (com a sarjeta do lado do asfalto) em toda beira de calçada com asfalto. */
   const CURBS: [number, number][][] = [
     [[49.5, 0], [49.5, VILLAGE_S]],
@@ -760,7 +762,7 @@ if (reached('4b') && FLORESTA) {
     [[56, VILLAGE_S], [56, STREET.y1], [ROAD_S.x0, STREET.y1], [ROAD_S.x0, VILLAGE_S]],
     [[W, STREET.y1], [ROAD_S.x1, STREET.y1], [ROAD_S.x1, VILLAGE_S]],
   ];
-  for (const pts of CURBS) chao.push({ type: 'meio-fio', x: 0, y: 0, polyline: pts, props: { altura: 0.15, sarjeta: true } });
+  for (const pts of CURBS) chao.push({ type: 'meio-fio', x: 0, y: 0, polyline: pts, props: { altura: 0.15, largura: 0.2, sarjeta: true, cor: '#bdb6a8' } });
   // a faixa amarela do meio, tracejada e apagada (na Travessa, interrompida pela faixa de pedestre)
   const CENTER_LINES: [number, number][][] = [
     [[57.5, 44], [W - 0.5, 44]],
@@ -768,7 +770,7 @@ if (reached('4b') && FLORESTA) {
     [[52.75, 0.5], [52.75, 42]],
     [[52.75, 46], [52.75, VILLAGE_S - 0.5]],
   ];
-  for (const pts of CENTER_LINES) chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: pts, props: { cor: 'amarela', tracejada: true, apagada: true } });
+  for (const pts of CENTER_LINES) chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: pts, props: { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true } });
   // remendos de asfalto (mais escuros), buracos com água e poças na beira da sarjeta
   const PATCHES: [number, number][][] = [
     [[59.5, 42.2], [62.8, 42], [63.1, 43.9], [59.8, 44.1]],
@@ -776,12 +778,12 @@ if (reached('4b') && FLORESTA) {
     [[89.6, 55.2], [91.4, 55], [91.6, 58.6], [89.8, 58.8]],
     [[51.2, 19.4], [54.4, 19.2], [54.6, 21.6], [51.4, 21.8]],
   ];
-  for (const pts of PATCHES) chao.push({ type: 'remendo', x: 0, y: 0, polygon: pts });
+  for (const pts of PATCHES) chao.push({ type: 'remendo', x: 0, y: 0, polygon: pts, props: { cor: '#2c2f33' } });
   for (const [x, y, raio] of [[66.6, 45.7, 0.45], [81.4, 42.3, 0.55], [91.9, 66.5, 0.5], [52.5, 52, 0.45]] as const) {
     chao.push(point('buraco', x, y, { raio, agua: true }));
   }
   for (const [x, y, rx, ry] of [[72.5, 46.5, 1.1, 0.35], [52.9, 34.5, 0.8, 0.5], [88.6, 64, 0.35, 1]] as const) {
-    chao.push({ type: 'poca', x: x - rx, y: y - ry, w: 2 * rx, h: 2 * ry, ellipse: true });
+    chao.push({ type: 'poca', x: x - rx, y: y - ry, w: 2 * rx, h: 2 * ry, ellipse: true, props: { cor: '#56788c' } });
   }
   /** Onde é asfalto (para as rachaduras não saírem dele nem entrarem na faixa de pedestre). */
   const onAsphalt = (x: number, y: number) =>
@@ -805,7 +807,7 @@ if (reached('4b') && FLORESTA) {
       pts.push([round(x), round(y)]);
     }
     if (pts.length < 3) continue;
-    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { mato: frng() < 0.6 } });
+    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { largura: 0.06, cor: '#1e2022', mato: frng() < 0.6 } });
     n++;
   }
   // bueiros na sarjeta e tampas no meio da rua (enfeite: o pé passa por cima)
@@ -845,7 +847,7 @@ if (reached('4b') && FLORESTA) {
     [[76.4, 58.4], [75.2, 58.9], [73.8, 58.7]],
     [[77.6, 58.5], [78.4, 59.6]],
   ];
-  for (const pts of ROOTS) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.35, altura: 0.2 } });
+  for (const pts of ROOTS) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.35, altura: 0.2, cor: '#6b4a2e' } });
 
   // ----- a mata tomando as casas, os postes e os fios -----
   /** Cipó na fachada (0 a 1), plantas na laje, árvore na laje (só nas casas do norte: atrás da rua, não tampam nada) e varal. */
