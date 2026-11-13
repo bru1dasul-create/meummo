@@ -44,8 +44,9 @@ export interface WorldView {
    * Animação curta de alguém: 'windup' (preparando um golpe), 'shoot' (estilingue, ou o monstro jogando algo),
    * 'arc' (Bordunada), 'dash' (esquiva, sua ou de outro jogador), 'hurt' (levou golpe), 'die' (monstro caiu: o motor
    * tira o desenho 0,7 s depois),
-   * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou) e os golpes dos monstros ('bite', 'strike',
-   * 'charge', 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
+   * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou), 'sling-pull' (começou a puxar o estilingue:
+   * termina com 'shoot' ou, sem atirar, com 'sling-cancel') e os golpes dos monstros ('bite', 'strike', 'charge' =
+   * investida, 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
    */
   action?(id: number, kind: string, angle?: number): void;
   /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */
@@ -54,6 +55,15 @@ export interface WorldView {
   setZoom?(factor: number): number;
   /** Sinal de missão em cima de um NPC: '!' tem missão nova, '?' tem missão para concluir, '' nada. */
   mark?(id: number, mark: '!' | '?' | ''): void;
+
+  // ---- opcionais (conversa com NPC) ----
+  /**
+   * Modo conversa: a câmera vai, com suavidade, olhar para este ponto do chão (metros; o pé de quem fala) em vez de
+   * seguir o seu personagem; null volta a seguir. O motor cuida do zoom (chega mais perto com setZoom).
+   */
+  focus?(point: { x: number; y: number } | null): void;
+  /** `id` está falando por `ms` (boca e gestos, sem balão: o texto está na janela de conversa); 0 para de falar. */
+  talk?(id: number, ms: number): void;
 }
 
 // ======================= desenho provisório =======================
@@ -144,6 +154,8 @@ export class ProvisionalView implements WorldView {
   private readonly safe: Shape[] = [];
   private readonly canopies: { x: number; y: number; r: number }[] = [];
   private followId: number | null = null;
+  /** Modo conversa: a câmera olha para este ponto em vez de seguir alguém. */
+  private focusPoint: { x: number; y: number } | null = null;
   private camX = 0;
   private camY = 0;
   /** Pixels por metro (muda com o tamanho da tela e com o zoom do jogador). */
@@ -253,9 +265,9 @@ export class ProvisionalView implements WorldView {
   frame(now: number): void {
     this.lastNow = now;
     const target = this.followId !== null ? this.actors.get(this.followId) : undefined;
-    if (target) {
-      const at = this.position(target, now);
-      // câmera acompanha macio
+    const at = this.focusPoint ?? (target ? this.position(target, now) : null);
+    if (at) {
+      // câmera acompanha macio (na conversa, vai até quem fala)
       this.camX += (at.x - this.camX) * 0.2;
       this.camY += (at.y - this.camY) * 0.2;
     }
@@ -309,6 +321,14 @@ export class ProvisionalView implements WorldView {
     this.canvas.height = Math.round(h * devicePixelRatio);
     // a escolha do dono: no normal, uns 14 × 16 m de chão na tela
     this.scale = Math.max(22, Math.min(70, Math.min(w / 16, h / 10))) * this.zoomUser;
+  }
+
+  focus(point: { x: number; y: number } | null): void {
+    this.focusPoint = point;
+  }
+
+  talk(): void {
+    // o desenho provisório não tem boca: quem fala só aparece na janela de conversa
   }
 
   setZoom(factor: number): number {

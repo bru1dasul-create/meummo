@@ -43,14 +43,21 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 | Ação | Computador | Celular |
 |---|---|---|
-| Andar | `W` `A` `S` `D` / setas (duas juntas = diagonal, ex.: `W`+`D`), ou botão direito no chão | toque no chão |
-| Estilingue | mire com o mouse e clique (segure para continuar) | toque no monstro ou segure **Estilingue** |
+| Andar | `W` `A` `S` `D` / setas, ou clique no chão (`Shift` anda devagar) | joystick ou toque no chão |
+| Estilingue | **segure e solte**: botão esquerdo em cima do monstro, botão direito (vai para o mouse) ou `J` (no monstro mais perto). Quanto mais segurar (até ~1 s), mais forte e mais longe | segure e solte o botão **Estilingue**; toque rápido no monstro = pedra fraca na hora |
 | Bordunada (golpe em arco) | `Q` | botão **Bordunada** |
 | Fôlego (cura) | `E` | botão **Fôlego** |
 | Esquiva | `Espaço` | botão **Esquiva** |
+| Defesa (segura os golpes da frente e gasta energia) | segure `F` | segure o botão **Defesa** |
+| Comida e remédio (atalhos) | `3` e `4` | os dois botões redondos |
+| Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
 | Som ligado/desligado | `M` ou 🔊 no painel | 🔊 no painel |
+
+Levar um golpe, esquivar ou levantar a defesa solta a pedra que você estava puxando. A defesa vira sozinha para o
+monstro mais perto; a barra embaixo do pé é a energia dela (acabou, ela quebra: solte e espere voltar). O jogo
+antigo (visto de cima, em `?antigo`) tem os controles de antes: clique para atirar e botão direito no chão para andar.
 
 A visão do jogo está em [docs/DESIGN.md](docs/DESIGN.md) e o que vem depois em [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -151,7 +158,8 @@ por cima deles.
 
 Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` ([mínimo, máximo]),
 `passoMs` (tempo para andar um quadrado — menor é mais rápido), `alcanceAgressao`, `xp`, `renascerMs`
-e o `ataque` (`tipo`: `mordida`, `bote`, `giro`, `projetil` ou `investida`; `preparoMs` é o tempo do aviso vermelho).
+e o `ataque` (`tipo`: `mordida`, `bote`, `giro`, `projetil` ou `investida`; `preparoMs` é o tempo do aviso vermelho;
+`recuo` é quanto o golpe empurra quem leva, em centímetros — sem ele, vale o do tipo: 12 a 34).
 Na `investida`, o monstro corre `alcance` tiles em linha reta atropelando quem estiver no caminho; com
 `"rastroFogo": { "duracaoMs": 2500, "dano": [4, 7] }` o caminho fica pegando fogo e queima quem fica em cima.
 O `canto` (a Iara) encanta quem fica perto: `"canto": { "cadaMs": 10000, "alcance": 5, "preparoMs": 1300,

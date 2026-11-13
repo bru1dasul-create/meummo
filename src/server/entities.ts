@@ -8,7 +8,8 @@ import type { MonsterZone, Tile } from '../shared/map';
 import { footTile } from '../shared/movement';
 import type { GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
-import type { EntityState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
+import { GUARD_MAX_ENERGY } from '../shared/constants';
+import type { EntityState, GuardState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
 import type { QuestLog } from '../shared/quests';
 import { SKILLS } from '../shared/skills';
 import { Inventory } from './inventory';
@@ -41,7 +42,8 @@ export class Player {
   /** Ids de quem este jogador está vendo agora. */
   readonly known = new Set<number>();
   /** Pedaços de caminhada/esquivas pedidos e ainda não processados (o servidor anda no ritmo dele). */
-  readonly queue: { seq: number; a: number; dash: boolean; slow: boolean }[] = [];
+  /** `guard`: segurava a defesa quando pediu este pedaço (anda devagar; vale a ordem das mensagens, como no navegador). */
+  readonly queue: { seq: number; a: number; dash: boolean; slow: boolean; guard: boolean }[] = [];
   /** Quanto tempo de caminhada o jogador ainda pode gastar agora (enche com o relógio, até um limite). */
   walkBudget = 0;
   /** Quando o orçamento de caminhada foi enchido pela última vez (0 = ainda não). */
@@ -85,6 +87,23 @@ export class Player {
   /** Até aqui os monstros não "percebem" este jogador sozinhos (acabou de entrar, chegar ou acordar). */
   unnoticedUntil = 0;
   nextShotAt = 0;
+  /** Puxando o estilingue desde quando (pedra com carga), ou null. Esquiva, golpe recebido e desmaio cancelam. */
+  chargeStart: number | null = null;
+  /** Defesa (passo 2b): segurando o botão? Virada para onde (radianos)? Levantada desde quando (null = baixada)? */
+  guardWanted = false;
+  guardAngle = 0;
+  guardUpAt: number | null = null;
+  /** Quebrou: só levanta de novo soltando o botão, depois de guardBrokenUntil e com energia para isso. */
+  guardBroken = false;
+  guardBrokenUntil = 0;
+  /** Energia da defesa (0 a GUARD_MAX_ENERGY; não fica salva) e a partir de quando ela volta. */
+  energy = GUARD_MAX_ENERGY;
+  energyRegenAt = 0;
+  energyClock = 0;
+  /** O que o navegador já sabe da energia (manda de novo só quando muda). */
+  energySent = GUARD_MAX_ENERGY;
+  energySentAt = 0;
+  guardSent: GuardState = 'off';
   dashReadyAt = 0;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);
   lastDamagedAt = -Infinity;
@@ -289,4 +308,6 @@ export interface Projectile extends ShotPath {
   kind: string;
   /** Jogadores que viram o tiro sair (recebem o aviso de quando ele acaba). */
   viewers: Set<number>;
+  /** Quanto empurra quem ele acerta (metros; o recuo do monstro que atirou). */
+  push?: number;
 }

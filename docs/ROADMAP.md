@@ -213,9 +213,38 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
   dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula
   ao falar. E o escudo da Budega numa placa em cima da laje (`logo` = "budega" na casa, do [mundo]), sem
-  "tabacaria" e sem o narguilé: no círculo, o hibisco. Falta o nome "Xiovanna" na NPC "budega" ([estrutura])
-- [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
-  esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
+  "tabacaria" e sem o narguilé: no círculo, o hibisco. O nome "Xiovanna" na NPC "budega" já está nos dados
+  ([estrutura], 13/11)
+- [x] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17, em três partes (o "pode" do dono em 13/11)
+  - [x] **2a — pedra com carga** (13/11): segurar puxa, soltar atira; carga cheia em 1,1 s = o dobro do dano e alcance
+    de 6,5 a 9,5 m (só no mapa novo). O servidor conta a carga (`charge` → `shoot`, protocolo 21); esquiva, golpe
+    recebido e desmaio soltam a pedra. PC: segurar o botão esquerdo no monstro, o direito (para o mouse) ou J (no mais
+    perto); celular: segurar o botão Estilingue (toque rápido no monstro = pedra fraca na hora). Anel no pé enchendo
+    e "carga perdida" (desenho provisório no `combat.ts`; a [arte] pode animar o puxar com as ações `sling-pull` e
+    `sling-cancel` da view)
+  - [x] **2b — defesa com energia** (13/11): segurar F (celular: botão Defesa) levanta a defesa, que protege 0,11 s
+    depois, num arco de 140° na frente, virada sozinha para o monstro mais perto (sem monstro, para onde você anda).
+    Golpe defendido: passa 25% (pelo menos 1) e gasta 10 + 0,75 × dano de energia; segurar gasta 6/s; sem defesa, a
+    energia volta 22/s depois de 0,7 s. Acabou: a defesa quebra e só levanta de novo soltando, depois de 0,85 s e com
+    20 de energia. Defendendo, anda a 70% do andar devagar e não atira nem usa habilidade; levantar solta a pedra.
+    Fogo no chão não tem direção: a defesa não segura. Protocolo 22 (`guard`, `energy`, `blk` no `hit`). Desenho
+    provisório: arco azul-claro no chão, faísca no bloqueio, barra de energia embaixo do pé, "defesa quebrou!" e o
+    botão `#guard-button` (`src/client/novo/guard.ts`); a barra verde da HUD nova é essa energia ([arte])
+  - [x] **2c — recuo** (13/11): golpe de monstro empurra o jogador na direção em que andava, o quanto o monstro diz
+    (`"recuo"` no ataque, em cm; padrão pelo tipo: fruta 12, mordida 16, bote 22, giro 26, investida 34; também no
+    painel do administrador). Defesa que segura deixa 25% do empurrão; a que quebra, 50%; parede segura. Medido no
+    navegador: 12 cm por fruta, 3 cm defendendo. Os monstros não recuam (andam de tile em tile; a [arte] pode mostrar
+    o tranco no desenho). **Esquiva conferida:** a do jogo rola 3 m, protege 0,35 s e recarrega em 2,5 s; a do
+    protótipo anda 1 m, protege 0,2 s e recarrega em 0,2 s. Ficou a do jogo (os avisos dos monstros foram feitos para
+    ela) — o dono decide se quer a do protótipo
+- [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
+  vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
+  NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
+  golpe fecha a conversa. O motor avisa a view: `focus(ponto)` (olhar para quem fala; a provisória já centraliza) e
+  `talk(id, ms)` (quanto tempo a boca mexe: a fala ao abrir e a resposta ao entregar, aceitar ou desistir)
+- [ ] **[arte]** Conversa com NPC, parte 2: a `PD.View` centraliza em quem fala (`focus`, mesmo sendo criatura) e mexe
+  a boca (`talk`); a fala "por cima" da cena no lugar do painel com o retrato antigo, com os botões (Aceitar,
+  Desistir, Entregar, Ver a loja), no PC e no celular
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou
