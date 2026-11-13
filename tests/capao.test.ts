@@ -128,10 +128,12 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
 
   it('cada coisa sólida do cenário tem a sua colisão (tronco, poste, pedra, gradil, pilar, mata fechada, casa, banco...)', () => {
     const covered = (x: number, y: number) => boxes.some((b) => x >= b.x0 - 1e-6 && x <= b.x1 + 1e-6 && y >= b.y0 - 1e-6 && y <= b.y1 + 1e-6);
-    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo', 'semaforo'];
+    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo', 'semaforo', 'prateleira', 'geladeira', 'balcao', 'engradado'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
-      const solid = SOLID.includes(o.type) || (o.type === 'portao' && prop(o, 'aberto') !== true) || (o.type === 'arbusto' && prop(o, 'fechado') === true);
+      // (a casa com interior, a Budega, tem só as paredes: o meio dela é o chão de dentro)
+      const hollow = o.type === 'casa' && prop(o, 'interior') === true;
+      const solid = (SOLID.includes(o.type) && !hollow) || (o.type === 'portao' && prop(o, 'aberto') !== true) || (o.type === 'arbusto' && prop(o, 'fechado') === true);
       if (solid) expect(covered(x, y), `${o.type} em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBe(true);
       // capivara e aguapé são só enfeite: não seguram ninguém
       if (o.type === 'capivara') expect(boxes.some((b) => b.type !== 'agua' && x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1)).toBe(false);
@@ -350,8 +352,10 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
   const cenario = layer('cenario');
   const houses = cenario.filter((o) => o.type === 'casa');
   const budega = houses.find((o) => o.name === 'Budega')!;
-  /** O balcão da Budega, do lado da praça: onde a [estrutura] põe quem atende (data/npcs.json). */
+  /** A frente da porta da Budega, do lado da praça (onde a Xiovanna ficava antes do interior): fica livre. */
   const COUNTER = { x: 64.5, y: 53.3 };
+  /** O pé da Xiovanna, atrás do balcão de dentro (a [estrutura] põe o mesmo número no data/npcs.json). */
+  const XIOVANNA = { x: 64.6, y: 51 };
 
   it('o Portão I está aberto e dá para ir da clareira até a Travessa, a rua, a praça, a viela e a rua de baixo', () => {
     const gate = cenario.find((o) => o.type === 'portao')!;
@@ -378,7 +382,7 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     }
     for (let y = 1; y <= 80 - 1; y += 0.5) expect(reach(map.width - 0.75, y), `beira leste em y = ${y}`).toBe(false);
     expect(houses.length).toBe(8); // 7 casas e a Budega
-    for (const h of houses) {
+    for (const h of houses.filter((c) => prop(c, 'interior') !== true)) {
       const [x0, y0, x1, y1] = [h.x / M, h.y / M, (h.x + h.width) / M, (h.y + h.height) / M];
       for (let x = x0 + 0.5; x < x1; x += 1) for (let y = y0 + 0.5; y < y1; y += 1) expect(reach(x, y), `${h.name || 'casa'} em (${x}, ${y})`).toBe(false);
     }
@@ -394,7 +398,7 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     }
   });
 
-  it('a Budega: letreiro "BUDEGA DISTRIBUIDORA" (escolha do dono), vendinha, sem nada de tabaco, e o balcão livre, alcançável e na zona segura', () => {
+  it('a Budega: letreiro "BUDEGA DISTRIBUIDORA" (escolha do dono), vendinha, sem nada de tabaco, e a frente da porta livre, alcançável e na zona segura', () => {
     expect(prop(budega, 'letreiro')).toBe('BUDEGA DISTRIBUIDORA');
     expect(prop(budega, 'logo')).toBe('budega'); // o escudo dourado do dono na fachada (pedido dele, 13/11)
     expect(prop(budega, 'comercio')).toBe('vendinha');
@@ -408,6 +412,48 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     expect(reach(COUNTER.x, COUNTER.y)).toBe(true);
     const safe = layer('seguro').some((o) => COUNTER.x >= o.x / M && COUNTER.x <= (o.x + o.width) / M && COUNTER.y >= o.y / M && COUNTER.y <= (o.y + o.height) / M);
     expect(safe).toBe(true);
+  });
+
+  it('a Budega por dentro (pedido do dono, como no HumanitZ): entra pela porta de enrolar, compra na frente do balcão e atrás dele só fica a Xiovanna', () => {
+    expect(prop(budega, 'interior')).toBe(true);
+    const inside = { x0: 62.15, x1: 66.85, y0: 49.65, y1: 52.35 };
+    const box = (o: TiledObject) => [o.x / M, (o.x + o.width) / M, o.y / M, (o.y + o.height) / M].map((v) => +v.toFixed(2));
+    // o ladrilho cobre o lado de dentro, e os móveis estão lá dentro
+    expect(box(layer('chao').find((o) => o.type === 'piso')!)).toEqual([inside.x0, inside.x1, inside.y0, inside.y1]);
+    const of = (t: string) => cenario.filter((o) => o.type === t);
+    expect([of('prateleira').length, of('geladeira').length, of('balcao').length, of('engradado').length]).toEqual([2, 1, 1, 2]);
+    expect(prop(of('balcao')[0]!, 'caixa')).toBe(true);
+    for (const o of ['prateleira', 'geladeira', 'balcao', 'engradado'].flatMap(of)) {
+      const [x0, x1, y0, y1] = box(o);
+      expect(x0 >= inside.x0 && x1 <= inside.x1 && y0 >= inside.y0 && y1 <= inside.y1, `${o.type} dentro da Budega`).toBe(true);
+    }
+    // as paredes têm 15 cm e a frente fica aberta no vão da porta de enrolar (menos 34 cm de cada ponta)
+    // (os engradados ficam nos cantos de dentro: o pé passa de 62,55 a 66,45)
+    for (let x = 62.9; x <= 66.11; x += 0.2) expect(footFree(x, 52.45), `porta em x = ${x}`).toBe(true);
+    for (const x of [62.1, 66.9]) for (let y = 49.75; y <= 52.25; y += 0.25) expect(footFree(x, y), `parede em (${x}, ${y})`).toBe(false);
+    // da praça dá para entrar: a porta, a frente do balcão e o corredor das prateleiras, ao lado da geladeira
+    for (const [x, y] of [[64.5, 53.3], [64.5, 52.25], [64.5, 52], [65.5, 52], [62.75, 51], [62.75, 50.25]] as const) expect(reach(x, y), `(${x}, ${y})`).toBe(true);
+    // atrás do balcão ninguém passa (fechado pela geladeira e pela parede), mas a Xiovanna cabe lá
+    for (const [x, y] of [[64.75, 50.75], [65.5, 50.75], [66.25, 50.5]] as const) expect(reach(x, y), `atrás do balcão (${x}, ${y})`).toBe(false);
+    expect(footFree(XIOVANNA.x, XIOVANNA.y - FOOT.h / 2)).toBe(true);
+    const game = GameMap.fromTiled(map as unknown as TiledMap, 'capao');
+    const corner = cornerAtFeet(XIOVANNA.x, XIOVANNA.y);
+    expect(bodyFits(game, corner.x, corner.y)).toBe(true);
+    // de frente para o balcão, o pé fica a menos de 3 m do pé dela (a distância para conversar e comprar)
+    expect(Math.hypot(64.5 - XIOVANNA.x, 52 + FOOT.h / 2 - XIOVANNA.y)).toBeLessThan(3);
+    const safe = layer('seguro').some((o) => XIOVANNA.x >= o.x / M && XIOVANNA.x <= (o.x + o.width) / M && XIOVANNA.y >= o.y / M && XIOVANNA.y <= (o.y + o.height) / M);
+    expect(safe).toBe(true);
+    // nenhuma copa tampa a Xiovanna nem quem está no balcão (só cobre o que está atrás dela, na tela)
+    const screen = (x: number, y: number, z = 0) => [(x - y) * Math.SQRT1_2, (x + y) * Math.SQRT1_2 * 0.5 - z * 0.866] as const;
+    for (const t of cenario.filter((o) => o.type === 'arvore' && o.x / M > 48)) {
+      const { x, y } = at(t);
+      const [cx, cy] = screen(x, y, Number(prop(t, 'altura')));
+      for (const [kx, ky] of [[XIOVANNA.x, XIOVANNA.y], [64.5, 52.2]] as const) {
+        if (kx + ky >= x + y) continue;
+        const [sx, sy] = screen(kx, ky);
+        expect(Math.hypot(sx - cx, sy - cy), `${prop(t, 'especie')} em (${x}, ${y}) tampa (${kx}, ${ky})`).toBeGreaterThanOrEqual(Number(prop(t, 'copa')) * 1.05);
+      }
+    }
   });
 
   it('na vila não há vão de entalar: duas coisas sólidas de frente uma para a outra ficam coladas ou a 1,2 m', () => {
