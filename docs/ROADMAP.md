@@ -103,7 +103,18 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   direita (vem junto com o joystick)
 - [ ] **[arte + mundo]** Modo leve para celular fraco: menos efeitos (neblina, luzes, faíscas), com opção nas
   configurações
-- [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC
+- [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC.
+  Como: abrir o jogo com `?fps` no fim do endereço (no PC, http://localhost:3000/?fps; no celular, o mesmo endereço
+  que você usa para jogar nele, com `?fps`). Mostra os quadros por segundo, quanto cada quadro custa (abaixo de 16 ms
+  dá 60; abaixo de 33 ms, 30) e o quadro mais lento. Medido em 13/11 no navegador de teste, SEM placa de vídeo
+  (pessimista): 31 a 58 no PC 1280×720, 26 a 43 no 1920×1080 e 33 a 57 no celular emulado; o combate é o mais pesado
+- [x] **[estrutura]** Desempenho, a minha parte (13/11): a camada do combate usa no máximo ~1,3 milhão de pixels (no
+  celular de tela densa ela tinha mais pixels que o próprio cenário) e some quando não tem nada para mostrar: +2 a 5
+  quadros por segundo no celular emulado. O motor e essa camada gastam menos de 0,2 ms por quadro; o resto é o desenho
+- [ ] **[arte]** Desempenho do desenho (perfil no combate, 13/11): o `get bounds` de `props.js` monta um texto com o
+  zoom (`toFixed`) a cada leitura, em ~1000 objetos, várias vezes por quadro (é a função que mais gasta); a escolha do
+  que aparece passa por todos os objetos a cada quadro; personagens e criaturas são pintados por código a cada quadro
+  (guardar a imagem de cada pose, como já é feito com as árvores, é o ganho maior no combate)
 
 ## 🗺️ Mundo novo (2.5D isométrico) — decidido pelo dono em 12/11
 O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas são refeitos do zero; o motor

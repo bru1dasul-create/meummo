@@ -105,6 +105,12 @@ const GUARD_RADIUS = 0.8;
 /** Faísca da defesa segurando um golpe. */
 const SPARK_MS = 420;
 const FLASH_MS = 260;
+/**
+ * A camada de combate não precisa de mais pixels que o desenho do cenário: no celular de tela muito densa ela ficava
+ * maior que o próprio cenário (2265×945 contra 1726×720). Até este tanto de pixels; acima disso, perde só um pouco de
+ * nitidez nos números e anéis.
+ */
+const MAX_LAYER_PIXELS = 1_300_000;
 const POOF_MS = 450;
 
 export class CombatLayer {
@@ -285,14 +291,25 @@ export class CombatLayer {
     const ctx = this.ctx;
     const w = this.canvas.clientWidth;
     const h = this.canvas.clientHeight;
-    const dpr = window.devicePixelRatio || 1;
-    if (this.canvas.width !== Math.round(w * dpr) || this.canvas.height !== Math.round(h * dpr)) {
-      this.canvas.width = Math.round(w * dpr);
-      this.canvas.height = Math.round(h * dpr);
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
     const screen = (x: number, y: number, z = 0) => view.toScreen(x, y, z);
+    const bars = [...health];
+    // nada para mostrar: a camada some (o navegador não gasta para juntá-la ao desenho do cenário)
+    if (!this.busy(feetOf, screen, w, h, bars.length > 0)) {
+      if (this.canvas.style.visibility !== 'hidden') {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.canvas.style.visibility = 'hidden';
+      }
+      return;
+    }
+    this.canvas.style.visibility = '';
+    const scale = Math.min(window.devicePixelRatio || 1, Math.max(1, Math.sqrt(MAX_LAYER_PIXELS / Math.max(1, w * h))));
+    if (this.canvas.width !== Math.round(w * scale) || this.canvas.height !== Math.round(h * scale)) {
+      this.canvas.width = Math.round(w * scale);
+      this.canvas.height = Math.round(h * scale);
+    }
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, w, h);
     // quantos pixels tem 1 metro de altura aqui (para o tamanho das coisas acompanhar o zoom)
     const meter = (x: number, y: number) => Math.max(8, Math.abs(screen(x, y, 0).y - screen(x, y, 1).y));
 
@@ -306,9 +323,24 @@ export class CombatLayer {
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
     this.drawShots(now, screen, meter);
-    this.drawBars(feetOf, health, screen, meter);
+    this.drawBars(feetOf, bars, screen, meter);
     this.drawMarks(now, feetOf, screen, meter);
     this.drawFloaters(now, feetOf, screen, meter);
+  }
+
+  /** Tem algo para desenhar agora? (Sinal de missão só conta se o NPC estiver na tela.) */
+  private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
+    if (bars || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
+    if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
+    if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
+    if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
+    for (const id of this.marks.keys()) {
+      const feet = feetOf(id);
+      if (!feet) continue;
+      const p = screen(feet.x, feet.y, BODY_HEIGHT);
+      if (p.x > -80 && p.x < w + 80 && p.y > -120 && p.y < h + 80) return true;
+    }
+    return false;
   }
 
   private drawWarnings(now: number, screen: (x: number, y: number, z?: number) => Point): void {

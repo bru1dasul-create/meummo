@@ -75,6 +75,15 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — desempenho (pergunta do dono: "como fica em FPS? o que fazer para ficar leve?"):** medido no navegador
+de teste, sem placa de vídeo (pessimista): PC 1280×720 de 31 (combate) a 58 (praça) quadros por segundo; 1920×1080
+de 26 a 43; celular emulado de 33 a 57. Quase todo o quadro é o desenho da view (8 a 30 ms de JavaScript); o motor e
+a minha camada de combate, menos de 0,2 ms. A camada de combate estava com mais pixels que o cenário no celular
+(2265×945 contra 1726×720) e custava 2 a 4 ms juntando as duas: agora usa até ~1,3 milhão de pixels e some quando
+não tem nada (+2 a 5 quadros no celular). `?fps` no endereço mostra o medidor (para o dono medir no PC e no celular
+dele). Perfil do combate mandado à [arte]: `get bounds` em `props.js` (texto do zoom a cada leitura, ~1000 objetos),
+a escolha do que aparece passando por todos os objetos, e personagens pintados a cada quadro.
+
 **13/11 — tela inicial nova (imagem do dono), a parte do servidor:** o dono confirmou o nome (**Selva de Pedra**; a
 primeira imagem dizia "Selva de Concreto" por engano) e concordou em deixar fora o que só funciona com o jogo na
 internet (Google, e-mail, "esqueceu a senha") e o "Sair do Jogo". Mandou o fundo limpo e o logo (em
