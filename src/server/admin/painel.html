@@ -232,6 +232,12 @@
         border-color: var(--danger);
         color: var(--danger);
       }
+      #logs {
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 62vh;
+        font-size: 12px;
+      }
       pre {
         overflow: auto;
         max-height: 420px;
@@ -489,6 +495,7 @@
           { id: 'jogadores', titulo: 'Jogadores', ajustados: state.players ? state.players.jogadores.length : 0 },
           ...data.grupos.map((g) => ({ id: g.arquivo, titulo: g.titulo, ajustados: g.lista.reduce((n, e) => n + e.campos.filter((c) => c.ajustado).length, 0) })),
           { id: 'ajustes', titulo: 'Meus ajustes', ajustados: 0 },
+          { id: 'registros', titulo: 'Registros', ajustados: 0 },
         ];
         for (const tab of tabList) {
           const button = el('button', { type: 'button', class: tab.id === state.tab ? 'on' : '', onclick: () => ((state.tab = tab.id), render()) }, tab.titulo);
@@ -496,8 +503,9 @@
           tabs.append(button);
         }
 
-        document.getElementById('tools').hidden = state.tab === 'ajustes' || state.tab === 'jogadores';
+        document.getElementById('tools').hidden = state.tab === 'ajustes' || state.tab === 'jogadores' || state.tab === 'registros';
         if (state.tab === 'ajustes') return renderExport();
+        if (state.tab === 'registros') return renderLogs();
         if (state.tab === 'jogadores') return renderPlayers();
         const group = data.grupos.find((g) => g.arquivo === state.tab);
         const search = state.search.trim().toLowerCase();
@@ -509,6 +517,54 @@
           cards.append(card);
         }
         content.replaceChildren(list.length ? cards : el('p', { class: 'empty', text: 'Nada com esse nome.' }));
+      }
+
+      // ---------- Registros: o que o servidor anotou (para achar e corrigir problemas) ----------
+
+      let logFilter = '';
+      async function renderLogs() {
+        content.replaceChildren(el('p', { class: 'empty', text: 'Carregando...' }));
+        let data;
+        try {
+          const res = await fetch(`/admin/api/registros?limite=800&filtro=${encodeURIComponent(logFilter)}`, { cache: 'no-store' });
+          data = await res.json();
+        } catch (error) {
+          return toast(`Não consegui falar com o servidor: ${error.message}`, true);
+        }
+        if (state.tab !== 'registros') return;
+        const text = data.linhas.join('\n');
+        const pre = el('pre', { id: 'logs', text: text || (logFilter ? 'Nada com esse filtro.' : 'Nada anotado ainda.') });
+        const filter = el('input', { type: 'text', value: logFilter, placeholder: 'Filtrar (ex.: erro, ADM, painel, o nome de alguém)' });
+        const apply = () => {
+          logFilter = filter.value;
+          renderLogs();
+        };
+        filter.addEventListener('keydown', (event) => event.key === 'Enter' && apply());
+        const copy = async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            toast('Copiado: é só colar na conversa.');
+          } catch {
+            toast('Não deu para copiar sozinho: selecione o texto e use Ctrl+C.', true);
+          }
+        };
+        const bar = el(
+          'div',
+          { class: 'notice' },
+          filter,
+          el('button', { class: 'act', type: 'button', text: 'Filtrar', onclick: apply }),
+          el('button', { class: 'act soft', type: 'button', text: 'Só erros', onclick: () => ((logFilter = 'erro'), renderLogs()) }),
+          el('button', { class: 'act soft', type: 'button', text: 'Tudo', onclick: () => ((logFilter = ''), renderLogs()) }),
+          el('button', { class: 'act', type: 'button', text: 'Copiar tudo', onclick: copy }),
+        );
+        const where = el('div', {
+          class: 'stats',
+          text: data.pasta
+            ? `As últimas linhas (a mais nova embaixo). Os arquivos, um por dia, ficam em ${data.pasta}. Deu problema? Copie e mande para quem vai corrigir.`
+            : 'As últimas linhas (a mais nova embaixo). Este servidor não guarda os registros em arquivo.',
+        });
+        content.replaceChildren(bar, where, pre);
+        pre.scrollTop = pre.scrollHeight;
       }
 
       async function renderExport() {

@@ -9,6 +9,9 @@ const MAX_RAW_LENGTH = 1024;
 /** Maior quantidade numa compra ou venda (maior que qualquer pilha). */
 const MAX_TRADE = 999;
 
+/** Tamanho máximo do relato de erro do navegador (o resto é cortado). */
+const OOPS_MAX = 800;
+
 /** Um poder do administrador bem formado (se ele é administrador, o mundo confere). */
 function parseGmCommand(raw: unknown): GmCommand | null {
   if (typeof raw !== 'object' || raw === null) return null;
@@ -85,6 +88,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return { t: 'charge' };
     case 'guard':
       return typeof msg.on === 'boolean' && isAngle(msg.a) ? { t: 'guard', on: msg.on, a: msg.a } : null;
+    case 'oops':
+      return typeof msg.text === 'string' && msg.text.trim() ? { t: 'oops', text: msg.text.slice(0, OOPS_MAX) } : null;
     case 'gm': {
       const cmd = parseGmCommand(msg.cmd);
       return cmd ? { t: 'gm', cmd } : null;

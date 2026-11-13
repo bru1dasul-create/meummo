@@ -331,7 +331,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   correr; pousando dentro de algo vai para o chão livre), invencível (sem dano, monstros e canto ignoram), teleporte
   ao clicar e curar. Mensagem `gm` (protocolo 24), conferida no servidor e registrada. Visual provisório
   (`src/client/novo/gm.ts`) para a [arte] caprichar
-- [ ] **[dono → estrutura]** Menu ADM, passo 2 (o dono escolhe): o painel já ajusta monstros, itens, loja e jogadores;
+- [x] **[estrutura]** Registros (13/11, pedido do dono: "logs para ter correções mais fácil"): arquivo por dia em
+  `saves/registros/` (14 dias), aba **Registros** no painel (filtro, "Só erros", "Copiar tudo"), erros do servidor com
+  o caminho (o tick e as mensagens não derrubam mais o servidor) e os erros do navegador de quem joga (mensagem `oops`,
+  protocolo 25, com o aparelho)
+- [ ] **[dono → estrutura]** Menu ADM, passo 2 (o dono escolheu "todos", 13/11): o painel já ajusta monstros, itens, loja e jogadores;
   dá para pôr também missões, onde e quantos monstros nascem, os números do combate (carga, defesa, recuo), a
   posição dos NPCs, nível/XP de um jogador e "ver como o servidor vê" (colisões) no jogo
 - [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem

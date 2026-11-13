@@ -148,6 +148,10 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   **derrubar os monstros perto** (você ganha a XP), **voar** (atravessa parede e árvore, rápido; ao pousar dentro de
   algo, vai para o chão livre), **invencível** (não leva dano e os monstros te ignoram), **teleporte ao clicar** (o
   clique no chão te leva até lá) e **curar**. Tudo fica registrado na janela do servidor.
+- **Registros:** o que o servidor anota (quem entrou e saiu, o que o administrador fez, avisos e **erros**, inclusive
+  os que acontecerem no navegador de quem joga, no PC ou no celular, com o aparelho e onde foi). Filtre por "erro" e
+  use **Copiar tudo** para mandar a quem vai corrigir. Também ficam num arquivo por dia em `saves/registros/` (os
+  últimos 14 dias). Um erro dentro do jogo agora fica anotado e não derruba mais o servidor.
 
 Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
 alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").

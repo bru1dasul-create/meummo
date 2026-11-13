@@ -35,6 +35,10 @@ export interface AdminOptions {
   setAdmin?: (name: string, admin: boolean) => string | null;
   /** Os administradores de hoje (nomes). */
   admins?: () => string[];
+  /** As últimas linhas dos registros (com `filter`, se vier). */
+  logs?: (limit: number, filter: string) => string[];
+  /** Onde ficam os arquivos dos registros (null = não guarda em arquivo). */
+  logDir?: string | null;
   log?: (message: string) => void;
 }
 
@@ -182,6 +186,12 @@ export function createAdminHandler(options: AdminOptions): (req: http.IncomingMe
       return true;
     }
     const { realm } = options;
+    if (route === 'GET /admin/api/registros' && options.logs) {
+      const filtro = (url.searchParams.get('filtro') ?? '').slice(0, 80);
+      const limite = Math.max(1, Math.min(2000, Number(url.searchParams.get('limite')) || 500));
+      sendJson(res, 200, { linhas: options.logs(limite, filtro), pasta: options.logDir ?? null });
+      return true;
+    }
     if (route === 'GET /admin/api/jogadores' && realm) {
       sendJson(res, 200, {
         jogadores: realm.playersOnline(),

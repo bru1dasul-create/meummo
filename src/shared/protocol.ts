@@ -67,6 +67,7 @@ export type ClientMsg =
   | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
   | { t: 'guard'; on: boolean; a: number } // segurando (ou soltei) a defesa, virada para o ângulo `a` (radianos)
   | { t: 'gm'; cmd: GmCommand } // poder do administrador (o servidor confere se é administrador mesmo)
+  | { t: 'oops'; text: string } // deu erro no navegador: o servidor anota nos registros (para corrigir depois)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila

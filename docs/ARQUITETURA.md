@@ -119,6 +119,15 @@ Cada jogador só recebe notícias de quem está a até 20 tiles na horizontal e 
 Quando alguém entra na visão chega um `spawn`; quando sai, um `despawn`. É isso que permite
 muita gente no mesmo servidor sem mandar tudo para todo mundo.
 
+## Registros (logs)
+Tudo o que o servidor anota passa pelo `Logbook` (`src/server/logbook.ts`): a tela (a janela do servidor), um
+arquivo por dia ao lado dos personagens salvos (`saves/registros/AAAA-MM-DD.log`, os últimos 14 dias) e as últimas
+2000 linhas na memória, para a aba **Registros** do painel (`GET /admin/api/registros?filtro=...`). Erros: o passo do
+mundo (tick) e o tratamento de cada mensagem estão protegidos; o erro fica anotado com o caminho (`logbook.error`, o
+mesmo erro repetindo só uma vez por minuto) e o servidor continua. O que escapar de tudo é anotado antes de desligar
+(`main.ts`). No navegador, `reportErrors` (`net.ts`) manda os erros da página na mensagem `oops` (até 10 por sessão,
+sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depois 1 a cada 10 s).
+
 ## Combate (servidor manda, cliente desenha)
 - **Projéteis** (estilingue, frutas do Sagui) são simulados no servidor a cada tick, em pedacinhos de
   1/4 de tile, com a mesma função que o cliente usa para desenhar (`advanceShot` em `src/shared/combat.ts`).
@@ -307,6 +316,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
 | cliente | `charge` | começar a puxar o estilingue (a carga conta até o `shoot`) |
 | cliente | `guard` | segurar (`on: true`) ou soltar a defesa, virada para o ângulo `a` |
+| cliente | `oops` | deu erro no navegador: o texto do erro (onde foi, a tela e o aparelho) vai para os registros do servidor |
 | cliente | `gm` | poder do administrador (`cmd`: criar monstros, derrubar os de perto, voar, invencível, ir até um ponto, curar); o servidor confere se ele é administrador e registra |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |

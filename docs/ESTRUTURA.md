@@ -75,6 +75,13 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — registros (logs), pedido do dono para corrigir mais fácil:** `Logbook` (tela + `saves/registros/` um
+arquivo por dia, 14 dias + memória para a aba Registros do painel). O tick e cada mensagem estão em try/catch:
+o erro vai para o registro com o caminho e o servidor continua (antes, um defeito num tick derrubava tudo). Erros do
+navegador chegam pela mensagem `oops` (protocolo 25), com a tela e o aparelho. O dono também pediu, para o painel,
+"todos" os itens que propus (nível/XP, posição dos NPCs, monstros por área, missões, números do combate): faço em
+partes, nessa ordem.
+
 **13/11 — Xiovanna atrás do balcão (Budega com interior, do [mundo] e da [arte]):** `budega` em (64,6; 51), logo
 depois do mapa entrar na main, como combinado. O teste dos NPCs no mapa novo passou a pedir "o corpo cabe e dá para
 chegar a pé a até 3 m" (atrás do balcão ninguém chega no pé dela, de propósito). Missão, loja (a 2,9 m) e o lugar
@@ -232,10 +239,11 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **24** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+Números para não se perder: protocolo na versão **25** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
 `slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo; 20: objetivo `talk` e
 `goalLabel` nas missões; 21: `charge`, começar a puxar o estilingue; 22: `guard` e `energy`, a defesa, e `blk` no
-`hit`; 23: `mode` no `hello`, entrar ou criar conta; 24: `gm`, o menu ADM); `MIGRATIONS` no
+`hit`; 23: `mode` no `hello`, entrar ou criar conta; 24: `gm`, o menu ADM; 25: `oops`, erros do navegador);
+`MIGRATIONS` no
 passo **4** (3: coluna `quests`; 4: coluna `admin`; o movimento livre não precisou de passo novo: o salvo continua
 sendo o tile).
 
