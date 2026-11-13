@@ -42,6 +42,9 @@ import {
   makeShot,
   reachableLine,
   shotTouches,
+  chargeFraction,
+  chargedDamage,
+  chargedRange,
   tileIn,
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
@@ -466,18 +469,29 @@ export class World {
     player.queue.push({ seq, a: degrees, dash, slow });
   }
 
-  /** Estilingue: atira uma pedrinha na direção do ângulo. */
+  /** Começou a puxar o estilingue: a carga conta pelo relógio do servidor, até o tiro (veja shoot). */
+  charge(player: Player): void {
+    if (player.loading || player.dead) return;
+    player.chargeStart = this.now();
+  }
+
+  /** Estilingue: atira uma pedrinha na direção do ângulo, mais forte e mais longe quanto mais tempo puxou. */
   shoot(player: Player, cid: number, angle: number): void {
     const now = this.now();
     if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
     // da área segura ninguém ataca: o monstro não entra nem acerta lá, então não teria como revidar
-    if (this.inSafeArea(player)) return;
+    if (this.inSafeArea(player)) {
+      player.chargeStart = null;
+      return;
+    }
+    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart) : 0;
+    player.chargeStart = null;
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
     this.faceAngle(player, angle);
     const [min, max] = player.damage();
-    this.spawnProjectile(player, angle, SHOT_SPEED, SHOT_RANGE, this.rollRange(min, max), 'pedra', cid);
+    this.spawnProjectile(player, angle, SHOT_SPEED, chargedRange(charge, this.map.metric), chargedDamage(this.rollRange(min, max), charge), 'pedra', cid);
   }
 
   useSkill(player: Player, n: number, angle: number): void {
@@ -1019,6 +1033,7 @@ export class World {
       if (!dash) player.walkBudget -= WALK_SLICE_MS;
       // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
       if (dash && result.moved) {
+        player.chargeStart = null; // a esquiva solta a pedra que estava puxando (sem atirar)
         player.dashReadyAt = Math.max(now, player.dashReadyAt) + DASH_COOLDOWN_MS;
         player.invulnerableUntil = now + DASH_INVULNERABLE_MS;
         player.dashed = true;
@@ -1051,6 +1066,7 @@ export class World {
 
   private killPlayer(player: Player, now: number): void {
     player.deadUntil = now + DEATH_MS;
+    player.chargeStart = null;
     player.queue.length = 0;
     this.emitToViewers(player, { t: 'death', id: player.id });
     player.outbox.push({ t: 'sys', text: 'Você desmaiou! Voltando para a vila...' });
@@ -1174,6 +1190,7 @@ export class World {
     if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamagedAt = now;
+    if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
     this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp });
 
     if (target.kind === 'monster') {

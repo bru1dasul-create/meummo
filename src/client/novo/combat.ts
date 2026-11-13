@@ -10,7 +10,7 @@
 //   pés de quem ele acerta;
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
-import { SHOT_FEET_DY } from '../../shared/constants';
+import { CHARGE_FULL_MS, SHOT_FEET_DY } from '../../shared/constants';
 import type { WorldView } from './view';
 
 type Point = { x: number; y: number };
@@ -95,6 +95,10 @@ interface GroundDrop {
 }
 
 const FLOAT_MS = 900;
+/** Raio do anel da carga em volta do pé (metros). */
+const CHARGE_RING_RADIUS = 0.6;
+/** Quanto tempo o "carga perdida" fica na tela. */
+const CHARGE_LOST_MS = 1100;
 const FLASH_MS = 260;
 const POOF_MS = 450;
 
@@ -110,6 +114,10 @@ export class CombatLayer {
   private floaters: Floater[] = [];
   private flashes: Flash[] = [];
   private poofs: { x: number; y: number; start: number }[] = [];
+  /** Puxando o estilingue: de quem e desde quando (o anel em volta do pé enche até a carga cheia). */
+  private chargeRing: { id: number; since: number } | null = null;
+  /** Um golpe soltou a pedra: o aviso "carga perdida" embaixo do pé, onde o anel estava. */
+  private chargeLost: { id: number; start: number } | null = null;
   /** Sinais de missão em cima dos NPCs ('!' nova, '?' para concluir). */
   private readonly marks = new Map<number, '!' | '?'>();
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
@@ -145,8 +153,12 @@ export class CombatLayer {
   }
 
   /** O servidor confirmou o seu tiro `cid` com o número `id`. */
-  linkMyShot(cid: number, id: number): void {
-    if (this.myShots.has(cid)) this.shotOfServer.set(id, cid);
+  linkMyShot(cid: number, id: number, range?: number): void {
+    const mine = this.myShots.get(cid);
+    if (!mine) return;
+    this.shotOfServer.set(id, cid);
+    // o alcance que vale é o do servidor (ex.: um golpe soltou a carga um instante antes de a pedra sair)
+    if (range !== undefined) mine.range = range;
   }
 
   /** O projétil acabou (acertou alguém, bateu em algo ou chegou no fim). */
@@ -167,6 +179,18 @@ export class CombatLayer {
   /** Clarão de golpe de perto: leque (ou círculo, `wide`) no chão a partir do pé (x, y). */
   flash(x: number, y: number, angle: number, radius: number, wide: boolean, now: number): void {
     this.flashes.push({ x, y, angle, radius, wide, start: now });
+  }
+
+  /** Começou (`since`) ou parou (null) de puxar o estilingue. */
+  setCharge(id: number, since: number | null): void {
+    this.chargeRing = since === null ? null : { id, since };
+    if (since !== null) this.chargeLost = null;
+  }
+
+  /** Um golpe soltou a pedra que `id` puxava: some o anel e aparece "carga perdida" no lugar. */
+  loseCharge(id: number, now: number): void {
+    this.chargeRing = null;
+    this.chargeLost = { id, start: now };
   }
 
   /** Sinal de missão em cima do NPC `id` ('' tira). */
@@ -201,6 +225,8 @@ export class CombatLayer {
     this.drops.clear();
     this.windups.clear();
     this.marks.clear();
+    this.chargeRing = null;
+    this.chargeLost = null;
   }
 
   /** Põe a tela do combate por cima do desenho (chamar depois de criar a view de um mapa novo). */
@@ -233,6 +259,8 @@ export class CombatLayer {
 
     this.drawWarnings(now, screen);
     this.drawWindups(now, feetOf, screen);
+    this.drawChargeRing(now, feetOf, screen);
+    this.drawChargeLost(now, feetOf, screen, meter);
     this.drawDrops(now, screen, meter);
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
@@ -286,6 +314,78 @@ export class CombatLayer {
       }
       ctx.stroke();
     }
+  }
+
+  /** O anel da carga em volta do pé: enche no sentido do relógio; cheio, fica dourado e pulsa. */
+  private drawChargeRing(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point): void {
+    const ring = this.chargeRing;
+    const feet = ring ? feetOf(ring.id) : null;
+    if (!ring || !feet) return;
+    const progress = Math.min(1, (now - ring.since) / CHARGE_FULL_MS);
+    const full = progress >= 1;
+    const ctx = this.ctx;
+    const radius = CHARGE_RING_RADIUS;
+    const arc = (from: number, to: number) => {
+      ctx.beginPath();
+      const steps = 32;
+      for (let i = 0; i <= steps; i++) {
+        const a = from + ((to - from) * i) / steps;
+        const p = screen(feet.x + Math.cos(a) * radius, feet.y + Math.sin(a) * radius);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    };
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(20, 12, 10, 0.35)';
+    arc(0, Math.PI * 2);
+    // enche como um relógio na tela: começa no ponto mais alto do anel e vai para a direita (com qualquer câmera)
+    let top = 0;
+    let topY = Infinity;
+    for (let i = 0; i < 48; i++) {
+      const a = (Math.PI * 2 * i) / 48;
+      const y = screen(feet.x + Math.cos(a) * radius, feet.y + Math.sin(a) * radius).y;
+      if (y < topY) {
+        topY = y;
+        top = a;
+      }
+    }
+    const step = Math.PI / 24;
+    const right = screen(feet.x + Math.cos(top + step) * radius, feet.y + Math.sin(top + step) * radius).x;
+    const left = screen(feet.x + Math.cos(top - step) * radius, feet.y + Math.sin(top - step) * radius).x;
+    const turn = right >= left ? 1 : -1;
+    ctx.strokeStyle = full ? `rgba(255, 205, 80, ${(0.75 + 0.25 * Math.sin(now / 80)).toFixed(3)})` : 'rgba(255, 240, 200, 0.95)';
+    ctx.lineWidth = full ? 5 : 4;
+    arc(top, top + turn * Math.PI * 2 * progress);
+  }
+
+  private drawChargeLost(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    const lost = this.chargeLost;
+    if (!lost) return;
+    const t = (now - lost.start) / CHARGE_LOST_MS;
+    const feet = t < 1 ? feetOf(lost.id) : null;
+    if (!feet) {
+      if (t >= 1) this.chargeLost = null;
+      return;
+    }
+    const ctx = this.ctx;
+    // logo abaixo de onde o anel estava (o ponto mais baixo dele na tela)
+    let bottom = -Infinity;
+    for (let i = 0; i < 16; i++) {
+      const a = (Math.PI * 2 * i) / 16;
+      bottom = Math.max(bottom, screen(feet.x + Math.cos(a) * CHARGE_RING_RADIUS, feet.y + Math.sin(a) * CHARGE_RING_RADIUS).y);
+    }
+    const center = screen(feet.x, feet.y);
+    const size = Math.round(Math.max(12, meter(feet.x, feet.y) * 0.22));
+    ctx.globalAlpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
+    ctx.font = `600 ${size}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(20, 12, 10, 0.85)';
+    ctx.strokeText('carga perdida', center.x, bottom + size + 2);
+    ctx.fillStyle = '#efe3c6';
+    ctx.fillText('carga perdida', center.x, bottom + size + 2);
+    ctx.globalAlpha = 1;
   }
 
   private drawDrops(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {

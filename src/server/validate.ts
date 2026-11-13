@@ -52,6 +52,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         ...(msg.dash ? { dash: true as const } : {}),
         ...(msg.slow ? { slow: true as const } : {}),
       };
+    case 'charge':
+      return { t: 'charge' };
     case 'shoot':
       return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
         ? { t: 'shoot', cid: msg.cid as number, a: msg.a }

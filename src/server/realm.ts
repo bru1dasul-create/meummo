@@ -147,6 +147,10 @@ export class Realm {
     this.worldOf(player)?.requestWalk(player, seq, degrees, dash, slow);
   }
 
+  charge(player: Player): void {
+    this.worldOf(player)?.charge(player);
+  }
+
   shoot(player: Player, cid: number, angle: number): void {
     this.worldOf(player)?.shoot(player, cid, angle);
   }

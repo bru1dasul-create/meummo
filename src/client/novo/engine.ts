@@ -9,7 +9,6 @@ import {
   DASH_TILES,
   MAX_PENDING_WALKS,
   SHOT_COOLDOWN_MS,
-  SHOT_RANGE,
   SHOT_SPEED,
   TRADE_RANGE,
   TRADE_SLACK,
@@ -31,6 +30,7 @@ import { ShopWindow } from '../shop';
 import { npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
+import { chargedRange, chargeFraction } from '../../shared/combat';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
 import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
@@ -45,13 +45,16 @@ export interface NewWorldDeps {
 }
 
 type Point = { x: number; y: number };
+/** Para onde a pedra vai quando soltar: no monstro clicado, para onde o mouse aponta, ou no mais perto (botão). */
+/** Para onde vai a pedra que está sendo puxada: no monstro clicado, para o mouse, ou no mais perto (botão da tela, tecla J). */
+type Aim = { by: 'target'; id: number } | { by: 'mouse' } | { by: 'button' } | { by: 'key' };
 
 /** Ângulo com 3 casas (o servidor recebe assim). */
 const round3 = (value: number) => Math.round(value * 1000) / 1000;
 /** Radianos → graus inteiros de 0 a 359 (o `walk` e o desenho usam graus). */
 const toDegrees = (radians: number) => ((Math.round((radians * 180) / Math.PI) % 360) + 360) % 360;
-/** Alcance do "atirar no mais perto" dos botões (o estilingue vai até SHOT_RANGE). */
-const AUTO_AIM_RANGE = SHOT_RANGE + 0.5;
+/** O "atirar no mais perto" dos botões procura um pouco além do alcance da pedra (o monstro anda). */
+const AUTO_AIM_SLACK = 0.5;
 /** Alcance da mira automática da Bordunada (golpe de perto). */
 const MELEE_AIM_RANGE = 2.5;
 /** Monstro que caiu: tempo para a view mostrar a queda ('die') antes de o desenho sair. */
@@ -166,8 +169,10 @@ class NewWorld implements NewWorldGame {
   private nextShotAt = 0;
   private dashReadyAt = 0;
   private readonly skillReadyAt = SKILLS.map(() => 0);
-  /** Atirando sem parar: no monstro clicado, para onde o mouse aponta (botão direito) ou pelo botão da tela. */
-  private firing: { by: 'target'; id: number } | { by: 'mouse' } | { by: 'button' } | null = null;
+  /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
+  private charging: { since: number; aim: Aim } | null = null;
+  /** Soltou durante a recarga do estilingue: a pedra sai assim que der. */
+  private pendingShot: { at: number; aim: Aim; since: number } | null = null;
   /** Onde está o mouse (tela), para mirar. */
   private mouse: Point | null = null;
   /** O último toque foi com o dedo (a Bordunada mira sozinha). */
@@ -196,7 +201,7 @@ class NewWorld implements NewWorldGame {
     this.combat = new CombatLayer(this.container);
     this.actionBar = new ActionBar(
       [
-        { slot: 'shot', label: 'Estilingue', key: 'clique' },
+        { slot: 'shot', label: 'Estilingue', key: 'J' }, // segurar puxa, soltar atira (pedra com carga)
         ...SKILLS.map((skill, i) => ({ slot: `skill${i}` as ActionSlot, label: skill.name, key: skill.key })),
         { slot: 'dash', label: 'Esquiva', key: 'Espaço' },
       ],
@@ -309,7 +314,7 @@ class NewWorld implements NewWorldGame {
     this.route = [];
     this.goingToNpc = null;
     this.wasSafe = null;
-    this.firing = null;
+    this.cancelCharge();
     this.setDead(false);
     if (msg.t === 'welcome') {
       this.myId = msg.id;
@@ -377,7 +382,7 @@ class NewWorld implements NewWorldGame {
   private readonly loop = (now: number) => {
     if (this.destroyed || !this.view) return;
     this.handleMovement(now);
-    this.handleFiring(now);
+    this.handlePendingShot(now);
     this.checkNpcArrival();
     this.checkNpcDistance();
     this.checkSafeArea();
@@ -415,6 +420,11 @@ class NewWorld implements NewWorldGame {
 
   private readonly onKey = (event: KeyboardEvent) => {
     if (event.key === 'Shift') this.shiftDown = event.type === 'keydown';
+    // J: segurar puxa o estilingue, soltar atira no monstro mais perto (como no protótipo)
+    if (event.code === 'KeyJ' && event.type === 'keyup') {
+      if (this.charging?.aim.by === 'key') this.releaseCharge(performance.now());
+      return;
+    }
     if (event.type !== 'keydown' || this.chat.isTyping()) return;
     const now = performance.now();
     switch (event.code) {
@@ -433,6 +443,9 @@ class NewWorld implements NewWorldGame {
       case 'Digit3':
       case 'Digit4':
         if (!event.repeat) this.useQuick(event.code === 'Digit3' ? 1 : 2, now);
+        break;
+      case 'KeyJ':
+        if (!event.repeat) this.startCharge({ by: 'key' }, now);
         break;
       case 'KeyM':
         if (!event.repeat) this.toggleSound();
@@ -457,6 +470,7 @@ class NewWorld implements NewWorldGame {
   };
   private readonly onBlur = () => {
     this.shiftDown = false;
+    this.cancelCharge(); // sem foco, o soltar do botão não chega: solta a pedra sem atirar
   };
 
   private handleMovement(now: number): void {
@@ -600,17 +614,15 @@ class NewWorld implements NewWorldGame {
     if (event.pointerType === 'mouse') {
       this.mouse = { x: event.clientX, y: event.clientY };
       const now = performance.now();
+      // segurar puxa o estilingue; soltar atira (pedra com carga)
       if (event.button === 2) {
-        this.firing = { by: 'mouse' };
-        const angle = this.mouseAim();
-        if (angle !== null) this.tryShoot(angle, now);
+        this.startCharge({ by: 'mouse' }, now);
         return;
       }
       if (event.button !== 0) return;
       const monster = this.actorAtScreen(event.clientX, event.clientY, 'monster');
       if (monster !== null) {
-        this.firing = { by: 'target', id: monster };
-        this.shootAt(monster, now);
+        this.startCharge({ by: 'target', id: monster }, now);
         return;
       }
       this.tapAt(event.clientX, event.clientY);
@@ -626,7 +638,8 @@ class NewWorld implements NewWorldGame {
   };
 
   private readonly onPointerUp = (event: PointerEvent) => {
-    if (event.pointerType === 'mouse' && this.firing && this.firing.by !== 'button') this.firing = null;
+    const aim = this.charging?.aim.by;
+    if (event.pointerType === 'mouse' && (aim === 'target' || aim === 'mouse')) this.releaseCharge(performance.now());
   };
 
   /** O botão direito é do jogo (atirar), não do menu do navegador. */
@@ -656,7 +669,9 @@ class NewWorld implements NewWorldGame {
     // (o clique do mouse já olhou o monstro antes de chegar aqui; o toque olha agora)
     const monster = this.actorAtScreen(clientX, clientY, 'monster');
     if (monster !== null) {
-      this.shootAt(monster, performance.now());
+      // toque rápido no monstro: pedra fraca na hora (para puxar, segure o botão Estilingue)
+      const target = this.entities.get(monster)!;
+      this.quickShot(aimAngle(this.myFeet(), feetAt(target.x, target.y)), performance.now());
       return;
     }
     const npcId = this.actorAtScreen(clientX, clientY, 'npc');
@@ -830,11 +845,60 @@ class NewWorld implements NewWorldGame {
     return aimAngle(this.myFeet(), feetAt(target.x, target.y));
   }
 
-  /** Atira no monstro `id` (na posição do servidor, que é onde ele está de verdade). */
-  private shootAt(id: number, now: number): void {
-    const target = this.entities.get(id);
-    if (!target) return;
-    this.tryShoot(aimAngle(this.myFeet(), feetAt(target.x, target.y)), now);
+  /** Começa a puxar o estilingue: o servidor conta a carga pelo relógio dele, até o tiro. */
+  private startCharge(aim: Aim, now: number): void {
+    if (this.dead || this.charging) return;
+    if (this.refuseInSafeArea(now)) return;
+    this.pendingShot = null;
+    this.charging = { since: now, aim };
+    this.conn.send({ t: 'charge' });
+    this.combat.setCharge(this.myId, now);
+    this.view?.action?.(this.myId, 'charge');
+  }
+
+  /** Soltou: a pedra sai com a carga que juntou (durante a recarga, sai assim que der). */
+  private releaseCharge(now: number): void {
+    const charging = this.charging;
+    if (!charging) return;
+    this.charging = null;
+    this.combat.setCharge(this.myId, null);
+    // durante a recarga, sai assim que der, com a carga contada até lá (o servidor conta igual, até o tiro chegar)
+    if (now < this.nextShotAt) this.pendingShot = { at: this.nextShotAt, aim: charging.aim, since: charging.since };
+    else this.fireAim(charging.aim, chargeFraction(now - charging.since), now);
+  }
+
+  /** Solta a pedra sem atirar (esquiva, golpe recebido, desmaio, troca de mapa, janela sem foco). */
+  private cancelCharge(): void {
+    this.charging = null;
+    this.pendingShot = null;
+    this.combat.setCharge(this.myId, null);
+  }
+
+  private handlePendingShot(now: number): void {
+    const pending = this.pendingShot;
+    if (!pending || now < pending.at) return;
+    this.pendingShot = null;
+    this.fireAim(pending.aim, chargeFraction(now - pending.since), now);
+  }
+
+  /** Atira para onde a mira manda: no monstro (onde ele está de verdade), para o mouse, ou no mais perto. */
+  private fireAim(aim: Aim, charge: number, now: number): void {
+    let angle: number | null = null;
+    if (aim.by === 'target') {
+      const target = this.entities.get(aim.id);
+      angle = target ? aimAngle(this.myFeet(), feetAt(target.x, target.y)) : this.mouseAim(); // caiu: vai para o mouse
+    } else if (aim.by === 'mouse') {
+      angle = this.mouseAim();
+    }
+    // a mira automática procura até onde esta pedra chega (com carga cheia, mais longe)
+    this.tryShoot(angle ?? this.autoAim(chargedRange(charge, this.map.metric) + AUTO_AIM_SLACK), now, charge);
+  }
+
+  /** Pedra fraca na hora (toque rápido no monstro, no celular). */
+  private quickShot(angle: number, now: number): void {
+    if (this.dead || this.charging || now < this.nextShotAt) return;
+    this.conn.send({ t: 'charge' }); // zera a carga no servidor: o toque rápido é uma pedra sem carga
+    this.tryShoot(angle, now, 0);
   }
 
   /** O seu tile está entre estes ([x1, y1, x2, y2, ...])? */
@@ -862,53 +926,30 @@ class NewWorld implements NewWorldGame {
     return true;
   }
 
-  /** Estilingue: uma pedra na direção `angle` (radianos). Aparece na hora; o servidor decide se acerta. */
-  private tryShoot(angle: number, now: number): void {
+  /** Estilingue: uma pedra na direção `angle` (radianos), com a carga (0 a 1). Aparece na hora; o servidor decide. */
+  private tryShoot(angle: number, now: number, charge: number): void {
     if (this.dead || now < this.nextShotAt) return;
-    if (this.refuseInSafeArea(now)) {
-      this.firing = null;
-      return;
-    }
+    if (this.refuseInSafeArea(now)) return;
     // um pouco mais que a recarga do servidor, para a variação da rede não fazer um tiro ser recusado
     this.nextShotAt = now + SHOT_COOLDOWN_MS + 40;
     const cid = ++this.shotCid;
     this.conn.send({ t: 'shoot', cid, a: round3(angle) });
     const feet = this.myFeet();
     const origin = shotOriginOfFeet(feet.x, feet.y);
-    this.combat.myShot(cid, origin.x, origin.y, angle, SHOT_SPEED, SHOT_RANGE, now);
+    this.combat.myShot(cid, origin.x, origin.y, angle, SHOT_SPEED, chargedRange(charge, this.map.metric), now);
     this.sfx.play('shot');
     this.faceAngle(toDegrees(angle));
     this.view?.action?.(this.myId, 'shoot', toDegrees(angle));
     this.actionBar.setCooldown('shot', this.nextShotAt, SHOT_COOLDOWN_MS);
   }
 
-  /** Atirando sem parar (botão segurado): um tiro por recarga. */
-  private handleFiring(now: number): void {
-    if (!this.firing || this.dead) return;
-    if (this.firing.by === 'target') {
-      if (!this.entities.has(this.firing.id)) {
-        this.firing = null; // o monstro caiu ou sumiu
-        return;
-      }
-      this.shootAt(this.firing.id, now);
-    } else if (this.firing.by === 'mouse') {
-      const angle = this.mouseAim();
-      if (angle !== null) this.tryShoot(angle, now);
-    } else {
-      this.tryShoot(this.autoAim(AUTO_AIM_RANGE), now);
-    }
-  }
-
   /** Botões da tela (celular e PC). */
   private onAction(slot: ActionSlot, down: boolean): void {
     const now = performance.now();
     if (slot === 'shot') {
-      if (down) {
-        this.firing = { by: 'button' };
-        this.tryShoot(this.autoAim(AUTO_AIM_RANGE), now);
-      } else if (this.firing?.by === 'button') {
-        this.firing = null;
-      }
+      // segurar o botão puxa; soltar atira no monstro mais perto
+      if (down) this.startCharge({ by: 'button' }, now);
+      else if (this.charging?.aim.by === 'button') this.releaseCharge(now);
       return;
     }
     if (!down) return;
@@ -963,6 +1004,7 @@ class NewWorld implements NewWorldGame {
       this.toast.show('Sem espaço para rolar aí');
       return;
     }
+    this.cancelCharge(); // a esquiva solta a pedra que estava puxando (o servidor faz o mesmo)
     this.seq += 1;
     this.pending.push({ seq: this.seq, a: degrees, dash: true, slow: false });
     this.conn.send({ t: 'walk', seq: this.seq, a: degrees, dash: true });
@@ -1005,7 +1047,7 @@ class NewWorld implements NewWorldGame {
 
   private onShot(msg: Extract<ServerMsg, { t: 'shot' }>): void {
     if (msg.by === this.myId && msg.cid !== undefined) {
-      this.combat.linkMyShot(msg.cid, msg.id); // o seu tiro já está voando desde o clique
+      this.combat.linkMyShot(msg.cid, msg.id, msg.range); // o seu tiro já está voando desde o clique
       return;
     }
     const fromMonster = this.entities.get(msg.by)?.kind === 'monster';
@@ -1019,6 +1061,10 @@ class NewWorld implements NewWorldGame {
     if (e) e.hp = hp;
     this.view?.action?.(id, 'hurt');
     if (id === this.myId) {
+      // golpe recebido solta a pedra (o servidor faz o mesmo); para puxar de novo, aperte de novo
+      const hadCharge = this.charging !== null || this.pendingShot !== null;
+      this.cancelCharge();
+      if (hadCharge) this.combat.loseCharge(id, now);
       this.myHp = hp;
       this.hud.setHp(hp, this.myMaxHp);
       this.feedback.hurtFlash();
@@ -1056,8 +1102,7 @@ class NewWorld implements NewWorldGame {
       } else {
         view?.removeActor(id);
       }
-      if (this.firing?.by === 'target' && this.firing.id === id) this.firing = null;
-      this.sfx.play('kill');
+      this.sfx.play('kill'); // (puxando a pedra nele: ao soltar, ela vai para o mouse ou o mais perto)
       return;
     }
     if (e) {
@@ -1071,7 +1116,7 @@ class NewWorld implements NewWorldGame {
     if (this.dead === dead) return;
     this.dead = dead;
     if (dead) {
-      this.firing = null;
+      this.cancelCharge();
       this.clearRoute();
       this.goingToNpc = null;
       this.feedback.showDeath();

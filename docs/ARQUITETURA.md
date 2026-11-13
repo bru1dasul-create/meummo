@@ -124,7 +124,13 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   1/4 de tile, com a mesma função que o cliente usa para desenhar (`advanceShot` em `src/shared/combat.ts`).
   Árvores, pedras e paredes seguram tiros (propriedade `bloqueiaTiro`); a água não.
 - **O seu tiro aparece na hora:** o cliente desenha a pedrinha assim que você clica, mandando um número
-  (`cid`). Quando o servidor confirma (`shot` com o mesmo `cid`), os dois passam a ser o mesmo tiro.
+  (`cid`). Quando o servidor confirma (`shot` com o mesmo `cid`), os dois passam a ser o mesmo tiro (e vale o
+  alcance que o servidor mandou).
+- **Pedra com carga (jogo novo):** apertar manda `charge` e o servidor marca a hora (`Player.chargeStart`); soltar
+  manda `shoot`, e a carga é o tempo entre os dois no relógio do servidor (`chargeFraction`, cheia em
+  `CHARGE_FULL_MS`). A carga dá o dano (`chargedDamage`: até o dobro) e, no mapa novo, o alcance (`chargedRange`:
+  6,5 a 9,5 m), em `src/shared/combat.ts`. Esquiva, golpe recebido e desmaio zeram a carga; o toque rápido manda
+  `charge` e `shoot` juntos (pedra sem carga). Quem não manda `charge` (o jogo antigo) atira como sempre.
 - **Golpes telegrafados:** quando um monstro vai atacar, o servidor manda `warn` com os quadrados que
   serão atingidos e o tempo até o golpe. Na hora, só leva dano quem ainda estiver ali (e não estiver
   invencível pela esquiva). Por isso a rede não atrapalha: o aviso dura mais que o atraso da internet.
@@ -288,6 +294,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 |---|---|---|
 | cliente | `hello` | entrar com nome e senha (cria o personagem se o nome ainda não existir) |
 | cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
+| cliente | `charge` | começar a puxar o estilingue (a carga conta até o `shoot`) |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |

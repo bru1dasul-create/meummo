@@ -75,6 +75,17 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — combate passo 2a, a pedra com carga** (o dono: "pode fazer o combate passo 2"; dividi em 2a carga, 2b
+defesa com energia, 2c recuo): segurar puxa o estilingue e soltar atira; a carga enche em 1,1 s (pode segurar mais) e
+leva o dano até o **dobro** do de hoje e o alcance de 6,5 a 9,5 m (no mapa antigo nada muda). O servidor conta a carga
+pelo relógio dele, do `charge` até o `shoot` (protocolo 21); esquiva, golpe recebido e desmaio soltam a pedra sem
+atirar (como no protótipo: para puxar de novo, aperte de novo). Controles: PC segura o botão esquerdo no monstro, o
+direito (mira no mouse) ou J (mira no mais perto); celular segura o botão Estilingue e o toque rápido no monstro é
+uma pedra fraca na hora. Na tela: anel em volta do pé que enche como relógio e fica dourado quando cheio, e "carga
+perdida" embaixo do pé quando um golpe solta a pedra. Conferido no PC (mouse, botão direito e J) e no celular: cheia
+= 9,5 m e dano dobrado; rápida = 6,5 m. **Para o 2b:** no protótipo o botão direito é a defesa; aqui ele puxa a pedra
+— decidir com o dono quando a defesa entrar.
+
 **13/11 — primeira missão do jogo novo** (pedida pelo dono): "O Despertar" (Curupira → falar com a atendente da
 Budega) e "Saguis Encantados" (a Budega pede 4 saguis acalmados; Garrafada). Tipo novo de objetivo "falar" (aceita
 com quem dá, conclui com a pessoa procurada: `questFinisher`) e "rotulo" (texto do objetivo). O sagui virou "Sagui
@@ -156,9 +167,9 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **20** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+Números para não se perder: protocolo na versão **21** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
 `slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo; 20: objetivo `talk` e
-`goalLabel` nas missões); `MIGRATIONS` no
+`goalLabel` nas missões; 21: `charge`, começar a puxar o estilingue); `MIGRATIONS` no
 passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes

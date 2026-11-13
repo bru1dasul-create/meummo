@@ -62,6 +62,7 @@ export type ClientMsg =
   | { t: 'hello'; v: number; name: string; password: string; mundo?: 'novo' }
   // quero andar um pedaço (WALK_SLICE_MS) na direção `a` (graus inteiros); com dash, rolar; slow: devagar (mundo novo, Shift)
   | { t: 'walk'; seq: number; a: number; dash?: true; slow?: true }
+  | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila

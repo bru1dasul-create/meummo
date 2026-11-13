@@ -197,8 +197,16 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   desmaia de bruços ao cair (o encanto sai).
   `PD.creatures` (`js/creatures/`): o monstro com desenho lá deixa de sair com o corpo de gente
 - [ ] **[arte]** Jararaca com corpo próprio no 2.5D (rasteja em S, enrola e ergue a cabeça no aviso, bote)
-- [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
-  esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
+- [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17, em três partes (o "pode" do dono em 13/11)
+  - [x] **2a — pedra com carga** (13/11): segurar puxa, soltar atira; carga cheia em 1,1 s = o dobro do dano e alcance
+    de 6,5 a 9,5 m (só no mapa novo). O servidor conta a carga (`charge` → `shoot`, protocolo 21); esquiva, golpe
+    recebido e desmaio soltam a pedra. PC: segurar o botão esquerdo no monstro, o direito (para o mouse) ou J (no mais
+    perto); celular: segurar o botão Estilingue (toque rápido no monstro = pedra fraca na hora). Anel no pé enchendo
+    e "carga perdida" (desenho provisório no `combat.ts`; a [arte] pode animar o puxar com a ação `charge` da view)
+  - [ ] **2b — defesa com energia:** F (e um botão no celular), arco de 140° na frente, bloqueia ~75%, energia 100
+    (6/s segurando; golpe gasta 10 + 0,75 × dano; quebra sem energia; volta a 22/s depois de 0,7 s), anda mais devagar
+    defendendo; a barra verde da HUD nova é essa energia
+  - [ ] **2c — recuo:** a pedra empurra 12 a 34 cm pela força (menos com defesa), parede segura; conferir a esquiva
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

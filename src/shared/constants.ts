@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 20;
+export const PROTOCOL_VERSION = 21;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -58,6 +58,16 @@ export const SHOT_HIT_RADIUS = 0.6;
 export const SHOT_FEET_DY = 0.5;
 /** Tempo mínimo entre dois tiros do estilingue. */
 export const SHOT_COOLDOWN_MS = 450;
+/**
+ * Pedra com carga (revisão 17 do protótipo): segurar puxa o estilingue e soltar atira. A carga completa leva
+ * CHARGE_FULL_MS e pode ser mantida. Carga cheia: dano × (1 + CHARGE_DAMAGE_BONUS) e, no mapa novo, alcance de
+ * CHARGE_RANGE_MIN (sem carga) a CHARGE_RANGE_MAX metros. (No protótipo, 20 a 40 de dano: aqui vale a proporção,
+ * o dobro do dano de cada um, para não estragar o equilíbrio dos monstros e dos níveis.)
+ */
+export const CHARGE_FULL_MS = 1100;
+export const CHARGE_DAMAGE_BONUS = 1;
+export const CHARGE_RANGE_MIN = 6.5;
+export const CHARGE_RANGE_MAX = 9.5;
 
 /** Esquiva: quantos tiles o rolamento anda, de quanto em quanto tempo e quanto tempo fica invencível. */
 export const DASH_TILES = 3;

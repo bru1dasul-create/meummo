@@ -3,7 +3,23 @@
 
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
 import type { Tile, Walkable } from './map';
+import { CHARGE_DAMAGE_BONUS, CHARGE_FULL_MS, CHARGE_RANGE_MAX, CHARGE_RANGE_MIN, SHOT_RANGE } from './constants';
 import { canStep } from './movement';
+
+/** Quanto da carga do estilingue (0 a 1) depois de puxar `heldMs`. */
+export function chargeFraction(heldMs: number): number {
+  return Math.max(0, Math.min(1, heldMs / CHARGE_FULL_MS));
+}
+
+/** Alcance da pedra com esta carga: no mapa novo, de CHARGE_RANGE_MIN a CHARGE_RANGE_MAX; no antigo, o de sempre. */
+export function chargedRange(charge: number, metric: boolean): number {
+  return metric ? CHARGE_RANGE_MIN + (CHARGE_RANGE_MAX - CHARGE_RANGE_MIN) * charge : SHOT_RANGE;
+}
+
+/** Dano da pedra com esta carga (carga cheia: o dobro). */
+export function chargedDamage(base: number, charge: number): number {
+  return Math.round(base * (1 + CHARGE_DAMAGE_BONUS * charge));
+}
 
 export interface Point {
   x: number;

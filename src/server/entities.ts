@@ -85,6 +85,8 @@ export class Player {
   /** Até aqui os monstros não "percebem" este jogador sozinhos (acabou de entrar, chegar ou acordar). */
   unnoticedUntil = 0;
   nextShotAt = 0;
+  /** Puxando o estilingue desde quando (pedra com carga), ou null. Esquiva, golpe recebido e desmaio cancelam. */
+  chargeStart: number | null = null;
   dashReadyAt = 0;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);
   lastDamagedAt = -Infinity;
