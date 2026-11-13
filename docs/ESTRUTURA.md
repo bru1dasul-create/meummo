@@ -75,6 +75,12 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — primeira missão do jogo novo** (pedida pelo dono): "O Despertar" (Curupira → falar com a atendente da
+Budega) e "Saguis Encantados" (a Budega pede 4 saguis acalmados; Garrafada). Tipo novo de objetivo "falar" (aceita
+com quem dá, conclui com a pessoa procurada: `questFinisher`) e "rotulo" (texto do objetivo). O sagui virou "Sagui
+Encantado" (decisão do dono: muda o texto, não o monstro). Mexi só na lógica do `talk.ts` (qual missão aparece com
+quem; "Para concluir"), não no visual. Conferido de ponta a ponta no PC e no celular (~20 s de caça).
+
 **13/11 — a Budega abriu** (`budega`, depois da 4b do [mundo] na `main`): no balcão (64,5; 53,3), "Atendente"
 provisório. Achado no teste: o servidor media a distância para negociar misturando o tile do jogador com a posição
 da vendedora (dava 3,7 com o jogador a 3 m, no balcão) → no mapa novo, do pé ao pé, até TRADE_RANGE + TRADE_SLACK
@@ -150,8 +156,9 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **19** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
-`slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo); `MIGRATIONS` no
+Números para não se perder: protocolo na versão **20** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+`slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo; 20: objetivo `talk` e
+`goalLabel` nas missões); `MIGRATIONS` no
 passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes

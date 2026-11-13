@@ -212,16 +212,17 @@ o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão
 
 ## Missões (sem programar)
 
-As missões ficam em [`data/missoes.json`](data/missoes.json). Hoje quem dá missões é o **Curupira**, guardião da
-mata, na beira da mata ao norte da vila (logo depois do píer). Um **!** em cima dele quer dizer missão nova; um
-**?**, missão pronta para entregar. As missões em andamento aparecem embaixo do painel de vida.
+As missões ficam em [`data/missoes.json`](data/missoes.json). No jogo novo, a primeira é do **Curupira**, na
+clareira onde você acorda ("O Despertar": ir até a Budega, na praça da Vila do Capão), e a atendente da Budega
+continua ("Saguis Encantados"). Um **!** em cima de alguém quer dizer missão nova; um **?**, missão para concluir
+com ele. As missões em andamento aparecem embaixo do painel de vida.
 
 | Campo | O que é |
 |---|---|
 | `nome` | o nome da missão |
-| `quemDa` | o id do NPC que dá a missão (em `data/npcs.json`); é para ele que se volta para entregar |
+| `quemDa` | o id do NPC que dá a missão (em `data/npcs.json`); é para ele que se volta para entregar (menos na de falar) |
 | `pedido`, `concluida` | o que ele diz ao pedir e ao receber |
-| `objetivo` | `{ "tipo": "derrotar", "monstro": "sagui", "quantidade": 5 }` ou `{ "tipo": "entregar", "item": "couro_jararaca", "quantidade": 3 }` (entregar tira os itens da mochila) |
+| `objetivo` | `{ "tipo": "derrotar", "monstro": "sagui", "quantidade": 5 }`, `{ "tipo": "entregar", "item": "couro_jararaca", "quantidade": 3 }` (entregar tira os itens da mochila) ou `{ "tipo": "falar", "com": "budega" }` (ir até alguém e conversar: a missão se conclui com essa pessoa). Opcional em todos: `"rotulo"`, o texto do objetivo na tela (ex.: `"Acalmar 4 saguis encantados"`) |
 | `recompensa` | `xp`, `ouro` e `itens` (lista de `{ "item": ..., "quantidade": ... }`) |
 | `depoisDe` | opcional: só aparece depois de concluir esta outra missão (para fazer uma sequência) |
 | `nivelMinimo` | opcional: nível mínimo para aceitar (padrão 1) |
