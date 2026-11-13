@@ -393,6 +393,89 @@ body {
   }
 }
 
+/* "Como jogar": os controles do jogo que vai abrir (o main.ts marca body.jogo-novo; o ?antigo tem os de antes) */
+body:not(.jogo-novo) .only-novo,
+body.jogo-novo .only-antigo {
+  display: none;
+}
+
+/* celular deitado (tela baixa): o logo à esquerda e o painel à direita, mais junto, para o "Entrar" e o "Criar uma
+   conta" caberem sem rolar; o "Como jogar" volta para o canto de baixo, embaixo do logo */
+@media (max-height: 500px) and (orientation: landscape) {
+  .overlay {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(16px, 4vw, 44px);
+    padding: calc(6px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+
+  #login-logo {
+    width: min(42vw, 400px);
+    height: auto;
+    margin: 0 0 8vh;
+  }
+
+  #login .panel {
+    flex: none;
+    width: min(340px, 50vw);
+    margin: 28px 0 0;
+    padding: 18px 18px 6px;
+    gap: 6px;
+  }
+
+  #login .panel-vines {
+    height: 96px;
+  }
+
+  #login .panel-medal {
+    top: -26px;
+    width: 44px;
+    height: 44px;
+  }
+
+  #login-title {
+    margin: 0;
+    font-size: 17px;
+  }
+
+  #login .field input {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  #login .hint {
+    display: none;
+  }
+
+  #login-button {
+    margin-top: 2px;
+    padding: 9px 12px 8px;
+    font-size: 18px;
+  }
+
+  #login .error {
+    min-height: 0;
+  }
+
+  #login .how-to {
+    position: fixed;
+    left: calc(14px + env(safe-area-inset-left));
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    margin: 0;
+  }
+
+  #login .how-to[open] .controls {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    width: max-content;
+    max-width: min(380px, 46vw);
+    margin: 0;
+  }
+}
+
 input {
   width: 100%;
   padding: 10px 12px;

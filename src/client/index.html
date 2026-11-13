@@ -62,13 +62,28 @@
       </form>
       <details id="how-to" class="how-to">
         <summary><span aria-hidden="true">?</span> Como jogar</summary>
-        <ul class="controls desktop-only">
+        <!-- jogo 2.5D (o de sempre): os controles do README -->
+        <ul class="controls desktop-only only-novo">
+          <li><b>Clique no chão</b> ou <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>: andar · <kbd>Shift</kbd> anda devagar</li>
+          <li>Estilingue: <b>segure e solte</b> o botão esquerdo no monstro, o direito para o mouse ou <kbd>J</kbd> (quanto mais segura, mais forte)</li>
+          <li><kbd>Q</kbd> Bordunada · <kbd>E</kbd> Fôlego (cura) · <kbd>Espaço</kbd> esquiva</li>
+          <li>Segure <kbd>F</kbd>: defesa · <kbd>3</kbd> e <kbd>4</kbd>: comida e remédio</li>
+          <li>Roda do mouse: zoom · <kbd>I</kbd> mochila · <kbd>Enter</kbd> conversar</li>
+        </ul>
+        <ul class="controls touch-only only-novo">
+          <li>Joystick ou toque no chão para andar</li>
+          <li>Toque rápido no monstro: pedra fraca · segure e solte <b>Estilingue</b>: pedra forte</li>
+          <li>Segure <b>Defesa</b> · botões: Bordunada, Fôlego (cura) e Esquiva</li>
+          <li>Os anéis redondos: comida e remédio</li>
+        </ul>
+        <!-- jogo antigo (?antigo) -->
+        <ul class="controls desktop-only only-antigo">
           <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar (duas juntas = diagonal) · <kbd>Espaço</kbd> esquiva</li>
           <li>Mouse mira · <b>clique</b> atira com o estilingue</li>
           <li><kbd>Q</kbd> Bordunada · <kbd>E</kbd> Fôlego (cura)</li>
           <li>Botão direito: andar até lá · <kbd>Enter</kbd> conversar</li>
         </ul>
-        <ul class="controls touch-only">
+        <ul class="controls touch-only only-antigo">
           <li>Toque no chão para andar</li>
           <li>Toque num monstro (ou segure <b>Estilingue</b>) para atirar</li>
           <li>Botões: Bordunada, Fôlego (cura) e Esquiva</li>

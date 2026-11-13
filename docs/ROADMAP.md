@@ -371,6 +371,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   em quadros dourados perto do polegar. O jogo antigo (`?antigo`) continua igual. Falta a [estrutura] ligar a barra
   azul (`hud.setEnergy(valor, máximo)`); até lá ela mostra a energia cheia
 - [ ] **[arte]** Interface, próximos passos: pintar os outros ícones de item, e a loja e a conversa no mesmo painel
+- [x] **[arte]** Tela inicial, acertos pedidos pela [estrutura] (13/11): no celular deitado o logo vai para a esquerda
+  e o painel para a direita, mais junto (o "Entrar" e o "Criar uma conta" cabem sem rolar, também no iPhone); o "Como
+  jogar" mostra os controles do jogo 2.5D (segurar e soltar o estilingue, defesa no F, 3 e 4, zoom na roda) e o
+  `?antigo` continua com os de antes
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou
