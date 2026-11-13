@@ -71,7 +71,7 @@ function octile(ax: number, ay: number, bx: number, by: number): number {
 }
 
 /** Fila de prioridade mínima (heap binário) — devolve sempre o item de menor prioridade. */
-class MinHeap {
+export class MinHeap {
   private items: number[] = [];
   private priorities: number[] = [];
 

@@ -1,8 +1,10 @@
 // Joystick na tela do celular: encostar e arrastar na metade esquerda da tela anda naquela direção (na tela).
-// Solto, para. O resto da tela continua servindo para tocar no chão (andar até lá) ou num personagem.
+// Solto, para. Um toque rápido, sem arrastar, vale como tocar no chão ali (andar até lá ou falar com quem está lá),
+// como no resto da tela.
 
 const DEAD_ZONE = 12; // pixels: arrastar menos que isso não anda
 const RADIUS = 56; // tamanho do joystick desenhado
+const TAP_MS = 300; // encostou e soltou antes disto, sem arrastar: foi um toque, não o joystick
 
 export class Joystick {
   private readonly base: HTMLDivElement;
@@ -12,8 +14,15 @@ export class Joystick {
   private originY = 0;
   private dx = 0;
   private dy = 0;
+  private downAt = 0;
+  /** O quanto o dedo já se afastou do ponto onde encostou (pixels). */
+  private farthest = 0;
 
-  constructor(private readonly surface: HTMLElement) {
+  constructor(
+    private readonly surface: HTMLElement,
+    /** Toque rápido sem arrastar na área do joystick: o jogo trata como tocar no chão ali. */
+    private readonly onTap: (clientX: number, clientY: number) => void = () => {},
+  ) {
     this.base = document.createElement('div');
     this.base.style.cssText = `position:fixed;width:${RADIUS * 2}px;height:${RADIUS * 2}px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(0,0,0,.18);pointer-events:none;display:none;z-index:5;`;
     this.knob = document.createElement('div');
@@ -58,6 +67,8 @@ export class Joystick {
     this.originY = event.clientY;
     this.dx = 0;
     this.dy = 0;
+    this.downAt = performance.now();
+    this.farthest = 0;
     this.base.style.left = `${event.clientX - RADIUS}px`;
     this.base.style.top = `${event.clientY - RADIUS}px`;
     this.base.style.display = 'block';
@@ -69,6 +80,7 @@ export class Joystick {
     this.dx = event.clientX - this.originX;
     this.dy = event.clientY - this.originY;
     const length = Math.hypot(this.dx, this.dy);
+    this.farthest = Math.max(this.farthest, length);
     const k = length > RADIUS ? RADIUS / length : 1;
     this.knob.style.transform = `translate(${this.dx * k}px, ${this.dy * k}px)`;
   };
@@ -77,5 +89,7 @@ export class Joystick {
     if (event.pointerId !== this.pointerId) return;
     this.pointerId = null;
     this.base.style.display = 'none';
+    const tapped = event.type === 'pointerup' && this.farthest < DEAD_ZONE && performance.now() - this.downAt < TAP_MS;
+    if (tapped) this.onTap(this.originX, this.originY);
   };
 }

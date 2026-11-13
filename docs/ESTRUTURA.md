@@ -75,6 +75,16 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — "andar até" do jogo novo refeito (defeito do [mundo] na etapa 4b):** a rota de tile em tile raspava num
+poste de 0,3 m e travava de frente, e o toque seguinte travava de novo. Agora `src/shared/route.ts`: reta direta
+quando livre, senão A* numa grade de 0,2 m pelo tamanho do pé e retas conferidas com folga; trava → recalcula (2
+vezes) → larga com aviso. No mapa da 4b: 900 de 900 trajetos aleatórios chegaram, nenhum travou, busca de 2 a 6 ms
+(pior 22 ms). No celular, toque rápido na área do joystick também anda (`joystick.ts`). `?novo&provisorio` força o
+desenho provisório (mostra as caixas de colisão). O jogo antigo continua com a rota antiga (congelado). A [arte]
+juntou a `PD.View` na `main` com o "pode" do dono; a 4a do [mundo] entrou sem monstros (escolha do dono). Esperando
+o dono: endereço normal abrir o jogo novo? e o "pode" para o combate do jogo novo. A Budega fica no balcão
+(64,5; 53,3) quando o dono liberar.
+
 **12/11 — Mapa 01 (decisões do dono, repassadas pelo [mundo]; confirmar com o dono quando chegar a hora):** o
 [mundo] faz em etapas (câmera, planta, uma tela jogável só com a clareira, o resto em 3 pedaços, atmosferas,
 minimapa); o meu trabalho no mapa novo começa na etapa 3, e ele avisa. Ficam comigo: a Budega como a vendinha da

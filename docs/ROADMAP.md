@@ -89,6 +89,9 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   10 s derrubava a conexão ("mensagens demais": a trava era de 15 mensagens por segundo e o andar solto manda 20) —
   agora 40 por segundo; e o "andar até" ficava indo e voltando perto do destino — agora para quando nenhum passo
   aproxima mais
+- [x] **[estrutura]** "Andar até" do jogo novo pelo tamanho exato do pé (13/11, achado pelo [mundo] na etapa 4b): não
+  raspa mais em poste e banco (a rota de tile em tile travava de frente neles), recalcula se travar e, se não der,
+  avisa e larga a rota (o toque seguinte funciona). No celular, um toque rápido na área do joystick também anda
 - [ ] **[mundo]** Movimento livre, passo 2: colisão do tamanho de cada objeto (tronco, poste, cesto, caixote), dita
   no tileset; a [estrutura] lê e usa
 - [ ] **[estrutura + arte]** Movimento livre, passo 3: joystick na tela do celular (a [estrutura] faz funcionar, a

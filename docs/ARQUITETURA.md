@@ -59,14 +59,20 @@ Os mapas novos ficam em `public/assets/maps-iso/` (o servidor lê esta pasta e a
 - Pontos com nome (`spawn`, chegadas) e a posição dos NPCs no `data/npcs.json` dizem **onde fica o pé**, exato, com
   fração (`cornerAtFeet` converte para a posição "de canto"). Quem nasce fica a até 0,8 m do `spawn`, para ninguém
   nascer em cima do outro.
-- O "clique para andar" do jogador usa `bodyWalkable`: um tile vale se o pé cabe parado em algum lugar dele, então o
-  caminho entra nos vãos entre troncos que a grade dos monstros fecha; `steerDegrees` anda reto quando está quase
-  alinhado, para o escorregão da quina ajudar a entrar no vão.
+- O "andar até" do jogo novo usa `src/shared/route.ts`, pelo tamanho exato do pé: se a reta até o destino está livre
+  (com folga de 8 cm), vai direto; senão, A* numa grade fina de 0,2 m de lugares onde o pé cabe e, depois, "puxa o
+  fio" em retas conferidas. Quem segue a rota (`followRoute`) pula para o ponto seguinte assim que o vê em linha reta
+  e, no último, para quando nenhum pedaço aproxima mais. Se travar mesmo assim, o jogo recalcula a partir de onde está
+  (até 2 vezes) e depois larga a rota com o aviso "Não dá para chegar aí". Tocou onde o pé não cabe (casa, árvore):
+  vai até o lugar livre mais perto (até 3 m). (A rota antiga, de tile em tile com `bodyWalkable`, raspava em poste e
+  banco; ela continua só no jogo de hoje.)
 - Para testar o mundo novo: `MEUMMO_MAPA_INICIAL=capao` faz os personagens novos começarem nele (o Refúgio continua
   sendo de quem já joga). O jogo de hoje (Phaser) não desenha esses mapas: quem desenha é o jogo 2.5D novo.
 
 ## O jogo 2.5D novo (`src/client/novo/`)
-Abre em `http://localhost:3000/?novo` (o jogo de hoje continua em `/`). A tela de entrada, o painel de vida e o chat
+Abre em `http://localhost:3000/?novo` (o jogo de hoje continua em `/`); `?novo&provisorio` troca o desenho da [arte]
+pelo provisório, que mostra as caixas de colisão (bom para conferir onde o pé bate). No celular, encostar e arrastar
+na metade esquerda é o joystick; um toque rápido sem arrastar, em qualquer lugar, é "andar até" ali. A tela de entrada, o painel de vida e o chat
 são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o personagem num mapa do formato novo
 (o jogo de hoje nunca recebe esses mapas, e vice-versa).
 - `engine.ts` (da [estrutura]): o motor. Conversa com o servidor, prevê o próprio andar (as mesmas regras de

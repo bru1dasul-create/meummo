@@ -6,23 +6,8 @@
 import { DASH_TILES, MAX_PENDING_WALKS, TRADE_RANGE, WALK_SLICE_MS } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
-import {
-  bodyFits,
-  bodySpotIn,
-  degreesOfDir,
-  finalApproach,
-  bodyWalkable,
-  cornerAtFeet,
-  feetAt,
-  footCenter,
-  footTile,
-  steerDegrees,
-  sweepBody,
-  sliceDistance,
-  walkSlice,
-  type Pose,
-} from '../../shared/movement';
-import { findPath } from '../../shared/pathfind';
+import { degreesOfDir, cornerAtFeet, feetAt, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
+import { findRoute, followRoute } from '../../shared/route';
 import type { EntityState, NpcInfo, PlayerStats, ServerMsg, WelcomeMsg, ZoneMsg } from '../../shared/protocol';
 import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
@@ -58,10 +43,14 @@ async function loadMap(id: string): Promise<TiledMap> {
   return (await response.json()) as TiledMap;
 }
 
-/** O desenho: o da [arte] (PD.View, quando estiver carregado) ou o provisório. */
+/**
+ * O desenho: o da [arte] (PD.View, quando estiver carregado) ou o provisório. `?novo&provisorio` força o provisório,
+ * que mostra as caixas de colisão do mapa (bom para conferir onde o pé bate).
+ */
 function createView(container: HTMLElement, map: TiledMap): WorldView {
   const pd = (window as unknown as { PD?: { View?: new (container: HTMLElement, map: TiledMap) => WorldView } }).PD;
-  return pd?.View ? new pd.View(container, map) : new ProvisionalView(container, map);
+  const forceProvisional = new URLSearchParams(location.search).has('provisorio');
+  return pd?.View && !forceProvisional ? new pd.View(container, map) : new ProvisionalView(container, map);
 }
 
 class NewWorld implements NewWorldGame {
@@ -89,6 +78,10 @@ class NewWorld implements NewWorldGame {
   private walkAt = 0;
   /** "Tocar no chão para andar": pontos até o destino. */
   private route: Tile[] = [];
+  /** Onde o "andar até" quer chegar (para recalcular o caminho se travar). */
+  private routeGoal: Tile | null = null;
+  /** Quantas vezes o caminho deste "andar até" já foi recalculado. */
+  private replans = 0;
   private stuckSlices = 0;
   /** Indo conversar com este NPC (fala quando chegar perto). */
   private goingToNpc: number | null = null;
@@ -111,7 +104,7 @@ class NewWorld implements NewWorldGame {
     this.chat = deps.chat;
     this.hud = deps.hud;
     this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
-    this.joystick = new Joystick(this.container);
+    this.joystick = new Joystick(this.container, (x, y) => this.tapAt(x, y));
     this.container.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKey);
@@ -237,10 +230,6 @@ class NewWorld implements NewWorldGame {
     this.shiftDown = false;
   };
 
-  private here(): Tile {
-    return footTile(this.predicted.x, this.predicted.y);
-  }
-
   private handleMovement(now: number): void {
     const delta = this.walkAt > 0 ? Math.min(250, now - this.walkAt) : 0;
     this.walkAt = now;
@@ -277,21 +266,8 @@ class NewWorld implements NewWorldGame {
       return this.screenDegrees(stick.dx, stick.dy);
     }
     this.slow = this.shiftDown; // "andar até" com Shift segurado vai devagar
-    while (this.route.length > 0) {
-      const next = this.route[0]!;
-      if (this.route.length === 1) {
-        // ponto final: só anda enquanto o pedaço aproxima de verdade (senão passaria do ponto e voltaria sem parar)
-        const degrees = finalApproach(this.map, this.predicted, next, this.sliceOf(this.slow));
-        if (degrees === null) this.route.shift();
-        return degrees;
-      }
-      if (Math.hypot(next.x - this.predicted.x, next.y - this.predicted.y) <= 0.35) {
-        this.route.shift();
-        continue;
-      }
-      return steerDegrees(this.predicted.x, this.predicted.y, next.x, next.y);
-    }
-    return null;
+    if (this.route.length === 0) return null;
+    return followRoute(this.map, this.predicted, this.route, this.sliceOf(this.slow));
   }
 
   private walkOnce(degrees: number): void {
@@ -311,10 +287,24 @@ class NewWorld implements NewWorldGame {
     else this.noteStuck();
   }
 
+  /**
+   * O "andar até" não saiu do lugar: recalcula o caminho a partir de onde está (até 2 vezes). Se continuar
+   * preso, larga a rota e avisa — o próximo toque calcula de novo a partir daqui.
+   */
   private noteStuck(): void {
     if (this.route.length === 0) return;
     this.stuckSlices += 1;
-    if (this.stuckSlices >= 4) this.clearRoute();
+    if (this.stuckSlices < 3) return;
+    this.stuckSlices = 0;
+    const found = this.routeGoal && this.replans < 2 ? findRoute(this.map, this.predicted, this.routeGoal) : null;
+    this.replans += 1;
+    if (found && found.points.length > 0) {
+      this.route = found.points;
+      return;
+    }
+    this.clearRoute();
+    this.goingToNpc = null;
+    this.toast.show('Não dá para chegar aí');
   }
 
   private showMe(durationMs: number): void {
@@ -343,39 +333,40 @@ class NewWorld implements NewWorldGame {
     this.showMe(0);
   }
 
-  /** Tocar/clicar no chão: anda até lá (pelo caminho onde o pé cabe). */
+  /**
+   * Tocar/clicar no chão: anda até lá, pelo caminho onde o pé passa (src/shared/route.ts). Se o pé não cabe
+   * onde tocou (árvore, casa), vai até o lugar livre mais perto.
+   */
   private walkToPoint(x: number, y: number): void {
     const goal = cornerAtFeet(x, y);
-    const target = footTile(goal.x, goal.y);
-    const start = this.here();
-    const path = findPath(bodyWalkable(this.map), start.x, start.y, target.x, target.y);
-    if (!path) {
+    const found = findRoute(this.map, this.predicted, goal);
+    this.stuckSlices = 0;
+    this.replans = 0;
+    if (!found || found.points.length === 0) {
+      this.clearRoute();
       this.toast.show('Não dá para chegar aí');
       return;
     }
-    let tx = start.x;
-    let ty = start.y;
-    this.route = path.map((dir) => {
-      tx += DX[dir];
-      ty += DY[dir];
-      return bodySpotIn(this.map, tx, ty) ?? { x: tx, y: ty };
-    });
-    // o último ponto é exatamente onde tocou (se o pé couber lá)
-    if (bodyFits(this.map, goal.x, goal.y)) {
-      if (this.route.length > 0) this.route[this.route.length - 1] = goal;
-      else this.route = [goal];
-    }
-    this.stuckSlices = 0;
+    this.route = found.points;
+    this.routeGoal = found.points[found.points.length - 1]!;
   }
 
   private clearRoute(): void {
     this.route = [];
+    this.routeGoal = null;
   }
 
   private readonly onPointerDown = (event: PointerEvent) => {
     if (!this.view || event.button > 0 || this.joystick.owns(event)) return;
-    if (event.pointerType !== 'mouse' && event.clientX <= window.innerWidth * 0.45) return; // é o joystick
-    const point = this.view.toWorld(event.clientX, event.clientY);
+    // na área do joystick, o toque rápido chega pelo próprio joystick (tapAt), quando o dedo sai
+    if (event.pointerType !== 'mouse' && event.clientX <= window.innerWidth * 0.45) return;
+    this.tapAt(event.clientX, event.clientY);
+  };
+
+  /** Tocou/clicou na tela neste ponto: vai conversar com o NPC que está ali ou anda até lá. */
+  private tapAt(clientX: number, clientY: number): void {
+    if (!this.view) return;
+    const point = this.view.toWorld(clientX, clientY);
     // tocou perto de um NPC: vai conversar
     for (const [id, npc] of this.npcs) {
       const feet = feetAt(npc.e.x, npc.e.y);
@@ -387,7 +378,7 @@ class NewWorld implements NewWorldGame {
     }
     this.goingToNpc = null;
     this.walkToPoint(point.x, point.y);
-  };
+  }
 
   /** Chegou perto do NPC que foi procurar: ele fala. */
   private checkNpcArrival(): void {

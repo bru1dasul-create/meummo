@@ -116,7 +116,7 @@ com o dono, onde estamos e próximos passos): `docs/ESTRUTURA.md` da [estrutura]
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).
 O jogo 2.5D novo abre em http://localhost:3000/?novo (`window.__mundoNovo`: `me`, `walkTo(x, y)` em metros, `walking()`,
-`safe()`, `entities()`, `screenOf(x, y)`). No jogo de hoje existe `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
+`safe()`, `entities()`, `screenOf(x, y)`); `?novo&provisorio` mostra as caixas de colisão no lugar do desenho. No jogo de hoje existe `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,
 `__meummo.walkTo(x, y)`, `__meummo.walking()`, `__meummo.screenOf(x, y)`, `__meummo.drops()` (ouro e itens no chão),
 `__meummo.charmed()` (encantado pelo canto) — útil para testes automáticos. Para testar com ouro, itens ou em outro
 mapa sem caçar, use o painel do administrador (`/admin/api/jogador`) no servidor de teste.

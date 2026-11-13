@@ -54,6 +54,8 @@ interface Shape {
   points?: { x: number; y: number }[];
   /** Linha: largura em metros (propriedade `largura`). */
   lineWidth?: number;
+  /** Altura em metros (propriedade `altura` da colisão; sem ela, a altura padrão do tipo). */
+  height?: number;
 }
 
 /** Objeto do Tiled → forma em metros. */
@@ -69,7 +71,9 @@ function shapeOf(o: TiledObject, px: number): Shape {
     const width = o.properties?.find((p) => p.name === 'largura')?.value;
     return { ...box, lineWidth: typeof width === 'number' && width > 0 ? width : 2 };
   }
-  return { x0: o.x / px, y0: o.y / px, x1: (o.x + (o.width ?? 0)) / px, y1: (o.y + (o.height ?? 0)) / px, kind, ellipse: o.ellipse === true };
+  const altura = o.properties?.find((p) => p.name === 'altura')?.value;
+  const height = typeof altura === 'number' && altura >= 0 ? altura : undefined;
+  return { x0: o.x / px, y0: o.y / px, x1: (o.x + (o.width ?? 0)) / px, y1: (o.y + (o.height ?? 0)) / px, kind, ellipse: o.ellipse === true, height };
 }
 
 interface Actor extends ActorInfo {
@@ -98,6 +102,8 @@ const GROUND: Record<string, string> = {
   lama: '#4d3a24',
   asfalto: '#3e3f44',
   circulo: '#8d9b97',
+  praca: '#b8b2a3',
+  faixa: '#d8d4c8',
 };
 /** Coisas da camada `colisao` que ficam no nível do chão (não viram caixa): a beira da água. */
 const FLAT: Record<string, string> = { agua: 'rgba(47, 111, 159, 0.85)' };
@@ -138,8 +144,9 @@ export class ProvisionalView implements WorldView {
         else if (layer.name === 'colisao' && !o.point) (FLAT[shape.kind] ? this.flat : this.solids).push(shape);
         else if (layer.name === 'seguro' && !o.point) this.safe.push(shape);
         else if (layer.name === 'cenario' && typeOf(o) === 'arvore') {
-          const copa = (o.properties?.find((p) => p.name === 'copa')?.value as number | undefined) ?? 3;
-          this.canopies.push({ x: o.x / px, y: o.y / px, r: copa / 2 });
+          // `copa` é o RAIO da copa em metros (combinado com o [mundo] e a [arte], docs/ARQUITETURA.md)
+          const copa = o.properties?.find((p) => p.name === 'copa')?.value;
+          this.canopies.push({ x: o.x / px, y: o.y / px, r: typeof copa === 'number' && copa > 0 ? copa : 1.5 });
         }
       }
     }
@@ -228,7 +235,7 @@ export class ProvisionalView implements WorldView {
     // coisas altas e personagens na ordem de quem está mais atrás (menor x + y) para a frente
     const items: { depth: number; draw: () => void }[] = [];
     for (const s of this.solids) {
-      if (this.onScreen((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, w, h)) items.push({ depth: s.x1 + s.y1, draw: () => this.drawBox(s, HEIGHT[s.kind] ?? 1.2) });
+      if (this.onScreen((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, w, h)) items.push({ depth: s.x1 + s.y1, draw: () => this.drawBox(s, s.height ?? HEIGHT[s.kind] ?? 1.2) });
     }
     for (const [id, a] of this.actors) {
       const at = this.position(a, now);
