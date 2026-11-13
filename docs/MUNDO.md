@@ -54,7 +54,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   sem vão de entalar e com o lado de trás do balcão fechado, e o lugar da Xiovanna (`XIOVANNA`, pé em 64,6; 51, que
   a [estrutura] copia no `data/npcs.json`; mais a leste a copa da árvore da praça cobre ela na tela). O gerador
   confere que ela cabe lá.
-- **O resto do Capão (4c) no padrão novo, aprovado (13/11, "pode mandar pra arte"):** no ramo `mundo/etapa-4c` (bloco
+- **O resto do Capão (4c) no padrão novo está na `main` (13/11)**, com o desenho da [arte] (viaduto a 8 m na beira
+  norte: o tabuleiro e o trem aparecem quando se chega no fundo; o dono não pediu mudança). Antes no ramo `mundo/etapa-4c` (bloco
   `reached('4c') && FLORESTA`, sorteio `SEED + 12`). Propriedades novas: `viaduto` (`cipo`, `arvoresNoTopo`),
   `pilar-viaduto` (`pixo`, `musgo`, `cipo`), `trem` (`cipo`, `plantas`, `janelasQuebradas`), `onibus` (`horta`),
   `casa` abandonada (`arvoreDentro`), `trave` (`ferrugem`, `cipo`, `rede`), `muro` (`cipo`, `musgo`), e a `arvore`
@@ -147,7 +148,13 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     x 16 a 26 × y 92 a 112. Entra na `main` depois da 4b e do desenho dessas coisas pela [arte] (senão o bambu vira
     parede invisível e o deque parece água). Para aumentar de novo depois (o dono perguntou): subir `H` e pôr as
     coisas novas no sul; o que existe não muda de lugar, nem os NPCs (`data/npcs.json`).
-  - **4c:** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
+  - **4c (aprovada pelo dono em 13/11; ramo `mundo/etapa-4c`, por cima da mata nova; espera o desenho da [arte]):** campinho de várzea
+    (60 a 85 × 63 a 78, `campinho` com linhas, duas `trave`, capivaras pastando, bancos) e o `muro` com grafite a oeste
+    dele (pintura virada para o campo); `viaduto` da Linha 5-Lilás (y 2 a 6, a 8 m, quebrado na ponta do parque, com
+    mato), 4 `pilar-viaduto`, o `trem` lilás (3 vagões) e `cipo`; o `onibus` velho (70 a 86 × 12,5 a 15,5); a rua para
+    Guarapiranga segue pela mata ao sul da vila (x 88 a 94) até uma `barreira` com `placa` em y 114,5 (a saída abre
+    quando o Mapa 02 existir) e a rua leste termina no mato com a placa "ESTAÇÃO CAPÃO REDONDO". O plano antigo era:
+  - **4c (plano de 12/11):** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
     5-Lilás no fundo (y 2 a 6, x 48 a 96, 8 m de altura, com o trem lilás parado) e um ônibus velho embaixo; saídas
     sul (x 88 a 94, y = 80) → Guarapiranga e leste (x = 96, y 41 a 47) → Estação Capão Redondo (depois). Regra: o que
     é alto fica no fundo da tela (noroeste), o que é baixo fica na frente. Saci no fundo da mata, em (8,5; 6) (depois).

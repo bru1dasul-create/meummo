@@ -141,14 +141,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   da casa amarela ao lado da porta (não na frente) e os postes da rua do portão na calçada das casas, que para a
   câmera fica atrás de quem anda na rua (antes ficavam na calçada da praça, na frente do personagem); nenhum fio
   atravessa a rua
-- [ ] **[mundo]** O resto do Capão (4c) no padrão novo: planta aprovada pelo dono em 13/11 ("pode mandar pra arte";
+- [x] **[mundo]** O resto do Capão (4c) no padrão novo (**na main em 13/11**, com o desenho da [arte]): planta aprovada pelo dono em 13/11 ("pode mandar pra arte";
   `docs/referencias/capao-fundo-planta.jpg`, `capao-sul-planta.jpg` e os alvos `capao-fundo-aprovado.jpg` e
   `capao-campinho-aprovado.jpg`; na imagem do fundo a IA desenhou a casa abandonada destruída: no jogo ela fica
   inteira, só com a árvore saindo pelo telhado). No ramo `mundo/etapa-4c`: viaduto com cipó e árvores no tabuleiro,
   pilares com pichação, musgo e cipó, o trem com cipó e plantas, o ônibus virando a horta da vila, a casa abandonada
   com árvore pelo telhado, caminho de terra no fundo, o campinho com o mato entrando, traves enferrujadas com a rede
   rasgada, o muro com cipó, cadeiras de quem assiste, a rua para Guarapiranga com faixa apagada, rachaduras, buracos
-  e raízes, e a Figueira do Viaduto. Entra com o desenho da 4c pela [arte]
+  e raízes, e a Figueira do Viaduto. O viaduto fica a 8 m, na beira norte (o tabuleiro e o trem aparecem quando se
+  chega no fundo da vila; o dono não pediu mudança)
 - [x] **[arte]** O desenho da 4c (13/11, `prototipos/pindorama-25d/js/world/fundo.js`): as traves com a rede rasgada,
   a ferrugem e o cipó; o muro com o grafite "CAPÃO", o sol e as manchas de tinta, musgo e cipó; o viaduto da linha
   lilás (o tabuleiro com a mureta, a brita, os dormentes e os trilhos, mato e arvorezinhas, a face manchada e pichada, a
@@ -215,10 +216,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   (`docs/referencias/mapa-01-planta.jpg`); 3) uma tela jogável (a clareira, em `/?novo`) ✔ (`npm run gen:capao` →
   `public/assets/maps-iso/capao.tmj`); 4) o resto do mapa em 3 pedaços: mata e lago ✔ (12/11; os saguis encantados e
   as jararacas voltaram em 13/11, com o combate do jogo novo), portão e vila ✔ (13/11: a Budega Distribuidora na praça,
-  desenhada pela [arte]), campinho, viaduto e saídas; 5) atmosferas (dia, entardecer e noite); 6) minimapa.
+  desenhada pela [arte]), campinho, viaduto e saídas ✔ (13/11, já no padrão novo); 5) atmosferas (dia, entardecer e
+  noite); 6) minimapa.
   Mata nova (pedido do dono, 13/11: 50% maior para o sul, menos árvores, trilhas sem copa, plantas variadas, mais
   sombria): aprovada pelo dono (13/11) e **na main em 13/11**, junto com o desenho da [arte] (árvores de verdade,
-  árvore seca, jerivá, embaúba, xaxim, bananeira, bambu, plantas, cogumelos, deque, pinguela, véus, escuro e neblina). Dá para aumentar de novo depois (cresce para o sul sem mudar nada de lugar). Padrão: a arte conceitual
+  árvore seca, jerivá, embaúba, xaxim, bananeira, bambu, plantas, cogumelos, deque, pinguela, véus, escuro e neblina).
+  Dá para aumentar de novo depois (cresce para o sul sem mudar nada de lugar). Etapa 4c (campinho, viaduto
+  da Linha 5-Lilás, ônibus velho e as saídas, fechadas com placa até os próximos mapas existirem): aprovada pelo dono
+  (13/11) e **na main em 13/11**, com o desenho da [arte]. Padrão: a arte conceitual
   aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
