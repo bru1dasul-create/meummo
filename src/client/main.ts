@@ -14,7 +14,7 @@ import {
 } from '../shared/names';
 import type { ByeReason, LoginMode, WelcomeMsg } from '../shared/protocol';
 import { WorldScene, type WorldSceneData } from './game/WorldScene';
-import { Connection, JoinError, type JoinFailure } from './net';
+import { Connection, JoinError, reportErrors, type JoinFailure } from './net';
 import { Sfx } from './sfx';
 import { ChatBox, Hud } from './ui';
 
@@ -25,6 +25,8 @@ const NAME_STORAGE_KEY = 'meummo:nome';
  * O `?novo` de antes continua abrindo o novo.
  */
 const NEW_WORLD = !new URLSearchParams(location.search).has('antigo');
+// a interface do jogo 2.5D (HUD com moldura, barra de habilidades...) só vale nele: style.css usa body.jogo-novo
+document.body.classList.toggle('jogo-novo', NEW_WORLD);
 
 const loginOverlay = document.getElementById('login') as HTMLDivElement;
 const loginForm = document.getElementById('login-form') as HTMLFormElement;
@@ -73,6 +75,8 @@ const BYE_MESSAGES: Record<ByeReason, string> = {
 };
 
 let game: Phaser.Game | null = null;
+/** Para de mandar os erros da página ao servidor (ao sair do jogo). */
+let stopErrorReports: (() => void) | null = null;
 const sfx = new Sfx();
 let session: { conn: Connection; chat: ChatBox; hud: Hud } | null = null;
 /** O jogo 2.5D novo, quando é ele que está aberto. */
@@ -142,6 +146,8 @@ loginForm.addEventListener('submit', async (event) => {
   try {
     const { conn, welcome } = await Connection.join(name, password, undefined, undefined, NEW_WORLD, loginMode);
     saveName(name);
+    stopErrorReports?.();
+    stopErrorReports = reportErrors(conn); // erros desta página vão para os registros do servidor
     if (NEW_WORLD) await startNewWorldGame(conn, welcome);
     else startGame(conn, welcome);
   } catch (error) {

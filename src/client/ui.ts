@@ -1,7 +1,9 @@
 // Interface em HTML por cima do jogo: barra de informações e chat.
 
-import { actionIconUrl } from './actionArt';
+import { GUARD_MAX_ENERGY } from '../shared/constants';
+import { actionIconUrl, guardIconUrl } from './actionArt';
 import { installCoinStyle } from './coinArt';
+import { drawHeroPortrait } from './heroPortrait';
 
 const MAX_CHAT_LINES = 60;
 /** Sem mensagem nova por esse tempo, o chat fica mais transparente (para não esconder o jogo). */
@@ -150,6 +152,11 @@ export class ChatBox {
 }
 
 /** Painel do canto: nome, nível, vida, XP, online e ping. */
+/** Número com ponto de milhar, como no resto do jogo (1.420). */
+function count(n: number): string {
+  return Math.round(n).toLocaleString('pt-BR');
+}
+
 export class Hud {
   private readonly root = byId<HTMLDivElement>('hud');
   private readonly name = byId<HTMLSpanElement>('hud-name');
@@ -161,11 +168,29 @@ export class Hud {
   private readonly gold = byId<HTMLSpanElement>('hud-gold');
   private readonly online = byId<HTMLSpanElement>('hud-online');
   private readonly ping = byId<HTMLSpanElement>('hud-ping');
+  // jogo 2.5D: o retrato do herói no círculo e a barra azul da energia da defesa (no antigo ficam escondidos)
+  private readonly portrait = document.getElementById('hud-portrait') as HTMLCanvasElement | null;
+  private readonly enFill = document.getElementById('hud-en-fill');
+  private readonly enText = document.getElementById('hud-en-text');
+  private portraitDrawn = false;
+  private shownEnergy = '';
+  private readonly redrawPortrait = () => {
+    this.portraitDrawn = false;
+    this.drawPortrait();
+  };
 
   constructor(playerName: string) {
     this.root.hidden = false;
     this.name.textContent = playerName;
     installCoinStyle(); // a moeda desenhada aparece em todo lugar que mostra ouro
+    this.setEnergy(GUARD_MAX_ENERGY, GUARD_MAX_ENERGY);
+    window.addEventListener('resize', this.redrawPortrait); // o círculo muda de tamanho com a tela
+  }
+
+  /** O herói no círculo: desenha quando o 2.5D já carregou (no primeiro número que chega depois disso). */
+  private drawPortrait(): void {
+    if (this.portraitDrawn || !this.portrait) return;
+    this.portraitDrawn = drawHeroPortrait(this.portrait, { mode: 'head' });
   }
 
   /** O ouro mudou: o número pula (e brilha) para chamar a atenção. */
@@ -176,16 +201,30 @@ export class Hud {
   }
 
   setHp(hp: number, maxHp: number): void {
+    this.drawPortrait();
     const fraction = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
     this.hpFill.style.width = `${(fraction * 100).toFixed(1)}%`;
     this.hpFill.className = `fill ${fraction > 0.5 ? 'ok' : fraction > 0.25 ? 'mid' : 'low'}`;
-    this.hpText.textContent = `${hp} / ${maxHp}`;
+    this.hpText.textContent = `${count(hp)} / ${count(maxHp)}`;
+  }
+
+  /** Energia da defesa (barra azul do jogo 2.5D). Pode ser chamado todo quadro: só mexe na tela quando muda. */
+  setEnergy(value: number, max: number): void {
+    if (!this.enFill || !this.enText) return;
+    const fraction = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
+    const key = `${Math.round(value)}/${max}`;
+    if (key === this.shownEnergy) return;
+    this.shownEnergy = key;
+    this.enFill.style.width = `${(fraction * 100).toFixed(1)}%`;
+    this.enText.textContent = `${count(value)} / ${count(max)}`;
   }
 
   setXp(xp: number, xpNext: number, level: number): void {
+    this.drawPortrait();
     this.level.textContent = `Nv ${level}`;
+    this.level.dataset.n = String(level); // o selo redondo do jogo 2.5D mostra só o número
     this.xpFill.style.width = `${xpNext > 0 ? ((xp / xpNext) * 100).toFixed(1) : 0}%`;
-    this.xpText.textContent = `XP ${xp} / ${xpNext}`;
+    this.xpText.textContent = `XP ${count(xp)} / ${count(xpNext)}`;
   }
 
   setGold(gold: number): void {
@@ -205,6 +244,8 @@ export class Hud {
   destroy(): void {
     this.root.hidden = true;
     this.ping.textContent = 'ping —';
+    window.removeEventListener('resize', this.redrawPortrait);
+    this.portraitDrawn = false;
   }
 }
 
@@ -234,6 +275,8 @@ export class ActionBar {
   constructor(defs: ActionDef[], onPress: (slot: ActionSlot, down: boolean) => void) {
     this.root.replaceChildren();
     this.root.hidden = false;
+    // jogo 2.5D: o botão da defesa (do motor) entra no 5º quadrado da barra com o ícone pintado (style.css lê a variável)
+    if (document.body.classList.contains('jogo-novo')) document.body.style.setProperty('--icone-defesa', `url("${guardIconUrl()}")`);
     for (const def of defs) {
       const el = document.createElement('button');
       el.type = 'button';

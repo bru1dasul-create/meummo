@@ -10,7 +10,8 @@
 //   pés de quem ele acerta;
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
-import { CHARGE_FULL_MS, GUARD_HALF_ARC, GUARD_MAX_ENERGY, GUARD_READY_MS, SHOT_FEET_DY } from '../../shared/constants';
+import type { CombatRules } from '../../shared/combatRules';
+import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
 import type { GuardState } from '../../shared/protocol';
 import type { WorldView } from './view';
 
@@ -129,7 +130,7 @@ export class CombatLayer {
   private chargeRing: { id: number; since: number } | null = null;
   /** Aviso curto embaixo do pé ("carga perdida", "defesa quebrou!"). */
   private footNote: { id: number; text: string; color: string; start: number } | null = null;
-  /** Defesas levantadas: de quem, para onde (radianos) e desde quando (protege depois de GUARD_READY_MS). */
+  /** Defesas levantadas: de quem, para onde (radianos) e desde quando (protege depois de guardReadyMs). */
   private readonly guards = new Map<number, { angle: number; since: number }>();
   /** A sua energia (barra embaixo do pé quando não está cheia ou a defesa está levantada). */
   private energy: { id: number; value: number; state: GuardState } | null = null;
@@ -141,7 +142,11 @@ export class CombatLayer {
   private readonly windups = new Map<number, { start: number; until: number }>();
   private readonly drops = new Map<number, GroundDrop>();
 
-  constructor(container: HTMLElement) {
+  constructor(
+    container: HTMLElement,
+    /** Os números do combate (tempo da carga, arco da defesa): o motor muda no lugar quando o servidor manda novos. */
+    private readonly rules: CombatRules,
+  ) {
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'combate-novo';
     this.canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;';
@@ -394,7 +399,7 @@ export class CombatLayer {
     const ring = this.chargeRing;
     const feet = ring ? feetOf(ring.id) : null;
     if (!ring || !feet) return;
-    const progress = Math.min(1, (now - ring.since) / CHARGE_FULL_MS);
+    const progress = this.rules.chargeFullMs > 0 ? Math.min(1, (now - ring.since) / this.rules.chargeFullMs) : 1;
     const full = progress >= 1;
     const ctx = this.ctx;
     const radius = CHARGE_RING_RADIUS;
@@ -482,9 +487,9 @@ export class CombatLayer {
     for (const [id, guard] of this.guards) {
       const feet = feetOf(id);
       if (!feet) continue;
-      const ready = now - guard.since >= GUARD_READY_MS;
-      const from = guard.angle - GUARD_HALF_ARC;
-      const to = guard.angle + GUARD_HALF_ARC;
+      const ready = now - guard.since >= this.rules.guardReadyMs;
+      const from = guard.angle - this.rules.guardHalfArc;
+      const to = guard.angle + this.rules.guardHalfArc;
       // faixa clara (o pedaço protegido) e a borda de fora
       ctx.beginPath();
       arc(feet, GUARD_RADIUS, from, to, true);
@@ -525,7 +530,8 @@ export class CombatLayer {
 
   /**
    * A barra de energia embaixo do seu pé (só quando não está cheia ou a defesa está levantada; laranja piscando
-   * quando quebrou). Devolve quantos pixels ela ocupa, para o aviso embaixo do pé descer.
+   * quando quebrou). Azul, como o arco da defesa e a barra de energia da HUD (a verde da HUD é a XP).
+   * Devolve quantos pixels ela ocupa, para o aviso embaixo do pé descer.
    */
   private drawEnergy(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): number {
     const energy = this.energy;
@@ -545,7 +551,7 @@ export class CombatLayer {
       ctx.fillStyle = Math.floor(now / 160) % 2 === 0 ? '#f3a25b' : '#a8582a';
       ctx.fillRect(left, top, Math.max(2, width * fraction), height);
     } else {
-      ctx.fillStyle = energy.state === 'up' ? '#9be7a9' : '#6cc07d';
+      ctx.fillStyle = energy.state === 'up' ? '#6ec6ff' : '#2a7ad8';
       ctx.fillRect(left, top, width * fraction, height);
     }
     return height + 8;

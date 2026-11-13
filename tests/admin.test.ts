@@ -102,7 +102,7 @@ describe('ajustes do painel', () => {
     const chapeu = view.grupos.find((g) => g.arquivo === 'itens')!.lista.find((i) => i.id === 'chapeu')!;
     expect(chapeu.campos.map((c) => c.campo)).toEqual(['preco', 'dano', 'vida', 'defesa']); // equipamento: sem "cura"
     const dona = view.grupos.find((g) => g.arquivo === 'npcs')!.lista[0]!;
-    expect(dona.campos.map((c) => c.campo)).toEqual(['fala', 'loja.vende', 'loja.compraPor']);
+    expect(dona.campos.map((c) => c.campo)).toEqual(['fala', 'mapa', 'x', 'y', 'loja.vende', 'loja.compraPor']);
     expect(view.itens).toEqual([
       { id: 'fruta', nome: 'Fruta', preco: 5 },
       { id: 'chapeu', nome: 'Chapéu', preco: 40 },
@@ -212,7 +212,7 @@ describe('travas do painel', () => {
       expect(await page.text()).toContain('Painel do administrador');
 
       const data = (await (await fetch(`${base}/admin/api/dados`)).json()) as { grupos: { arquivo: string }[] };
-      expect(data.grupos.map((g) => g.arquivo)).toEqual(['monstros', 'itens', 'npcs']);
+      expect(data.grupos.map((g) => g.arquivo)).toEqual(['monstros', 'itens', 'npcs', 'areas', 'missoes', 'combate']);
 
       const body = JSON.stringify({ arquivo: 'monstros', id: 'sagui', campo: 'vida', valor: 30 });
       const denied = await fetch(`${base}/admin/api/ajustar`, { method: 'POST', body, headers: { 'content-type': 'application/json' } });

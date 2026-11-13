@@ -7,6 +7,7 @@
 import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
+import type { CombatRules } from './combatRules';
 
 export type EntityKind = 'player' | 'monster' | 'npc';
 
@@ -66,6 +67,8 @@ export type ClientMsg =
   | { t: 'walk'; seq: number; a: number; dash?: true; slow?: true }
   | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
   | { t: 'guard'; on: boolean; a: number } // segurando (ou soltei) a defesa, virada para o ângulo `a` (radianos)
+  | { t: 'gm'; cmd: GmCommand } // poder do administrador (o servidor confere se é administrador mesmo)
+  | { t: 'oops'; text: string } // deu erro no navegador: o servidor anota nos registros (para corrigir depois)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
@@ -82,6 +85,19 @@ export type QuestAction = 'accept' | 'complete' | 'abandon';
 
 /** equip = equipar; use = usar/comer; drop = jogar fora (a pilha inteira). */
 export type ItemAction = 'equip' | 'use' | 'drop';
+
+/**
+ * Poderes do administrador (menu ADM): criar monstros onde está, derrubar os de perto, voar (atravessa tudo), ficar
+ * invencível, ir até um ponto (metros, o pé) e curar.
+ */
+export type GmCommand =
+  | { do: 'spawn'; monster: string; n: number }
+  | { do: 'clear' }
+  | { do: 'fly'; on: boolean }
+  | { do: 'god'; on: boolean }
+  | { do: 'tp'; x: number; y: number }
+  | { do: 'heal' }
+  | { do: 'npc'; npc: string }; // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
 
 /** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
 export type LoginMode = 'login' | 'create';
@@ -127,6 +143,8 @@ export type ServerMsg =
       /** Todas as missões (de data/missoes.json) e o seu progresso. */
       quests: QuestInfo[];
       questLog: QuestLog;
+      /** Os números do combate que valem (carga, defesa, empurrão), com os ajustes do painel. */
+      combat: CombatRules;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
@@ -148,6 +166,8 @@ export type ServerMsg =
   | { t: 'guard'; id: number; on: boolean; a: number } // outro jogador levantou (ou baixou) a defesa, virada para `a`
   // a sua energia (0 a 100) e a defesa: baixada, levantada ou quebrada (solte e espere a energia voltar)
   | { t: 'energy'; v: number; g: GuardState }
+  // você é administrador (o menu ADM aparece), com o voo e o invencível ligados ou não e os monstros que dá para criar
+  | { t: 'gm'; admin: boolean; fly: boolean; god: boolean; monsters: { id: string; name: string }[] }
   | { t: 'heal'; id: number; amount: number; hp: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }
@@ -168,6 +188,8 @@ export type ServerMsg =
   | { t: 'sys'; text: string } // aviso do sistema
   | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
   | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
+  | { t: 'questDefs'; quests: QuestInfo[] } // o painel do administrador mudou as missões (textos, objetivo, recompensa)
+  | { t: 'combat'; rules: CombatRules } // o painel do administrador mudou os números do combate (carga, defesa, empurrão)
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }

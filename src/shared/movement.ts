@@ -245,6 +245,13 @@ export function moveBody(map: Walkable, from: Pose, dx: number, dy: number, dir:
   return { x, y, dir, moved: x !== from.x || y !== from.y };
 }
 
+/** Voo do administrador: anda `distance` na direção `degrees` atravessando tudo (só não sai do mapa). */
+export function flySlice(map: { width: number; height: number }, from: Pose, degrees: number, distance: number): Pose & { moved: boolean } {
+  const x = Math.max(0, Math.min(map.width - 1, from.x + UNIT_X[degrees]! * distance));
+  const y = Math.max(0, Math.min(map.height - 1, from.y + UNIT_Y[degrees]! * distance));
+  return { x, y, dir: dirOfDegrees(degrees), moved: x !== from.x || y !== from.y };
+}
+
 /** Um pedaço de caminhada na direção `degrees`, andando `distance` tiles (no máximo 1). */
 export function walkSlice(map: Walkable, from: Pose, degrees: number, distance: number): Pose & { moved: boolean } {
   return moveBody(map, from, UNIT_X[degrees]! * distance, UNIT_Y[degrees]! * distance, dirOfDegrees(degrees));

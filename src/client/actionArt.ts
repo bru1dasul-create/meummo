@@ -1,8 +1,10 @@
-// Ícones dos botões de habilidade (pixel art 16x16 desenhada por código, como os itens).
+// Ícones dos botões de habilidade. Jogo antigo: pixel art 16x16 desenhada por código, como os itens. Jogo 2.5D: os
+// ícones pintados com brilho de paintedIcons.ts, no traço da HUD nova (a defesa também, que não é botão desta barra).
 // Para trocar por arte de verdade: troque o desenho aqui ou devolva a URL de uma imagem em actionIconUrl.
 
 import type { ActionSlot } from './ui';
 import { drawIcon, type IconArt } from './itemArt';
+import { paintedActionIcon } from './paintedIcons';
 
 const ICONS: Record<ActionSlot, IconArt> = {
   // Estilingue: forquilha de madeira com o elástico vermelho
@@ -97,11 +99,22 @@ const ICONS: Record<ActionSlot, IconArt> = {
 
 const urls = new Map<ActionSlot, string>();
 
+/** Jogo 2.5D aberto (main.ts marca o body)? */
+function newWorld(): boolean {
+  return document.body.classList.contains('jogo-novo');
+}
+
 export function actionIconUrl(slot: ActionSlot): string {
+  if (newWorld()) return paintedActionIcon(slot);
   let url = urls.get(slot);
   if (!url) {
     url = drawIcon(ICONS[slot]).toDataURL();
     urls.set(slot, url);
   }
   return url;
+}
+
+/** O ícone da defesa (jogo 2.5D): o botão dela é do motor, a HUD só pinta. */
+export function guardIconUrl(): string {
+  return paintedActionIcon('guard');
 }

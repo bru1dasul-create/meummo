@@ -10,10 +10,10 @@ import { GameMap, type TiledMap } from '../shared/map';
 import { nameKey } from '../shared/names';
 import { CharacterStore, type HashCost } from './accounts';
 import { createAdminHandler } from './admin';
+import { Logbook } from './logbook';
 import { LoginGuard, type GuardLimits } from './login-guard';
 import { CLIENT_DIR, ISO_MAPS_DIR, MAPS_DIR } from './paths';
 import { Realm } from './realm';
-import { checkQuests, loadQuestDefs, nameQuestGoals } from './quests';
 import { Session, type Lobby } from './session';
 import { Tuning } from './tuning';
 import type { World } from './world';
@@ -43,6 +43,8 @@ export interface ServerOptions {
 
 export interface RunningServer {
   port: number;
+  /** Os registros (tela, arquivo do dia e a aba Registros do painel). */
+  logbook: Logbook;
   /** Todos os mapas. */
   realm: Realm;
   /** Os ajustes do painel do administrador. */
@@ -77,18 +79,34 @@ export function loadMaps(dirs: string | string[] = [MAPS_DIR, ISO_MAPS_DIR]): Ga
 }
 
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
-  const log =
-    options.log === false ? () => {} : (message: string) => console.log(`[${new Date().toLocaleTimeString('pt-BR')}] ${message}`);
+  // registros: na tela, num arquivo por dia ao lado dos personagens salvos (saves/registros) e na aba do painel
+  const logbook = new Logbook({
+    dir: options.log === false || options.saveFile === ':memory:' ? null : path.join(path.dirname(options.saveFile), 'registros'),
+    console: options.log !== false,
+  });
+  const log = logbook.write;
   const maps = loadMaps();
-  // Monstros, itens e NPCs: os arquivos de data/ com os ajustes do painel por cima (tudo conferido).
+  // Monstros, itens, NPCs, áreas e missões: os arquivos de data/ (e os mapas) com os ajustes do painel por cima (tudo conferido).
   const tuningFile =
     options.tuningFile !== undefined ? options.tuningFile : options.saveFile === ':memory:' ? null : path.join(path.dirname(options.saveFile), 'ajustes.json');
   const tuning = Tuning.load(tuningFile, maps, log);
-  const quests = loadQuestDefs();
-  checkQuests(quests, tuning);
-  nameQuestGoals(quests, tuning);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, quests, saver: store, startMap: options.startMap });
+  const realm = new Realm(maps, {
+    log,
+    monsters: tuning.monsters,
+    items: tuning.items,
+    npcs: tuning.npcs,
+    areas: tuning.areas,
+    quests: tuning.quests,
+    combat: tuning.combat,
+    saver: store,
+    startMap: options.startMap,
+    // menu ADM "trazer para cá": vira um ajuste do painel (mapa, x e y juntos)
+    setNpcSpot: (npc, map, x, y) => {
+      const result = tuning.setMany('npcs', npc, { mapa: map, x, y });
+      return result.ok ? null : result.erro;
+    },
+  });
   tuning.onChange = (changed) => realm.tuningChanged(changed);
   const sessions = new Set<Session>();
   const guard = new LoginGuard(() => performance.now(), options.guardLimits);
@@ -96,6 +114,14 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     tuning,
     realm,
     log,
+    logs: (limit, filter) => logbook.recent(limit, filter),
+    logDir: logbook.dir,
+    setAdmin: (name, admin) => {
+      const saved = store.setAdmin(name, admin);
+      if (saved) realm.setAdmin(saved, admin); // se ele está jogando, vale na hora
+      return saved;
+    },
+    admins: () => store.admins(),
     setPassword: async (name, password) => {
       const saved = await store.setPassword(name, password);
       if (saved) guard.forgive(nameKey(saved)); // as tentativas erradas de antes não travam a senha nova
@@ -150,7 +176,12 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sessions.add(session);
     ws.on('message', (data, isBinary) => {
       if (isBinary) return ws.close(1003, 'binario nao suportado');
-      session.handle(data.toString());
+      try {
+        session.handle(data.toString());
+      } catch (error) {
+        // um defeito ao tratar uma mensagem fica anotado (com o caminho do erro) e não derruba o servidor
+        logbook.error(`ao tratar uma mensagem de ${session.playerName ?? 'alguém entrando'}`, error);
+      }
     });
     ws.on('close', () => {
       session.disconnect();
@@ -171,7 +202,13 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     }
   }, HEARTBEAT_MS);
 
-  const ticker = setInterval(() => realm.tick(), TICK_MS);
+  const ticker = setInterval(() => {
+    try {
+      realm.tick();
+    } catch (error) {
+      logbook.error('no passo do mundo (tick)', error); // anotado; o mundo continua no próximo passo
+    }
+  }, TICK_MS);
 
   await new Promise<void>((resolve, reject) => {
     httpServer.once('error', reject);
@@ -188,6 +225,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   let closing: Promise<void> | null = null;
   return {
     port,
+    logbook,
     realm,
     tuning,
     world,

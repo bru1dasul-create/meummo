@@ -36,6 +36,8 @@ export class Session {
   /** Conferindo a senha (demora um pouquinho de propósito). */
   private authenticating = false;
   private readonly limiter: TokenBucket;
+  /** Relatos de erro do navegador: até 5 de uma vez, depois 1 a cada 10 s. */
+  private readonly oopsBudget: TokenBucket;
   private strikes = 0;
   private closed = false;
 
@@ -49,6 +51,7 @@ export class Session {
     // Até 60 mensagens de uma vez, 40 por segundo em média. Andar solto usa 20 por segundo (um pedaço a cada 50 ms),
     // e ainda tem tiro, habilidade, ping e chat. (Com 15/s, quem andava sem parar uns 10 s era desconectado.)
     this.limiter = new TokenBucket(60, 40, now());
+    this.oopsBudget = new TokenBucket(5, 0.1, now());
   }
 
   get playerName(): string | null {
@@ -79,6 +82,13 @@ export class Session {
         break;
       case 'guard':
         this.lobby.realm.guard(this.player, msg.on, msg.a);
+        break;
+      case 'gm':
+        this.lobby.realm.gm(this.player, msg.cmd);
+        break;
+      case 'oops':
+        // erro no navegador de quem joga: vai para os registros (no máximo alguns por minuto, para não encher)
+        if (this.oopsBudget.take(this.now())) this.lobby.log(`erro no navegador de ${this.player.name}: ${msg.text.replace(/\r/g, '')}`);
         break;
       case 'shoot':
         this.lobby.realm.shoot(this.player, msg.cid, msg.a);

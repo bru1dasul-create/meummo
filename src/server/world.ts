@@ -7,17 +7,12 @@ import {
   DASH_INVULNERABLE_MS,
   DASH_TILES,
   DEATH_MS,
+  GM_CLEAR_RANGE,
+  GM_FLY_FACTOR,
+  GM_SPAWN_MAP_MAX,
+  GM_SPAWN_MAX,
   GOLD_DROP_MS,
-  GUARD_BREAK_MS,
-  GUARD_BREAK_PUSH_FACTOR,
-  GUARD_DRAIN_PER_S,
   GUARD_MAX_ENERGY,
-  GUARD_PUSH_FACTOR,
-  GUARD_READY_MS,
-  GUARD_REARM_ENERGY,
-  GUARD_REGEN_DELAY_MS,
-  GUARD_REGEN_PER_S,
-  GUARD_WALK_FACTOR,
   ITEM_DROP_MS,
   MAX_PLAYERS,
   MAX_QUEUED_WALKS,
@@ -59,18 +54,20 @@ import {
   chargedRange,
   tileIn,
 } from '../shared/combat';
+import { defaultCombatRules, type CombatRules } from '../shared/combatRules';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
-import type { GameMap, Tile } from '../shared/map';
-import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
+import type { GameMap, MonsterZone, Tile } from '../shared/map';
+import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
-import type { FailReason, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
+import type { FailReason, GmCommand, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../shared/quests';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
+import type { AreaDef } from './tuning';
 import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
@@ -122,6 +119,15 @@ export interface WorldOptions {
   npcs?: ReadonlyMap<string, NpcDef>;
   /** Missões (de data/missoes.json). */
   quests?: ReadonlyMap<string, QuestInfo>;
+  /**
+   * Menu ADM "trazer para cá": grava o novo lugar do NPC nos ajustes do painel (vale na hora e fica salvo). Devolve o
+   * erro, ou null se deu certo. Sem isto (testes), o menu avisa que não dá.
+   */
+  setNpcSpot?: (npc: string, map: string, x: number, y: number) => string | null;
+  /** Áreas de monstros com os ajustes do painel (qual monstro e quantos; chave `mapa#n`). */
+  areas?: ReadonlyMap<string, AreaDef>;
+  /** Números do combate (carga, defesa, empurrão) com os ajustes do painel; sem isto, o padrão. */
+  combat?: CombatRules;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -182,8 +188,16 @@ export class World {
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
   readonly quests: ReadonlyMap<string, QuestInfo>;
+  /** Números do combate (o painel muda no lugar: o mundo sempre lê o valor de agora). */
+  readonly combat: CombatRules;
   /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
   private readonly npcDefs: ReadonlyMap<string, NpcDef>;
+  /** Todos os monstros que existem (o administrador pode criar qualquer um, em qualquer mapa). */
+  private readonly monsterDefs: ReadonlyMap<string, MonsterDef>;
+  private readonly setNpcSpot: WorldOptions['setNpcSpot'];
+  private readonly areas: ReadonlyMap<string, AreaDef>;
+  /** A área do mapa (`mapa#n`) → os monstros dela. */
+  private readonly zoneByArea = new Map<string, ZoneState>();
   /** Chão pegando fogo agora (rastros de investida). */
   private hazards: Hazard[] = [];
   /** Tile → id do monstro que está nele (monstros não se empilham). */
@@ -206,6 +220,7 @@ export class World {
     this.saver = options.saver ?? null;
     this.items = options.items ?? new Map();
     this.quests = options.quests ?? new Map();
+    this.combat = options.combat ?? defaultCombatRules();
     this.npcDefs = options.npcs ?? new Map();
     let ids = 1;
     this.links = options.links ?? {
@@ -222,23 +237,87 @@ export class World {
     }
 
     const defs = options.monsters ?? new Map<string, MonsterDef>();
-    for (const zone of map.monsterZones) {
-      const def = defs.get(zone.monster);
+    this.monsterDefs = defs;
+    this.setNpcSpot = options.setNpcSpot;
+    this.areas = options.areas ?? new Map();
+    map.monsterZones.forEach((zone, i) => {
+      // o painel pode ter mudado o monstro e a quantidade desta área
+      const area = this.areas.get(`${map.id}#${i + 1}`);
+      const monster = area?.monster ?? zone.monster;
+      const def = defs.get(monster);
       if (!def) {
-        this.log(`aviso: o mapa tem uma área do monstro "${zone.monster}", mas ele não existe em data/monsters.json`);
-        continue;
+        this.log(`aviso: o mapa tem uma área do monstro "${monster}", mas ele não existe em data/monsters.json`);
+        return;
       }
-      const state: ZoneState = { zone, def, alive: new Set(), respawnAt: [] };
-      this.zones.push(state);
-      for (let i = 0; i < zone.count; i++) this.spawnMonster(state);
+      this.addZone(`${map.id}#${i + 1}`, { ...zone, monster, count: area?.count ?? zone.count }, def);
+    });
+  }
+
+  private addZone(areaId: string, zone: MonsterZone, def: MonsterDef): ZoneState {
+    const state: ZoneState = { zone, def, alive: new Set(), respawnAt: [] };
+    this.zones.push(state);
+    this.zoneByArea.set(areaId, state);
+    for (let i = 0; i < zone.count; i++) this.spawnMonster(state);
+    return state;
+  }
+
+  /**
+   * O painel mudou uma área (qual monstro ou quantos): troca os monstros dela na hora (os do tipo antigo saem) e
+   * completa ou tira até ficar com a quantidade nova.
+   */
+  refreshAreas(): void {
+    this.map.monsterZones.forEach((zone, i) => {
+      const id = `${this.map.id}#${i + 1}`;
+      const area = this.areas.get(id);
+      const def = area ? this.monsterDefs.get(area.monster) : undefined;
+      if (!area || !def) return;
+      const state = this.zoneByArea.get(id);
+      if (!state) {
+        this.addZone(id, { ...zone, monster: def.id, count: area.count }, def);
+        return;
+      }
+      if (state.def !== def) {
+        for (const monsterId of [...state.alive]) {
+          const monster = this.monsters.get(monsterId);
+          if (monster) this.removeMonster(monster);
+        }
+        state.def = def;
+        state.zone.monster = def.id;
+        state.respawnAt = [];
+      }
+      state.zone.count = area.count;
+      for (const monsterId of [...state.alive].slice(area.count)) {
+        const monster = this.monsters.get(monsterId);
+        if (monster) this.removeMonster(monster);
+      }
+      while (state.alive.size < area.count && this.spawnMonster(state)) {
+        // completa agora (quem caiu antes volta no tempo dele, até a quantidade nova)
+      }
+      state.respawnAt = state.respawnAt.slice(0, Math.max(0, area.count - state.alive.size));
+    });
+  }
+
+  /** Tira um monstro do mapa sem ninguém ganhar nada (o painel mudou a área dele). */
+  private removeMonster(monster: Monster): void {
+    this.monsters.delete(monster.id);
+    this.monsterAt.delete(this.tileKey(monster.x, monster.y));
+    monster.zone.alive.delete(monster.id);
+    for (const player of this.players.values()) {
+      if (player.known.delete(monster.id)) player.outbox.push({ t: 'despawn', id: monster.id });
     }
   }
 
   /** Põe o NPC no lugar dele (ou no chão livre mais perto, se o mapa mudou e o lugar ficou bloqueado). */
   private placeNpc(def: NpcDef): void {
+    const spot = this.npcSpot(def);
+    if (spot) this.addNpc(def, spot);
+  }
+
+  /** Onde o NPC fica: o lugar dele, ou o chão livre mais perto (avisa no registro), ou null se não tiver onde. */
+  private npcSpot(def: NpcDef): Tile | null {
     // Formato novo: a posição do data/npcs.json é onde fica o pé, em metros (pode ter fração).
     const exact = this.map.metric ? cornerAtFeet(def.x, def.y) : null;
-    if (exact && bodyFits(this.map, exact.x, exact.y)) return this.addNpc(def, exact);
+    if (exact && bodyFits(this.map, exact.x, exact.y)) return exact;
     let tile: Tile | null = { x: Math.floor(def.x), y: Math.floor(def.y) };
     if (!this.map.isWalkable(tile.x, tile.y) || !this.map.isReachable(tile.x, tile.y)) {
       tile = this.map.nearestWalkable(def.x, def.y);
@@ -248,9 +327,9 @@ export class World {
           ? `aviso: ${def.name} (data/npcs.json) estava em (${def.x}, ${def.y}), que é bloqueado no mapa "${this.map.id}"; ficou em (${tile.x}, ${tile.y})`
           : `aviso: ${def.name} (data/npcs.json) não tem onde ficar perto de (${def.x}, ${def.y}) no mapa "${this.map.id}"`,
       );
-      if (!tile) return;
+      if (!tile) return null;
     }
-    this.addNpc(def, tile);
+    return tile;
   }
 
   private addNpc(def: NpcDef, spot: Tile): void {
@@ -291,6 +370,7 @@ export class World {
     player.maxHp = playerMaxHp(player);
     player.hp = player.maxHp;
     if (saved) this.restore(player, saved, savedSpot !== null);
+    player.admin = saved?.admin === true;
     // voltou onde tinha parado (pode ser no meio dos monstros): um tempinho para o jogo abrir
     if (savedSpot) player.unnoticedUntil = this.now() + NOTICE_GRACE_MS;
     this.players.set(player.id, player);
@@ -314,8 +394,10 @@ export class World {
         npcs: this.npcList(),
         quests: [...this.quests.values()],
         questLog: { ...player.quests },
+        combat: { ...this.combat },
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
+      ...(player.admin ? [this.gmState(player)] : []),
     ]);
     this.links.announce({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
     this.links.announce({ t: 'online', n: this.links.online() });
@@ -377,6 +459,7 @@ export class World {
         npcs: this.npcList(),
         questLog: { ...player.quests },
       },
+      ...(player.admin ? [this.gmState(player)] : []),
     ]);
     this.saveCharacters([player]);
     this.log(`${player.name} foi para ${this.map.name}`);
@@ -468,6 +551,139 @@ export class World {
 
   // ======================= pedidos dos jogadores =======================
 
+  // ======================= poderes do administrador (menu ADM) =======================
+
+  /** O que o menu ADM do navegador precisa saber: se é administrador, o voo, o invencível e os monstros que existem. */
+  private gmState(player: Player): ServerMsg {
+    const monsters = [...this.monsterDefs.values()].map((def) => ({ id: def.id, name: def.name }));
+    return { t: 'gm', admin: player.admin, fly: player.fly, god: player.god, monsters };
+  }
+
+  /** O painel marcou (ou desmarcou) este jogador como administrador. Perdeu: o voo e o invencível acabam. */
+  setAdmin(player: Player, admin: boolean): void {
+    player.admin = admin;
+    if (!admin) {
+      player.god = false;
+      if (player.fly) {
+        player.fly = false;
+        this.unstick(player);
+      }
+    }
+    player.outbox.push(this.gmState(player));
+    player.outbox.push({ t: 'sys', text: admin ? 'Você agora é administrador: tecla G (ou o botão ADM) abre o menu.' : 'Você não é mais administrador.' });
+  }
+
+  /** Um poder do administrador. Quem não é administrador é ignorado (e fica registrado). */
+  gm(player: Player, cmd: GmCommand): void {
+    if (player.loading) return;
+    if (!player.admin) {
+      this.log(`aviso: ${player.name} pediu um poder de administrador sem ser administrador (${cmd.do})`);
+      return;
+    }
+    const now = this.now();
+    const say = (text: string): void => {
+      player.outbox.push({ t: 'sys', text: `ADM: ${text}` });
+    };
+    switch (cmd.do) {
+      case 'spawn': {
+        const text = this.gmSpawn(player, cmd.monster, cmd.n);
+        say(text);
+        this.log(`ADM ${player.name}: ${text} (${this.map.name}, ${player.x}, ${player.y})`);
+        return;
+      }
+      case 'clear': {
+        if (player.dead) return;
+        const feet = feetAt(player.fx, player.fy);
+        let n = 0;
+        for (const monster of [...this.monsters.values()]) {
+          if (Math.hypot(monster.x + 0.5 - feet.x, monster.y + 0.5 - feet.y) > GM_CLEAR_RANGE) continue;
+          this.damage(monster, monster.hp, player.id, now);
+          n++;
+        }
+        say(n > 0 ? `derrubei ${n} monstro(s) perto de você.` : `nenhum monstro a até ${GM_CLEAR_RANGE} m.`);
+        if (n > 0) this.log(`ADM ${player.name}: derrubou ${n} monstro(s) em ${this.map.name}`);
+        return;
+      }
+      case 'fly':
+        if (player.fly === cmd.on) return;
+        player.fly = cmd.on;
+        if (!cmd.on) this.unstick(player);
+        player.outbox.push(this.gmState(player));
+        say(cmd.on ? 'voando (atravessa tudo).' : 'pousou.');
+        return;
+      case 'god':
+        player.god = cmd.on;
+        if (cmd.on) {
+          for (const monster of this.monsters.values()) if (monster.targetId === player.id) this.dropTarget(monster);
+        }
+        player.outbox.push(this.gmState(player));
+        say(cmd.on ? 'invencível (os monstros te ignoram).' : 'invencível desligado.');
+        return;
+      case 'tp': {
+        if (player.dead) return;
+        const corner = cornerAtFeet(cmd.x, cmd.y);
+        const fits = this.map.metric && bodyFits(this.map, corner.x, corner.y);
+        const spot = fits ? corner : player.fly && this.inMap(corner) ? corner : this.freeSpot(Math.floor(cmd.x), Math.floor(cmd.y));
+        if (!spot) return say('não achei chão livre ali.');
+        this.placePlayer(player, spot.x, spot.y);
+        return;
+      }
+      case 'heal':
+        if (player.dead) return;
+        this.adminHeal(player);
+        return;
+      case 'npc': {
+        const def = this.npcDefs.get(cmd.npc);
+        if (!def) return say(`não existe o personagem "${cmd.npc}".`);
+        if (!this.setNpcSpot) return say('aqui não dá para mudar o lugar dos personagens.');
+        // no mapa novo, o pé exato (em metros, com uma casa); no antigo, o tile
+        const feet = feetAt(player.fx, player.fy);
+        const x = this.map.metric ? Math.round(feet.x * 10) / 10 : player.x;
+        const y = this.map.metric ? Math.round(feet.y * 10) / 10 : player.y;
+        const erro = this.setNpcSpot(def.id, this.map.id, x, y);
+        if (erro) return say(`não deu: ${erro}`);
+        say(`${def.name} agora fica aqui (${x}, ${y}). Fica salvo nos ajustes do painel (dá para voltar ao padrão lá).`);
+        this.log(`ADM ${player.name}: levou ${def.name} para ${this.map.name} (${x}, ${y})`);
+        return;
+      }
+    }
+  }
+
+  /** Cria `n` monstros `id` em volta do administrador (numa área só deles: quando caem, não renascem). */
+  private gmSpawn(player: Player, id: string, n: number): string {
+    const def = this.monsterDefs.get(id);
+    if (!def) return `não existe o monstro "${id}".`;
+    const made = [...this.monsters.values()].filter((m) => m.zone.temporary).length;
+    const count = Math.min(n, GM_SPAWN_MAX, GM_SPAWN_MAP_MAX - made);
+    if (count <= 0) return `já tem ${made} monstros criados neste mapa: derrube alguns antes.`;
+    const zone: ZoneState = { zone: { monster: def.id, x: player.x - 2, y: player.y - 2, w: 5, h: 5, count }, def, alive: new Set(), respawnAt: [], temporary: true };
+    let spawned = 0;
+    for (let i = 0; i < count; i++) if (this.spawnMonster(zone)) spawned++;
+    return spawned > 0 ? `criei ${spawned} ${def.name} (não renascem).` : 'não achei chão livre aqui perto.';
+  }
+
+  /** Dentro do mapa (voando, dá para ir a qualquer lugar dele). */
+  private inMap(spot: { x: number; y: number }): boolean {
+    return spot.x >= 0 && spot.y >= 0 && spot.x <= this.map.width - 1 && spot.y <= this.map.height - 1;
+  }
+
+  /** Põe o jogador exatamente em (x, y) (canto do corpo) e avisa o navegador. */
+  private placePlayer(player: Player, x: number, y: number): void {
+    player.fx = x;
+    player.fy = y;
+    player.queue.length = 0;
+    player.walkBudget = 0;
+    player.changed = true;
+    player.outbox.push({ t: 'teleport', x: player.fx, y: player.fy, dir: player.dir });
+  }
+
+  /** Parou de voar dentro de algo (parede, árvore): vai para o chão livre mais perto. */
+  private unstick(player: Player): void {
+    if (bodyFits(this.map, player.fx, player.fy)) return;
+    const spot = this.freeSpot(player.x, player.y) ?? this.pickSpawnTile();
+    this.placePlayer(player, spot.x, spot.y);
+  }
+
   /**
    * O cliente pediu para andar um pedaço (WALK_SLICE_MS) na direção `degrees` (ou rolar, se dash).
    * Entra na fila e é processado no tick, no ritmo do relógio.
@@ -483,7 +699,7 @@ export class World {
       player.ackPending = true;
       return;
     }
-    player.queue.push({ seq, a: degrees, dash, slow, guard: player.guardWanted });
+    player.queue.push({ seq, a: degrees, dash, slow, guard: player.guardWanted, fly: player.fly });
   }
 
   /** Começou a puxar o estilingue: a carga conta pelo relógio do servidor, até o tiro (veja shoot). */
@@ -494,7 +710,7 @@ export class World {
 
   /**
    * Segurou (ou soltou) a defesa, virada para `angle` (radianos). Ela sobe no tick (updateGuard) e protege
-   * GUARD_READY_MS depois; levantar a defesa solta a pedra que estava puxando.
+   * guardReadyMs depois; levantar a defesa solta a pedra que estava puxando.
    */
   guard(player: Player, on: boolean, angle: number): void {
     if (player.loading || player.dead) {
@@ -519,14 +735,14 @@ export class World {
       player.chargeStart = null;
       return;
     }
-    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart) : 0;
+    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart, this.combat) : 0;
     player.chargeStart = null;
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
     this.faceAngle(player, angle);
     const [min, max] = player.damage();
-    this.spawnProjectile(player, angle, SHOT_SPEED, chargedRange(charge, this.map.metric), chargedDamage(this.rollRange(min, max), charge), 'pedra', cid);
+    this.spawnProjectile(player, angle, SHOT_SPEED, chargedRange(charge, this.map.metric, this.combat), chargedDamage(this.rollRange(min, max), charge, this.combat), 'pedra', cid);
   }
 
   useSkill(player: Player, n: number, angle: number): void {
@@ -745,6 +961,26 @@ export class World {
   }
 
   /** Vida cheia. */
+  /** O painel mudou o nível: a XP do nível começa do zero, a vida enche e todo mundo vê. */
+  adminSetLevel(player: Player, level: number): void {
+    player.level = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
+    player.xp = 0;
+    player.maxHp = playerMaxHp(player);
+    if (!player.dead) player.hp = player.maxHp;
+    player.statsDirty = true;
+    this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
+    this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    player.outbox.push({ t: 'sys', text: `O administrador mudou o seu nível para ${player.level}.` });
+    this.saveCharacters([player]);
+  }
+
+  /** O painel deu XP (sobe de nível como caçando). */
+  adminGiveXp(player: Player, amount: number): void {
+    this.giveXp(player, amount);
+    player.outbox.push({ t: 'sys', text: `O administrador te deu ${amount} de XP.` });
+    this.saveCharacters([player]);
+  }
+
   adminHeal(player: Player): void {
     const amount = player.maxHp - player.hp;
     player.hp = player.maxHp;
@@ -802,11 +1038,41 @@ export class World {
 
   /** Os NPCs mudaram no painel (o que vendem, o que dizem): manda a lista nova para quem está aqui. */
   refreshNpcs(): void {
+    // o lugar (e o mapa) de cada um pode ter mudado: entra quem passou a morar aqui, sai quem foi embora, anda quem mudou
+    const here = new Map([...this.npcs.values()].map((npc) => [npc.def.id, npc]));
+    for (const def of this.npcDefs.values()) {
+      const npc = here.get(def.id);
+      if (def.map !== this.map.id) {
+        if (npc) this.npcs.delete(npc.id);
+        continue;
+      }
+      if (!npc) {
+        this.placeNpc(def);
+        continue;
+      }
+      const spot = this.npcSpot(def);
+      if (spot && (spot.x !== npc.x || spot.y !== npc.y)) {
+        npc.x = spot.x;
+        npc.y = spot.y;
+      }
+    }
     const npcs = this.npcList();
     for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
   }
 
   // ======================= missões =======================
+
+  /** O painel mudou os números do combate: quem está jogando recebe os novos (o navegador usa os mesmos). */
+  refreshCombat(): void {
+    const rules = { ...this.combat };
+    for (const player of this.players.values()) player.outbox.push({ t: 'combat', rules });
+  }
+
+  /** O painel mudou as missões (textos, objetivo, recompensa): quem está jogando recebe a lista nova. */
+  refreshQuests(): void {
+    const quests = [...this.quests.values()];
+    for (const player of this.players.values()) player.outbox.push({ t: 'questDefs', quests });
+  }
 
   /** Aceitar ou concluir (perto de quem dá a missão) ou abandonar uma missão. */
   questAction(player: Player, act: QuestAction, id: string, npcId?: number): void {
@@ -1066,7 +1332,9 @@ export class World {
       const from = { x: player.fx, y: player.fy, dir: player.dir };
       const result = dash
         ? sweepBody(this.map, from, input.a, DASH_TILES)
-        : walkSlice(this.map, from, input.a, this.walkDistance(input));
+        : input.fly
+          ? flySlice(this.map, from, input.a, this.walkDistance(input))
+          : walkSlice(this.map, from, input.a, this.walkDistance(input));
       if (!dash) player.walkBudget -= WALK_SLICE_MS;
       // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
       if (dash && result.moved) {
@@ -1110,9 +1378,10 @@ export class World {
     player.ackPending = true;
   }
 
-  /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (GUARD_WALK_FACTOR). */
-  private walkDistance(input: { slow: boolean; guard: boolean }): number {
-    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * GUARD_WALK_FACTOR;
+  /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (× guardWalkFactor). */
+  private walkDistance(input: { slow: boolean; guard: boolean; fly: boolean }): number {
+    if (input.fly) return sliceDistance(this.map.metric, false, STEP_MS) * GM_FLY_FACTOR;
+    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * this.combat.guardWalkFactor;
     return sliceDistance(this.map.metric, input.slow, STEP_MS);
   }
 
@@ -1124,7 +1393,7 @@ export class World {
     const dt = player.energyClock > 0 ? Math.max(0, now - player.energyClock) / 1000 : 0;
     player.energyClock = now;
     // quebrada: rearma soltando o botão, depois do tempo da quebra e com energia para isso
-    if (player.guardBroken && !player.guardWanted && now >= player.guardBrokenUntil && player.energy >= GUARD_REARM_ENERGY) {
+    if (player.guardBroken && !player.guardWanted && now >= player.guardBrokenUntil && player.energy >= this.combat.guardRearmEnergy) {
       player.guardBroken = false;
     }
     const active = player.guardWanted && !player.guardBroken && player.energy > 0;
@@ -1137,26 +1406,26 @@ export class World {
       this.emitGuard(player);
     }
     if (active) {
-      player.energy = Math.max(0, player.energy - GUARD_DRAIN_PER_S * dt);
-      player.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+      player.energy = Math.max(0, player.energy - this.combat.guardDrainPerS * dt);
+      player.energyRegenAt = now + this.combat.guardRegenDelayMs;
       if (player.energy <= 0) this.breakGuard(player, now);
     } else if (now >= player.energyRegenAt && player.energy < GUARD_MAX_ENERGY) {
-      player.energy = Math.min(GUARD_MAX_ENERGY, player.energy + GUARD_REGEN_PER_S * dt);
+      player.energy = Math.min(GUARD_MAX_ENERGY, player.energy + this.combat.guardRegenPerS * dt);
     }
     this.sendEnergy(player, now);
   }
 
-  /** A defesa levantada já protege? (Leva GUARD_READY_MS para subir.) */
+  /** A defesa levantada já protege? (Leva guardReadyMs para subir.) */
   private guardReady(player: Player, now: number): boolean {
-    return player.guardUpAt !== null && now - player.guardUpAt >= GUARD_READY_MS && player.energy > 0;
+    return player.guardUpAt !== null && now - player.guardUpAt >= this.combat.guardReadyMs && player.energy > 0;
   }
 
   /** Acabou a energia: a defesa cai e só levanta de novo soltando o botão (veja updateGuard). */
   private breakGuard(player: Player, now: number): void {
     player.guardBroken = true;
-    player.guardBrokenUntil = now + GUARD_BREAK_MS;
+    player.guardBrokenUntil = now + this.combat.guardBreakMs;
     player.energy = 0;
-    player.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+    player.energyRegenAt = now + this.combat.guardRegenDelayMs;
     if (player.guardUpAt !== null) {
       player.guardUpAt = null;
       this.emitGuard(player);
@@ -1333,15 +1602,15 @@ export class World {
    */
   private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0): void {
     if (target.hp <= 0) return;
-    if (target.kind === 'player' && (target.dead || now < target.invulnerableUntil || this.inSafeArea(target))) return;
+    if (target.kind === 'player' && (target.dead || target.god || now < target.invulnerableUntil || this.inSafeArea(target))) return;
     // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
     if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
     let blocked: 0 | 1 | 2 = 0;
-    if (target.kind === 'player' && travel !== undefined && this.guardReady(target, now) && guardCovers(target.guardAngle, travel)) {
-      const block = blockHit(target.energy, amount);
+    if (target.kind === 'player' && travel !== undefined && this.guardReady(target, now) && guardCovers(target.guardAngle, travel, this.combat)) {
+      const block = blockHit(target.energy, amount, this.combat);
       amount = block.damage;
       target.energy = block.energy;
-      target.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+      target.energyRegenAt = now + this.combat.guardRegenDelayMs;
       blocked = block.broke ? 2 : 1;
       if (block.broke) this.breakGuard(target, now);
       this.sendEnergy(target, now, true);
@@ -1351,7 +1620,7 @@ export class World {
     if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
     this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp, ...(blocked ? { blk: blocked } : {}) });
     if (target.kind === 'player' && target.hp > 0 && travel !== undefined && push > 0) {
-      const factor = blocked === 2 ? GUARD_BREAK_PUSH_FACTOR : blocked === 1 ? GUARD_PUSH_FACTOR : 1;
+      const factor = blocked === 2 ? this.combat.guardBreakPushFactor : blocked === 1 ? this.combat.guardPushFactor : 1;
       this.knockBack(target, travel, push * factor);
     }
 
@@ -1534,7 +1803,7 @@ export class World {
     if (!song) return; // o administrador tirou o canto no meio
     monster.nextAttackAt = Math.max(monster.nextAttackAt, now + 600);
     for (const player of this.players.values()) {
-      if (player.dead || player.loading || now < player.invulnerableUntil || this.inSafeArea(player)) continue;
+      if (player.dead || player.loading || player.god || now < player.invulnerableUntil || this.inSafeArea(player)) continue;
       if (chebyshev(monster, player) > song.range) continue;
       player.charmedUntil = now + song.durationMs;
       player.charmedBy = monster.id;
@@ -1823,7 +2092,7 @@ export class World {
     let best: Player | null = null;
     let bestDistance = Infinity;
     for (const player of this.players.values()) {
-      if (player.dead || player.loading || now < player.unnoticedUntil || this.inSafeArea(player)) continue;
+      if (player.dead || player.loading || player.god || now < player.unnoticedUntil || this.inSafeArea(player)) continue;
       const distance = chebyshev(monster, player);
       if (distance <= range && distance < bestDistance) {
         best = player;

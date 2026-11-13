@@ -589,6 +589,31 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página, tocar no Curupira
   funciona nos três (no deitado o chat segurava o toque) e os balões não se cobrem.
 
+### Interface nova do jogo 2.5D (13/11): a HUD da imagem do dono
+- **Pedido:** "o menu do jogo está horrível, tem que fazer conforme o gráfico do jogo", depois a imagem da HUD
+  ("Quero a hud nessa pegada") e "mexe dentro da mochila também para parecer o personagem real". Escolhas dele antes
+  da imagem: ícones no traço do jogo, botões maiores e mais vivos, redesenhar o personagem no menu.
+- **Molduras** (`public/assets/ui/hud`): recortes da imagem do dono, limpos por um script Python (fora do repositório):
+  números, ícones e a silhueta saíram; no retrato, o círculo e as três barras viraram **furos** (o herói e as barras
+  ficam por baixo, a madeira por cima). Medidas em px dessas imagens, usadas no `style.css`: retrato 654x315 (círculo
+  em 141,115 raio 83,5; selo do nível em 115,210; barras vida 279..583 x 56..85, energia 286..561 x 103..130, XP
+  289..554 x 148..174); habilidades 887x234 (quadrado i em x = 123 + i·107,8, y 103, 93x95; etiqueta da tecla 105 px
+  abaixo do topo do quadrado); frascos 282x139 (anéis em 85,67 e 205,67; selo de quantidade a +36,5 e +27,5 do meio).
+  O degradê de cada barra foi medido na imagem (uma cor por linha).
+- **Escala:** `--hs` (retrato) e `--as` (barra e frascos) no `body.jogo-novo`: 0,66 em tela grande, 0,56 e 0,48 nas
+  menores; no celular, retrato 0,40 (0,34 em pé) e os botões soltos em quadros dourados (`--ring`). Tudo do jogo novo
+  está em `body.jogo-novo` (o `main.ts` marca o body; o `?antigo` continua com o painel de antes).
+- **Herói no retrato e na mochila:** `prototipos/pindorama-25d/js/portrait.js` (`PD.portrait(canvas, { mode, yaw })`):
+  o mesmo boneco do jogo, parado e assentado, olhando a 25° ('head') ou girando no clique na mochila ('full'). Sem
+  armadura nem arma. O lado do jogo é `src/client/heroPortrait.ts`.
+- **Ícones pintados:** `src/client/paintedIcons.ts` (canvas 128 px: halo, contorno escuro, degradê). Habilidades com
+  fundo escuro colorido (verde, fogo, água, céu); itens com fundo transparente. Os itens sem pintura usam a pixel art
+  aumentada 4x (`itemArt.ts`), para a tela reduzir liso. A defesa (botão do motor) pega o ícone pela variável
+  `--icone-defesa`, que o `ActionBar` põe no body.
+- **Falta:** a [estrutura] chamar `hud.setEnergy(valor, máximo)` (a barra azul mostra cheia até lá); pintar os outros
+  itens; levar a loja e a conversa para o mesmo painel. A barra embaixo do pé (do `combat.ts`) é verde; a da HUD é azul
+  como o arco da defesa: combinar com a [estrutura].
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

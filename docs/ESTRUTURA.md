@@ -75,6 +75,54 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — painel, parte 5 (números do combate):** `CombatRules` (`src/shared/combatRules.ts`, padrão das constantes
+`CHARGE_*`/`GUARD_*`, menos `GUARD_MAX_ENERGY`, que é a escala da barra). `chargeFraction`, `chargedRange`,
+`chargedDamage`, `guardCovers` e `blockHit` recebem as regras (sem padrão escondido: quem esquece não compila).
+`World.combat` (opção `combat`; o servidor passa `tuning.combat`, o mesmo objeto, mudado no lugar). Grupo `combate`
+no `Tuning`: partes `carga`, `defesa`, `recuo`, em unidades do dono (ms, %, graus, metros), com limites por número
+(`COMBAT_NUMBERS`); `parseCombat` converte e o teste confere que o padrão do painel volta exatamente ao do jogo.
+`welcome.combat` e mensagem `combat` (protocolo 28); o motor e o `CombatLayer` usam o mesmo objeto
+(`Object.assign` ao chegar). Gancho de teste: `__mundoNovo.combat()`.
+
+**13/11 — painel, parte 4 (missões):** grupo `missoes` no `Tuning` (as missões passam a ser montadas junto com
+monstros, itens e NPCs, conferidas por `parseQuestDefs`/`checkQuests`). Campos: nome, pedido e concluída (`texto-longo`,
+até 600 letras), `objetivo.rotulo` (vazio = automático), `objetivo.quantidade`/`monstro`/`item`, `nivelMinimo`,
+`repetivel` e `recompensa.xp`/`ouro`/`itens` (tipo novo `itens-qtd`: lista de `{ item, quantidade }`). Fica de fora:
+quem dá, com quem falar e `depoisDe` (mudam a ordem da história: só no arquivo). Mensagem nova `questDefs`
+(protocolo 27): o cliente troca a lista dentro do mesmo array (a conversa e o rastreador usam ele) e redesenha.
+`replaceInPlace(..., exact)` tira campo que sumiu (o `goalLabel` que voltou ao automático).
+
+**13/11 — painel, parte 3 (monstros por área):** grupo novo `areas` no `Tuning` (o padrão vem dos mapas; chave
+`mapa#n`, n = a ordem da área no mapa, de 1 em diante): `monstro` e `quantidade` (0 a 50). O mundo monta as áreas com
+os ajustes e `refreshAreas` vale na hora (troca o tipo, completa ou tira, sem ninguém ganhar nada). O lugar da área
+continua sendo do mapa ([mundo]).
+
+**13/11 — painel, partes 1 e 2:** nível e XP (ações `nivel` e `xp` no cartão do jogador) e a posição dos NPCs
+(campos `mapa`, `x`, `y` — tipo novo `numero`, com vírgula; `Tuning.setMany` muda os três juntos; `refreshNpcs` tira,
+põe e move; o navegador move o boneco). Menu ADM "Trazer para cá" (`gm` `npc`, protocolo 26) grava pelo `setNpcSpot`.
+
+**13/11 — registros (logs), pedido do dono para corrigir mais fácil:** `Logbook` (tela + `saves/registros/` um
+arquivo por dia, 14 dias + memória para a aba Registros do painel). O tick e cada mensagem estão em try/catch:
+o erro vai para o registro com o caminho e o servidor continua (antes, um defeito num tick derrubava tudo). Erros do
+navegador chegam pela mensagem `oops` (protocolo 25), com a tela e o aparelho. O dono também pediu, para o painel,
+"todos" os itens que propus (nível/XP, posição dos NPCs, monstros por área, missões, números do combate): faço em
+partes, nessa ordem.
+
+**13/11 — Xiovanna atrás do balcão (Budega com interior, do [mundo] e da [arte]):** `budega` em (64,6; 51), logo
+depois do mapa entrar na main, como combinado. O teste dos NPCs no mapa novo passou a pedir "o corpo cabe e dá para
+chegar a pé a até 3 m" (atrás do balcão ninguém chega no pé dela, de propósito). Missão, loja (a 2,9 m) e o lugar
+exato conferidos no navegador.
+
+**13/11 — menu ADM, passo 1 (pedido do dono: "pôr mais bicho, matar, voar, coisas que player normal não faz"):**
+administrador salvo no personagem (`MIGRATIONS` passo **4**: coluna `admin`, todo mundo começa como jogador normal),
+marcado no painel (`POST /admin/api/adm`; online, vale na hora). Comando `gm` (protocolo 24), sempre conferido no
+servidor (quem não é administrador é ignorado e registrado) e registrado no log: `spawn` (monstros numa área
+temporária em volta, que não renascem; até 10 por vez e 60 por mapa), `clear` (dano igual à vida dos monstros a até
+8 m: XP e itens normais), `fly` (o pedaço da fila guarda o voo, como a defesa; `flySlice` atravessa tudo; pousar
+dentro de algo leva ao chão livre), `god` (sem dano; monstros e o canto ignoram), `tp` (o pé exato, ou o chão livre
+mais perto; voando, qualquer ponto do mapa), `heal`. No navegador, `src/client/novo/gm.ts` (botão ADM e tecla G);
+voando, o "andar até" vai reto. Conferido no PC e no celular. Testes em `tests/gm.test.ts`.
+
 **13/11 — desempenho (pergunta do dono: "como fica em FPS? o que fazer para ficar leve?"):** medido no navegador
 de teste, sem placa de vídeo (pessimista): PC 1280×720 de 31 (combate) a 58 (praça) quadros por segundo; 1920×1080
 de 26 a 43; celular emulado de 33 a 57. Quase todo o quadro é o desenho da view (8 a 30 ms de JavaScript); o motor e
@@ -217,11 +265,13 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **23** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+Números para não se perder: protocolo na versão **26** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
 `slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo; 20: objetivo `talk` e
 `goalLabel` nas missões; 21: `charge`, começar a puxar o estilingue; 22: `guard` e `energy`, a defesa, e `blk` no
-`hit`; 23: `mode` no `hello`, entrar ou criar conta); `MIGRATIONS` no
-passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
+`hit`; 23: `mode` no `hello`, entrar ou criar conta; 24: `gm`, o menu ADM; 25: `oops`, erros do navegador; 26: `npc` no `gm`);
+`MIGRATIONS` no
+passo **4** (3: coluna `quests`; 4: coluna `admin`; o movimento livre não precisou de passo novo: o salvo continua
+sendo o tile).
 
 ## Esperando outras frentes
 - Nada pendente para a [estrutura]. A [arte] entregou tudo que estava pedido (Curupira, jacaré, boto, Iara, canto,

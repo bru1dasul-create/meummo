@@ -7,6 +7,7 @@ import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
 import type { Projectile } from '../src/server/entities';
 import { blockHit, guardCovers } from '../src/shared/combat';
+import { DEFAULT_COMBAT_RULES as RULES } from '../src/shared/combatRules';
 import {
   CHARGE_FULL_MS,
   GUARD_BREAK_MS,
@@ -72,30 +73,30 @@ function setup() {
 
 describe('defesa com energia: as contas', () => {
   it('bloqueio com energia de sobra: passa 25% e gasta 10 + 0,75 × dano', () => {
-    expect(blockHit(100, 40)).toEqual({ damage: 10, energy: 60, broke: false });
-    const small = blockHit(100, 3);
+    expect(blockHit(100, 40, RULES)).toEqual({ damage: 10, energy: 60, broke: false });
+    const small = blockHit(100, 3, RULES);
     expect(small.damage).toBe(1); // pelo menos 1
     expect(small.energy).toBeCloseTo(100 - 12.25);
     expect(small.broke).toBe(false);
   });
 
   it('uma pedra de 40 com 40 de energia: segura inteira e quebra (como no protótipo)', () => {
-    expect(blockHit(40, 40)).toEqual({ damage: 10, energy: 0, broke: true });
+    expect(blockHit(40, 40, RULES)).toEqual({ damage: 10, energy: 0, broke: true });
   });
 
   it('sem energia para o golpe inteiro: protege em parte e quebra', () => {
     // 20 de energia para um golpe que custa 40: metade da proteção → passa 40 × (1 − 0,75 × 0,5) = 25
-    expect(blockHit(20, 40)).toEqual({ damage: 25, energy: 0, broke: true });
+    expect(blockHit(20, 40, RULES)).toEqual({ damage: 25, energy: 0, broke: true });
   });
 
   it('o arco é de 140° na frente; lados mais abertos e costas não', () => {
     // defesa virada para o leste: o golpe que anda para o oeste vem de frente
-    expect(guardCovers(EAST, WEST)).toBe(true);
-    expect(guardCovers(EAST, EAST)).toBe(false); // pelas costas
-    expect(guardCovers(EAST, WEST + 69 * DEG)).toBe(true);
-    expect(guardCovers(EAST, WEST - 69 * DEG)).toBe(true);
-    expect(guardCovers(EAST, WEST + 75 * DEG)).toBe(false);
-    expect(guardCovers(170 * DEG, -10 * DEG)).toBe(true); // dá a volta no círculo
+    expect(guardCovers(EAST, WEST, RULES)).toBe(true);
+    expect(guardCovers(EAST, EAST, RULES)).toBe(false); // pelas costas
+    expect(guardCovers(EAST, WEST + 69 * DEG, RULES)).toBe(true);
+    expect(guardCovers(EAST, WEST - 69 * DEG, RULES)).toBe(true);
+    expect(guardCovers(EAST, WEST + 75 * DEG, RULES)).toBe(false);
+    expect(guardCovers(170 * DEG, -10 * DEG, RULES)).toBe(true); // dá a volta no círculo
   });
 });
 
