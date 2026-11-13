@@ -54,6 +54,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       };
     case 'charge':
       return { t: 'charge' };
+    case 'guard':
+      return typeof msg.on === 'boolean' && isAngle(msg.a) ? { t: 'guard', on: msg.on, a: msg.a } : null;
     case 'shoot':
       return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
         ? { t: 'shoot', cid: msg.cid as number, a: msg.a }

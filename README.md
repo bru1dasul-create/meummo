@@ -48,14 +48,16 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 | Bordunada (golpe em arco) | `Q` | botão **Bordunada** |
 | Fôlego (cura) | `E` | botão **Fôlego** |
 | Esquiva | `Espaço` | botão **Esquiva** |
+| Defesa (segura os golpes da frente e gasta energia) | segure `F` | segure o botão **Defesa** |
 | Comida e remédio (atalhos) | `3` e `4` | os dois botões redondos |
 | Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
 | Som ligado/desligado | `M` ou 🔊 no painel | 🔊 no painel |
 
-Levar um golpe ou esquivar solta a pedra que você estava puxando. O jogo antigo (visto de cima, em `?antigo`) tem os
-controles de antes: clique para atirar e botão direito no chão para andar.
+Levar um golpe, esquivar ou levantar a defesa solta a pedra que você estava puxando. A defesa vira sozinha para o
+monstro mais perto; a barra embaixo do pé é a energia dela (acabou, ela quebra: solte e espere voltar). O jogo
+antigo (visto de cima, em `?antigo`) tem os controles de antes: clique para atirar e botão direito no chão para andar.
 
 A visão do jogo está em [docs/DESIGN.md](docs/DESIGN.md) e o que vem depois em [docs/ROADMAP.md](docs/ROADMAP.md).
 

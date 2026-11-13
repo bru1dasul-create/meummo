@@ -131,6 +131,13 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   `CHARGE_FULL_MS`). A carga dá o dano (`chargedDamage`: até o dobro) e, no mapa novo, o alcance (`chargedRange`:
   6,5 a 9,5 m), em `src/shared/combat.ts`. Esquiva, golpe recebido e desmaio zeram a carga; o toque rápido manda
   `charge` e `shoot` juntos (pedra sem carga). Quem não manda `charge` (o jogo antigo) atira como sempre.
+- **Defesa com energia (jogo novo):** `guard` (on/off e o ângulo) marca `Player.guardWanted`; a cada tick,
+  `updateGuard` levanta a defesa (se não estiver quebrada e tiver energia), gasta e devolve energia e quebra quando
+  ela acaba. O `damage` recebe para onde o golpe anda (`travel`): se a defesa já protege (`GUARD_READY_MS`) e o golpe
+  vem pela frente (`guardCovers`, 140°), `blockHit` diz quanto passa e quanta energia gasta (`src/shared/combat.ts`).
+  Cada pedaço de caminhada da fila guarda se a defesa estava segura quando ele chegou (anda devagar,
+  `GUARD_WALK_FACTOR`): assim o servidor anda na mesma ordem que o navegador previu. A energia vai ao navegador em
+  `energy` (na hora quando a defesa muda; no máximo 4 por segundo enquanto sobe ou desce); quem vê recebe `guard`.
 - **Golpes telegrafados:** quando um monstro vai atacar, o servidor manda `warn` com os quadrados que
   serão atingidos e o tempo até o golpe. Na hora, só leva dano quem ainda estiver ali (e não estiver
   invencível pela esquiva). Por isso a rede não atrapalha: o aviso dura mais que o atraso da internet.
@@ -295,6 +302,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `hello` | entrar com nome e senha (cria o personagem se o nome ainda não existir) |
 | cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
 | cliente | `charge` | começar a puxar o estilingue (a carga conta até o `shoot`) |
+| cliente | `guard` | segurar (`on: true`) ou soltar a defesa, virada para o ângulo `a` |
 | cliente | `shoot` | atirar com o estilingue no ângulo `a` |
 | cliente | `skill` | usar a habilidade `n` mirando no ângulo `a` |
 | cliente | `item` / `unequip` | equipar, usar ou jogar fora o item do espaço `i` / tirar o que está numa parte |
@@ -313,6 +321,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
 | servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho, investida), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
+| servidor | `guard` / `energy` | outro jogador levantou ou baixou a defesa / a sua energia e a defesa (baixada, levantada, quebrada); no `hit`, `blk` diz se a defesa segurou (1) ou segurou e quebrou (2) |
 | servidor | `death` / `levelup` | alguém caiu / subiu de nível |
 | servidor | `stats` / `cd` / `fail` | sua XP, nível, dano e defesa / recarga de habilidade / pedido recusado (ex.: recarregando) |
 | servidor | `inv` / `loot` | sua mochila (e seu ouro) mudou / estes itens do monstro que caiu em (x, y) foram para a sua mochila |

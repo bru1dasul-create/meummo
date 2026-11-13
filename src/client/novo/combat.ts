@@ -10,7 +10,8 @@
 //   pés de quem ele acerta;
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
-import { CHARGE_FULL_MS, SHOT_FEET_DY } from '../../shared/constants';
+import { CHARGE_FULL_MS, GUARD_HALF_ARC, GUARD_MAX_ENERGY, GUARD_READY_MS, SHOT_FEET_DY } from '../../shared/constants';
+import type { GuardState } from '../../shared/protocol';
 import type { WorldView } from './view';
 
 type Point = { x: number; y: number };
@@ -97,8 +98,12 @@ interface GroundDrop {
 const FLOAT_MS = 900;
 /** Raio do anel da carga em volta do pé (metros). */
 const CHARGE_RING_RADIUS = 0.6;
-/** Quanto tempo o "carga perdida" fica na tela. */
-const CHARGE_LOST_MS = 1100;
+/** Quanto tempo um aviso embaixo do pé ("carga perdida", "defesa quebrou!") fica na tela. */
+const FOOT_NOTE_MS = 1100;
+/** Raio do arco da defesa no chão (metros). */
+const GUARD_RADIUS = 0.8;
+/** Faísca da defesa segurando um golpe. */
+const SPARK_MS = 420;
 const FLASH_MS = 260;
 const POOF_MS = 450;
 
@@ -116,8 +121,14 @@ export class CombatLayer {
   private poofs: { x: number; y: number; start: number }[] = [];
   /** Puxando o estilingue: de quem e desde quando (o anel em volta do pé enche até a carga cheia). */
   private chargeRing: { id: number; since: number } | null = null;
-  /** Um golpe soltou a pedra: o aviso "carga perdida" embaixo do pé, onde o anel estava. */
-  private chargeLost: { id: number; start: number } | null = null;
+  /** Aviso curto embaixo do pé ("carga perdida", "defesa quebrou!"). */
+  private footNote: { id: number; text: string; color: string; start: number } | null = null;
+  /** Defesas levantadas: de quem, para onde (radianos) e desde quando (protege depois de GUARD_READY_MS). */
+  private readonly guards = new Map<number, { angle: number; since: number }>();
+  /** A sua energia (barra embaixo do pé quando não está cheia ou a defesa está levantada). */
+  private energy: { id: number; value: number; state: GuardState } | null = null;
+  /** Faíscas de golpes que bateram na defesa. */
+  private sparks: { id: number; angle: number; broke: boolean; start: number }[] = [];
   /** Sinais de missão em cima dos NPCs ('!' nova, '?' para concluir). */
   private readonly marks = new Map<number, '!' | '?'>();
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
@@ -184,13 +195,39 @@ export class CombatLayer {
   /** Começou (`since`) ou parou (null) de puxar o estilingue. */
   setCharge(id: number, since: number | null): void {
     this.chargeRing = since === null ? null : { id, since };
-    if (since !== null) this.chargeLost = null;
+    if (since !== null && this.footNote?.id === id) this.footNote = null;
   }
 
   /** Um golpe soltou a pedra que `id` puxava: some o anel e aparece "carga perdida" no lugar. */
   loseCharge(id: number, now: number): void {
     this.chargeRing = null;
-    this.chargeLost = { id, start: now };
+    this.note(id, 'carga perdida', '#efe3c6', now);
+  }
+
+  /** Aviso curto embaixo do pé de `id`. */
+  note(id: number, text: string, color: string, now: number): void {
+    this.footNote = { id, text, color, start: now };
+  }
+
+  /** Defesa de `id` levantada, virada para `angle` (radianos), ou baixada (null). */
+  setGuard(id: number, angle: number | null, now: number): void {
+    if (angle === null) {
+      this.guards.delete(id);
+      return;
+    }
+    const guard = this.guards.get(id);
+    if (guard) guard.angle = angle;
+    else this.guards.set(id, { angle, since: now });
+  }
+
+  /** A sua energia (0 a 100) e a defesa, para a barra embaixo do pé. */
+  setEnergy(id: number, value: number, state: GuardState): void {
+    this.energy = { id, value, state };
+  }
+
+  /** Um golpe bateu na defesa de `id` (virada para `angle`; null = para onde a defesa dele está); `broke`: e quebrou. */
+  spark(id: number, angle: number | null, broke: boolean, now: number): void {
+    this.sparks.push({ id, angle: angle ?? this.guards.get(id)?.angle ?? 0, broke, start: now });
   }
 
   /** Sinal de missão em cima do NPC `id` ('' tira). */
@@ -226,7 +263,9 @@ export class CombatLayer {
     this.windups.clear();
     this.marks.clear();
     this.chargeRing = null;
-    this.chargeLost = null;
+    this.footNote = null;
+    this.guards.clear();
+    this.sparks = [];
   }
 
   /** Põe a tela do combate por cima do desenho (chamar depois de criar a view de um mapa novo). */
@@ -259,8 +298,10 @@ export class CombatLayer {
 
     this.drawWarnings(now, screen);
     this.drawWindups(now, feetOf, screen);
+    this.drawGuards(now, feetOf, screen);
     this.drawChargeRing(now, feetOf, screen);
-    this.drawChargeLost(now, feetOf, screen, meter);
+    const below = this.drawEnergy(now, feetOf, screen, meter);
+    this.drawFootNote(now, feetOf, screen, meter, below);
     this.drawDrops(now, screen, meter);
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
@@ -359,22 +400,28 @@ export class CombatLayer {
     arc(top, top + turn * Math.PI * 2 * progress);
   }
 
-  private drawChargeLost(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
-    const lost = this.chargeLost;
-    if (!lost) return;
-    const t = (now - lost.start) / CHARGE_LOST_MS;
-    const feet = t < 1 ? feetOf(lost.id) : null;
-    if (!feet) {
-      if (t >= 1) this.chargeLost = null;
-      return;
-    }
-    const ctx = this.ctx;
-    // logo abaixo de onde o anel estava (o ponto mais baixo dele na tela)
+  /** O ponto mais baixo, na tela, de um círculo de `radius` metros no chão em volta de `feet`. */
+  private bottomOfRing(feet: Point, radius: number, screen: (x: number, y: number, z?: number) => Point): number {
     let bottom = -Infinity;
     for (let i = 0; i < 16; i++) {
       const a = (Math.PI * 2 * i) / 16;
-      bottom = Math.max(bottom, screen(feet.x + Math.cos(a) * CHARGE_RING_RADIUS, feet.y + Math.sin(a) * CHARGE_RING_RADIUS).y);
+      bottom = Math.max(bottom, screen(feet.x + Math.cos(a) * radius, feet.y + Math.sin(a) * radius).y);
     }
+    return bottom;
+  }
+
+  /** O aviso embaixo do pé, abaixo do anel (e da barra de energia, se ela estiver aparecendo: `below` pixels). */
+  private drawFootNote(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number, below: number): void {
+    const note = this.footNote;
+    if (!note) return;
+    const t = (now - note.start) / FOOT_NOTE_MS;
+    const feet = t < 1 ? feetOf(note.id) : null;
+    if (!feet) {
+      if (t >= 1) this.footNote = null;
+      return;
+    }
+    const ctx = this.ctx;
+    const bottom = this.bottomOfRing(feet, CHARGE_RING_RADIUS, screen) + (this.energy?.id === note.id ? below : 0);
     const center = screen(feet.x, feet.y);
     const size = Math.round(Math.max(12, meter(feet.x, feet.y) * 0.22));
     ctx.globalAlpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
@@ -382,10 +429,94 @@ export class CombatLayer {
     ctx.textAlign = 'center';
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(20, 12, 10, 0.85)';
-    ctx.strokeText('carga perdida', center.x, bottom + size + 2);
-    ctx.fillStyle = '#efe3c6';
-    ctx.fillText('carga perdida', center.x, bottom + size + 2);
+    ctx.strokeText(note.text, center.x, bottom + size + 2);
+    ctx.fillStyle = note.color;
+    ctx.fillText(note.text, center.x, bottom + size + 2);
     ctx.globalAlpha = 1;
+  }
+
+  /** Arco da defesa no chão, na frente de quem defende (fraco enquanto sobe, forte quando já protege). */
+  private drawGuards(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point): void {
+    const ctx = this.ctx;
+    const arc = (feet: Point, radius: number, from: number, to: number, first: boolean) => {
+      const steps = 20;
+      for (let i = 0; i <= steps; i++) {
+        const a = from + ((to - from) * i) / steps;
+        const p = screen(feet.x + Math.cos(a) * radius, feet.y + Math.sin(a) * radius);
+        if (i === 0 && first) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+    };
+    for (const [id, guard] of this.guards) {
+      const feet = feetOf(id);
+      if (!feet) continue;
+      const ready = now - guard.since >= GUARD_READY_MS;
+      const from = guard.angle - GUARD_HALF_ARC;
+      const to = guard.angle + GUARD_HALF_ARC;
+      // faixa clara (o pedaço protegido) e a borda de fora
+      ctx.beginPath();
+      arc(feet, GUARD_RADIUS, from, to, true);
+      arc(feet, GUARD_RADIUS - 0.18, to, from, false);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(184, 235, 240, ${ready ? 0.28 : 0.12})`;
+      ctx.fill();
+      ctx.beginPath();
+      arc(feet, GUARD_RADIUS, from, to, true);
+      ctx.lineWidth = ready ? 4 : 2;
+      ctx.strokeStyle = `rgba(184, 235, 240, ${ready ? 0.9 : 0.45})`;
+      ctx.stroke();
+    }
+    // faíscas: um golpe bateu na defesa (laranja: e quebrou)
+    this.sparks = this.sparks.filter((spark) => now - spark.start < SPARK_MS);
+    for (const spark of this.sparks) {
+      const feet = feetOf(spark.id);
+      if (!feet) continue;
+      const u = (now - spark.start) / SPARK_MS;
+      const center = screen(feet.x + Math.cos(spark.angle) * GUARD_RADIUS, feet.y + Math.sin(spark.angle) * GUARD_RADIUS, 0.9);
+      const radius = 8 + u * 18;
+      ctx.globalAlpha = 1 - u;
+      ctx.strokeStyle = spark.broke ? '#f3a25b' : '#b8ebf0';
+      ctx.lineWidth = 3 - u * 1.5;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.047 + spark.start;
+        ctx.beginPath();
+        ctx.moveTo(center.x + Math.cos(a) * radius, center.y + Math.sin(a) * radius * 0.7);
+        ctx.lineTo(center.x + Math.cos(a) * (radius + 7), center.y + Math.sin(a) * (radius + 7) * 0.7);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /**
+   * A barra de energia embaixo do seu pé (só quando não está cheia ou a defesa está levantada; laranja piscando
+   * quando quebrou). Devolve quantos pixels ela ocupa, para o aviso embaixo do pé descer.
+   */
+  private drawEnergy(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): number {
+    const energy = this.energy;
+    if (!energy || (energy.value >= GUARD_MAX_ENERGY && energy.state === 'off')) return 0;
+    const feet = feetOf(energy.id);
+    if (!feet) return 0;
+    const ctx = this.ctx;
+    const center = screen(feet.x, feet.y);
+    const top = this.bottomOfRing(feet, CHARGE_RING_RADIUS, screen) + 6;
+    const width = Math.round(Math.max(44, meter(feet.x, feet.y) * 0.9));
+    const height = 6;
+    const left = center.x - width / 2;
+    const fraction = Math.max(0, Math.min(1, energy.value / GUARD_MAX_ENERGY));
+    ctx.fillStyle = 'rgba(20, 12, 10, 0.7)';
+    ctx.fillRect(left - 1, top - 1, width + 2, height + 2);
+    if (energy.state === 'broken') {
+      ctx.fillStyle = Math.floor(now / 160) % 2 === 0 ? '#f3a25b' : '#a8582a';
+      ctx.fillRect(left, top, Math.max(2, width * fraction), height);
+    } else {
+      ctx.fillStyle = energy.state === 'up' ? '#9be7a9' : '#6cc07d';
+      ctx.fillRect(left, top, width * fraction, height);
+    }
+    return height + 8;
   }
 
   private drawDrops(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {

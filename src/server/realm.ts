@@ -151,6 +151,10 @@ export class Realm {
     this.worldOf(player)?.charge(player);
   }
 
+  guard(player: Player, on: boolean, angle: number): void {
+    this.worldOf(player)?.guard(player, on, angle);
+  }
+
   shoot(player: Player, cid: number, angle: number): void {
     this.worldOf(player)?.shoot(player, cid, angle);
   }

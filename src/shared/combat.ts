@@ -3,7 +3,17 @@
 
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
 import type { Tile, Walkable } from './map';
-import { CHARGE_DAMAGE_BONUS, CHARGE_FULL_MS, CHARGE_RANGE_MAX, CHARGE_RANGE_MIN, SHOT_RANGE } from './constants';
+import {
+  CHARGE_DAMAGE_BONUS,
+  CHARGE_FULL_MS,
+  CHARGE_RANGE_MAX,
+  CHARGE_RANGE_MIN,
+  GUARD_DAMAGE_FACTOR,
+  GUARD_HALF_ARC,
+  GUARD_HIT_COST,
+  GUARD_HIT_DAMAGE_COST,
+  SHOT_RANGE,
+} from './constants';
 import { canStep } from './movement';
 
 /** Quanto da carga do estilingue (0 a 1) depois de puxar `heldMs`. */
@@ -19,6 +29,37 @@ export function chargedRange(charge: number, metric: boolean): number {
 /** Dano da pedra com esta carga (carga cheia: o dobro). */
 export function chargedDamage(base: number, charge: number): number {
   return Math.round(base * (1 + CHARGE_DAMAGE_BONUS * charge));
+}
+
+/** Diferença entre dois ângulos (radianos), de -π a π. */
+export function angleDiff(a: number, b: number): number {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d <= -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+/**
+ * A defesa virada para `guardAngle` pega um golpe que vem andando na direção `travel` (radianos)? Só se ele chegar
+ * pela frente: até GUARD_HALF_ARC para cada lado (140° ao todo). Laterais mais abertas e costas levam o golpe inteiro.
+ */
+export function guardCovers(guardAngle: number, travel: number): boolean {
+  return Math.abs(angleDiff(guardAngle, travel + Math.PI)) <= GUARD_HALF_ARC + 1e-9;
+}
+
+/**
+ * Um golpe de `damage` na defesa levantada com `energy`: o dano que passa, a energia que sobra e se a defesa quebrou.
+ * Com energia de sobra, passa GUARD_DAMAGE_FACTOR do dano (pelo menos 1). Sem energia para o golpe inteiro, protege
+ * em parte (na proporção da energia que tinha) e quebra; zerar a energia também quebra.
+ */
+export function blockHit(energy: number, damage: number): { damage: number; energy: number; broke: boolean } {
+  const cost = GUARD_HIT_COST + GUARD_HIT_DAMAGE_COST * damage;
+  const spent = Math.min(Math.max(0, energy), cost);
+  const fraction = spent / cost;
+  const left = energy - spent;
+  const broke = fraction < 1 - 1e-9 || left <= 1e-9;
+  const through = damage * (1 - (1 - GUARD_DAMAGE_FACTOR) * fraction);
+  return { damage: Math.max(1, Math.ceil(through - 1e-9)), energy: broke ? 0 : left, broke };
 }
 
 export interface Point {

@@ -219,9 +219,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     perto); celular: segurar o botão Estilingue (toque rápido no monstro = pedra fraca na hora). Anel no pé enchendo
     e "carga perdida" (desenho provisório no `combat.ts`; a [arte] pode animar o puxar com as ações `sling-pull` e
     `sling-cancel` da view)
-  - [ ] **2b — defesa com energia:** F (e um botão no celular), arco de 140° na frente, bloqueia ~75%, energia 100
-    (6/s segurando; golpe gasta 10 + 0,75 × dano; quebra sem energia; volta a 22/s depois de 0,7 s), anda mais devagar
-    defendendo; a barra verde da HUD nova é essa energia
+  - [x] **2b — defesa com energia** (13/11): segurar F (celular: botão Defesa) levanta a defesa, que protege 0,11 s
+    depois, num arco de 140° na frente, virada sozinha para o monstro mais perto (sem monstro, para onde você anda).
+    Golpe defendido: passa 25% (pelo menos 1) e gasta 10 + 0,75 × dano de energia; segurar gasta 6/s; sem defesa, a
+    energia volta 22/s depois de 0,7 s. Acabou: a defesa quebra e só levanta de novo soltando, depois de 0,85 s e com
+    20 de energia. Defendendo, anda a 70% do andar devagar e não atira nem usa habilidade; levantar solta a pedra.
+    Fogo no chão não tem direção: a defesa não segura. Protocolo 22 (`guard`, `energy`, `blk` no `hit`). Desenho
+    provisório: arco azul-claro no chão, faísca no bloqueio, barra de energia embaixo do pé, "defesa quebrou!" e o
+    botão `#guard-button` (`src/client/novo/guard.ts`); a barra verde da HUD nova é essa energia ([arte])
   - [ ] **2c — recuo:** a pedra empurra 12 a 34 cm pela força (menos com defesa), parede segura; conferir a esquiva
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua

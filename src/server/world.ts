@@ -8,6 +8,14 @@ import {
   DASH_TILES,
   DEATH_MS,
   GOLD_DROP_MS,
+  GUARD_BREAK_MS,
+  GUARD_DRAIN_PER_S,
+  GUARD_MAX_ENERGY,
+  GUARD_READY_MS,
+  GUARD_REARM_ENERGY,
+  GUARD_REGEN_DELAY_MS,
+  GUARD_REGEN_PER_S,
+  GUARD_WALK_FACTOR,
   ITEM_DROP_MS,
   MAX_PLAYERS,
   MAX_QUEUED_WALKS,
@@ -35,10 +43,12 @@ import {
   angleOfDir,
   arcTiles,
   areaTiles,
+  blockHit,
   chebyshev,
   dirFromAngle,
   dirTowards,
   dirTowards8,
+  guardCovers,
   makeShot,
   reachableLine,
   shotTouches,
@@ -115,6 +125,8 @@ export interface WorldOptions {
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
 const SHOT_TOLERANCE_MS = 60;
 const SKILL_TOLERANCE_MS = 100;
+/** De quanto em quanto tempo, no máximo, o navegador fica sabendo da energia enquanto ela sobe ou desce. */
+const ENERGY_SEND_MS = 250;
 /** Quanto um monstro pode se afastar da área dele, além do alcance de perseguição. */
 const LEASH_MARGIN = 4;
 /** Proteção depois de voltar para a vila. */
@@ -337,7 +349,10 @@ export class World {
       player.hp = player.maxHp;
       player.dir = DOWN;
       player.lastDamagedAt = -Infinity;
+      this.refillEnergy(player, now);
     }
+    this.dropGuard(player); // mapa novo: a defesa começa baixada (o navegador também solta)
+    player.energyClock = now;
     player.x = spot.x;
     player.y = spot.y;
     player.queue.length = 0;
@@ -466,19 +481,37 @@ export class World {
       player.ackPending = true;
       return;
     }
-    player.queue.push({ seq, a: degrees, dash, slow });
+    player.queue.push({ seq, a: degrees, dash, slow, guard: player.guardWanted });
   }
 
   /** Começou a puxar o estilingue: a carga conta pelo relógio do servidor, até o tiro (veja shoot). */
   charge(player: Player): void {
-    if (player.loading || player.dead) return;
+    if (player.loading || player.dead || player.guardWanted) return; // defendendo, as mãos estão ocupadas
     player.chargeStart = this.now();
+  }
+
+  /**
+   * Segurou (ou soltou) a defesa, virada para `angle` (radianos). Ela sobe no tick (updateGuard) e protege
+   * GUARD_READY_MS depois; levantar a defesa solta a pedra que estava puxando.
+   */
+  guard(player: Player, on: boolean, angle: number): void {
+    if (player.loading || player.dead) {
+      player.guardWanted = false;
+      return;
+    }
+    const turned = Math.abs(angle - player.guardAngle) > 1e-6;
+    player.guardAngle = angle;
+    if (on) player.chargeStart = null;
+    player.guardWanted = on;
+    // quem vê acompanha para onde a defesa levantada está virada (o navegador manda no máximo umas 8 por segundo)
+    if (on && turned && player.guardUpAt !== null) this.emitGuard(player);
   }
 
   /** Estilingue: atira uma pedrinha na direção do ângulo, mais forte e mais longe quanto mais tempo puxou. */
   shoot(player: Player, cid: number, angle: number): void {
     const now = this.now();
     if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
+    if (player.guardWanted) return; // defendendo, não atira (o navegador nem pede)
     // da área segura ninguém ataca: o monstro não entra nem acerta lá, então não teria como revidar
     if (this.inSafeArea(player)) {
       player.chargeStart = null;
@@ -499,6 +532,7 @@ export class World {
     if (!skill || player.loading) return;
     const now = this.now();
     if (player.dead) return this.fail(player, 'dead');
+    if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
     if (now < player.skillReadyAt[n]! - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
 
     if (skill.kind === 'arc') {
@@ -995,6 +1029,7 @@ export class World {
       return;
     }
     if (player.charmedBy !== null) this.updateCharm(player, now);
+    this.updateGuard(player, now);
     this.processWalks(player, now);
     this.regenPlayer(player, now);
   }
@@ -1029,7 +1064,7 @@ export class World {
       const from = { x: player.fx, y: player.fy, dir: player.dir };
       const result = dash
         ? sweepBody(this.map, from, input.a, DASH_TILES)
-        : walkSlice(this.map, from, input.a, sliceDistance(this.map.metric, input.slow, STEP_MS));
+        : walkSlice(this.map, from, input.a, this.walkDistance(input));
       if (!dash) player.walkBudget -= WALK_SLICE_MS;
       // Rolar contra a parede não conta como esquiva (nem dá invencibilidade).
       if (dash && result.moved) {
@@ -1057,6 +1092,94 @@ export class World {
     }
   }
 
+  /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (GUARD_WALK_FACTOR). */
+  private walkDistance(input: { slow: boolean; guard: boolean }): number {
+    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * GUARD_WALK_FACTOR;
+    return sliceDistance(this.map.metric, input.slow, STEP_MS);
+  }
+
+  /**
+   * Defesa e energia, a cada tick: levanta quem segura o botão (se não estiver quebrada e tiver energia), gasta
+   * segurando, quebra quando acaba e devolve a energia depois de um tempo sem defesa.
+   */
+  private updateGuard(player: Player, now: number): void {
+    const dt = player.energyClock > 0 ? Math.max(0, now - player.energyClock) / 1000 : 0;
+    player.energyClock = now;
+    // quebrada: rearma soltando o botão, depois do tempo da quebra e com energia para isso
+    if (player.guardBroken && !player.guardWanted && now >= player.guardBrokenUntil && player.energy >= GUARD_REARM_ENERGY) {
+      player.guardBroken = false;
+    }
+    const active = player.guardWanted && !player.guardBroken && player.energy > 0;
+    if (active && player.guardUpAt === null) {
+      player.guardUpAt = now;
+      player.chargeStart = null;
+      this.emitGuard(player);
+    } else if (!active && player.guardUpAt !== null) {
+      player.guardUpAt = null;
+      this.emitGuard(player);
+    }
+    if (active) {
+      player.energy = Math.max(0, player.energy - GUARD_DRAIN_PER_S * dt);
+      player.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+      if (player.energy <= 0) this.breakGuard(player, now);
+    } else if (now >= player.energyRegenAt && player.energy < GUARD_MAX_ENERGY) {
+      player.energy = Math.min(GUARD_MAX_ENERGY, player.energy + GUARD_REGEN_PER_S * dt);
+    }
+    this.sendEnergy(player, now);
+  }
+
+  /** A defesa levantada já protege? (Leva GUARD_READY_MS para subir.) */
+  private guardReady(player: Player, now: number): boolean {
+    return player.guardUpAt !== null && now - player.guardUpAt >= GUARD_READY_MS && player.energy > 0;
+  }
+
+  /** Acabou a energia: a defesa cai e só levanta de novo soltando o botão (veja updateGuard). */
+  private breakGuard(player: Player, now: number): void {
+    player.guardBroken = true;
+    player.guardBrokenUntil = now + GUARD_BREAK_MS;
+    player.energy = 0;
+    player.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+    if (player.guardUpAt !== null) {
+      player.guardUpAt = null;
+      this.emitGuard(player);
+    }
+    this.sendEnergy(player, now, true);
+  }
+
+  /** Baixa a defesa sem avisar ninguém (desmaio, troca de mapa: quem via já vai esquecer o jogador). */
+  private dropGuard(player: Player): void {
+    player.guardWanted = false;
+    player.guardUpAt = null;
+  }
+
+  /** Energia cheia de novo (acordou depois de desmaiar). */
+  private refillEnergy(player: Player, now: number): void {
+    player.energy = GUARD_MAX_ENERGY;
+    player.guardBroken = false;
+    player.guardBrokenUntil = 0;
+    player.energyRegenAt = 0;
+    this.sendEnergy(player, now, true);
+  }
+
+  /** Quem vê o jogador fica sabendo da defesa dele (levantada ou não, e para onde). */
+  private emitGuard(player: Player): void {
+    this.emitToViewers(player, { t: 'guard', id: player.id, on: player.guardUpAt !== null, a: round3(player.guardAngle) }, player.id);
+  }
+
+  /**
+   * Conta a energia ao navegador: na hora quando a defesa muda (ou com `force`), e no máximo a cada
+   * ENERGY_SEND_MS enquanto ela sobe ou desce (o navegador anima a barra entre um aviso e outro).
+   */
+  private sendEnergy(player: Player, now: number, force = false): void {
+    const state = player.guardBroken ? 'broken' : player.guardUpAt !== null ? 'up' : 'off';
+    const value = Math.round(player.energy);
+    if (!force && state === player.guardSent && (value === player.energySent || now - player.energySentAt < ENERGY_SEND_MS)) return;
+    player.guardSent = state;
+    player.energySent = value;
+    player.energySentAt = now;
+    player.outbox.push({ t: 'energy', v: value, g: state });
+  }
+
   private regenPlayer(player: Player, now: number): void {
     if (player.hp >= player.maxHp || now - player.lastDamagedAt < REGEN_DELAY_MS || now < player.nextRegenAt) return;
     player.nextRegenAt = now + REGEN_EVERY_MS;
@@ -1067,6 +1190,7 @@ export class World {
   private killPlayer(player: Player, now: number): void {
     player.deadUntil = now + DEATH_MS;
     player.chargeStart = null;
+    this.dropGuard(player);
     player.queue.length = 0;
     this.emitToViewers(player, { t: 'death', id: player.id });
     player.outbox.push({ t: 'sys', text: 'Você desmaiou! Voltando para a vila...' });
@@ -1094,6 +1218,7 @@ export class World {
     player.unnoticedUntil = now + NOTICE_GRACE_MS;
     player.lastDamagedAt = -Infinity;
     player.changed = true;
+    this.refillEnergy(player, now);
     player.outbox.push({ t: 'teleport', x: player.fx, y: player.fy, dir: player.dir });
     this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
   }
@@ -1162,7 +1287,7 @@ export class World {
       if (result === 'flying') continue;
       this.projectiles.delete(shot.id);
       for (const id of shot.viewers) this.players.get(id)?.outbox.push({ t: 'shot_end', id: shot.id, hit: hit.target?.id ?? 0 });
-      if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now);
+      if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx));
     }
   }
 
@@ -1183,15 +1308,29 @@ export class World {
 
   // ======================= dano =======================
 
-  private damage(target: Entity, amount: number, attackerId: number, now: number): void {
+  /**
+   * `travel`: para onde o golpe anda (radianos), para a defesa saber se ele veio pela frente. Sem direção (fogo no
+   * chão), a defesa não segura.
+   */
+  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number): void {
     if (target.hp <= 0) return;
     if (target.kind === 'player' && (target.dead || now < target.invulnerableUntil || this.inSafeArea(target))) return;
     // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
     if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
+    let blocked: 0 | 1 | 2 = 0;
+    if (target.kind === 'player' && travel !== undefined && this.guardReady(target, now) && guardCovers(target.guardAngle, travel)) {
+      const block = blockHit(target.energy, amount);
+      amount = block.damage;
+      target.energy = block.energy;
+      target.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+      blocked = block.broke ? 2 : 1;
+      if (block.broke) this.breakGuard(target, now);
+      this.sendEnergy(target, now, true);
+    }
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamagedAt = now;
     if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
-    this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp });
+    this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp, ...(blocked ? { blk: blocked } : {}) });
 
     if (target.kind === 'monster') {
       const attacker = this.players.get(attackerId);
@@ -1433,7 +1572,7 @@ export class World {
     if (windup.kind === 'charge') return this.resolveCharge(monster, windup.tiles, now);
     for (const player of [...this.players.values()]) {
       if (!player.dead && tileIn(windup.tiles, player.x, player.y)) {
-        this.damage(player, this.rollRange(...attack.damage), monster.id, now);
+        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)));
       }
     }
     // Saci: depois do giro, some num redemoinho.
@@ -1453,7 +1592,9 @@ export class World {
     }
     const run = path.slice(0, last + 1);
     for (const player of [...this.players.values()]) {
-      if (!player.dead && tileIn(run, player.x, player.y)) this.damage(player, this.rollRange(...attack.damage), monster.id, now);
+      if (!player.dead && tileIn(run, player.x, player.y)) {
+        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)));
+      }
     }
     // não para em cima de ninguém: se tem gente no fim, para um tile antes
     const occupied = (t: Tile) => [...this.players.values()].some((p) => !p.dead && p.x === t.x && p.y === t.y);

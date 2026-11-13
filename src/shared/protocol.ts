@@ -63,6 +63,7 @@ export type ClientMsg =
   // quero andar um pedaço (WALK_SLICE_MS) na direção `a` (graus inteiros); com dash, rolar; slow: devagar (mundo novo, Shift)
   | { t: 'walk'; seq: number; a: number; dash?: true; slow?: true }
   | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
+  | { t: 'guard'; on: boolean; a: number } // segurando (ou soltei) a defesa, virada para o ângulo `a` (radianos)
   | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
@@ -98,6 +99,9 @@ export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_fu
 export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge' | 'song';
 
 /** Servidor → cliente. O servidor sempre envia uma lista (um pacote por tick). */
+/** A defesa do jogador: baixada, levantada, ou quebrada (sem energia; só levanta de novo soltando o botão). */
+export type GuardState = 'off' | 'up' | 'broken';
+
 export type ServerMsg =
   | {
       t: 'welcome';
@@ -132,7 +136,11 @@ export type ServerMsg =
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
   | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number } // r = alcance do golpe (bote, investida)
   | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)
-  | { t: 'hit'; id: number; by: number; dmg: number; hp: number }
+  // blk: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou
+  | { t: 'hit'; id: number; by: number; dmg: number; hp: number; blk?: 1 | 2 }
+  | { t: 'guard'; id: number; on: boolean; a: number } // outro jogador levantou (ou baixou) a defesa, virada para `a`
+  // a sua energia (0 a 100) e a defesa: baixada, levantada ou quebrada (solte e espere a energia voltar)
+  | { t: 'energy'; v: number; g: GuardState }
   | { t: 'heal'; id: number; amount: number; hp: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }

@@ -77,6 +77,9 @@ export class Session {
       case 'charge':
         this.lobby.realm.charge(this.player);
         break;
+      case 'guard':
+        this.lobby.realm.guard(this.player, msg.on, msg.a);
+        break;
       case 'shoot':
         this.lobby.realm.shoot(this.player, msg.cid, msg.a);
         break;
