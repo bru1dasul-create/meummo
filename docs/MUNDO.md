@@ -72,9 +72,16 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Escolha do dono em 12/11 ("opção a"): a 4a entrou sem elas porque o
     jogo novo ainda não mostra golpe, dano nem desmaio, e o jogador apanharia sem ver. Religar (`CREATURES = true` e
     gerar de novo) quando o combate do jogo novo, passo 1, da [estrutura] chegar; o teste das zonas volta sozinho.
-  - **4b (a próxima):** o portão abre; Travessa Jasmim da Beirada (x 49,5 a 56); rua do portão para o leste (y 41 a
-    47); praça em (61 a 79, 49 a 59) com a Budega (vendinha, 62 a 67 × 49,5 a 52,5), fogueira e árvore; casas de
-    bloco com laje e caixa d'água ao norte da rua (y 29 a 40); postes de luz quente; zona segura da vila em x ≥ 49,5.
+  - **4b (prévia pronta no ramo `mundo/etapa-4b`, esperando o "pode" do dono):** o Portão I abre; faixa de pedestre
+    atravessando a Travessa; rua do portão para o leste (y 41 a 47) e rua de baixo (x 88 a 94, ainda fechada no mato
+    lá no fim); calçadas estreitas; praça de pedra portuguesa (61 a 79 × 48,5 a 59) com a Budega (vendinha,
+    letreiro "BUDEGA", 62 a 67 × 49,5 a 52,5; balcão em (64,5; 53,3), onde a [estrutura] põe quem atende), fogueira
+    com 4 bancos em (69,5; 56), árvore da praça (sibipiruna) em (77; 58), 2 mesas, orelhão e lixeira encostados na
+    Budega; 5 casas coladas ao norte da rua com uma viela de 2 m (x 79 a 81), uma casa verde ao sul e uma casa
+    abandonada no terreno dos fundos; 7 postes com fiação; carro largado na Travessa; árvores e mato nos fundos; a
+    beira da vila fechada por mata. Regras novas: a câmera não pode ter o portão, a rua, o balcão, o letreiro e a
+    fogueira tampados (por isso a árvore da praça ficou no canto sudeste), e nenhum vão de 0,3 a 1,2 m entre duas
+    coisas sólidas de frente uma para a outra (um orelhão a 40 cm de um poste entalou o personagem).
   - **4c:** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
     5-Lilás no fundo (y 2 a 6, x 48 a 96, 8 m de altura, com o trem lilás parado) e um ônibus velho embaixo; saídas
     sul (x 88 a 94, y = 80) → Guarapiranga e leste (x = 96, y 41 a 47) → Estação Capão Redondo (depois). Regra: o que
@@ -155,6 +162,9 @@ Feito pelo [mundo], tudo na `main`:
 ## Esperando outras frentes
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
+  Relatado em 13/11: o "andar até" do jogo novo enrosca em poste e banco (segue linha reta entre pontos) e, depois de
+  enroscar, para de responder até o jogador mexer no teclado; e o desenho provisório pode usar a `altura` que vai
+  nas colisões da vila (hoje casa vira caixa de 1,2 m) e a `copa` como raio.
 - **[arte]:** o desenho 2.5D do mapa novo a partir de `chao` e `cenario` (clareira, figueira, mata, gradil, portão e,
   da 4a, lago, lama, mata profunda com neblina, aguapés, capivaras, troncos caídos, Pedra do Véu e véus). O dono achou
   a figueira "bugada" e não reconheceu a pedra no desenho de hoje: mandei sugestões para ela.

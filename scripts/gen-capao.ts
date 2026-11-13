@@ -3,15 +3,16 @@
 //
 // Formato combinado com a [estrutura] (roteiro, "🗺️ Mundo novo"): Tiled ortogonal, 1 tile = 1 metro (tile de 32 px,
 // só como grade); tudo em camadas de objetos, sem tiles:
-// - "chao": as áreas do chão, de baixo para cima (mata, grama, terra, asfalto, trilha, o círculo ancestral);
-// - "cenario": as coisas com altura (árvores, gradil, portão, pilares, arbustos, pedras, postes, o brilho do Véu);
+// - "chao": as áreas do chão, de baixo para cima (mata, grama, terra, calçada, asfalto, faixa de pedestre, praça,
+//   trilha, o círculo ancestral);
+// - "cenario": as coisas com altura (árvores, gradil, portão, pilares, arbustos, pedras, postes e fiação, o brilho do
+//   Véu e, na vila, as casas, a Budega, bancos, mesas, fogueira, orelhão, lixeira e o carro largado);
 // - "colisao": retângulos onde o pé bate, tirados do cenário por este gerador (desenho e colisão nunca desencontram);
 //   `bloqueiaTiro` false onde a pedrinha passa (gradil e portão de grade);
 // - "seguro": retângulos de zona segura (monstro não entra, não nota e não acerta quem está dentro);
 // - "areas": retângulos com nome, para a faixa com o nome do lugar;
 // - "pontos": o nascimento ("spawn") e, depois, as chegadas.
-// O servidor de hoje ainda não lê esse formato (exige tile de 16 px), por isso o arquivo fica fora de
-// public/assets/maps até a [estrutura] ligar a leitura.
+// O servidor lê os mapas desta pasta (maps-iso) e manda para eles quem entra pelo jogo novo (/?novo).
 //
 // Escopo aprovado pelo dono, uma etapa por vez: 3) só a Clareira dos Despertos (um anel de arbustos a cercava);
 // 4a) a mata do parque abre: trilha em volta do lago, o lago, a mata profunda (noroeste e sudoeste), os saguis
@@ -36,7 +37,7 @@ if (existsSync(OUT) && !process.argv.includes('--force')) {
 const PX = 32;
 /** Etapa do escopo aprovado: '3' só a clareira; '4a' a mata e o lago; '4b' o portão e a vila; '4c' o resto. */
 const STAGES = ['3', '4a', '4b', '4c'] as const;
-const STAGE: (typeof STAGES)[number] = '4a';
+const STAGE: (typeof STAGES)[number] = '4b';
 const reached = (stage: (typeof STAGES)[number]) => STAGES.indexOf(STAGE) >= STAGES.indexOf(stage);
 /**
  * As criaturas da mata (saguis encantados e jararacas) só entram quando o jogo novo tiver combate: sem ele, o
@@ -81,6 +82,54 @@ const ANCESTRAL = { x: 7.5, y: 9.5, raio: 1.2 };
 const RING = { inner: 12.6, outer: 14.4 };
 /** Distância mínima entre troncos (borda a borda), para o pé de 0,6 × 0,4 passar. */
 const TRUNK_GAP = 1.2;
+
+// ---------------- a Vila do Capão (etapa 4b) ----------------
+/** A rua que sai do portão para o leste e a rua para o sul (a saída para Guarapiranga só abre na etapa 4c). */
+const STREET = { x0: 56, x1: W, y0: 41, y1: 47 };
+const ROAD_S = { x0: 88, x1: 94, y0: 47, y1: H };
+/** A praça (pedra portuguesa) e a Budega, a vendinha da praça (o negócio do dono; nada de tabaco). */
+const SQUARE = { x0: 61, x1: 79, y0: 48.5, y1: 59 };
+const BUDEGA = { x0: 62, x1: 67, y0: 49.5, y1: 52.5 };
+/** Onde fica quem atende na Budega: no balcão, do lado da praça (o NPC é da [estrutura], em data/npcs.json). */
+const BUDEGA_COUNTER = { x: 64.5, y: 53.3 };
+/** A fogueira da praça, com bancos em volta (a oeste da árvore, para a copa não cobrir o fogo). */
+const FIRE = { x: 69.5, y: 56 };
+interface House {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  altura: number;
+  andares: number;
+  cor: string;
+  extra?: Props;
+}
+/**
+ * Casas de bloco com laje e caixa d'água, de cores vivas. A frente (porta e janelas) é o lado sul, o que a câmera vê.
+ * As do lado norte da rua são coladas umas nas outras, com uma viela de 2 m (x 79 a 81) para o terreno dos fundos.
+ */
+const HOUSES: House[] = [
+  { x0: 58, x1: 64, y0: 31, y1: 39.5, altura: 5.8, andares: 2, cor: '#c9774a' },
+  { x0: 64, x1: 71, y0: 33, y1: 39.5, altura: 3.2, andares: 1, cor: '#e2a3b8', extra: { pixo: true } },
+  { x0: 71, x1: 79, y0: 30, y1: 39.5, altura: 6.2, andares: 2, cor: '#79a9d1' },
+  { x0: 81, x1: 86, y0: 32, y1: 39.5, altura: 3.4, andares: 1, cor: '#e8c75a' },
+  { x0: 86, x1: 94.4, y0: 29, y1: 39.5, altura: 6.4, andares: 2, cor: '#b9673f', extra: { bloco: true } },
+  // ao sul da rua, do lado da praça (baixa, para não tampar a rua)
+  { x0: 81, x1: 87, y0: 49, y1: 58, altura: 3.3, andares: 1, cor: '#8fc08a' },
+  // sozinha no terreno dos fundos, tomada pelo mato
+  { x0: 62, x1: 67, y0: 13, y1: 20, altura: 3.2, andares: 1, cor: '#c27a4e', extra: { abandonada: true, caixaDagua: false } },
+];
+/** Postes de concreto com luz quente, ligados pela fiação (o primeiro é o do portão, que já existia). */
+const POSTS: [number, number][] = [[50.5, 40], [60, 47.8], [70, 47.8], [80, 47.8], [87.6, 47.6], [87.6, 63], [87.6, 76]];
+/**
+ * Entre duas coisas sólidas da vila o vão é zero (encostadas) ou de pelo menos este tanto: num vão menor que isso o
+ * pé de 0,6 m entra de lado e entala (aconteceu entre um orelhão e um poste, num vão de 40 cm).
+ */
+const MIN_GAP = 1.2;
+/** Mato tomando conta da vila (bem selvagem), longe das ruas: centro e raios. */
+const VILLAGE_GRASS: [number, number, number, number][] = [[64.5, 19, 5.5, 4], [76, 12, 9, 4], [90, 21, 4.5, 5], [60, 61.5, 2.4, 3], [70, 79.5, 12, 2.5]];
+/** Árvores no terreno dos fundos (a mata voltando para a vila). */
+const VILLAGE_TREES: [number, number, string][] = [[59, 11, 'mata'], [69.5, 24.5, 'ipe-amarelo'], [84, 21, 'mata'], [91.5, 11, 'mata'], [77, 10.5, 'mata']];
 
 type Props = Record<string, string | number | boolean>;
 interface Shape {
@@ -158,6 +207,22 @@ chao.push(ellipse('grama', C.x, C.y, CLEARING_R));
 chao.push({ type: 'trilha', x: 0, y: 0, polyline: TRAIL_LOOP, props: { largura: 2.2 } });
 chao.push({ type: 'trilha', x: 0, y: 0, polyline: TRAIL_MAIN, props: { largura: 3 } });
 chao.push(ellipse('circulo', C.x, C.y, CIRCLE_R, { brilho: '#3fd6c8' }));
+if (reached('4b')) {
+  // a vila: mato tomando conta, calçadas estreitas de periferia, as ruas e a praça de pedra portuguesa
+  for (const [cx, cy, rx, ry] of VILLAGE_GRASS) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.18) });
+  chao.push(rect('calcada', 48.2, 49.5, 0, H)); // a do parque, junto do gradil
+  chao.push(rect('calcada', 56, 57.5, 0, STREET.y0)); // Travessa, lado leste, ao norte da rua
+  chao.push(rect('calcada', 56, 57.5, STREET.y1, H)); // Travessa, lado leste, ao sul da rua
+  chao.push(rect('calcada', 57.5, W, 39.5, STREET.y0)); // a das casas
+  chao.push(rect('calcada', 57.5, ROAD_S.x0, STREET.y1, SQUARE.y0)); // a da praça
+  chao.push(rect('calcada', ROAD_S.x0 - 1, ROAD_S.x0, SQUARE.y0, H)); // rua de baixo, lado oeste
+  chao.push(rect('calcada', ROAD_S.x1, W, STREET.y1, H)); // rua de baixo, lado leste
+  chao.push(rect('asfalto', STREET.x0, STREET.x1, STREET.y0, STREET.y1));
+  chao.push(rect('asfalto', ROAD_S.x0, ROAD_S.x1, ROAD_S.y0, ROAD_S.y1));
+  // faixa de pedestre do portão para a vila, atravessando a Travessa (listras compridas no sentido da rua, y)
+  chao.push(rect('faixa', 49.5, 56, 42.5, 45.5, { listras: 'y' }));
+  chao.push(rect('praca', SQUARE.x0, SQUARE.x1, SQUARE.y0, SQUARE.y1, { desenho: 'ondas' }));
+}
 
 // ---------------- cenário ----------------
 const rng = mulberry32(SEED);
@@ -223,13 +288,13 @@ for (let tries = 0; tries < 6000; tries++) {
   forest.push(point('arvore', round(x), round(y), { especie, copa, altura, tronco }));
 }
 
-// o gradil do parque (ferro velho com cipó) e o Portão I, fechado nesta etapa
+// o gradil do parque (ferro velho com cipó) e o Portão I, que abre na etapa 4b
 cenario.push(rect('gradil', PARK_X - 0.1, PARK_X + 0.1, 0, GATE.y0 - 0.3, { altura: 1.8, estado: 'inteiro' }));
 cenario.push(rect('gradil', PARK_X - 0.1, PARK_X + 0.1, GATE.y1 + 0.3, H, { altura: 1.8, estado: 'inteiro' }));
-cenario.push(rect('portao', PARK_X - 0.1, PARK_X + 0.1, GATE.y0 + 0.3, GATE.y1 - 0.3, { aberto: false }, 'Portão I'));
+cenario.push(rect('portao', PARK_X - 0.1, PARK_X + 0.1, GATE.y0 + 0.3, GATE.y1 - 0.3, { aberto: reached('4b') }, 'Portão I'));
 for (const y of [GATE.y0, GATE.y1]) cenario.push(rect('pilar', PARK_X - 0.3, PARK_X + 0.3, y - 0.3, y + 0.3, { altura: 2.6 }));
 // poste com luz quente do lado de fora do portão (aparece entre as grades)
-cenario.push(point('poste', 50.5, 40, { altura: 4.2, luz: '#ffd36b' }));
+cenario.push(point('poste', POSTS[0]![0], POSTS[0]![1], { altura: reached('4b') ? 7 : 4.2, luz: '#ffd36b' }));
 
 // pedras na beira da clareira, em grupos (uma grande e duas pequenas), para lerem como pedras
 const STONES: [number, number, number][] = reached('4a')
@@ -317,6 +382,117 @@ if (!reached('4a')) {
   for (const [x, y] of edge) cenario.push(point('arbusto', round(x), round(y), { raio: round(0.9 + rng() * 0.25), fechado: true }));
 }
 
+// ---------------- etapa 4b: o Portão I abre para a Vila do Capão ----------------
+/**
+ * Pontos da vila que a câmera precisa ver (x, y, altura): o portão, a Travessa, a rua, o balcão e o letreiro da Budega
+ * e a fogueira da praça.
+ * Uma copa alta "sobe" na tela e cobre o que está uns 8 m atrás dela (ao norte e a oeste): por isso a árvore da praça
+ * fica no canto sudeste da praça, com a fogueira a oeste dela.
+ */
+const VILLAGE_KEYS: [number, number, number][] = [];
+/** A copa desta árvore da vila tampa algum desses pontos? (só tampa o que está atrás dela) */
+function canopyHides(x: number, y: number, copa: number, altura: number): boolean {
+  const [cx, cy] = screen(x, y, altura);
+  return VILLAGE_KEYS.some(([kx, ky, kz]) => {
+    if (kx + ky >= x + y) return false;
+    const [sx, sy] = screen(kx, ky, kz);
+    return Math.hypot(sx - cx, sy - cy) < copa * 1.05;
+  });
+}
+/** Contorno convexo (na tela) de um monte de pontos. */
+function hull(pts: (readonly [number, number])[]): [number, number][] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: readonly [number, number], a: readonly [number, number], b: readonly [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (list: (readonly [number, number])[]) => {
+    const out: (readonly [number, number])[] = [];
+    for (const q of list) {
+      while (out.length >= 2 && cross(out[out.length - 2]!, out[out.length - 1]!, q) <= 0) out.pop();
+      out.push(q);
+    }
+    return out.slice(0, -1);
+  };
+  return [...half(p), ...half([...p].reverse())].map(([x, y]) => [x, y]);
+}
+/** Que ponto da vila esta caixa (casa, carro) tampa? Vale o meio do corpo de quem está atrás dela (ao norte ou a oeste). */
+function boxHides(b: { x0: number; x1: number; y0: number; y1: number }, altura: number): [number, number, number] | undefined {
+  const outline = hull(([[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]] as const).flatMap(([x, y]) => [screen(x, y, 0), screen(x, y, altura)]));
+  return VILLAGE_KEYS.find(([kx, ky, kz]) => kz === 0 && (kx < b.x0 || ky < b.y0) && inside(...screen(kx, ky, 0.9), outline));
+}
+if (reached('4b')) {
+  const vrng = mulberry32(SEED + 4); // sorteio só da vila: a mata do parque continua igual
+  for (let y = GATE.y0 + 0.5; y <= GATE.y1 - 0.5; y += 1) VILLAGE_KEYS.push([PARK_X, y, 0]);
+  for (let y = 38; y <= 50; y += 1) VILLAGE_KEYS.push([52.75, y, 0]);
+  for (let x = STREET.x0; x <= W - 2; x += 1) VILLAGE_KEYS.push([x, 44, 0]);
+  VILLAGE_KEYS.push([BUDEGA_COUNTER.x, BUDEGA_COUNTER.y, 0], [FIRE.x, FIRE.y, 0]);
+  for (let x = BUDEGA.x0 + 0.5; x <= BUDEGA.x1 - 0.5; x += 1) VILLAGE_KEYS.push([x, BUDEGA.y1 + 0.05, 2.2]); // o letreiro
+
+  // as casas e a Budega (uma casa com comércio: letreiro e toldo na frente, que dá para a praça)
+  for (const h of HOUSES) cenario.push(rect('casa', h.x0, h.x1, h.y0, h.y1, { altura: h.altura, andares: h.andares, cor: h.cor, caixaDagua: true, ...h.extra }));
+  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 2.6, andares: 1, cor: '#d4553a', caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA', toldo: '#f1c84a' }, 'Budega'));
+
+  // a praça: fogueira com bancos em volta (virados para o fogo), mesas ao lado da Budega (sem fechar o caminho até o
+  // balcão) e luz quente; o orelhão e a lixeira ficam encostados nas paredes da Budega (sem vão para o pé entalar)
+  cenario.push(point('fogueira', FIRE.x, FIRE.y, { raio: 0.6, luz: '#ffb347' }));
+  // bancos de 1,6 m a 2,6 m do fogo: as quatro entradas da roda ficam com mais de 1,5 m
+  const benches: [number, number, number, number, number][] = [
+    [FIRE.x - 0.8, FIRE.x + 0.8, FIRE.y - 2.85, FIRE.y - 2.35, 90],
+    [FIRE.x - 0.8, FIRE.x + 0.8, FIRE.y + 2.35, FIRE.y + 2.85, 270],
+    [FIRE.x - 2.85, FIRE.x - 2.35, FIRE.y - 0.8, FIRE.y + 0.8, 0],
+    [FIRE.x + 2.35, FIRE.x + 2.85, FIRE.y - 0.8, FIRE.y + 0.8, 180],
+  ];
+  for (const [x0, x1, y0, y1, olhando] of benches) cenario.push(rect('banco', round(x0), round(x1), round(y0), round(y1), { olhando }));
+  const furniture: { x: number; y: number; r: number }[] = [{ x: FIRE.x, y: FIRE.y, r: 3.1 }];
+  for (const [x, y] of [[62.6, 55.4], [63.8, 57.8]] as const) {
+    cenario.push(point('mesa', x, y, { cadeiras: 2 }));
+    furniture.push({ x, y, r: 0.9 });
+  }
+  for (const [x, y] of [[78.3, 49.3], [61.7, 58.3]] as const) {
+    cenario.push(point('poste-praca', x, y, { altura: 3.2, luz: '#ffd36b' }));
+    furniture.push({ x, y, r: 0.3 });
+  }
+  cenario.push(point('orelhao', BUDEGA.x0 - 0.25, 51, { olhando: 180 }));
+  cenario.push(point('lixeira', BUDEGA.x1 + 0.25, 51.5));
+  furniture.push({ x: BUDEGA_COUNTER.x, y: BUDEGA_COUNTER.y, r: 1.5 });
+  // a árvore da praça: o lugar mais perto do da planta (70, 54) que não tampa a rua, o balcão, o letreiro nem a fogueira
+  const SQ_TREE = { especie: 'sibipiruna', copa: 3.6, altura: 6.5, tronco: 0.7 };
+  let spot: { x: number; y: number } | undefined;
+  for (let x = SQUARE.x0 + 1; x <= SQUARE.x1 - 1; x += 0.5) {
+    for (let y = SQUARE.y0 + 1; y <= SQUARE.y1 - 1; y += 0.5) {
+      if (x < BUDEGA.x1 + 1.5 && y < BUDEGA.y1 + 1.5) continue;
+      if (furniture.some((f) => dist(x, y, f.x, f.y) < f.r + SQ_TREE.tronco / 2 + 1.5)) continue;
+      if (canopyHides(x, y, SQ_TREE.copa, SQ_TREE.altura)) continue;
+      if (!spot || dist(x, y, 70, 54) < dist(spot.x, spot.y, 70, 54)) spot = { x, y };
+    }
+  }
+  if (!spot) throw new Error('Não achei lugar para a árvore da praça que não tampe a rua, o balcão, o letreiro ou a fogueira.');
+  trees.push({ x: spot.x, y: spot.y, tronco: SQ_TREE.tronco });
+  cenario.push(point('arvore', spot.x, spot.y, SQ_TREE, 'Árvore da Praça'));
+
+  // postes da rua (o do portão já existe) e a fiação passando de um para o outro
+  for (const [x, y] of POSTS.slice(1)) cenario.push(point('poste', x, y, { altura: 7, luz: '#ffd36b' }));
+  cenario.push({ type: 'fiacao', x: 0, y: 0, polyline: POSTS, props: { altura: 6.6 } });
+  // carro largado na Travessa, com mato por cima (dá para passar dos dois lados)
+  cenario.push(rect('carro', 50.5, 54.5, 22, 24.2, { altura: 1.4, cor: '#a8473e', mato: true }));
+  // a mata voltando: árvores no terreno dos fundos
+  for (const [x, y, especie] of VILLAGE_TREES) {
+    const ipe = especie !== 'mata';
+    trees.push({ x, y, tronco: ipe ? 0.45 : 0.5 });
+    cenario.push(point('arvore', x, y, { especie, copa: ipe ? 2.3 : 2.4, altura: 6, tronco: ipe ? 0.45 : 0.5 }));
+  }
+  // a beira da vila: mata fechada (a ponta da Travessa, a rua do leste e a rua de baixo terminam no mato; a saída
+  // para Guarapiranga abre na etapa 4c)
+  const villageEdge: [number, number][] = [];
+  for (let x = PARK_X + 0.6; x < W - 1; x += 1.1) villageEdge.push([x, 0.6], [x, H - 0.6]);
+  for (let y = 0.6; y < H; y += 1.1) villageEdge.push([W - 0.6, y]);
+  for (const [x, y] of villageEdge) cenario.push(point('arbusto', round(x), round(y), { raio: round(0.9 + vrng() * 0.25), fechado: true }));
+
+  // nada alto ao sul da rua pode tampar o portão, a rua ou o balcão
+  for (const o of cenario.filter((c) => c.type === 'casa' || c.type === 'carro')) {
+    const hidden = boxHides({ x0: o.x, x1: o.x + o.w!, y0: o.y, y1: o.y + o.h! }, Number(o.props!.altura));
+    if (hidden) throw new Error(`${o.name || o.type} em (${o.x}, ${o.y}) tampa o ponto (${hidden.join(', ')}) da vila.`);
+  }
+}
+
 // ---------------- colisão (tirada do cenário) ----------------
 for (const s of cenario) {
   const p = s.props ?? {};
@@ -324,8 +500,31 @@ for (const s of cenario) {
   else if (s.type === 'poste') colisao.push(block('poste', s.x, s.y, 0.3));
   else if (s.type === 'pedra') colisao.push(block('pedra', s.x, s.y, round(Number(p.raio) * 1.5)));
   else if (s.type === 'arbusto' && p.fechado) colisao.push(block('mata-fechada', s.x, s.y, round(Number(p.raio) * 1.8)));
-  else if (s.type === 'gradil' || s.type === 'portao') colisao.push({ ...rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!), props: { bloqueiaTiro: false } });
+  else if (s.type === 'gradil' || (s.type === 'portao' && !p.aberto)) colisao.push({ ...rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!), props: { bloqueiaTiro: false } });
   else if (s.type === 'pilar' || s.type === 'tronco-caido') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!));
+  // a vila: casa e carro seguram a pedrinha; o que é baixo ou fino (banco, mesa, fogueira, lixeira, orelhão) deixa passar.
+  // A altura vai junto, para o desenho provisório levantar a caixa certa.
+  else if (s.type === 'casa' || s.type === 'carro') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  else if (s.type === 'banco') colisao.push(rect('banco', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: 0.5 }));
+  else if (s.type === 'mesa') colisao.push(block('mesa', s.x, s.y, 0.8, { bloqueiaTiro: false, altura: 0.75 }));
+  else if (s.type === 'fogueira') colisao.push(block('fogueira', s.x, s.y, 1.2, { bloqueiaTiro: false, altura: 0.4 }));
+  else if (s.type === 'lixeira') colisao.push(block('lixeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.9 }));
+  else if (s.type === 'orelhao') colisao.push(block('orelhao', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 2.2 }));
+  else if (s.type === 'poste-praca') colisao.push(block('poste-praca', s.x, s.y, 0.25, { altura: 3.2 }));
+}
+// na vila, nenhum vão estreito entre duas coisas sólidas de frente uma para a outra: abaixo de 0,3 m o pé nem entra; de
+// 0,3 a MIN_GAP ele entra de lado e entala. (Na diagonal, canto com canto, sempre há por onde sair.)
+if (reached('4b')) {
+  const village = colisao.filter((c) => c.x + c.w! > PARK_X + 0.5);
+  for (let i = 0; i < village.length; i++) {
+    for (let j = i + 1; j < village.length; j++) {
+      const [a, b] = [village[i]!, village[j]!];
+      const [dx, dy] = [Math.max(0, b.x - (a.x + a.w!), a.x - (b.x + b.w!)), Math.max(0, b.y - (a.y + a.h!), a.y - (b.y + b.h!))];
+      if ((dx > 0 && dy > 0) || (a.type === 'mata-fechada' && b.type === 'mata-fechada')) continue; // canto com canto; a mata é parede
+      const gap = dx + dy;
+      if (gap > 0.3 && gap < MIN_GAP) throw new Error(`Vão de ${gap.toFixed(2)} m entre ${a.type} (${a.x}, ${a.y}) e ${b.type} (${b.x}, ${b.y}): o pé entala.`);
+    }
+  }
 }
 // a água do lago vira faixas de 0,5 m de altura (o pé não entra, a pedrinha passa por cima)
 if (reached('4a')) {
