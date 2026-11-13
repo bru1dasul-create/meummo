@@ -39,10 +39,10 @@ const STAGES = ['3', '4a', '4b', '4c'] as const;
 const STAGE: (typeof STAGES)[number] = '4a';
 const reached = (stage: (typeof STAGES)[number]) => STAGES.indexOf(STAGE) >= STAGES.indexOf(stage);
 /**
- * As criaturas da mata (saguis encantados e jararacas) só entram quando o jogo novo tiver combate: sem ele, o
- * jogador apanha sem ver o golpe e desmaia sem saber por quê (escolha do dono em 12/11: a 4a vai sem elas).
+ * As criaturas da mata (saguis encantados e jararacas). Ficaram desligadas até o jogo novo ter combate (escolha do dono
+ * em 12/11: sem ele, o jogador apanhava sem ver o golpe); o combate, passo 1, chegou em 13/11 e elas voltaram.
  */
-const CREATURES = false;
+const CREATURES = true;
 const W = 96;
 const H = 80;
 const SEED = 20261113;
