@@ -754,6 +754,86 @@ if (reached('4c')) {
   cenario.push(point('placa', 92.9, STREET.y0 + 0.3, { texto: 'ESTAÇÃO CAPÃO REDONDO', seta: 'leste', poste: true }));
 }
 
+// ---------------- padrão novo na 4c (13/11): a floresta reinando sobre o resto do Capão ----------------
+// O mesmo padrão da rua da Budega (docs/referencias/padrao-cidade-floresta.jpg): o viaduto e o trem tomados pelo cipó,
+// árvores no tabuleiro, o ônibus virando horta, o campinho com o mato entrando, a rua para Guarapiranga rachada com
+// raízes, e a Figueira do Viaduto segurando a ponta quebrada. Nada da 4c aprovada muda de lugar (sorteio SEED + 12).
+if (reached('4c') && FLORESTA) {
+  const grng = mulberry32(SEED + 12);
+  const find = (type: string) => cenario.filter((o) => o.type === type);
+  // ----- o viaduto e o trem: cipó, árvores no tabuleiro, pichação e musgo nos pilares -----
+  for (const o of find('viaduto')) o.props = { ...o.props, cipo: 0.7, arvoresNoTopo: true };
+  for (const o of find('pilar-viaduto')) o.props = { ...o.props, pixo: true, musgo: true, cipo: 0.5 };
+  for (const o of find('trem')) o.props = { ...o.props, cipo: true, plantas: true, janelasQuebradas: true };
+  // mais cortinas de cipó descendo do tabuleiro (as de antes ficam)
+  const hanging = new Set(find('cipo').map((o) => o.x));
+  for (let x = VIADUCT.x0 + 2.5; x < VIADUCT.x1 - 1; x += 3.5 + grng() * 1.5) {
+    if ([...hanging].some((h) => Math.abs(h - x) < 1.5)) continue;
+    cenario.push(point('cipo', round(x), VIADUCT.y1 + 0.05, { comprimento: round(2 + grng() * 4), base: 8 }));
+  }
+  // ----- o ônibus virou a horta da vila, e a casa abandonada tem uma árvore saindo pelo telhado -----
+  for (const o of find('onibus')) o.props = { ...o.props, horta: true };
+  for (const o of find('casa').filter((c) => c.props?.abandonada === true)) o.props = { ...o.props, arvoreDentro: true };
+  // um caminho de terra da viela até embaixo do viaduto (por fora do ônibus e da casa abandonada)
+  const BACK_PATH: [number, number][] = [[80, 29.6], [80.4, 22], [78.5, 17.6], [72, 17.4], [69.2, 14], [68.5, 8.5]];
+  chao.push({ type: 'trilha', x: 0, y: 0, polyline: BACK_PATH, props: { largura: 1.6 } });
+
+  // ----- o campinho: o mato entrando pelos cantos, traves enferrujadas com cipó e rede rasgada, cadeiras de quem assiste -----
+  for (const [cx, cy, rx, ry] of [[61, 64, 1.8, 1.2], [84, 77, 2, 1.3], [61.4, 77, 1.5, 1], [83.6, 64.2, 1.4, 1]] as const) {
+    chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
+  }
+  for (const o of find('trave')) o.props = { ...o.props, ferrugem: true, cipo: true, rede: 'rasgada' };
+  for (const o of find('muro')) o.props = { ...o.props, cipo: 0.4, musgo: true };
+  for (const [x, olhando] of [[68.3, 90], [68.8, 90], [75.9, 90], [76.4, 90]] as const) cenario.push(point('cadeira', x, 61.6, { olhando, cor: '#f2f2ee' }));
+
+  // ----- a rua para Guarapiranga: faixa apagada, rachaduras com mato, buracos com água, raízes saindo da mata, capim -----
+  chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: [[91, VILLAGE_S + 0.5], [91, SOUTH_BARRIER_Y - 1]], props: { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true } });
+  const onRoad = (x: number, y: number) => x > ROAD_GUARA.x0 + 0.3 && x < ROAD_GUARA.x1 - 0.3 && y > VILLAGE_S + 0.5 && y < SOUTH_BARRIER_Y - 0.5;
+  for (let i = 0, n = 0; i < 300 && n < 9; i++) {
+    let [x, y]: [number, number] = [ROAD_GUARA.x0 + 0.5 + grng() * 5, VILLAGE_S + 1 + grng() * 32];
+    if (!onRoad(x, y)) continue;
+    const pts: [number, number][] = [[round(x), round(y)]];
+    let a = grng() * Math.PI * 2;
+    for (let k = 0; k < 3 + Math.floor(grng() * 3); k++) {
+      a += (grng() - 0.5) * 1.6;
+      const l = 0.5 + grng() * 0.9;
+      const [nx, ny] = [x + Math.cos(a) * l, y + Math.sin(a) * l];
+      if (!onRoad(nx, ny)) break;
+      [x, y] = [nx, ny];
+      pts.push([round(x), round(y)]);
+    }
+    if (pts.length < 3) continue;
+    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { largura: 0.06, cor: '#1e2022', mato: grng() < 0.7 } });
+    n++;
+  }
+  for (const [x, y, raio] of [[89.6, 89.5, 0.5], [92.4, 103, 0.45]] as const) chao.push(point('buraco', x, y, { raio, agua: true }));
+  // raízes das árvores da mata entrando na rua (baixas: o pé passa por cima)
+  const ROAD_ROOTS: [number, number][][] = [
+    [[87.2, 92], [88.4, 92.6], [89.8, 92.4], [90.9, 93.2]],
+    [[94.8, 99], [93.6, 99.6], [92.5, 99.3]],
+    [[87.2, 108], [88.5, 107.4], [89.6, 107.9]],
+  ];
+  for (const pts of ROAD_ROOTS) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.3, altura: 0.2, cor: '#6b4a2e' } });
+  for (const x of [ROAD_GUARA.x0 + 0.25, ROAD_GUARA.x1 - 0.25]) {
+    for (let y = VILLAGE_S + 1 + grng() * 2; y < SOUTH_BARRIER_Y - 1; y += 1.5 + grng() * 3) chao.push(point('planta', x, round(y), { tipo: 'capim', raio: round(0.2 + grng() * 0.15) }));
+  }
+  // o fim da rua da vila, no leste, engolido pelo mato
+  for (const [cx, cy, rx, ry] of [[95.2, 42.6, 1.1, 1.4], [94.8, 45.9, 0.9, 0.8]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
+
+  // ----- a Figueira do Viaduto: na beira do parque, segurando a ponta quebrada do viaduto (a mais alta do mapa) -----
+  const FIG_V = { especie: 'figueira', copa: 6.5, altura: 12, tronco: 2.2 };
+  let figSpot: [number, number] | undefined;
+  for (const [x, y] of [[45, 5.5], [44.5, 6.5], [45.5, 7], [44, 5]] as const) {
+    if (plantFits(x, y, FIG_V.tronco, FIG_V.copa, TRUNK_GAP + 1) && !hidesView(x, y, FIG_V.copa, FIG_V.altura) && !canopyHides(x, y, FIG_V.copa, FIG_V.altura)) {
+      figSpot = [x, y];
+      break;
+    }
+  }
+  if (!figSpot) throw new Error('Não achei lugar para a Figueira do Viaduto na beira do parque.');
+  trees.push({ x: figSpot[0], y: figSpot[1], tronco: FIG_V.tronco });
+  cenario.push(point('arvore', figSpot[0], figSpot[1], { ...FIG_V, abraca: 'viaduto' }, 'Figueira do Viaduto'));
+}
+
 // a mata fechada ao sul da vila: só enfeite (ninguém chega lá). A partir da 4c a rua para Guarapiranga passa por ela,
 // e nenhuma copa tampa a rua nem o campinho
 {
