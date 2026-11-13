@@ -53,6 +53,7 @@
       poles: [],
       wires: [],
       trafficLight: null,
+      trafficLights: [],
     };
 
     for (const o of objs('chao')) {
@@ -102,6 +103,9 @@
       } else if (k === 'poste' && (pr.altura || 3.8) >= 5) {
         // poste de concreto da rua (com luminária e a fiação que passa por ele)
         map.poles.push({ x, y, h: pr.altura * 100, lamp: !!pr.luz, light: pr.luz || '#ffe9a6', vine: !!pr.cipo });
+      } else if (k === 'semaforo') {
+        // semáforo de rua (ponto): `altura`, `olhando` (graus, para onde as luzes dão; 0 = leste), `quebrado` e `faiscas`
+        map.trafficLights.push({ x, y, h: (pr.altura || 4.6) * 100, facing: pr.olhando || 0, broken: !!pr.quebrado, sparks: !!pr.faiscas });
       } else if (k === 'poste' || k === 'poste-praca') {
         map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6' });
       } else if (k === 'fiacao' && o.polyline) {

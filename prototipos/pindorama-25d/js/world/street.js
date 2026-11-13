@@ -678,6 +678,11 @@
   /** Largura da raiz no chão a `s` cm do começo de um caminho de `len` cm (o pé do tronco usa a mesma conta). */
   const rootWidth = (wa, s, len) => wa * (1 - 0.5 * Math.pow(M.clamp(s / len, 0, 1), 1.1));
   const inHouse = (map, x, y) => (map.houses || []).some((h) => x > h.x0 - 15 && x < h.x1 + 15 && y > h.y0 - 15 && y < h.y1 + 15);
+  // raiz não passa por dentro de casa, por baixo do pé de poste ou de semáforo, nem entra no círculo do despertar
+  const blocked = (map, x, y) =>
+    inHouse(map, x, y) ||
+    (map.poles || []).concat(map.trafficLights || []).some((p) => Math.hypot(p.x - x, p.y - y) < 45) ||
+    (!!map.awakening && Math.hypot(map.awakening.x - x, map.awakening.y - y) < map.awakening.r + 30);
 
   /**
    * Caminhos das raízes da figueira da rua, do centro do tronco para fora: as do mapa (`raiz`, do [mundo]) e, nos vãos
@@ -690,7 +695,7 @@
     const R = t.trunk || 90;
     const rnd = seeded(t.x, t.y, 977);
     const out = [];
-    for (const s of map.shapes) {
+    for (const s of map.shapes || []) {
       if (s.type !== 'raiz' || !s.pts || !s.pts.length) continue;
       if (Math.hypot(s.pts[0].x - t.x, s.pts[0].y - t.y) > R * 2.5) continue;
       const pts = chaikin([{ x: t.x, y: t.y }].concat(s.pts), 2);
@@ -704,18 +709,18 @@
       const n = Math.floor(gap / 0.85);
       for (let k = 1; k <= n; k++) {
         const a = r.a + (gap * k) / (n + 1) + (rnd() - 0.5) * 0.2;
-        const len = R * 1.45 + 150 + rnd() * 160;
+        const len = R * 1.45 + (t.breaks ? 150 + rnd() * 160 : 110 + rnd() * 90);
         const pts = [{ x: t.x, y: t.y }];
         let x = t.x, y = t.y, ang = a;
         for (let d = 0; d < len; d += 30) {
           if (d > R * 1.8) ang += (rnd() - 0.5) * 0.45 + (a - ang) * 0.12;
           x += Math.cos(ang) * 30;
           y += Math.sin(ang) * 30;
-          if (inHouse(map, x, y)) break;
+          if (blocked(map, x, y)) break;
           pts.push({ x, y });
         }
         const wa = R * (0.48 + rnd() * 0.14);
-        if (lengthOf(pts) < R * 2.9) continue;
+        if (lengthOf(pts) < R * (t.breaks ? 2.9 : 2.5)) continue;
         const sm = chaikin(pts, 2);
         out.push({ shape: null, pts: sm, len: lengthOf(sm), wa, h0: R * (0.5 + rnd() * 0.12), a });
       }
@@ -818,12 +823,12 @@
    * Uma raiz e seus galhos, pintada no chão. `main` é o caminho (do tronco para fora), `wa` a largura no começo dele.
    * `from`: os galhos e os mergulhos só começam depois desses cm (antes, a raiz está embaixo do pé do tronco).
    */
-  function rootNetwork(ctx, cam, map, main, wa, rnd, from) {
+  function rootNetwork(ctx, cam, map, main, wa, rnd, from, plain) {
     const roots = [];
     const grow = (line, w, depth) => {
       roots.push({ line, wa: w, depth });
       // raiz fina (de árvore pequena, ou já galho) não se divide: os galhinhos pareciam gravetos secos
-      if (depth >= 2 || w < 30) return;
+      if (depth >= (plain ? 1 : 2) || w < 30) return;
       const len = lengthOf(line);
       if (len < 120) return;
       const pts = walk(line, 10);
@@ -846,7 +851,7 @@
           a += bend + (dir - a) * 0.06 + (rnd() - 0.5) * 0.18;
           x += Math.cos(a) * 16;
           y += Math.sin(a) * 16;
-          if (inHouse(map, x, y)) break;
+          if (blocked(map, x, y)) break;
           child.push({ x, y });
         }
         if (lengthOf(child) > bw * 4) grow(chaikin(child, 2), bw, depth + 1);
@@ -864,22 +869,22 @@
       }
       return { depth: r.depth, g: rootShape(cam, r.line, r.wa, cut, rnd), cut };
     });
-    // o chão trincado em volta da principal
+    // o chão trincado em volta da principal (na mata, não)
     const mp = walk(main, 8);
     for (let i = 4; i < mp.length; i += 4) {
-      if (rnd() < 0.6 || i * 8 < from) continue;
+      if (rnd() < 0.6 || i * 8 < from || plain) continue;
       const p = mp[i];
       const t = p.a + (rnd() < 0.5 ? 1 : -1) * (Math.PI / 2 + (rnd() - 0.5) * 0.8);
       crack(ctx, p.x + Math.cos(t) * wa * 0.4, p.y + Math.sin(t) * wa * 0.4, t, 18 + rnd() * 36, rnd, 1.5, '#232528', 1);
     }
     // 1) o chão rompido: terra escura em volta e a fresta mais escura colada na raiz (todas antes dos corpos, para os
     //    galhos saírem da principal sem uma faixa de terra no meio)
-    ctx.fillStyle = 'rgba(48, 38, 28, 0.45)';
+    ctx.fillStyle = plain ? 'rgba(34, 40, 22, 0.35)' : 'rgba(48, 38, 28, 0.45)';
     for (const s of shapes) {
       smooth(ctx, s.g.map((q) => q.soilL).concat(s.g.map((q) => q.soilR).reverse()));
       ctx.fill();
     }
-    ctx.fillStyle = 'rgba(18, 14, 10, 0.55)';
+    ctx.fillStyle = plain ? 'rgba(18, 20, 10, 0.4)' : 'rgba(18, 14, 10, 0.55)';
     for (const s of shapes) for (const run of aboveGround(s.g)) {
       band(ctx, run, 'seamL', 'seamR', run.emerges);
       ctx.fill();
@@ -892,7 +897,7 @@
       ctx.fillStyle = 'rgba(26, 20, 15, 0.55)';
       smooth(ctx, blob(q.p.x + fx * w * 0.3, q.p.y + fy * w * 0.3, w * 0.55 + 4, w * 0.5 + 3, q.p.a, 9, 0.4, rnd));
       ctx.fill();
-      for (let c = 0; c < 2; c++) {
+      for (let c = 0; c < (plain ? 0 : 2); c++) {
         const t = q.p.a + (back ? Math.PI : 0) + (rnd() - 0.5) * 1.6;
         const d = w * 0.75 + 6 + rnd() * 6;
         const x = q.p.x + Math.cos(t) * d, y = q.p.y + Math.sin(t) * d;
@@ -913,7 +918,7 @@
     // 2) lascas do chão levantadas nas beiradas, onde a raiz rompeu
     for (const s of shapes) {
       s.g.forEach((q, i) => {
-        if (q.k < 0.35 || q.w < 9 || rnd() > 0.14 || i * 6 < (s.depth ? 0 : from)) return;
+        if (plain || q.k < 0.35 || q.w < 9 || rnd() > 0.14 || i * 6 < (s.depth ? 0 : from)) return;
         const sideK = rnd() < 0.5 ? 1 : -1;
         const nx = -Math.sin(q.p.a) * sideK, ny = Math.cos(q.p.a) * sideK;
         const d = q.half + 3 + rnd() * q.w * 0.12;
@@ -1015,7 +1020,7 @@
     }
     // 4) onde a raiz passa por baixo, o chão só estufa e trinca por cima; depois da ponta, a trinca continua
     for (const s of shapes) {
-      if (s.cut) {
+      if (s.cut && !plain) {
         const seg = s.g.slice(Math.max(0, s.cut[0] - 2), Math.min(s.g.length, s.cut[1] + 3));
         ctx.strokeStyle = '#232528';
         ctx.lineWidth = 1.7;
@@ -1028,7 +1033,7 @@
         ctx.stroke();
       }
       const tip = s.g[s.g.length - 1];
-      if (tip) crack(ctx, tip.p.x, tip.p.y, tip.p.a, 26 + rnd() * 50, rnd, 1.6, '#232528', s.depth ? 0 : 1);
+      if (tip && !plain) crack(ctx, tip.p.x, tip.p.y, tip.p.a, 26 + rnd() * 50, rnd, 1.6, '#232528', s.depth ? 0 : 1);
     }
   }
 
@@ -1047,7 +1052,7 @@
         tree = t;
       }
     }
-    const fig = tree && tree.breaks ? figRootPaths(tree, map).find((r) => r.shape === sh) : null;
+    const fig = tree && (tree.breaks || tree.kind === 'figueira') ? figRootPaths(tree, map).find((r) => r.shape === sh) : null;
     const base = sh.width || 35;
     const wa = fig ? fig.wa : tree ? M.clamp(tree.trunk * 2 * 0.36, base * 0.8, base * 2) : base;
     const from = fig ? (tree.trunk || 90) * 2.2 : 0;
@@ -1180,11 +1185,25 @@
     return true;
   };
 
-  // ------------------------------------------------------------------ chão quebrado em volta da figueira da esquina
+  // ------------------------------------------------------------------ o chão no pé das figueiras
+  // A da esquina (`rompendo`) quebrou a rua; a da mata só tem a terra e as raízes.
   function breaks(ctx, t, env) {
     const { map } = env;
     const cam = env.g.cam;
     const R = Math.max(60, t.trunk || 60);
+    if (!t.breaks) {
+      // figueira da mata (a dos Despertos): só a terra escura no pé e as raízes, sem placas nem folhas da rua
+      const rs = seeded(t.x, t.y, 813);
+      ctx.fillStyle = 'rgba(52, 38, 26, 0.75)';
+      smooth(ctx, blob(t.x, t.y, R * 1.9, R * 1.7, rs() * 3, 14, 0.3, rs));
+      ctx.fill();
+      for (const r of figRootPaths(t, map)) {
+        if (r.shape) continue;
+        const end = r.pts[r.pts.length - 1];
+        rootNetwork(ctx, cam, map, r.pts, r.wa, seeded(end.x, end.y, 553), R * 2.2, true);
+      }
+      return;
+    }
     const rnd = seeded(t.x, t.y, 811);
     // terra escura aparecendo em volta do tronco, com manchas
     ctx.fillStyle = '#3f2f21';
