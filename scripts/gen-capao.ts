@@ -309,8 +309,10 @@ if (reached('4b')) {
   chao.push(rect('calcada', ROAD_S.x1, W, STREET.y1, VILLAGE_S)); // rua de baixo, lado leste
   chao.push(rect('asfalto', STREET.x0, STREET.x1, STREET.y0, STREET.y1));
   chao.push(rect('asfalto', ROAD_S.x0, ROAD_S.x1, ROAD_S.y0, ROAD_S.y1));
-  // faixa de pedestre do portão para a vila, atravessando a Travessa (listras compridas no sentido da rua, y)
-  chao.push(rect('faixa', 49.5, 56, 42.5, 45.5, { listras: 'y' }));
+  // faixa de pedestre atravessando a Travessa (listras compridas no sentido da rua, y). No padrão novo ela fica na
+  // esquina, logo ao sul do cruzamento, e não no meio dele (pedido do dono, 13/11)
+  const cw = FLORESTA ? { y0: 47.8, y1: 50.6 } : { y0: 42.5, y1: 45.5 };
+  chao.push(rect('faixa', 49.5, 56, cw.y0, cw.y1, { listras: 'y' }));
   chao.push(rect('praca', SQUARE.x0, SQUARE.x1, SQUARE.y0, SQUARE.y1, { desenho: 'ondas' }));
 }
 
@@ -889,12 +891,12 @@ if (reached('4b') && FLORESTA) {
     [[W, STREET.y1], [ROAD_S.x1, STREET.y1], [ROAD_S.x1, VILLAGE_S]],
   ];
   for (const pts of CURBS) chao.push({ type: 'meio-fio', x: 0, y: 0, polyline: pts, props: { altura: 0.15, largura: 0.2, sarjeta: true, cor: '#bdb6a8' } });
-  // a faixa amarela do meio, tracejada e apagada (na Travessa, interrompida pela faixa de pedestre)
+  // a faixa amarela do meio, tracejada e apagada (na Travessa, parando antes do cruzamento e da faixa de pedestre)
   const CENTER_LINES: [number, number][][] = [
     [[57.5, 44], [W - 0.5, 44]],
     [[91, STREET.y1 + 0.5], [91, VILLAGE_S]],
-    [[52.75, 0.5], [52.75, 42]],
-    [[52.75, 46], [52.75, VILLAGE_S - 0.5]],
+    [[52.75, 0.5], [52.75, STREET.y0 - 0.5]],
+    [[52.75, 51.1], [52.75, VILLAGE_S - 0.5]],
   ];
   for (const pts of CENTER_LINES) chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: pts, props: { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true } });
   // remendos de asfalto (mais escuros), buracos com água e poças na beira da sarjeta
@@ -1012,6 +1014,9 @@ if (reached('4b') && FLORESTA) {
   // ----- a vida na rua: moto com mato, placa de rua, cadeiras, vasos, lixo e as bandeirinhas da praça -----
   cenario.push(rect('moto', 83.2, 85.2, 41.3, 42.1, { altura: 1.1, cor: '#8a3a2a', mato: true, olhando: 0 }));
   cenario.push(point('placa-rua', 56.3, 47.3, { texto: 'R. SANTO DIAS', texto2: 'TV. JASMIM DA BEIRADA' }));
+  // o semáforo quebrado, soltando faísca, na esquina da figueira (pedido do dono, 13/11): na calçada das casas, que para
+  // a câmera fica atrás de quem anda na rua; a 1,27 m do tronco, para a calçada passar entre os dois
+  cenario.push(point('semaforo', 57, 40.9, { altura: 4.6, olhando: 0, quebrado: true, faiscas: true }, 'Semáforo'));
   // cadeiras de plástico: dois vizinhos na porta da casa amarela e duas na roda da fogueira (na diagonal dos bancos)
   // (as da casa amarela ficam ao lado da porta, não na frente dela: pedido do dono, 13/11)
   for (const [x, y, olhando] of [[83.65, 39.75, 90], [84.15, 39.75, 90], [FIRE.x + 1.9, FIRE.y - 1.9, 135], [FIRE.x - 1.9, FIRE.y + 1.9, 315]] as const) {
@@ -1053,6 +1058,7 @@ for (const s of cenario) {
   else if (s.type === 'predio') colisao.push(rect('predio', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
   else if (s.type === 'moto' || s.type === 'lixo') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'placa-rua') colisao.push(block('placa-rua', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.6 }));
+  else if (s.type === 'semaforo') colisao.push(block('semaforo', s.x, s.y, 0.25, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'cadeira') colisao.push(block('cadeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 }));
   else if (s.type === 'vaso') colisao.push(block('vaso', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.6 }));
 }

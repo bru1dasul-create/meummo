@@ -128,7 +128,7 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
 
   it('cada coisa sólida do cenário tem a sua colisão (tronco, poste, pedra, gradil, pilar, mata fechada, casa, banco...)', () => {
     const covered = (x: number, y: number) => boxes.some((b) => x >= b.x0 - 1e-6 && x <= b.x1 + 1e-6 && y >= b.y0 - 1e-6 && y <= b.y1 + 1e-6);
-    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo'];
+    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo', 'semaforo'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
       const solid = SOLID.includes(o.type) || (o.type === 'portao' && prop(o, 'aberto') !== true) || (o.type === 'arbusto' && prop(o, 'fechado') === true);
@@ -515,6 +515,21 @@ describe('Mapa 01 (Capão): a rua e a praça da Budega no padrão novo (a flores
     }
     // e a calçada das casas continua passando entre o poste e a parede
     for (const x of [61.5, 70, 80, 90.5]) expect(reachNear(x, 40.1, 0.2), `calçada no poste de x = ${x}`).toBe(true);
+  });
+
+  it('a faixa de pedestre fica na esquina, fora do cruzamento, e o semáforo quebrado solta faísca na esquina da figueira', () => {
+    // pedido do dono (13/11): "faixa de pedestre deve ser na esquina da rua, não no meio do cruzamento"
+    const faixa = chao.find((o) => o.type === 'faixa')!;
+    const r = { x0: faixa.x / M, x1: (faixa.x + faixa.width) / M, y0: faixa.y / M, y1: (faixa.y + faixa.height) / M };
+    expect(r.x0 <= 49.5 && r.x1 >= 56).toBe(true); // atravessa a Travessa inteira
+    expect(r.y0).toBeGreaterThanOrEqual(47); // ao sul do cruzamento (a rua do portão vai de y 41 a 47)
+    expect(r.y0).toBeLessThan(48.5); // colada na esquina
+    for (const [x, y] of [[50, (r.y0 + r.y1) / 2], [55.5, (r.y0 + r.y1) / 2]] as const) expect(reach(x, y), `faixa em (${x}, ${y})`).toBe(true);
+    const sem = cenario.find((o) => o.type === 'semaforo')!;
+    expect([prop(sem, 'quebrado'), prop(sem, 'faiscas')]).toEqual([true, true]);
+    expect(at(sem).y).toBeLessThan(41.1); // na calçada das casas, atrás de quem anda na rua
+    expect(Math.hypot(at(sem).x - 56, at(sem).y - 41)).toBeLessThan(1.5); // na esquina
+    expect(reachNear(57, 40.1, 0.2)).toBe(true); // a calçada passa entre o semáforo e a figueira
   });
 
   it('a vida na rua: moto, placa de rua, cadeiras, vasos, lixo e bandeirinhas, sem fechar a calçada da casa amarela nem a roda da fogueira', () => {
