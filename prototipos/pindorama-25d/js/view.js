@@ -66,10 +66,11 @@
     addActor(id, a) {
       if (this.actors.has(id)) this.removeActor(id);
       const yaw = Number.isFinite(a.angle) ? rad(a.angle) : Math.PI / 4;
-      // monstro com corpo próprio (sagui...): a criatura no lugar do corpo de gente
-      const creature = a.kind === 'monster' && PD.creatures && PD.creatures.has(a.type) ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
+      // monstro ou NPC com corpo próprio (sagui, jararaca, a Xiovanna da Budega...): a criatura no lugar do corpo de gente
+      const own = (a.kind === 'monster' || a.kind === 'npc') && PD.creatures && PD.creatures.has(a.type);
+      const creature = own ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
       if (creature) {
-        const actor = { id, kind: 'monster', type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
+        const actor = { id, kind: a.kind, type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
         this.actors.set(id, actor);
         if (this.followId === null && a.me) this.follow(id);
         return actor;
@@ -129,6 +130,7 @@
       if (!a) return;
       a.speech = String(text || '');
       a.speechUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 2500 + a.speech.length * 60;
+      if (a.creature) a.creature.talk(2500 + a.speech.length * 60);
     }
 
     /** Uma direção na tela (ex.: "para cima") vira qual direção no chão, nesta câmera. */
@@ -158,7 +160,9 @@
     /** Leva o personagem até a posição que chegou: anda (ou corre) até lá; longe demais, aparece lá. */
     _drive(a, dt) {
       if (a.creature) {
-        a.creature.update(dt);
+        // a criatura enxerga o personagem que a câmera segue (NPC olha para ele e acena)
+        const me = this.actors.get(this.followId);
+        a.creature.update(dt, me && !me.creature ? { hero: { x: me.ch.pos.x, y: me.ch.pos.y } } : null);
         return;
       }
       const ch = a.ch;
@@ -290,8 +294,101 @@
       ctx.setTransform(dpr, 0, 0, dpr, -cam.viewX * dpr, -cam.viewY * dpr);
       const actors = [...this.actors.values()].map((a) => this._actorDrawable(a));
       this.world.draw(ctx, actors);
+      this._drawAtmosphere(ctx);
       this._drawNames(ctx);
       this._drawSpeech(ctx);
+    }
+
+    /**
+     * Clima da área onde o herói está (mata sombria, pedido do dono): `escuro` escurece a tela em volta dele (perto
+     * fica claro, para ler o combate) e `neblina` passa uma névoa fria que se arrasta devagar. Os valores vêm das
+     * áreas do mapa (a menor que contém o herói vale) e mudam suave ao trocar de área.
+     */
+    _drawAtmosphere(ctx) {
+      const hero = this.actors.get(this.followId);
+      const cam = this.cam;
+      const dt = this.world._dt || 1 / 60;
+      let want = { dark: 0, fog: 0 };
+      if (hero) {
+        const x = hero.ch.pos.x, y = hero.ch.pos.y;
+        let best = null;
+        for (const a of this.map.areas || []) {
+          if (a.dark === null && a.fog === null) continue;
+          if (x < a.x0 || x > a.x1 || y < a.y0 || y > a.y1) continue;
+          const size = (a.x1 - a.x0) * (a.y1 - a.y0);
+          if (!best || size < best.size) best = { a, size };
+        }
+        if (best) want = { dark: best.a.dark || 0, fog: best.a.fog || 0 };
+      }
+      const atm = this.atm || (this.atm = { ...want });
+      atm.dark = M.damp(atm.dark, want.dark, 1.2, dt);
+      atm.fog = M.damp(atm.fog, want.fog, 1.2, dt);
+      if (atm.dark < 0.01 && atm.fog < 0.01) return;
+      const W = cam.viewW, H = cam.viewH;
+      const pxm = 100 * cam.zoom; // px por metro (no chão, de lado)
+      const c = hero ? this.toScreen(hero.ch.pos.x / 100, hero.ch.pos.y / 100, 1) : { x: W / 2, y: H / 2 };
+      // tudo numa camada 4× menor, esticada uma vez só no fim (escuro e neblina são borrados mesmo): três passadas na
+      // tela inteira (escuro, véu e bancos de neblina) pesavam no celular
+      const Q = 4;
+      const lw = Math.ceil(W / Q), lh = Math.ceil(H / Q);
+      if (!this._atmLayer || this._atmLayer.width !== lw || this._atmLayer.height !== lh) {
+        this._atmLayer = document.createElement('canvas');
+        this._atmLayer.width = lw;
+        this._atmLayer.height = lh;
+      }
+      const fl = this._atmLayer.getContext('2d');
+      fl.globalAlpha = 1;
+      fl.clearRect(0, 0, lw, lh);
+      if (atm.dark >= 0.01) {
+        // escuro frio em volta (verde-azulado bem fundo), mais fraco perto do herói
+        const a = Math.min(0.7, atm.dark * 1.15);
+        const g = fl.createRadialGradient(c.x / Q, c.y / Q, (pxm * 2.2) / Q, c.x / Q, c.y / Q, (pxm * 9.5) / Q);
+        g.addColorStop(0, `rgba(4, 14, 18, ${a * 0.18})`);
+        g.addColorStop(1, `rgba(4, 14, 18, ${a})`);
+        fl.fillStyle = g;
+        fl.fillRect(0, 0, lw, lh);
+      }
+      if (atm.fog >= 0.01) {
+        // véu de névoa no todo e bancos de neblina que se arrastam (presos ao chão: passam quando você anda)
+        fl.fillStyle = `rgba(150, 178, 172, ${atm.fog * 0.08})`;
+        fl.fillRect(0, 0, lw, lh);
+        if (!this._fogSprite) {
+          const fc = document.createElement('canvas');
+          fc.width = fc.height = 64;
+          const fx = fc.getContext('2d');
+          const fg = fx.createRadialGradient(32, 32, 0, 32, 32, 32);
+          fg.addColorStop(0, 'rgba(196, 220, 214, 1)');
+          fg.addColorStop(0.55, 'rgba(196, 220, 214, 0.45)');
+          fg.addColorStop(1, 'rgba(196, 220, 214, 0)');
+          fx.fillStyle = fg;
+          fx.fillRect(0, 0, 64, 64);
+          this._fogSprite = fc;
+        }
+        const t = this.world.time || 0;
+        const cell = 9; // um banco de neblina a cada ~9 m
+        const w = this.toWorld(W / 2, H / 2);
+        const span = Math.ceil(Math.max(W, H) / pxm / cell) + 2;
+        const gx = Math.floor(w.x / cell), gy = Math.floor(w.y / cell);
+        for (let i = gx - span; i <= gx + span; i++) {
+          for (let j = gy - span; j <= gy + span; j++) {
+            const h = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
+            const r1 = h - Math.floor(h);
+            const fx = (i + r1) * cell + Math.sin(t * 0.05 + r1 * 6) * 3;
+            const fy = (j + ((r1 * 7.3) % 1)) * cell + Math.cos(t * 0.04 + r1 * 4) * 2;
+            const p = this.toScreen(fx, fy, 0.6);
+            if (p.x < -pxm * 6 || p.x > W + pxm * 6 || p.y < -pxm * 4 || p.y > H + pxm * 4) continue;
+            const rad = pxm * (3.5 + r1 * 3);
+            fl.globalAlpha = Math.min(1, atm.fog * (0.4 + r1 * 0.3));
+            fl.drawImage(this._fogSprite, (p.x - rad * 1.8) / Q, (p.y - rad * 0.55) / Q, (rad * 3.6) / Q, (rad * 1.1) / Q);
+          }
+        }
+        fl.globalAlpha = 1;
+      }
+      const dpr = cam.dpr;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.drawImage(this._atmLayer, 0, 0, W, H);
+      ctx.restore();
     }
 
     /** Ponto da tela logo acima da cabeça (penas incluídas): onde ficam o nome e o balão. Segue o agachar e o pulo. */

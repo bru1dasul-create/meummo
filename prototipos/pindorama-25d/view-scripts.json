@@ -16,6 +16,8 @@
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",
+    "js/creatures/jararaca.js",
+    "js/creatures/xiovanna.js",
     "js/view.js"
   ]
 }
