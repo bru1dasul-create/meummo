@@ -51,6 +51,11 @@ export const SHOT_SPEED = 14;
 export const SHOT_RANGE = 7;
 /** Distância (em tiles) do centro do alvo para a pedrinha contar como acerto. */
 export const SHOT_HIT_RADIUS = 0.6;
+/**
+ * Mundo novo (2.5D): a pedra em (x, y) voa na altura do peito de quem tem o PÉ no ponto do chão (x, y + SHOT_FEET_DY).
+ * É esse ponto do chão que bate nas coisas do mapa (tronco, poste) e é ali que a tela desenha a pedra.
+ */
+export const SHOT_FEET_DY = 0.5;
 /** Tempo mínimo entre dois tiros do estilingue. */
 export const SHOT_COOLDOWN_MS = 450;
 

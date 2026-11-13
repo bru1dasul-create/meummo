@@ -10,6 +10,7 @@
 //   pés de quem ele acerta;
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
+import { SHOT_FEET_DY } from '../../shared/constants';
 import type { WorldView } from './view';
 
 type Point = { x: number; y: number };
@@ -26,12 +27,12 @@ export function tileFeetSquare(tx: number, ty: number): Point[] {
 
 /** Ponto do chão embaixo de um projétil que está em (sx, sy). */
 export function shotFeet(sx: number, sy: number): Point {
-  return { x: sx, y: sy + 0.5 };
+  return { x: sx, y: sy + SHOT_FEET_DY };
 }
 
 /** Onde o projétil sai, para quem tem o pé em (feetX, feetY) (o inverso de shotFeet). */
 export function shotOriginOfFeet(feetX: number, feetY: number): Point {
-  return { x: feetX, y: feetY - 0.5 };
+  return { x: feetX, y: feetY - SHOT_FEET_DY };
 }
 
 /** Ângulo do tiro (radianos, como o servidor espera) de um pé até outro ponto do chão. */

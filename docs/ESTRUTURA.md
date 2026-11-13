@@ -75,6 +75,12 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — ajustes do combate (relato do [mundo] depois de religar os monstros, a878d34):** a pedra parava na grade de
+1 m dos troncos (213 árvores na mata) → no formato novo ela bate pelo retângulo exato embaixo dela
+(`blocksShotAt`); no celular, o toque no sagui agora vale onde ele está desenhado e onde ele está de verdade, com mais
+folga no dedo. Não reproduzi o "0 de 12 toques" do [mundo] no Chromium (iPhone 13 deitado: 11 de 12 antes, 12 de 12
+depois); perguntei como ele tocou. `__mundoNovo.entities()` agora traz o pé (`feetX`, `feetY`).
+
 **13/11 — o dono disse "pode os dois":** o endereço normal abre o jogo novo (o antigo em `?antigo`) e o **combate do
 jogo novo, passo 1**, está na `main`: o servidor de sempre visto no 2.5D (`src/client/novo/combat.ts` desenha por cima:
 aviso vermelho no golpe de perto, anel laranja no preparo, pedras, dano, barras de vida, desmaio, ouro). PC: clique no

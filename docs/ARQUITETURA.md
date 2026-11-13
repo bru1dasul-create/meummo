@@ -91,7 +91,10 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   (sx, sy + 0,5), na altura do peito; mirar é do seu pé ao pé do alvo. A view pode ajudar com dois métodos
   opcionais: `action(id, tipo, ângulo)` (animações: 'windup', 'shoot', 'arc', 'dash', 'hurt', 'faint', 'revive' e os
   golpes dos monstros) e `actorPosition(id)` (onde o pé está desenhado, para barra e número seguirem o desenho).
-  O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada).
+  O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada). No formato novo, a pedra
+  bate pelo retângulo exato da `colisao` (com `bloqueiaTiro`) embaixo dela (`GameMap.blocksShotAt`, `SHOT_FEET_DY`):
+  um tronco de 0,3 m segura a pedra só nos 0,3 m dele. Tocar/clicar num monstro vale tanto onde ele está desenhado
+  quanto onde o servidor diz que ele está, com mais folga no dedo.
 - **Velocidade** (decisão do dono em 13/11): no mundo novo, correr é o normal (`RUN_SPEED`, 4,5 m/s) e andar devagar
   (`WALK_SPEED`, 2 m/s) é segurando Shift ou empurrando pouco o joystick; o pedido `walk` leva `slow: true` (protocolo
   18) e o servidor anda o pedaço do tamanho certo (`sliceDistance`). No jogo de hoje continua 5 tiles por segundo.

@@ -8,6 +8,7 @@ import { Realm } from '../src/server/realm';
 import { parseMonsterDefs } from '../src/server/monsters';
 import { parseClientMsg } from '../src/server/validate';
 import { World } from '../src/server/world';
+import { advanceShot, makeShot } from '../src/shared/combat';
 import { TICK_MS } from '../src/shared/constants';
 import { DX, DY, RIGHT } from '../src/shared/dir';
 import { GameMap, type TiledMap, type TiledObject } from '../src/shared/map';
@@ -326,5 +327,30 @@ describe('mapa do formato novo: formas do Tiled', () => {
     expect(game.isWalkable(3, 3)).toBe(true); // o chão não bloqueia
     expect(bodyFits(game, 10.5, 4.6)).toBe(false); // a elipse da colisão bloqueia como a caixa em volta
     expect(bodyFits(game, 13, 4.6)).toBe(true);
+  });
+});
+
+describe('mapa do formato novo: a pedra', () => {
+  /** Uma pedra para o leste com o ponto do chão embaixo dela em y = groundY; devolve como acabou e onde. */
+  function fly(map: GameMap, groundY: number) {
+    const shot = makeShot({ x: 4.5, y: groundY - 1 }, 0, 14, 10); // makeShot soma 0,5; o chão fica 0,5 abaixo da pedra
+    let result: ReturnType<typeof advanceShot> = 'flying';
+    for (let i = 0; i < 100 && result === 'flying'; i++) result = advanceShot(shot, 0.05, map);
+    return { result, x: shot.x };
+  }
+
+  it('para no tronco de verdade, e não no metro inteiro em volta dele', () => {
+    const map = GameMap.fromTiled(metricMap({ solids: [rect(10, 5, 0.3, 0.3)] }), 'teste');
+    const through = fly(map, 5.15); // o chão embaixo da pedra passa pelo tronco
+    expect(through.result).toBe('wall');
+    expect(through.x).toBeGreaterThan(9.9);
+    expect(through.x).toBeLessThan(10.6);
+    expect(fly(map, 5.6).result).toBe('range'); // passa ao lado do tronco, no mesmo metro: antes parava no ar
+  });
+
+  it('passa por cima da água e da grade (bloqueiaTiro falso)', () => {
+    const noShot = { properties: [{ name: 'bloqueiaTiro', type: 'bool', value: false }] };
+    const map = GameMap.fromTiled(metricMap({ solids: [rect(9, 5, 3, 1, noShot)] }), 'teste');
+    expect(fly(map, 5.5).result).toBe('range');
   });
 });
