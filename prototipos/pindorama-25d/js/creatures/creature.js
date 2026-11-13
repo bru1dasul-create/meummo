@@ -267,7 +267,13 @@
     ctx.save();
     ctx.transform(a.x * dc.ru, a.y * dc.ru, b.x * dc.rv, b.y * dc.rv, q.x, q.y);
     ctx.beginPath();
-    ctx.arc(0, 0, 1, 0, M.TAU);
+    if (dc.shape === 'tri') {
+      // triângulo com a ponta para `v` (a mancha em "V" da jararaca, de pé no flanco)
+      ctx.moveTo(-1, -0.85);
+      ctx.lineTo(1, -0.85);
+      ctx.lineTo(0, 1);
+      ctx.closePath();
+    } else ctx.arc(0, 0, 1, 0, M.TAU);
     if (dc.glow) {
       ctx.shadowColor = dc.glow;
       ctx.shadowBlur = 3 * cam.zoom;
