@@ -353,6 +353,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   para os outros jogadores também (o tiro deles mostra a puxada curta e o soltar). Sons novos no `sfx.ts`: zumbido do
   elástico subindo com a carga e o "plim" da carga cheia, pancada da defesa e a defesa quebrando — ligados pela
   [estrutura] no motor (pedido enviado). Conferido no PC e no celular (botão Estilingue), sem erros
+- [x] **[arte]** Dois acertos pedidos pelo dono (13/11, vendo o jogo): a **placa PARQUE SANTO DIAS** na altura dos olhos
+  (tábua de 1,2 a 2 m), na frente do gradil e com o cipó só nos postes e nas pontas (o nome dá para ler; o [mundo] levou
+  a placa para fora do portão, ramo `mundo/placa-parque`); e a **casa abandonada da 4c**: a árvore agora nasce lá de
+  dentro (o tronco sobe por um buraco de borda quebrada na laje, sem raiz nem placa solta em cima, a laje em volta
+  limpa) e solta galhos e folhas pelas janelas e pela porta, com duas trincas finas na parede. A casa continua inteira
 - [ ] **[estrutura]** Ligar o combate do herói no motor (pedido da [arte], 13/11): `sfx.charge(carga)` a cada quadro da
   puxada e `sfx.stopCharge()` ao soltar/cancelar/desmaiar; `sfx.play('block')` e `sfx.play('guard-break')` no lugar do
   `'hit'` na defesa; o ângulo da mira no `'sling-pull'` (e de novo quando a mira mudar) e no `'guard'` quando a defesa

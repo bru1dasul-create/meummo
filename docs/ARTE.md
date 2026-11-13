@@ -614,6 +614,15 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   itens; levar a loja e a conversa para o mesmo painel. A barra embaixo do pé (do `combat.ts`) é verde; a da HUD é azul
   como o arco da defesa: combinar com a [estrutura].
 
+### Placa do parque e casa com árvore de dentro (13/11, pedidos do dono)
+- Placa grande (`bigSign` no `fundo.js`): tábua de 1,2 a 2 m em postes de 2,1 m; cipó só nos postes (até a tábua) e
+  nas pontas; o pé dela no chão é a tábua inteira (`x0..y1` no `tmj.js`): com o pé de um ponto só, o gradil passava na
+  frente dela.
+- Casa com `arvoreDentro` (`treeThroughRoof` e `treeOpenings` no `props.js`): o buraco escuro com a parede de dentro
+  da borda do fundo; o tronco abaixo da laje é recortado pelo contorno do buraco (senão o pé dele aparecia em cima da
+  laje, na frente); a borda da frente quebrada por cima; três ferros tortos; nada de raiz nem de placa solta; as
+  plantas da laje ficam a 1,7 m do tronco; galhos e cachos de folha pelas janelas e pela porta de tábuas.
+
 ### O herói no combate (13/11): a revisão 17 ligada no jogo
 - O estilingue e a defesa da revisão 17 (`js/slingshot.js`, `js/guard.js`, que o dono trouxe do ChatGPT) já estavam no
   protótipo; no jogo o motor mandava as ações (`sling-pull`, `shoot`, `sling-cancel`, `guard`, `guard-end`,

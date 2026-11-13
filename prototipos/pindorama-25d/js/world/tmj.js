@@ -262,7 +262,11 @@
       } else if (k === 'placa') {
         // placa de direção (ponto): `texto`, `seta` (norte, sul, leste, oeste) e `poste` (num poste; sem ele, no chão)
         // `tamanho: 'grande'` = a placa de madeira em dois postes da entrada do parque; `mato` = musgo e cipó
-        map.props.push({ kind: 'placa', x, y, r: 14, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big: pr.tamanho === 'grande', weeds: !!pr.mato });
+        const big = pr.tamanho === 'grande';
+        // a grande tem 2,4 m de tábua ao longo de y: o pé dela no chão é a tábua inteira (com o pé de um ponto só, o
+        // gradil que ela encosta passava na frente dela no desenho)
+        const foot = big ? { x0: x - 7, x1: x + 16, y0: y - 120, y1: y + 120 } : {};
+        map.props.push({ kind: 'placa', x, y, r: 14, ...foot, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big, weeds: !!pr.mato });
       } else if (k === 'deque' || k === 'pinguela') {
         // dá para andar em cima: o lado comprido diz a direção
         map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100 });
