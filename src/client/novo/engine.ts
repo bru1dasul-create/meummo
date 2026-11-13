@@ -38,6 +38,8 @@ const toDegrees = (radians: number) => ((Math.round((radians * 180) / Math.PI) %
 const AUTO_AIM_RANGE = SHOT_RANGE + 0.5;
 /** Alcance da mira automática da Bordunada (golpe de perto). */
 const MELEE_AIM_RANGE = 2.5;
+/** Monstro que caiu: tempo para a view mostrar a queda ('die') antes de o desenho sair. */
+const DIE_MS = 700;
 
 export interface NewWorldGame {
   destroy(): void;
@@ -853,12 +855,21 @@ class NewWorld implements NewWorldGame {
     }
     const e = this.entities.get(id);
     if (e?.kind === 'monster') {
-      // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão)
+      // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão). A view que anima
+      // ('die') ganha um instante para mostrar a queda antes de o desenho sair.
       const feet = this.drawnFeet(id);
       if (feet) this.combat.poof(feet.x, feet.y, now);
       this.entities.delete(id);
       this.facing.delete(id);
-      this.view?.removeActor(id);
+      const view = this.view;
+      if (view?.action) {
+        view.action(id, 'die');
+        window.setTimeout(() => {
+          if (this.view === view) view.removeActor(id);
+        }, DIE_MS);
+      } else {
+        view?.removeActor(id);
+      }
       if (this.firing?.by === 'target' && this.firing.id === id) this.firing = null;
       this.sfx.play('kill');
       return;
@@ -927,6 +938,7 @@ class NewWorld implements NewWorldGame {
         const feet = feetAt(msg.x, msg.y);
         const duration = e.kind === 'monster' ? (e.stepMs ?? 320) : 120;
         this.view?.moveActor(msg.id, feet.x, feet.y, angle, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
+        if (msg.dash) this.view?.action?.(msg.id, 'dash', angle);
         break;
       }
       case 'ack':

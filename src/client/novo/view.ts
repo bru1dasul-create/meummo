@@ -42,7 +42,8 @@ export interface WorldView {
   // ---- opcionais (combate): a view que não tiver, o motor segue sem ----
   /**
    * Animação curta de alguém: 'windup' (preparando um golpe), 'shoot' (estilingue, ou o monstro jogando algo),
-   * 'arc' (Bordunada), 'dash' (esquiva), 'hurt' (levou golpe),
+   * 'arc' (Bordunada), 'dash' (esquiva, sua ou de outro jogador), 'hurt' (levou golpe), 'die' (monstro caiu: o motor
+   * tira o desenho 0,7 s depois),
    * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou) e os golpes dos monstros ('bite', 'strike',
    * 'charge', 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
    */
@@ -224,7 +225,7 @@ export class ProvisionalView implements WorldView {
     const a = this.actors.get(id);
     if (!a) return;
     if (kind === 'hurt') a.hurtUntil = this.lastNow + 180;
-    else if (kind === 'faint') a.fainted = true;
+    else if (kind === 'faint' || kind === 'die') a.fainted = true;
     else if (kind === 'revive') a.fainted = false;
   }
 
