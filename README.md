@@ -213,7 +213,7 @@ o servidor. Se o lugar dela ficar bloqueado (o mapa mudou), ela vai para o chão
 ## Missões (sem programar)
 
 As missões ficam em [`data/missoes.json`](data/missoes.json). No jogo novo, a primeira é do **Curupira**, na
-clareira onde você acorda ("O Despertar": ir até a Budega, na praça da Vila do Capão), e a atendente da Budega
+clareira onde você acorda ("O Despertar": ir até a Budega, na praça da Vila do Capão), e a Xiovanna, da Budega,
 continua ("Saguis Encantados"). Um **!** em cima de alguém quer dizer missão nova; um **?**, missão para concluir
 com ele. As missões em andamento aparecem embaixo do painel de vida.
 

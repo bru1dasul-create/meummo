@@ -41,8 +41,8 @@
     "nome": "O Despertar",
     "quemDa": "curupira_capao",
     "pedido": "Você acordou no meio da mata que voltou pela cidade, e não foi o único. Siga a trilha até o portão e entre na Vila do Capão. Na praça tem a Budega: fale com quem está no balcão, que lá chega notícia de todo canto.",
-    "concluida": "Foi o Curupira que te mandou? Então seja bem-vindo à vila! Toma uma água de coco por conta da casa. E escuta: tem coisa estranha acontecendo com os bichos da mata.",
-    "objetivo": { "tipo": "falar", "com": "budega", "rotulo": "Falar com a atendente da Budega, na praça da vila" },
+    "concluida": "Foi o Curupira que te mandou? Eu sou a Xiovanna, seja bem-vindo à vila! Toma uma água de coco por conta da casa. E escuta: tem coisa estranha acontecendo com os bichos da mata.",
+    "objetivo": { "tipo": "falar", "com": "budega", "rotulo": "Falar com a Xiovanna, na Budega da praça" },
     "recompensa": { "xp": 20, "itens": [{ "item": "agua_coco", "quantidade": 2 }] }
   },
   "saguis_encantados": {
