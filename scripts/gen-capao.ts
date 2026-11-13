@@ -450,8 +450,9 @@ if (reached('4b')) {
     cenario.push(point('poste-praca', x, y, { altura: 3.2, luz: '#ffd36b' }));
     furniture.push({ x, y, r: 0.3 });
   }
-  cenario.push(point('orelhao', BUDEGA.x0 - 0.25, 51, { olhando: 180 }));
-  cenario.push(point('lixeira', BUDEGA.x1 + 0.25, 51.5));
+  // (nos cantos da frente da Budega, que a câmera vê: a parede oeste fica de costas para ela; o orelhão fica fora do toldo)
+  cenario.push(point('orelhao', BUDEGA.x0 - 0.25, BUDEGA.y1 + 0.25, { olhando: 90 }));
+  cenario.push(point('lixeira', BUDEGA.x1 - 0.25, BUDEGA.y1 + 0.25));
   furniture.push({ x: BUDEGA_COUNTER.x, y: BUDEGA_COUNTER.y, r: 1.5 });
   // a árvore da praça: o lugar mais perto do da planta (70, 54) que não tampa a rua, o balcão, o letreiro nem a fogueira
   const SQ_TREE = { especie: 'sibipiruna', copa: 3.6, altura: 6.5, tronco: 0.7 };
