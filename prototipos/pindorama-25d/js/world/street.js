@@ -617,20 +617,13 @@
   };
 
   // ------------------------------------------------------------------ raiz que levanta o chão
-  // um cordão marrom que afina; a sombra cai para o lado contrário da luz; o lado de cima é claro (a raiz é alta);
-  // em volta, o chão trinca
-  paint.raiz = (ctx, sh, env) => {
-    const cam = env.g.cam;
-    const h = sh.height || 20;
-    const w0 = sh.width || 35;
-    const L = cam.light;
-    const shx = (-L.x / L.z) * h * 0.5, shy = (-L.y / L.z) * h * 0.5;
-    // rente ao chão (a raiz alta, indo para a câmera, parecia um cano em pé) e com as curvas macias
-    const up = liftOf(cam, h * 0.22);
-    const p0 = sh.pts[0];
-    const rnd = seeded(p0.x, p0.y, 551);
-    let line = sh.pts;
-    for (let it = 0; it < 2; it++) {
+  // Raiz de figueira (o dono achou as de antes feias: grossas por igual, pareciam um cano): sai grossa do tronco e
+  // afina, se divide em raízes menores (que se dividem de novo), tem a cor da casca do tronco, é um pouco alta (o lado
+  // de cima claro, a sombra no chão) e de vez em quando entra no asfalto e sai mais à frente. Em volta, o chão trinca.
+  const ROOT = { top: '#86735f', side: '#574838', light: '#a8937a', groove: '#4a3b2f', hole: '#2a211a' };
+  function chaikin(pts, times) {
+    let line = pts;
+    for (let it = 0; it < times; it++) {
       const sm = [line[0]];
       for (let i = 0; i + 1 < line.length; i++) {
         const a = line[i], b = line[i + 1];
@@ -639,45 +632,133 @@
       sm.push(line[line.length - 1]);
       line = sm;
     }
-    const pts = walk(line, 8);
+    return line;
+  }
+  const lengthOf = (pts) => pts.reduce((s, p, i) => (i ? s + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0), 0);
+  function rootPiece(ctx, cam, pts, wOf, rnd, holeStart, holeEnd) {
     const n = pts.length;
-    const color = sh.color || '#6b4a2e';
-    const stroke = (dx, dy, wk, style) => {
-      ctx.strokeStyle = style;
-      for (let i = 0; i + 1 < n; i++) {
-        ctx.lineWidth = Math.max(2, w0 * wk * (1 - 0.62 * (i / n)));
-        ctx.beginPath();
-        ctx.moveTo(pts[i].x + dx, pts[i].y + dy);
-        ctx.lineTo(pts[i + 1].x + dx, pts[i + 1].y + dy);
-        ctx.stroke();
-      }
-    };
-    ctx.lineCap = 'round';
-    // o chão trincado em volta (antes da raiz)
-    for (let i = 0; i < n; i += 4) {
-      if (rnd() < 0.5) {
-        const p = pts[i];
-        const t = p.a + (rnd() < 0.5 ? 1 : -1) * (Math.PI / 2 + (rnd() - 0.5) * 0.8);
-        crack(ctx, p.x + Math.cos(t) * w0 * 0.5, p.y + Math.sin(t) * w0 * 0.5, t, 18 + rnd() * 40, rnd, 1.6, '#232528', 1);
-      }
-    }
-    // raízes finas saindo para os lados
-    ctx.strokeStyle = '#4a3422';
-    for (let i = 3; i < n - 2; i += 3) {
-      if (rnd() < 0.45) continue;
+    if (n < 2) return;
+    const L = cam.light;
+    const L_ = [], R_ = [], TL = [], TR = [], SL = [], SR = [], mid = [];
+    for (let i = 0; i < n; i++) {
       const p = pts[i];
-      const t = p.a + (rnd() < 0.5 ? 1 : -1) * (0.7 + rnd() * 0.6);
-      const len = w0 * (0.8 + rnd() * 1.4) * (1 - i / n);
-      ctx.lineWidth = Math.max(1.5, w0 * 0.18 * (1 - i / n));
+      const w = wOf(i);
+      const h = w * 0.4;
+      const up = liftOf(cam, h);
+      const nx = -Math.sin(p.a), ny = Math.cos(p.a);
+      const sx = (-L.x / L.z) * h * 0.6, sy = (-L.y / L.z) * h * 0.6;
+      L_.push({ x: p.x + nx * w * 0.5, y: p.y + ny * w * 0.5 });
+      R_.push({ x: p.x - nx * w * 0.5, y: p.y - ny * w * 0.5 });
+      SL.push({ x: p.x + nx * w * 0.55 + sx, y: p.y + ny * w * 0.55 + sy });
+      SR.push({ x: p.x - nx * w * 0.55 + sx, y: p.y - ny * w * 0.55 + sy });
+      TL.push({ x: p.x + nx * w * 0.36 - up, y: p.y + ny * w * 0.36 - up });
+      TR.push({ x: p.x - nx * w * 0.36 - up, y: p.y - ny * w * 0.36 - up });
+      mid.push({ x: p.x - up * 1.05 + nx * w * 0.06 * Math.sin(i * 0.9), y: p.y - up * 1.05 + ny * w * 0.06 * Math.sin(i * 0.9), w });
+    }
+    // sombra no chão, o corpo (lado da sombra), o lado de cima claro, o brilho e o sulco da casca
+    ctx.fillStyle = 'rgba(10, 10, 12, 0.28)';
+    poly(ctx, SL.concat(SR.slice().reverse()));
+    ctx.fill();
+    poly(ctx, L_.concat(R_.slice().reverse()));
+    ctx.fillStyle = ROOT.side;
+    ctx.fill();
+    ctx.strokeStyle = '#2e241b';
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    poly(ctx, TL.concat(TR.slice().reverse()));
+    ctx.fillStyle = ROOT.top;
+    ctx.fill();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = ROOT.light;
+    for (let i = 0; i + 1 < n; i++) {
+      ctx.lineWidth = Math.max(1, wOf(i) * 0.12);
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.quadraticCurveTo(p.x + Math.cos(t) * len * 0.5 + (rnd() - 0.5) * 8, p.y + Math.sin(t) * len * 0.5, p.x + Math.cos(t) * len, p.y + Math.sin(t) * len);
+      ctx.moveTo(TL[i].x, TL[i].y);
+      ctx.lineTo(TL[i + 1].x, TL[i + 1].y);
       ctx.stroke();
     }
-    stroke(shx, shy, 1.05, 'rgba(12, 12, 14, 0.3)');
-    stroke(0, 0, 1, '#3e2b1b');
-    stroke(-up, -up, 0.84, color);
-    stroke(-up * 1.5, -up * 1.5, 0.3, M.shade(color, 0.25));
+    ctx.strokeStyle = ROOT.groove;
+    for (let i = 0; i + 1 < n; i++) {
+      if (wOf(i) < 8) break;
+      ctx.lineWidth = Math.max(0.8, wOf(i) * 0.07);
+      ctx.beginPath();
+      ctx.moveTo(mid[i].x, mid[i].y);
+      ctx.lineTo(mid[i + 1].x, mid[i + 1].y);
+      ctx.stroke();
+    }
+    // onde a raiz entra no chão (ou sai dele): o buraco escuro e pedrinhas de asfalto em volta
+    const hole = (p, w) => {
+      ctx.fillStyle = ROOT.hole;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, w * 0.62, w * 0.42, p.a, 0, M.TAU);
+      ctx.fill();
+      for (let k = 0; k < 4; k++) {
+        ctx.fillStyle = rnd() < 0.5 ? '#55585e' : '#3f4247';
+        ctx.fillRect(p.x + (rnd() - 0.5) * w * 1.6, p.y + (rnd() - 0.5) * w * 1.6, 2.5 + rnd() * 3, 2 + rnd() * 2.5);
+      }
+    };
+    if (holeStart) hole(pts[0], wOf(0));
+    if (holeEnd) hole(pts[n - 1], wOf(n - 1));
+  }
+  paint.raiz = (ctx, sh, env) => {
+    const cam = env.g.cam;
+    const w0 = sh.width || 35;
+    const p0 = sh.pts[0];
+    const rnd = seeded(p0.x, p0.y, 551);
+    const main = chaikin(sh.pts, 2);
+    const roots = [];
+    // a raiz principal e os galhos (dois níveis), cada um afinando até a ponta
+    const grow = (line, wa, wb, depth) => {
+      roots.push({ line, wa, wb, depth });
+      if (depth >= 2) return;
+      const len = lengthOf(line);
+      if (len < 60) return;
+      const pts = walk(line, 10);
+      // menos galhinhos no segundo nível (muitos pareciam gravetos soltos)
+      const n = depth === 0 ? 2 + Math.floor(rnd() * 3) : rnd() < 0.6 ? 1 : 0;
+      for (let k = 0; k < n; k++) {
+        const u = 0.18 + rnd() * 0.6;
+        const at = pts[Math.min(pts.length - 1, Math.floor(u * pts.length))];
+        let a = at.a + (rnd() < 0.5 ? 1 : -1) * (0.45 + rnd() * 0.7);
+        const blen = len * (1 - u) * (depth === 0 ? 0.4 + rnd() * 0.45 : 0.3 + rnd() * 0.3) + 20;
+        const child = [{ x: at.x, y: at.y }];
+        let x = at.x, y = at.y;
+        for (let d = 0; d < blen; d += 14) {
+          a += (rnd() - 0.5) * 0.5;
+          x += Math.cos(a) * 14;
+          y += Math.sin(a) * 14;
+          child.push({ x, y });
+        }
+        const wHere = wa + (wb - wa) * u;
+        grow(chaikin(child, 1), wHere * 0.62, Math.max(3.5, wHere * 0.14), depth + 1);
+      }
+    };
+    grow(main, w0, Math.max(3, w0 * 0.12), 0);
+    // o chão trincado em volta da principal (antes das raízes)
+    const mp = walk(main, 8);
+    for (let i = 0; i < mp.length; i += 4) {
+      if (rnd() < 0.55) continue;
+      const p = mp[i];
+      const t = p.a + (rnd() < 0.5 ? 1 : -1) * (Math.PI / 2 + (rnd() - 0.5) * 0.8);
+      crack(ctx, p.x + Math.cos(t) * w0 * 0.5, p.y + Math.sin(t) * w0 * 0.5, t, 18 + rnd() * 40, rnd, 1.6, '#232528', 1);
+    }
+    // das finas para a grossa (a grossa por cima); cada uma pode entrar no chão num trecho e sair adiante
+    roots.sort((a, b) => b.depth - a.depth);
+    for (const r of roots) {
+      const pts = walk(r.line, 6);
+      const n = pts.length;
+      const wOf = (i) => (r.wa + (r.wb - r.wa) * Math.pow(i / Math.max(1, n - 1), 0.8)) * (1 + 0.08 * Math.sin(i * 0.7));
+      let cut = null;
+      if (r.depth < 2 && n > 26 && rnd() < 0.7) {
+        const g0 = Math.floor(n * (0.35 + rnd() * 0.35));
+        cut = [g0, Math.min(n - 3, g0 + 3 + Math.floor(rnd() * 4))];
+      }
+      if (!cut) rootPiece(ctx, cam, pts, wOf, rnd, false, false);
+      else {
+        rootPiece(ctx, cam, pts.slice(0, cut[0] + 1), wOf, rnd, false, true);
+        rootPiece(ctx, cam, pts.slice(cut[1]), (i) => wOf(i + cut[1]), rnd, true, false);
+      }
+    }
   };
 
   // ------------------------------------------------------------------ capim (planta `capim` na camada do chão)

@@ -431,9 +431,12 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   - `predio` (no mapa) vira uma casa alta (`tower`): 5 andares, varandas embaixo das janelas, a entrada no meio com a
     marquise e a placa do bloco (o nome do prédio, "Bloco B"), o cipó sem cobrir a entrada e duas caixas d'água.
   - Carro com `arvore`: o tronco sai pelo teto (o teto rasgado em volta) e a copa abre em cima.
-- **Correções do dono na rua (13/11):** a Figueira da Esquina (`rompendo`) tem raízes do tronco curtas e baixas, e as
-  `raiz` do chão ficaram rentes e com curvas macias (alta e indo para a câmera, a raiz parecia um cano em pé); o chão
-  quebrado em volta dela vai antes dos detalhes do chão (as raízes passam por cima dos pedaços). A caixa d'água virou a
+- **Correções do dono na rua (13/11):** a Figueira da Esquina (`rompendo`) tem raízes do tronco curtas e baixas. As
+  `raiz` do chão foram refeitas ("tá feio demais essa raiz": grossas por igual e de outra cor, pareciam um cano): a raiz
+  sai grossa e afina, se divide em raízes menores (dois níveis, poucos galhinhos para não virar graveto), tem a cor da
+  casca da figueira, é um pouco alta (lado de cima claro, sombra no chão, sulco da casca) e entra no asfalto num trecho
+  e sai adiante (o buraco escuro e pedrinhas). O chão quebrado em volta da árvore vai antes dos detalhes do chão (as
+  raízes passam por cima dos pedaços). A caixa d'água virou a
   de plástico das lajes (corpo que abre para cima com dois anéis, tampa com cúpula e pegador, cano branco, calço de
   madeira). O carro foi refeito: perfil de sedã esticado na largura, portas, vidros (um quebrado), faróis, rodas
   murchas, ferrugem; o mato virou musgo no teto e no capô, cipó e capim (antes eram bolas verdes).
