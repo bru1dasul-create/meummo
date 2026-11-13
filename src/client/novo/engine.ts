@@ -21,14 +21,14 @@ import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
-import type { QuestInfo, QuestLog } from '../../shared/quests';
+import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
 import { SKILLS } from '../../shared/skills';
 import { Bag } from '../bag';
 import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
 import { ShopWindow } from '../shop';
-import { QuestTracker, TalkWindow, type QuestContext } from '../talk';
+import { npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
@@ -282,6 +282,8 @@ class NewWorld implements NewWorldGame {
           return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp };
         }),
       hp: () => ({ hp: game.myHp, maxHp: game.myMaxHp }),
+      // sinais de missão em cima dos NPCs ('!' nova, '?' para concluir)
+      marks: () => [...game.npcs.values()].map((n) => ({ name: n.e.name, type: n.e.type, mark: npcMark(n.e.type, game.questList, game.questContext()) })),
       zoom: () => game.zoom,
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
@@ -717,9 +719,19 @@ class NewWorld implements NewWorldGame {
     this.openNpc(npc);
   }
 
-  /** Perto do NPC: missão (conversa), loja ou só a fala dele. */
+  /**
+   * Perto do NPC: a conversa quando ele tem missão para você agora (nova, em andamento ou para concluir); senão a loja
+   * (se vende); senão a conversa (quem só dá missão) ou a fala dele.
+   */
   private openNpc(npc: NpcInfo): void {
-    if (this.talk.hasQuests(npc)) {
+    const ctx = this.questContext();
+    const type = npc.e.type;
+    const questNow = this.questList.some(
+      (q) =>
+        (questFinisher(q) === type && ctx.log[q.id]?.state === 'active') ||
+        (q.giver === type && (ctx.log[q.id]?.state === 'active' || questBlocker(q, ctx.log, ctx.level) === null)),
+    );
+    if (questNow || (this.talk.hasQuests(npc) && !npc.shop)) {
       this.bag.close();
       this.shop.close();
       this.talk.open(npc, this.questContext());
@@ -1146,11 +1158,16 @@ class NewWorld implements NewWorldGame {
     };
   }
 
-  /** O diário, o nível ou a mochila mudaram: a lista de missões na tela e a conversa aberta. */
+  /** O diário, o nível ou a mochila mudaram: a lista de missões na tela, a conversa aberta e os sinais ! e ?. */
   private refreshQuests(): void {
     const ctx = this.questContext();
     this.tracker.update(ctx);
     this.talk.update(ctx);
+    for (const [id, npc] of this.npcs) {
+      const mark = npcMark(npc.e.type, this.questList, ctx);
+      if (this.view?.mark) this.view.mark(id, mark);
+      else this.combat.setMark(id, mark);
+    }
   }
 
   private onQuestLog(log: QuestLog): void {

@@ -5,7 +5,7 @@
 
 import type { ItemInfo } from '../shared/items';
 import type { NpcInfo } from '../shared/protocol';
-import { questBlocker, questProgress, type QuestInfo, type QuestLog } from '../shared/quests';
+import { questBlocker, questFinisher, questProgress, type QuestInfo, type QuestLog } from '../shared/quests';
 import { characterPortrait } from './game/characters';
 import { itemIconUrl } from './itemArt';
 
@@ -47,6 +47,8 @@ function button(text: string, className: string, onClick: () => void): HTMLButto
 
 /** "Derrotar 5 Sagui Travesso" / "Entregar 3 Couro de Jararaca" */
 export function goalText(quest: QuestInfo): string {
+  if (quest.goalLabel) return quest.goalLabel;
+  if (quest.goal.kind === 'talk') return `Falar com ${quest.goalName}`;
   return `${quest.goal.kind === 'kill' ? 'Derrotar' : 'Entregar'} ${quest.goal.count} ${quest.goalName}`;
 }
 
@@ -57,9 +59,9 @@ export function questReady(quest: QuestInfo, ctx: QuestContext): boolean {
 
 /** O sinal em cima do NPC: '?' tem missão para entregar, '!' tem missão nova, '' nada. */
 export function npcMark(npcType: string, quests: readonly QuestInfo[], ctx: QuestContext): '?' | '!' | '' {
-  const mine = quests.filter((q) => q.giver === npcType);
-  if (mine.some((q) => questReady(q, ctx))) return '?';
-  if (mine.some((q) => questBlocker(q, ctx.log, ctx.level) === null)) return '!';
+  // '?' com quem a missão se conclui (quem deu, ou a pessoa procurada na missão de falar)
+  if (quests.some((q) => questFinisher(q) === npcType && questReady(q, ctx))) return '?';
+  if (quests.some((q) => q.giver === npcType && questBlocker(q, ctx.log, ctx.level) === null)) return '!';
   return '';
 }
 
@@ -90,7 +92,7 @@ export class TalkWindow {
 
   /** Se este NPC tem missões (então clicar nele abre a conversa). */
   hasQuests(npc: NpcInfo): boolean {
-    return this.quests.some((q) => q.giver === npc.e.type);
+    return this.quests.some((q) => q.giver === npc.e.type || questFinisher(q) === npc.e.type);
   }
 
   open(npc: NpcInfo, ctx: QuestContext): void {
@@ -115,7 +117,7 @@ export class TalkWindow {
     this.ctx = ctx;
     if (!this.npc) return;
     for (const quest of this.quests) {
-      if (quest.giver !== this.npc.e.type) continue;
+      if (questFinisher(quest) !== this.npc.e.type) continue;
       if (before[quest.id]?.state === 'active' && ctx.log[quest.id]?.state === 'done') this.reply = quest.done;
     }
     this.render();
@@ -192,9 +194,11 @@ export class TalkWindow {
     head.append(portrait, who, close);
     const parts: HTMLElement[] = [el('div', 'talk-vine'), head];
 
-    const mine = this.quests.filter((q) => q.giver === npc.e.type);
-    const ready = mine.filter((q) => questReady(q, ctx));
-    const doing = mine.filter((q) => ctx.log[q.id]?.state === 'active' && !questReady(q, ctx));
+    // conclui aqui o que acaba com este NPC (inclusive a missão de falar, que outro deu); o resto é de quem deu
+    const type = npc.e.type;
+    const mine = this.quests.filter((q) => q.giver === type);
+    const ready = this.quests.filter((q) => questFinisher(q) === type && questReady(q, ctx));
+    const doing = mine.filter((q) => ctx.log[q.id]?.state === 'active' && !ready.includes(q));
     const fresh = mine.filter((q) => questBlocker(q, ctx.log, ctx.level) === null);
     const later = mine.filter((q) => questBlocker(q, ctx.log, ctx.level) === 'level');
 
@@ -209,11 +213,15 @@ export class TalkWindow {
     const progress = (quest: QuestInfo) => questProgress(quest, ctx.log[quest.id], ctx.inBag);
 
     if (ready.length) {
-      parts.push(el('h3', '', 'Para entregar'));
+      parts.push(el('h3', '', 'Para concluir'));
       const list = el('ul', 'talk-list');
       for (const quest of ready) {
         list.append(
-          card(quest, 'ready', [this.goal(quest, progress(quest)), this.rewardChips(quest), button('Entregar', 'talk-main talk-give', () => this.actions.complete(npc.e.id, quest.id))]),
+          card(quest, 'ready', [
+            this.goal(quest, progress(quest)),
+            this.rewardChips(quest),
+            button(quest.goal.kind === 'talk' ? 'Conversar' : 'Entregar', 'talk-main talk-give', () => this.actions.complete(npc.e.id, quest.id)),
+          ]),
         );
       }
       parts.push(list);
@@ -270,7 +278,13 @@ export class QuestTracker {
         const fill = el('div');
         fill.style.width = `${Math.round((100 * done) / quest.goal.count)}%`;
         bar.append(fill);
-        row.append(el('strong', '', quest.name), el('span', '', ready ? '✓ pronta: volte para entregar' : `${quest.goalName}: ${done}/${quest.goal.count}`), bar);
+        const status =
+          quest.goal.kind === 'talk'
+            ? (quest.goalLabel ?? `Fale com ${quest.goalName}`)
+            : ready
+              ? '✓ pronta: volte para entregar'
+              : `${quest.goalLabel ?? quest.goalName}: ${done}/${quest.goal.count}`;
+        row.append(el('strong', '', quest.name), el('span', '', status), bar);
         return row;
       }),
     );

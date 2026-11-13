@@ -150,9 +150,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   as teclas − e + (fica guardado no aparelho)
 - [x] **[estrutura]** A Budega no balcão da praça (64,5; 53,3) (13/11, `budega` em `data/npcs.json`): vende Banana,
   Ramo de Arruda, Água de Coco, Garrafada e Chapéu de Palha, e compra o que se pega na mata pela metade do preço.
-  Atendente provisório; o dono troca depois por um personagem inspirado em alguém da equipe dele. No mapa novo, a
+  Quem atende é a **Xiovanna** (13/11, personagem inspirada em alguém da equipe do dono; o desenho é da [arte]). No mapa novo, a
   distância para negociar é do pé ao pé (até 3,5 m: o balcão deixa o jogador a uns 3 m dela)
 - [ ] **[arte]** Ícones da Água de Coco (`agua_coco`) e da Garrafada (`garrafada`), já em `data/items.json`
+- [x] **[estrutura]** Primeira missão do jogo novo (13/11, com o "pode" do dono): "O Despertar" (o Curupira da clareira
+  manda ir até a vila falar com a atendente da Budega) e "Saguis Encantados" (a atendente pede para acalmar 4 saguis
+  encantados — uma pedrada e o encanto sai — e voltar; dá uma Garrafada). Objetivo novo "falar" (conclui com a
+  pessoa procurada) e "rotulo" (o texto do objetivo); o monstro virou "Sagui Encantado"; sinais ! e ? em cima dos
+  NPCs no jogo novo. Protocolo 20
 - [x] **[estrutura]** Atalhos de consumo no jogo novo (13/11, da HUD do dono): 1 = comida, 2 = remédio (campo
   `atalho` em `data/items.json`); cada um usa o item do grupo com a maior cura que está na mochila. Teclas 3 e 4 ou os
   dois botões redondos (`src/client/novo/quick.ts`, visual simples para a [arte] levar à HUD nova). Protocolo 19

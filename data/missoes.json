@@ -36,5 +36,22 @@
     "concluida": "Obrigado, guardião. Volte quando quiser: trabalho na mata não falta.",
     "objetivo": { "tipo": "derrotar", "monstro": "sagui", "quantidade": 8 },
     "recompensa": { "xp": 40, "ouro": 25 }
+  },
+  "o_despertar": {
+    "nome": "O Despertar",
+    "quemDa": "curupira_capao",
+    "pedido": "Você acordou no meio da mata que voltou pela cidade, e não foi o único. Siga a trilha até o portão e entre na Vila do Capão. Na praça tem a Budega: fale com quem está no balcão, que lá chega notícia de todo canto.",
+    "concluida": "Foi o Curupira que te mandou? Eu sou a Xiovanna, seja bem-vindo à vila! Toma uma água de coco por conta da casa. E escuta: tem coisa estranha acontecendo com os bichos da mata.",
+    "objetivo": { "tipo": "falar", "com": "budega", "rotulo": "Falar com a Xiovanna, na Budega da praça" },
+    "recompensa": { "xp": 20, "itens": [{ "item": "agua_coco", "quantidade": 2 }] }
+  },
+  "saguis_encantados": {
+    "nome": "Saguis Encantados",
+    "quemDa": "budega",
+    "depoisDe": "o_despertar",
+    "pedido": "Os saguis da mata estão encantados: o desequilíbrio entre os mundos deixou eles bravos, roubando fruta e jogando em quem passa. Não precisa machucar: uma pedrada certeira e o encanto sai, e eles voltam pro mato. Acalme 4 deles e volte aqui.",
+    "concluida": "Quatro saguis em paz! A mata agradece, e eu também. Leve esta garrafada: receita de benzedeira, cura de verdade.",
+    "objetivo": { "tipo": "derrotar", "monstro": "sagui", "quantidade": 4, "rotulo": "Acalmar 4 saguis encantados" },
+    "recompensa": { "xp": 40, "ouro": 15, "itens": [{ "item": "garrafada", "quantidade": 1 }] }
   }
 }

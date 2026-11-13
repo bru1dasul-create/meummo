@@ -11,6 +11,11 @@ import { QUESTS_FILE } from './paths';
 
 const FILE = 'data/missoes.json';
 
+/** O id que o objetivo cita (monstro, item ou NPC). */
+function goalKey(goal: QuestGoal): string {
+  return goal.kind === 'kill' ? goal.monster : goal.kind === 'deliver' ? goal.item : goal.npc;
+}
+
 function wholeNumber(r: Reader, field: string, fallback: number, min = 0): number {
   const value = r.number(field, { min, fallback });
   if (!Number.isInteger(value)) r.fail(field, 'precisa ser um número inteiro');
@@ -35,7 +40,10 @@ export function parseQuestDefs(json: unknown): Map<string, QuestInfo> {
     let goal: QuestGoal;
     if (kind === 'derrotar') goal = { kind: 'kill', monster: g.text('monstro').toLowerCase(), count: wholeNumber(g, 'quantidade', 1, 1) };
     else if (kind === 'entregar') goal = { kind: 'deliver', item: g.text('item').toLowerCase(), count: wholeNumber(g, 'quantidade', 1, 1) };
-    else g.fail('tipo', 'precisa ser "derrotar" (monstros) ou "entregar" (itens)');
+    else if (kind === 'falar') goal = { kind: 'talk', npc: g.text('com').toLowerCase(), count: 1 };
+    else g.fail('tipo', 'precisa ser "derrotar" (monstros), "entregar" (itens) ou "falar" (ir até alguém, "com": id do NPC)');
+    // "rotulo": o objetivo do jeito que aparece na tela (ex.: "Acalmar 4 saguis encantados"); sem ele, o texto padrão
+    const label = g.has('rotulo') ? g.text('rotulo') : null;
     const rewardData = r.object('recompensa', true) ?? {};
     const rr = new Reader(rewardData, FILE, `recompensa da ${where}`);
     const items = rr.list('itens').map((value, i) => {
@@ -59,7 +67,8 @@ export function parseQuestDefs(json: unknown): Map<string, QuestInfo> {
       ask: r.text('pedido'),
       done: r.text('concluida', 'Obrigado!'),
       goal: goal!,
-      goalName: goal!.kind === 'kill' ? goal!.monster : goal!.item,
+      goalName: goalKey(goal!),
+      ...(label ? { goalLabel: label } : {}),
       reward: { xp: wholeNumber(rr, 'xp', 0), gold: wholeNumber(rr, 'ouro', 0), items },
     });
   }
@@ -80,6 +89,9 @@ export function checkQuests(
     if (quest.goal.kind === 'deliver' && !game.items.has(quest.goal.item)) {
       throw new Error(`${where}: o item "${quest.goal.item}" não existe em data/items.json.`);
     }
+    if (quest.goal.kind === 'talk' && !game.npcs.has(quest.goal.npc)) {
+      throw new Error(`${where}: o objetivo manda falar com "${quest.goal.npc}", que não existe em data/npcs.json.`);
+    }
     for (const reward of quest.reward.items) {
       if (!game.items.has(reward.item)) throw new Error(`${where}: a recompensa tem o item "${reward.item}", que não existe em data/items.json.`);
     }
@@ -93,14 +105,15 @@ export function checkQuests(
   }
 }
 
-/** Põe o nome de verdade do monstro ou do item em cada objetivo (para o navegador mostrar). */
+/** Põe o nome de verdade do monstro, do item ou do NPC em cada objetivo (para o navegador mostrar). */
 export function nameQuestGoals(
   quests: ReadonlyMap<string, QuestInfo>,
-  game: { monsters: ReadonlyMap<string, MonsterDef>; items: ReadonlyMap<string, ItemInfo> },
+  game: { monsters: ReadonlyMap<string, MonsterDef>; items: ReadonlyMap<string, ItemInfo>; npcs?: ReadonlyMap<string, NpcDef> },
 ): void {
   for (const quest of quests.values()) {
     const goal = quest.goal;
-    quest.goalName = (goal.kind === 'kill' ? game.monsters.get(goal.monster)?.name : game.items.get(goal.item)?.name) ?? quest.goalName;
+    const name = goal.kind === 'kill' ? game.monsters.get(goal.monster)?.name : goal.kind === 'deliver' ? game.items.get(goal.item)?.name : game.npcs?.get(goal.npc)?.name;
+    quest.goalName = name ?? quest.goalName;
   }
 }
 
