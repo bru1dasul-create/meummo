@@ -47,9 +47,13 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   no jogo no PC e no celular. **Regra do dono para postes:** na rua, os postes e os fios ficam na calçada que para a
   câmera fica atrás de quem anda (a das casas, no norte da rua do portão), nunca na calçada da frente nem atravessando
   a rua ("pra não ficar na frente do personagem e não ficar tão poluído"). Cadeiras e coisas na calçada não tampam
-  portas. Vem aí (aprovado pelo dono, na fila da [arte] depois da conversa com NPC): **a Budega com interior**, como
-  no HumanitZ (o telhado e as paredes da frente somem quando se entra); a minha parte será o chão de dentro, a porta
-  aberta na colisão e a Xiovanna atrás do balcão.
+  portas. **A Budega com interior está na `main` (13/11)**, como no HumanitZ (o telhado e a frente somem quando se
+  entra; desenho da [arte]). Minha parte: `interior: true` na `casa`, o `piso`, a colisão só nas paredes de 15 cm com
+  o vão da porta de enrolar (`BUDEGA_DOOR_SIDE` 0,34 de cada ponta; a parede do fundo vai até a frente das
+  prateleiras, `BUDEGA_SHELF`), os móveis (`prateleira`, `geladeira`, `balcao` com `caixa`, `engradado` com `pilha`)
+  sem vão de entalar e com o lado de trás do balcão fechado, e o lugar da Xiovanna (`XIOVANNA`, pé em 64,6; 51, que
+  a [estrutura] copia no `data/npcs.json`; mais a leste a copa da árvore da praça cobre ela na tela). O gerador
+  confere que ela cabe lá.
 - **O resto do Capão (4c) no padrão novo, aprovado (13/11, "pode mandar pra arte"):** no ramo `mundo/etapa-4c` (bloco
   `reached('4c') && FLORESTA`, sorteio `SEED + 12`). Propriedades novas: `viaduto` (`cipo`, `arvoresNoTopo`),
   `pilar-viaduto` (`pixo`, `musgo`, `cipo`), `trem` (`cipo`, `plantas`, `janelasQuebradas`), `onibus` (`horta`),
