@@ -76,6 +76,12 @@ const DIE_MS = 700;
  * A escolha fica guardada neste aparelho. A view limita (a da [arte] vai de 0,7 a 1,4).
  */
 const DEFAULT_ZOOM = 0.7;
+/** Conversa com NPC (missão ou loja): a câmera chega pelo menos até este zoom, e volta quando a conversa fecha. */
+const CONVERSATION_ZOOM = 1.25;
+/** Quanto tempo a câmera leva para chegar (e para voltar). */
+const CONVERSATION_ZOOM_MS = 450;
+/** Resposta curta do NPC (aceitou, desistiu): quanto tempo a boca mexe. */
+const SHORT_REPLY_MS = 1200;
 const ZOOM_KEY = 'meummo:zoom';
 const ZOOM_STEP = 1.1;
 
@@ -200,6 +206,11 @@ class NewWorld implements NewWorldGame {
   private lastWalkDegrees = 90;
   private lastWalkAt = 0;
   private readonly guardButton: GuardButton;
+  /** Conversa aberta (missão ou loja): com quem. A câmera vai até ele e volta quando fecha. */
+  private conversationNpc: number | null = null;
+  /** O zoom que a tela mostra agora (o escolhido pelo jogador fica em `zoom`; na conversa, chega mais perto). */
+  private viewZoom = DEFAULT_ZOOM;
+  private zoomAnim: { from: number; to: number; start: number } | null = null;
   /** Onde está o mouse (tela), para mirar. */
   private mouse: Point | null = null;
   /** O último toque foi com o dedo (a Bordunada mira sozinha). */
@@ -335,6 +346,9 @@ class NewWorld implements NewWorldGame {
     this.view?.destroy();
     this.view = createView(this.container, json);
     this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
+    this.viewZoom = this.zoom;
+    this.zoomAnim = null;
+    this.conversationNpc = null;
     this.combat.clear();
     this.combat.raise(); // por cima do desenho novo
     this.entities.clear();
@@ -417,6 +431,7 @@ class NewWorld implements NewWorldGame {
     this.handleMovement(now);
     this.handlePendingShot(now);
     this.updateGuard(now);
+    this.updateConversation(now);
     this.checkNpcArrival();
     this.checkNpcDistance();
     this.checkSafeArea();
@@ -706,6 +721,8 @@ class NewWorld implements NewWorldGame {
   zoomBy(step: number): void {
     if (!this.view?.setZoom) return;
     this.zoom = this.view.setZoom(this.zoom * step);
+    this.viewZoom = this.zoom; // o jogador mexeu: vale o dele (até na conversa)
+    this.zoomAnim = null;
     try {
       localStorage.setItem(ZOOM_KEY, String(Math.round(this.zoom * 1000) / 1000));
     } catch {
@@ -954,6 +971,66 @@ class NewWorld implements NewWorldGame {
     this.tryShoot(angle, now, 0);
   }
 
+  // ======================= conversa =======================
+
+  /**
+   * A cada quadro: abriu ou fechou conversa (missão ou loja)? A câmera vai até quem fala (zoom suave e, onde a view
+   * souber, centralizando nele) e volta quando fecha.
+   */
+  private updateConversation(now: number): void {
+    const npcId = this.talk.isOpen ? this.talk.npcId : this.shop.isOpen ? this.shop.npcId : null;
+    if (npcId !== this.conversationNpc) {
+      const before = this.conversationNpc;
+      this.conversationNpc = npcId;
+      if (before !== null) this.view?.talk?.(before, 0);
+      const npc = npcId !== null ? this.npcs.get(npcId) : undefined;
+      if (npc) {
+        const feet = feetAt(npc.e.x, npc.e.y);
+        this.view?.focus?.({ x: feet.x, y: feet.y });
+        this.animateZoom(Math.max(this.zoom, CONVERSATION_ZOOM), now);
+        this.speak(npc.e.id, this.openingLine(npc));
+      } else {
+        this.view?.focus?.(null);
+        this.animateZoom(this.zoom, now);
+      }
+    }
+    const anim = this.zoomAnim;
+    if (anim && this.view?.setZoom) {
+      const t = Math.min(1, (now - anim.start) / CONVERSATION_ZOOM_MS);
+      this.viewZoom = this.view.setZoom(anim.from + (anim.to - anim.from) * t * t * (3 - 2 * t));
+      if (t >= 1) this.zoomAnim = null;
+    }
+  }
+
+  private animateZoom(to: number, now: number): void {
+    if (!this.view?.setZoom || Math.abs(to - this.viewZoom) < 1e-3) return;
+    this.zoomAnim = { from: this.viewZoom, to, start: now };
+  }
+
+  /** `id` fala `text`: a view mexe a boca pelo tempo de ler (a que não souber, segue sem). */
+  private speak(id: number, text: string): void {
+    if (text) this.view?.talk?.(id, Math.min(7000, Math.max(SHORT_REPLY_MS, text.length * 55)));
+  }
+
+  /** O que o NPC diz ao abrir a conversa: a missão que ele pede agora, ou a fala dele. */
+  private openingLine(npc: NpcInfo): string {
+    const ctx = this.questContext();
+    const offer = this.questList.find((q) => q.giver === npc.e.type && questBlocker(q, ctx.log, ctx.level) === null);
+    return offer?.ask ?? npc.line ?? '';
+  }
+
+  /** Mudou o diário com a conversa aberta: quem está falando com você responde (entregou, aceitou, desistiu). */
+  private npcAnswers(before: QuestLog, log: QuestLog): void {
+    const id = this.conversationNpc;
+    const npc = id !== null ? this.npcs.get(id) : undefined;
+    if (!npc) return;
+    for (const quest of this.questList) {
+      if (before[quest.id]?.state === log[quest.id]?.state) continue;
+      if (questFinisher(quest) === npc.e.type && log[quest.id]?.state === 'done') return this.speak(npc.e.id, quest.done);
+      if (quest.giver === npc.e.type) return void this.view?.talk?.(npc.e.id, SHORT_REPLY_MS); // aceitou ou desistiu: resposta curta
+    }
+  }
+
   // ======================= defesa =======================
 
   /** Segurou F ou o botão Defesa: levanta a defesa (e solta a pedra que estava puxando). */
@@ -1181,6 +1258,9 @@ class NewWorld implements NewWorldGame {
     this.view?.action?.(id, blocked ? 'block' : 'hurt');
     if (blocked) this.combat.spark(id, id === this.myId ? this.guardAngle : null, blocked === 2, now);
     if (id === this.myId) {
+      // apanhando, a conversa fecha (a câmera volta para você ver de onde veio)
+      if (this.talk.isOpen) this.talk.close();
+      if (this.shop.isOpen) this.shop.close();
       // golpe recebido solta a pedra (o servidor faz o mesmo); para puxar de novo, aperte de novo
       const hadCharge = this.charging !== null || this.pendingShot !== null;
       this.cancelCharge();
@@ -1345,6 +1425,7 @@ class NewWorld implements NewWorldGame {
   private onQuestLog(log: QuestLog): void {
     const before = this.questLog;
     this.questLog = log;
+    this.npcAnswers(before, log);
     for (const quest of this.questList) {
       const was = before[quest.id];
       const now = log[quest.id];

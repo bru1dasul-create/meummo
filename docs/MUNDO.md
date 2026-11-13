@@ -31,6 +31,18 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Decisão do dono (13/11, noite): pausa para capricho.** Ele achou a arte "ruinzinha" (falta detalhe; a rua não
+  parece rua, a calçada não parece calçada) e decidiu parar de avançar e melhorar os mapas, uma área por vez,
+  começando pela rua e pela praça da Budega. Ideia dele, aprovada com as imagens de referência: **a floresta reinando
+  sobre a cidade inteira**, pós-apocalíptico em versão brasileira, **sem barraco destruído** (casas e prédios inteiros,
+  tomados pela mata; a vila continua viva e colorida). Padrão: `docs/referencias/padrao-rua-floresta.jpg` (a rua da
+  Budega: asfalto rachado com remendo e faixa apagada, meio-fio e sarjeta, bueiro, tampa, poça, calçada de placas
+  levantadas por raiz, mato nas frestas, figueira rompendo o asfalto, cipó nos postes e nos fios, plantas e varal nas
+  lajes, moto com mato, placa azul de rua, cadeiras de plástico) e `docs/referencias/padrao-cidade-floresta.jpg` (o
+  bairro: prédios de conjunto habitacional com árvore na laje, viaduto com o trem lilás coberto de cipó, ônibus
+  virando vaso). Feitas com o Nano Banana, por cima da arte aprovada (estilo) e de um print do jogo (arranjo). O
+  próximo passo que ele pediu: **"vamos ver no papel"** (a planta da rua e da praça no padrão novo, para aprovar). O
+  desenho do chão (asfalto, calçada) é da [arte]; o que fica em cima (meio-fio, bueiro, faixa, raiz, placa...) é meu.
 - **Decisão do dono (12/11, roteiro "🗺️ Mundo novo"):** o visual vira o do protótipo 2.5D da [arte]
   (`prototipos/pindorama-25d/`, isométrico, estilo HQ) e os mapas são refeitos do zero. Os 5 mapas de hoje saem quando
   o capítulo 1 novo estiver jogável; o motor (servidor, regras, salvamento) fica. Capítulo 1: Capão Redondo e o Parque

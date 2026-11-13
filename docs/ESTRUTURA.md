@@ -75,6 +75,15 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — conversa com NPC, parte 1 (pedido do dono no meio do 2c):** "a câmera deve se posicionar na Xiovanna e
+vir a msg por cima com ela falando (mexendo a boca)", igual ao aceitar/desistir e em qualquer conversa direta. Minha
+parte: modo conversa no motor (`updateConversation`): ao abrir missão ou loja, zoom suave até 1,25 e `focus` na
+pessoa; ao fechar, volta ao zoom do jogador; golpe recebido fecha a conversa (fora da área segura, não dá para ficar
+sem ver o perigo). `talk(id, ms)` diz à view quanto tempo a boca mexe (fala ao abrir; `done` ao entregar; resposta
+curta ao aceitar ou desistir). A `PD.View` só segue "gente" (criatura não é seguida) e ainda não tem `focus` nem
+`talk`: pedi à [arte], junto com a fala por cima da cena no lugar do painel com retrato antigo. Conferido: PC 53 → 95
+px por metro e volta; celular 28 → 49; na provisória o Curupira fica no centro da tela.
+
 **13/11 — combate passo 2c, o recuo (fecha o passo 2):** golpe de monstro empurra o jogador na direção do golpe, o
 quanto o monstro diz (`"recuo"` no ataque, em centímetros; padrão pelo tipo, de 12 a 34 como as pedras do protótipo;
 no painel também). Defesa: 25% do empurrão; quebrando no golpe, 50%. Parede segura (o `sweepBody` ganhou o mínimo
