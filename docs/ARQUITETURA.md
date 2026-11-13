@@ -370,14 +370,21 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
 - Formato combinado entre a [estrutura] e o [mundo] (12/11): Tiled ortogonal, **1 tile = 1 metro** (tile de 32 px,
   só como grade), tudo em camadas de objetos, sem tiles. A câmera isométrica é só o jeito de desenhar: para o
   servidor, o mapa é visto de cima.
-- Camadas: `chao` (áreas do chão, de baixo para cima: mata, grama, terra, asfalto, trilha em polilinha com
-  `largura`, `circulo`), `cenario` (coisas com altura: `arvore` com `especie`, `copa`, `altura` e `tronco` em metros,
-  `gradil`, `portao`, `pilar`, `arbusto`, `pedra`, `poste`, `veu`…), `colisao` (retângulos onde o pé bate;
-  `bloqueiaTiro` false onde a pedrinha passa), `seguro` (zona segura por área), `areas` (nome do lugar para a faixa)
-  e `pontos` (`spawn` e chegadas). `chao` e `cenario` são do desenho (o servidor ignora).
+- Camadas: `chao` (áreas do chão, de baixo para cima: mata, grama, terra, calcada, asfalto, `faixa` de pedestre com
+  `listras` no sentido da rua, `praca` de pedra portuguesa, trilha em polilinha com `largura`, `circulo`), `cenario`
+  (coisas com altura: `arvore` com `especie`, `copa` = **raio** da copa, `altura` e `tronco` em metros, `gradil`,
+  `portao` com `aberto`, `pilar`, `arbusto`, `pedra`, `poste` com `luz`, `fiacao` em polilinha ligando os postes, `veu`;
+  na vila, `casa` com `altura`, `andares`, `cor`, `caixaDagua`, `pixo`, `bloco`, `abandonada` e, no comércio,
+  `comercio`, `letreiro` e `toldo` (a frente é sempre o lado sul, o que a câmera vê), `banco` e `capivara` com
+  `olhando` em graus (0 = leste, 90 = sul), `mesa`, `fogueira`, `orelhao`, `lixeira`, `poste-praca` e `carro`),
+  `colisao` (retângulos onde o pé bate; `bloqueiaTiro` false onde a pedrinha passa; `altura` nos da vila, para o
+  desenho provisório), `seguro` (zona segura por área), `areas` (nome do lugar para a faixa) e `pontos` (`spawn` e
+  chegadas). `chao` e `cenario` são do desenho (o servidor ignora).
 - A `colisao` sai do gerador a partir do `cenario` (tronco, poste, pedra, gradil, portão…), para desenho e colisão
-  nunca desencontrarem. Medidas para o pé de 0,6 × 0,4: passagem com pelo menos 1,5 m e 1,2 m entre troncos.
+  nunca desencontrarem. Medidas para o pé de 0,6 × 0,4: passagem com pelo menos 1,5 m e 1,2 m entre troncos; duas
+  coisas sólidas de frente uma para a outra ficam coladas ou a pelo menos 1,2 m (num vão menor o pé entra e entala).
 - Mapa 01 (Parque Santo Dias e Vila do Capão, 96 × 80 m): `scripts/gen-capao.ts` (`npm run gen:capao`) →
-  `public/assets/maps-iso/capao.tmj`, fora da pasta que o servidor de hoje carrega (o leitor ainda exige tile de
-  16 px). Câmera: o gerador não planta árvore alta que, vista de cima na diagonal, cubra a clareira, o círculo ou a
-  trilha (`hidesView`). Testes em `tests/capao.test.ts` (inclusive por onde o pé consegue ir a partir do nascimento).
+  `public/assets/maps-iso/capao.tmj` (o servidor lê essa pasta para o jogo novo). Câmera: o gerador não põe árvore
+  nem casa que, vista de cima na diagonal, cubra a clareira, o círculo, a trilha, o lago, o portão, a rua da vila ou o
+  balcão da Budega (`hidesView`, `canopyHides`, `boxHides`). Testes em `tests/capao.test.ts` (inclusive por onde o pé
+  consegue ir a partir do nascimento).
