@@ -129,7 +129,7 @@ const MIN_GAP = 1.2;
 /** Mato tomando conta da vila (bem selvagem), longe das ruas: centro e raios. */
 const VILLAGE_GRASS: [number, number, number, number][] = [[64.5, 19, 5.5, 4], [76, 12, 9, 4], [90, 21, 4.5, 5], [60, 61.5, 2.4, 3], [70, 79.5, 12, 2.5]];
 /** Árvores no terreno dos fundos (a mata voltando para a vila). */
-const VILLAGE_TREES: [number, number, string][] = [[59, 11, 'mata'], [69.5, 24.5, 'ipe-amarelo'], [84, 21, 'mata'], [91.5, 11, 'mata'], [77, 10.5, 'mata']];
+const VILLAGE_TREES: [number, number, string][] = [[59, 11, 'mata'], [69.5, 24.5, 'mata'], [84, 21, 'mata'], [91.5, 11, 'mata'], [77, 10.5, 'mata']];
 
 type Props = Record<string, string | number | boolean>;
 interface Shape {
@@ -278,11 +278,14 @@ for (let tries = 0; tries < 6000; tries++) {
   const x = 1 + rng() * (PARK_X - 2.5);
   const y = 1 + rng() * (H - 2);
   const kind = rng();
-  const especie = kind < 0.06 ? 'ipe-amarelo' : kind < 0.11 ? 'ipe-roxo' : 'mata';
-  const tronco = round(especie === 'mata' ? 0.4 + rng() * 0.25 : 0.45);
+  // os ipês amarelos e roxos saíram a pedido do dono (13/11: "cores muito fortes"); o sorteio continua o mesmo, para
+  // a mata não mudar de lugar antes da reforma dela
+  const drawn = kind < 0.06 ? 'ipe-amarelo' : kind < 0.11 ? 'ipe-roxo' : 'mata';
+  const especie = 'mata';
+  const tronco = round(drawn === 'mata' ? 0.4 + rng() * 0.25 : 0.45);
   if (!treeFits(x, y, tronco)) continue;
-  const copa = round(especie === 'mata' ? 1.7 + rng() * 1.2 : 2.3);
-  const altura = round(especie === 'mata' ? 5 + rng() * 3.5 : 6);
+  const copa = round(drawn === 'mata' ? 1.7 + rng() * 1.2 : 2.3);
+  const altura = round(drawn === 'mata' ? 5 + rng() * 3.5 : 6);
   if (hidesView(x, y, copa, altura)) continue;
   trees.push({ x, y, tronco });
   forest.push(point('arvore', round(x), round(y), { especie, copa, altura, tronco }));
