@@ -369,6 +369,26 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   amarelo, pupila em fenda e a risca escura até o canto da boca. A língua sai de vez em quando (mais no aviso).
   O corpo é desenhado numa peça só: em pedaços, cada emenda ganhava contorno e parecia lagarta. Só o pescoço é
   outra peça, e na emenda as bolas dele não têm contorno (`noInk`).
+- **Mata nova, entrega 1 (13/11):** pedidos do dono via [mundo], "floresta mais sombria" e "árvore normal, não
+  redonda, e árvore seca". Referência: `docs/referencias/mapa-01-arte-aprovada.jpg`.
+  - **Árvore de verdade** (`crownPaint` em `props.js`, espécies em `BROADLEAF` e a seca):
+    - o tronco (`TreeTrunk`) vai só até a forquilha (`FORK` 0,42 da altura) e a copa (`TreeCanopy`) desenha os
+      galhos dali até 4 a 7 tufos espalhados, mais um em cima;
+    - cada tufo é um contorno de lóbulos de folhagem (`tuftPath`): o escuro embaixo, o corpo deslocado para a luz, a
+      parte clara, folhas claras e escuras, vãos e folhas soltas na beirada;
+    - os galhos ganham todos os contornos antes dos recheios, para não riscarem um ao outro;
+    - a mata tem cipós pendurados.
+  - **Seca:** galhos que se dividem em gravetos duas vezes, casca cinza e barba-de-velho.
+  - **Caixa da imagem guardada:** é calculada justa pelos tufos (`crownPlan`); a folgada pesava.
+  - **Clima** (`_drawAtmosphere` em `view.js`):
+    - cada área do mapa traz `escuro` e `neblina` (`tmj.js` lê); onde duas se cobrem, vale a menor, e a troca é
+      suave;
+    - o escuro é um degradê verde-azulado fundo, fraco perto do herói (para ler o combate) e forte nas bordas;
+    - a neblina é um véu leve mais bancos que se arrastam, presos ao chão;
+    - tudo numa camada 4× menor, esticada uma vez só: no teste sem placa de vídeo, a mata profunda caiu de 33
+      para 26 quadros por segundo com três passadas na tela inteira e voltou para 29 assim.
+  - **Medido na área dos saguis do mapa de hoje** (PC/celular): árvores antigas sem clima, 27/23 quadros por
+    segundo; árvores novas com clima, 25/25.
 - **Xiovanna, a vendedora da Budega (13/11):** `js/creatures/xiovanna.js`, registrada com a chave da NPC
   ("budega"). A PD.View usa criatura também para NPC. Feita com bolas, como as criaturas, porque o corpo de gente
   (`body.js`) é o modelo único do herói, com mais de 60 pontos presos às medidas dele. As fotos de referência do dono
