@@ -440,6 +440,21 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   de plástico das lajes (corpo que abre para cima com dois anéis, tampa com cúpula e pegador, cano branco, calço de
   madeira). O carro foi refeito: perfil de sedã esticado na largura, portas, vidros (um quebrado), faróis, rodas
   murchas, ferrugem; o mato virou musgo no teto e no capô, cipó e capim (antes eram bolas verdes).
+- **Raízes da Figueira da Esquina, de novo (13/11, referência do dono mandada no chat: o tronco abrindo em muitas
+  raízes redondas que serpenteiam pela calçada e pelo asfalto, placas levantadas, musgo, folhas secas).** O que o dono
+  achou feio, para não repetir: "cano" grosso por igual; galhinhos que pareciam gravetos; "garras" enroladas no pé; a
+  base lisa como uma saia; pontas rombudas com monte de terra (pareciam tora cortada); faces retas (tábuas).
+  - Os caminhos das raízes saem de `PD.street.figRootPaths` (street.js): as `raiz` do mapa, começando no centro do
+    tronco, e raízes a mais nos vãos maiores que ~50° (nenhuma entra em casa). O pé do tronco (`_figButtress`, props.js)
+    e o chão usam os mesmos caminhos e a mesma largura (`rootWidth`): o pé nasce dentro do tronco largo e alto e, a
+    2,3 raios do centro, tem a largura e a altura da raiz do chão, sem contorno — as duas viram uma só.
+  - Corte em meia elipse (lombo redondo) em faixas, cada uma com a cor da luz que recebe (mesma paleta no pé e no
+    chão); musgo irregular no alto; a ponta afina, fica rente e some na terra escura; às vezes a raiz passa por baixo
+    do chão (trinca por cima) e sai adiante. Galhos: até dois na principal e um no galho, cedo e abrindo para o lado;
+    raiz fina (árvore pequena) não se divide.
+  - `breaks` (o chão em volta): terra escura com manchas, placas de calçada levantadas (o lado aparece, beirada clara
+    do lado da luz, trinca e capim), pedaços de asfalto quase rentes, trincas e folhas secas; as raízes a mais são
+    pintadas aqui, as do mapa por cima.
 - **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
   de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
   - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a

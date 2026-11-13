@@ -1511,12 +1511,16 @@
     const zf = t.h * FIG.fork; // forquilha: onde o tronco vira galhos
     const rnd = M.rng(Math.round(t.x * 7 + t.y * 3));
     const lean = rnd() * M.TAU;
-    // perfil: alarga bem na base (as sapopemas fundidas ao tronco) e afina um pouco até a forquilha
+    // perfil: alarga bem na base (as sapopemas fundidas ao tronco) e afina um pouco até a forquilha. Na figueira da rua
+    // (`rompendo`) o pé é feito das raízes que saem do chão (_figButtress): as raízes curtas enroladas no tronco viravam
+    // "garras" e a base lisa parecia uma saia — o dono achou feio as duas
+    const street = !!t.breaks;
     const slices = [];
     const N = 24;
     for (let k = 0; k <= N; k++) {
       const u = k / N;
-      const flare = u < 0.32 ? Math.pow(1 - u / 0.32, 2) * 0.55 : 0;
+      const fu = street ? 0.3 : 0.32;
+      const flare = u < fu ? Math.pow(1 - u / fu, 2) * (street ? 0.45 : 0.55) : 0;
       const r = R * (0.78 + 0.22 * (1 - u) + flare) * (1 + Math.sin(u * 9 + lean) * 0.03);
       const off = Math.sin(u * 2.2 + lean) * R * 0.12 * u;
       const c = cam.p({ x: t.x + Math.cos(lean) * off, y: t.y + Math.sin(lean) * off, z: z0 + zf * u });
@@ -1524,9 +1528,7 @@
     }
     const roots = [];
     for (let k = 0, n = 8; k < n; k++) {
-      // a figueira que rompeu a rua (`rompendo`): raízes curtas e baixas no pé do tronco (as que atravessam a calçada e
-      // o asfalto são as `raiz` do chão); compridas e altas, elas viravam um cano em pé na visão de cima
-      const street = !!t.breaks;
+      // (na figueira da rua essas raízes não são desenhadas: as que atravessam a calçada e o asfalto são as `raiz` do chão)
       roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (street ? 1.05 + rnd() * 0.3 : 1.6 + rnd() * 1.0), zr: R * (street ? 0.12 + rnd() * 0.08 : 0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
     }
     const limbs = [];
@@ -1538,9 +1540,12 @@
     // primeiro os de trás, depois os da frente, cada grupo com o contorno de todos antes do recheio (senão a borda de um
     // galho riscava o outro e os dois pareciam cruzar em "X")
     const front = (a) => Math.cos(a) + Math.sin(a) > 0;
-    for (const r of roots) if (!front(r.a)) this._figRoot(ctx, r, R);
+    const base = street ? this._figBaseRoots(R, rnd) : null;
+    if (base) this._figButtress(ctx, base, 'back');
+    if (!street) for (const r of roots) if (!front(r.a)) this._figRoot(ctx, r, R);
     this._figTrunkBody(ctx, slices);
-    for (const r of roots) if (front(r.a)) this._figRoot(ctx, r, R);
+    if (base) this._figButtress(ctx, base, 'front');
+    if (!street) for (const r of roots) if (front(r.a)) this._figRoot(ctx, r, R);
     this._figLimbs(ctx, limbs.filter((l) => !front(l.a)), R, zf, rnd);
     this._figLimbs(ctx, limbs.filter((l) => front(l.a)), R, zf, rnd);
     // símbolos na frente do tronco (na superfície: a frente do cilindro fica r·sinP abaixo do centro da fatia)
@@ -1613,6 +1618,146 @@
         ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
         line(-0.05);
       }
+    }
+  };
+
+  /**
+   * Raízes do pé da figueira da rua: os mesmos caminhos das raízes pintadas no chão (street.js, figRootPaths) — as do
+   * mapa e as a mais, nos vãos entre elas. Sem o chão novo (protótipo antigo), cinco retas em volta.
+   */
+  TreeTrunk.prototype._figBaseRoots = function (R, rnd) {
+    const t = this.t;
+    const map = this.world.map;
+    const S = PD.street;
+    if (S && S.figRootPaths && map && map.shapes) return S.figRootPaths(t, map);
+    const out = [];
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * M.TAU + rnd() * 0.5;
+      const pts = [{ x: t.x, y: t.y }, { x: t.x + Math.cos(a) * R * 4, y: t.y + Math.sin(a) * R * 4 }];
+      out.push({ pts, len: R * 4, wa: R * 0.8, h0: R * 0.7, a });
+    }
+    return out;
+  };
+
+  /**
+   * Raízes que saem do chão (figueira da rua; referência do dono de 13/11). Cada uma nasce dentro do tronco, alta e
+   * larga, desce e vira a raiz do chão (street.js): no fim do pé ela tem a largura e a altura da raiz do chão, e sem
+   * contorno, as duas viram uma só. O corte é meia elipse (lombo redondo) em oito faixas, cada uma com a cor da luz que
+   * recebe, e musgo no alto. O que o dono achou feio antes: "garras" enroladas no pé, base lisa como saia, tábuas.
+   * `part` 'back' desenha a terra, o contorno de todas e as de trás (antes do tronco); 'front', as da frente.
+   */
+  TreeTrunk.prototype._figButtress = function (ctx, roots, part) {
+    const cam = this.cam;
+    const t = this.t;
+    const z0 = this.z0;
+    const zoom = cam.zoom;
+    const R = t.trunk || 100;
+    const ink = this.ink;
+    const L = cam.light;
+    const tc = cam.toCamera;
+    const tcl = Math.hypot(tc.x, tc.y, tc.z);
+    const ST = PD.street;
+    const widthAt = (r, d) => (ST && ST.rootWidth ? ST.rootWidth(r.wa, d, r.len) : r.wa * (1 - 0.5 * Math.min(1, d / r.len)));
+    const pointAt = (r, d) => {
+      if (ST && ST.along) return ST.along(r.pts, d);
+      const a = r.a;
+      return { x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, a };
+    };
+    const RAMP = ['#2f251c', '#4a3c2f', '#665443', '#857160', '#a58f76'];
+    const tone = (v) => {
+      const f = M.clamp(v, 0, 0.999) * (RAMP.length - 1);
+      const i = Math.floor(f);
+      return M.mix(RAMP[i], RAMP[i + 1], f - i);
+    };
+    const S = 16;
+    const ARC = 8;
+    const d0 = R * 0.5;
+    const d1 = R * 2.3;
+    const geo = roots.map((r) => {
+      const hTip = widthAt(r, d1) * 0.26;
+      const rows = [];
+      for (let s = 0; s <= S; s++) {
+        const u = s / S;
+        const d = d0 + (d1 - d0) * u;
+        const p = pointAt(r, d);
+        const nx = -Math.sin(p.a), ny = Math.cos(p.a);
+        // no tronco, larga e alta (aleta); no fim, igual à raiz do chão
+        const w = widthAt(r, d) * (1 + 0.9 * Math.pow(1 - u, 2));
+        const h = hTip + (r.h0 - hTip) * Math.pow(1 - u, 1.5);
+        const row = { u, cx: p.x, cy: p.y, a: p.a, nx, ny, w, h };
+        for (let j = 0; j <= ARC; j++) {
+          const th = (j / ARC) * Math.PI;
+          const side = (Math.cos(th) * w) / 2;
+          row['e' + j] = cam.p({ x: p.x + nx * side, y: p.y + ny * side, z: z0 + Math.sin(th) * h });
+        }
+        row.sL = cam.p({ x: p.x + nx * (w / 2 + 6), y: p.y + ny * (w / 2 + 6), z: z0 });
+        row.sR = cam.p({ x: p.x - nx * (w / 2 + 6), y: p.y - ny * (w / 2 + 6), z: z0 });
+        rows.push(row);
+      }
+      // as faixas e a cor de cada uma pela normal no meio do pé
+      const mid = rows[Math.round(S * 0.4)];
+      const faces = [];
+      for (let j = 0; j < ARC; j++) {
+        const th = ((j + 0.5) / ARC) * Math.PI;
+        const ns = Math.cos(th) * mid.h, nz = (Math.sin(th) * mid.w) / 2;
+        const nl = Math.hypot(ns, nz) || 1;
+        const N3 = { x: (mid.nx * ns) / nl, y: (mid.ny * ns) / nl, z: nz / nl };
+        const lit = N3.x * L.x + N3.y * L.y + N3.z * L.z;
+        const face = (N3.x * tc.x + N3.y * tc.y + N3.z * tc.z) / tcl;
+        faces.push({ A: 'e' + j, B: 'e' + (j + 1), color: tone(0.2 + lit * 0.78), face });
+      }
+      faces.sort((p, q) => p.face - q.face);
+      const tip = rows[S];
+      return { r, rows, faces, depth: Math.cos(tip.a) + Math.sin(tip.a), front: Math.cos(r.a) + Math.sin(r.a) > 0 };
+    });
+    const facePoly = (g, f, upto) => {
+      const rows = g.rows.slice(0, upto);
+      return rows.map((q) => q[f.A]).concat(rows.map((q) => q[f.B]).reverse());
+    };
+    const fill = (g) => {
+      for (const f of g.faces) poly(ctx, facePoly(g, f, g.rows.length), f.color);
+      // sulco da casca no alto do lombo (some antes do fim do pé)
+      ctx.strokeStyle = 'rgba(40, 30, 22, 0.45)';
+      ctx.lineWidth = Math.max(0.8, 1.6 * zoom);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      g.rows.slice(1, Math.round(S * 0.75)).forEach((q, i) => {
+        const p = cam.p({ x: q.cx + q.nx * q.w * 0.12, y: q.cy + q.ny * q.w * 0.12, z: z0 + q.h * 0.95 });
+        i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
+      });
+      ctx.stroke();
+      // musgo no alto, aqui e ali
+      const rnd = M.rng(Math.round(g.r.a * 1000) + 91);
+      for (let k = 0; k < 2; k++) {
+        const q = g.rows[Math.round(S * (0.25 + rnd() * 0.5))];
+        const p = cam.p({ x: q.cx, y: q.cy, z: z0 + q.h * 0.98 });
+        const rx = q.w * (0.16 + rnd() * 0.1) * zoom;
+        ctx.fillStyle = rnd() < 0.5 ? 'rgba(74, 104, 46, 0.85)' : 'rgba(92, 124, 54, 0.82)';
+        const mx = p.x + (rnd() - 0.5) * rx;
+        const edge = [];
+        for (let e = 0; e < 11; e++) {
+          const th = (e / 11) * M.TAU;
+          const k = 0.6 + rnd() * 0.8;
+          edge.push({ x: mx + Math.cos(th) * rx * k, y: p.y + Math.sin(th) * rx * 0.5 * k });
+        }
+        poly(ctx, edge);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(160, 182, 92, 0.85)';
+        for (let d = 0; d < 3; d++) {
+          ctx.beginPath();
+          ctx.arc(p.x + (rnd() - 0.5) * rx * 1.4, p.y + (rnd() - 0.5) * rx * 0.6, Math.max(0.8, 1.3 * zoom), 0, M.TAU);
+          ctx.fill();
+        }
+      }
+    };
+    if (part === 'back') {
+      // a terra rompida dos dois lados de cada raiz (embaixo dela)
+      for (const g of geo) poly(ctx, g.rows.map((q) => q.sL).concat(g.rows.map((q) => q.sR).reverse()), 'rgba(36, 28, 20, 0.45)');
+      // contorno de todas (sem o fim, que vira a raiz do chão), antes de qualquer recheio: as juntas ficam sem risco
+      for (const g of geo) for (const f of g.faces) poly(ctx, facePoly(g, f, Math.round(S * 0.8)), null, INK, ink * 2.2);
+      geo.filter((g) => !g.front).sort((p, q) => p.depth - q.depth).forEach(fill);
+    } else {
+      geo.filter((g) => g.front).sort((p, q) => p.depth - q.depth).forEach(fill);
     }
   };
 
