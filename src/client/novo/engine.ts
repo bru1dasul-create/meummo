@@ -206,6 +206,8 @@ class NewWorld implements NewWorldGame {
   private lastWalkDegrees = 90;
   private lastWalkAt = 0;
   private readonly guardButton: GuardButton;
+  /** `?fps` no endereço: quadros por segundo e o custo de cada quadro, para medir no aparelho de verdade. */
+  private readonly fpsMeter = new URLSearchParams(location.search).has('fps') ? new FpsMeter() : null;
   /** Conversa aberta (missão ou loja): com quem. A câmera vai até ele e volta quando fecha. */
   private conversationNpc: number | null = null;
   /** O zoom que a tela mostra agora (o escolhido pelo jogador fica em `zoom`; na conversa, chega mais perto). */
@@ -417,6 +419,7 @@ class NewWorld implements NewWorldGame {
     this.bag.destroy();
     this.quick.destroy();
     this.guardButton.destroy();
+    this.fpsMeter?.destroy();
     this.shop.destroy();
     this.talk.destroy();
     this.tracker.destroy();
@@ -428,6 +431,7 @@ class NewWorld implements NewWorldGame {
 
   private readonly loop = (now: number) => {
     if (this.destroyed || !this.view) return;
+    const workStart = performance.now();
     this.handleMovement(now);
     this.handlePendingShot(now);
     this.updateGuard(now);
@@ -439,6 +443,7 @@ class NewWorld implements NewWorldGame {
     this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
     this.actionBar.update(now);
     this.quick.update(now);
+    this.fpsMeter?.tick(now, performance.now() - workStart);
     this.raf = requestAnimationFrame(this.loop);
   };
 
@@ -1680,5 +1685,47 @@ class NewWorld implements NewWorldGame {
         // combate, loja, missões...: chegam nas próximas etapas do mundo novo
         break;
     }
+  }
+}
+
+/**
+ * Medidor de desempenho (`?fps` no endereço), no alto da tela: quadros por segundo, quanto o processador gasta em
+ * cada quadro (o motor e o desenho; para 60 quadros por segundo precisa ficar abaixo de ~16 ms, para 30, de ~33 ms)
+ * e o quadro mais lento do último segundo (os "engasgos").
+ */
+class FpsMeter {
+  private readonly el = document.createElement('div');
+  private frames = 0;
+  private work = 0;
+  private worst = 0;
+  private since = 0;
+  private last = 0;
+
+  constructor() {
+    this.el.id = 'fps-meter';
+    this.el.style.cssText =
+      'position:fixed;top:calc(6px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:50;padding:3px 8px;' +
+      'border-radius:6px;background:rgba(0,0,0,0.6);color:#fff;font:600 12px system-ui,sans-serif;pointer-events:none;white-space:nowrap';
+    this.el.textContent = 'medindo...';
+    document.body.append(this.el);
+  }
+
+  tick(now: number, workMs: number): void {
+    if (this.last > 0) this.worst = Math.max(this.worst, now - this.last);
+    this.last = now;
+    this.frames += 1;
+    this.work += workMs;
+    if (this.since === 0) this.since = now;
+    if (now - this.since < 1000) return;
+    const fps = Math.round((this.frames * 1000) / (now - this.since));
+    this.el.textContent = `${fps} FPS · cada quadro ${(this.work / this.frames).toFixed(1)} ms · mais lento ${Math.round(this.worst)} ms`;
+    this.frames = 0;
+    this.work = 0;
+    this.worst = 0;
+    this.since = now;
+  }
+
+  destroy(): void {
+    this.el.remove();
   }
 }
