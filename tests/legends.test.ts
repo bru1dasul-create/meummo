@@ -196,6 +196,6 @@ describe('o canto no painel do administrador', () => {
     expect(tuning.set('monstros', 'iara', 'canto.alcance', 3)).toEqual({ ok: true });
     expect(tuning.monsters.get('iara')!.song!.range).toBe(3);
     expect(tuning.set('monstros', 'iara', 'canto.preparoMs', 100)).toEqual({ ok: false, erro: expect.stringMatching(/"preparoMs" precisa ser pelo menos 300/) });
-    expect(tuning.set('monstros', 'sagui', 'canto.alcance', 3)).toEqual({ ok: false, erro: 'O campo "Alcance do canto (tiles)" não vale para Sagui Travesso.' });
+    expect(tuning.set('monstros', 'sagui', 'canto.alcance', 3)).toEqual({ ok: false, erro: 'O campo "Alcance do canto (tiles)" não vale para Sagui Encantado.' });
   });
 });

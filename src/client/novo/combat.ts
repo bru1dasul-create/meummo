@@ -110,6 +110,8 @@ export class CombatLayer {
   private floaters: Floater[] = [];
   private flashes: Flash[] = [];
   private poofs: { x: number; y: number; start: number }[] = [];
+  /** Sinais de missão em cima dos NPCs ('!' nova, '?' para concluir). */
+  private readonly marks = new Map<number, '!' | '?'>();
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
   private readonly windups = new Map<number, { start: number; until: number }>();
   private readonly drops = new Map<number, GroundDrop>();
@@ -167,6 +169,12 @@ export class CombatLayer {
     this.flashes.push({ x, y, angle, radius, wide, start: now });
   }
 
+  /** Sinal de missão em cima do NPC `id` ('' tira). */
+  setMark(id: number, mark: '!' | '?' | ''): void {
+    if (mark) this.marks.set(id, mark);
+    else this.marks.delete(id);
+  }
+
   /** Nuvenzinha onde um monstro caiu. */
   poof(x: number, y: number, now: number): void {
     this.poofs.push({ x, y, start: now });
@@ -192,6 +200,7 @@ export class CombatLayer {
     this.poofs = [];
     this.drops.clear();
     this.windups.clear();
+    this.marks.clear();
   }
 
   /** Põe a tela do combate por cima do desenho (chamar depois de criar a view de um mapa novo). */
@@ -229,6 +238,7 @@ export class CombatLayer {
     this.drawPoofs(now, screen, meter);
     this.drawShots(now, screen, meter);
     this.drawBars(feetOf, health, screen, meter);
+    this.drawMarks(now, feetOf, screen, meter);
     this.drawFloaters(now, feetOf, screen, meter);
   }
 
@@ -397,6 +407,31 @@ export class CombatLayer {
       ctx.fillRect(p.x - width / 2 - 1, p.y - height - 1, width + 2, height + 2);
       ctx.fillStyle = fraction > 0.5 ? '#7bd389' : fraction > 0.25 ? '#f2c14e' : '#e5484d';
       ctx.fillRect(p.x - width / 2, p.y - height, width * fraction, height);
+    }
+  }
+
+  private drawMarks(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    const ctx = this.ctx;
+    for (const [id, mark] of this.marks) {
+      const feet = feetOf(id);
+      if (!feet) continue;
+      const m = meter(feet.x, feet.y);
+      // acima do nome, balançando de leve
+      const p = screen(feet.x, feet.y, BODY_HEIGHT + 0.95 + 0.06 * Math.sin(now / 250));
+      const r = Math.max(10, m * 0.2);
+      ctx.fillStyle = mark === '?' ? '#f2c14e' : '#ffe08a';
+      ctx.strokeStyle = 'rgba(40, 24, 10, 0.9)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, r, r, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#2b1d12';
+      ctx.font = `800 ${Math.round(r * 1.4)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(mark, p.x, p.y + 1);
+      ctx.textBaseline = 'alphabetic';
     }
   }
 

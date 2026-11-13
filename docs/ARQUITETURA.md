@@ -227,6 +227,10 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no
   `welcome` (`quests`). O progresso de cada um (`Player.quests`, um `QuestLog`: missão → `active`/`done` e a
   contagem) vai no `welcome` e no `zone` (`questLog`) e, quando muda, em `quests`.
+- Objetivos: `kill` (derrotar), `deliver` (entregar) e `talk` (falar com alguém: aceita com quem dá, conclui com a
+  pessoa procurada — `questFinisher`). `goalLabel` (campo `rotulo`) é o texto do objetivo na tela, quando a missão
+  escolhe. No jogo novo, a conversa e o quadro são as mesmas janelas (`talk.ts`); os sinais ! e ? em cima dos NPCs
+  são desenhados por cima pelo motor (`combat.ts`), ou pela view, se ela tiver `mark`.
 - Pedidos: `quest` com `accept` ou `complete` (perto do NPC que dá a missão, `TRADE_RANGE`) e `abandon` (em
   qualquer lugar). O servidor confere tudo (`questBlocker`: já fazendo, já feita e não repetível, falta a anterior,
   nível, limite de 5). "Derrotar" conta em `killMonster` para cada um que ajudou; "entregar" conta pela mochila

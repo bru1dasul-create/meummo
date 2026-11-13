@@ -52,7 +52,7 @@ import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import type { FailReason, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
-import { questBlocker, type QuestInfo, type QuestLog } from '../shared/quests';
+import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../shared/quests';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
@@ -772,7 +772,9 @@ export class World {
       return;
     }
     const npc = npcId !== undefined ? this.npcs.get(npcId) : undefined;
-    if (!npc || npc.def.id !== quest.giver) return; // NPC de outro mapa, ou não é ele quem dá esta missão
+    // aceitar é com quem dá a missão; concluir é com quem ela manda procurar (na de falar) ou com quem deu
+    const expected = act === 'accept' ? quest.giver : questFinisher(quest);
+    if (!npc || npc.def.id !== expected) return; // NPC de outro mapa, ou não é com ele
     if (!this.nearNpc(player, npc)) return this.fail(player, 'too_far', true);
 
     if (act === 'accept') {
@@ -843,7 +845,7 @@ export class World {
       progress.count += 1;
       player.questsDirty = true;
       if (progress.count === quest.goal.count) {
-        const giver = this.npcDefs.get(quest.giver)?.name ?? 'quem te deu a missão';
+        const giver = this.npcDefs.get(questFinisher(quest))?.name ?? 'quem te deu a missão';
         player.outbox.push({ t: 'sys', text: `Missão pronta: ${quest.name}. Fale com ${giver} para receber a recompensa.` });
       }
     }
