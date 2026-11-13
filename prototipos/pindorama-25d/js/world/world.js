@@ -253,7 +253,7 @@
       mark('sombra');
 
       const order = this._staticOrder().slice();
-      for (const o of order) { o.hideTarget = 1; o.hideWindow = null; }
+      for (const o of order) { o.hideTarget = 1; o.hideWindow = null; o.hideWindows = null; }
       // encaixa cada personagem na ordem: depois de tudo que está atrás dele
       for (const a of actors) {
         let idx = 0;
@@ -287,6 +287,11 @@
           if (hide) {
             o.hideTarget = Math.min(o.hideTarget, o.overhead ? 0.42 : 0.5);
             if (!o.hideWindow || a.primary) o.hideWindow = o._lastHideWindow = window;
+            // uma janela para cada um que esta copa (ou casa) cobre: o herói e também o monstro do lado dele
+            // (até 6 por objeto, com o herói sempre entre elas: cada janela desenha o objeto mais duas vezes)
+            const list = o.hideWindows || (o.hideWindows = []);
+            if (a.primary) list.unshift(window);
+            else if (list.length < 6) list.push(window);
           }
         }
       }
@@ -310,34 +315,39 @@
           o.draw(ctx, t);
           continue;
         }
-        // janela: fora do círculo em volta do personagem, inteiro; dentro, bem transparente (borda em 2 degraus)
-        const W = o.hideWindow || o._lastHideWindow || this._window;
-        const big = new Path2D();
-        big.rect(-1e6, -1e6, 2e6, 2e6);
-        big.moveTo(W.x + W.r, W.y);
-        big.arc(W.x, W.y, W.r, 0, M.TAU);
+        // janelas: fora dos círculos em volta de quem está coberto, inteiro; dentro, bem transparente (borda em 2
+        // degraus). Uma janela por personagem coberto (antes só a do herói: o sagui embaixo da mesma copa sumia)
+        const Ws = o.hideWindows && o.hideWindows.length ? o.hideWindows : [o.hideWindow || o._lastHideWindow || this._window];
+        const outside = (W) => {
+          const p = new Path2D();
+          p.rect(-1e6, -1e6, 2e6, 2e6);
+          p.moveTo(W.x + W.r, W.y);
+          p.arc(W.x, W.y, W.r, 0, M.TAU);
+          return p;
+        };
         ctx.save();
-        ctx.clip(big, 'evenodd');
+        for (const W of Ws) ctx.clip(outside(W), 'evenodd');
         o.alpha = 1;
         o.draw(ctx, t);
         ctx.restore();
-        const ring = new Path2D();
-        ring.moveTo(W.x + W.r, W.y);
-        ring.arc(W.x, W.y, W.r, 0, M.TAU);
-        ring.moveTo(W.x + W.r * 0.8, W.y);
-        ring.arc(W.x, W.y, W.r * 0.8, 0, M.TAU);
-        ctx.save();
-        ctx.clip(ring, 'evenodd');
-        o.alpha = 1 - o.fade * 0.45;
-        o.draw(ctx, t);
-        ctx.restore();
-        const inner = new Path2D();
-        inner.arc(W.x, W.y, W.r * 0.8, 0, M.TAU);
-        ctx.save();
-        ctx.clip(inner);
-        o.alpha = 1 - o.fade * 0.78;
-        o.draw(ctx, t);
-        ctx.restore();
+        Ws.forEach((W, k) => {
+          for (const [rOut, rIn, a] of [[W.r, W.r * 0.8, 0.45], [W.r * 0.8, 0, 0.78]]) {
+            ctx.save();
+            // onde uma janela já desenhou, a próxima não desenha de novo (senão a transparência somava)
+            for (let j = 0; j < k; j++) ctx.clip(outside(Ws[j]), 'evenodd');
+            const ring = new Path2D();
+            ring.moveTo(W.x + rOut, W.y);
+            ring.arc(W.x, W.y, rOut, 0, M.TAU);
+            if (rIn) {
+              ring.moveTo(W.x + rIn, W.y);
+              ring.arc(W.x, W.y, rIn, 0, M.TAU);
+            }
+            ctx.clip(ring, 'evenodd');
+            o.alpha = 1 - o.fade * a;
+            o.draw(ctx, t);
+            ctx.restore();
+          }
+        });
         o.alpha = 1;
       }
       mark('objetos');

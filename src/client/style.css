@@ -2081,14 +2081,18 @@ kbd {
   }
 }
 
-/* Jogo 2.5D novo (/?novo) no celular: a metade esquerda é do joystick e o resto da tela serve para tocar no chão ou
-   num personagem. O chat vira uma caixinha no canto de baixo à direita; as últimas falas aparecem em cima dela sem
-   segurar o toque e somem quando ninguém fala; tocar na caixinha abre o chat inteiro para escrever. */
+/* Jogo 2.5D novo no celular: a metade esquerda é do joystick, o canto de baixo à direita é dos botões de ação e o
+   resto da tela serve para tocar no chão ou num personagem. O chat vira uma caixinha no canto de CIMA à direita (lá o
+   teclado do celular também não cobre); as últimas falas aparecem logo abaixo dela sem segurar o toque e somem quando
+   ninguém fala; tocar na caixinha abre o chat inteiro para escrever. */
 @media (pointer: coarse) {
   body:has(canvas.mundo-novo) #chat {
     left: auto;
     right: calc(8px + env(safe-area-inset-right));
-    width: min(320px, 48vw);
+    top: calc(8px + env(safe-area-inset-top));
+    bottom: auto;
+    width: min(300px, calc(100vw - 196px - env(safe-area-inset-right))); /* ao lado do painel do canto (170px), sem encostar */
+    flex-direction: column-reverse;
     align-items: flex-end;
     pointer-events: none; /* só a caixinha de escrever segura o toque; o resto passa para o jogo */
   }
@@ -2097,10 +2101,13 @@ kbd {
     pointer-events: auto;
   }
 
+  /* duas falas inteiras; o pedacinho da fala de cima que aparece na margem some no degradê */
   body:has(canvas.mundo-novo) #chat-log {
     align-self: stretch;
     max-height: calc(2 * 1.4em + 12px);
     pointer-events: none;
+    -webkit-mask-image: linear-gradient(180deg, transparent 1px, #000 6px);
+    mask-image: linear-gradient(180deg, transparent 1px, #000 6px);
   }
 
   body:has(canvas.mundo-novo) #chat.idle #chat-log {
@@ -2108,7 +2115,7 @@ kbd {
   }
 
   body:has(canvas.mundo-novo) #chat-form {
-    width: 150px;
+    width: min(150px, 100%);
     transition: width 0.2s;
   }
 
@@ -2117,8 +2124,19 @@ kbd {
     padding-block: 6px;
   }
 
+  /* escrevendo: o chat usa a largura da tela (por cima do painel do canto, que volta quando termina) */
+  body:has(canvas.mundo-novo) #chat:focus-within {
+    width: min(420px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  }
+
   body:has(canvas.mundo-novo) #chat:focus-within #chat-form {
     width: 100%;
+  }
+
+  /* por cima do painel do canto: fundo opaco, para o painel não aparecer através das letras */
+  body:has(canvas.mundo-novo) #chat:focus-within #chat-input,
+  body:has(canvas.mundo-novo) #chat:focus-within #chat-log {
+    background-color: #0e100d;
   }
 
   body:has(canvas.mundo-novo) #chat:focus-within #chat-log {
@@ -2144,5 +2162,10 @@ kbd {
 
   #zone-banner span {
     font-size: 10px;
+  }
+
+  /* a faixa fica no alto por uns segundos: as falas recolhidas do jogo novo dão licença enquanto isso */
+  body:has(canvas.mundo-novo):has(#zone-banner:not([hidden])) #chat:not(:focus-within) #chat-log {
+    opacity: 0;
   }
 }

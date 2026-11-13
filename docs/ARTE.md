@@ -329,10 +329,18 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - **Pedras** ("isso é uma pedra?"): rocha facetada de contorno irregular (anel de base enterrado, anel de cima menor e
   uma coroa), cada face com o tom pela luz, musgo no topo iluminado e fiapos de grama na base da frente; cada pedra
   sai diferente (sorteio pela posição).
-- **Celular no `/?novo`** (aviso da [estrutura]): o chat vira uma caixinha no canto de baixo à direita (a esquerda é
-  do joystick), as falas aparecem em cima sem segurar o toque e somem; tocar na caixinha abre o chat (CSS com
-  `body:has(canvas.mundo-novo)`, o jogo de hoje não muda). No celular deitado, a faixa da zona fica no alto e menor
-  (vale para os dois jogos).
+- **Celular no jogo novo** (avisos da [estrutura]): o chat vira uma caixinha no canto de **cima** à direita (a esquerda
+  é do joystick e o canto de baixo à direita é dos botões Fôlego e Esquiva, que ela cobria; lá em cima o teclado do
+  celular também não cobre), ao lado do painel do canto (largura `100vw - 196px`, até 300 px). As duas últimas falas
+  aparecem logo abaixo sem segurar o toque e somem; tocar na caixinha abre o chat na largura da tela, com fundo opaco
+  por cima do painel. CSS com `body:has(canvas.mundo-novo)`; o jogo antigo não muda. No celular deitado, a faixa da
+  zona fica no alto e menor (vale para os dois jogos) e as falas recolhidas dão licença enquanto ela aparece.
+  O registro do chat (`ui.ts`) segue a última fala e só para quando o **jogador** rola (roda, dedo ou barra): a
+  conta antiga ("está no fim?") se enganava quando o chat mudava de tamanho e o celular pequeno mostrava a fala
+  velha. Conferido em Pixel 7 e num celular de 320 px, em pé e deitado (`chat-celular.cjs` no scratchpad).
+- **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
+  outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).
+  `world.js` junta as janelas em `o.hideWindows` e recorta uma de cada vez.
 - **Etapa 4a** (mata e lago, do [mundo]): `tmj.js` lê `tronco-caido` (caixa; deita no lado comprido),
   `aguape` (ponto com `raio`), `capivara` (ponto com `olhando` em graus; enfeite, sem colisão), `pedra` com
   `ancestral` e a `cor` das formas do chão (o lago usa '#2f6f6a'). Desenhos em `props.js`: tronco caído (cilindro
