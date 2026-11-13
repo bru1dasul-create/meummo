@@ -20,7 +20,10 @@ export type SoundName =
   | 'coins'
   | 'coin'
   | 'buy'
-  | 'sell';
+  | 'sell'
+  | 'block'
+  | 'guard-break'
+  | 'pull-full';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -31,6 +34,8 @@ export class Sfx {
   private master: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly lastPlayed = new Map<SoundName, number>();
+  /** O zumbido do elástico enquanto o estilingue é puxado (revisão 17): um som contínuo que sobe com a carga. */
+  private pull: { osc: OscillatorNode; gain: GainNode; full: boolean } | null = null;
   muted: boolean;
 
   constructor() {
@@ -58,8 +63,58 @@ export class Sfx {
     }
   }
 
+  /**
+   * Puxando o estilingue: chame a cada quadro com a carga (0 a 1). O tom sobe e fica mais forte com a carga; quando
+   * enche, um "plim". As receitas são as da revisão 17 do protótipo (js/audio.js).
+   */
+  charge(power: number): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') {
+      this.stopCharge();
+      return;
+    }
+    const p = Math.max(0, Math.min(1, power));
+    const t = ctx.currentTime;
+    if (!this.pull) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = 105;
+      gain.gain.value = 0;
+      osc.connect(gain).connect(this.master!);
+      osc.start(t);
+      this.pull = { osc, gain, full: false };
+    }
+    this.pull.osc.frequency.setTargetAtTime(105 + p * 250, t, 0.05);
+    this.pull.gain.gain.setTargetAtTime(0.05 + p * 0.07, t, 0.035);
+    if (p >= 1 && !this.pull.full) {
+      this.pull.full = true;
+      this.play('pull-full');
+    }
+  }
+
+  /** Soltou (atirou), cancelou ou desmaiou: o zumbido do elástico para. */
+  stopCharge(): void {
+    const v = this.pull;
+    if (!v) return;
+    this.pull = null;
+    try {
+      const t = this.ctx!.currentTime;
+      v.gain.gain.cancelScheduledValues(t);
+      v.gain.gain.setTargetAtTime(0, t, 0.008);
+      v.osc.stop(t + 0.05);
+      v.osc.onended = () => {
+        v.osc.disconnect();
+        v.gain.disconnect();
+      };
+    } catch {
+      // já parou
+    }
+  }
+
   toggleMute(): boolean {
     this.muted = !this.muted;
+    if (this.muted) this.stopCharge();
     try {
       localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0');
     } catch {
@@ -149,6 +204,17 @@ export class Sfx {
       case 'equip': // fivela fechando
         this.noise(t, 0.05, 'bandpass', 2600, 1700, 0.25);
         this.tone('square', 330, 440, t + 0.03, 0.07, 0.07);
+        break;
+      case 'block': // a defesa segurou o golpe: pancada seca nos braços (revisão 17)
+        this.noise(t, 0.11, 'bandpass', 1800, 900, 0.42);
+        this.tone('triangle', 240, 110, t, 0.12, 0.38);
+        break;
+      case 'guard-break': // a defesa quebrou (acabou a energia): pancada grave e mais longa (revisão 17)
+        this.noise(t, 0.24, 'lowpass', 950, 300, 0.55);
+        this.tone('triangle', 180, 48, t, 0.26, 0.4);
+        break;
+      case 'pull-full': // o estilingue chegou na carga máxima (revisão 17)
+        this.tone('triangle', 690, 1050, t, 0.18, 0.24);
         break;
     }
   }

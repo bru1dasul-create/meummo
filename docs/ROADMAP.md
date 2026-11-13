@@ -345,6 +345,18 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     o tranco no desenho). **Esquiva conferida:** a do jogo rola 3 m, protege 0,35 s e recarrega em 2,5 s; a do
     protótipo anda 1 m, protege 0,2 s e recarrega em 0,2 s. Ficou a do jogo (os avisos dos monstros foram feitos para
     ela) — o dono decide se quer a do protótipo
+- [x] **[arte]** O herói no combate do jogo 2.5D (13/11, pedido do dono): as animações da revisão 17 (a que o dono
+  trouxe do ChatGPT: `js/slingshot.js` e `js/guard.js`) ligadas às ações que o motor já mandava. Segurar o estilingue:
+  ele puxa o elástico; soltar: a pedra sai e o braço volta. A **forquilha só aparece na mão na hora do tiro** (escolha do
+  dono, 13/11; no resto do tempo, mãos livres). Defesa: os braços sobem na frente, cedem no bloqueio e caem quando a
+  defesa quebra; golpe recebido parado dá o tranco (andando não, para o desenho não ficar para trás do servidor). Vale
+  para os outros jogadores também (o tiro deles mostra a puxada curta e o soltar). Sons novos no `sfx.ts`: zumbido do
+  elástico subindo com a carga e o "plim" da carga cheia, pancada da defesa e a defesa quebrando — ligados pela
+  [estrutura] no motor (pedido enviado). Conferido no PC e no celular (botão Estilingue), sem erros
+- [ ] **[estrutura]** Ligar o combate do herói no motor (pedido da [arte], 13/11): `sfx.charge(carga)` a cada quadro da
+  puxada e `sfx.stopCharge()` ao soltar/cancelar/desmaiar; `sfx.play('block')` e `sfx.play('guard-break')` no lugar do
+  `'hit'` na defesa; o ângulo da mira no `'sling-pull'` (e de novo quando a mira mudar) e no `'guard'` quando a defesa
+  vira
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
