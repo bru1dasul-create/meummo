@@ -137,9 +137,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   com árvore pelo telhado, caminho de terra no fundo, o campinho com o mato entrando, traves enferrujadas com a rede
   rasgada, o muro com cipó, cadeiras de quem assiste, a rua para Guarapiranga com faixa apagada, rachaduras, buracos
   e raízes, e a Figueira do Viaduto. Entra com o desenho da 4c pela [arte]
-- [ ] **[mundo + arte]** Faixa de pedestre na esquina (fora do cruzamento) e o semáforo quebrado soltando faísca na
-  esquina do portão (pedido do dono, 13/11): mapa no ramo `mundo/rua-semaforo`; o desenho do `semaforo` já está na
-  main (7c75c95) e os dois juntos foram conferidos no PC e no celular. Entra com o "pode" do dono
+- [x] **[mundo + arte]** Faixa de pedestre na esquina (fora do cruzamento) e o semáforo quebrado soltando faísca na
+  esquina do portão (pedido do dono, 13/11; **na main em 13/11**, "pode, junta"): a faixa atravessa a travessa na
+  esquina (antes ficava no meio do cruzamento) e o `semaforo` (`quebrado`, `faiscas`) fica na ponta da calçada das
+  casas, com o braço sobre a rua do portão; a amarela pisca falhada e as faíscas caem e quicam no chão. Conferido no
+  PC e no celular, já com a Figueira da Esquina no lugar novo
 - [x] **[mundo]** A Figueira da Esquina vai para a calçada da casa rosa (**na main em 13/11**, aprovado pelo dono:
   "pode seguir com as alterações"): na esquina do portão, a copa alta tampava, na tela, 19 m da trilha do norte do
   parque, onde andam os saguis (o dono pediu "o caminho sem árvore"); na esquina ela tampa em qualquer tamanho. Fica com
