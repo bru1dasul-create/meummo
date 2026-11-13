@@ -74,6 +74,12 @@ export class Session {
       case 'walk':
         this.lobby.realm.requestWalk(this.player, msg.seq, msg.a, msg.dash === true, msg.slow === true);
         break;
+      case 'charge':
+        this.lobby.realm.charge(this.player);
+        break;
+      case 'guard':
+        this.lobby.realm.guard(this.player, msg.on, msg.a);
+        break;
       case 'shoot':
         this.lobby.realm.shoot(this.player, msg.cid, msg.a);
         break;

@@ -251,10 +251,11 @@ export function walkSlice(map: Walkable, from: Pose, degrees: number, distance: 
 }
 
 /**
- * Anda até `distance` tiles em linha reta (esquiva, puxão do canto), em pedaços, deslizando nas paredes.
- * Para quando não consegue mais avançar. `moved` só conta se andou pelo menos um pedacinho de verdade.
+ * Anda até `distance` tiles em linha reta (esquiva, puxão do canto, recuo), em pedaços, deslizando nas paredes, na
+ * direção `degrees` (inteiro de 0 a 359). Para quando não consegue mais avançar. `moved` só conta se andou pelo menos
+ * `minMove` (a esquiva contra a parede não conta; o recuo usa 0: qualquer pedacinho vale).
  */
-export function sweepBody(map: Walkable, from: Pose, degrees: number, distance: number): Pose & { moved: boolean } {
+export function sweepBody(map: Walkable, from: Pose, degrees: number, distance: number, minMove = 0.2): Pose & { moved: boolean } {
   let pose: Pose = { x: from.x, y: from.y, dir: dirOfDegrees(degrees) };
   let left = distance;
   while (left > 1e-9) {
@@ -264,7 +265,8 @@ export function sweepBody(map: Walkable, from: Pose, degrees: number, distance: 
     if (!next.moved) break;
     pose = next;
   }
-  if (Math.hypot(pose.x - from.x, pose.y - from.y) < 0.2) return { x: from.x, y: from.y, dir: pose.dir, moved: false };
+  const moved = Math.hypot(pose.x - from.x, pose.y - from.y);
+  if (moved < 1e-9 || moved < minMove) return { x: from.x, y: from.y, dir: pose.dir, moved: false };
   return { x: pose.x, y: pose.y, dir: pose.dir, moved: true };
 }
 
