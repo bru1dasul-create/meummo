@@ -488,7 +488,8 @@
       return { x0: sh.x - r, x1: sh.x + r, y0: sh.y - r, y1: sh.y + r };
     }
     if (sh.kind === 'ellipse') return { x0: sh.cx - sh.rx, x1: sh.cx + sh.rx, y0: sh.cy - sh.ry, y1: sh.cy + sh.ry };
-    const pad = sh.kind === 'line' ? sh.width / 2 : 0;
+    // (as raízes da rua soltam galhos além da linha do mapa: PD.street.reach diz até onde)
+    const pad = sh.kind === 'line' ? sh.width / 2 + ((PD.street && PD.street.reach && PD.street.reach[sh.type]) || 0) : 0;
     const xs = sh.pts.map((p) => p.x), ys = sh.pts.map((p) => p.y);
     return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad };
   }
@@ -526,14 +527,14 @@
     ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
     this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
     const env = { map: m, g: this, box };
-    // a figueira que rompeu a esquina: o chão quebrado em volta do tronco vai depois das superfícies e antes dos
-    // detalhes (as raízes do chão passam por cima dos pedaços soltos)
+    // o pé das figueiras (a que rompeu a esquina: o chão quebrado; todas: as raízes) vai depois das superfícies e antes
+    // dos detalhes (as raízes do mapa passam por cima dos pedaços soltos)
     let broke = false;
     const breaks = () => {
       broke = true;
       if (!PD.street) return;
       for (const t of m.trees || []) {
-        if (t.breaks && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
+        if ((t.breaks || t.kind === 'figueira') && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
       }
     };
     m.shapes.forEach((sh, n) => {

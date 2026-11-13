@@ -149,12 +149,13 @@ const POSTS: [number, number][] = FLORESTA
   ? // pedido do dono (13/11): na rua do portão, os postes ficam na calçada das casas, que para a câmera fica atrás de
     // quem anda na rua (antes ficavam na calçada da praça, na frente do personagem e das fachadas)
     // (o da esquina com a rua de baixo também vem para cá: na calçada da praça ele ficava na frente de quem anda)
-    [[50.5, 40], [61.5, 40.86], [70, 40.86], [80, 40.86], [90.5, 40.86], [87.6, 63], [87.6, 76]]
+    // (o da casa rosa fica em 71,2, na divisa com a casa azul: a Figueira da Esquina está na frente da casa rosa)
+    [[50.5, 40], [61.5, 40.86], [71.2, 40.86], [80, 40.86], [90.5, 40.86], [87.6, 63], [87.6, 76]]
   : [[50.5, 40], [60, 47.8], [70, 47.8], [80, 47.8], [87.6, 47.6], [87.6, 63], [87.6, 76]];
 /** A fiação: cada linha liga os postes de uma rua (no padrão novo, nenhum fio atravessa a rua do portão). */
 const WIRES: [number, number][][] = FLORESTA
   ? [
-      [[50.5, 40], [61.5, 40.86], [70, 40.86], [80, 40.86], [90.5, 40.86]],
+      [[50.5, 40], [61.5, 40.86], [71.2, 40.86], [80, 40.86], [90.5, 40.86]],
       [[87.6, 63], [87.6, 76]],
     ]
   : [POSTS];
@@ -957,17 +958,20 @@ if (reached('4b') && FLORESTA) {
     }
   }
 
-  // ----- a Figueira da Esquina: rompeu a calçada e o asfalto na esquina do portão (a primeira coisa que se vê) -----
-  const BIG_FIG = { x: 57, y: 38.6, copa: 6, altura: 10, tronco: 1.8 };
+  // ----- a Figueira da Esquina: rompeu a calçada e o asfalto logo depois da esquina do portão (a primeira coisa que se
+  // vê da rua). Fica na frente da casa rosa: mais perto da esquina, a copa alta "subia" na tela e tampava a trilha do
+  // norte do parque, bem onde andam os saguis (o dono pediu "o caminho sem árvore") -----
+  const BIG_FIG = { x: 68, y: 40.25, copa: 6, altura: 10, tronco: 1.8 };
   if (canopyHides(BIG_FIG.x, BIG_FIG.y, BIG_FIG.copa, BIG_FIG.altura)) throw new Error('A Figueira da Esquina tampa a rua ou o portão.');
+  if (hidesView(BIG_FIG.x, BIG_FIG.y, BIG_FIG.copa, BIG_FIG.altura)) throw new Error('A Figueira da Esquina tampa uma trilha do parque.');
   trees.push({ x: BIG_FIG.x, y: BIG_FIG.y, tronco: BIG_FIG.tronco });
   cenario.push(point('arvore', BIG_FIG.x, BIG_FIG.y, { especie: 'figueira', copa: BIG_FIG.copa, altura: BIG_FIG.altura, tronco: BIG_FIG.tronco, rompendo: true }, 'Figueira da Esquina'));
   /** Raízes (baixas: o pé passa por cima) que levantam a calçada e racham o asfalto. */
   const ROOTS: [number, number][][] = [
-    [[56.4, 39.6], [55.2, 40.6], [53.6, 41.2], [52.2, 41]],
-    [[57.4, 39.6], [58.2, 41.2], [59.6, 42.6], [61.4, 43.1]],
-    [[57.9, 39.3], [59.8, 40.2], [62.4, 40.5]],
-    [[56.2, 38.4], [55, 37.4], [53.8, 36]],
+    [[67.2, 40.85], [66.3, 41.6], [64.9, 42.3], [63.3, 42.4]],
+    [[68.6, 41], [69.6, 42.1], [71, 43.2], [72.8, 43.6]],
+    [[68.95, 39.95], [70.3, 40.15], [72.4, 40.05]],
+    [[68.05, 41.2], [67.8, 42.5], [68.3, 43.9]],
     // as da árvore da praça, levantando a pedra portuguesa
     [[76.4, 58.4], [75.2, 58.9], [73.8, 58.7]],
     [[77.6, 58.5], [78.4, 59.6]],
