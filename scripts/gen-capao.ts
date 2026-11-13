@@ -148,13 +148,14 @@ const HOUSES: House[] = [
 const POSTS: [number, number][] = FLORESTA
   ? // pedido do dono (13/11): na rua do portão, os postes ficam na calçada das casas, que para a câmera fica atrás de
     // quem anda na rua (antes ficavam na calçada da praça, na frente do personagem e das fachadas)
-    [[50.5, 40], [61.5, 40.86], [70, 40.86], [80, 40.86], [87.6, 47.6], [87.6, 63], [87.6, 76]]
+    // (o da esquina com a rua de baixo também vem para cá: na calçada da praça ele ficava na frente de quem anda)
+    [[50.5, 40], [61.5, 40.86], [70, 40.86], [80, 40.86], [90.5, 40.86], [87.6, 63], [87.6, 76]]
   : [[50.5, 40], [60, 47.8], [70, 47.8], [80, 47.8], [87.6, 47.6], [87.6, 63], [87.6, 76]];
 /** A fiação: cada linha liga os postes de uma rua (no padrão novo, nenhum fio atravessa a rua do portão). */
 const WIRES: [number, number][][] = FLORESTA
   ? [
-      [[50.5, 40], [61.5, 40.86], [70, 40.86], [80, 40.86]],
-      [[87.6, 47.6], [87.6, 63], [87.6, 76]],
+      [[50.5, 40], [61.5, 40.86], [70, 40.86], [80, 40.86], [90.5, 40.86]],
+      [[87.6, 63], [87.6, 76]],
     ]
   : [POSTS];
 /**
