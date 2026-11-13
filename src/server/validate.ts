@@ -25,6 +25,8 @@ function parseGmCommand(raw: unknown): GmCommand | null {
       return { do: 'clear' };
     case 'heal':
       return { do: 'heal' };
+    case 'npc':
+      return typeof c.npc === 'string' && /^[a-z0-9_-]{1,40}$/.test(c.npc) ? { do: 'npc', npc: c.npc } : null;
     case 'fly':
     case 'god':
       return typeof c.on === 'boolean' ? { do: c.do, on: c.on } : null;

@@ -20,7 +20,7 @@ export type TuningFile = 'monstros' | 'itens' | 'npcs';
 export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs'];
 
 /** Como o painel mostra e confere cada campo. */
-export type FieldKind = 'inteiro' | 'faixa' | 'sim-nao' | 'texto' | 'itens' | 'porcento';
+export type FieldKind = 'inteiro' | 'numero' | 'faixa' | 'sim-nao' | 'texto' | 'itens' | 'porcento';
 
 interface FieldSpec<Def> {
   /** Caminho no arquivo de dados (ex.: 'ataque.dano'). */
@@ -66,6 +66,9 @@ const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [
 
 const NPC_FIELDS: FieldSpec<NpcDef>[] = [
   { campo: 'fala', rotulo: 'O que diz', tipo: 'texto', ler: (d) => d.line },
+  { campo: 'mapa', rotulo: 'Mapa onde fica', tipo: 'texto', dica: 'o nome do arquivo do mapa (ex.: capao). Mais fácil: no jogo, menu ADM → trazer para cá', ler: (d) => d.map },
+  { campo: 'x', rotulo: 'Posição x', tipo: 'numero', dica: 'onde fica o pé (no mapa novo, em metros)', ler: (d) => d.x },
+  { campo: 'y', rotulo: 'Posição y', tipo: 'numero', dica: 'onde fica o pé (no mapa novo, em metros)', ler: (d) => d.y },
   { campo: 'loja.vende', rotulo: 'O que vende', tipo: 'itens', ler: (d) => d.shop?.sells ?? [], vale: (d) => d.shop !== null },
   { campo: 'loja.compraPor', rotulo: 'Paga pelo que você vende (%)', tipo: 'porcento', dica: '50 = metade do preço', ler: (d) => d.shop?.buyPercent ?? 0, vale: (d) => d.shop !== null },
 ];
@@ -186,6 +189,8 @@ function typeProblem(kind: FieldKind, value: unknown): string | null {
   switch (kind) {
     case 'inteiro':
       return whole(value) ? null : 'precisa ser um número inteiro';
+    case 'numero':
+      return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100000 ? null : 'precisa ser um número (pode ter vírgula)';
     case 'porcento':
       return whole(value) && (value as number) >= 0 && (value as number) <= 100 ? null : 'precisa ser um número de 0 a 100';
     case 'faixa':
@@ -264,6 +269,20 @@ export class Tuning {
     const next = clone(this.overrides);
     const byId = (next[arquivo] ??= {});
     setPath((byId[id] ??= {}), campo.split('.'), valor);
+    return this.commit(next, arquivo);
+  }
+
+  /** Muda vários campos de uma vez (ex.: mapa, x e y de um NPC): confere tudo junto e vale uma vez só. */
+  setMany(arquivo: TuningFile, id: string, campos: Record<string, unknown>): TuningResult {
+    const next = clone(this.overrides);
+    const byId = (next[arquivo] ??= {});
+    for (const [campo, valor] of Object.entries(campos)) {
+      const spec = this.spec(arquivo, id, campo);
+      if ('erro' in spec) return { ok: false, erro: spec.erro };
+      const bad = typeProblem(spec.tipo, valor);
+      if (bad) return { ok: false, erro: `${spec.rotulo}: ${bad}.` };
+      setPath((byId[id] ??= {}), campo.split('.'), valor);
+    }
     return this.commit(next, arquivo);
   }
 

@@ -126,6 +126,11 @@ export interface WorldOptions {
   npcs?: ReadonlyMap<string, NpcDef>;
   /** Missões (de data/missoes.json). */
   quests?: ReadonlyMap<string, QuestInfo>;
+  /**
+   * Menu ADM "trazer para cá": grava o novo lugar do NPC nos ajustes do painel (vale na hora e fica salvo). Devolve o
+   * erro, ou null se deu certo. Sem isto (testes), o menu avisa que não dá.
+   */
+  setNpcSpot?: (npc: string, map: string, x: number, y: number) => string | null;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -190,6 +195,7 @@ export class World {
   private readonly npcDefs: ReadonlyMap<string, NpcDef>;
   /** Todos os monstros que existem (o administrador pode criar qualquer um, em qualquer mapa). */
   private readonly monsterDefs: ReadonlyMap<string, MonsterDef>;
+  private readonly setNpcSpot: WorldOptions['setNpcSpot'];
   /** Chão pegando fogo agora (rastros de investida). */
   private hazards: Hazard[] = [];
   /** Tile → id do monstro que está nele (monstros não se empilham). */
@@ -229,6 +235,7 @@ export class World {
 
     const defs = options.monsters ?? new Map<string, MonsterDef>();
     this.monsterDefs = defs;
+    this.setNpcSpot = options.setNpcSpot;
     for (const zone of map.monsterZones) {
       const def = defs.get(zone.monster);
       if (!def) {
@@ -243,9 +250,15 @@ export class World {
 
   /** Põe o NPC no lugar dele (ou no chão livre mais perto, se o mapa mudou e o lugar ficou bloqueado). */
   private placeNpc(def: NpcDef): void {
+    const spot = this.npcSpot(def);
+    if (spot) this.addNpc(def, spot);
+  }
+
+  /** Onde o NPC fica: o lugar dele, ou o chão livre mais perto (avisa no registro), ou null se não tiver onde. */
+  private npcSpot(def: NpcDef): Tile | null {
     // Formato novo: a posição do data/npcs.json é onde fica o pé, em metros (pode ter fração).
     const exact = this.map.metric ? cornerAtFeet(def.x, def.y) : null;
-    if (exact && bodyFits(this.map, exact.x, exact.y)) return this.addNpc(def, exact);
+    if (exact && bodyFits(this.map, exact.x, exact.y)) return exact;
     let tile: Tile | null = { x: Math.floor(def.x), y: Math.floor(def.y) };
     if (!this.map.isWalkable(tile.x, tile.y) || !this.map.isReachable(tile.x, tile.y)) {
       tile = this.map.nearestWalkable(def.x, def.y);
@@ -255,9 +268,9 @@ export class World {
           ? `aviso: ${def.name} (data/npcs.json) estava em (${def.x}, ${def.y}), que é bloqueado no mapa "${this.map.id}"; ficou em (${tile.x}, ${tile.y})`
           : `aviso: ${def.name} (data/npcs.json) não tem onde ficar perto de (${def.x}, ${def.y}) no mapa "${this.map.id}"`,
       );
-      if (!tile) return;
+      if (!tile) return null;
     }
-    this.addNpc(def, tile);
+    return tile;
   }
 
   private addNpc(def: NpcDef, spot: Tile): void {
@@ -559,6 +572,20 @@ export class World {
         if (player.dead) return;
         this.adminHeal(player);
         return;
+      case 'npc': {
+        const def = this.npcDefs.get(cmd.npc);
+        if (!def) return say(`não existe o personagem "${cmd.npc}".`);
+        if (!this.setNpcSpot) return say('aqui não dá para mudar o lugar dos personagens.');
+        // no mapa novo, o pé exato (em metros, com uma casa); no antigo, o tile
+        const feet = feetAt(player.fx, player.fy);
+        const x = this.map.metric ? Math.round(feet.x * 10) / 10 : player.x;
+        const y = this.map.metric ? Math.round(feet.y * 10) / 10 : player.y;
+        const erro = this.setNpcSpot(def.id, this.map.id, x, y);
+        if (erro) return say(`não deu: ${erro}`);
+        say(`${def.name} agora fica aqui (${x}, ${y}). Fica salvo nos ajustes do painel (dá para voltar ao padrão lá).`);
+        this.log(`ADM ${player.name}: levou ${def.name} para ${this.map.name} (${x}, ${y})`);
+        return;
+      }
     }
   }
 
@@ -874,6 +901,26 @@ export class World {
   }
 
   /** Vida cheia. */
+  /** O painel mudou o nível: a XP do nível começa do zero, a vida enche e todo mundo vê. */
+  adminSetLevel(player: Player, level: number): void {
+    player.level = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
+    player.xp = 0;
+    player.maxHp = playerMaxHp(player);
+    if (!player.dead) player.hp = player.maxHp;
+    player.statsDirty = true;
+    this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
+    this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    player.outbox.push({ t: 'sys', text: `O administrador mudou o seu nível para ${player.level}.` });
+    this.saveCharacters([player]);
+  }
+
+  /** O painel deu XP (sobe de nível como caçando). */
+  adminGiveXp(player: Player, amount: number): void {
+    this.giveXp(player, amount);
+    player.outbox.push({ t: 'sys', text: `O administrador te deu ${amount} de XP.` });
+    this.saveCharacters([player]);
+  }
+
   adminHeal(player: Player): void {
     const amount = player.maxHp - player.hp;
     player.hp = player.maxHp;
@@ -931,6 +978,24 @@ export class World {
 
   /** Os NPCs mudaram no painel (o que vendem, o que dizem): manda a lista nova para quem está aqui. */
   refreshNpcs(): void {
+    // o lugar (e o mapa) de cada um pode ter mudado: entra quem passou a morar aqui, sai quem foi embora, anda quem mudou
+    const here = new Map([...this.npcs.values()].map((npc) => [npc.def.id, npc]));
+    for (const def of this.npcDefs.values()) {
+      const npc = here.get(def.id);
+      if (def.map !== this.map.id) {
+        if (npc) this.npcs.delete(npc.id);
+        continue;
+      }
+      if (!npc) {
+        this.placeNpc(def);
+        continue;
+      }
+      const spot = this.npcSpot(def);
+      if (spot && (spot.x !== npc.x || spot.y !== npc.y)) {
+        npc.x = spot.x;
+        npc.y = spot.y;
+      }
+    }
     const npcs = this.npcList();
     for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
   }

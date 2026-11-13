@@ -310,6 +310,7 @@ class NewWorld implements NewWorldGame {
       teleportMode: (on) => {
         this.gmTeleport = on;
       },
+      npc: (id) => this.conn.send({ t: 'gm', cmd: { do: 'npc', npc: id } }),
     });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
@@ -399,6 +400,7 @@ class NewWorld implements NewWorldGame {
       this.npcs.set(npc.e.id, npc);
       this.addEntity(npc.e, false);
     }
+    this.gmPanel.setNpcs(msg.npcs.map((npc) => ({ id: npc.e.type, name: npc.e.name })));
     this.applyStats(msg.stats);
     this.myHp = you.hp;
     this.myMaxHp = you.maxHp;
@@ -1025,6 +1027,38 @@ class NewWorld implements NewWorldGame {
     if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt) return;
     this.conn.send({ t: 'charge' }); // zera a carga no servidor: o toque rápido é uma pedra sem carga
     this.tryShoot(angle, now, 0);
+  }
+
+  /**
+   * A lista de NPCs deste mapa mudou (painel ou menu ADM): quem mudou de lugar anda até lá, quem chegou aparece, quem
+   * foi embora some. Loja ou conversa aberta mostra o que mudou.
+   */
+  private onNpcList(list: NpcInfo[]): void {
+    const fresh = new Set<number>();
+    for (const npc of list) {
+      fresh.add(npc.e.id);
+      const old = this.entities.get(npc.e.id);
+      this.npcs.set(npc.e.id, npc);
+      if (!old) {
+        this.addEntity(npc.e, false);
+      } else if (old.x !== npc.e.x || old.y !== npc.e.y) {
+        this.entities.set(npc.e.id, npc.e);
+        const feet = feetAt(npc.e.x, npc.e.y);
+        this.view?.moveActor(npc.e.id, feet.x, feet.y, degreesOfDir(npc.e.dir), { durationMs: 0 });
+      }
+      if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
+      if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
+    }
+    for (const id of [...this.npcs.keys()]) {
+      if (fresh.has(id)) continue;
+      this.npcs.delete(id);
+      this.entities.delete(id);
+      this.view?.removeActor(id);
+      if (this.talk.npcId === id) this.talk.close();
+      if (this.shop.npcId === id) this.shop.close();
+    }
+    this.gmPanel.setNpcs([...this.npcs.values()].map((npc) => ({ id: npc.e.type, name: npc.e.name })));
+    this.refreshQuests(); // os sinais ! e ? em cima de quem chegou
   }
 
   // ======================= conversa =======================
@@ -1722,11 +1756,7 @@ class NewWorld implements NewWorldGame {
         this.onQuestLog(msg.log);
         break;
       case 'npcs':
-        for (const npc of msg.npcs) {
-          this.npcs.set(npc.e.id, npc);
-          if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
-          if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
-        }
+        this.onNpcList(msg.npcs);
         break;
       case 'online':
         this.hud.setOnline(msg.n);

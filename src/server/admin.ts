@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import type http from 'node:http';
 import path from 'node:path';
 import { MAX_GOLD } from '../shared/items';
+import { MAX_LEVEL } from '../shared/progression';
 import { nameProblem, normalizeName, PASSWORD_MAX, PASSWORD_MIN, passwordProblem } from '../shared/names';
 import { ROOT } from './paths';
 import type { AdminResult, Realm } from './realm';
@@ -47,6 +48,8 @@ type PlayerAction =
   | { acao: 'ouro'; id: number; quantidade: number }
   | { acao: 'item'; id: number; item: string; quantidade: number }
   | { acao: 'curar'; id: number }
+  | { acao: 'nivel'; id: number; nivel: number }
+  | { acao: 'xp'; id: number; quantidade: number }
   | { acao: 'levar'; id: number; mapa: string; x?: number; y?: number }
   | { acao: 'expulsar'; id: number };
 
@@ -71,6 +74,10 @@ function parsePlayerAction(body: unknown): PlayerAction | null {
         : null;
     case 'curar':
       return { acao: 'curar', id };
+    case 'nivel':
+      return whole(b.nivel, 1, MAX_LEVEL) ? { acao: 'nivel', id, nivel: b.nivel } : null;
+    case 'xp':
+      return whole(b.quantidade, 1, 10_000_000) ? { acao: 'xp', id, quantidade: b.quantidade } : null;
     case 'expulsar':
       return { acao: 'expulsar', id };
     case 'levar': {
@@ -303,6 +310,10 @@ function runPlayerAction(action: PlayerAction, realm: Realm, tuning: Tuning, kic
     }
     case 'curar':
       return realm.adminHeal(action.id);
+    case 'nivel':
+      return realm.adminSetLevel(action.id, action.nivel);
+    case 'xp':
+      return realm.adminGiveXp(action.id, action.quantidade);
     case 'levar':
       return realm.adminMove(action.id, action.mapa, action.x, action.y);
     case 'expulsar': {

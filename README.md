@@ -134,8 +134,11 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
 - **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
   sozinho, distância que percebe e persegue, tempo para renascer.
 - **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
-- **Loja e personagens:** o que a Dona Iracema diz, o que vende e quanto paga pelo que você vende.
-- **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **dar ouro**,
+- **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
+  vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
+  (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).
+- **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **mudar o nível**
+  (a XP do nível começa do zero e a vida enche), **dar XP** (sobe de nível como caçando), **dar ouro**,
   **dar item** (o que não couber na mochila fica no chão, ao lado), **curar**, **levar para** outro mapa ou posição
   (x e y vazios = ponto de nascimento) e **expulsar** (o progresso fica salvo e dá para entrar de novo). No topo,
   **aviso para todos** (aparece na tela de quem está jogando) e **trocar senha**, para quem esqueceu: escreva o nome

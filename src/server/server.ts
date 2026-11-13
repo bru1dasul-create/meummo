@@ -95,7 +95,20 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   checkQuests(quests, tuning);
   nameQuestGoals(quests, tuning);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
-  const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, quests, saver: store, startMap: options.startMap });
+  const realm = new Realm(maps, {
+    log,
+    monsters: tuning.monsters,
+    items: tuning.items,
+    npcs: tuning.npcs,
+    quests,
+    saver: store,
+    startMap: options.startMap,
+    // menu ADM "trazer para cá": vira um ajuste do painel (mapa, x e y juntos)
+    setNpcSpot: (npc, map, x, y) => {
+      const result = tuning.setMany('npcs', npc, { mapa: map, x, y });
+      return result.ok ? null : result.erro;
+    },
+  });
   tuning.onChange = (changed) => realm.tuningChanged(changed);
   const sessions = new Set<Session>();
   const guard = new LoginGuard(() => performance.now(), options.guardLimits);

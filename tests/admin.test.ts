@@ -102,7 +102,7 @@ describe('ajustes do painel', () => {
     const chapeu = view.grupos.find((g) => g.arquivo === 'itens')!.lista.find((i) => i.id === 'chapeu')!;
     expect(chapeu.campos.map((c) => c.campo)).toEqual(['preco', 'dano', 'vida', 'defesa']); // equipamento: sem "cura"
     const dona = view.grupos.find((g) => g.arquivo === 'npcs')!.lista[0]!;
-    expect(dona.campos.map((c) => c.campo)).toEqual(['fala', 'loja.vende', 'loja.compraPor']);
+    expect(dona.campos.map((c) => c.campo)).toEqual(['fala', 'mapa', 'x', 'y', 'loja.vende', 'loja.compraPor']);
     expect(view.itens).toEqual([
       { id: 'fruta', nome: 'Fruta', preco: 5 },
       { id: 'chapeu', nome: 'Chapéu', preco: 40 },

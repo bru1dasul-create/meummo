@@ -95,7 +95,8 @@ export type GmCommand =
   | { do: 'fly'; on: boolean }
   | { do: 'god'; on: boolean }
   | { do: 'tp'; x: number; y: number }
-  | { do: 'heal' };
+  | { do: 'heal' }
+  | { do: 'npc'; npc: string }; // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
 
 /** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
 export type LoginMode = 'login' | 'create';

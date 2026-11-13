@@ -10,6 +10,8 @@ export interface GmActions {
   heal(): void;
   /** Liga/desliga o "teleporte ao clicar" (fica só no navegador: o clique no chão vira um pedido de ir até lá). */
   teleportMode(on: boolean): void;
+  /** Traz o NPC (a chave dele) para onde o administrador está (fica salvo nos ajustes do painel). */
+  npc(id: string): void;
 }
 
 export interface GmState {
@@ -24,6 +26,7 @@ export class GmPanel {
   private readonly panel = document.createElement('div');
   private readonly style = document.createElement('style');
   private readonly monster = document.createElement('select');
+  private readonly npcSelect = document.createElement('select');
   private readonly count = document.createElement('input');
   private readonly flyButton: HTMLButtonElement;
   private readonly godButton: HTMLButtonElement;
@@ -78,6 +81,9 @@ export class GmPanel {
       this.actions.teleportMode(this.teleport);
       this.render();
     });
+    const npcRow = document.createElement('div');
+    npcRow.className = 'row';
+    npcRow.append(this.npcSelect, make('Trazer para cá', () => this.npcSelect.value && this.actions.npc(this.npcSelect.value)));
     const toggles = document.createElement('div');
     toggles.className = 'row';
     toggles.append(this.flyButton, this.godButton);
@@ -87,7 +93,7 @@ export class GmPanel {
     const hint = document.createElement('p');
     hint.className = 'hint';
     hint.textContent = 'Monstros criados não renascem. Voando, você atravessa tudo. Tudo fica registrado no servidor.';
-    this.panel.append(title, spawnRow, others, toggles, this.teleportButton, hint);
+    this.panel.append(title, spawnRow, others, toggles, this.teleportButton, npcRow, hint);
     // clique no menu não vira clique no jogo (andar, atirar)
     for (const el of [this.panel, this.button]) {
       el.addEventListener('pointerdown', (event) => event.stopPropagation());
@@ -118,6 +124,20 @@ export class GmPanel {
     }
     this.button.hidden = !state.admin;
     this.render();
+  }
+
+  /** Os NPCs deste mapa (para o "trazer para cá"). */
+  setNpcs(list: { id: string; name: string }[]): void {
+    const current = this.npcSelect.value;
+    this.npcSelect.replaceChildren(
+      ...list.map((npc) => {
+        const option = document.createElement('option');
+        option.value = npc.id;
+        option.textContent = npc.name;
+        return option;
+      }),
+    );
+    if (list.some((npc) => npc.id === current)) this.npcSelect.value = current;
   }
 
   toggle(): void {

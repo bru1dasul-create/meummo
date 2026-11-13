@@ -335,7 +335,9 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `saves/registros/` (14 dias), aba **Registros** no painel (filtro, "Só erros", "Copiar tudo"), erros do servidor com
   o caminho (o tick e as mensagens não derrubam mais o servidor) e os erros do navegador de quem joga (mensagem `oops`,
   protocolo 25, com o aparelho)
-- [ ] **[dono → estrutura]** Menu ADM, passo 2 (o dono escolheu "todos", 13/11): o painel já ajusta monstros, itens, loja e jogadores;
+- [ ] **[estrutura]** Menu ADM, passo 2 (o dono escolheu "todos", 13/11). Feito: nível e XP de um jogador (cartão no
+  painel) e a posição dos NPCs (mapa, x e y no painel; "Trazer para cá" no menu ADM; vale na hora, com o boneco
+  andando na tela de quem joga). Falta: monstros por área, missões e números do combate. Era a lista: o painel já ajusta monstros, itens, loja e jogadores;
   dá para pôr também missões, onde e quantos monstros nascem, os números do combate (carga, defesa, recuo), a
   posição dos NPCs, nível/XP de um jogador e "ver como o servidor vê" (colisões) no jogo
 - [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem

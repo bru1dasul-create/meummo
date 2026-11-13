@@ -422,6 +422,11 @@
         switch (field.tipo) {
           case 'inteiro':
             return [numberInput(field.valor, commit, 0)];
+          case 'numero': {
+            const input = numberInput(field.valor, commit, 0);
+            input.step = '0.1';
+            return [input];
+          }
           case 'porcento':
             return [numberInput(field.valor, commit, 0), el('span', { text: '%' })];
           case 'faixa': {
@@ -627,6 +632,21 @@
 
         const gold = el('input', { type: 'number', min: '1', step: '1', value: '100' });
         card.append(el('div', { class: 'row' }, el('span', { text: 'Dar ouro' }), gold, el('button', { class: 'act', type: 'button', text: 'Dar', onclick: () => playerAction({ acao: 'ouro', id: p.id, quantidade: Number(gold.value) }) })));
+
+        const level = el('input', { type: 'number', min: '1', max: '50', step: '1', value: String(p.nivel) });
+        const xp = el('input', { type: 'number', min: '1', step: '1', value: '100' });
+        card.append(
+          el(
+            'div',
+            { class: 'row' },
+            el('span', { text: 'Nível' }),
+            level,
+            el('button', { class: 'act', type: 'button', text: 'Mudar', onclick: () => playerAction({ acao: 'nivel', id: p.id, nivel: Number(level.value) }, `Mudar ${p.nome} para o nível ${level.value}? A XP do nível começa do zero.`) }),
+            el('span', { text: 'Dar XP' }),
+            xp,
+            el('button', { class: 'act', type: 'button', text: 'Dar', onclick: () => playerAction({ acao: 'xp', id: p.id, quantidade: Number(xp.value) }) }),
+          ),
+        );
 
         const item = el('select');
         for (const i of state.players.itens) item.append(el('option', { value: i.id, text: i.nome }));

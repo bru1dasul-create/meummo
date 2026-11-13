@@ -281,8 +281,9 @@ export class Npc {
   constructor(
     readonly id: number,
     readonly def: NpcDef,
-    readonly x: number,
-    readonly y: number,
+    /** Muda quando o painel (ou o menu ADM) leva o NPC para outro lugar. */
+    public x: number,
+    public y: number,
     /** O desenho do que ela veste (como o equipamento dos jogadores). */
     readonly gear: GearLook,
   ) {
