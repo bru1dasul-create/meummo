@@ -212,7 +212,7 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   ao falar. E o escudo da Budega numa placa em cima da laje (`logo` = "budega" na casa, do [mundo]), sem
   "tabacaria" e sem o narguilé: no círculo, o hibisco. O nome "Xiovanna" na NPC "budega" já está nos dados
   ([estrutura], 13/11)
-- [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17, em três partes (o "pode" do dono em 13/11)
+- [x] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17, em três partes (o "pode" do dono em 13/11)
   - [x] **2a — pedra com carga** (13/11): segurar puxa, soltar atira; carga cheia em 1,1 s = o dobro do dano e alcance
     de 6,5 a 9,5 m (só no mapa novo). O servidor conta a carga (`charge` → `shoot`, protocolo 21); esquiva, golpe
     recebido e desmaio soltam a pedra. PC: segurar o botão esquerdo no monstro, o direito (para o mouse) ou J (no mais
@@ -227,7 +227,13 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     Fogo no chão não tem direção: a defesa não segura. Protocolo 22 (`guard`, `energy`, `blk` no `hit`). Desenho
     provisório: arco azul-claro no chão, faísca no bloqueio, barra de energia embaixo do pé, "defesa quebrou!" e o
     botão `#guard-button` (`src/client/novo/guard.ts`); a barra verde da HUD nova é essa energia ([arte])
-  - [ ] **2c — recuo:** a pedra empurra 12 a 34 cm pela força (menos com defesa), parede segura; conferir a esquiva
+  - [x] **2c — recuo** (13/11): golpe de monstro empurra o jogador na direção em que andava, o quanto o monstro diz
+    (`"recuo"` no ataque, em cm; padrão pelo tipo: fruta 12, mordida 16, bote 22, giro 26, investida 34; também no
+    painel do administrador). Defesa que segura deixa 25% do empurrão; a que quebra, 50%; parede segura. Medido no
+    navegador: 12 cm por fruta, 3 cm defendendo. Os monstros não recuam (andam de tile em tile; a [arte] pode mostrar
+    o tranco no desenho). **Esquiva conferida:** a do jogo rola 3 m, protege 0,35 s e recarrega em 2,5 s; a do
+    protótipo anda 1 m, protege 0,2 s e recarrega em 0,2 s. Ficou a do jogo (os avisos dos monstros foram feitos para
+    ela) — o dono decide se quer a do protótipo
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

@@ -24,6 +24,8 @@ export interface MonsterAttack {
   projectile: string;
   /** Investida: rastro de fogo que fica no caminho (null = sem fogo). */
   fire: { durationMs: number; damage: [number, number] } | null;
+  /** Quanto o golpe empurra quem leva, em centímetros ("recuo"; a defesa segura boa parte). */
+  pushCm: number;
 }
 
 export interface MonsterDef {
@@ -74,6 +76,14 @@ export interface MonsterDrop {
 
 const FILE = 'data/monsters.json';
 
+/**
+ * Recuo de cada tipo de golpe quando o monstro não diz o dele (centímetros): fruta e mordida empurram pouco (como a
+ * pedra fraca do protótipo, 12 cm), a investida empurra como a pedra mais forte (34 cm).
+ */
+const DEFAULT_PUSH_CM: Record<AttackKind, number> = { projectile: 12, bite: 16, strike: 22, spin: 26, charge: 34 };
+/** O maior recuo aceito (centímetros): mais que isso vira teleporte, não empurrão. */
+const MAX_PUSH_CM = 100;
+
 const ATTACK_KINDS: Record<string, AttackKind> = {
   mordida: 'bite',
   bote: 'strike',
@@ -95,6 +105,10 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
     const kindName = a.text('tipo');
     const kind = ATTACK_KINDS[kindName];
     if (!kind) throw new Error(`Erro em data/monsters.json (ataque do monstro "${rawId}"): tipo "${kindName}" não existe. Use: ${Object.keys(ATTACK_KINDS).join(', ')}.`);
+    const pushCm = a.number('recuo', { min: 0, fallback: DEFAULT_PUSH_CM[kind] });
+    if (pushCm > MAX_PUSH_CM) {
+      throw new Error(`Erro em data/monsters.json (ataque do monstro "${rawId}"): "recuo" precisa ser no máximo ${MAX_PUSH_CM} (centímetros).`);
+    }
     const fireData = a.object('rastroFogo', true);
     let fire: MonsterAttack['fire'] = null;
     if (fireData) {
@@ -147,6 +161,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         speed: a.number('velocidade', { min: 1, fallback: 8 }),
         projectile: a.text('projetil', 'pedra'),
         fire,
+        pushCm,
       },
       whirlwind,
       song,

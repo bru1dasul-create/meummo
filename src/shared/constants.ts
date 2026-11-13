@@ -88,6 +88,12 @@ export const GUARD_REGEN_DELAY_MS = 700;
 export const GUARD_BREAK_MS = 850;
 export const GUARD_REARM_ENERGY = 20;
 export const GUARD_WALK_FACTOR = 0.7;
+/**
+ * Recuo (passo 2c): o golpe empurra quem leva na direção em que andava (o quanto vem do monstro, campo "recuo"). A
+ * defesa que segura deixa GUARD_PUSH_FACTOR do empurrão; a que quebra no golpe, GUARD_BREAK_PUSH_FACTOR. Parede segura.
+ */
+export const GUARD_PUSH_FACTOR = 0.25;
+export const GUARD_BREAK_PUSH_FACTOR = 0.5;
 
 /** Esquiva: quantos tiles o rolamento anda, de quanto em quanto tempo e quanto tempo fica invencível. */
 export const DASH_TILES = 3;

@@ -9,8 +9,10 @@ import {
   DEATH_MS,
   GOLD_DROP_MS,
   GUARD_BREAK_MS,
+  GUARD_BREAK_PUSH_FACTOR,
   GUARD_DRAIN_PER_S,
   GUARD_MAX_ENERGY,
+  GUARD_PUSH_FACTOR,
   GUARD_READY_MS,
   GUARD_REARM_ENERGY,
   GUARD_REGEN_DELAY_MS,
@@ -1092,6 +1094,22 @@ export class World {
     }
   }
 
+  /**
+   * Recuo: empurra o jogador `distance` metros na direção `angle` (radianos), parando na parede (como a esquiva). O
+   * navegador fica sabendo pelo ack (e corrige a previsão sem cancelar o "andar até").
+   */
+  private knockBack(player: Player, angle: number, distance: number): void {
+    const from = { x: player.fx, y: player.fy, dir: player.dir };
+    // o andar trabalha em graus inteiros de 0 a 359 (como o pedido `walk`)
+    const degrees = ((Math.round((angle * 180) / Math.PI) % 360) + 360) % 360;
+    const result = sweepBody(this.map, from, degrees, distance, 0); // qualquer pedacinho vale (sem o mínimo da esquiva)
+    if (!result.moved) return;
+    player.fx = result.x;
+    player.fy = result.y;
+    player.changed = true;
+    player.ackPending = true;
+  }
+
   /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (GUARD_WALK_FACTOR). */
   private walkDistance(input: { slow: boolean; guard: boolean }): number {
     if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * GUARD_WALK_FACTOR;
@@ -1255,6 +1273,7 @@ export class World {
       damage,
       kind,
       viewers: new Set(),
+      ...(owner.kind === 'monster' ? { push: owner.def.attack.pushCm / 100 } : {}),
     };
     this.projectiles.set(shot.id, shot);
     const msg: ServerMsg = {
@@ -1287,7 +1306,7 @@ export class World {
       if (result === 'flying') continue;
       this.projectiles.delete(shot.id);
       for (const id of shot.viewers) this.players.get(id)?.outbox.push({ t: 'shot_end', id: shot.id, hit: hit.target?.id ?? 0 });
-      if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx));
+      if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx), shot.push ?? 0);
     }
   }
 
@@ -1310,9 +1329,9 @@ export class World {
 
   /**
    * `travel`: para onde o golpe anda (radianos), para a defesa saber se ele veio pela frente. Sem direção (fogo no
-   * chão), a defesa não segura.
+   * chão), a defesa não segura. `push`: quanto o golpe empurra o jogador nessa direção (metros; recuo, passo 2c).
    */
-  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number): void {
+  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0): void {
     if (target.hp <= 0) return;
     if (target.kind === 'player' && (target.dead || now < target.invulnerableUntil || this.inSafeArea(target))) return;
     // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
@@ -1331,6 +1350,10 @@ export class World {
     target.lastDamagedAt = now;
     if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
     this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp, ...(blocked ? { blk: blocked } : {}) });
+    if (target.kind === 'player' && target.hp > 0 && travel !== undefined && push > 0) {
+      const factor = blocked === 2 ? GUARD_BREAK_PUSH_FACTOR : blocked === 1 ? GUARD_PUSH_FACTOR : 1;
+      this.knockBack(target, travel, push * factor);
+    }
 
     if (target.kind === 'monster') {
       const attacker = this.players.get(attackerId);
@@ -1572,7 +1595,7 @@ export class World {
     if (windup.kind === 'charge') return this.resolveCharge(monster, windup.tiles, now);
     for (const player of [...this.players.values()]) {
       if (!player.dead && tileIn(windup.tiles, player.x, player.y)) {
-        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)));
+        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)), attack.pushCm / 100);
       }
     }
     // Saci: depois do giro, some num redemoinho.
@@ -1593,7 +1616,7 @@ export class World {
     const run = path.slice(0, last + 1);
     for (const player of [...this.players.values()]) {
       if (!player.dead && tileIn(run, player.x, player.y)) {
-        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)));
+        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)), attack.pushCm / 100);
       }
     }
     // não para em cima de ninguém: se tem gente no fim, para um tile antes

@@ -158,7 +158,8 @@ por cima deles.
 
 Cada monstro fica em [`data/monsters.json`](data/monsters.json): `vida`, `dano` ([mínimo, máximo]),
 `passoMs` (tempo para andar um quadrado — menor é mais rápido), `alcanceAgressao`, `xp`, `renascerMs`
-e o `ataque` (`tipo`: `mordida`, `bote`, `giro`, `projetil` ou `investida`; `preparoMs` é o tempo do aviso vermelho).
+e o `ataque` (`tipo`: `mordida`, `bote`, `giro`, `projetil` ou `investida`; `preparoMs` é o tempo do aviso vermelho;
+`recuo` é quanto o golpe empurra quem leva, em centímetros — sem ele, vale o do tipo: 12 a 34).
 Na `investida`, o monstro corre `alcance` tiles em linha reta atropelando quem estiver no caminho; com
 `"rastroFogo": { "duracaoMs": 2500, "dano": [4, 7] }` o caminho fica pegando fogo e queima quem fica em cima.
 O `canto` (a Iara) encanta quem fica perto: `"canto": { "cadaMs": 10000, "alcance": 5, "preparoMs": 1300,

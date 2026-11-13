@@ -308,4 +308,6 @@ export interface Projectile extends ShotPath {
   kind: string;
   /** Jogadores que viram o tiro sair (recebem o aviso de quando ele acaba). */
   viewers: Set<number>;
+  /** Quanto empurra quem ele acerta (metros; o recuo do monstro que atirou). */
+  push?: number;
 }

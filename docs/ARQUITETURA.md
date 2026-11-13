@@ -138,6 +138,10 @@ muita gente no mesmo servidor sem mandar tudo para todo mundo.
   Cada pedaço de caminhada da fila guarda se a defesa estava segura quando ele chegou (anda devagar,
   `GUARD_WALK_FACTOR`): assim o servidor anda na mesma ordem que o navegador previu. A energia vai ao navegador em
   `energy` (na hora quando a defesa muda; no máximo 4 por segundo enquanto sobe ou desce); quem vê recebe `guard`.
+- **Recuo:** o `damage` também recebe quanto o golpe empurra (`push`, do `"recuo"` do monstro; a fruta leva o do
+  monstro que jogou). O jogador anda esse tanto na direção do golpe (`knockBack`, com `sweepBody` parando na parede),
+  menos com a defesa (`GUARD_PUSH_FACTOR`, `GUARD_BREAK_PUSH_FACTOR`). O servidor marca o ack: o navegador corrige a
+  previsão sozinho, como em qualquer correção.
 - **Golpes telegrafados:** quando um monstro vai atacar, o servidor manda `warn` com os quadrados que
   serão atingidos e o tempo até o golpe. Na hora, só leva dano quem ainda estiver ali (e não estiver
   invencível pela esquiva). Por isso a rede não atrapalha: o aviso dura mais que o atraso da internet.

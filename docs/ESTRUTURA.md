@@ -75,6 +75,14 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — combate passo 2c, o recuo (fecha o passo 2):** golpe de monstro empurra o jogador na direção do golpe, o
+quanto o monstro diz (`"recuo"` no ataque, em centímetros; padrão pelo tipo, de 12 a 34 como as pedras do protótipo;
+no painel também). Defesa: 25% do empurrão; quebrando no golpe, 50%. Parede segura (o `sweepBody` ganhou o mínimo
+como parâmetro: a esquiva continua exigindo 20 cm, o recuo aceita qualquer pedacinho). O navegador não precisou
+mudar: o servidor marca o ack e a previsão se corrige sozinha, sem cancelar o "andar até". Monstros não recuam
+(andam de tile em tile). Esquiva: a do jogo (3 m, 0,35 s protegido, 2,5 s de recarga) é bem diferente da do
+protótipo (1 m, 0,2 s, 0,2 s); deixei a do jogo e perguntei ao dono. Testes em `tests/recuo.test.ts`.
+
 **13/11 — combate passo 2b, a defesa com energia:** os números do `guard.js` da revisão 17 (energia 100, 6/s
 segurando, 22/s de volta depois de 0,7 s, protege 0,11 s depois de levantar, arco de 140°, passa 25%, golpe gasta
 10 + 0,75 × dano, quebra e rearma com 20 depois de 0,85 s soltando; anda a 70% do andar devagar). Decisões minhas,
