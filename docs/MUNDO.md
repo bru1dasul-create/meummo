@@ -72,10 +72,10 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Escolha do dono em 12/11 ("opção a"): a 4a entrou sem elas porque o
     jogo novo ainda não mostra golpe, dano nem desmaio, e o jogador apanharia sem ver. Religar (`CREATURES = true` e
     gerar de novo) quando o combate do jogo novo, passo 1, da [estrutura] chegar; o teste das zonas volta sozinho.
-  - **4b (prévia pronta no ramo `mundo/etapa-4b`, esperando o "pode" do dono):** o Portão I abre; faixa de pedestre
+  - **4b (aprovada pelo dono em 13/11; entra na `main` junto com o desenho da vila pela [arte]):** o Portão I abre; faixa de pedestre
     atravessando a Travessa; rua do portão para o leste (y 41 a 47) e rua de baixo (x 88 a 94, ainda fechada no mato
     lá no fim); calçadas estreitas; praça de pedra portuguesa (61 a 79 × 48,5 a 59) com a Budega (vendinha,
-    letreiro "BUDEGA", 62 a 67 × 49,5 a 52,5; balcão em (64,5; 53,3), onde a [estrutura] põe quem atende), fogueira
+    letreiro "BUDEGA DISTRIBUIDORA", escolha do dono, 62 a 67 × 49,5 a 52,5; balcão em (64,5; 53,3), onde a [estrutura] põe quem atende), fogueira
     com 4 bancos em (69,5; 56), árvore da praça (sibipiruna) em (77; 58), 2 mesas, orelhão e lixeira encostados na
     Budega; 5 casas coladas ao norte da rua com uma viela de 2 m (x 79 a 81), uma casa verde ao sul e uma casa
     abandonada no terreno dos fundos; 7 postes com fiação; carro largado na Travessa; árvores e mato nos fundos; a

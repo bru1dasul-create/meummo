@@ -286,8 +286,8 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     }
   });
 
-  it('a Budega: letreiro "BUDEGA", vendinha, sem nada de tabaco, e o balcão livre, alcançável e na zona segura', () => {
-    expect(prop(budega, 'letreiro')).toBe('BUDEGA');
+  it('a Budega: letreiro "BUDEGA DISTRIBUIDORA" (escolha do dono), vendinha, sem nada de tabaco, e o balcão livre, alcançável e na zona segura', () => {
+    expect(prop(budega, 'letreiro')).toBe('BUDEGA DISTRIBUIDORA');
     expect(prop(budega, 'comercio')).toBe('vendinha');
     expect(JSON.stringify(budega).toLowerCase()).not.toMatch(/tabac|cigarr|fumo/);
     const [x0, x1, y1] = [budega.x / M, (budega.x + budega.width) / M, (budega.y + budega.height) / M];
