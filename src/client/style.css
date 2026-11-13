@@ -2101,6 +2101,22 @@ kbd {
     pointer-events: auto;
   }
 
+  /* Mochila: botão só com o ícone, logo acima dos botões de ação (perto do polegar); o alto à direita é do chat */
+  body:has(canvas.mundo-novo) #bag-button {
+    top: auto;
+    right: 10px;
+    bottom: calc(156px + env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  body:has(canvas.mundo-novo) #bag-button span {
+    display: none;
+  }
+
   /* duas falas inteiras; o pedacinho da fala de cima que aparece na margem some no degradê */
   body:has(canvas.mundo-novo) #chat-log {
     align-self: stretch;

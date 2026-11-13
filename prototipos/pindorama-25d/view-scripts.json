@@ -14,6 +14,8 @@
     "js/world/ground.js",
     "js/world/props.js",
     "js/world/world.js",
+    "js/creatures/creature.js",
+    "js/creatures/sagui.js",
     "js/view.js"
   ]
 }
