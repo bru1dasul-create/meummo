@@ -16,6 +16,8 @@ import '../../../prototipos/pindorama-25d/js/world/props.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';
+import '../../../prototipos/pindorama-25d/js/creatures/jararaca.js';
+import '../../../prototipos/pindorama-25d/js/creatures/xiovanna.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 
 export {};

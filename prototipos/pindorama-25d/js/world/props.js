@@ -519,8 +519,127 @@
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 88);
     ctx.fillStyle = '#d97a5a';
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 12);
-    // letreiro pintado na parede, em cima da porta
-    if (s.sign) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
+    // letreiro pintado na parede, em cima da porta (quem tem logo ganha a placa em cima da laje no lugar dele)
+    if (s.sign && !b.logo) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
+    if (b.logo === 'budega') {
+      // a placa com o escudo fica em pé na beirada da laje, presa por dois ferros
+      const lw = Math.min(124, W * 0.36);
+      ctx.fillStyle = INK;
+      for (const px of [W / 2 - lw * 0.3, W / 2 + lw * 0.3]) ctx.fillRect(px - 4, -20, 8, 34);
+      budegaLogo(ctx, W / 2, -lw * 1.02 + 4, lw);
+    }
+  }
+  /**
+   * Logo da Budega (o escudo dourado do dono): "BUDEGA" e "DISTRIBUIDORA" numa faixa mais larga que o escudo, os
+   * arabescos em cima e o círculo embaixo. Sem a palavra "tabacaria" e sem o narguilé do original (nada de tabaco no
+   * desenho): no círculo vai a flor de hibisco, a mesma do cabelo da Xiovanna. Desenhado no plano em que estiver (cm, y
+   * para baixo), com o meio em `cx`, o topo em `top` e a largura `w` (a altura é 1,06 × w).
+   */
+  function budegaLogo(ctx, cx, top, w) {
+    const X = (x) => cx + x * w;
+    const Y = (y) => top + y * w;
+    const gold = ctx.createLinearGradient(X(-0.5), Y(0), X(0.5), Y(1));
+    gold.addColorStop(0, '#d18e2c');
+    gold.addColorStop(0.32, '#f7e08c');
+    gold.addColorStop(0.55, '#e3a840');
+    gold.addColorStop(0.8, '#f6d77e');
+    gold.addColorStop(1, '#d69a38');
+    const CREAM = '#fff8e8';
+    const shield = (k) => {
+      // k < 1: o mesmo escudo encolhido para dentro (o filete de dentro)
+      const sx = (x) => X(x * k);
+      const sy = (y) => Y(0.53 + (y - 0.53) * k);
+      const p = new Path2D();
+      p.moveTo(sx(-0.36), sy(0));
+      p.lineTo(sx(0.36), sy(0));
+      p.lineTo(sx(0.47), sy(0.09));
+      p.lineTo(sx(0.43), sy(0.62));
+      p.quadraticCurveTo(sx(0.37), sy(0.86), sx(0), sy(1.06));
+      p.quadraticCurveTo(sx(-0.37), sy(0.86), sx(-0.43), sy(0.62));
+      p.lineTo(sx(-0.47), sy(0.09));
+      p.closePath();
+      return p;
+    };
+    ctx.save();
+    ctx.lineJoin = 'round';
+    const outer = shield(1);
+    ctx.lineWidth = w * 0.06;
+    ctx.strokeStyle = INK;
+    ctx.stroke(outer);
+    ctx.fillStyle = gold;
+    ctx.fill(outer);
+    ctx.fillStyle = CREAM;
+    ctx.fill(shield(0.9));
+    ctx.lineWidth = w * 0.012;
+    ctx.strokeStyle = gold;
+    ctx.stroke(shield(0.84));
+    // arabescos em cima: dois cachos dourados e o filete
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = w * 0.022;
+    ctx.lineCap = 'round';
+    for (const sg of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(X(sg * 0.04), Y(0.17));
+      ctx.bezierCurveTo(X(sg * 0.16), Y(0.07), X(sg * 0.3), Y(0.14), X(sg * 0.25), Y(0.2));
+      ctx.bezierCurveTo(X(sg * 0.21), Y(0.24), X(sg * 0.15), Y(0.2), X(sg * 0.19), Y(0.17));
+      ctx.stroke();
+    }
+    ctx.lineWidth = w * 0.01;
+    ctx.beginPath();
+    ctx.moveTo(X(-0.22), Y(0.255));
+    ctx.lineTo(X(0.22), Y(0.255));
+    ctx.stroke();
+    // a faixa do nome, mais larga que o escudo
+    const band = new Path2D();
+    band.roundRect(X(-0.53), Y(0.3), w * 1.06, w * 0.31, w * 0.05);
+    ctx.lineWidth = w * 0.05;
+    ctx.strokeStyle = INK;
+    ctx.stroke(band);
+    ctx.fillStyle = gold;
+    ctx.fill(band);
+    const bandIn = new Path2D();
+    bandIn.roundRect(X(-0.495), Y(0.325), w * 0.99, w * 0.26, w * 0.035);
+    ctx.fillStyle = CREAM;
+    ctx.fill(bandIn);
+    // o nome: dourado com contorno marrom, para ler de longe
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.lineJoin = 'round';
+    ctx.font = `bold ${w * 0.17}px Georgia, "Times New Roman", serif`;
+    ctx.lineWidth = w * 0.02;
+    ctx.strokeStyle = '#6b4416';
+    ctx.strokeText('BUDEGA', X(0), Y(0.49));
+    ctx.fillStyle = gold;
+    ctx.fillText('BUDEGA', X(0), Y(0.49));
+    ctx.font = `bold ${w * 0.062}px Georgia, "Times New Roman", serif`;
+    ctx.lineWidth = w * 0.01;
+    ctx.strokeText('DISTRIBUIDORA', X(0), Y(0.565));
+    ctx.fillText('DISTRIBUIDORA', X(0), Y(0.565));
+    // filete e o círculo com a flor de hibisco
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = w * 0.01;
+    ctx.beginPath();
+    ctx.moveTo(X(-0.2), Y(0.655));
+    ctx.lineTo(X(0.2), Y(0.655));
+    ctx.stroke();
+    const cy = Y(0.81);
+    const cr = w * 0.125;
+    ctx.lineWidth = w * 0.022;
+    ctx.beginPath();
+    ctx.arc(X(0), cy, cr, 0, M.TAU);
+    ctx.stroke();
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * M.TAU - Math.PI / 2;
+      ctx.fillStyle = '#c8323a';
+      ctx.beginPath();
+      ctx.ellipse(X(0) + Math.cos(a) * cr * 0.42, cy + Math.sin(a) * cr * 0.42, cr * 0.36, cr * 0.26, a, 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#f2c84b';
+    ctx.beginPath();
+    ctx.arc(X(0), cy, cr * 0.16, 0, M.TAU);
+    ctx.fill();
+    ctx.restore();
   }
   /** Toldo listrado da vendinha: sai da parede logo acima da porta, abaixo do letreiro. */
   function houseAwning(ctx, cam, b, z0, ink) {
@@ -890,6 +1009,11 @@
   // casca por espécie (as árvores da rua têm a barra caiada; as da mata não)
   const BARK = {
     mata: ['#5a4532', '#3c2d21'],
+    seca: ['#857c72', '#5c554d'],
+    jeriva: ['#8a8072', '#5f574c'],
+    embauba: ['#c9c2b2', '#9a9384'],
+    xaxim: ['#4a3526', '#2f2219'],
+    bananeira: ['#7f9a4c', '#5b7436'],
     figueira: ['#7c6a57', '#574838'],
     sibipiruna: ['#7a7060', '#544b3e'],
     'ipe-amarelo': ['#6b5541', '#4a3a2b'],
@@ -918,12 +1042,14 @@
       const t = this.t;
       const z0 = this.z0;
       const ink = this.ink;
-      const top = t.h * 0.68;
+      const crown = BROADLEAF.has(t.kind) || t.kind === 'seca';
+      const top = t.h * (t.kind === 'seca' ? DEAD_FORK : crown ? FORK : 0.68);
       const pts = [];
       const r0 = t.trunk || 17;
-      const r1 = t.trunk ? t.trunk * 0.55 : 9;
+      const r1 = t.trunk ? t.trunk * (crown ? 0.75 : 0.55) : 9;
       const N = 6;
-      const lean = (k) => Math.sin(k * 1.3 + t.x) * (t.trunk ? 3 : 6);
+      const twist = t.kind === 'seca' ? 10 : t.trunk ? 3 : 6;
+      const lean = (k) => Math.sin(k * 1.3 + t.x) * twist;
       const bark = BARK[t.kind];
       if (t.kind === 'figueira') {
         this._figPaint(ctx);
@@ -952,6 +1078,7 @@
         poly(ctx, pts.slice(0, wz + 1).map((p) => ({ x: p.c.x + p.r * 0.2, y: p.c.y })).concat(wr), '#cfc6b4');
       }
       if (t.kind === 'figueira') this._figGlyphs(ctx, pts);
+      if (crown) return; // os galhos saem da forquilha na copa (crownPaint)
       // galhos para dentro da copa
       ctx.strokeStyle = INK;
       ctx.lineCap = 'round';
@@ -1251,6 +1378,29 @@
     }
     screenBox() {
       const t = this.t;
+      if (BROADLEAF.has(t.kind) || t.kind === 'seca') {
+        // árvore de verdade: a caixa justa dos tufos e da forquilha (a caixa folgada fazia a imagem grande demais, e
+        // desenhar imagens grandes a cada quadro pesava no celular)
+        const dead = t.kind === 'seca';
+        const { fork, tufts } = crownPlan(t, this.z0, dead);
+        const zoom = this.cam.zoom;
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        const grow = (q, rx, ry) => {
+          x0 = Math.min(x0, q.x - rx);
+          x1 = Math.max(x1, q.x + rx);
+          y0 = Math.min(y0, q.y - ry);
+          y1 = Math.max(y1, q.y + ry);
+        };
+        grow(this.cam.p(fork), 30 * zoom, 20 * zoom);
+        for (const tf of tufts) {
+          // a seca: os gravetos passam da ponta do galho (até ~0,75 do galho) e a barba-de-velho pende
+          const q = this.cam.p(tf.w);
+          const r = dead ? t.r * 0.9 * zoom : tf.R * 1.35 * zoom;
+          grow(q, r, r);
+          if (dead || t.kind === 'mata') grow({ x: q.x, y: q.y + 150 * zoom }, r, 0);
+        }
+        return { x0: x0 - 8 * zoom, y0: y0 - 8 * zoom, x1: x1 + 8 * zoom, y1: y1 + 8 * zoom };
+      }
       const c = this.cam.p(this.center);
       const r = t.r * this.cam.zoom * 1.25;
       return { x0: c.x - r, y0: c.y - r * 1.05, x1: c.x + r, y1: c.y + r * 0.85 };
@@ -1259,6 +1409,10 @@
       const cam = this.cam;
       const t = this.t;
       const ink = this.ink;
+      if (BROADLEAF.has(t.kind) || t.kind === 'seca') {
+        crownPaint(ctx, cam, t, this.z0, ink, this.colors, t.kind === 'seca');
+        return;
+      }
       const c = this.center;
       const r = M.rng(Math.round(t.x * 3 + t.y));
       // cachos numa cúpula achatada (mais larga do que alta); o tom de cada um vem da altura: embaixo escuro, em cima
@@ -1421,6 +1575,248 @@
       if (this.alpha < 0.999) ctx.globalAlpha = this.alpha;
       ctx.drawImage(s.c, s.x + off, s.y, s.w, s.h);
       ctx.globalAlpha = 1;
+    }
+  }
+
+  // ------------------------------------------------------------------ árvore de verdade (pedido do dono, 13/11)
+  // "as árvores ao invés de ser redonda poderia ser normal como uma árvore e ter árvore seca tbm": o tronco sobe até a
+  // forquilha e abre em galhos; cada galho termina num tufo de folhas de contorno recortado (lóbulos de folhagem, não
+  // bola), com o lado da luz claro, folhinhas na borda e vãos escuros. Entre os tufos aparecem os galhos e pendem uns
+  // cipós. A seca tem só galhos tortos, que se dividem em gravetos, e barba-de-velho pendurada.
+  /** O ponto (no mundo) da curva de Bézier quadrática entre `a` e `b`, com o controle `c`. */
+  function bez2(a, c, b, u) {
+    const v = 1 - u;
+    return { x: a.x * v * v + 2 * c.x * u * v + b.x * u * u, y: a.y * v * v + 2 * c.y * u * v + b.y * u * u, z: a.z * v * v + 2 * c.z * u * v + b.z * u * u };
+  }
+  /** Galho afinando (tela): a curva de `a` a `b` subindo `lift` cm no meio, de meia-largura w0 até w1 (cm). */
+  function limbPoly(cam, a, b, w0, w1, lift) {
+    const c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 + lift };
+    const q = [];
+    for (let i = 0; i <= 8; i++) q.push({ p: cam.p(bez2(a, c, b, i / 8)), w: (w0 + ((w1 - w0) * i) / 8) * cam.zoom });
+    const left = [];
+    const right = [];
+    for (let i = 0; i < q.length; i++) {
+      const p0 = q[Math.max(0, i - 1)].p;
+      const p1 = q[Math.min(q.length - 1, i + 1)].p;
+      let nx = -(p1.y - p0.y);
+      let ny = p1.x - p0.x;
+      const l = Math.hypot(nx, ny) || 1;
+      nx /= l;
+      ny /= l;
+      left.push({ x: q[i].p.x + nx * q[i].w, y: q[i].p.y + ny * q[i].w });
+      right.push({ x: q[i].p.x - nx * q[i].w, y: q[i].p.y - ny * q[i].w });
+    }
+    return left.concat(right.reverse());
+  }
+  /** Contorno de um tufo (tela): lóbulos em volta de uma elipse achatada; `k` encolhe, (dx, dy) desloca. */
+  function tuftPath(o, k = 1, dx = 0, dy = 0) {
+    const p = new Path2D();
+    const N = o.lobes.length;
+    const pt = (i) => {
+      const L = o.lobes[i % N];
+      const th = (i / N) * M.TAU + o.phase;
+      const rr = o.R * k * L;
+      return { x: o.x + dx + Math.cos(th) * rr, y: o.y + dy + Math.sin(th) * rr * o.sq, th };
+    };
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    let prev = pt(N - 1);
+    let cur = pt(0);
+    let m = mid(prev, cur);
+    p.moveTo(m.x, m.y);
+    for (let i = 0; i < N; i++) {
+      const next = pt(i + 1);
+      const out = { x: Math.cos(cur.th), y: Math.sin(cur.th) * o.sq };
+      const bulge = o.R * k * 0.3;
+      const end = mid(cur, next);
+      p.quadraticCurveTo(cur.x + out.x * bulge, cur.y + out.y * bulge, end.x, end.y);
+      cur = next;
+    }
+    p.closePath();
+    return p;
+  }
+  const BROADLEAF = new Set(['mata', 'sibipiruna', 'ipe', 'ipe-amarelo', 'ipe-roxo']);
+  /** Forquilha (onde o tronco vira galhos), em fração da altura; a seca abre mais baixo. */
+  const FORK = 0.42;
+  const DEAD_FORK = 0.45;
+  const DEAD = { bark: '#857c72', shade: '#5c554d', moss: '#9aa58c' };
+
+  /** O plano da copa (no mundo, cm), sorteado pela posição: a forquilha e os tufos (na seca, as pontas dos galhos). */
+  function crownPlan(t, z0, dead) {
+    const rnd = M.rng(Math.round(t.x * 13 + t.y * 7 + 5));
+    const fork = { x: t.x + Math.sin(6 * 1.3 + t.x) * (dead ? 10 : 3), y: t.y, z: z0 + t.h * (dead ? DEAD_FORK : FORK) };
+    const n = dead ? 3 + Math.floor(rnd() * 2) : 4 + Math.floor(rnd() * 2) + (t.r > 300 ? 1 : 0);
+    const a0 = rnd() * M.TAU;
+    const tufts = [];
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (k / n) * M.TAU + (rnd() - 0.5) * 0.9;
+      const d = t.r * (dead ? 0.65 + rnd() * 0.35 : 0.55 + rnd() * 0.3);
+      const z = z0 + t.h * (dead ? 0.78 + rnd() * 0.2 : 0.6 + rnd() * 0.28);
+      tufts.push({ w: { x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, z }, R: t.r * (0.36 + rnd() * 0.16), a });
+    }
+    if (!dead) tufts.push({ w: { x: t.x + (rnd() - 0.5) * t.r * 0.3, y: t.y + (rnd() - 0.5) * t.r * 0.3, z: z0 + t.h * 0.92 }, R: t.r * 0.46, a: 0 });
+    return { fork, tufts, rnd };
+  }
+
+  function crownPaint(ctx, cam, t, z0, ink, colors, dead) {
+    const { fork, tufts, rnd } = crownPlan(t, z0, dead);
+    const zoom = cam.zoom;
+    const L = cam.lightScreen;
+    const bark = BARK[t.kind] || BARK.mata;
+    const w0 = (t.trunk || 17) * 0.62;
+
+    // ---- galhos: todos os contornos antes dos recheios (senão a borda de um galho risca o outro na forquilha)
+    const limbs = [];
+    for (const tf of tufts) {
+      const end = dead ? tf.w : { ...tf.w, z: tf.w.z - tf.R * 0.25 };
+      const len = Math.hypot(end.x - fork.x, end.y - fork.y, end.z - fork.z);
+      limbs.push({ poly: limbPoly(cam, fork, end, w0 * (dead ? 0.8 : 1), w0 * (dead ? 0.18 : 0.32), len * 0.18), end });
+      if (dead) {
+        // a seca: cada galho se divide em gravetos, duas vezes
+        const split = (from, dir, len2, w, depth) => {
+          for (const turn of [-0.55, 0.5]) {
+            const ang = Math.atan2(dir.y, dir.x) + turn + (rnd() - 0.5) * 0.4;
+            const to = { x: from.x + Math.cos(ang) * len2, y: from.y + Math.sin(ang) * len2, z: from.z + len2 * (0.35 + rnd() * 0.4) };
+            limbs.push({ poly: limbPoly(cam, from, to, w, w * 0.45, len2 * 0.12), end: to, twig: true });
+            if (depth > 1) split(to, { x: to.x - from.x, y: to.y - from.y }, len2 * 0.62, w * 0.45, depth - 1);
+          }
+        };
+        split(end, { x: end.x - fork.x, y: end.y - fork.y }, len * 0.45, w0 * 0.2, 2);
+      }
+    }
+    const fill = (pts, color) => {
+      ctx.beginPath();
+      pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    };
+    ctx.lineJoin = 'round';
+    for (const lb of limbs) {
+      ctx.beginPath();
+      lb.poly.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.closePath();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 2.2;
+      ctx.stroke();
+    }
+    for (const lb of limbs) fill(lb.poly, dead ? DEAD.bark : bark[0]);
+
+    if (dead) {
+      // barba-de-velho: fios cinza-esverdeados pendurados nos gravetos
+      ctx.strokeStyle = DEAD.moss;
+      ctx.lineWidth = Math.max(1, 1.4 * zoom);
+      ctx.globalAlpha = 0.85;
+      const tips = limbs.filter((l) => l.twig);
+      for (let k = 0; k < 5 && tips.length; k++) {
+        const e = cam.p(tips[Math.floor(rnd() * tips.length)].end);
+        for (let j = 0; j < 4; j++) {
+          const len = (40 + rnd() * 70) * cam.cosP * zoom;
+          const x = e.x + (rnd() - 0.5) * 10 * zoom;
+          ctx.beginPath();
+          ctx.moveTo(x, e.y);
+          ctx.bezierCurveTo(x + 5 * zoom, e.y + len * 0.35, x - 5 * zoom, e.y + len * 0.7, x + (rnd() - 0.5) * 6 * zoom, e.y + len);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    // ---- tufos de folhas, de trás para a frente, cada um com o seu contorno
+    const j = (rnd() - 0.5) * 0.16; // cada árvore com um tom um pouco diferente
+    const tone = (hex) => M.shade(hex, j);
+    const col = { base: tone(colors.base), shade: tone(colors.shade), light: tone(colors.light), under: tone(colors.under) };
+    const hi = M.shade(col.light, 0.22);
+    const list = tufts.map((tf) => {
+      const q = cam.p(tf.w);
+      const lobes = [];
+      const N = 8 + Math.floor(rnd() * 4);
+      for (let i = 0; i < N; i++) lobes.push(0.8 + rnd() * 0.32);
+      return { x: q.x, y: q.y, R: tf.R * zoom, sq: 0.84, lobes, phase: rnd() * M.TAU, depth: cam.depth(tf.w) };
+    });
+    list.sort((a, b) => a.depth - b.depth);
+    for (const o of list) {
+      const out = tuftPath(o);
+      ctx.strokeStyle = CANOPY_INK;
+      ctx.lineWidth = ink * 2.5;
+      ctx.stroke(out);
+      ctx.fillStyle = col.under;
+      ctx.fill(out);
+      ctx.save();
+      ctx.clip(out);
+      // o corpo do tufo (deslocado para a luz deixa o lado da sombra escuro) e a parte de cima clara
+      ctx.fillStyle = col.base;
+      ctx.fill(tuftPath(o, 0.86, L.x * o.R * 0.12, L.y * o.R * 0.12 - o.R * 0.04));
+      ctx.fillStyle = col.light;
+      ctx.fill(tuftPath(o, 0.5, L.x * o.R * 0.32, L.y * o.R * 0.32 - o.R * 0.06));
+      // folhas: claras do lado da luz, escuras do lado da sombra; e uns vãos escuros
+      const leaf = (x, y, len, rot, color) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(x, y, len, len * 0.42, rot, 0, M.TAU);
+        ctx.fill();
+      };
+      const toLight = Math.atan2(L.y, L.x);
+      for (let k = 0; k < 9; k++) {
+        const a = toLight + (rnd() - 0.5) * 2.2;
+        const d = o.R * (0.15 + rnd() * 0.55);
+        leaf(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d * o.sq, o.R * (0.09 + rnd() * 0.05), rnd() * Math.PI, rnd() < 0.5 ? hi : col.light);
+      }
+      for (let k = 0; k < 6; k++) {
+        const a = toLight + Math.PI + (rnd() - 0.5) * 2;
+        const d = o.R * (0.3 + rnd() * 0.5);
+        leaf(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d * o.sq, o.R * (0.08 + rnd() * 0.05), rnd() * Math.PI, col.shade);
+      }
+      ctx.fillStyle = CANOPY_INK;
+      for (let k = 0; k < 2; k++) {
+        const a = toLight + Math.PI + (rnd() - 0.5) * 1.3;
+        const d = o.R * (0.45 + rnd() * 0.3);
+        ctx.beginPath();
+        ctx.ellipse(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d * o.sq, o.R * 0.09, o.R * 0.05, a, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      // folhas soltas na beirada de cima, quebrando o contorno
+      for (let k = 0; k < 5; k++) {
+        const a = -Math.PI / 2 + (rnd() - 0.5) * 2.6;
+        const x = o.x + Math.cos(a) * o.R * 0.95;
+        const y = o.y + Math.sin(a) * o.R * o.sq * 0.95;
+        const len = o.R * (0.1 + rnd() * 0.05);
+        const rot = a + Math.PI / 2 + (rnd() - 0.5) * 0.6;
+        ctx.fillStyle = CANOPY_INK;
+        ctx.beginPath();
+        ctx.ellipse(x, y, len + ink, len * 0.45 + ink, rot, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = Math.sin(a - toLight) > 0 ? col.base : col.light;
+        ctx.beginPath();
+        ctx.ellipse(x, y, len, len * 0.45, rot, 0, M.TAU);
+        ctx.fill();
+      }
+    }
+    // cipós pendurados (só na mata)
+    if (t.kind === 'mata') {
+      const nv = Math.floor(rnd() * 3);
+      for (let k = 0; k < nv; k++) {
+        const o = list[Math.floor(rnd() * list.length)];
+        const x = o.x + (rnd() - 0.5) * o.R;
+        const y = o.y + o.R * o.sq * 0.75;
+        const len = (60 + rnd() * 80) * cam.cosP * zoom;
+        ctx.strokeStyle = CANOPY_INK;
+        ctx.lineWidth = Math.max(1.5, 3 * zoom);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.bezierCurveTo(x + 8 * zoom, y + len * 0.4, x - 8 * zoom, y + len * 0.7, x + 3 * zoom, y + len);
+        ctx.stroke();
+        ctx.strokeStyle = col.shade;
+        ctx.lineWidth = Math.max(1, 1.6 * zoom);
+        ctx.stroke();
+        for (let f = 1; f < 4; f++) {
+          ctx.fillStyle = col.base;
+          ctx.beginPath();
+          ctx.ellipse(x + (f % 2 ? 4 : -4) * zoom, y + len * (f / 4), 4 * zoom, 2 * zoom, f % 2 ? 0.5 : -0.5, 0, M.TAU);
+          ctx.fill();
+        }
+      }
     }
   }
 

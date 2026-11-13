@@ -197,7 +197,21 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   olhando em volta, correndo de quatro aos saltos, ergue a fruta no aviso e arremessa no tiro, pisca ao apanhar e
   desmaia de bruços ao cair (o encanto sai).
   `PD.creatures` (`js/creatures/`): o monstro com desenho lá deixa de sair com o corpo de gente
-- [ ] **[arte]** Jararaca com corpo próprio no 2.5D (rasteja em S, enrola e ergue a cabeça no aviso, bote)
+- [x] **[arte]** Jararaca com corpo próprio no 2.5D (13/11): marrom-oliva com as manchas em "V", cabeça triangular,
+  olhos amarelos e língua que entra e sai; rasteja em S seguindo o caminho da cabeça, se enrola e ergue o pescoço no
+  aviso (treme a ponta do rabo), dá o bote e vira de barriga para cima ao cair
+- [x] **[arte]** Mata nova, entrega 1 (13/11, pedidos do dono: "floresta mais sombria" e "árvore normal, não redonda,
+  e árvore seca"): o tronco abre em galhos na forquilha e cada galho termina num tufo de folhas de contorno recortado
+  (vãos entre os tufos mostram os galhos; cipós pendurados); árvore seca com galhos tortos e barba-de-velho; escuro
+  e neblina por área (`escuro`/`neblina` das áreas do mapa, a menor área vale), claro perto do herói
+- [ ] **[arte]** Mata nova, entrega 2: jerivá, embaúba, xaxim, bananeira, bambu, samambaia, helicônia, taboa,
+  cogumelo que brilha, deque, pinguela e os véus (brilho espiritual); de quebra, os arbustos da mata fechada (hoje uma
+  fila de bolas)
+- [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o
+  repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
+  dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula
+  ao falar. E o escudo da Budega numa placa em cima da laje (`logo` = "budega" na casa, do [mundo]), sem
+  "tabacaria" e sem o narguilé: no círculo, o hibisco. Falta o nome "Xiovanna" na NPC "budega" ([estrutura])
 - [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
   esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
