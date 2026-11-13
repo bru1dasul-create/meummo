@@ -45,6 +45,12 @@ const reached = (stage: (typeof STAGES)[number]) => STAGES.indexOf(STAGE) >= STA
  * em 12/11: sem ele, o jogador apanhava sem ver o golpe); o combate, passo 1, chegou em 13/11 e elas voltaram.
  */
 const CREATURES = true;
+/**
+ * O padrão novo (13/11, pedido do dono): a floresta reinando sobre a vila. Liga o meio-fio, a faixa apagada, os remendos,
+ * as rachaduras com mato, os bueiros, a Figueira da Esquina, as raízes, o cipó nas casas, nos postes e nos fios, o prédio
+ * do conjunto no fundo e a vida na rua (moto, placa de rua, cadeiras, vasos, lixo, bandeirinhas).
+ */
+const FLORESTA = true;
 const W = 96;
 /** O mapa cresceu para o sul em 13/11 (o dono pediu a mata 50% maior): o parque vai até y = 120 e a vila até y = 80. */
 const H = 120;
@@ -709,6 +715,159 @@ if (reached('4b')) {
   }
 }
 
+// ---------------- padrão novo (13/11): a floresta reinando sobre a vila ----------------
+// O dono pediu para caprichar antes de avançar: a rua tem que parecer rua e a calçada, calçada, com a cidade tomada pela
+// floresta (pós-apocalíptico brasileiro, sem barraco destruído). Referência aprovada: docs/referencias/padrao-rua-floresta.jpg.
+// Nada do que já foi aprovado muda de lugar: só entram coisas novas (no chão e em cima dele) e propriedades novas nas
+// casas, nos postes e na fiação. Sorteio próprio (SEED + 11): o resto do mapa não muda.
+if (reached('4b') && FLORESTA) {
+  const frng = mulberry32(SEED + 11);
+  // ----- o chão da rua: meio-fio, faixa apagada, remendos, buracos com água, poças, rachaduras com mato, bueiros, tampas -----
+  // a calçada é de placas de cimento (com juntas); a praça de pedra portuguesa ganha musgo nas frestas
+  for (const c of chao.filter((o) => o.type === 'calcada')) c.props = { ...c.props, desenho: 'placas' };
+  for (const c of chao.filter((o) => o.type === 'praca')) c.props = { ...c.props, musgo: true };
+  // (as linhas e manchas novas levam `largura` e `cor`: um desenho que ainda não conhece o tipo mostra só um traço fino
+  // na cor certa, e não uma faixa larga de terra)
+  /** O meio-fio (com a sarjeta do lado do asfalto) em toda beira de calçada com asfalto. */
+  const CURBS: [number, number][][] = [
+    [[49.5, 0], [49.5, VILLAGE_S]],
+    [[56, 0], [56, STREET.y0], [W, STREET.y0]],
+    [[56, VILLAGE_S], [56, STREET.y1], [ROAD_S.x0, STREET.y1], [ROAD_S.x0, VILLAGE_S]],
+    [[W, STREET.y1], [ROAD_S.x1, STREET.y1], [ROAD_S.x1, VILLAGE_S]],
+  ];
+  for (const pts of CURBS) chao.push({ type: 'meio-fio', x: 0, y: 0, polyline: pts, props: { altura: 0.15, largura: 0.2, sarjeta: true, cor: '#bdb6a8' } });
+  // a faixa amarela do meio, tracejada e apagada (na Travessa, interrompida pela faixa de pedestre)
+  const CENTER_LINES: [number, number][][] = [
+    [[57.5, 44], [W - 0.5, 44]],
+    [[91, STREET.y1 + 0.5], [91, VILLAGE_S]],
+    [[52.75, 0.5], [52.75, 42]],
+    [[52.75, 46], [52.75, VILLAGE_S - 0.5]],
+  ];
+  for (const pts of CENTER_LINES) chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: pts, props: { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true } });
+  // remendos de asfalto (mais escuros), buracos com água e poças na beira da sarjeta
+  const PATCHES: [number, number][][] = [
+    [[59.5, 42.2], [62.8, 42], [63.1, 43.9], [59.8, 44.1]],
+    [[74.8, 44.6], [78.4, 44.3], [78.6, 46.4], [75, 46.6]],
+    [[89.6, 55.2], [91.4, 55], [91.6, 58.6], [89.8, 58.8]],
+    [[51.2, 19.4], [54.4, 19.2], [54.6, 21.6], [51.4, 21.8]],
+  ];
+  for (const pts of PATCHES) chao.push({ type: 'remendo', x: 0, y: 0, polygon: pts, props: { cor: '#2c2f33' } });
+  for (const [x, y, raio] of [[66.6, 45.7, 0.45], [81.4, 42.3, 0.55], [91.9, 66.5, 0.5], [52.5, 52, 0.45]] as const) {
+    chao.push(point('buraco', x, y, { raio, agua: true }));
+  }
+  for (const [x, y, rx, ry] of [[72.5, 46.5, 1.1, 0.35], [52.9, 34.5, 0.8, 0.5], [88.6, 64, 0.35, 1]] as const) {
+    chao.push({ type: 'poca', x: x - rx, y: y - ry, w: 2 * rx, h: 2 * ry, ellipse: true, props: { cor: '#56788c' } });
+  }
+  /** Onde é asfalto (para as rachaduras não saírem dele nem entrarem na faixa de pedestre). */
+  const onAsphalt = (x: number, y: number) =>
+    !(x > 49.5 && x < 56 && y > 42.3 && y < 45.7) &&
+    ((x > 49.7 && x < 55.8 && y > 0.5 && y < VILLAGE_S - 0.5) ||
+      (x > 56 && x < W - 0.3 && y > STREET.y0 + 0.2 && y < STREET.y1 - 0.2) ||
+      (x > ROAD_S.x0 + 0.2 && x < ROAD_S.x1 - 0.2 && y > STREET.y1 && y < VILLAGE_S));
+  for (let i = 0, n = 0; i < 400 && n < 18; i++) {
+    const zone = i % 3;
+    let [x, y]: [number, number] =
+      zone === 0 ? [57 + frng() * 38, 41.5 + frng() * 5] : zone === 1 ? [88.5 + frng() * 5, 48 + frng() * 31] : [50 + frng() * 5.6, 1 + frng() * 78];
+    if (!onAsphalt(x, y)) continue;
+    const pts: [number, number][] = [[round(x), round(y)]];
+    let a = frng() * Math.PI * 2;
+    for (let k = 0; k < 3 + Math.floor(frng() * 3); k++) {
+      a += (frng() - 0.5) * 1.6;
+      const l = 0.5 + frng() * 0.9;
+      const [nx, ny] = [x + Math.cos(a) * l, y + Math.sin(a) * l];
+      if (!onAsphalt(nx, ny)) break;
+      [x, y] = [nx, ny];
+      pts.push([round(x), round(y)]);
+    }
+    if (pts.length < 3) continue;
+    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { largura: 0.06, cor: '#1e2022', mato: frng() < 0.6 } });
+    n++;
+  }
+  // bueiros na sarjeta e tampas no meio da rua (enfeite: o pé passa por cima)
+  for (const [x, y, olhando] of [
+    [63, 41.3, 0], [76.5, 41.3, 0], [90.5, 41.3, 0], [59, 46.7, 0], [73.5, 46.7, 0], [85.5, 46.7, 0],
+    [88.3, 60, 90], [88.3, 72, 90], [55.7, 28, 90], [55.7, 62, 90], [49.8, 15, 90], [49.8, 55, 90],
+  ] as const) {
+    chao.push(point('bueiro', x, y, { olhando }));
+  }
+  for (const [x, y] of [[69, 43.6], [86.2, 44.6], [91.2, 54], [52.6, 30], [52.9, 58]] as const) chao.push(point('tampa', x, y, { raio: 0.35 }));
+  // capim na sarjeta e nas frestas (não segura o pé)
+  for (const pts of CURBS) {
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [[ax, ay], [bx, by]] = [pts[i]!, pts[i + 1]!];
+      const len = Math.hypot(bx - ax, by - ay);
+      for (let d = 1 + frng() * 2; d < len - 0.5; d += 1.5 + frng() * 3.5) {
+        const side = frng() < 0.5 ? -0.25 : 0.25;
+        const [nx, ny] = [-(by - ay) / len, (bx - ax) / len];
+        const [x, y] = [ax + ((bx - ax) * d) / len + nx * side, ay + ((by - ay) * d) / len + ny * side];
+        chao.push(point('planta', x, y, { tipo: 'capim', raio: round(0.2 + frng() * 0.15) }));
+      }
+    }
+  }
+
+  // ----- a Figueira da Esquina: rompeu a calçada e o asfalto na esquina do portão (a primeira coisa que se vê) -----
+  const BIG_FIG = { x: 57, y: 38.6, copa: 6, altura: 10, tronco: 1.8 };
+  if (canopyHides(BIG_FIG.x, BIG_FIG.y, BIG_FIG.copa, BIG_FIG.altura)) throw new Error('A Figueira da Esquina tampa a rua ou o portão.');
+  trees.push({ x: BIG_FIG.x, y: BIG_FIG.y, tronco: BIG_FIG.tronco });
+  cenario.push(point('arvore', BIG_FIG.x, BIG_FIG.y, { especie: 'figueira', copa: BIG_FIG.copa, altura: BIG_FIG.altura, tronco: BIG_FIG.tronco, rompendo: true }, 'Figueira da Esquina'));
+  /** Raízes (baixas: o pé passa por cima) que levantam a calçada e racham o asfalto. */
+  const ROOTS: [number, number][][] = [
+    [[56.4, 39.6], [55.2, 40.6], [53.6, 41.2], [52.2, 41]],
+    [[57.4, 39.6], [58.2, 41.2], [59.6, 42.6], [61.4, 43.1]],
+    [[57.9, 39.3], [59.8, 40.2], [62.4, 40.5]],
+    [[56.2, 38.4], [55, 37.4], [53.8, 36]],
+    // as da árvore da praça, levantando a pedra portuguesa
+    [[76.4, 58.4], [75.2, 58.9], [73.8, 58.7]],
+    [[77.6, 58.5], [78.4, 59.6]],
+  ];
+  for (const pts of ROOTS) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.35, altura: 0.2, cor: '#6b4a2e' } });
+
+  // ----- a mata tomando as casas, os postes e os fios -----
+  /** Cipó na fachada (0 a 1), plantas na laje, árvore na laje (só nas casas do norte: atrás da rua, não tampam nada) e varal. */
+  const HOUSE_GREEN: [number, number, Props][] = [
+    [58, 31, { cipo: 0.35, plantas: true, arvoreNaLaje: true, varal: true, musgo: true, grade: true }],
+    [64, 33, { cipo: 0.5, plantas: true, musgo: true, grade: true }],
+    [71, 30, { cipo: 0.25, plantas: true, arvoreNaLaje: true, musgo: true, grade: true }],
+    [81, 32, { cipo: 0.6, plantas: true, musgo: true, grade: true }],
+    [86, 29, { cipo: 0.3, plantas: true, varal: true, musgo: true, grade: true, portao: true }],
+    [81, 49, { cipo: 0.4, plantas: true, musgo: true, grade: true }],
+    [62, 13, { cipo: 0.9, plantas: true, musgo: true }],
+  ];
+  for (const [x0, y0, extra] of HOUSE_GREEN) {
+    const house = cenario.find((o) => o.type === 'casa' && o.x === x0 && o.y === y0);
+    if (!house) throw new Error(`Casa em (${x0}, ${y0}) não achada.`);
+    house.props = { ...house.props, ...extra };
+  }
+  const budega = cenario.find((o) => o.type === 'casa' && o.name === 'Budega')!;
+  budega.props = { ...budega.props, plantas: true, musgo: true };
+  for (const o of cenario.filter((c) => c.type === 'poste' || c.type === 'fiacao')) o.props = { ...o.props, cipo: true };
+  // o carro largado na Travessa tem uma árvore nascendo de dentro
+  const car = cenario.find((o) => o.type === 'carro')!;
+  car.props = { ...car.props, arvore: true };
+  // o prédio do conjunto habitacional no fundo (5 andares, com árvore na laje e cortina de cipó): longe do ônibus, do
+  // pilar do viaduto e das árvores (sem vão de entalar), atrás das casas (não tampa a rua)
+  const PREDIO = { x0: 88, x1: 94.4, y0: 13, y1: 22 };
+  cenario.push(rect('predio', PREDIO.x0, PREDIO.x1, PREDIO.y0, PREDIO.y1, { andares: 5, altura: 14, cor: '#b8b2a6', cipo: 0.6, arvoreNaLaje: true, varandas: true, caixaDagua: true }, 'Bloco B'));
+  {
+    const hidden = boxHides(PREDIO, 14);
+    if (hidden) throw new Error(`O prédio tampa o ponto (${hidden.join(', ')}) da vila.`);
+  }
+
+  // ----- a vida na rua: moto com mato, placa de rua, cadeiras, vasos, lixo e as bandeirinhas da praça -----
+  cenario.push(rect('moto', 83.2, 85.2, 41.3, 42.1, { altura: 1.1, cor: '#8a3a2a', mato: true, olhando: 0 }));
+  cenario.push(point('placa-rua', 56.3, 47.3, { texto: 'R. SANTO DIAS', texto2: 'TV. JASMIM DA BEIRADA' }));
+  // cadeiras de plástico: dois vizinhos na porta da casa amarela e duas na roda da fogueira (na diagonal dos bancos)
+  for (const [x, y, olhando] of [[82.25, 39.75, 90], [82.75, 39.75, 90], [FIRE.x + 1.9, FIRE.y - 1.9, 135], [FIRE.x - 1.9, FIRE.y + 1.9, 315]] as const) {
+    cenario.push(point('cadeira', x, y, { olhando, cor: '#f2f2ee' }));
+  }
+  for (const [x, y] of [[60.4, 39.75], [73.2, 39.75], [88.6, 39.75]] as const) cenario.push(point('vaso', x, y, { planta: 'espada-de-sao-jorge' }));
+  cenario.push(rect('lixo', 80.15, 80.75, 47.55, 48.15, { altura: 0.6 }));
+  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[61.7, 58.3], [69.5, 53.2], [78.3, 49.3]], props: { altura: 3.2 } });
+  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[67, 52.6], [72.5, 55.6], [76.4, 57.4]], props: { altura: 3 } });
+  // o mato invadindo os cantos da praça
+  for (const [cx, cy, rx, ry] of [[61.9, 58.2, 1.4, 0.9], [78.1, 49.6, 1.2, 0.9]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
+}
+
 // ---------------- colisão (tirada do cenário) ----------------
 for (const s of cenario) {
   const p = s.props ?? {};
@@ -728,6 +887,12 @@ for (const s of cenario) {
   else if (s.type === 'lixeira') colisao.push(block('lixeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.9 }));
   else if (s.type === 'orelhao') colisao.push(block('orelhao', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 2.2 }));
   else if (s.type === 'poste-praca') colisao.push(block('poste-praca', s.x, s.y, 0.25, { altura: 3.2 }));
+  // o padrão novo: o prédio segura tudo; moto, placa de rua, cadeira, vaso e lixo são baixos ou finos (a pedrinha passa)
+  else if (s.type === 'predio') colisao.push(rect('predio', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  else if (s.type === 'moto' || s.type === 'lixo') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'placa-rua') colisao.push(block('placa-rua', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.6 }));
+  else if (s.type === 'cadeira') colisao.push(block('cadeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 }));
+  else if (s.type === 'vaso') colisao.push(block('vaso', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.6 }));
 }
 // na vila, nenhum vão estreito entre duas coisas sólidas de frente uma para a outra: abaixo de 0,3 m o pé nem entra; de
 // 0,3 a MIN_GAP ele entra de lado e entala. (Na diagonal, canto com canto, sempre há por onde sair.)
