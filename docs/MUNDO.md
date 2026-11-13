@@ -54,7 +54,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   sem vão de entalar e com o lado de trás do balcão fechado, e o lugar da Xiovanna (`XIOVANNA`, pé em 64,6; 51, que
   a [estrutura] copia no `data/npcs.json`; mais a leste a copa da árvore da praça cobre ela na tela). O gerador
   confere que ela cabe lá.
-- **O resto do Capão (4c) no padrão novo, aprovado (13/11, "pode mandar pra arte"):** no ramo `mundo/etapa-4c` (bloco
+- **O resto do Capão (4c) no padrão novo está na `main` (13/11)**, com o desenho da [arte] (viaduto a 8 m na beira
+  norte: o tabuleiro e o trem aparecem quando se chega no fundo; o dono não pediu mudança). Antes no ramo `mundo/etapa-4c` (bloco
   `reached('4c') && FLORESTA`, sorteio `SEED + 12`). Propriedades novas: `viaduto` (`cipo`, `arvoresNoTopo`),
   `pilar-viaduto` (`pixo`, `musgo`, `cipo`), `trem` (`cipo`, `plantas`, `janelasQuebradas`), `onibus` (`horta`),
   `casa` abandonada (`arvoreDentro`), `trave` (`ferrugem`, `cipo`, `rede`), `muro` (`cipo`, `musgo`), e a `arvore`

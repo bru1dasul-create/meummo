@@ -1188,6 +1188,7 @@ class NewWorld implements NewWorldGame {
     const up = this.guardHeld && this.guardState !== 'broken';
     this.combat.setGuard(this.myId, up ? this.guardAngle : null, now);
     this.combat.setEnergy(this.myId, this.energyShown, up ? 'up' : this.guardState);
+    this.hud.setEnergy(this.energyShown, GUARD_MAX_ENERGY); // a barra azul da HUD (só mexe na tela quando o número muda)
     this.guardButton.show(this.guardHeld, this.guardState === 'broken');
   }
 
