@@ -59,7 +59,9 @@ export interface PlayerStats {
 /** Cliente → servidor. */
 export type ClientMsg =
   // quero entrar com este personagem (criado na hora se não existir); mundo 'novo' = o jogo 2.5D (só os mapas do formato novo)
-  | { t: 'hello'; v: number; name: string; password: string; mundo?: 'novo' }
+  // mode: 'login' só entra (nome que não existe = not_found); 'create' só cria (nome que já existe = name_exists);
+  // sem mode, entra ou cria, como sempre (a tela de entrada antiga e os bots)
+  | { t: 'hello'; v: number; name: string; password: string; mundo?: 'novo'; mode?: LoginMode }
   // quero andar um pedaço (WALK_SLICE_MS) na direção `a` (graus inteiros); com dash, rolar; slow: devagar (mundo novo, Shift)
   | { t: 'walk'; seq: number; a: number; dash?: true; slow?: true }
   | { t: 'charge' } // comecei a puxar o estilingue (pedra com carga): o servidor conta o tempo até o `shoot`
@@ -81,6 +83,9 @@ export type QuestAction = 'accept' | 'complete' | 'abandon';
 /** equip = equipar; use = usar/comer; drop = jogar fora (a pilha inteira). */
 export type ItemAction = 'equip' | 'use' | 'drop';
 
+/** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
+export type LoginMode = 'login' | 'create';
+
 export type RejectReason =
   | 'name_invalid'
   | 'name_taken'
@@ -90,7 +95,9 @@ export type RejectReason =
   | 'creation_limit' // personagens novos demais vindos do mesmo lugar
   | 'unavailable' // o servidor não conseguiu ler os personagens salvos
   | 'full'
-  | 'version';
+  | 'version'
+  | 'not_found' // Entrar: não existe personagem com esse nome (confira o nome ou crie uma conta)
+  | 'name_exists'; // Criar: esse nome já tem dono
 /** Por que o servidor encerrou a sua sessão. */
 export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';

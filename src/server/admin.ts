@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import type http from 'node:http';
 import path from 'node:path';
 import { MAX_GOLD } from '../shared/items';
+import { nameProblem, normalizeName, PASSWORD_MAX, PASSWORD_MIN, passwordProblem } from '../shared/names';
 import { ROOT } from './paths';
 import type { AdminResult, Realm } from './realm';
 import { TUNING_FILES, type Tuning, type TuningFile } from './tuning';
@@ -28,6 +29,8 @@ export interface AdminOptions {
   realm?: Realm;
   /** Desconecta o jogador (expulsar). false = ele não estava mais online. */
   kick?: (playerId: number) => boolean;
+  /** Troca a senha de um personagem salvo (para quem esqueceu). Devolve o nome salvo, ou null se não existir. */
+  setPassword?: (name: string, password: string) => Promise<string | null>;
   log?: (message: string) => void;
 }
 
@@ -191,6 +194,27 @@ export function createAdminHandler(options: AdminOptions): (req: http.IncomingMe
           const result = runPlayerAction(action, realm, tuning, options.kick);
           if (result.ok) log(`painel: ${result.texto}`);
           sendJson(res, result.ok ? 200 : 400, result);
+        })
+        .catch((error: Error) => sendJson(res, 400, { ok: false, erro: error.message }));
+      return true;
+    }
+    if (route === 'POST /admin/api/senha' && options.setPassword) {
+      const setPassword = options.setPassword;
+      readBody(req)
+        .then(async (body) => {
+          const data = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
+          const nome = typeof data.nome === 'string' ? normalizeName(data.nome) : '';
+          const senha = typeof data.senha === 'string' ? data.senha.normalize('NFC') : '';
+          if (!nome || nameProblem(nome)) return sendJson(res, 400, { ok: false, erro: 'Escreva o nome do personagem.' });
+          const problem = passwordProblem(senha);
+          if (problem) {
+            const erro = problem === 'short' ? `A senha precisa ter pelo menos ${PASSWORD_MIN} caracteres.` : `A senha pode ter no máximo ${PASSWORD_MAX} caracteres.`;
+            return sendJson(res, 400, { ok: false, erro });
+          }
+          const saved = await setPassword(nome, senha);
+          if (!saved) return sendJson(res, 400, { ok: false, erro: `Não existe personagem chamado "${nome}".` });
+          log(`painel: senha de ${saved} trocada`); // a senha nunca vai para o registro
+          sendJson(res, 200, { ok: true, texto: `Senha de ${saved} trocada. Passe a senha nova para quem joga com ele.` });
         })
         .catch((error: Error) => sendJson(res, 400, { ok: false, erro: error.message }));
       return true;

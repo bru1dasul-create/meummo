@@ -2,7 +2,7 @@
 
 import { PROTOCOL_VERSION } from '../shared/constants';
 import { nameKey, nameProblem, normalizeName, passwordProblem } from '../shared/names';
-import type { ByeReason, RejectReason, ServerMsg } from '../shared/protocol';
+import type { ByeReason, LoginMode, RejectReason, ServerMsg } from '../shared/protocol';
 import type { CharacterStore, LoginResult, SavedCharacter } from './accounts';
 import type { LoginGuard } from './login-guard';
 import { TokenBucket } from './rate-limit';
@@ -66,7 +66,7 @@ export class Session {
       if (msg.t !== 'hello') return this.strike('precisa entrar primeiro');
       if (msg.v !== PROTOCOL_VERSION) return this.reject('version');
       this.authenticating = true;
-      void this.login(msg.name, msg.password, msg.mundo === 'novo');
+      void this.login(msg.name, msg.password, msg.mundo === 'novo', msg.mode);
       return;
     }
 
@@ -134,7 +134,7 @@ export class Session {
     this.close(4002, reason);
   }
 
-  private async login(rawName: string, rawPassword: string, newWorld: boolean): Promise<void> {
+  private async login(rawName: string, rawPassword: string, newWorld: boolean, mode?: LoginMode): Promise<void> {
     const name = normalizeName(rawName);
     if (nameProblem(name)) return this.reject('name_invalid');
     const password = rawPassword.normalize('NFC'); // o mesmo acento digitado em aparelhos diferentes vira a mesma senha
@@ -145,7 +145,7 @@ export class Session {
 
     let result: LoginResult;
     try {
-      result = await store.login(name, password, guard.canCreate(this.ip));
+      result = await store.login(name, password, guard.canCreate(this.ip), mode);
     } catch (error) {
       if (!this.closed) log(`erro ao conferir o personagem "${name}": ${(error as Error).message}`);
       return this.reject('unavailable');

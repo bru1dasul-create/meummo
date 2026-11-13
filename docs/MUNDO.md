@@ -31,6 +31,27 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Decisão do dono (13/11, noite): pausa para capricho.** Ele achou a arte "ruinzinha" (falta detalhe; a rua não
+  parece rua, a calçada não parece calçada) e decidiu parar de avançar e melhorar os mapas, uma área por vez,
+  começando pela rua e pela praça da Budega. Ideia dele, aprovada com as imagens de referência: **a floresta reinando
+  sobre a cidade inteira**, pós-apocalíptico em versão brasileira, **sem barraco destruído** (casas e prédios inteiros,
+  tomados pela mata; a vila continua viva e colorida). Padrão: `docs/referencias/padrao-rua-floresta.jpg` (a rua da
+  Budega: asfalto rachado com remendo e faixa apagada, meio-fio e sarjeta, bueiro, tampa, poça, calçada de placas
+  levantadas por raiz, mato nas frestas, figueira rompendo o asfalto, cipó nos postes e nos fios, plantas e varal nas
+  lajes, moto com mato, placa azul de rua, cadeiras de plástico) e `docs/referencias/padrao-cidade-floresta.jpg` (o
+  bairro: prédios de conjunto habitacional com árvore na laje, viaduto com o trem lilás coberto de cipó, ônibus
+  virando vaso). Feitas com o Nano Banana, por cima da arte aprovada (estilo) e de um print do jogo (arranjo). O
+  próximo passo que ele pediu: **"vamos ver no papel"** (a planta da rua e da praça no padrão novo, para aprovar). O
+  desenho do chão (asfalto, calçada) é da [arte]; o que fica em cima (meio-fio, bueiro, faixa, raiz, placa...) é meu.
+- **A planta da rua da Budega foi aprovada (13/11, "pode mandar se for essa aqui, show"):** a imagem do Nano Banana
+  feita por cima da minha prévia de perto (`docs/referencias/rua-budega-aprovada.jpg`, com a planta numerada em
+  `rua-budega-planta.jpg`) é o alvo. No gerador, a constante `FLORESTA` (sorteio `SEED + 11`, nada muda de lugar); ramo
+  `mundo/rua-floresta`. Tipos novos no `chao`: `meio-fio`, `faixa-rua`, `remendo`, `buraco`, `poca`, `rachadura`,
+  `bueiro`, `tampa`, `raiz` e `planta` capim (com `largura` e `cor`, para um desenho que ainda não os conhece mostrar
+  só um traço fino); no `cenario`: `predio`, `moto`, `placa-rua`, `cadeira`, `vaso`, `lixo` e a figueira com
+  `rompendo`; propriedades novas em `casa` (`cipo`, `plantas`, `arvoreNaLaje`, `varal`, `musgo`, `grade`,
+  `portao`), `poste`/`fiacao` (`cipo`), `carro` (`arvore`), `calcada` (`desenho: 'placas'`) e `praca` (`musgo`).
+  Prévias: meu `previa-floresta.mjs` (aceita um JSON de números com legenda) na pasta temporária da conversa.
 - **Decisão do dono (12/11, roteiro "🗺️ Mundo novo"):** o visual vira o do protótipo 2.5D da [arte]
   (`prototipos/pindorama-25d/`, isométrico, estilo HQ) e os mapas são refeitos do zero. Os 5 mapas de hoje saem quando
   o capítulo 1 novo estiver jogável; o motor (servidor, regras, salvamento) fica. Capítulo 1: Capão Redondo e o Parque
@@ -82,7 +103,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     beira da vila fechada por mata. Regras novas: a câmera não pode ter o portão, a rua, o balcão, o letreiro e a
     fogueira tampados (por isso a árvore da praça ficou no canto sudeste), e nenhum vão de 0,3 a 1,2 m entre duas
     coisas sólidas de frente uma para a outra (um orelhão a 40 cm de um poste entalou o personagem).
-  - **Mata nova (pedido do dono em 13/11; aprovada por ele no mesmo dia; ramo `mundo/mata-nova`):** o dono não gostou da
+  - **Mata nova (pedido do dono em 13/11; aprovada por ele no mesmo dia; na `main` em 13/11 com o desenho da [arte], conferida no jogo no PC e no celular):** o dono não gostou da
     mata ("muito pequena, muita árvore, caminho sem árvore, cores fortes, plantas diferentes, mais sombria, árvore normal
     e não redonda, árvore seca") e escolheu: 50% maior para o sul (o mapa passa a 96 × 120 e a vila continua até y = 80;
     o pedaço ao sul da vila é mata fechada de enfeite), todas as plantas e "mudar a trilha e o lago" para a figueira não
