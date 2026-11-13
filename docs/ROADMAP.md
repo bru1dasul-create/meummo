@@ -171,12 +171,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   parque, onde andam os saguis (o dono pediu "o caminho sem árvore"); na esquina ela tampa em qualquer tamanho. Fica com
   as mesmas raízes (caminhos novos, na calçada e na rua) e o poste da casa rosa vai para a divisa com a casa azul. O
   gerador confere as trilhas do parque e um teste garante que nenhuma árvore da vila as tampa
-- [ ] **[mundo]** A mata no padrão novo: o Parque Santo Dias de antes, engolido pela floresta. Planta aprovada pelo
+- [x] **[mundo]** A mata no padrão novo: o Parque Santo Dias de antes, engolido pela floresta (**na main em 13/11**, com o
+  desenho da [arte]). Planta aprovada pelo
   dono em 13/11 ("pode seguir com as alterações"; `docs/referencias/parque-antigo-planta.jpg`,
   `parque-academia-planta.jpg` e os alvos `parque-antigo-aprovado.jpg` e `parque-academia-aprovado.jpg`; as imagens
   da IA só dão o clima). No ramo `mundo/parque-antigo` (por cima da 4c): a placa da entrada, o bebedouro quebrado,
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
-  academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. Entra com o desenho da [arte]
+  academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. A placa grande fica alta,
+  acima do pilar do portão (como na imagem aprovada), e o poste do parque da entrada saiu da frente do poste do portão
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`

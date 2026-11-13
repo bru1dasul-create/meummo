@@ -68,12 +68,13 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   de tampar). Agora em (68; 40,25), com raízes novas (as `raiz` que começam perto do tronco viram o pé dela no desenho
   da [arte]) e o poste da casa rosa em x = 71,2. **Regra:** árvore alta da vila não tampa trilha do parque (o gerador
   confere a figueira com `hidesView`; o teste confere todas as árvores da vila).
-- **O parque antigo, aprovado (13/11, mesmo "pode"):** no ramo `mundo/parque-antigo` (por cima da 4c; bloco
+- **O parque antigo está na `main` (13/11)**, com o desenho da [arte]. Antes no ramo `mundo/parque-antigo` (bloco
   `FLORESTA` antes da etapa 4b, sorteio `SEED + 13`; tudo fora das trilhas e sem vão de entalar, com a função `near`
   procurando lugar em espiral). Tipos e propriedades: `placa` (`tamanho: 'grande'`, `mato`), `bebedouro` (`quebrado`,
   `musgo`), `banco` (`material: 'concreto'`, `mato`), `lixeira` (`mato`), `poste-praca` (`apagado`, `torto`, `cipo`),
   `academia` (`aparelho`, `ferrugem`, `cipo`) e `calcada` em polígono (`desenho: 'placas'`, `quebrada`). Referências:
-  `docs/referencias/parque-*.jpg`. Entra na `main` com o desenho da [arte], depois da 4c.
+  `docs/referencias/parque-*.jpg`. A placa grande fica alta, acima do pilar do portão; o poste do parque da entrada
+  fica em (46,2; 34,6), fora da linha do poste do portão na tela.
 - **A planta da rua da Budega foi aprovada (13/11, "pode mandar se for essa aqui, show"):** a imagem do Nano Banana
   feita por cima da minha prévia de perto (`docs/referencias/rua-budega-aprovada.jpg`, com a planta numerada em
   `rua-budega-planta.jpg`) é o alvo. No gerador, a constante `FLORESTA` (sorteio `SEED + 11`, nada muda de lugar); ramo
