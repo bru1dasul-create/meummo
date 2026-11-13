@@ -335,9 +335,32 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   aparecem logo abaixo sem segurar o toque e somem; tocar na caixinha abre o chat na largura da tela, com fundo opaco
   por cima do painel. CSS com `body:has(canvas.mundo-novo)`; o jogo antigo não muda. No celular deitado, a faixa da
   zona fica no alto e menor (vale para os dois jogos) e as falas recolhidas dão licença enquanto ela aparece.
+  A Mochila (que a [estrutura] ligou no jogo novo em 13/11) ia para o mesmo canto e cobria a caixinha. No celular,
+  ela vira um botão só com o ícone, logo acima dos botões de ação, perto do polegar.
   O registro do chat (`ui.ts`) segue a última fala e só para quando o **jogador** rola (roda, dedo ou barra): a
   conta antiga ("está no fim?") se enganava quando o chat mudava de tamanho e o celular pequeno mostrava a fala
   velha. Conferido em Pixel 7 e num celular de 320 px, em pé e deitado (`chat-celular.cjs` no scratchpad).
+- **Criaturas (monstros que não são gente), 13/11:** `js/creatures/creature.js` é a base. A criatura anda de casa
+  em casa no tempo do passo do servidor, em linha reta, e vira suave. O jeito de andar sai da velocidade suavizada.
+  Os golpes chegam por `view.action` ('windup', 'shoot', 'hurt'...). O desenho é o da capivara: bolas com contorno
+  de tinta, a meia-lua escura do lado da sombra e o brilho do lado da luz. A ordem entre as partes vai pela posição
+  no chão e pouco pela altura, como no corpo da gente. Detalhes de rosto e listras são "decalques" achatados pela
+  câmera, que somem de costas. Para criar uma: `PD.creatures.define('tipo', Classe)` e pôr o arquivo em
+  `view-scripts.json`, `clareira.html` e `src/client/novo/arte.ts`; o tipo é a chave do monstro em `data/monsters.json`.
+  **Sagui** (`sagui.js`), em tamanho de jogo (`S` = 1,6; sentado, uns 75 cm, quase metade do herói: com a câmera
+  longe, que o dono pediu, menor que isso some no celular; no jogo antigo o monstro tinha o tamanho do personagem):
+  - corpo cinza-amarronzado com o lombo rajado e a barriga clara;
+  - rosto escuro com a mancha branca na testa e o focinho curto;
+  - olhos amarelos acesos com a pupila em fenda e dois pontinhos lilás rodando (o encanto);
+  - tufos brancos em leque dos lados da cabeça e o rabo de anéis.
+  Parado, senta e olha em volta. Correndo, vai de quatro aos saltos. No aviso, senta e ergue a fruta verde (a mesma
+  cor da fruta que voa) atrás da cabeça; no tiro, arremessa por cima. Ao apanhar, pisca branco e encolhe.
+  Ao cair ('die'), desmaia de bruços em 0,3 s, com os olhos fechados e o rabo largado; o encanto sobe e some, o
+  nome sai e o desenho apaga até o motor tirar, 0,7 s depois. Tombar de lado girando o corpo todo (`_fall`, da base)
+  ficou confuso no sagui; fica para quem não tiver pose própria (`ownDeath`).
+  Prancha de conferência: `prancha-sagui.cjs` no scratchpad (8 lados × sentado, correndo, preparo, arremesso,
+  apanhando, caindo).
+  A câmera olha de cima, então o rosto fica alto na cabeça; embaixo, o focinho escondia os olhos.
 - **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
   outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).
   `world.js` junta as janelas em `o.hideWindows` e recorta uma de cada vez.

@@ -7,6 +7,7 @@
 //   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
+//   action(id, tipo, angulo)  golpes e reações; por enquanto só nas criaturas (js/creatures: o sagui)
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -65,6 +66,14 @@
     addActor(id, a) {
       if (this.actors.has(id)) this.removeActor(id);
       const yaw = Number.isFinite(a.angle) ? rad(a.angle) : Math.PI / 4;
+      // monstro com corpo próprio (sagui...): a criatura no lugar do corpo de gente
+      const creature = a.kind === 'monster' && PD.creatures && PD.creatures.has(a.type) ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
+      if (creature) {
+        const actor = { id, kind: 'monster', type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
+        this.actors.set(id, actor);
+        if (this.followId === null && a.me) this.follow(id);
+        return actor;
+      }
       const ch = new PD.Character(a.x * 100, a.y * 100, yaw);
       ch.faceYaw = yaw;
       const actor = {
@@ -94,6 +103,10 @@
     moveActor(id, x, y, angle, opts = {}) {
       const a = this.actors.get(id);
       if (!a) return;
+      if (a.creature) {
+        a.creature.moveTo(x * 100, y * 100, Number.isFinite(angle) ? rad(angle) : undefined, opts && opts.durationMs, !!(opts && opts.dash));
+        return;
+      }
       a.target = { x: x * 100, y: y * 100 };
       if (Number.isFinite(angle)) a.angle = rad(angle);
       a.dash = !!(opts && opts.dash);
@@ -102,6 +115,12 @@
     removeActor(id) {
       this.actors.delete(id);
       if (this.followId === id) this.followId = null;
+    }
+
+    /** Golpe ou reação (veja WorldView.action): as criaturas animam; o corpo de gente ainda não. */
+    action(id, kind, angle) {
+      const a = this.actors.get(id);
+      if (a && a.creature) a.creature.action(kind, Number.isFinite(angle) ? rad(angle) : undefined);
     }
 
     /** Fala curta em cima do personagem. */
@@ -138,6 +157,10 @@
 
     /** Leva o personagem até a posição que chegou: anda (ou corre) até lá; longe demais, aparece lá. */
     _drive(a, dt) {
+      if (a.creature) {
+        a.creature.update(dt);
+        return;
+      }
       const ch = a.ch;
       const T = a.target;
       const dx = T.x - ch.pos.x;
@@ -238,7 +261,9 @@
       this.last = t;
       this._resize();
       for (const a of this.actors.values()) this._drive(a, dt);
-      const hero = this.actors.get(this.followId) || this.actors.values().next().value;
+      // quem a câmera segue é sempre gente (a PD.World lê o passo e o pulo dele)
+      let hero = this.actors.get(this.followId);
+      if (!hero || hero.creature) hero = [...this.actors.values()].find((a) => !a.creature);
       const others = [...this.actors.values()].filter((a) => a !== hero).map((a) => a.ch);
       if (hero) {
         this.world._dt = dt;
@@ -271,6 +296,10 @@
 
     /** Ponto da tela logo acima da cabeça (penas incluídas): onde ficam o nome e o balão. Segue o agachar e o pulo. */
     _overHead(a) {
+      if (a.creature) {
+        const h = a.creature.overHead();
+        return this.cam.p({ x: h.x, y: h.y, z: h.z + 10 });
+      }
       const h = a.rig && a.rig.head ? a.rig.head.o : { x: a.ch.pos.x, y: a.ch.pos.y, z: 172 };
       return this.cam.p({ x: h.x, y: h.y, z: h.z + 46 });
     }
@@ -286,7 +315,7 @@
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = 'rgba(8, 12, 10, 0.85)';
       for (const a of this.actors.values()) {
-        if (!a.name) continue;
+        if (!a.name || (a.creature && a.creature.dying !== null)) continue; // caído: o nome sai junto
         const q = this._overHead(a);
         ctx.strokeText(a.name, q.x, q.y);
         ctx.fillStyle = a.me ? NAME_COLOR.me : NAME_COLOR[a.kind] || NAME_COLOR.player;
@@ -363,6 +392,7 @@
     }
 
     _actorDrawable(a) {
+      if (a.creature) return a.creature.drawable(this.cam, a.id === this.followId);
       const ch = a.ch;
       const r = ch.radius || 30;
       const rig = a.rig;
