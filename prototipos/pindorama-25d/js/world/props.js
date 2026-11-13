@@ -35,7 +35,15 @@
     paint() {}
     /** A imagem e a caixa valem para um zoom e uma densidade de tela. */
     _zoomKey() {
-      return `${this.cam.zoom.toFixed(4)}|${this.cam.dpr}`;
+      // o texto é montado uma vez por zoom (na câmera, que é a mesma de todos): a [estrutura] mediu que montá-lo a
+      // cada leitura, em ~1000 objetos e várias vezes por quadro, era o que mais gastava no desenho
+      const cam = this.cam;
+      if (cam._keyZoom !== cam.zoom || cam._keyDpr !== cam.dpr) {
+        cam._keyZoom = cam.zoom;
+        cam._keyDpr = cam.dpr;
+        cam._zoomKey = `${cam.zoom.toFixed(4)}|${cam.dpr}`;
+      }
+      return cam._zoomKey;
     }
     /**
      * Área da tela ocupada (px do mundo, com a folga da imagem), sem fazer a imagem: a ordem de desenho e o "esconde o
