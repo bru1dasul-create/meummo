@@ -43,6 +43,13 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   virando vaso). Feitas com o Nano Banana, por cima da arte aprovada (estilo) e de um print do jogo (arranjo). O
   próximo passo que ele pediu: **"vamos ver no papel"** (a planta da rua e da praça no padrão novo, para aprovar). O
   desenho do chão (asfalto, calçada) é da [arte]; o que fica em cima (meio-fio, bueiro, faixa, raiz, placa...) é meu.
+- **A rua da Budega no padrão novo está na `main` (13/11)**, com o desenho da [arte] (chão e objetos em pé), conferida
+  no jogo no PC e no celular. **Regra do dono para postes:** na rua, os postes e os fios ficam na calçada que para a
+  câmera fica atrás de quem anda (a das casas, no norte da rua do portão), nunca na calçada da frente nem atravessando
+  a rua ("pra não ficar na frente do personagem e não ficar tão poluído"). Cadeiras e coisas na calçada não tampam
+  portas. Vem aí (aprovado pelo dono, na fila da [arte] depois da conversa com NPC): **a Budega com interior**, como
+  no HumanitZ (o telhado e as paredes da frente somem quando se entra); a minha parte será o chão de dentro, a porta
+  aberta na colisão e a Xiovanna atrás do balcão.
 - **A planta da rua da Budega foi aprovada (13/11, "pode mandar se for essa aqui, show"):** a imagem do Nano Banana
   feita por cima da minha prévia de perto (`docs/referencias/rua-budega-aprovada.jpg`, com a planta numerada em
   `rua-budega-planta.jpg`) é o alvo. No gerador, a constante `FLORESTA` (sorteio `SEED + 11`, nada muda de lugar); ramo

@@ -118,14 +118,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   brasileira, sem barraco destruído (casas e prédios inteiros, tomados pela mata; a vila continua viva). Referências
   aprovadas: `docs/referencias/padrao-rua-floresta.jpg` (a rua da Budega, com o detalhe que se quer) e
   `docs/referencias/padrao-cidade-floresta.jpg` (o bairro inteiro). O Mapa 02 para depois do pedaço (a)
-- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: planta aprovada pelo dono em 13/11 ("show",
+- [x] **[mundo]** A rua e a praça da Budega no padrão novo (**na main em 13/11**, com o desenho da [arte]): planta aprovada pelo dono em 13/11 ("show",
   `docs/referencias/rua-budega-planta.jpg` e o alvo `docs/referencias/rua-budega-aprovada.jpg`; na beirada esquerda
   dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-budega` (por cima da main):
   meio-fio com sarjeta, faixa amarela apagada, remendos, buracos com água, poças, rachaduras com mato, bueiros,
   tampas, capim, calçada de placas, musgo na praça, a **Figueira da Esquina** rompendo a calçada e o asfalto na
   esquina do portão (com raízes), cipó nas casas, nos postes e nos fios, plantas e árvore nas lajes, varal, o prédio
   do conjunto (Bloco B) no fundo, moto com mato, placa azul (R. Santo Dias × Tv. Jasmim da Beirada), cadeiras,
-  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Entra na main com o desenho da [arte]
+  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Ajustes do dono vendo as fotos: as cadeiras
+  da casa amarela ao lado da porta (não na frente) e os postes da rua do portão na calçada das casas, que para a
+  câmera fica atrás de quem anda na rua (antes ficavam na calçada da praça, na frente do personagem); nenhum fio
+  atravessa a rua
 - [x] **[arte]** O chão no padrão novo (13/11, `js/world/street.js`): asfalto de verdade (grão, manchas e trincas; mais
   trincas no `estado` rachado), calçada de placas de cimento (juntas, trincas, placas levantadas perto de raiz, mato
   nas frestas), meio-fio com sarjeta (a face aparece quando a rua fica do lado da câmera), faixa amarela apagada,
