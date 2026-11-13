@@ -1185,6 +1185,67 @@
     return true;
   };
 
+  // ------------------------------------------------------------------ piso de dentro (a Budega): ladrilho hidráulico
+  // Ladrilhos de 25 cm, creme, com quartos de círculo terracota nos cantos (quatro ladrilhos fazem uma flor) e um
+  // losango verde no meio; o rejunte claro e, aqui e ali, um ladrilho mais gasto ou trincado (perto da porta, mais).
+  texture.piso = (ctx, sh, box) => {
+    if (sh.kind !== 'rect' && sh.kind !== 'poly') return false;
+    const b = clipBox(G.shapeBox(sh), box);
+    if (!b) return true;
+    ctx.save();
+    G.shapePath(ctx, sh);
+    ctx.clip();
+    const S = 25;
+    ctx.fillStyle = '#e6d9bd';
+    ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+    const sb = G.shapeBox(sh);
+    for (let i = Math.floor(b.x0 / S); i * S < b.x1; i++) {
+      for (let j = Math.floor(b.y0 / S); j * S < b.y1; j++) {
+        const x = i * S, y = j * S;
+        const r = G.cellRng(i, j, 1301);
+        const worn = r() < 0.12 || (y > sb.y1 - 60 && r() < 0.35);
+        ctx.globalAlpha = worn ? 0.6 : 1;
+        ctx.fillStyle = '#b5523a';
+        for (const [cx, cy, a0] of [[x, y, 0], [x + S, y, Math.PI / 2], [x + S, y + S, Math.PI], [x, y + S, Math.PI * 1.5]]) {
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, S * 0.4, a0, a0 + Math.PI / 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.fillStyle = '#2f5d4a';
+        ctx.beginPath();
+        ctx.moveTo(x + S / 2, y + S * 0.22);
+        ctx.lineTo(x + S * 0.78, y + S / 2);
+        ctx.lineTo(x + S / 2, y + S * 0.78);
+        ctx.lineTo(x + S * 0.22, y + S / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#e6d9bd';
+        ctx.beginPath();
+        ctx.arc(x + S / 2, y + S / 2, S * 0.08, 0, M.TAU);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        if (worn && r() < 0.5) crack(ctx, x + S * r(), y + S * r(), r() * M.TAU, S * 0.6, r, 0.9, 'rgba(60, 46, 34, 0.6)', 0);
+      }
+    }
+    // rejunte
+    ctx.strokeStyle = 'rgba(160, 150, 132, 0.8)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let x = Math.floor(b.x0 / S) * S; x <= b.x1; x += S) {
+      ctx.moveTo(x, b.y0);
+      ctx.lineTo(x, b.y1);
+    }
+    for (let y = Math.floor(b.y0 / S) * S; y <= b.y1; y += S) {
+      ctx.moveTo(b.x0, y);
+      ctx.lineTo(b.x1, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+    return true;
+  };
+
   // ------------------------------------------------------------------ o chão no pé das figueiras
   // A da esquina (`rompendo`) quebrou a rua; a da mata só tem a terra e as raízes.
   function breaks(ctx, t, env) {
