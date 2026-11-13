@@ -15,6 +15,7 @@ import type { SavedInventory } from './inventory';
 import type { QuestLog } from '../shared/quests';
 import { lookFromName } from '../shared/look';
 import { nameKey } from '../shared/names';
+import type { LoginMode } from '../shared/protocol';
 
 /** O progresso que fica salvo. `null` = usar o padrão (vida cheia, nascer na vila). */
 export interface CharacterData {
@@ -47,7 +48,7 @@ export interface CharacterSaver {
 
 export type LoginResult =
   | { ok: true; id: number; created: boolean }
-  | { ok: false; reason: 'wrong_password' | 'creation_limit' };
+  | { ok: false; reason: 'wrong_password' | 'creation_limit' | 'not_found' | 'name_exists' };
 
 /**
  * Custo do scrypt, a "receita" que protege as senhas: quanto maior, mais difícil adivinhar uma senha
@@ -150,10 +151,15 @@ export class CharacterStore implements CharacterSaver {
    * Confere nome e senha. Se ainda não existe personagem com esse nome (e `allowCreate`), cria um novo
    * com esta senha. Demora um pouquinho de propósito (scrypt), sem travar o jogo.
    */
-  async login(name: string, password: string, allowCreate = true): Promise<LoginResult> {
+  /**
+   * Entra com o personagem `name` (conferindo a senha) ou cria um novo. `mode`: 'login' só entra (não existe =
+   * not_found), 'create' só cria (já existe = name_exists, sem conferir a senha); sem `mode`, entra ou cria.
+   */
+  async login(name: string, password: string, allowCreate = true, mode?: LoginMode): Promise<LoginResult> {
     const key = nameKey(name);
     const existing = this.findKey.get(key) as { id: number; password_hash: string } | undefined;
-    if (existing) return this.checkPassword(existing, password);
+    if (existing) return mode === 'create' ? { ok: false, reason: 'name_exists' } : this.checkPassword(existing, password);
+    if (mode === 'login') return { ok: false, reason: 'not_found' };
     if (!allowCreate) return { ok: false, reason: 'creation_limit' };
 
     const hash = await hashPassword(password, this.cost);
@@ -167,8 +173,21 @@ export class CharacterStore implements CharacterSaver {
       // Outra conexão criou o mesmo nome enquanto a senha era preparada: vale a senha de quem chegou antes.
       const winner = this.findKey.get(key) as { id: number; password_hash: string } | undefined;
       if (!winner) throw error;
-      return this.checkPassword(winner, password);
+      return mode === 'create' ? { ok: false, reason: 'name_exists' } : this.checkPassword(winner, password);
     }
+  }
+
+  /**
+   * Troca a senha do personagem `name` (painel do administrador, para quem esqueceu). Devolve o nome como está salvo,
+   * ou null se não existir personagem com esse nome. A senha nunca vai para o registro: só o hash fica salvo.
+   */
+  async setPassword(name: string, password: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT id, name FROM characters WHERE name_key = ?').get(nameKey(name)) as { id: number; name: string } | undefined;
+    if (!row) return null;
+    const hash = await hashPassword(password, this.cost);
+    this.assertOpen();
+    this.db.prepare('UPDATE characters SET password_hash = ? WHERE id = ?').run(hash, row.id);
+    return row.name;
   }
 
   /** O personagem salvo (ou null se não existir). */

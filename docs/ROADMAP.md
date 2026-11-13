@@ -112,6 +112,22 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[dono]** Nascimento no **Parque Santo Dias** (Capão Redondo). Capítulo 1, do mais fácil ao mais difícil:
   Capão Redondo e o parque → Guarapiranga → Santo Amaro (Largo Treze, Terminal e o Shopping do Largo Treze, sem
   o nome da rede) → Billings → o centro (Sé) no fim do jogo
+- [x] **[dono]** Pausa para capricho (13/11): parar de avançar e melhorar o detalhe dos mapas (o dono achou a arte
+  "ruinzinha": a rua não parece rua, a calçada não parece calçada), uma área por vez, começando pela rua e pela praça
+  da Budega. **Direção de arte nova:** a floresta reinando sobre a cidade inteira, pós-apocalíptico em versão
+  brasileira, sem barraco destruído (casas e prédios inteiros, tomados pela mata; a vila continua viva). Referências
+  aprovadas: `docs/referencias/padrao-rua-floresta.jpg` (a rua da Budega, com o detalhe que se quer) e
+  `docs/referencias/padrao-cidade-floresta.jpg` (o bairro inteiro). O Mapa 02 para depois do pedaço (a)
+- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: planta aprovada pelo dono em 13/11 ("show",
+  `docs/referencias/rua-budega-planta.jpg` e o alvo `docs/referencias/rua-budega-aprovada.jpg`; na beirada esquerda
+  dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-floresta` (por cima da 4c):
+  meio-fio com sarjeta, faixa amarela apagada, remendos, buracos com água, poças, rachaduras com mato, bueiros,
+  tampas, capim, calçada de placas, musgo na praça, a **Figueira da Esquina** rompendo a calçada e o asfalto na
+  esquina do portão (com raízes), cipó nas casas, nos postes e nos fios, plantas e árvore nas lajes, varal, o prédio
+  do conjunto (Bloco B) no fundo, moto com mato, placa azul (R. Santo Dias × Tv. Jasmim da Beirada), cadeiras,
+  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Entra na main com o desenho da [arte]
+- [ ] **[arte]** O chão no padrão novo: asfalto (rachaduras, remendos, faixas apagadas), calçada de placas de cimento
+  (juntas, placas levantadas por raiz, mato nas frestas), meio-fio com sarjeta; e as coisas novas que a planta trouxer
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
@@ -204,9 +220,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   e árvore seca"): o tronco abre em galhos na forquilha e cada galho termina num tufo de folhas de contorno recortado
   (vãos entre os tufos mostram os galhos; cipós pendurados); árvore seca com galhos tortos e barba-de-velho; escuro
   e neblina por área (`escuro`/`neblina` das áreas do mapa, a menor área vale), claro perto do herói
-- [ ] **[arte]** Mata nova, entrega 2: jerivá, embaúba, xaxim, bananeira, bambu, samambaia, helicônia, taboa,
-  cogumelo que brilha, deque, pinguela e os véus (brilho espiritual); de quebra, os arbustos da mata fechada (hoje uma
-  fila de bolas)
+- [x] **[arte]** Mata nova, entrega 2 (13/11): jerivá (folhas em pena, coquinhos e folha seca pendurada), embaúba
+  (candelabro com guarda-chuvas de folhas em mão, prateadas), xaxim (tronco de fibra e coroa rendada), bananeira
+  (leque rasgado, folha velha, cacho com coração roxo e filhote no pé), bambu (moita em chafariz), samambaia,
+  helicônia, taboa, cogumelo que brilha, deque, pinguela (tronco com o corte à mostra) e o brilho dos cogumelos e dos
+  véus por cima do escuro (nos véus, luzinhas subindo e uma cortina de luz bem fraca); os arbustos viraram tufos de
+  folhas recortadas. E o jogo só prepara a imagem dos objetos
+  perto da tela: no mapa novo (1.107 objetos) entrar caiu de ~2 s para 0,1–0,2 s e a memória das imagens, de
+  240–325 MB para 20–70 MB
 - [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o
   repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
   dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula
@@ -240,6 +261,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
   golpe fecha a conversa. O motor avisa a view: `focus(ponto)` (olhar para quem fala; a provisória já centraliza) e
   `talk(id, ms)` (quanto tempo a boca mexe: a fala ao abrir e a resposta ao entregar, aceitar ou desistir)
+- [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem
+  `docs/referencias/tela-inicial.webp`; fundo e logo em `tela-inicial-fundo.webp` e `tela-inicial-logo.webp`): "Entrar"
+  só entra com personagem que já existe (antes, nome digitado errado criava um personagem novo sem querer) e "Criar uma
+  conta" só cria nome novo (protocolo 23, `mode` no `hello`); a lógica está no `main.ts` e liga quando a página tiver
+  `#mode-toggle` (com `#login-title` e `#password2`); sem eles, tudo como antes. Para quem esquece a senha: **trocar
+  senha** no painel do administrador. Decidido com o dono: o nome é **Pindorama: Selva de Pedra**; ficam fora, até o
+  jogo estar na internet, "Entrar com Google", e-mail, "Esqueceu sua senha?" e "Sair do Jogo"
+- [ ] **[arte]** Tela inicial nova, o visual: fundo, logo e o painel de madeira com cipós da imagem do dono, no PC e
+  no celular, com os ids combinados (`#login-title`, `#password2`, `#mode-toggle`, mais os de sempre)
 - [ ] **[arte]** Conversa com NPC, parte 2: a `PD.View` centraliza em quem fala (`focus`, mesmo sendo criatura) e mexe
   a boca (`talk`); a fala "por cima" da cena no lugar do painel com o retrato antigo, com os botões (Aceitar,
   Desistir, Entregar, Ver a loja), no PC e no celular

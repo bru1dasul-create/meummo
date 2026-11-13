@@ -7,6 +7,7 @@ import sirv from 'sirv';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { TICK_MS } from '../shared/constants';
 import { GameMap, type TiledMap } from '../shared/map';
+import { nameKey } from '../shared/names';
 import { CharacterStore, type HashCost } from './accounts';
 import { createAdminHandler } from './admin';
 import { LoginGuard, type GuardLimits } from './login-guard';
@@ -90,10 +91,16 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const realm = new Realm(maps, { log, monsters: tuning.monsters, items: tuning.items, npcs: tuning.npcs, quests, saver: store, startMap: options.startMap });
   tuning.onChange = (changed) => realm.tuningChanged(changed);
   const sessions = new Set<Session>();
+  const guard = new LoginGuard(() => performance.now(), options.guardLimits);
   const admin = createAdminHandler({
     tuning,
     realm,
     log,
+    setPassword: async (name, password) => {
+      const saved = await store.setPassword(name, password);
+      if (saved) guard.forgive(nameKey(saved)); // as tentativas erradas de antes não travam a senha nova
+      return saved;
+    },
     kick: (playerId) => {
       for (const session of sessions) {
         if (session.playerId === playerId) {
@@ -108,7 +115,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const lobby: Lobby = {
     realm,
     store,
-    guard: new LoginGuard(() => performance.now(), options.guardLimits),
+    guard,
     online: new Map(),
     log,
   };

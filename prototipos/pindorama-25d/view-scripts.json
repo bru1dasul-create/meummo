@@ -13,6 +13,7 @@
     "js/world/tmj.js",
     "js/world/ground.js",
     "js/world/props.js",
+    "js/world/flora.js",
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",

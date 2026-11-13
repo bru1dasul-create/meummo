@@ -1,7 +1,7 @@
 // Conexão com o servidor (WebSocket).
 
 import { PROTOCOL_VERSION } from '../shared/constants';
-import type { ByeReason, ClientMsg, RejectReason, ServerMsg, WelcomeMsg } from '../shared/protocol';
+import type { ByeReason, ClientMsg, LoginMode, RejectReason, ServerMsg, WelcomeMsg } from '../shared/protocol';
 
 export type JoinFailure = RejectReason | 'offline' | 'timeout';
 
@@ -52,6 +52,8 @@ export class Connection {
     timeoutMs = 10000,
     /** Entrar pelo jogo 2.5D novo (o servidor manda para os mapas do formato novo). */
     newWorld = false,
+    /** 'login' só entra, 'create' só cria; sem, entra ou cria (como sempre). */
+    mode?: LoginMode,
   ): Promise<{ conn: Connection; welcome: WelcomeMsg }> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
@@ -79,7 +81,7 @@ export class Connection {
         }
       };
       ws.addEventListener('open', () =>
-        conn.send(newWorld ? { t: 'hello', v: PROTOCOL_VERSION, name, password, mundo: 'novo' } : { t: 'hello', v: PROTOCOL_VERSION, name, password }),
+        conn.send({ t: 'hello', v: PROTOCOL_VERSION, name, password, ...(newWorld ? { mundo: 'novo' as const } : {}), ...(mode ? { mode } : {}) }),
       );
       ws.addEventListener('error', () => finish(new JoinError('offline')));
       ws.addEventListener('close', () => finish(new JoinError('offline')));

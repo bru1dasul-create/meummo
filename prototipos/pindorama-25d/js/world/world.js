@@ -52,6 +52,8 @@
       this.poles = (m.poles || []).map((p) => add(new P.Pole(this, p)));
       if (m.trafficLight) add(new P.TrafficLight(this, m.trafficLight));
       for (const d of m.props || []) add(new P.Small(this, d));
+      // deque e pinguela: rentes ao chão, fora da ordem de quem fica em pé (desenhados logo depois do chão)
+      this.flats = (m.flats || []).map((d) => new P.Small(this, d));
       for (const f of m.fences || []) for (const part of P.Fence.split(f)) add(new P.Fence(this, part));
       for (const b of m.pillars || []) add(new P.Pillar(this, b));
       // no mundo novo, a colisão é a do próprio mapa (as mesmas caixas que o servidor usa)
@@ -136,7 +138,44 @@
     /** Recalcula imagens prontas (mudou o zoom ou a tela). */
     invalidate() {
       this.order = null;
+      // as imagens ficam (velhas): enquanto não são refeitas, saem esticadas para o zoom novo
       for (const p of this.props) p.spriteKey = '';
+      for (const f of this.flats || []) f.spriteKey = '';
+    }
+
+    /**
+     * O quadro já gastou o tempo de refazer imagens de objetos (~6 ms)? As que faltam ficam para os próximos quadros.
+     * Pelo menos 2 por quadro, para não parar de vez num aparelho lento.
+     */
+    buildBusy() {
+      return (this._built || 0) >= 2 && (this._buildMs || 0) > 6;
+    }
+
+    /** A tela (px do mundo), com folga de `mx` px dos lados e `my` em cima e embaixo. */
+    _viewRect(mx, my = mx) {
+      const cam = this.cam;
+      return { x0: cam.viewX - mx, y0: cam.viewY - my, x1: cam.viewX + cam.viewW + mx, y1: cam.viewY + cam.viewH + my };
+    }
+
+    /**
+     * Imagens dos objetos: adianta as de quem está chegando na tela (uma faixa de meia tela em volta, com o tempo que
+     * sobrou do quadro) e solta as de quem ficou a mais de uma tela de distância, para a memória não crescer com o
+     * tamanho do mapa.
+     */
+    _spriteCare() {
+      const cam = this.cam;
+      const near = this._viewRect(cam.viewW * 0.5, cam.viewH * 0.5);
+      const far = this._viewRect(cam.viewW, cam.viewH);
+      this._careTick = (this._careTick || 0) + 1;
+      const sweep = this._careTick % 30 === 0;
+      const care = (p) => {
+        const b = p.bounds;
+        if (overlap(b, near)) {
+          if (!p.spriteReady && !this.buildBusy()) p._ensureSprite();
+        } else if (sweep && p.sprite && !overlap(b, far)) p.dropSprite();
+      };
+      for (const p of this.props) care(p);
+      for (const f of this.flats || []) care(f);
     }
 
     update(dt, hero, others = []) {
@@ -243,9 +282,14 @@
         T[k] = T[k] * 0.95 + (t1 - t0) * 0.05;
         t0 = t1;
       };
+      // refazer imagens de objetos: ~6 ms por quadro (as que faltam saem esticadas); só o que aparece é desenhado
+      this._buildMs = 0;
+      this._built = 0;
+      const view = this._viewRect(40);
       this.ground.draw(ctx);
       mark('chao');
       this._drawAwakening(ctx);
+      for (const f of this.flats || []) if (overlap(f.bounds, view)) f.draw(ctx, t);
       for (const a of actors) a.drawShadow(ctx);
       // poeira no chão (antes do que está em pé)
       for (const p of this.particles) if (p.kind === 'poeira') this._drawParticle(ctx, p);
@@ -307,6 +351,7 @@
           actorMs += now() - a0;
           continue;
         }
+        if (!overlap(o.bounds, view)) continue; // fora da tela
         const target = o.hideTarget ?? 1;
         o.fade = M.damp(o.fade ?? 0, target < 1 ? 1 : 0, 10, this._dt || 1 / 60);
         o.hideTarget = 1;
@@ -357,6 +402,7 @@
       // por cima de tudo: soco (o que não ficou atrás do personagem), riscos, faíscas e pétalas
       for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._drawPetals(ctx);
+      this._spriteCare();
       mark('cima');
     }
 
