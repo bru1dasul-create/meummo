@@ -132,10 +132,13 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   remendos, buracos com água, poças, rachaduras com mato, bueiros, tampas de esgoto, raízes que levantam o chão,
   capim, musgo na praça, o campinho de terra com as linhas de cal e o chão quebrado em volta da Figueira da Esquina
   (`rompendo`; ela não tem os símbolos da Figueira dos Despertos: só árvore com véu perto tem)
-- [ ] **[arte]** As coisas novas da planta da rua: placa azul de rua, moto e carro com mato, cadeiras, vasos, lixo,
-  bandeirinhas, cipó nos postes e nos fios, casas tomadas pela mata (cipó, musgo, plantas e árvore na laje, varal,
-  grade, portão) e o prédio do conjunto; e as da 4c que a rua usa (viaduto com o trem, ônibus, muro grafitado, traves,
-  barreira e placa)
+- [x] **[arte]** As coisas novas da planta da rua (13/11, `js/world/city.js` e `props.js`): placa azul de rua (as de
+  São Paulo, com os dois nomes), moto enferrujada com mato, cadeira de plástico, vaso de espada-de-são-jorge, sacos de
+  lixo, bandeirinhas que balançam, cipó subindo pelos postes e pendurado nos fios, carro com uma árvore saindo pelo
+  teto, casas tomadas pela mata (cortinas de cipó conforme o `cipo`, manchas de chuva e musgo, plantas e árvore na laje,
+  varal com roupa, portão de garagem de ferro) e o prédio do conjunto (5 andares, varandas, entrada com a placa do
+  bloco). O escudo da Budega fica na frente do que está na laje. As coisas da 4c (viaduto, trem, ônibus, muro, traves,
+  barreira, placa, campinho) ficam para a etapa 4c: o ramo da rua do [mundo] (`mundo/rua-budega`) saiu sem a 4c
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔

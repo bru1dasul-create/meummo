@@ -411,6 +411,26 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
     grande da cidade).
   - Custo de um pedaço do chão (512 px) na rua: 6,6 ms no PC e 24,6 ms no celular de teste, quase o mesmo de antes
     (6,5 e 23,6 ms).
+- **Rua no padrão novo, as coisas em pé (13/11):** `js/world/city.js` (carrega depois do `flora.js`; nas três listas de
+  scripts) e mudanças no `props.js`.
+  - `PD.city.small[tipo]` (o `Small` pergunta a ele depois da flora): `placa-rua` (poste fino e duas plaquinhas azuis
+    cruzadas no alto, `texto` ao longo de x e `texto2` ao longo de y, desenhadas na parede de cada uma com
+    `cam.wallMatrix`; a largura sai do tamanho do texto), `moto` (referencial girado pelo `olhando`, inclinada no
+    descanso; rodas no plano de pé, tanque, banco, motor, guidão e farol; com `mato`, cipó por cima e capim em volta),
+    `cadeira` (de plástico; encosto e pernas na ordem certa conforme a frente vira para a câmera ou não), `vaso` (barro
+    com espadas-de-são-jorge: verde-escuro com faixas claras e borda amarela) e `lixo` (sacos pretos com brilho e nó).
+  - `PD.city.bunting`: o cordão de bandeirinhas (`bandeirinhas` no mapa, polilinha com `altura`), caindo no meio,
+    as bandeirinhas a cada 38 cm, de cores alternadas, balançando (desenhadas a cada quadro, depois dos fios).
+  - `PD.city.wireVines` (fio com `cipo`): folhas enroladas no fio do meio e fiapos pendurados que balançam;
+    `PD.city.poleVine` (poste com `cipo`): espiral de cipó subindo e fiapos caindo da cruzeta.
+  - Casa (`props.js`): `cipo` (0 a 1) = cortinas de cipó caindo da laje e ramos subindo do chão (`overgrowth`),
+    `musgo` (manchas de chuva escorrendo e musgo no rodapé e na beirada), `portao` (portão de garagem de ferro com
+    frisos e ferrugem), e na laje (`roofItems`, do fundo para a frente) a caixa d'água, `plantas` (samambaias e
+    arbustos da flora), `arvoreNaLaje` (árvore pequena com tronco e copa de tufos) e `varal` (roupas na parede
+    imaginária do fio). O escudo da Budega é desenhado depois da laje (planta nenhuma fica na frente da marca).
+  - `predio` (no mapa) vira uma casa alta (`tower`): 5 andares, varandas embaixo das janelas, a entrada no meio com a
+    marquise e a placa do bloco (o nome do prédio, "Bloco B"), o cipó sem cobrir a entrada e duas caixas d'água.
+  - Carro com `arvore`: o tronco sai pelo teto (o teto rasgado em volta) e a copa abre em cima.
 - **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
   de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
   - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a

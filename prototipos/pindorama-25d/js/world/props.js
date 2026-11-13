@@ -196,7 +196,8 @@
     screenBox() {
       const { x0, x1, y0, y1, h } = this.b;
       const z0 = this.z0;
-      const pts = [this.P(x0, y1, z0), this.P(x1, y1, z0), this.P(x1, y0, z0), this.P(x0, y0, z0 + h + 220), this.P(x1, y0, z0 + h + 220), this.P(x0, y1 + 160, z0 + h)];
+      const up = this.b.topExtra || 220;
+      const pts = [this.P(x0, y1, z0), this.P(x1, y1, z0), this.P(x1, y0, z0), this.P(x0, y0, z0 + h + up), this.P(x1, y0, z0 + h + up), this.P(x0, y1 + 160, z0 + h), this.P(x1, y1, z0 + h + up * 0.6)];
       return bbox(pts, 30 * this.cam.zoom);
     }
     shadow(path) {
@@ -312,7 +313,9 @@
     constructor(world, b) {
       super(world, b);
       const wall = b.block ? BLOCK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
-      this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38) };
+      // a laje com árvore ou varal precisa de mais espaço em cima na imagem
+      const topExtra = b.roofTree ? 640 : b.clothes ? 300 : 220;
+      this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38), topExtra };
     }
     paint(ctx) {
       const cam = this.cam;
@@ -341,19 +344,32 @@
             vendinha(ctx, b, W, H, r);
             continue;
           }
+          if (f === 0 && b.tower) {
+            // prédio do conjunto: a entrada no meio, com a placa do bloco
+            towerEntrance(ctx, W, H, b);
+            continue;
+          }
           const doorW = f === 0 ? 92 : 0;
           const doorX = f === 0 ? Math.min(W - doorW - 50, W * 0.18) : 0;
           if (f === 0) houseDoor(ctx, doorX, H - 212, doorW, 212, b, r);
+          // portão de garagem de ferro na ponta da frente
+          const gw = f === 0 && b.garage ? Math.min(240, W * 0.4) : 0;
+          if (gw) garageDoor(ctx, W - gw - 30, H - 230, gw, 230, r);
           // janelas: no térreo, do outro lado da porta; em cima, espalhadas
-          const room = f === 0 ? W - (doorX + doorW) - 60 : W - 80;
-          const n = Math.max(1, Math.floor(room / 190));
+          const room = f === 0 ? W - (doorX + doorW) - 60 - (gw ? gw + 40 : 0) : W - 80;
+          const n = room > 120 ? Math.max(1, Math.floor(room / 190)) : 0;
           for (let k = 0; k < n; k++) {
             const wx = (f === 0 ? doorX + doorW + 40 : 40) + (room / n) * (k + 0.5) - 55;
             const wy = yTop + Math.max(40, fh * 0.28);
-            houseWindow(ctx, wx, wy, 110, Math.min(100, fh * 0.36), b, M.rng(b.x0 + f * 17 + k));
+            const wh = Math.min(100, fh * 0.36);
+            houseWindow(ctx, wx, wy, 110, wh, b, M.rng(b.x0 + f * 17 + k));
+            if (b.balconies && f > 0) balcony(ctx, wx - 15, wy + wh + 6, 140);
           }
         }
         if (b.abandoned) vines(ctx, W, H, r);
+        // a casa tomada pela mata: musgo e manchas de chuva, e o cipó cobrindo parte da fachada
+        if (b.moss) mossWall(ctx, W, H, r);
+        if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : null);
       });
       // ---- lado (+x): começa na quina da frente e vai para o fundo
       onWall(ctx, cam, { x: b.x1, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
@@ -370,9 +386,12 @@
           }
         }
         if (b.abandoned) vines(ctx, D, H, r);
+        if (b.moss) mossWall(ctx, D, H, r);
+        if (b.vine) overgrowth(ctx, D, H, r, b.vine * 0.8);
       });
-      // ---- laje: caixa d'água e, nas de 2 andares, os ferros da próxima laje esperando
-      if (b.tank && !b.abandoned) tank(ctx, cam, b.x0 + W * 0.68, b.y0 + D * 0.35, z0 + H, ink);
+      // ---- laje: caixa d'água, plantas, árvore e varal (do fundo para a frente) e, nas de 2 andares, os ferros
+      roofItems(ctx, cam, b, z0 + H, ink);
+      if (b.logo) onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => logoBoard(ctx, b, W));
       if (floors >= 2) {
         ctx.strokeStyle = '#5a4a3e';
         ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
@@ -518,6 +537,263 @@
       }
     }
   }
+  // ---- a casa tomada pela mata (planta da rua da Budega, 13/11)
+  const LEAVES = ['#3f7a3a', '#2f5f2e', '#4f8a42', '#356b33'];
+  /** Folhas em cacho (na parede, em cm): cada folha com contorno escuro. */
+  function leafCluster(ctx, x, y, n, size, r) {
+    for (let k = 0; k < n; k++) {
+      const lx = x + (r() - 0.5) * size * 2.2, ly = y + (r() - 0.5) * size * 1.6;
+      const a = r() * Math.PI;
+      ctx.fillStyle = CANOPY_INK;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, size * 0.62 + 2, size * 0.36 + 2, a, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = LEAVES[Math.floor(r() * LEAVES.length)];
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, size * 0.62, size * 0.36, a, 0, M.TAU);
+      ctx.fill();
+    }
+  }
+  /** Manchas de chuva escorrendo da laje e musgo no rodapé e na beirada. */
+  function mossWall(ctx, len, H, r) {
+    ctx.fillStyle = 'rgba(40, 46, 34, 0.15)';
+    for (let i = 0; i < Math.max(3, len / 70); i++) {
+      const x = r() * len, w = 10 + r() * 26, h = 60 + r() * H * 0.5;
+      ctx.fillRect(x, 16, w, h);
+      ctx.fillRect(x + w * 0.3, 16 + h, w * 0.4, 20 + r() * 40);
+    }
+    const MOSS = ['rgba(70, 104, 50, 0.6)', 'rgba(88, 122, 58, 0.55)', 'rgba(56, 86, 42, 0.6)'];
+    for (let i = 0; i < len / 20; i++) {
+      ctx.fillStyle = MOSS[Math.floor(r() * 3)];
+      ctx.beginPath();
+      ctx.ellipse(r() * len, H - r() * 36, 10 + r() * 24, 6 + r() * 12, 0, 0, M.TAU);
+      ctx.fill();
+    }
+    for (let i = 0; i < len / 40; i++) {
+      ctx.fillStyle = MOSS[Math.floor(r() * 3)];
+      ctx.beginPath();
+      ctx.ellipse(r() * len, 18 + r() * 22, 8 + r() * 18, 5 + r() * 9, 0, 0, M.TAU);
+      ctx.fill();
+    }
+  }
+  /** Cipó tomando a parede: cortinas caindo da laje e ramos subindo do chão; `amount` (0 a 1) = quanto cobre. */
+  function overgrowth(ctx, len, H, r, amount, clear) {
+    const a = Math.max(0, Math.min(1, amount));
+    // `clear` = trecho [x0, x1] da parede que fica livre (a entrada e a placa do prédio)
+    const pick = () => {
+      let x = r() * len;
+      if (clear && x > clear[0] && x < clear[1]) x = x < (clear[0] + clear[1]) / 2 ? clear[0] - 30 - r() * 60 : clear[1] + 30 + r() * 60;
+      return x;
+    };
+    const stem = (pts) => {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.strokeStyle = CANOPY_INK;
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.strokeStyle = '#3d6a32';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    };
+    // cortinas que caem da laje
+    const nTop = Math.max(1, Math.round((len / 110) * a));
+    for (let k = 0; k < nTop; k++) {
+      const x = pick();
+      const drop = H * (0.12 + r() * 0.6 * a);
+      for (let j = 0; j < 2 + Math.floor(r() * 3); j++) {
+        const x0 = x + (r() - 0.5) * 60;
+        const pts = [];
+        for (let t = 0; t <= 1.001; t += 0.125) pts.push([x0 + Math.sin(t * 5 + j) * 8, 10 + drop * t * (0.6 + r() * 0.4)]);
+        stem(pts);
+        for (const [px, py] of pts) if (r() < 0.8) leafCluster(ctx, px, py, 2, 13 + r() * 5, r);
+      }
+      leafCluster(ctx, x, 18, 8, 16, r);
+    }
+    // ramos subindo do chão
+    const nBot = Math.max(1, Math.round((len / 150) * a));
+    for (let k = 0; k < nBot; k++) {
+      const x = pick();
+      const top = H * (0.2 + r() * 0.55 * a);
+      const pts = [];
+      for (let t = 0; t <= 1.001; t += 0.125) pts.push([x + Math.sin(t * 4 + k) * 22, H - top * t]);
+      stem(pts);
+      for (const [px, py] of pts) leafCluster(ctx, px, py, 3, 14 + r() * 6, r);
+    }
+  }
+  /** Portão de garagem de ferro: chapa com frisos, ferrugem escorrendo e o trinco. */
+  function garageDoor(ctx, x, y, w, h, r) {
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 6, y - 6, w + 12, h + 6);
+    ctx.fillStyle = '#5b6168';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#454a50';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let xx = x + 14; xx < x + w - 4; xx += 16) {
+      ctx.moveTo(xx, y + 4);
+      ctx.lineTo(xx, y + h);
+    }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(140, 82, 44, 0.45)';
+    for (let k = 0; k < 6; k++) ctx.fillRect(x + r() * (w - 12), y + h * (0.2 + r() * 0.5), 6 + r() * 10, h * (0.15 + r() * 0.3));
+    ctx.fillStyle = '#2e3236';
+    ctx.fillRect(x + w * 0.48, y + h * 0.55, 10, 24);
+  }
+  /** Entrada do prédio do conjunto: porta de vidro com grade e a placa do bloco (o nome do prédio no mapa). */
+  function towerEntrance(ctx, W, H, b) {
+    const dw = 170, dh = 230;
+    const dx = W / 2 - dw / 2, dy = H - dh;
+    ctx.fillStyle = INK;
+    ctx.fillRect(dx - 8, dy - 8, dw + 16, dh + 8);
+    ctx.fillStyle = '#2b3036';
+    ctx.fillRect(dx, dy, dw, dh);
+    ctx.fillStyle = 'rgba(150, 178, 190, 0.35)';
+    ctx.fillRect(dx + 10, dy + 10, dw / 2 - 15, dh - 20);
+    ctx.fillRect(dx + dw / 2 + 5, dy + 10, dw / 2 - 15, dh - 20);
+    ctx.strokeStyle = '#1b1e22';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let k = 1; k < 6; k++) {
+      ctx.moveTo(dx + (dw * k) / 6, dy + 8);
+      ctx.lineTo(dx + (dw * k) / 6, dy + dh);
+    }
+    ctx.stroke();
+    // marquise e a placa do bloco
+    ctx.fillStyle = INK;
+    ctx.fillRect(dx - 40, dy - 34, dw + 80, 26);
+    ctx.fillStyle = '#8f897d';
+    ctx.fillRect(dx - 36, dy - 30, dw + 72, 18);
+    const label = (b.name || '').toUpperCase();
+    if (label) {
+      ctx.font = `700 34px ${FONT_SIGN}`;
+      const tw = ctx.measureText(label).width + 40;
+      ctx.fillStyle = INK;
+      ctx.fillRect(W / 2 - tw / 2 - 4, dy - 96, tw + 8, 56);
+      ctx.fillStyle = '#e8e2d2';
+      ctx.fillRect(W / 2 - tw / 2, dy - 92, tw, 48);
+      ctx.fillStyle = '#2f3a46';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, W / 2, dy - 67);
+    }
+  }
+  /** Árvore pequena nascida na laje (raiz no chão da laje, copa de tufos como as da mata). */
+  function roofTree(ctx, cam, x, y, z, ink) {
+    const t = { x, y, kind: 'mata', r: 125, h: 380, trunk: 7 };
+    const fork = { x, y, z: z + t.h * FORK };
+    const b0 = cam.p({ x, y, z }), b1 = cam.p(fork);
+    const w0 = 9 * cam.zoom, w1 = 5 * cam.zoom;
+    const shape = [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
+    poly(ctx, shape, null, INK, ink * 2.2);
+    poly(ctx, shape, '#5a4532');
+    // raízes agarradas na beirada da laje
+    ctx.strokeStyle = '#4a3726';
+    ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+    for (const [dx, dy] of [[-30, 10], [25, 18], [8, -26]]) {
+      const q = cam.p({ x: x + dx, y: y + dy, z });
+      ctx.beginPath();
+      ctx.moveTo(b0.x, b0.y);
+      ctx.lineTo(q.x, q.y);
+      ctx.stroke();
+    }
+    crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
+  }
+  /** Varal na laje: dois postinhos, o fio caindo um pouco e as roupas penduradas (viradas para a frente). */
+  function clothesLine(ctx, cam, b, z, ink) {
+    const W = b.x1 - b.x0, D = b.y1 - b.y0;
+    const y = b.y0 + D * 0.7;
+    const xa = b.x0 + W * 0.12, xb = Math.min(b.x1 - W * 0.12, xa + 420);
+    const L = xb - xa;
+    for (const x of [xa, xb]) {
+      const p0 = cam.p({ x, y, z }), p1 = cam.p({ x, y, z: z + 165 });
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 4 * cam.zoom + ink * 2;
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a8f96';
+      ctx.lineWidth = 4 * cam.zoom;
+      ctx.stroke();
+    }
+    onWall(ctx, cam, { x: xa, y, z: z + 160 }, { x: 1, y: 0 }, () => {
+      const sag = (a) => Math.sin((Math.PI * a) / L) * 14;
+      ctx.strokeStyle = '#2a2a2e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let a = 0; a <= L; a += 10) (a ? ctx.lineTo(a, sag(a)) : ctx.moveTo(a, sag(a)));
+      ctx.stroke();
+      const COL = ['#e8452c', '#2f6fd0', '#f4c21c', '#f2efe6', '#e86a9a', '#3f9a4a', '#7d3fa8'];
+      const r = M.rng(Math.round(b.x0 * 5 + b.y0));
+      for (let a = 26; a < L - 30; a += 52 + r() * 18) {
+        const top = sag(a) + 1;
+        const c = COL[Math.floor(r() * COL.length)];
+        const kind = r();
+        ctx.fillStyle = c;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        if (kind < 0.4) {
+          // camiseta
+          ctx.moveTo(a - 22, top);
+          ctx.lineTo(a + 22, top);
+          ctx.lineTo(a + 30, top + 14);
+          ctx.lineTo(a + 18, top + 18);
+          ctx.lineTo(a + 18, top + 52);
+          ctx.lineTo(a - 18, top + 52);
+          ctx.lineTo(a - 18, top + 18);
+          ctx.lineTo(a - 30, top + 14);
+        } else if (kind < 0.7) {
+          // toalha
+          ctx.rect(a - 18, top, 36, 58);
+        } else {
+          // bermuda
+          ctx.moveTo(a - 18, top);
+          ctx.lineTo(a + 18, top);
+          ctx.lineTo(a + 20, top + 44);
+          ctx.lineTo(a + 3, top + 44);
+          ctx.lineTo(a, top + 18);
+          ctx.lineTo(a - 3, top + 44);
+          ctx.lineTo(a - 20, top + 44);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+        // prendedores
+        ctx.fillStyle = '#d8d2c2';
+        ctx.fillRect(a - 12, top - 3, 4, 7);
+        ctx.fillRect(a + 8, top - 3, 4, 7);
+      }
+    });
+  }
+  /** O que fica na laje, do fundo para a frente: caixa d'água, plantas, árvore e varal. */
+  function roofItems(ctx, cam, b, z, ink) {
+    const W = b.x1 - b.x0, D = b.y1 - b.y0;
+    const items = [];
+    const tx = b.x0 + W * 0.68, ty = b.y0 + D * 0.35;
+    if (b.tank && !b.abandoned) items.push({ k: tx + ty, draw: () => tank(ctx, cam, tx, ty, z, ink) });
+    if (b.tower && b.tank && W > 500) items.push({ k: b.x0 + W * 0.3 + ty, draw: () => tank(ctx, cam, b.x0 + W * 0.3, ty, z, ink) });
+    if (b.roofTree) {
+      const rx = b.x0 + W * 0.28, ry = b.y0 + D * 0.42;
+      items.push({ k: rx + ry, draw: () => roofTree(ctx, cam, rx, ry, z, ink) });
+    }
+    if (b.plants && PD.flora) {
+      const r = M.rng(Math.round(b.x0 * 7 + b.y0 * 3));
+      for (let k = 0; k < 6 + Math.floor(r() * 3); k++) {
+        const x = b.x0 + W * (0.08 + r() * 0.84), y = b.y0 + D * (0.1 + r() * 0.8);
+        if (Math.hypot(x - tx, y - ty) < 100) continue;
+        const kind = r() < 0.55 ? 'planta-samambaia' : 'arbusto';
+        const d = { kind, x, y, r: kind === 'arbusto' ? 38 + r() * 18 : 34 + r() * 18, wild: true };
+        const fl = PD.flora.small[kind];
+        if (fl) items.push({ k: x + y, draw: () => fl.paint(ctx, cam, d, z, ink) });
+      }
+    }
+    if (b.clothes) items.push({ k: b.x0 + W * 0.3 + b.y0 + D * 0.7, draw: () => clothesLine(ctx, cam, b, z, ink) });
+    items.sort((p, q) => p.k - q.k);
+    for (const it of items) it.draw();
+  }
   /** Vendinha: porta de enrolar meio aberta, prateleiras acesas lá dentro (garrafas, latas, caixas, frutas) e o letreiro. */
   function vendinha(ctx, b, W, H, r) {
     const s = b.shop;
@@ -563,13 +839,14 @@
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 12);
     // letreiro pintado na parede, em cima da porta (quem tem logo ganha a placa em cima da laje no lugar dele)
     if (s.sign && !b.logo) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
-    if (b.logo === 'budega') {
-      // a placa com o escudo fica em pé na beirada da laje, presa por dois ferros
-      const lw = Math.min(124, W * 0.36);
-      ctx.fillStyle = INK;
-      for (const px of [W / 2 - lw * 0.3, W / 2 + lw * 0.3]) ctx.fillRect(px - 4, -20, 8, 34);
-      budegaLogo(ctx, W / 2, -lw * 1.02 + 4, lw);
-    }
+  }
+  /** A placa com o escudo da Budega, em pé na beirada da laje, presa por dois ferros (na frente do que está na laje). */
+  function logoBoard(ctx, b, W) {
+    if (b.logo !== 'budega') return;
+    const lw = Math.min(124, W * 0.36);
+    ctx.fillStyle = INK;
+    for (const px of [W / 2 - lw * 0.3, W / 2 + lw * 0.3]) ctx.fillRect(px - 4, -20, 8, 34);
+    budegaLogo(ctx, W / 2, -lw * 1.02 + 4, lw);
   }
   /**
    * Logo da Budega (o escudo dourado do dono): "BUDEGA" e "DISTRIBUIDORA" numa faixa mais larga que o escudo, os
@@ -1988,6 +2265,8 @@
         ctx.ellipse(s1.x + 2 * cam.zoom, s1.y + 11 * cam.zoom, 18 * cam.zoom, 6 * cam.zoom, -0.45, 0, M.TAU);
         ctx.fill();
       }
+      // a mata subindo pelo poste (planta da rua da Budega)
+      if (p.vine && PD.city) PD.city.poleVine(ctx, cam, p, z0, this.h, ink);
     }
   }
 
@@ -2095,7 +2374,8 @@
     }
     constructor(world, d) {
       const fp = d.x0 !== undefined ? { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 } : { x0: d.x - (d.r || 30), x1: d.x + (d.r || 30), y0: d.y - (d.r || 30), y1: d.y + (d.r || 30) };
-      const fl = PD.flora && PD.flora.small[d.kind];
+      // desenhos de fora: as plantas da mata (flora.js) e as coisas da rua (city.js)
+      const fl = (PD.flora && PD.flora.small[d.kind]) || (PD.city && PD.city.small[d.kind]);
       super(world, fp, { fades: d.kind === 'banca' || !!(fl && fl.fades) });
       this.d = d;
       if (fl) {
@@ -2109,14 +2389,15 @@
       const r = d.r || 30;
       const decor = d.kind === 'aguape' || d.kind === 'capivara'; // enfeites: não seguram ninguém
       this.collider = decor ? null : d.x0 !== undefined ? { type: 'box', ...fp } : { type: 'circle', x: d.x, y: d.y, r: d.kind === 'arbusto' ? r * 0.8 : d.kind === 'pedra' ? r : d.kind === 'mesa' ? 60 : 22 };
-      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.h || 140, fogueira: 40 }[d.kind] || 80;
+      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.tree ? 520 : d.h || 140, fogueira: 40 }[d.kind] || 80;
     }
     screenBox() {
       if (this.fl && this.fl.box) return this.fl.box(this.cam, this.d, this.z0, this.height);
       const f = this.fp;
       const z = this.z0;
       const h = this.height + 60;
-      return bbox([this.P(f.x0, f.y1, z), this.P(f.x1, f.y0, z), this.P(f.x1, f.y1, z), this.P(f.x0, f.y0, z + h), this.P(f.x1, f.y0, z + h), this.P(f.x0, f.y1, z + h)], 40 * this.cam.zoom);
+      const e = this.d.tree ? 140 : 0; // a copa da árvore do carro passa da caixa do carro
+      return bbox([this.P(f.x0 - e, f.y1 + e, z), this.P(f.x1 + e, f.y0 - e, z), this.P(f.x1 + e, f.y1 + e, z), this.P(f.x0 - e, f.y0 - e, z + h), this.P(f.x1 + e, f.y0 - e, z + h), this.P(f.x0 - e, f.y1 + e, z + h)], 40 * this.cam.zoom);
     }
     shadow(path) {
       const f = this.fp;
@@ -2689,6 +2970,23 @@
         circles.sort((p, q) => p.y - q.y);
         blobCluster(ctx, circles, { base: '#4f8a3c', shade: '#356a2c', light: '#72aa52' }, ink, cam.lightScreen);
       }
+    }
+    // uma árvore nascendo de dentro do carro (planta da rua da Budega): o tronco sai pelo teto e a copa abre em cima
+    if (d.tree) {
+      const tx = (cab.x0 + cab.x1) / 2, ty = (cab.y0 + cab.y1) / 2;
+      const t = { x: tx, y: ty, kind: 'mata', r: 150, h: 430, trunk: 9 };
+      const fork = { x: tx, y: ty, z: z0 + 20 + t.h * FORK };
+      const b0 = cam.p({ x: tx, y: ty, z: z0 + H }), b1 = cam.p(fork);
+      const w0 = 11 * cam.zoom, w1 = 7 * cam.zoom;
+      const trunkShape = [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
+      poly(ctx, trunkShape, null, INK, ink * 2.2);
+      poly(ctx, trunkShape, '#5a4532');
+      // o teto rasgado em volta do tronco
+      ctx.fillStyle = '#2a2420';
+      ctx.beginPath();
+      ctx.ellipse(b0.x, b0.y, w0 * 1.9, w0 * 0.8, 0, 0, M.TAU);
+      ctx.fill();
+      crownPaint(ctx, cam, t, z0 + 20, ink, CANOPY.mata, false);
     }
   };
 

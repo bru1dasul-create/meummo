@@ -151,6 +151,19 @@
       return (this._built || 0) >= 2 && (this._buildMs || 0) > 6;
     }
 
+    /** Algum trecho entre esses pontos (já na tela) aparece? (caixa dos pontos contra a tela, com folga) */
+    _onScreen(pts) {
+      if (!pts.length) return false;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const q of pts) {
+        x0 = Math.min(x0, q.x);
+        y0 = Math.min(y0, q.y);
+        x1 = Math.max(x1, q.x);
+        y1 = Math.max(y1, q.y);
+      }
+      return overlap({ x0, y0: y0 - 200, x1, y1: y1 + 200 }, this._viewRect(80));
+    }
+
     /** A tela (px do mundo), com folga de `mx` px dos lados e `my` em cima e embaixo. */
     _viewRect(mx, my = mx) {
       const cam = this.cam;
@@ -399,6 +412,8 @@
       T.objetos -= actorMs * 0.05;
       T.personagem = T.personagem * 0.95 + actorMs * 0.05;
       this._drawWires(ctx);
+      // bandeirinhas da praça (balançam: a cada quadro)
+      if (PD.city) for (const b of this.map.bunting || []) if (this._onScreen(b.pts.map((p) => this.cam.p({ x: p.x, y: p.y, z: b.h })))) PD.city.bunting(ctx, this.cam, b, this.time);
       // por cima de tudo: soco (o que não ficou atrás do personagem), riscos, faíscas e pétalas
       for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._drawPetals(ctx);
@@ -493,26 +508,30 @@
       const cam = this.cam;
       ctx.strokeStyle = 'rgba(22, 18, 22, 0.9)';
       ctx.lineCap = 'round';
-      for (const [a, b] of this.map.wires) {
+      this.map.wires.forEach(([a, b, vine], w) => {
         const A = this.poles[a].wireAnchors();
         const B = this.poles[b].wireAnchors();
         for (let k = 0; k < 3; k++) {
           const p0 = A[k];
           const p1 = B[2 - k] || B[k];
           const sag = 70 + k * 18;
-          const pts = [];
+          const pts3 = [];
           for (let s = 0; s <= 12; s++) {
             const u = s / 12;
             const p = M.lerp3(p0, p1, u);
             p.z -= Math.sin(u * Math.PI) * sag;
-            pts.push(cam.p(p));
+            pts3.push(p);
           }
+          const pts = pts3.map((p) => cam.p(p));
+          ctx.strokeStyle = 'rgba(22, 18, 22, 0.9)';
           ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
           ctx.beginPath();
           pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
           ctx.stroke();
+          // a mata subindo pela fiação (planta da rua da Budega): cipó no fio do meio
+          if (vine && k === 1 && PD.city && this._onScreen(pts)) PD.city.wireVines(ctx, cam, pts3, 977 + w * 31, this.time);
         }
-      }
+      });
       // o "gato": emaranhado de fios num poste (típico da cidade); mapas sem postes de fiação não têm
       if (!this.poles[1]) return;
       const p = this.poles[1].p;

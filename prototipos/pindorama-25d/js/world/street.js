@@ -346,8 +346,9 @@
   paint['faixa-rua'] = (ctx, sh) => {
     const w = sh.width || 12;
     const color = sh.color || '#c9a640';
-    const dash = sh.dashed ? 280 : 1e9;
-    const gap = 320;
+    // traço de ~1,2 m e vão de ~1 m (a lista do [mundo])
+    const dash = sh.dashed ? 120 : 1e9;
+    const gap = 100;
     let phase = 0;
     ctx.lineCap = 'butt';
     for (let i = 0; i + 1 < sh.pts.length; i++) {
@@ -540,26 +541,27 @@
 
   // ------------------------------------------------------------------ bueiro (grade na sarjeta)
   paint.bueiro = (ctx, sh) => {
-    // `olhando` = para onde a boca do bueiro dá; a grade comprida fica deitada ao longo do meio-fio
+    // grade de 0,9 × 0,4 m colada no meio-fio: `olhando` 0 = o meio-fio vai de leste a oeste (a grade comprida deitada
+    // em x); 90 = de norte a sul
     ctx.save();
     ctx.translate(sh.x, sh.y);
     ctx.rotate(((sh.angle || 0) * Math.PI) / 180);
-    const W = 42, L = 84;
+    const L = 90, W = 40; // L ao longo do meio-fio (x local), W para dentro da rua
     ctx.fillStyle = 'rgba(14, 15, 17, 0.3)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, W * 0.95, L * 0.68, 0, 0, M.TAU);
+    ctx.ellipse(0, 0, L * 0.68, W * 0.95, 0, 0, M.TAU);
     ctx.fill();
     ctx.fillStyle = '#3b3936';
-    ctx.fillRect(-W / 2, -L / 2, W, L);
+    ctx.fillRect(-L / 2, -W / 2, L, W);
     ctx.fillStyle = '#0c0c0d';
-    ctx.fillRect(-W / 2 + 4, -L / 2 + 4, W - 8, L - 8);
+    ctx.fillRect(-L / 2 + 4, -W / 2 + 4, L - 8, W - 8);
     ctx.fillStyle = '#5a5650';
-    for (let y = -L / 2 + 8; y < L / 2 - 6; y += 9) ctx.fillRect(-W / 2 + 4, y, W - 8, 3.6);
-    ctx.fillStyle = 'rgba(122, 78, 42, 0.35)'; // ferrugem
-    ctx.fillRect(-W / 2 + 6, L / 6, W - 12, L / 4);
+    for (let x = -L / 2 + 8; x < L / 2 - 6; x += 9) ctx.fillRect(x, -W / 2 + 4, 3.6, W - 8);
+    ctx.fillStyle = 'rgba(122, 78, 42, 0.3)'; // ferrugem
+    ctx.fillRect(L / 6, -W / 2 + 6, L / 4, W - 12);
     ctx.strokeStyle = 'rgba(200, 196, 186, 0.35)';
     ctx.lineWidth = 1.4;
-    ctx.strokeRect(-W / 2, -L / 2, W, L);
+    ctx.strokeRect(-L / 2, -W / 2, L, W);
     ctx.restore();
   };
 
