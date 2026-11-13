@@ -110,6 +110,8 @@
           abandoned: !!pr.abandonada,
           name: o.name || '',
           shop: pr.comercio ? { type: pr.comercio, sign: pr.letreiro || '', awning: pr.toldo ? [pr.toldo, '#fff4dc'] : null } : null,
+          // placa com o logo em cima da laje, no lugar do letreiro ('budega': o escudo da Budega, pedido do dono)
+          logo: pr.logo || null,
         });
       } else if (k === 'banco') {
         map.props.push({ kind: 'banco', ...rect(o), angle: pr.olhando });
@@ -151,7 +153,12 @@
 
     for (const o of objs('colisao')) map.colliders.push({ type: 'box', ...rect(o), shots: props(o).bloqueiaTiro !== false });
     for (const o of objs('seguro')) map.safe.push({ ...rect(o), name: o.name || '' });
-    for (const o of objs('areas')) map.areas.push({ ...rect(o), name: o.name || '' });
+    for (const o of objs('areas')) {
+      // clima da área (de 0 a 1): `escuro` e `neblina`; onde duas se cobrem, vale a menor (a mais de perto)
+      const pr = props(o);
+      const num = (v) => (typeof v === 'number' && isFinite(v) ? Math.max(0, Math.min(1, v)) : null);
+      map.areas.push({ ...rect(o), name: o.name || '', dark: num(pr.escuro), fog: num(pr.neblina) });
+    }
     for (const o of objs('pontos')) if ((o.name || '') === 'spawn') map.spawn = { x: o.x * CM, y: o.y * CM };
     if (!map.spawn) map.spawn = { x: map.w / 2, y: map.h / 2 };
     return map;
