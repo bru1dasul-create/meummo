@@ -242,6 +242,21 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     expect(bad.slice(0, 5)).toEqual([]);
   });
 
+  it('nenhuma árvore da vila tampa as trilhas do parque vista da câmera (a copa da Figueira da Esquina não cai em cima dos saguis)', () => {
+    const screen = (x: number, y: number, z = 0) => [(x - y) * Math.SQRT1_2, (x + y) * Math.SQRT1_2 * 0.5 - z * 0.866] as const;
+    const bad: string[] = [];
+    for (const o of cenario.filter((c) => !inPark(c) && c.type === 'arvore')) {
+      const { x, y } = at(o);
+      const [cx, cy] = screen(x, y, Number(prop(o, 'altura')));
+      for (const [kx, ky] of keys) {
+        if (kx >= 48 || kx + ky >= x + y) continue; // só as do parque, e só o que está atrás da árvore
+        const [sx, sy] = screen(kx, ky);
+        if (Math.hypot(sx - cx, sy - cy) < Number(prop(o, 'copa')) * 1.05) bad.push(`${prop(o, 'especie')} em (${x}, ${y}) tampa (${kx.toFixed(1)}, ${ky.toFixed(1)})`);
+      }
+    }
+    expect(bad.slice(0, 5)).toEqual([]);
+  });
+
   it('a mata ficou mais aberta: no parque, no máximo uma árvore grande a cada 40 m²', () => {
     const big = cenario.filter((o) => inPark(o) && o.type === 'arvore' && Number(prop(o, 'copa')) >= 1.7 && prop(o, 'especie') !== 'figueira');
     expect(big.length).toBeLessThanOrEqual((48 * 120) / 40);
@@ -457,16 +472,17 @@ describe('Mapa 01 (Capão): a rua e a praça da Budega no padrão novo (a flores
     expect(boxes.some((b) => ['meio-fio', 'faixa-rua', 'remendo', 'buraco', 'rachadura', 'bueiro', 'tampa', 'raiz', 'poca'].includes(b.type))).toBe(false);
   });
 
-  it('a Figueira da Esquina rompe a calçada na esquina do portão sem fechar a passagem, e as raízes passam por cima da rua', () => {
+  it('a Figueira da Esquina rompe a calçada na frente da casa rosa sem fechar a passagem, e as raízes passam por cima da rua', () => {
     const fig = cenario.find((o) => o.name === 'Figueira da Esquina')!;
     expect(prop(fig, 'especie')).toBe('figueira');
     expect(prop(fig, 'rompendo')).toBe(true);
     const { x, y } = at(fig);
-    expect(Math.hypot(x - 57, y - 38.6)).toBeLessThan(0.01);
+    // logo depois da esquina do portão: na esquina, a copa tampava a trilha dos saguis no parque
+    expect(Math.hypot(x - 68, y - 40.25)).toBeLessThan(0.01);
     // do portão até a rua continua livre, e a faixa de pedestre também
-    for (const [px, py] of [[49, 44], [52.75, 44], [56.5, 42], [60, 44]] as const) expect(reach(px, py), `(${px}, ${py})`).toBe(true);
+    for (const [px, py] of [[49, 44], [52.75, 44], [56.5, 42], [60, 44], [68, 43], [72, 42]] as const) expect(reach(px, py), `(${px}, ${py})`).toBe(true);
     expect(of('raiz').length).toBeGreaterThanOrEqual(4);
-    expect(reachNear(58.2, 41.4, 0.3)).toBe(true); // em cima de uma raiz, na rua
+    expect(reachNear(69.6, 42.1, 0.3)).toBe(true); // em cima de uma raiz, na rua
   });
 
   it('a mata tomando a vila: cipó nos postes, nos fios e nas casas, plantas nas lajes, e o prédio do conjunto no fundo', () => {
