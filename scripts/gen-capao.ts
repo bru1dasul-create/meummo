@@ -678,7 +678,9 @@ if (FLORESTA) {
     cenario.push(point('lixeira', bin[0]!, bin[1]!, { mato: true }));
   }
   // postes de parque apagados, tortos e com cipó, na beira das trilhas
-  for (const [tx, ty] of [[45.8, 35.5], [26, 37.6], [31.8, 55.2]] as const) {
+  // (o da entrada fica um pouco ao norte e a leste: em 45,8; 35,5 ele ficava, na tela, na mesma linha do poste de
+  // concreto do portão, e os dois se confundiam)
+  for (const [tx, ty] of [[46.2, 34.6], [26, 37.6], [31.8, 55.2]] as const) {
     const [x, y] = near(tx, ty, 0.25, 0.25, 0.35);
     cenario.push(point('poste-praca', x, y, { altura: 3.2, apagado: true, torto: true, cipo: true }));
   }
