@@ -23,6 +23,15 @@
     return A.x0 + A.x1 + A.y0 + A.y1 < B.x0 + B.x1 + B.y0 + B.y1;
   }
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  // móveis de dentro de casa (só aparecem com o herói lá dentro)
+  const INSIDE_KINDS = new Set(['prateleira', 'geladeira', 'balcao', 'engradado']);
+  /** O pé (caixa) está dentro da casa que dá para entrar `o` (a casa, não a parede do fundo)? */
+  const insideOf = (o, fp) => {
+    const b = o.b && o.b.interior && o.cutK !== undefined ? o.b : null;
+    if (!b || !fp) return false;
+    const cx = (fp.x0 + fp.x1) / 2, cy = (fp.y0 + fp.y1) / 2;
+    return cx > b.x0 && cx < b.x1 && cy > b.y0 && cy < b.y1;
+  };
 
   class World {
     /** `map`: o mapa já pronto (PD.MAP, a esquina de São Paulo, ou um mapa do mundo novo lido por PD.tmj.toMap). */
@@ -43,7 +52,10 @@
       const m = this.map;
       const add = (p) => (this.props.push(p), p);
       for (const b of m.buildings || []) add(new P.Building(this, b));
-      for (const h of m.houses || []) add(new P.House(this, h));
+      const houses = (m.houses || []).map((h) => add(new P.House(this, h)));
+      // casa que dá para entrar (a Budega): a parede do fundo por dentro é outro objeto, desenhado antes de quem está lá
+      this.interiors = houses.filter((p) => p.b.interior);
+      for (const p of this.interiors) add(new P.HouseBack(this, p));
       for (const w of m.walls || []) add(new P.Wall(this, w));
       for (const t of m.trees || []) {
         add(new P.TreeTrunk(this, t));
@@ -52,7 +64,15 @@
       this.poles = (m.poles || []).map((p) => add(new P.Pole(this, p)));
       if (m.trafficLight) add(new P.TrafficLight(this, m.trafficLight));
       this.trafficLights = (m.trafficLights || []).map((d) => add(new P.TrafficLight(this, d)));
-      for (const d of m.props || []) add(new P.Small(this, d));
+      for (const d of m.props || []) {
+        const p = add(new P.Small(this, d));
+        // os móveis de dentro de uma casa que dá para entrar só aparecem com o herói lá dentro (House.cutK)
+        if (INSIDE_KINDS.has(d.kind)) {
+          const cx = d.x0 !== undefined ? (d.x0 + d.x1) / 2 : d.x;
+          const cy = d.y0 !== undefined ? (d.y0 + d.y1) / 2 : d.y;
+          p.house = this.interiors.find((h) => cx > h.b.x0 && cx < h.b.x1 && cy > h.b.y0 && cy < h.b.y1) || null;
+        }
+      }
       // deque e pinguela: rentes ao chão, fora da ordem de quem fica em pé (desenhados logo depois do chão)
       this.flats = (m.flats || []).map((d) => new P.Small(this, d));
       for (const f of m.fences || []) for (const part of P.Fence.split(f)) add(new P.Fence(this, part));
@@ -195,6 +215,18 @@
     update(dt, hero, others = []) {
       this.time += dt;
       const t = this.time;
+      // dentro de uma casa que dá para entrar? (o telhado e a frente dela saem: House.cutK). Para sair, uns passos a
+      // mais que para entrar: parado na porta, não fica piscando
+      let inside = null;
+      for (const p of this.interiors || []) {
+        const b = p.b;
+        const m = this.insideHouse === p ? -25 : 6;
+        if (hero.pos.x > b.x0 + m && hero.pos.x < b.x1 - m && hero.pos.y > b.y0 + m && hero.pos.y < b.y1 - m) {
+          inside = p;
+          break;
+        }
+      }
+      this.insideHouse = inside;
       // eventos do personagem: poeira e soco
       for (const character of [hero, ...others]) {
         for (const ev of character.events) {
@@ -354,6 +386,12 @@
             continue;
           }
           if (!overlap(o.bounds, a.bounds)) continue;
+          // quem está dentro de uma casa que dá para entrar fica sempre antes da frente dela (senão um poste do outro
+          // lado da rua, que fica atrás dele, o empurrava para depois da casa e ele aparecia por cima do telhado)
+          if (insideOf(o, a.fp)) {
+            beforeActor = Math.min(beforeActor, i);
+            continue;
+          }
           if (behind(o, a)) idx = i + 1;
         }
         idx = Math.min(idx, beforeActor);
@@ -366,6 +404,8 @@
         for (let i = idx + 1; i < order.length; i++) {
           const o = order[i];
           if (o.actor || !o.fades) continue;
+          // quem está dentro da loja fechada (você do lado de fora) não ganha a janela transparente: só o nome aparece
+          if (insideOf(o, a.fp)) continue;
           let hide = overlap(o.bounds, body);
           if (hide && o.overhead && o.cover) hide = o.cover(body);
           if (hide) {

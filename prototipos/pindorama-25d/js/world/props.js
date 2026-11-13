@@ -316,6 +316,86 @@
       // a laje com árvore ou varal precisa de mais espaço em cima na imagem
       const topExtra = b.roofTree ? 640 : b.clothes ? 300 : 220;
       this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38), topExtra };
+      if (b.interior) {
+        // casa que dá para entrar (a Budega, pedido do dono: "igual HumanitZ"): na ordem de desenho ela é a parede da
+        // frente — quem está dentro fica atrás dela e na frente da parede do fundo (HouseBack). Com o herói dentro, o
+        // telhado e as paredes da frente saem com suavidade (`cutK` de 0 a 1) e fica só a base delas.
+        this.fp = { x0: b.x0, x1: b.x1, y0: b.y1 - 20, y1: b.y1 };
+        this.cutK = 0;
+      }
+    }
+    draw(ctx, t) {
+      if (!this.b.interior) return super.draw(ctx, t);
+      const w = this.world;
+      this.cutK = M.damp(this.cutK, w.insideHouse === this ? 1 : 0, 9, w._dt || 1 / 60);
+      if (this.cutK > 0.999) this.cutK = 1;
+      if (this.cutK < 0.001) this.cutK = 0;
+      // cortada, ela não cobre o herói: sem a "janela" transparente das casas
+      this.fades = this.cutK < 0.5;
+      const a = this.alpha;
+      if (this.cutK < 1) {
+        this.alpha = a * (1 - this.cutK);
+        super.draw(ctx, t);
+        this.alpha = a;
+      }
+      if (this.cutK > 0) {
+        const s = this._cutSprite();
+        ctx.globalAlpha = this.cutK * a;
+        ctx.drawImage(s.c, s.x, s.y, s.w, s.h);
+        ctx.globalAlpha = 1;
+      }
+    }
+    dropSprite() {
+      super.dropSprite();
+      this._cut = null;
+    }
+    /** A imagem da casa cortada (feita na hora em que precisar; a mesma caixa da casa inteira). */
+    _cutSprite() {
+      const cam = this.cam;
+      const key = this._zoomKey();
+      if (this._cut && this._cutKey === key) return this._cut;
+      const b = this.bounds;
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.ceil(b.w * cam.dpr));
+      c.height = Math.max(1, Math.ceil(b.h * cam.dpr));
+      const ctx = c.getContext('2d');
+      ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -b.x0 * cam.dpr, -b.y0 * cam.dpr);
+      this.paintCut(ctx);
+      this._cut = { c, x: b.x0, y: b.y0, w: b.w, h: b.h };
+      this._cutKey = key;
+      return this._cut;
+    }
+    /**
+     * A casa cortada (herói dentro): só a base das paredes da frente (+y) e do lado (+x), com o corte claro em cima, e
+     * a soleira na porta. A porta é o vão da porta de enrolar (a frente toda, menos 34 cm de cada ponta).
+     */
+    paintCut(ctx) {
+      const cam = this.cam;
+      const b = this.b;
+      const z0 = this.z0;
+      const ink = this.ink;
+      const T = 15;
+      const hc = 45;
+      const side = M.shade(b.wall, -0.26);
+      const cut = { front: b.wall, side, top: '#ddd3c2' };
+      const P = (x, y, z) => cam.p({ x, y, z });
+      // a soleira no vão da porta
+      poly(ctx, [P(b.x0 + 34, b.y1 - T, z0 + 1), P(b.x1 - 34, b.y1 - T, z0 + 1), P(b.x1 - 34, b.y1, z0 + 1), P(b.x0 + 34, b.y1, z0 + 1)], '#b9b2a4', 'rgba(27, 16, 13, 0.5)', ink);
+      box(ctx, cam, b.x1 - T, b.x1, b.y0, b.y1, z0, z0 + hc, cut, ink);
+      box(ctx, cam, b.x0, b.x0 + 34, b.y1 - T, b.y1, z0, z0 + hc, cut, ink);
+      box(ctx, cam, b.x1 - 34, b.x1, b.y1 - T, b.y1, z0, z0 + hc, cut, ink);
+      // musgo na base de fora, como na casa inteira
+      if (b.moss) {
+        const r = M.rng(Math.round(b.x0 * 3 + 5));
+        ctx.fillStyle = 'rgba(86, 118, 52, 0.55)';
+        for (let k = 0; k < 8; k++) {
+          const x = b.x0 + r() * (b.x1 - b.x0);
+          const p = P(x, b.y1, z0 + r() * hc * 0.6);
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, (6 + r() * 10) * cam.zoom, (3 + r() * 4) * cam.zoom, 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
     }
     paint(ctx) {
       const cam = this.cam;
@@ -409,6 +489,138 @@
         }
       }
       if (shop && b.shop.awning) houseAwning(ctx, cam, b, z0, ink);
+    }
+  }
+
+  /**
+   * O fundo de dentro da casa que dá para entrar: as paredes do fundo (-y) e da esquerda (-x) vistas por dentro, com
+   * reboco claro em cima e azulejo branco embaixo (faixa azul no meio), o relógio, a placa "FIADO SÓ AMANHÃ" e a lousa
+   * de preços, e o topo das paredes (sem a laje). Só aparece com a casa cortada (herói dentro).
+   */
+  class HouseBack extends Prop {
+    constructor(world, house) {
+      const b = house.b;
+      super(world, { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y0 + 15 }, { fades: false });
+      this.house = house;
+      this.b = b;
+    }
+    screenBox() {
+      const b = this.b;
+      const z0 = this.z0;
+      const H = b.h;
+      const pts = [this.P(b.x0, b.y0, z0), this.P(b.x1, b.y0, z0), this.P(b.x0, b.y1, z0), this.P(b.x0, b.y0, z0 + H), this.P(b.x1, b.y0, z0 + H), this.P(b.x0, b.y1, z0 + H)];
+      return bbox(pts, 20 * this.cam.zoom);
+    }
+    shadow() {}
+    draw(ctx) {
+      const k = this.house.cutK || 0;
+      if (k <= 0) return;
+      const s = this._spriteNow();
+      ctx.globalAlpha = k * this.alpha;
+      ctx.drawImage(s.c, s.x, s.y, s.w, s.h);
+      ctx.globalAlpha = 1;
+    }
+    paint(ctx) {
+      const cam = this.cam;
+      const b = this.b;
+      const z0 = this.z0;
+      const ink = this.ink;
+      const T = 15;
+      const H = b.h;
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const paint = '#efe3c6';
+      const tile = '#f2efe8';
+      const band = '#3f6fa8';
+      const tileH = 120;
+      // reboco em cima, azulejo embaixo (quadrados de 15 cm) e a faixa azul entre os dois; `dark` = a parede de lado
+      const face = (len, dark) => {
+        ctx.fillStyle = dark ? M.shade(paint, -0.16) : paint;
+        ctx.fillRect(0, 0, len, H - tileH);
+        ctx.fillStyle = dark ? M.shade(tile, -0.16) : tile;
+        ctx.fillRect(0, H - tileH, len, tileH);
+        ctx.strokeStyle = dark ? 'rgba(120, 120, 128, 0.45)' : 'rgba(150, 150, 158, 0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let x = 15; x < len; x += 15) {
+          ctx.moveTo(x, H - tileH);
+          ctx.lineTo(x, H);
+        }
+        for (let y = H - tileH + 15; y < H; y += 15) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(len, y);
+        }
+        ctx.stroke();
+        ctx.fillStyle = dark ? M.shade(band, -0.16) : band;
+        ctx.fillRect(0, H - tileH - 6, len, 8);
+        // sujeira perto do chão
+        ctx.fillStyle = 'rgba(80, 64, 44, 0.12)';
+        ctx.fillRect(0, H - 14, len, 14);
+      };
+      const lenN = b.x1 - b.x0 - T;
+      const lenW = b.y1 - b.y0 - T;
+      // a parede da esquerda (por dentro, de frente para +x: mais escura) e a do fundo (de frente para +y)
+      poly(ctx, [P(b.x0 + T, b.y1, z0), P(b.x0 + T, b.y0 + T, z0), P(b.x0 + T, b.y0 + T, z0 + H), P(b.x0 + T, b.y1, z0 + H)], null, INK, ink * 2.2);
+      onWall(ctx, cam, { x: b.x0 + T, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
+        face(lenW, true);
+        // lousa de preços (sem marca, nada de tabaco) e um calendário
+        const bx = lenW * 0.55, by = 46;
+        ctx.fillStyle = '#6a4a2e';
+        ctx.fillRect(bx - 6, by - 6, 112, 84);
+        ctx.fillStyle = '#2d3a33';
+        ctx.fillRect(bx, by, 100, 72);
+        ctx.fillStyle = '#e9eee6';
+        ctx.font = '700 11px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('PREÇOS', bx + 8, by + 15);
+        ctx.font = '600 8px system-ui, sans-serif';
+        [['ÁGUA DE COCO', '5'], ['GARRAFADA', '12'], ['PÃO DE QUEIJO', '3'], ['AÇAÍ', '8']].forEach(([n, v], i) => {
+          ctx.fillText(n, bx + 8, by + 30 + i * 11);
+          ctx.fillText(v, bx + 86, by + 30 + i * 11);
+        });
+        ctx.fillStyle = '#f7f2e4';
+        ctx.fillRect(lenW * 0.22, 40, 34, 44);
+        ctx.fillStyle = '#c0392b';
+        ctx.fillRect(lenW * 0.22, 40, 34, 10);
+        ctx.strokeStyle = 'rgba(60, 60, 60, 0.5)';
+        ctx.lineWidth = 1;
+        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) ctx.strokeRect(lenW * 0.22 + 3 + c * 7, 54 + r * 7, 6, 6);
+      });
+      poly(ctx, [P(b.x0 + T, b.y0 + T, z0), P(b.x1, b.y0 + T, z0), P(b.x1, b.y0 + T, z0 + H), P(b.x0 + T, b.y0 + T, z0 + H)], null, INK, ink * 2.2);
+      onWall(ctx, cam, { x: b.x0 + T, y: b.y0 + T, z: z0 + H }, { x: 1, y: 0 }, () => {
+        face(lenN, false);
+        // relógio de parede
+        const cx = lenN * 0.18, cy = 32;
+        ctx.fillStyle = '#fbf8f0';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 17, 0, M.TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, cy - 11);
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + 8, cy + 3);
+        ctx.stroke();
+        // a placa de madeira: "FIADO SÓ AMANHÃ"
+        const pw = 128, px = lenN * 0.6 - pw / 2;
+        ctx.fillStyle = INK;
+        ctx.fillRect(px - 3, 13, pw + 6, 38);
+        ctx.fillStyle = '#c99a5b';
+        ctx.fillRect(px, 16, pw, 32);
+        ctx.fillStyle = '#3a2412';
+        ctx.font = '700 12px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('FIADO SÓ AMANHÃ', px + pw / 2, 37);
+      });
+      // o fim das paredes (as pontas que dão para a frente e para a direita) e o topo delas (sem a laje)
+      const end = M.shade(b.wall, -0.1);
+      poly(ctx, [P(b.x0, b.y1, z0), P(b.x0 + T, b.y1, z0), P(b.x0 + T, b.y1, z0 + H), P(b.x0, b.y1, z0 + H)], end, INK, ink * 1.6);
+      poly(ctx, [P(b.x1, b.y0, z0), P(b.x1, b.y0 + T, z0), P(b.x1, b.y0 + T, z0 + H), P(b.x1, b.y0, z0 + H)], M.shade(b.wall, -0.26), INK, ink * 1.6);
+      const topC = '#ddd3c2';
+      poly(ctx, [P(b.x0, b.y0, z0 + H), P(b.x1, b.y0, z0 + H), P(b.x1, b.y0 + T, z0 + H), P(b.x0 + T, b.y0 + T, z0 + H), P(b.x0 + T, b.y1, z0 + H), P(b.x0, b.y1, z0 + H)], topC, INK, ink * 1.6);
     }
   }
 
@@ -816,8 +1028,8 @@
         ctx.fillRect(x, sy - gh, 11 + r() * 6, gh);
       }
     }
-    // a porta de aço enrolada até a metade
-    const shut = oh * 0.36;
+    // a porta de aço enrolada até a metade (na que dá para entrar, quase toda aberta: dá para passar)
+    const shut = oh * (b.interior ? 0.12 : 0.36);
     ctx.fillStyle = '#9da1a6';
     ctx.fillRect(ox, oy, ow, shut);
     ctx.strokeStyle = '#7e8287';
@@ -830,7 +1042,11 @@
     }
     ctx.fillStyle = '#6d7175';
     ctx.fillRect(ox, oy + shut - 8, ow, 8);
-    // balcão na entrada
+    // balcão na entrada (na que dá para entrar, o balcão de verdade fica lá dentro)
+    if (b.interior) {
+      if (s.sign && !b.logo) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
+      return;
+    }
     ctx.fillStyle = INK;
     ctx.fillRect(ox + ow * 0.55 - 4, H - 92, ow * 0.45 + 4, 92);
     ctx.fillStyle = '#b5523a';
@@ -2538,6 +2754,16 @@
 
   class Small extends Prop {
     draw(ctx, time) {
+      // móvel de dentro de casa (prateleira, geladeira, balcão, engradado): só com a casa cortada (herói dentro)
+      if (this.house) {
+        const k = this.house.cutK || 0;
+        if (k <= 0) return;
+        const a = this.alpha;
+        this.alpha = a * k;
+        super.draw(ctx, time);
+        this.alpha = a;
+        return;
+      }
       super.draw(ctx, time);
       if (this.d.kind === 'fogueira') this._flames(ctx, time);
     }
@@ -4117,8 +4343,8 @@
   }
 
   PD.props = {
-    Prop, Building, House, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly,
-    // para as plantas da mata (flora.js) desenharem com o mesmo traço
-    help: { INK, CANOPY_INK, BARK, tuftPath, limbPoly, circleShadow, lineShadow, boxShadow },
+    Prop, Building, House, HouseBack, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly,
+    // para as plantas da mata (flora.js) e as coisas da cidade (city.js) desenharem com o mesmo traço
+    help: { INK, CANOPY_INK, BARK, tuftPath, limbPoly, circleShadow, lineShadow, boxShadow, box, onWall },
   };
 })(window.PD = window.PD || {});

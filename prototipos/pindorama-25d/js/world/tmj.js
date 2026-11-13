@@ -103,6 +103,11 @@
       } else if (k === 'poste' && (pr.altura || 3.8) >= 5) {
         // poste de concreto da rua (com luminária e a fiação que passa por ele)
         map.poles.push({ x, y, h: pr.altura * 100, lamp: !!pr.luz, light: pr.luz || '#ffe9a6', vine: !!pr.cipo });
+      } else if (k === 'prateleira' || k === 'geladeira' || k === 'balcao' || k === 'engradado') {
+        // móveis de dentro da casa que dá para entrar (retângulo): `altura`, `olhando` (para onde a frente dá: 90 = sul,
+        // 0 = leste), `caixa` (balcão com a caixa registradora), `pilha` (quantos engradados), `cor`
+        const r0 = o.width || o.height ? rect(o) : { x0: x - 20, x1: x + 20, y0: y - 15, y1: y + 15 };
+        map.props.push({ kind: k, ...r0, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, register: !!pr.caixa, stack: pr.pilha || 3, color: pr.cor || null });
       } else if (k === 'semaforo') {
         // semáforo de rua (ponto): `altura`, `olhando` (graus, para onde as luzes dão; 0 = leste), `quebrado` e `faiscas`
         map.trafficLights.push({ x, y, h: (pr.altura || 4.6) * 100, facing: pr.olhando || 0, broken: !!pr.quebrado, sparks: !!pr.faiscas });
@@ -133,6 +138,8 @@
           moss: !!pr.musgo,
           grilles: !!pr.grade,
           garage: !!pr.portao,
+          // dá para entrar (a Budega): com o herói dentro, o telhado e a frente saem e aparece o que tem lá dentro
+          interior: !!pr.interior,
         });
       } else if (k === 'predio') {
         // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje

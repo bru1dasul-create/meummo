@@ -467,6 +467,23 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   escrita no ritmo da boca (55 ms por letra, até 7 s; tocar mostra tudo), o pedido da missão nova vira a fala (não
   repete no cartão), rodapé com Ver a loja e Tchau. CSS: `#talk.cinema` (embaixo, 760 px, até 46% da altura; no
   celular, a largura toda até 54%) e `.shop-portrait` escondido no jogo 2.5D.
+- **Budega com interior (13/11, pedido do dono: "igual HumanitZ").** A `casa` com `interior: true` dá para entrar.
+  - Na ordem de desenho, a `House` é só a parede da frente (pé = a faixa de 20 cm da frente). A `HouseBack` é a
+    parede do fundo e a da esquerda vistas por dentro (pé = a faixa do fundo): reboco creme em cima, azulejo branco
+    embaixo com a faixa azul, relógio, a placa "FIADO SÓ AMANHÃ", a lousa de preços (água de coco, garrafada, pão de
+    queijo, açaí) e um calendário; o topo das paredes aparece (sem a laje).
+  - `World.update` vê se o herói está dentro (para sair, 25 cm a mais: na porta não pisca). A casa anima `cutK` de 0
+    a 1: a casa inteira some e entra a cortada (`paintCut`: base de 45 cm da frente e do lado, com o corte claro em
+    cima, e a soleira no vão da porta de enrolar).
+  - Os móveis (`prateleira`, `geladeira`, `balcao` com `caixa`, `engradado` com `pilha`; `olhando` 90 = frente para
+    o sul, 0 = leste) estão no `city.js` e só aparecem com a casa cortada. O piso é o tipo `piso` do chão (street.js):
+    ladrilho hidráulico de 25 cm com a flor terracota e o losango verde, mais gasto perto da porta.
+  - Quem está dentro fica sempre antes da frente da casa na ordem de desenho (senão um poste atrás dele o empurrava
+    para depois). Com você fora, a casa não abre a janela transparente para quem está dentro: só o nome aparece.
+  - A porta de enrolar da casa que dá para entrar fica quase toda aberta, e o balcão pintado na porta sai (o balcão
+    de verdade está lá dentro).
+  - O mapa (piso, paredes na colisão com o vão da porta, móveis) e o lugar da Xiovanna atrás do balcão são do
+    [mundo]. A posição dela fica em `data/npcs.json`. Testado numa cópia minha do mapa.
 - **Semáforo quebrado (13/11, pedido do dono: "coloca um semáforo aí quebrado saindo faísca").** `semaforo` no mapa
   (ponto: `altura`, `olhando` em graus, `quebrado`, `faiscas`) vira `map.trafficLights` e um `TrafficLight` com `rig`
   (props.js): poste cinza de São Paulo com ferrugem e cipó, o braço sobre a rua (vai para o lado que tem asfalto a
