@@ -519,8 +519,127 @@
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 88);
     ctx.fillStyle = '#d97a5a';
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 12);
-    // letreiro pintado na parede, em cima da porta
-    if (s.sign) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
+    // letreiro pintado na parede, em cima da porta (quem tem logo ganha a placa em cima da laje no lugar dele)
+    if (s.sign && !b.logo) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
+    if (b.logo === 'budega') {
+      // a placa com o escudo fica em pé na beirada da laje, presa por dois ferros
+      const lw = Math.min(124, W * 0.36);
+      ctx.fillStyle = INK;
+      for (const px of [W / 2 - lw * 0.3, W / 2 + lw * 0.3]) ctx.fillRect(px - 4, -20, 8, 34);
+      budegaLogo(ctx, W / 2, -lw * 1.02 + 4, lw);
+    }
+  }
+  /**
+   * Logo da Budega (o escudo dourado do dono): "BUDEGA" e "DISTRIBUIDORA" numa faixa mais larga que o escudo, os
+   * arabescos em cima e o círculo embaixo. Sem a palavra "tabacaria" e sem o narguilé do original (nada de tabaco no
+   * desenho): no círculo vai a flor de hibisco, a mesma do cabelo da Xiovanna. Desenhado no plano em que estiver (cm, y
+   * para baixo), com o meio em `cx`, o topo em `top` e a largura `w` (a altura é 1,06 × w).
+   */
+  function budegaLogo(ctx, cx, top, w) {
+    const X = (x) => cx + x * w;
+    const Y = (y) => top + y * w;
+    const gold = ctx.createLinearGradient(X(-0.5), Y(0), X(0.5), Y(1));
+    gold.addColorStop(0, '#d18e2c');
+    gold.addColorStop(0.32, '#f7e08c');
+    gold.addColorStop(0.55, '#e3a840');
+    gold.addColorStop(0.8, '#f6d77e');
+    gold.addColorStop(1, '#d69a38');
+    const CREAM = '#fff8e8';
+    const shield = (k) => {
+      // k < 1: o mesmo escudo encolhido para dentro (o filete de dentro)
+      const sx = (x) => X(x * k);
+      const sy = (y) => Y(0.53 + (y - 0.53) * k);
+      const p = new Path2D();
+      p.moveTo(sx(-0.36), sy(0));
+      p.lineTo(sx(0.36), sy(0));
+      p.lineTo(sx(0.47), sy(0.09));
+      p.lineTo(sx(0.43), sy(0.62));
+      p.quadraticCurveTo(sx(0.37), sy(0.86), sx(0), sy(1.06));
+      p.quadraticCurveTo(sx(-0.37), sy(0.86), sx(-0.43), sy(0.62));
+      p.lineTo(sx(-0.47), sy(0.09));
+      p.closePath();
+      return p;
+    };
+    ctx.save();
+    ctx.lineJoin = 'round';
+    const outer = shield(1);
+    ctx.lineWidth = w * 0.06;
+    ctx.strokeStyle = INK;
+    ctx.stroke(outer);
+    ctx.fillStyle = gold;
+    ctx.fill(outer);
+    ctx.fillStyle = CREAM;
+    ctx.fill(shield(0.9));
+    ctx.lineWidth = w * 0.012;
+    ctx.strokeStyle = gold;
+    ctx.stroke(shield(0.84));
+    // arabescos em cima: dois cachos dourados e o filete
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = w * 0.022;
+    ctx.lineCap = 'round';
+    for (const sg of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(X(sg * 0.04), Y(0.17));
+      ctx.bezierCurveTo(X(sg * 0.16), Y(0.07), X(sg * 0.3), Y(0.14), X(sg * 0.25), Y(0.2));
+      ctx.bezierCurveTo(X(sg * 0.21), Y(0.24), X(sg * 0.15), Y(0.2), X(sg * 0.19), Y(0.17));
+      ctx.stroke();
+    }
+    ctx.lineWidth = w * 0.01;
+    ctx.beginPath();
+    ctx.moveTo(X(-0.22), Y(0.255));
+    ctx.lineTo(X(0.22), Y(0.255));
+    ctx.stroke();
+    // a faixa do nome, mais larga que o escudo
+    const band = new Path2D();
+    band.roundRect(X(-0.53), Y(0.3), w * 1.06, w * 0.31, w * 0.05);
+    ctx.lineWidth = w * 0.05;
+    ctx.strokeStyle = INK;
+    ctx.stroke(band);
+    ctx.fillStyle = gold;
+    ctx.fill(band);
+    const bandIn = new Path2D();
+    bandIn.roundRect(X(-0.495), Y(0.325), w * 0.99, w * 0.26, w * 0.035);
+    ctx.fillStyle = CREAM;
+    ctx.fill(bandIn);
+    // o nome: dourado com contorno marrom, para ler de longe
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.lineJoin = 'round';
+    ctx.font = `bold ${w * 0.17}px Georgia, "Times New Roman", serif`;
+    ctx.lineWidth = w * 0.02;
+    ctx.strokeStyle = '#6b4416';
+    ctx.strokeText('BUDEGA', X(0), Y(0.49));
+    ctx.fillStyle = gold;
+    ctx.fillText('BUDEGA', X(0), Y(0.49));
+    ctx.font = `bold ${w * 0.062}px Georgia, "Times New Roman", serif`;
+    ctx.lineWidth = w * 0.01;
+    ctx.strokeText('DISTRIBUIDORA', X(0), Y(0.565));
+    ctx.fillText('DISTRIBUIDORA', X(0), Y(0.565));
+    // filete e o círculo com a flor de hibisco
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = w * 0.01;
+    ctx.beginPath();
+    ctx.moveTo(X(-0.2), Y(0.655));
+    ctx.lineTo(X(0.2), Y(0.655));
+    ctx.stroke();
+    const cy = Y(0.81);
+    const cr = w * 0.125;
+    ctx.lineWidth = w * 0.022;
+    ctx.beginPath();
+    ctx.arc(X(0), cy, cr, 0, M.TAU);
+    ctx.stroke();
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * M.TAU - Math.PI / 2;
+      ctx.fillStyle = '#c8323a';
+      ctx.beginPath();
+      ctx.ellipse(X(0) + Math.cos(a) * cr * 0.42, cy + Math.sin(a) * cr * 0.42, cr * 0.36, cr * 0.26, a, 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#f2c84b';
+    ctx.beginPath();
+    ctx.arc(X(0), cy, cr * 0.16, 0, M.TAU);
+    ctx.fill();
+    ctx.restore();
   }
   /** Toldo listrado da vendinha: sai da parede logo acima da porta, abaixo do letreiro. */
   function houseAwning(ctx, cam, b, z0, ink) {

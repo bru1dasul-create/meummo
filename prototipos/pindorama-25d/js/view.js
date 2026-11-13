@@ -66,10 +66,11 @@
     addActor(id, a) {
       if (this.actors.has(id)) this.removeActor(id);
       const yaw = Number.isFinite(a.angle) ? rad(a.angle) : Math.PI / 4;
-      // monstro com corpo próprio (sagui...): a criatura no lugar do corpo de gente
-      const creature = a.kind === 'monster' && PD.creatures && PD.creatures.has(a.type) ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
+      // monstro ou NPC com corpo próprio (sagui, jararaca, a Xiovanna da Budega...): a criatura no lugar do corpo de gente
+      const own = (a.kind === 'monster' || a.kind === 'npc') && PD.creatures && PD.creatures.has(a.type);
+      const creature = own ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
       if (creature) {
-        const actor = { id, kind: 'monster', type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
+        const actor = { id, kind: a.kind, type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
         this.actors.set(id, actor);
         if (this.followId === null && a.me) this.follow(id);
         return actor;
@@ -129,6 +130,7 @@
       if (!a) return;
       a.speech = String(text || '');
       a.speechUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 2500 + a.speech.length * 60;
+      if (a.creature) a.creature.talk(2500 + a.speech.length * 60);
     }
 
     /** Uma direção na tela (ex.: "para cima") vira qual direção no chão, nesta câmera. */
@@ -158,7 +160,9 @@
     /** Leva o personagem até a posição que chegou: anda (ou corre) até lá; longe demais, aparece lá. */
     _drive(a, dt) {
       if (a.creature) {
-        a.creature.update(dt);
+        // a criatura enxerga o personagem que a câmera segue (NPC olha para ele e acena)
+        const me = this.actors.get(this.followId);
+        a.creature.update(dt, me && !me.creature ? { hero: { x: me.ch.pos.x, y: me.ch.pos.y } } : null);
         return;
       }
       const ch = a.ch;

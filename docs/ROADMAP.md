@@ -199,10 +199,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[arte]** Jararaca com corpo próprio no 2.5D (13/11): marrom-oliva com as manchas em "V", cabeça triangular,
   olhos amarelos e língua que entra e sai; rasteja em S seguindo o caminho da cabeça, se enrola e ergue o pescoço no
   aviso (treme a ponta do rabo), dá o bote e vira de barriga para cima ao cair
-- [ ] **[arte]** Xiovanna, a vendedora da Budega (pedido do dono, com fotos de referência que não vão para o
-  repositório): morena, black power, flor de hibisco, uniforme preto com o escudo da Budega no peito; e o escudo na
-  fachada (sem "tabacaria" e sem o narguilé). Corpo feminino, cabelo e roupas novas no desenho 2.5D. Pedidos: nome
-  "Xiovanna" na NPC "budega" ([estrutura]) e `logo` = "budega" na casa da Budega ([mundo])
+- [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o
+  repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
+  dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula
+  ao falar. E o escudo da Budega numa placa em cima da laje (`logo` = "budega" na casa, do [mundo]), sem
+  "tabacaria" e sem o narguilé: no círculo, o hibisco. Falta o nome "Xiovanna" na NPC "budega" ([estrutura])
 - [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
   esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do

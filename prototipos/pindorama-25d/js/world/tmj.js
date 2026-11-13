@@ -110,6 +110,8 @@
           abandoned: !!pr.abandonada,
           name: o.name || '',
           shop: pr.comercio ? { type: pr.comercio, sign: pr.letreiro || '', awning: pr.toldo ? [pr.toldo, '#fff4dc'] : null } : null,
+          // placa com o logo em cima da laje, no lugar do letreiro ('budega': o escudo da Budega, pedido do dono)
+          logo: pr.logo || null,
         });
       } else if (k === 'banco') {
         map.props.push({ kind: 'banco', ...rect(o), angle: pr.olhando });

@@ -369,6 +369,24 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   amarelo, pupila em fenda e a risca escura até o canto da boca. A língua sai de vez em quando (mais no aviso).
   O corpo é desenhado numa peça só: em pedaços, cada emenda ganhava contorno e parecia lagarta. Só o pescoço é
   outra peça, e na emenda as bolas dele não têm contorno (`noInk`).
+- **Xiovanna, a vendedora da Budega (13/11):** `js/creatures/xiovanna.js`, registrada com a chave da NPC
+  ("budega"). A PD.View usa criatura também para NPC. Feita com bolas, como as criaturas, porque o corpo de gente
+  (`body.js`) é o modelo único do herói, com mais de 60 pontos presos às medidas dele. As fotos de referência do dono
+  NÃO vão para o repositório.
+  - **Visual:** morena; black power grande e uniforme preto da Budega (jaqueta de zíper, capuz, escudo dourado no
+    peito, emblema na manga); jeans e tênis branco.
+  - **Cabelo:** uma nuvem de bolas numa casca (Fibonacci), com um buraco no rosto. A cada quadro, a nuvem se divide
+    pela profundidade da câmera: o que está atrás da cabeça vai antes dela, o resto depois. Desenhado inteiro antes,
+    a nuca ficava careca de perfil; inteiro depois, a parte de trás caía em cima dos olhos. Cachos colados no alto da
+    cabeça fazem a linha do cabelo.
+  - **Rosto:** decalques com olho, íris, delineado, sobrancelha, nariz e lábios.
+  - **Gestos:** vira o corpo e a cabeça para o herói a menos de 6 m e acena quando ele chega a 4 m. De vez em quando
+    leva a mão ao cabelo, como na foto, e gesticula quando fala (`view.say` chama `talk`).
+  - Prancha: `prancha-sagui.cjs ... budega`.
+- **Logo da Budega:** `budegaLogo` em `props.js`, desenhado em código com a letra Georgia, como o título do jogo.
+  É um escudo dourado com "BUDEGA" e "DISTRIBUIDORA" numa faixa, arabescos e um círculo com o hibisco. Saem a
+  palavra "tabacaria" (pedido do dono) e o narguilé (nada de tabaco no desenho). A casa com `logo` = "budega" (do
+  [mundo]) ganha a placa em pé na beirada da laje, presa por dois ferros, no lugar do letreiro de texto.
 - **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
   outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).
   `world.js` junta as janelas em `o.hideWindows` e recorta uma de cada vez.
