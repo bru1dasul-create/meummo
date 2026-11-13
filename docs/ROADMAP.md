@@ -114,7 +114,8 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
 - [ ] **[arte]** Desempenho do desenho (perfil no combate, 13/11): o `get bounds` de `props.js` monta um texto com o
   zoom (`toFixed`) a cada leitura, em ~1000 objetos, várias vezes por quadro (é a função que mais gasta); a escolha do
   que aparece passa por todos os objetos a cada quadro; personagens e criaturas são pintados por código a cada quadro
-  (guardar a imagem de cada pose, como já é feito com as árvores, é o ganho maior no combate)
+  (guardar a imagem de cada pose, como já é feito com as árvores, é o ganho maior no combate). Feito o primeiro (13/11):
+  o texto do zoom é montado uma vez por zoom (ler a caixa de todos os objetos caiu de ~0,10 ms para 0,03 ms)
 
 ## 🗺️ Mundo novo (2.5D isométrico) — decidido pelo dono em 12/11
 O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas são refeitos do zero; o motor
@@ -164,6 +165,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   da IA só dão o clima). No ramo `mundo/parque-antigo` (por cima da 4c): a placa da entrada, o bebedouro quebrado,
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
   academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. Entra com o desenho da [arte]
+- [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
+  telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
+  AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
+  com `caixa`, `engradado`). Liga com `interior: true` na `casa`; o mapa é do [mundo] (`mundo/budega-interior`)
 - [ ] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
   `barra`, `remada`) são novos; `placa` (a da 4c) com `tamanho: 'grande'` e `mato`; `banco` com `material: 'concreto'`
   e `mato`; `lixeira` com `mato`; `poste-praca` com `apagado`, `torto` e `cipo`; e a pista (`calcada` em polígono com
