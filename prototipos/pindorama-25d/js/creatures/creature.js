@@ -78,7 +78,9 @@
       if (Number.isFinite(yaw)) this.yawTarget = yaw;
     }
 
-    update(dt) {
+    /** `near`: o que a criatura enxerga em volta ({ hero: { x, y } em cm }), para NPC olhar e acenar. */
+    update(dt, near) {
+      this.near = near || null;
       this.time += dt;
       this.hurtT += dt;
       if (this.dying !== null) this.dying += dt;
@@ -104,6 +106,9 @@
 
     /** Cada criatura: avança o jeito de andar e a pose. */
     animate() {}
+
+    /** Começou a falar (balão): quem tiver gesto de fala usa. */
+    talk() {}
 
     /** Ponto 3D (cm) em volta do pé: `along` para a frente, `side` para a direita, `z` para cima. */
     at(along, side, z, yaw = this.yaw) {
@@ -219,11 +224,12 @@
     const sorted = groups.filter((g) => g.balls.length).map((g) => ({ g, d: depth(g.ref || g.balls[0].c) + (g.bias || 0) }));
     sorted.sort((a, b) => a.d - b.d);
     for (const { g } of sorted) {
-      const qs = g.balls.map((b) => ({ q: cam.p(b.c), r: b.r * zoom, col: b.col }));
-      // contorno: um pouco maior que cada bola, tudo junto
+      const qs = g.balls.map((b) => ({ q: cam.p(b.c), r: b.r * zoom, col: b.col, noInk: b.noInk }));
+      // contorno: um pouco maior que cada bola, tudo junto (`noInk`: a emenda com o grupo de antes, sem risco)
       ctx.fillStyle = INK;
       ctx.beginPath();
-      for (const { q, r } of qs) {
+      for (const { q, r, noInk } of qs) {
+        if (noInk) continue;
         ctx.moveTo(q.x + r + ink, q.y);
         ctx.arc(q.x, q.y, r + ink, 0, M.TAU);
       }
@@ -262,12 +268,36 @@
     const tc = cam.toCamera;
     if (dc.n && dc.n.x * tc.x + dc.n.y * tc.y + dc.n.z * tc.z < (dc.minFacing ?? 0.05)) return;
     const q = cam.p(dc.c);
-    const a = cam.pDir(dc.u);
-    const b = cam.pDir(dc.v);
+    let u = dc.u;
+    let v = dc.v;
+    if (dc.rot) {
+      // girado no próprio plano (sobrancelha inclinada, pétala)
+      const c = Math.cos(dc.rot), s = Math.sin(dc.rot);
+      u = M.add(M.scale(dc.u, c), M.scale(dc.v, s));
+      v = M.add(M.scale(dc.v, c), M.scale(dc.u, -s));
+    }
+    const a = cam.pDir(u);
+    const b = cam.pDir(v);
     ctx.save();
     ctx.transform(a.x * dc.ru, a.y * dc.ru, b.x * dc.rv, b.y * dc.rv, q.x, q.y);
     ctx.beginPath();
-    ctx.arc(0, 0, 1, 0, M.TAU);
+    if (dc.shape === 'shield') {
+      // escudo (o logo da Budega no peito): topo reto com as quinas, laterais e a ponta embaixo
+      ctx.moveTo(-0.95, 0.85);
+      ctx.lineTo(-0.55, 1);
+      ctx.lineTo(0.55, 1);
+      ctx.lineTo(0.95, 0.85);
+      ctx.lineTo(0.9, -0.15);
+      ctx.quadraticCurveTo(0.6, -0.7, 0, -1);
+      ctx.quadraticCurveTo(-0.6, -0.7, -0.9, -0.15);
+      ctx.closePath();
+    } else if (dc.shape === 'tri') {
+      // triângulo com a ponta para `v` (a mancha em "V" da jararaca, de pé no flanco)
+      ctx.moveTo(-1, -0.85);
+      ctx.lineTo(1, -0.85);
+      ctx.lineTo(0, 1);
+      ctx.closePath();
+    } else ctx.arc(0, 0, 1, 0, M.TAU);
     if (dc.glow) {
       ctx.shadowColor = dc.glow;
       ctx.shadowBlur = 3 * cam.zoom;

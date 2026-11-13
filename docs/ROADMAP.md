@@ -196,7 +196,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   olhando em volta, correndo de quatro aos saltos, ergue a fruta no aviso e arremessa no tiro, pisca ao apanhar e
   desmaia de bruços ao cair (o encanto sai).
   `PD.creatures` (`js/creatures/`): o monstro com desenho lá deixa de sair com o corpo de gente
-- [ ] **[arte]** Jararaca com corpo próprio no 2.5D (rasteja em S, enrola e ergue a cabeça no aviso, bote)
+- [x] **[arte]** Jararaca com corpo próprio no 2.5D (13/11): marrom-oliva com as manchas em "V", cabeça triangular,
+  olhos amarelos e língua que entra e sai; rasteja em S seguindo o caminho da cabeça, se enrola e ergue o pescoço no
+  aviso (treme a ponta do rabo), dá o bote e vira de barriga para cima ao cair
+- [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o
+  repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
+  dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula
+  ao falar. E o escudo da Budega numa placa em cima da laje (`logo` = "budega" na casa, do [mundo]), sem
+  "tabacaria" e sem o narguilé: no círculo, o hibisco. O nome "Xiovanna" na NPC "budega" já está nos dados
+  ([estrutura], 13/11)
 - [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17, em três partes (o "pode" do dono em 13/11)
   - [x] **2a — pedra com carga** (13/11): segurar puxa, soltar atira; carga cheia em 1,1 s = o dobro do dano e alcance
     de 6,5 a 9,5 m (só no mapa novo). O servidor conta a carga (`charge` → `shoot`, protocolo 21); esquiva, golpe
