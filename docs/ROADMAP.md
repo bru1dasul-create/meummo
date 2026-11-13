@@ -179,6 +179,23 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
   academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. A placa grande fica alta,
   acima do pilar do portão (como na imagem aprovada), e o poste do parque da entrada saiu da frente do poste do portão
+- [ ] **[mundo]** Casas com interior (pedido do dono, 13/11: "dar vida para alguns interiores de casa"; planta aprovada:
+  "pode mandar as casas pra arte"; `docs/referencias/casas-interior-planta.jpg` e os alvos `casa-amarela-dentro.jpg`,
+  `casa-rosa-dentro.jpg` e `casa-abandonada-dentro.jpg`, que só dão o clima): a amarela (a família: cozinha no fundo,
+  sala na frente), a rosa (a casa da vó) e a abandonada do fundo (a árvore nasce do chão de dentro e sai pelo buraco da
+  laje). No ramo `mundo/casas-interior`: `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis
+  sem vão de entalar. Entra com o desenho da [arte]
+- [ ] **[arte]** Casas com interior, o desenho: como a Budega (o telhado e a frente somem com o herói dentro), a porta
+  aberta no vão do mapa, o `piso` (`desenho`: `ceramica`, `taco`, `cimento`) e os móveis novos: `pia`, `fogao` (`panela`),
+  `filtro` (de barro, no banquinho), `mesa-cozinha` (`toalha: 'xadrez'`, `cadeiras`), `estante` (`tv`: a TV de tubo),
+  `tapete`, `sofa` (`cor`, `croche`, `rasgado`, `mato`), `cristaleira`, `mesa-redonda` (`toalha: 'croche'`),
+  `maquina-costura`, `cama` (`colcha: 'retalhos'`), `colchao` (`velho`) e `entulho` (`cadeiraCaida`); a `geladeira` e o
+  `vaso` já existem. Na casa abandonada, o tronco no chão de dentro é a `arvore` com `dentroDaCasa` (no meio da casa)
+- [ ] **[estrutura + arte + mundo]** Joaquim, o gato da vó (pedido do dono, 13/11): bem pequeno, todo branco com
+  detalhes laranja (a máscara na testa e no focinho, as orelhas e o rabo), olhos azuis, como o gato do dono
+  (`docs/referencias/joaquim-1.jpg` e `joaquim-2.jpg`), e com vida: dorme no sofá da vó, acorda, se espreguiça, anda
+  pela casa, mia e dá para fazer carinho. A [estrutura] define a chave e o comportamento, a [arte] desenha e anima, e o
+  [mundo] marca a casa dele (a casa rosa; no mapa ele está no sofá, `gato` com `nome: 'Joaquim'`)
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
