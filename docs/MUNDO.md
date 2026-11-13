@@ -72,7 +72,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Ficaram desligadas de 12/11 ("opção a" do dono) até o combate do jogo
     novo, passo 1, da [estrutura] chegar (9de98f5). Conferi no jogo: os saguis atacam, as pedras acertam e a vida cai;
     mas na mata fechada eles ficam escondidos embaixo das copas e muita pedra bate nas árvores: a mata nova resolve.
-  - **4b (aprovada pelo dono em 13/11; entra na `main` junto com o desenho da vila pela [arte]):** o Portão I abre; faixa de pedestre
+  - **4b (na `main` em 13/11, depois do desenho da vila pela [arte]):** o Portão I abre; faixa de pedestre
     atravessando a Travessa; rua do portão para o leste (y 41 a 47) e rua de baixo (x 88 a 94, ainda fechada no mato
     lá no fim); calçadas estreitas; praça de pedra portuguesa (61 a 79 × 48,5 a 59) com a Budega (vendinha,
     letreiro "BUDEGA DISTRIBUIDORA", escolha do dono, 62 a 67 × 49,5 a 52,5; balcão em (64,5; 53,3), onde a [estrutura] põe quem atende), fogueira
