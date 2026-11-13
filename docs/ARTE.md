@@ -346,6 +346,17 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   (`CANOPY_INK`) e cada árvore com um tom um pouco diferente. Água (`Ground._water`): sem pintas; funda e escura no
   meio, clareando em 16 faixas até a margem, espuma na beira e marolas finas. A quantidade de árvores, as trilhas sem
   copa, tirar os ipês e a margem do lago são do [mundo].
+- **Vila da etapa 4b** (lista final do [mundo], aprovada pelo dono em 13/11): `tmj.js` lê `casa` (→ `map.houses`,
+  classe `House`: frente ao sul, 1 ou 2 andares, `cor` ou `bloco` aparente, `caixaDagua`, `pixo`, `abandonada` com
+  janela quebrada, porta de tábuas e cipó, ferros esperando a próxima laje nas de 2 andares; a Budega é `comercio`
+  'vendinha' com porta de enrolar meio aberta, prateleiras acesas sem nada de tabaco, letreiro e toldo listrado), `poste`
+  alto (≥ 5 m → poste de concreto `Pole` com luminária; `fiacao` liga os postes mais perto de cada ponta da polilinha),
+  `poste-praca`, `banco` de madeira com encosto do lado contrário de `olhando`, `mesa`, `fogueira` (pedras, lenha e
+  brasa no desenho guardado; chamas, faíscas e clarão no chão a cada quadro em `Small.draw`), `orelhao`, `lixeira`,
+  `carro` com `mato` (carroceria, cabine, vidro quebrado, ferrugem, pneus murchos e tufos de mato) e a `sibipiruna`
+  (verde com florzinha amarela miúda). Portão `aberto`: as duas folhas giradas 75° para o lado da câmera. Chão:
+  `praca` em pedra portuguesa com as ondas pretas, `faixa` de pedestre gasta e `calcada`. Testado com o mapa do ramo
+  `mundo/etapa-4b` (sem commitar o mapa, que é do [mundo]); com o mapa de hoje nada muda.
 - Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5, com a neblina da
   mata profunda) e a luz do poste.
 - Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página, tocar no Curupira

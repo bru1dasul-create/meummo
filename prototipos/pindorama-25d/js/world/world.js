@@ -43,6 +43,7 @@
       const m = this.map;
       const add = (p) => (this.props.push(p), p);
       for (const b of m.buildings || []) add(new P.Building(this, b));
+      for (const h of m.houses || []) add(new P.House(this, h));
       for (const w of m.walls || []) add(new P.Wall(this, w));
       for (const t of m.trees || []) {
         add(new P.TreeTrunk(this, t));

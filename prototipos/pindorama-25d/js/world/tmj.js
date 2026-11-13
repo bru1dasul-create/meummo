@@ -5,8 +5,9 @@
 //  - "chao": áreas do chão, na ordem de desenho (mata, grama, terra, asfalto, trilha em polilinha com `largura`, `cor`
 //    opcional, como a da água do lago,
 //    `circulo` com `brilho`);
-//  - "cenario": árvores (`especie`, `copa`, `altura`, `tronco`, em metros), arbusto, pedra, poste, gradil, portão,
-//    pilar e `veu` (pontos do Véu Ancestral);
+//  - "cenario": árvores (`especie`, `copa` = raio, `altura`, `tronco` = diâmetro, em metros), arbusto, pedra, poste
+//    (alto = de concreto, com `fiacao`), poste-praca, gradil, portão, pilar, `veu`, tronco-caido, aguape, capivara e a
+//    vila: casa (frente ao sul), banco, mesa, fogueira, orelhao, lixeira e carro;
 //  - "colisao": caixas onde o pé bate (as mesmas do servidor); "seguro", "areas" e "pontos" (o nascimento).
 (function (PD) {
   'use strict';
@@ -41,7 +42,8 @@
       areas: [],
       spawn: null,
       awakening: null,
-      // o que o mapa da esquina de São Paulo tinha e este não tem
+      houses: [],
+      // o que o mapa da esquina de São Paulo tinha (postes e fios agora também vêm da vila)
       buildings: [],
       walls: [],
       poles: [],
@@ -64,10 +66,11 @@
         const pts = o.polygon.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
         map.shapes.push({ type: k, kind: 'poly', pts, color: pr.cor });
       } else {
-        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor });
+        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras });
       }
     }
 
+    const wireLines = [];
     for (const o of objs('cenario')) {
       const k = kindOf(o);
       const pr = props(o);
@@ -87,14 +90,59 @@
       } else if (k === 'capivara') {
         // enfeite (não bloqueia); `olhando` em graus no chão (0 = leste, 90 = sul)
         map.props.push({ kind: 'capivara', x, y, angle: pr.olhando || 0 });
-      } else if (k === 'poste') {
+      } else if (k === 'poste' && (pr.altura || 3.8) >= 5) {
+        // poste de concreto da rua (com luminária e a fiação que passa por ele)
+        map.poles.push({ x, y, h: pr.altura * 100, lamp: !!pr.luz, light: pr.luz || '#ffe9a6' });
+      } else if (k === 'poste' || k === 'poste-praca') {
         map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6' });
+      } else if (k === 'fiacao' && o.polyline) {
+        wireLines.push(o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })));
+      } else if (k === 'casa') {
+        // casa da vila: a frente é o lado sul (+y), o que a câmera vê
+        map.houses.push({
+          ...rect(o),
+          h: (pr.altura || 3) * 100,
+          floors: pr.andares || 1,
+          wall: pr.cor || '#c9a27a',
+          block: !!pr.bloco,
+          tank: !!pr.caixaDagua,
+          pixo: !!pr.pixo,
+          abandoned: !!pr.abandonada,
+          name: o.name || '',
+          shop: pr.comercio ? { type: pr.comercio, sign: pr.letreiro || '', awning: pr.toldo ? [pr.toldo, '#fff4dc'] : null } : null,
+        });
+      } else if (k === 'banco') {
+        map.props.push({ kind: 'banco', ...rect(o), angle: pr.olhando });
+      } else if (k === 'mesa') {
+        map.props.push({ kind: 'mesa', x, y, chairs: pr.cadeiras || 2 });
+      } else if (k === 'fogueira') {
+        map.props.push({ kind: 'fogueira', x, y, r: (pr.raio || 0.6) * 100, light: pr.luz || '#ffb347' });
+      } else if (k === 'orelhao' || k === 'lixeira') {
+        map.props.push({ kind: k, x, y, angle: pr.olhando });
+      } else if (k === 'carro') {
+        map.props.push({ kind: 'carro', ...rect(o), h: (pr.altura || 1.4) * 100, color: pr.cor || '#a8473e', weeds: !!pr.mato });
       } else if (k === 'gradil' || k === 'portao') {
         map.fences.push({ ...rect(o), h: (pr.altura || 1.8) * 100, hasH: pr.altura !== undefined, gate: k === 'portao', open: !!pr.aberto, broken: pr.estado === 'quebrado', name: o.name || '' });
       } else if (k === 'pilar') {
         map.pillars.push({ ...rect(o), h: (pr.altura || 2.4) * 100 });
       } else if (k === 'veu') {
         map.veils.push({ x, y, r: (pr.raio || 1.5) * 100 });
+      }
+    }
+    // fiação: cada trecho da polilinha liga os dois postes mais perto das pontas (os fios saem das cruzetas)
+    const poleNear = (q) => {
+      let best = -1, bd = 160;
+      map.poles.forEach((p, i) => {
+        const d = Math.hypot(p.x - q.x, p.y - q.y);
+        if (d < bd) { bd = d; best = i; }
+      });
+      return best;
+    };
+    for (const line of wireLines) {
+      for (let i = 0; i + 1 < line.length; i++) {
+        const a = poleNear(line[i]);
+        const b = poleNear(line[i + 1]);
+        if (a >= 0 && b >= 0 && a !== b) map.wires.push([a, b]);
       }
     }
     // portões e gradis herdam a altura do gradil vizinho quando não dizem a deles
