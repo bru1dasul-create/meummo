@@ -82,7 +82,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     beira da vila fechada por mata. Regras novas: a câmera não pode ter o portão, a rua, o balcão, o letreiro e a
     fogueira tampados (por isso a árvore da praça ficou no canto sudeste), e nenhum vão de 0,3 a 1,2 m entre duas
     coisas sólidas de frente uma para a outra (um orelhão a 40 cm de um poste entalou o personagem).
-  - **Mata nova (pedido do dono em 13/11; prévia pronta no ramo `mundo/mata-nova`):** o dono não gostou da
+  - **Mata nova (pedido do dono em 13/11; aprovada por ele no mesmo dia; ramo `mundo/mata-nova`):** o dono não gostou da
     mata ("muito pequena, muita árvore, caminho sem árvore, cores fortes, plantas diferentes, mais sombria, árvore normal
     e não redonda, árvore seca") e escolheu: 50% maior para o sul (o mapa passa a 96 × 120 e a vila continua até y = 80;
     o pedaço ao sul da vila é mata fechada de enfeite), todas as plantas e "mudar a trilha e o lago" para a figueira não
@@ -93,7 +93,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     (vale a menor). Regras novas no gerador e nos testes: nenhuma copa tampa trilha ou lago, nem de cima nem da
     câmera, e a figueira não tampa nada além da própria clareira. Saguis em x 32 a 46 × y 6 a 24, jararacas em
     x 16 a 26 × y 92 a 112. Entra na `main` depois da 4b e do desenho dessas coisas pela [arte] (senão o bambu vira
-    parede invisível e o deque parece água).
+    parede invisível e o deque parece água). Para aumentar de novo depois (o dono perguntou): subir `H` e pôr as
+    coisas novas no sul; o que existe não muda de lugar, nem os NPCs (`data/npcs.json`).
   - **4c:** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
     5-Lilás no fundo (y 2 a 6, x 48 a 96, 8 m de altura, com o trem lilás parado) e um ônibus velho embaixo; saídas
     sul (x 88 a 94, y = 80) → Guarapiranga e leste (x = 96, y 41 a 47) → Estação Capão Redondo (depois). Regra: o que
