@@ -42,8 +42,8 @@ export function parseQuestDefs(json: unknown): Map<string, QuestInfo> {
     else if (kind === 'entregar') goal = { kind: 'deliver', item: g.text('item').toLowerCase(), count: wholeNumber(g, 'quantidade', 1, 1) };
     else if (kind === 'falar') goal = { kind: 'talk', npc: g.text('com').toLowerCase(), count: 1 };
     else g.fail('tipo', 'precisa ser "derrotar" (monstros), "entregar" (itens) ou "falar" (ir até alguém, "com": id do NPC)');
-    // "rotulo": o objetivo do jeito que aparece na tela (ex.: "Acalmar 4 saguis encantados"); sem ele, o texto padrão
-    const label = g.has('rotulo') ? g.text('rotulo') : null;
+    // "rotulo": o objetivo do jeito que aparece na tela (ex.: "Acalmar 4 saguis encantados"); sem ele (ou vazio), o texto padrão
+    const label = g.optionalText('rotulo') || null;
     const rewardData = r.object('recompensa', true) ?? {};
     const rr = new Reader(rewardData, FILE, `recompensa da ${where}`);
     const items = rr.list('itens').map((value, i) => {

@@ -75,6 +75,14 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — painel, parte 4 (missões):** grupo `missoes` no `Tuning` (as missões passam a ser montadas junto com
+monstros, itens e NPCs, conferidas por `parseQuestDefs`/`checkQuests`). Campos: nome, pedido e concluída (`texto-longo`,
+até 600 letras), `objetivo.rotulo` (vazio = automático), `objetivo.quantidade`/`monstro`/`item`, `nivelMinimo`,
+`repetivel` e `recompensa.xp`/`ouro`/`itens` (tipo novo `itens-qtd`: lista de `{ item, quantidade }`). Fica de fora:
+quem dá, com quem falar e `depoisDe` (mudam a ordem da história: só no arquivo). Mensagem nova `questDefs`
+(protocolo 27): o cliente troca a lista dentro do mesmo array (a conversa e o rastreador usam ele) e redesenha.
+`replaceInPlace(..., exact)` tira campo que sumiu (o `goalLabel` que voltou ao automático).
+
 **13/11 — painel, parte 3 (monstros por área):** grupo novo `areas` no `Tuning` (o padrão vem dos mapas; chave
 `mapa#n`, n = a ordem da área no mapa, de 1 em diante): `monstro` e `quantidade` (0 a 50). O mundo monta as áreas com
 os ajustes e `refreshAreas` vale na hora (troca o tipo, completa ou tira, sem ninguém ganhar nada). O lugar da área

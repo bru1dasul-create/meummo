@@ -185,6 +185,7 @@ export type ServerMsg =
   | { t: 'sys'; text: string } // aviso do sistema
   | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
   | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
+  | { t: 'questDefs'; quests: QuestInfo[] } // o painel do administrador mudou as missões (textos, objetivo, recompensa)
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }

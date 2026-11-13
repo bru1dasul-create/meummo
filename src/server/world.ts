@@ -1064,6 +1064,12 @@ export class World {
 
   // ======================= missões =======================
 
+  /** O painel mudou as missões (textos, objetivo, recompensa): quem está jogando recebe a lista nova. */
+  refreshQuests(): void {
+    const quests = [...this.quests.values()];
+    for (const player of this.players.values()) player.outbox.push({ t: 'questDefs', quests });
+  }
+
   /** Aceitar ou concluir (perto de quem dá a missão) ou abandonar uma missão. */
   questAction(player: Player, act: QuestAction, id: string, npcId?: number): void {
     const quest = this.quests.get(id);

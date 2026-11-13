@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 26;
+export const PROTOCOL_VERSION = 27;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;

@@ -14,7 +14,6 @@ import { Logbook } from './logbook';
 import { LoginGuard, type GuardLimits } from './login-guard';
 import { CLIENT_DIR, ISO_MAPS_DIR, MAPS_DIR } from './paths';
 import { Realm } from './realm';
-import { checkQuests, loadQuestDefs, nameQuestGoals } from './quests';
 import { Session, type Lobby } from './session';
 import { Tuning } from './tuning';
 import type { World } from './world';
@@ -87,13 +86,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   });
   const log = logbook.write;
   const maps = loadMaps();
-  // Monstros, itens e NPCs: os arquivos de data/ com os ajustes do painel por cima (tudo conferido).
+  // Monstros, itens, NPCs, áreas e missões: os arquivos de data/ (e os mapas) com os ajustes do painel por cima (tudo conferido).
   const tuningFile =
     options.tuningFile !== undefined ? options.tuningFile : options.saveFile === ':memory:' ? null : path.join(path.dirname(options.saveFile), 'ajustes.json');
   const tuning = Tuning.load(tuningFile, maps, log);
-  const quests = loadQuestDefs();
-  checkQuests(quests, tuning);
-  nameQuestGoals(quests, tuning);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
   const realm = new Realm(maps, {
     log,
@@ -101,7 +97,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     items: tuning.items,
     npcs: tuning.npcs,
     areas: tuning.areas,
-    quests,
+    quests: tuning.quests,
     saver: store,
     startMap: options.startMap,
     // menu ADM "trazer para cá": vira um ajuste do painel (mapa, x e y juntos)

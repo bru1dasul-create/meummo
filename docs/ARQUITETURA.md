@@ -345,6 +345,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `items` / `npcs` | o administrador ajustou os itens / os NPCs deste mapa: use as listas novas |
 | servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
 | servidor | `quests` | seu progresso nas missões mudou |
+| servidor | `questDefs` | o administrador ajustou as missões (textos, objetivo, recompensa): use a lista nova |
 | servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |

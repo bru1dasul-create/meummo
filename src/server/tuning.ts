@@ -1,4 +1,4 @@
-// Ajustes do administrador: o painel (/admin) muda números do jogo — monstros, itens e loja — sem mexer nos
+// Ajustes do administrador: o painel (/admin) muda números do jogo — monstros, itens, loja e missões — sem mexer nos
 // arquivos do projeto. Os ajustes ficam num arquivo separado (padrão: saves/ajustes.json, fora do Git): assim
 // atualizar o jogo nunca briga com eles, e eles continuam valendo depois de cada atualização.
 //
@@ -10,14 +10,16 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import path from 'node:path';
 import type { ItemInfo } from '../shared/items';
 import type { GameMap } from '../shared/map';
+import type { QuestInfo } from '../shared/quests';
 import { parseItemDefs } from './items';
 import { checkDrops, parseMonsterDefs, type MonsterDef } from './monsters';
 import { checkNpcs, parseNpcDefs, type NpcDef } from './npcs';
-import { ITEMS_FILE, MONSTERS_FILE, NPCS_FILE } from './paths';
+import { ITEMS_FILE, MONSTERS_FILE, NPCS_FILE, QUESTS_FILE } from './paths';
+import { checkQuests, nameQuestGoals, parseQuestDefs } from './quests';
 
 /** Os arquivos de dados que o painel ajusta (com o nome em português, como no arquivo de ajustes). */
-export type TuningFile = 'monstros' | 'itens' | 'npcs' | 'areas';
-export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs', 'areas'];
+export type TuningFile = 'monstros' | 'itens' | 'npcs' | 'areas' | 'missoes';
+export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs', 'areas', 'missoes'];
 
 /**
  * Uma área de monstros de um mapa: o padrão vem do mapa (o [mundo] desenha no Tiled); o painel muda qual monstro e
@@ -72,7 +74,14 @@ function parseAreas(json: Raw, maps: readonly GameMap[], monsters: ReadonlyMap<s
 }
 
 /** Como o painel mostra e confere cada campo. */
-export type FieldKind = 'inteiro' | 'numero' | 'faixa' | 'sim-nao' | 'texto' | 'itens' | 'porcento';
+export type FieldKind = 'inteiro' | 'numero' | 'faixa' | 'sim-nao' | 'texto' | 'texto-longo' | 'itens' | 'itens-qtd' | 'porcento';
+
+/** Tamanho máximo dos textos (o curto: nomes e falas; o longo: o que o NPC conta numa missão). */
+const TEXT_MAX = 300;
+const LONG_TEXT_MAX = 600;
+/** Lista de itens com quantidade (recompensa de missão): até tantos itens, cada um até tantas unidades. */
+const ITEM_LIST_MAX = 8;
+const ITEM_COUNT_MAX = 99;
 
 interface FieldSpec<Def> {
   /** Caminho no arquivo de dados (ex.: 'ataque.dano'). */
@@ -121,6 +130,47 @@ const AREA_FIELDS: FieldSpec<AreaDef>[] = [
   { campo: 'quantidade', rotulo: 'Quantos', tipo: 'inteiro', dica: `0 = nenhum; até ${AREA_MAX}`, ler: (d) => d.count },
 ];
 
+const QUEST_FIELDS: FieldSpec<QuestInfo>[] = [
+  { campo: 'nome', rotulo: 'Nome da missão', tipo: 'texto', ler: (d) => d.name },
+  { campo: 'pedido', rotulo: 'O que diz ao pedir', tipo: 'texto-longo', dica: 'aparece na conversa, antes de aceitar', ler: (d) => d.ask },
+  { campo: 'concluida', rotulo: 'O que diz ao concluir', tipo: 'texto-longo', ler: (d) => d.done },
+  {
+    campo: 'objetivo.rotulo',
+    rotulo: 'Objetivo na tela',
+    tipo: 'texto',
+    dica: 'vazio = o texto automático (ex.: "Derrotar 5 Sagui")',
+    ler: (d) => d.goalLabel ?? '',
+  },
+  { campo: 'objetivo.quantidade', rotulo: 'Quantos', tipo: 'inteiro', dica: 'pelo menos 1', ler: (d) => d.goal.count, vale: (d) => d.goal.kind !== 'talk' },
+  {
+    campo: 'objetivo.monstro',
+    rotulo: 'Qual monstro',
+    tipo: 'texto',
+    dica: 'a chave dele (ex.: sagui, jararaca); a lista está na aba Monstros',
+    ler: (d) => (d.goal.kind === 'kill' ? d.goal.monster : ''),
+    vale: (d) => d.goal.kind === 'kill',
+  },
+  {
+    campo: 'objetivo.item',
+    rotulo: 'Qual item',
+    tipo: 'texto',
+    dica: 'a chave dele (ex.: couro_jararaca); a lista está na aba Itens',
+    ler: (d) => (d.goal.kind === 'deliver' ? d.goal.item : ''),
+    vale: (d) => d.goal.kind === 'deliver',
+  },
+  { campo: 'nivelMinimo', rotulo: 'Nível mínimo', tipo: 'inteiro', dica: 'pelo menos 1', ler: (d) => d.minLevel },
+  { campo: 'repetivel', rotulo: 'Pode fazer de novo', tipo: 'sim-nao', ler: (d) => d.repeatable },
+  { campo: 'recompensa.xp', rotulo: 'Recompensa: XP', tipo: 'inteiro', ler: (d) => d.reward.xp },
+  { campo: 'recompensa.ouro', rotulo: 'Recompensa: ouro', tipo: 'inteiro', ler: (d) => d.reward.gold },
+  {
+    campo: 'recompensa.itens',
+    rotulo: 'Recompensa: itens',
+    tipo: 'itens-qtd',
+    dica: `até ${ITEM_LIST_MAX} itens`,
+    ler: (d) => d.reward.items.map((s) => ({ item: s.item, quantidade: s.n })),
+  },
+];
+
 const NPC_FIELDS: FieldSpec<NpcDef>[] = [
   { campo: 'fala', rotulo: 'O que diz', tipo: 'texto', ler: (d) => d.line },
   { campo: 'mapa', rotulo: 'Mapa onde fica', tipo: 'texto', dica: 'o nome do arquivo do mapa (ex.: capao). Mais fácil: no jogo, menu ADM → trazer para cá', ler: (d) => d.map },
@@ -139,13 +189,15 @@ interface Defs {
   items: Map<string, ItemInfo>;
   npcs: Map<string, NpcDef>;
   areas: Map<string, AreaDef>;
+  quests: Map<string, QuestInfo>;
 }
 
-/** O conteúdo de data/monsters.json, data/items.json e data/npcs.json. */
+/** O conteúdo de data/monsters.json, data/items.json, data/npcs.json e data/missoes.json (sem missões = nenhuma). */
 export interface BaseData {
   monstros: unknown;
   itens: unknown;
   npcs: unknown;
+  missoes?: unknown;
 }
 
 export type TuningResult = { ok: true } | { ok: false; erro: string };
@@ -170,7 +222,7 @@ export interface TuningView {
   itens: { id: string; nome: string; preco: number }[];
 }
 
-const TITLES: Record<TuningFile, string> = { monstros: 'Monstros', itens: 'Itens', npcs: 'Loja e personagens', areas: 'Áreas de monstros' };
+const TITLES: Record<TuningFile, string> = { monstros: 'Monstros', itens: 'Itens', npcs: 'Loja e personagens', areas: 'Áreas de monstros', missoes: 'Missões' };
 const PART_NAMES: Record<string, string> = { weapon: 'arma', head: 'cabeça', body: 'corpo', charm: 'amuleto' };
 const KIND_NAMES: Record<ItemInfo['kind'], string> = { equipment: 'Equipamento', consumable: 'Consumível', material: 'Material' };
 
@@ -178,9 +230,9 @@ function readJson(file: string): unknown {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
-/** Lê os três arquivos de dados do projeto. */
+/** Lê os arquivos de dados do projeto. */
 export function loadBaseData(): BaseData {
-  return { monstros: readJson(MONSTERS_FILE), itens: readJson(ITEMS_FILE), npcs: readJson(NPCS_FILE) };
+  return { monstros: readJson(MONSTERS_FILE), itens: readJson(ITEMS_FILE), npcs: readJson(NPCS_FILE), missoes: readJson(QUESTS_FILE) };
 }
 
 function isObject(value: unknown): value is Raw {
@@ -235,7 +287,10 @@ function build(base: BaseData, overrides: Overrides, maps: readonly GameMap[]): 
   const npcs = parseNpcDefs(merge(base.npcs, overrides.npcs ?? {}));
   checkNpcs(npcs, items, maps);
   const areas = parseAreas(merge(baseAreas(maps), overrides.areas ?? {}) as Raw, maps, monsters);
-  return { monsters, items, npcs, areas };
+  const quests = parseQuestDefs(merge(base.missoes ?? {}, overrides.missoes ?? {}));
+  checkQuests(quests, { npcs, monsters, items });
+  nameQuestGoals(quests, { monsters, items, npcs });
+  return { monsters, items, npcs, areas, quests };
 }
 
 function clone<T>(value: T): T {
@@ -257,9 +312,21 @@ function typeProblem(kind: FieldKind, value: unknown): string | null {
     case 'sim-nao':
       return typeof value === 'boolean' ? null : 'precisa ser sim ou não';
     case 'texto':
-      return typeof value === 'string' && value.length <= 300 ? null : 'precisa ser um texto de até 300 letras';
+      return typeof value === 'string' && value.length <= TEXT_MAX ? null : `precisa ser um texto de até ${TEXT_MAX} letras`;
+    case 'texto-longo':
+      return typeof value === 'string' && value.length <= LONG_TEXT_MAX ? null : `precisa ser um texto de até ${LONG_TEXT_MAX} letras`;
     case 'itens':
       return Array.isArray(value) && value.length <= 60 && value.every((v) => typeof v === 'string') ? null : 'precisa ser uma lista de itens';
+    case 'itens-qtd': {
+      const stack = (v: unknown) => {
+        if (!isObject(v) || Object.keys(v).some((k) => k !== 'item' && k !== 'quantidade')) return false;
+        const n = v.quantidade;
+        return typeof v.item === 'string' && whole(n) && (n as number) >= 1 && (n as number) <= ITEM_COUNT_MAX;
+      };
+      return Array.isArray(value) && value.length <= ITEM_LIST_MAX && value.every(stack)
+        ? null
+        : `precisa ser uma lista de até ${ITEM_LIST_MAX} itens, cada um com quantidade de 1 a ${ITEM_COUNT_MAX}`;
+    }
   }
 }
 
@@ -270,6 +337,8 @@ export class Tuning {
   readonly npcs: Map<string, NpcDef>;
   /** As áreas de monstros dos mapas (qual monstro e quantos), com os ajustes. */
   readonly areas: Map<string, AreaDef>;
+  /** As missões (data/missoes.json), com os ajustes. */
+  readonly quests: Map<string, QuestInfo>;
   readonly problem: string | null;
   /** Avisado depois de cada ajuste aceito, com os arquivos que mudaram. */
   onChange: ((changed: ReadonlySet<TuningFile>) => void) | null = null;
@@ -306,6 +375,7 @@ export class Tuning {
     this.items = defs.items;
     this.npcs = defs.npcs;
     this.areas = defs.areas;
+    this.quests = defs.quests;
   }
 
   /** Lê os dados do projeto e os ajustes guardados (arquivo que não existe = sem ajustes). */
@@ -368,12 +438,13 @@ export class Tuning {
   }
 
   view(): TuningView {
-    const effective: Record<TuningFile, ReadonlyMap<string, unknown>> = { monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas };
+    const effective = this.current();
     const defaults: Record<TuningFile, ReadonlyMap<string, unknown>> = {
       monstros: this.defaults.monsters,
       itens: this.defaults.items,
       npcs: this.defaults.npcs,
       areas: this.defaults.areas,
+      missoes: this.defaults.quests,
     };
     const grupos = TUNING_FILES.map((arquivo) => ({
       arquivo,
@@ -387,7 +458,7 @@ export class Tuning {
           return {
             id,
             nome: (def as { name: string }).name,
-            detalhe: describe(arquivo, def),
+            detalhe: describe(arquivo, def, this),
             campos: fields.map((f) => ({
               campo: f.campo,
               rotulo: f.rotulo,
@@ -404,9 +475,14 @@ export class Tuning {
     return { problema: this.problem, arquivo: this.file, grupos, itens };
   }
 
+  /** O que o jogo está usando agora, por arquivo. */
+  private current(): Record<TuningFile, ReadonlyMap<string, unknown>> {
+    return { monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas, missoes: this.quests };
+  }
+
   private spec(arquivo: TuningFile, id: string, campo: string): FieldSpec<unknown> | { erro: string } {
     if (!TUNING_FILES.includes(arquivo)) return { erro: 'Arquivo de ajustes desconhecido.' };
-    const current = ({ monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas } as Record<TuningFile, ReadonlyMap<string, unknown>>)[arquivo].get(id);
+    const current = this.current()[arquivo].get(id);
     if (current === undefined) return { erro: `"${id}" não existe em ${TITLES[arquivo].toLowerCase()}.` };
     const spec = (FIELDS[arquivo] as FieldSpec<unknown>[]).find((f) => f.campo === campo);
     if (!spec) return { erro: `O campo "${campo}" não pode ser ajustado pelo painel.` };
@@ -432,6 +508,7 @@ export class Tuning {
     replaceInPlace(this.items, defs.items);
     replaceInPlace(this.npcs, defs.npcs);
     replaceInPlace(this.areas, defs.areas);
+    replaceInPlace(this.quests, defs.quests, true);
     // Preço de item aparece na loja: mudar item também atualiza a loja de quem está vendo.
     this.onChange?.(new Set<TuningFile>(changed === 'itens' ? ['itens', 'npcs'] : [changed]));
     return { ok: true };
@@ -453,6 +530,7 @@ export class Tuning {
       itens: this.defaults.items,
       npcs: this.defaults.npcs,
       areas: this.defaults.areas,
+      missoes: this.defaults.quests,
     };
     for (const key of Object.keys(overrides)) {
       if (!TUNING_FILES.includes(key as TuningFile)) delete overrides[key as TuningFile];
@@ -488,11 +566,23 @@ const FIELDS: Record<TuningFile, FieldSpec<never>[]> = {
   itens: ITEM_FIELDS as FieldSpec<never>[],
   npcs: NPC_FIELDS as FieldSpec<never>[],
   areas: AREA_FIELDS as FieldSpec<never>[],
+  missoes: QUEST_FIELDS as FieldSpec<never>[],
 };
 
-function describe(arquivo: TuningFile, def: unknown): string {
+function describe(arquivo: TuningFile, def: unknown, game: { npcs: ReadonlyMap<string, NpcDef>; quests: ReadonlyMap<string, QuestInfo> }): string {
   if (arquivo === 'monstros') return `Nível ${(def as MonsterDef).level}`;
   if (arquivo === 'areas') return (def as AreaDef).detail;
+  if (arquivo === 'missoes') {
+    const quest = def as QuestInfo;
+    const goal =
+      quest.goal.kind === 'kill'
+        ? `derrotar ${quest.goal.count} ${quest.goalName}`
+        : quest.goal.kind === 'deliver'
+          ? `entregar ${quest.goal.count} ${quest.goalName}`
+          : `falar com ${quest.goalName}`;
+    const after = quest.after ? `depois de "${game.quests.get(quest.after)?.name ?? quest.after}"` : '';
+    return [`quem dá: ${game.npcs.get(quest.giver)?.name ?? quest.giver}`, goal, after].filter(Boolean).join(' · ');
+  }
   if (arquivo === 'itens') {
     const item = def as ItemInfo;
     return item.slot ? `${KIND_NAMES[item.kind]} · ${PART_NAMES[item.slot] ?? item.slot}` : KIND_NAMES[item.kind];
@@ -501,11 +591,18 @@ function describe(arquivo: TuningFile, def: unknown): string {
   return [npc.title, `mapa ${npc.map}`].filter(Boolean).join(' · ');
 }
 
-/** Copia os valores novos para dentro dos objetos que o jogo já usa (quem guardou a referência vê a mudança). */
-function replaceInPlace<T extends object>(current: Map<string, T>, next: Map<string, T>): void {
+/**
+ * Copia os valores novos para dentro dos objetos que o jogo já usa (quem guardou a referência vê a mudança).
+ * `exact`: também tira o que não existe mais (ex.: o "rotulo" de uma missão que voltou ao texto automático).
+ */
+function replaceInPlace<T extends object>(current: Map<string, T>, next: Map<string, T>, exact = false): void {
   for (const [id, def] of next) {
     const existing = current.get(id);
-    if (existing) Object.assign(existing, def);
-    else current.set(id, def);
+    if (!existing) {
+      current.set(id, def);
+      continue;
+    }
+    if (exact) for (const key of Object.keys(existing)) if (!(key in def)) delete (existing as Record<string, unknown>)[key];
+    Object.assign(existing, def);
   }
 }

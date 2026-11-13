@@ -137,6 +137,10 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
 - **Áreas de monstros:** cada área de cada mapa (nome, onde fica e o padrão do mapa): **qual monstro** nasce ali e
   **quantos** (0 a 50). Vale na hora: os monstros da área completam, somem ou trocam de tipo. O lugar da área é o do
   mapa (quem desenha os mapas muda no Tiled).
+- **Missões:** nome, o que o personagem diz ao pedir e ao concluir, o objetivo que aparece na tela (vazio = o texto
+  automático), **quantos** (e qual monstro ou item), nível mínimo, se dá para fazer de novo e a **recompensa** (XP,
+  ouro e itens com quantidade). Vale na hora, até numa conversa aberta; quem já está fazendo a missão continua com o
+  que já fez (se a quantidade baixar, já pode entregar). Quem dá a missão e a ordem delas ficam em `data/missoes.json`.
 - **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
   vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
   (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).

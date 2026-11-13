@@ -212,7 +212,7 @@ describe('travas do painel', () => {
       expect(await page.text()).toContain('Painel do administrador');
 
       const data = (await (await fetch(`${base}/admin/api/dados`)).json()) as { grupos: { arquivo: string }[] };
-      expect(data.grupos.map((g) => g.arquivo)).toEqual(['monstros', 'itens', 'npcs', 'areas']);
+      expect(data.grupos.map((g) => g.arquivo)).toEqual(['monstros', 'itens', 'npcs', 'areas', 'missoes']);
 
       const body = JSON.stringify({ arquivo: 'monstros', id: 'sagui', campo: 'vida', valor: 30 });
       const denied = await fetch(`${base}/admin/api/ajustar`, { method: 'POST', body, headers: { 'content-type': 'application/json' } });

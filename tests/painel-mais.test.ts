@@ -1,8 +1,9 @@
-// Painel do administrador, mais coisas (pedido do dono: "todos esses"): nível e XP de um jogador e a posição dos NPCs
-// (no painel e no menu ADM, "trazer para cá"), valendo na hora para quem está jogando.
+// Painel do administrador, mais coisas (pedido do dono: "todos esses"): nível e XP de um jogador, a posição dos NPCs
+// (no painel e no menu ADM, "trazer para cá"), os monstros por área e as missões, valendo na hora para quem está jogando.
 
 import { describe, expect, it } from 'vitest';
 import { Realm } from '../src/server/realm';
+import { loadMaps } from '../src/server/server';
 import { Tuning, type BaseData } from '../src/server/tuning';
 import { World } from '../src/server/world';
 import type { NpcDef } from '../src/server/npcs';
@@ -183,5 +184,124 @@ describe('monstros por área (painel)', () => {
     expect(count('cobra')).toBe(1);
     tuning.set('areas', 'vila#1', 'quantidade', 0);
     expect(world.monsters.size).toBe(0);
+  });
+});
+
+describe('missões pelo painel', () => {
+  const base = (): BaseData => ({
+    monstros: {
+      bicho: { nome: 'Bicho', nivel: 1, vida: 20, xp: 1, passoMs: 1e9, ouro: [1, 2], ataque: { tipo: 'mordida', preparoMs: 400, intervaloMs: 1000, dano: [2, 3] } },
+    },
+    itens: {
+      fruta: { nome: 'Fruta', preco: 5, tipo: 'consumivel', cura: 10 },
+      couro: { nome: 'Couro', preco: 6, tipo: 'material' },
+    },
+    npcs: { velho: { nome: 'Seu Velho', titulo: 'do mato', mapa: 'vila', x: 2, y: 0, fala: 'Oi!' } },
+    missoes: {
+      espantar: {
+        nome: 'Espantar Bichos',
+        quemDa: 'velho',
+        pedido: 'Espante 3 bichos.',
+        concluida: 'Valeu!',
+        objetivo: { tipo: 'derrotar', monstro: 'bicho', quantidade: 3, rotulo: 'Espantar 3 bichos' },
+        recompensa: { xp: 7, ouro: 10, itens: [{ item: 'fruta', quantidade: 2 }] },
+      },
+    },
+  });
+  const vila = () => GameMap.fromTiled(tiledFromAscii(['........', '........', '........'], { x: 1, y: 1 }), 'vila');
+
+  it('o painel mostra cada missão (textos, objetivo e recompensa) e confere o que muda', () => {
+    const tuning = new Tuning(base(), [vila()], null);
+    const group = tuning.view().grupos.find((g) => g.arquivo === 'missoes')!;
+    expect(group.titulo).toBe('Missões');
+    const entry = group.lista[0]!;
+    expect(entry).toMatchObject({ id: 'espantar', nome: 'Espantar Bichos', detalhe: 'quem dá: Seu Velho · derrotar 3 Bicho' });
+    expect(entry.campos.map((c) => c.campo)).toEqual([
+      'nome',
+      'pedido',
+      'concluida',
+      'objetivo.rotulo',
+      'objetivo.quantidade',
+      'objetivo.monstro',
+      'nivelMinimo',
+      'repetivel',
+      'recompensa.xp',
+      'recompensa.ouro',
+      'recompensa.itens',
+    ]);
+    expect(entry.campos.find((c) => c.campo === 'recompensa.itens')!.valor).toEqual([{ item: 'fruta', quantidade: 2 }]);
+
+    expect(tuning.set('missoes', 'espantar', 'pedido', 'Espante 5 bichos, por favor.')).toEqual({ ok: true });
+    expect(tuning.set('missoes', 'espantar', 'objetivo.quantidade', 5)).toEqual({ ok: true });
+    const reward = [
+      { item: 'couro', quantidade: 1 },
+      { item: 'fruta', quantidade: 4 },
+    ];
+    expect(tuning.set('missoes', 'espantar', 'recompensa.itens', reward)).toEqual({ ok: true });
+    const quest = tuning.quests.get('espantar')!;
+    expect(quest).toMatchObject({
+      ask: 'Espante 5 bichos, por favor.',
+      goal: { kind: 'kill', monster: 'bicho', count: 5 },
+      reward: { xp: 7, gold: 10, items: [{ item: 'couro', n: 1 }, { item: 'fruta', n: 4 }] },
+    });
+
+    // valor errado: recusado com o motivo, e nada muda
+    expect(tuning.set('missoes', 'espantar', 'objetivo.quantidade', 0).ok).toBe(false);
+    expect(tuning.set('missoes', 'espantar', 'objetivo.monstro', 'naoexiste').ok).toBe(false);
+    expect(tuning.set('missoes', 'espantar', 'recompensa.itens', [{ item: 'naoexiste', quantidade: 1 }]).ok).toBe(false);
+    expect(tuning.set('missoes', 'espantar', 'recompensa.itens', [{ item: 'fruta', quantidade: 0 }]).ok).toBe(false);
+    expect(tuning.set('missoes', 'espantar', 'pedido', 'a'.repeat(601)).ok).toBe(false);
+    expect(tuning.set('missoes', 'espantar', 'nome', '').ok).toBe(false);
+    expect(tuning.set('missoes', 'espantar', 'objetivo.item', 'couro').ok).toBe(false); // não é missão de entregar
+    expect(quest.goal.count).toBe(5);
+    expect(quest.name).toBe('Espantar Bichos');
+
+    // objetivo na tela vazio = o texto automático; "voltar ao padrão" traz o de antes
+    expect(tuning.set('missoes', 'espantar', 'objetivo.rotulo', '')).toEqual({ ok: true });
+    expect('goalLabel' in quest).toBe(false);
+    expect(tuning.reset('missoes', 'espantar', 'objetivo.rotulo')).toEqual({ ok: true });
+    expect(quest.goalLabel).toBe('Espantar 3 bichos');
+  });
+
+  it('vale na hora: quem está jogando recebe as missões novas, e o objetivo menor já deixa concluir', () => {
+    const tuning = new Tuning(base(), [vila()], null);
+    const clock = new FakeClock();
+    const realm = new Realm([vila()], {
+      now: clock.now,
+      random: () => 0,
+      monsters: tuning.monsters,
+      items: tuning.items,
+      npcs: tuning.npcs,
+      quests: tuning.quests,
+    });
+    tuning.onChange = (changed) => realm.tuningChanged(changed);
+    const conn = new FakeConn();
+    const joined = realm.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    const world = realm.worlds.get('vila')!;
+    const velho = [...world.npcs.values()][0]!;
+    world.questAction(player, 'accept', 'espantar', velho.id);
+    expect(player.quests.espantar).toEqual({ state: 'active', count: 0 });
+    player.quests.espantar!.count = 2; // derrubou 2 dos 3
+    world.questAction(player, 'complete', 'espantar', velho.id);
+    expect(player.quests.espantar!.state).toBe('active');
+
+    expect(tuning.set('missoes', 'espantar', 'objetivo.quantidade', 2)).toEqual({ ok: true });
+    expect(tuning.set('missoes', 'espantar', 'concluida', 'Dois já está bom!')).toEqual({ ok: true });
+    world.tick();
+    const sent = conn.ofType('questDefs').at(-1)!.quests.find((q) => q.id === 'espantar')!;
+    expect(sent).toMatchObject({ done: 'Dois já está bom!', goal: { count: 2 } });
+
+    world.questAction(player, 'complete', 'espantar', velho.id);
+    expect(player.quests.espantar!.state).toBe('done');
+    expect(player.xp).toBe(7);
+  });
+
+  it('as missões de verdade (data/missoes.json) entram no painel', () => {
+    const tuning = Tuning.load(null, loadMaps());
+    const group = tuning.view().grupos.find((g) => g.arquivo === 'missoes')!;
+    expect(group.lista.map((e) => e.id)).toContain('saguis_encantados');
+    expect(group.lista.find((e) => e.id === 'o_despertar')!.campos.map((c) => c.campo)).not.toContain('objetivo.quantidade'); // falar: sem quantidade
   });
 });

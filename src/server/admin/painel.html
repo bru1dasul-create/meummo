@@ -211,6 +211,27 @@
       .items .off {
         color: var(--muted);
       }
+      .wide textarea.long {
+        min-height: 110px;
+      }
+      .stacks {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .stacks .stack {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .stacks select {
+        flex: 1;
+        min-width: 140px;
+      }
+      .stacks input[type='number'] {
+        width: 70px;
+      }
       #toast {
         position: fixed;
         right: 16px;
@@ -371,7 +392,11 @@
         if (tipo === 'faixa') return `${value[0]} a ${value[1]}`;
         if (tipo === 'sim-nao') return value ? 'sim' : 'não';
         if (tipo === 'itens') return value.length ? value.join(', ') : 'nada';
-        if (tipo === 'texto') return value ? `"${value}"` : 'nada';
+        if (tipo === 'itens-qtd') return value.length ? value.map((s) => `${itemName(s.item)} x${s.quantidade}`).join(', ') : 'nada';
+        if (tipo === 'texto' || tipo === 'texto-longo') {
+          if (!value) return 'nada';
+          return value.length > 60 ? `"${value.slice(0, 57)}..."` : `"${value}"`;
+        }
         return String(value);
       }
 
@@ -405,6 +430,56 @@
 
       function reset(group, entry, field) {
         return send('/admin/api/padrao', { arquivo: group.arquivo, id: entry.id, campo: field.campo }, `${entry.nome} › ${field.rotulo} voltou ao padrão (${show(field.padrao, field.tipo)}).`);
+      }
+
+      function itemName(id) {
+        return state.data?.itens.find((i) => i.id === id)?.nome ?? id;
+      }
+
+      /** Lista de itens com quantidade (recompensa de missão): cada linha é um item e quantos; dá para tirar e pôr. */
+      function stackList(value, onCommit) {
+        const stacks = value.map((s) => ({ ...s }));
+        const box = el('div', { class: 'stacks' });
+        const pick = (selected) => {
+          const select = el('select');
+          for (const item of state.data.itens) select.append(el('option', { value: item.id, text: item.nome }));
+          select.value = selected;
+          return select;
+        };
+        const save = () => onCommit(stacks.map((s) => ({ item: s.item, quantidade: s.quantidade })));
+        stacks.forEach((stack) => {
+          const select = pick(stack.item);
+          select.addEventListener('change', () => ((stack.item = select.value), save()));
+          const count = numberInput(stack.quantidade, (v) => ((stack.quantidade = v), save()), 1);
+          count.max = '99';
+          const remove = el('button', { type: 'button', class: 'reset', text: 'tirar', onclick: () => (stacks.splice(stacks.indexOf(stack), 1), save()) });
+          box.append(el('div', { class: 'stack' }, select, el('span', { text: 'x' }), count, remove));
+        });
+        if (!stacks.length) box.append(el('span', { class: 'hint', text: 'Nenhum item.' }));
+        const add = el('div', { class: 'stack' });
+        const fresh = pick(state.data.itens[0]?.id ?? '');
+        const freshCount = numberInput(1, () => {}, 1);
+        freshCount.max = '99';
+        add.append(
+          fresh,
+          el('span', { text: 'x' }),
+          freshCount,
+          el('button', {
+            type: 'button',
+            text: 'pôr na recompensa',
+            onclick: () => {
+              const n = Math.floor(Number(freshCount.value));
+              if (!fresh.value || !Number.isFinite(n) || n < 1) return;
+              // o mesmo item de novo: soma na linha que já existe
+              const same = stacks.find((s) => s.item === fresh.value);
+              if (same) same.quantidade = Math.min(99, same.quantidade + n);
+              else stacks.push({ item: fresh.value, quantidade: n });
+              save();
+            },
+          }),
+        );
+        box.append(add);
+        return box;
       }
 
       function numberInput(value, onCommit, min) {
@@ -442,12 +517,16 @@
             box.addEventListener('change', () => commit(box.checked));
             return [box];
           }
-          case 'texto': {
-            const area = el('textarea', { maxlength: '300' });
+          case 'texto':
+          case 'texto-longo': {
+            const long = field.tipo === 'texto-longo';
+            const area = el('textarea', { maxlength: long ? '600' : '300', class: long ? 'long' : '' });
             area.value = field.valor ?? '';
             area.addEventListener('change', () => commit(area.value.trim()));
             return [area];
           }
+          case 'itens-qtd':
+            return [stackList(field.valor, commit)];
           case 'itens': {
             const chosen = new Set(field.valor);
             const list = el('div', { class: 'items' });
@@ -471,7 +550,7 @@
       }
 
       function renderField(group, entry, field) {
-        const wide = field.tipo === 'texto' || field.tipo === 'itens';
+        const wide = field.tipo === 'texto' || field.tipo === 'texto-longo' || field.tipo === 'itens' || field.tipo === 'itens-qtd';
         const label = el('label', { text: field.rotulo });
         if (field.dica) label.append(el('span', { class: 'hint', text: field.dica }));
         const inputs = el('div', { class: wide ? 'inputs wide' : 'inputs' }, ...fieldInputs(group, entry, field));
