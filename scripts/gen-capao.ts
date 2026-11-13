@@ -1181,7 +1181,8 @@ if (reached('4c') && FLORESTA) {
   open(rosa, [65, 66.2], 'taco', 'vo');
   cenario.push(rect('cristaleira', 64.4, 65.8, 33.15, 33.6, { altura: 1.9, olhando: 90 }));
   cenario.push(rect('sofa', 64.15, 65, 35.6, 37.4, { altura: 0.9, olhando: 0, cor: '#6f8f5a', croche: true }));
-  cenario.push(point('gato', 64.6, 36.4, { deitado: true, cor: '#c98a4b' })); // dormindo no sofá
+  // o Joaquim, o gato da vó (pedido do dono, 13/11): bem pequeno, todo branco com detalhes laranja, dormindo no sofá
+  cenario.push(point('gato', 64.6, 36.4, { nome: 'Joaquim', deitado: true, cor: '#ffffff', manchas: '#e8893a', tamanho: 'pequeno' }));
   cenario.push(rect('mesa-redonda', 66.5, 67.3, 34.8, 35.6, { altura: 0.75, cadeiras: 2, toalha: 'croche' }));
   cenario.push(rect('maquina-costura', 67.6, 68.6, 33.15, 33.65, { altura: 0.8, olhando: 90 }));
   cenario.push(rect('cama', 68.85, 70.85, 33.15, 34.55, { altura: 0.6, colcha: 'retalhos' }));
