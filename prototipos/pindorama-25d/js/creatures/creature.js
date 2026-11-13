@@ -219,11 +219,12 @@
     const sorted = groups.filter((g) => g.balls.length).map((g) => ({ g, d: depth(g.ref || g.balls[0].c) + (g.bias || 0) }));
     sorted.sort((a, b) => a.d - b.d);
     for (const { g } of sorted) {
-      const qs = g.balls.map((b) => ({ q: cam.p(b.c), r: b.r * zoom, col: b.col }));
-      // contorno: um pouco maior que cada bola, tudo junto
+      const qs = g.balls.map((b) => ({ q: cam.p(b.c), r: b.r * zoom, col: b.col, noInk: b.noInk }));
+      // contorno: um pouco maior que cada bola, tudo junto (`noInk`: a emenda com o grupo de antes, sem risco)
       ctx.fillStyle = INK;
       ctx.beginPath();
-      for (const { q, r } of qs) {
+      for (const { q, r, noInk } of qs) {
+        if (noInk) continue;
         ctx.moveTo(q.x + r + ink, q.y);
         ctx.arc(q.x, q.y, r + ink, 0, M.TAU);
       }

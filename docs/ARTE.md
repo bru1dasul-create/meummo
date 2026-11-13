@@ -361,6 +361,14 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   Prancha de conferência: `prancha-sagui.cjs` no scratchpad (8 lados × sentado, correndo, preparo, arremesso,
   apanhando, caindo).
   A câmera olha de cima, então o rosto fica alto na cabeça; embaixo, o focinho escondia os olhos.
+  **Jararaca** (`jararaca.js`, `S` = 1,15; uns 2 m de comprimento): o corpo é uma fila de bolas ao longo do
+  rastro da cabeça (pontos de 3 em 3 cm), com uma onda em S presa ao chão (fase = distância andada), então a cobra
+  rasteja sem deslizar e, parada, fica em S. Enrolada (`coil`, no aviso, no bote e um pouco depois), o corpo vira uma
+  espiral atrás da cabeça e o pescoço sobe numa curva (Bézier); a mistura entre as duas poses é suave. Manchas em
+  "V" são decalques em triângulo nos flancos, alternando os lados. A cabeça é larga atrás (as bochechas), com olho
+  amarelo, pupila em fenda e a risca escura até o canto da boca. A língua sai de vez em quando (mais no aviso).
+  O corpo é desenhado numa peça só: em pedaços, cada emenda ganhava contorno e parecia lagarta. Só o pescoço é
+  outra peça, e na emenda as bolas dele não têm contorno (`noInk`).
 - **Copas e monstros:** a "janela" que deixa ver através da copa abre em volta de **cada** personagem coberto (herói,
   outros jogadores e monstros), não só do herói: antes o sagui na mata fechada sumia (só o nome aparecia).
   `world.js` junta as janelas em `o.hideWindows` e recorta uma de cada vez.
