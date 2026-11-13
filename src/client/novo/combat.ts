@@ -530,7 +530,8 @@ export class CombatLayer {
 
   /**
    * A barra de energia embaixo do seu pé (só quando não está cheia ou a defesa está levantada; laranja piscando
-   * quando quebrou). Devolve quantos pixels ela ocupa, para o aviso embaixo do pé descer.
+   * quando quebrou). Azul, como o arco da defesa e a barra de energia da HUD (a verde da HUD é a XP).
+   * Devolve quantos pixels ela ocupa, para o aviso embaixo do pé descer.
    */
   private drawEnergy(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): number {
     const energy = this.energy;
@@ -550,7 +551,7 @@ export class CombatLayer {
       ctx.fillStyle = Math.floor(now / 160) % 2 === 0 ? '#f3a25b' : '#a8582a';
       ctx.fillRect(left, top, Math.max(2, width * fraction), height);
     } else {
-      ctx.fillStyle = energy.state === 'up' ? '#9be7a9' : '#6cc07d';
+      ctx.fillStyle = energy.state === 'up' ? '#6ec6ff' : '#2a7ad8';
       ctx.fillRect(left, top, width * fraction, height);
     }
     return height + 8;

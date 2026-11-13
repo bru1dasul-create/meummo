@@ -311,7 +311,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     20 de energia. Defendendo, anda a 70% do andar devagar e não atira nem usa habilidade; levantar solta a pedra.
     Fogo no chão não tem direção: a defesa não segura. Protocolo 22 (`guard`, `energy`, `blk` no `hit`). Desenho
     provisório: arco azul-claro no chão, faísca no bloqueio, barra de energia embaixo do pé, "defesa quebrou!" e o
-    botão `#guard-button` (`src/client/novo/guard.ts`); a barra verde da HUD nova é essa energia ([arte])
+    botão `#guard-button` (`src/client/novo/guard.ts`); a barra azul da HUD nova é essa energia ([arte]; a verde é a
+    XP), e a barra embaixo do pé também ficou azul
   - [x] **2c — recuo** (13/11): golpe de monstro empurra o jogador na direção em que andava, o quanto o monstro diz
     (`"recuo"` no ataque, em cm; padrão pelo tipo: fruta 12, mordida 16, bote 22, giro 26, investida 34; também no
     painel do administrador). Defesa que segura deixa 25% do empurrão; a que quebra, 50%; parede segura. Medido no
