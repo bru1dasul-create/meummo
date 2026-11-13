@@ -103,7 +103,19 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   direita (vem junto com o joystick)
 - [ ] **[arte + mundo]** Modo leve para celular fraco: menos efeitos (neblina, luzes, faíscas), com opção nas
   configurações
-- [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC
+- [ ] **[dono]** Medir em aparelho de verdade: meta de 30 quadros por segundo num celular intermediário e 60 no PC.
+  Como: abrir o jogo com `?fps` no fim do endereço (no PC, http://localhost:3000/?fps; no celular, o mesmo endereço
+  que você usa para jogar nele, com `?fps`). Mostra os quadros por segundo, quanto cada quadro custa (abaixo de 16 ms
+  dá 60; abaixo de 33 ms, 30) e o quadro mais lento. Medido em 13/11 no navegador de teste, SEM placa de vídeo
+  (pessimista): 31 a 58 no PC 1280×720, 26 a 43 no 1920×1080 e 33 a 57 no celular emulado; o combate é o mais pesado
+- [x] **[estrutura]** Desempenho, a minha parte (13/11): a camada do combate usa no máximo ~1,3 milhão de pixels (no
+  celular de tela densa ela tinha mais pixels que o próprio cenário) e some quando não tem nada para mostrar: +2 a 5
+  quadros por segundo no celular emulado. O motor e essa camada gastam menos de 0,2 ms por quadro; o resto é o desenho
+- [ ] **[arte]** Desempenho do desenho (perfil no combate, 13/11): o `get bounds` de `props.js` monta um texto com o
+  zoom (`toFixed`) a cada leitura, em ~1000 objetos, várias vezes por quadro (é a função que mais gasta); a escolha do
+  que aparece passa por todos os objetos a cada quadro; personagens e criaturas são pintados por código a cada quadro
+  (guardar a imagem de cada pose, como já é feito com as árvores, é o ganho maior no combate). Feito o primeiro (13/11):
+  o texto do zoom é montado uma vez por zoom (ler a caixa de todos os objetos caiu de ~0,10 ms para 0,03 ms)
 
 ## 🗺️ Mundo novo (2.5D isométrico) — decidido pelo dono em 12/11
 O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas são refeitos do zero; o motor
@@ -153,6 +165,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   da IA só dão o clima). No ramo `mundo/parque-antigo` (por cima da 4c): a placa da entrada, o bebedouro quebrado,
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
   academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. Entra com o desenho da [arte]
+- [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
+  telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
+  AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
+  com `caixa`, `engradado`). Liga com `interior: true` na `casa`; o mapa é do [mundo] (`mundo/budega-interior`)
+- [x] **[mundo]** Budega com interior, o mapa (**na main em 13/11**): ladrilho por dentro, colisão só nas paredes de
+  15 cm com a porta de enrolar aberta (de 62,34 a 66,66; a parede do fundo vai até a frente das prateleiras), a
+  geladeira na ponta do balcão fechando a passagem para trás dele, 1,25 m atrás do balcão para a Xiovanna, engradados
+  nos cantos da porta e nenhum vão de entalar; a lixeira saiu da frente da porta. A Xiovanna fica com o pé em
+  (64,6; 51), onde nenhuma copa a cobre na tela (a [estrutura] muda o `data/npcs.json` logo depois do mapa)
 - [ ] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
   `barra`, `remada`) são novos; `placa` (a da 4c) com `tamanho: 'grande'` e `mato`; `banco` com `material: 'concreto'`
   e `mato`; `lixeira` com `mato`; `poste-praca` com `apagado`, `torto` e `cipo`; e a pista (`calcada` em polígono com
@@ -313,11 +334,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `#mode-toggle` (com `#login-title` e `#password2`); sem eles, tudo como antes. Para quem esquece a senha: **trocar
   senha** no painel do administrador. Decidido com o dono: o nome é **Pindorama: Selva de Pedra**; ficam fora, até o
   jogo estar na internet, "Entrar com Google", e-mail, "Esqueceu sua senha?" e "Sair do Jogo"
-- [ ] **[arte]** Tela inicial nova, o visual: fundo, logo e o painel de madeira com cipós da imagem do dono, no PC e
-  no celular, com os ids combinados (`#login-title`, `#password2`, `#mode-toggle`, mais os de sempre)
-- [ ] **[arte]** Conversa com NPC, parte 2: a `PD.View` centraliza em quem fala (`focus`, mesmo sendo criatura) e mexe
-  a boca (`talk`); a fala "por cima" da cena no lugar do painel com o retrato antigo, com os botões (Aceitar,
-  Desistir, Entregar, Ver a loja), no PC e no celular
+- [x] **[arte]** Tela inicial nova, o visual (13/11): o fundo e o logo da imagem do dono (`public/assets/ui`, mais leves),
+  o painel de madeira escura com moldura, cipós e o medalhão do sol em espiral, o título que troca ("Entrar no mundo"
+  / "Criar uma conta"), campos com ícone, o "Repita a senha" só ao criar, o botão laranja de pincelada e o link "Criar
+  uma conta" / "Já tenho conta"; o "Como jogar" virou um botão no canto (embaixo do painel no celular). No PC, no
+  celular em pé e deitado. O nome da aba é "Pindorama: Selva de Pedra"
+- [x] **[arte]** Conversa com NPC, parte 2 (13/11): a `PD.View` leva a câmera até quem fala (`focus`, gente ou
+  criatura), que fica um pouco acima do meio da tela, vira para você e mexe a boca enquanto fala (`talk`); o seu
+  personagem parado na frente dele fica transparente. A fala vem embaixo, por cima da cena, sem o retrato antigo
+  (`#talk.cinema`, só no jogo 2.5D): o nome numa plaquinha, a fala escrita aos poucos no ritmo da boca (tocar mostra
+  tudo), os cartões das missões e botões grandes (Aceitar, Entregar/Conversar, Desistir, Ver a loja, Tchau), no PC
+  e no celular. A loja do jogo 2.5D também fica sem o retrato. O jogo antigo (`?antigo`) continua igual
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

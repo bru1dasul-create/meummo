@@ -2,6 +2,9 @@
 // Só mostra e pede: quem confere distância, pré-requisito, nível e objetivo é o servidor.
 // Visual: o mesmo painel de tábuas da loja, com cipó em cima, o retrato de quem fala, a fala num balão e
 // cada missão num cartão (objetivo com barra de progresso e a recompensa em "fichas": XP, ouro e itens).
+// No jogo 2.5D (pedido do dono, 13/11: "a câmera deve se posicionar na Xiovanna e vir a msg por cima com ela
+// falando, mexendo a boca"): a câmera mostra quem fala, então sai o retrato; a fala vem embaixo da tela, por cima
+// da cena, escrita aos poucos no ritmo da boca, com os botões grandes (Aceitar, Entregar, Desistir, Ver a loja, Tchau).
 
 import type { ItemInfo } from '../shared/items';
 import type { NpcInfo } from '../shared/protocol';
@@ -65,8 +68,21 @@ export function npcMark(npcType: string, quests: readonly QuestInfo[], ctx: Ques
   return '';
 }
 
+/** O jogo 2.5D está aberto (a tela dele é o canvas.mundo-novo): a conversa vira a fala por cima da cena. */
+function cinemaMode(): boolean {
+  return document.querySelector('canvas.mundo-novo') !== null;
+}
+
+/** Tempo de cada letra da fala: o mesmo ritmo da boca no motor (55 ms por letra, até 7 s a fala inteira). */
+function letterMs(text: string): number {
+  return Math.min(55, 7000 / Math.max(1, text.length));
+}
+
 export class TalkWindow {
   private readonly root = byId<HTMLDivElement>('talk');
+  /** A fala que já foi escrita aos poucos (render de novo com a mesma fala a mostra inteira). */
+  private typed = '';
+  private typeTimer = 0;
   private npc: NpcInfo | null = null;
   private ctx: QuestContext | null = null;
   /** O que o NPC acabou de dizer (ao entregar uma missão). */
@@ -96,7 +112,12 @@ export class TalkWindow {
   }
 
   open(npc: NpcInfo, ctx: QuestContext): void {
-    if (this.npc?.e.id !== npc.e.id) this.portrait = characterPortrait(npc.e.look, npc.e.gear ?? {}, 6, npc.e.kind === 'npc' ? npc.e.type : undefined);
+    const cinema = cinemaMode();
+    this.root.classList.toggle('cinema', cinema);
+    if (this.npc?.e.id !== npc.e.id) {
+      this.typed = '';
+      if (!cinema) this.portrait = characterPortrait(npc.e.look, npc.e.gear ?? {}, 6, npc.e.kind === 'npc' ? npc.e.type : undefined);
+    }
     this.npc = npc;
     this.ctx = ctx;
     this.reply = null;
@@ -105,6 +126,8 @@ export class TalkWindow {
   }
 
   readonly close = (): void => {
+    window.clearInterval(this.typeTimer);
+    this.typed = '';
     this.npc = null;
     this.reply = null;
     this.root.hidden = true;
@@ -170,10 +193,52 @@ export class TalkWindow {
     return box;
   }
 
+  /** Escreve a fala aos poucos, no ritmo da boca; clicar nela mostra tudo. A mesma fala de antes sai inteira. */
+  private typewrite(p: HTMLElement, text: string): void {
+    window.clearInterval(this.typeTimer);
+    if (!text || text === this.typed) {
+      p.textContent = text;
+      return;
+    }
+    this.typed = text;
+    const start = performance.now();
+    const ms = letterMs(text);
+    const step = (): void => {
+      const n = Math.min(text.length, Math.floor((performance.now() - start) / ms) + 1);
+      p.textContent = text.slice(0, n);
+      if (n >= text.length) window.clearInterval(this.typeTimer);
+    };
+    p.addEventListener('click', () => {
+      window.clearInterval(this.typeTimer);
+      p.textContent = text;
+    });
+    step();
+    this.typeTimer = window.setInterval(step, 30);
+  }
+
+  /** Jogo 2.5D: o nome (e o que a pessoa é) numa plaquinha, o ✕ e a fala grande, sem retrato. */
+  private cinemaHead(npc: NpcInfo, line: string): HTMLElement[] {
+    const head = el('div', 'talk-cine-head');
+    const plate = el('div', 'talk-cine-name');
+    plate.append(el('strong', '', npc.e.name));
+    if (npc.title) plate.append(el('span', '', npc.title));
+    const close = button('✕', 'shop-close', this.close);
+    close.title = 'Fechar (Esc)';
+    close.setAttribute('aria-label', 'Fechar a conversa');
+    head.append(plate, close);
+    const p = el('p', `talk-cine-line${this.reply ? ' talk-reply' : ''}`);
+    this.typewrite(p, line);
+    return [head, p];
+  }
+
   private render(): void {
     const npc = this.npc;
     const ctx = this.ctx;
     if (!npc || !ctx) return;
+    if (this.root.classList.contains('cinema')) {
+      this.renderCinema(npc, ctx);
+      return;
+    }
 
     // ---- cabeçalho: cipó, retrato, nome e a fala no balão ----
     const head = el('div', 'shop-head');
@@ -192,8 +257,29 @@ export class TalkWindow {
     close.title = 'Fechar (Esc)';
     close.setAttribute('aria-label', 'Fechar a conversa');
     head.append(portrait, who, close);
-    const parts: HTMLElement[] = [el('div', 'talk-vine'), head];
+    const parts: HTMLElement[] = [el('div', 'talk-vine'), head, ...this.questParts(npc, ctx, true)];
+    if (npc.shop) parts.push(button('Ver a loja', 'talk-shop', () => this.actions.openShop(npc)));
+    this.root.replaceChildren(...parts);
+  }
 
+  /**
+   * Jogo 2.5D: a fala é o que a pessoa diz agora (a resposta ao entregar; ou o pedido da missão nova, que a boca
+   * acabou de falar; ou a fala dela), embaixo os cartões e os botões grandes.
+   */
+  private renderCinema(npc: NpcInfo, ctx: QuestContext): void {
+    const offer = this.quests.find((q) => q.giver === npc.e.type && questBlocker(q, ctx.log, ctx.level) === null);
+    const line = this.reply ?? offer?.ask ?? npc.line ?? '';
+    const parts: HTMLElement[] = [...this.cinemaHead(npc, line), ...this.questParts(npc, ctx, !offer || line !== offer.ask)];
+    const foot = el('div', 'talk-cine-foot');
+    if (npc.shop) foot.append(button('Ver a loja', 'talk-shop', () => this.actions.openShop(npc)));
+    foot.append(button('Tchau', 'talk-soft talk-bye', this.close));
+    parts.push(foot);
+    this.root.replaceChildren(...parts);
+  }
+
+  /** As missões deste NPC em cartões: para concluir, fazendo, novas e as que esperam nível. */
+  private questParts(npc: NpcInfo, ctx: QuestContext, showAsk: boolean): HTMLElement[] {
+    const parts: HTMLElement[] = [];
     // conclui aqui o que acaba com este NPC (inclusive a missão de falar, que outro deu); o resto é de quem deu
     const type = npc.e.type;
     const mine = this.quests.filter((q) => q.giver === type);
@@ -240,7 +326,7 @@ export class TalkWindow {
       for (const quest of fresh) {
         list.append(
           card(quest, 'fresh', [
-            el('p', 'talk-ask', quest.ask),
+            showAsk || quest !== fresh[0] ? el('p', 'talk-ask', quest.ask) : null,
             this.goal(quest, null),
             this.rewardChips(quest),
             button('Aceitar', 'talk-main', () => this.actions.accept(npc.e.id, quest.id)),
@@ -253,8 +339,7 @@ export class TalkWindow {
       parts.push(el('p', 'shop-empty', `Volte quando tiver nível ${Math.min(...later.map((q) => q.minLevel))}: ${later.length === 1 ? 'tem mais uma missão' : `tem mais ${later.length} missões`}.`));
     }
     if (!ready.length && !doing.length && !fresh.length && !later.length) parts.push(el('p', 'shop-empty', 'Nenhuma missão agora. Volte mais tarde!'));
-    if (npc.shop) parts.push(button('Ver a loja', 'talk-shop', () => this.actions.openShop(npc)));
-    this.root.replaceChildren(...parts);
+    return parts;
   }
 }
 
