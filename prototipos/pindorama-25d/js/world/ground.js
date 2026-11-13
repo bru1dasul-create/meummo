@@ -527,14 +527,14 @@
     ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
     this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
     const env = { map: m, g: this, box };
-    // a figueira que rompeu a esquina: o chão quebrado em volta do tronco vai depois das superfícies e antes dos
-    // detalhes (as raízes do chão passam por cima dos pedaços soltos)
+    // o pé das figueiras (a que rompeu a esquina: o chão quebrado; todas: as raízes) vai depois das superfícies e antes
+    // dos detalhes (as raízes do mapa passam por cima dos pedaços soltos)
     let broke = false;
     const breaks = () => {
       broke = true;
       if (!PD.street) return;
       for (const t of m.trees || []) {
-        if (t.breaks && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
+        if ((t.breaks || t.kind === 'figueira') && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
       }
     };
     m.shapes.forEach((sh, n) => {

@@ -51,6 +51,7 @@
       }
       this.poles = (m.poles || []).map((p) => add(new P.Pole(this, p)));
       if (m.trafficLight) add(new P.TrafficLight(this, m.trafficLight));
+      this.trafficLights = (m.trafficLights || []).map((d) => add(new P.TrafficLight(this, d)));
       for (const d of m.props || []) add(new P.Small(this, d));
       // deque e pinguela: rentes ao chão, fora da ordem de quem fica em pé (desenhados logo depois do chão)
       this.flats = (m.flats || []).map((d) => new P.Small(this, d));
@@ -217,6 +218,13 @@
         p.y += p.vy * dt;
         p.z += p.vz * dt;
         p.vz -= (p.g || 0) * dt;
+        // o que cai (faísca) quica baixinho no chão em vez de atravessar
+        if (p.floor != null && p.z < p.floor) {
+          p.z = p.floor;
+          p.vz = Math.abs(p.vz) * 0.25;
+          p.vx *= 0.5;
+          p.vy *= 0.5;
+        }
       }
       this.particles = this.particles.filter((p) => p.t < p.life);
       // pétalas do ipê caindo (com o vento)
@@ -250,6 +258,25 @@
         s.x += Math.sin(t * 2 + s.hue * 9) * 12 * dt;
       }
       this.sparks = this.sparks.filter((s) => s.t < s.life);
+      // faíscas do semáforo quebrado: estouros de vez em quando, da caixinha de força, da ponta do fio solto ou dos fios
+      // da caixa de luzes; às vezes estala duas vezes seguidas
+      for (const tl of this.trafficLights || []) {
+        if (!tl.d.sparks) continue;
+        if (tl._nextBurst == null) tl._nextBurst = t + 1 + Math.random() * 2;
+        if (t < tl._nextBurst) continue;
+        const pts = tl.sparkPoints();
+        if (!pts.length) continue;
+        const roll = Math.random();
+        const o = pts[roll < 0.5 ? 0 : roll < 0.85 ? 1 : 2];
+        const n = 7 + Math.floor(Math.random() * 9);
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * M.TAU;
+          const sp = 70 + Math.random() * 190;
+          this.particles.push({ kind: 'faisca', x: o.x, y: o.y, z: o.z, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 40 + Math.random() * 200, g: 980, floor: tl.z0, t: 0, life: 0.3 + Math.random() * 0.5 });
+        }
+        this.particles.push({ kind: 'clarao', x: o.x, y: o.y, z: o.z, vx: 0, vy: 0, vz: 0, t: 0, life: 0.14, r: 26 });
+        tl._nextBurst = t + (Math.random() < 0.35 ? 0.12 + Math.random() * 0.15 : 1.4 + Math.random() * 3.6);
+      }
     }
 
     _dust(x, y, z, strength) {
@@ -598,6 +625,34 @@
         ctx.fillStyle = '#fff7d6';
         ctx.fill();
         ctx.globalAlpha = 1;
+      } else if (p.kind === 'faisca') {
+        // faísca elétrica: risquinho branco-amarelo com brilho laranja, caindo
+        const back = cam.p({ x: p.x - p.vx * 0.025, y: p.y - p.vy * 0.025, z: p.z - p.vz * 0.025 });
+        const a = 1 - k * k;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = a * 0.55;
+        ctx.strokeStyle = '#ffb02e';
+        ctx.lineWidth = Math.max(2, 4 * cam.zoom);
+        ctx.beginPath();
+        ctx.moveTo(back.x, back.y);
+        ctx.lineTo(q.x, q.y);
+        ctx.stroke();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = '#fffbe0';
+        ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (p.kind === 'clarao') {
+        // o clarão do estouro
+        const rad = p.r * cam.zoom * (1 + k * 0.6);
+        const g = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, rad);
+        g.addColorStop(0, `rgba(255, 250, 220, ${0.9 * (1 - k)})`);
+        g.addColorStop(0.35, `rgba(255, 210, 110, ${0.55 * (1 - k)})`);
+        g.addColorStop(1, 'rgba(255, 180, 60, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, rad, 0, M.TAU);
+        ctx.fill();
       } else if (p.kind === 'risco') {
         const back = cam.p({ x: p.x - p.vx * 0.04, y: p.y - p.vy * 0.04, z: p.z - p.vz * 0.04 });
         ctx.globalAlpha = 1 - k;

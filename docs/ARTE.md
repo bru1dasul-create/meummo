@@ -455,6 +455,16 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   - `breaks` (o chão em volta): terra escura com manchas, placas de calçada levantadas (o lado aparece, beirada clara
     do lado da luz, trinca e capim), pedaços de asfalto quase rentes, trincas e folhas secas; as raízes a mais são
     pintadas aqui, as do mapa por cima.
+  - A Figueira dos Despertos também ganhou o pé novo (o dono aprovou em 13/11): na mata, `breaks` só pinta a terra
+    escura e as raízes (`plain`: sem trincas, lascas nem placas), mais curtas; nenhuma raiz entra no círculo do
+    despertar, em casa ou no pé de poste e de semáforo (`blocked`). As raízes antigas em garra (`_figRoot`) saíram.
+- **Semáforo quebrado (13/11, pedido do dono: "coloca um semáforo aí quebrado saindo faísca").** `semaforo` no mapa
+  (ponto: `altura`, `olhando` em graus, `quebrado`, `faiscas`) vira `map.trafficLights` e um `TrafficLight` com `rig`
+  (props.js): poste cinza de São Paulo com ferrugem e cipó, o braço sobre a rua (vai para o lado que tem asfalto a
+  3 m) entortado para baixo, a caixa de luzes preta com anteparo amarelo pendurada torta por dois fios, lentes
+  apagadas com pala (a verde trincada), a caixinha de força aberta com fios coloridos e um fio solto descascado. A
+  amarela pisca falhada (~a cada 4 s, `draw`); as faíscas são partículas do mundo (`faisca` cai e quica no chão,
+  `clarao` é o estouro), de `sparkPoints()`, de 1,4 a 5 s, às vezes duas seguidas (`World.update`).
 - **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
   de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
   - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a
