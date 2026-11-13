@@ -179,6 +179,23 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
   academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. A placa grande fica alta,
   acima do pilar do portão (como na imagem aprovada), e o poste do parque da entrada saiu da frente do poste do portão
+- [ ] **[mundo]** Casas com interior (pedido do dono, 13/11: "dar vida para alguns interiores de casa"; planta aprovada:
+  "pode mandar as casas pra arte"; `docs/referencias/casas-interior-planta.jpg` e os alvos `casa-amarela-dentro.jpg`,
+  `casa-rosa-dentro.jpg` e `casa-abandonada-dentro.jpg`, que só dão o clima): a amarela (a família: cozinha no fundo,
+  sala na frente), a rosa (a casa da vó) e a abandonada do fundo (a árvore nasce do chão de dentro e sai pelo buraco da
+  laje). No ramo `mundo/casas-interior`: `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis
+  sem vão de entalar. Entra com o desenho da [arte]
+- [ ] **[arte]** Casas com interior, o desenho: como a Budega (o telhado e a frente somem com o herói dentro), a porta
+  aberta no vão do mapa, o `piso` (`desenho`: `ceramica`, `taco`, `cimento`) e os móveis novos: `pia`, `fogao` (`panela`),
+  `filtro` (de barro, no banquinho), `mesa-cozinha` (`toalha: 'xadrez'`, `cadeiras`), `estante` (`tv`: a TV de tubo),
+  `tapete`, `sofa` (`cor`, `croche`, `rasgado`, `mato`), `cristaleira`, `mesa-redonda` (`toalha: 'croche'`),
+  `maquina-costura`, `cama` (`colcha: 'retalhos'`), `colchao` (`velho`) e `entulho` (`cadeiraCaida`); a `geladeira` e o
+  `vaso` já existem. Na casa abandonada, o tronco no chão de dentro é a `arvore` com `dentroDaCasa` (no meio da casa)
+- [ ] **[estrutura + arte + mundo]** Joaquim, o gato da vó (pedido do dono, 13/11): bem pequeno, todo branco com
+  detalhes laranja (a máscara na testa e no focinho, as orelhas e o rabo), olhos azuis, como o gato do dono
+  (`docs/referencias/joaquim-1.jpg` e `joaquim-2.jpg`), e com vida: dorme no sofá da vó, acorda, se espreguiça, anda
+  pela casa, mia e dá para fazer carinho. A [estrutura] define a chave e o comportamento, a [arte] desenha e anima, e o
+  [mundo] marca a casa dele (a casa rosa; no mapa ele está no sofá, `gato` com `nome: 'Joaquim'`)
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
@@ -345,6 +362,21 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     o tranco no desenho). **Esquiva conferida:** a do jogo rola 3 m, protege 0,35 s e recarrega em 2,5 s; a do
     protótipo anda 1 m, protege 0,2 s e recarrega em 0,2 s. Ficou a do jogo (os avisos dos monstros foram feitos para
     ela) — o dono decide se quer a do protótipo
+- [x] **[arte]** O herói no combate do jogo 2.5D (13/11, pedido do dono): as animações da revisão 17 (a que o dono
+  trouxe do ChatGPT: `js/slingshot.js` e `js/guard.js`) ligadas às ações que o motor já mandava. Segurar o estilingue:
+  ele puxa o elástico; soltar: a pedra sai e o braço volta. A **forquilha só aparece na mão na hora do tiro** (escolha do
+  dono, 13/11; no resto do tempo, mãos livres). Defesa: os braços sobem na frente, cedem no bloqueio e caem quando a
+  defesa quebra; golpe recebido parado dá o tranco (andando não, para o desenho não ficar para trás do servidor). Vale
+  para os outros jogadores também (o tiro deles mostra a puxada curta e o soltar). Sons novos no `sfx.ts`: zumbido do
+  elástico subindo com a carga e o "plim" da carga cheia, pancada da defesa e a defesa quebrando — ligados pela
+  [estrutura] no motor (pedido enviado). Conferido no PC e no celular (botão Estilingue), sem erros
+- [x] **[estrutura]** Ligar o combate do herói no motor (pedido da [arte], 13/11): `sfx.charge(carga)` a cada quadro da
+  puxada e `sfx.stopCharge()` ao soltar/cancelar/desmaiar (e ao sair do jogo); `'block'` quando a defesa segura e
+  `'guard-break'` quando ela quebra (um som só, na mensagem `energy`, quebrando num golpe ou segurando até acabar); a
+  mira no `'sling-pull'` desde o começo e de novo quando muda mais de 5° (a mesma conta do tiro: alvo, mouse ou o
+  mais perto); parado, o corpo vira junto (a view vira o parado para o ângulo do motor); o `'guard'` vai com o ângulo
+  sempre que a defesa é reenviada. Conferido no PC e no celular: puxando perto de um sagui, o herói vira para ele
+  antes de soltar (`__mundoNovo.me.angle`)
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar

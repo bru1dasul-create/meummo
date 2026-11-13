@@ -124,7 +124,95 @@
     /** Golpe ou reação (veja WorldView.action): as criaturas animam; o corpo de gente ainda não. */
     action(id, kind, angle) {
       const a = this.actors.get(id);
-      if (a && a.creature) a.creature.action(kind, Number.isFinite(angle) ? rad(angle) : undefined);
+      if (!a) return;
+      const yaw = Number.isFinite(angle) ? rad(angle) : undefined;
+      if (a.creature) a.creature.action(kind, yaw);
+      else this._personAction(a, kind, yaw);
+    }
+
+    /**
+     * Gente (o herói e os outros jogadores): o estilingue e a defesa da revisão 17 do protótipo (o dono trouxe do
+     * ChatGPT; js/slingshot.js e js/guard.js). O motor manda as ações; quem decide carga, defesa e dano é o servidor.
+     * A forquilha do estilingue só aparece na mão enquanto ele puxa e solta (escolha do dono: no resto do tempo, mãos
+     * livres — a regra "sem arma no personagem").
+     */
+    _personAction(a, kind, yaw) {
+      const ch = a.ch;
+      const S = PD.slingshot;
+      const G = PD.guard;
+      if (!ch || ch.death) return;
+      const slinging = () => ch.attack && ch.attack.kind === 'slingshot';
+      // parado (ou quase): o tranco do golpe trava as pernas por 0,22 s. Andando, o servidor não para o jogador, então o
+      // desenho também não para (se parasse, ele ficaria para trás e depois correria para alcançar)
+      const still = () => Math.hypot(a.target.x - ch.pos.x, a.target.y - ch.pos.y) < 45 && ch.speed < 80;
+      const arm = () => {
+        if (ch.equipped.maoE !== 'estilingue') ch.equip('maoE', 'estilingue');
+        a.sling = true;
+      };
+      switch (kind) {
+        case 'sling-pull': {
+          // segurar: começa a puxar o elástico para a mira (sem ângulo, para onde ele olha; o tiro corrige ao soltar).
+          // Mandado de novo durante a puxada, com o ângulo, só vira a mira e o corpo
+          if (!S) return;
+          if (slinging() && ch.attack.stage === 'charging') {
+            if (yaw !== undefined) {
+              ch.attack.dir = yaw;
+              ch.faceYaw = yaw;
+            }
+            return;
+          }
+          if (ch.guard && ch.guard.active) G.release(ch, true);
+          arm();
+          S.start(ch, yaw ?? ch.yaw, { attackHeld: true });
+          if (yaw !== undefined) ch.faceYaw = yaw;
+          ch._pose = null;
+          return;
+        }
+        case 'shoot': {
+          if (!S) return;
+          const dir = yaw ?? ch.yaw;
+          arm();
+          if (!(slinging() && ch.attack.stage === 'charging')) {
+            // tiro rápido (toque no monstro) ou o tiro de outro jogador: a puxada começa já no ponto de soltar
+            S.start(ch, dir, { attackHeld: true });
+            ch.attack.age = S.RULES.minDraw;
+          }
+          const at = ch.attack;
+          at.dir = dir;
+          at.aimYaw = dir;
+          at.poseAim = M.clamp(M.angleDiff(ch.yaw, dir), -65 * M.DEG, 65 * M.DEG);
+          at.releaseRequested = true;
+          ch.faceYaw = dir;
+          ch._pose = null;
+          return;
+        }
+        case 'sling-cancel':
+          if (S && slinging()) S.cancel(ch);
+          return;
+        case 'guard':
+          // defesa levantada (o motor manda de novo quando a mira da defesa muda)
+          a.guardHeld = true;
+          if (yaw !== undefined) a.guardDir = yaw;
+          return;
+        case 'guard-end':
+          a.guardHeld = false;
+          return;
+        case 'guard-break':
+          // a energia acabou: os braços caem e só levantam de novo soltando e apertando outra vez
+          a.guardHeld = false;
+          if (G) G.breakGuard(ch);
+          if (still()) ch.reactToHit({ strength: 0.55 });
+          return;
+        case 'block':
+          // a defesa segurou o golpe: os braços cedem um pouco e voltam
+          if (G) G.ensure(ch).recoil = 0.2;
+          return;
+        case 'hurt':
+          // golpe que passou: o tronco cede (a defesa e a pedra puxada caem, como no servidor)
+          if (still()) ch.reactToHit({ strength: 0.45 });
+          else if (S && slinging()) S.cancel(ch);
+          return;
+      }
     }
 
     /**
@@ -216,7 +304,19 @@
         const mag = Math.min(1, want / top);
         input = { move: { x: (dx / d) * mag, y: (dy / d) * mag }, run, speedScale: Math.max(1, want / top), agile };
       }
+      // defesa (revisão 17): os braços sobem e viram para onde o motor mandou. A energia de verdade é a do servidor:
+      // aqui ela fica sempre cheia, e a defesa só quebra quando o motor manda 'guard-break'
+      if (PD.guard) {
+        if (ch.guard) ch.guard.energy = PD.guard.RULES.maxEnergy;
+        input.guardHeld = !!a.guardHeld;
+        if (a.guardDir !== undefined) input.guardDir = a.guardDir;
+      }
       ch.update(dt, input, null);
+      // a forquilha sai da mão quando o tiro (ou a puxada cancelada) termina
+      if (a.sling && !(ch.attack && ch.attack.kind === 'slingshot')) {
+        if (ch.equipped.maoE === 'estilingue') ch.unequip('maoE');
+        a.sling = false;
+      }
       // parado: vira para o ângulo que veio
       if (d <= 3 && a.angle !== undefined) ch.faceYaw = a.angle;
       // conversa: o NPC com quem você fala vira para você

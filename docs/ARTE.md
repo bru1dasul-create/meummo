@@ -614,6 +614,21 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   itens; levar a loja e a conversa para o mesmo painel. A barra embaixo do pé (do `combat.ts`) é verde; a da HUD é azul
   como o arco da defesa: combinar com a [estrutura].
 
+### O herói no combate (13/11): a revisão 17 ligada no jogo
+- O estilingue e a defesa da revisão 17 (`js/slingshot.js`, `js/guard.js`, que o dono trouxe do ChatGPT) já estavam no
+  protótipo; no jogo o motor mandava as ações (`sling-pull`, `shoot`, `sling-cancel`, `guard`, `guard-end`,
+  `guard-break`, `block`, `hurt`) e o desenho ignorava. Agora `PD.View._personAction` traduz cada uma: `S.start` com
+  `attackHeld` (o motor diz quando soltar), `releaseRequested` no `shoot` (o tiro rápido e o de outro jogador começam a
+  puxada já no `minDraw`), `input.guardHeld/guardDir` no `_drive` (a energia do desenho fica sempre cheia: a de verdade
+  é a do servidor; quebra só com `guard-break`), `recoil` no bloqueio.
+- **Forquilha só na hora do tiro** (escolha do dono): `equip('maoE', 'estilingue')` ao começar a puxar e `unequip` quando
+  o ataque termina. A regra "sem arma no personagem" vale fora do tiro.
+- **Tranco do golpe só parado** (`still()`): andando, o servidor não para o jogador; com o tranco de 0,22 s o desenho
+  ficava para trás e depois corria para alcançar.
+- Sons em `sfx.ts` (`charge`/`stopCharge`, `block`, `guard-break`, `pull-full`), receitas da revisão 17; quem chama é o
+  motor (pedido à [estrutura]). Ainda não: o desmaio (`faint`/`revive`) da gente no desenho e a mira seguindo o mouse
+  durante a puxada (o motor ainda não manda o ângulo: o herói puxa para onde olha e vira ao soltar).
+
 ### Parque antigo (13/11): `js/world/parque.js` e variações dos objetos da vila
 - Do mapa do [mundo] (`mundo/parque-antigo`): `bebedouro` e `academia` são novos (`parque.js`, em `PD.city.small`); o
   `banco` com `material: 'concreto'` (`_concreteBench`), a `lixeira` com `mato` (`_parkBin`, verde) e o `poste-praca`
