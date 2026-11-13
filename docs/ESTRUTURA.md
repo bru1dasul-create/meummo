@@ -75,6 +75,16 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — o dono disse "pode os dois":** o endereço normal abre o jogo novo (o antigo em `?antigo`) e o **combate do
+jogo novo, passo 1**, está na `main`: o servidor de sempre visto no 2.5D (`src/client/novo/combat.ts` desenha por cima:
+aviso vermelho no golpe de perto, anel laranja no preparo, pedras, dano, barras de vida, desmaio, ouro). PC: clique no
+monstro atira, botão direito atira no mouse, Espaço, Q, E; celular: toque no monstro e os 4 botões. Regra nova:
+ninguém ataca de dentro da área segura. Pedi ao [mundo] para religar os monstros da 4a e à [arte] o desenho do
+combate (métodos opcionais `action` e `actorPosition` na `WorldView`) e o conserto do celular (o chat compacto da
+[arte] cobre dois botões no canto direito). Próximo: o dono joga o passo 1; depois, o passo 2 (revisão 17).
+Falta conferir: o tiro dos jogadores ainda bate na grade de 1 m da colisão (um tronco de 0,3 m segura a pedra no metro
+inteiro dele) — vale refinar quando o combate da revisão 17 chegar.
+
 **13/11 — "andar até" do jogo novo refeito (defeito do [mundo] na etapa 4b):** a rota de tile em tile raspava num
 poste de 0,3 m e travava de frente, e o toque seguinte travava de novo. Agora `src/shared/route.ts`: reta direta
 quando livre, senão A* numa grade de 0,2 m pelo tamanho do pé e retas conferidas com folga; trava → recalcula (2

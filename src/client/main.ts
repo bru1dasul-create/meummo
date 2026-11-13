@@ -138,7 +138,7 @@ async function startNewWorldGame(conn: Connection, welcome: WelcomeMsg): Promise
   conn.onClose = (reason) => endGame(reason ? BYE_MESSAGES[reason] : 'A conexão com o servidor caiu. Entre de novo.');
   try {
     const { startNewWorld } = await import('./novo/engine');
-    newWorld = await startNewWorld({ conn, welcome, chat, hud });
+    newWorld = await startNewWorld({ conn, welcome, chat, hud, sfx });
   } catch (error) {
     endGame((error as Error).message);
   }

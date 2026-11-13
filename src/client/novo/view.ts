@@ -33,11 +33,22 @@ export interface WorldView {
   frame(now: number): void;
   /** Ponto da tela (pixels) → ponto no chão (metros). */
   toWorld(screenX: number, screenY: number): { x: number; y: number };
-  /** Ponto no chão (metros) → tela (pixels). */
-  toScreen(x: number, y: number): { x: number; y: number };
+  /** Ponto do mundo (metros; `z` = altura acima do chão, em metros) → tela (pixels). */
+  toScreen(x: number, y: number, z?: number): { x: number; y: number };
   /** Uma direção na tela (ex.: "para cima") vira qual direção no chão? (Teclado e joystick andam pela tela.) */
   groundDirOfScreen(dx: number, dy: number): { x: number; y: number };
   destroy(): void;
+
+  // ---- opcionais (combate): a view que não tiver, o motor segue sem ----
+  /**
+   * Animação curta de alguém: 'windup' (preparando um golpe), 'shoot' (estilingue, ou o monstro jogando algo),
+   * 'arc' (Bordunada), 'dash' (esquiva), 'hurt' (levou golpe),
+   * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou) e os golpes dos monstros ('bite', 'strike',
+   * 'charge', 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
+   */
+  action?(id: number, kind: string, angle?: number): void;
+  /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */
+  actorPosition?(id: number): { x: number; y: number } | null;
 }
 
 // ======================= desenho provisório =======================
@@ -85,6 +96,10 @@ interface Actor extends ActorInfo {
   duration: number;
   speech: string;
   speechUntil: number;
+  /** Levou golpe: fica vermelho até aqui. */
+  hurtUntil?: number;
+  /** Desmaiado (deitado e apagado) até 'revive'. */
+  fainted?: boolean;
 }
 
 /** Cores do chão por tipo (camada `chao` do mapa). */
@@ -128,6 +143,8 @@ export class ProvisionalView implements WorldView {
   private camY = 0;
   /** Pixels por metro (muda com o tamanho da tela). */
   private scale = 40;
+  /** Hora do último quadro (para actorPosition e action). */
+  private lastNow = 0;
   private readonly onResize = () => this.resize();
 
   constructor(container: HTMLElement, map: TiledMap) {
@@ -190,9 +207,25 @@ export class ProvisionalView implements WorldView {
     if (a) [this.camX, this.camY] = [a.toX, a.toY];
   }
 
-  toScreen(x: number, y: number): { x: number; y: number } {
+  toScreen(x: number, y: number, z = 0): { x: number; y: number } {
     const s = this.scale;
-    return { x: (x - y - (this.camX - this.camY)) * s * 0.866 + this.canvas.clientWidth / 2, y: (x + y - (this.camX + this.camY)) * s * 0.5 + this.canvas.clientHeight / 2 };
+    return {
+      x: (x - y - (this.camX - this.camY)) * s * 0.866 + this.canvas.clientWidth / 2,
+      y: (x + y - (this.camX + this.camY)) * s * 0.5 + this.canvas.clientHeight / 2 - z * s * 0.8,
+    };
+  }
+
+  actorPosition(id: number): { x: number; y: number } | null {
+    const a = this.actors.get(id);
+    return a ? this.position(a, this.lastNow) : null;
+  }
+
+  action(id: number, kind: string): void {
+    const a = this.actors.get(id);
+    if (!a) return;
+    if (kind === 'hurt') a.hurtUntil = this.lastNow + 180;
+    else if (kind === 'faint') a.fainted = true;
+    else if (kind === 'revive') a.fainted = false;
   }
 
   toWorld(screenX: number, screenY: number): { x: number; y: number } {
@@ -212,6 +245,7 @@ export class ProvisionalView implements WorldView {
   }
 
   frame(now: number): void {
+    this.lastNow = now;
     const target = this.followId !== null ? this.actors.get(this.followId) : undefined;
     if (target) {
       const at = this.position(target, now);
@@ -370,15 +404,18 @@ export class ProvisionalView implements WorldView {
     ctx.beginPath();
     ctx.ellipse(p.x, p.y, s * 0.32, s * 0.16, 0, 0, Math.PI * 2);
     ctx.fill();
-    const color = a.me ? ACTOR_COLORS.me : ACTOR_COLORS[a.kind];
-    const height = s * 1.5;
+    const color = now < (a.hurtUntil ?? 0) ? '#ff2d2d' : a.me ? ACTOR_COLORS.me : ACTOR_COLORS[a.kind];
+    const height = a.fainted ? s * 0.4 : s * 1.5;
+    ctx.globalAlpha = a.fainted ? 0.55 : 1;
     ctx.fillStyle = color;
     ctx.strokeStyle = '#1a1a1a';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(p.x - s * 0.22, p.y - height, s * 0.44, height, s * 0.2);
+    if (a.fainted) ctx.roundRect(p.x - s * 0.75, p.y - height, s * 1.5, height, s * 0.2);
+    else ctx.roundRect(p.x - s * 0.22, p.y - height, s * 0.44, height, s * 0.2);
     ctx.fill();
     ctx.stroke();
+    ctx.globalAlpha = 1;
     // para onde olha: um tracinho no chão
     const look = { x: Math.cos((a.angle * Math.PI) / 180), y: Math.sin((a.angle * Math.PI) / 180) };
     const tip = this.toScreen(x + look.x * 0.5, y + look.y * 0.5);

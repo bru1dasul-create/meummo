@@ -202,6 +202,30 @@ describe('mapa do formato novo: o mundo', () => {
     expect(player.hp).toBe(player.maxHp);
   });
 
+  it('de dentro da área segura não dá para atirar nem dar Bordunada (o monstro não teria como revidar)', () => {
+    const { world, player, conn, run } = arena(new FakeClock());
+    player.x = 5; // dentro da área segura, olhando para a cobra (x 10)
+    player.y = 5;
+    run(200);
+    conn.clear();
+    world.shoot(player, 1, 0);
+    world.useSkill(player, 0, 0);
+    expect(world.projectiles.size).toBe(0);
+    world.tick(); // as mensagens saem no tick
+    expect(conn.ofType('shot')).toEqual([]);
+    expect(conn.ofType('cd')).toEqual([]); // a Bordunada nem gastou a recarga
+    // um passo para fora da área segura: atira e golpeia normalmente
+    player.x = 7;
+    run(600);
+    conn.clear();
+    world.shoot(player, 2, 0);
+    world.useSkill(player, 0, 0);
+    expect(world.projectiles.size).toBe(1);
+    world.tick();
+    expect(conn.ofType('shot').length).toBe(1);
+    expect(conn.ofType('cd').length).toBe(1);
+  });
+
   it('NPC fica com o pé no ponto exato do data/npcs.json (com fração, só no formato novo)', () => {
     const clock = new FakeClock();
     const map = GameMap.fromTiled(metricMap(), 'teste');
