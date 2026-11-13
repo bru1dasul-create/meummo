@@ -467,6 +467,14 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   escrita no ritmo da boca (55 ms por letra, até 7 s; tocar mostra tudo), o pedido da missão nova vira a fala (não
   repete no cartão), rodapé com Ver a loja e Tchau. CSS: `#talk.cinema` (embaixo, 760 px, até 46% da altura; no
   celular, a largura toda até 54%) e `.shop-portrait` escondido no jogo 2.5D.
+- **Tela inicial nova (13/11, referência `docs/referencias/tela-inicial.webp`).** `src/client/index.html` e o bloco
+  "Tela inicial" do `style.css`. O fundo e o logo estão em `public/assets/ui/` (o fundo achatado sobre preto, 205 KB;
+  o logo com 1100 px de largura, 154 KB). O painel tem a moldura de madeira feita de camadas de `box-shadow`, cipós e
+  folhas num SVG por cima das quinas e o medalhão do sol em espiral. O botão "Entrar" é uma pincelada (`clip-path`).
+  Os ids combinados com a [estrutura] (`#login-title`, `#password2`, `#mode-toggle`, `data-mode` no form) seguem a
+  lógica do `main.ts`. O "Repita a senha" e a dica só aparecem em `data-mode='create'`. O "Como jogar" fica no canto
+  de baixo; em tela estreita ou baixa, vai para baixo do painel. Ficam fora Google, e-mail, "Esqueceu a senha" e
+  "Sair" (decisão do dono).
 - **Budega com interior (13/11, pedido do dono: "igual HumanitZ").** A `casa` com `interior: true` dá para entrar.
   - Na ordem de desenho, a `House` é só a parede da frente (pé = a faixa de 20 cm da frente). A `HouseBack` é a
     parede do fundo e a da esquerda vistas por dentro (pé = a faixa do fundo): reboco creme em cima, azulejo branco

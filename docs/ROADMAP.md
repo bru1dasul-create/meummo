@@ -310,8 +310,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `#mode-toggle` (com `#login-title` e `#password2`); sem eles, tudo como antes. Para quem esquece a senha: **trocar
   senha** no painel do administrador. Decidido com o dono: o nome é **Pindorama: Selva de Pedra**; ficam fora, até o
   jogo estar na internet, "Entrar com Google", e-mail, "Esqueceu sua senha?" e "Sair do Jogo"
-- [ ] **[arte]** Tela inicial nova, o visual: fundo, logo e o painel de madeira com cipós da imagem do dono, no PC e
-  no celular, com os ids combinados (`#login-title`, `#password2`, `#mode-toggle`, mais os de sempre)
+- [x] **[arte]** Tela inicial nova, o visual (13/11): o fundo e o logo da imagem do dono (`public/assets/ui`, mais leves),
+  o painel de madeira escura com moldura, cipós e o medalhão do sol em espiral, o título que troca ("Entrar no mundo"
+  / "Criar uma conta"), campos com ícone, o "Repita a senha" só ao criar, o botão laranja de pincelada e o link "Criar
+  uma conta" / "Já tenho conta"; o "Como jogar" virou um botão no canto (embaixo do painel no celular). No PC, no
+  celular em pé e deitado. O nome da aba é "Pindorama: Selva de Pedra"
 - [x] **[arte]** Conversa com NPC, parte 2 (13/11): a `PD.View` leva a câmera até quem fala (`focus`, gente ou
   criatura), que fica um pouco acima do meio da tela, vira para você e mexe a boca enquanto fala (`talk`); o seu
   personagem parado na frente dele fica transparente. A fala vem embaixo, por cima da cena, sem o retrato antigo
