@@ -303,7 +303,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 
 | Quem envia | Mensagem | Para quê |
 |---|---|---|
-| cliente | `hello` | entrar com nome e senha (cria o personagem se o nome ainda não existir) |
+| cliente | `hello` | entrar com nome e senha; `mode: 'login'` só entra, `mode: 'create'` só cria (a tela com "Criar uma conta"); sem `mode`, cria o personagem se o nome ainda não existir |
 | cliente | `walk` | andar um pedaço (50 ms) na direção `a` (graus inteiros, 0 = direita, 90 = baixo), com número de sequência; com `dash: true` é a esquiva |
 | cliente | `charge` | começar a puxar o estilingue (a carga conta até o `shoot`) |
 | cliente | `guard` | segurar (`on: true`) ou soltar a defesa, virada para o ângulo `a` |
@@ -314,7 +314,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `quest` | aceitar, entregar (perto de quem dá a missão) ou abandonar uma missão |
 | cliente | `loaded` | terminei de carregar o mapa novo (depois de um `zone`) |
 | cliente | `chat` / `ping` | falar / medir a latência |
-| servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão) |
+| servidor | `welcome` / `reject` | entrou (com seus números e os NPCs do mapa) / recusado (nome inválido, senha errada ou curta, tentativas demais, servidor cheio, versão, nome que não existe no Entrar, nome que já tem dono no Criar) |
 | servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |

@@ -39,8 +39,12 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       // Sem senha ainda é aceito aqui: assim um jogo antigo recebe "versão desatualizada", e não silêncio.
       const password = msg.password ?? '';
       if (msg.mundo !== undefined && msg.mundo !== 'novo') return null;
+      if (msg.mode !== undefined && msg.mode !== 'login' && msg.mode !== 'create') return null;
       if (!(typeof msg.name === 'string' && msg.name.length <= 64 && typeof password === 'string' && password.length <= 256 && Number.isSafeInteger(msg.v))) return null;
-      return msg.mundo === 'novo' ? { t: 'hello', name: msg.name, password, v: msg.v as number, mundo: 'novo' } : { t: 'hello', name: msg.name, password, v: msg.v as number };
+      const hello: Extract<ClientMsg, { t: 'hello' }> = { t: 'hello', name: msg.name, password, v: msg.v as number };
+      if (msg.mundo === 'novo') hello.mundo = 'novo';
+      if (msg.mode !== undefined) hello.mode = msg.mode;
+      return hello;
     }
     case 'walk':
       if (!isWalkAngle(msg.a) || !Number.isSafeInteger(msg.seq) || (msg.seq as number) < 0) return null;

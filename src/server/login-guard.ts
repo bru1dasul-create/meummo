@@ -26,6 +26,11 @@ class SlidingCount {
 
   constructor(private readonly windowMs: number) {}
 
+  /** Esquece as tentativas desta chave. */
+  clear(key: string): void {
+    this.hits.delete(key);
+  }
+
   count(key: string, now: number): number {
     const list = this.hits.get(key);
     if (!list) return 0;
@@ -67,6 +72,11 @@ export class LoginGuard {
     const now = this.now();
     this.ipFails.add(ip, now);
     this.nameFails.add(nameKey, now);
+  }
+
+  /** A senha deste nome foi trocada (painel): as tentativas erradas de antes não travam mais quem entrar com a nova. */
+  forgive(nameKey: string): void {
+    this.nameFails.clear(nameKey);
   }
 
   canCreate(ip: string): boolean {

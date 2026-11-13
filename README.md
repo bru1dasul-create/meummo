@@ -138,8 +138,10 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
 - **Jogadores:** quem está online (mapa, posição, vida, ouro — atualiza sozinho) e, para cada um: **dar ouro**,
   **dar item** (o que não couber na mochila fica no chão, ao lado), **curar**, **levar para** outro mapa ou posição
   (x e y vazios = ponto de nascimento) e **expulsar** (o progresso fica salvo e dá para entrar de novo). No topo,
-  **aviso para todos** (aparece na tela de quem está jogando). Quem recebe vê no chat o que o administrador fez.
-  Tudo fica registrado na janela do servidor. Banir fica para quando o jogo for para a internet (M5).
+  **aviso para todos** (aparece na tela de quem está jogando) e **trocar senha**, para quem esqueceu: escreva o nome
+  do personagem e a senha nova (vale para qualquer personagem salvo, mesmo quem não está online) e passe a senha nova
+  para a pessoa. Quem recebe vê no chat o que o administrador fez. Tudo fica registrado na janela do servidor (a
+  senha nunca aparece lá). Banir fica para quando o jogo for para a internet (M5).
 
 Mudou, salvou: **vale na hora** para quem está jogando — até a vida dos monstros que já estão no mapa e a loja que
 alguém está com aberta. Valor que não serve é recusado com o motivo (ex.: "vida precisa ser pelo menos 1").

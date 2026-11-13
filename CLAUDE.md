@@ -115,6 +115,8 @@ com o dono, onde estamos e próximos passos): `docs/ESTRUTURA.md` da [estrutura]
 ## Conferir no navegador
 Além dos testes: `npm run build && npm start`, ligue bots (`--cacar` para ver combate) e abra
 http://localhost:3000 com o Playwright/Chromium, entre com nome e senha (`#name`, `#password`) e tire prints (computador e celular).
+Na tela inicial nova (quando tiver o link `#mode-toggle`), quem nunca entrou naquele navegador começa em "Criar uma conta":
+para entrar com um personagem que já existe, clique antes em `#mode-toggle` ("Já tenho conta").
 O jogo 2.5D novo é o que abre em http://localhost:3000 (`window.__mundoNovo`: `me`, `walkTo(x, y)` em metros, `walking()`,
 `safe()`, `entities()` (com a vida e o pé: `feetX`, `feetY`), `hp()`, `dead()`, `zoom()`, `marks()` (! e ? dos NPCs), `screenOf(x, y)` — do pé, em metros); `?provisorio` mostra as caixas de colisão no lugar do desenho. O jogo antigo
 (visto de cima) fica em `?antigo` e tem `window.__meummo` (só leitura + "andar até"): `__meummo.me`, `__meummo.entities()`,

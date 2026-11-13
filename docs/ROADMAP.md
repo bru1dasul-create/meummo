@@ -251,6 +251,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
   golpe fecha a conversa. O motor avisa a view: `focus(ponto)` (olhar para quem fala; a provisória já centraliza) e
   `talk(id, ms)` (quanto tempo a boca mexe: a fala ao abrir e a resposta ao entregar, aceitar ou desistir)
+- [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem
+  `docs/referencias/tela-inicial.webp`; fundo e logo em `tela-inicial-fundo.webp` e `tela-inicial-logo.webp`): "Entrar"
+  só entra com personagem que já existe (antes, nome digitado errado criava um personagem novo sem querer) e "Criar uma
+  conta" só cria nome novo (protocolo 23, `mode` no `hello`); a lógica está no `main.ts` e liga quando a página tiver
+  `#mode-toggle` (com `#login-title` e `#password2`); sem eles, tudo como antes. Para quem esquece a senha: **trocar
+  senha** no painel do administrador. Decidido com o dono: o nome é **Pindorama: Selva de Pedra**; ficam fora, até o
+  jogo estar na internet, "Entrar com Google", e-mail, "Esqueceu sua senha?" e "Sair do Jogo"
+- [ ] **[arte]** Tela inicial nova, o visual: fundo, logo e o painel de madeira com cipós da imagem do dono, no PC e
+  no celular, com os ids combinados (`#login-title`, `#password2`, `#mode-toggle`, mais os de sempre)
 - [ ] **[arte]** Conversa com NPC, parte 2: a `PD.View` centraliza em quem fala (`focus`, mesmo sendo criatura) e mexe
   a boca (`talk`); a fala "por cima" da cena no lugar do painel com o retrato antigo, com os botões (Aceitar,
   Desistir, Entregar, Ver a loja), no PC e no celular
