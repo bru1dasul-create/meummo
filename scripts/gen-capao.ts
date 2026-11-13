@@ -145,7 +145,18 @@ const HOUSES: House[] = [
   { x0: 62, x1: 67, y0: 13, y1: 20, altura: 3.2, andares: 1, cor: '#c27a4e', extra: { abandonada: true, caixaDagua: false } },
 ];
 /** Postes de concreto com luz quente, ligados pela fiação (o primeiro é o do portão, que já existia). */
-const POSTS: [number, number][] = [[50.5, 40], [60, 47.8], [70, 47.8], [80, 47.8], [87.6, 47.6], [87.6, 63], [87.6, 76]];
+const POSTS: [number, number][] = FLORESTA
+  ? // pedido do dono (13/11): sem postes nem fios na frente das casas da rua do portão ("menos poluído"); eles vão para
+    // a Travessa, do lado do parque (atrás da rua, para a câmera), e para a rua de baixo
+    [[50.5, 40], [49.6, 12], [49.6, 26], [49.6, 54], [49.6, 67], [87.6, 47.6], [87.6, 63], [87.6, 76]]
+  : [[50.5, 40], [60, 47.8], [70, 47.8], [80, 47.8], [87.6, 47.6], [87.6, 63], [87.6, 76]];
+/** A fiação: cada linha liga os postes de uma rua. */
+const WIRES: [number, number][][] = FLORESTA
+  ? [
+      [[49.6, 12], [49.6, 26], [50.5, 40], [49.6, 54], [49.6, 67]],
+      [[87.6, 47.6], [87.6, 63], [87.6, 76]],
+    ]
+  : [POSTS];
 /**
  * Entre duas coisas sólidas da vila o vão é zero (encostadas) ou de pelo menos este tanto: num vão menor que isso o
  * pé de 0,6 m entra de lado e entala (aconteceu entre um orelhão e um poste, num vão de 40 cm).
@@ -692,7 +703,7 @@ if (reached('4b')) {
 
   // postes da rua (o do portão já existe) e a fiação passando de um para o outro
   for (const [x, y] of POSTS.slice(1)) cenario.push(point('poste', x, y, { altura: 7, luz: '#ffd36b' }));
-  cenario.push({ type: 'fiacao', x: 0, y: 0, polyline: POSTS, props: { altura: 6.6 } });
+  for (const wire of WIRES) cenario.push({ type: 'fiacao', x: 0, y: 0, polyline: wire, props: { altura: 6.6 } });
   // carro largado na Travessa, com mato por cima (dá para passar dos dois lados)
   cenario.push(rect('carro', 50.5, 54.5, 22, 24.2, { altura: 1.4, cor: '#a8473e', mato: true }));
   // a mata voltando: árvores no terreno dos fundos
@@ -857,7 +868,8 @@ if (reached('4b') && FLORESTA) {
   cenario.push(rect('moto', 83.2, 85.2, 41.3, 42.1, { altura: 1.1, cor: '#8a3a2a', mato: true, olhando: 0 }));
   cenario.push(point('placa-rua', 56.3, 47.3, { texto: 'R. SANTO DIAS', texto2: 'TV. JASMIM DA BEIRADA' }));
   // cadeiras de plástico: dois vizinhos na porta da casa amarela e duas na roda da fogueira (na diagonal dos bancos)
-  for (const [x, y, olhando] of [[82.25, 39.75, 90], [82.75, 39.75, 90], [FIRE.x + 1.9, FIRE.y - 1.9, 135], [FIRE.x - 1.9, FIRE.y + 1.9, 315]] as const) {
+  // (as da casa amarela ficam ao lado da porta, não na frente dela: pedido do dono, 13/11)
+  for (const [x, y, olhando] of [[83.65, 39.75, 90], [84.15, 39.75, 90], [FIRE.x + 1.9, FIRE.y - 1.9, 135], [FIRE.x - 1.9, FIRE.y + 1.9, 315]] as const) {
     cenario.push(point('cadeira', x, y, { olhando, cor: '#f2f2ee' }));
   }
   for (const [x, y] of [[60.4, 39.75], [73.2, 39.75], [88.6, 39.75]] as const) cenario.push(point('vaso', x, y, { planta: 'espada-de-sao-jorge' }));
