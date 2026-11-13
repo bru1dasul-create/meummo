@@ -161,11 +161,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   retângulo encostar), tile de 32 px, a **zona segura por área** (camada `seguro`: monstro não entra, não nota e não
   acerta quem está dentro), pontos e NPCs no ponto exato do pé, e a pasta `maps-iso/` (`MEUMMO_MAPA_INICIAL=capao`
   para testar). O Curupira já está na clareira (`curupira_capao` em `data/npcs.json`)
-- [ ] **[estrutura]** Combate no jogo novo, passo 1: ver os golpes dos monstros (aviso no chão, tiro, dano), a vida
-  baixar, desmaiar e voltar, e atacar com o estilingue. Na prévia da etapa 4a, no `/?novo`, os saguis atacavam e nada
-  disso aparecia (a vida na tela só mudava com a regeneração); por isso a 4a entrou sem os monstros, e o [mundo] religa
-  os saguis e as jararacas no gerador quando este passo chegar. Depois, passo 2: as regras da revisão 17 (pedra com
-  carga, defesa com energia, esquiva e recuo)
+- [x] **[estrutura]** Combate no jogo novo, passo 1 (13/11, com o "pode" do dono): o servidor de sempre, agora visto
+  no 2.5D. Aviso de golpe no chão (quadrados vermelhos no golpe de perto; anel laranja em quem prepara, como o sagui
+  antes de jogar a fruta), pedras e frutas voando, número de dano e de cura, barra de vida de quem apanhou, desmaio
+  e volta para a clareira, ouro no chão, nível. PC: clique no monstro atira nele (segurando, continua), botão direito
+  atira para onde o mouse aponta, Espaço esquiva, Q Bordunada, E Fôlego. Celular: tocar no monstro atira; botões
+  Estilingue (segurando, mira sozinho no mais perto), Bordunada, Fôlego e Esquiva. Regra nova no servidor: de dentro
+  da área segura ninguém ataca (o monstro não teria como revidar). Desenhado por cima pelo motor
+  (`src/client/novo/combat.ts`) até a [arte] desenhar do jeito dela
+- [ ] **[mundo]** Religar os saguis e as jararacas da etapa 4a no gerador (o combate do jogo novo chegou)
+- [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
+  esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou

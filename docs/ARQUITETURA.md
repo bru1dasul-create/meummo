@@ -84,6 +84,14 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
 - `arte.ts` (da [arte]): carrega os scripts do protótipo que definem o desenho de verdade, o `PD.View`; com ele
   carregado, o motor usa ele no lugar do provisório.
 - `joystick.ts`: o joystick do celular (metade esquerda da tela).
+- `combat.ts`: o combate desenhado por cima (uma tela transparente sobre a view): aviso no chão, anel laranja de
+  quem prepara um golpe, pedras e frutas, números de dano e cura, barras de vida, clarão dos golpes de perto e ouro
+  no chão. Contas que batem com o servidor (há teste em `tests/combate-novo.test.ts`): o pé de quem está no tile
+  (tx, ty) fica no quadrado [tx, tx+1] × [ty+0,2, ty+1,2] do chão; um projétil em (sx, sy) é desenhado sobre o chão em
+  (sx, sy + 0,5), na altura do peito; mirar é do seu pé ao pé do alvo. A view pode ajudar com dois métodos
+  opcionais: `action(id, tipo, ângulo)` (animações: 'windup', 'shoot', 'arc', 'dash', 'hurt', 'faint', 'revive' e os
+  golpes dos monstros) e `actorPosition(id)` (onde o pé está desenhado, para barra e número seguirem o desenho).
+  O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada).
 - **Velocidade** (decisão do dono em 13/11): no mundo novo, correr é o normal (`RUN_SPEED`, 4,5 m/s) e andar devagar
   (`WALK_SPEED`, 2 m/s) é segurando Shift ou empurrando pouco o joystick; o pedido `walk` leva `slow: true` (protocolo
   18) e o servidor anda o pedaço do tamanho certo (`sliceDistance`). No jogo de hoje continua 5 tiles por segundo.

@@ -469,6 +469,8 @@ export class World {
   shoot(player: Player, cid: number, angle: number): void {
     const now = this.now();
     if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
+    // da área segura ninguém ataca: o monstro não entra nem acerta lá, então não teria como revidar
+    if (this.inSafeArea(player)) return;
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
@@ -485,6 +487,7 @@ export class World {
     if (now < player.skillReadyAt[n]! - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
 
     if (skill.kind === 'arc') {
+      if (this.inSafeArea(player)) return; // da área segura ninguém ataca (veja shoot)
       this.faceAngle(player, angle);
       const tiles = arcTiles(player.x, player.y, angle);
       const [min, max] = player.damage();
