@@ -1274,39 +1274,111 @@
     const sh = [P(xa, b.y1, zTop - 8), P(xb, b.y1, zTop - 8), P(xb, b.y1, zTop - 70), P(xa, b.y1, zTop - 70)];
     poly(ctx, sh, 'rgba(20,14,26,0.28)');
   }
+  /**
+   * Caixa d'água de plástico (as azuis das lajes): corpo que abre um pouco para cima, com dois anéis; tampa mais larga
+   * com a cúpula e o pegador; o cano branco saindo do lado e descendo para a laje; em cima de um calço de madeira.
+   * (O dono pediu: a de antes parecia uma lata.)
+   */
   function tank(ctx, cam, x, y, z, ink) {
-    // caixa d'água azul (cilindro)
-    const r = 70;
-    const h = 95;
-    const top = cam.p({ x, y, z: z + h });
-    const bot = cam.p({ x, y, z: z + 10 });
-    const rx = r * cam.zoom;
-    const ry = r * cam.zoom * cam.sinP;
+    const zoom = cam.zoom;
+    const sp = cam.sinP;
+    const zb = z + 12; // em cima do calço
+    const rb = 56, rt = 68, h = 82;
+    const B = cam.p({ x, y, z: zb });
+    const T = cam.p({ x, y, z: zb + h });
+    const ell = (c, r, color, k = 1, a0 = 0, a1 = M.TAU) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, r * zoom * k, r * zoom * sp * k, 0, a0, a1);
+      ctx.fill();
+    };
+    // calço de madeira
+    const s0 = cam.p({ x, y, z });
     ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.ellipse(bot.x, bot.y, rx + ink * 1.6, ry + ink * 1.6, 0, 0, M.TAU);
+    ctx.ellipse(s0.x, s0.y, (rb + 10) * zoom + ink, (rb + 10) * zoom * sp + ink, 0, 0, M.TAU);
     ctx.fill();
-    ctx.fillRect(bot.x - rx - ink * 1.6, top.y, (rx + ink * 1.6) * 2, bot.y - top.y);
-    ctx.fillStyle = '#2f73c4';
-    ctx.beginPath();
-    ctx.ellipse(bot.x, bot.y, rx, ry, 0, 0, M.TAU);
-    ctx.fill();
-    ctx.fillRect(bot.x - rx, top.y, rx * 2, bot.y - top.y);
-    ctx.fillStyle = '#245a9c';
-    ctx.fillRect(bot.x + rx * 0.35, top.y, rx * 0.65, bot.y - top.y);
+    ctx.fillStyle = '#7a5a3c';
+    ctx.fillRect(s0.x - (rb + 10) * zoom, s0.y - 12 * zoom * cam.cosP, (rb + 10) * 2 * zoom, 12 * zoom * cam.cosP);
+    ell(s0, rb + 10, '#6a4e34');
+    // o corpo (tronco de cone) com o lado da sombra
+    const body = [
+      { x: B.x - rb * zoom, y: B.y },
+      { x: T.x - rt * zoom, y: T.y },
+      { x: T.x + rt * zoom, y: T.y },
+      { x: B.x + rb * zoom, y: B.y },
+    ];
     ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.ellipse(top.x, top.y, rx + ink * 1.4, ry + ink * 1.4, 0, 0, M.TAU);
+    ctx.ellipse(B.x, B.y, rb * zoom + ink * 1.4, rb * zoom * sp + ink * 1.4, 0, 0, Math.PI);
     ctx.fill();
-    ctx.fillStyle = '#5a9be0';
+    poly(ctx, body, null, INK, ink * 2.6);
+    poly(ctx, body, '#2f73c4');
+    ell(B, rb, '#2f73c4', 1, 0, Math.PI);
+    poly(ctx, [{ x: B.x + rb * zoom * 0.3, y: B.y }, { x: T.x + rt * zoom * 0.3, y: T.y }, { x: T.x + rt * zoom, y: T.y }, { x: B.x + rb * zoom, y: B.y }], '#245a9c');
+    // os dois anéis do corpo
+    ctx.strokeStyle = '#1f4f8c';
+    ctx.lineWidth = Math.max(1.2, 2.6 * zoom);
+    for (const u of [0.33, 0.66]) {
+      const c = cam.p({ x, y, z: zb + h * u });
+      const r = (rb + (rt - rb) * u) * zoom;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, r, r * sp, 0, 0.08, Math.PI - 0.08);
+      ctx.stroke();
+    }
+    // sujeira e limo escorrendo (a mata tomando a cidade)
+    ctx.fillStyle = 'rgba(30, 60, 40, 0.28)';
+    for (let k = 0; k < 4; k++) {
+      const u = (k + 0.5) / 4;
+      const px = T.x - rt * zoom * 0.8 + rt * zoom * 1.6 * u;
+      ctx.fillRect(px, T.y + 4 * zoom, 3 * zoom, (h * cam.cosP * 0.35 + k * 6) * zoom);
+    }
+    // o cano branco: sai do lado, faz a curva e desce até a laje
+    const p0 = cam.p({ x: x + rb * 0.8, y: y + rb * 0.6, z: zb + 18 });
+    const p1 = cam.p({ x: x + rb * 1.3, y: y + rb * 1.0, z: zb + 18 });
+    const p2 = cam.p({ x: x + rb * 1.3, y: y + rb * 1.0, z });
+    for (const [c, w] of [[INK, 6 * zoom + ink * 2], ['#dcd8cc', 6 * zoom]]) {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+    // a tampa: aba mais larga, a cúpula e o pegador no meio
+    const L = cam.p({ x, y, z: zb + h + 4 });
+    ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.ellipse(top.x, top.y, rx, ry, 0, 0, M.TAU);
+    ctx.ellipse(L.x, L.y, (rt + 6) * zoom + ink * 1.4, (rt + 6) * zoom * sp + ink * 1.4, 0, 0, M.TAU);
     ctx.fill();
+    ctx.fillRect(L.x - (rt + 6) * zoom - ink * 1.4, L.y - 0, ((rt + 6) * zoom + ink * 1.4) * 2, (T.y - L.y) + 2);
+    ell(T, rt + 6, '#2a66b0', 1, 0, Math.PI);
+    ctx.fillStyle = '#2a66b0';
+    ctx.fillRect(T.x - (rt + 6) * zoom, L.y, (rt + 6) * 2 * zoom, T.y - L.y);
+    ell(L, rt + 6, '#4f8fdc');
+    const D = cam.p({ x, y, z: zb + h + 4 });
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.ellipse(D.x, D.y - 2 * zoom, rt * 0.82 * zoom + ink, (rt * 0.82 * sp + 14) * zoom + ink, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = '#5b9be6';
+    ctx.beginPath();
+    ctx.ellipse(D.x, D.y - 2 * zoom, rt * 0.82 * zoom, (rt * 0.82 * sp + 14) * zoom, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(D.x - rt * 0.32 * zoom, D.y - 12 * zoom, rt * 0.3 * zoom, 5 * zoom, -0.2, 0, M.TAU);
+    ctx.fill();
+    const K = cam.p({ x, y, z: zb + h + 4 + 20 });
+    ctx.fillStyle = INK;
+    ctx.fillRect(K.x - 9 * zoom - ink, K.y - ink, 18 * zoom + ink * 2, 7 * zoom + ink * 2);
     ctx.fillStyle = '#3e83cf';
-    ctx.beginPath();
-    ctx.ellipse(top.x, top.y, rx * 0.45, ry * 0.45, 0, 0, M.TAU);
-    ctx.fill();
+    ctx.fillRect(K.x - 9 * zoom, K.y, 18 * zoom, 7 * zoom);
   }
+
   function antenna(ctx, cam, x, y, z, ink) {
     const a = cam.p({ x, y, z });
     const b = cam.p({ x, y, z: z + 260 });
@@ -1452,7 +1524,10 @@
     }
     const roots = [];
     for (let k = 0, n = 8; k < n; k++) {
-      roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (1.6 + rnd() * 1.0), zr: R * (0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
+      // a figueira que rompeu a rua (`rompendo`): raízes curtas e baixas no pé do tronco (as que atravessam a calçada e
+      // o asfalto são as `raiz` do chão); compridas e altas, elas viravam um cano em pé na visão de cima
+      const street = !!t.breaks;
+      roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (street ? 1.05 + rnd() * 0.3 : 1.6 + rnd() * 1.0), zr: R * (street ? 0.12 + rnd() * 0.08 : 0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
     }
     const limbs = [];
     const turn = rnd() * M.TAU;
@@ -1610,7 +1685,7 @@
       const hangs = [];
       for (let k = 0; k < l.hang; k++) {
         const s = Math.floor(S * (0.45 + 0.5 * rnd()));
-        const reach = rnd() < 0.5 ? 0 : 60 + rnd() * 160;
+        const reach = t.breaks ? (rnd(), 170 + rnd() * 150) : rnd() < 0.5 ? 0 : 60 + rnd() * 160;
         hangs.push({ s, end: z0 + reach, sway: (rnd() - 0.5) * 30, w: (2.4 + rnd() * 1.6) * zoom });
       }
       return { pts, hangs };
@@ -2887,6 +2962,12 @@
    * Carro largado: carroceria e cabine em caixas, vidros escuros (um quebrado), pneus murchos, ferrugem e o mato que
    * tomou conta (tufos no capô e no teto, capim em volta). Deitado no lado comprido da caixa.
    */
+  /**
+   * Carro largado (a cidade tomada pela mata; o dono pediu "arruma esse carro", que parecia duas caixas): perfil de
+   * sedã esticado na largura (porta-malas, vidro de trás, teto, para-brisa e capô), portas e maçanetas, vidros (um
+   * quebrado), faróis, rodas murchas, ferrugem; com `mato`, musgo no teto e no capô, cipó por cima e capim em volta;
+   * com `arvore`, uma árvore saindo por um buraco no teto. A frente aponta para +x (ou +y).
+   */
   Small.prototype._car = function (ctx) {
     const cam = this.cam;
     const d = this.d;
@@ -2897,98 +2978,200 @@
     const alongX = f.x1 - f.x0 >= f.y1 - f.y0;
     const H = d.h || 140;
     const body = d.color || '#a8473e';
-    const C = { front: body, side: M.shade(body, -0.25), top: M.shade(body, 0.12) };
-    const L = alongX ? f.x1 - f.x0 : f.y1 - f.y0;
-    // carroceria baixa e cabine
-    const inset = 8;
-    box(ctx, cam, f.x0 + inset, f.x1 - inset, f.y0 + inset, f.y1 - inset, z0 + 22, z0 + H * 0.58, C, ink);
-    const cab = alongX ? { x0: f.x0 + L * 0.3, x1: f.x0 + L * 0.74, y0: f.y0 + 22, y1: f.y1 - 22 } : { x0: f.x0 + 22, x1: f.x1 - 22, y0: f.y0 + L * 0.3, y1: f.y0 + L * 0.74 };
-    const faces = box(ctx, cam, cab.x0, cab.x1, cab.y0, cab.y1, z0 + H * 0.58, z0 + H, C, ink);
-    // pneus murchos (só os do lado da câmera), por cima da carroceria, saindo por baixo dela
-    const wheels = alongX ? [[f.x0 + L * 0.2, f.y1], [f.x0 + L * 0.78, f.y1]] : [[f.x1, f.y0 + L * 0.2], [f.x1, f.y0 + L * 0.78]];
-    for (const [wx, wy] of wheels) {
-      const p = cam.p({ x: wx, y: wy, z: z0 + 12 });
-      ctx.fillStyle = INK;
+    const Lc = alongX ? f.x1 - f.x0 : f.y1 - f.y0;
+    const Wc = alongX ? f.y1 - f.y0 : f.x1 - f.x0;
+    const vN = Wc - 8, vF = 8; // o lado de perto (virado para a câmera) e o de longe
+    const W3 = (u, v, z) => (alongX ? { x: f.x0 + u, y: f.y0 + v, z: z0 + z } : { x: f.x0 + v, y: f.y0 + u, z: z0 + z });
+    const P = (u, v, z) => cam.p(W3(u, v, z));
+    const zb = 26; // a barra de baixo (as rodas murchas deixam o carro baixo)
+    const prof = [[0, zb], [0, 0.56 * H], [0.17 * Lc, 0.6 * H], [0.27 * Lc, 0.63 * H], [0.37 * Lc, H], [0.63 * Lc, H], [0.75 * Lc, 0.64 * H], [0.95 * Lc, 0.57 * H], [Lc, 0.5 * H], [Lc, zb]];
+    const tc = cam.toCamera;
+    const uDir = alongX ? { x: 1, y: 0 } : { x: 0, y: 1 };
+    const C = { side: M.shade(body, -0.22), top: M.shade(body, 0.1), end: body };
+    const glassC = '#2b3640';
+    // rodas: as de longe antes do carro (só a parte de baixo aparece), as de perto depois
+    const wheel = (uc, v) => {
+      const r = 30, zc = 24;
+      const out = [], rim = [];
+      for (let i = 0; i < 24; i++) {
+        const t = (i / 24) * M.TAU;
+        out.push(P(uc + Math.cos(t) * r, v, Math.max(0, zc + Math.sin(t) * r * 0.92)));
+        rim.push(P(uc + Math.cos(t) * r * 0.55, v + 1, zc + Math.sin(t) * r * 0.55));
+      }
+      poly(ctx, out, null, INK, ink * 2);
+      poly(ctx, out, '#252322');
+      poly(ctx, rim, '#6d665e');
+      ctx.fillStyle = 'rgba(128, 74, 38, 0.55)';
+      const c = P(uc, v + 1, zc);
       ctx.beginPath();
-      ctx.ellipse(p.x, p.y, 22 * cam.zoom + ink, 16 * cam.zoom + ink, 0, 0, M.TAU);
+      ctx.arc(c.x + 3 * cam.zoom, c.y + 2 * cam.zoom, 6 * cam.zoom, 0, M.TAU);
       ctx.fill();
-      ctx.fillStyle = '#2c2c2e';
+    };
+    const wheelsU = [0.18 * Lc, 0.8 * Lc];
+    for (const u of wheelsU) wheel(u, vF + 6);
+    // as faces de cima (do perfil), as que a câmera vê, da mais longe para a mais perto
+    const faces = [];
+    for (let i = 0; i + 1 < prof.length; i++) {
+      const [ua, za] = prof[i], [ub, zb2] = prof[i + 1];
+      const du = ub - ua, dz = zb2 - za;
+      const nu = -dz, nz = du; // normal para fora (o perfil anda de trás para a frente por cima)
+      const dot = nu * (uDir.x * tc.x + uDir.y * tc.y) + nz * tc.z;
+      if (dot <= 0 || (du === 0 && dz === 0)) continue;
+      const quad = [P(ua, vF, za), P(ub, vF, zb2), P(ub, vN, zb2), P(ua, vN, za)];
+      faces.push({ i, quad, depth: cam.depth(W3((ua + ub) / 2, (vF + vN) / 2, (za + zb2) / 2)), steep: Math.abs(dz) > Math.abs(du) });
+    }
+    faces.sort((a, b) => a.depth - b.depth);
+    const glassFace = (i) => i === 3 || i === 5; // vidro de trás e para-brisa
+    for (const fc of faces) {
+      const col = glassFace(fc.i) ? glassC : fc.i === 8 ? C.end : fc.i === 0 ? C.end : C.top;
+      poly(ctx, fc.quad, col, INK, ink * 2);
+    }
+    // o lado de perto: o perfil inteiro
+    const side = prof.map(([u, z]) => P(u, vN, z));
+    poly(ctx, side, C.side, INK, ink * 2.2);
+    ctx.save();
+    poly(ctx, side);
+    ctx.clip();
+    // caixas de roda escuras, frisos das portas, maçanetas e ferrugem
+    for (const u of wheelsU) {
+      const arc = [];
+      for (let i = 0; i <= 12; i++) {
+        const t = Math.PI + (i / 12) * Math.PI;
+        arc.push(P(u + Math.cos(t) * 40, vN, 24 + Math.sin(-t) * 40));
+      }
+      poly(ctx, arc, '#1c1a19');
+    }
+    ctx.strokeStyle = M.shade(body, -0.45);
+    ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+    ctx.beginPath();
+    for (const u of [0.38 * Lc, 0.61 * Lc]) {
+      const a = P(u, vN, zb + 6), b = P(u, vN, 0.63 * H);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    const r0 = P(0.02 * Lc, vN, 0.4 * H), r1 = P(0.98 * Lc, vN, 0.4 * H);
+    ctx.moveTo(r0.x, r0.y);
+    ctx.lineTo(r1.x, r1.y);
+    ctx.stroke();
+    ctx.fillStyle = '#2a2624';
+    for (const u of [0.46 * Lc, 0.68 * Lc]) {
+      const q = P(u, vN, 0.55 * H);
+      ctx.fillRect(q.x - 5 * cam.zoom, q.y - 1.5 * cam.zoom, 10 * cam.zoom, 3 * cam.zoom);
+    }
+    ctx.fillStyle = 'rgba(122, 66, 32, 0.5)';
+    for (let k = 0; k < 7; k++) {
+      const q = P(rnd() * Lc, vN, zb + rnd() * H * 0.35);
       ctx.beginPath();
-      ctx.ellipse(p.x, p.y, 22 * cam.zoom, 16 * cam.zoom, 0, 0, M.TAU);
-      ctx.fill();
-      ctx.fillStyle = '#76736e';
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y - 1 * cam.zoom, 8 * cam.zoom, 6 * cam.zoom, 0, 0, M.TAU);
+      ctx.ellipse(q.x, q.y, (6 + rnd() * 12) * cam.zoom, (4 + rnd() * 6) * cam.zoom, rnd() * 3, 0, M.TAU);
       ctx.fill();
     }
-    // vidros nas duas faces da cabine que a câmera vê (um quebrado)
-    const glass = (pts, broken) => {
-      const cx = pts.reduce((a, q) => a + q.x, 0) / 4, cy = pts.reduce((a, q) => a + q.y, 0) / 4;
-      const shrink = pts.map((q) => ({ x: cx + (q.x - cx) * 0.78, y: cy + (q.y - cy) * 0.7 }));
-      poly(ctx, shrink, broken ? '#1d2126' : '#3f5563', INK, ink * 1.2);
-      if (!broken) {
-        ctx.fillStyle = 'rgba(255,255,255,0.22)';
-        ctx.beginPath();
-        ctx.moveTo(shrink[0].x * 0.7 + shrink[1].x * 0.3, shrink[0].y * 0.7 + shrink[1].y * 0.3);
-        ctx.lineTo(shrink[3].x * 0.5 + shrink[2].x * 0.5, shrink[3].y * 0.5 + shrink[2].y * 0.5);
-        ctx.lineTo(shrink[3].x * 0.3 + shrink[2].x * 0.7, shrink[3].y * 0.3 + shrink[2].y * 0.7);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.strokeStyle = 'rgba(200, 215, 225, 0.6)';
+    ctx.restore();
+    // vidros do lado (o da frente às vezes quebrado)
+    const win = (pts, broken) => {
+      const q = pts.map(([u, z]) => P(u, vN + 1, z));
+      poly(ctx, q, broken ? '#14171a' : glassC, INK, ink * 1.4);
+      const cx = q.reduce((a, p) => a + p.x, 0) / q.length, cy = q.reduce((a, p) => a + p.y, 0) / q.length;
+      if (broken) {
+        ctx.strokeStyle = 'rgba(200, 215, 225, 0.55)';
         ctx.lineWidth = Math.max(0.8, 1.2 * cam.zoom);
         ctx.beginPath();
-        for (let k = 0; k < 4; k++) {
+        for (const p of q) {
           ctx.moveTo(cx, cy);
-          const q = shrink[k];
-          ctx.lineTo(cx + (q.x - cx) * 0.9, cy + (q.y - cy) * 0.9);
+          ctx.lineTo(cx + (p.x - cx) * 0.85, cy + (p.y - cy) * 0.85);
         }
         ctx.stroke();
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.beginPath();
+        ctx.moveTo(q[0].x * 0.6 + q[1].x * 0.4, q[0].y * 0.6 + q[1].y * 0.4);
+        ctx.lineTo(q[1].x * 0.5 + q[2].x * 0.5, q[1].y * 0.5 + q[2].y * 0.5);
+        ctx.lineTo(cx, cy);
+        ctx.closePath();
+        ctx.fill();
       }
     };
-    glass(faces.fy, rnd() < 0.5);
-    glass(faces.fx, false);
-    // ferrugem
-    ctx.fillStyle = 'rgba(110, 60, 30, 0.45)';
-    for (let k = 0; k < 5; k++) {
-      const q = cam.p({ x: f.x0 + rnd() * (f.x1 - f.x0), y: alongX ? f.y1 - inset : f.y0 + rnd() * (f.y1 - f.y0), z: z0 + 30 + rnd() * H * 0.25 });
+    win([[0.29 * Lc, 0.66 * H], [0.38 * Lc, 0.95 * H], [0.49 * Lc, 0.95 * H], [0.49 * Lc, 0.66 * H]], false);
+    win([[0.51 * Lc, 0.66 * H], [0.51 * Lc, 0.95 * H], [0.62 * Lc, 0.95 * H], [0.72 * Lc, 0.66 * H]], rnd() < 0.6);
+    // trincas no para-brisa, se a câmera vê ele
+    const ws = faces.find((fc) => fc.i === 5);
+    if (ws) {
+      const q = ws.quad;
+      const cx = (q[0].x + q[1].x + q[2].x + q[3].x) / 4, cy = (q[0].y + q[1].y + q[2].y + q[3].y) / 4;
+      ctx.strokeStyle = 'rgba(205, 220, 230, 0.55)';
+      ctx.lineWidth = Math.max(0.8, 1.1 * cam.zoom);
       ctx.beginPath();
-      ctx.ellipse(q.x, q.y, (8 + rnd() * 10) * cam.zoom, (5 + rnd() * 6) * cam.zoom, rnd() * 3, 0, M.TAU);
+      for (let k = 0; k < 6; k++) {
+        const a = rnd() * M.TAU;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * 18 * cam.zoom, cy + Math.sin(a) * 9 * cam.zoom);
+      }
+      ctx.stroke();
+    }
+    // farol e grade na frente (a frente é virada para +x ou +y: a câmera vê)
+    for (const v of [vF + 18, vN - 18]) {
+      const q = P(Lc + 1, v, 0.42 * H);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y, 8 * cam.zoom + ink, 5 * cam.zoom + ink, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = v === vF + 18 ? '#bdb59a' : '#5a5648';
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y, 8 * cam.zoom, 5 * cam.zoom, 0, 0, M.TAU);
       ctx.fill();
     }
-    // o mato: tufos no capô, no teto e capim em volta
+    poly(ctx, [P(Lc + 1, vF + 32, 0.36 * H), P(Lc + 1, vN - 32, 0.36 * H), P(Lc + 1, vN - 32, 0.26 * H), P(Lc + 1, vF + 32, 0.26 * H)], '#2a2725', INK, ink);
+    for (const u of wheelsU) wheel(u, vN + 2);
+    // a mata tomando o carro: musgo no teto e no capô, cipó por cima, capim em volta
     if (d.weeds) {
-      const spots = [];
-      for (let k = 0; k < 4; k++) spots.push({ x: f.x0 + rnd() * (f.x1 - f.x0), y: f.y0 + rnd() * (f.y1 - f.y0), z: z0 + (k < 2 ? H : H * 0.58) });
-      for (let k = 0; k < 6; k++) spots.push({ x: f.x0 + rnd() * (f.x1 - f.x0), y: k % 2 ? f.y1 + 6 : f.y0 + rnd() * (f.y1 - f.y0), z: z0 + 4 });
-      for (const sp of spots) {
-        const circles = [];
-        for (let j = 0; j < 4; j++) {
-          const q = cam.p({ x: sp.x + (rnd() - 0.5) * 40, y: sp.y + (rnd() - 0.5) * 30, z: sp.z + rnd() * 18 });
-          circles.push({ x: q.x, y: q.y, r: (9 + rnd() * 9) * cam.zoom });
+      const MOSS = ['rgba(70, 106, 48, 0.75)', 'rgba(88, 126, 58, 0.7)', 'rgba(56, 88, 40, 0.75)'];
+      for (const fc of faces) {
+        if (fc.i !== 4 && fc.i !== 7 && fc.i !== 2) continue;
+        ctx.save();
+        poly(ctx, fc.quad);
+        ctx.clip();
+        const q = fc.quad;
+        for (let k = 0; k < 9; k++) {
+          const a = rnd(), b = rnd();
+          const x = q[0].x + (q[1].x - q[0].x) * a + (q[3].x - q[0].x) * b;
+          const y = q[0].y + (q[1].y - q[0].y) * a + (q[3].y - q[0].y) * b;
+          ctx.fillStyle = MOSS[Math.floor(rnd() * MOSS.length)];
+          ctx.beginPath();
+          ctx.ellipse(x, y, (8 + rnd() * 14) * cam.zoom, (5 + rnd() * 8) * cam.zoom, rnd() * 3, 0, M.TAU);
+          ctx.fill();
         }
-        circles.sort((p, q) => p.y - q.y);
-        blobCluster(ctx, circles, { base: '#4f8a3c', shade: '#356a2c', light: '#72aa52' }, ink, cam.lightScreen);
+        ctx.restore();
+      }
+      if (PD.city) {
+        const pts = [];
+        for (let k = 0; k <= 9; k++) pts.push(P(0.1 * Lc + k * 0.09 * Lc, vN - 4 - Math.sin(k) * 10, (k < 3 || k > 7 ? 0.62 * H : H + 2) + Math.sin(k * 1.7) * 4));
+        PD.city.vine(ctx, pts, rnd, cam.zoom, ink);
+        for (const u of [0.05, 0.18, 0.32, 0.55, 0.8, 0.96]) PD.city.grass(ctx, P(u * Lc, vN + 10, 0), 26 * cam.zoom, rnd, ink);
       }
     }
-    // uma árvore nascendo de dentro do carro (planta da rua da Budega): o tronco sai pelo teto e a copa abre em cima
+    // uma árvore nascendo de dentro do carro: o tronco sai por um buraco no teto e a copa abre em cima
     if (d.tree) {
-      const tx = (cab.x0 + cab.x1) / 2, ty = (cab.y0 + cab.y1) / 2;
-      const t = { x: tx, y: ty, kind: 'mata', r: 150, h: 430, trunk: 9 };
-      const fork = { x: tx, y: ty, z: z0 + 20 + t.h * FORK };
-      const b0 = cam.p({ x: tx, y: ty, z: z0 + H }), b1 = cam.p(fork);
+      const tu = 0.5 * Lc, tv = Wc / 2;
+      const tp = W3(tu, tv, 0);
+      const t = { x: tp.x, y: tp.y, kind: 'mata', r: 150, h: 430, trunk: 9 };
+      const fork = { x: tp.x, y: tp.y, z: z0 + 20 + t.h * FORK };
+      const hole = P(tu, tv, H);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(hole.x, hole.y, 24 * cam.zoom, 10 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#1a1614';
+      ctx.beginPath();
+      ctx.ellipse(hole.x, hole.y, 20 * cam.zoom, 8 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      const b1 = cam.p(fork);
       const w0 = 11 * cam.zoom, w1 = 7 * cam.zoom;
-      const trunkShape = [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
+      const trunkShape = [{ x: hole.x - w0, y: hole.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: hole.x + w0, y: hole.y }];
       poly(ctx, trunkShape, null, INK, ink * 2.2);
       poly(ctx, trunkShape, '#5a4532');
-      // o teto rasgado em volta do tronco
-      ctx.fillStyle = '#2a2420';
-      ctx.beginPath();
-      ctx.ellipse(b0.x, b0.y, w0 * 1.9, w0 * 0.8, 0, 0, M.TAU);
-      ctx.fill();
       crownPaint(ctx, cam, t, z0 + 20, ink, CANOPY.mata, false);
     }
   };
+
 
   /** Pedra do Véu (pedra ancestral): o mesmo símbolo da figueira, brilhando em verde-água na face da frente. */
   Small.prototype._rockGlyph = function (ctx) {

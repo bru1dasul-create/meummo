@@ -526,12 +526,23 @@
     ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
     this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
     const env = { map: m, g: this, box };
+    // a figueira que rompeu a esquina: o chão quebrado em volta do tronco vai depois das superfícies e antes dos
+    // detalhes (as raízes do chão passam por cima dos pedaços soltos)
+    let broke = false;
+    const breaks = () => {
+      broke = true;
+      if (!PD.street) return;
+      for (const t of m.trees || []) {
+        if (t.breaks && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
+      }
+    };
     m.shapes.forEach((sh, n) => {
       const b = shapeBox(sh);
       if (b.x1 < box.x0 || b.x0 > box.x1 || b.y1 < box.y0 || b.y0 > box.y1) return;
       // detalhes da rua (meio-fio, faixa, remendo, bueiro, tampa, buraco, poça, rachadura, raiz, capim): street.js
       const sp = PD.street && PD.street.paint[sh.type];
       if (sp) {
+        if (!broke) breaks();
         sp(ctx, sh, env);
         return;
       }
@@ -565,12 +576,7 @@
       this._texture(ctx, sh, box, n + 1);
       if (sh.type === 'circulo') this._circleStone(ctx, sh);
     });
-    // a figueira que rompeu a esquina: o chão quebrado em volta do tronco
-    if (PD.street) {
-      for (const t of m.trees || []) {
-        if (t.breaks && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
-      }
-    }
+    if (!broke) breaks();
     // sombras do que fica em pé (fixas), só das coisas perto deste pedaço
     ctx.fillStyle = C.shadow;
     const shade = new Path2D();

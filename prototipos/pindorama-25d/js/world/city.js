@@ -507,5 +507,6 @@
     }
   }
 
-  PD.city = { small, bunting, wireVines, poleVine };
+  // capim e cipó também para o carro tomado pela mata (props.js)
+  PD.city = { small, bunting, wireVines, poleVine, grass: grassTuft, vine: vineStrand };
 })(window.PD = window.PD || {});

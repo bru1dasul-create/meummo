@@ -624,11 +624,22 @@
     const h = sh.height || 20;
     const w0 = sh.width || 35;
     const L = cam.light;
-    const shx = (-L.x / L.z) * h * 0.6, shy = (-L.y / L.z) * h * 0.6;
-    const up = liftOf(cam, h * 0.55);
+    const shx = (-L.x / L.z) * h * 0.5, shy = (-L.y / L.z) * h * 0.5;
+    // rente ao chão (a raiz alta, indo para a câmera, parecia um cano em pé) e com as curvas macias
+    const up = liftOf(cam, h * 0.22);
     const p0 = sh.pts[0];
     const rnd = seeded(p0.x, p0.y, 551);
-    const pts = walk(sh.pts, 8);
+    let line = sh.pts;
+    for (let it = 0; it < 2; it++) {
+      const sm = [line[0]];
+      for (let i = 0; i + 1 < line.length; i++) {
+        const a = line[i], b = line[i + 1];
+        sm.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 }, { x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 });
+      }
+      sm.push(line[line.length - 1]);
+      line = sm;
+    }
+    const pts = walk(line, 8);
     const n = pts.length;
     const color = sh.color || '#6b4a2e';
     const stroke = (dx, dy, wk, style) => {
@@ -650,10 +661,23 @@
         crack(ctx, p.x + Math.cos(t) * w0 * 0.5, p.y + Math.sin(t) * w0 * 0.5, t, 18 + rnd() * 40, rnd, 1.6, '#232528', 1);
       }
     }
-    stroke(shx, shy, 1.1, 'rgba(12, 12, 14, 0.35)');
+    // raízes finas saindo para os lados
+    ctx.strokeStyle = '#4a3422';
+    for (let i = 3; i < n - 2; i += 3) {
+      if (rnd() < 0.45) continue;
+      const p = pts[i];
+      const t = p.a + (rnd() < 0.5 ? 1 : -1) * (0.7 + rnd() * 0.6);
+      const len = w0 * (0.8 + rnd() * 1.4) * (1 - i / n);
+      ctx.lineWidth = Math.max(1.5, w0 * 0.18 * (1 - i / n));
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.quadraticCurveTo(p.x + Math.cos(t) * len * 0.5 + (rnd() - 0.5) * 8, p.y + Math.sin(t) * len * 0.5, p.x + Math.cos(t) * len, p.y + Math.sin(t) * len);
+      ctx.stroke();
+    }
+    stroke(shx, shy, 1.05, 'rgba(12, 12, 14, 0.3)');
     stroke(0, 0, 1, '#3e2b1b');
-    stroke(-up, -up, 0.82, color);
-    stroke(-up * 1.4, -up * 1.4, 0.32, M.shade(color, 0.28));
+    stroke(-up, -up, 0.84, color);
+    stroke(-up * 1.5, -up * 1.5, 0.3, M.shade(color, 0.25));
   };
 
   // ------------------------------------------------------------------ capim (planta `capim` na camada do chão)
