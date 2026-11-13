@@ -55,8 +55,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   `pilar-viaduto` (`pixo`, `musgo`, `cipo`), `trem` (`cipo`, `plantas`, `janelasQuebradas`), `onibus` (`horta`),
   `casa` abandonada (`arvoreDentro`), `trave` (`ferrugem`, `cipo`, `rede`), `muro` (`cipo`, `musgo`), e a `arvore`
   'Figueira do Viaduto' (`abraca: 'viaduto'`). Referências: `docs/referencias/capao-*-planta.jpg` e
-  `capao-*-aprovado.jpg`. Em espera também: `mundo/rua-semaforo` (faixa na esquina e o semáforo quebrado; o desenho
-  do `semaforo` já está na main, 7c75c95, e conferi os dois juntos no PC e no celular: falta o "pode" do dono).
+  `capao-*-aprovado.jpg`. **Na `main` desde 13/11 ("pode, junta"):** a faixa de pedestre na esquina e o semáforo
+  quebrado soltando faísca (o desenho do `semaforo` é da [arte]; o mapa lê `altura`, `olhando`, `quebrado`, `faiscas`).
 - **A Figueira da Esquina mudou para a calçada da casa rosa (13/11, na `main`, aprovado: "pode seguir com as
   alterações"):** na esquina do portão, a copa alta "subia" na tela e tampava 19 m da trilha do norte do parque, bem
   onde andam os saguis; na esquina ela tampa em qualquer tamanho (só a partir de x ≈ 67, na calçada das casas, deixa
