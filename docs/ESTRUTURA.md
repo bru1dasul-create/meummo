@@ -75,6 +75,15 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — painel, parte 5 (números do combate):** `CombatRules` (`src/shared/combatRules.ts`, padrão das constantes
+`CHARGE_*`/`GUARD_*`, menos `GUARD_MAX_ENERGY`, que é a escala da barra). `chargeFraction`, `chargedRange`,
+`chargedDamage`, `guardCovers` e `blockHit` recebem as regras (sem padrão escondido: quem esquece não compila).
+`World.combat` (opção `combat`; o servidor passa `tuning.combat`, o mesmo objeto, mudado no lugar). Grupo `combate`
+no `Tuning`: partes `carga`, `defesa`, `recuo`, em unidades do dono (ms, %, graus, metros), com limites por número
+(`COMBAT_NUMBERS`); `parseCombat` converte e o teste confere que o padrão do painel volta exatamente ao do jogo.
+`welcome.combat` e mensagem `combat` (protocolo 28); o motor e o `CombatLayer` usam o mesmo objeto
+(`Object.assign` ao chegar). Gancho de teste: `__mundoNovo.combat()`.
+
 **13/11 — painel, parte 4 (missões):** grupo `missoes` no `Tuning` (as missões passam a ser montadas junto com
 monstros, itens e NPCs, conferidas por `parseQuestDefs`/`checkQuests`). Campos: nome, pedido e concluída (`texto-longo`,
 até 600 letras), `objetivo.rotulo` (vazio = automático), `objetivo.quantidade`/`monstro`/`item`, `nivelMinimo`,

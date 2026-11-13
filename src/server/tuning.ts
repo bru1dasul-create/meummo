@@ -1,4 +1,4 @@
-// Ajustes do administrador: o painel (/admin) muda números do jogo — monstros, itens, loja e missões — sem mexer nos
+// Ajustes do administrador: o painel (/admin) muda números do jogo — monstros, itens, loja, missões e combate — sem mexer nos
 // arquivos do projeto. Os ajustes ficam num arquivo separado (padrão: saves/ajustes.json, fora do Git): assim
 // atualizar o jogo nunca briga com eles, e eles continuam valendo depois de cada atualização.
 //
@@ -8,6 +8,7 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { DEFAULT_COMBAT_RULES, defaultCombatRules, type CombatRules } from '../shared/combatRules';
 import type { ItemInfo } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import type { QuestInfo } from '../shared/quests';
@@ -18,8 +19,8 @@ import { ITEMS_FILE, MONSTERS_FILE, NPCS_FILE, QUESTS_FILE } from './paths';
 import { checkQuests, nameQuestGoals, parseQuestDefs } from './quests';
 
 /** Os arquivos de dados que o painel ajusta (com o nome em português, como no arquivo de ajustes). */
-export type TuningFile = 'monstros' | 'itens' | 'npcs' | 'areas' | 'missoes';
-export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs', 'areas', 'missoes'];
+export type TuningFile = 'monstros' | 'itens' | 'npcs' | 'areas' | 'missoes' | 'combate';
+export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs', 'areas', 'missoes', 'combate'];
 
 /**
  * Uma área de monstros de um mapa: o padrão vem do mapa (o [mundo] desenha no Tiled); o painel muda qual monstro e
@@ -71,6 +72,163 @@ function parseAreas(json: Raw, maps: readonly GameMap[], monsters: ReadonlyMap<s
     });
   }
   return areas;
+}
+
+type CombatPartId = 'carga' | 'defesa' | 'recuo';
+
+/** Uma parte dos números do combate, como o painel mostra (em ms, %, graus e metros). */
+export interface CombatPart {
+  id: CombatPartId;
+  name: string;
+  detail: string;
+  values: Record<string, number>;
+}
+
+const COMBAT_PARTS: { id: CombatPartId; name: string; detail: string }[] = [
+  { id: 'carga', name: 'Pedra com carga', detail: 'segurar o estilingue: a pedra vai mais longe e bate mais forte' },
+  { id: 'defesa', name: 'Defesa', detail: 'segura os golpes que vêm pela frente e gasta energia (de 0 a 100)' },
+  { id: 'recuo', name: 'Empurrão (recuo)', detail: 'quanto cada monstro empurra fica na aba Monstros (Empurrão do golpe)' },
+];
+
+/** Um número do combate no painel: a parte, o nome no arquivo de ajustes, os limites e como ler dos números do jogo. */
+interface CombatNumber {
+  parte: CombatPartId;
+  campo: string;
+  rotulo: string;
+  tipo: 'inteiro' | 'numero' | 'porcento';
+  min: number;
+  max: number;
+  dica?: string;
+  ler: (rules: CombatRules) => number;
+}
+
+const COMBAT_NUMBERS: CombatNumber[] = [
+  { parte: 'carga', campo: 'tempoMs', rotulo: 'Tempo para carregar (ms)', tipo: 'inteiro', min: 100, max: 5000, dica: 'segurando o estilingue', ler: (r) => r.chargeFullMs },
+  {
+    parte: 'carga',
+    campo: 'danoPorcento',
+    rotulo: 'Dano com a carga cheia (%)',
+    tipo: 'inteiro',
+    min: 100,
+    max: 500,
+    dica: '200 = o dobro do normal',
+    ler: (r) => Math.round((1 + r.chargeDamageBonus) * 100),
+  },
+  { parte: 'carga', campo: 'alcanceMinimo', rotulo: 'Alcance sem carga (m)', tipo: 'numero', min: 2, max: 20, dica: 'no mapa novo', ler: (r) => r.chargeRangeMin },
+  { parte: 'carga', campo: 'alcanceMaximo', rotulo: 'Alcance com a carga cheia (m)', tipo: 'numero', min: 2, max: 20, dica: 'no mapa novo', ler: (r) => r.chargeRangeMax },
+  {
+    parte: 'defesa',
+    campo: 'seguraPorcento',
+    rotulo: 'Quanto do golpe ela segura (%)',
+    tipo: 'porcento',
+    min: 0,
+    max: 100,
+    dica: '75 = passa só 25% do dano',
+    ler: (r) => Math.round((1 - r.guardDamageFactor) * 100),
+  },
+  {
+    parte: 'defesa',
+    campo: 'angulo',
+    rotulo: 'Ângulo que ela cobre (graus)',
+    tipo: 'inteiro',
+    min: 30,
+    max: 360,
+    dica: '140 = a frente; 360 = todos os lados',
+    ler: (r) => Math.round((r.guardHalfArc * 2 * 180) / Math.PI),
+  },
+  { parte: 'defesa', campo: 'preparoMs', rotulo: 'Tempo para subir (ms)', tipo: 'inteiro', min: 0, max: 2000, dica: 'antes disso ainda não protege', ler: (r) => r.guardReadyMs },
+  { parte: 'defesa', campo: 'gastoPorGolpe', rotulo: 'Energia que cada golpe gasta', tipo: 'numero', min: 0, max: 100, ler: (r) => r.guardHitCost },
+  { parte: 'defesa', campo: 'gastoPorDano', rotulo: 'Energia a mais por ponto de dano do golpe', tipo: 'numero', min: 0, max: 10, ler: (r) => r.guardHitDamageCost },
+  { parte: 'defesa', campo: 'gastoPorSegundo', rotulo: 'Energia gasta por segundo segurando', tipo: 'numero', min: 0, max: 100, ler: (r) => r.guardDrainPerS },
+  { parte: 'defesa', campo: 'recuperaPorSegundo', rotulo: 'Energia que volta por segundo', tipo: 'numero', min: 1, max: 200, ler: (r) => r.guardRegenPerS },
+  {
+    parte: 'defesa',
+    campo: 'esperaMs',
+    rotulo: 'Espera para a energia voltar (ms)',
+    tipo: 'inteiro',
+    min: 0,
+    max: 10000,
+    dica: 'depois de soltar a defesa ou de levar um golpe nela',
+    ler: (r) => r.guardRegenDelayMs,
+  },
+  { parte: 'defesa', campo: 'quebradaMs', rotulo: 'Quebrou: tempo até levantar de novo (ms)', tipo: 'inteiro', min: 0, max: 10000, ler: (r) => r.guardBreakMs },
+  { parte: 'defesa', campo: 'energiaParaLevantar', rotulo: 'Quebrou: energia para levantar de novo', tipo: 'inteiro', min: 0, max: 100, ler: (r) => r.guardRearmEnergy },
+  {
+    parte: 'defesa',
+    campo: 'andarPorcento',
+    rotulo: 'Andando com ela (% do andar devagar)',
+    tipo: 'porcento',
+    min: 10,
+    max: 100,
+    ler: (r) => Math.round(r.guardWalkFactor * 100),
+  },
+  {
+    parte: 'recuo',
+    campo: 'defesaSeguraPorcento',
+    rotulo: 'Defesa que segura o golpe: quanto do empurrão ela segura (%)',
+    tipo: 'porcento',
+    min: 0,
+    max: 100,
+    dica: '75 = passa só 25% do empurrão',
+    ler: (r) => Math.round((1 - r.guardPushFactor) * 100),
+  },
+  {
+    parte: 'recuo',
+    campo: 'defesaQuebradaPorcento',
+    rotulo: 'Defesa que quebra no golpe: quanto do empurrão ela segura (%)',
+    tipo: 'porcento',
+    min: 0,
+    max: 100,
+    ler: (r) => Math.round((1 - r.guardBreakPushFactor) * 100),
+  },
+];
+
+/** O padrão dos números do combate, como no arquivo de ajustes (parte → campo → valor). */
+function baseCombat(): Raw {
+  const out: Record<string, Raw> = {};
+  for (const n of COMBAT_NUMBERS) (out[n.parte] ??= {})[n.campo] = n.ler(DEFAULT_COMBAT_RULES);
+  return out;
+}
+
+/** Confere os números do combate (cada um nos seus limites) e monta os números que o jogo usa. */
+function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: CombatRules } {
+  const values: Record<CombatPartId, Record<string, number>> = { carga: {}, defesa: {}, recuo: {} };
+  for (const n of COMBAT_NUMBERS) {
+    const section = isObject(json[n.parte]) ? (json[n.parte] as Raw) : {};
+    const value = section[n.campo] ?? n.ler(DEFAULT_COMBAT_RULES);
+    const whole = n.tipo !== 'numero';
+    if (typeof value !== 'number' || !Number.isFinite(value) || (whole && !Number.isInteger(value)) || value < n.min || value > n.max) {
+      throw new Error(`Erro nos ajustes (Combate › ${n.rotulo}): precisa ser um número${whole ? ' inteiro' : ''} de ${n.min} a ${n.max}.`);
+    }
+    values[n.parte][n.campo] = value;
+  }
+  const c = values.carga;
+  const d = values.defesa;
+  const r = values.recuo;
+  if (c.alcanceMaximo! < c.alcanceMinimo!) {
+    throw new Error('Erro nos ajustes (Combate › Pedra com carga): o alcance com a carga cheia não pode ser menor que o alcance sem carga.');
+  }
+  const rules: CombatRules = {
+    chargeFullMs: c.tempoMs!,
+    chargeDamageBonus: c.danoPorcento! / 100 - 1,
+    chargeRangeMin: c.alcanceMinimo!,
+    chargeRangeMax: c.alcanceMaximo!,
+    guardReadyMs: d.preparoMs!,
+    guardHalfArc: ((d.angulo! / 2) * Math.PI) / 180,
+    guardDamageFactor: 1 - d.seguraPorcento! / 100,
+    guardHitCost: d.gastoPorGolpe!,
+    guardHitDamageCost: d.gastoPorDano!,
+    guardDrainPerS: d.gastoPorSegundo!,
+    guardRegenPerS: d.recuperaPorSegundo!,
+    guardRegenDelayMs: d.esperaMs!,
+    guardBreakMs: d.quebradaMs!,
+    guardRearmEnergy: d.energiaParaLevantar!,
+    guardWalkFactor: d.andarPorcento! / 100,
+    guardPushFactor: 1 - r.defesaSeguraPorcento! / 100,
+    guardBreakPushFactor: 1 - r.defesaQuebradaPorcento! / 100,
+  };
+  const parts = new Map<string, CombatPart>(COMBAT_PARTS.map((p) => [p.id, { ...p, values: values[p.id] }]));
+  return { parts, rules };
 }
 
 /** Como o painel mostra e confere cada campo. */
@@ -171,6 +329,15 @@ const QUEST_FIELDS: FieldSpec<QuestInfo>[] = [
   },
 ];
 
+const COMBAT_FIELDS: FieldSpec<CombatPart>[] = COMBAT_NUMBERS.map((n) => ({
+  campo: n.campo,
+  rotulo: n.rotulo,
+  tipo: n.tipo,
+  dica: n.dica ? `${n.dica} (de ${n.min} a ${n.max})` : `de ${n.min} a ${n.max}`,
+  ler: (d: CombatPart) => d.values[n.campo],
+  vale: (d: CombatPart) => d.id === n.parte,
+}));
+
 const NPC_FIELDS: FieldSpec<NpcDef>[] = [
   { campo: 'fala', rotulo: 'O que diz', tipo: 'texto', ler: (d) => d.line },
   { campo: 'mapa', rotulo: 'Mapa onde fica', tipo: 'texto', dica: 'o nome do arquivo do mapa (ex.: capao). Mais fácil: no jogo, menu ADM → trazer para cá', ler: (d) => d.map },
@@ -190,6 +357,8 @@ interface Defs {
   npcs: Map<string, NpcDef>;
   areas: Map<string, AreaDef>;
   quests: Map<string, QuestInfo>;
+  combatParts: Map<string, CombatPart>;
+  combat: CombatRules;
 }
 
 /** O conteúdo de data/monsters.json, data/items.json, data/npcs.json e data/missoes.json (sem missões = nenhuma). */
@@ -222,7 +391,14 @@ export interface TuningView {
   itens: { id: string; nome: string; preco: number }[];
 }
 
-const TITLES: Record<TuningFile, string> = { monstros: 'Monstros', itens: 'Itens', npcs: 'Loja e personagens', areas: 'Áreas de monstros', missoes: 'Missões' };
+const TITLES: Record<TuningFile, string> = {
+  monstros: 'Monstros',
+  itens: 'Itens',
+  npcs: 'Loja e personagens',
+  areas: 'Áreas de monstros',
+  missoes: 'Missões',
+  combate: 'Combate',
+};
 const PART_NAMES: Record<string, string> = { weapon: 'arma', head: 'cabeça', body: 'corpo', charm: 'amuleto' };
 const KIND_NAMES: Record<ItemInfo['kind'], string> = { equipment: 'Equipamento', consumable: 'Consumível', material: 'Material' };
 
@@ -290,7 +466,8 @@ function build(base: BaseData, overrides: Overrides, maps: readonly GameMap[]): 
   const quests = parseQuestDefs(merge(base.missoes ?? {}, overrides.missoes ?? {}));
   checkQuests(quests, { npcs, monsters, items });
   nameQuestGoals(quests, { monsters, items, npcs });
-  return { monsters, items, npcs, areas, quests };
+  const combat = parseCombat(merge(baseCombat(), overrides.combate ?? {}) as Raw);
+  return { monsters, items, npcs, areas, quests, combatParts: combat.parts, combat: combat.rules };
 }
 
 function clone<T>(value: T): T {
@@ -339,6 +516,10 @@ export class Tuning {
   readonly areas: Map<string, AreaDef>;
   /** As missões (data/missoes.json), com os ajustes. */
   readonly quests: Map<string, QuestInfo>;
+  /** Os números do combate que o jogo usa (carga, defesa, empurrão): o mesmo objeto, mudado no lugar. */
+  readonly combat: CombatRules = defaultCombatRules();
+  /** Os números do combate como o painel mostra (uma parte por cartão). */
+  readonly combatParts: Map<string, CombatPart>;
   readonly problem: string | null;
   /** Avisado depois de cada ajuste aceito, com os arquivos que mudaram. */
   onChange: ((changed: ReadonlySet<TuningFile>) => void) | null = null;
@@ -376,6 +557,8 @@ export class Tuning {
     this.npcs = defs.npcs;
     this.areas = defs.areas;
     this.quests = defs.quests;
+    this.combatParts = defs.combatParts;
+    Object.assign(this.combat, defs.combat);
   }
 
   /** Lê os dados do projeto e os ajustes guardados (arquivo que não existe = sem ajustes). */
@@ -445,6 +628,7 @@ export class Tuning {
       npcs: this.defaults.npcs,
       areas: this.defaults.areas,
       missoes: this.defaults.quests,
+      combate: this.defaults.combatParts,
     };
     const grupos = TUNING_FILES.map((arquivo) => ({
       arquivo,
@@ -477,7 +661,7 @@ export class Tuning {
 
   /** O que o jogo está usando agora, por arquivo. */
   private current(): Record<TuningFile, ReadonlyMap<string, unknown>> {
-    return { monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas, missoes: this.quests };
+    return { monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas, missoes: this.quests, combate: this.combatParts };
   }
 
   private spec(arquivo: TuningFile, id: string, campo: string): FieldSpec<unknown> | { erro: string } {
@@ -509,6 +693,8 @@ export class Tuning {
     replaceInPlace(this.npcs, defs.npcs);
     replaceInPlace(this.areas, defs.areas);
     replaceInPlace(this.quests, defs.quests, true);
+    replaceInPlace(this.combatParts, defs.combatParts);
+    Object.assign(this.combat, defs.combat);
     // Preço de item aparece na loja: mudar item também atualiza a loja de quem está vendo.
     this.onChange?.(new Set<TuningFile>(changed === 'itens' ? ['itens', 'npcs'] : [changed]));
     return { ok: true };
@@ -531,6 +717,7 @@ export class Tuning {
       npcs: this.defaults.npcs,
       areas: this.defaults.areas,
       missoes: this.defaults.quests,
+      combate: this.defaults.combatParts,
     };
     for (const key of Object.keys(overrides)) {
       if (!TUNING_FILES.includes(key as TuningFile)) delete overrides[key as TuningFile];
@@ -567,11 +754,12 @@ const FIELDS: Record<TuningFile, FieldSpec<never>[]> = {
   npcs: NPC_FIELDS as FieldSpec<never>[],
   areas: AREA_FIELDS as FieldSpec<never>[],
   missoes: QUEST_FIELDS as FieldSpec<never>[],
+  combate: COMBAT_FIELDS as FieldSpec<never>[],
 };
 
 function describe(arquivo: TuningFile, def: unknown, game: { npcs: ReadonlyMap<string, NpcDef>; quests: ReadonlyMap<string, QuestInfo> }): string {
   if (arquivo === 'monstros') return `Nível ${(def as MonsterDef).level}`;
-  if (arquivo === 'areas') return (def as AreaDef).detail;
+  if (arquivo === 'areas' || arquivo === 'combate') return (def as AreaDef | CombatPart).detail;
   if (arquivo === 'missoes') {
     const quest = def as QuestInfo;
     const goal =

@@ -7,6 +7,7 @@
 import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
+import type { CombatRules } from './combatRules';
 
 export type EntityKind = 'player' | 'monster' | 'npc';
 
@@ -142,6 +143,8 @@ export type ServerMsg =
       /** Todas as missões (de data/missoes.json) e o seu progresso. */
       quests: QuestInfo[];
       questLog: QuestLog;
+      /** Os números do combate que valem (carga, defesa, empurrão), com os ajustes do painel. */
+      combat: CombatRules;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
@@ -186,6 +189,7 @@ export type ServerMsg =
   | { t: 'notice'; text: string } // aviso do administrador para todo mundo (aparece grande na tela)
   | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
   | { t: 'questDefs'; quests: QuestInfo[] } // o painel do administrador mudou as missões (textos, objetivo, recompensa)
+  | { t: 'combat'; rules: CombatRules } // o painel do administrador mudou os números do combate (carga, defesa, empurrão)
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }

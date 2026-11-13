@@ -141,6 +141,10 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   automático), **quantos** (e qual monstro ou item), nível mínimo, se dá para fazer de novo e a **recompensa** (XP,
   ouro e itens com quantidade). Vale na hora, até numa conversa aberta; quem já está fazendo a missão continua com o
   que já fez (se a quantidade baixar, já pode entregar). Quem dá a missão e a ordem delas ficam em `data/missoes.json`.
+- **Combate:** a **pedra com carga** (tempo para carregar, dano e alcance com a carga cheia), a **defesa** (quanto do
+  golpe segura, o ângulo que cobre, o tempo para subir, a energia que gasta e que volta, o tempo quebrada e a
+  velocidade andando com ela) e quanto do **empurrão** a defesa segura. Vale na hora para quem está jogando; o
+  empurrão de cada monstro fica na aba Monstros.
 - **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
   vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
   (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).

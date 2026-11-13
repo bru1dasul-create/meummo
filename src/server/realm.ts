@@ -333,6 +333,7 @@ export class Realm {
       if (changed.has('npcs')) world.refreshNpcs();
       if (changed.has('areas')) world.refreshAreas();
       if (changed.has('missoes')) world.refreshQuests();
+      if (changed.has('combate')) world.refreshCombat();
     }
   }
 

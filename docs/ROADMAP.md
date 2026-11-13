@@ -335,13 +335,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `saves/registros/` (14 dias), aba **Registros** no painel (filtro, "Só erros", "Copiar tudo"), erros do servidor com
   o caminho (o tick e as mensagens não derrubam mais o servidor) e os erros do navegador de quem joga (mensagem `oops`,
   protocolo 25, com o aparelho)
-- [ ] **[estrutura]** Menu ADM, passo 2 (o dono escolheu "todos", 13/11). Feito: nível e XP de um jogador (cartão no
-  painel) e a posição dos NPCs (mapa, x e y no painel; "Trazer para cá" no menu ADM; vale na hora, com o boneco
-  andando na tela de quem joga), os monstros por área (aba "Áreas de monstros": qual monstro e quantos, `mapa#n`;
-  vale na hora) e as missões (aba "Missões": textos, quantos, nível, repetir e recompensa; vale na hora, até com a
-  conversa aberta). Falta: números do combate. Era a lista: o painel já ajusta monstros, itens, loja e jogadores;
-  dá para pôr também missões, onde e quantos monstros nascem, os números do combate (carga, defesa, recuo), a
-  posição dos NPCs, nível/XP de um jogador e "ver como o servidor vê" (colisões) no jogo
+- [x] **[estrutura]** Menu ADM, passo 2 (o dono escolheu "todos", 13/11): nível e XP de um jogador (cartão no
+  painel), a posição dos NPCs (mapa, x e y no painel; "Trazer para cá" no menu ADM; vale na hora, com o boneco
+  andando na tela de quem joga), os monstros por área (aba "Áreas de monstros": qual monstro e quantos, `mapa#n`),
+  as missões (aba "Missões": textos, quantos, nível, repetir e recompensa; até com a conversa aberta) e os números
+  do combate (aba "Combate": carga, defesa e quanto do empurrão a defesa segura; protocolo 28). Tudo vale na hora.
+  "Ver como o servidor vê" (colisões) dentro do jogo ficou de fora: por enquanto, o `?provisorio` mostra as caixas
 - [x] **[estrutura]** Tela inicial nova, parte do servidor (13/11, pedido do dono com a imagem
   `docs/referencias/tela-inicial.webp`; fundo e logo em `tela-inicial-fundo.webp` e `tela-inicial-logo.webp`): "Entrar"
   só entra com personagem que já existe (antes, nome digitado errado criava um personagem novo sem querer) e "Criar uma

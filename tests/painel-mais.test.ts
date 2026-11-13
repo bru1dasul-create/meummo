@@ -1,5 +1,6 @@
 // Painel do administrador, mais coisas (pedido do dono: "todos esses"): nível e XP de um jogador, a posição dos NPCs
-// (no painel e no menu ADM, "trazer para cá"), os monstros por área e as missões, valendo na hora para quem está jogando.
+// (no painel e no menu ADM, "trazer para cá"), os monstros por área, as missões e os números do combate, valendo na
+// hora para quem está jogando.
 
 import { describe, expect, it } from 'vitest';
 import { Realm } from '../src/server/realm';
@@ -7,6 +8,8 @@ import { loadMaps } from '../src/server/server';
 import { Tuning, type BaseData } from '../src/server/tuning';
 import { World } from '../src/server/world';
 import type { NpcDef } from '../src/server/npcs';
+import { DEFAULT_COMBAT_RULES } from '../src/shared/combatRules';
+import { TICK_MS } from '../src/shared/constants';
 import { GameMap, type TiledObject } from '../src/shared/map';
 import { maxHpFor } from '../src/shared/progression';
 import { FakeClock, FakeConn, tiledFromAscii } from './helpers';
@@ -303,5 +306,89 @@ describe('missões pelo painel', () => {
     const group = tuning.view().grupos.find((g) => g.arquivo === 'missoes')!;
     expect(group.lista.map((e) => e.id)).toContain('saguis_encantados');
     expect(group.lista.find((e) => e.id === 'o_despertar')!.campos.map((c) => c.campo)).not.toContain('objetivo.quantidade'); // falar: sem quantidade
+  });
+});
+
+describe('números do combate pelo painel', () => {
+  const empty = (): BaseData => ({ monstros: {}, itens: {}, npcs: {} });
+
+  it('o padrão do painel é o mesmo do jogo (revisão 17 do protótipo)', () => {
+    const tuning = new Tuning(empty(), [], null);
+    expect(tuning.combat).toEqual(DEFAULT_COMBAT_RULES); // de % e graus de volta aos números do jogo, sem perder nada
+    const group = tuning.view().grupos.find((g) => g.arquivo === 'combate')!;
+    expect(group.titulo).toBe('Combate');
+    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo']);
+    const value = (part: number, field: string) => group.lista[part]!.campos.find((c) => c.campo === field)!.valor;
+    expect(group.lista[0]!.campos.map((c) => [c.campo, c.valor])).toEqual([
+      ['tempoMs', 1100],
+      ['danoPorcento', 200],
+      ['alcanceMinimo', 6.5],
+      ['alcanceMaximo', 9.5],
+    ]);
+    expect(value(1, 'angulo')).toBe(140);
+    expect(value(1, 'seguraPorcento')).toBe(75);
+    expect(value(1, 'andarPorcento')).toBe(70);
+    expect(value(2, 'defesaSeguraPorcento')).toBe(75);
+    expect(value(2, 'defesaQuebradaPorcento')).toBe(50);
+  });
+
+  it('confere os limites e muda no lugar (o mundo lê o mesmo objeto)', () => {
+    const tuning = new Tuning(empty(), [], null);
+    const rules = tuning.combat;
+    expect(tuning.set('combate', 'carga', 'tempoMs', 2000)).toEqual({ ok: true });
+    expect(tuning.set('combate', 'defesa', 'angulo', 360)).toEqual({ ok: true });
+    expect(tuning.set('combate', 'defesa', 'seguraPorcento', 50)).toEqual({ ok: true });
+    expect(tuning.set('combate', 'recuo', 'defesaSeguraPorcento', 100)).toEqual({ ok: true });
+    expect(rules).toMatchObject({ chargeFullMs: 2000, guardDamageFactor: 0.5, guardPushFactor: 0 });
+    expect(rules.guardHalfArc).toBeCloseTo(Math.PI);
+    // fora dos limites: recusado com o motivo, e nada muda
+    const refused = tuning.set('combate', 'carga', 'alcanceMaximo', 4); // menor que o alcance sem carga (6,5)
+    expect(refused.ok).toBe(false);
+    expect(refused.ok ? '' : refused.erro).toMatch(/não pode ser menor/);
+    expect(tuning.set('combate', 'carga', 'tempoMs', 50).ok).toBe(false);
+    expect(tuning.set('combate', 'defesa', 'seguraPorcento', 120).ok).toBe(false);
+    expect(tuning.set('combate', 'defesa', 'angulo', 10).ok).toBe(false);
+    expect(tuning.set('combate', 'defesa', 'tempoMs', 900).ok).toBe(false); // campo da carga, não da defesa
+    expect(rules.chargeFullMs).toBe(2000);
+    expect(tuning.reset('combate', 'carga', 'tempoMs')).toEqual({ ok: true });
+    expect(rules.chargeFullMs).toBe(1100);
+  });
+
+  it('vale na hora no servidor, e quem está jogando recebe os números novos', () => {
+    const tuning = new Tuning(empty(), [], null);
+    const clock = new FakeClock();
+    const realm = new Realm([metricMap('praca')], { now: clock.now, random: () => 0, combat: tuning.combat });
+    tuning.onChange = (changed) => realm.tuningChanged(changed);
+    const conn = new FakeConn();
+    const joined = realm.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    const world = realm.worlds.get('praca')!;
+    const run = (ms: number) => {
+      for (let t = 0; t < ms; t += TICK_MS) {
+        clock.advance(TICK_MS);
+        world.tick();
+      }
+    };
+    run(TICK_MS);
+    expect(conn.ofType('welcome')[0]!.combat).toEqual(DEFAULT_COMBAT_RULES);
+
+    // pedra com carga: o triplo do dano
+    expect(tuning.set('combate', 'carga', 'danoPorcento', 300)).toEqual({ ok: true });
+    run(TICK_MS);
+    expect(conn.ofType('combat').at(-1)!.rules.chargeDamageBonus).toBe(2);
+    const base = player.damage()[0];
+    world.charge(player);
+    clock.advance(DEFAULT_COMBAT_RULES.chargeFullMs);
+    world.shoot(player, 1, 0);
+    expect([...world.projectiles.values()].at(-1)!.damage).toBe(3 * base);
+
+    // defesa: segura só a metade de um golpe de frente
+    expect(tuning.set('combate', 'defesa', 'seguraPorcento', 50)).toEqual({ ok: true });
+    world.guard(player, true, 0);
+    run(200);
+    const hp = player.hp;
+    (world as unknown as { damage(t: unknown, amount: number, by: number, now: number, travel?: number): void }).damage(player, 20, 0, clock.now(), Math.PI);
+    expect(hp - player.hp).toBe(10);
   });
 });

@@ -140,6 +140,10 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
   `CHARGE_FULL_MS`). A carga dá o dano (`chargedDamage`: até o dobro) e, no mapa novo, o alcance (`chargedRange`:
   6,5 a 9,5 m), em `src/shared/combat.ts`. Esquiva, golpe recebido e desmaio zeram a carga; o toque rápido manda
   `charge` e `shoot` juntos (pedra sem carga). Quem não manda `charge` (o jogo antigo) atira como sempre.
+- **Números do combate (carga, defesa, empurrão):** ficam num objeto só, `CombatRules` (`src/shared/combatRules.ts`;
+  o padrão vem das constantes `CHARGE_*`/`GUARD_*`). As funções de `src/shared/combat.ts` recebem esse objeto; o
+  servidor usa o do painel (`Tuning.combat`, mudado no lugar, aba "Combate") e manda ao navegador no `welcome`
+  (`combat`) e, quando muda, na mensagem `combat`. O navegador usa os mesmos (andar com defesa, anel da carga, arco).
 - **Defesa com energia (jogo novo):** `guard` (on/off e o ângulo) marca `Player.guardWanted`; a cada tick,
   `updateGuard` levanta a defesa (se não estiver quebrada e tiver energia), gasta e devolve energia e quebra quando
   ela acaba. O `damage` recebe para onde o golpe anda (`travel`): se a defesa já protege (`GUARD_READY_MS`) e o golpe
@@ -346,6 +350,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `notice` | aviso do administrador para todo mundo (aparece na tela) |
 | servidor | `quests` | seu progresso nas missões mudou |
 | servidor | `questDefs` | o administrador ajustou as missões (textos, objetivo, recompensa): use a lista nova |
+| servidor | `combat` | o administrador ajustou os números do combate (carga, defesa, empurrão): use os novos |
 | servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |

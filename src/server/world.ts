@@ -12,16 +12,7 @@ import {
   GM_SPAWN_MAP_MAX,
   GM_SPAWN_MAX,
   GOLD_DROP_MS,
-  GUARD_BREAK_MS,
-  GUARD_BREAK_PUSH_FACTOR,
-  GUARD_DRAIN_PER_S,
   GUARD_MAX_ENERGY,
-  GUARD_PUSH_FACTOR,
-  GUARD_READY_MS,
-  GUARD_REARM_ENERGY,
-  GUARD_REGEN_DELAY_MS,
-  GUARD_REGEN_PER_S,
-  GUARD_WALK_FACTOR,
   ITEM_DROP_MS,
   MAX_PLAYERS,
   MAX_QUEUED_WALKS,
@@ -63,6 +54,7 @@ import {
   chargedRange,
   tileIn,
 } from '../shared/combat';
+import { defaultCombatRules, type CombatRules } from '../shared/combatRules';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, MonsterZone, Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
@@ -134,6 +126,8 @@ export interface WorldOptions {
   setNpcSpot?: (npc: string, map: string, x: number, y: number) => string | null;
   /** Áreas de monstros com os ajustes do painel (qual monstro e quantos; chave `mapa#n`). */
   areas?: ReadonlyMap<string, AreaDef>;
+  /** Números do combate (carga, defesa, empurrão) com os ajustes do painel; sem isto, o padrão. */
+  combat?: CombatRules;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -194,6 +188,8 @@ export class World {
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
   readonly quests: ReadonlyMap<string, QuestInfo>;
+  /** Números do combate (o painel muda no lugar: o mundo sempre lê o valor de agora). */
+  readonly combat: CombatRules;
   /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
   private readonly npcDefs: ReadonlyMap<string, NpcDef>;
   /** Todos os monstros que existem (o administrador pode criar qualquer um, em qualquer mapa). */
@@ -224,6 +220,7 @@ export class World {
     this.saver = options.saver ?? null;
     this.items = options.items ?? new Map();
     this.quests = options.quests ?? new Map();
+    this.combat = options.combat ?? defaultCombatRules();
     this.npcDefs = options.npcs ?? new Map();
     let ids = 1;
     this.links = options.links ?? {
@@ -397,6 +394,7 @@ export class World {
         npcs: this.npcList(),
         quests: [...this.quests.values()],
         questLog: { ...player.quests },
+        combat: { ...this.combat },
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
@@ -712,7 +710,7 @@ export class World {
 
   /**
    * Segurou (ou soltou) a defesa, virada para `angle` (radianos). Ela sobe no tick (updateGuard) e protege
-   * GUARD_READY_MS depois; levantar a defesa solta a pedra que estava puxando.
+   * guardReadyMs depois; levantar a defesa solta a pedra que estava puxando.
    */
   guard(player: Player, on: boolean, angle: number): void {
     if (player.loading || player.dead) {
@@ -737,14 +735,14 @@ export class World {
       player.chargeStart = null;
       return;
     }
-    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart) : 0;
+    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart, this.combat) : 0;
     player.chargeStart = null;
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
     this.faceAngle(player, angle);
     const [min, max] = player.damage();
-    this.spawnProjectile(player, angle, SHOT_SPEED, chargedRange(charge, this.map.metric), chargedDamage(this.rollRange(min, max), charge), 'pedra', cid);
+    this.spawnProjectile(player, angle, SHOT_SPEED, chargedRange(charge, this.map.metric, this.combat), chargedDamage(this.rollRange(min, max), charge, this.combat), 'pedra', cid);
   }
 
   useSkill(player: Player, n: number, angle: number): void {
@@ -1064,6 +1062,12 @@ export class World {
 
   // ======================= missões =======================
 
+  /** O painel mudou os números do combate: quem está jogando recebe os novos (o navegador usa os mesmos). */
+  refreshCombat(): void {
+    const rules = { ...this.combat };
+    for (const player of this.players.values()) player.outbox.push({ t: 'combat', rules });
+  }
+
   /** O painel mudou as missões (textos, objetivo, recompensa): quem está jogando recebe a lista nova. */
   refreshQuests(): void {
     const quests = [...this.quests.values()];
@@ -1374,10 +1378,10 @@ export class World {
     player.ackPending = true;
   }
 
-  /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (GUARD_WALK_FACTOR). */
+  /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (× guardWalkFactor). */
   private walkDistance(input: { slow: boolean; guard: boolean; fly: boolean }): number {
     if (input.fly) return sliceDistance(this.map.metric, false, STEP_MS) * GM_FLY_FACTOR;
-    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * GUARD_WALK_FACTOR;
+    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * this.combat.guardWalkFactor;
     return sliceDistance(this.map.metric, input.slow, STEP_MS);
   }
 
@@ -1389,7 +1393,7 @@ export class World {
     const dt = player.energyClock > 0 ? Math.max(0, now - player.energyClock) / 1000 : 0;
     player.energyClock = now;
     // quebrada: rearma soltando o botão, depois do tempo da quebra e com energia para isso
-    if (player.guardBroken && !player.guardWanted && now >= player.guardBrokenUntil && player.energy >= GUARD_REARM_ENERGY) {
+    if (player.guardBroken && !player.guardWanted && now >= player.guardBrokenUntil && player.energy >= this.combat.guardRearmEnergy) {
       player.guardBroken = false;
     }
     const active = player.guardWanted && !player.guardBroken && player.energy > 0;
@@ -1402,26 +1406,26 @@ export class World {
       this.emitGuard(player);
     }
     if (active) {
-      player.energy = Math.max(0, player.energy - GUARD_DRAIN_PER_S * dt);
-      player.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+      player.energy = Math.max(0, player.energy - this.combat.guardDrainPerS * dt);
+      player.energyRegenAt = now + this.combat.guardRegenDelayMs;
       if (player.energy <= 0) this.breakGuard(player, now);
     } else if (now >= player.energyRegenAt && player.energy < GUARD_MAX_ENERGY) {
-      player.energy = Math.min(GUARD_MAX_ENERGY, player.energy + GUARD_REGEN_PER_S * dt);
+      player.energy = Math.min(GUARD_MAX_ENERGY, player.energy + this.combat.guardRegenPerS * dt);
     }
     this.sendEnergy(player, now);
   }
 
-  /** A defesa levantada já protege? (Leva GUARD_READY_MS para subir.) */
+  /** A defesa levantada já protege? (Leva guardReadyMs para subir.) */
   private guardReady(player: Player, now: number): boolean {
-    return player.guardUpAt !== null && now - player.guardUpAt >= GUARD_READY_MS && player.energy > 0;
+    return player.guardUpAt !== null && now - player.guardUpAt >= this.combat.guardReadyMs && player.energy > 0;
   }
 
   /** Acabou a energia: a defesa cai e só levanta de novo soltando o botão (veja updateGuard). */
   private breakGuard(player: Player, now: number): void {
     player.guardBroken = true;
-    player.guardBrokenUntil = now + GUARD_BREAK_MS;
+    player.guardBrokenUntil = now + this.combat.guardBreakMs;
     player.energy = 0;
-    player.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+    player.energyRegenAt = now + this.combat.guardRegenDelayMs;
     if (player.guardUpAt !== null) {
       player.guardUpAt = null;
       this.emitGuard(player);
@@ -1602,11 +1606,11 @@ export class World {
     // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
     if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
     let blocked: 0 | 1 | 2 = 0;
-    if (target.kind === 'player' && travel !== undefined && this.guardReady(target, now) && guardCovers(target.guardAngle, travel)) {
-      const block = blockHit(target.energy, amount);
+    if (target.kind === 'player' && travel !== undefined && this.guardReady(target, now) && guardCovers(target.guardAngle, travel, this.combat)) {
+      const block = blockHit(target.energy, amount, this.combat);
       amount = block.damage;
       target.energy = block.energy;
-      target.energyRegenAt = now + GUARD_REGEN_DELAY_MS;
+      target.energyRegenAt = now + this.combat.guardRegenDelayMs;
       blocked = block.broke ? 2 : 1;
       if (block.broke) this.breakGuard(target, now);
       this.sendEnergy(target, now, true);
@@ -1616,7 +1620,7 @@ export class World {
     if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
     this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp, ...(blocked ? { blk: blocked } : {}) });
     if (target.kind === 'player' && target.hp > 0 && travel !== undefined && push > 0) {
-      const factor = blocked === 2 ? GUARD_BREAK_PUSH_FACTOR : blocked === 1 ? GUARD_PUSH_FACTOR : 1;
+      const factor = blocked === 2 ? this.combat.guardBreakPushFactor : blocked === 1 ? this.combat.guardPushFactor : 1;
       this.knockBack(target, travel, push * factor);
     }
 

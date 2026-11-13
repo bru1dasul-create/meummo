@@ -98,6 +98,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     npcs: tuning.npcs,
     areas: tuning.areas,
     quests: tuning.quests,
+    combat: tuning.combat,
     saver: store,
     startMap: options.startMap,
     // menu ADM "trazer para cá": vira um ajuste do painel (mapa, x e y juntos)
