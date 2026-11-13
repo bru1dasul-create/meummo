@@ -939,6 +939,8 @@
     figueira: { base: '#2c6a3b', shade: '#1b4829', light: '#4f9053', under: '#143022' },
   };
 
+  const CANOPY_INK = '#13221a';
+
   class TreeCanopy extends Prop {
     constructor(world, t) {
       super(world, { x0: t.x - t.r, x1: t.x + t.r, y0: t.y - t.r, y1: t.y + t.r }, { overhead: true });
@@ -962,73 +964,102 @@
       const ink = this.ink;
       const c = this.center;
       const r = M.rng(Math.round(t.x * 3 + t.y));
-      // bolotas numa cúpula achatada; as de trás/baixo escuras, as de cima/frente claras
+      // cachos numa cúpula achatada (mais larga do que alta); o tom de cada um vem da altura: embaixo escuro, em cima
+      // claro. Antes eram 14 bolas grandes e lisas — o dono achou "bolas verdes enormes empilhadas que enchem a tela"
       const blobs = [];
       if (t.kind === 'figueira') this._figBlobs(blobs, c, r);
-      else {
-        const n = 13;
-        for (let k = 0; k < n; k++) {
-          const a = (k / n) * M.TAU + r() * 0.5;
-          const d = (k === 0 ? 0 : 0.35 + r() * 0.5) * t.r * 0.62;
-          const z = (r() - 0.35) * t.r * 0.45;
-          const p = { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: c.z + z };
-          blobs.push({ p, r: t.r * (0.34 + r() * 0.16), depth: cam.depth(p) + z * 0.3 });
-        }
-        blobs.push({ p: { x: c.x, y: c.y, z: c.z + t.r * 0.32 }, r: t.r * 0.46, depth: cam.depth({ x: c.x, y: c.y, z: c.z + t.r * 0.32 }) + 40 });
-      }
+      else this._leafBlobs(blobs, c, r);
       blobs.sort((a, b) => a.depth - b.depth);
       const circles = blobs.map((b) => {
         const q = cam.p(b.p);
         return { x: q.x, y: q.y, r: b.r * cam.zoom, tier: b.tier };
       });
-      // contorno da copa toda
+      // cada árvore com um tom um pouco diferente (a mata não fica de uma cor só)
+      const j = (r() - 0.5) * 0.16;
+      const tone = (hex) => M.shade(hex, j);
+      const col = { base: tone(this.colors.base), shade: tone(this.colors.shade), light: tone(this.colors.light), under: tone(this.colors.under) };
+      // contorno da copa toda, em verde quase preto (o preto puro deixava tudo com cara de bola de desenho)
+      ctx.fillStyle = CANOPY_INK;
       for (const ci of circles) {
-        ctx.fillStyle = INK;
         ctx.beginPath();
-        ctx.arc(ci.x, ci.y, ci.r + ink * 1.4, 0, M.TAU);
+        ctx.arc(ci.x, ci.y, ci.r + ink * 1.25, 0, M.TAU);
         ctx.fill();
       }
       const L = cam.lightScreen;
+      const toLight = Math.atan2(L.y, L.x);
       circles.forEach((ci, k) => {
-        // cachos de baixo/trás escuros; na figueira o tom vem da altura do cacho (tier 0 embaixo, 2 em cima)
-        const back = ci.tier !== undefined ? ci.tier === 0 : k < circles.length * 0.4;
-        ctx.fillStyle = back ? this.colors.shade : this.colors.base;
+        const back = ci.tier === 0;
+        ctx.fillStyle = back ? col.shade : col.base;
         ctx.beginPath();
         ctx.arc(ci.x, ci.y, ci.r, 0, M.TAU);
         ctx.fill();
         if (k) {
-          ctx.strokeStyle = INK;
+          ctx.strokeStyle = 'rgba(19, 34, 26, 0.55)';
           ctx.lineWidth = ink * 0.6;
           ctx.stroke();
         }
-        // meia-lua de sombra e brilho
         ctx.save();
         ctx.beginPath();
         ctx.arc(ci.x, ci.y, ci.r, 0, M.TAU);
         ctx.clip();
-        ctx.fillStyle = back ? this.colors.under : this.colors.shade;
+        // meia-lua de sombra do lado longe da luz
+        ctx.fillStyle = back ? col.under : col.shade;
         ctx.beginPath();
         ctx.arc(ci.x, ci.y, ci.r, 0, M.TAU);
         ctx.arc(ci.x + L.x * ci.r * 0.42, ci.y + L.y * ci.r * 0.42, ci.r, 0, M.TAU, true);
         ctx.fill('evenodd');
-        if (!back) {
-          const lift = ci.tier === 2 ? 0.4 : 0.25;
-          ctx.fillStyle = this.colors.light;
+        // folhagem: tufos de folha do lado da luz, cada um com a beirada escura do outro lado
+        const tuft = back ? M.mix(col.shade, col.base, 0.5) : ci.tier === 2 ? col.light : M.mix(col.base, col.light, 0.55);
+        const tufts = back ? 3 : 5;
+        for (let f = 0; f < tufts; f++) {
+          const a = toLight + (r() - 0.5) * 2.4;
+          const dist = ci.r * (0.22 + r() * 0.5);
+          const tr = ci.r * (0.17 + r() * 0.11);
+          const x = ci.x + Math.cos(a) * dist;
+          const y = ci.y + Math.sin(a) * dist;
+          ctx.fillStyle = back ? col.under : col.shade;
           ctx.beginPath();
-          ctx.arc(ci.x, ci.y, ci.r, 0, M.TAU);
-          ctx.arc(ci.x - L.x * ci.r * lift, ci.y - L.y * ci.r * lift, ci.r, 0, M.TAU, true);
-          ctx.fill('evenodd');
+          ctx.arc(x - L.x * tr * 0.28, y - L.y * tr * 0.28, tr, 0, M.TAU);
+          ctx.fill();
+          ctx.fillStyle = tuft;
+          ctx.beginPath();
+          ctx.arc(x, y, tr, 0, M.TAU);
+          ctx.fill();
+        }
+        // vãos escuros entre as folhas, do lado da sombra
+        ctx.fillStyle = col.under;
+        for (let g = 0; g < 2; g++) {
+          const a = toLight + Math.PI + (r() - 0.5) * 1.4;
+          const dist = ci.r * (0.55 + r() * 0.25);
+          ctx.beginPath();
+          ctx.ellipse(ci.x + Math.cos(a) * dist, ci.y + Math.sin(a) * dist, ci.r * 0.12, ci.r * 0.08, a, 0, M.TAU);
+          ctx.fill();
         }
         ctx.restore();
       });
-      // folhinhas/flores soltas na borda
-      ctx.fillStyle = this.colors.light;
-      for (let k = 0; k < 26; k++) {
+      // folhinhas soltas na borda
+      ctx.fillStyle = col.light;
+      for (let k = 0; k < 10; k++) {
         const ci = circles[Math.floor(r() * circles.length)];
         const a = r() * M.TAU;
         ctx.beginPath();
-        ctx.arc(ci.x + Math.cos(a) * ci.r * 0.7, ci.y + Math.sin(a) * ci.r * 0.7, Math.max(1.2, 4 * cam.zoom), 0, M.TAU);
+        ctx.arc(ci.x + Math.cos(a) * ci.r * 0.7, ci.y + Math.sin(a) * ci.r * 0.7, Math.max(1, 3 * cam.zoom), 0, M.TAU);
         ctx.fill();
+      }
+    }
+    /** Copa comum: cachos menores numa cúpula achatada (mais larga do que alta). */
+    _leafBlobs(blobs, c, r) {
+      const cam = this.cam;
+      const t = this.t;
+      const n = 10 + Math.round(t.r / 32);
+      for (let k = 0; k < n; k++) {
+        const a = r() * M.TAU;
+        const q = k < 2 ? r() * 0.25 : Math.sqrt(0.1 + r() * 0.9);
+        const d = q * t.r * 0.72;
+        const z = t.r * (0.3 * (1 - q * q) - 0.1) + (r() - 0.5) * t.r * 0.12;
+        const p = { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: c.z + z };
+        const rel = (p.z - c.z) / t.r;
+        blobs.push({ p, r: t.r * (0.26 + r() * 0.1), depth: cam.depth(p) + z * 0.3, tier: rel < -0.03 ? 0 : rel > 0.14 ? 2 : 1 });
       }
     }
     /**

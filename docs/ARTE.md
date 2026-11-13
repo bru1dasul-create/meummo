@@ -340,6 +340,12 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   mostra os anéis), aguapé (círculos deitados na água e flor lilás), capivara (bolas ao longo do corpo, que ficam
   redondas de qualquer lado; com fatias de pé ela virava listras olhando a 135° e 315°) e o símbolo aceso da Pedra do
   Véu. A água ganhou reflexo claro na margem. Prancha de conferência em `scratchpad` (não fica no repositório).
+- **Crítica do dono à mata (13/11, repassada pelo [mundo])**: "bolas verdes enormes empilhadas que enchem a tela" e
+  lago "cheio de pintinhas". Copas: cachos menores numa cúpula achatada (10 + raio/32 cachos), tom pela altura,
+  tufos de folha do lado da luz com beirada escura, vãos escuros do lado da sombra, contorno verde quase preto
+  (`CANOPY_INK`) e cada árvore com um tom um pouco diferente. Água (`Ground._water`): sem pintas; funda e escura no
+  meio, clareando em 16 faixas até a margem, espuma na beira e marolas finas. A quantidade de árvores, as trilhas sem
+  copa, tirar os ipês e a margem do lago são do [mundo].
 - Falta: o Curupira no 2.5D (hoje sai o protagonista com outra roupa), as atmosferas (Etapa 5, com a neblina da
   mata profunda) e a luz do poste.
 - Conferido em 12/11 no `/?novo` (PC 1600x900, Pixel 7 em pé e deitado): sem erros na página, tocar no Curupira

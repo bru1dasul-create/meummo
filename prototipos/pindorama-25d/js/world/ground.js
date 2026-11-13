@@ -541,17 +541,6 @@
         shapePath(ctx, sh);
         ctx.fillStyle = sh.color || mat.base;
         ctx.fill();
-        if (sh.type === 'agua') {
-          // reflexo claro junto da margem
-          ctx.save();
-          shapePath(ctx, sh);
-          ctx.clip();
-          shapePath(ctx, sh);
-          ctx.strokeStyle = 'rgba(160, 235, 220, 0.16)';
-          ctx.lineWidth = 70;
-          ctx.stroke();
-          ctx.restore();
-        }
       }
       this._texture(ctx, sh, box, n + 1);
       if (sh.type === 'circulo') this._circleStone(ctx, sh);
@@ -571,6 +560,7 @@
 
   /** Pontinhos de textura da forma, só dentro dela e dentro do pedaço. */
   Ground.prototype._texture = function (ctx, sh, box, seed) {
+    if (sh.type === 'agua') return this._water(ctx, sh, box, seed);
     const mat = matOf(sh.type);
     const b = shapeBox(sh);
     const i0 = Math.floor(Math.max(b.x0, box.x0) / 100), i1 = Math.floor(Math.min(b.x1, box.x1) / 100);
@@ -603,6 +593,64 @@
         }
       }
     }
+  };
+
+  /**
+   * Água (o dono achou o lago "cheio de pintinhas"): funda e escura no meio, clareando em faixas suaves até a margem,
+   * uma linha de espuma na beira e marolas finas aqui e ali. Tudo em cm do chão (o pedaço já está na projeção do chão,
+   * então um arco de círculo vira a marola achatada da câmera).
+   */
+  Ground.prototype._water = function (ctx, sh, box, seed) {
+    const base = sh.color || MAT.agua.base;
+    ctx.save();
+    shapePath(ctx, sh);
+    ctx.clip();
+    ctx.fillStyle = M.shade(base, -0.38);
+    shapePath(ctx, sh);
+    ctx.fill();
+    // da parte funda para a margem: cada faixa (o traço dentro da forma recortada) um pouco mais clara
+    ctx.lineJoin = 'round';
+    // muitas faixas com passo pequeno: a passagem do fundo para a margem fica suave (sem degraus de mapa de relevo)
+    const N = 16;
+    for (let k = 0; k < N; k++) {
+      const u = k / (N - 1);
+      ctx.strokeStyle = M.shade(base, -0.34 + u * 0.56);
+      ctx.lineWidth = 1400 * Math.pow(1 - u, 1.6) + 70;
+      shapePath(ctx, sh);
+      ctx.stroke();
+    }
+    // espuma na beira
+    ctx.strokeStyle = 'rgba(214, 246, 238, 0.42)';
+    ctx.lineWidth = 16;
+    shapePath(ctx, sh);
+    ctx.stroke();
+    // marolas: arcos finos e claros, poucos
+    const b = shapeBox(sh);
+    const i0 = Math.floor(Math.max(b.x0, box.x0) / 200), i1 = Math.floor(Math.min(b.x1, box.x1) / 200);
+    const j0 = Math.floor(Math.max(b.y0, box.y0) / 200), j1 = Math.floor(Math.min(b.y1, box.y1) / 200);
+    ctx.lineCap = 'round';
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const r = cellRng(i, j, seed + 31);
+        if (r() > 0.42) continue;
+        const x = (i + r()) * 200;
+        const y = (j + r()) * 200;
+        if (!inside(sh, x, y)) continue;
+        const rad = 30 + r() * 45;
+        const a0 = -2.4 + r() * 0.6;
+        ctx.strokeStyle = `rgba(206, 244, 236, ${0.2 + r() * 0.14})`;
+        ctx.lineWidth = 4 + r() * 2;
+        ctx.beginPath();
+        ctx.arc(x, y, rad, a0, a0 + 1 + r() * 0.5);
+        ctx.stroke();
+        if (r() < 0.5) {
+          ctx.beginPath();
+          ctx.arc(x + 14, y + 10, rad * 0.62, a0 + 0.2, a0 + 1.1);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
   };
 
   /** O círculo ancestral no chão: pedra com anéis e rachaduras entalhadas (o brilho vem do mundo, animado). */
