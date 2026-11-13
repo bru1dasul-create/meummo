@@ -545,3 +545,54 @@ describe('Mapa 01 (Capão), etapa 4c: campinho, viaduto e saídas', () => {
     expect(reach(95.25, 44)).toBe(false); // o fim da rua da vila (a estação fica para depois)
   });
 });
+
+describe('Mapa 01 (Capão): o resto do Capão (4c) no padrão novo (aprovado pelo dono em 13/11)', () => {
+  const cenario = layer('cenario');
+  const chao = layer('chao');
+  const one = (type: string) => cenario.find((o) => o.type === type)!;
+
+  it('o viaduto, os pilares e o trem tomados pela mata; o ônibus virou a horta; a casa abandonada fica inteira, com uma árvore pelo telhado', () => {
+    expect(prop(one('viaduto'), 'arvoresNoTopo')).toBe(true);
+    expect(Number(prop(one('viaduto'), 'cipo'))).toBeGreaterThan(0);
+    for (const p of cenario.filter((o) => o.type === 'pilar-viaduto')) expect([prop(p, 'pixo'), prop(p, 'musgo')]).toEqual([true, true]);
+    expect([prop(one('trem'), 'cipo'), prop(one('trem'), 'plantas')]).toEqual([true, true]);
+    expect(prop(one('onibus'), 'horta')).toBe(true);
+    const abandoned = cenario.find((o) => o.type === 'casa' && prop(o, 'abandonada') === true)!;
+    expect(prop(abandoned, 'arvoreDentro')).toBe(true);
+    expect(reach(at(abandoned).x, at(abandoned).y)).toBe(false); // continua uma casa (não dá para entrar)
+    expect(cenario.filter((o) => o.type === 'cipo').length).toBeGreaterThan(8);
+  });
+
+  it('um caminho de terra liga a viela ao vão embaixo do viaduto, e dá para andar por ele', () => {
+    const path = chao.find((o) => o.type === 'trilha' && o.polyline && Math.abs(o.polyline[0]!.x / M + o.x / M - 80) < 0.01)!;
+    expect(path).toBeDefined();
+    for (const p of path.polyline!) expect(reachNear((path.x + p.x) / M, (path.y + p.y) / M, 0.6), `caminho em (${(path.x + p.x) / M}, ${(path.y + p.y) / M})`).toBe(true);
+  });
+
+  it('o campinho com o mato entrando, traves enferrujadas com a rede rasgada, o muro com cipó e cadeiras para quem assiste', () => {
+    for (const t of cenario.filter((o) => o.type === 'trave')) expect([prop(t, 'ferrugem'), prop(t, 'cipo'), prop(t, 'rede')]).toEqual([true, true, 'rasgada']);
+    expect(Number(prop(one('muro'), 'cipo'))).toBeGreaterThan(0);
+    const chairs = cenario.filter((o) => o.type === 'cadeira' && at(o).y > 61 && at(o).y < 62);
+    expect(chairs).toHaveLength(4);
+    // as cadeiras não fecham a passagem entre a praça e o campinho
+    for (const x of [67.5, 72, 77.5]) expect(reachNear(x, 61.6, 0.4), `beira do campinho em x = ${x}`).toBe(true);
+  });
+
+  it('a rua para Guarapiranga: faixa apagada, rachaduras, buracos e raízes, sem fechar a rua', () => {
+    const onRoad = (x: number, y: number) => x > 88 && x < 94 && y > 80 && y < 114.5;
+    expect(chao.some((o) => o.type === 'faixa-rua' && o.polyline!.every((p) => Math.abs((o.x + p.x) / M - 91) < 0.01))).toBe(true);
+    expect(chao.filter((o) => o.type === 'rachadura' && o.polyline!.every((p) => onRoad((o.x + p.x) / M, (o.y + p.y) / M))).length).toBeGreaterThan(4);
+    expect(chao.filter((o) => o.type === 'buraco' && onRoad(o.x / M, o.y / M)).length).toBeGreaterThanOrEqual(2);
+    for (let y = 81; y <= 113; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
+  });
+
+  it('a Figueira do Viaduto fica na beira do parque, perto da ponta quebrada, sem tampar trilha nem fechar o caminho dos saguis', () => {
+    const fig = cenario.find((o) => o.name === 'Figueira do Viaduto')!;
+    expect(prop(fig, 'especie')).toBe('figueira');
+    expect(Number(prop(fig, 'altura'))).toBeGreaterThan(10);
+    const { x, y } = at(fig);
+    expect(x).toBeLessThan(48); // no parque
+    expect(y).toBeLessThan(10); // perto do viaduto (y 2 a 6)
+    expect(reachNear(x, y + 2.5, 0.5)).toBe(true); // dá para chegar perto do tronco
+  });
+});
