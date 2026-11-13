@@ -112,6 +112,18 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [x] **[dono]** Nascimento no **Parque Santo Dias** (Capão Redondo). Capítulo 1, do mais fácil ao mais difícil:
   Capão Redondo e o parque → Guarapiranga → Santo Amaro (Largo Treze, Terminal e o Shopping do Largo Treze, sem
   o nome da rede) → Billings → o centro (Sé) no fim do jogo
+- [x] **[dono]** Pausa para capricho (13/11): parar de avançar e melhorar o detalhe dos mapas (o dono achou a arte
+  "ruinzinha": a rua não parece rua, a calçada não parece calçada), uma área por vez, começando pela rua e pela praça
+  da Budega. **Direção de arte nova:** a floresta reinando sobre a cidade inteira, pós-apocalíptico em versão
+  brasileira, sem barraco destruído (casas e prédios inteiros, tomados pela mata; a vila continua viva). Referências
+  aprovadas: `docs/referencias/padrao-rua-floresta.jpg` (a rua da Budega, com o detalhe que se quer) e
+  `docs/referencias/padrao-cidade-floresta.jpg` (o bairro inteiro). O Mapa 02 para depois do pedaço (a)
+- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: a planta no papel primeiro ("vamos ver no papel", 13/11),
+  depois o mapa: meio-fio, faixas apagadas, remendos, buracos, bueiros, tampas, poças, raízes levantando a calçada,
+  uma figueira rompendo o asfalto, cipó nos postes e nos fios, plantas nas lajes, moto e carro com mato, placa de rua,
+  cadeiras na calçada, varal, prédios de conjunto habitacional no fundo, sem mudar de lugar o que já foi aprovado
+- [ ] **[arte]** O chão no padrão novo: asfalto (rachaduras, remendos, faixas apagadas), calçada de placas de cimento
+  (juntas, placas levantadas por raiz, mato nas frestas), meio-fio com sarjeta; e as coisas novas que a planta trouxer
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
