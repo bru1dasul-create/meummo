@@ -43,10 +43,37 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   virando vaso). Feitas com o Nano Banana, por cima da arte aprovada (estilo) e de um print do jogo (arranjo). O
   próximo passo que ele pediu: **"vamos ver no papel"** (a planta da rua e da praça no padrão novo, para aprovar). O
   desenho do chão (asfalto, calçada) é da [arte]; o que fica em cima (meio-fio, bueiro, faixa, raiz, placa...) é meu.
+- **A rua da Budega no padrão novo está na `main` (13/11)**, com o desenho da [arte] (chão e objetos em pé), conferida
+  no jogo no PC e no celular. **Regra do dono para postes:** na rua, os postes e os fios ficam na calçada que para a
+  câmera fica atrás de quem anda (a das casas, no norte da rua do portão), nunca na calçada da frente nem atravessando
+  a rua ("pra não ficar na frente do personagem e não ficar tão poluído"). Cadeiras e coisas na calçada não tampam
+  portas. Vem aí (aprovado pelo dono, na fila da [arte] depois da conversa com NPC): **a Budega com interior**, como
+  no HumanitZ (o telhado e as paredes da frente somem quando se entra); a minha parte será o chão de dentro, a porta
+  aberta na colisão e a Xiovanna atrás do balcão.
+- **O resto do Capão (4c) no padrão novo, aprovado (13/11, "pode mandar pra arte"):** no ramo `mundo/etapa-4c` (bloco
+  `reached('4c') && FLORESTA`, sorteio `SEED + 12`). Propriedades novas: `viaduto` (`cipo`, `arvoresNoTopo`),
+  `pilar-viaduto` (`pixo`, `musgo`, `cipo`), `trem` (`cipo`, `plantas`, `janelasQuebradas`), `onibus` (`horta`),
+  `casa` abandonada (`arvoreDentro`), `trave` (`ferrugem`, `cipo`, `rede`), `muro` (`cipo`, `musgo`), e a `arvore`
+  'Figueira do Viaduto' (`abraca: 'viaduto'`). Referências: `docs/referencias/capao-*-planta.jpg` e
+  `capao-*-aprovado.jpg`. **Na `main` desde 13/11 ("pode, junta"):** a faixa de pedestre na esquina e o semáforo
+  quebrado soltando faísca (o desenho do `semaforo` é da [arte]; o mapa lê `altura`, `olhando`, `quebrado`, `faiscas`).
+- **A Figueira da Esquina mudou para a calçada da casa rosa (13/11, na `main`, aprovado: "pode seguir com as
+  alterações"):** na esquina do portão, a copa alta "subia" na tela e tampava 19 m da trilha do norte do parque, bem
+  onde andam os saguis; na esquina ela tampa em qualquer tamanho (só a partir de x ≈ 67, na calçada das casas, deixa
+  de tampar). Agora em (68; 40,25), com raízes novas (as `raiz` que começam perto do tronco viram o pé dela no desenho
+  da [arte]) e o poste da casa rosa em x = 71,2. **Regra:** árvore alta da vila não tampa trilha do parque (o gerador
+  confere a figueira com `hidesView`; o teste confere todas as árvores da vila).
+- **O parque antigo, aprovado (13/11, mesmo "pode"):** no ramo `mundo/parque-antigo` (por cima da 4c; bloco
+  `FLORESTA` antes da etapa 4b, sorteio `SEED + 13`; tudo fora das trilhas e sem vão de entalar, com a função `near`
+  procurando lugar em espiral). Tipos e propriedades: `placa` (`tamanho: 'grande'`, `mato`), `bebedouro` (`quebrado`,
+  `musgo`), `banco` (`material: 'concreto'`, `mato`), `lixeira` (`mato`), `poste-praca` (`apagado`, `torto`, `cipo`),
+  `academia` (`aparelho`, `ferrugem`, `cipo`) e `calcada` em polígono (`desenho: 'placas'`, `quebrada`). Referências:
+  `docs/referencias/parque-*.jpg`. Entra na `main` com o desenho da [arte], depois da 4c.
 - **A planta da rua da Budega foi aprovada (13/11, "pode mandar se for essa aqui, show"):** a imagem do Nano Banana
   feita por cima da minha prévia de perto (`docs/referencias/rua-budega-aprovada.jpg`, com a planta numerada em
   `rua-budega-planta.jpg`) é o alvo. No gerador, a constante `FLORESTA` (sorteio `SEED + 11`, nada muda de lugar); ramo
-  `mundo/rua-floresta`. Tipos novos no `chao`: `meio-fio`, `faixa-rua`, `remendo`, `buraco`, `poca`, `rachadura`,
+  **`mundo/rua-budega`** (por cima da `main`, sem a 4c: entra assim que o chão da [arte] ficar pronto; o
+  `mundo/rua-floresta` é o mesmo por cima da 4c, só de guarda). Tipos novos no `chao`: `meio-fio`, `faixa-rua`, `remendo`, `buraco`, `poca`, `rachadura`,
   `bueiro`, `tampa`, `raiz` e `planta` capim (com `largura` e `cor`, para um desenho que ainda não os conhece mostrar
   só um traço fino); no `cenario`: `predio`, `moto`, `placa-rua`, `cadeira`, `vaso`, `lixo` e a figueira com
   `rompendo`; propriedades novas em `casa` (`cipo`, `plantas`, `arvoreNaLaje`, `varal`, `musgo`, `grade`,
@@ -103,6 +130,19 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     beira da vila fechada por mata. Regras novas: a câmera não pode ter o portão, a rua, o balcão, o letreiro e a
     fogueira tampados (por isso a árvore da praça ficou no canto sudeste), e nenhum vão de 0,3 a 1,2 m entre duas
     coisas sólidas de frente uma para a outra (um orelhão a 40 cm de um poste entalou o personagem).
+  - **Mata nova (pedido do dono em 13/11; aprovada por ele no mesmo dia; na `main` em 13/11 com o desenho da [arte], conferida no jogo no PC e no celular):** o dono não gostou da
+    mata ("muito pequena, muita árvore, caminho sem árvore, cores fortes, plantas diferentes, mais sombria, árvore normal
+    e não redonda, árvore seca") e escolheu: 50% maior para o sul (o mapa passa a 96 × 120 e a vila continua até y = 80;
+    o pedaço ao sul da vila é mata fechada de enfeite), todas as plantas e "mudar a trilha e o lago" para a figueira não
+    tampar. O que mudou: ~100 árvores grandes em 48 × 120 (antes 213 em 48 × 80); trilhas novas (norte pelos saguis,
+    lago, sul até a Clareira das Bananeiras e, pela pinguela, ao recanto do Véu); lago em (16, 50) com deque; riacho até
+    a beira sul; jerivá, embaúba, xaxim, bananeira e árvore seca (`arvore`), `bambu` (bloqueia), `planta` (samambaia,
+    helicônia, taboa e cogumelo que brilha), `deque` e `pinguela` (dá para andar em cima); escuro e neblina nas áreas
+    (vale a menor). Regras novas no gerador e nos testes: nenhuma copa tampa trilha ou lago, nem de cima nem da
+    câmera, e a figueira não tampa nada além da própria clareira. Saguis em x 32 a 46 × y 6 a 24, jararacas em
+    x 16 a 26 × y 92 a 112. Entra na `main` depois da 4b e do desenho dessas coisas pela [arte] (senão o bambu vira
+    parede invisível e o deque parece água). Para aumentar de novo depois (o dono perguntou): subir `H` e pôr as
+    coisas novas no sul; o que existe não muda de lugar, nem os NPCs (`data/npcs.json`).
   - **4c:** campinho de várzea em (60 a 85, 63 a 78); muro com grafite em x = 58 (y 62 a 78); viaduto da Linha
     5-Lilás no fundo (y 2 a 6, x 48 a 96, 8 m de altura, com o trem lilás parado) e um ônibus velho embaixo; saídas
     sul (x 88 a 94, y = 80) → Guarapiranga e leste (x = 96, y 41 a 47) → Estação Capão Redondo (depois). Regra: o que

@@ -37,6 +37,8 @@
       fences: [],
       pillars: [],
       veils: [],
+      // bandeirinhas (cordões no alto, de ponto a ponto)
+      bunting: [],
       // rentes ao chão (deque e pinguela): desenhados logo depois do chão, antes de quem fica em pé
       flats: [],
       colliders: [],
@@ -51,6 +53,7 @@
       poles: [],
       wires: [],
       trafficLight: null,
+      trafficLights: [],
     };
 
     for (const o of objs('chao')) {
@@ -58,17 +61,22 @@
       const pr = props(o);
       if (o.polyline) {
         const pts = o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
-        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor });
+        // linhas da rua (meio-fio, faixa-rua, rachadura, raiz): altura, tracejada, apagada, sarjeta e mato
+        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor, height: pr.altura != null ? pr.altura * 100 : null, dashed: !!pr.tracejada, faded: !!pr.apagada, gutter: !!pr.sarjeta, weeds: !!pr.mato });
       } else if (o.ellipse) {
         const r = rect(o);
-        const s = { type: k, kind: 'ellipse', cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2, rx: (r.x1 - r.x0) / 2, ry: (r.y1 - r.y0) / 2 };
+        const s = { type: k, kind: 'ellipse', cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2, rx: (r.x1 - r.x0) / 2, ry: (r.y1 - r.y0) / 2, color: pr.cor };
         map.shapes.push(s);
         if (k === 'circulo') map.awakening = { x: s.cx, y: s.cy, r: Math.min(s.rx, s.ry), color: pr.brilho || '#3fd6c8' };
       } else if (o.polygon) {
         const pts = o.polygon.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
         map.shapes.push({ type: k, kind: 'poly', pts, color: pr.cor });
+      } else if (o.point || (!o.width && !o.height)) {
+        // pontos no chão (bueiro, tampa, buraco, capim): `raio`, `olhando`, `agua`, `tipo`
+        map.shapes.push({ type: k, kind: 'point', x: o.x * CM, y: o.y * CM, r: pr.raio ? pr.raio * 100 : null, angle: pr.olhando || 0, water: !!pr.agua, plant: pr.tipo || null, color: pr.cor });
       } else {
-        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras });
+        // `estado` (asfalto rachado), `musgo` (praça) e `linhas` (campinho)
+        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras, state: pr.estado || null, moss: !!pr.musgo, lines: !!pr.linhas });
       }
     }
 
@@ -79,7 +87,7 @@
       const x = o.x * CM;
       const y = o.y * CM;
       if (k === 'arvore') {
-        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '' });
+        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo });
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {
@@ -94,11 +102,14 @@
         map.props.push({ kind: 'capivara', x, y, angle: pr.olhando || 0 });
       } else if (k === 'poste' && (pr.altura || 3.8) >= 5) {
         // poste de concreto da rua (com luminária e a fiação que passa por ele)
-        map.poles.push({ x, y, h: pr.altura * 100, lamp: !!pr.luz, light: pr.luz || '#ffe9a6' });
+        map.poles.push({ x, y, h: pr.altura * 100, lamp: !!pr.luz, light: pr.luz || '#ffe9a6', vine: !!pr.cipo });
+      } else if (k === 'semaforo') {
+        // semáforo de rua (ponto): `altura`, `olhando` (graus, para onde as luzes dão; 0 = leste), `quebrado` e `faiscas`
+        map.trafficLights.push({ x, y, h: (pr.altura || 4.6) * 100, facing: pr.olhando || 0, broken: !!pr.quebrado, sparks: !!pr.faiscas });
       } else if (k === 'poste' || k === 'poste-praca') {
         map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6' });
       } else if (k === 'fiacao' && o.polyline) {
-        wireLines.push(o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })));
+        wireLines.push({ pts: o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })), vine: !!pr.cipo });
       } else if (k === 'casa') {
         // casa da vila: a frente é o lado sul (+y), o que a câmera vê
         map.houses.push({
@@ -114,6 +125,29 @@
           shop: pr.comercio ? { type: pr.comercio, sign: pr.letreiro || '', awning: pr.toldo ? [pr.toldo, '#fff4dc'] : null } : null,
           // placa com o logo em cima da laje, no lugar do letreiro ('budega': o escudo da Budega, pedido do dono)
           logo: pr.logo || null,
+          // a casa tomada pela mata (planta da rua da Budega): `cipo` de 0 a 1 = quanto da fachada o cipó cobre
+          vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0,
+          plants: !!pr.plantas,
+          roofTree: !!pr.arvoreNaLaje,
+          clothes: !!pr.varal,
+          moss: !!pr.musgo,
+          grilles: !!pr.grade,
+          garage: !!pr.portao,
+        });
+      } else if (k === 'predio') {
+        // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje
+        map.houses.push({
+          ...rect(o),
+          h: (pr.altura || 14) * 100,
+          floors: pr.andares || 5,
+          wall: pr.cor || '#b8b2a6',
+          tank: !!pr.caixaDagua,
+          tower: true,
+          balconies: !!pr.varandas,
+          vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0,
+          roofTree: !!pr.arvoreNaLaje,
+          moss: true,
+          name: o.name || '',
         });
       } else if (k === 'banco') {
         map.props.push({ kind: 'banco', ...rect(o), angle: pr.olhando });
@@ -124,7 +158,20 @@
       } else if (k === 'orelhao' || k === 'lixeira') {
         map.props.push({ kind: k, x, y, angle: pr.olhando });
       } else if (k === 'carro') {
-        map.props.push({ kind: 'carro', ...rect(o), h: (pr.altura || 1.4) * 100, color: pr.cor || '#a8473e', weeds: !!pr.mato });
+        map.props.push({ kind: 'carro', ...rect(o), h: (pr.altura || 1.4) * 100, color: pr.cor || '#a8473e', weeds: !!pr.mato, tree: !!pr.arvore });
+      } else if (k === 'moto') {
+        // moto enferrujada (o lado comprido é o comprimento; `olhando` = para onde a frente aponta)
+        map.props.push({ kind: 'moto', ...rect(o), h: (pr.altura || 1.1) * 100, color: pr.cor || '#8a3a2a', weeds: !!pr.mato, angle: pr.olhando || 0 });
+      } else if (k === 'cadeira') {
+        map.props.push({ kind: 'cadeira', x, y, r: 25, angle: pr.olhando || 0, color: pr.cor || '#f2f2ee' });
+      } else if (k === 'vaso') {
+        map.props.push({ kind: 'vaso', x, y, r: 25, plant: pr.planta || 'espada-de-sao-jorge' });
+      } else if (k === 'lixo') {
+        map.props.push({ kind: 'lixo', ...rect(o), h: (pr.altura || 0.6) * 100 });
+      } else if (k === 'placa-rua') {
+        map.props.push({ kind: 'placa-rua', x, y, r: 10, text: pr.texto || '', text2: pr.texto2 || '' });
+      } else if (k === 'bandeirinhas' && o.polyline) {
+        map.bunting.push({ pts: o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })), h: (pr.altura || 3) * 100 });
       } else if (k === 'gradil' || k === 'portao') {
         map.fences.push({ ...rect(o), h: (pr.altura || 1.8) * 100, hasH: pr.altura !== undefined, gate: k === 'portao', open: !!pr.aberto, broken: pr.estado === 'quebrado', name: o.name || '' });
       } else if (k === 'pilar') {
@@ -151,11 +198,11 @@
       });
       return best;
     };
-    for (const line of wireLines) {
+    for (const { pts: line, vine } of wireLines) {
       for (let i = 0; i + 1 < line.length; i++) {
         const a = poleNear(line[i]);
         const b = poleNear(line[i + 1]);
-        if (a >= 0 && b >= 0 && a !== b) map.wires.push([a, b]);
+        if (a >= 0 && b >= 0 && a !== b) map.wires.push([a, b, vine]);
       }
     }
     // portões e gradis herdam a altura do gradil vizinho quando não dizem a deles

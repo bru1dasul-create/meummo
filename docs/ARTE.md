@@ -389,6 +389,91 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
       para 26 quadros por segundo com três passadas na tela inteira e voltou para 29 assim.
   - **Medido na área dos saguis do mapa de hoje** (PC/celular): árvores antigas sem clima, 27/23 quadros por
     segundo; árvores novas com clima, 25/25.
+- **Rua no padrão novo, o chão (13/11):** referências aprovadas `padrao-rua-floresta.jpg`, `rua-budega-aprovada.jpg` e
+  a planta `rua-budega-planta.jpg`. Tudo em `js/world/street.js` (carrega logo depois do `ground.js`; está nas três
+  listas de scripts), pintado no chão uma vez por pedaço da tela:
+  - `PD.street.texture[tipo]` troca a textura de superfície: asfalto (grão miúdo, manchas fracas de tom e de óleo,
+    trincas; o `estado` 'rachado' tem mais, com "couro de jacaré"), calçada com `desenho` 'placas' (placas de ~70 cm,
+    juntas escuras, umas trincadas, manchas de musgo, levantadas perto de raiz, mato nas frestas) e o campinho (terra
+    batida, grama nas beiradas e as linhas de cal se tiver `linhas`). A praça com `musgo` ganha musgo e capim, mais
+    nas beiradas.
+  - `PD.street.paint[tipo]` desenha as formas que são só detalhe: meio-fio (o lado da rua é achado pelo asfalto
+    vizinho; tampo claro com juntas, sarjeta suja e, quando a rua fica do lado da câmera, a face do meio-fio descendo:
+    a rua parece mais baixa), faixa-rua (tracejada e apagada), remendo, buraco (com água), poça, rachadura (com mato),
+    bueiro (a grade deitada ao longo do meio-fio, `olhando` = para onde a boca dá), tampa, raiz (cordão que afina, com
+    sombra, lado de cima claro e o chão trincado em volta) e capim (planta `capim` na camada do chão).
+  - Capim e mato sobem na tela: no chão, subir `h` cm é andar (-k·h, -k·h), com k = cosP / (2·K·sinP).
+  - `PD.street.breaks` quebra o chão em volta da árvore com `rompendo` (terra, pedaços levantados, trincas).
+  - O leitor do mapa (`tmj.js`) passa as propriedades novas: nas linhas `altura`, `tracejada`, `apagada`, `sarjeta`,
+    `mato`; nos retângulos `estado`, `musgo`, `linhas`; os pontos do chão (`raio`, `olhando`, `agua`, `tipo`); e o
+    `rompendo` da árvore.
+  - A figueira só tem os símbolos que brilham se tiver um véu a menos de 4 m (a Figueira da Esquina é só uma árvore
+    grande da cidade).
+  - Custo de um pedaço do chão (512 px) na rua: 6,6 ms no PC e 24,6 ms no celular de teste, quase o mesmo de antes
+    (6,5 e 23,6 ms).
+- **Rua no padrão novo, as coisas em pé (13/11):** `js/world/city.js` (carrega depois do `flora.js`; nas três listas de
+  scripts) e mudanças no `props.js`.
+  - `PD.city.small[tipo]` (o `Small` pergunta a ele depois da flora): `placa-rua` (poste fino e duas plaquinhas azuis
+    cruzadas no alto, `texto` ao longo de x e `texto2` ao longo de y, desenhadas na parede de cada uma com
+    `cam.wallMatrix`; a largura sai do tamanho do texto), `moto` (referencial girado pelo `olhando`, inclinada no
+    descanso; rodas no plano de pé, tanque, banco, motor, guidão e farol; com `mato`, cipó por cima e capim em volta),
+    `cadeira` (de plástico; encosto e pernas na ordem certa conforme a frente vira para a câmera ou não), `vaso` (barro
+    com espadas-de-são-jorge: verde-escuro com faixas claras e borda amarela) e `lixo` (sacos pretos com brilho e nó).
+  - `PD.city.bunting`: o cordão de bandeirinhas (`bandeirinhas` no mapa, polilinha com `altura`), caindo no meio,
+    as bandeirinhas a cada 38 cm, de cores alternadas, balançando (desenhadas a cada quadro, depois dos fios).
+  - `PD.city.wireVines` (fio com `cipo`): folhas enroladas no fio do meio e fiapos pendurados que balançam;
+    `PD.city.poleVine` (poste com `cipo`): espiral de cipó subindo e fiapos caindo da cruzeta.
+  - Casa (`props.js`): `cipo` (0 a 1) = cortinas de cipó caindo da laje e ramos subindo do chão (`overgrowth`),
+    `musgo` (manchas de chuva escorrendo e musgo no rodapé e na beirada), `portao` (portão de garagem de ferro com
+    frisos e ferrugem), e na laje (`roofItems`, do fundo para a frente) a caixa d'água, `plantas` (samambaias e
+    arbustos da flora), `arvoreNaLaje` (árvore pequena com tronco e copa de tufos) e `varal` (roupas na parede
+    imaginária do fio). O escudo da Budega é desenhado depois da laje (planta nenhuma fica na frente da marca).
+  - `predio` (no mapa) vira uma casa alta (`tower`): 5 andares, varandas embaixo das janelas, a entrada no meio com a
+    marquise e a placa do bloco (o nome do prédio, "Bloco B"), o cipó sem cobrir a entrada e duas caixas d'água.
+  - Carro com `arvore`: o tronco sai pelo teto (o teto rasgado em volta) e a copa abre em cima.
+- **Correções do dono na rua (13/11):** a Figueira da Esquina (`rompendo`) tem raízes do tronco curtas e baixas. As
+  `raiz` do chão foram refeitas ("tá feio demais essa raiz": grossas por igual e de outra cor, pareciam um cano): a raiz
+  sai grossa e afina, se divide em raízes menores (dois níveis, poucos galhinhos para não virar graveto), tem a cor da
+  casca da figueira, é um pouco alta (lado de cima claro, sombra no chão, sulco da casca) e entra no asfalto num trecho
+  e sai adiante (o buraco escuro e pedrinhas). O chão quebrado em volta da árvore vai antes dos detalhes do chão (as
+  raízes passam por cima dos pedaços). A caixa d'água virou a
+  de plástico das lajes (corpo que abre para cima com dois anéis, tampa com cúpula e pegador, cano branco, calço de
+  madeira). O carro foi refeito: perfil de sedã esticado na largura, portas, vidros (um quebrado), faróis, rodas
+  murchas, ferrugem; o mato virou musgo no teto e no capô, cipó e capim (antes eram bolas verdes).
+- **Raízes da Figueira da Esquina, de novo (13/11, referência do dono mandada no chat: o tronco abrindo em muitas
+  raízes redondas que serpenteiam pela calçada e pelo asfalto, placas levantadas, musgo, folhas secas).** O que o dono
+  achou feio, para não repetir: "cano" grosso por igual; galhinhos que pareciam gravetos; "garras" enroladas no pé; a
+  base lisa como uma saia; pontas rombudas com monte de terra (pareciam tora cortada); faces retas (tábuas).
+  - Os caminhos das raízes saem de `PD.street.figRootPaths` (street.js): as `raiz` do mapa, começando no centro do
+    tronco, e raízes a mais nos vãos maiores que ~50° (nenhuma entra em casa). O pé do tronco (`_figButtress`, props.js)
+    e o chão usam os mesmos caminhos e a mesma largura (`rootWidth`): o pé nasce dentro do tronco largo e alto e, a
+    2,3 raios do centro, tem a largura e a altura da raiz do chão, sem contorno — as duas viram uma só.
+  - Corte em meia elipse (lombo redondo) em faixas, cada uma com a cor da luz que recebe (mesma paleta no pé e no
+    chão); musgo irregular no alto; a ponta afina, fica rente e some na terra escura; às vezes a raiz passa por baixo
+    do chão (trinca por cima) e sai adiante. Galhos: até dois na principal e um no galho, cedo e abrindo para o lado;
+    raiz fina (árvore pequena) não se divide.
+  - `breaks` (o chão em volta): terra escura com manchas, placas de calçada levantadas (o lado aparece, beirada clara
+    do lado da luz, trinca e capim), pedaços de asfalto quase rentes, trincas e folhas secas; as raízes a mais são
+    pintadas aqui, as do mapa por cima.
+  - A Figueira dos Despertos também ganhou o pé novo (o dono aprovou em 13/11): na mata, `breaks` só pinta a terra
+    escura e as raízes (`plain`: sem trincas, lascas nem placas), mais curtas; nenhuma raiz entra no círculo do
+    despertar, em casa ou no pé de poste e de semáforo (`blocked`). As raízes antigas em garra (`_figRoot`) saíram.
+- **Conversa com NPC, parte 2 (13/11).** `PD.View.focus(ponto|null)`: a câmera mira um ponto do chão um pouco mais
+  perto da câmera que o pé de quem fala (16% da altura da tela; 20% no celular em pé), então a pessoa fica acima do
+  meio e a fala embaixo não a cobre; o NPC parado vira para você. `talk(id, ms)`: gente abre e fecha a boca em
+  sílabas (`look.mouthOpen`) e levanta a sobrancelha; criatura usa o `talk` dela (a Xiovanna já tinha). O seu
+  personagem entre a câmera e quem fala fica com 32% de opacidade (`_conversationAlpha`). A janela (`talk.ts`)
+  liga o modo `cinema` quando a página tem o `canvas.mundo-novo`: plaquinha do nome na cor de NPC, a fala grande
+  escrita no ritmo da boca (55 ms por letra, até 7 s; tocar mostra tudo), o pedido da missão nova vira a fala (não
+  repete no cartão), rodapé com Ver a loja e Tchau. CSS: `#talk.cinema` (embaixo, 760 px, até 46% da altura; no
+  celular, a largura toda até 54%) e `.shop-portrait` escondido no jogo 2.5D.
+- **Semáforo quebrado (13/11, pedido do dono: "coloca um semáforo aí quebrado saindo faísca").** `semaforo` no mapa
+  (ponto: `altura`, `olhando` em graus, `quebrado`, `faiscas`) vira `map.trafficLights` e um `TrafficLight` com `rig`
+  (props.js): poste cinza de São Paulo com ferrugem e cipó, o braço sobre a rua (vai para o lado que tem asfalto a
+  3 m) entortado para baixo, a caixa de luzes preta com anteparo amarelo pendurada torta por dois fios, lentes
+  apagadas com pala (a verde trincada), a caixinha de força aberta com fios coloridos e um fio solto descascado. A
+  amarela pisca falhada (~a cada 4 s, `draw`); as faíscas são partículas do mundo (`faisca` cai e quica no chão,
+  `clarao` é o estouro), de `sparkPoints()`, de 1,4 a 5 s, às vezes duas seguidas (`World.update`).
 - **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
   de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
   - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a

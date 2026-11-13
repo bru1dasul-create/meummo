@@ -452,6 +452,7 @@
 
   /** O ponto (x, y) está dentro da forma? */
   function inside(sh, x, y) {
+    if (sh.kind === 'point') return false;
     if (sh.kind === 'rect') return x >= sh.x0 && x <= sh.x1 && y >= sh.y0 && y <= sh.y1;
     if (sh.kind === 'ellipse') {
       const dx = (x - sh.cx) / sh.rx;
@@ -482,13 +483,19 @@
   }
   function shapeBox(sh) {
     if (sh.kind === 'rect') return sh;
+    if (sh.kind === 'point') {
+      const r = Math.max(60, (sh.r || 40) * 2.5);
+      return { x0: sh.x - r, x1: sh.x + r, y0: sh.y - r, y1: sh.y + r };
+    }
     if (sh.kind === 'ellipse') return { x0: sh.cx - sh.rx, x1: sh.cx + sh.rx, y0: sh.cy - sh.ry, y1: sh.cy + sh.ry };
-    const pad = sh.kind === 'line' ? sh.width / 2 : 0;
+    // (as raízes da rua soltam galhos além da linha do mapa: PD.street.reach diz até onde)
+    const pad = sh.kind === 'line' ? sh.width / 2 + ((PD.street && PD.street.reach && PD.street.reach[sh.type]) || 0) : 0;
     const xs = sh.pts.map((p) => p.x), ys = sh.pts.map((p) => p.y);
     return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad };
   }
   function shapePath(ctx, sh) {
     ctx.beginPath();
+    if (sh.kind === 'point') return;
     if (sh.kind === 'rect') ctx.rect(sh.x0, sh.y0, sh.x1 - sh.x0, sh.y1 - sh.y0);
     else if (sh.kind === 'ellipse') ctx.ellipse(sh.cx, sh.cy, sh.rx, sh.ry, 0, 0, M.TAU);
     else {
@@ -498,6 +505,9 @@
   }
   // número fixo por metro quadrado: o mesmo pontinho sai igual em qualquer pedaço da tela
   const cellRng = (i, j, s) => M.rng(((i * 73856093) ^ (j * 19349663) ^ (s * 83492791)) >>> 0);
+
+  // para os pintores da rua (street.js), que carregam depois deste arquivo
+  PD.groundHelp = { inside, shapeBox, shapePath, cellRng, MAT };
 
   Ground.prototype._paintShapes = function (ctx, view) {
     const cam = this.cam;
@@ -516,9 +526,28 @@
     ctx.fillStyle = MAT.mata.base;
     ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
     this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
+    const env = { map: m, g: this, box };
+    // o pé das figueiras (a que rompeu a esquina: o chão quebrado; todas: as raízes) vai depois das superfícies e antes
+    // dos detalhes (as raízes do mapa passam por cima dos pedaços soltos)
+    let broke = false;
+    const breaks = () => {
+      broke = true;
+      if (!PD.street) return;
+      for (const t of m.trees || []) {
+        if ((t.breaks || t.kind === 'figueira') && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
+      }
+    };
     m.shapes.forEach((sh, n) => {
       const b = shapeBox(sh);
       if (b.x1 < box.x0 || b.x0 > box.x1 || b.y1 < box.y0 || b.y0 > box.y1) return;
+      // detalhes da rua (meio-fio, faixa, remendo, bueiro, tampa, buraco, poça, rachadura, raiz, capim): street.js
+      const sp = PD.street && PD.street.paint[sh.type];
+      if (sp) {
+        if (!broke) breaks();
+        sp(ctx, sh, env);
+        return;
+      }
+      if (sh.kind === 'point') return;
       const mat = matOf(sh.type);
       if (sh.kind === 'line') {
         ctx.lineCap = 'round';
@@ -548,6 +577,7 @@
       this._texture(ctx, sh, box, n + 1);
       if (sh.type === 'circulo') this._circleStone(ctx, sh);
     });
+    if (!broke) breaks();
     // sombras do que fica em pé (fixas), só das coisas perto deste pedaço
     ctx.fillStyle = C.shadow;
     const shade = new Path2D();
@@ -563,8 +593,15 @@
 
   /** Pontinhos de textura da forma, só dentro dela e dentro do pedaço. */
   Ground.prototype._texture = function (ctx, sh, box, seed) {
+    // o padrão novo da rua (street.js): asfalto de verdade, calçada de placas, campinho
+    const st = PD.street && PD.street.texture[sh.type];
+    if (st && st(ctx, sh, box, seed, this, this.map)) return;
     if (sh.type === 'agua') return this._water(ctx, sh, box, seed);
-    if (sh.type === 'praca') return this._portuguese(ctx, sh, seed);
+    if (sh.type === 'praca') {
+      this._portuguese(ctx, sh, seed);
+      if (sh.moss && PD.street) PD.street.moss(ctx, sh, box, seed, this);
+      return;
+    }
     if (sh.type === 'faixa') return this._crosswalk(ctx, sh);
     const mat = matOf(sh.type);
     const b = shapeBox(sh);

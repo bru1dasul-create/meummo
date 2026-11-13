@@ -129,16 +129,58 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   brasileira, sem barraco destruído (casas e prédios inteiros, tomados pela mata; a vila continua viva). Referências
   aprovadas: `docs/referencias/padrao-rua-floresta.jpg` (a rua da Budega, com o detalhe que se quer) e
   `docs/referencias/padrao-cidade-floresta.jpg` (o bairro inteiro). O Mapa 02 para depois do pedaço (a)
-- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: planta aprovada pelo dono em 13/11 ("show",
+- [x] **[mundo]** A rua e a praça da Budega no padrão novo (**na main em 13/11**, com o desenho da [arte]): planta aprovada pelo dono em 13/11 ("show",
   `docs/referencias/rua-budega-planta.jpg` e o alvo `docs/referencias/rua-budega-aprovada.jpg`; na beirada esquerda
-  dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-floresta` (por cima da 4c):
+  dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-budega` (por cima da main):
   meio-fio com sarjeta, faixa amarela apagada, remendos, buracos com água, poças, rachaduras com mato, bueiros,
   tampas, capim, calçada de placas, musgo na praça, a **Figueira da Esquina** rompendo a calçada e o asfalto na
   esquina do portão (com raízes), cipó nas casas, nos postes e nos fios, plantas e árvore nas lajes, varal, o prédio
   do conjunto (Bloco B) no fundo, moto com mato, placa azul (R. Santo Dias × Tv. Jasmim da Beirada), cadeiras,
-  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Entra na main com o desenho da [arte]
-- [ ] **[arte]** O chão no padrão novo: asfalto (rachaduras, remendos, faixas apagadas), calçada de placas de cimento
-  (juntas, placas levantadas por raiz, mato nas frestas), meio-fio com sarjeta; e as coisas novas que a planta trouxer
+  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Ajustes do dono vendo as fotos: as cadeiras
+  da casa amarela ao lado da porta (não na frente) e os postes da rua do portão na calçada das casas, que para a
+  câmera fica atrás de quem anda na rua (antes ficavam na calçada da praça, na frente do personagem); nenhum fio
+  atravessa a rua
+- [ ] **[mundo]** O resto do Capão (4c) no padrão novo: planta aprovada pelo dono em 13/11 ("pode mandar pra arte";
+  `docs/referencias/capao-fundo-planta.jpg`, `capao-sul-planta.jpg` e os alvos `capao-fundo-aprovado.jpg` e
+  `capao-campinho-aprovado.jpg`; na imagem do fundo a IA desenhou a casa abandonada destruída: no jogo ela fica
+  inteira, só com a árvore saindo pelo telhado). No ramo `mundo/etapa-4c`: viaduto com cipó e árvores no tabuleiro,
+  pilares com pichação, musgo e cipó, o trem com cipó e plantas, o ônibus virando a horta da vila, a casa abandonada
+  com árvore pelo telhado, caminho de terra no fundo, o campinho com o mato entrando, traves enferrujadas com a rede
+  rasgada, o muro com cipó, cadeiras de quem assiste, a rua para Guarapiranga com faixa apagada, rachaduras, buracos
+  e raízes, e a Figueira do Viaduto. Entra com o desenho da 4c pela [arte]
+- [x] **[mundo + arte]** Faixa de pedestre na esquina (fora do cruzamento) e o semáforo quebrado soltando faísca na
+  esquina do portão (pedido do dono, 13/11; **na main em 13/11**, "pode, junta"): a faixa atravessa a travessa na
+  esquina (antes ficava no meio do cruzamento) e o `semaforo` (`quebrado`, `faiscas`) fica na ponta da calçada das
+  casas, com o braço sobre a rua do portão; a amarela pisca falhada e as faíscas caem e quicam no chão. Conferido no
+  PC e no celular, já com a Figueira da Esquina no lugar novo
+- [x] **[mundo]** A Figueira da Esquina vai para a calçada da casa rosa (**na main em 13/11**, aprovado pelo dono:
+  "pode seguir com as alterações"): na esquina do portão, a copa alta tampava, na tela, 19 m da trilha do norte do
+  parque, onde andam os saguis (o dono pediu "o caminho sem árvore"); na esquina ela tampa em qualquer tamanho. Fica com
+  as mesmas raízes (caminhos novos, na calçada e na rua) e o poste da casa rosa vai para a divisa com a casa azul. O
+  gerador confere as trilhas do parque e um teste garante que nenhuma árvore da vila as tampa
+- [ ] **[mundo]** A mata no padrão novo: o Parque Santo Dias de antes, engolido pela floresta. Planta aprovada pelo
+  dono em 13/11 ("pode seguir com as alterações"; `docs/referencias/parque-antigo-planta.jpg`,
+  `parque-academia-planta.jpg` e os alvos `parque-antigo-aprovado.jpg` e `parque-academia-aprovado.jpg`; as imagens
+  da IA só dão o clima). No ramo `mundo/parque-antigo` (por cima da 4c): a placa da entrada, o bebedouro quebrado,
+  bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
+  academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. Entra com o desenho da [arte]
+- [ ] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
+  `barra`, `remada`) são novos; `placa` (a da 4c) com `tamanho: 'grande'` e `mato`; `banco` com `material: 'concreto'`
+  e `mato`; `lixeira` com `mato`; `poste-praca` com `apagado`, `torto` e `cipo`; e a pista (`calcada` em polígono com
+  `desenho: 'placas'` e `quebrada`). Tudo com `ferrugem`/`musgo`/`cipo` onde o mapa disser
+- [x] **[arte]** O chão no padrão novo (13/11, `js/world/street.js`): asfalto de verdade (grão, manchas e trincas; mais
+  trincas no `estado` rachado), calçada de placas de cimento (juntas, trincas, placas levantadas perto de raiz, mato
+  nas frestas), meio-fio com sarjeta (a face aparece quando a rua fica do lado da câmera), faixa amarela apagada,
+  remendos, buracos com água, poças, rachaduras com mato, bueiros, tampas de esgoto, raízes que levantam o chão,
+  capim, musgo na praça, o campinho de terra com as linhas de cal e o chão quebrado em volta da Figueira da Esquina
+  (`rompendo`; ela não tem os símbolos da Figueira dos Despertos: só árvore com véu perto tem)
+- [x] **[arte]** As coisas novas da planta da rua (13/11, `js/world/city.js` e `props.js`): placa azul de rua (as de
+  São Paulo, com os dois nomes), moto enferrujada com mato, cadeira de plástico, vaso de espada-de-são-jorge, sacos de
+  lixo, bandeirinhas que balançam, cipó subindo pelos postes e pendurado nos fios, carro com uma árvore saindo pelo
+  teto, casas tomadas pela mata (cortinas de cipó conforme o `cipo`, manchas de chuva e musgo, plantas e árvore na laje,
+  varal com roupa, portão de garagem de ferro) e o prédio do conjunto (5 andares, varandas, entrada com a placa do
+  bloco). O escudo da Budega fica na frente do que está na laje. As coisas da 4c (viaduto, trem, ônibus, muro, traves,
+  barreira, placa, campinho) ficam para a etapa 4c: o ramo da rua do [mundo] (`mundo/rua-budega`) saiu sem a 4c
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔
@@ -147,7 +189,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   as jararacas voltaram em 13/11, com o combate do jogo novo), portão e vila ✔ (13/11: a Budega Distribuidora na praça,
   desenhada pela [arte]), campinho, viaduto e saídas; 5) atmosferas (dia, entardecer e noite); 6) minimapa.
   Mata nova (pedido do dono, 13/11: 50% maior para o sul, menos árvores, trilhas sem copa, plantas variadas, mais
-  sombria): prévia no ramo `mundo/mata-nova`, entra depois do desenho das plantas novas pela [arte]. Padrão: a arte conceitual
+  sombria): aprovada pelo dono (13/11) e **na main em 13/11**, junto com o desenho da [arte] (árvores de verdade,
+  árvore seca, jerivá, embaúba, xaxim, bananeira, bambu, plantas, cogumelos, deque, pinguela, véus, escuro e neblina). Dá para aumentar de novo depois (cresce para o sul sem mudar nada de lugar). Padrão: a arte conceitual
   aprovada (`docs/referencias/mapa-01-arte-aprovada.jpg`, "2.5D estilizado e sombrio")
 - [x] **[arte]** Desenhar no 2.5D o mapa novo a partir das camadas `chao` e `cenario` do `.tmj` (Etapa 3: a clareira,
   o círculo, a Figueira dos Despertos, a mata, o gradil e o Portão I), com a "janela" nas copas — `PD.View`
@@ -280,9 +323,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   jogo estar na internet, "Entrar com Google", e-mail, "Esqueceu sua senha?" e "Sair do Jogo"
 - [ ] **[arte]** Tela inicial nova, o visual: fundo, logo e o painel de madeira com cipós da imagem do dono, no PC e
   no celular, com os ids combinados (`#login-title`, `#password2`, `#mode-toggle`, mais os de sempre)
-- [ ] **[arte]** Conversa com NPC, parte 2: a `PD.View` centraliza em quem fala (`focus`, mesmo sendo criatura) e mexe
-  a boca (`talk`); a fala "por cima" da cena no lugar do painel com o retrato antigo, com os botões (Aceitar,
-  Desistir, Entregar, Ver a loja), no PC e no celular
+- [x] **[arte]** Conversa com NPC, parte 2 (13/11): a `PD.View` leva a câmera até quem fala (`focus`, gente ou
+  criatura), que fica um pouco acima do meio da tela, vira para você e mexe a boca enquanto fala (`talk`); o seu
+  personagem parado na frente dele fica transparente. A fala vem embaixo, por cima da cena, sem o retrato antigo
+  (`#talk.cinema`, só no jogo 2.5D): o nome numa plaquinha, a fala escrita aos poucos no ritmo da boca (tocar mostra
+  tudo), os cartões das missões e botões grandes (Aceitar, Entregar/Conversar, Desistir, Ver a loja, Tchau), no PC
+  e no celular. A loja do jogo 2.5D também fica sem o retrato. O jogo antigo (`?antigo`) continua igual
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
   Capão, sem a palavra "Tabacaria" e sem produtos de tabaco (a lei proíbe propaganda de tabaco); o nome continua
   **Selva de Pedra**; os saguis são **encantados** pelo desequilíbrio entre os mundos e a missão é acalmar ou
