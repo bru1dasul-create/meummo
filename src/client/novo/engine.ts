@@ -145,7 +145,10 @@ class NewWorld implements NewWorldGame {
     this.hud = deps.hud;
     this.sfx = deps.sfx;
     this.keyboard = new KeyboardDirections(() => this.chat.isTyping());
-    this.joystick = new Joystick(this.container, (x, y) => this.tapAt(x, y));
+    this.joystick = new Joystick(this.container, (x, y) => {
+      this.usingTouch = true;
+      this.tapAt(x, y);
+    });
     this.combat = new CombatLayer(this.container);
     this.actionBar = new ActionBar(
       [
@@ -183,7 +186,12 @@ class NewWorld implements NewWorldGame {
       walkTo: (x: number, y: number) => game.walkToPoint(x, y),
       walking: () => game.route.length > 0,
       safe: () => game.wasSafe,
-      entities: () => [...game.entities.values()].map((e) => ({ id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp })),
+      // x, y: posição "de canto" (a do servidor); feetX, feetY: o pé, em metros (é o que o screenOf espera)
+      entities: () =>
+        [...game.entities.values()].map((e) => {
+          const feet = feetAt(e.x, e.y);
+          return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp };
+        }),
       hp: () => ({ hp: game.myHp, maxHp: game.myMaxHp }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
@@ -499,12 +507,11 @@ class NewWorld implements NewWorldGame {
   /** Tocou/clicou na tela neste ponto: atira no monstro que está ali, vai conversar com o NPC ou anda até lá. */
   private tapAt(clientX: number, clientY: number): void {
     if (!this.view || this.dead) return;
-    if (this.usingTouch) {
-      const monster = this.actorAtScreen(clientX, clientY, 'monster');
-      if (monster !== null) {
-        this.shootAt(monster, performance.now());
-        return;
-      }
+    // (o clique do mouse já olhou o monstro antes de chegar aqui; o toque olha agora)
+    const monster = this.actorAtScreen(clientX, clientY, 'monster');
+    if (monster !== null) {
+      this.shootAt(monster, performance.now());
+      return;
     }
     const npcId = this.actorAtScreen(clientX, clientY, 'npc');
     const npc = npcId !== null ? this.npcs.get(npcId) : undefined;
@@ -520,24 +527,28 @@ class NewWorld implements NewWorldGame {
   }
 
   /**
-   * Quem está desenhado neste ponto da tela (o corpo, do pé até a cabeça), deste tipo, ou null. Funciona com
-   * qualquer câmera: usa só o toScreen da view.
+   * Quem está neste ponto da tela (o corpo, do pé até a cabeça), deste tipo, ou null. Vale tanto onde ele está
+   * desenhado quanto onde o servidor diz que ele está (o desenho anda um pouco atrás de quem corre). No dedo, a folga
+   * é maior. Funciona com qualquer câmera: usa só o toScreen da view.
    */
   private actorAtScreen(clientX: number, clientY: number, kind: 'monster' | 'npc'): number | null {
     if (!this.view) return null;
+    const point = { x: clientX, y: clientY };
     let best: number | null = null;
-    let bestDistance = Infinity;
+    let bestScore = Infinity;
     for (const e of this.entities.values()) {
       if (e.kind !== kind) continue;
-      const feet = this.drawnFeet(e.id);
-      if (!feet) continue;
-      const foot = this.view.toScreen(feet.x, feet.y, 0);
-      const head = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT);
-      const reach = Math.max(18, Math.hypot(head.x - foot.x, head.y - foot.y) * 0.4);
-      const distance = distanceToSegment({ x: clientX, y: clientY }, foot, head);
-      if (distance <= reach && distance < bestDistance) {
-        best = e.id;
-        bestDistance = distance;
+      for (const feet of [this.drawnFeet(e.id), feetAt(e.x, e.y)]) {
+        if (!feet) continue;
+        const foot = this.view.toScreen(feet.x, feet.y, 0);
+        const head = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT);
+        const height = Math.hypot(head.x - foot.x, head.y - foot.y);
+        const reach = this.usingTouch ? Math.max(32, height * 0.6) : Math.max(18, height * 0.4);
+        const score = distanceToSegment(point, foot, head) / reach;
+        if (score <= 1 && score < bestScore) {
+          best = e.id;
+          bestScore = score;
+        }
       }
     }
     return best;

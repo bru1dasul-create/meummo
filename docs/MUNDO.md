@@ -68,10 +68,10 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
     `mata-profunda` e áreas com `neblina` e `escuro`), fechada por arbustos que bloqueiam; mata fechada nas bordas.
     O gerador não planta árvore alta que, vista pela câmera, cubra a clareira, o círculo, a trilha ou o lago
     (`hidesView`), e deixa 1,2 m entre troncos.
-  - **Criaturas (prontas, desligadas):** `CREATURES = false` no gerador. Saguis encantados em x 24 a 40 × y 12 a 28
-    (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Escolha do dono em 12/11 ("opção a"): a 4a entrou sem elas porque o
-    jogo novo ainda não mostra golpe, dano nem desmaio, e o jogador apanharia sem ver. Religar (`CREATURES = true` e
-    gerar de novo) quando o combate do jogo novo, passo 1, da [estrutura] chegar; o teste das zonas volta sozinho.
+  - **Criaturas (religadas em 13/11):** `CREATURES = true` no gerador. Saguis encantados em x 24 a 40 × y 12 a 28
+    (4) e jararacas em x 6 a 22 × y 56 a 74 (3). Ficaram desligadas de 12/11 ("opção a" do dono) até o combate do jogo
+    novo, passo 1, da [estrutura] chegar (9de98f5). Conferi no jogo: os saguis atacam, as pedras acertam e a vida cai;
+    mas na mata fechada eles ficam escondidos embaixo das copas e muita pedra bate nas árvores: a mata nova resolve.
   - **4b (a próxima):** o portão abre; Travessa Jasmim da Beirada (x 49,5 a 56); rua do portão para o leste (y 41 a
     47); praça em (61 a 79, 49 a 59) com a Budega (vendinha, 62 a 67 × 49,5 a 52,5), fogueira e árvore; casas de
     bloco com laje e caixa d'água ao norte da rua (y 29 a 40); postes de luz quente; zona segura da vila em x ≥ 49,5.

@@ -21,7 +21,7 @@
 // - camada de objetos `seguro`: retângulos de área segura (monstro não entra, não nota e não acerta quem está lá);
 // - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai).
 
-import { TILE_SIZE } from './constants';
+import { SHOT_FEET_DY, TILE_SIZE } from './constants';
 import { DX, DY } from './dir';
 
 // Só os pedaços do formato JSON do Tiled que usamos.
@@ -197,6 +197,8 @@ export class GameMap implements Walkable {
   /** Retângulos de `colisao` que encostam em cada tile. */
   private readonly solidsByTile: (SolidRect[] | undefined)[];
   private readonly cover: Uint8Array;
+  /** Só os tiles com `bloqueiaTiro` (sem os retângulos de `colisao`): a pedra do mapa novo usa os retângulos exatos. */
+  private readonly tileCover: Uint8Array;
   /** Tiles alcançáveis a pé a partir do ponto de nascimento (calculado na primeira consulta). */
   private reachable: Uint8Array | null = null;
 
@@ -223,6 +225,7 @@ export class GameMap implements Walkable {
     this.height = height;
     this.solidTiles = blocked;
     this.blocked = new Uint8Array(blocked);
+    this.tileCover = new Uint8Array(cover);
     this.cover = cover;
     this.solidsByTile = new Array(width * height);
     for (const rect of info.solids ?? []) {
@@ -444,6 +447,25 @@ export class GameMap implements Walkable {
   /** Projéteis param aqui? (fora do mapa, ou tile com `bloqueiaTiro`.) */
   blocksShot(x: number, y: number): boolean {
     return !this.inside(x, y) || this.cover[y * this.width + x] === 1;
+  }
+
+  /**
+   * A pedra no ponto exato (x, y) bate em algo? No formato novo, pelo retângulo de verdade (um tronco de 0,3 m segura
+   * a pedra só nos 0,3 m dele, não no metro inteiro), olhando o ponto do chão embaixo da pedra (SHOT_FEET_DY). No
+   * formato antigo, continua o tile inteiro.
+   */
+  blocksShotAt(x: number, y: number): boolean {
+    if (!this.metric) return this.blocksShot(Math.floor(x), Math.floor(y));
+    const gy = y + SHOT_FEET_DY;
+    const tx = Math.floor(x);
+    const ty = Math.floor(gy);
+    if (!this.inside(tx, ty)) return true;
+    const i = ty * this.width + tx;
+    if (this.tileCover[i] === 1) return true;
+    for (const r of this.solidsByTile[i] ?? NO_SOLIDS) {
+      if (r.shot && x > r.x0 && x < r.x1 && gy > r.y0 && gy < r.y1) return true;
+    }
+    return false;
   }
 
   /** Procura o tile livre mais próximo (busca em largura, passando por cima de obstáculos). */

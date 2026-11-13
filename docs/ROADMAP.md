@@ -169,7 +169,9 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   Estilingue (segurando, mira sozinho no mais perto), Bordunada, Fôlego e Esquiva. Regra nova no servidor: de dentro
   da área segura ninguém ataca (o monstro não teria como revidar). Desenhado por cima pelo motor
   (`src/client/novo/combat.ts`) até a [arte] desenhar do jeito dela
-- [ ] **[mundo]** Religar os saguis e as jararacas da etapa 4a no gerador (o combate do jogo novo chegou)
+- [x] **[mundo]** Religar os saguis e as jararacas da etapa 4a no gerador (o combate do jogo novo chegou): 4 saguis
+  encantados no norte do parque e 3 jararacas na mata profunda do sudoeste (13/11). Com a mata fechada de hoje elas
+  ficam escondidas embaixo das copas; a mata nova (mais aberta) resolve
 - [ ] **[estrutura]** Combate no jogo novo, passo 2: as regras da revisão 17 (pedra com carga, defesa com energia,
   esquiva e recuo). Antes, pedir ao dono para jogar o passo 1
 - [x] **[dono]** Decisões de 12/11: a **Budega Distribuidora** (o negócio do dono) é a vendinha da praça da Vila do
