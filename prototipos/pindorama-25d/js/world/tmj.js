@@ -8,7 +8,8 @@
 //  - "cenario": árvores (`especie`, `copa` = raio, `altura`, `tronco` = diâmetro, em metros), arbusto, pedra, poste
 //    (alto = de concreto, com `fiacao`), poste-praca, gradil, portão, pilar, `veu`, tronco-caido, aguape, capivara, a
 //    vila: casa (frente ao sul), banco, mesa, fogueira, orelhao, lixeira e carro; e a etapa 4c (desenho em fundo.js):
-//    trave, muro, viaduto, pilar-viaduto, trem, cipo, onibus, barreira e placa;
+//    trave, muro, viaduto, pilar-viaduto, trem, cipo, onibus, barreira e placa; o parque antigo: bebedouro e academia
+//    (parque.js), banco de concreto, lixeira e poste com mato/cipó, a placa grande e a calçada de placas soltas;
 //  - "colisao": caixas onde o pé bate (as mesmas do servidor); "seguro", "areas" e "pontos" (o nascimento).
 (function (PD) {
   'use strict';
@@ -84,7 +85,8 @@
         if (k === 'circulo') map.awakening = { x: s.cx, y: s.cy, r: Math.min(s.rx, s.ry), color: pr.brilho || '#3fd6c8' };
       } else if (o.polygon) {
         const pts = o.polygon.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
-        map.shapes.push({ type: k, kind: 'poly', pts, color: pr.cor });
+        // `desenho` e `quebrada` (as placas soltas da calçada velha do parque)
+        map.shapes.push({ type: k, kind: 'poly', pts, color: pr.cor, pattern: pr.desenho, broken: !!pr.quebrada });
       } else if (o.point || (!o.width && !o.height)) {
         // pontos no chão (bueiro, tampa, buraco, capim): `raio`, `olhando`, `agua`, `tipo`
         map.shapes.push({ type: k, kind: 'point', x: o.x * CM, y: o.y * CM, r: pr.raio ? pr.raio * 100 : null, angle: pr.olhando || 0, water: !!pr.agua, plant: pr.tipo || null, color: pr.cor });
@@ -126,7 +128,8 @@
         // semáforo de rua (ponto): `altura`, `olhando` (graus, para onde as luzes dão; 0 = leste), `quebrado` e `faiscas`
         map.trafficLights.push({ x, y, h: (pr.altura || 4.6) * 100, facing: pr.olhando || 0, broken: !!pr.quebrado, sparks: !!pr.faiscas });
       } else if (k === 'poste' || k === 'poste-praca') {
-        map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6' });
+        // `apagado` (vidro quebrado, sem luz), `torto` e `cipo` (os do parque antigo)
+        map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6', off: !!pr.apagado, bent: !!pr.torto, vine: !!pr.cipo });
       } else if (k === 'fiacao' && o.polyline) {
         wireLines.push({ pts: o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })), vine: !!pr.cipo });
       } else if (k === 'casa') {
@@ -173,13 +176,20 @@
           name: o.name || '',
         });
       } else if (k === 'banco') {
-        map.props.push({ kind: 'banco', ...rect(o), angle: pr.olhando });
+        // `material` ('concreto' no parque; sem ele, de madeira) e `mato`
+        map.props.push({ kind: 'banco', ...rect(o), angle: pr.olhando, material: pr.material || 'madeira', weeds: !!pr.mato });
       } else if (k === 'mesa') {
         map.props.push({ kind: 'mesa', x, y, chairs: pr.cadeiras || 2 });
       } else if (k === 'fogueira') {
         map.props.push({ kind: 'fogueira', x, y, r: (pr.raio || 0.6) * 100, light: pr.luz || '#ffb347' });
       } else if (k === 'orelhao' || k === 'lixeira') {
-        map.props.push({ kind: k, x, y, angle: pr.olhando });
+        // `mato`: a lixeira verde do parque antigo, com mato em volta (sem ele, a laranja de rua)
+        map.props.push({ kind: k, x, y, angle: pr.olhando, weeds: !!pr.mato });
+      } else if (k === 'bebedouro') {
+        map.props.push({ kind: 'bebedouro', x, y, r: 24, broken: !!pr.quebrado, moss: !!pr.musgo });
+      } else if (k === 'academia') {
+        // aparelho da academia ao ar livre (caixa): `aparelho` ('simulador-caminhada', 'barra', 'remada'), `ferrugem`, `cipo`
+        map.props.push({ kind: 'academia', ...rect(o), h: (pr.altura || 1.6) * 100, device: pr.aparelho || 'barra', rust: !!pr.ferrugem, vine: !!pr.cipo });
       } else if (k === 'carro') {
         map.props.push({ kind: 'carro', ...rect(o), h: (pr.altura || 1.4) * 100, color: pr.cor || '#a8473e', weeds: !!pr.mato, tree: !!pr.arvore });
       } else if (k === 'moto') {
@@ -251,7 +261,8 @@
         map.props.push({ kind: 'barreira', ...rect(o), h: (pr.altura || 1.1) * 100 });
       } else if (k === 'placa') {
         // placa de direção (ponto): `texto`, `seta` (norte, sul, leste, oeste) e `poste` (num poste; sem ele, no chão)
-        map.props.push({ kind: 'placa', x, y, r: 14, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste });
+        // `tamanho: 'grande'` = a placa de madeira em dois postes da entrada do parque; `mato` = musgo e cipó
+        map.props.push({ kind: 'placa', x, y, r: 14, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big: pr.tamanho === 'grande', weeds: !!pr.mato });
       } else if (k === 'deque' || k === 'pinguela') {
         // dá para andar em cima: o lado comprido diz a direção
         map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100 });
