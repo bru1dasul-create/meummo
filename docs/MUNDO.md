@@ -43,6 +43,15 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   virando vaso). Feitas com o Nano Banana, por cima da arte aprovada (estilo) e de um print do jogo (arranjo). O
   próximo passo que ele pediu: **"vamos ver no papel"** (a planta da rua e da praça no padrão novo, para aprovar). O
   desenho do chão (asfalto, calçada) é da [arte]; o que fica em cima (meio-fio, bueiro, faixa, raiz, placa...) é meu.
+- **A planta da rua da Budega foi aprovada (13/11, "pode mandar se for essa aqui, show"):** a imagem do Nano Banana
+  feita por cima da minha prévia de perto (`docs/referencias/rua-budega-aprovada.jpg`, com a planta numerada em
+  `rua-budega-planta.jpg`) é o alvo. No gerador, a constante `FLORESTA` (sorteio `SEED + 11`, nada muda de lugar); ramo
+  `mundo/rua-floresta`. Tipos novos no `chao`: `meio-fio`, `faixa-rua`, `remendo`, `buraco`, `poca`, `rachadura`,
+  `bueiro`, `tampa`, `raiz` e `planta` capim (com `largura` e `cor`, para um desenho que ainda não os conhece mostrar
+  só um traço fino); no `cenario`: `predio`, `moto`, `placa-rua`, `cadeira`, `vaso`, `lixo` e a figueira com
+  `rompendo`; propriedades novas em `casa` (`cipo`, `plantas`, `arvoreNaLaje`, `varal`, `musgo`, `grade`,
+  `portao`), `poste`/`fiacao` (`cipo`), `carro` (`arvore`), `calcada` (`desenho: 'placas'`) e `praca` (`musgo`).
+  Prévias: meu `previa-floresta.mjs` (aceita um JSON de números com legenda) na pasta temporária da conversa.
 - **Decisão do dono (12/11, roteiro "🗺️ Mundo novo"):** o visual vira o do protótipo 2.5D da [arte]
   (`prototipos/pindorama-25d/`, isométrico, estilo HQ) e os mapas são refeitos do zero. Os 5 mapas de hoje saem quando
   o capítulo 1 novo estiver jogável; o motor (servidor, regras, salvamento) fica. Capítulo 1: Capão Redondo e o Parque
