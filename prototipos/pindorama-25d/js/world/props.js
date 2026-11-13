@@ -1511,26 +1511,22 @@
     const zf = t.h * FIG.fork; // forquilha: onde o tronco vira galhos
     const rnd = M.rng(Math.round(t.x * 7 + t.y * 3));
     const lean = rnd() * M.TAU;
-    // perfil: alarga bem na base (as sapopemas fundidas ao tronco) e afina um pouco até a forquilha. Na figueira da rua
-    // (`rompendo`) o pé é feito das raízes que saem do chão (_figButtress): as raízes curtas enroladas no tronco viravam
-    // "garras" e a base lisa parecia uma saia — o dono achou feio as duas
-    const street = !!t.breaks;
+    // perfil: alarga na base e afina um pouco até a forquilha. O pé é feito das raízes que saem do chão
+    // (_figButtress), na figueira da rua e na dos Despertos (aprovado pelo dono em 13/11): as raízes curtas enroladas
+    // no tronco viravam "garras" e a base lisa parecia uma saia — o dono achou feio as duas
     const slices = [];
     const N = 24;
     for (let k = 0; k <= N; k++) {
       const u = k / N;
-      const fu = street ? 0.3 : 0.32;
-      const flare = u < fu ? Math.pow(1 - u / fu, 2) * (street ? 0.45 : 0.55) : 0;
+      const fu = 0.3;
+      const flare = u < fu ? Math.pow(1 - u / fu, 2) * 0.45 : 0;
       const r = R * (0.78 + 0.22 * (1 - u) + flare) * (1 + Math.sin(u * 9 + lean) * 0.03);
       const off = Math.sin(u * 2.2 + lean) * R * 0.12 * u;
       const c = cam.p({ x: t.x + Math.cos(lean) * off, y: t.y + Math.sin(lean) * off, z: z0 + zf * u });
       slices.push({ c, r, u });
     }
-    const roots = [];
-    for (let k = 0, n = 8; k < n; k++) {
-      // (na figueira da rua essas raízes não são desenhadas: as que atravessam a calçada e o asfalto são as `raiz` do chão)
-      roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (street ? 1.05 + rnd() * 0.3 : 1.6 + rnd() * 1.0), zr: R * (street ? 0.12 + rnd() * 0.08 : 0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
-    }
+    // os sorteios das raízes antigas (em garra, não desenhadas mais) continuam, para os galhos e a copa saírem iguais
+    for (let k = 0; k < 8; k++) for (let j = 0; j < 5; j++) rnd();
     const limbs = [];
     const turn = rnd() * M.TAU;
     for (let k = 0; k < 4; k++) {
@@ -1540,12 +1536,10 @@
     // primeiro os de trás, depois os da frente, cada grupo com o contorno de todos antes do recheio (senão a borda de um
     // galho riscava o outro e os dois pareciam cruzar em "X")
     const front = (a) => Math.cos(a) + Math.sin(a) > 0;
-    const base = street ? this._figBaseRoots(R, rnd) : null;
-    if (base) this._figButtress(ctx, base, 'back');
-    if (!street) for (const r of roots) if (!front(r.a)) this._figRoot(ctx, r, R);
+    const base = this._figBaseRoots(R, rnd);
+    this._figButtress(ctx, base, 'back');
     this._figTrunkBody(ctx, slices);
-    if (base) this._figButtress(ctx, base, 'front');
-    if (!street) for (const r of roots) if (front(r.a)) this._figRoot(ctx, r, R);
+    this._figButtress(ctx, base, 'front');
     this._figLimbs(ctx, limbs.filter((l) => !front(l.a)), R, zf, rnd);
     this._figLimbs(ctx, limbs.filter((l) => front(l.a)), R, zf, rnd);
     // símbolos na frente do tronco (na superfície: a frente do cilindro fica r·sinP abaixo do centro da fatia)
@@ -1622,8 +1616,8 @@
   };
 
   /**
-   * Raízes do pé da figueira da rua: os mesmos caminhos das raízes pintadas no chão (street.js, figRootPaths) — as do
-   * mapa e as a mais, nos vãos entre elas. Sem o chão novo (protótipo antigo), cinco retas em volta.
+   * Raízes do pé da figueira: os mesmos caminhos das raízes pintadas no chão (street.js, figRootPaths) — as do mapa
+   * (figueira da rua) e as a mais, nos vãos entre elas. Sem o chão novo (protótipo antigo), cinco retas em volta.
    */
   TreeTrunk.prototype._figBaseRoots = function (R, rnd) {
     const t = this.t;
@@ -1640,7 +1634,7 @@
   };
 
   /**
-   * Raízes que saem do chão (figueira da rua; referência do dono de 13/11). Cada uma nasce dentro do tronco, alta e
+   * Raízes que saem do chão (toda figueira; referência do dono de 13/11). Cada uma nasce dentro do tronco, alta e
    * larga, desce e vira a raiz do chão (street.js): no fim do pé ela tem a largura e a altura da raiz do chão, e sem
    * contorno, as duas viram uma só. O corte é meia elipse (lombo redondo) em oito faixas, cada uma com a cor da luz que
    * recebe, e musgo no alto. O que o dono achou feio antes: "garras" enroladas no pé, base lisa como saia, tábuas.
@@ -1758,51 +1752,6 @@
       geo.filter((g) => !g.front).sort((p, q) => p.depth - q.depth).forEach(fill);
     } else {
       geo.filter((g) => g.front).sort((p, q) => p.depth - q.depth).forEach(fill);
-    }
-  };
-
-  /** Sapopema: raiz grossa que nasce da base alargada do tronco, desce serpenteando e afunda no chão (meio enterrada). */
-  TreeTrunk.prototype._figRoot = function (ctx, r, R) {
-    const cam = this.cam;
-    const t = this.t;
-    const z0 = this.z0;
-    const zoom = cam.zoom;
-    const ink = this.ink;
-    const B = FIG.bark;
-    const L = cam.lightScreen;
-    const S = 12;
-    const pts = [];
-    for (let s = 0; s <= S; s++) {
-      const u = s / S;
-      const d = R * 0.85 + (r.len - R * 0.85) * u;
-      const a = r.a + Math.sin(u * 3 + r.wig) * 0.12;
-      const w = r.w * (1 - 0.85 * Math.pow(u, 0.8));
-      const z = z0 + r.zr * Math.pow(1 - u, 2) + w * 0.25;
-      pts.push({ p: cam.p({ x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, z }), r: w * zoom });
-    }
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    // contorno só a partir de um pouco fora do tronco (a junta com a casca fica sem risco)
-    for (const [color, grow, from] of [[INK, ink * 2.2, 2], [B.base, 0, 0]]) {
-      ctx.strokeStyle = color;
-      for (let s = from; s + 1 < pts.length; s++) {
-        ctx.lineWidth = pts[s].r * 2 + grow;
-        ctx.beginPath();
-        ctx.moveTo(pts[s].p.x, pts[s].p.y);
-        ctx.lineTo(pts[s + 1].p.x, pts[s + 1].p.y);
-        ctx.stroke();
-      }
-    }
-    for (const [color, side, k] of [[B.shade, -1, 0.5], [B.light, 1, 0.28]]) {
-      ctx.strokeStyle = color;
-      for (let s = 0; s + 1 < pts.length; s++) {
-        const o = pts[s].r * 0.5 * side;
-        ctx.lineWidth = Math.max(0.6, pts[s].r * 2 * k);
-        ctx.beginPath();
-        ctx.moveTo(pts[s].p.x + L.x * o, pts[s].p.y + L.y * o);
-        ctx.lineTo(pts[s + 1].p.x + L.x * o, pts[s + 1].p.y + L.y * o);
-        ctx.stroke();
-      }
     }
   };
 
@@ -3675,21 +3624,81 @@
     }
   }
 
-  // ------------------------------------------------------------------ semáforo (a luz troca: desenhado a cada quadro)
+  // ------------------------------------------------------------------ semáforo
+  // O de antes (mapa antigo de São Paulo): poste e caixa de três luzes trocando de cor. O do mundo novo (`semaforo` no
+  // mapa, pedido do dono em 13/11: "um semáforo quebrado saindo faísca"): semáforo de rua de São Paulo, poste cinza com
+  // o braço sobre a rua (entortado para baixo), a caixa de luzes preta com o anteparo amarelo pendurada torta pelos
+  // fios, lentes apagadas (uma trincada), a amarela piscando falhada de vez em quando; no poste, a caixinha de força com
+  // a porta aberta e os fios para fora; ferrugem e cipó. As faíscas (da caixinha e da ponta do fio solto) são
+  // partículas do mundo (World.update, 'faisca'); este objeto diz de onde elas saem (`sparkPoints`).
   class TrafficLight extends Prop {
     constructor(world, d) {
       super(world, { x0: d.x - 14, x1: d.x + 14, y0: d.y - 14, y1: d.y + 14 }, { fades: false });
       this.d = d;
       this.collider = { type: 'circle', x: d.x, y: d.y, r: 18 };
+      if (d.broken) this._rig();
+    }
+    /** A forma do semáforo quebrado, em cm do mundo (z a partir do chão do poste). */
+    _rig() {
+      const d = this.d;
+      const H = d.h || 460;
+      const fa = ((d.facing || 0) * Math.PI) / 180;
+      const f = { x: Math.cos(fa), y: Math.sin(fa) };
+      // o braço vai para o lado da rua (onde há asfalto a 3 m); sem asfalto, para o lado da câmera
+      const map = this.world.map;
+      const road = (map.shapes || []).filter((s) => s.type === 'asfalto' || s.type === 'rua');
+      const lat = { x: -f.y, y: f.x };
+      const onRoad = (k) => road.some((s) => PD.groundHelp && PD.groundHelp.inside(s, d.x + lat.x * 300 * k, d.y + lat.y * 300 * k));
+      const k = onRoad(1) ? 1 : onRoad(-1) ? -1 : lat.x + lat.y >= 0 ? 1 : -1;
+      const s = { x: lat.x * k, y: lat.y * k };
+      const P3 = (x, y, z) => ({ x, y, z });
+      const add = (p, v, m) => ({ x: p.x + v.x * m, y: p.y + v.y * m, z: p.z + (v.z || 0) * m });
+      const base = P3(d.x, d.y, 0);
+      const top = P3(d.x, d.y, H);
+      const a0 = P3(d.x, d.y, H - 25);
+      const a1 = add(P3(d.x, d.y, H - 19), s, 130);
+      const a2 = add(P3(d.x, d.y, H - 70), s, 262);
+      // a caixa de luzes: pendurada no fim do braço, torta de lado (gira em volta da direção para onde olha)
+      const tilt = 0.4;
+      const u = { x: f.x, y: f.y, z: 0 };
+      const v = { x: s.x * Math.cos(tilt), y: s.y * Math.cos(tilt), z: Math.sin(tilt) };
+      const w = { x: -s.x * Math.sin(tilt), y: -s.y * Math.sin(tilt), z: Math.cos(tilt) };
+      const headTop = add(add(a2, { x: 0, y: 0, z: 1 }, -34), s, -6);
+      const c = add(headTop, w, -50);
+      const corner = (a, b, e) => add(add(add(c, u, 12 * a), v, 17 * b), w, 50 * e);
+      const lens = [1, 0, -1].map((e) => add(add(c, u, 12.5), w, 31 * e));
+      // a caixinha de força no poste, virada para a câmera
+      const cv = { x: Math.SQRT1_2, y: Math.SQRT1_2, z: 0 };
+      const side = { x: -Math.SQRT1_2, y: Math.SQRT1_2, z: 0 };
+      const box = add(P3(d.x, d.y, 168), cv, 15);
+      const loose = [add(a2, s, 4), add(add(a2, s, 18), { x: 0, y: 0, z: 1 }, -50), add(add(a2, s, 10), { x: 0, y: 0, z: 1 }, -105), add(add(add(a2, s, -4), u, 8), { x: 0, y: 0, z: 1 }, -132)];
+      this.rig = { H, f, s, u, v, w, base, top, a0, a1, a2, headTop, c, corner, lens, box, cv, side, loose };
+    }
+    /** De onde saem as faíscas (cm do mundo): a caixinha de força, a ponta do fio solto e os fios da caixa de luzes. */
+    sparkPoints() {
+      const r = this.rig;
+      if (!r) return [];
+      const z0 = this.z0;
+      const at = (p) => ({ x: p.x, y: p.y, z: z0 + p.z });
+      const end = r.loose[r.loose.length - 1];
+      return [at({ x: r.box.x + r.cv.x * 9, y: r.box.y + r.cv.y * 9, z: r.box.z + 6 }), at(end), at(r.headTop)];
     }
     screenBox() {
       const d = this.d;
-      return bbox([this.P(d.x, d.y, this.z0), this.P(d.x, d.y, this.z0 + 400)], 40 * this.cam.zoom);
+      const r = this.rig;
+      if (!r) return bbox([this.P(d.x, d.y, this.z0), this.P(d.x, d.y, this.z0 + 400)], 40 * this.cam.zoom);
+      const z0 = this.z0;
+      const pts = [r.base, r.top, r.a2, r.corner(1, 1, -1), r.corner(-1, -1, -1), r.corner(1, -1, 1), r.loose[3]].map((p) => this.P(p.x, p.y, z0 + p.z));
+      return bbox(pts, 60 * this.cam.zoom);
     }
     shadow(path) {
-      lineShadow(path, this.cam, this.d.x, this.d.y, 400, 10);
+      lineShadow(path, this.cam, this.d.x, this.d.y, this.rig ? this.rig.H : 400, 10);
     }
     paint(ctx) {
+      if (this.rig) {
+        this._paintBroken(ctx);
+        return;
+      }
       const cam = this.cam;
       const d = this.d;
       const base = cam.p({ x: d.x, y: d.y, z: this.z0 });
@@ -3721,8 +3730,208 @@
         ctx.fill();
       }
     }
+    _paintBroken(ctx) {
+      const cam = this.cam;
+      const zoom = cam.zoom;
+      const ink = this.ink;
+      const z0 = this.z0;
+      const r = this.rig;
+      const P = (p) => cam.p({ x: p.x, y: p.y, z: z0 + p.z });
+      const tube = (pts, wid, color, shade) => {
+        const sp = pts.map(P);
+        const path = () => {
+          ctx.beginPath();
+          sp.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+        };
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        path();
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = wid * zoom + ink * 2.2;
+        ctx.stroke();
+        path();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = wid * zoom;
+        ctx.stroke();
+        if (shade) {
+          ctx.beginPath();
+          sp.forEach((p, i) => (i ? ctx.lineTo(p.x + wid * zoom * 0.25, p.y) : ctx.moveTo(p.x + wid * zoom * 0.25, p.y)));
+          ctx.strokeStyle = shade;
+          ctx.lineWidth = wid * zoom * 0.45;
+          ctx.stroke();
+        }
+      };
+      const rnd = M.rng(Math.round(this.d.x * 3 + this.d.y * 7));
+      // placa do pé e o poste (cinza, com o lado da sombra), ferrugem
+      const foot = P(r.base);
+      ctx.fillStyle = '#6d7277';
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 1.4;
+      ctx.beginPath();
+      ctx.ellipse(foot.x, foot.y, 16 * zoom, 16 * zoom * cam.sinP, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.stroke();
+      tube([r.base, r.top], 15, '#9aa0a6', '#73797f');
+      const RUST = ['rgba(150, 82, 38, 0.75)', 'rgba(118, 62, 30, 0.7)'];
+      for (let k = 0; k < 7; k++) {
+        const z = 30 + rnd() * (r.H - 60);
+        const p = P({ x: r.base.x, y: r.base.y, z });
+        ctx.fillStyle = RUST[k % 2];
+        ctx.beginPath();
+        ctx.ellipse(p.x + (rnd() - 0.4) * 5 * zoom, p.y, (2.5 + rnd() * 3) * zoom, (5 + rnd() * 9) * zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      // cipó subindo pelo poste (como nos postes da rua)
+      if (PD.city && PD.city.poleVine) PD.city.poleVine(ctx, cam, { x: r.base.x, y: r.base.y }, z0, r.H * 0.75, ink);
+      // a caixinha de força, aberta, com os fios para fora
+      const bx = (a, b, e) => P({ x: r.box.x + r.side.x * 12 * a + r.cv.x * 7 * e, y: r.box.y + r.side.y * 12 * a + r.cv.y * 7 * e, z: r.box.z + 21 * b });
+      const front = [bx(-1, -1, 1), bx(1, -1, 1), bx(1, 1, 1), bx(-1, 1, 1)];
+      const sideFace = [bx(1, -1, 1), bx(1, -1, -1), bx(1, 1, -1), bx(1, 1, 1)];
+      const topFace = [bx(-1, 1, 1), bx(1, 1, 1), bx(1, 1, -1), bx(-1, 1, -1)];
+      poly(ctx, sideFace, '#5f6469', INK, ink * 1.4);
+      poly(ctx, topFace, '#8d9399', INK, ink * 1.4);
+      poly(ctx, front, '#1a1b1d', INK, ink * 1.4);
+      // a porta aberta (presa num lado, aberta para fora)
+      const hinge = (b) => P({ x: r.box.x - r.side.x * 12 + r.cv.x * 7, y: r.box.y - r.side.y * 12 + r.cv.y * 7, z: r.box.z + 21 * b });
+      const open = (b) => P({ x: r.box.x - r.side.x * 17 + r.cv.x * 27, y: r.box.y - r.side.y * 17 + r.cv.y * 27, z: r.box.z + 21 * b - 3 });
+      poly(ctx, [hinge(-1), open(-1), open(1), hinge(1)], '#7d8389', INK, ink * 1.4);
+      // fios coloridos saindo da caixinha
+      for (const [col, dx, drop] of [['#c0392b', -5, 46], ['#e0b92a', 1, 62], ['#2b2b2b', 6, 38]]) {
+        const p0 = { x: r.box.x + r.side.x * dx + r.cv.x * 7, y: r.box.y + r.side.y * dx + r.cv.y * 7, z: r.box.z - 8 };
+        const p1 = { x: p0.x + r.cv.x * 14, y: p0.y + r.cv.y * 14, z: p0.z - drop * 0.6 };
+        const p2 = { x: p0.x + r.cv.x * 20 + r.side.x * dx, y: p0.y + r.cv.y * 20 + r.side.y * dx, z: p0.z - drop };
+        const a = P(p0), b = P(p1), e = P(p2);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 2.6 * zoom + ink;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo(b.x, b.y, e.x, e.y);
+        ctx.stroke();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2.6 * zoom;
+        ctx.stroke();
+      }
+      // o braço sobre a rua, entortado para baixo no fim
+      tube([r.a0, r.a1, r.a2], 10, '#959ba1', '#6f757b');
+      for (let k = 0; k < 3; k++) {
+        const t = 0.2 + rnd() * 0.7;
+        const p = t < 0.5 ? P({ x: r.a0.x + (r.a1.x - r.a0.x) * t * 2, y: r.a0.y + (r.a1.y - r.a0.y) * t * 2, z: r.a0.z + (r.a1.z - r.a0.z) * t * 2 }) : P({ x: r.a1.x + (r.a2.x - r.a1.x) * (t * 2 - 1), y: r.a1.y + (r.a2.y - r.a1.y) * (t * 2 - 1), z: r.a1.z + (r.a2.z - r.a1.z) * (t * 2 - 1) });
+        ctx.fillStyle = RUST[k % 2];
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, (4 + rnd() * 4) * zoom, (2 + rnd() * 2) * zoom, 0.4, 0, M.TAU);
+        ctx.fill();
+      }
+      // os dois fios que seguram a caixa de luzes torta
+      const hang = [r.corner(0, 0.6, 1), r.corner(0, -0.6, 1)];
+      ctx.strokeStyle = '#141414';
+      ctx.lineWidth = Math.max(1, 2.2 * zoom);
+      for (const h of hang) {
+        const a = P(r.a2), b = P(h);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo((a.x + b.x) / 2 + 4 * zoom, (a.y + b.y) / 2, b.x, b.y);
+        ctx.stroke();
+      }
+      // anteparo amarelo atrás da caixa (no plano da frente, um pouco para trás)
+      const plate = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([b, e]) => {
+        const p = { x: r.c.x - r.u.x * 13 + r.v.x * 27 * b + r.w.x * 61 * e, y: r.c.y - r.u.y * 13 + r.v.y * 27 * b + r.w.y * 61 * e, z: r.c.z - r.u.z * 13 + r.v.z * 27 * b + r.w.z * 61 * e };
+        return P(p);
+      });
+      poly(ctx, plate, '#c4951d', INK, ink * 1.6);
+      // a caixa: as faces que olham para a câmera
+      const tc = cam.toCamera;
+      const faces = [
+        { n: r.u, pts: [[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1]], color: '#1e2023' },
+        { n: { x: -r.u.x, y: -r.u.y, z: -r.u.z }, pts: [[-1, -1, -1], [-1, 1, -1], [-1, 1, 1], [-1, -1, 1]], color: '#17181a' },
+        { n: r.v, pts: [[-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]], color: '#2e3135' },
+        { n: { x: -r.v.x, y: -r.v.y, z: -r.v.z }, pts: [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]], color: '#26292c' },
+        { n: r.w, pts: [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]], color: '#3b3e43' },
+        { n: { x: -r.w.x, y: -r.w.y, z: -r.w.z }, pts: [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1]], color: '#121314' },
+      ];
+      for (const fc of faces) {
+        if (fc.n.x * tc.x + fc.n.y * tc.y + fc.n.z * tc.z <= 0) continue;
+        poly(ctx, fc.pts.map(([a, b, e]) => P(r.corner(a, b, e))), fc.color, INK, ink * 1.4);
+      }
+      // as lentes apagadas (vermelha, amarela, verde) com a pala em cima; a verde trincada
+      const ring = (cen, rad, out) => {
+        const pts = [];
+        for (let k = 0; k <= 16; k++) {
+          const t = (k / 16) * M.TAU;
+          pts.push(P({ x: cen.x + r.u.x * out + (r.v.x * Math.cos(t) + r.w.x * Math.sin(t)) * rad, y: cen.y + r.u.y * out + (r.v.y * Math.cos(t) + r.w.y * Math.sin(t)) * rad, z: cen.z + r.u.z * out + (r.v.z * Math.cos(t) + r.w.z * Math.sin(t)) * rad }));
+        }
+        return pts;
+      };
+      const LENS = ['#43201c', '#4b3c14', '#173822'];
+      r.lens.forEach((cen, i) => {
+        poly(ctx, ring(cen, 11, 0), LENS[i], INK, ink * 1.1);
+        // brilho do vidro
+        const hl = ring(cen, 7, 0.5).slice(9, 13);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+        ctx.lineWidth = Math.max(1, 1.6 * zoom);
+        ctx.beginPath();
+        hl.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+        ctx.stroke();
+        // pala (a aba em cima da lente)
+        const visor = ring(cen, 13, 7).slice(0, 9);
+        ctx.strokeStyle = '#101112';
+        ctx.lineWidth = Math.max(1.5, 3.4 * zoom);
+        ctx.beginPath();
+        visor.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+        ctx.stroke();
+      });
+      const g = P({ x: r.lens[2].x + r.u.x * 0.5, y: r.lens[2].y + r.u.y * 0.5, z: r.lens[2].z });
+      ctx.strokeStyle = 'rgba(220, 235, 225, 0.7)';
+      ctx.lineWidth = Math.max(0.8, 1.1 * zoom);
+      for (const a of [0.3, 2.2, 4.1]) {
+        ctx.beginPath();
+        ctx.moveTo(g.x + Math.cos(a) * 2 * zoom, g.y + Math.sin(a) * 2 * zoom);
+        ctx.lineTo(g.x + Math.cos(a + 0.4) * 9 * zoom, g.y + Math.sin(a + 0.4) * 7 * zoom);
+        ctx.stroke();
+      }
+      // o fio solto que desce do braço (na ponta, as faíscas)
+      const ls = r.loose.map(P);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.4 * zoom + ink;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ls[0].x, ls[0].y);
+      ctx.bezierCurveTo(ls[1].x, ls[1].y, ls[2].x, ls[2].y, ls[3].x, ls[3].y);
+      ctx.stroke();
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.lineWidth = 2.4 * zoom;
+      ctx.stroke();
+      // a ponta desencapada (cobre)
+      ctx.fillStyle = '#d08a3c';
+      ctx.beginPath();
+      ctx.arc(ls[3].x, ls[3].y, 2.4 * zoom, 0, M.TAU);
+      ctx.fill();
+    }
     draw(ctx, time) {
       super.draw(ctx);
+      const cam = this.cam;
+      if (this.rig) {
+        // a amarela pisca falhada de vez em quando (soma de três ondas: só passa do limite em poucos instantes)
+        const t = time + (this.d.x % 7);
+        const v = Math.sin(t * 9.1) + Math.sin(t * 4.3 + 1.7) + Math.sin(t * 1.3 + 0.4);
+        if (v < 2.2 || this.alpha < 0.5) return;
+        const r = this.rig;
+        const cen = r.lens[1];
+        const q = cam.p({ x: cen.x + r.u.x, y: cen.y + r.u.y, z: this.z0 + cen.z });
+        const rad = 11 * cam.zoom;
+        const glow = ctx.createRadialGradient(q.x, q.y, rad * 0.3, q.x, q.y, rad * 3.2);
+        glow.addColorStop(0, 'rgba(255, 214, 90, 0.75)');
+        glow.addColorStop(1, 'rgba(255, 190, 40, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, rad * 3.2, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ffd34a';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rad * 0.8, rad * 0.95, 0, 0, M.TAU);
+        ctx.fill();
+        return;
+      }
       // ciclo: verde 6 s, amarelo 2 s, vermelho 6 s
       const t = time % 14;
       const on = t < 6 ? 2 : t < 8 ? 1 : 0;
