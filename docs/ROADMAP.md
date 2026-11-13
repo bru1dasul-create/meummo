@@ -169,6 +169,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
   com `caixa`, `engradado`). Liga com `interior: true` na `casa`; o mapa é do [mundo] (`mundo/budega-interior`)
+- [x] **[mundo]** Budega com interior, o mapa (**na main em 13/11**): ladrilho por dentro, colisão só nas paredes de
+  15 cm com a porta de enrolar aberta (de 62,34 a 66,66; a parede do fundo vai até a frente das prateleiras), a
+  geladeira na ponta do balcão fechando a passagem para trás dele, 1,25 m atrás do balcão para a Xiovanna, engradados
+  nos cantos da porta e nenhum vão de entalar; a lixeira saiu da frente da porta. A Xiovanna fica com o pé em
+  (64,6; 51), onde nenhuma copa a cobre na tela (a [estrutura] muda o `data/npcs.json` logo depois do mapa)
 - [ ] **[arte]** Os desenhos do parque antigo (13/11): `bebedouro` e `academia` (`aparelho`: `simulador-caminhada`,
   `barra`, `remada`) são novos; `placa` (a da 4c) com `tamanho: 'grande'` e `mato`; `banco` com `material: 'concreto'`
   e `mato`; `lixeira` com `mato`; `poste-praca` com `apagado`, `torto` e `cipo`; e a pista (`calcada` em polígono com
