@@ -162,12 +162,12 @@ Feito pelo [mundo], tudo na `main`:
 ## Esperando outras frentes
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
-  Relatado em 13/11: o "andar até" do jogo novo enrosca em poste e banco (segue linha reta entre pontos) e, depois de
-  enroscar, para de responder até o jogador mexer no teclado; e o desenho provisório pode usar a `altura` que vai
-  nas colisões da vila (hoje casa vira caixa de 1,2 m) e a `copa` como raio.
-- **[arte]:** o desenho 2.5D do mapa novo a partir de `chao` e `cenario` (clareira, figueira, mata, gradil, portão e,
-  da 4a, lago, lama, mata profunda com neblina, aguapés, capivaras, troncos caídos, Pedra do Véu e véus). O dono achou
-  a figueira "bugada" e não reconheceu a pedra no desenho de hoje: mandei sugestões para ela.
+  Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois
+  parava de responder; agora vai pelo tamanho exato do pé (`src/shared/route.ts`). O desenho provisório usa a
+  `altura` das colisões e a `copa` como raio, e `/?novo&provisorio` mostra as caixas de colisão (bom para conferir).
+- **[arte]:** a 4a já está desenhada na `main` (4a6b80f). Para a 4b, ela espera o "pode" do dono e a minha lista final;
+  a PD.View ainda não desenha `casa`, `banco`, `mesa`, `fogueira`, `orelhao`, `lixeira`, `carro`, `fiacao`, `praca`
+  e `faixa`. Por isso a 4b só entra na `main` junto com o desenho da vila (senão viram paredes invisíveis).
 - Dos mapas de hoje (valem até eles saírem): o personagem novo tem ~1,6 tile de altura e o zoom ficou sempre par. Se a
   cabeça ou o chapéu sumirem embaixo das copas ou dos letreiros do shopping, ajusto `FADE_NEAR`/`FADE_FAR` em
   `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
