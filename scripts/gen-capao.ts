@@ -1191,10 +1191,11 @@ if (reached('4c') && FLORESTA) {
   // ----- a casa abandonada do fundo: a árvore nasceu lá dentro e saiu pelo telhado; o mato entrou junto -----
   const abandonada = house(62, 13);
   open(abandonada, [62.75, 63.95], 'cimento', 'ninguem');
-  cenario.push(point('arvore', 65.15, 15.6, { especie: 'mata', copa: 3, altura: 7.5, tronco: 0.8, dentroDaCasa: true }));
+  // (no meio da casa: é onde o desenho da [arte] põe o buraco da laje e o tronco subindo)
+  cenario.push(point('arvore', 64.5, 16.5, { especie: 'mata', copa: 3, altura: 7.5, tronco: 0.8, dentroDaCasa: true }));
   cenario.push(rect('sofa', 62.15, 63, 13.15, 14.95, { altura: 0.9, olhando: 0, cor: '#6b5a4a', rasgado: true, mato: true }));
-  chao.push(rect('colchao', 63.6, 65, 17.6, 19.4, { velho: true }));
-  chao.push(point('entulho', 64.2, 16.9, { cadeiraCaida: true }));
+  chao.push(rect('colchao', 62.4, 63.6, 16.2, 18.2, { velho: true }));
+  chao.push(point('entulho', 65.9, 17.9, { cadeiraCaida: true }));
   for (const [cx, cy, rx, ry] of [[63, 16.5, 0.7, 0.9], [66.2, 18.9, 0.6, 0.5], [65.6, 13.8, 0.8, 0.5]] as const) {
     chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
   }
