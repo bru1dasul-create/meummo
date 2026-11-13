@@ -39,6 +39,7 @@ const MONSTER_FIELDS: FieldSpec<MonsterDef>[] = [
   { campo: 'ataque.dano', rotulo: 'Dano do golpe', tipo: 'faixa', ler: (d) => d.attack.damage },
   { campo: 'ataque.preparoMs', rotulo: 'Aviso no chão (ms)', tipo: 'inteiro', dica: 'maior = mais tempo para desviar', ler: (d) => d.attack.windupMs },
   { campo: 'ataque.intervaloMs', rotulo: 'Tempo entre golpes (ms)', tipo: 'inteiro', ler: (d) => d.attack.intervalMs },
+  { campo: 'ataque.recuo', rotulo: 'Empurrão do golpe (cm)', tipo: 'inteiro', dica: 'até 100; a defesa segura 75%', ler: (d) => d.attack.pushCm },
   { campo: 'xp', rotulo: 'XP que dá', tipo: 'inteiro', ler: (d) => d.xp },
   { campo: 'ouro', rotulo: 'Ouro que deixa', tipo: 'faixa', ler: (d) => d.gold },
   { campo: 'passoMs', rotulo: 'Tempo por passo (ms)', tipo: 'inteiro', dica: 'menor = mais rápido', ler: (d) => d.stepMs },
