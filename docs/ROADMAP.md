@@ -118,16 +118,30 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   brasileira, sem barraco destruído (casas e prédios inteiros, tomados pela mata; a vila continua viva). Referências
   aprovadas: `docs/referencias/padrao-rua-floresta.jpg` (a rua da Budega, com o detalhe que se quer) e
   `docs/referencias/padrao-cidade-floresta.jpg` (o bairro inteiro). O Mapa 02 para depois do pedaço (a)
-- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: planta aprovada pelo dono em 13/11 ("show",
+- [x] **[mundo]** A rua e a praça da Budega no padrão novo (**na main em 13/11**, com o desenho da [arte]): planta aprovada pelo dono em 13/11 ("show",
   `docs/referencias/rua-budega-planta.jpg` e o alvo `docs/referencias/rua-budega-aprovada.jpg`; na beirada esquerda
-  dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-floresta` (por cima da 4c):
+  dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-budega` (por cima da main):
   meio-fio com sarjeta, faixa amarela apagada, remendos, buracos com água, poças, rachaduras com mato, bueiros,
   tampas, capim, calçada de placas, musgo na praça, a **Figueira da Esquina** rompendo a calçada e o asfalto na
   esquina do portão (com raízes), cipó nas casas, nos postes e nos fios, plantas e árvore nas lajes, varal, o prédio
   do conjunto (Bloco B) no fundo, moto com mato, placa azul (R. Santo Dias × Tv. Jasmim da Beirada), cadeiras,
-  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Entra na main com o desenho da [arte]
-- [ ] **[arte]** O chão no padrão novo: asfalto (rachaduras, remendos, faixas apagadas), calçada de placas de cimento
-  (juntas, placas levantadas por raiz, mato nas frestas), meio-fio com sarjeta; e as coisas novas que a planta trouxer
+  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Ajustes do dono vendo as fotos: as cadeiras
+  da casa amarela ao lado da porta (não na frente) e os postes da rua do portão na calçada das casas, que para a
+  câmera fica atrás de quem anda na rua (antes ficavam na calçada da praça, na frente do personagem); nenhum fio
+  atravessa a rua
+- [x] **[arte]** O chão no padrão novo (13/11, `js/world/street.js`): asfalto de verdade (grão, manchas e trincas; mais
+  trincas no `estado` rachado), calçada de placas de cimento (juntas, trincas, placas levantadas perto de raiz, mato
+  nas frestas), meio-fio com sarjeta (a face aparece quando a rua fica do lado da câmera), faixa amarela apagada,
+  remendos, buracos com água, poças, rachaduras com mato, bueiros, tampas de esgoto, raízes que levantam o chão,
+  capim, musgo na praça, o campinho de terra com as linhas de cal e o chão quebrado em volta da Figueira da Esquina
+  (`rompendo`; ela não tem os símbolos da Figueira dos Despertos: só árvore com véu perto tem)
+- [x] **[arte]** As coisas novas da planta da rua (13/11, `js/world/city.js` e `props.js`): placa azul de rua (as de
+  São Paulo, com os dois nomes), moto enferrujada com mato, cadeira de plástico, vaso de espada-de-são-jorge, sacos de
+  lixo, bandeirinhas que balançam, cipó subindo pelos postes e pendurado nos fios, carro com uma árvore saindo pelo
+  teto, casas tomadas pela mata (cortinas de cipó conforme o `cipo`, manchas de chuva e musgo, plantas e árvore na laje,
+  varal com roupa, portão de garagem de ferro) e o prédio do conjunto (5 andares, varandas, entrada com a placa do
+  bloco). O escudo da Budega fica na frente do que está na laje. As coisas da 4c (viaduto, trem, ônibus, muro, traves,
+  barreira, placa, campinho) ficam para a etapa 4c: o ramo da rua do [mundo] (`mundo/rua-budega`) saiu sem a 4c
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
   até a vila do Capão (zona segura); a mata fechada do parque é a primeira área de caça. Escopo aprovado pelo dono
   em 12/11, uma etapa por vez e cada uma com a aprovação dele: 1) distância da câmera ✔; 2) planta final no papel ✔

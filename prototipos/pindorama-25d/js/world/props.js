@@ -196,7 +196,8 @@
     screenBox() {
       const { x0, x1, y0, y1, h } = this.b;
       const z0 = this.z0;
-      const pts = [this.P(x0, y1, z0), this.P(x1, y1, z0), this.P(x1, y0, z0), this.P(x0, y0, z0 + h + 220), this.P(x1, y0, z0 + h + 220), this.P(x0, y1 + 160, z0 + h)];
+      const up = this.b.topExtra || 220;
+      const pts = [this.P(x0, y1, z0), this.P(x1, y1, z0), this.P(x1, y0, z0), this.P(x0, y0, z0 + h + up), this.P(x1, y0, z0 + h + up), this.P(x0, y1 + 160, z0 + h), this.P(x1, y1, z0 + h + up * 0.6)];
       return bbox(pts, 30 * this.cam.zoom);
     }
     shadow(path) {
@@ -312,7 +313,9 @@
     constructor(world, b) {
       super(world, b);
       const wall = b.block ? BLOCK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
-      this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38) };
+      // a laje com árvore ou varal precisa de mais espaço em cima na imagem
+      const topExtra = b.roofTree ? 640 : b.clothes ? 300 : 220;
+      this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38), topExtra };
     }
     paint(ctx) {
       const cam = this.cam;
@@ -341,19 +344,32 @@
             vendinha(ctx, b, W, H, r);
             continue;
           }
+          if (f === 0 && b.tower) {
+            // prédio do conjunto: a entrada no meio, com a placa do bloco
+            towerEntrance(ctx, W, H, b);
+            continue;
+          }
           const doorW = f === 0 ? 92 : 0;
           const doorX = f === 0 ? Math.min(W - doorW - 50, W * 0.18) : 0;
           if (f === 0) houseDoor(ctx, doorX, H - 212, doorW, 212, b, r);
+          // portão de garagem de ferro na ponta da frente
+          const gw = f === 0 && b.garage ? Math.min(240, W * 0.4) : 0;
+          if (gw) garageDoor(ctx, W - gw - 30, H - 230, gw, 230, r);
           // janelas: no térreo, do outro lado da porta; em cima, espalhadas
-          const room = f === 0 ? W - (doorX + doorW) - 60 : W - 80;
-          const n = Math.max(1, Math.floor(room / 190));
+          const room = f === 0 ? W - (doorX + doorW) - 60 - (gw ? gw + 40 : 0) : W - 80;
+          const n = room > 120 ? Math.max(1, Math.floor(room / 190)) : 0;
           for (let k = 0; k < n; k++) {
             const wx = (f === 0 ? doorX + doorW + 40 : 40) + (room / n) * (k + 0.5) - 55;
             const wy = yTop + Math.max(40, fh * 0.28);
-            houseWindow(ctx, wx, wy, 110, Math.min(100, fh * 0.36), b, M.rng(b.x0 + f * 17 + k));
+            const wh = Math.min(100, fh * 0.36);
+            houseWindow(ctx, wx, wy, 110, wh, b, M.rng(b.x0 + f * 17 + k));
+            if (b.balconies && f > 0) balcony(ctx, wx - 15, wy + wh + 6, 140);
           }
         }
         if (b.abandoned) vines(ctx, W, H, r);
+        // a casa tomada pela mata: musgo e manchas de chuva, e o cipó cobrindo parte da fachada
+        if (b.moss) mossWall(ctx, W, H, r);
+        if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : null);
       });
       // ---- lado (+x): começa na quina da frente e vai para o fundo
       onWall(ctx, cam, { x: b.x1, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
@@ -370,9 +386,12 @@
           }
         }
         if (b.abandoned) vines(ctx, D, H, r);
+        if (b.moss) mossWall(ctx, D, H, r);
+        if (b.vine) overgrowth(ctx, D, H, r, b.vine * 0.8);
       });
-      // ---- laje: caixa d'água e, nas de 2 andares, os ferros da próxima laje esperando
-      if (b.tank && !b.abandoned) tank(ctx, cam, b.x0 + W * 0.68, b.y0 + D * 0.35, z0 + H, ink);
+      // ---- laje: caixa d'água, plantas, árvore e varal (do fundo para a frente) e, nas de 2 andares, os ferros
+      roofItems(ctx, cam, b, z0 + H, ink);
+      if (b.logo) onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => logoBoard(ctx, b, W));
       if (floors >= 2) {
         ctx.strokeStyle = '#5a4a3e';
         ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
@@ -518,6 +537,263 @@
       }
     }
   }
+  // ---- a casa tomada pela mata (planta da rua da Budega, 13/11)
+  const LEAVES = ['#3f7a3a', '#2f5f2e', '#4f8a42', '#356b33'];
+  /** Folhas em cacho (na parede, em cm): cada folha com contorno escuro. */
+  function leafCluster(ctx, x, y, n, size, r) {
+    for (let k = 0; k < n; k++) {
+      const lx = x + (r() - 0.5) * size * 2.2, ly = y + (r() - 0.5) * size * 1.6;
+      const a = r() * Math.PI;
+      ctx.fillStyle = CANOPY_INK;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, size * 0.62 + 2, size * 0.36 + 2, a, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = LEAVES[Math.floor(r() * LEAVES.length)];
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, size * 0.62, size * 0.36, a, 0, M.TAU);
+      ctx.fill();
+    }
+  }
+  /** Manchas de chuva escorrendo da laje e musgo no rodapé e na beirada. */
+  function mossWall(ctx, len, H, r) {
+    ctx.fillStyle = 'rgba(40, 46, 34, 0.15)';
+    for (let i = 0; i < Math.max(3, len / 70); i++) {
+      const x = r() * len, w = 10 + r() * 26, h = 60 + r() * H * 0.5;
+      ctx.fillRect(x, 16, w, h);
+      ctx.fillRect(x + w * 0.3, 16 + h, w * 0.4, 20 + r() * 40);
+    }
+    const MOSS = ['rgba(70, 104, 50, 0.6)', 'rgba(88, 122, 58, 0.55)', 'rgba(56, 86, 42, 0.6)'];
+    for (let i = 0; i < len / 20; i++) {
+      ctx.fillStyle = MOSS[Math.floor(r() * 3)];
+      ctx.beginPath();
+      ctx.ellipse(r() * len, H - r() * 36, 10 + r() * 24, 6 + r() * 12, 0, 0, M.TAU);
+      ctx.fill();
+    }
+    for (let i = 0; i < len / 40; i++) {
+      ctx.fillStyle = MOSS[Math.floor(r() * 3)];
+      ctx.beginPath();
+      ctx.ellipse(r() * len, 18 + r() * 22, 8 + r() * 18, 5 + r() * 9, 0, 0, M.TAU);
+      ctx.fill();
+    }
+  }
+  /** Cipó tomando a parede: cortinas caindo da laje e ramos subindo do chão; `amount` (0 a 1) = quanto cobre. */
+  function overgrowth(ctx, len, H, r, amount, clear) {
+    const a = Math.max(0, Math.min(1, amount));
+    // `clear` = trecho [x0, x1] da parede que fica livre (a entrada e a placa do prédio)
+    const pick = () => {
+      let x = r() * len;
+      if (clear && x > clear[0] && x < clear[1]) x = x < (clear[0] + clear[1]) / 2 ? clear[0] - 30 - r() * 60 : clear[1] + 30 + r() * 60;
+      return x;
+    };
+    const stem = (pts) => {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.strokeStyle = CANOPY_INK;
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.strokeStyle = '#3d6a32';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    };
+    // cortinas que caem da laje
+    const nTop = Math.max(1, Math.round((len / 110) * a));
+    for (let k = 0; k < nTop; k++) {
+      const x = pick();
+      const drop = H * (0.12 + r() * 0.6 * a);
+      for (let j = 0; j < 2 + Math.floor(r() * 3); j++) {
+        const x0 = x + (r() - 0.5) * 60;
+        const pts = [];
+        for (let t = 0; t <= 1.001; t += 0.125) pts.push([x0 + Math.sin(t * 5 + j) * 8, 10 + drop * t * (0.6 + r() * 0.4)]);
+        stem(pts);
+        for (const [px, py] of pts) if (r() < 0.8) leafCluster(ctx, px, py, 2, 13 + r() * 5, r);
+      }
+      leafCluster(ctx, x, 18, 8, 16, r);
+    }
+    // ramos subindo do chão
+    const nBot = Math.max(1, Math.round((len / 150) * a));
+    for (let k = 0; k < nBot; k++) {
+      const x = pick();
+      const top = H * (0.2 + r() * 0.55 * a);
+      const pts = [];
+      for (let t = 0; t <= 1.001; t += 0.125) pts.push([x + Math.sin(t * 4 + k) * 22, H - top * t]);
+      stem(pts);
+      for (const [px, py] of pts) leafCluster(ctx, px, py, 3, 14 + r() * 6, r);
+    }
+  }
+  /** Portão de garagem de ferro: chapa com frisos, ferrugem escorrendo e o trinco. */
+  function garageDoor(ctx, x, y, w, h, r) {
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 6, y - 6, w + 12, h + 6);
+    ctx.fillStyle = '#5b6168';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#454a50';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let xx = x + 14; xx < x + w - 4; xx += 16) {
+      ctx.moveTo(xx, y + 4);
+      ctx.lineTo(xx, y + h);
+    }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(140, 82, 44, 0.45)';
+    for (let k = 0; k < 6; k++) ctx.fillRect(x + r() * (w - 12), y + h * (0.2 + r() * 0.5), 6 + r() * 10, h * (0.15 + r() * 0.3));
+    ctx.fillStyle = '#2e3236';
+    ctx.fillRect(x + w * 0.48, y + h * 0.55, 10, 24);
+  }
+  /** Entrada do prédio do conjunto: porta de vidro com grade e a placa do bloco (o nome do prédio no mapa). */
+  function towerEntrance(ctx, W, H, b) {
+    const dw = 170, dh = 230;
+    const dx = W / 2 - dw / 2, dy = H - dh;
+    ctx.fillStyle = INK;
+    ctx.fillRect(dx - 8, dy - 8, dw + 16, dh + 8);
+    ctx.fillStyle = '#2b3036';
+    ctx.fillRect(dx, dy, dw, dh);
+    ctx.fillStyle = 'rgba(150, 178, 190, 0.35)';
+    ctx.fillRect(dx + 10, dy + 10, dw / 2 - 15, dh - 20);
+    ctx.fillRect(dx + dw / 2 + 5, dy + 10, dw / 2 - 15, dh - 20);
+    ctx.strokeStyle = '#1b1e22';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let k = 1; k < 6; k++) {
+      ctx.moveTo(dx + (dw * k) / 6, dy + 8);
+      ctx.lineTo(dx + (dw * k) / 6, dy + dh);
+    }
+    ctx.stroke();
+    // marquise e a placa do bloco
+    ctx.fillStyle = INK;
+    ctx.fillRect(dx - 40, dy - 34, dw + 80, 26);
+    ctx.fillStyle = '#8f897d';
+    ctx.fillRect(dx - 36, dy - 30, dw + 72, 18);
+    const label = (b.name || '').toUpperCase();
+    if (label) {
+      ctx.font = `700 34px ${FONT_SIGN}`;
+      const tw = ctx.measureText(label).width + 40;
+      ctx.fillStyle = INK;
+      ctx.fillRect(W / 2 - tw / 2 - 4, dy - 96, tw + 8, 56);
+      ctx.fillStyle = '#e8e2d2';
+      ctx.fillRect(W / 2 - tw / 2, dy - 92, tw, 48);
+      ctx.fillStyle = '#2f3a46';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, W / 2, dy - 67);
+    }
+  }
+  /** Árvore pequena nascida na laje (raiz no chão da laje, copa de tufos como as da mata). */
+  function roofTree(ctx, cam, x, y, z, ink) {
+    const t = { x, y, kind: 'mata', r: 125, h: 380, trunk: 7 };
+    const fork = { x, y, z: z + t.h * FORK };
+    const b0 = cam.p({ x, y, z }), b1 = cam.p(fork);
+    const w0 = 9 * cam.zoom, w1 = 5 * cam.zoom;
+    const shape = [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
+    poly(ctx, shape, null, INK, ink * 2.2);
+    poly(ctx, shape, '#5a4532');
+    // raízes agarradas na beirada da laje
+    ctx.strokeStyle = '#4a3726';
+    ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+    for (const [dx, dy] of [[-30, 10], [25, 18], [8, -26]]) {
+      const q = cam.p({ x: x + dx, y: y + dy, z });
+      ctx.beginPath();
+      ctx.moveTo(b0.x, b0.y);
+      ctx.lineTo(q.x, q.y);
+      ctx.stroke();
+    }
+    crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
+  }
+  /** Varal na laje: dois postinhos, o fio caindo um pouco e as roupas penduradas (viradas para a frente). */
+  function clothesLine(ctx, cam, b, z, ink) {
+    const W = b.x1 - b.x0, D = b.y1 - b.y0;
+    const y = b.y0 + D * 0.7;
+    const xa = b.x0 + W * 0.12, xb = Math.min(b.x1 - W * 0.12, xa + 420);
+    const L = xb - xa;
+    for (const x of [xa, xb]) {
+      const p0 = cam.p({ x, y, z }), p1 = cam.p({ x, y, z: z + 165 });
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 4 * cam.zoom + ink * 2;
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a8f96';
+      ctx.lineWidth = 4 * cam.zoom;
+      ctx.stroke();
+    }
+    onWall(ctx, cam, { x: xa, y, z: z + 160 }, { x: 1, y: 0 }, () => {
+      const sag = (a) => Math.sin((Math.PI * a) / L) * 14;
+      ctx.strokeStyle = '#2a2a2e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let a = 0; a <= L; a += 10) (a ? ctx.lineTo(a, sag(a)) : ctx.moveTo(a, sag(a)));
+      ctx.stroke();
+      const COL = ['#e8452c', '#2f6fd0', '#f4c21c', '#f2efe6', '#e86a9a', '#3f9a4a', '#7d3fa8'];
+      const r = M.rng(Math.round(b.x0 * 5 + b.y0));
+      for (let a = 26; a < L - 30; a += 52 + r() * 18) {
+        const top = sag(a) + 1;
+        const c = COL[Math.floor(r() * COL.length)];
+        const kind = r();
+        ctx.fillStyle = c;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        if (kind < 0.4) {
+          // camiseta
+          ctx.moveTo(a - 22, top);
+          ctx.lineTo(a + 22, top);
+          ctx.lineTo(a + 30, top + 14);
+          ctx.lineTo(a + 18, top + 18);
+          ctx.lineTo(a + 18, top + 52);
+          ctx.lineTo(a - 18, top + 52);
+          ctx.lineTo(a - 18, top + 18);
+          ctx.lineTo(a - 30, top + 14);
+        } else if (kind < 0.7) {
+          // toalha
+          ctx.rect(a - 18, top, 36, 58);
+        } else {
+          // bermuda
+          ctx.moveTo(a - 18, top);
+          ctx.lineTo(a + 18, top);
+          ctx.lineTo(a + 20, top + 44);
+          ctx.lineTo(a + 3, top + 44);
+          ctx.lineTo(a, top + 18);
+          ctx.lineTo(a - 3, top + 44);
+          ctx.lineTo(a - 20, top + 44);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+        // prendedores
+        ctx.fillStyle = '#d8d2c2';
+        ctx.fillRect(a - 12, top - 3, 4, 7);
+        ctx.fillRect(a + 8, top - 3, 4, 7);
+      }
+    });
+  }
+  /** O que fica na laje, do fundo para a frente: caixa d'água, plantas, árvore e varal. */
+  function roofItems(ctx, cam, b, z, ink) {
+    const W = b.x1 - b.x0, D = b.y1 - b.y0;
+    const items = [];
+    const tx = b.x0 + W * 0.68, ty = b.y0 + D * 0.35;
+    if (b.tank && !b.abandoned) items.push({ k: tx + ty, draw: () => tank(ctx, cam, tx, ty, z, ink) });
+    if (b.tower && b.tank && W > 500) items.push({ k: b.x0 + W * 0.3 + ty, draw: () => tank(ctx, cam, b.x0 + W * 0.3, ty, z, ink) });
+    if (b.roofTree) {
+      const rx = b.x0 + W * 0.28, ry = b.y0 + D * 0.42;
+      items.push({ k: rx + ry, draw: () => roofTree(ctx, cam, rx, ry, z, ink) });
+    }
+    if (b.plants && PD.flora) {
+      const r = M.rng(Math.round(b.x0 * 7 + b.y0 * 3));
+      for (let k = 0; k < 6 + Math.floor(r() * 3); k++) {
+        const x = b.x0 + W * (0.08 + r() * 0.84), y = b.y0 + D * (0.1 + r() * 0.8);
+        if (Math.hypot(x - tx, y - ty) < 100) continue;
+        const kind = r() < 0.55 ? 'planta-samambaia' : 'arbusto';
+        const d = { kind, x, y, r: kind === 'arbusto' ? 38 + r() * 18 : 34 + r() * 18, wild: true };
+        const fl = PD.flora.small[kind];
+        if (fl) items.push({ k: x + y, draw: () => fl.paint(ctx, cam, d, z, ink) });
+      }
+    }
+    if (b.clothes) items.push({ k: b.x0 + W * 0.3 + b.y0 + D * 0.7, draw: () => clothesLine(ctx, cam, b, z, ink) });
+    items.sort((p, q) => p.k - q.k);
+    for (const it of items) it.draw();
+  }
   /** Vendinha: porta de enrolar meio aberta, prateleiras acesas lá dentro (garrafas, latas, caixas, frutas) e o letreiro. */
   function vendinha(ctx, b, W, H, r) {
     const s = b.shop;
@@ -563,13 +839,14 @@
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 12);
     // letreiro pintado na parede, em cima da porta (quem tem logo ganha a placa em cima da laje no lugar dele)
     if (s.sign && !b.logo) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
-    if (b.logo === 'budega') {
-      // a placa com o escudo fica em pé na beirada da laje, presa por dois ferros
-      const lw = Math.min(124, W * 0.36);
-      ctx.fillStyle = INK;
-      for (const px of [W / 2 - lw * 0.3, W / 2 + lw * 0.3]) ctx.fillRect(px - 4, -20, 8, 34);
-      budegaLogo(ctx, W / 2, -lw * 1.02 + 4, lw);
-    }
+  }
+  /** A placa com o escudo da Budega, em pé na beirada da laje, presa por dois ferros (na frente do que está na laje). */
+  function logoBoard(ctx, b, W) {
+    if (b.logo !== 'budega') return;
+    const lw = Math.min(124, W * 0.36);
+    ctx.fillStyle = INK;
+    for (const px of [W / 2 - lw * 0.3, W / 2 + lw * 0.3]) ctx.fillRect(px - 4, -20, 8, 34);
+    budegaLogo(ctx, W / 2, -lw * 1.02 + 4, lw);
   }
   /**
    * Logo da Budega (o escudo dourado do dono): "BUDEGA" e "DISTRIBUIDORA" numa faixa mais larga que o escudo, os
@@ -997,39 +1274,111 @@
     const sh = [P(xa, b.y1, zTop - 8), P(xb, b.y1, zTop - 8), P(xb, b.y1, zTop - 70), P(xa, b.y1, zTop - 70)];
     poly(ctx, sh, 'rgba(20,14,26,0.28)');
   }
+  /**
+   * Caixa d'água de plástico (as azuis das lajes): corpo que abre um pouco para cima, com dois anéis; tampa mais larga
+   * com a cúpula e o pegador; o cano branco saindo do lado e descendo para a laje; em cima de um calço de madeira.
+   * (O dono pediu: a de antes parecia uma lata.)
+   */
   function tank(ctx, cam, x, y, z, ink) {
-    // caixa d'água azul (cilindro)
-    const r = 70;
-    const h = 95;
-    const top = cam.p({ x, y, z: z + h });
-    const bot = cam.p({ x, y, z: z + 10 });
-    const rx = r * cam.zoom;
-    const ry = r * cam.zoom * cam.sinP;
+    const zoom = cam.zoom;
+    const sp = cam.sinP;
+    const zb = z + 12; // em cima do calço
+    const rb = 56, rt = 68, h = 82;
+    const B = cam.p({ x, y, z: zb });
+    const T = cam.p({ x, y, z: zb + h });
+    const ell = (c, r, color, k = 1, a0 = 0, a1 = M.TAU) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, r * zoom * k, r * zoom * sp * k, 0, a0, a1);
+      ctx.fill();
+    };
+    // calço de madeira
+    const s0 = cam.p({ x, y, z });
     ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.ellipse(bot.x, bot.y, rx + ink * 1.6, ry + ink * 1.6, 0, 0, M.TAU);
+    ctx.ellipse(s0.x, s0.y, (rb + 10) * zoom + ink, (rb + 10) * zoom * sp + ink, 0, 0, M.TAU);
     ctx.fill();
-    ctx.fillRect(bot.x - rx - ink * 1.6, top.y, (rx + ink * 1.6) * 2, bot.y - top.y);
-    ctx.fillStyle = '#2f73c4';
-    ctx.beginPath();
-    ctx.ellipse(bot.x, bot.y, rx, ry, 0, 0, M.TAU);
-    ctx.fill();
-    ctx.fillRect(bot.x - rx, top.y, rx * 2, bot.y - top.y);
-    ctx.fillStyle = '#245a9c';
-    ctx.fillRect(bot.x + rx * 0.35, top.y, rx * 0.65, bot.y - top.y);
+    ctx.fillStyle = '#7a5a3c';
+    ctx.fillRect(s0.x - (rb + 10) * zoom, s0.y - 12 * zoom * cam.cosP, (rb + 10) * 2 * zoom, 12 * zoom * cam.cosP);
+    ell(s0, rb + 10, '#6a4e34');
+    // o corpo (tronco de cone) com o lado da sombra
+    const body = [
+      { x: B.x - rb * zoom, y: B.y },
+      { x: T.x - rt * zoom, y: T.y },
+      { x: T.x + rt * zoom, y: T.y },
+      { x: B.x + rb * zoom, y: B.y },
+    ];
     ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.ellipse(top.x, top.y, rx + ink * 1.4, ry + ink * 1.4, 0, 0, M.TAU);
+    ctx.ellipse(B.x, B.y, rb * zoom + ink * 1.4, rb * zoom * sp + ink * 1.4, 0, 0, Math.PI);
     ctx.fill();
-    ctx.fillStyle = '#5a9be0';
+    poly(ctx, body, null, INK, ink * 2.6);
+    poly(ctx, body, '#2f73c4');
+    ell(B, rb, '#2f73c4', 1, 0, Math.PI);
+    poly(ctx, [{ x: B.x + rb * zoom * 0.3, y: B.y }, { x: T.x + rt * zoom * 0.3, y: T.y }, { x: T.x + rt * zoom, y: T.y }, { x: B.x + rb * zoom, y: B.y }], '#245a9c');
+    // os dois anéis do corpo
+    ctx.strokeStyle = '#1f4f8c';
+    ctx.lineWidth = Math.max(1.2, 2.6 * zoom);
+    for (const u of [0.33, 0.66]) {
+      const c = cam.p({ x, y, z: zb + h * u });
+      const r = (rb + (rt - rb) * u) * zoom;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, r, r * sp, 0, 0.08, Math.PI - 0.08);
+      ctx.stroke();
+    }
+    // sujeira e limo escorrendo (a mata tomando a cidade)
+    ctx.fillStyle = 'rgba(30, 60, 40, 0.28)';
+    for (let k = 0; k < 4; k++) {
+      const u = (k + 0.5) / 4;
+      const px = T.x - rt * zoom * 0.8 + rt * zoom * 1.6 * u;
+      ctx.fillRect(px, T.y + 4 * zoom, 3 * zoom, (h * cam.cosP * 0.35 + k * 6) * zoom);
+    }
+    // o cano branco: sai do lado, faz a curva e desce até a laje
+    const p0 = cam.p({ x: x + rb * 0.8, y: y + rb * 0.6, z: zb + 18 });
+    const p1 = cam.p({ x: x + rb * 1.3, y: y + rb * 1.0, z: zb + 18 });
+    const p2 = cam.p({ x: x + rb * 1.3, y: y + rb * 1.0, z });
+    for (const [c, w] of [[INK, 6 * zoom + ink * 2], ['#dcd8cc', 6 * zoom]]) {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+    // a tampa: aba mais larga, a cúpula e o pegador no meio
+    const L = cam.p({ x, y, z: zb + h + 4 });
+    ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.ellipse(top.x, top.y, rx, ry, 0, 0, M.TAU);
+    ctx.ellipse(L.x, L.y, (rt + 6) * zoom + ink * 1.4, (rt + 6) * zoom * sp + ink * 1.4, 0, 0, M.TAU);
     ctx.fill();
+    ctx.fillRect(L.x - (rt + 6) * zoom - ink * 1.4, L.y - 0, ((rt + 6) * zoom + ink * 1.4) * 2, (T.y - L.y) + 2);
+    ell(T, rt + 6, '#2a66b0', 1, 0, Math.PI);
+    ctx.fillStyle = '#2a66b0';
+    ctx.fillRect(T.x - (rt + 6) * zoom, L.y, (rt + 6) * 2 * zoom, T.y - L.y);
+    ell(L, rt + 6, '#4f8fdc');
+    const D = cam.p({ x, y, z: zb + h + 4 });
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.ellipse(D.x, D.y - 2 * zoom, rt * 0.82 * zoom + ink, (rt * 0.82 * sp + 14) * zoom + ink, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = '#5b9be6';
+    ctx.beginPath();
+    ctx.ellipse(D.x, D.y - 2 * zoom, rt * 0.82 * zoom, (rt * 0.82 * sp + 14) * zoom, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(D.x - rt * 0.32 * zoom, D.y - 12 * zoom, rt * 0.3 * zoom, 5 * zoom, -0.2, 0, M.TAU);
+    ctx.fill();
+    const K = cam.p({ x, y, z: zb + h + 4 + 20 });
+    ctx.fillStyle = INK;
+    ctx.fillRect(K.x - 9 * zoom - ink, K.y - ink, 18 * zoom + ink * 2, 7 * zoom + ink * 2);
     ctx.fillStyle = '#3e83cf';
-    ctx.beginPath();
-    ctx.ellipse(top.x, top.y, rx * 0.45, ry * 0.45, 0, 0, M.TAU);
-    ctx.fill();
+    ctx.fillRect(K.x - 9 * zoom, K.y, 18 * zoom, 7 * zoom);
   }
+
   function antenna(ctx, cam, x, y, z, ink) {
     const a = cam.p({ x, y, z });
     const b = cam.p({ x, y, z: z + 260 });
@@ -1126,7 +1475,7 @@
         poly(ctx, wl.concat(wr), '#efe9dc');
         poly(ctx, pts.slice(0, wz + 1).map((p) => ({ x: p.c.x + p.r * 0.2, y: p.c.y })).concat(wr), '#cfc6b4');
       }
-      if (t.kind === 'figueira') this._figGlyphs(ctx, pts);
+      if (t.kind === 'figueira' && this._sacred()) this._figGlyphs(ctx, pts);
       if (crown) return; // os galhos saem da forquilha na copa (crownPaint)
       // galhos para dentro da copa
       ctx.strokeStyle = INK;
@@ -1175,7 +1524,10 @@
     }
     const roots = [];
     for (let k = 0, n = 8; k < n; k++) {
-      roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (1.6 + rnd() * 1.0), zr: R * (0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
+      // a figueira que rompeu a rua (`rompendo`): raízes curtas e baixas no pé do tronco (as que atravessam a calçada e
+      // o asfalto são as `raiz` do chão); compridas e altas, elas viravam um cano em pé na visão de cima
+      const street = !!t.breaks;
+      roots.push({ a: (k / n) * M.TAU + (rnd() - 0.5) * 0.55, len: R * (street ? 1.05 + rnd() * 0.3 : 1.6 + rnd() * 1.0), zr: R * (street ? 0.12 + rnd() * 0.08 : 0.28 + rnd() * 0.18), w: R * (0.2 + rnd() * 0.1), wig: rnd() * 6 });
     }
     const limbs = [];
     const turn = rnd() * M.TAU;
@@ -1193,7 +1545,19 @@
     this._figLimbs(ctx, limbs.filter((l) => front(l.a)), R, zf, rnd);
     // símbolos na frente do tronco (na superfície: a frente do cilindro fica r·sinP abaixo do centro da fatia)
     const onFace = (s) => ({ c: { x: s.c.x - s.r * zoom * 0.12, y: s.c.y + s.r * cam.sinP * zoom * 0.95 }, r: 0 });
-    this._figGlyphs(ctx, [null, onFace(slices[6]), onFace(slices[11]), onFace(slices[16])]);
+    if (this._sacred()) this._figGlyphs(ctx, [null, onFace(slices[6]), onFace(slices[11]), onFace(slices[16])]);
+  };
+
+  /**
+   * Figueira sagrada (com os símbolos que brilham): a que tem um ponto do Véu perto. A Figueira da Esquina, que rompeu
+   * a rua (`rompendo`), é só uma árvore grande da cidade. No protótipo antigo (sem véus no mapa), todas são.
+   */
+  TreeTrunk.prototype._sacred = function () {
+    const t = this.t;
+    if (t.breaks) return false;
+    const map = this.world.map;
+    if (!map || map.kind !== 'tmj') return true;
+    return (map.veils || []).some((v) => Math.hypot(v.x - t.x, v.y - t.y) < 400);
   };
 
   /** Corpo do tronco: fatias em tinta (contorno), depois a casca com luz à esquerda e sulcos que contornam o cilindro. */
@@ -1321,7 +1685,7 @@
       const hangs = [];
       for (let k = 0; k < l.hang; k++) {
         const s = Math.floor(S * (0.45 + 0.5 * rnd()));
-        const reach = rnd() < 0.5 ? 0 : 60 + rnd() * 160;
+        const reach = t.breaks ? (rnd(), 170 + rnd() * 150) : rnd() < 0.5 ? 0 : 60 + rnd() * 160;
         hangs.push({ s, end: z0 + reach, sway: (rnd() - 0.5) * 30, w: (2.4 + rnd() * 1.6) * zoom });
       }
       return { pts, hangs };
@@ -1976,6 +2340,8 @@
         ctx.ellipse(s1.x + 2 * cam.zoom, s1.y + 11 * cam.zoom, 18 * cam.zoom, 6 * cam.zoom, -0.45, 0, M.TAU);
         ctx.fill();
       }
+      // a mata subindo pelo poste (planta da rua da Budega)
+      if (p.vine && PD.city) PD.city.poleVine(ctx, cam, p, z0, this.h, ink);
     }
   }
 
@@ -2083,7 +2449,8 @@
     }
     constructor(world, d) {
       const fp = d.x0 !== undefined ? { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 } : { x0: d.x - (d.r || 30), x1: d.x + (d.r || 30), y0: d.y - (d.r || 30), y1: d.y + (d.r || 30) };
-      const fl = PD.flora && PD.flora.small[d.kind];
+      // desenhos de fora: as plantas da mata (flora.js) e as coisas da rua (city.js)
+      const fl = (PD.flora && PD.flora.small[d.kind]) || (PD.city && PD.city.small[d.kind]);
       super(world, fp, { fades: d.kind === 'banca' || !!(fl && fl.fades) });
       this.d = d;
       if (fl) {
@@ -2097,14 +2464,15 @@
       const r = d.r || 30;
       const decor = d.kind === 'aguape' || d.kind === 'capivara'; // enfeites: não seguram ninguém
       this.collider = decor ? null : d.x0 !== undefined ? { type: 'box', ...fp } : { type: 'circle', x: d.x, y: d.y, r: d.kind === 'arbusto' ? r * 0.8 : d.kind === 'pedra' ? r : d.kind === 'mesa' ? 60 : 22 };
-      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.h || 140, fogueira: 40 }[d.kind] || 80;
+      this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.tree ? 520 : d.h || 140, fogueira: 40 }[d.kind] || 80;
     }
     screenBox() {
       if (this.fl && this.fl.box) return this.fl.box(this.cam, this.d, this.z0, this.height);
       const f = this.fp;
       const z = this.z0;
       const h = this.height + 60;
-      return bbox([this.P(f.x0, f.y1, z), this.P(f.x1, f.y0, z), this.P(f.x1, f.y1, z), this.P(f.x0, f.y0, z + h), this.P(f.x1, f.y0, z + h), this.P(f.x0, f.y1, z + h)], 40 * this.cam.zoom);
+      const e = this.d.tree ? 140 : 0; // a copa da árvore do carro passa da caixa do carro
+      return bbox([this.P(f.x0 - e, f.y1 + e, z), this.P(f.x1 + e, f.y0 - e, z), this.P(f.x1 + e, f.y1 + e, z), this.P(f.x0 - e, f.y0 - e, z + h), this.P(f.x1 + e, f.y0 - e, z + h), this.P(f.x0 - e, f.y1 + e, z + h)], 40 * this.cam.zoom);
     }
     shadow(path) {
       const f = this.fp;
@@ -2594,6 +2962,12 @@
    * Carro largado: carroceria e cabine em caixas, vidros escuros (um quebrado), pneus murchos, ferrugem e o mato que
    * tomou conta (tufos no capô e no teto, capim em volta). Deitado no lado comprido da caixa.
    */
+  /**
+   * Carro largado (a cidade tomada pela mata; o dono pediu "arruma esse carro", que parecia duas caixas): perfil de
+   * sedã esticado na largura (porta-malas, vidro de trás, teto, para-brisa e capô), portas e maçanetas, vidros (um
+   * quebrado), faróis, rodas murchas, ferrugem; com `mato`, musgo no teto e no capô, cipó por cima e capim em volta;
+   * com `arvore`, uma árvore saindo por um buraco no teto. A frente aponta para +x (ou +y).
+   */
   Small.prototype._car = function (ctx) {
     const cam = this.cam;
     const d = this.d;
@@ -2604,81 +2978,200 @@
     const alongX = f.x1 - f.x0 >= f.y1 - f.y0;
     const H = d.h || 140;
     const body = d.color || '#a8473e';
-    const C = { front: body, side: M.shade(body, -0.25), top: M.shade(body, 0.12) };
-    const L = alongX ? f.x1 - f.x0 : f.y1 - f.y0;
-    // carroceria baixa e cabine
-    const inset = 8;
-    box(ctx, cam, f.x0 + inset, f.x1 - inset, f.y0 + inset, f.y1 - inset, z0 + 22, z0 + H * 0.58, C, ink);
-    const cab = alongX ? { x0: f.x0 + L * 0.3, x1: f.x0 + L * 0.74, y0: f.y0 + 22, y1: f.y1 - 22 } : { x0: f.x0 + 22, x1: f.x1 - 22, y0: f.y0 + L * 0.3, y1: f.y0 + L * 0.74 };
-    const faces = box(ctx, cam, cab.x0, cab.x1, cab.y0, cab.y1, z0 + H * 0.58, z0 + H, C, ink);
-    // pneus murchos (só os do lado da câmera), por cima da carroceria, saindo por baixo dela
-    const wheels = alongX ? [[f.x0 + L * 0.2, f.y1], [f.x0 + L * 0.78, f.y1]] : [[f.x1, f.y0 + L * 0.2], [f.x1, f.y0 + L * 0.78]];
-    for (const [wx, wy] of wheels) {
-      const p = cam.p({ x: wx, y: wy, z: z0 + 12 });
-      ctx.fillStyle = INK;
+    const Lc = alongX ? f.x1 - f.x0 : f.y1 - f.y0;
+    const Wc = alongX ? f.y1 - f.y0 : f.x1 - f.x0;
+    const vN = Wc - 8, vF = 8; // o lado de perto (virado para a câmera) e o de longe
+    const W3 = (u, v, z) => (alongX ? { x: f.x0 + u, y: f.y0 + v, z: z0 + z } : { x: f.x0 + v, y: f.y0 + u, z: z0 + z });
+    const P = (u, v, z) => cam.p(W3(u, v, z));
+    const zb = 26; // a barra de baixo (as rodas murchas deixam o carro baixo)
+    const prof = [[0, zb], [0, 0.56 * H], [0.17 * Lc, 0.6 * H], [0.27 * Lc, 0.63 * H], [0.37 * Lc, H], [0.63 * Lc, H], [0.75 * Lc, 0.64 * H], [0.95 * Lc, 0.57 * H], [Lc, 0.5 * H], [Lc, zb]];
+    const tc = cam.toCamera;
+    const uDir = alongX ? { x: 1, y: 0 } : { x: 0, y: 1 };
+    const C = { side: M.shade(body, -0.22), top: M.shade(body, 0.1), end: body };
+    const glassC = '#2b3640';
+    // rodas: as de longe antes do carro (só a parte de baixo aparece), as de perto depois
+    const wheel = (uc, v) => {
+      const r = 30, zc = 24;
+      const out = [], rim = [];
+      for (let i = 0; i < 24; i++) {
+        const t = (i / 24) * M.TAU;
+        out.push(P(uc + Math.cos(t) * r, v, Math.max(0, zc + Math.sin(t) * r * 0.92)));
+        rim.push(P(uc + Math.cos(t) * r * 0.55, v + 1, zc + Math.sin(t) * r * 0.55));
+      }
+      poly(ctx, out, null, INK, ink * 2);
+      poly(ctx, out, '#252322');
+      poly(ctx, rim, '#6d665e');
+      ctx.fillStyle = 'rgba(128, 74, 38, 0.55)';
+      const c = P(uc, v + 1, zc);
       ctx.beginPath();
-      ctx.ellipse(p.x, p.y, 22 * cam.zoom + ink, 16 * cam.zoom + ink, 0, 0, M.TAU);
+      ctx.arc(c.x + 3 * cam.zoom, c.y + 2 * cam.zoom, 6 * cam.zoom, 0, M.TAU);
       ctx.fill();
-      ctx.fillStyle = '#2c2c2e';
+    };
+    const wheelsU = [0.18 * Lc, 0.8 * Lc];
+    for (const u of wheelsU) wheel(u, vF + 6);
+    // as faces de cima (do perfil), as que a câmera vê, da mais longe para a mais perto
+    const faces = [];
+    for (let i = 0; i + 1 < prof.length; i++) {
+      const [ua, za] = prof[i], [ub, zb2] = prof[i + 1];
+      const du = ub - ua, dz = zb2 - za;
+      const nu = -dz, nz = du; // normal para fora (o perfil anda de trás para a frente por cima)
+      const dot = nu * (uDir.x * tc.x + uDir.y * tc.y) + nz * tc.z;
+      if (dot <= 0 || (du === 0 && dz === 0)) continue;
+      const quad = [P(ua, vF, za), P(ub, vF, zb2), P(ub, vN, zb2), P(ua, vN, za)];
+      faces.push({ i, quad, depth: cam.depth(W3((ua + ub) / 2, (vF + vN) / 2, (za + zb2) / 2)), steep: Math.abs(dz) > Math.abs(du) });
+    }
+    faces.sort((a, b) => a.depth - b.depth);
+    const glassFace = (i) => i === 3 || i === 5; // vidro de trás e para-brisa
+    for (const fc of faces) {
+      const col = glassFace(fc.i) ? glassC : fc.i === 8 ? C.end : fc.i === 0 ? C.end : C.top;
+      poly(ctx, fc.quad, col, INK, ink * 2);
+    }
+    // o lado de perto: o perfil inteiro
+    const side = prof.map(([u, z]) => P(u, vN, z));
+    poly(ctx, side, C.side, INK, ink * 2.2);
+    ctx.save();
+    poly(ctx, side);
+    ctx.clip();
+    // caixas de roda escuras, frisos das portas, maçanetas e ferrugem
+    for (const u of wheelsU) {
+      const arc = [];
+      for (let i = 0; i <= 12; i++) {
+        const t = Math.PI + (i / 12) * Math.PI;
+        arc.push(P(u + Math.cos(t) * 40, vN, 24 + Math.sin(-t) * 40));
+      }
+      poly(ctx, arc, '#1c1a19');
+    }
+    ctx.strokeStyle = M.shade(body, -0.45);
+    ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+    ctx.beginPath();
+    for (const u of [0.38 * Lc, 0.61 * Lc]) {
+      const a = P(u, vN, zb + 6), b = P(u, vN, 0.63 * H);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    const r0 = P(0.02 * Lc, vN, 0.4 * H), r1 = P(0.98 * Lc, vN, 0.4 * H);
+    ctx.moveTo(r0.x, r0.y);
+    ctx.lineTo(r1.x, r1.y);
+    ctx.stroke();
+    ctx.fillStyle = '#2a2624';
+    for (const u of [0.46 * Lc, 0.68 * Lc]) {
+      const q = P(u, vN, 0.55 * H);
+      ctx.fillRect(q.x - 5 * cam.zoom, q.y - 1.5 * cam.zoom, 10 * cam.zoom, 3 * cam.zoom);
+    }
+    ctx.fillStyle = 'rgba(122, 66, 32, 0.5)';
+    for (let k = 0; k < 7; k++) {
+      const q = P(rnd() * Lc, vN, zb + rnd() * H * 0.35);
       ctx.beginPath();
-      ctx.ellipse(p.x, p.y, 22 * cam.zoom, 16 * cam.zoom, 0, 0, M.TAU);
-      ctx.fill();
-      ctx.fillStyle = '#76736e';
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y - 1 * cam.zoom, 8 * cam.zoom, 6 * cam.zoom, 0, 0, M.TAU);
+      ctx.ellipse(q.x, q.y, (6 + rnd() * 12) * cam.zoom, (4 + rnd() * 6) * cam.zoom, rnd() * 3, 0, M.TAU);
       ctx.fill();
     }
-    // vidros nas duas faces da cabine que a câmera vê (um quebrado)
-    const glass = (pts, broken) => {
-      const cx = pts.reduce((a, q) => a + q.x, 0) / 4, cy = pts.reduce((a, q) => a + q.y, 0) / 4;
-      const shrink = pts.map((q) => ({ x: cx + (q.x - cx) * 0.78, y: cy + (q.y - cy) * 0.7 }));
-      poly(ctx, shrink, broken ? '#1d2126' : '#3f5563', INK, ink * 1.2);
-      if (!broken) {
-        ctx.fillStyle = 'rgba(255,255,255,0.22)';
-        ctx.beginPath();
-        ctx.moveTo(shrink[0].x * 0.7 + shrink[1].x * 0.3, shrink[0].y * 0.7 + shrink[1].y * 0.3);
-        ctx.lineTo(shrink[3].x * 0.5 + shrink[2].x * 0.5, shrink[3].y * 0.5 + shrink[2].y * 0.5);
-        ctx.lineTo(shrink[3].x * 0.3 + shrink[2].x * 0.7, shrink[3].y * 0.3 + shrink[2].y * 0.7);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.strokeStyle = 'rgba(200, 215, 225, 0.6)';
+    ctx.restore();
+    // vidros do lado (o da frente às vezes quebrado)
+    const win = (pts, broken) => {
+      const q = pts.map(([u, z]) => P(u, vN + 1, z));
+      poly(ctx, q, broken ? '#14171a' : glassC, INK, ink * 1.4);
+      const cx = q.reduce((a, p) => a + p.x, 0) / q.length, cy = q.reduce((a, p) => a + p.y, 0) / q.length;
+      if (broken) {
+        ctx.strokeStyle = 'rgba(200, 215, 225, 0.55)';
         ctx.lineWidth = Math.max(0.8, 1.2 * cam.zoom);
         ctx.beginPath();
-        for (let k = 0; k < 4; k++) {
+        for (const p of q) {
           ctx.moveTo(cx, cy);
-          const q = shrink[k];
-          ctx.lineTo(cx + (q.x - cx) * 0.9, cy + (q.y - cy) * 0.9);
+          ctx.lineTo(cx + (p.x - cx) * 0.85, cy + (p.y - cy) * 0.85);
         }
         ctx.stroke();
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.beginPath();
+        ctx.moveTo(q[0].x * 0.6 + q[1].x * 0.4, q[0].y * 0.6 + q[1].y * 0.4);
+        ctx.lineTo(q[1].x * 0.5 + q[2].x * 0.5, q[1].y * 0.5 + q[2].y * 0.5);
+        ctx.lineTo(cx, cy);
+        ctx.closePath();
+        ctx.fill();
       }
     };
-    glass(faces.fy, rnd() < 0.5);
-    glass(faces.fx, false);
-    // ferrugem
-    ctx.fillStyle = 'rgba(110, 60, 30, 0.45)';
-    for (let k = 0; k < 5; k++) {
-      const q = cam.p({ x: f.x0 + rnd() * (f.x1 - f.x0), y: alongX ? f.y1 - inset : f.y0 + rnd() * (f.y1 - f.y0), z: z0 + 30 + rnd() * H * 0.25 });
+    win([[0.29 * Lc, 0.66 * H], [0.38 * Lc, 0.95 * H], [0.49 * Lc, 0.95 * H], [0.49 * Lc, 0.66 * H]], false);
+    win([[0.51 * Lc, 0.66 * H], [0.51 * Lc, 0.95 * H], [0.62 * Lc, 0.95 * H], [0.72 * Lc, 0.66 * H]], rnd() < 0.6);
+    // trincas no para-brisa, se a câmera vê ele
+    const ws = faces.find((fc) => fc.i === 5);
+    if (ws) {
+      const q = ws.quad;
+      const cx = (q[0].x + q[1].x + q[2].x + q[3].x) / 4, cy = (q[0].y + q[1].y + q[2].y + q[3].y) / 4;
+      ctx.strokeStyle = 'rgba(205, 220, 230, 0.55)';
+      ctx.lineWidth = Math.max(0.8, 1.1 * cam.zoom);
       ctx.beginPath();
-      ctx.ellipse(q.x, q.y, (8 + rnd() * 10) * cam.zoom, (5 + rnd() * 6) * cam.zoom, rnd() * 3, 0, M.TAU);
+      for (let k = 0; k < 6; k++) {
+        const a = rnd() * M.TAU;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * 18 * cam.zoom, cy + Math.sin(a) * 9 * cam.zoom);
+      }
+      ctx.stroke();
+    }
+    // farol e grade na frente (a frente é virada para +x ou +y: a câmera vê)
+    for (const v of [vF + 18, vN - 18]) {
+      const q = P(Lc + 1, v, 0.42 * H);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y, 8 * cam.zoom + ink, 5 * cam.zoom + ink, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = v === vF + 18 ? '#bdb59a' : '#5a5648';
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y, 8 * cam.zoom, 5 * cam.zoom, 0, 0, M.TAU);
       ctx.fill();
     }
-    // o mato: tufos no capô, no teto e capim em volta
+    poly(ctx, [P(Lc + 1, vF + 32, 0.36 * H), P(Lc + 1, vN - 32, 0.36 * H), P(Lc + 1, vN - 32, 0.26 * H), P(Lc + 1, vF + 32, 0.26 * H)], '#2a2725', INK, ink);
+    for (const u of wheelsU) wheel(u, vN + 2);
+    // a mata tomando o carro: musgo no teto e no capô, cipó por cima, capim em volta
     if (d.weeds) {
-      const spots = [];
-      for (let k = 0; k < 4; k++) spots.push({ x: f.x0 + rnd() * (f.x1 - f.x0), y: f.y0 + rnd() * (f.y1 - f.y0), z: z0 + (k < 2 ? H : H * 0.58) });
-      for (let k = 0; k < 6; k++) spots.push({ x: f.x0 + rnd() * (f.x1 - f.x0), y: k % 2 ? f.y1 + 6 : f.y0 + rnd() * (f.y1 - f.y0), z: z0 + 4 });
-      for (const sp of spots) {
-        const circles = [];
-        for (let j = 0; j < 4; j++) {
-          const q = cam.p({ x: sp.x + (rnd() - 0.5) * 40, y: sp.y + (rnd() - 0.5) * 30, z: sp.z + rnd() * 18 });
-          circles.push({ x: q.x, y: q.y, r: (9 + rnd() * 9) * cam.zoom });
+      const MOSS = ['rgba(70, 106, 48, 0.75)', 'rgba(88, 126, 58, 0.7)', 'rgba(56, 88, 40, 0.75)'];
+      for (const fc of faces) {
+        if (fc.i !== 4 && fc.i !== 7 && fc.i !== 2) continue;
+        ctx.save();
+        poly(ctx, fc.quad);
+        ctx.clip();
+        const q = fc.quad;
+        for (let k = 0; k < 9; k++) {
+          const a = rnd(), b = rnd();
+          const x = q[0].x + (q[1].x - q[0].x) * a + (q[3].x - q[0].x) * b;
+          const y = q[0].y + (q[1].y - q[0].y) * a + (q[3].y - q[0].y) * b;
+          ctx.fillStyle = MOSS[Math.floor(rnd() * MOSS.length)];
+          ctx.beginPath();
+          ctx.ellipse(x, y, (8 + rnd() * 14) * cam.zoom, (5 + rnd() * 8) * cam.zoom, rnd() * 3, 0, M.TAU);
+          ctx.fill();
         }
-        circles.sort((p, q) => p.y - q.y);
-        blobCluster(ctx, circles, { base: '#4f8a3c', shade: '#356a2c', light: '#72aa52' }, ink, cam.lightScreen);
+        ctx.restore();
+      }
+      if (PD.city) {
+        const pts = [];
+        for (let k = 0; k <= 9; k++) pts.push(P(0.1 * Lc + k * 0.09 * Lc, vN - 4 - Math.sin(k) * 10, (k < 3 || k > 7 ? 0.62 * H : H + 2) + Math.sin(k * 1.7) * 4));
+        PD.city.vine(ctx, pts, rnd, cam.zoom, ink);
+        for (const u of [0.05, 0.18, 0.32, 0.55, 0.8, 0.96]) PD.city.grass(ctx, P(u * Lc, vN + 10, 0), 26 * cam.zoom, rnd, ink);
       }
     }
+    // uma árvore nascendo de dentro do carro: o tronco sai por um buraco no teto e a copa abre em cima
+    if (d.tree) {
+      const tu = 0.5 * Lc, tv = Wc / 2;
+      const tp = W3(tu, tv, 0);
+      const t = { x: tp.x, y: tp.y, kind: 'mata', r: 150, h: 430, trunk: 9 };
+      const fork = { x: tp.x, y: tp.y, z: z0 + 20 + t.h * FORK };
+      const hole = P(tu, tv, H);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(hole.x, hole.y, 24 * cam.zoom, 10 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#1a1614';
+      ctx.beginPath();
+      ctx.ellipse(hole.x, hole.y, 20 * cam.zoom, 8 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      const b1 = cam.p(fork);
+      const w0 = 11 * cam.zoom, w1 = 7 * cam.zoom;
+      const trunkShape = [{ x: hole.x - w0, y: hole.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: hole.x + w0, y: hole.y }];
+      poly(ctx, trunkShape, null, INK, ink * 2.2);
+      poly(ctx, trunkShape, '#5a4532');
+      crownPaint(ctx, cam, t, z0 + 20, ink, CANOPY.mata, false);
+    }
   };
+
 
   /** Pedra do Véu (pedra ancestral): o mesmo símbolo da figueira, brilhando em verde-água na face da frente. */
   Small.prototype._rockGlyph = function (ctx) {
