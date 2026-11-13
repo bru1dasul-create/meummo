@@ -88,6 +88,8 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   pelo motor; chegar perto de um NPC abre a missão, a loja ou a fala dele, e afastar fecha. Câmera: o motor chama
   `setZoom` da view (opcional na `WorldView`), começando em 0,7 (longe), com roda do mouse e teclas − e +, e guarda
   a escolha no aparelho (`meummo:zoom`).
+- `quick.ts`: os atalhos de consumo (1 = comida, 2 = remédio, campo `atalho` de `data/items.json`; a regra de qual item
+  usar é `pickQuickItem`, em `src/shared/items.ts`). Teclas 3 e 4; a recarga é a do item (uma só para todos).
 - `combat.ts`: o combate desenhado por cima (uma tela transparente sobre a view): aviso no chão, anel laranja de
   quem prepara um golpe, pedras e frutas, números de dano e cura, barras de vida, clarão dos golpes de perto e ouro
   no chão. Contas que batem com o servidor (há teste em `tests/combate-novo.test.ts`): o pé de quem está no tile

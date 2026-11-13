@@ -16,7 +16,7 @@ import {
   WALK_SLICE_MS,
 } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
-import type { InventoryState, ItemInfo, ItemStack } from '../../shared/items';
+import { pickQuickItem, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
@@ -33,6 +33,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
 import { Joystick } from './joystick';
+import { QuickSlots } from './quick';
 import { ProvisionalView, type WorldView } from './view';
 
 export interface NewWorldDeps {
@@ -120,6 +121,10 @@ class NewWorld implements NewWorldGame {
   private myLevel = 1;
   /** O que estava equipado (para tocar o som de equipar quando muda). */
   private equippedBefore = '';
+  /** Atalhos de comida (1) e remédio (2). */
+  private readonly quick: QuickSlots;
+  /** Quando dá para usar o próximo item (o servidor conta uma recarga só para todos os consumíveis). */
+  private itemReadyAt = 0;
   private map!: GameMap;
   private view: WorldView | null = null;
   private myId = 0;
@@ -209,7 +214,10 @@ class NewWorld implements NewWorldGame {
       this.items,
       welcome.inv,
       {
-        item: (act, i) => this.conn.send({ t: 'item', act, i }),
+        item: (act, i) => {
+          if (act === 'use') this.noteItemUse(this.lastInv.slots[i]?.item ?? null, performance.now());
+          this.conn.send({ t: 'item', act, i });
+        },
         unequip: (part) => this.conn.send({ t: 'unequip', part }),
       },
       welcome.stats,
@@ -232,6 +240,8 @@ class NewWorld implements NewWorldGame {
       },
     });
     this.tracker = new QuestTracker(this.questList);
+    this.quick = new QuickSlots((n) => this.useQuick(n, performance.now()));
+    this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
     this.container.addEventListener('pointermove', this.onPointerMove);
     this.container.addEventListener('contextmenu', this.onContextMenu);
@@ -352,6 +362,7 @@ class NewWorld implements NewWorldGame {
     this.feedback.destroy();
     this.combat.destroy();
     this.bag.destroy();
+    this.quick.destroy();
     this.shop.destroy();
     this.talk.destroy();
     this.tracker.destroy();
@@ -371,6 +382,7 @@ class NewWorld implements NewWorldGame {
     this.view.frame(now);
     this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
     this.actionBar.update(now);
+    this.quick.update(now);
     this.raf = requestAnimationFrame(this.loop);
   };
 
@@ -415,6 +427,10 @@ class NewWorld implements NewWorldGame {
       case 'KeyE':
       case 'Digit2':
         if (!event.repeat) this.trySkill(1, 0, now);
+        break;
+      case 'Digit3':
+      case 'Digit4':
+        if (!event.repeat) this.useQuick(event.code === 'Digit3' ? 1 : 2, now);
         break;
       case 'KeyM':
         if (!event.repeat) this.toggleSound();
@@ -1095,7 +1111,31 @@ class NewWorld implements NewWorldGame {
     this.hud.setGold(gold);
     this.bag.setState(inv);
     this.shop.setInventory(inv);
+    this.refreshQuick();
     this.refreshQuests(); // missão de entregar conta pela mochila
+  }
+
+  /** Os atalhos mostram o que a mochila tem agora. */
+  private refreshQuick(): void {
+    this.quick.set([pickQuickItem(1, this.items, this.lastInv), pickQuickItem(2, this.items, this.lastInv)], this.items);
+  }
+
+  /** Atalho de comida (1) ou remédio (2): usa o item daquele grupo com a maior cura que está na mochila. */
+  private useQuick(n: 1 | 2, now: number): void {
+    if (this.dead) return this.toast.show('Desmaiado não dá para comer');
+    const pick = pickQuickItem(n, this.items, this.lastInv);
+    if (!pick) return this.toast.show(n === 1 ? 'Sem comida na mochila (a Budega vende)' : 'Sem remédio na mochila (a Budega vende)');
+    if (now < this.itemReadyAt) return this.toast.show('Espere um pouquinho para usar outro item');
+    if (this.myHp >= this.myMaxHp) return this.toast.show('Sua vida já está cheia');
+    this.conn.send({ t: 'item', act: 'use', i: pick.slot });
+    this.noteItemUse(pick.item, now);
+  }
+
+  /** Usou um consumível (pelo atalho ou pela mochila): o véu da recarga nos atalhos. */
+  private noteItemUse(item: string | null, now: number): void {
+    const ms = (item ? this.items.get(item)?.cooldownMs : undefined) ?? 3000;
+    this.itemReadyAt = now + ms + 40;
+    this.quick.setCooldown(this.itemReadyAt, ms);
   }
 
   private questContext(): QuestContext {
@@ -1329,6 +1369,7 @@ class NewWorld implements NewWorldGame {
         for (const item of msg.items) this.items.set(item.id, item);
         this.bag.setState(this.lastInv);
         this.shop.setInventory(this.lastInv);
+        this.refreshQuick();
         break;
       case 'quests':
         this.onQuestLog(msg.log);

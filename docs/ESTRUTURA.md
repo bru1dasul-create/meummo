@@ -150,8 +150,8 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **18** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
-`slow` no `walk`, andar devagar no mundo novo); `MIGRATIONS` no
+Números para não se perder: protocolo na versão **19** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+`slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo); `MIGRATIONS` no
 passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes

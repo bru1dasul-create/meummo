@@ -13,7 +13,7 @@ import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
 import { SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
 import { DOWN } from '../src/shared/dir';
-import { BAG_SIZE, gearLookOf } from '../src/shared/items';
+import { BAG_SIZE, emptyEquipment, gearLookOf, pickQuickItem, type InventoryState } from '../src/shared/items';
 import { GameMap } from '../src/shared/map';
 import { damageRange, maxHpFor } from '../src/shared/progression';
 import { FAST_HASH, FakeClock, FakeConn, tiledFromAscii } from './helpers';
@@ -380,5 +380,42 @@ describe('arquivo de personagens de antes da mochila', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('atalhos de consumo (campo "atalho")', () => {
+  const defs = parseItemDefs({
+    banana: { nome: 'Banana', tipo: 'consumivel', cura: 15, atalho: 1 },
+    coco: { nome: 'Água de Coco', tipo: 'consumivel', cura: 20, atalho: 1 },
+    arruda: { nome: 'Arruda', tipo: 'consumivel', cura: 30, atalho: 2 },
+    garrafada: { nome: 'Garrafada', tipo: 'consumivel', cura: 60, atalho: 2 },
+    pao: { nome: 'Pão', tipo: 'consumivel', cura: 5 }, // sem atalho
+    chapeu: { nome: 'Chapéu', tipo: 'equipamento', parte: 'cabeca' },
+  });
+  const bag = (...stacks: ([string, number] | null)[]): InventoryState => ({
+    gold: 0,
+    slots: stacks.map((s) => (s ? { item: s[0], n: s[1] } : null)),
+    equipped: emptyEquipment(),
+  });
+
+  it('o arquivo diz o grupo: 1 = comida, 2 = remédio; só consumível tem atalho', () => {
+    expect(defs.get('banana')!.quick).toBe(1);
+    expect(defs.get('garrafada')!.quick).toBe(2);
+    expect(defs.get('pao')!.quick).toBeUndefined();
+    expect(() => parseItemDefs({ x: { nome: 'X', tipo: 'equipamento', parte: 'cabeca', atalho: 1 } })).toThrow(/"atalho" só vale para consumíveis/);
+    expect(() => parseItemDefs({ x: { nome: 'X', tipo: 'consumivel', cura: 5, atalho: 3 } })).toThrow(/"atalho" precisa ser 1 \(comida\) ou 2 \(remédio\)/);
+    const real = loadItemDefs();
+    expect(real.get('banana')!.quick).toBe(1);
+    expect(real.get('agua_coco')!.quick).toBe(1);
+    expect(real.get('erva_arruda')!.quick).toBe(2);
+    expect(real.get('garrafada')!.quick).toBe(2);
+  });
+
+  it('cada atalho usa o item do grupo com a maior cura que está na mochila, e conta todos os espaços dele', () => {
+    const inv = bag(['banana', 5], ['chapeu', 1], ['coco', 2], null, ['arruda', 1], ['coco', 3]);
+    expect(pickQuickItem(1, defs, inv)).toEqual({ item: 'coco', count: 5, slot: 2 });
+    expect(pickQuickItem(2, defs, inv)).toEqual({ item: 'arruda', count: 1, slot: 4 });
+    expect(pickQuickItem(1, defs, bag(['banana', 2]))).toEqual({ item: 'banana', count: 2, slot: 0 });
+    expect(pickQuickItem(2, defs, bag(['banana', 2], ['pao', 4]))).toBeNull(); // nada do grupo 2 (pão não tem atalho)
   });
 });
