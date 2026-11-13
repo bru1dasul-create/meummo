@@ -9,6 +9,17 @@ import { findPath } from '../src/shared/pathfind';
 import { BIG_TREES } from '../scripts/map-depth';
 import { gid, IMAGE_HEIGHT, IMAGE_WIDTH, tiledTileset } from '../scripts/tileset';
 import { tiledFromAscii } from './helpers';
+import { TRADE_RANGE } from '../src/shared/constants';
+
+/** Algum metro alcançável a pé (desde o nascimento) com o meio a até `range` metros do pé (x, y)? */
+function reachableWithin(map: GameMap, x: number, y: number, range: number): boolean {
+  for (let ty = Math.floor(y - range); ty <= Math.floor(y + range); ty++) {
+    for (let tx = Math.floor(x - range); tx <= Math.floor(x + range); tx++) {
+      if (map.isReachable(tx, ty) && Math.hypot(tx + 0.5 - x, ty + 0.5 - y) <= range) return true;
+    }
+  }
+  return false;
+}
 
 const realMap = (id: string) => JSON.parse(readFileSync(`public/assets/maps/${id}.tmj`, 'utf8')) as TiledMap;
 const layerData = (map: TiledMap, name: string) => map.layers.find((l) => l.name === name)?.data as number[];
@@ -179,7 +190,14 @@ describe('camadas do mapa', () => {
       const json = JSON.parse(readFileSync(`public/assets/${iso ? 'maps-iso' : 'maps'}/${npc.mapa}.tmj`, 'utf8')) as TiledMap;
       const map = GameMap.fromTiled(json, npc.mapa);
       const corner = cornerAtFeet(npc.x, npc.y);
-      const fits = iso ? bodyFits(map, corner.x, corner.y) : map.isWalkable(npc.x, npc.y);
+      if (iso) {
+        // o corpo cabe no lugar dele; e dá para chegar perto o bastante para conversar e negociar (quem fica atrás
+        // de um balcão, como a Xiovanna na Budega, não precisa ter caminho até o pé dela)
+        expect(bodyFits(map, corner.x, corner.y), `${id} cabe em (${npc.x}, ${npc.y})`).toBe(true);
+        expect(reachableWithin(map, npc.x, npc.y, TRADE_RANGE), `dá para chegar a ${TRADE_RANGE} m de ${id}`).toBe(true);
+        continue;
+      }
+      const fits = map.isWalkable(npc.x, npc.y);
       expect(fits && map.isReachable(Math.floor(npc.x), Math.floor(npc.y)), `${id} em (${npc.x}, ${npc.y})`).toBe(true);
     }
   });

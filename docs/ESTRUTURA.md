@@ -75,6 +75,11 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — Xiovanna atrás do balcão (Budega com interior, do [mundo] e da [arte]):** `budega` em (64,6; 51), logo
+depois do mapa entrar na main, como combinado. O teste dos NPCs no mapa novo passou a pedir "o corpo cabe e dá para
+chegar a pé a até 3 m" (atrás do balcão ninguém chega no pé dela, de propósito). Missão, loja (a 2,9 m) e o lugar
+exato conferidos no navegador.
+
 **13/11 — menu ADM, passo 1 (pedido do dono: "pôr mais bicho, matar, voar, coisas que player normal não faz"):**
 administrador salvo no personagem (`MIGRATIONS` passo **4**: coluna `admin`, todo mundo começa como jogador normal),
 marcado no painel (`POST /admin/api/adm`; online, vale na hora). Comando `gm` (protocolo 24), sempre conferido no
