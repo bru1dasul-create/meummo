@@ -7,7 +7,8 @@
     "recargaMs": 3000,
     "pilha": 20,
     "descricao": "Docinha e fácil de achar perto da represa.",
-    "icone": "banana"
+    "icone": "banana",
+    "atalho": 1
   },
   "couro_jararaca": {
     "nome": "Couro de Jararaca",
@@ -77,7 +78,8 @@
     "recargaMs": 3000,
     "pilha": 20,
     "descricao": "Erva de cura que teima em nascer no meio do concreto.",
-    "icone": "erva"
+    "icone": "erva",
+    "atalho": 2
   },
   "agua_coco": {
     "nome": "Água de Coco",
@@ -87,7 +89,8 @@
     "recargaMs": 3000,
     "pilha": 20,
     "descricao": "Geladinha, direto do coco, da Budega da praça. Mata a sede e dá um fôlego.",
-    "icone": "agua_coco"
+    "icone": "agua_coco",
+    "atalho": 1
   },
   "garrafada": {
     "nome": "Garrafada",
@@ -97,7 +100,8 @@
     "recargaMs": 3000,
     "pilha": 10,
     "descricao": "Remédio de ervas na garrafa, receita de benzedeira. Cura de verdade.",
-    "icone": "garrafada"
+    "icone": "garrafada",
+    "atalho": 2
   },
   "sucata": {
     "nome": "Sucata",

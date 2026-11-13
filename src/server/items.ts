@@ -57,6 +57,12 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       price: whole('preco', 0),
     };
     if (kind === 'consumable' && def.heal === 0) r.fail('cura', 'precisa ser maior que 0 (por enquanto, consumível é para curar)');
+    if (r.has('atalho')) {
+      if (kind !== 'consumable') r.fail('atalho', 'só vale para consumíveis (tipo "consumivel")');
+      const quick = whole('atalho', 0, 1);
+      if (quick !== 1 && quick !== 2) r.fail('atalho', 'precisa ser 1 (comida) ou 2 (remédio)');
+      def.quick = quick as 1 | 2;
+    }
     defs.set(id, def);
   }
   return defs;
