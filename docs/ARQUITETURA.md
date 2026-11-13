@@ -70,8 +70,9 @@ Os mapas novos ficam em `public/assets/maps-iso/` (o servidor lê esta pasta e a
   sendo de quem já joga). O jogo de hoje (Phaser) não desenha esses mapas: quem desenha é o jogo 2.5D novo.
 
 ## O jogo 2.5D novo (`src/client/novo/`)
-Abre em `http://localhost:3000/?novo` (o jogo de hoje continua em `/`); `?novo&provisorio` troca o desenho da [arte]
-pelo provisório, que mostra as caixas de colisão (bom para conferir onde o pé bate). No celular, encostar e arrastar
+É o que abre em `http://localhost:3000` (desde 13/11; o jogo antigo, visto de cima, fica em `/?antigo`, e o `?novo` de
+antes continua valendo); `?provisorio` troca o desenho da [arte] pelo provisório, que mostra as caixas de colisão (bom
+para conferir onde o pé bate). No celular, encostar e arrastar
 na metade esquerda é o joystick; um toque rápido sem arrastar, em qualquer lugar, é "andar até" ali. A tela de entrada, o painel de vida e o chat
 são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o personagem num mapa do formato novo
 (o jogo de hoje nunca recebe esses mapas, e vice-versa).

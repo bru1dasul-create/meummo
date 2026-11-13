@@ -79,7 +79,8 @@ npm install
 npm run dev
 ```
 
-Abra **http://localhost:5173**. Para jogar com alguém na mesma rede Wi-Fi (inclusive pelo celular),
+Abra **http://localhost:5173** (o jogo novo, em 2.5D; o jogo antigo, visto de cima, fica em
+**http://localhost:5173/?antigo**). Para jogar com alguém na mesma rede Wi-Fi (inclusive pelo celular),
 use o endereço que aparece como `Network` no terminal, por exemplo `http://192.168.0.10:5173`.
 
 Quer ver o mundo cheio? Com o jogo rodando, abra outro terminal. Bots que passeiam pela vila:

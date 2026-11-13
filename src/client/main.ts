@@ -19,8 +19,12 @@ import { Sfx } from './sfx';
 import { ChatBox, Hud } from './ui';
 
 const NAME_STORAGE_KEY = 'meummo:nome';
-/** http://localhost:3000/?novo abre o jogo 2.5D novo (o mundo novo, ainda em construção). */
-const NEW_WORLD = new URLSearchParams(location.search).has('novo');
+/**
+ * Qual jogo abre: o 2.5D novo é o padrão (decisão do dono, 13/11). O jogo de hoje, visto de cima, fica em
+ * `?antigo` (ex.: http://localhost:5173/?antigo), só para consulta, até o capítulo 1 novo ficar pronto.
+ * O `?novo` de antes continua abrindo o novo.
+ */
+const NEW_WORLD = !new URLSearchParams(location.search).has('antigo');
 
 const loginOverlay = document.getElementById('login') as HTMLDivElement;
 const loginForm = document.getElementById('login-form') as HTMLFormElement;
