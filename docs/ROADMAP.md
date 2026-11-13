@@ -217,7 +217,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     de 6,5 a 9,5 m (só no mapa novo). O servidor conta a carga (`charge` → `shoot`, protocolo 21); esquiva, golpe
     recebido e desmaio soltam a pedra. PC: segurar o botão esquerdo no monstro, o direito (para o mouse) ou J (no mais
     perto); celular: segurar o botão Estilingue (toque rápido no monstro = pedra fraca na hora). Anel no pé enchendo
-    e "carga perdida" (desenho provisório no `combat.ts`; a [arte] pode animar o puxar com a ação `charge` da view)
+    e "carga perdida" (desenho provisório no `combat.ts`; a [arte] pode animar o puxar com as ações `sling-pull` e
+    `sling-cancel` da view)
   - [ ] **2b — defesa com energia:** F (e um botão no celular), arco de 140° na frente, bloqueia ~75%, energia 100
     (6/s segurando; golpe gasta 10 + 0,75 × dano; quebra sem energia; volta a 22/s depois de 0,7 s), anda mais devagar
     defendendo; a barra verde da HUD nova é essa energia

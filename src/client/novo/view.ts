@@ -44,8 +44,9 @@ export interface WorldView {
    * Animação curta de alguém: 'windup' (preparando um golpe), 'shoot' (estilingue, ou o monstro jogando algo),
    * 'arc' (Bordunada), 'dash' (esquiva, sua ou de outro jogador), 'hurt' (levou golpe), 'die' (monstro caiu: o motor
    * tira o desenho 0,7 s depois),
-   * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou) e os golpes dos monstros ('bite', 'strike',
-   * 'charge', 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
+   * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou), 'sling-pull' (começou a puxar o estilingue:
+   * termina com 'shoot' ou, sem atirar, com 'sling-cancel') e os golpes dos monstros ('bite', 'strike', 'charge' =
+   * investida, 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
    */
   action?(id: number, kind: string, angle?: number): void;
   /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */

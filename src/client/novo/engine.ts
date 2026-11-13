@@ -853,7 +853,7 @@ class NewWorld implements NewWorldGame {
     this.charging = { since: now, aim };
     this.conn.send({ t: 'charge' });
     this.combat.setCharge(this.myId, now);
-    this.view?.action?.(this.myId, 'charge');
+    this.view?.action?.(this.myId, 'sling-pull');
   }
 
   /** Soltou: a pedra sai com a carga que juntou (durante a recarga, sai assim que der). */
@@ -864,25 +864,28 @@ class NewWorld implements NewWorldGame {
     this.combat.setCharge(this.myId, null);
     // durante a recarga, sai assim que der, com a carga contada até lá (o servidor conta igual, até o tiro chegar)
     if (now < this.nextShotAt) this.pendingShot = { at: this.nextShotAt, aim: charging.aim, since: charging.since };
-    else this.fireAim(charging.aim, chargeFraction(now - charging.since), now);
+    else if (!this.fireAim(charging.aim, chargeFraction(now - charging.since), now)) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   /** Solta a pedra sem atirar (esquiva, golpe recebido, desmaio, troca de mapa, janela sem foco). */
   private cancelCharge(): void {
+    const pulling = this.charging !== null || this.pendingShot !== null;
     this.charging = null;
     this.pendingShot = null;
     this.combat.setCharge(this.myId, null);
+    // a view volta da pose de puxar (o 'sling-pull' começa a pose; o 'shoot' ou este 'sling-cancel' terminam)
+    if (pulling) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   private handlePendingShot(now: number): void {
     const pending = this.pendingShot;
     if (!pending || now < pending.at) return;
     this.pendingShot = null;
-    this.fireAim(pending.aim, chargeFraction(now - pending.since), now);
+    if (!this.fireAim(pending.aim, chargeFraction(now - pending.since), now)) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   /** Atira para onde a mira manda: no monstro (onde ele está de verdade), para o mouse, ou no mais perto. */
-  private fireAim(aim: Aim, charge: number, now: number): void {
+  private fireAim(aim: Aim, charge: number, now: number): boolean {
     let angle: number | null = null;
     if (aim.by === 'target') {
       const target = this.entities.get(aim.id);
@@ -891,7 +894,7 @@ class NewWorld implements NewWorldGame {
       angle = this.mouseAim();
     }
     // a mira automática procura até onde esta pedra chega (com carga cheia, mais longe)
-    this.tryShoot(angle ?? this.autoAim(chargedRange(charge, this.map.metric) + AUTO_AIM_SLACK), now, charge);
+    return this.tryShoot(angle ?? this.autoAim(chargedRange(charge, this.map.metric) + AUTO_AIM_SLACK), now, charge);
   }
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
@@ -927,9 +930,9 @@ class NewWorld implements NewWorldGame {
   }
 
   /** Estilingue: uma pedra na direção `angle` (radianos), com a carga (0 a 1). Aparece na hora; o servidor decide. */
-  private tryShoot(angle: number, now: number, charge: number): void {
-    if (this.dead || now < this.nextShotAt) return;
-    if (this.refuseInSafeArea(now)) return;
+  private tryShoot(angle: number, now: number, charge: number): boolean {
+    if (this.dead || now < this.nextShotAt) return false;
+    if (this.refuseInSafeArea(now)) return false;
     // um pouco mais que a recarga do servidor, para a variação da rede não fazer um tiro ser recusado
     this.nextShotAt = now + SHOT_COOLDOWN_MS + 40;
     const cid = ++this.shotCid;
@@ -941,6 +944,7 @@ class NewWorld implements NewWorldGame {
     this.faceAngle(toDegrees(angle));
     this.view?.action?.(this.myId, 'shoot', toDegrees(angle));
     this.actionBar.setCooldown('shot', this.nextShotAt, SHOT_COOLDOWN_MS);
+    return true;
   }
 
   /** Botões da tela (celular e PC). */
