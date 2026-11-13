@@ -73,6 +73,11 @@ export const REGEN_FRACTION = 0.03;
 
 /** Distância (em tiles) para negociar com um vendedor. */
 export const TRADE_RANGE = 3;
+/**
+ * Mundo novo: o servidor aceita negociar/conversar até TRADE_RANGE + TRADE_SLACK metros (do pé ao pé). O navegador
+ * abre a loja a TRADE_RANGE; a folga cobre a diferença pequena entre a previsão do andar e a posição oficial.
+ */
+export const TRADE_SLACK = 0.5;
 
 /** Ouro no chão: quanto tempo fica esperando o dono pegar (pisca nos últimos segundos). */
 export const GOLD_DROP_MS = 60_000;

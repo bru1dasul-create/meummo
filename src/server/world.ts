@@ -22,6 +22,7 @@ import {
   STEP_MS,
   TICK_MS,
   TRADE_RANGE,
+  TRADE_SLACK,
   VIEW_HYSTERESIS,
   VIEW_RADIUS_X,
   VIEW_RADIUS_Y,
@@ -45,7 +46,7 @@ import {
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, Tile } from '../shared/map';
-import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
+import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
@@ -772,7 +773,7 @@ export class World {
     }
     const npc = npcId !== undefined ? this.npcs.get(npcId) : undefined;
     if (!npc || npc.def.id !== quest.giver) return; // NPC de outro mapa, ou não é ele quem dá esta missão
-    if (chebyshev(player, npc) > TRADE_RANGE) return this.fail(player, 'too_far', true);
+    if (!this.nearNpc(player, npc)) return this.fail(player, 'too_far', true);
 
     if (act === 'accept') {
       const blocker = questBlocker(quest, player.quests, player.level);
@@ -890,7 +891,7 @@ export class World {
       this.fail(player, 'dead', true);
       return null;
     }
-    if (chebyshev(player, npc) > TRADE_RANGE) {
+    if (!this.nearNpc(player, npc)) {
       this.fail(player, 'too_far', true);
       return null;
     }
@@ -1763,6 +1764,17 @@ export class World {
   }
 
   /** O jogador está numa área segura (camada `seguro` do mapa)? Lá monstro não entra, não nota e não acerta. */
+  /**
+   * Perto o bastante do NPC para negociar ou falar da missão? No mapa novo, do pé ao pé, em metros (um balcão deixa o
+   * jogador a uns 3 m de quem está atrás dele); no antigo, de tile em tile, como sempre foi.
+   */
+  private nearNpc(player: Player, npc: Npc): boolean {
+    if (!this.map.metric) return chebyshev(player, npc) <= TRADE_RANGE;
+    const me = feetAt(player.fx, player.fy);
+    const them = feetAt(npc.x, npc.y);
+    return Math.hypot(me.x - them.x, me.y - them.y) <= TRADE_RANGE + TRADE_SLACK;
+  }
+
   private inSafeArea(player: Player): boolean {
     if (this.map.safeAreas.length === 0) return false;
     const at = footCenter(player.fx, player.fy);
