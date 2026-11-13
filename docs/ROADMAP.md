@@ -203,9 +203,13 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   e árvore seca"): o tronco abre em galhos na forquilha e cada galho termina num tufo de folhas de contorno recortado
   (vãos entre os tufos mostram os galhos; cipós pendurados); árvore seca com galhos tortos e barba-de-velho; escuro
   e neblina por área (`escuro`/`neblina` das áreas do mapa, a menor área vale), claro perto do herói
-- [ ] **[arte]** Mata nova, entrega 2: jerivá, embaúba, xaxim, bananeira, bambu, samambaia, helicônia, taboa,
-  cogumelo que brilha, deque, pinguela e os véus (brilho espiritual); de quebra, os arbustos da mata fechada (hoje uma
-  fila de bolas)
+- [x] **[arte]** Mata nova, entrega 2 (13/11): jerivá (folhas em pena, coquinhos e folha seca pendurada), embaúba
+  (candelabro com guarda-chuvas de folhas em mão, prateadas), xaxim (tronco de fibra e coroa rendada), bananeira
+  (leque rasgado, folha velha, cacho com coração roxo e filhote no pé), bambu (moita em chafariz), samambaia,
+  helicônia, taboa, cogumelo que brilha, deque, pinguela (tronco com o corte à mostra) e o brilho dos cogumelos e dos
+  véus por cima do escuro; os arbustos viraram tufos de folhas recortadas. E o jogo só prepara a imagem dos objetos
+  perto da tela: no mapa novo (1.107 objetos) entrar caiu de ~2 s para 0,1–0,2 s e a memória das imagens, de
+  240–325 MB para 20–70 MB
 - [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o
   repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
   dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula

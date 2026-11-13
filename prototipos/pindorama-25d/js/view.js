@@ -384,11 +384,61 @@
         }
         fl.globalAlpha = 1;
       }
+      this._drawGlows(fl, Q, W, H, pxm, Math.max(atm.dark, atm.fog * 0.6));
       const dpr = cam.dpr;
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.drawImage(this._atmLayer, 0, 0, W, H);
       ctx.restore();
+    }
+
+    /**
+     * O que brilha na mata (cogumelos e véus, de PD.flora.glows): na mesma camada do escuro, abre um buraco no escuro
+     * em volta de cada um e tinge o ar de verde-água, respirando devagar. Assim o brilho vence o escuro sem mais uma
+     * passada na tela inteira.
+     */
+    _drawGlows(fl, Q, W, H, pxm, k) {
+      if (k < 0.01) return;
+      const glows = this._glows || (this._glows = PD.flora && PD.flora.glows ? PD.flora.glows(this.map) : []);
+      if (!glows.length) return;
+      const sprites = this._glowSprites || (this._glowSprites = new Map());
+      const sprite = (color) => {
+        let s = sprites.get(color);
+        if (s) return s;
+        s = document.createElement('canvas');
+        s.width = s.height = 64;
+        const g = s.getContext('2d');
+        const n = parseInt(color.slice(1), 16);
+        const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+        const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gr.addColorStop(0, `rgba(${rgb}, 1)`);
+        gr.addColorStop(0.4, `rgba(${rgb}, 0.5)`);
+        gr.addColorStop(1, `rgba(${rgb}, 0)`);
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 64, 64);
+        sprites.set(color, s);
+        return s;
+      };
+      const t = this.world.time || 0;
+      const sinP = this.cam.sinP || 0.6;
+      for (const g of glows) {
+        const p = this.toScreen(g.x / 100, g.y / 100, g.z / 100);
+        const breathe = 1 + 0.12 * Math.sin(t * 1.2 + g.x * 0.013 + g.y * 0.007);
+        const rx = (g.r / 100) * pxm * breathe;
+        const ry = rx * Math.max(0.55, sinP);
+        if (p.x < -rx || p.x > W + rx || p.y < -ry || p.y > H + ry) continue;
+        const x = (p.x - rx) / Q, y = (p.y - ry) / Q, w = (2 * rx) / Q, h = (2 * ry) / Q;
+        // abre o escuro…
+        fl.globalCompositeOperation = 'destination-out';
+        fl.globalAlpha = Math.min(1, g.k * 1.4);
+        fl.drawImage(sprite('#ffffff'), x, y, w, h);
+        // …e acende a cor
+        fl.globalCompositeOperation = 'source-over';
+        fl.globalAlpha = Math.min(1, g.k * k * breathe * 1.1);
+        fl.drawImage(sprite(g.color), x, y, w, h);
+      }
+      fl.globalCompositeOperation = 'source-over';
+      fl.globalAlpha = 1;
     }
 
     /** Ponto da tela logo acima da cabeça (penas incluídas): onde ficam o nome e o balão. Segue o agachar e o pulo. */

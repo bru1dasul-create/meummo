@@ -37,6 +37,8 @@
       fences: [],
       pillars: [],
       veils: [],
+      // rentes ao chão (deque e pinguela): desenhados logo depois do chão, antes de quem fica em pé
+      flats: [],
       colliders: [],
       safe: [],
       areas: [],
@@ -129,6 +131,15 @@
         map.pillars.push({ ...rect(o), h: (pr.altura || 2.4) * 100 });
       } else if (k === 'veu') {
         map.veils.push({ x, y, r: (pr.raio || 1.5) * 100 });
+      } else if (k === 'bambu') {
+        // moita de bambu (bloqueia): `raio` e `altura` em metros
+        map.props.push({ kind: 'bambu', x, y, r: (pr.raio || 1.2) * 100, h: (pr.altura || 7) * 100 });
+      } else if (k === 'planta') {
+        // samambaia, helicônia, taboa e cogumelo (com `brilho`): enfeite, não bloqueia
+        map.props.push({ kind: 'planta-' + (pr.tipo || 'samambaia'), x, y, r: (pr.raio || 0.5) * 100, glow: pr.brilho || null });
+      } else if (k === 'deque' || k === 'pinguela') {
+        // dá para andar em cima: o lado comprido diz a direção
+        map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100 });
       }
     }
     // fiação: cada trecho da polilinha liga os dois postes mais perto das pontas (os fios saem das cruzetas)

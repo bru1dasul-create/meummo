@@ -33,35 +33,77 @@
       return null;
     }
     paint() {}
+    /** A imagem e a caixa valem para um zoom e uma densidade de tela. */
+    _zoomKey() {
+      return `${this.cam.zoom.toFixed(4)}|${this.cam.dpr}`;
+    }
+    /**
+     * Área da tela ocupada (px do mundo, com a folga da imagem), sem fazer a imagem: a ordem de desenho e o "esconde o
+     * personagem" só precisam da caixa. A imagem só é feita quando o objeto chega perto da tela — antes saíam as de
+     * todos de uma vez: no mapa da mata nova (mil objetos) o jogo travava 2 s ao entrar e a cada zoom, e as imagens
+     * passavam de 200 MB no celular.
+     */
+    get bounds() {
+      const key = this._zoomKey();
+      if (!this._bb || this._bbKey !== key) {
+        const b = this.screenBox();
+        const pad = 6;
+        const x0 = Math.floor(b.x0 - pad), y0 = Math.floor(b.y0 - pad);
+        const w = Math.ceil(b.x1 - b.x0 + 2 * pad), h = Math.ceil(b.y1 - b.y0 + 2 * pad);
+        this._bb = { x0, y0, x1: x0 + w, y1: y0 + h, w, h };
+        this._bbKey = key;
+      }
+      return this._bb;
+    }
+    /** A imagem já está feita para o zoom de agora? */
+    get spriteReady() {
+      return !!this.sprite && this.spriteKey === this._zoomKey();
+    }
     _ensureSprite() {
       const cam = this.cam;
-      const key = `${cam.zoom.toFixed(4)}|${cam.dpr}`;
+      const key = this._zoomKey();
       if (this.sprite && this.spriteKey === key) return;
-      const b = this.screenBox();
-      const pad = 6;
-      const x0 = Math.floor(b.x0 - pad), y0 = Math.floor(b.y0 - pad);
-      const w = Math.ceil(b.x1 - b.x0 + 2 * pad), h = Math.ceil(b.y1 - b.y0 + 2 * pad);
+      const t0 = performance.now();
+      const b = this.bounds;
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.ceil(w * cam.dpr));
-      c.height = Math.max(1, Math.ceil(h * cam.dpr));
+      c.width = Math.max(1, Math.ceil(b.w * cam.dpr));
+      c.height = Math.max(1, Math.ceil(b.h * cam.dpr));
       const ctx = c.getContext('2d');
-      ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -x0 * cam.dpr, -y0 * cam.dpr);
+      ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -b.x0 * cam.dpr, -b.y0 * cam.dpr);
       this.paint(ctx);
-      this.sprite = { c, x: x0, y: y0, w, h };
+      this.sprite = { c, x: b.x0, y: b.y0, w: b.w, h: b.h, zoom: cam.zoom };
       this.spriteKey = key;
+      // o mundo conta quanto tempo do quadro foi gasto fazendo imagens (veja World.buildBusy)
+      const w = this.world;
+      if (w) {
+        w._buildMs = (w._buildMs || 0) + performance.now() - t0;
+        w._built = (w._built || 0) + 1;
+      }
+    }
+    /** Solta a imagem (o objeto ficou longe da tela); ela é refeita quando ele voltar. */
+    dropSprite() {
+      this.sprite = null;
+      this.spriteKey = '';
+    }
+    /**
+     * A imagem para desenhar agora: a pronta; ou, logo depois de mudar o zoom, quando o quadro já gastou o tempo de
+     * refazer imagens, a antiga esticada para o zoom novo (a tela não trava e fica nítida em poucos quadros). Esticar
+     * funciona porque a posição na tela é proporcional ao zoom.
+     */
+    _spriteNow() {
+      const s = this.sprite;
+      if (s && this.spriteKey !== this._zoomKey() && this.world.buildBusy && this.world.buildBusy()) {
+        const k = this.cam.zoom / s.zoom;
+        return { c: s.c, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k };
+      }
+      this._ensureSprite();
+      return this.sprite;
     }
     draw(ctx) {
-      this._ensureSprite();
-      const s = this.sprite;
+      const s = this._spriteNow();
       if (this.alpha < 0.999) ctx.globalAlpha = this.alpha;
       ctx.drawImage(s.c, s.x, s.y, s.w, s.h);
       ctx.globalAlpha = 1;
-    }
-    /** Área da tela ocupada (para saber se esconde o personagem). */
-    get bounds() {
-      this._ensureSprite();
-      const s = this.sprite;
-      return { x0: s.x, y0: s.y, x1: s.x + s.w, y1: s.y + s.h };
     }
   }
 
@@ -1029,6 +1071,8 @@
     }
     screenBox() {
       const t = this.t;
+      const fl = PD.flora && PD.flora.tree[t.kind];
+      if (fl && fl.trunkBox) return fl.trunkBox(this.cam, t, this.z0);
       const roots = t.kind === 'figueira' ? (t.trunk || 60) * 4.2 : 40;
       return bbox([this.P(t.x, t.y, this.z0), this.P(t.x, t.y, this.z0 + t.h * 0.72)], Math.max(40, roots) * this.cam.zoom);
     }
@@ -1053,6 +1097,11 @@
       const bark = BARK[t.kind];
       if (t.kind === 'figueira') {
         this._figPaint(ctx);
+        return;
+      }
+      const fl = PD.flora && PD.flora.tree[t.kind];
+      if (fl) {
+        fl.trunk(ctx, cam, t, z0, ink);
         return;
       }
       for (let k = 0; k <= N; k++) {
@@ -1378,6 +1427,8 @@
     }
     screenBox() {
       const t = this.t;
+      const fl = PD.flora && PD.flora.tree[t.kind];
+      if (fl) return fl.crownBox(this.cam, t, this.z0);
       if (BROADLEAF.has(t.kind) || t.kind === 'seca') {
         // árvore de verdade: a caixa justa dos tufos e da forquilha (a caixa folgada fazia a imagem grande demais, e
         // desenhar imagens grandes a cada quadro pesava no celular)
@@ -1409,6 +1460,11 @@
       const cam = this.cam;
       const t = this.t;
       const ink = this.ink;
+      const fl = PD.flora && PD.flora.tree[t.kind];
+      if (fl) {
+        fl.crown(ctx, cam, t, this.z0, ink);
+        return;
+      }
       if (BROADLEAF.has(t.kind) || t.kind === 'seca') {
         crownPaint(ctx, cam, t, this.z0, ink, this.colors, t.kind === 'seca');
         return;
@@ -1565,8 +1621,7 @@
       return (cx - c.x) ** 2 + (cy - c.y) ** 2 < r * r;
     }
     draw(ctx, time) {
-      this._ensureSprite();
-      const s = this.sprite;
+      const s = this._spriteNow();
       // balanço da copa: desliza a imagem pronta (girar uma imagem grande custa caro a cada quadro);
       // o passo é de meio pixel do aparelho, então o movimento fica suave sem refazer pixel nenhum
       const dpr = this.cam.dpr;
@@ -2028,14 +2083,24 @@
     }
     constructor(world, d) {
       const fp = d.x0 !== undefined ? { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 } : { x0: d.x - (d.r || 30), x1: d.x + (d.r || 30), y0: d.y - (d.r || 30), y1: d.y + (d.r || 30) };
-      super(world, fp, { fades: d.kind === 'banca' });
+      const fl = PD.flora && PD.flora.small[d.kind];
+      super(world, fp, { fades: d.kind === 'banca' || !!(fl && fl.fades) });
       this.d = d;
+      if (fl) {
+        // desenho da flora: ela diz a altura, se segura o jogador e como desenha
+        this.fl = fl;
+        this.height = fl.height(d);
+        const r = d.r || 30;
+        this.collider = fl.blocks ? { type: 'circle', x: d.x, y: d.y, r: r * fl.blocks } : null;
+        return;
+      }
       const r = d.r || 30;
       const decor = d.kind === 'aguape' || d.kind === 'capivara'; // enfeites: não seguram ninguém
       this.collider = decor ? null : d.x0 !== undefined ? { type: 'box', ...fp } : { type: 'circle', x: d.x, y: d.y, r: d.kind === 'arbusto' ? r * 0.8 : d.kind === 'pedra' ? r : d.kind === 'mesa' ? 60 : 22 };
       this.height = { banca: 250, orelhao: 230, lixeira: 95, hidrante: 70, mesa: 80, banco: 50, arbusto: (d.r || 60) * 1.1, pedra: (d.r || 40) * 0.8, 'poste-praca': (d.h || 340) + 40, 'tronco-caido': d.h || 60, aguape: 20, capivara: 60, carro: d.h || 140, fogueira: 40 }[d.kind] || 80;
     }
     screenBox() {
+      if (this.fl && this.fl.box) return this.fl.box(this.cam, this.d, this.z0, this.height);
       const f = this.fp;
       const z = this.z0;
       const h = this.height + 60;
@@ -2044,6 +2109,10 @@
     shadow(path) {
       const f = this.fp;
       const d = this.d;
+      if (this.fl) {
+        if (this.fl.shadow) this.fl.shadow(path, this.cam, d, this.height);
+        return;
+      }
       if (d.kind === 'arbusto' || d.kind === 'pedra') circleShadow(path, this.cam, d.x, d.y, d.r * 0.9, this.height * 0.5);
       else if (d.kind === 'aguape') return; // boia na água: sem sombra
       else if (d.kind === 'capivara') circleShadow(path, this.cam, d.x, d.y, 42, 30);
@@ -2058,6 +2127,10 @@
       const z0 = this.z0;
       const ink = this.ink;
       const P = (x, y, z) => cam.p({ x, y, z });
+      if (this.fl) {
+        this.fl.paint(ctx, cam, d, z0, ink);
+        return;
+      }
       switch (d.kind) {
         case 'banca': {
           const f = this.fp;
@@ -3196,5 +3269,9 @@
     }
   }
 
-  PD.props = { Prop, Building, House, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly };
+  PD.props = {
+    Prop, Building, House, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly,
+    // para as plantas da mata (flora.js) desenharem com o mesmo traço
+    help: { INK, CANOPY_INK, BARK, tuftPath, limbPoly, circleShadow, lineShadow, boxShadow },
+  };
 })(window.PD = window.PD || {});

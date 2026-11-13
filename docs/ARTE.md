@@ -389,6 +389,42 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
       para 26 quadros por segundo com três passadas na tela inteira e voltou para 29 assim.
   - **Medido na área dos saguis do mapa de hoje** (PC/celular): árvores antigas sem clima, 27/23 quadros por
     segundo; árvores novas com clima, 25/25.
+- **Mata nova, entrega 2 (13/11):** tudo em `js/world/flora.js` (carrega depois do `props.js`; está nas três listas
+  de scripts: `view-scripts.json`, `clareira.html`/`index.html` e `src/client/novo/arte.ts`).
+  - **Como liga:** `PD.flora.tree[espécie]` desenha tronco e copa (o `TreeTrunk`/`TreeCanopy` perguntam primeiro a
+    ela) e `PD.flora.small[tipo]` desenha os objetos pequenos (o `Small` pergunta a altura, se segura o jogador, a
+    sombra e o desenho). Sem o `flora.js` carregado, sai o desenho antigo.
+  - **Plano de cada planta:** onde fica cada folha é sorteado pela posição (`plan`), e o mesmo plano dá o desenho e a
+    caixa justa da imagem guardada.
+  - **Folhas:** `pinnate` (folha em pena: palmeira, xaxim, samambaia; recorte, folíolos pendendo, metade da sombra
+    escura) e `paddle` (remo: bananeira, helicônia; talo, nervuras e rasgos). A embaúba tem folha em mão
+    (`palmLeaf`): lóbulos de ponta redonda num plano inclinado; vista por baixo, sai quase branca.
+  - **Espécies:** jerivá (11 folhas em arco, bota de bases velhas, folha seca pendurada, cacho de coquinhos);
+    embaúba (galhos em candelabro saindo do tronco em alturas diferentes, guarda-chuva de 6 a 8 folhas em cada
+    ponta); xaxim (tronco grosso de fibra, 13 folhas rendadas, saia seca, báculos); bananeira (folhas em leque, uma
+    velha amarela e rasgada pendurada no tronco, cacho com pencas para cima e o coração roxo, filhotes no pé).
+  - **Pequenos:** arbusto (4 a 7 tufos recortados, como as copas, e galhinhos; três tons: vila, mata e mata
+    fechada); bambu (16 a 20 colmos com nós que sobem retos e abrem em arco no alto, raminhos de folha fina; segura
+    o jogador e fica transparente se esconder alguém); samambaia, helicônia (brácteas vermelhas em zigue-zague com a
+    ponta amarela), taboa (com 3 espigas) e cogumelo (cor do `brilho` do mapa).
+  - **Rente ao chão:** deque e pinguela vão em `world.flats`, desenhados logo depois do chão (o herói passa por
+    cima). O chão do mapa novo não tem altura, então o tampo fica no nível 0 e a estrutura desce para dentro da água
+    (estacas com a roda d'água; a pinguela é um tronco com o corte e os anéis do lado da câmera).
+  - **Brilho:** `PD.flora.glows(mapa)` lista cogumelos e véus; a `_drawGlows` (`view.js`), na mesma camada pequena do
+    escuro, abre um buraco no escuro em volta de cada um e tinge o ar da cor do brilho, respirando devagar. Só
+    aparece onde a área tem escuro ou neblina.
+  - **Imagens só perto da tela** (`props.js` e `world.js`): antes, o jogo fazia a imagem de todos os objetos do mapa
+    de uma vez (ao entrar e a cada zoom). No mapa da mata nova (1.107 objetos) isso travava ~2 s e as imagens somavam
+    238 MB no celular e 325 MB no PC (o iPhone tem limite perto disso). Agora:
+    - `bounds` sai da caixa (`screenBox`), sem fazer a imagem;
+    - o que está fora da tela não é desenhado;
+    - a imagem é feita quando o objeto chega a meia tela da borda, e solta quando fica a mais de uma tela;
+    - depois do zoom, as imagens velhas saem esticadas e são refeitas aos poucos (~6 ms por quadro, no mínimo 2).
+    - Medido no mapa novo (PC/celular): entrar 0,11/0,16 s; memória 48/19 MB parado e 70/51 MB depois de
+      atravessar o mapa; tudo nítido 2 a 3 quadros depois do zoom. O que ainda pesa no zoom é o chão, que se
+      redesenha em pedaços (~160 ms no primeiro quadro no celular de teste): fica para depois.
+  - **Quadros por segundo no mapa novo** (teste sem placa de vídeo, PC/celular): lago 38/37, bananeiras 36/33, mata
+    profunda com escuro, neblina e brilho 31/27–34. Prancha de conferência: `prancha-flora.cjs` no scratchpad.
 - **Xiovanna, a vendedora da Budega (13/11):** `js/creatures/xiovanna.js`, registrada com a chave da NPC
   ("budega"). A PD.View usa criatura também para NPC. Feita com bolas, como as criaturas, porque o corpo de gente
   (`body.js`) é o modelo único do herói, com mais de 60 pontos presos às medidas dele. As fotos de referência do dono
