@@ -118,10 +118,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   brasileira, sem barraco destruído (casas e prédios inteiros, tomados pela mata; a vila continua viva). Referências
   aprovadas: `docs/referencias/padrao-rua-floresta.jpg` (a rua da Budega, com o detalhe que se quer) e
   `docs/referencias/padrao-cidade-floresta.jpg` (o bairro inteiro). O Mapa 02 para depois do pedaço (a)
-- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: a planta no papel primeiro ("vamos ver no papel", 13/11),
-  depois o mapa: meio-fio, faixas apagadas, remendos, buracos, bueiros, tampas, poças, raízes levantando a calçada,
-  uma figueira rompendo o asfalto, cipó nos postes e nos fios, plantas nas lajes, moto e carro com mato, placa de rua,
-  cadeiras na calçada, varal, prédios de conjunto habitacional no fundo, sem mudar de lugar o que já foi aprovado
+- [ ] **[mundo]** A rua e a praça da Budega no padrão novo: planta aprovada pelo dono em 13/11 ("show",
+  `docs/referencias/rua-budega-planta.jpg` e o alvo `docs/referencias/rua-budega-aprovada.jpg`; na beirada esquerda
+  dessa imagem a IA repetiu a Budega e a fogueira, ignore). Pronto no ramo `mundo/rua-floresta` (por cima da 4c):
+  meio-fio com sarjeta, faixa amarela apagada, remendos, buracos com água, poças, rachaduras com mato, bueiros,
+  tampas, capim, calçada de placas, musgo na praça, a **Figueira da Esquina** rompendo a calçada e o asfalto na
+  esquina do portão (com raízes), cipó nas casas, nos postes e nos fios, plantas e árvore nas lajes, varal, o prédio
+  do conjunto (Bloco B) no fundo, moto com mato, placa azul (R. Santo Dias × Tv. Jasmim da Beirada), cadeiras,
+  vasos, lixo e bandeirinhas. Nada do que já foi aprovado mudou de lugar. Entra na main com o desenho da [arte]
 - [ ] **[arte]** O chão no padrão novo: asfalto (rachaduras, remendos, faixas apagadas), calçada de placas de cimento
   (juntas, placas levantadas por raiz, mato nas frestas), meio-fio com sarjeta; e as coisas novas que a planta trouxer
 - [ ] **[mundo]** Primeiro mapa (a fatia de teste): a clareira do despertar na beira do parque, com caminho claro
