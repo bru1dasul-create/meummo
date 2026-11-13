@@ -75,6 +75,37 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — combate passo 2c, o recuo (fecha o passo 2):** golpe de monstro empurra o jogador na direção do golpe, o
+quanto o monstro diz (`"recuo"` no ataque, em centímetros; padrão pelo tipo, de 12 a 34 como as pedras do protótipo;
+no painel também). Defesa: 25% do empurrão; quebrando no golpe, 50%. Parede segura (o `sweepBody` ganhou o mínimo
+como parâmetro: a esquiva continua exigindo 20 cm, o recuo aceita qualquer pedacinho). O navegador não precisou
+mudar: o servidor marca o ack e a previsão se corrige sozinha, sem cancelar o "andar até". Monstros não recuam
+(andam de tile em tile). Esquiva: a do jogo (3 m, 0,35 s protegido, 2,5 s de recarga) é bem diferente da do
+protótipo (1 m, 0,2 s, 0,2 s); deixei a do jogo e perguntei ao dono. Testes em `tests/recuo.test.ts`.
+
+**13/11 — combate passo 2b, a defesa com energia:** os números do `guard.js` da revisão 17 (energia 100, 6/s
+segurando, 22/s de volta depois de 0,7 s, protege 0,11 s depois de levantar, arco de 140°, passa 25%, golpe gasta
+10 + 0,75 × dano, quebra e rearma com 20 depois de 0,85 s soltando; anda a 70% do andar devagar). Decisões minhas,
+para o dono sentir jogando: F e um botão Defesa (o botão direito continua puxando a pedra, porque aqui o esquerdo
+no chão anda); a defesa vira sozinha para o monstro mais perto (até 8 m), senão para onde anda; segurando o botão
+anda devagar mesmo com a defesa quebrada (o navegador prevê sem esperar o servidor); defendendo não atira nem usa
+habilidade (nem o Fôlego). Por dentro: a mensagem `guard` marca cada pedaço de caminhada da fila (o servidor anda na
+mesma ordem que o navegador) e o `damage` recebe a direção do golpe (fruta: para onde voa; golpe de perto e
+investida: do monstro para o jogador; fogo no chão: sem direção, a defesa não segura). Conferido no PC e no celular:
+4 frutas de sagui defendidas (1 de dano cada), energia caindo até quebrar e voltando; andar 4,7 m/s livre e 1,5
+defendendo. Testes em `tests/defesa.test.ts`.
+
+**13/11 — combate passo 2a, a pedra com carga** (o dono: "pode fazer o combate passo 2"; dividi em 2a carga, 2b
+defesa com energia, 2c recuo): segurar puxa o estilingue e soltar atira; a carga enche em 1,1 s (pode segurar mais) e
+leva o dano até o **dobro** do de hoje e o alcance de 6,5 a 9,5 m (no mapa antigo nada muda). O servidor conta a carga
+pelo relógio dele, do `charge` até o `shoot` (protocolo 21); esquiva, golpe recebido e desmaio soltam a pedra sem
+atirar (como no protótipo: para puxar de novo, aperte de novo). Controles: PC segura o botão esquerdo no monstro, o
+direito (mira no mouse) ou J (mira no mais perto); celular segura o botão Estilingue e o toque rápido no monstro é
+uma pedra fraca na hora. Na tela: anel em volta do pé que enche como relógio e fica dourado quando cheio, e "carga
+perdida" embaixo do pé quando um golpe solta a pedra. Conferido no PC (mouse, botão direito e J) e no celular: cheia
+= 9,5 m e dano dobrado; rápida = 6,5 m. **Para o 2b:** no protótipo o botão direito é a defesa; aqui ele puxa a pedra
+— decidir com o dono quando a defesa entrar.
+
 **13/11 — primeira missão do jogo novo** (pedida pelo dono): "O Despertar" (Curupira → falar com a atendente da
 Budega) e "Saguis Encantados" (a Budega pede 4 saguis acalmados; Garrafada). Tipo novo de objetivo "falar" (aceita
 com quem dá, conclui com a pessoa procurada: `questFinisher`) e "rotulo" (texto do objetivo). O sagui virou "Sagui
@@ -156,9 +187,10 @@ Feito pela Estrutura, tudo na `main`:
 - Curupira e missões (`data/missoes.json`): derrotar ou entregar, recompensa, sequência, repetível.
 - Billings: Jacaré Mutante, Boto Encantado e a Iara (chefe, com o canto que encanta e puxa; a esquiva solta).
 
-Números para não se perder: protocolo na versão **20** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
+Números para não se perder: protocolo na versão **22** (16: `walk` no lugar de `step`; 17: `mundo` no `hello`; 18:
 `slow` no `walk`, andar devagar no mundo novo; 19: `quick` no item, os atalhos de consumo; 20: objetivo `talk` e
-`goalLabel` nas missões); `MIGRATIONS` no
+`goalLabel` nas missões; 21: `charge`, começar a puxar o estilingue; 22: `guard` e `energy`, a defesa, e `blk` no
+`hit`); `MIGRATIONS` no
 passo **3** (coluna `quests`; o movimento livre não precisou de passo novo: o salvo continua sendo o tile).
 
 ## Esperando outras frentes
