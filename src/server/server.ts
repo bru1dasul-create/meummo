@@ -100,6 +100,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     monsters: tuning.monsters,
     items: tuning.items,
     npcs: tuning.npcs,
+    areas: tuning.areas,
     quests,
     saver: store,
     startMap: options.startMap,

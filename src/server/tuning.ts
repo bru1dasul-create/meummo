@@ -16,8 +16,60 @@ import { checkNpcs, parseNpcDefs, type NpcDef } from './npcs';
 import { ITEMS_FILE, MONSTERS_FILE, NPCS_FILE } from './paths';
 
 /** Os arquivos de dados que o painel ajusta (com o nome em português, como no arquivo de ajustes). */
-export type TuningFile = 'monstros' | 'itens' | 'npcs';
-export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs'];
+export type TuningFile = 'monstros' | 'itens' | 'npcs' | 'areas';
+export const TUNING_FILES: readonly TuningFile[] = ['monstros', 'itens', 'npcs', 'areas'];
+
+/**
+ * Uma área de monstros de um mapa: o padrão vem do mapa (o [mundo] desenha no Tiled); o painel muda qual monstro e
+ * quantos. A chave é `mapa#n` (n = a ordem da área no mapa, começando em 1).
+ */
+export interface AreaDef {
+  id: string;
+  map: string;
+  index: number;
+  name: string;
+  detail: string;
+  monster: string;
+  count: number;
+}
+
+/** No máximo tantos monstros por área (mais que isso pesa no servidor e no celular). */
+const AREA_MAX = 50;
+
+/** O padrão das áreas: o que está nos mapas. */
+function baseAreas(maps: readonly GameMap[]): Raw {
+  const out: Raw = {};
+  for (const map of maps) {
+    map.monsterZones.forEach((zone, i) => {
+      out[`${map.id}#${i + 1}`] = { monstro: zone.monster, quantidade: zone.count };
+    });
+  }
+  return out;
+}
+
+/** Confere as áreas (monstro que existe, quantidade de 0 a AREA_MAX). Monstro que não existe só é erro se foi ajustado. */
+function parseAreas(json: Raw, maps: readonly GameMap[], monsters: ReadonlyMap<string, MonsterDef>): Map<string, AreaDef> {
+  const areas = new Map<string, AreaDef>();
+  for (const map of maps) {
+    map.monsterZones.forEach((zone, i) => {
+      const id = `${map.id}#${i + 1}`;
+      const raw = isObject(json[id]) ? (json[id] as Raw) : {};
+      const name = `${map.name} · área ${i + 1}`;
+      const monster = typeof raw.monstro === 'string' ? raw.monstro.trim().toLowerCase() : zone.monster;
+      const count = raw.quantidade ?? zone.count;
+      if (monster !== zone.monster && !monsters.has(monster)) {
+        throw new Error(`Erro nos ajustes (${name}): o monstro "${monster}" não existe. Use um destes: ${[...monsters.keys()].join(', ')}.`);
+      }
+      if (typeof count !== 'number' || !Number.isInteger(count) || count < 0 || count > AREA_MAX) {
+        throw new Error(`Erro nos ajustes (${name}): "quantidade" precisa ser um número inteiro de 0 a ${AREA_MAX}.`);
+      }
+      const where = `x ${zone.x}–${zone.x + zone.w}, y ${zone.y}–${zone.y + zone.h}`;
+      const detail = `${monsters.get(monster)?.name ?? monster} · ${where}`;
+      areas.set(id, { id, map: map.id, index: i + 1, name, detail, monster, count });
+    });
+  }
+  return areas;
+}
 
 /** Como o painel mostra e confere cada campo. */
 export type FieldKind = 'inteiro' | 'numero' | 'faixa' | 'sim-nao' | 'texto' | 'itens' | 'porcento';
@@ -64,6 +116,11 @@ const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [
   { campo: 'defesa', rotulo: 'Defesa', tipo: 'inteiro', ler: (d) => d.bonus.defense, vale: (d) => d.kind === 'equipment' },
 ];
 
+const AREA_FIELDS: FieldSpec<AreaDef>[] = [
+  { campo: 'monstro', rotulo: 'Qual monstro', tipo: 'texto', dica: 'a chave dele (ex.: sagui, jararaca); a lista está na aba Monstros', ler: (d) => d.monster },
+  { campo: 'quantidade', rotulo: 'Quantos', tipo: 'inteiro', dica: `0 = nenhum; até ${AREA_MAX}`, ler: (d) => d.count },
+];
+
 const NPC_FIELDS: FieldSpec<NpcDef>[] = [
   { campo: 'fala', rotulo: 'O que diz', tipo: 'texto', ler: (d) => d.line },
   { campo: 'mapa', rotulo: 'Mapa onde fica', tipo: 'texto', dica: 'o nome do arquivo do mapa (ex.: capao). Mais fácil: no jogo, menu ADM → trazer para cá', ler: (d) => d.map },
@@ -81,6 +138,7 @@ interface Defs {
   monsters: Map<string, MonsterDef>;
   items: Map<string, ItemInfo>;
   npcs: Map<string, NpcDef>;
+  areas: Map<string, AreaDef>;
 }
 
 /** O conteúdo de data/monsters.json, data/items.json e data/npcs.json. */
@@ -112,7 +170,7 @@ export interface TuningView {
   itens: { id: string; nome: string; preco: number }[];
 }
 
-const TITLES: Record<TuningFile, string> = { monstros: 'Monstros', itens: 'Itens', npcs: 'Loja e personagens' };
+const TITLES: Record<TuningFile, string> = { monstros: 'Monstros', itens: 'Itens', npcs: 'Loja e personagens', areas: 'Áreas de monstros' };
 const PART_NAMES: Record<string, string> = { weapon: 'arma', head: 'cabeça', body: 'corpo', charm: 'amuleto' };
 const KIND_NAMES: Record<ItemInfo['kind'], string> = { equipment: 'Equipamento', consumable: 'Consumível', material: 'Material' };
 
@@ -176,7 +234,8 @@ function build(base: BaseData, overrides: Overrides, maps: readonly GameMap[]): 
   checkDrops(monsters, items);
   const npcs = parseNpcDefs(merge(base.npcs, overrides.npcs ?? {}));
   checkNpcs(npcs, items, maps);
-  return { monsters, items, npcs };
+  const areas = parseAreas(merge(baseAreas(maps), overrides.areas ?? {}) as Raw, maps, monsters);
+  return { monsters, items, npcs, areas };
 }
 
 function clone<T>(value: T): T {
@@ -209,6 +268,8 @@ export class Tuning {
   readonly monsters: Map<string, MonsterDef>;
   readonly items: Map<string, ItemInfo>;
   readonly npcs: Map<string, NpcDef>;
+  /** As áreas de monstros dos mapas (qual monstro e quantos), com os ajustes. */
+  readonly areas: Map<string, AreaDef>;
   readonly problem: string | null;
   /** Avisado depois de cada ajuste aceito, com os arquivos que mudaram. */
   onChange: ((changed: ReadonlySet<TuningFile>) => void) | null = null;
@@ -244,6 +305,7 @@ export class Tuning {
     this.monsters = defs.monsters;
     this.items = defs.items;
     this.npcs = defs.npcs;
+    this.areas = defs.areas;
   }
 
   /** Lê os dados do projeto e os ajustes guardados (arquivo que não existe = sem ajustes). */
@@ -306,8 +368,13 @@ export class Tuning {
   }
 
   view(): TuningView {
-    const effective: Record<TuningFile, ReadonlyMap<string, unknown>> = { monstros: this.monsters, itens: this.items, npcs: this.npcs };
-    const defaults: Record<TuningFile, ReadonlyMap<string, unknown>> = { monstros: this.defaults.monsters, itens: this.defaults.items, npcs: this.defaults.npcs };
+    const effective: Record<TuningFile, ReadonlyMap<string, unknown>> = { monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas };
+    const defaults: Record<TuningFile, ReadonlyMap<string, unknown>> = {
+      monstros: this.defaults.monsters,
+      itens: this.defaults.items,
+      npcs: this.defaults.npcs,
+      areas: this.defaults.areas,
+    };
     const grupos = TUNING_FILES.map((arquivo) => ({
       arquivo,
       titulo: TITLES[arquivo],
@@ -339,7 +406,7 @@ export class Tuning {
 
   private spec(arquivo: TuningFile, id: string, campo: string): FieldSpec<unknown> | { erro: string } {
     if (!TUNING_FILES.includes(arquivo)) return { erro: 'Arquivo de ajustes desconhecido.' };
-    const current = ({ monstros: this.monsters, itens: this.items, npcs: this.npcs } as Record<TuningFile, ReadonlyMap<string, unknown>>)[arquivo].get(id);
+    const current = ({ monstros: this.monsters, itens: this.items, npcs: this.npcs, areas: this.areas } as Record<TuningFile, ReadonlyMap<string, unknown>>)[arquivo].get(id);
     if (current === undefined) return { erro: `"${id}" não existe em ${TITLES[arquivo].toLowerCase()}.` };
     const spec = (FIELDS[arquivo] as FieldSpec<unknown>[]).find((f) => f.campo === campo);
     if (!spec) return { erro: `O campo "${campo}" não pode ser ajustado pelo painel.` };
@@ -364,6 +431,7 @@ export class Tuning {
     replaceInPlace(this.monsters, defs.monsters);
     replaceInPlace(this.items, defs.items);
     replaceInPlace(this.npcs, defs.npcs);
+    replaceInPlace(this.areas, defs.areas);
     // Preço de item aparece na loja: mudar item também atualiza a loja de quem está vendo.
     this.onChange?.(new Set<TuningFile>(changed === 'itens' ? ['itens', 'npcs'] : [changed]));
     return { ok: true };
@@ -380,7 +448,12 @@ export class Tuning {
 
   /** Ajuste de algo que não existe mais nos arquivos do projeto: sai (com aviso). */
   private dropUnknown(overrides: Overrides): Overrides {
-    const known: Record<TuningFile, ReadonlyMap<string, unknown>> = { monstros: this.defaults.monsters, itens: this.defaults.items, npcs: this.defaults.npcs };
+    const known: Record<TuningFile, ReadonlyMap<string, unknown>> = {
+      monstros: this.defaults.monsters,
+      itens: this.defaults.items,
+      npcs: this.defaults.npcs,
+      areas: this.defaults.areas,
+    };
     for (const key of Object.keys(overrides)) {
       if (!TUNING_FILES.includes(key as TuningFile)) delete overrides[key as TuningFile];
     }
@@ -414,10 +487,12 @@ const FIELDS: Record<TuningFile, FieldSpec<never>[]> = {
   monstros: MONSTER_FIELDS as FieldSpec<never>[],
   itens: ITEM_FIELDS as FieldSpec<never>[],
   npcs: NPC_FIELDS as FieldSpec<never>[],
+  areas: AREA_FIELDS as FieldSpec<never>[],
 };
 
 function describe(arquivo: TuningFile, def: unknown): string {
   if (arquivo === 'monstros') return `Nível ${(def as MonsterDef).level}`;
+  if (arquivo === 'areas') return (def as AreaDef).detail;
   if (arquivo === 'itens') {
     const item = def as ItemInfo;
     return item.slot ? `${KIND_NAMES[item.kind]} · ${PART_NAMES[item.slot] ?? item.slot}` : KIND_NAMES[item.kind];

@@ -141,3 +141,47 @@ describe('posição dos NPCs', () => {
     expect(tuning.npcs.get('dona')).toMatchObject({ map: 'praca', x: 12.5 });
   });
 });
+
+describe('monstros por área (painel)', () => {
+  const base: BaseData = {
+    monstros: {
+      bicho: { nome: 'Bicho', nivel: 1, vida: 20, xp: 5, passoMs: 1e9, ouro: [1, 2], ataque: { tipo: 'mordida', preparoMs: 400, intervaloMs: 1000, dano: [2, 3] } },
+      cobra: { nome: 'Cobra', nivel: 2, vida: 30, xp: 9, passoMs: 1e9, ouro: [1, 2], ataque: { tipo: 'bote', preparoMs: 400, intervaloMs: 1000, dano: [3, 4] } },
+    },
+    itens: {},
+    npcs: {},
+  };
+  const map = () => GameMap.fromTiled(tiledFromAscii(['..........', '..........', '..........', '..........'], { x: 1, y: 1 }, [{ monster: 'bicho', x: 4, y: 0, w: 5, h: 4, count: 2 }]), 'vila');
+
+  it('o painel mostra cada área (com o padrão do mapa) e confere o que muda', () => {
+    const tuning = new Tuning(structuredClone(base), [map()], null);
+    const group = tuning.view().grupos.find((g) => g.arquivo === 'areas')!;
+    expect(group.titulo).toBe('Áreas de monstros');
+    expect(group.lista[0]).toMatchObject({ id: 'vila#1', campos: [{ campo: 'monstro', valor: 'bicho' }, { campo: 'quantidade', valor: 2 }] });
+    expect(tuning.set('areas', 'vila#1', 'quantidade', 6)).toEqual({ ok: true });
+    expect(tuning.areas.get('vila#1')).toMatchObject({ monster: 'bicho', count: 6 });
+    expect(tuning.set('areas', 'vila#1', 'monstro', 'naoexiste').ok).toBe(false);
+    expect(tuning.set('areas', 'vila#1', 'quantidade', 99).ok).toBe(false);
+    expect(tuning.set('areas', 'vila#1', 'monstro', 'cobra')).toEqual({ ok: true });
+    expect(tuning.areas.get('vila#1')).toMatchObject({ monster: 'cobra', count: 6 });
+  });
+
+  it('vale na hora: completa, tira e troca o monstro da área', () => {
+    const tuning = new Tuning(structuredClone(base), [map()], null);
+    const clock = new FakeClock();
+    const realm = new Realm([map()], { now: clock.now, random: () => 0.5, monsters: tuning.monsters, areas: tuning.areas });
+    tuning.onChange = (changed) => realm.tuningChanged(changed);
+    const world = realm.worlds.get('vila')!;
+    const count = (type: string) => [...world.monsters.values()].filter((m) => m.def.id === type).length;
+    expect(count('bicho')).toBe(2);
+    tuning.set('areas', 'vila#1', 'quantidade', 5);
+    expect(count('bicho')).toBe(5);
+    tuning.set('areas', 'vila#1', 'quantidade', 1);
+    expect(count('bicho')).toBe(1);
+    tuning.set('areas', 'vila#1', 'monstro', 'cobra');
+    expect(count('bicho')).toBe(0);
+    expect(count('cobra')).toBe(1);
+    tuning.set('areas', 'vila#1', 'quantidade', 0);
+    expect(world.monsters.size).toBe(0);
+  });
+});

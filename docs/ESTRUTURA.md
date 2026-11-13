@@ -75,6 +75,11 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**13/11 — painel, parte 3 (monstros por área):** grupo novo `areas` no `Tuning` (o padrão vem dos mapas; chave
+`mapa#n`, n = a ordem da área no mapa, de 1 em diante): `monstro` e `quantidade` (0 a 50). O mundo monta as áreas com
+os ajustes e `refreshAreas` vale na hora (troca o tipo, completa ou tira, sem ninguém ganhar nada). O lugar da área
+continua sendo do mapa ([mundo]).
+
 **13/11 — painel, partes 1 e 2:** nível e XP (ações `nivel` e `xp` no cartão do jogador) e a posição dos NPCs
 (campos `mapa`, `x`, `y` — tipo novo `numero`, com vírgula; `Tuning.setMany` muda os três juntos; `refreshNpcs` tira,
 põe e move; o navegador move o boneco). Menu ADM "Trazer para cá" (`gm` `npc`, protocolo 26) grava pelo `setNpcSpot`.

@@ -134,6 +134,9 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
 - **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
   sozinho, distância que percebe e persegue, tempo para renascer.
 - **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
+- **Áreas de monstros:** cada área de cada mapa (nome, onde fica e o padrão do mapa): **qual monstro** nasce ali e
+  **quantos** (0 a 50). Vale na hora: os monstros da área completam, somem ou trocam de tipo. O lugar da área é o do
+  mapa (quem desenha os mapas muda no Tiled).
 - **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
   vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
   (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).

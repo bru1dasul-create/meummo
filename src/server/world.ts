@@ -64,7 +64,7 @@ import {
   tileIn,
 } from '../shared/combat';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
-import type { GameMap, Tile } from '../shared/map';
+import type { GameMap, MonsterZone, Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
@@ -75,6 +75,7 @@ import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../s
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
+import type { AreaDef } from './tuning';
 import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
@@ -131,6 +132,8 @@ export interface WorldOptions {
    * erro, ou null se deu certo. Sem isto (testes), o menu avisa que não dá.
    */
   setNpcSpot?: (npc: string, map: string, x: number, y: number) => string | null;
+  /** Áreas de monstros com os ajustes do painel (qual monstro e quantos; chave `mapa#n`). */
+  areas?: ReadonlyMap<string, AreaDef>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -196,6 +199,9 @@ export class World {
   /** Todos os monstros que existem (o administrador pode criar qualquer um, em qualquer mapa). */
   private readonly monsterDefs: ReadonlyMap<string, MonsterDef>;
   private readonly setNpcSpot: WorldOptions['setNpcSpot'];
+  private readonly areas: ReadonlyMap<string, AreaDef>;
+  /** A área do mapa (`mapa#n`) → os monstros dela. */
+  private readonly zoneByArea = new Map<string, ZoneState>();
   /** Chão pegando fogo agora (rastros de investida). */
   private hazards: Hazard[] = [];
   /** Tile → id do monstro que está nele (monstros não se empilham). */
@@ -236,15 +242,71 @@ export class World {
     const defs = options.monsters ?? new Map<string, MonsterDef>();
     this.monsterDefs = defs;
     this.setNpcSpot = options.setNpcSpot;
-    for (const zone of map.monsterZones) {
-      const def = defs.get(zone.monster);
+    this.areas = options.areas ?? new Map();
+    map.monsterZones.forEach((zone, i) => {
+      // o painel pode ter mudado o monstro e a quantidade desta área
+      const area = this.areas.get(`${map.id}#${i + 1}`);
+      const monster = area?.monster ?? zone.monster;
+      const def = defs.get(monster);
       if (!def) {
-        this.log(`aviso: o mapa tem uma área do monstro "${zone.monster}", mas ele não existe em data/monsters.json`);
-        continue;
+        this.log(`aviso: o mapa tem uma área do monstro "${monster}", mas ele não existe em data/monsters.json`);
+        return;
       }
-      const state: ZoneState = { zone, def, alive: new Set(), respawnAt: [] };
-      this.zones.push(state);
-      for (let i = 0; i < zone.count; i++) this.spawnMonster(state);
+      this.addZone(`${map.id}#${i + 1}`, { ...zone, monster, count: area?.count ?? zone.count }, def);
+    });
+  }
+
+  private addZone(areaId: string, zone: MonsterZone, def: MonsterDef): ZoneState {
+    const state: ZoneState = { zone, def, alive: new Set(), respawnAt: [] };
+    this.zones.push(state);
+    this.zoneByArea.set(areaId, state);
+    for (let i = 0; i < zone.count; i++) this.spawnMonster(state);
+    return state;
+  }
+
+  /**
+   * O painel mudou uma área (qual monstro ou quantos): troca os monstros dela na hora (os do tipo antigo saem) e
+   * completa ou tira até ficar com a quantidade nova.
+   */
+  refreshAreas(): void {
+    this.map.monsterZones.forEach((zone, i) => {
+      const id = `${this.map.id}#${i + 1}`;
+      const area = this.areas.get(id);
+      const def = area ? this.monsterDefs.get(area.monster) : undefined;
+      if (!area || !def) return;
+      const state = this.zoneByArea.get(id);
+      if (!state) {
+        this.addZone(id, { ...zone, monster: def.id, count: area.count }, def);
+        return;
+      }
+      if (state.def !== def) {
+        for (const monsterId of [...state.alive]) {
+          const monster = this.monsters.get(monsterId);
+          if (monster) this.removeMonster(monster);
+        }
+        state.def = def;
+        state.zone.monster = def.id;
+        state.respawnAt = [];
+      }
+      state.zone.count = area.count;
+      for (const monsterId of [...state.alive].slice(area.count)) {
+        const monster = this.monsters.get(monsterId);
+        if (monster) this.removeMonster(monster);
+      }
+      while (state.alive.size < area.count && this.spawnMonster(state)) {
+        // completa agora (quem caiu antes volta no tempo dele, até a quantidade nova)
+      }
+      state.respawnAt = state.respawnAt.slice(0, Math.max(0, area.count - state.alive.size));
+    });
+  }
+
+  /** Tira um monstro do mapa sem ninguém ganhar nada (o painel mudou a área dele). */
+  private removeMonster(monster: Monster): void {
+    this.monsters.delete(monster.id);
+    this.monsterAt.delete(this.tileKey(monster.x, monster.y));
+    monster.zone.alive.delete(monster.id);
+    for (const player of this.players.values()) {
+      if (player.known.delete(monster.id)) player.outbox.push({ t: 'despawn', id: monster.id });
     }
   }
 

@@ -151,7 +151,7 @@ function parseChange(body: unknown): { arquivo: TuningFile; id: string; campo: s
   if (typeof body !== 'object' || body === null) return null;
   const { arquivo, id, campo, valor } = body as Record<string, unknown>;
   if (!TUNING_FILES.includes(arquivo as TuningFile)) return null;
-  if (typeof id !== 'string' || !/^[a-z0-9_-]{1,40}$/.test(id)) return null;
+  if (typeof id !== 'string' || !/^[a-z0-9_-]{1,40}(#[0-9]{1,3})?$/.test(id)) return null; // área de monstros: mapa#n
   if (typeof campo !== 'string' || !/^[a-zA-Z.]{1,40}$/.test(campo)) return null;
   return { arquivo: arquivo as TuningFile, id, campo, valor };
 }

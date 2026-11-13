@@ -331,6 +331,7 @@ export class Realm {
       if (changed.has('monstros')) world.refreshMonsters();
       if (changed.has('itens')) world.refreshItems();
       if (changed.has('npcs')) world.refreshNpcs();
+      if (changed.has('areas')) world.refreshAreas();
     }
   }
 
