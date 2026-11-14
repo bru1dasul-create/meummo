@@ -224,6 +224,8 @@
     const sorted = groups.filter((g) => g.balls.length).map((g) => ({ g, d: depth(g.ref || g.balls[0].c) + (g.bias || 0) }));
     sorted.sort((a, b) => a.d - b.d);
     for (const { g } of sorted) {
+      // `under`/`over`: desenho próprio do grupo, antes (atrás) ou depois (na frente) das bolas (ex.: orelhas do gato)
+      if (g.under) g.under(ctx);
       const qs = g.balls.map((b) => ({ q: cam.p(b.c), r: b.r * zoom, col: b.col, noInk: b.noInk }));
       // contorno: um pouco maior que cada bola, tudo junto (`noInk`: a emenda com o grupo de antes, sem risco)
       ctx.fillStyle = INK;
@@ -257,6 +259,7 @@
       pass('base', 0.84, 0.16, 0);
       if (!g.matte) pass('light', 0.4, 0.42, 2.2);
       if (g.decals) for (const dc of g.decals) decal(ctx, cam, dc, flash);
+      if (g.over) g.over(ctx);
     }
   }
 
@@ -351,6 +354,8 @@
     INK,
     tube,
     tint,
+    /** Sombra das bolas projetada num plano de altura `z` (cm): o chão, ou o assento do sofá para o gato. */
+    drawShadow,
     /** Registra uma criatura: `PD.creatures.define('sagui', ClasseDoSagui)`. */
     define(type, cls) {
       TYPES[type] = cls;

@@ -9,6 +9,7 @@
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
 //   action(id, tipo, angulo)  golpes e reações; por enquanto só nas criaturas (js/creatures: o sagui)
 //   gear(id, gear)            o que o jogador tem equipado (o ícone de cada parte): o arco (`weapon: 'arco'`) fica na mão
+//   canDraw(kind, tipo)       desenha este bicho? (kind 'pet': o Joaquim, 'joaquim'; ações wake, sleep, meow, purr, dash)
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
 //   talk(id, ms)              quem fala mexe a boca (e a sobrancelha) por `ms`, sem balão; 0 para
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
@@ -25,7 +26,7 @@
   const ZOOM = { min: 0.7, max: 1.4, portraitMeters: 9 };
 
   // cor do nome em cima da cabeça (as mesmas do jogo de hoje, src/client/style.css)
-  const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', monster: '#f1e4c8' };
+  const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', pet: '#8fe3c8', monster: '#f1e4c8' };
   const UI_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   const rad = (deg) => (deg * Math.PI) / 180;
 
@@ -70,10 +71,13 @@
     addActor(id, a) {
       if (this.actors.has(id)) this.removeActor(id);
       const yaw = Number.isFinite(a.angle) ? rad(a.angle) : Math.PI / 4;
-      // monstro ou NPC com corpo próprio (sagui, jararaca, a Xiovanna da Budega...): a criatura no lugar do corpo de gente
-      const own = (a.kind === 'monster' || a.kind === 'npc') && PD.creatures && PD.creatures.has(a.type);
+      // monstro, NPC ou bicho com corpo próprio (sagui, jararaca, a Xiovanna da Budega, o Joaquim...): a criatura no lugar
+      // do corpo de gente
+      const own = (a.kind === 'monster' || a.kind === 'npc' || a.kind === 'pet') && PD.creatures && PD.creatures.has(a.type);
       const creature = own ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
       if (creature) {
+        // o bicho que já aparece dormindo (o Joaquim no sofá)
+        if (a.asleep && creature.setAsleep) creature.setAsleep(true);
         const actor = { id, kind: a.kind, type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
         this.actors.set(id, actor);
         if (this.followId === null && a.me) this.follow(id);
@@ -102,6 +106,14 @@
       this.actors.set(id, actor);
       if (a.me || this.followId === null) this.follow(id);
       return actor;
+    }
+
+    /**
+     * A view sabe desenhar este tipo? (o motor pergunta para os bichos, kind 'pet': sem desenho, ele desenha um
+     * provisório por cima). Hoje: o Joaquim, o gato da vó (js/creatures/gato.js).
+     */
+    canDraw(kind, type) {
+      return kind === 'pet' && !!(PD.creatures && PD.creatures.has(type));
     }
 
     /** Nova posição do pé (metros) e para onde olha (graus). `durationMs` não é usado: anda pela velocidade. */

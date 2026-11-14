@@ -704,8 +704,8 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   por cima.
 - **Joaquim** (`PD.gato.draw`): bem pequeno, creme com as pontas laranja-claras de flame point, olhos azuis (fechados,
   dormindo), nariz rosa; dorme enrolado no sofá da vó: respira, mexe uma orelha, bate a ponta do rabo, solta "z"; o
-  nome em verde-água em cima. Desenhado a cada quadro (`live` no `Small`). Acordar, andar, miar e carinho: quando a
-  [estrutura] fizer o comportamento (a chave é dela; os sons também).
+  nome em verde-água em cima. Desenhado a cada quadro (`live` no `Small`). Acordado (andar, miar, carinho), veja
+  "Joaquim que anda" logo abaixo: dormindo, ele continua sendo este desenho.
 - Conferi com o mapa do [mundo] numa cópia à parte (`foto-casas.cjs`: leva o herói à porta pelo painel e entra
   andando): PC e celular em pé.
 
@@ -731,6 +731,30 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - Conferi com uma ligação local só para o teste (o `icone` `arco` e as chamadas no `combat.ts` e no `engine.ts`,
   desfeitas depois): o painel dá o arco, a mochila equipa, o arco vai para a mão, o botão vira "Arco", a flecha voa e
   crava. Receitas: `arco-pose.cjs` (`view.gear` direto), `arco-jogo.cjs`, `arco-defesa.cjs`.
+
+### Joaquim que anda (14/11): `js/creatures/gato.js`
+- A [estrutura] fez o comportamento (o bicho `pet` `joaquim`, protocolo 30). Na PD.View: `canDraw('pet', 'joaquim')`
+  (aí o motor para de desenhar o gatinho provisório e manda o bicho para a view), o `asleep` de quando ele aparece
+  (`setAsleep`) e a cor do nome (`NAME_COLOR.pet`, a dos NPCs).
+- A criatura `Joaquim` (de bolas, como o sagui): poses em pé, sentado, espreguiçando (`wake`), no pulo (`LEAP`) e
+  enrolado, e o desenho passa de uma para a outra. **Dormindo, é o desenho aprovado** (`sleeping`, o mesmo do
+  `PD.gato.draw`), que entra e sai com um esmaecer rápido (~0,2 s) quando ele enrola ou acorda.
+- Do jeito do gato do dono: orelhas grandes (uma "concha" de 4 pontos, rosada por dentro e com a ponta laranja; a de
+  trás vai antes da cabeça e a da frente depois, pelos ganchos `under`/`over` que pus nos grupos do `creature.js`),
+  cabeça larga embaixo (bochechas) com focinho curto, máscara laranja-clara na testa e no nariz, olhos azuis (fechados
+  dormindo e no carinho), rabo em pé com a ponta virando. Parado e acordado, vira a cabeça para quem está perto.
+- O passo é de gato (a pata de trás e, um quarto de passada depois, a da frente do mesmo lado; a pata no chão vai para
+  trás, sem escorregar para a frente). As costas são de bolas bem juntas (espaçadas, o contorno saía encaroçado, de
+  carneiro).
+- Em cima do sofá (`perch`, 46 cm): desenhado depois do sofá (`lift`), a sombra vai no assento (`PD.creatures.drawShadow`
+  com a altura) e não no chão. O pulo (`dash`) é um arco de 0,42 s, virado para onde ele pula.
+- "miau!" e o coração do carinho saem do lado da cabeça, abaixo do nome (em cima, o nome escondia os dois).
+- O erro da primeira versão: o "para cima" da cabeça era frente × lado ao contrário; as orelhas e a máscara ficavam
+  embaixo do queixo (pareciam presas brancas).
+- Conferir sem entrar no jogo: `node ferramentas/prancha-joaquim.cjs saida.png poses` (todas as poses em 4 direções e
+  nos tamanhos do PC e do celular) e `... saida.png tiras` (o passo, o pulo, acordar e deitar em quadros). No jogo:
+  entrar na casa da vó (Capão, porta perto de x 65, y 40) e esperar ele acordar; conferi no PC e no celular deitado,
+  com dois visitantes, sem erros.
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
@@ -825,8 +849,9 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura]:** o comportamento do Joaquim (acordar, andar, miar, carinho); os sons. O arco: ligar o desenho
-  (veja o roteiro: o `icone` `arco`, as chamadas do `projectileArt.ts` no `combat.ts` e o `setLook`).
+- **[estrutura]:** o arco: ligar o desenho (veja o roteiro: o `icone` `arco`, as chamadas do `projectileArt.ts` no
+  `combat.ts` e o `setLook`). Ela pediu para avisar quando o `canDraw` do Joaquim entrasse, para conferir no navegador.
+  O botão do som no celular (pedido dela) está pronto no meu ramo.
 - **[mundo]:** junta o `mundo/casas-interior` (e o `mundo/placa-parque`) depois do meu ramo.
 - **[mundo]:** a Dona Iracema aparecia por cima do balcão da barraquinha (o balcão desenhado na frente das pernas).
   O [mundo] anotou o pedido; confira no jogo se ficou certo.
@@ -835,8 +860,7 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
-0. **Joaquim acordado** (quando a [estrutura] fizer o comportamento): sentado, andando, miando, recebendo carinho.
-   Pintar também o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
+0. Pintar o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
 1. **Piloto do estilo desenhado** com o Nano Banana (esperando os exemplos do dono, veja acima).
 2. **Monstros antigos no capricho novo** (`monsterPaint.ts`): sagui, jararaca, saci, corpo-seco, capelobo e Mula sem
    Cabeça. Hoje são 16x16 e menores que um jogador. Se o piloto aprovar o estilo desenhado, faça já nesse estilo.
@@ -849,6 +873,9 @@ confirmou.
 ## Como confiro (receitas)
 - **Prancha:** `npm run render:characters` (`-- --so Curupira --escala 4 --out arquivo.png` para um só). Os monstros
   pintados ficam embaixo.
+- **Criatura de bolas do 2.5D sem entrar no jogo:** `node prototipos/pindorama-25d/ferramentas/prancha-joaquim.cjs
+  saida.png poses` (ou `tiras`): carrega os scripts do `view-scripts.json` numa página e desenha a criatura em cada
+  pose; serve de modelo para outra criatura.
 - **Testes de arte:**
   - equipamento sem visual;
   - quadro do personagem sem nada cortado nas bordas, com o fogo do Curupira dentro;

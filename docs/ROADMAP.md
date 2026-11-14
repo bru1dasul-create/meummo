@@ -196,7 +196,7 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `tapete`, `sofa` (`cor`, `croche`, `rasgado`, `mato`), `cristaleira`, `mesa-redonda` (`toalha: 'croche'`),
   `maquina-costura`, `cama` (`colcha: 'retalhos'`), `colchao` (`velho`) e `entulho` (`cadeiraCaida`); a `geladeira` e o
   `vaso` já existem. Na casa abandonada, o tronco no chão de dentro é a `arvore` com `dentroDaCasa` (no meio da casa)
-- [ ] **[estrutura + arte + mundo]** Joaquim, o gato da vó (pedido do dono, 13/11): bem pequeno, todo branco com
+- [x] **[estrutura + arte + mundo]** Joaquim, o gato da vó (pedido do dono, 13/11): bem pequeno, todo branco com
   detalhes laranja (a máscara na testa e no focinho, as orelhas e o rabo), olhos azuis, como o gato do dono
   (`docs/referencias/joaquim-1.jpg` e `joaquim-2.jpg`), e com vida: dorme no sofá da vó, acorda, se espreguiça, anda
   pela casa, mia e dá para fazer carinho. A [estrutura] define a chave e o comportamento, a [arte] desenha e anima, e o
@@ -209,9 +209,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     (uma vez) para quem chega a 2,5 m, acordado; tocar nele faz o herói ir até lá e fazer carinho: ele ronrona
     (dormindo, continua dormindo). Sons: miado e ronronar. Gatinho provisório desenhado pelo motor (só com você
     dentro da casa) até o da [arte]. Protocolo 30. Conferido no PC e no celular com o mapa do ramo do [mundo]
-  - [ ] **[arte]** Ligar o `gato.js` no Joaquim que anda: `canDraw('pet', 'joaquim')` na PD.View (aí o motor para de
-    desenhar o provisório e manda o bicho para a view, com `kind: 'pet'` e `asleep`), e as ações `wake`, `sleep`,
-    `meow`, `purr` (coração) e `dash` (o pulo do sofá); o gato decorativo do mapa sai quando ele entrar
+  - [x] **[arte]** Ligar o `gato.js` no Joaquim que anda (14/11, no ramo da arte; entra na main com o "pode" do
+    dono): `canDraw('pet', 'joaquim')` na PD.View e a criatura de bolas acordada (em pé, andando no passo de gato,
+    sentado, espreguiçando, o pulo do sofá, "miau!" e o coração do carinho; olha para quem está perto). Dormindo,
+    continua o desenho enrolado aprovado. Conferido no PC e no celular deitado, na casa da vó
   - [x] **[mundo]** A casa rosa na main (14/11, com o desenho das casas) e o `gato` decorativo do sofá saiu: o Joaquim
     de verdade aparece lá (conferido no PC e no celular: dorme no sofá e passeia pela casa)
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o

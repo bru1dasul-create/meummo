@@ -3297,8 +3297,18 @@ body.jogo-novo .talk-chip img {
     font-size: 13px;
   }
 
-  body.jogo-novo .hud-net {
+  /* a linha da rede some (falta espaço), mas o botão do som fica: no celular não tem a tecla M, e sem ele não dava nem
+     para desligar o som (pedido da [estrutura], que fez o painel do som) */
+  body.jogo-novo .hud-net > :not(#hud-sound) {
     display: none;
+  }
+
+  body.jogo-novo #hud-sound {
+    width: 32px;
+    height: 32px;
+    margin-left: 0;
+    font-size: 16px;
+    line-height: 30px;
   }
 
   /* ações: quadrado de 2x2 no canto de baixo à direita, cada uma no quadro dourado */
