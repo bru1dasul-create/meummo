@@ -148,6 +148,10 @@ const C = {
   onibus: hex('#e0b443'),
   carro: hex('#a33a2a'),
   branco: hex('#f2f0ea'),
+  ferrugem: hex('#9a5a36'),
+  bomba: hex('#c0392b'),
+  pneu: hex('#26262a'),
+  flor: hex('#e58fb0'),
 };
 
 export interface MapImage {
@@ -211,7 +215,17 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
   for (const o of scen) {
     if (o.type === 'deque' || o.type === 'pinguela') {
       const [x0, y0, x1, y1] = box(o);
-      cv.rect(x0, y0, x1, y1, C.madeira);
+      if (prop(o, 'pedras') === true) {
+        // as pedras de atravessar o riacho: uma fileira de pedras
+        const along = x1 - x0 >= y1 - y0;
+        const n = 4;
+        for (let k = 0; k < n; k++) {
+          const t = (k + 0.5) / n;
+          const [cx, cy] = along ? [x0 + (x1 - x0) * t, (y0 + y1) / 2] : [(x0 + x1) / 2, y0 + (y1 - y0) * t];
+          const r = Math.min(x1 - x0, y1 - y0) * 0.38;
+          cv.ellipse(cx, cy, r, r, C.pedra);
+        }
+      } else cv.rect(x0, y0, x1, y1, C.madeira);
     }
   }
   for (const o of scen) {
@@ -219,6 +233,8 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     if (o.point) {
       const [x, y] = [s(o.x), s(o.y)];
       if (t === 'pedra') cv.ellipse(x, y, s(num(o, 'raio', 0.5) * M), s(num(o, 'raio', 0.5) * M), C.pedra);
+      else if (t === 'pneus') cv.ellipse(x, y, s(num(o, 'raio', 0.5) * M), s(num(o, 'raio', 0.5) * M), C.pneu);
+      else if (t === 'parquinho') cv.ellipse(x, y, s(num(o, 'raio', 0.8) * M), s(num(o, 'raio', 0.8) * M), C.ferrugem, 0.9);
       continue;
     }
     if (o.polyline) continue;
@@ -237,6 +253,20 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     else if (t === 'carro' || t === 'moto') fill(C.carro, 1, false);
     else if (t === 'trave' || t === 'barreira') fill(C.branco, 0.9, false);
     else if (t === 'tronco-caido') fill(C.madeira, 1, false);
+    // a floresta maior: o parquinho enferrujado, as bombas do posto e as pedras da cachoeirinha (com a água caindo)
+    else if (t === 'parquinho') fill(C.ferrugem, 0.9, false);
+    else if (t === 'bomba') fill(C.bomba, 1, false);
+    else if (t === 'cachoeira') {
+      fill(C.pedra, 1, false);
+      cv.line([[(x0 + x1) / 2, y0], [(x0 + x1) / 2, y1]], Math.max(1, escala * 0.5), C.branco, 0.85);
+    }
+  }
+  // a cobertura do posto: o teto meio transparente (as bombas embaixo continuam aparecendo)
+  for (const o of scen) {
+    if (o.type !== 'cobertura') continue;
+    const [x0, y0, x1, y1] = box(o);
+    cv.rect(x0, y0, x1, y1, C.concreto, 0.55);
+    cv.line([[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]], 1, C.contorno, 0.6);
   }
   // a mata fechada (as paredes de mato) e o bambu
   for (const o of scen) {
@@ -249,8 +279,11 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
   for (const o of scen) {
     if (o.type !== 'arvore' || !o.point || prop(o, 'dentroDaCasa') === true) continue;
     const r = s(num(o, 'copa', 2) * M) * 0.9;
-    cv.ellipse(s(o.x), s(o.y), r, r, C.copa, 0.5);
-    cv.ellipse(s(o.x), s(o.y), r * 0.45, r * 0.45, shade(C.copa, 0.8), 0.35);
+    // a árvore que dá flor (a paineira) aparece com a cor da flor: dá para achar ela no mapa
+    const flor = prop(o, 'flores');
+    const c = typeof flor === 'string' ? hex(flor) : C.copa;
+    cv.ellipse(s(o.x), s(o.y), r, r, c, typeof flor === 'string' ? 0.75 : 0.5);
+    cv.ellipse(s(o.x), s(o.y), r * 0.45, r * 0.45, shade(c, 0.8), 0.35);
   }
   // o viaduto passa por cima de tudo (o tabuleiro é alto)
   for (const o of scen) {

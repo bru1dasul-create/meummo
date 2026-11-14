@@ -24,6 +24,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { writeMapImage } from './mapa-de-cima';
 import { mulberry32 } from './pixels';
 
 const outIndex = process.argv.indexOf('--out');
@@ -1361,10 +1362,11 @@ if (FLORESTA_MAIOR) {
     { type: 'lama', x: 0, y: 0, polygon: blob(POOL.x, POOL.y, POOL.rx + 1.2, POOL.ry + 1.1, 0.12, 28) },
     { type: 'lama', x: 0, y: 0, polyline: STREAM_SOUTH, props: { largura: STREAM_W + 1.4 } },
   );
+  // (o riacho primeiro e o poço por cima: senão a faixa do riacho aparece atravessando o poço)
   after(
     'agua',
-    { type: 'agua', x: 0, y: 0, polygon: POOL_PTS, props: { cor: '#2f7a73' } },
     { type: 'agua', x: 0, y: 0, polyline: STREAM_SOUTH, props: { cor: '#2f6f6a', largura: STREAM_W } },
+    { type: 'agua', x: 0, y: 0, polygon: POOL_PTS, props: { cor: '#2f7a73' } },
   );
   chao.push(ellipse('grama', PAINEIRA_C.x, PAINEIRA_C.y, PAINEIRA_C.r));
   chao.push(ellipse('grama', RECANTO.x, RECANTO.y, RECANTO.r));
@@ -2058,7 +2060,10 @@ const map = {
 };
 mkdirSync(path.dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(map));
+// o mapa visto de cima, para a janela do mapa (tecla M) e o mini mapa: <id>-mapa.png e <id>-mapa.json ao lado do .tmj
+const mapImage = writeMapImage(OUT);
 const count = (type: string) => cenario.filter((s) => s.type === type).length;
 console.log(
   `Mapa gerado em ${path.relative(process.cwd(), OUT)}: ${W}x${H} m, ${count('arvore')} árvores, ${count('arbusto')} arbustos da mata fechada, ${colisao.length} retângulos de colisão.`,
 );
+console.log(`Mapa visto de cima (tecla M): ${path.relative(process.cwd(), mapImage.png)} e ${path.basename(mapImage.json)}.`);

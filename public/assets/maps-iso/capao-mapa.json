@@ -1,0 +1,145 @@
+{
+  "escala": 8,
+  "largura": 96,
+  "altura": 180,
+  "nomes": [
+    {
+      "nome": "Clareira dos Despertos",
+      "x": 37,
+      "y": 43,
+      "tipo": "clareira"
+    },
+    {
+      "nome": "Mata do Parque Santo Dias",
+      "x": 24,
+      "y": 90,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Lago do Parque",
+      "x": 16,
+      "y": 50,
+      "tipo": "agua"
+    },
+    {
+      "nome": "Clareira das Bananeiras",
+      "x": 27,
+      "y": 80,
+      "tipo": "clareira"
+    },
+    {
+      "nome": "Mata Profunda",
+      "x": 11.5,
+      "y": 9,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Mata Profunda",
+      "x": 12,
+      "y": 100,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Vila do Capão",
+      "x": 72,
+      "y": 40,
+      "tipo": "vila"
+    },
+    {
+      "nome": "Clareira da Paineira",
+      "x": 32,
+      "y": 150,
+      "tipo": "clareira"
+    },
+    {
+      "nome": "Cachoeirinha",
+      "x": 14.3,
+      "y": 158.5,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Mata Profunda",
+      "x": 11,
+      "y": 169,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Mata da Estrada",
+      "x": 68,
+      "y": 130,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Posto Abandonado",
+      "x": 80.5,
+      "y": 144.5,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Estrada para Guarapiranga",
+      "x": 92,
+      "y": 130,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Figueira dos Despertos",
+      "x": 36.5,
+      "y": 38,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Pedra do Véu",
+      "x": 7.5,
+      "y": 9.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Portão I",
+      "x": 48,
+      "y": 44,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Budega",
+      "x": 64.5,
+      "y": 51,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Árvore da Praça",
+      "x": 77,
+      "y": 58,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Figueira do Viaduto",
+      "x": 45.5,
+      "y": 7,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Figueira da Esquina",
+      "x": 68,
+      "y": 40.25,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Bloco B",
+      "x": 91.2,
+      "y": 17.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Semáforo",
+      "x": 57,
+      "y": 40.9,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Paineira",
+      "x": 27.76,
+      "y": 145.76,
+      "tipo": "lugar"
+    }
+  ]
+}
