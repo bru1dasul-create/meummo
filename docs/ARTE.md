@@ -771,6 +771,28 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   entrar na casa da vó (Capão, porta perto de x 65, y 40) e esperar ele acordar; conferi no PC e no celular deitado,
   com dois visitantes, sem erros.
 
+### A lista do dono de 14/11, lote 1 (o que está feio ou com defeito; o dono deu o "pode" para começar)
+- **Cama do quarto do Joaquim** (`casas.js` `small.cama`): a cabeceira fica do lado oposto ao `olhando` (0 = pés para
+  o leste e cabeceira em x0, o padrão sem `olhando`; 90 em y0; 180 em x1; 270 em y1); a do lado da câmera vai por
+  último. O [mundo] virou a cama no mapa (`mundo/cama-vo`); os dois ramos entram juntos. O crucifixo foi para o meio da
+  cabeceira (x 70,15).
+- **Braço do arco** (`slingshot.js`): puxando, de lado para o alvo: `BOW_TURN` 75° do peito para a flecha (o quadril
+  dá `BOW_HIPS` 28°, menos andando), a mão do arco esticada para o alvo (x da mão esquerda conta para fora), o cotovelo
+  da corda guiado para trás na linha da flecha, a cabeça olhando ao longo dela (`look.bowHead`, lido no animator) e o
+  arco virado para onde a flecha vai (`look.bowDir`). Conferir: `arco-prancha.cjs` (scratchpad) e no jogo.
+- **Esquiva** (`animator.js` `startRoll`/`_rollPose`, `view.js` ação `dash`): no jogo ela era um pulo de 3 m sem
+  movimento. Agora é um rolamento de 0,5 s: a pose encolhida e o giro da queda do rig (`fall`), com o pé da pose
+  recuando para o meio da bola seguir reto; a vista não teletransporta enquanto rola. A esquiva curta do protótipo
+  (`_startDodge`) não mudou (os testes do protótipo passam).
+- **Entrar e sair das casas** (`props.js` `CUT_TIME`, `world.js` `focusHouse`, `view.js`): 0,6 s com começo e fim
+  suaves; saindo, a casa continua em foco até o telhado voltar; o escuro fecha e abre como íris; a câmera volta junto;
+  o herói que sai não é cortado.
+- **Entrada da Budega**: esperando a proposta do [mundo] ao dono (mandei o diagnóstico: sem `portaDe`, o herói
+  atravessa a fachada pintada; o varal passa na frente; o orelhão na quina).
+- **Próximo da lista (pedido da [estrutura], que mediu):** o zoom e a conversa travam porque o chão (`ground.js`) se
+  refaz inteiro a cada zoom novo; esticar os pedaços velhos enquanto o zoom muda e refazer quando parar, e o
+  `buildBusy` contar o primeiro desenho de cada imagem nova.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
