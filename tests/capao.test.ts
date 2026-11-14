@@ -673,3 +673,34 @@ describe('Mapa 01 (Capão): o resto do Capão (4c) no padrão novo (aprovado pel
     expect(reachNear(x, y + 2.5, 0.5)).toBe(true); // dá para chegar perto do tronco
   });
 });
+
+describe('Mapa 01 (Capão): o Parque Santo Dias de antes, engolido pela floresta (aprovado pelo dono em 13/11)', () => {
+  const cenario = layer('cenario');
+  const of = (t: string) => cenario.filter((o) => o.type === t);
+
+  it('a placa PARQUE SANTO DIAS fica do lado de fora do portão, na frente do gradil e dos pilares (na tela), virada para a rua, sem fechar a calçada', () => {
+    // (dentro do parque, atrás do pilar norte, o pilar ficava na frente dela e ela subia acima dele: o dono achou errado)
+    const placa = of('placa').find((o) => prop(o, 'texto') === 'PARQUE SANTO DIAS')!;
+    const { x, y } = at(placa);
+    expect(x).toBeGreaterThan(48); // fora do gradil
+    for (const p of of('pilar').filter((o) => Math.abs(o.x / M - 48) < 1)) expect(x + y, 'na frente do pilar, na tela').toBeGreaterThan((p.x + p.width + p.y + p.height) / M);
+    expect(prop(placa, 'olhando')).toBe(0); // virada para a rua (leste)
+    for (let yy = y - 1; yy <= y + 1; yy += 0.25) expect(footFree(49.1, yy), `calçada em y = ${yy}`).toBe(true);
+  });
+
+  it('as coisas do parque antigo estão lá: bebedouro, bancos de concreto, postes apagados, a academia e a pista de cimento', () => {
+    expect(of('bebedouro').length).toBe(1);
+    expect(of('banco').filter((o) => prop(o, 'material') === 'concreto').length).toBe(3);
+    expect(of('poste-praca').filter((o) => prop(o, 'apagado') === true).length).toBe(3);
+    expect(of('academia').map((o) => String(prop(o, 'aparelho'))).sort()).toEqual(['barra', 'remada', 'simulador-caminhada']);
+    expect(layer('chao').filter((o) => o.type === 'calcada' && prop(o, 'quebrada') === true).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('o poste do parque da entrada não fica, na tela, na mesma linha do poste de concreto do portão (os dois se confundiam)', () => {
+    const sx = (x: number, y: number) => (x - y) * Math.SQRT1_2;
+    const gate = of('poste').find((o) => Math.abs(at(o).x - 50.5) < 0.01 && Math.abs(at(o).y - 40) < 0.01)!;
+    for (const p of of('poste-praca').filter((o) => prop(o, 'apagado') === true)) {
+      expect(Math.abs(sx(at(p).x, at(p).y) - sx(at(gate).x, at(gate).y))).toBeGreaterThan(0.5);
+    }
+  });
+});

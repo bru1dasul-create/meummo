@@ -657,11 +657,10 @@ if (FLORESTA) {
     }
     throw new Error(`Não achei lugar para uma coisa do parque antigo perto de (${x}, ${y}).`);
   }
-  // a placa da entrada, do lado de dentro do portão (atrás da trilha, para a câmera)
-  {
-    const [x, y] = near(46.2, 40, 0.2, 0.2, 0.6);
-    cenario.push(point('placa', x, y, { texto: 'PARQUE SANTO DIAS', poste: true, tamanho: 'grande', mato: true }));
-  }
+  // a placa da entrada, do lado de fora do portão, logo ao sul do pilar e encostada no gradil, virada para a rua (como
+  // na imagem aprovada). Dentro do parque, atrás do pilar norte, o pilar ficava na frente dela na tela e ela tinha de
+  // subir acima dele (o dono achou errado). Aqui ela fica na frente do gradil e do pilar, na altura dos olhos.
+  cenario.push(point('placa', 48.2, 48.6, { texto: 'PARQUE SANTO DIAS', poste: true, tamanho: 'grande', mato: true, olhando: 0 }));
   // o bebedouro, perto do portão
   {
     const [x, y] = near(45.3, 46.8, 0.5, 0.5, 0.4);
