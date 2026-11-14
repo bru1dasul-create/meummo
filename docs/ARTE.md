@@ -754,6 +754,12 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
     da frente vão na frente da barriga, nascendo do peito (o começo some no pelo). Rabo que afina, do creme ao laranja,
     com aneizinhos, em "ponto de interrogação".
 - Dormindo, é o desenho aprovado (`sleeping`); a troca enrolado ↔ acordado esmaece em ~0,1 s.
+- **O rabo (pedido do dono: estava ruim sentado e deitado de frente)**: `paintTail` corta o rabo onde ele passa para
+  trás ou para a frente do corpo (o pedaço de trás vai antes do corpo, o da frente depois; as emendas sem risco). Dormindo,
+  ele é mais fino, afina até a ponta e dá a volta **pelo lado de quem olha** até perto do focinho (antes ia pelo lado de
+  lá e era desenhado por cima do gato, como um cachecol). Sentado, dá a volta no chão por fora do corpo e termina na
+  frente das patinhas, também pelo lado virado para a câmera (`tailSide`, que só muda com ele em pé). Enrolando ou
+  acordando, o rabo fica atrás do corpo (no meio da passagem ele cruzava o gato como um cinto).
 - Em cima do sofá (`perch`, 46 cm): desenhado depois do sofá (`lift`), a sombra vai no assento
   (`PD.creatures.drawShadow` com a altura). O pulo (`dash`) é um arco de 0,42 s. "miau!" e o coração saem do lado da
   cabeça, abaixo do nome.

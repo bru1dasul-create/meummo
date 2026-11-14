@@ -50,6 +50,128 @@
     if (close) ctx.closePath();
   }
 
+  /**
+   * Contorno de um membro que afina (perna, rabo), em px de tela: os pontos do meio e o raio em cada um. Devolve os
+   * dois lados e, com `cap`, a ponta redonda no fim. O começo é aberto (emenda no corpo ou no outro pedaço).
+   */
+  function limbShape(ptsIn, radsIn, cap = true) {
+    // pontos quase em cima um do outro na tela (o rabo vindo na direção de quem olha) torciam a ponta: saem antes
+    const pts = [ptsIn[0]], rads = [radsIn[0]];
+    for (let i = 1; i < ptsIn.length; i++) {
+      const last = pts[pts.length - 1];
+      if (Math.hypot(ptsIn[i].x - last.x, ptsIn[i].y - last.y) < Math.max(0.6, radsIn[i] * 0.45)) {
+        if (i === ptsIn.length - 1 && pts.length > 1) {
+          pts[pts.length - 1] = ptsIn[i];
+          rads[rads.length - 1] = radsIn[i];
+        }
+        continue;
+      }
+      pts.push(ptsIn[i]);
+      rads.push(radsIn[i]);
+    }
+    const n = pts.length;
+    const L = [], R = [];
+    for (let i = 0; i < n; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.hypot(dx, dy) || 1;
+      dx /= d;
+      dy /= d;
+      L.push({ x: pts[i].x - dy * rads[i], y: pts[i].y + dx * rads[i] });
+      R.push({ x: pts[i].x + dy * rads[i], y: pts[i].y - dx * rads[i] });
+    }
+    let end = null;
+    if (cap) {
+      const e = pts[n - 1], prev = pts[Math.max(0, n - 3)];
+      const ang = Math.atan2(e.y - prev.y, e.x - prev.x);
+      end = { x: e.x, y: e.y, r: rads[n - 1], a0: ang + Math.PI / 2, a1: ang - Math.PI / 2 };
+    }
+    return { L, R, end };
+  }
+  /** O caminho fechado do membro (para pintar e recortar). */
+  function limbFill(ctx, s) {
+    ctx.beginPath();
+    ctx.moveTo(s.L[0].x, s.L[0].y);
+    for (let i = 1; i < s.L.length; i++) ctx.lineTo(s.L[i].x, s.L[i].y);
+    if (s.end) ctx.arc(s.end.x, s.end.y, s.end.r, s.end.a0, s.end.a1, true);
+    for (let i = s.R.length - 1; i >= 0; i--) ctx.lineTo(s.R[i].x, s.R[i].y);
+    ctx.closePath();
+  }
+  /** O risco do membro: os dois lados e a ponta; o começo (e o fim sem ponta) ficam sem risco. */
+  function limbStroke(ctx, s) {
+    ctx.beginPath();
+    ctx.moveTo(s.L[0].x, s.L[0].y);
+    for (let i = 1; i < s.L.length; i++) ctx.lineTo(s.L[i].x, s.L[i].y);
+    const last = s.R[s.R.length - 1];
+    if (s.end) ctx.arc(s.end.x, s.end.y, s.end.r, s.end.a0, s.end.a1, true);
+    else ctx.moveTo(last.x, last.y);
+    for (let i = s.R.length - 1; i >= 0; i--) ctx.lineTo(s.R[i].x, s.R[i].y);
+  }
+
+  /**
+   * O rabo (px de tela: os pontos e o raio em cada um), cortado onde ele passa para trás ou para a frente do corpo:
+   * `front[i]` diz de cada ponto; `which` escolhe os pedaços desta vez ('behind', antes do corpo; 'front', depois). As
+   * emendas não têm risco nem ponta (um pedaço continua o outro); só a ponta de verdade é redonda. A base é creme,
+   * passando para o laranja, e o resto tem os aneizinhos de través. `col`: { tail, base, ring, ringW }.
+   */
+  function paintTail(ctx, pts, rads, front, which, inkW, col) {
+    const n = pts.length;
+    const want = which === 'front';
+    const rings = [0.42, 0.57, 0.72, 0.86].map((f) => Math.min(n - 2, Math.max(1, Math.round(f * (n - 1)))));
+    const baseEnd = Math.min(n - 1, Math.max(2, Math.round(n * 0.22)));
+    for (let a = 0; a < n; ) {
+      let b = a;
+      while (b + 1 < n && front[b + 1] === front[a]) b++;
+      if (front[a] === want) {
+        const i0 = Math.max(0, a - 1), i1 = Math.min(n - 1, b + 1);
+        const shape = limbShape(pts.slice(i0, i1 + 1), rads.slice(i0, i1 + 1), i1 === n - 1);
+        limbFill(ctx, shape);
+        ctx.fillStyle = col.tail;
+        ctx.fill();
+        ctx.save();
+        limbFill(ctx, shape);
+        ctx.clip();
+        if (a <= baseEnd) {
+          // a base creme (nasce do corpo), passando para o laranja
+          const q = pts[baseEnd];
+          const g = ctx.createLinearGradient(pts[0].x, pts[0].y, q.x, q.y);
+          g.addColorStop(0, col.base);
+          g.addColorStop(0.45, col.base);
+          g.addColorStop(1, 'rgba(246, 237, 224, 0)');
+          ctx.strokeStyle = g;
+          ctx.lineWidth = rads[0] * 2.6;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i <= baseEnd; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = col.ring;
+        ctx.lineWidth = col.ringW;
+        ctx.lineCap = 'round';
+        for (const i of rings) {
+          if (i < a || i > b) continue;
+          const p = pts[i], pa = pts[i - 1], pb = pts[i + 1];
+          const dx = pb.x - pa.x, dy = pb.y - pa.y, d = Math.hypot(dx, dy) || 1;
+          const nx = (-dy / d) * rads[i] * 1.3, ny = (dx / d) * rads[i] * 1.3;
+          ctx.beginPath();
+          ctx.moveTo(p.x - nx, p.y - ny);
+          ctx.quadraticCurveTo(p.x + (dx / d) * rads[i] * 0.5, p.y + (dy / d) * rads[i] * 0.5, p.x + nx, p.y + ny);
+          ctx.stroke();
+        }
+        ctx.restore();
+        limbStroke(ctx, shape);
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = inkW;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+      a = b + 1;
+    }
+  }
+
   /** Dormindo enrolado: o corpo (uma almofada redonda), o rabo dando a volta, a cabeça deitada nas patinhas. */
   function sleeping(ctx, cam, s, C) {
     const k = s.size === 'pequeno' ? 0.82 : 1;
@@ -102,41 +224,27 @@
       ctx.quadraticCurveTo((c0.x + c1.x) / 2, (c0.y + c1.y) / 2 - 2 * zoom, c1.x, c1.y);
       ctx.stroke();
     };
-    // o rabo: dá a volta pelo lado de cá, do traseiro até perto do focinho; a ponta bate de vez em quando
+    // o rabo: dá a volta pelo lado de cá, do traseiro até perto do focinho; a ponta bate de vez em quando. Afina até
+    // a ponta, e o pedaço que passa atrás do corpo (para quem olha) fica escondido: de frente, ele não deita por cima
+    // do gato como um cachecol
     const flickPhase = (t % 9.5) / 9.5;
     const flick = flickPhase > 0.9 ? Math.sin(((flickPhase - 0.9) / 0.1) * Math.PI) : 0;
-    const tail = [];
-    const N = 12;
+    const tail = [], tailR = [], tailFront = [];
+    const N = 18;
     for (let i = 0; i <= N; i++) {
       const f = i / N;
-      const q = Math.PI + nearSide * f * Math.PI * 0.85;
+      // do traseiro, pelo lado de quem olha (o `nearSide`), até perto do focinho (antes ia pelo lado de lá)
+      const q = Math.PI - nearSide * f * Math.PI * 0.85;
       const lift = f > 0.75 ? flick * 4 * k * ((f - 0.75) / 0.25) : 0;
-      tail.push(at(Math.cos(q) * A * 1.04, Math.sin(q) * B * 1.12, 2.6 * k + lift));
+      const u = Math.cos(q) * A * 1.04, v = Math.sin(q) * B * 1.12;
+      tail.push(at(u, v, 2.6 * k + lift));
+      tailR.push((1.85 - 0.7 * f) * k * zoom);
+      // na frente do meio do corpo, para quem olha (a câmera fica do lado de +x +y)
+      tailFront.push(ax * u + bx * v + ay * u + by * v > -0.08 * B);
     }
-    const drawTail = () => {
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      path(ctx, tail, false);
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = (4.8 * k + 1.6) * zoom;
-      ctx.stroke();
-      path(ctx, tail, false);
-      ctx.strokeStyle = C.point;
-      ctx.lineWidth = 4.8 * k * zoom;
-      ctx.stroke();
-      // os anéis mais escuros
-      ctx.strokeStyle = C.stripe;
-      ctx.lineWidth = Math.max(0.8, 1.3 * zoom);
-      for (let i = 3; i < N; i += 2) {
-        const a = tail[i - 1], b = tail[i + 1] || tail[i];
-        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
-        const nx = (-dy / d) * 2.2 * k * zoom, ny = (dx / d) * 2.2 * k * zoom;
-        ctx.beginPath();
-        ctx.moveTo(tail[i].x - nx, tail[i].y - ny);
-        ctx.lineTo(tail[i].x + nx, tail[i].y + ny);
-        ctx.stroke();
-      }
-    };
+    const tailCol = { tail: C.point, base: C.body, ring: C.stripe, ringW: Math.max(0.8, 1.1 * zoom) };
+    const tailInk = Math.max(1, 1.3 * zoom);
+    const drawTail = (which) => paintTail(ctx, tail, tailR, tailFront, which, tailInk, tailCol);
     // a orelha que mexe de vez em quando (uma tremidinha rápida)
     const twPhase = ((t + 2.3) % 7.3) / 7.3;
     const twitch = twPhase > 0.94 ? Math.sin(((twPhase - 0.94) / 0.06) * Math.PI * 2) * 0.35 : 0;
@@ -234,13 +342,15 @@
       }
     };
     if (headNear) {
+      drawTail('behind');
       drawBody();
-      drawTail();
+      drawTail('front');
       drawHead();
     } else {
       drawHead();
+      drawTail('behind');
       drawBody();
-      drawTail();
+      drawTail('front');
     }
     // os "z" de quem está dormindo, subindo e sumindo
     const period = 2.6;
@@ -335,13 +445,13 @@
     hip: [-7.5, 0, 13], chest: [6.5, 0, 12.5], head: [13.5, 0, 21],
     rear: [[-8, -3.1, 0], [-8, 3.1, 0]], front: [[7.5, -2.7, 0], [7.5, 2.7, 0]],
     // o rabo em pé, com a ponta virando (o "ponto de interrogação" do gato contente)
-    tail: [[-12.5, 0, 14.5], [-17.5, 0, 17.5], [-20, 0.8, 22], [-19.5, 3.5, 26.5], [-16.5, 7, 28.5]],
+    tail: [[-12.5, 0, 14.5], [-17.5, 0, 18], [-20.5, 1, 23.5], [-20, 4, 29], [-16.5, 8, 31.5]],
   };
   const SIT = {
     hip: [-4.5, 0, 7.5], chest: [2.5, 0, 14], head: [5, 0, 24],
     rear: [[0.5, -4.6, 0], [0.5, 4.6, 0]], front: [[5.5, -2.3, 0], [5.5, 2.3, 0]],
-    // sentado, o rabo dá a volta no chão e encosta nas patas da frente
-    tail: [[-9.5, 0, 2.5], [-9.5, 5, 1.5], [-5, 8.5, 1.5], [1, 9, 1.5], [6, 6.8, 1.5]],
+    // sentado, o rabo dá a volta no chão, por fora do corpo, e termina na frente das patinhas
+    tail: [[-9, 0, 2.6], [-11, 6, 1.7], [-4.5, 10.5, 1.7], [4, 10, 1.7], [9.5, 4.5, 1.7]],
   };
   const CURL = {
     hip: [-6, -1.5, 7.5], chest: [5, 1.5, 7.5], head: [10, 3.5, 7],
@@ -398,46 +508,6 @@
     return hull(pts);
   }
 
-  /**
-   * Caminho de um membro que afina (perna, rabo), em px de tela: os pontos do meio, o raio em cada um e a ponta
-   * redonda no fim. O começo fica aberto (emenda no corpo): pintar fecha sozinho; riscar não risca o começo.
-   */
-  function limbPath(ctx, ptsIn, radsIn) {
-    // pontos quase em cima um do outro na tela (o rabo vindo na direção de quem olha) torciam a ponta: saem antes
-    const pts = [ptsIn[0]], rads = [radsIn[0]];
-    for (let i = 1; i < ptsIn.length; i++) {
-      const last = pts[pts.length - 1];
-      const end = i === ptsIn.length - 1;
-      if (Math.hypot(ptsIn[i].x - last.x, ptsIn[i].y - last.y) < Math.max(0.6, radsIn[i] * 0.45)) {
-        if (end && pts.length > 1) {
-          pts[pts.length - 1] = ptsIn[i];
-          rads[rads.length - 1] = radsIn[i];
-        }
-        continue;
-      }
-      pts.push(ptsIn[i]);
-      rads.push(radsIn[i]);
-    }
-    const n = pts.length;
-    const Ls = [], Rs = [];
-    for (let i = 0; i < n; i++) {
-      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
-      let dx = b.x - a.x, dy = b.y - a.y;
-      const d = Math.hypot(dx, dy) || 1;
-      dx /= d;
-      dy /= d;
-      Ls.push({ x: pts[i].x - dy * rads[i], y: pts[i].y + dx * rads[i] });
-      Rs.push({ x: pts[i].x + dy * rads[i], y: pts[i].y - dx * rads[i] });
-    }
-    const e = pts[n - 1], prev = pts[Math.max(0, n - 3)];
-    const ang = Math.atan2(e.y - prev.y, e.x - prev.x);
-    ctx.beginPath();
-    ctx.moveTo(Ls[0].x, Ls[0].y);
-    for (let i = 1; i < n; i++) ctx.lineTo(Ls[i].x, Ls[i].y);
-    ctx.arc(e.x, e.y, rads[n - 1], ang + Math.PI / 2, ang - Math.PI / 2, true);
-    for (let i = n - 1; i >= 0; i--) ctx.lineTo(Rs[i].x, Rs[i].y);
-  }
-
   /** Triângulo de orelha com os lados um pouco abaulados (a, b: a base; q: a ponta), em px de tela. */
   function earPath(ctx, a, q, b, bulge = 0.12) {
     const c1 = { x: (a.x + q.x) / 2 - (q.y - a.y) * bulge, y: (a.y + q.y) / 2 + (q.x - a.x) * bulge };
@@ -455,7 +525,8 @@
     const pts = L.pts.map((p) => cam.p(p));
     const rads = L.rads.map((r) => r * z);
     const fill = L.near ? FUR.base : FUR.far;
-    limbPath(ctx, pts, rads);
+    const shape = limbShape(pts, rads);
+    limbFill(ctx, shape);
     if (inFront) {
       // na frente da barriga, a perna nasce do peito: o começo dela some no pelo (sem retângulo chapado)
       const g = ctx.createLinearGradient(pts[0].x, pts[0].y, pts[2].x, pts[2].y);
@@ -467,8 +538,7 @@
     ctx.fill();
     ctx.fillStyle = fill;
     // na frente da barriga (sentado), o risco começa no meio da coxa: a perna sai do peito, sem emenda riscada
-    const from = inFront ? 1 : 0;
-    limbPath(ctx, pts.slice(from), rads.slice(from));
+    limbStroke(ctx, inFront ? limbShape(pts.slice(1), rads.slice(1)) : shape);
     ctx.strokeStyle = C.INK;
     ctx.lineWidth = inkW;
     ctx.stroke();
@@ -490,41 +560,6 @@
         ctx.stroke();
       }
     }
-  }
-
-  function drawTail(ctx, cam, R, inkW) {
-    const z = cam.zoom;
-    const pts = R.tail.map((p) => cam.p(p));
-    const rads = R.tailR.map((r) => r * z);
-    const a = pts[0], b = pts[pts.length - 1];
-    const g = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-    g.addColorStop(0, FUR.base);
-    g.addColorStop(0.3, POINT.light);
-    g.addColorStop(1, POINT.base);
-    limbPath(ctx, pts, rads);
-    ctx.fillStyle = g;
-    ctx.fill();
-    // os aneizinhos mais escuros, de través
-    ctx.save();
-    limbPath(ctx, pts, rads);
-    ctx.clip();
-    ctx.strokeStyle = POINT.ring;
-    ctx.lineWidth = Math.max(1, 1.05 * z);
-    for (const f of [0.45, 0.6, 0.75, 0.9]) {
-      const i = Math.min(pts.length - 2, Math.max(1, Math.round(f * (pts.length - 1))));
-      const p = pts[i], pa = pts[i - 1], pb = pts[i + 1];
-      const dx = pb.x - pa.x, dy = pb.y - pa.y, d = Math.hypot(dx, dy) || 1;
-      const nx = (-dy / d) * rads[i] * 1.3, ny = (dx / d) * rads[i] * 1.3;
-      ctx.beginPath();
-      ctx.moveTo(p.x - nx, p.y - ny);
-      ctx.quadraticCurveTo(p.x + (dx / d) * rads[i] * 0.5, p.y + (dy / d) * rads[i] * 0.5, p.x + nx, p.y + ny);
-      ctx.stroke();
-    }
-    ctx.restore();
-    limbPath(ctx, pts, rads);
-    ctx.strokeStyle = C.INK;
-    ctx.lineWidth = inkW;
-    ctx.stroke();
   }
 
   function drawBody(ctx, cam, R, inkW) {
@@ -846,14 +881,23 @@
     ctx.lineCap = 'round';
     const legs = R.legs.slice().sort((a, b) => near(a.paw) - near(b.paw));
     const bodyNear = near(R.mid);
-    const tailFront = near(R.tail[Math.floor(R.tail.length / 2)]) > bodyNear + 1;
     const headFront = near(R.head.c) + 2.5 > bodyNear;
+    // o rabo: o pedaço atrás do quadril vai antes do corpo; o da frente (sentado de frente, ele dá a volta nas patas),
+    // depois das patas
+    const hipNear = near(R.hip);
+    const tailPts = R.tail.map((p) => cam.p(p));
+    const tailRads = R.tailR.map((r) => r * z);
+    // enrolando ou acordando (a passagem do desenho de dormir para o acordado), o rabo vai do alto para o chão e, no
+    // meio do caminho, cruza o corpo: fica atrás dele (antes virava um cinto laranja por cima do gato)
+    const curling = R.curl > 0.05;
+    const tailFront = R.tail.map((p) => !curling && near(p) > hipNear + 0.6);
+    const tailCol = { tail: '#f2bb8b', base: FUR.base, ring: POINT.ring, ringW: Math.max(1, 1.05 * z) };
     for (const L of legs) if (!L.inFront) drawLeg(ctx, cam, L, inkW, false);
-    if (!tailFront) drawTail(ctx, cam, R, inkW);
+    paintTail(ctx, tailPts, tailRads, tailFront, 'behind', inkW, tailCol);
     if (!headFront) drawHead(ctx, cam, R, inkW);
     drawBody(ctx, cam, R, inkW);
     for (const L of legs) if (L.inFront) drawLeg(ctx, cam, L, inkW, true);
-    if (tailFront) drawTail(ctx, cam, R, inkW);
+    paintTail(ctx, tailPts, tailRads, tailFront, 'front', inkW, tailCol);
     if (headFront) drawHead(ctx, cam, R, inkW);
     ctx.restore();
   }
@@ -1007,10 +1051,16 @@
     parts(cam) {
       const t = this.time;
       const act = this.act;
+      // sentado e enrolando, o rabo dá a volta pelo lado virado para quem olha (pelo outro, sumia atrás do corpo). O
+      // lado só muda em pé (sentado, o rabo não pula de um lado para o outro) e com folga, para não ficar trocando
+      const sideCam = -Math.sin(this.yaw) * cam.toCamera.x + Math.cos(this.yaw) * cam.toCamera.y;
+      if (this.tailSide === undefined || (this.sit < 0.15 && this.curl < 0.15 && Math.abs(sideCam) > 0.2)) this.tailSide = sideCam >= 0 ? 1 : -1;
+      const ts = this.tailSide || 1;
+      const mirror = (P) => (ts > 0 ? P : { ...P, tail: P.tail.map(([f, sd, h]) => [f, -sd, h]) });
       // a pose: em pé → sentado → enrolado; espreguiçando e no pulo, por cima
       const sitK = M.smoothstep(0, 1, this.sit);
-      let pose = blendPose(STAND, SIT, sitK);
-      pose = blendPose(pose, CURL, M.smoothstep(0, 1, this.curl));
+      let pose = blendPose(STAND, mirror(SIT), sitK);
+      pose = blendPose(pose, mirror(CURL), M.smoothstep(0, 1, this.curl));
       if (act && act.kind === 'wake') {
         const u = act.t / act.dur;
         const k = u < 0.2 ? M.smoothstep(0, 0.2, u) : u > 0.75 ? 1 - M.smoothstep(0.75, 1, u) : 1;
@@ -1131,7 +1181,7 @@
       }
 
       const face = { show: M.dot(hf, cam.toCamera) > -0.2, closed: this.asleep || purr || this.blinkT < 0.13, meow };
-      this._rig = { mid, body, bodyParts: [rear, fore], legs, tail, tailR, head: { c: headC, f: hf, s: hs, u: hu, r: rh }, ears, face, haunch, toCamH };
+      this._rig = { curl: this.curl, mid, hip, body, bodyParts: [rear, fore], legs, tail, tailR, head: { c: headC, f: hf, s: hs, u: hu, r: rh }, ears, face, haunch, toCamH };
 
       // por cima de tudo: o "miau!" e o coração do carinho (também dormindo, no desenho enrolado). Saem do lado da
       // cabeça, abaixo do nome (que fica centrado em cima dele), para um não esconder o outro
