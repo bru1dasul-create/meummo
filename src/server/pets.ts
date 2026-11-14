@@ -1,6 +1,7 @@
-// Bichos de estimação (data/bichos.json): o Joaquim, o gato da vó (pedido do dono, 14/11). Não é monstro nem NPC
-// parado: anda sozinho pela casa dele, dorme, mia quando alguém chega e ronrona com carinho. Nunca é alvo (não está
-// na lista de monstros: a pedra, a flecha, a mira e o "derrubar" do menu ADM nem enxergam ele).
+// Bichos de estimação e do ambiente (data/bichos.json): o Joaquim, o gato da vó, e as capivaras (pedidos do dono,
+// 14/11). Não são monstros nem NPCs parados: andam sozinhos pela área deles, dormem (a capivara deita), o gato mia
+// quando alguém chega e os dois gostam de carinho. Nunca são alvo (não estão na lista de monstros: a pedra, a flecha,
+// a mira e o "derrubar" do menu ADM nem enxergam eles). Um bicho dos dados pode ser um bando (`quantidade`).
 //
 // O servidor decide tudo (igual para todo mundo que está vendo): onde ele está, se está dormindo, quando mia.
 // O mapa diz onde ele dorme (ponto da camada `pontos`) e por onde anda (retângulo da camada `pontos`).
@@ -17,6 +18,12 @@ const FILE = 'data/bichos.json';
 
 export interface PetDef {
   id: string;
+  /** O que é, para o desenho (ex.: 'joaquim', 'capivara'); sem o campo `tipo`, o próprio id. */
+  type: string;
+  /** Quantos (um bando de capivaras): cada um anda sozinho e eles dormem lado a lado. */
+  count: number;
+  /** Mora dentro de uma casa (o desenho provisório só mostra com você lá dentro: de fora, o telhado esconde). */
+  indoor: boolean;
   name: string;
   /** O que ele é ("o gato da vó"); aparece embaixo do nome. */
   title: string;
@@ -34,10 +41,10 @@ export interface PetDef {
   walks: [number, number];
   /** Quanto fica parado em cada lugar (segundos). */
   restS: [number, number];
-  /** Mia quando alguém chega a tantos metros (e espera tanto para miar de novo). */
+  /** Mia quando alguém chega a tantos metros (e espera tanto para miar de novo). 0 = não mia ("mia": false). */
   meowRange: number;
   meowEveryS: number;
-  /** Dá para fazer carinho a tantos metros (e ele espera tanto entre um carinho e outro). */
+  /** Dá para fazer carinho a tantos metros (e ele espera tanto entre um carinho e outro). 0 = não ("carinho": false). */
   petRange: number;
   petEveryS: number;
 }
@@ -61,14 +68,24 @@ export function parsePetDefs(json: unknown): Map<string, PetDef> {
     }
     if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new Error(`Erro em ${FILE}: "${rawId}" precisa ser um objeto.`);
     const r = new Reader(raw as Record<string, unknown>, FILE, `bicho "${rawId}"`);
-    const meow = new Reader(r.object('mia', true) ?? {}, FILE, `"mia" do bicho "${rawId}"`);
-    const pet = new Reader(r.object('carinho', true) ?? {}, FILE, `"carinho" do bicho "${rawId}"`);
+    const obj = raw as Record<string, unknown>;
+    // "mia": false e "carinho": false desligam (a capivara não mia)
+    const noMeow = obj.mia === false;
+    const noPet = obj.carinho === false;
+    const meow = new Reader(noMeow ? {} : (r.object('mia', true) ?? {}), FILE, `"mia" do bicho "${rawId}"`);
+    const pet = new Reader(noPet ? {} : (r.object('carinho', true) ?? {}), FILE, `"carinho" do bicho "${rawId}"`);
+    const count = r.number('quantidade', { min: 1, fallback: 1 });
+    if (!Number.isInteger(count) || count > 8) r.fail('quantidade', 'precisa ser um número inteiro de 1 a 8');
+    const type = (r.has('tipo') ? r.text('tipo') : id).trim().toLowerCase();
     const speed = r.number('velocidade', { min: 0.2, fallback: 0.8 });
     if (speed > 4) r.fail('velocidade', 'precisa ser no máximo 4 (metros por segundo)');
     const walks = pair(r, 'passeios', [3, 6], 0);
     if (!walks.every(Number.isInteger)) r.fail('passeios', 'precisa ser [mínimo, máximo] em números inteiros');
     defs.set(id, {
       id,
+      type,
+      count,
+      indoor: r.bool('dentroDeCasa', true),
       name: r.text('nome'),
       title: r.optionalText('titulo'),
       map: r.text('mapa').toLowerCase(),
@@ -78,9 +95,9 @@ export function parsePetDefs(json: unknown): Map<string, PetDef> {
       sleepS: pair(r, 'sonoSegundos', [25, 50], 1),
       walks,
       restS: pair(r, 'paradaSegundos', [2, 6], 0),
-      meowRange: meow.number('alcance', { min: 0.5, fallback: 2.5 }),
+      meowRange: noMeow ? 0 : meow.number('alcance', { min: 0.5, fallback: 2.5 }),
       meowEveryS: meow.number('esperaSegundos', { min: 1, fallback: 12 }),
-      petRange: pet.number('alcance', { min: 0.5, fallback: 1.6 }),
+      petRange: noPet ? 0 : pet.number('alcance', { min: 0.5, fallback: 1.6 }),
       petEveryS: pet.number('esperaSegundos', { min: 0.5, fallback: 2 }),
     });
   }
@@ -148,7 +165,7 @@ export class Pet {
     return {
       id: this.id,
       kind: 'pet',
-      type: this.def.id,
+      type: this.def.type,
       name: this.def.name,
       x: this.x,
       y: this.y,
@@ -157,7 +174,7 @@ export class Pet {
       level: 0,
       hp: 1,
       maxHp: 1,
-      home: this.def.area,
+      ...(this.def.indoor ? { home: this.def.area } : {}),
       ...(this.asleep ? { asleep: true as const } : {}),
     };
   }
@@ -215,6 +232,7 @@ export class Pet {
 
   /** Mia (olhando para a pessoa) quando alguém chega perto, acordado, com uma espera entre um miado e outro. */
   private meow(now: number, players: Iterable<{ id: number; x: number; y: number }>, fx: (kind: FxKind, angle?: number) => void): void {
+    if (this.def.meowRange <= 0) return; // não mia (a capivara)
     const feet = this.feet();
     let arrived: { x: number; y: number } | null = null;
     const still = new Set<number>();
@@ -325,23 +343,30 @@ function between(random: () => number, min: number, max: number, whole = false):
 }
 
 /**
- * O lugar onde o bicho dorme e o chão livre mais perto dele (de onde ele pula), em posições "de canto". Null se o mapa
- * não tem o ponto, o retângulo, ou nenhum chão livre perto da cama.
+ * O lugar onde o bicho dorme e o chão livre mais perto dele (de onde ele pula), em posições "de canto". Num bando
+ * (`index` 1, 2...), cada um dorme num lugar em volta do ponto, lado a lado. Se o lugar já é chão livre (a capivara
+ * deita no chão), ele dorme ali mesmo, sem pular. Null se o mapa não tem o ponto, o retângulo, ou chão livre perto.
  */
-export function petHome(map: GameMap, def: PetDef): { bed: { x: number; y: number }; hop: { x: number; y: number }; area: MapRegion } | null {
+export function petHome(map: GameMap, def: PetDef, index = 0): { bed: { x: number; y: number }; hop: { x: number; y: number }; area: MapRegion } | null {
   const spot = map.spots.get(def.bed);
   const area = map.regions.get(def.area);
   if (!spot || !area) return null;
-  const bed = cornerAtFeet(spot.x, spot.y);
-  // o chão livre mais perto da cama, dentro da área (procura em anéis de 0,3 m em volta)
+  const inArea = (x: number, y: number) => x >= area.x0 + EDGE && x <= area.x1 - EDGE && y >= area.y0 + EDGE && y <= area.y1 - EDGE;
+  // o bando dorme em roda: o primeiro no ponto, os outros a ~1 m dele
+  const a0 = index === 0 ? 0 : ((index - 1) / Math.max(1, def.count - 1)) * Math.PI * 2 + Math.PI / 4;
+  const center = index === 0 ? spot : { x: spot.x + Math.cos(a0) * 1.1, y: spot.y + Math.sin(a0) * 1.1 };
+  const here = cornerAtFeet(center.x, center.y);
+  if (inArea(center.x, center.y) && bodyFits(map, here.x, here.y)) return { bed: here, hop: here, area };
+  const bed = index === 0 ? cornerAtFeet(spot.x, spot.y) : null;
+  // o chão livre mais perto (procura em anéis de 0,3 m em volta)
   for (let radius = 0.3; radius <= 2.4; radius += 0.3) {
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2;
-      const fx = spot.x + Math.cos(a) * radius;
-      const fy = spot.y + Math.sin(a) * radius;
-      if (fx < area.x0 + EDGE || fx > area.x1 - EDGE || fy < area.y0 + EDGE || fy > area.y1 - EDGE) continue;
+      const fx = center.x + Math.cos(a) * radius;
+      const fy = center.y + Math.sin(a) * radius;
+      if (!inArea(fx, fy)) continue;
       const corner = cornerAtFeet(fx, fy);
-      if (bodyFits(map, corner.x, corner.y)) return { bed, hop: corner, area };
+      if (bodyFits(map, corner.x, corner.y)) return { bed: bed ?? corner, hop: corner, area };
     }
   }
   return null;

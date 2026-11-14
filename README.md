@@ -280,6 +280,13 @@ dorme (`sonoSegundos`), quantos lugares visita acordado (`passeios`) e quanto fi
 (`carinho`). Onde ele dorme e por onde anda ficam no mapa (o ponto `joaquim` e o retângulo `joaquim-casa`, na camada
 `pontos`). Ele nunca é alvo: a pedra e a flecha passam por ele.
 
+As **capivaras** ficam no mesmo arquivo, em bando: `capivaras_lago` (3, na margem do lago) e `capivaras_campinho` (2,
+no campo). Os campos a mais: `tipo` (o desenho: `capivara`), `quantidade` (quantas no bando, até 8), `dentroDeCasa`
+(`false`: moram fora) e `"mia": false` (capivara não mia). Cada uma anda sozinha pela área do bando, deita para
+descansar em volta do ponto de descanso (lado a lado, cada uma acordando numa hora) e gosta de carinho (faz uns
+estalinhos baixos, como capivara contente de verdade). No mapa: o retângulo `capivaras-<lugar>` e o ponto
+`capivaras-<lugar>-descanso`, na camada `pontos`.
+
 ## Vendedores e loja (sem programar)
 
 Os personagens que não são jogadores (como a **Dona Iracema**, quitandeira do píer, no Refúgio) ficam em
