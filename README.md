@@ -43,17 +43,24 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 | Ação | Computador | Celular |
 |---|---|---|
-| Andar | `W` `A` `S` `D` / setas, ou clique no chão (`Shift` anda devagar) | joystick ou toque no chão |
+| Andar | `W` `A` `S` `D` / setas, ou clique no chão (`C` liga e desliga o andar devagar) | joystick ou toque no chão |
 | Estilingue | **segure e solte**: botão esquerdo em cima do monstro, botão direito (vai para o mouse) ou `J` (no monstro mais perto). Quanto mais segurar (até ~1 s), mais forte e mais longe | segure e solte o botão **Estilingue**; toque rápido no monstro = pedra fraca na hora |
 | Bordunada (golpe em arco) | `Q` | botão **Bordunada** |
 | Fôlego (cura) | `E` | botão **Fôlego** |
-| Esquiva | `Espaço` | botão **Esquiva** |
+| Esquiva | `Shift` | botão **Esquiva** |
+| Pular (por enquanto só de enfeite: quem está perto vê) | `Espaço` | — (o botão vem com o desenho do pulo) |
 | Defesa (segura os golpes da frente e gasta energia) | segure `F` | segure o botão **Defesa** |
 | Comida e remédio (atalhos) | `3` e `4` | os dois botões redondos |
 | Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
-| Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | `M` liga e desliga · 🔊 no painel abre o volume | 🔊 no painel |
+| Mapa | `M` (ainda sendo feito: por enquanto só avisa) | — |
+| Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | 🔊 no painel (sem tecla; dá para escolher uma) | 🔊 no painel |
+| Trocar as teclas | 🔊 no painel → **Teclas**: clique na tecla e aperte a nova (fica guardado neste navegador) | — |
+
+As teclas acima são o padrão: andar (`W` `A` `S` `D` e setas), `Enter`, `Esc`, `−` `+` e os números `1` a `4` são
+fixos; as outras dá para trocar. No Windows, apertar o `Shift` 5 vezes seguidas abre o aviso das "Teclas de
+Aderência": para desligar, Configurações → Acessibilidade → Teclado → Teclas de Aderência → desmarque o atalho.
 
 Levar um golpe, esquivar ou levantar a defesa solta a pedra que você estava puxando. A defesa vira sozinha para o
 monstro mais perto; a barra embaixo do pé é a energia dela (acabou, ela quebra: solte e espere voltar). O jogo

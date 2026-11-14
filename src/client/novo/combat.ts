@@ -15,6 +15,24 @@ import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
 import type { GuardState } from '../../shared/protocol';
 import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
+
+/** A altura (metros) em que os projéteis voam no desenho. */
+export const SHOT_DRAW_Z = 0.9;
+
+/**
+ * O projétil parou porque bateu em algo (o servidor diz no quê): `on` = o tipo do que segurou ('tronco', 'parede',
+ * 'pedra'...; 'borda' = fim do mapa) e `z` = a altura do voo (metros). A flecha crava ali, nessa altura.
+ */
+export interface StuckShot {
+  on: string;
+  z: number;
+}
+
+/**
+ * O desenho da [arte] para o projétil que parou sem acertar ninguém (`projectileArt.ts`): no chão, no fim do alcance,
+ * ou cravado em algo (`stuck`). Quem ainda não lê o `stuck` desenha no chão, no ponto onde parou.
+ */
+const ended = projectileEnded as (kind: string, x: number, y: number, angle: number, now: number, stuck?: StuckShot) => void;
 import type { WorldView } from './view';
 
 type Point = { x: number; y: number };
@@ -73,6 +91,8 @@ interface Flying {
   start: number;
   kind: string;
   fromMonster: boolean;
+  /** O servidor já disse onde ele para (a distância do começo e, se bateu em algo, no quê): o desenho voa até lá. */
+  stop?: { at: number; on?: string };
 }
 
 /** Um bicho que a view ainda não desenha (o Joaquim, até o desenho da [arte]): o gatinho provisório. */
@@ -345,15 +365,30 @@ export class CombatLayer {
 
   /** O projétil acabou (acertou alguém, bateu em algo ou chegou no fim). */
   /** O tiro acabou (`hit`: em quem bateu; 0 = em ninguém: no chão, num tronco ou no fim do alcance, e a flecha crava). */
-  endShot(id: number, hit = 0): void {
+  /**
+   * O servidor disse que o projétil `id` acabou. Acertou alguém (`hit`): some na hora. Senão, `end` diz onde parou
+   * (x, y como no `shot`) e no que bateu (`on`): o desenho continua voando até lá e então a flecha crava (no chão ou
+   * no tronco). Sem `end` (servidor antigo), crava onde está desenhada agora.
+   */
+  endShot(id: number, hit = 0, end?: { x: number; y: number; on?: string }): void {
     const cid = this.shotOfServer.get(id);
     const shot = this.shots.get(id) ?? (cid !== undefined ? this.myShots.get(cid) : undefined);
+    if (shot && hit === 0 && end) {
+      // a distância do começo até onde parou (no caminho do tiro)
+      const at = Math.max(0, (end.x - shot.x) * shot.dx + (end.y - shot.y) * shot.dy);
+      shot.stop = { at, ...(end.on ? { on: end.on } : {}) };
+      return; // o drawShots crava quando o desenho chegar lá
+    }
     if (shot && hit === 0) {
       const now = performance.now();
       const traveled = Math.min(shot.range, (shot.speed * (now - shot.start)) / 1000);
-      const end = shotFeet(shot.x + shot.dx * traveled, shot.y + shot.dy * traveled);
-      projectileEnded(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now);
+      const feet = shotFeet(shot.x + shot.dx * traveled, shot.y + shot.dy * traveled);
+      ended(shot.kind, feet.x, feet.y, Math.atan2(shot.dy, shot.dx), now);
     }
+    this.forget(id, cid);
+  }
+
+  private forget(id: number, cid: number | undefined): void {
     this.shots.delete(id);
     if (cid !== undefined) {
       this.myShots.delete(cid);
@@ -803,20 +838,24 @@ export class CombatLayer {
     const draw = (shots: Map<number, Flying>) => {
       for (const [key, shot] of shots) {
         const traveled = (shot.speed * (now - shot.start)) / 1000;
-        if (traveled >= shot.range + 0.2) {
-          // chegou ao fim do alcance sem o servidor avisar antes: a flecha crava ali
-          const end = shotFeet(shot.x + shot.dx * shot.range, shot.y + shot.dy * shot.range);
-          projectileEnded(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now);
+        // o servidor já disse onde parou: crava quando o desenho chegar lá. Sem aviso dele, no fim do alcance (com folga)
+        const stopAt = shot.stop ? Math.min(shot.stop.at, shot.range) : shot.range;
+        if (traveled >= (shot.stop ? stopAt : shot.range + 0.2)) {
+          const end = shotFeet(shot.x + shot.dx * stopAt, shot.y + shot.dy * stopAt);
+          const on = shot.stop?.on;
+          ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: SHOT_DRAW_Z } : undefined);
           shots.delete(key);
+          if (shots === this.shots) this.shotOfServer.delete(key);
+          else for (const [id, cid] of this.shotOfServer) if (cid === key) this.shotOfServer.delete(id);
           continue;
         }
         const ground = shotFeet(shot.x + shot.dx * Math.min(traveled, shot.range), shot.y + shot.dy * Math.min(traveled, shot.range));
         const m = meter(ground.x, ground.y);
         const shadow = screen(ground.x, ground.y, 0);
-        const p = screen(ground.x, ground.y, 0.9);
+        const p = screen(ground.x, ground.y, SHOT_DRAW_Z);
         const ctx = this.ctx;
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
-        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, 0.9);
+        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, SHOT_DRAW_Z);
         if (drawProjectile(ctx, shot.kind, p, shadow, ahead, m)) continue;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();

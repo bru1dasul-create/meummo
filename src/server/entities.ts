@@ -112,6 +112,7 @@ export class Player {
   energySentAt = 0;
   guardSent: GuardState = 'off';
   dashReadyAt = 0;
+  jumpReadyAt = 0;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);
   lastDamagedAt = -Infinity;
   nextRegenAt = 0;

@@ -82,6 +82,7 @@ export type ClientMsg =
   | { t: 'sell'; npc: number; i: number; n: number } // vender n do item do espaço i da mochila para o vendedor `npc`
   | { t: 'quest'; act: QuestAction; id: string; npc?: number } // aceitar ou concluir (perto de quem dá a missão) ou abandonar
   | { t: 'pet'; id: number } // fazer carinho no bicho (perto dele)
+  | { t: 'jump' } // pular (só de enfeite por enquanto: quem está perto vê)
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
@@ -125,7 +126,7 @@ export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge' | 'song' | PetFx;
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 
@@ -165,7 +166,10 @@ export type ServerMsg =
   | { t: 'teleport'; x: number; y: number; dir: Dir } // você foi levado para outro lugar (ex.: voltou para a vila)
   | { t: 'stats'; stats: PlayerStats }
   | { t: 'shot'; id: number; by: number; x: number; y: number; a: number; speed: number; range: number; kind: string; cid?: number }
-  | { t: 'shot_end'; id: number; hit: number } // projétil acabou (hit = id de quem levou, ou 0)
+  // projétil acabou (hit = id de quem levou, ou 0). Sem acertar ninguém: onde parou (x, y, como no `shot`) e, se bateu
+  // em algo, `on` = o tipo do que segurou (ex.: 'tronco', 'parede', 'pedra'; 'borda' = fim do mapa); sem `on`, caiu no
+  // chão no fim do alcance
+  | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string }
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
   | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number } // r = alcance do golpe (bote, investida)
   | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)

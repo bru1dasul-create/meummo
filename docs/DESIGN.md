@@ -33,7 +33,7 @@ Sem violência explícita: quem perde a vida **desmaia** e acorda na vila.
 | Estilingue | mira com o mouse, clique (segure para continuar) | toque no monstro ou segure o botão | pedrinha que voa 7 quadrados; árvores e paredes seguram, água não |
 | Bordunada | `Q` (mira no mouse) | botão (mira no monstro mais perto) | acerta os 3 quadrados à frente; 2,2× o dano; recarga 4 s |
 | Fôlego | `E` | botão | cura 30% da vida; recarga 20 s |
-| Esquiva | `Espaço` | botão | rola 3 quadrados, fica invencível por 0,35 s; recarga 2,5 s |
+| Esquiva | `Shift` (dá para trocar) | botão | rola 3 quadrados, fica invencível por 0,35 s; recarga 2,5 s |
 
 - **Avisos:** antes de cada golpe, o monstro marca no chão onde vai acertar e o vermelho vai enchendo.
   Quem sai da área a tempo não leva dano.

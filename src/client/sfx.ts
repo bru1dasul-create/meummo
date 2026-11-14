@@ -11,6 +11,7 @@ export type SoundName =
   | 'hurt'
   | 'warn'
   | 'dash'
+  | 'jump'
   | 'levelup'
   | 'death'
   | 'heal'
@@ -235,6 +236,12 @@ export class Sfx {
         break;
       case 'dash': // vuush
         this.noise(t, 0.2, 'bandpass', 700, 3200, 0.35);
+        break;
+      case 'jump': // o pé empurra o chão, um ventinho e, meio segundo depois, o pouso macio
+        this.noise(t, 0.08, 'lowpass', 900, 350, 0.16);
+        this.noise(t + 0.06, 0.2, 'bandpass', 450, 1300, 0.06);
+        this.noise(t + 0.5, 0.07, 'lowpass', 700, 250, 0.18);
+        this.tone('sine', 120, 60, t + 0.5, 0.09, 0.16);
         break;
       case 'arc': // borduna cortando o ar
         this.noise(t, 0.13, 'bandpass', 500, 1500, 0.4);

@@ -79,6 +79,26 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — flecha presa na árvore (as regras):** `SolidRect.kind` (o tipo do objeto da `colisao` no Tiled) e
+`GameMap.shotBlockerAt(x, y)` (o tipo do que segura o tiro, 'bloco' sem tipo, 'borda' fora do mapa). O `advanceShot`
+volta até a beirada quando bate (8 metades, ~1 mm). `shot_end` ganhou `x`, `y` (onde parou, sem acertar ninguém) e
+`on` (no que bateu) — protocolo **32**. O motor (`CombatLayer.endShot`) deixa o desenho voar até o ponto e chama o
+`projectileEnded(kind, x, y, ângulo, agora, stuck)` com `stuck = { on, z: SHOT_DRAW_Z }` (0,9 m, a altura do voo).
+Conferido no Capão: tronco em x = 44,83, o servidor disse x = 44,824, `on: 'tronco'`. Falta a [arte] desenhar
+cravada no tronco (hoje crava no chão, ao pé da árvore). `tests/flecha-presa.test.ts`.
+
+**14/11 — controles novos (pedido do dono):** `src/client/novo/keys.ts` (`KeyBindings`: cada ação com uma tecla,
+`KeyboardEvent.code`, os dois Shifts como um; troca com tecla já usada troca as duas; recusa as de andar, as fixas e
+Ctrl/Alt/Caps/F1–F12; guarda em `meummo:teclas`) e `keysPanel.ts` (janela das teclas, aberta pelo botão "Teclas" do
+painel do som, escondido no celular; avisa das "Teclas de Aderência" do Windows com a esquiva no Shift). Padrão:
+Shift esquiva, Espaço pula, J atira, F defende, Q/E habilidades, I mochila, M mapa (só um aviso até o mapa existir),
+C liga e desliga o andar devagar (antes, segurar Shift), som sem tecla. A barra de ações é refeita com as teclas novas
+(`makeActionBar`/`keysChanged`). **Pulo** (protocolo **31**): o cliente manda `jump`, o servidor confere a recarga
+(`JUMP_COOLDOWN_MS`, 0,8 s), recusa desmaiado, defendendo ou puxando o tiro, e manda `fx` `jump` a quem está perto
+(`tests/pulo.test.ts`); som `jump` no `sfx.ts`; o desenho provisório dá um pulinho. Pedidos à [arte]: o pulo no boneco
+(o animador já pula com `input.jump`), o botão de pular no celular, a etiqueta da tecla da esquiva (o estilo desenha a
+barra de espaço fixa) e o "Como jogar" da tela de entrada.
+
 **14/11 — lag na conversa e trava no zoom (medido) e o som do arco:** perfil no Chromium sem placa de vídeo (CDP
 Profiler + tarefas longas, build com `npx vite build --minify false`): ao abrir e fechar a conversa e ao dar zoom,
 quadros de 100 a 250 ms, quase tudo em `drawImage`. A causa é do desenho (da [arte]): `Ground._ensureKey()`
