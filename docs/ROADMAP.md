@@ -525,7 +525,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[mundo + arte]** A cama do quarto do Joaquim está invertida (14/11): o [mundo] virou a cama na planta
   (`olhando: 90`, ramo `mundo/cama-vo`) e o desenho da [arte] passou a ler o `olhando` (a cabeceira no lado oposto aos
   pés; antes ficava sempre no oeste). Os dois ramos entram juntos na main
-- [ ] **[mundo + arte]** A entrada da Budega ("está péssima")
+- [x] **[mundo + arte]** A entrada da Budega ("está péssima") (14/11): o [mundo] marcou o vão da porta
+  (`portaDe`/`portaAte`), tirou o varal da frente e levou o orelhão para o poste de luz da praça (ramo
+  `mundo/budega-entrada`); a [arte] desenhou o vão da loja (a porta de aço enrolada, os trilhos, a soleira e, lá
+  dentro, o piso de ladrilho, a geladeira, o balcão e as prateleiras acesas, sem o musgo da fachada por cima) e o
+  orelhão preso no poste. Os dois ramos entram juntos na main
 - [x] **[arte]** Entrada e saída dos interiores com animação (a volta para o mundo é muito repentina) (14/11, no ramo
   da arte): o telhado e a frente saem e voltam em 0,6 s suaves; saindo, a casa continua em foco até o telhado voltar
   (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto

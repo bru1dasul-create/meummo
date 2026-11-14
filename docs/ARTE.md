@@ -787,8 +787,19 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - **Entrar e sair das casas** (`props.js` `CUT_TIME`, `world.js` `focusHouse`, `view.js`): 0,6 s com começo e fim
   suaves; saindo, a casa continua em foco até o telhado voltar; o escuro fecha e abre como íris; a câmera volta junto;
   o herói que sai não é cortado.
-- **Entrada da Budega**: esperando a proposta do [mundo] ao dono (mandei o diagnóstico: sem `portaDe`, o herói
-  atravessa a fachada pintada; o varal passa na frente; o orelhão na quina).
+- **Entrada da Budega** (`props.js` `shopDoorway`/`shopDoorRect`; o mapa é do [mundo], `mundo/budega-entrada`): a
+  frente da vendinha que dá para entrar era uma parede de prateleiras pintada (o herói parecia atravessá-la). Agora é
+  o vão da loja no lugar do `portaDe`/`portaAte` (sem eles, a frente toda menos 34 cm de cada lado): a porta de aço
+  enrolada na caixa em cima, os trilhos dos dois lados, a soleira de cimento e, lá dentro, o que o mapa tem nesses
+  lugares (piso de ladrilho, geladeira à esquerda, balcão com a caixa à direita, prateleiras no fundo, a luz da
+  lâmpada). O musgo e o cipó da fachada são recortados fora do vão. O orelhão com `poste: true` (`tmj.js` acha o
+  `poste-praca` mais perto, até 1,5 m: `poleAt`) liga dois braços de ferro até o poste. Os caixotes de frutas, a
+  lousinha e o degrau com capacho dependem da resposta do dono à proposta do [mundo].
+- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] já pôs no mapa (`mundo/floresta-dentro`,
+  dentro do `mundo/budega-entrada`) a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
+  `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
+  samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
+  minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
 - **Próximo da lista (pedido da [estrutura], que mediu):** o zoom e a conversa travam porque o chão (`ground.js`) se
   refaz inteiro a cada zoom novo; esticar os pedaços velhos enquanto o zoom muda e refazer quando parar, e o
   `buildBusy` contar o primeiro desenho de cada imagem nova.
