@@ -804,7 +804,7 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
 - **Zoom e conversa que travavam** (pedido da [estrutura], que mediu): feito depois do lote 1 (a seção abaixo).
 
-### Depois do lote 1 (14/11): controles, zoom e flecha (no ramo; vão para a main com o "pode" do dono)
+### Depois do lote 1 (14/11): controles, zoom e flecha (na main em 14/11, com o "pode" do dono)
 - **Pulo e botão de pular** (`view.js` ação `jump` → `jumpPulse`, que liga o `input.jump` antes do `ch.update`;
   `ui.ts` `ActionSlot` 'jump'; `paintedIcons.ts` `paintJump`): no computador, o 6º quadrado da moldura; no celular, em
   cima da coluna da esquerda (`right: 76px`: em cima da direita fica a mochila).
