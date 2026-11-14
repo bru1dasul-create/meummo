@@ -327,11 +327,11 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     expect(zones.map((z) => [z.name, prop(z, 'quantidade')])).toEqual([
       ['sagui', 4],
       ['jararaca', 3],
-      // os bichos novos da floresta maior (nomes provisórios até o dono escolher; a [estrutura] manda as chaves)
-      ['reservada-sul-1', 3],
-      ['reservada-sul-2', 3],
-      ['reservada-sul-3', 3],
-      ['reservada-sul-chefe', 1],
+      // os bichos novos da floresta maior (escolhidos pelo dono em 14/11)
+      ['quati', 4],
+      ['tatu_bola', 3],
+      ['marimbondo', 3],
+      ['filhote_boitata', 1],
     ]);
     for (const z of zones) {
       const [x0, y0, x1, y1] = [z.x / M, z.y / M, (z.x + z.width) / M, (z.y + z.height) / M];
@@ -968,10 +968,12 @@ describe('Mapa 01 (Capão): a floresta maior (pedido do dono em 14/11, "aumentar
     expect(bad).toEqual([]);
   });
 
-  it('os bichos novos têm as áreas reservadas e as capivaras têm onde andar e onde descansar', () => {
-    const zones = layer('monstros').filter((z) => String(z.name).startsWith('reservada-sul'));
-    expect(zones.map((z) => z.name)).toEqual(['reservada-sul-1', 'reservada-sul-2', 'reservada-sul-3', 'reservada-sul-chefe']);
-    const chefe = zones.find((z) => z.name === 'reservada-sul-chefe')!;
+  it('os bichos novos moram nas áreas deles (e existem nos dados) e as capivaras têm onde andar e onde descansar', () => {
+    const monsters = JSON.parse(readFileSync('data/monsters.json', 'utf8')) as Record<string, unknown>;
+    const zones = layer('monstros').filter((z) => ['quati', 'tatu_bola', 'marimbondo', 'filhote_boitata'].includes(String(z.name)));
+    expect(zones.map((z) => z.name)).toEqual(['quati', 'tatu_bola', 'marimbondo', 'filhote_boitata']);
+    for (const z of zones) expect(Object.keys(monsters), String(z.name)).toContain(z.name);
+    const chefe = zones.find((z) => z.name === 'filhote_boitata')!;
     expect(prop(chefe, 'quantidade')).toBe(1); // o mais forte mora sozinho, no recanto do Véu
     const veu = of('veu').find((v) => at(v).y > 160)!;
     expect(inRect(at(veu).x, at(veu).y, chefe)).toBe(true);

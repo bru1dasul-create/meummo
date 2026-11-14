@@ -75,7 +75,7 @@ function parseAreas(json: Raw, maps: readonly GameMap[], monsters: ReadonlyMap<s
   return areas;
 }
 
-type CombatPartId = 'carga' | 'defesa' | 'recuo';
+type CombatPartId = 'carga' | 'defesa' | 'recuo' | 'noite';
 
 /** Uma parte dos números do combate, como o painel mostra (em ms, %, graus e metros). */
 export interface CombatPart {
@@ -89,6 +89,7 @@ const COMBAT_PARTS: { id: CombatPartId; name: string; detail: string }[] = [
   { id: 'carga', name: 'Pedra com carga', detail: 'segurar o estilingue: a pedra vai mais longe e bate mais forte' },
   { id: 'defesa', name: 'Defesa', detail: 'segura os golpes que vêm pela frente e gasta energia (de 0 a 100)' },
   { id: 'recuo', name: 'Empurrão (recuo)', detail: 'quanto cada monstro empurra fica na aba Monstros (Empurrão do golpe)' },
+  { id: 'noite', name: 'Dia e noite', detail: 'quanto dura cada um (o mesmo relógio em todos os mapas) e o quanto os bichos mudam à noite' },
 ];
 
 /** Um número do combate no painel: a parte, o nome no arquivo de ajustes, os limites e como ler dos números do jogo. */
@@ -182,6 +183,12 @@ const COMBAT_NUMBERS: CombatNumber[] = [
     max: 100,
     ler: (r) => Math.round((1 - r.guardBreakPushFactor) * 100),
   },
+  { parte: 'noite', campo: 'diaMinutos', rotulo: 'Dia (minutos)', tipo: 'inteiro', min: 1, max: 600, ler: (r) => Math.round(r.dayMs / 60_000) },
+  { parte: 'noite', campo: 'noiteMinutos', rotulo: 'Noite (minutos)', tipo: 'inteiro', min: 0, max: 600, dica: '0 = sem noite', ler: (r) => Math.round(r.nightMs / 60_000) },
+  { parte: 'noite', campo: 'vidaPorcento', rotulo: 'À noite: vida dos bichos (%)', tipo: 'porcento', min: 100, max: 400, dica: '125 = 25% a mais', ler: (r) => Math.round(r.nightHpFactor * 100) },
+  { parte: 'noite', campo: 'danoPorcento', rotulo: 'À noite: dano dos bichos (%)', tipo: 'porcento', min: 100, max: 400, ler: (r) => Math.round(r.nightDamageFactor * 100) },
+  { parte: 'noite', campo: 'xpPorcento', rotulo: 'À noite: XP de cada bicho (%)', tipo: 'porcento', min: 100, max: 500, ler: (r) => Math.round(r.nightXpFactor * 100) },
+  { parte: 'noite', campo: 'ouroPorcento', rotulo: 'À noite: ouro de cada bicho (%)', tipo: 'porcento', min: 100, max: 500, ler: (r) => Math.round(r.nightGoldFactor * 100) },
 ];
 
 /** O padrão dos números do combate, como no arquivo de ajustes (parte → campo → valor). */
@@ -193,7 +200,7 @@ function baseCombat(): Raw {
 
 /** Confere os números do combate (cada um nos seus limites) e monta os números que o jogo usa. */
 function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: CombatRules } {
-  const values: Record<CombatPartId, Record<string, number>> = { carga: {}, defesa: {}, recuo: {} };
+  const values: Record<CombatPartId, Record<string, number>> = { carga: {}, defesa: {}, recuo: {}, noite: {} };
   for (const n of COMBAT_NUMBERS) {
     const section = isObject(json[n.parte]) ? (json[n.parte] as Raw) : {};
     const value = section[n.campo] ?? n.ler(DEFAULT_COMBAT_RULES);
@@ -206,6 +213,7 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
   const c = values.carga;
   const d = values.defesa;
   const r = values.recuo;
+  const n = values.noite;
   if (c.alcanceMaximo! < c.alcanceMinimo!) {
     throw new Error('Erro nos ajustes (Combate › Pedra com carga): o alcance com a carga cheia não pode ser menor que o alcance sem carga.');
   }
@@ -227,6 +235,12 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
     guardWalkFactor: d.andarPorcento! / 100,
     guardPushFactor: 1 - r.defesaSeguraPorcento! / 100,
     guardBreakPushFactor: 1 - r.defesaQuebradaPorcento! / 100,
+    dayMs: n.diaMinutos! * 60_000,
+    nightMs: n.noiteMinutos! * 60_000,
+    nightHpFactor: n.vidaPorcento! / 100,
+    nightDamageFactor: n.danoPorcento! / 100,
+    nightXpFactor: n.xpPorcento! / 100,
+    nightGoldFactor: n.ouroPorcento! / 100,
   };
   const parts = new Map<string, CombatPart>(COMBAT_PARTS.map((p) => [p.id, { ...p, values: values[p.id] }]));
   return { parts, rules };

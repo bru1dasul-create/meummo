@@ -152,8 +152,9 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   que já fez (se a quantidade baixar, já pode entregar). Quem dá a missão e a ordem delas ficam em `data/missoes.json`.
 - **Combate:** a **pedra com carga** (tempo para carregar, dano e alcance com a carga cheia), a **defesa** (quanto do
   golpe segura, o ângulo que cobre, o tempo para subir, a energia que gasta e que volta, o tempo quebrada e a
-  velocidade andando com ela) e quanto do **empurrão** a defesa segura. Vale na hora para quem está jogando; o
-  empurrão de cada monstro fica na aba Monstros.
+  velocidade andando com ela), quanto do **empurrão** a defesa segura e o **dia e noite** (quanto dura cada um e o
+  quanto os bichos mudam à noite: vida, dano, XP e ouro). Vale na hora para quem está jogando; o empurrão de cada
+  monstro fica na aba Monstros.
 - **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
   vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
   (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).
@@ -201,6 +202,11 @@ O `canto` (a Iara) encanta quem fica perto: `"canto": { "cadaMs": 10000, "alcanc
 "duracaoMs": 3000, "puxaACadaMs": 450, "falas": ["..."] }` — de quanto em quanto tempo canta, até quantos tiles
 pega, o tempo do aviso no chão, quanto o encanto dura (o encantado não anda; a esquiva solta na hora) e de quanto
 em quanto tempo ele é puxado um passo para perto dela. Esses números também estão no painel do administrador.
+Três jeitos especiais (os bichos da mata do sul do Capão):
+- `"casca": { "seguraPorcento": 70, "angulo": 140, "tontoMs": 2000 }` (o tatu-bola): o golpe que vem pela frente
+  (dentro do `angulo`) perde `seguraPorcento` do dano; depois da investida ele fica tonto `tontoMs`, parado e sem casca;
+- `"desvioTiro": 40` (os marimbondos): a chance, em %, de uma pedra ou flecha passar pelo meio do enxame sem acertar;
+- `"soNoite": true` (o filhote de boitatá): só aparece de noite e vai embora quando amanhece.
 Salve e reinicie o servidor. Se algo estiver errado no arquivo, o servidor explica o quê.
 
 O que cada monstro deixa fica na lista `itens` dele: `item` (o id em `data/items.json`), `chance` (em %, de 0 a 100)
@@ -243,6 +249,14 @@ Cada lugar do Capão tem a sua música (licença livre, CC0; créditos em
 [`public/assets/audio/musica/CREDITOS.md`](public/assets/audio/musica/CREDITOS.md)): a vila, a mata (e a clareira e o
 lago) e a Mata Profunda. A troca é devagar, e o volume da música se ajusta no painel do som (🔊). Para trocar uma
 música, ponha o arquivo novo na mesma pasta com o mesmo nome e anote a licença na tabela de créditos.
+
+## Dia e noite
+
+O mundo tem um relógio só, igual em todos os mapas: **30 minutos de dia e 10 de noite**, de verdade (continua de
+onde estava quando o servidor reinicia). Escurece devagar no fim do dia e clareia no começo. **À noite os bichos ficam
+25% mais fortes** (vida e dano) **e dão 50% a mais de XP e ouro**; o som da mata troca os passarinhos pelos grilos e
+pela coruja. Os números mudam no painel (Combate → Dia e noite). Para testar sem esperar: menu ADM no jogo (tecla G)
+→ **Virar dia** / **Virar noite**.
 
 ## Bichos de estimação (sem programar)
 

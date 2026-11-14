@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 32;
+export const PROTOCOL_VERSION = 34;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -113,6 +113,19 @@ export const DASH_INVULNERABLE_MS = 350;
  * nem desvia de golpe). A recarga é do tamanho do pulo do desenho, para ninguém encher a tela dos outros de pulos.
  */
 export const JUMP_COOLDOWN_MS = 800;
+
+/**
+ * Dia e noite (decisão do dono, 14/11): 30 minutos de dia e 10 de noite, de verdade (o relógio é o mesmo em todos os
+ * mapas e continua depois que o servidor reinicia). O amanhecer e o anoitecer levam TWILIGHT_MS (dentro do dia). À
+ * noite os bichos ficam mais fortes (vida e dano) e dão mais XP e ouro. Tudo ajustável no painel (Combate).
+ */
+export const DAY_MS = 30 * 60_000;
+export const NIGHT_MS = 10 * 60_000;
+export const TWILIGHT_MS = 60_000;
+export const NIGHT_HP_FACTOR = 1.25;
+export const NIGHT_DAMAGE_FACTOR = 1.25;
+export const NIGHT_XP_FACTOR = 1.5;
+export const NIGHT_GOLD_FACTOR = 1.5;
 
 /** Quanto tempo o jogador fica desmaiado antes de voltar para a vila. */
 export const DEATH_MS = 3000;

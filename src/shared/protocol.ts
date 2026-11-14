@@ -104,7 +104,8 @@ export type GmCommand =
   | { do: 'god'; on: boolean }
   | { do: 'tp'; x: number; y: number }
   | { do: 'heal' }
-  | { do: 'npc'; npc: string }; // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
+  | { do: 'npc'; npc: string } // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
+  | { do: 'time'; phase: 'dia' | 'noite' }; // vira o relógio para o começo do dia ou da noite (todos os mapas)
 
 /** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
 export type LoginMode = 'login' | 'create';
@@ -126,7 +127,9 @@ export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | PetFx;
+// 'dizzy' = o bicho ficou tonto (o tatu-bola depois da investida); 'dodge' = o tiro passou pelo meio do enxame sem acertar;
+// 'vanish' = o bicho foi embora (o filhote de boitatá ao amanhecer: em seguida vem o `despawn`)
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 
@@ -152,8 +155,10 @@ export type ServerMsg =
       /** Todas as missões (de data/missoes.json) e o seu progresso. */
       quests: QuestInfo[];
       questLog: QuestLog;
-      /** Os números do combate que valem (carga, defesa, empurrão), com os ajustes do painel. */
+      /** Os números do combate que valem (carga, defesa, empurrão, dia e noite), com os ajustes do painel. */
       combat: CombatRules;
+      /** Dia e noite: em que ponto do ciclo estamos agora (ms; de 0 até combat.dayMs é dia). O navegador anda sozinho daqui. */
+      time: number;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
@@ -204,6 +209,9 @@ export type ServerMsg =
   | { t: 'quests'; log: QuestLog } // seu progresso nas missões mudou
   | { t: 'questDefs'; quests: QuestInfo[] } // o painel do administrador mudou as missões (textos, objetivo, recompensa)
   | { t: 'combat'; rules: CombatRules } // o painel do administrador mudou os números do combate (carga, defesa, empurrão)
+  // dia e noite: em que ponto do ciclo estamos agora (ms). Vem quando o dia vira noite (e vice-versa), quando o
+  // administrador vira o relógio ou muda quanto dura cada um: o navegador acerta o relógio dele
+  | { t: 'time'; at: number }
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }

@@ -114,6 +114,21 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   `M` mapa, `C` andar devagar e o som sem tecla. Ficam fixas (não dá para escolher) as de andar, `Enter`, `Esc`, o zoom,
   `1` a `4` e o `G` do menu ADM; Ctrl, Alt, Caps Lock e F1–F12 são recusadas (Ctrl + W fecha a aba). Trocar com uma
   tecla já usada troca as duas ações. Fica no aparelho (`meummo:teclas`); a barra de ações é refeita com as novas.
+- **Bichos com jeito especial** (protocolo 34; campos de data/monsters.json lidos em `monsters.ts`): `casca`
+  (`MonsterDef.shell`: no `World.damage`, golpe que vem pela frente, pelo `dir` do bicho e pelo caminho do tiro ou
+  por onde está quem bateu (`hitFrom`), perde parte do dano e sai com `blk: 1`; depois da investida, `dizzyUntil`:
+  parado e sem casca, com o `fx` `dizzy`), `desvioTiro` (`shotDodge`: no `monsterTouchedBy`, um sorteio por tiro e por
+  enxame, guardado em `Projectile.swarms`; se passou, o tiro segue e vai o `fx` `dodge`) e `soNoite` (`nightOnly`:
+  `spawnMonster` recusa de dia; `nightTurned` traz todos ao anoitecer e tira ao amanhecer com o `fx` `vanish`).
+- **Dia e noite** (protocolo 33): `src/shared/dayNight.ts` (contas puras: posição no ciclo, `isNightAt`, a luz
+  `daylightAt` com o anoitecer e o amanhecer de `TWILIGHT_MS` dentro do dia) e `src/server/dayNight.ts`
+  (`DayNightClock`: um só, criado pelo reino e passado a todos os mundos, andando com `Date.now`, então continua depois
+  de reiniciar; `turnTo('dia'|'noite')` do menu ADM). Os tamanhos e a força da noite estão em `CombatRules` (painel →
+  Combate → Dia e noite). O `World` confere a cada tick (`updateNight`): ao virar, a vida dos bichos muda na mesma
+  proporção (`fitMonsterHp`, `hp` para quem vê) e todos recebem `time` (o ponto do ciclo, em ms; também no `welcome`).
+  À noite: `monsterDamage` (golpes, projéteis e fogo) × `nightDamageFactor`, bicho que nasce já mais forte, e quem
+  derruba ganha XP × `nightXpFactor` e ouro × `nightGoldFactor`. O navegador anda o relógio sozinho a partir do
+  `time` e manda à view `setTimeOfDay({ light, night })` (só quando muda); o `Ambient` troca os bichos do som.
 - **Pulo** (`Espaço`, protocolo 31): por enquanto só de enfeite. O navegador pula na hora (`view.action(id, 'jump')`)
   e manda `jump`; o servidor confere a recarga (`JUMP_COOLDOWN_MS`, 0,8 s) e se não está desmaiado, defendendo ou
   puxando o tiro, e manda o `fx` `jump` para quem está perto (não para quem pulou).
@@ -383,6 +398,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `combat` | o administrador ajustou os números do combate (carga, defesa, empurrão): use os novos |
 | cliente | `pet` | fazer carinho no bicho (o Joaquim), perto dele |
 | cliente | `jump` | pulei (só de enfeite: o servidor confere a recarga e manda o `fx` `jump` para quem está perto) |
+| servidor | `time` | dia e noite: em que ponto do ciclo estamos (ms); vem na virada, quando o administrador vira o relógio e quando o painel muda os tamanhos (e no `welcome`, o `time`) |
 | servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |

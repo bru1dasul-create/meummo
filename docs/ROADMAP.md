@@ -549,9 +549,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   `cachoeira`, `pinguela` com `pedras`, `cobertura` do posto, `bomba`, `pneus`, a lojinha (`casa` com `posto`) e a placa
   em branco (lista no `docs/MUNDO.md`, "Esperando outras frentes")
 - [ ] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
-- [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
-  as áreas e a [arte] desenha. O [mundo] já reservou 4 áreas na floresta maior (`reservada-sul-1` a `-3` e
-  `reservada-sul-chefe`, no ramo `mundo/floresta-maior`); faltam as chaves que o dono escolher
+- [x] **[estrutura]** Mais bichos, as regras (14/11, aprovados pelo dono): `quati` (nível 2, bando de 4), `tatu_bola`
+  (nível 3: casca que segura 70% de frente e tonto 2 s depois da investida), `marimbondo` (nível 3: enxame, 40% das
+  pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
+  (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
+- [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
+  — **marcadas no ramo `mundo/floresta-maior`** (quati 4, tatu_bola 3, marimbondo 3, filhote_boitata 1 no recanto do
+  Véu); entram na `main` com a floresta maior
+- [ ] **[arte]** Desenhar os quatro bichos novos (hoje aparecem como bonecos de gente com o nome) e as ações `dizzy`
+  (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
   comportamento, o [mundo] marca a área e a [arte] anima. O [mundo] marcou `capivaras-lago` e `capivaras-campinho`
   (com os pontos `-descanso`) no ramo `mundo/floresta-maior`
@@ -561,8 +567,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   ramo `mundo/floresta-maior`)
 
 **Sistemas:**
-- [ ] **[estrutura + arte]** Dia e noite: à noite os bichos ficam mais fortes e dão mais XP e ouro; olhos vermelhos (a
-  [arte]); lampiões (o [mundo] marca, a [arte] acende)
+- [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
+  para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
+  e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
+  mata troca os passarinhos pelos grilos e a coruja; o desenho provisório escurece (protocolo 33)
+- [ ] **[arte]** O desenho da noite: escurecer com `view.setTimeOfDay({ light, night })` (luz de 1 a 0, o anoitecer e o
+  amanhecer suaves) e os olhos vermelhos em todos os bichos enquanto `night`; lampiões acesos (o [mundo] marca)
 - [x] **[estrutura]** Drop de itens nos bichos (14/11, escolha do dono: "no chão, como o ouro"): os itens caem em volta do
   bicho, com o desenho de cada um (caindo com quique, "×2", brilho no raro e facho de luz no lendário), e você pega
   passando por cima; ficam 2 minutos; com a mochila cheia, esperam no chão

@@ -237,6 +237,8 @@ export class Monster {
   changed = false;
   /** O movimento deste tick foi uma investida (o navegador desenha rápido, com rastro). */
   dashed = false;
+  /** Tonto até aqui (o tatu-bola depois da investida): parado e sem a casca. */
+  dizzyUntil = 0;
   /** Jogadores que bateram neste monstro (todos ganham XP quando ele cai). */
   readonly contributors = new Set<number>();
 
@@ -321,4 +323,6 @@ export interface Projectile extends ShotPath {
   viewers: Set<number>;
   /** Quanto empurra quem ele acerta (metros; o recuo do monstro que atirou). */
   push?: number;
+  /** Enxames que o tiro já cruzou: passou pelo meio (true) ou acertou (false). Um sorteio por enxame e por tiro. */
+  swarms?: Map<number, boolean>;
 }

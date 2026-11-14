@@ -79,6 +79,24 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — bichos novos (aprovados pelo dono):** `quati`, `tatu_bola`, `marimbondo` e `filhote_boitata` em
+data/monsters.json (só acrescentados no fim, no estilo do arquivo). Campos novos: `casca` (`shell`), `desvioTiro`
+(`shotDodge`) e `soNoite` (`nightOnly`); protocolo **34** (`fx` `dizzy`, `dodge`, `vanish`; a casca usa o `blk: 1` do
+`hit`, e o navegador toca o som da defesa). Testes: `tests/bichos-novos.test.ts`. Conferido pelo menu ADM no Capão
+(cuidado nos testes: os bichos criados pelo menu ficam no mundo até reiniciar o servidor). O desenho de verdade
+mostra bicho desconhecido como um boneco de gente com o nome, até a [arte] pintar; no mapa, só quando o [mundo]
+marcar as áreas da floresta maior (esperando o dono aprovar a planta).
+
+**14/11 — dia e noite (números aprovados pelo dono) e o botão de pular:** protocolo **33**. `src/shared/dayNight.ts`
+(contas puras) e `src/server/dayNight.ts` (`DayNightClock`: um só no reino, com `Date.now`; nos testes, o relógio
+falso; `turnTo` para o menu ADM). Números em `CombatRules` (`dayMs`, `nightMs`, `nightHpFactor`, `nightDamageFactor`,
+`nightXpFactor`, `nightGoldFactor`) e no painel (Combate → Dia e noite). `World.updateNight` (a cada tick):
+`fitMonsterHp` na virada, `time` para todos; `monsterDamage` à noite; XP e ouro à noite no `killMonster`/`giveLoot`.
+Cliente: `welcome.time` + `time` → `timeBase`; `updateTimeOfDay` manda `setTimeOfDay({ light, night })` à view (só
+quando muda), avisa na virada e põe o `Ambient` de noite (grilos e coruja no lugar dos passarinhos). Ganchos:
+`time()`, `sound().night`. Testes: `tests/dia-noite.test.ts`. Falta a [arte]: o escuro de verdade e os olhos
+vermelhos. O botão de pular da [arte] entrou na main e o motor ligou (`makeActionBar`, `onAction` → `tryJump`).
+
 **14/11 — ajustes pedidos pela [arte]:** a flecha que cai no fim do alcance em cima da água vem com `on: 'agua'`
 (`GameMap.kindUnderShot`: o tipo do retângulo da `colisao` embaixo, mesmo os que não seguram tiro), para o respingo; e
 o botão da defesa ganhou as classes `long`/`longer` na etiqueta da tecla (como a barra). A flecha cravada no tronco

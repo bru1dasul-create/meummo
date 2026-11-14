@@ -92,9 +92,9 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   "conhece" o riacho novo e o poço depois de sorteada a antiga (`STREAMS`/`PONDS`); `pruneWedges` tira as plantas
   sorteadas que ficam num vão de entalar e para tudo se o vão for entre duas coisas postas à mão; `pocketOpen`: só é
   vão de entalar se couber um quadrado de 0,3 m entre as duas coisas, fora das outras (os dentes entre os arbustos da
-  parede não contam). Bichos: áreas `reservada-sul-1` (20 a 38 × 112 a 140), `-2` (52 a 86 × 92 a 136), `-3` (52 a
-  86 × 154 a 177) com 3 cada e `reservada-sul-chefe` (2 a 12 × 167 a 178, o recanto) com 1; a [estrutura] propôs ao
-  dono quati, tatu-bola, marimbondo e filhote de boitatá (só de noite) e manda as chaves. **Capivaras andando** (formato
+  parede não contam). Bichos (escolhidos pelo dono em 14/11; dados da [estrutura]): `quati` 4 (20 a 38 × 112 a 140, a mata
+  do meio do parque), `tatu_bola` 3 (52 a 86 × 92 a 136), `marimbondo` 3 (52 a 86 × 154 a 177, perto do posto) e
+  `filhote_boitata` 1 (2 a 12 × 167 a 178, o recanto do Véu; só de noite). **Capivaras andando** (formato
   da [estrutura]): em `pontos`, `capivaras-lago` e `capivaras-campinho` (retângulos) e os pontos `-descanso`; as de
   enfeite saem quando as dela entrarem. **Mapa da tecla M:** o gerador escreve junto `capao-mapa.png` (8 px por metro,
   sem texto) e `capao-mapa.json` (`escala`, `largura`, `altura`, `nomes`), por `scripts/mapa-de-cima.ts`.
@@ -268,7 +268,7 @@ Feito pelo [mundo], tudo na `main`:
   água caindo no poço), a `pinguela` com `pedras`, a `cobertura` do posto (some ou fica transparente com o herói embaixo
   ou atrás, como o telhado), a `bomba`, os `pneus`, a lojinha (`casa` com `posto`) e a placa em branco. Lote 2 (a floresta
   de dentro das casas): ramo `mundo/lote2-floresta-dentro`, espera o "pode" do dono.
-- **[estrutura] (14/11):** as chaves dos bichos novos (para trocar os nomes `reservada-sul-*`) e as capivaras andando.
+- **[estrutura] (14/11):** as capivaras andando (os lugares já estão marcados em `pontos`).
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois

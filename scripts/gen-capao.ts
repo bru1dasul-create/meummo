@@ -141,7 +141,7 @@ const SOUTH_TRAILS: { pts: [number, number][]; largura: number }[] = [
 const SOUTH_TRAIL_CLEARED: [number, number][] = [[26.9, 107.3], [23.9, 105.2], [35.0, 117.2]];
 /** O buraco no gradil: a passagem do parque para a mata da estrada (com um pedaço de gradil torto em cada ponta). */
 const FENCE_HOLE = { y0: 160, y1: 162.4 };
-/** Áreas dos bichos novos (a [estrutura] escolhe com o dono; nomes provisórios até lá), com a mata mais aberta. */
+/** Áreas dos bichos novos (quati, tatu-bola, marimbondos e o filhote de boitatá), com a mata mais aberta. */
 const NEW_ZONES = {
   meio: { x0: 20, x1: 38, y0: 112, y1: 140 },
   chefe: { x0: 2, x1: 12, y0: 167, y1: 178 },
@@ -1980,10 +1980,11 @@ if (CREATURES) {
   monstros.push(rect('area', SAGUI_ZONE.x0, SAGUI_ZONE.x1, SAGUI_ZONE.y0, SAGUI_ZONE.y1, { quantidade: 4 }, 'sagui'));
   monstros.push(rect('area', JARARACA_ZONE.x0, JARARACA_ZONE.x1, JARARACA_ZONE.y0, JARARACA_ZONE.y1, { quantidade: 3 }, 'jararaca'));
   if (FLORESTA_MAIOR) {
-    // os bichos novos da floresta maior: nomes provisórios até o dono escolher (a [estrutura] manda as chaves; o servidor
-    // só avisa ao ligar enquanto o bicho não existe). O mais forte mora sozinho no recanto do Véu
+    // os bichos novos da floresta maior (escolhidos pelo dono em 14/11; regras e dados da [estrutura]): o bando de quatis
+    // na mata do meio do parque, os tatus-bola e os marimbondos na mata da estrada, e o filhote de boitatá sozinho no
+    // recanto do Véu da mata profunda do sul (só de noite: de dia a área fica vazia)
     const z = NEW_ZONES;
-    for (const [zone, quantidade, nome] of [[z.meio, 3, 'reservada-sul-1'], [z.estradaNorte, 3, 'reservada-sul-2'], [z.estradaSul, 3, 'reservada-sul-3'], [z.chefe, 1, 'reservada-sul-chefe']] as const) {
+    for (const [zone, quantidade, nome] of [[z.meio, 4, 'quati'], [z.estradaNorte, 3, 'tatu_bola'], [z.estradaSul, 3, 'marimbondo'], [z.chefe, 1, 'filhote_boitata']] as const) {
       monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade }, nome));
     }
   }
