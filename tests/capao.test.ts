@@ -415,6 +415,23 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     expect(safe).toBe(true);
   });
 
+  it('a entrada da Budega (pedido do dono, 14/11: "está péssimo"): o vão da porta no mapa, sem varal de bandeirinhas na frente e sem orelhão colado na quina', () => {
+    expect(Number(prop(budega, 'portaDe'))).toBeCloseTo(62.34);
+    expect(Number(prop(budega, 'portaAte'))).toBeCloseTo(66.66);
+    // nenhum varal passa na frente da porta (de 61,5 a 67,5, até 5 m para o sul da fachada)
+    for (const b of cenario.filter((o) => o.type === 'bandeirinhas')) {
+      const p = b.polyline!.map((q) => [(b.x + q.x) / M, (b.y + q.y) / M] as const);
+      for (let i = 0; i + 1 < p.length; i++) {
+        for (let t = 0; t <= 1; t += 0.05) {
+          const [x, y] = [p[i]![0] + (p[i + 1]![0] - p[i]![0]) * t, p[i]![1] + (p[i + 1]![1] - p[i]![1]) * t];
+          expect(x > 61.5 && x < 67.5 && y > 52.5 && y < 57.5, `varal em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBe(false);
+        }
+      }
+    }
+    const orelhao = cenario.find((o) => o.type === 'orelhao')!;
+    expect(Math.hypot(at(orelhao).x - 62, at(orelhao).y - 52.5)).toBeGreaterThan(3);
+  });
+
   it('a Budega por dentro (pedido do dono, como no HumanitZ): entra pela porta de enrolar, compra na frente do balcão e atrás dele só fica a Xiovanna', () => {
     expect(prop(budega, 'interior')).toBe(true);
     const inside = { x0: 62.15, x1: 66.85, y0: 49.65, y1: 52.35 };
