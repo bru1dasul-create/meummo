@@ -1186,8 +1186,10 @@ if (reached('4c') && FLORESTA) {
   pontos.push(point('ponto', 64.6, 36.4, undefined, 'joaquim'));
   pontos.push(rect('area', BUDEGA_WALL + 64, 71 - BUDEGA_WALL, 33 + BUDEGA_WALL, 39.5 - BUDEGA_WALL, undefined, 'joaquim-casa'));
   cenario.push(rect('mesa-redonda', 66.5, 67.3, 34.8, 35.6, { altura: 0.75, cadeiras: 2, toalha: 'croche' }));
-  cenario.push(rect('maquina-costura', 67.6, 68.6, 33.15, 33.65, { altura: 0.8, olhando: 90 }));
-  cenario.push(rect('cama', 68.85, 70.85, 33.15, 34.55, { altura: 0.6, colcha: 'retalhos' }));
+  cenario.push(rect('maquina-costura', 68.25, 69.25, 33.15, 33.65, { altura: 0.8, olhando: 90 }));
+  // a cama com a cabeceira na parede do fundo (norte) e os pés para a sala (o dono achou a de antes invertida: a cabeceira
+  // ficava no meio do quarto); `olhando` 90 = os pés para o sul
+  cenario.push(rect('cama', 69.45, 70.85, 33.15, 35.15, { altura: 0.6, colcha: 'retalhos', olhando: 90 }));
   cenario.push(point('vaso', 64.4, 39.1, { planta: 'espada-de-sao-jorge' }));
   cenario.push(point('vaso', 70.6, 39.1, { planta: 'samambaia' }));
 
