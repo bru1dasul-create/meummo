@@ -229,6 +229,13 @@ no corpo precisa de código (`src/client/itemArt.ts` e `src/client/game/gearArt.
 `npm run check` avisa se algum equipamento ficou sem desenho no personagem. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
 
+## Música
+
+Cada lugar do Capão tem a sua música (licença livre, CC0; créditos em
+[`public/assets/audio/musica/CREDITOS.md`](public/assets/audio/musica/CREDITOS.md)): a vila, a mata (e a clareira e o
+lago) e a Mata Profunda. A troca é devagar, e o volume da música se ajusta no painel do som (🔊). Para trocar uma
+música, ponha o arquivo novo na mesma pasta com o mesmo nome e anote a licença na tabela de créditos.
+
 ## Bichos de estimação (sem programar)
 
 O **Joaquim**, o gato da vó, mora na casa rosa do Capão. Ele fica em [`data/bichos.json`](data/bichos.json): quanto tempo

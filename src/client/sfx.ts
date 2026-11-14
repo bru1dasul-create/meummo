@@ -3,6 +3,7 @@
 // Desde 14/11 o som é da [estrutura] (escolha do dono): quem liga o som no motor também faz o som.
 
 import type { ShotKind } from '../shared/items';
+import { Music } from './music';
 
 export type SoundName =
   | 'shot'
@@ -55,8 +56,11 @@ export class Sfx {
    * O som contínuo da puxada, que sobe com a carga: o zumbido do elástico do estilingue (revisão 17) ou o rangido da
    * corda do arco (mais grave e áspero).
    */
-  private pull: { osc: OscillatorNode; gain: GainNode; filter: BiquadFilterNode | null; kind: ShotKind; full: boolean } | null = null;
+  private pull: { source: AudioScheduledSourceNode; gain: GainNode; filter: BiquadFilterNode | null; kind: ShotKind; full: boolean; nextCreakAt: number } | null =
+    null;
   muted: boolean;
+  /** A música de cada lugar (pelo volume "música"). */
+  readonly music = new Music(this);
 
   constructor() {
     this.muted = readMuted();
@@ -84,6 +88,7 @@ export class Sfx {
         for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
       }
       void this.ctx.resume();
+      this.music.prime(); // no mesmo clique: libera os tocadores de música (o iPhone pede)
     } catch {
       this.ctx = null; // sem áudio neste navegador: o jogo segue mudo
     }
@@ -104,32 +109,41 @@ export class Sfx {
     const t = ctx.currentTime;
     if (this.pull && this.pull.kind !== kind) this.stopCharge(); // trocou de arma no meio: recomeça com o som certo
     if (!this.pull) {
-      const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       gain.gain.value = 0;
       let filter: BiquadFilterNode | null = null;
+      let source: AudioScheduledSourceNode;
       if (kind === 'flecha') {
-        osc.type = 'sawtooth';
-        osc.frequency.value = 70;
+        // o arco: um chiado fininho de corda esticando (nada de tom contínuo: o dono achou que parecia motor)
+        const noise = ctx.createBufferSource();
+        noise.buffer = this.noiseBuffer;
+        noise.loop = true;
         filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 520;
-        filter.Q.value = 4;
-        osc.connect(filter).connect(gain).connect(this.buses.efeitos!);
+        filter.type = 'bandpass';
+        filter.frequency.value = 2400;
+        filter.Q.value = 9;
+        noise.connect(filter).connect(gain).connect(this.buses.efeitos!);
+        source = noise;
       } else {
+        const osc = ctx.createOscillator();
         osc.type = 'triangle';
         osc.frequency.value = 105;
         osc.connect(gain).connect(this.buses.efeitos!);
+        source = osc;
       }
-      osc.start(t);
-      this.pull = { osc, gain, filter, kind, full: false };
+      source.start(t);
+      this.pull = { source, gain, filter, kind, full: false, nextCreakAt: t + 0.05 };
     }
     if (kind === 'flecha') {
-      this.pull.osc.frequency.setTargetAtTime(70 + p * 120, t, 0.06);
-      this.pull.filter?.frequency.setTargetAtTime(520 + p * 900, t, 0.06);
-      this.pull.gain.gain.setTargetAtTime(0.04 + p * 0.06, t, 0.04);
+      this.pull.filter?.frequency.setTargetAtTime(2400 + p * 1100, t, 0.08);
+      this.pull.gain.gain.setTargetAtTime(0.012 + p * 0.022, t, 0.06);
+      // e a madeira do arco rangendo: estalinhos que ficam mais rápidos e fortes com a carga
+      if (t >= this.pull.nextCreakAt && p < 1) {
+        this.creak(t, 0.045 + p * 0.05);
+        this.pull.nextCreakAt = t + 0.22 - p * 0.14 + Math.random() * 0.04;
+      }
     } else {
-      this.pull.osc.frequency.setTargetAtTime(105 + p * 250, t, 0.05);
+      (this.pull.source as OscillatorNode).frequency.setTargetAtTime(105 + p * 250, t, 0.05);
       this.pull.gain.gain.setTargetAtTime(0.05 + p * 0.07, t, 0.035);
     }
     if (p >= 1 && !this.pull.full) {
@@ -147,9 +161,9 @@ export class Sfx {
       const t = this.ctx!.currentTime;
       v.gain.gain.cancelScheduledValues(t);
       v.gain.gain.setTargetAtTime(0, t, 0.008);
-      v.osc.stop(t + 0.05);
-      v.osc.onended = () => {
-        v.osc.disconnect();
+      v.source.stop(t + 0.05);
+      v.source.onended = () => {
+        v.source.disconnect();
         v.filter?.disconnect();
         v.gain.disconnect();
       };
@@ -327,6 +341,12 @@ export class Sfx {
     osc.connect(gain).connect(this.buses.efeitos!);
     osc.start(start);
     osc.stop(start + duration + 0.02);
+  }
+
+  /** Um rangido curtinho de madeira (o arco envergando): um estalo de chiado médio e um "toc" grave. */
+  private creak(start: number, volume: number): void {
+    this.noise(start, 0.035, 'bandpass', 900 + Math.random() * 500, 700, volume);
+    this.tone('triangle', 170, 120, start, 0.04, volume * 0.4);
   }
 
   /** "Mi-au": a voz (dente de serra) sobe e desce; um filtro faz o "i" virar "a" e depois "u". */

@@ -428,8 +428,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   propriedade `som` do lugar manda, senão o nome): vila (bem-te-vi, sabiá, vento leve), clareira (passarinhos e um
   zumbido mágico baixinho), mata (vento, folhas, cigarras), mata profunda (vento mais forte, grilos, coruja) e água
   (água correndo, gotas, sapos). Troca suave de um lugar para o outro. Conferido no PC e no celular
-- [ ] **[estrutura]** Som, parte 2: a música do Capão (vila e mata), depois de o dono escolher a origem (licença livre,
-  banco pago, IA ou feita por código; recomendação: começar pelas de licença livre)
+- [x] **[estrutura]** Som, parte 2: a música do Capão (14/11, o dono: "pode começar pelas músicas de licença livre").
+  Três músicas CC0 do OpenGameArt (`public/assets/audio/musica/`, créditos em `CREDITOS.md`, volume igualado):
+  Vila do Capão → "Down The River" (Komiku); a mata, a Clareira e o Lago → "Forest Whisper Theme" (Cleyton
+  Kauffman); a Mata Profunda → "Peaceful Forest" (Samza). Troca devagar de uma para a outra, toca aos poucos (não
+  carrega a música inteira), pelo volume "música" do painel. Conferido no PC e no celular. Falta o dono ouvir e dizer
+  se ficam
 - [x] **[arte]** O botão do som na HUD do celular (14/11): o 🔊 aparece no celular (deitado e em pé) e abre o painel
   do som; conferido pela [estrutura]
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
@@ -499,6 +503,57 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [ ] **[arte]** Aplicar a câmera decidida no 2.5D (no protótipo: zoom do jogador com padrão 1,0, afastando até 0,7) e
   combinar com o dono o enquadramento no celular (em pé, a tela mostra só uns 6 m de largura) — na `PD.View` já está
   assim; provisório até o dono decidir: aproximar até 1,4 e, em pé, uns 9 m de largura
+
+## 📋 A lista do dono de 14/11 (distribuída pela [estrutura] entre as frentes)
+Pedido: "distribui as outras tarefas para os outros chats". Cada frente pega as suas; o que passa por mais de uma diz
+quem começa. (A música de licença livre, primeiro item da lista, já está acima.)
+
+**Bugs e o que está feio (primeiro):**
+- [x] **[estrutura]** Lag ao falar com NPC e o jogo travando ao dar e tirar zoom: medidos (14/11). A causa é a mesma
+  e está no desenho: cada mudança de zoom apaga e refaz o chão inteiro, e a câmera da conversa muda o zoom a cada
+  quadro por meio segundo (quadros de 100 a 250 ms). Passado à [arte] (abaixo)
+- [ ] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
+  muda e refazer só quando ele parar, como os objetos já fazem; e o orçamento de refazer imagens (`buildBusy`) contar
+  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade)
+- [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
+  é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
+- [ ] **[arte]** Arco: "o braço fica feio puxando"
+- [ ] **[arte]** Esquiva: "está feia demais"
+- [ ] **[mundo + arte]** A cama do quarto do Joaquim está invertida
+- [ ] **[mundo + arte]** A entrada da Budega ("está péssima")
+- [ ] **[arte]** Entrada e saída dos interiores com animação (a volta para o mundo é muito repentina)
+
+**Mundo:**
+- [ ] **[mundo]** Aumentar a floresta
+- [ ] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
+- [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
+  as áreas e a [arte] desenha
+- [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
+  comportamento, o [mundo] marca a área e a [arte] anima
+- [ ] **[estrutura + mundo + arte]** Mapa: o M abre o mapa completo, que só mostra o que você já andou, e um mini mapa.
+  A [estrutura] guarda o explorado (no personagem) e a tecla; o [mundo] faz a imagem de cima de cada mapa; a [arte]
+  desenha a janela e o mini mapa
+
+**Sistemas:**
+- [ ] **[estrutura + arte]** Dia e noite: à noite os bichos ficam mais fortes e dão mais XP e ouro; olhos vermelhos (a
+  [arte]); lampiões (o [mundo] marca, a [arte] acende)
+- [ ] **[estrutura]** Drop de itens nos bichos (e o arco e o estilingue de goiabeira nos bichos novos)
+- [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
+  movimento delas; o som do vento acompanha)
+- [ ] **[estrutura + arte]** A flecha que acerta a árvore fica presa nela (a [estrutura] diz onde parou; a [arte] desenha)
+
+**Personagem e controles:**
+- [ ] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (o andar devagar e o desligar o som mudam de
+  tecla: o M vira o mapa)
+- [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
+  botão de atirar, à parte)
+
+**Habilidades (combinar os detalhes com o dono antes):**
+- [ ] **[estrutura + arte]** Habilidades que sobem de nível com o personagem (mais dano e o visual muda) e a primeira
+  classe, o **Caçador da Floresta** (DPS à distância: arco, velocidade, precisão e espíritos dos bichos): Chuva de
+  Flechas (área; evolui com mais flechas e área maior), Flecha Ancestral (dano espiritual), Olhos de Gavião (ver
+  inimigos e rastros de longe), Chamado Selvagem (invoca uma onça ou uma águia espiritual) e Fúria da Onça
+  (transformação: corpo a corpo, mais agressivo)
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
