@@ -79,6 +79,14 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — combinados com o [mundo] (a floresta maior, esperando o dono):** o Capão passa a 96 × 180 m (cresce só
+para o sul; nada muda de lugar). Áreas reservadas na camada `monstros` (x0–x1 × y0–y1): A 20–38 × 112–140 (mata do
+meio do parque), B 2–24 × 150–178 (mata profunda do sul e cachoeirinha, a mais forte), C 52–86 × 92–136 (mata da
+estrada, norte), D 52–86 × 154–177 (mata da estrada, sul, perto do posto). Minha proposta ao dono: A quati (2), C
+tatu-bola (3), D marimbondo (3), B filhote de boitatá (5, só de noite). Monstro que ainda não existe numa área: o
+servidor só avisa ao ligar. **Capivaras:** por grupo, em `pontos`, o retângulo `capivaras-<lugar>` (onde andam) e o
+ponto `capivaras-<lugar>-descanso`; quantidade e o resto em data/bichos.json (como o Joaquim: `area`, `descanso`).
+
 **14/11 — itens no chão (escolha A do dono):** `World.giveLoot` agora põe tudo no chão: o ouro no lugar do monstro
 e cada item num lugar livre em volta (`walkableAround`), por `ITEM_DROP_MS` (2 min). Pegar é o `pickUp` de sempre
 (passando por cima, depois de `DROP_READY_MS`), que agora manda "Você pegou: ..." e o anúncio do lendário. O `loot`
