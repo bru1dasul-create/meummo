@@ -1209,6 +1209,24 @@ if (reached('4c') && FLORESTA) {
   for (const [cx, cy, rx, ry] of [[63, 16.5, 0.7, 0.9], [66.2, 18.9, 0.6, 0.5], [65.6, 13.8, 0.8, 0.5]] as const) {
     chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
   }
+
+  // ----- a floresta também dentro de casa (pedido do dono, 14/11: "o interior deve ter partes da floresta também, como
+  // o mapa em geral"): raiz levantando o piso, mato nas frestas, samambaia nos cantos e cipó nas paredes de dentro
+  // (`cipoDentro`, de 0 a 1, desenhado pela [arte]). Nada disso segura o pé: o caminho de dentro continua livre -----
+  const budega = cenario.find((o) => o.type === 'casa' && o.name === 'Budega')!;
+  const inside: [Shape, number, boolean][] = [[budega, 0.25, false], [amarela, 0.35, false], [rosa, 0.3, false], [abandonada, 0.9, true]];
+  for (const [h, cipo, musgo] of inside) h.props = { ...h.props, cipoDentro: cipo, ...(musgo ? { musgoDentro: true } : {}) };
+  const ROOTS_INSIDE: [number, number][][] = [
+    [[62.15, 51.2], [62.9, 51.4], [63.3, 51.15]], // Budega: entra por baixo da parede, no corredor ao lado da geladeira
+    [[85.85, 37.1], [85.1, 37.45], [84.3, 37.35]], // a família: levanta a cerâmica perto do sofá
+    [[70.85, 36.3], [70.15, 36.6], [69.4, 36.4]], // a vó: levanta o taco perto da cama
+    [[62.15, 18.6], [62.9, 18.3], [63.4, 18.6]], // a abandonada: mais raiz entrando pelas paredes
+    [[66.85, 14.2], [66.1, 14.6], [65.6, 14.4]],
+  ];
+  for (const pts of ROOTS_INSIDE) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.22, altura: 0.12, cor: '#6b4a2e', dentro: true } });
+  // mato nas frestas do piso (perto das portas e dos cantos) e samambaia nos cantos
+  for (const [x, y] of [[62.6, 52.2], [82.2, 38.95], [65.25, 38.95], [62.6, 19.4], [65.9, 19.5], [66.5, 16.2]] as const) chao.push(point('planta', x, y, { tipo: 'capim', raio: 0.22 }));
+  for (const [x, y, raio] of [[85.5, 33.3, 0.35], [64.5, 34.6, 0.35], [66.3, 13.7, 0.45], [62.6, 15.6, 0.4]] as const) cenario.push(point('planta', x, y, { tipo: 'samambaia', raio, dentro: true }));
 }
 
 for (const s of cenario) {
