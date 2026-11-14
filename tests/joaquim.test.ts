@@ -41,6 +41,9 @@ function houseMap(withHome = true): GameMap {
 
 const JOAQUIM: PetDef = {
   id: 'joaquim',
+  type: 'joaquim',
+  count: 1,
+  indoor: true,
   name: 'Joaquim',
   title: 'o gato da vó',
   map: 'vila',

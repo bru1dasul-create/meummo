@@ -182,6 +182,8 @@ export interface GroundDrop {
 
 /** As moedas pulam do monstro antes de dar para pegar (para dar tempo de ver e ouvir caírem). */
 export const DROP_READY_MS = 400;
+/** O bicho que vai embora (o filhote de boitatá ao amanhecer) some do mapa este tempo depois do aviso `vanish`. */
+export const VANISH_MS = 600;
 /** De quanto em quanto tempo o servidor olha o que cada jogador está vendo (o mapa explorado). */
 const EXPLORE_EVERY_MS = 500;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
@@ -283,14 +285,17 @@ export class World {
 
     for (const def of options.pets?.values() ?? []) {
       if (def.map !== map.id) continue;
-      const home = petHome(map, def);
-      if (!home) {
-        this.log(`aviso: ${def.name} não tem casa no mapa "${map.id}" (falta o ponto "${def.bed}" ou o retângulo "${def.area}" na camada pontos, ou chão livre ao lado da cama)`);
-        continue;
+      for (let i = 0; i < def.count; i++) {
+        const home = petHome(map, def, i);
+        if (!home) {
+          this.log(`aviso: ${def.name} não tem casa no mapa "${map.id}" (falta o ponto "${def.bed}" ou o retângulo "${def.area}" na camada pontos, ou chão livre ao lado da cama)`);
+          break;
+        }
+        const pet = new Pet(this.links.nextId(), def, home.bed, home.hop, home.area, home.bed.x, home.bed.y);
+        // começa dormindo na cama; num bando, cada um acorda numa hora (não todos juntos)
+        pet.until = this.now() + (def.sleepS[0] + (i > 0 ? this.random() * (def.sleepS[1] - def.sleepS[0]) : 0)) * 1000;
+        this.pets.set(pet.id, pet);
       }
-      const pet = new Pet(this.links.nextId(), def, home.bed, home.hop, home.area, home.bed.x, home.bed.y);
-      pet.until = this.now() + def.sleepS[0] * 1000; // começa dormindo na cama
-      this.pets.set(pet.id, pet);
     }
   }
 
@@ -1106,8 +1111,12 @@ export class World {
   private nightTurned(): void {
     for (const monster of [...this.monsters.values()]) {
       if (monster.def.nightOnly && !this.night) {
-        this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'vanish' });
-        this.removeMonster(monster);
+        // vai embora: o navegador anima (a chama apagando) e ele sai do mapa logo depois
+        if (monster.leavingAt === null) {
+          monster.leavingAt = this.now() + VANISH_MS;
+          monster.windup = null;
+          this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'vanish' });
+        }
         continue;
       }
       this.fitMonsterHp(monster);
@@ -1477,6 +1486,7 @@ export class World {
     if (!pet || player.loading || player.dead) return;
     const me = feetAt(player.fx, player.fy);
     const feet = pet.feet();
+    if (pet.def.petRange <= 0) return; // esse não gosta de carinho
     if (Math.hypot(me.x - feet.x, me.y - feet.y) > pet.def.petRange + 0.3) return this.fail(player, 'too_far');
     pet.cuddle(this.now(), me, (kind, angle) => this.petFx(pet, kind, angle));
   }
@@ -1788,7 +1798,7 @@ export class World {
 
   private monsterTouchedBy(x: number, y: number, shot?: Projectile): Monster | null {
     for (const monster of this.monsters.values()) {
-      if (!shotTouches(x, y, monster.x, monster.y, SHOT_HIT_RADIUS)) continue;
+      if (monster.leavingAt !== null || !shotTouches(x, y, monster.x, monster.y, SHOT_HIT_RADIUS)) continue;
       // enxame (o marimbondo): um sorteio por tiro; se passou pelo meio, segue voando
       if (shot && monster.def.shotDodge > 0) {
         shot.swarms ??= new Map();
@@ -1821,6 +1831,7 @@ export class World {
    */
   private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0): void {
     if (target.hp <= 0) return;
+    if (target.kind === 'monster' && target.leavingAt !== null) return; // indo embora: ninguém acerta mais
     if (target.kind === 'player' && (target.dead || target.god || now < target.invulnerableUntil || this.inSafeArea(target))) return;
     // Defesa dos equipamentos: tira um pouco de cada golpe, mas sempre sobra pelo menos 1.
     if (target.kind === 'player') amount = Math.max(1, amount - target.bonus.defense);
@@ -1921,6 +1932,10 @@ export class World {
   }
 
   private updateMonster(monster: Monster, now: number): void {
+    if (monster.leavingAt !== null) {
+      if (now >= monster.leavingAt) this.removeMonster(monster); // foi embora (amanheceu)
+      return;
+    }
     if (now < monster.dizzyUntil) return; // tonto (o tatu-bola depois da investida): parado
     if (monster.windup) {
       if (now >= monster.windup.resolveAt) this.resolveWindup(monster, now);

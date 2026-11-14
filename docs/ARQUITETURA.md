@@ -184,6 +184,10 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
   (`GameMap.regions`). É uma entidade à parte (`World.pets`, kind `pet`), fora da lista de monstros, então nunca é alvo.
   Aparece como os outros (`spawn`, com `asleep` e `home`; `move`, com `dash` no pulo) e avisa o que faz em `fx`
   (`meow`, `purr`, `wake`, `sleep`). Carinho: o cliente manda `pet` (o servidor confere a distância).
+  As capivaras usam o mesmo `Pet` (`pets.ts`): `PetDef.type` (o desenho), `count` (o mundo cria um `Pet` por
+  capivara, e `petHome(map, def, i)` deita cada uma em volta do ponto, no chão, sem pulo), `indoor` (sem ele, o
+  `spawn` não leva `home`: o desenho provisório mostra sempre) e `meowRange` 0 (não mia). O carinho manda o mesmo
+  `purr`; o navegador toca o som `capy` para a capivara.
 - **Armas com tiro próprio (o arco):** o item pode ter `tiro` (`WeaponShot`: o que sai, a carga, o alcance, o
   intervalo e a velocidade). `shotProfile(regras, arma, mapaNovo)` (`src/shared/combat.ts`) diz o tiro de agora: o da
   arma equipada ou a pedra (números do combate); o servidor (`World.shotOf`) e o motor (`engine.shot()`) fazem a mesma

@@ -26,5 +26,59 @@
       "alcance": 1.6,
       "esperaSegundos": 2
     }
+  },
+  "capivaras_lago": {
+    "nome": "Capivara",
+    "tipo": "capivara",
+    "mapa": "capao",
+    "dorme": "capivaras-lago-descanso",
+    "area": "capivaras-lago",
+    "quantidade": 3,
+    "dentroDeCasa": false,
+    "velocidade": 0.5,
+    "sonoSegundos": [
+      40,
+      90
+    ],
+    "passeios": [
+      2,
+      5
+    ],
+    "paradaSegundos": [
+      5,
+      12
+    ],
+    "mia": false,
+    "carinho": {
+      "alcance": 1.8,
+      "esperaSegundos": 3
+    }
+  },
+  "capivaras_campinho": {
+    "nome": "Capivara",
+    "tipo": "capivara",
+    "mapa": "capao",
+    "dorme": "capivaras-campinho-descanso",
+    "area": "capivaras-campinho",
+    "quantidade": 2,
+    "dentroDeCasa": false,
+    "velocidade": 0.5,
+    "sonoSegundos": [
+      40,
+      90
+    ],
+    "passeios": [
+      2,
+      5
+    ],
+    "paradaSegundos": [
+      5,
+      12
+    ],
+    "mia": false,
+    "carinho": {
+      "alcance": 1.8,
+      "esperaSegundos": 3
+    }
   }
 }

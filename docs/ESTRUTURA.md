@@ -79,6 +79,14 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — capivaras e ajustes:** `pets.ts` generalizado (sem mudar o protocolo): `type`, `count`, `indoor` e
+`"mia"`/`"carinho": false`; `petHome(map, def, index)` (o bando deita em roda, ~1,1 m do ponto; chão livre = sem pulo);
+no mundo, um `Pet` por capivara, cada uma acordando numa hora. Dois bandos em data/bichos.json (lago 3, campinho 2), nos
+pontos do ramo `mundo/floresta-maior` (até ele entrar na main, o servidor avisa "Capivara não tem casa"). Navegador: a
+capivara provisória marrom (`drawCapy`) e o som `capy` no carinho. Testes: `tests/capivaras.test.ts`. Conferido com o
+mapa do [mundo] copiado só no servidor de teste (e desfeito). Também: o boitatá que vai embora fica 600 ms (`VANISH_MS`,
+`Monster.leavingAt`, sem bater nem apanhar) para a [arte] animar; e os nomes do mapa da tecla M não se cobrem mais.
+
 **14/11 — mapa da tecla M e mini mapa:** protocolo **36** e `MIGRATIONS` passo **5** (coluna `explored`, JSON mapa →
 texto). `src/shared/explore.ts` (grade de 4 m, raio de 12 m, texto `colunas:base64` que se ajeita se o mapa mudar de
 largura). `World.explore` a cada 500 ms (`EXPLORE_EVERY_MS`), `exploredField` nas boas-vindas e no `zone`;

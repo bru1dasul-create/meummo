@@ -550,8 +550,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
 - [ ] **[arte]** Desenhar os quatro bichos novos (hoje aparecem como bonecos de gente com o nome) e as ações `dizzy`
   (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
-- [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
-  comportamento, o [mundo] marca a área e a [arte] anima
+- [x] **[estrutura]** As capivaras andando, as regras (14/11): os bichos de data/bichos.json ganharam `tipo`,
+  `quantidade` (bando), `dentroDeCasa` e `"mia": false`; dois bandos no Capão (lago 3, campinho 2), que deitam lado a
+  lado em volta do ponto de descanso, acordam cada um numa hora e gostam de carinho (estalinhos); desenho provisório
+  marrom até o da [arte]. Conferido com o mapa do ramo do [mundo] (os pontos ainda não estão na main)
+- [ ] **[mundo + arte]** Juntar a floresta maior (os pontos das capivaras) e o desenho da capivara na main, e tirar as
+  capivaras de enfeite do mapa
 - [x] **[estrutura]** Mapa da tecla M e mini mapa, a parte das regras e o desenho provisório (14/11): o mapa em
   quadradinhos de 4 m, explorado a até 12 m de onde você anda, salvo no personagem (passo 5 do arquivo); o M (ou tocar
   no mini mapa) abre o mapa inteiro com a neblina, os nomes dos lugares já vistos, os NPCs (com ! e ?) e a sua seta;

@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadItemDefs } from '../src/server/items';
 import { checkDrops, loadMonsterDefs, parseMonsterDefs } from '../src/server/monsters';
-import { World, type Player } from '../src/server/world';
+import { VANISH_MS, World, type Player } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
 import { LEFT, RIGHT } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
@@ -155,8 +155,11 @@ describe('o filhote de boitatá (só de noite)', () => {
     expect(fogo.def.id).toBe('fogo');
     turn(world, player, 'dia');
     run(TICK_MS * 2);
-    expect(bicho()).toBeUndefined();
+    // o aviso vem na hora e ele fica uns instantes (a chama apagando), sem bater nem apanhar
     expect(conn.ofType('fx').some((m) => m.kind === 'vanish' && m.id === fogo.id)).toBe(true);
+    expect(bicho()).toBeDefined();
+    run(VANISH_MS);
+    expect(bicho()).toBeUndefined();
     expect(conn.ofType('despawn').some((m) => m.id === fogo.id)).toBe(true);
     run(70_000); // o dia inteiro sem ele (o tempo de renascer passou e ele não volta)
     expect(bicho()).toBeUndefined();
