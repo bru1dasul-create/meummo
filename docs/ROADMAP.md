@@ -377,6 +377,20 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   mais perto); parado, o corpo vira junto (a view vira o parado para o ângulo do motor); o `'guard'` vai com o ângulo
   sempre que a defesa é reenviada. Conferido no PC e no celular: puxando perto de um sagui, o herói vira para ele
   antes de soltar (`__mundoNovo.me.angle`)
+- [x] **[estrutura]** Arco de Bambu, as regras (14/11, pedido do dono: "o arco deve permanecer na mão, como um item /
+  arma"; mesmo botão do estilingue; sem munição; vendido e dropado como o estilingue). Item `arco_bambu` (dano +5,
+  preço 300, "Bambu do brejo curvado no fogo, corda de fibra de tucum.") com o campo novo `tiro` (arma com tiro
+  próprio): flecha, carga cheia em 1,5 s (o estilingue é 1,1), alcance 8 a 13 m (6,5 a 9,5), 0,7 s entre tiros (0,45)
+  e flecha a 20 m/s (pedra 14). O servidor atira com os números da arma equipada (`shotProfile`, a mesma conta no
+  navegador, para a previsão bater); no mapa antigo, o arco atira pedra. A Budega vende o arco e o Estilingue de
+  Goiabeira. Os números do tiro ficam no painel (aba Itens). Sons novos: a corda do arco rangendo na carga e o "tóim"
+  ao soltar. Flecha provisória (uma haste na direção do voo) até a da [arte]; ícone provisório `estilingue` até o
+  `arco` dela. Protocolo 29. Conferido no PC e no celular
+- [ ] **[arte]** Arco de Bambu, o desenho: o ícone `arco` (item e botão; aí a [estrutura] troca o `icone` do
+  `arco_bambu`), o arco sempre na mão (`view.gear(id, gear)`, que o motor já chama), a pose do arco no
+  `sling-pull`/`shoot`, a flecha voando e cravada (`projectileArt.ts`: a [estrutura] liga as três funções no `combat.ts`
+  quando o arquivo entrar) e o `actionBar.setLook` (idem)
+- [ ] **[estrutura]** Arco e estilingue de goiabeira caindo dos bichos novos (quando eles entrarem)
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar

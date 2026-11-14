@@ -2,7 +2,7 @@
 // não programa poder criar e ajustar itens; aqui elas viram tipos do código e são conferidas.
 
 import { readFileSync } from 'node:fs';
-import type { EquipSlot, ItemInfo, ItemKind, Rarity } from '../shared/items';
+import { SHOT_KINDS, type EquipSlot, type ItemInfo, type ItemKind, type Rarity, type ShotKind, type WeaponShot } from '../shared/items';
 import { Reader } from './data-reader';
 import { ITEMS_FILE } from './paths';
 
@@ -11,6 +11,42 @@ const FILE = 'data/items.json';
 const KINDS: Record<string, ItemKind> = { equipamento: 'equipment', consumivel: 'consumable', consumível: 'consumable', material: 'material' };
 const SLOTS: Record<string, EquipSlot> = { arma: 'weapon', cabeca: 'head', cabeça: 'head', corpo: 'body', amuleto: 'charm' };
 const RARITIES: Record<string, Rarity> = { comum: 'common', raro: 'rare', lendario: 'legendary', lendário: 'legendary' };
+
+/** Limites do "tiro" de uma arma (os mesmos que o painel do administrador confere). */
+export const WEAPON_SHOT_LIMITS = {
+  cargaMs: [100, 5000],
+  alcance: [2, 20],
+  intervaloMs: [200, 5000],
+  velocidade: [4, 40],
+} as const;
+
+/** O campo "tiro" de uma arma: { "projetil": "flecha", "cargaMs": 1500, "alcanceMinimo": 8, "alcanceMaximo": 13, ... }. */
+function parseWeaponShot(raw: unknown, where: string): WeaponShot {
+  const at = `tiro do ${where}`;
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new Error(`Erro em ${FILE} (${where}): o campo "tiro" precisa ser um objeto { "projetil": "flecha", "cargaMs": ..., ... }.`);
+  }
+  const r = new Reader(raw as Record<string, unknown>, FILE, at);
+  const projectile = r.text('projetil').toLowerCase();
+  if (!(SHOT_KINDS as readonly string[]).includes(projectile)) r.fail('projetil', `precisa ser ${SHOT_KINDS.map((k) => `"${k}"`).join(' ou ')}`);
+  const within = (field: string, [min, max]: readonly [number, number], whole: boolean) => {
+    const value = r.number(field);
+    if (whole && !Number.isInteger(value)) r.fail(field, 'precisa ser um número inteiro');
+    if (value < min || value > max) r.fail(field, `precisa ser de ${min} a ${max}`);
+    return value;
+  };
+  const L = WEAPON_SHOT_LIMITS;
+  const shot: WeaponShot = {
+    projectile: projectile as ShotKind,
+    chargeMs: within('cargaMs', L.cargaMs, true),
+    rangeMin: within('alcanceMinimo', L.alcance, false),
+    rangeMax: within('alcanceMaximo', L.alcance, false),
+    cooldownMs: within('intervaloMs', L.intervaloMs, true),
+    speed: within('velocidade', L.velocidade, false),
+  };
+  if (shot.rangeMax < shot.rangeMin) r.fail('alcanceMaximo', 'não pode ser menor que o "alcanceMinimo"');
+  return shot;
+}
 
 function pick<T>(table: Record<string, T>, value: string, field: string, where: string): T {
   const found = table[value.toLowerCase()];
@@ -57,6 +93,10 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       price: whole('preco', 0),
     };
     if (kind === 'consumable' && def.heal === 0) r.fail('cura', 'precisa ser maior que 0 (por enquanto, consumível é para curar)');
+    if (r.has('tiro')) {
+      if (slot !== 'weapon') r.fail('tiro', 'só vale para armas (tipo "equipamento", parte "arma")');
+      def.shot = parseWeaponShot((raw as Record<string, unknown>).tiro, where);
+    }
     if (r.has('atalho')) {
       if (kind !== 'consumable') r.fail('atalho', 'só vale para consumíveis (tipo "consumivel")');
       const quick = whole('atalho', 0, 1);
