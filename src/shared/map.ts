@@ -523,6 +523,22 @@ export class GameMap implements Walkable {
   }
 
   /**
+   * O que está no chão embaixo do projétil no ponto (x, y) da pedra: o tipo do retângulo de colisão que cobre o chão
+   * ali, mesmo os que não seguram tiro (ex.: 'agua'), ou null. Só nos mapas do formato novo.
+   */
+  kindUnderShot(x: number, y: number): string | null {
+    if (!this.metric) return null;
+    const gy = y + SHOT_FEET_DY;
+    const tx = Math.floor(x);
+    const ty = Math.floor(gy);
+    if (!this.inside(tx, ty)) return null;
+    for (const r of this.solidsByTile[ty * this.width + tx] ?? NO_SOLIDS) {
+      if (x > r.x0 && x < r.x1 && gy > r.y0 && gy < r.y1) return r.kind ?? null;
+    }
+    return null;
+  }
+
+  /**
    * O que segura o projétil no ponto (x, y) da pedra: o tipo do retângulo de colisão (ex.: 'tronco'), 'borda' (fora do
    * mapa), 'bloco' (tile que segura, ou retângulo sem tipo) ou null (passa).
    */
