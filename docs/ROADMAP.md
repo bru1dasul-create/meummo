@@ -209,8 +209,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     (uma vez) para quem chega a 2,5 m, acordado; tocar nele faz o herói ir até lá e fazer carinho: ele ronrona
     (dormindo, continua dormindo). Sons: miado e ronronar. Gatinho provisório desenhado pelo motor (só com você
     dentro da casa) até o da [arte]. Protocolo 30. Conferido no PC e no celular com o mapa do ramo do [mundo]
-  - [x] **[arte]** Ligar o `gato.js` no Joaquim que anda (14/11, no ramo da arte; entra na main com o "pode" do
-    dono): `canDraw('pet', 'joaquim')` na PD.View e o Joaquim acordado pintado como o gato enrolado (refeito depois
+  - [x] **[arte]** Ligar o `gato.js` no Joaquim que anda (14/11, na main com o "pode" do dono):
+    `canDraw('pet', 'joaquim')` na PD.View e o Joaquim acordado pintado como o gato enrolado (refeito depois
     que o dono achou a versão de bolas feia): em pé, andando no passo de gato, sentado, espreguiçando, o pulo do sofá,
     "miau!" e o coração do carinho; pisca e olha para quem está perto. Dormindo, continua o desenho enrolado aprovado.
     Conferido no PC e no celular deitado, na casa da vó
@@ -411,7 +411,7 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   Goiabeira. Os números do tiro ficam no painel (aba Itens). Sons novos: a corda do arco rangendo na carga e o "tóim"
   ao soltar. Flecha provisória (uma haste na direção do voo) até a da [arte]; ícone provisório `estilingue` até o
   `arco` dela. Protocolo 29. Conferido no PC e no celular
-- [x] **[arte]** Arco de Bambu, o desenho (14/11): o ícone `arco` (o item pintado na mochila e na loja, o botão de
+- [x] **[arte]** Arco de Bambu, o desenho (14/11, na main com o "pode" do dono): o ícone `arco` (o item pintado na mochila e na loja, o botão de
   atirar com o arco; o `GEAR_ART.arco` do jogo antigo já existia), o arco sempre na mão (`view.gear(id, gear)`: bambu
   com os nós, empunhadura de couro, corda de tucum; parado, andando, correndo e na defesa), a pose de arqueiro no
   `sling-pull`/`shoot` (o braço do arco esticado, a corda até o rosto, o arco envergando com a carga, a flecha encaixada

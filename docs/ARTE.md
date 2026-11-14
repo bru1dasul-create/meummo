@@ -865,9 +865,8 @@ confirmou.
 
 ## Esperando outras frentes
 - **[estrutura]:** o arco: ligar o desenho (veja o roteiro: o `icone` `arco`, as chamadas do `projectileArt.ts` no
-  `combat.ts` e o `setLook`). Ela pediu para avisar quando o `canDraw` do Joaquim entrasse, para conferir no navegador.
-  O botão do som no celular (pedido dela) está pronto no meu ramo.
-- **[mundo]:** junta o `mundo/casas-interior` (e o `mundo/placa-parque`) depois do meu ramo.
+  `combat.ts` e o `setLook`). O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular entraram na main em
+  14/11 (avisei a [estrutura] para conferir o Joaquim no navegador).
 - **[mundo]:** a Dona Iracema aparecia por cima do balcão da barraquinha (o balcão desenhado na frente das pernas).
   O [mundo] anotou o pedido; confira no jogo se ficou certo.
 - **[estrutura]** (ideia, não pedida ainda): o servidor só avisa o próprio jogador de que ele está encantado
