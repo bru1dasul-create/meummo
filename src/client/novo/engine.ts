@@ -15,7 +15,7 @@ import {
   WALK_SLICE_MS,
 } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
-import { pickQuickItem, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
+import { pickQuickItem, type GearLook, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
 import { GameMap, type Tile, type TiledMap } from '../../shared/map';
 import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
@@ -279,6 +279,7 @@ class NewWorld implements NewWorldGame {
     this.ambient = new Ambient(this.sfx);
     this.soundButton?.addEventListener('click', this.openSoundPanel);
     this.updateSoundButton();
+    this.updateShotLook(deps.welcome.you.gear ?? {}); // entrou já com o arco equipado
     const welcome = deps.welcome;
     for (const item of welcome.items) this.items.set(item.id, item);
     this.lastInv = welcome.inv;
@@ -1598,6 +1599,11 @@ class NewWorld implements NewWorldGame {
     this.soundPanel.show(this.sfx.muted, this.sfx.volumes());
   }
 
+  /** O botão do tiro mostra a arma de agora: com o arco, "Arco" (e o ícone dele); senão, o estilingue. */
+  private updateShotLook(gear: GearLook): void {
+    this.actionBar.setLook('shot', gear.weapon === 'arco' ? { label: 'Arco', icon: 'arco' } : { label: 'Estilingue', icon: null });
+  }
+
   /** O botão do som da HUD: abre (e fecha) o painel do som. */
   private readonly openSoundPanel = () => {
     this.sfx.unlock();
@@ -1825,7 +1831,7 @@ class NewWorld implements NewWorldGame {
         this.onShot(msg);
         break;
       case 'shot_end':
-        this.combat.endShot(msg.id);
+        this.combat.endShot(msg.id, msg.hit); // sem acertar ninguém, a flecha crava no chão
         break;
       case 'fx': {
         if (this.entities.get(msg.id)?.kind === 'pet') {
@@ -1940,6 +1946,7 @@ class NewWorld implements NewWorldGame {
         const e = this.entities.get(msg.id);
         if (e) e.gear = msg.gear;
         this.view?.gear?.(msg.id, msg.gear);
+        if (msg.id === this.myId) this.updateShotLook(msg.gear);
         break;
       }
       case 'items':

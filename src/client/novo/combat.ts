@@ -14,6 +14,7 @@ import type { CombatRules } from '../../shared/combatRules';
 import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
 import type { GuardState } from '../../shared/protocol';
+import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
 import type { WorldView } from './view';
 
 type Point = { x: number; y: number };
@@ -343,9 +344,17 @@ export class CombatLayer {
   }
 
   /** O projétil acabou (acertou alguém, bateu em algo ou chegou no fim). */
-  endShot(id: number): void {
-    this.shots.delete(id);
+  /** O tiro acabou (`hit`: em quem bateu; 0 = em ninguém: no chão, num tronco ou no fim do alcance, e a flecha crava). */
+  endShot(id: number, hit = 0): void {
     const cid = this.shotOfServer.get(id);
+    const shot = this.shots.get(id) ?? (cid !== undefined ? this.myShots.get(cid) : undefined);
+    if (shot && hit === 0) {
+      const now = performance.now();
+      const traveled = Math.min(shot.range, (shot.speed * (now - shot.start)) / 1000);
+      const end = shotFeet(shot.x + shot.dx * traveled, shot.y + shot.dy * traveled);
+      projectileEnded(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now);
+    }
+    this.shots.delete(id);
     if (cid !== undefined) {
       this.myShots.delete(cid);
       this.shotOfServer.delete(id);
@@ -501,6 +510,7 @@ export class CombatLayer {
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
     for (const pet of this.pets.values()) if (this.petVisible(pet)) return true;
+    if (landedBusy(performance.now())) return true; // flecha cravada no chão ainda à vista
     for (const id of this.marks.keys()) {
       const feet = feetOf(id);
       if (!feet) continue;
@@ -794,6 +804,9 @@ export class CombatLayer {
       for (const [key, shot] of shots) {
         const traveled = (shot.speed * (now - shot.start)) / 1000;
         if (traveled >= shot.range + 0.2) {
+          // chegou ao fim do alcance sem o servidor avisar antes: a flecha crava ali
+          const end = shotFeet(shot.x + shot.dx * shot.range, shot.y + shot.dy * shot.range);
+          projectileEnded(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now);
           shots.delete(key);
           continue;
         }
@@ -802,28 +815,9 @@ export class CombatLayer {
         const shadow = screen(ground.x, ground.y, 0);
         const p = screen(ground.x, ground.y, 0.9);
         const ctx = this.ctx;
-        if (shot.kind === 'flecha') {
-          // flecha provisória (a [arte] desenha a de verdade): uma haste na direção do voo, com a ponta clara
-          const tail = screen(ground.x - shot.dx * 0.6, ground.y - shot.dy * 0.6, 0.9);
-          const tailShadow = screen(ground.x - shot.dx * 0.6, ground.y - shot.dy * 0.6, 0);
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
-          ctx.lineWidth = Math.max(2, m * 0.04);
-          ctx.beginPath();
-          ctx.moveTo(tailShadow.x, tailShadow.y);
-          ctx.lineTo(shadow.x, shadow.y);
-          ctx.stroke();
-          ctx.strokeStyle = '#7a5530';
-          ctx.lineWidth = Math.max(2, m * 0.035);
-          ctx.beginPath();
-          ctx.moveTo(tail.x, tail.y);
-          ctx.lineTo(p.x, p.y);
-          ctx.stroke();
-          ctx.fillStyle = '#e8e2d2';
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, Math.max(2, m * 0.035), 0, Math.PI * 2);
-          ctx.fill();
-          continue;
-        }
+        // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
+        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, 0.9);
+        if (drawProjectile(ctx, shot.kind, p, shadow, ahead, m)) continue;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
         ctx.ellipse(shadow.x, shadow.y, m * 0.1, m * 0.045, 0, 0, Math.PI * 2);
@@ -839,6 +833,7 @@ export class CombatLayer {
     };
     draw(this.shots);
     draw(this.myShots);
+    drawLanded(this.ctx, screen, meter, now); // as flechas cravadas no chão
   }
 
   private drawBars(

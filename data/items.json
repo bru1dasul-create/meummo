@@ -45,7 +45,7 @@
     "dano": 5,
     "raridade": "raro",
     "descricao": "Bambu do brejo curvado no fogo, corda de fibra de tucum.",
-    "icone": "estilingue",
+    "icone": "arco",
     "tiro": { "projetil": "flecha", "cargaMs": 1500, "alcanceMinimo": 8, "alcanceMaximo": 13, "intervaloMs": 700, "velocidade": 20 }
   },
   "colar_presas": {

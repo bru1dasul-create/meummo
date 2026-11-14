@@ -79,6 +79,13 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — arco e Joaquim desenhados (da [arte], com o "pode" do dono):** liguei a flecha de verdade
+(`projectileArt.ts`: `drawProjectile` no `drawShots`, `projectileEnded` no `endShot(id, hit)` e no fim do alcance,
+`drawLanded`, `landedBusy` no `busy()`), o ícone `arco` no item e o `actionBar.setLook` (ao entrar e na mensagem `gear`
+sua). O Joaquim agora é desenhado pela view (`canDraw('pet', 'joaquim')`), e o gatinho provisório do `combat.ts` só
+aparece se a view não souber desenhar. Observação para o equilíbrio: no zoom padrão a tela mostra uns 10 m para os
+lados e para baixo (13 m nas diagonais do chão); a flecha com carga cheia (13 m) pode sair da tela.
+
 **14/11 — som, parte 1 (volume e ambiente):** `sfx.ts` ganhou um volume por parte (`efeitos`, `ambiente`, `musica`,
 `localStorage` `meummo:volumes`), cada uma num `GainNode` antes do geral; o "desligar" abaixa o geral (o ambiente
 continua por baixo). `src/client/ambient.ts`: `sceneOfPlace` (propriedade `som` do lugar, senão o nome) e `Ambient`

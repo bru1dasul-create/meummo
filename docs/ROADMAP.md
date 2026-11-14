@@ -416,10 +416,11 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   com os nós, empunhadura de couro, corda de tucum; parado, andando, correndo e na defesa), a pose de arqueiro no
   `sling-pull`/`shoot` (o braço do arco esticado, a corda até o rosto, o arco envergando com a carga, a flecha encaixada
   com as penas; as regras do arco no `slingshot.js`: carga de 1,5 s), o herói da mochila com o arco, a flecha voando e
-  cravada no chão (`projectileArt.ts`) e o `actionBar.setLook`. **Falta a [estrutura] ligar:** trocar o `icone` do
-  `arco_bambu` para `arco`; no `combat.ts`, `drawProjectile` antes da bolinha, `projectileEnded` no `endShot` quando o
-  `shot_end` vem com `hit` 0 (e no fim do alcance), `drawLanded` a cada quadro e `landedBusy(agora)` no `busy()`; e o
-  `setLook('shot', ...)` quando a sua arma muda
+  cravada no chão (`projectileArt.ts`) e o `actionBar.setLook`. **Ligado pela [estrutura] (14/11):** o `icone` do
+  `arco_bambu` é `arco`; no `combat.ts`, `drawProjectile` antes da bolinha (saiu a flecha provisória),
+  `projectileEnded` no `endShot` com o `hit` do `shot_end` (0 = em ninguém) e no fim do alcance, `drawLanded` a cada
+  quadro e `landedBusy` no `busy()`; o botão vira "Arco" ao entrar e quando a sua arma muda. Conferido no PC e no
+  celular: a flecha voa (com as penas e a sombra) e crava onde cai
 - [ ] **[estrutura]** Arco e estilingue de goiabeira caindo dos bichos novos (quando eles entrarem)
 - [x] **[estrutura]** Som, parte 1 (14/11; o som passou para a [estrutura], escolha do dono): **volume separado** para
   música, efeitos e ambiente (guardado no navegador; o botão do som da HUD abre o painel `#sound-panel`, e o `M`
@@ -429,7 +430,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   (água correndo, gotas, sapos). Troca suave de um lugar para o outro. Conferido no PC e no celular
 - [ ] **[estrutura]** Som, parte 2: a música do Capão (vila e mata), depois de o dono escolher a origem (licença livre,
   banco pago, IA ou feita por código; recomendação: começar pelas de licença livre)
-- [ ] **[arte]** O botão do som na HUD do celular (hoje ele some no celular, e o painel do som só abre por ele)
+- [x] **[arte]** O botão do som na HUD do celular (14/11): o 🔊 aparece no celular (deitado e em pé) e abre o painel
+  do som; conferido pela [estrutura]
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar
