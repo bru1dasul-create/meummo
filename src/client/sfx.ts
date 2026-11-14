@@ -3,6 +3,7 @@
 // Desde 14/11 o som é da [estrutura] (escolha do dono): quem liga o som no motor também faz o som.
 
 import type { ShotKind } from '../shared/items';
+import { Music } from './music';
 
 export type SoundName =
   | 'shot'
@@ -57,6 +58,8 @@ export class Sfx {
    */
   private pull: { osc: OscillatorNode; gain: GainNode; filter: BiquadFilterNode | null; kind: ShotKind; full: boolean } | null = null;
   muted: boolean;
+  /** A música de cada lugar (pelo volume "música"). */
+  readonly music = new Music(this);
 
   constructor() {
     this.muted = readMuted();
@@ -84,6 +87,7 @@ export class Sfx {
         for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
       }
       void this.ctx.resume();
+      this.music.prime(); // no mesmo clique: libera os tocadores de música (o iPhone pede)
     } catch {
       this.ctx = null; // sem áudio neste navegador: o jogo segue mudo
     }

@@ -39,6 +39,7 @@ import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
 import { ProvisionalView, type WorldView } from './view';
 import { Ambient, sceneOfPlace } from '../ambient';
+import { trackOfScene } from '../music';
 import { SoundPanel } from './soundPanel';
 
 export interface NewWorldDeps {
@@ -384,7 +385,7 @@ class NewWorld implements NewWorldGame {
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
       // o som: o lugar do ambiente, os volumes, se está desligado e se o navegador já liberou o áudio
-      sound: () => ({ scene: game.ambient.current, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
+      sound: () => ({ scene: game.ambient.current, music: game.sfx.music.current, playing: game.sfx.music.playing, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -464,6 +465,7 @@ class NewWorld implements NewWorldGame {
     this.soundButton?.removeEventListener('click', this.openSoundPanel);
     this.soundPanel.destroy();
     this.ambient.destroy();
+    this.sfx.music.stop();
     this.keyboard.destroy();
     this.joystick.destroy();
     this.toast.destroy();
@@ -1616,9 +1618,12 @@ class NewWorld implements NewWorldGame {
     if (now >= this.ambientCheckAt && this.predicted) {
       this.ambientCheckAt = now + 500;
       const feet = feetAt(this.predicted.x, this.predicted.y);
-      this.ambient.setScene(sceneOfPlace(this.map.placeAt(feet.x, feet.y)));
+      const scene = sceneOfPlace(this.map.placeAt(feet.x, feet.y));
+      this.ambient.setScene(scene);
+      this.sfx.music.play(trackOfScene(scene)); // a música do lugar (troca devagar)
     }
     this.ambient.update();
+    this.sfx.music.update();
   }
 
   // ======================= servidor =======================

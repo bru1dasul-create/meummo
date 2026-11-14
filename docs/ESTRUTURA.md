@@ -79,6 +79,17 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — música (licença livre) e a lista grande do dono:** três músicas CC0 do OpenGameArt em
+`public/assets/audio/musica/` (créditos em `CREDITOS.md`; igualadas a -20 LUFS com o `loudnorm` do ffmpeg, MP3 112 kbps):
+vila → Down The River (Komiku), mata/clareira/lago → Forest Whisper Theme (Cleyton Kauffman), mata profunda → Peaceful
+Forest (Samza). `src/client/music.ts`: dois tocadores `HTMLAudioElement` (tocam aos poucos, sem carregar tudo) ligados
+ao volume "música" por `MediaElementSource`; trocam devagar; liberados no primeiro clique (`Sfx.unlock` → `prime`, por
+causa do iPhone). O Pixabay e o Freesound recusam acesso automático daqui; o OpenGameArt, o FMA e o Incompetech
+funcionam. O dono mandou a lista grande (no roteiro, "A lista do dono de 14/11"): distribuí para a [arte] e o [mundo].
+Minha fila, na ordem: lag ao falar com NPC e trava no zoom (medir), som do arco, controles (Shift esquiva, Espaço
+pula, M mapa), flecha presa na árvore, drop de itens, dia e noite, vento, mapa explorado, capivaras, mais bichos e as
+habilidades (estas duas pedem decisões do dono).
+
 **14/11 — arco e Joaquim desenhados (da [arte], com o "pode" do dono):** liguei a flecha de verdade
 (`projectileArt.ts`: `drawProjectile` no `drawShots`, `projectileEnded` no `endShot(id, hit)` e no fim do alcance,
 `drawLanded`, `landedBusy` no `busy()`), o ícone `arco` no item e o `actionBar.setLook` (ao entrar e na mensagem `gear`
