@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 30;
+export const PROTOCOL_VERSION = 31;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -108,6 +108,11 @@ export const GM_CLEAR_RANGE = 8;
 export const DASH_TILES = 3;
 export const DASH_COOLDOWN_MS = 2500;
 export const DASH_INVULNERABLE_MS = 350;
+/**
+ * Pulo (Espaço, pedido do dono em 14/11): por enquanto é só de enfeite (quem está perto vê; não passa por cima de nada
+ * nem desvia de golpe). A recarga é do tamanho do pulo do desenho, para ninguém encher a tela dos outros de pulos.
+ */
+export const JUMP_COOLDOWN_MS = 800;
 
 /** Quanto tempo o jogador fica desmaiado antes de voltar para a vila. */
 export const DEATH_MS = 3000;

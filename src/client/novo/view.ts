@@ -45,7 +45,8 @@ export interface WorldView {
   // ---- opcionais (combate): a view que não tiver, o motor segue sem ----
   /**
    * Animação curta de alguém: 'windup' (preparando um golpe), 'shoot' (estilingue, ou o monstro jogando algo),
-   * 'arc' (Bordunada), 'dash' (esquiva, sua ou de outro jogador), 'hurt' (levou golpe), 'die' (monstro caiu: o motor
+   * 'arc' (Bordunada), 'dash' (esquiva, sua ou de outro jogador), 'jump' (pulo, seu ou de outro jogador: só o
+   * desenho, sem mudar de lugar), 'hurt' (levou golpe), 'die' (monstro caiu: o motor
    * tira o desenho 0,7 s depois),
    * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou), 'sling-pull' (começou a puxar o estilingue:
    * termina com 'shoot' ou, sem atirar, com 'sling-cancel') e os golpes dos monstros ('bite', 'strike', 'charge' =
@@ -129,7 +130,12 @@ interface Actor extends ActorInfo {
   hurtUntil?: number;
   /** Desmaiado (deitado e apagado) até 'revive'. */
   fainted?: boolean;
+  /** Pulou (action 'jump') neste instante: sobe e desce em JUMP_DRAW_MS. */
+  jumpAt?: number;
 }
+
+/** Quanto dura o pulinho do desenho provisório. */
+const JUMP_DRAW_MS = 550;
 
 /** Cores do chão por tipo (camada `chao` do mapa). */
 const GROUND: Record<string, string> = {
@@ -258,6 +264,7 @@ export class ProvisionalView implements WorldView {
     if (kind === 'hurt') a.hurtUntil = this.lastNow + 180;
     else if (kind === 'faint' || kind === 'die') a.fainted = true;
     else if (kind === 'revive') a.fainted = false;
+    else if (kind === 'jump') a.jumpAt = this.lastNow;
   }
 
   toWorld(screenX: number, screenY: number): { x: number; y: number } {
@@ -444,12 +451,15 @@ export class ProvisionalView implements WorldView {
 
   private drawActor(id: number, a: Actor, x: number, y: number, now: number): void {
     const ctx = this.ctx;
-    const p = this.toScreen(x, y);
+    const ground = this.toScreen(x, y);
     const s = this.scale;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y, s * 0.32, s * 0.16, 0, 0, Math.PI * 2);
+    ctx.ellipse(ground.x, ground.y, s * 0.32, s * 0.16, 0, 0, Math.PI * 2);
     ctx.fill();
+    // no pulo, o boneco sobe meio metro e desce (a sombra fica no chão)
+    const jumpT = a.jumpAt !== undefined ? (now - a.jumpAt) / JUMP_DRAW_MS : 1;
+    const p = jumpT < 1 ? { x: ground.x, y: ground.y - Math.sin(jumpT * Math.PI) * s * 0.5 } : ground;
     const color = now < (a.hurtUntil ?? 0) ? '#ff2d2d' : a.me ? ACTOR_COLORS.me : ACTOR_COLORS[a.kind];
     const height = a.fainted ? s * 0.4 : s * 1.5;
     ctx.globalAlpha = a.fainted ? 0.55 : 1;
@@ -467,7 +477,7 @@ export class ProvisionalView implements WorldView {
     const tip = this.toScreen(x + look.x * 0.5, y + look.y * 0.5);
     ctx.strokeStyle = color;
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+    ctx.moveTo(ground.x, ground.y);
     ctx.lineTo(tip.x, tip.y);
     ctx.stroke();
     ctx.font = `${Math.round(Math.max(11, s * 0.3))}px system-ui, sans-serif`;

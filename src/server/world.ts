@@ -5,6 +5,7 @@
 import {
   DASH_COOLDOWN_MS,
   DASH_INVULNERABLE_MS,
+  JUMP_COOLDOWN_MS,
   DASH_TILES,
   DEATH_MS,
   GM_CLEAR_RANGE,
@@ -740,6 +741,19 @@ export class World {
     player.guardWanted = on;
     // quem vê acompanha para onde a defesa levantada está virada (o navegador manda no máximo umas 8 por segundo)
     if (on && turned && player.guardUpAt !== null) this.emitGuard(player);
+  }
+
+  /**
+   * Pulo (Espaço): por enquanto só de enfeite — quem está perto vê (o próprio jogador já pulou no navegador). Não pula
+   * desmaiado, defendendo nem puxando o tiro (o desenho também não deixa). A recarga é conferida aqui, para ninguém
+   * encher a tela dos outros de pulos.
+   */
+  jump(player: Player): void {
+    const now = this.now();
+    if (player.loading || player.dead || player.guardWanted || player.chargeStart !== null) return;
+    if (now < player.jumpReadyAt - SKILL_TOLERANCE_MS) return;
+    player.jumpReadyAt = Math.max(now, player.jumpReadyAt) + JUMP_COOLDOWN_MS;
+    this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'jump' }, player.id);
   }
 
   /** Estilingue: atira uma pedrinha na direção do ângulo, mais forte e mais longe quanto mais tempo puxou. */

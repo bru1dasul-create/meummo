@@ -88,6 +88,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       };
     case 'charge':
       return { t: 'charge' };
+    case 'jump':
+      return { t: 'jump' };
     case 'guard':
       return typeof msg.on === 'boolean' && isAngle(msg.a) ? { t: 'guard', on: msg.on, a: msg.a } : null;
     case 'oops':

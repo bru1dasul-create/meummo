@@ -543,8 +543,16 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura + arte]** A flecha que acerta a árvore fica presa nela (a [estrutura] diz onde parou; a [arte] desenha)
 
 **Personagem e controles:**
-- [ ] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (o andar devagar e o desligar o som mudam de
-  tecla: o M vira o mapa)
+- [x] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (14/11): janela das teclas (botão "Teclas" no
+  painel do som, só no computador; fica guardado no navegador), o pulo passa pelo servidor e quem está perto vê
+  (protocolo 31; por enquanto só de enfeite), o andar devagar foi para o `C` (liga e desliga), o som ficou sem tecla
+  (painel do som) e o `M` está reservado para o mapa (por enquanto só avisa)
+- [ ] **[arte]** O pulo de verdade no boneco (o motor manda `action(id, 'jump')`, seu e dos outros; o animador do
+  protótipo já pula com `input.jump`) e um botão de pular no celular (o tipo `ActionSlot` com 'jump' e o ícone; o motor
+  põe na barra)
+- [ ] **[arte]** A etiqueta da tecla da esquiva na barra: o estilo desenha a barra de espaço fixa
+  (`.action[data-slot='dash'] .key`), mas a esquiva agora é o Shift e o jogador pode trocar; e o "Como jogar" da tela
+  de entrada (`index.html`) com as teclas novas
 - [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
   botão de atirar, à parte)
 
