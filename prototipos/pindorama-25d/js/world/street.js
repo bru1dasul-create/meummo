@@ -765,7 +765,16 @@
   }
   /** Largura da raiz no chão a `s` cm do começo de um caminho de `len` cm (o pé do tronco usa a mesma conta). */
   const rootWidth = (wa, s, len) => wa * (1 - 0.5 * Math.pow(M.clamp(s / len, 0, 1), 1.1));
-  const inHouse = (map, x, y) => (map.houses || []).some((h) => x > h.x0 - 15 && x < h.x1 + 15 && y > h.y0 - 15 && y < h.y1 + 15);
+  // a árvore que nasceu dentro de casa (`inside`, a casa abandonada): enquanto as raízes dela são planejadas e pintadas,
+  // `home` é a casa dela — aí "dentro de casa" vira o contrário: a raiz fica do lado de dentro das paredes e não passa
+  // por baixo do sofá (o colchão e o entulho ficam por cima dela: o colchão é pintado de novo depois, ground.js)
+  let home = null;
+  const homeOf = (t, map) => (t.inside ? (map.houses || []).find((h) => t.x > h.x0 && t.x < h.x1 && t.y > h.y0 && t.y < h.y1) || null : null);
+  const underFurniture = (map, x, y) => (map.props || []).some((p) => p.kind === 'sofa' && x > p.x0 - 12 && x < p.x1 + 12 && y > p.y0 - 12 && y < p.y1 + 12);
+  const inHouse = (map, x, y) =>
+    home
+      ? !(x > home.x0 + 26 && x < home.x1 - 26 && y > home.y0 + 26 && y < home.y1 - 26) || underFurniture(map, x, y)
+      : (map.houses || []).some((h) => x > h.x0 - 15 && x < h.x1 + 15 && y > h.y0 - 15 && y < h.y1 + 15);
   // raiz não passa por dentro de casa, por baixo do pé de poste ou de semáforo, nem entra no círculo do despertar
   const blocked = (map, x, y) =>
     inHouse(map, x, y) ||
@@ -780,6 +789,15 @@
   function figRootPaths(t, map) {
     const cache = map._figPaths || (map._figPaths = new Map());
     if (cache.has(t)) return cache.get(t);
+    const prev = home;
+    home = homeOf(t, map);
+    try {
+      return planRoots(t, map, cache);
+    } finally {
+      home = prev;
+    }
+  }
+  function planRoots(t, map, cache) {
     const R = t.trunk || 90;
     const rnd = seeded(t.x, t.y, 977);
     const out = [];
@@ -808,7 +826,8 @@
           pts.push({ x, y });
         }
         const wa = R * (0.48 + rnd() * 0.14);
-        if (lengthOf(pts) < R * (t.breaks ? 2.9 : 2.5)) continue;
+        // (a de dentro de casa: só as que passam bem do pé; a curta virava uma ponta rombuda logo depois dele)
+        if (lengthOf(pts) < R * (t.inside ? 4.4 : t.breaks ? 2.9 : 2.5)) continue;
         const sm = chaikin(pts, 2);
         out.push({ shape: null, pts: sm, len: lengthOf(sm), wa, h0: R * (0.5 + rnd() * 0.12), a });
       }
@@ -1337,6 +1356,23 @@
   // ------------------------------------------------------------------ o chão no pé das figueiras
   // A da esquina (`rompendo`) quebrou a rua; a da mata só tem a terra e as raízes.
   function breaks(ctx, t, env) {
+    const prev = home;
+    home = homeOf(t, env.map);
+    ctx.save();
+    if (home) {
+      // as trincas e as folhas da árvore de dentro não passam das paredes (lá fora é grama)
+      ctx.beginPath();
+      ctx.rect(home.x0 + 15, home.y0 + 15, home.x1 - home.x0 - 30, home.y1 - home.y0 - 30);
+      ctx.clip();
+    }
+    try {
+      paintBreaks(ctx, t, env);
+    } finally {
+      ctx.restore();
+      home = prev;
+    }
+  }
+  function paintBreaks(ctx, t, env) {
     const { map } = env;
     const cam = env.g.cam;
     const R = Math.max(60, t.trunk || 60);
@@ -1387,7 +1423,7 @@
         const weed = rnd() < 0.35;
         if (skip || inHouse(map, x, y)) continue;
         const kind = groundAt(map, x, y);
-        const slab = kind === 'calcada' || kind === 'praca';
+        const slab = kind === 'calcada' || kind === 'praca' || kind === 'piso';
         const col = slab ? ['#a29d90', '#6f6b62', '#c4bfb1'] : kind === 'terra' ? ['#5a4632', '#3e3022', '#6c5640'] : ['#474a50', '#2a2c30', '#5e6168'];
         if (!slab) for (const p of quad) {
           p.x = x + (p.x - x) * 0.62;

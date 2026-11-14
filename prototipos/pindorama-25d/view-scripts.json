@@ -20,11 +20,13 @@
     "js/world/city.js",
     "js/world/fundo.js",
     "js/world/parque.js",
+    "js/world/casas.js",
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",
     "js/creatures/jararaca.js",
     "js/creatures/xiovanna.js",
+    "js/creatures/gato.js",
     "js/view.js",
     "js/portrait.js"
   ]

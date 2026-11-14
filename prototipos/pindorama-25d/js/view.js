@@ -418,6 +418,13 @@
           const d = (cam.viewH * (portrait ? 0.2 : 0.16)) / (2 * PD.ISO_K * cam.sinP * cam.zoom);
           goal = { x: this.focusPoint.x + d, y: this.focusPoint.y + d, z: 0 };
         }
+        // dentro de uma casa (o telhado sai): a câmera vai para o meio dela, para a casa toda ficar no centro da tela
+        const home = this.world.insideHouse;
+        if (home && !this.focusPoint) {
+          const hb = home.b;
+          const k = 0.7 * (home.cutK || 0);
+          goal = { x: goal.x + ((hb.x0 + hb.x1) / 2 - goal.x) * k, y: goal.y + ((hb.y0 + hb.y1) / 2 - goal.y) * k, z: 0 };
+        }
         this.camTarget = this.camTarget ? M.damp3(this.camTarget, goal, 5.5, dt) : goal;
         this.cam.follow(this.camTarget);
       } else {
@@ -670,8 +677,14 @@
       ctx.lineJoin = 'round';
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = 'rgba(8, 12, 10, 0.85)';
+      // dentro de uma casa, só os nomes de quem está nela (lá fora fica escuro)
+      const home = this.world.insideHouse && this.world.insideHouse.cutK > 0.5 ? this.world.insideHouse.b : null;
       for (const a of this.actors.values()) {
         if (!a.name || (a.creature && a.creature.dying !== null)) continue; // caído: o nome sai junto
+        if (home) {
+          const p = a.creature ? a.creature.overHead() : a.ch.pos;
+          if (!(p.x > home.x0 && p.x < home.x1 && p.y > home.y0 && p.y < home.y1)) continue;
+        }
         const q = this._overHead(a);
         ctx.strokeText(a.name, q.x, q.y);
         ctx.fillStyle = a.me ? NAME_COLOR.me : NAME_COLOR[a.kind] || NAME_COLOR.player;

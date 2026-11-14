@@ -322,7 +322,8 @@
       super(world, b);
       const wall = b.block ? BLOCK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
       // a laje com árvore ou varal precisa de mais espaço em cima na imagem
-      const topExtra = b.treeInside ? 980 : b.roofTree ? 640 : b.clothes ? 300 : 220;
+      // (com a árvore de dentro de verdade, `innerTree`, a copa é a da própria árvore, desenhada por cima da casa)
+      const topExtra = b.treeInside && !b.innerTree ? 980 : b.roofTree ? 640 : b.clothes ? 300 : 220;
       this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38), topExtra };
       if (b.interior) {
         // casa que dá para entrar (a Budega, pedido do dono: "igual HumanitZ"): na ordem de desenho ela é a parede da
@@ -387,11 +388,13 @@
       const side = M.shade(b.wall, -0.26);
       const cut = { front: b.wall, side, top: '#ddd3c2' };
       const P = (x, y, z) => cam.p({ x, y, z });
+      // o vão da porta: o do mapa (`door`, nas casas) ou a frente toda menos as pontas (a porta de enrolar da Budega)
+      const d0 = b.door ? b.door.from : b.x0 + 34, d1 = b.door ? b.door.to : b.x1 - 34;
       // a soleira no vão da porta
-      poly(ctx, [P(b.x0 + 34, b.y1 - T, z0 + 1), P(b.x1 - 34, b.y1 - T, z0 + 1), P(b.x1 - 34, b.y1, z0 + 1), P(b.x0 + 34, b.y1, z0 + 1)], '#b9b2a4', 'rgba(27, 16, 13, 0.5)', ink);
+      poly(ctx, [P(d0, b.y1 - T, z0 + 1), P(d1, b.y1 - T, z0 + 1), P(d1, b.y1, z0 + 1), P(d0, b.y1, z0 + 1)], b.abandoned ? '#8f8b83' : '#b9b2a4', 'rgba(27, 16, 13, 0.5)', ink);
       box(ctx, cam, b.x1 - T, b.x1, b.y0, b.y1, z0, z0 + hc, cut, ink);
-      box(ctx, cam, b.x0, b.x0 + 34, b.y1 - T, b.y1, z0, z0 + hc, cut, ink);
-      box(ctx, cam, b.x1 - 34, b.x1, b.y1 - T, b.y1, z0, z0 + hc, cut, ink);
+      box(ctx, cam, b.x0, d0, b.y1 - T, b.y1, z0, z0 + hc, cut, ink);
+      box(ctx, cam, d1, b.x1, b.y1 - T, b.y1, z0, z0 + hc, cut, ink);
       // musgo na base de fora, como na casa inteira
       if (b.moss) {
         const r = M.rng(Math.round(b.x0 * 3 + 5));
@@ -421,6 +424,7 @@
       // ---- frente (+y)
       onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => {
         const r = M.rng(Math.round(b.x0 * 3 + 11));
+        const openings = [];
         wallTexture(ctx, b, W, H, r);
         // a beirada da laje
         ctx.fillStyle = M.shade(b.wall, -0.12);
@@ -437,9 +441,12 @@
             towerEntrance(ctx, W, H, b);
             continue;
           }
-          const doorW = f === 0 ? 92 : 0;
-          const doorX = f === 0 ? Math.min(W - doorW - 50, W * 0.18) : 0;
-          if (f === 0) houseDoor(ctx, doorX, H - 212, doorW, 212, b, r);
+          // a casa que dá para entrar tem a porta onde o mapa diz (`door`, o vão de 1,2 m) e aberta
+          const door = f === 0 && b.door ? { x: b.door.from - b.x0, w: b.door.to - b.door.from } : null;
+          const doorW = f === 0 ? (door ? door.w : 92) : 0;
+          const doorX = f === 0 ? (door ? door.x : Math.min(W - doorW - 50, W * 0.18)) : 0;
+          if (f === 0) (door ? openDoor : houseDoor)(ctx, doorX, H - 212, doorW, 212, b, r);
+          if (f === 0 && b.treeInside) openings.push({ x: doorX, y: H - 212, w: doorW, h: 212, door: true });
           // portão de garagem de ferro na ponta da frente
           const gw = f === 0 && b.garage ? Math.min(240, W * 0.4) : 0;
           if (gw) garageDoor(ctx, W - gw - 30, H - 230, gw, 230, r);
@@ -451,9 +458,13 @@
             const wy = yTop + Math.max(40, fh * 0.28);
             const wh = Math.min(100, fh * 0.36);
             houseWindow(ctx, wx, wy, 110, wh, b, M.rng(b.x0 + f * 17 + k));
+            if (b.treeInside) openings.push({ x: wx, y: wy, w: 110, h: wh });
             if (b.balconies && f > 0) balcony(ctx, wx - 15, wy + wh + 6, 140);
           }
         }
+        // a árvore que nasceu dentro de casa: galhos e folhas saindo pela porta e pelas janelas, e as trincas que o
+        // tronco abriu na parede logo abaixo do buraco da laje
+        if (b.treeInside) treeOpenings(ctx, openings, W, H, r, b.innerTree ? b.innerTree.x - b.x0 : W * 0.48);
         if (b.abandoned) vines(ctx, W, H, r);
         // a casa tomada pela mata: musgo e manchas de chuva, e o cipó cobrindo parte da fachada
         if (b.moss) mossWall(ctx, W, H, r);
@@ -462,6 +473,7 @@
       // ---- lado (+x): começa na quina da frente e vai para o fundo
       onWall(ctx, cam, { x: b.x1, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
         const r = M.rng(Math.round(b.y0 * 5 + 3));
+        const sideOpenings = [];
         wallTexture(ctx, b, D, H, r, true);
         ctx.fillStyle = M.shade(b.wall, -0.36);
         ctx.fillRect(0, 0, D, 16);
@@ -471,8 +483,10 @@
           for (let k = 0; k < n; k++) {
             const wx = 40 + ((D - 80) / n) * (k + 0.5) - 45;
             houseWindow(ctx, wx, yTop + Math.max(40, fh * 0.28), 90, Math.min(90, fh * 0.33), b, M.rng(b.y0 + f * 7 + k), true);
+            if (b.treeInside) sideOpenings.push({ x: wx, y: yTop + Math.max(40, fh * 0.28), w: 90, h: Math.min(90, fh * 0.33) });
           }
         }
+        if (b.treeInside) treeOpenings(ctx, sideOpenings, D, H, r, b.innerTree ? b.y1 - b.innerTree.y : D * 0.5);
         if (b.abandoned) vines(ctx, D, H, r);
         if (b.moss) mossWall(ctx, D, H, r);
         if (b.vine) overgrowth(ctx, D, H, r, b.vine * 0.8);
@@ -568,7 +582,10 @@
       const lenW = b.y1 - b.y0 - T;
       // a parede da esquerda (por dentro, de frente para +x: mais escura) e a do fundo (de frente para +y)
       poly(ctx, [P(b.x0 + T, b.y1, z0), P(b.x0 + T, b.y0 + T, z0), P(b.x0 + T, b.y0 + T, z0 + H), P(b.x0 + T, b.y1, z0 + H)], null, INK, ink * 2.2);
+      // as casas com morador (família, vó, a abandonada) têm as paredes delas (casas.js)
+      const home = b.resident && PD.casas;
       onWall(ctx, cam, { x: b.x0 + T, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
+        if (home) return PD.casas.innerWall(ctx, b, 'oeste', lenW, H);
         face(lenW, true);
         // lousa de preços (sem marca, nada de tabaco) e um calendário
         const bx = lenW * 0.55, by = 46;
@@ -595,6 +612,7 @@
       });
       poly(ctx, [P(b.x0 + T, b.y0 + T, z0), P(b.x1, b.y0 + T, z0), P(b.x1, b.y0 + T, z0 + H), P(b.x0 + T, b.y0 + T, z0 + H)], null, INK, ink * 2.2);
       onWall(ctx, cam, { x: b.x0 + T, y: b.y0 + T, z: z0 + H }, { x: 1, y: 0 }, () => {
+        if (home) return PD.casas.innerWall(ctx, b, 'fundo', lenN, H);
         face(lenN, false);
         // relógio de parede
         const cx = lenN * 0.18, cy = 32;
@@ -659,6 +677,73 @@
     for (let i = 0; i < Math.max(3, len / 90); i++) ctx.fillRect(r() * len, 16, 14 + r() * 30, 40 + r() * (H * 0.55));
     ctx.fillStyle = 'rgba(70, 52, 36, 0.18)';
     ctx.fillRect(0, H - 26, len, 26);
+  }
+  /**
+   * Porta aberta da casa que dá para entrar (o vão do mapa): o escuro de dentro com o chão aparecendo e a folha aberta
+   * para dentro, de quina; na abandonada, arrombada (tábuas quebradas, uma pendurada por um prego).
+   */
+  function openDoor(ctx, x, y, w, h, b, r) {
+    ctx.fillStyle = INK;
+    ctx.fillRect(x - 7, y - 7, w + 14, h + 7);
+    ctx.fillStyle = b.trim;
+    ctx.fillRect(x - 4, y - 4, w + 8, h + 4);
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, '#120e0b');
+    g.addColorStop(0.75, '#2a211a');
+    g.addColorStop(1, b.abandoned ? '#4a463f' : b.resident === 'vo' ? '#5e3e22' : '#6e6450');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+    if (b.abandoned) {
+      // arrombada: o que sobrou das tábuas (uma em cima, quebrada; uma pendurada; os tocos embaixo) e as farpas
+      ctx.fillStyle = '#7a5f42';
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 3;
+      const board = (cx, cy, bw, a) => {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.moveTo(-bw / 2, -10);
+        ctx.lineTo(bw / 2, -10);
+        ctx.lineTo(bw / 2 - 6, -2);
+        ctx.lineTo(bw / 2, 4);
+        ctx.lineTo(bw / 2 - 3, 10);
+        ctx.lineTo(-bw / 2, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      };
+      board(x + w * 0.32, y + 30, w * 0.6, 0.08);
+      board(x + w * 0.22, y + 92, w * 0.5, 1.15);
+      board(x + w * 0.78, y + h - 40, w * 0.4, -0.12);
+      ctx.fillStyle = '#c9c4ba';
+      ctx.fillRect(x + w * 0.04, y + 52, 4, 4);
+      return;
+    }
+    // a folha da porta, aberta para dentro, encostada do lado da dobradiça (a madeira e a maçaneta)
+    const lw = Math.min(30, w * 0.24);
+    ctx.fillStyle = b.resident === 'vo' ? '#8a5a34' : '#7a5a3c';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + lw, y + 10);
+    ctx.lineTo(x + lw, y + h - 8);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(x + 3, y + 20, lw * 0.35, h - 40);
+    ctx.fillStyle = '#d4b65a';
+    ctx.beginPath();
+    ctx.arc(x + lw - 6, y + h * 0.52, 3.5, 0, M.TAU);
+    ctx.fill();
+    // o capacho na soleira
+    ctx.fillStyle = '#8a6a3a';
+    ctx.fillRect(x + w * 0.2, y + h - 6, w * 0.6, 6);
+    void r;
   }
   /** Porta da casa: madeira ou portão de ferro com grade; na abandonada, tapada com tábuas. */
   function houseDoor(ctx, x, y, w, h, b, r) {
@@ -921,91 +1006,191 @@
     crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
   }
   /**
-   * Árvore que nasceu dentro da casa abandonada e rompeu a laje: buraco de bordas quebradas com ferro torto, pedaços
-   * de laje soltos, o tronco grosso saindo do buraco, raízes que escorrem pela laje e descem pela parede, e a copa.
+   * Árvore que nasceu dentro da casa abandonada (pedido do dono, 13/11: "a árvore deveria sair de dentro da casa, não do
+   * telhado"): o tronco sobe lá de dentro e passa por um buraco na laje, de borda quebrada, com uns ferros tortos; nada
+   * de raiz nem de placa solta em cima da laje. Desenho: o buraco escuro, a parede de dentro da borda do fundo, o tronco
+   * saindo da escuridão (mais escuro embaixo), a borda da frente por cima dele (é ela que mostra que o tronco atravessa)
+   * e a copa. Os galhos que saem pela porta e pelas janelas ficam na fachada (treeOpenings).
    */
   function treeThroughRoof(ctx, cam, b, x, y, z, ink) {
     const r = M.rng(Math.round(b.x0 * 3 + b.y0 * 7) + 41);
     const P = (px, py, pz) => cam.p({ x: px, y: py, z: pz });
-    // o buraco: contorno irregular, escuro por dentro, com a borda da laje aparecendo
-    const hole = [];
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * M.TAU;
-      const rr = 92 + r() * 46;
-      hole.push(P(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.9, z));
+    const slab = 16; // espessura da laje
+    // contorno do buraco (irregular, um pouco maior que o tronco)
+    const N = 16;
+    const rim = [];
+    const inner = b.innerTree;
+    const hole = inner ? Math.max(52, (inner.trunk || 30) * 1.5 + 18) : 52;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * M.TAU;
+      const rr = hole + r() * 24;
+      rim.push({ a, x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr * 0.92 });
     }
-    poly(ctx, hole, '#2a241e', INK, ink * 2);
-    // ferro da laje torto saindo da beirada
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 7; i++) {
-      const a = r() * M.TAU;
-      const p0 = P(x + Math.cos(a) * 100, y + Math.sin(a) * 92, z);
-      const p1 = P(x + Math.cos(a) * (60 + r() * 30), y + Math.sin(a) * (55 + r() * 30), z + 20 + r() * 50);
+    // a câmera olha de +x+y: a metade "do fundo" é a de menor x+y
+    const far = (q) => q.x + q.y < x + y;
+    // 1) o buraco escuro e a parede de dentro da borda do fundo (o corte da laje, mais claro)
+    poly(ctx, rim.map((q) => P(q.x, q.y, z)), '#14110e', INK, ink * 1.6);
+    for (let i = 0; i < N; i++) {
+      const a = rim[i], c = rim[(i + 1) % N];
+      if (!far(a) && !far(c)) continue;
+      poly(ctx, [P(a.x, a.y, z), P(c.x, c.y, z), P(c.x, c.y, z - slab), P(a.x, a.y, z - slab)], '#6f6a60');
+    }
+    // 2) o tronco, saindo lá de baixo: o pedaço abaixo da laje só aparece dentro do buraco (recortado pelo contorno
+    // dele) e é escuro, como na sombra de dentro da casa; acima da laje, a casca de sempre
+    const t = { x, y, kind: 'mata', r: 250, h: 560, trunk: 16 };
+    const fork = { x, y, z: z + t.h * FORK };
+    const b1 = cam.p(fork);
+    const w0 = (inner ? (inner.trunk || 30) * 1.05 : 27) * cam.zoom, w1 = 14 * cam.zoom;
+    const trunkShape = (za) => {
+      const b0 = P(x, y, za);
+      return [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
+    };
+    const holePath = new Path2D();
+    rim.forEach((q, i) => {
+      const pt = P(q.x, q.y, z);
+      if (i) holePath.lineTo(pt.x, pt.y);
+      else holePath.moveTo(pt.x, pt.y);
+    });
+    holePath.closePath();
+    ctx.save();
+    ctx.clip(holePath);
+    poly(ctx, trunkShape(z - 90), '#1d1712', INK, ink * 2.4);
+    ctx.restore();
+    if (inner) {
+      // a árvore de verdade: a forquilha dela fica na altura da laje; os galhos e a copa são os dela (TreeCanopy),
+      // desenhados por cima da casa. Aqui só o toco do tronco saindo do buraco, até onde os galhos começam
+      const top = P(x, y, z + 26);
+      const base = P(x, y, z);
+      const ww = w0 * 0.92;
+      const stub = [{ x: base.x - ww, y: base.y }, { x: top.x - ww * 0.86, y: top.y }, { x: top.x + ww * 0.86, y: top.y }, { x: base.x + ww, y: base.y }];
+      poly(ctx, stub, FIG.bark.base, INK, ink * 2.2);
+      poly(ctx, [stub[0], stub[1], { x: top.x - ww * 0.3, y: top.y }, { x: base.x - ww * 0.35, y: base.y }], 'rgba(255, 240, 210, 0.16)');
+    }
+    const shape = trunkShape(z);
+    const base = shape[0].y;
+    // a parte de fora: cobre só do nível da laje para cima (o pé fica escondido atrás da borda da frente); com a árvore
+    // de verdade, quem desenha o tronco e os galhos é ela
+    if (!inner) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(b1.x - 400, b1.y - 400, 800, base - (b1.y - 400) + 1);
+      ctx.clip();
+      poly(ctx, shape, null, INK, ink * 2.4);
+      const g = ctx.createLinearGradient(0, base, 0, b1.y);
+      g.addColorStop(0, '#2a2017');
+      g.addColorStop(0.18, BARK.figueira[1]);
+      g.addColorStop(0.45, BARK.figueira[0]);
+      g.addColorStop(1, BARK.figueira[0]);
+      poly(ctx, shape, g);
+      ctx.strokeStyle = 'rgba(40, 30, 20, 0.5)';
+      ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+      for (let k = 0; k < 3; k++) {
+        const f = (k + 1) / 4;
+        ctx.beginPath();
+        ctx.moveTo(shape[0].x + 2 * w0 * f, shape[0].y);
+        ctx.lineTo(b1.x - w1 + 2 * w1 * f, b1.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // 3) a borda da frente do buraco, quebrada, por cima do pé do tronco: uma beirada de concreto com a quina lascada
+    const idx = rim.map((q, i) => (!far(q) ? i : -1)).filter((i) => i >= 0);
+    const run = [];
+    if (idx.length >= 2) {
+      // a metade da frente, em ordem: começa no primeiro ponto da frente que vem depois de um do fundo
+      let startI = idx[0];
+      for (const i of idx) if (far(rim[(i - 1 + N) % N])) startI = i;
+      for (let k = 0; k < N; k++) {
+        const q = rim[(startI + k) % N];
+        if (far(q)) break;
+        run.push(q);
+      }
+    }
+    if (run.length >= 2) {
+      const outer = run.map((q) => P(x + (q.x - x) * 1.16, y + (q.y - y) * 1.16, z));
+      const inner = run.map((q) => P(q.x, q.y, z));
+      poly(ctx, [...outer, ...inner.reverse()], '#a59f93');
       ctx.strokeStyle = INK;
-      ctx.lineWidth = Math.max(1.6, 3.4 * cam.zoom);
+      ctx.lineWidth = ink * 1.6;
+      ctx.beginPath();
+      run.forEach((q, i) => {
+        const pt = P(q.x, q.y, z);
+        if (i) ctx.lineTo(pt.x, pt.y);
+        else ctx.moveTo(pt.x, pt.y);
+      });
+      ctx.stroke();
+    }
+    // 4) três ferros da laje, tortos, na beirada do buraco
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const q = rim[Math.floor(r() * N)];
+      const p0 = P(q.x, q.y, z - 4);
+      const p1 = P(x + (q.x - x) * 0.72, y + (q.y - y) * 0.72, z + 14 + r() * 20);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = Math.max(1.6, 3.2 * cam.zoom);
       ctx.beginPath();
       ctx.moveTo(p0.x, p0.y);
       ctx.lineTo(p1.x, p1.y);
       ctx.stroke();
       ctx.strokeStyle = '#8a4a2a';
-      ctx.lineWidth = Math.max(1, 1.8 * cam.zoom);
+      ctx.lineWidth = Math.max(1, 1.7 * cam.zoom);
       ctx.stroke();
     }
-    // pedaços de laje soltos em volta
-    for (let i = 0; i < 5; i++) {
-      const a = r() * M.TAU;
-      const d = 120 + r() * 60;
-      const cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d * 0.9;
-      const s = 18 + r() * 16;
-      box(ctx, cam, cx - s, cx + s, cy - s * 0.7, cy + s * 0.7, z, z + 9, { front: '#9d978b', side: '#7f796e', top: '#b9b3a6' }, ink);
-    }
-    // raízes que escorrem pela laje até a beirada e descem pela parede da frente
-    const W = b.x1 - b.x0, D = b.y1 - b.y0;
-    const ends = [
-      [b.x0 + W * 0.2, b.y1],
-      [b.x0 + W * 0.66, b.y1],
-      [b.x1, b.y0 + D * 0.7],
-      [b.x0 + W * 0.1, b.y0 + D * 0.3],
-    ];
-    for (const [ex, ey] of ends) {
-      const pts = [];
-      for (let k = 0; k <= 6; k++) {
-        const u = k / 6;
-        pts.push(P(x + (ex - x) * u + (r() - 0.5) * 18, y + (ey - y) * u + (r() - 0.5) * 18, z + 4));
-      }
-      if (ey === b.y1 || ex === b.x1) for (let k = 1; k <= 4; k++) pts.push(P(ex + (r() - 0.5) * 10, ey, z - k * 55));
-      ctx.strokeStyle = INK;
-      ctx.lineJoin = 'round';
+    // 5) a copa (a árvore de verdade do mapa desenha a dela)
+    if (!inner) crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
+  }
+  /**
+   * A árvore lá dentro aparece pelas aberturas (em cm da parede): pela porta de tábuas saem folhas pelas frestas e um
+   * galho pela quina de cima; pelas janelas, galhos com cachos de folha passando da moldura. E duas trincas finas
+   * descendo da beirada da laje, perto de onde o tronco rompeu (`trunkAt` = onde o tronco fica ao longo da parede).
+   */
+  function treeOpenings(ctx, openings, len, H, r, trunkAt) {
+    const BRANCH = BARK.figueira[0];
+    const branch = (x0, y0, x1, y1, w) => {
       ctx.lineCap = 'round';
-      ctx.lineWidth = Math.max(3, 15 * cam.zoom);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = w + 5;
       ctx.beginPath();
-      pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo((x0 + x1) / 2 + (r() - 0.5) * 20, (y0 + y1) / 2 - 12, x1, y1);
       ctx.stroke();
-      ctx.strokeStyle = BARK.figueira[0];
-      ctx.lineWidth = Math.max(2, 11 * cam.zoom);
+      ctx.strokeStyle = BRANCH;
+      ctx.lineWidth = w;
       ctx.stroke();
-      ctx.strokeStyle = 'rgba(255, 240, 210, 0.22)';
-      ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+    };
+    for (const o of openings) {
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+      if (o.door) {
+        // pela porta: folhas nas frestas entre as tábuas e um galho saindo pela quina de cima
+        for (let k = 0; k < 4; k++) leafCluster(ctx, o.x + o.w * (0.2 + r() * 0.6), o.y + 64 + k * 48, 2, 13, r);
+        branch(o.x + o.w * 0.75, o.y + 26, o.x + o.w + 42, o.y - 26, 9);
+        leafCluster(ctx, o.x + o.w + 46, o.y - 30, 6, 17, r);
+        continue;
+      }
+      // pela janela: dois galhos saindo e as folhas transbordando da moldura
+      const side = cx < trunkAt ? -1 : 1;
+      branch(cx - side * 10, cy + 6, cx + side * (o.w * 0.75), o.y - 18, 10);
+      branch(cx, cy + 10, cx - side * (o.w * 0.35), o.y + o.h + 22, 7);
+      leafCluster(ctx, cx + side * (o.w * 0.78), o.y - 22, 7, 18, r);
+      leafCluster(ctx, cx - side * (o.w * 0.36), o.y + o.h + 24, 5, 15, r);
+      leafCluster(ctx, cx, cy, 6, 16, r);
+    }
+    // trincas finas descendo da laje, perto do tronco
+    ctx.strokeStyle = 'rgba(52, 46, 40, 0.65)';
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 2; k++) {
+      let x = Math.max(20, Math.min(len - 20, trunkAt + (k ? 70 : -60) + (r() - 0.5) * 40));
+      let y = 14;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let j = 0; j < 5; j++) {
+        x += (r() - 0.5) * 26;
+        y += 22 + r() * 22;
+        ctx.lineTo(x, y);
+      }
       ctx.stroke();
     }
-    // o tronco grosso saindo do buraco, abrindo em galhos
-    const t = { x, y, kind: 'mata', r: 250, h: 560, trunk: 16 };
-    const fork = { x, y, z: z + t.h * FORK };
-    const b0 = P(x, y, z - 10), b1 = cam.p(fork);
-    const w0 = 30 * cam.zoom, w1 = 14 * cam.zoom;
-    const shape = [{ x: b0.x - w0, y: b0.y }, { x: b1.x - w1, y: b1.y }, { x: b1.x + w1, y: b1.y }, { x: b0.x + w0, y: b0.y }];
-    poly(ctx, shape, null, INK, ink * 2.4);
-    poly(ctx, shape, BARK.figueira[0]);
-    ctx.strokeStyle = 'rgba(40, 30, 20, 0.5)';
-    ctx.lineWidth = Math.max(1, 2 * cam.zoom);
-    for (let k = 0; k < 3; k++) {
-      const f = (k + 1) / 4;
-      ctx.beginPath();
-      ctx.moveTo(b0.x - w0 + 2 * w0 * f, b0.y);
-      ctx.lineTo(b1.x - w1 + 2 * w1 * f, b1.y);
-      ctx.stroke();
-    }
-    crownPaint(ctx, cam, t, z, ink, CANOPY.mata, false);
   }
   /** Varal na laje: dois postinhos, o fio caindo um pouco e as roupas penduradas (viradas para a frente). */
   function clothesLine(ctx, cam, b, z, ink) {
@@ -1086,16 +1271,17 @@
       const rx = b.x0 + W * 0.28, ry = b.y0 + D * 0.42;
       items.push({ k: rx + ry, draw: () => roofTree(ctx, cam, rx, ry, z, ink) });
     }
-    if (b.treeInside) {
-      // a árvore nasceu dentro da casa e rompeu a laje (etapa 4c, a casa abandonada do terreno do fundo)
-      const rx = b.x0 + W * 0.48, ry = b.y0 + D * 0.5;
-      items.push({ k: rx + ry, draw: () => treeThroughRoof(ctx, cam, b, rx, ry, z, ink) });
-    }
+    // a árvore nasceu dentro da casa e rompeu a laje (etapa 4c, a casa abandonada do terreno do fundo); com a árvore
+    // de verdade do mapa (`innerTree`), o buraco fica em volta dela
+    const holeX = b.innerTree ? b.innerTree.x : b.x0 + W * 0.48, holeY = b.innerTree ? b.innerTree.y : b.y0 + D * 0.5;
+    if (b.treeInside) items.push({ k: holeX + holeY, draw: () => treeThroughRoof(ctx, cam, b, holeX, holeY, z, ink) });
     if (b.plants && PD.flora) {
       const r = M.rng(Math.round(b.x0 * 7 + b.y0 * 3));
       for (let k = 0; k < 6 + Math.floor(r() * 3); k++) {
         const x = b.x0 + W * (0.08 + r() * 0.84), y = b.y0 + D * (0.1 + r() * 0.8);
         if (Math.hypot(x - tx, y - ty) < 100) continue;
+        // a árvore que sai de dentro: a laje em volta do buraco fica limpa (senão parecia árvore plantada no telhado)
+        if (b.treeInside && Math.hypot(x - holeX, y - holeY) < 170) continue;
         const kind = r() < 0.55 ? 'planta-samambaia' : 'arbusto';
         const d = { kind, x, y, r: kind === 'arbusto' ? 38 + r() * 18 : 34 + r() * 18, wild: true };
         const fl = PD.flora.small[kind];
@@ -1727,10 +1913,24 @@
     'ipe-roxo': ['#6b5541', '#4a3a2b'],
   };
   class TreeTrunk extends Prop {
+    draw(ctx, t) {
+      // a árvore que nasceu dentro da casa (world.js liga `house`): o tronco só aparece com a casa cortada
+      if (this.house) {
+        const k = this.house.cutK || 0;
+        if (k <= 0) return;
+        const a = this.alpha;
+        this.alpha = a * k;
+        super.draw(ctx, t);
+        this.alpha = a;
+        return;
+      }
+      super.draw(ctx, t);
+    }
     constructor(world, t) {
       const rr = Math.max(22, t.trunk || 0);
-      // a figueira é larga (tronco de 2 m e galhos): fica transparente se esconder o personagem, como a copa
-      super(world, { x0: t.x - rr, x1: t.x + rr, y0: t.y - rr, y1: t.y + rr }, { fades: t.kind === 'figueira' });
+      // a figueira é larga (tronco de 2 m e galhos): fica transparente se esconder o personagem, como a copa (e a
+      // árvore que nasceu dentro de casa, que tem o pé dela)
+      super(world, { x0: t.x - rr, x1: t.x + rr, y0: t.y - rr, y1: t.y + rr }, { fades: t.kind === 'figueira' || !!t.inside });
       this.t = t;
       this.collider = { type: 'circle', x: t.x, y: t.y, r: t.trunk ? t.trunk + 4 : 26 };
     }
@@ -1738,7 +1938,7 @@
       const t = this.t;
       const fl = PD.flora && PD.flora.tree[t.kind];
       if (fl && fl.trunkBox) return fl.trunkBox(this.cam, t, this.z0);
-      const roots = t.kind === 'figueira' ? (t.trunk || 60) * 4.2 : 40;
+      const roots = t.kind === 'figueira' || t.inside ? (t.trunk || 60) * 4.2 : 40;
       return bbox([this.P(t.x, t.y, this.z0), this.P(t.x, t.y, this.z0 + t.h * 0.72)], Math.max(40, roots) * this.cam.zoom);
     }
     shadow(path) {
@@ -1760,7 +1960,9 @@
       const twist = t.kind === 'seca' ? 10 : t.trunk ? 3 : 6;
       const lean = (k) => Math.sin(k * 1.3 + t.x) * twist;
       const bark = BARK[t.kind];
-      if (t.kind === 'figueira') {
+      // a árvore que nasceu dentro da casa abandonada tem o pé da figueira (o tronco abrindo nas raízes que rompem o
+      // chão de dentro, as mesmas do chão: as que o dono aprovou na Figueira da Esquina)
+      if (t.kind === 'figueira' || t.inside) {
         this._figPaint(ctx);
         return;
       }
@@ -2854,17 +3056,23 @@
 
   class Small extends Prop {
     draw(ctx, time) {
-      // móvel de dentro de casa (prateleira, geladeira, balcão, engradado): só com a casa cortada (herói dentro)
+      // móvel de dentro de casa (prateleira, geladeira, sofá, cama...): só com a casa cortada (herói dentro)
+      let k = 1;
       if (this.house) {
-        const k = this.house.cutK || 0;
+        k = this.house.cutK || 0;
         if (k <= 0) return;
-        const a = this.alpha;
-        this.alpha = a * k;
-        super.draw(ctx, time);
-        this.alpha = a;
+      }
+      // o que se mexe (o Joaquim respirando) é desenhado a cada quadro, sem a imagem pronta
+      if (this.fl && this.fl.live) {
+        ctx.globalAlpha = this.alpha * k;
+        this.fl.live(ctx, this.cam, this.d, this.z0, time);
+        ctx.globalAlpha = 1;
         return;
       }
+      const a = this.alpha;
+      this.alpha = a * k;
       super.draw(ctx, time);
+      this.alpha = a;
       if (this.d.kind === 'fogueira') this._flames(ctx, time);
     }
     constructor(world, d) {

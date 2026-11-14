@@ -21,11 +21,15 @@ import '../../../prototipos/pindorama-25d/js/world/flora.js';
 import '../../../prototipos/pindorama-25d/js/world/city.js';
 import '../../../prototipos/pindorama-25d/js/world/fundo.js';
 import '../../../prototipos/pindorama-25d/js/world/parque.js';
+// as casas com interior: móveis, pisos e paredes de dentro (família, vó, abandonada)
+import '../../../prototipos/pindorama-25d/js/world/casas.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';
 import '../../../prototipos/pindorama-25d/js/creatures/jararaca.js';
 import '../../../prototipos/pindorama-25d/js/creatures/xiovanna.js';
+// o Joaquim, o gato da vó
+import '../../../prototipos/pindorama-25d/js/creatures/gato.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
 

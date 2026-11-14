@@ -23,6 +23,8 @@
   }
   const kindOf = (o) => o.type || o.class || '';
   const rect = (o) => ({ x0: o.x * CM, y0: o.y * CM, x1: (o.x + o.width) * CM, y1: (o.y + o.height) * CM });
+  // móveis das casas com interior (o desenho fica em casas.js)
+  const HOME_FURNITURE = new Set(['pia', 'fogao', 'filtro', 'mesa-cozinha', 'estante', 'sofa', 'cristaleira', 'mesa-redonda', 'maquina-costura', 'cama']);
   /** A caixa em pedaços de até `max` cm ao longo do lado comprido (coisa grande vira várias imagens menores). */
   function pieces(r, max) {
     const alongX = r.x1 - r.x0 >= r.y1 - r.y0;
@@ -74,6 +76,13 @@
     for (const o of objs('chao')) {
       const k = kindOf(o);
       const pr = props(o);
+      if (k === 'entulho') {
+        // o monte de entulho (com `cadeiraCaida`): tijolos e a cadeira têm altura, então é um objeto (casas.js)
+        const r0 = o.width || o.height ? rect(o) : null;
+        const ex = r0 ? (r0.x0 + r0.x1) / 2 : o.x * CM, ey = r0 ? (r0.y0 + r0.y1) / 2 : o.y * CM;
+        map.props.push({ kind: 'entulho', x: ex, y: ey, r: 45, chair: !!pr.cadeiraCaida });
+        continue;
+      }
       if (o.polyline) {
         const pts = o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
         // linhas da rua (meio-fio, faixa-rua, rachadura, raiz): altura, tracejada, apagada, sarjeta e mato
@@ -103,7 +112,10 @@
       const x = o.x * CM;
       const y = o.y * CM;
       if (k === 'arvore') {
-        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo, hugs: pr.abraca || null });
+        // `dentroDaCasa`: a árvore que nasceu dentro da casa abandonada (o tronco só aparece com a casa cortada; a casa
+        // desenha o buraco da laje em volta dela e não um segundo tronco)
+        // (e rompe o chão de dentro: o pé e as raízes são os da Figueira da Esquina, os que o dono aprovou)
+        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo || !!pr.dentroDaCasa, hugs: pr.abraca || null, inside: !!pr.dentroDaCasa });
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {
@@ -124,6 +136,15 @@
         // 0 = leste), `caixa` (balcão com a caixa registradora), `pilha` (quantos engradados), `cor`
         const r0 = o.width || o.height ? rect(o) : { x0: x - 20, x1: x + 20, y0: y - 15, y1: y + 15 };
         map.props.push({ kind: k, ...r0, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, register: !!pr.caixa, stack: pr.pilha || 3, color: pr.cor || null });
+      } else if (HOME_FURNITURE.has(k)) {
+        // móveis das casas com interior (casas.js): `altura`, `olhando` (90 = sul, 0 = leste, 270 = norte, 180 = oeste)
+        // e os detalhes: `panela` (fogão), `tv` (estante), `cadeiras` e `toalha` (mesas), `cor`, `croche`, `rasgado` e
+        // `mato` (sofá), `colcha` (cama)
+        const r0 = o.width || o.height ? rect(o) : { x0: x - 25, x1: x + 25, y0: y - 25, y1: y + 25 };
+        map.props.push({ kind: k, ...r0, x: (r0.x0 + r0.x1) / 2, y: (r0.y0 + r0.y1) / 2, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, pot: !!pr.panela, tv: !!pr.tv, chairs: pr.cadeiras || 0, cloth: pr.toalha || null, color: pr.cor || null, doily: !!pr.croche, torn: !!pr.rasgado, weeds: !!pr.mato, quilt: pr.colcha || null });
+      } else if (k === 'gato') {
+        // o gato da casa (o Joaquim, da vó; creatures/gato.js): `nome`, `cor`, `manchas` e `tamanho`; dorme no sofá
+        map.props.push({ kind: 'gato', x, y, r: 20, name: pr.nome || o.name || '', color: pr.cor || null, marks: pr.manchas || null, size: pr.tamanho || null });
       } else if (k === 'semaforo') {
         // semáforo de rua (ponto): `altura`, `olhando` (graus, para onde as luzes dão; 0 = leste), `quebrado` e `faiscas`
         map.trafficLights.push({ x, y, h: (pr.altura || 4.6) * 100, facing: pr.olhando || 0, broken: !!pr.quebrado, sparks: !!pr.faiscas });
@@ -159,6 +180,9 @@
           interior: !!pr.interior,
           // a árvore que nasceu dentro da casa abandonada e rompeu a laje (etapa 4c)
           treeInside: !!pr.arvoreDentro,
+          // a porta (de onde até onde, em x, na frente) e quem mora (as paredes de dentro: 'familia', 'vo', 'ninguem')
+          door: pr.portaDe != null && pr.portaAte != null ? { from: pr.portaDe * 100, to: pr.portaAte * 100 } : null,
+          resident: pr.morador || null,
         });
       } else if (k === 'predio') {
         // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje
@@ -262,7 +286,11 @@
       } else if (k === 'placa') {
         // placa de direção (ponto): `texto`, `seta` (norte, sul, leste, oeste) e `poste` (num poste; sem ele, no chão)
         // `tamanho: 'grande'` = a placa de madeira em dois postes da entrada do parque; `mato` = musgo e cipó
-        map.props.push({ kind: 'placa', x, y, r: 14, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big: pr.tamanho === 'grande', weeds: !!pr.mato });
+        const big = pr.tamanho === 'grande';
+        // a grande tem 2,4 m de tábua ao longo de y: o pé dela no chão é a tábua inteira (com o pé de um ponto só, o
+        // gradil que ela encosta passava na frente dela no desenho)
+        const foot = big ? { x0: x - 7, x1: x + 16, y0: y - 120, y1: y + 120 } : {};
+        map.props.push({ kind: 'placa', x, y, r: 14, ...foot, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big, weeds: !!pr.mato });
       } else if (k === 'deque' || k === 'pinguela') {
         // dá para andar em cima: o lado comprido diz a direção
         map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100 });
@@ -287,6 +315,21 @@
         if (dd < bd) { bd = dd; best = p; }
       }
       if (best && bd < 800) best.hug = { x: t.x, y: t.y, trunk: t.trunk };
+    }
+    // casas com interior: a árvore de dentro (a casa abre o buraco da laje em volta dela), a geladeira de casa (a da
+    // Budega é a de bebidas) e o gato deitado no sofá (na altura do assento)
+    const within = (q, x, y) => x > q.x0 && x < q.x1 && y > q.y0 && y < q.y1;
+    for (const t of map.trees) {
+      if (!t.inside) continue;
+      const house = map.houses.find((q) => within(q, t.x, t.y));
+      if (house) house.innerTree = t;
+    }
+    for (const p of map.props) {
+      if (p.kind === 'geladeira') p.home = map.houses.some((q) => q.resident && within(q, (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2));
+      if (p.kind === 'gato') {
+        const sofa = map.props.find((q) => q.kind === 'sofa' && within(q, p.x, p.y));
+        p.perch = sofa ? (sofa.h || 90) * 0.5 : 0;
+      }
     }
     // fiação: cada trecho da polilinha liga os dois postes mais perto das pontas (os fios saem das cruzetas)
     const poleNear = (q) => {
