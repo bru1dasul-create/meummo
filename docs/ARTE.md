@@ -819,7 +819,7 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
 
-### Lote 2 da lista do dono de 14/11 (com o "pode" do dono; vai para a main com o "pode" de juntar)
+### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
 - **(10) Floresta dentro das casas**, com o mapa do [mundo] (`mundo/lote2-floresta-dentro`, 90e0059, juntado no meu
