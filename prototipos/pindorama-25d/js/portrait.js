@@ -6,18 +6,20 @@
 //     mode 'full': o corpo inteiro com a sombra no chão, fundo transparente (a mochila)
 //     yaw: para onde olha, em graus no chão (45 = de frente para a câmera; menos que isso vira para a direita da tela)
 //     dpr: px de verdade em 1 px de tela (o canvas já vem no tamanho de verdade); muda só a espessura das linhas
+//     weapon: o ícone da arma equipada; 'arco' = o Arco de Bambu na mão (o único que aparece no corpo, pedido do dono)
 //
-// O herói sai sem armadura e sem arma (pedido do dono): só o corpo, o cabelo, as penas e a tanga da classe.
+// O herói sai sem armadura (pedido do dono): o corpo, o cabelo, as penas, a tanga da classe e, se equipado, o arco.
 (function () {
   'use strict';
   const PD = (window.PD = window.PD || {});
   const DEG = Math.PI / 180;
 
   /** Corpo parado há um tempo: a respiração anda e as molas do cabelo e das penas descansam; olho aberto. */
-  function restingHero(yawDeg) {
+  function restingHero(yawDeg, weapon) {
     const ch = new PD.Character(0, 0, yawDeg * DEG);
     ch.faceYaw = yawDeg * DEG;
     ch.blinkIn = 1e9; // não pisca no meio do retrato
+    if (weapon === 'arco' && PD.equipment && PD.equipment.catalog.get('arco')) ch.equip('maoE', 'arco');
     for (let i = 0; i < 120; i++) ch.update(1 / 60, {}, null);
     ch.look.blink = 0;
     return ch;
@@ -45,7 +47,7 @@
     ctx.clearRect(0, 0, w, h);
     if (mode === 'head') background(ctx, w, h);
 
-    const ch = restingHero(yawDeg);
+    const ch = restingHero(yawDeg, opts.weapon);
     const cam = new PD.IsoCamera();
     cam.dpr = dpr;
     // tamanho: 'head' mostra uns 80 cm de altura (das penas ao peito); 'full', o corpo inteiro com folga
@@ -80,7 +82,7 @@
       ctx.ellipse(ground.x, ground.y, r, r * 0.42, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    painter.draw(ctx, rig, ch.look, {}, PD.classes ? PD.classes.appearanceOf(ch) : undefined);
+    painter.draw(ctx, rig, ch.look, ch.equipped, PD.classes ? PD.classes.appearanceOf(ch) : undefined);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     return true;
   }

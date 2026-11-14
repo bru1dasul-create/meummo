@@ -7,6 +7,8 @@ export interface HeroPortraitOptions {
   mode: 'head' | 'full';
   /** Para onde olha, em graus no chão (45 = de frente para a câmera). */
   yaw?: number;
+  /** O ícone da arma equipada ('arco': o Arco de Bambu na mão; as outras não aparecem no corpo). */
+  weapon?: string | null;
 }
 
 type PortraitFn = (canvas: HTMLCanvasElement, opts: HeroPortraitOptions & { dpr: number }) => boolean;

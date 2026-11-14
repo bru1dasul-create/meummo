@@ -1,7 +1,7 @@
 // Interface em HTML por cima do jogo: barra de informações e chat.
 
 import { GUARD_MAX_ENERGY } from '../shared/constants';
-import { actionIconUrl, guardIconUrl } from './actionArt';
+import { actionIconUrl, guardIconUrl, weaponActionIconUrl } from './actionArt';
 import { installCoinStyle } from './coinArt';
 import { drawHeroPortrait } from './heroPortrait';
 
@@ -259,6 +259,9 @@ export interface ActionDef {
 
 interface ActionButton {
   el: HTMLButtonElement;
+  def: ActionDef;
+  icon: HTMLImageElement;
+  label: HTMLSpanElement;
   cooldown: HTMLSpanElement;
   secs: HTMLSpanElement;
   shownSecs: number;
@@ -305,7 +308,7 @@ export class ActionBar {
       art.append(icon, secs);
       el.append(art, cooldown, label, key);
       this.root.append(el);
-      this.buttons.set(def.slot, { el, cooldown, secs, shownSecs: 0, readyAt: 0, duration: 0 });
+      this.buttons.set(def.slot, { el, def, icon, label, cooldown, secs, shownSecs: 0, readyAt: 0, duration: 0 });
 
       const down = (event: PointerEvent) => {
         event.preventDefault();
@@ -335,6 +338,19 @@ export class ActionBar {
         el.removeEventListener('contextmenu', noMenu);
       });
     }
+  }
+
+  /**
+   * Troca o nome e o ícone de um botão (o motor chama quando a arma muda: com o Arco de Bambu, o botão do estilingue vira
+   * `{ label: 'Arco', icon: 'arco' }`; sem ele, `{ label: 'Estilingue', icon: null }` volta ao de sempre).
+   */
+  setLook(slot: ActionSlot, look: { label?: string; icon?: string | null }): void {
+    const button = this.buttons.get(slot);
+    if (!button) return;
+    const label = look.label ?? button.def.label;
+    button.label.textContent = label;
+    button.el.title = `${label} (${button.def.key})`;
+    if (look.icon !== undefined) button.icon.src = (look.icon && weaponActionIconUrl(look.icon)) || actionIconUrl(slot);
   }
 
   setCooldown(slot: ActionSlot, readyAt: number, duration: number): void {

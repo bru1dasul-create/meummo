@@ -114,6 +114,15 @@ export function actionIconUrl(slot: ActionSlot): string {
   return url;
 }
 
+/**
+ * O ícone do botão de atirar com uma arma (o `icone` do item): com o Arco de Bambu, o arco com a flecha. Só no jogo
+ * 2.5D; null quando a arma não tem ícone próprio (aí fica o do estilingue).
+ */
+export function weaponActionIconUrl(icon: string): string | null {
+  if (!newWorld()) return null;
+  return icon === 'arco' ? paintedActionIcon('bow') : null;
+}
+
 /** O ícone da defesa (jogo 2.5D): o botão dela é do motor, a HUD só pinta. */
 export function guardIconUrl(): string {
   return paintedActionIcon('guard');

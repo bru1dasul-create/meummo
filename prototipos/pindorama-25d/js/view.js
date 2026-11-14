@@ -8,6 +8,7 @@
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
 //   action(id, tipo, angulo)  golpes e reações; por enquanto só nas criaturas (js/creatures: o sagui)
+//   gear(id, gear)            o que o jogador tem equipado (o ícone de cada parte): o arco (`weapon: 'arco'`) fica na mão
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
 //   talk(id, ms)              quem fala mexe a boca (e a sobrancelha) por `ms`, sem balão; 0 para
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
@@ -136,6 +137,22 @@
      * A forquilha do estilingue só aparece na mão enquanto ele puxa e solta (escolha do dono: no resto do tempo, mãos
      * livres — a regra "sem arma no personagem").
      */
+    /**
+     * O que o jogador tem equipado (o motor manda o `gear` dele: o ícone de cada parte). O Arco de Bambu fica sempre na
+     * mão (pedido do dono, 13/11: "o arco deve permanecer na mão, como um item / arma"); o resto não aparece no corpo.
+     */
+    gear(id, gear) {
+      const a = this.actors.get(id);
+      if (!a || !a.ch || a.creature) return;
+      a.weapon = gear && gear.weapon ? gear.weapon : null;
+      const ch = a.ch;
+      const busy = ch.attack && ch.attack.kind === 'slingshot';
+      if (a.weapon === 'arco') {
+        if (ch.equipped.maoE !== 'arco' && !busy) ch.equip('maoE', 'arco');
+      } else if (ch.equipped.maoE === 'arco' && !busy) ch.unequip('maoE');
+      ch._pose = null;
+    }
+
     _personAction(a, kind, yaw) {
       const ch = a.ch;
       const S = PD.slingshot;
@@ -145,8 +162,11 @@
       // parado (ou quase): o tranco do golpe trava as pernas por 0,22 s. Andando, o servidor não para o jogador, então o
       // desenho também não para (se parasse, ele ficaria para trás e depois correria para alcançar)
       const still = () => Math.hypot(a.target.x - ch.pos.x, a.target.y - ch.pos.y) < 45 && ch.speed < 80;
+      // com o arco na mão (o `gear` do jogador), é ele que atira; senão, a forquilha aparece só para o tiro
       const arm = () => {
-        if (ch.equipped.maoE !== 'estilingue') ch.equip('maoE', 'estilingue');
+        if (a.weapon === 'arco') {
+          if (ch.equipped.maoE !== 'arco') ch.equip('maoE', 'arco');
+        } else if (ch.equipped.maoE !== 'estilingue') ch.equip('maoE', 'estilingue');
         a.sling = true;
       };
       switch (kind) {
@@ -175,7 +195,7 @@
           if (!(slinging() && ch.attack.stage === 'charging')) {
             // tiro rápido (toque no monstro) ou o tiro de outro jogador: a puxada começa já no ponto de soltar
             S.start(ch, dir, { attackHeld: true });
-            ch.attack.age = S.RULES.minDraw;
+            ch.attack.age = (S.rulesOf ? S.rulesOf(ch) : S.RULES).minDraw;
           }
           const at = ch.attack;
           at.dir = dir;
@@ -316,6 +336,9 @@
       if (a.sling && !(ch.attack && ch.attack.kind === 'slingshot')) {
         if (ch.equipped.maoE === 'estilingue') ch.unequip('maoE');
         a.sling = false;
+        // o equipamento pode ter mudado no meio do tiro: o arco volta (ou sai) agora
+        if (a.weapon === 'arco' && ch.equipped.maoE !== 'arco') ch.equip('maoE', 'arco');
+        else if (a.weapon !== 'arco' && ch.equipped.maoE === 'arco') ch.unequip('maoE');
       }
       // parado: vira para o ângulo que veio
       if (d <= 3 && a.angle !== undefined) ch.faceYaw = a.angle;

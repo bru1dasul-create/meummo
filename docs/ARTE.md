@@ -709,6 +709,29 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - Conferi com o mapa do [mundo] numa cópia à parte (`foto-casas.cjs`: leva o herói à porta pelo painel e entra
   andando): PC e celular em pé.
 
+### Arco de Bambu (14/11): o desenho
+- Decisões do dono (13/11): o arco fica **sempre na mão** quando equipado; o mesmo botão do estilingue; sem munição.
+- `js/slingshot.js`: o item `arco` (mão esquerda, ocupa as duas) e as regras dele (`BOW_RULES`: carga de 1,5 s, a do
+  servidor); `rulesOf(ch)`, `isBow(ch)`. Mesmo puxar e soltar do estilingue; a pose muda: o braço do arco esticado na
+  altura do ombro, a mão da corda pinçando atrás da empunhadura (24 a 62 cm, com a carga), o cotovelo alto e para
+  trás. `bowGeometry`: o eixo inclinado para a frente em descanso (a ponta de baixo longe do chão) e quase em pé
+  puxando; os braços de bambu curvam com a puxada; a corda vai das pontas ao ponto pinçado; a flecha (74 cm, penas
+  vermelha e branca, ponta de pedra) sai do entalhe pela empunhadura. O `renderer.js` desenha o arco no lugar do item
+  genérico, como a forquilha.
+- `view.js`: `gear(id, gear)` (o motor chama ao aparecer e na mensagem `gear`): com `weapon: 'arco'`, o arco fica
+  equipado; o `arm()` do tiro usa o arco em vez da forquilha; no fim do tiro a forquilha sai e o arco fica.
+- `src/client/novo/projectileArt.ts`: `drawProjectile` (a flecha voando, com a sombra e o rastro), `projectileEnded`
+  e `drawLanded` (cravada no chão, meio enterrada, com a poeira da batida; some em ~2 s) e `landedBusy` (a camada do
+  combate se esconde quando não tem nada: com flecha no chão ela tem que continuar). O fim do tiro vem do servidor
+  (`shot_end`, `hit` 0 = não acertou ninguém): é ali que a flecha crava (o tiro some antes do fim do alcance do
+  desenho). A idade negativa (o relógio do quadro uns ms antes) conta como recém-cravada.
+- Ícones (`paintedIcons.ts`): `arco` (o item: bambu com os nós, a empunhadura e uma pena vermelha) e o botão `bow`
+  (o arco com a flecha, no brilho verde dos botões); `weaponActionIconUrl` (`actionArt.ts`) e `ActionBar.setLook` (`ui.ts`).
+- O retrato da mochila recebe `weapon` (`heroPortrait.ts` → `PD.portrait`): o herói segura o arco.
+- Conferi com uma ligação local só para o teste (o `icone` `arco` e as chamadas no `combat.ts` e no `engine.ts`,
+  desfeitas depois): o painel dá o arco, a mochila equipa, o arco vai para a mão, o botão vira "Arco", a flecha voa e
+  crava. Receitas: `arco-pose.cjs` (`view.gear` direto), `arco-jogo.cjs`, `arco-defesa.cjs`.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
@@ -802,9 +825,8 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura]:** o comportamento do Joaquim (acordar, andar, miar, carinho); os sons. O arco: as regras já estão na
-  `main` (f9f1b3c); ela liga `projectileArt.ts` e o `setLook` quando o meu desenho do arco entrar e troca o ícone do
-  item para `arco`.
+- **[estrutura]:** o comportamento do Joaquim (acordar, andar, miar, carinho); os sons. O arco: ligar o desenho
+  (veja o roteiro: o `icone` `arco`, as chamadas do `projectileArt.ts` no `combat.ts` e o `setLook`).
 - **[mundo]:** junta o `mundo/casas-interior` (e o `mundo/placa-parque`) depois do meu ramo.
 - **[mundo]:** a Dona Iracema aparecia por cima do balcão da barraquinha (o balcão desenhado na frente das pernas).
   O [mundo] anotou o pedido; confira no jogo se ficou certo.
@@ -813,10 +835,8 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
-0. **O arco (próximo, aprovado em 13/11):** `view.gear(id, gear)` com o arco sempre na mão esquerda, a pose de puxar a
-   corda até o rosto (o arco enverga com a carga), `src/client/novo/projectileArt.ts` (`drawProjectile`,
-   `projectileEnded`, `drawLanded`: a flecha voando e cravada), o ícone `arco` (item e botão), `ActionBar.setLook` e o
-   herói da mochila com o arco. Sem sons (são da [estrutura]).
+0. **Joaquim acordado** (quando a [estrutura] fizer o comportamento): sentado, andando, miando, recebendo carinho.
+   Pintar também o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
 1. **Piloto do estilo desenhado** com o Nano Banana (esperando os exemplos do dono, veja acima).
 2. **Monstros antigos no capricho novo** (`monsterPaint.ts`): sagui, jararaca, saci, corpo-seco, capelobo e Mula sem
    Cabeça. Hoje são 16x16 e menores que um jogador. Se o piloto aprovar o estilo desenhado, faça já nesse estilo.

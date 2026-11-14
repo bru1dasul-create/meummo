@@ -493,9 +493,10 @@
       if (equipped && Object.keys(equipped).length && PD.equipment) {
         // cada peça entra logo depois da parte do corpo que ela veste
         const eq = PD.equipment.drawItems(this, rig, equipped, items);
-        if (PD.slingshot && equipped.maoE === 'estilingue') {
-          eq.items = eq.items.filter(item => item.name !== 'equip:estilingue');
-          eq.items.push(...PD.slingshot.drawItems(this, rig, look, items.find(item => item.name === 'mao' && item.group === 'mao0')));
+        if (PD.slingshot && (equipped.maoE === 'estilingue' || equipped.maoE === 'arco')) {
+          const weapon = equipped.maoE;
+          eq.items = eq.items.filter(item => item.name !== 'equip:' + weapon);
+          eq.items.push(...PD.slingshot.drawItems(this, rig, look, items.find(item => item.name === 'mao' && item.group === 'mao0'), weapon));
         }
         if (eq.hides.size) items = items.filter((it) => !eq.hides.has(it.name));
         for (const e of eq.items) {

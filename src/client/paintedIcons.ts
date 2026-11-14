@@ -185,6 +185,62 @@ function paintShot(ctx: CanvasRenderingContext2D): void {
   sparkle(ctx, 70, 52, 5, t);
 }
 
+/**
+ * Atirar com o Arco de Bambu na mão (o botão do estilingue troca para este, ActionBar.setLook): o arco curvado com a
+ * barriga para cima e para a direita, a corda puxada para trás e a flecha encaixada apontando para o alvo.
+ */
+function paintBow(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.verde;
+  slotBackground(ctx, t, 13);
+  const T1 = [16, 52] as const;
+  const T2 = [76, 112] as const;
+  const C = [96, 32] as const;
+  const N = [34, 94] as const;
+  // a corda: das pontas até o entalhe da flecha, puxada para trás
+  const string = new Path2D();
+  string.moveTo(T1[0], T1[1]);
+  string.lineTo(N[0], N[1]);
+  string.lineTo(T2[0], T2[1]);
+  glowStroke(ctx, string, 2.6, THEMES.fogo, [16, 52, 76, 112], 8);
+  // o arco
+  const bow = new Path2D();
+  bow.moveTo(T1[0], T1[1]);
+  bow.quadraticCurveTo(C[0], C[1], T2[0], T2[1]);
+  glowStroke(ctx, bow, 9, t, [16, 32, 96, 112]);
+  const tips = new Path2D();
+  tips.arc(T1[0], T1[1], 5.5, 0, Math.PI * 2);
+  tips.moveTo(T2[0] + 5.5, T2[1]);
+  tips.arc(T2[0], T2[1], 5.5, 0, Math.PI * 2);
+  glowFill(ctx, tips, t, [10, 46, 82, 118], 8, 2);
+  // a flecha: a haste do entalhe até a ponta, as penas atrás e a ponta de pedra
+  const ux = Math.SQRT1_2;
+  const uy = -Math.SQRT1_2;
+  const tip = [N[0] + ux * 82, N[1] + uy * 82] as const;
+  const shaft = new Path2D();
+  shaft.moveTo(N[0], N[1]);
+  shaft.lineTo(tip[0] - ux * 10, tip[1] - uy * 10);
+  glowStroke(ctx, shaft, 4.2, t, [N[0], tip[1], tip[0], N[1]], 10);
+  const fl = new Path2D();
+  for (const s of [-1, 1]) {
+    const a0 = [N[0] + ux * 5, N[1] + uy * 5];
+    const a1 = [N[0] + ux * 20, N[1] + uy * 20];
+    fl.moveTo(a0[0]!, a0[1]!);
+    fl.lineTo(a0[0]! - uy * s * 8, a0[1]! + ux * s * 8);
+    fl.lineTo(a1[0]! - uy * s * 3, a1[1]! + ux * s * 3);
+    fl.lineTo(a1[0]!, a1[1]!);
+    fl.closePath();
+  }
+  glowFill(ctx, fl, THEMES.fogo, [N[0] - 8, N[1] - 28, N[0] + 28, N[1] + 8], 10, 1.8);
+  const head = new Path2D();
+  head.moveTo(tip[0], tip[1]);
+  head.lineTo(tip[0] - ux * 14 - uy * 7, tip[1] - uy * 14 + ux * 7);
+  head.lineTo(tip[0] - ux * 10, tip[1] - uy * 10);
+  head.lineTo(tip[0] - ux * 14 + uy * 7, tip[1] - uy * 14 - ux * 7);
+  head.closePath();
+  glowFill(ctx, head, t, [tip[0] - 20, tip[1] - 6, tip[0] + 6, tip[1] + 20], 18, 2.2);
+  sparkle(ctx, tip[0] - 2, tip[1] + 2, 5, t);
+}
+
 /** Bordunada: a borduna (clava) girando, com o rastro do golpe. */
 function paintClub(ctx: CanvasRenderingContext2D): void {
   const t = THEMES.fogo;
@@ -386,10 +442,11 @@ function paintGuard(ctx: CanvasRenderingContext2D): void {
   ctx.restore();
 }
 
-export type PaintedAction = 'shot' | 'skill0' | 'skill1' | 'dash' | 'guard';
+export type PaintedAction = 'shot' | 'skill0' | 'skill1' | 'dash' | 'guard' | 'bow';
 
 const ACTION_PAINTERS: Record<PaintedAction, (ctx: CanvasRenderingContext2D) => void> = {
   shot: paintShot,
+  bow: paintBow,
   skill0: paintClub,
   skill1: paintBreath,
   dash: paintDodge,
@@ -443,6 +500,121 @@ function shine(ctx: CanvasRenderingContext2D, path: Path2D, alpha = 0.7): void {
   ctx.save();
   ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
   ctx.fill(path);
+  ctx.restore();
+}
+
+/**
+ * O Arco de Bambu (o item, na mochila e na loja): bambu do brejo curvado no fogo, com os nós, a empunhadura de couro com
+ * uma pena vermelha amarrada e a corda de fibra de tucum.
+ */
+function paintBowItem(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 62, 112, 42);
+  const A = [40, 12] as const;
+  const B = [38, 116] as const;
+  const C = [116, 62] as const;
+  const at = (u: number): [number, number] => [
+    (1 - u) * (1 - u) * A[0] + 2 * (1 - u) * u * C[0] + u * u * B[0],
+    (1 - u) * (1 - u) * A[1] + 2 * (1 - u) * u * C[1] + u * u * B[1],
+  ];
+  const tangent = (u: number): [number, number] => {
+    const dx = 2 * (1 - u) * (C[0] - A[0]) + 2 * u * (B[0] - C[0]);
+    const dy = 2 * (1 - u) * (C[1] - A[1]) + 2 * u * (B[1] - C[1]);
+    const d = Math.hypot(dx, dy) || 1;
+    return [dx / d, dy / d];
+  };
+  // a corda (atrás do bambu)
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 4.2;
+  ctx.beginPath();
+  ctx.moveTo(A[0] + 2, A[1] + 3);
+  ctx.lineTo(B[0] + 2, B[1] - 3);
+  ctx.stroke();
+  ctx.strokeStyle = '#efe6cc';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+  // o bambu: contorno, o corpo com a luz e os nós
+  const limb = new Path2D();
+  limb.moveTo(A[0], A[1]);
+  limb.quadraticCurveTo(C[0], C[1], B[0], B[1]);
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 14;
+  ctx.stroke(limb);
+  const g = ctx.createLinearGradient(40, 0, 100, 0);
+  g.addColorStop(0, '#f2dc98');
+  g.addColorStop(0.5, '#c9a24e');
+  g.addColorStop(1, '#8a6a2a');
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 8.6;
+  ctx.stroke(limb);
+  ctx.strokeStyle = 'rgba(255, 248, 220, 0.55)';
+  ctx.lineWidth = 2.2;
+  ctx.save();
+  ctx.translate(-2, 0);
+  ctx.stroke(limb);
+  ctx.restore();
+  for (const u of [0.14, 0.3, 0.7, 0.86]) {
+    const [x, y] = at(u);
+    const [tx, ty] = tangent(u);
+    ctx.strokeStyle = '#6b4f1c';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(x - ty * 6, y + tx * 6);
+    ctx.lineTo(x + ty * 6, y - tx * 6);
+    ctx.stroke();
+  }
+  // as pontas (amarração escura onde a corda prende)
+  for (const [x, y] of [A, B]) {
+    ctx.fillStyle = '#3e2a14';
+    ctx.strokeStyle = '#24150a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 5.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  // a empunhadura de couro (no meio do arco) e a pena vermelha pendurada nela
+  const [gx, gy] = at(0.5);
+  const [tx, ty] = tangent(0.5);
+  ctx.save();
+  ctx.translate(gx, gy);
+  ctx.rotate(Math.atan2(ty, tx));
+  ctx.fillStyle = '#6b4024';
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(-12, -7.5, 24, 15, 4);
+  else ctx.rect(-12, -7.5, 24, 15);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(30, 16, 6, 0.6)';
+  ctx.lineWidth = 1.6;
+  for (let k = -8; k <= 8; k += 4) {
+    ctx.beginPath();
+    ctx.moveTo(k - 2, -7);
+    ctx.lineTo(k + 2, 7);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(gx + 2, gy + 6);
+  ctx.quadraticCurveTo(gx + 8, gy + 18, gx + 4, gy + 26);
+  ctx.stroke();
+  const f = new Path2D();
+  f.moveTo(gx + 4, gy + 25);
+  f.bezierCurveTo(gx + 14, gy + 30, gx + 16, gy + 46, gx + 9, gy + 54);
+  f.bezierCurveTo(gx + 2, gy + 46, gx - 2, gy + 32, gx + 4, gy + 25);
+  f.closePath();
+  body(ctx, f, '#ff8a6a', '#d83a22', '#8a1e10', [gx, gy + 25, gx + 16, gy + 54], '#24150a', 1.8);
+  ctx.strokeStyle = 'rgba(80, 10, 4, 0.7)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(gx + 5, gy + 27);
+  ctx.quadraticCurveTo(gx + 10, gy + 40, gx + 9, gy + 52);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -745,6 +917,7 @@ function paintBag(ctx: CanvasRenderingContext2D): void {
 }
 
 const ITEM_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
+  arco: paintBowItem,
   banana: paintBanana,
   agua_coco: paintCoconut,
   erva: paintRue,

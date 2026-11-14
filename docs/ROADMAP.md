@@ -396,10 +396,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   Goiabeira. Os números do tiro ficam no painel (aba Itens). Sons novos: a corda do arco rangendo na carga e o "tóim"
   ao soltar. Flecha provisória (uma haste na direção do voo) até a da [arte]; ícone provisório `estilingue` até o
   `arco` dela. Protocolo 29. Conferido no PC e no celular
-- [ ] **[arte]** Arco de Bambu, o desenho: o ícone `arco` (item e botão; aí a [estrutura] troca o `icone` do
-  `arco_bambu`), o arco sempre na mão (`view.gear(id, gear)`, que o motor já chama), a pose do arco no
-  `sling-pull`/`shoot`, a flecha voando e cravada (`projectileArt.ts`: a [estrutura] liga as três funções no `combat.ts`
-  quando o arquivo entrar) e o `actionBar.setLook` (idem)
+- [x] **[arte]** Arco de Bambu, o desenho (14/11): o ícone `arco` (o item pintado na mochila e na loja, o botão de
+  atirar com o arco; o `GEAR_ART.arco` do jogo antigo já existia), o arco sempre na mão (`view.gear(id, gear)`: bambu
+  com os nós, empunhadura de couro, corda de tucum; parado, andando, correndo e na defesa), a pose de arqueiro no
+  `sling-pull`/`shoot` (o braço do arco esticado, a corda até o rosto, o arco envergando com a carga, a flecha encaixada
+  com as penas; as regras do arco no `slingshot.js`: carga de 1,5 s), o herói da mochila com o arco, a flecha voando e
+  cravada no chão (`projectileArt.ts`) e o `actionBar.setLook`. **Falta a [estrutura] ligar:** trocar o `icone` do
+  `arco_bambu` para `arco`; no `combat.ts`, `drawProjectile` antes da bolinha, `projectileEnded` no `endShot` quando o
+  `shot_end` vem com `hit` 0 (e no fim do alcance), `drawLanded` a cada quadro e `landedBusy(agora)` no `busy()`; e o
+  `setLook('shot', ...)` quando a sua arma muda
 - [ ] **[estrutura]** Arco e estilingue de goiabeira caindo dos bichos novos (quando eles entrarem)
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com

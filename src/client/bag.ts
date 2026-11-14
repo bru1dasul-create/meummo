@@ -194,8 +194,10 @@ export class Bag {
       // só dá para desenhar com a mochila aberta (o canvas precisa ter tamanho na tela)
       const yaw = HERO_TURNS[this.dollTurn % HERO_TURNS.length]!;
       const box = this.heroCanvas.getBoundingClientRect();
-      const key = `heroi|${yaw}|${Math.round(box.width)}x${Math.round(box.height)}`;
-      if (this.isOpen && key !== this.dollKey && drawHeroPortrait(this.heroCanvas, { mode: 'full', yaw })) this.dollKey = key;
+      // a arma equipada (o arco aparece na mão do boneco, como no mundo)
+      const weapon = gearLookOf(this.state.equipped, this.items).weapon ?? null;
+      const key = `heroi|${yaw}|${weapon}|${Math.round(box.width)}x${Math.round(box.height)}`;
+      if (this.isOpen && key !== this.dollKey && drawHeroPortrait(this.heroCanvas, { mode: 'full', yaw, weapon })) this.dollKey = key;
       return;
     }
     const gear = gearLookOf(this.state.equipped, this.items);
