@@ -551,7 +551,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
   as áreas e a [arte] desenha
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
-  comportamento, o [mundo] marca a área e a [arte] anima
+  comportamento, o [mundo] marca a área e a [arte] anima. Parte da [arte] feita (14/11): a criatura `capivara`
+  (`js/creatures/capivara.js`, o desenho da capivara do cenário em bolas): anda com as patas em diagonal e o corpo
+  subindo e descendo, corre (passada aberta), parada pasta (a cabeça desce e mastiga) e olha em volta, e deita
+  (ações `sleep`/`deitar` e `wake`/`levantar`; `eat`/`pastar` pasta na hora; `addActor` com `asleep` já aparece
+  deitada). Conferida no jogo posta pela tela de teste; prancha: `ferramentas/prancha-capivara.cjs`
 - [ ] **[estrutura + mundo + arte]** Mapa: o M abre o mapa completo, que só mostra o que você já andou, e um mini mapa.
   A [estrutura] guarda o explorado (no personagem) e a tecla; o [mundo] faz a imagem de cima de cada mapa; a [arte]
   desenha a janela e o mini mapa

@@ -851,6 +851,14 @@ andando, (10) floresta dentro das casas.
   mais; meio apagada ou quase parada, inteira). `PD.View.setWind(força, ângulo)`. Medido no zoom 1 (6 copas): parado
   1,1 px, brisa 2,6, forte 8,9; quadro médio 22 a 27 ms, igual ao jogo parado. Conferir: `vento.cjs` (scratchpad),
   que grava o vídeo com a legenda e mede.
+- **(9) Capivaras andando** (parte da arte; o comportamento é da [estrutura], a área do [mundo]):
+  `js/creatures/capivara.js` (`PD.creatures.define('capivara')`, no `arte.ts` e no `view-scripts.json`): as fatias da
+  capivara do cenário (corpo de barril de -48 a +30 cm, cabeça de +30 a +60 girando em volta do pescoço), as 4 patas
+  em diagonal (passada de 64 cm; correndo, mais aberta), o corpo sobe e desce; parada mais de 1,2 s, pasta quando o
+  ruído deixa (a cabeça desce 55° e mastiga; as orelhas ficam da cor da cabeça); deitada (`lie`), o corpo desce 12 cm
+  e as patas se recolhem. Ações: `sleep`/`deitar`, `wake`/`levantar`, `eat`/`pastar`, `dash`; `setAsleep`. Conferir:
+  `ferramentas/prancha-capivara.cjs saida.png` e, no jogo, `capivara-jogo.cjs` (scratchpad: `PD.view.addActor` com
+  `kind: 'pet', type: 'capivara'`).
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
