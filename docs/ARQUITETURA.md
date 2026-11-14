@@ -215,13 +215,16 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
 ## Itens e mochila
 - Os tipos de item vêm de `data/items.json` (lido por `src/server/items.ts`) e vão para o navegador no `welcome`.
   O servidor confere ao ligar se todo item que os monstros deixam existe.
-- Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro: os itens vão direto para
-  a mochila dele (`loot` para o efeito do item voando, `inv` com a mochila nova). Mochila cheia: o item se perde,
-  com aviso. Item raro ou lendário salva o personagem na hora.
+- Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro. Desde 14/11 (escolha do
+  dono) os itens caem no chão, em volta de onde o monstro estava (`giveLoot`: o ouro no lugar dele, cada item num
+  lugar livre ao lado), e o jogador pega passando por cima (abaixo). O `loot` (item voando direto para a mochila)
+  não é mais mandado. Ao pegar: `pickup`, "Você pegou: ..." no chat e o anúncio para todos do item lendário; item
+  raro ou lendário salva o personagem na hora. No jogo 2.5D, `CombatLayer.drawDrops` desenha o ícone do item caindo
+  (com quique), "×N", e o brilho do raro (dourado) e do lendário (laranja, com facho de luz).
 - **Ouro:** cada um que ajudou também sorteia o `ouro` do monstro (`MonsterDef.gold`). O ouro fica em
   `Inventory.gold` (não ocupa espaço; máximo `MAX_GOLD` em `src/shared/items.ts`), vai no `inv` (`gold`) e é salvo
   dentro do JSON da mochila — save de antes do ouro entra com 0.
-- **No chão (`World.drops`):** o ouro sorteado e o item que não coube na mochila viram um `GroundDrop` com dono:
+- **No chão (`World.drops`):** o ouro e os itens sorteados (e o que o administrador deu e não coube) viram um `GroundDrop` com dono:
   só ele recebe o `drop` (posição, ouro ou item, tempo que falta) e só ele pega. A cada tick, o dono a
   `PICKUP_RANGE` tile (depois de `DROP_READY_MS`, o tempo das moedas caírem) pega: `pickup` (com o que pegou) e `inv`.
   Some em `GOLD_DROP_MS` / `ITEM_DROP_MS` (`drop_gone`). Item com a mochila ainda cheia continua no chão (avisa

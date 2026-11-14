@@ -13,7 +13,10 @@
 import type { CombatRules } from '../../shared/combatRules';
 import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
+import type { Rarity } from '../../shared/items';
 import type { GuardState } from '../../shared/protocol';
+import { coinUrl } from '../coinArt';
+import { itemIconUrl } from '../itemArt';
 import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
 
 /** A altura (metros) em que os projéteis voam no desenho. */
@@ -127,12 +130,25 @@ interface Flash {
   start: number;
 }
 
+/** Um item no chão (o desenho dele, a raridade para o brilho e quantos são). */
+export interface DropItem {
+  icon: string;
+  rarity: Rarity;
+  n: number;
+}
+
 interface GroundDrop {
   x: number;
   y: number;
   gold: boolean;
   until: number;
+  /** Quando apareceu (a queda do monstro até o chão). */
+  born: number;
+  item?: DropItem;
 }
+
+/** A queda do item: do alto do monstro até o chão, com um quique, nesse tempo (o servidor espera 0,4 s para deixar pegar). */
+const DROP_FALL_MS = 450;
 
 const FLOAT_MS = 900;
 /** Raio do anel da carga em volta do pé (metros). */
@@ -179,6 +195,8 @@ export class CombatLayer {
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
   private readonly windups = new Map<number, { start: number; until: number }>();
   private readonly drops = new Map<number, GroundDrop>();
+  /** Os desenhos dos itens no chão (e da moeda), um por ícone. */
+  private readonly dropImages = new Map<string, HTMLImageElement>();
   private readonly pets = new Map<number, ProvisionalPet>();
   /** O seu pé (para saber se você está dentro da casa do bicho). */
   private viewer: Point | null = null;
@@ -457,8 +475,15 @@ export class CombatLayer {
   }
 
   /** Ouro (ou item) no chão no tile (x, y), até `until`. */
-  addDrop(id: number, x: number, y: number, gold: boolean, until: number): void {
-    this.drops.set(id, { x, y, gold, until });
+  /** Ouro ou item no chão (x, y: o tile, como o servidor manda). De novo o mesmo (o resto que não coube): sem cair outra vez. */
+  addDrop(id: number, x: number, y: number, gold: boolean, until: number, item?: DropItem): void {
+    const born = this.drops.get(id)?.born ?? performance.now();
+    this.drops.set(id, { x, y, gold, until, born, ...(item ? { item } : {}) });
+  }
+
+  /** O que está no chão agora (para os testes): o tile e o pé (metros), ouro ou o item. */
+  dropList(): { id: number; x: number; y: number; feetX: number; feetY: number; gold: boolean; icon: string | null; n: number }[] {
+    return [...this.drops].map(([id, d]) => ({ id, x: d.x, y: d.y, feetX: d.x + 0.5, feetY: d.y + 0.7, gold: d.gold, icon: d.item?.icon ?? null, n: d.item?.n ?? 0 }));
   }
 
   removeDrop(id: number): void {
@@ -771,27 +796,85 @@ export class CombatLayer {
         this.drops.delete(id);
         continue;
       }
-      const x = drop.x + 0.5;
-      const y = drop.y + 0.7;
-      const m = meter(x, y);
-      const bob = 0.08 + 0.04 * Math.sin(now / 200 + id);
-      const shadow = screen(x, y, 0);
-      const p = screen(x, y, bob);
       // pisca no último segundo e meio, antes de sumir
       if (drop.until - now < 1500 && Math.floor(now / 150) % 2 === 0) continue;
+      // cada coisa num cantinho do lugar (dois bichos caídos no mesmo lugar: a moeda não cobre a banana); pegar continua
+      // valendo o lugar inteiro (é o servidor que decide)
+      const x = drop.x + 0.5 + (((id * 37) % 7) - 3) * 0.08;
+      const y = drop.y + 0.7 + (((id * 53) % 7) - 3) * 0.06;
+      const m = meter(x, y);
+      // caindo do monstro (com um quique); depois, flutua de leve
+      const age = (now - drop.born) / DROP_FALL_MS;
+      const z = age < 0.75 ? 0.9 * (1 - (age / 0.75) ** 2) : age < 1 ? 0.12 * Math.sin(((age - 0.75) / 0.25) * Math.PI) : 0.06 + 0.03 * Math.sin(now / 260 + id);
+      const shadow = screen(x, y, 0);
+      const p = screen(x, y, z);
+      const rarity = drop.item?.rarity ?? 'common';
+      if (rarity !== 'common') this.drawDropGlow(shadow, m, rarity, now, id);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
       ctx.beginPath();
-      ctx.ellipse(shadow.x, shadow.y, m * 0.16, m * 0.07, 0, 0, Math.PI * 2);
+      ctx.ellipse(shadow.x, shadow.y, m * 0.17, m * 0.075, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = drop.gold ? '#f2c14e' : '#b07a45';
-      ctx.strokeStyle = drop.gold ? '#8a5a12' : '#5a3a1c';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      if (drop.gold) ctx.ellipse(p.x, p.y - m * 0.06, m * 0.11, m * 0.11, 0, 0, Math.PI * 2);
-      else ctx.roundRect(p.x - m * 0.12, p.y - m * 0.2, m * 0.24, m * 0.2, m * 0.04);
-      ctx.fill();
-      ctx.stroke();
+      const size = Math.max(18, m * (drop.gold ? 0.3 : 0.46));
+      const img = this.dropImage(drop.gold ? null : (drop.item?.icon ?? null));
+      if (img) {
+        ctx.drawImage(img, p.x - size / 2, p.y - size * 0.92, size, size);
+      } else {
+        // o desenho ainda carregando (ou item sem desenho): a bolinha de ouro ou a caixinha
+        ctx.fillStyle = drop.gold ? '#f2c14e' : '#b07a45';
+        ctx.strokeStyle = drop.gold ? '#8a5a12' : '#5a3a1c';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (drop.gold) ctx.ellipse(p.x, p.y - m * 0.06, m * 0.11, m * 0.11, 0, 0, Math.PI * 2);
+        else ctx.roundRect(p.x - m * 0.12, p.y - m * 0.2, m * 0.24, m * 0.2, m * 0.04);
+        ctx.fill();
+        ctx.stroke();
+      }
+      // mais de um: "×2" no canto
+      if (drop.item && drop.item.n > 1) {
+        ctx.font = `800 ${Math.round(Math.max(11, size * 0.32))}px system-ui, sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(20, 12, 6, 0.9)';
+        ctx.fillStyle = '#fff3d6';
+        ctx.strokeText(`×${drop.item.n}`, p.x + size * 0.55, p.y);
+        ctx.fillText(`×${drop.item.n}`, p.x + size * 0.55, p.y);
+      }
     }
+  }
+
+  /** O brilho do item raro (dourado) e do lendário (laranja, com um facho de luz para ver de longe). */
+  private drawDropGlow(ground: Point, m: number, rarity: Rarity, now: number, id: number): void {
+    const ctx = this.ctx;
+    const legendary = rarity === 'legendary';
+    const pulse = 0.75 + 0.25 * Math.sin(now / 320 + id);
+    const color = legendary ? '255, 140, 40' : '255, 214, 90';
+    const r = m * (legendary ? 0.62 : 0.5) * pulse;
+    const glow = ctx.createRadialGradient(ground.x, ground.y, 0, ground.x, ground.y, r);
+    glow.addColorStop(0, `rgba(${color}, ${legendary ? 0.55 : 0.42})`);
+    glow.addColorStop(1, `rgba(${color}, 0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(ground.x, ground.y, r, r * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (!legendary) return;
+    const height = m * 2.4;
+    const beam = ctx.createLinearGradient(ground.x, ground.y, ground.x, ground.y - height);
+    beam.addColorStop(0, `rgba(${color}, ${0.4 * pulse})`);
+    beam.addColorStop(1, `rgba(${color}, 0)`);
+    ctx.fillStyle = beam;
+    ctx.fillRect(ground.x - m * 0.07, ground.y - height, m * 0.14, height);
+  }
+
+  /** O desenho do item (ou da moeda, com `icon` null), pronto para o canvas; null enquanto carrega. */
+  private dropImage(icon: string | null): HTMLImageElement | null {
+    const key = icon ?? '#ouro';
+    let img = this.dropImages.get(key);
+    if (!img) {
+      img = new Image();
+      img.src = icon ? itemIconUrl(icon) : coinUrl();
+      this.dropImages.set(key, img);
+    }
+    return img.complete && img.naturalWidth > 0 ? img : null;
   }
 
   private drawFlashes(now: number, screen: (x: number, y: number, z?: number) => Point): void {

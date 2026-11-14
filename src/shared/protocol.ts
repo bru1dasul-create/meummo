@@ -188,7 +188,9 @@ export type ServerMsg =
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila ou da loja)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
-  | { t: 'loot'; x: number; y: number; items: ItemStack[] } // estes itens do monstro que caiu em (x, y) foram para a sua mochila
+  // estes itens do monstro que caiu em (x, y) foram para a sua mochila. Desde 14/11 o servidor não manda mais: os itens
+  // caem no chão (`drop`) e você pega passando por cima (`pickup`); os jogos ainda sabem mostrar, se um dia voltar
+  | { t: 'loot'; x: number; y: number; items: ItemStack[] }
   /** Caiu no chão para você pegar (só você vê): ouro ou um item que não coube na mochila. Some em `ms`. */
   | { t: 'drop'; id: number; x: number; y: number; gold?: number; item?: ItemStack; ms: number }
   | { t: 'pickup'; id: number; gold?: number; item?: ItemStack } // você pegou (tudo ou parte de) o que estava no chão
