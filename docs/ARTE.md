@@ -864,9 +864,11 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura]:** o arco: ligar o desenho (veja o roteiro: o `icone` `arco`, as chamadas do `projectileArt.ts` no
-  `combat.ts` e o `setLook`). O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular entraram na main em
-  14/11 (avisei a [estrutura] para conferir o Joaquim no navegador).
+- **[estrutura]:** nada pendente da arte. O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
+  entraram na main em 14/11, e a [estrutura] ligou o arco (main 0765f59): conferi no jogo (a mochila equipa, o botão
+  vira "Arco", a flecha voa e crava). Observação dela: no zoom padrão a tela mostra uns 10 m do herói; a flecha com
+  carga cheia (13 m) pode cravar fora da tela (não é erro). Se o dono quiser, a câmera pode andar um pouco para onde
+  se mira enquanto puxa o arco (é da view: `follow`).
 - **[mundo]:** a Dona Iracema aparecia por cima do balcão da barraquinha (o balcão desenhado na frente das pernas).
   O [mundo] anotou o pedido; confira no jogo se ficou certo.
 - **[estrutura]** (ideia, não pedida ainda): o servidor só avisa o próprio jogador de que ele está encantado
