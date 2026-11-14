@@ -294,26 +294,36 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
   }
 
   // ----- os nomes: as áreas (pelo meio) e as coisas com nome (pelo ponto) -----
-  const tipoDe = (nome: string, area: boolean) => {
+  /** O tipo do nome (combinado com a [estrutura]: vila, agua, clareira, mata ou lugar). O `som` da área vale primeiro. */
+  const tipoDe = (o: TObj, area: boolean) => {
+    const nome = o.name ?? '';
     if (!area) return 'lugar';
     if (/vila/i.test(nome)) return 'vila';
-    if (/lago|rio|riacho|represa/i.test(nome)) return 'agua';
+    if (prop(o, 'som') === 'agua' || /lago|rio|riacho|represa|cachoeir/i.test(nome)) return 'agua';
     if (/clareira/i.test(nome)) return 'clareira';
-    return 'mata';
+    if (/^mata/i.test(nome)) return 'mata';
+    return 'lugar'; // o posto, a estrada...
   };
-  const nomes: MapImage['json']['nomes'] = [];
+  // a ordem conta: na janela do mapa, quando dois nomes se tocam, quem vem primeiro fica (combinado com a [estrutura]).
+  // Primeiro a vila e os lugares de ir (a loja, o portão, o posto, a estrada), depois as clareiras e a água, depois as
+  // matas (a do parque inteiro por último) e, no fim, as árvores, pedras e prédios com nome
+  const rank: { nome: string; x: number; y: number; tipo: string; ordem: number }[] = [];
   const round = (v: number) => Math.round(v * 100) / 100;
   for (const o of layer('areas')) {
     if (!o.name) continue;
-    nomes.push({ nome: o.name, x: round((o.x + (o.width ?? 0) / 2) / M), y: round((o.y + (o.height ?? 0) / 2) / M), tipo: tipoDe(o.name, true) });
+    const tipo = tipoDe(o, true);
+    const ordem = tipo === 'vila' ? 0 : tipo === 'lugar' ? 1 : tipo === 'clareira' || tipo === 'agua' ? 2 : /parque/i.test(o.name) ? 4 : 3;
+    rank.push({ nome: o.name, x: round((o.x + (o.width ?? 0) / 2) / M), y: round((o.y + (o.height ?? 0) / 2) / M), tipo, ordem });
   }
   // (o semáforo tem nome só para a [arte] achar ele; no mapa não é um lugar)
   const NOT_A_PLACE = new Set(['semaforo']);
   for (const o of scen) {
-    if (!o.name || NOT_A_PLACE.has(o.type ?? '') || nomes.some((n) => n.nome === o.name)) continue;
+    if (!o.name || NOT_A_PLACE.has(o.type ?? '') || rank.some((n) => n.nome === o.name)) continue;
     const [cx, cy] = o.point ? [o.x, o.y] : [o.x + (o.width ?? 0) / 2, o.y + (o.height ?? 0) / 2];
-    nomes.push({ nome: o.name, x: round(cx / M), y: round(cy / M), tipo: 'lugar' });
+    const ordem = o.type === 'casa' || o.type === 'portao' ? 1 : 5; // a loja e o portão são lugares de ir
+    rank.push({ nome: o.name, x: round(cx / M), y: round(cy / M), tipo: 'lugar', ordem });
   }
+  const nomes: MapImage['json']['nomes'] = rank.sort((a, b) => a.ordem - b.ordem).map(({ nome, x, y, tipo }) => ({ nome, x, y, tipo }));
 
   const png = new PNG({ width: cv.w, height: cv.h });
   png.data = Buffer.from(cv.data);

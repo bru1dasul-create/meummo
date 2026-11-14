@@ -4,16 +4,40 @@
   "altura": 180,
   "nomes": [
     {
+      "nome": "Vila do Capão",
+      "x": 72,
+      "y": 40,
+      "tipo": "vila"
+    },
+    {
+      "nome": "Posto Abandonado",
+      "x": 80.5,
+      "y": 144.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Estrada para Guarapiranga",
+      "x": 92,
+      "y": 130,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Portão I",
+      "x": 48,
+      "y": 44,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Budega",
+      "x": 64.5,
+      "y": 51,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Clareira dos Despertos",
       "x": 37,
       "y": 43,
       "tipo": "clareira"
-    },
-    {
-      "nome": "Mata do Parque Santo Dias",
-      "x": 24,
-      "y": 90,
-      "tipo": "mata"
     },
     {
       "nome": "Lago do Parque",
@@ -28,24 +52,6 @@
       "tipo": "clareira"
     },
     {
-      "nome": "Mata Profunda",
-      "x": 11.5,
-      "y": 9,
-      "tipo": "mata"
-    },
-    {
-      "nome": "Mata Profunda",
-      "x": 12,
-      "y": 100,
-      "tipo": "mata"
-    },
-    {
-      "nome": "Vila do Capão",
-      "x": 72,
-      "y": 40,
-      "tipo": "vila"
-    },
-    {
       "nome": "Clareira da Paineira",
       "x": 32,
       "y": 150,
@@ -55,6 +61,18 @@
       "nome": "Cachoeirinha",
       "x": 14.3,
       "y": 158.5,
+      "tipo": "agua"
+    },
+    {
+      "nome": "Mata Profunda",
+      "x": 11.5,
+      "y": 9,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Mata Profunda",
+      "x": 12,
+      "y": 100,
       "tipo": "mata"
     },
     {
@@ -70,15 +88,9 @@
       "tipo": "mata"
     },
     {
-      "nome": "Posto Abandonado",
-      "x": 80.5,
-      "y": 144.5,
-      "tipo": "mata"
-    },
-    {
-      "nome": "Estrada para Guarapiranga",
-      "x": 92,
-      "y": 130,
+      "nome": "Mata do Parque Santo Dias",
+      "x": 24,
+      "y": 90,
       "tipo": "mata"
     },
     {
@@ -91,18 +103,6 @@
       "nome": "Pedra do Véu",
       "x": 7.5,
       "y": 9.5,
-      "tipo": "lugar"
-    },
-    {
-      "nome": "Portão I",
-      "x": 48,
-      "y": 44,
-      "tipo": "lugar"
-    },
-    {
-      "nome": "Budega",
-      "x": 64.5,
-      "y": 51,
       "tipo": "lugar"
     },
     {
