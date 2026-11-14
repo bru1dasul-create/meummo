@@ -597,8 +597,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   de entrada (`index.html`) com as teclas novas (14/11): a etiqueta mostra a tecla de verdade (`data-key`): "Espaço"
   vira a barra de espaço, "Shift" a seta do Shift e os nomes compridos ficam com a letra menor; o "Como jogar" com
   Shift esquiva, Espaço pula, C anda devagar, M mapa (em breve) e as teclas no 🔊 → Teclas
-- [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
-  botão de atirar, à parte)
+- [x] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
+  botão de atirar, à parte) (14/11): no computador a barra é bordunada, fôlego, esquiva, defesa (4º quadrado) e pulo
+  (5º); o 6º fica livre para a próxima habilidade; o tiro é o clique (a tecla J continua valendo). No celular, o tiro é
+  o botão grande (88 px) no canto de baixo à direita; a bordunada, o fôlego, o pulo e a esquiva num 2x2 ao lado dele
+  (deitado) ou em cima (em pé), com a esquiva colada no tiro (só `style.css`)
 
 **Habilidades (combinar os detalhes com o dono antes):**
 - [ ] **[estrutura + arte]** Habilidades que sobem de nível com o personagem (mais dano e o visual muda) e a primeira

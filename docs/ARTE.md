@@ -837,6 +837,13 @@ andando, (10) floresta dentro das casas.
     sobem do chão perto dos cantos (com um galho de lado) e, nas casas com gente, um ou outro descendo de uma fresta do
     teto (`PD.city.vine`). Na Budega (0,25) o cipó é pouquinho e fica atrás das prateleiras e dos engradados.
   - Conferir: `foto-casas.cjs` (scratchpad): fotos de fora e de dentro das quatro casas.
+- **(6) O J saiu da barra** (só `style.css`): no computador, `.action[data-slot='shot']` não aparece e os outros andam
+  uma casa (bordunada 0, fôlego 1, esquiva 2, defesa 3 — o `left` do `#guard-button` —, pulo 4; o 6º fica vazio). No
+  celular (fim do arquivo), o tiro é `position: absolute` de 88 px no canto (deitado: o `#actions` anda 100 px para a
+  esquerda e o tiro fica à direita dele; em pé: o `#actions` sobe 100 px e o tiro fica embaixo); o 2x2 com
+  `grid-area` (bordunada, fôlego / pulo, esquiva); a mochila em cima do tiro (deitado) ou do 2x2 (em pé); deitado, a
+  defesa e os frascos andam 100 px para a esquerda; em pé ficam (a metade esquerda é do joystick). Conferir:
+  `celular-barra.cjs` (scratchpad): computador, deitado e em pé, com as caixas de cada botão.
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
