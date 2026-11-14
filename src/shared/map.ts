@@ -127,6 +127,14 @@ export interface MapExit {
   label: string;
 }
 
+/** Um retângulo com nome no mapa (em tiles = metros): de (x0, y0) a (x1, y1). */
+export interface MapRegion {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 /** Informações do mapa que vêm das propriedades e objetos do Tiled. */
 export interface MapInfo {
   id?: string;
@@ -138,6 +146,8 @@ export interface MapInfo {
   points?: ReadonlyMap<string, Tile>;
   /** Pontos com nome, exatos (em tiles = metros, com fração). */
   spots?: ReadonlyMap<string, { x: number; y: number }>;
+  /** Retângulos com nome da camada `pontos` (ex.: `joaquim-casa`, por onde o gato da vó anda). */
+  regions?: ReadonlyMap<string, MapRegion>;
   /** Formato novo: 1 tile = 1 metro e pontos/NPCs dizem onde fica o pé, exato. */
   metric?: boolean;
   /** Retângulos que seguram o pé (camada `colisao`). */
@@ -186,6 +196,8 @@ export class GameMap implements Walkable {
   readonly points: ReadonlyMap<string, Tile>;
   /** Os mesmos pontos, exatos (com fração). */
   readonly spots: ReadonlyMap<string, { x: number; y: number }>;
+  /** Retângulos com nome da camada `pontos` (em tiles = metros). Os nomes ficam em minúsculas. */
+  readonly regions: ReadonlyMap<string, MapRegion>;
   /** Formato novo (1 tile = 1 metro; pontos e NPCs dizem onde fica o pé, exato). */
   readonly metric: boolean;
   /** Áreas seguras (camada `seguro`). */
@@ -219,6 +231,7 @@ export class GameMap implements Walkable {
     this.exits = info.exits ?? [];
     this.points = info.points ?? new Map();
     this.spots = info.spots ?? new Map();
+    this.regions = info.regions ?? new Map();
     this.metric = info.metric ?? false;
     this.safeAreas = info.safeAreas ?? [];
     this.width = width;
@@ -281,6 +294,7 @@ export class GameMap implements Walkable {
     const exits: MapExit[] = [];
     const points = new Map<string, Tile>();
     const spots = new Map<string, { x: number; y: number }>();
+    const regions = new Map<string, MapRegion>();
     const solids: SolidRect[] = [];
     const safeAreas: SafeArea[] = [];
     const tw = json.tilewidth;
@@ -313,11 +327,17 @@ export class GameMap implements Walkable {
         const isExitLayer = layerName === 'saidas' || layerName === 'saídas';
         const isSolidLayer = layerName === 'colisao' || layerName === 'colisão';
         const isSafeLayer = layerName === 'seguro';
+        const isPointsLayer = layerName === 'pontos';
         for (const obj of layer.objects ?? []) {
           const objName = obj.name?.trim().toLowerCase();
           if (obj.point && objName) {
             points.set(objName, { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) });
             spots.set(objName, { x: obj.x / tw, y: obj.y / th });
+          }
+          if (isPointsLayer && !obj.point && objName && !obj.polygon && !obj.polyline) {
+            const rect = rectOf(obj);
+            if (rect.x1 > rect.x0 && rect.y1 > rect.y0) regions.set(objName, rect);
+            continue;
           }
           if ((isSolidLayer || isSafeLayer) && (obj.polygon || obj.polyline)) {
             // sem isto o polígono sumiria calado (largura 0) e a parede ou a área segura não existiria no jogo
@@ -383,6 +403,7 @@ export class GameMap implements Walkable {
       exits,
       points,
       spots,
+      regions,
       metric,
       solids,
       safeAreas,

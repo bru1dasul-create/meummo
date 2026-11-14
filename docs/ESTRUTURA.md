@@ -79,6 +79,15 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — Joaquim, o gato da vó (o comportamento):** `src/server/pets.ts` (`PetDef`, `parsePetDefs`, `Pet`,
+`petHome`): a cama é um ponto da camada `pontos` (pode estar dentro de um móvel sólido: o gato pula, `dashed`), o chão
+livre ao lado é procurado em anéis em volta; ele anda com `walkSlice` (o mesmo corpo do jogador) e nunca sai do
+retângulo (`GameMap.regions`, novo). Modos: sleep → stretch → (pula) rest/walk × passeios → volta → (pula) sleep.
+Mia uma vez por chegada (conjunto `near`), com espera; carinho com espera (`petEveryS`). World: `pets`, `updatePets`,
+`seePet`, `petFx`, `cuddle`. Protocolo 30: kind `pet`, `asleep`/`home` no EntityState, fx `meow`/`purr`/`wake`/`sleep`,
+mensagem `pet`. Motor: sem `view.canDraw('pet', tipo)`, desenha o gatinho provisório no `combat.ts` (só com você
+dentro do `home`); tocar nele anda até lá (corrige o caminho se ele andar) e manda `pet`. Sons `meow` e `purr`.
+
 **14/11 — Arco de Bambu (as regras):** `WeaponShot` em `ItemInfo.shot` (campo `tiro` em data/items.json, conferido por
 `parseWeaponShot`, limites em `WEAPON_SHOT_LIMITS`, os mesmos do painel). `shotProfile` em `src/shared/combat.ts`;
 `chargeFraction`/`chargedRange`/`chargedDamage` recebem o perfil do tiro (não mais as regras do combate). Servidor:

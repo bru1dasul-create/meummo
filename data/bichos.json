@@ -1,0 +1,30 @@
+{
+  "joaquim": {
+    "nome": "Joaquim",
+    "titulo": "o gato da vó",
+    "mapa": "capao",
+    "dorme": "joaquim",
+    "area": "joaquim-casa",
+    "velocidade": 0.8,
+    "sonoSegundos": [
+      25,
+      50
+    ],
+    "passeios": [
+      3,
+      6
+    ],
+    "paradaSegundos": [
+      2,
+      6
+    ],
+    "mia": {
+      "alcance": 2.5,
+      "esperaSegundos": 12
+    },
+    "carinho": {
+      "alcance": 1.6,
+      "esperaSegundos": 2
+    }
+  }
+}

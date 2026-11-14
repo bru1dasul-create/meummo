@@ -203,6 +203,16 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   [mundo] marca a casa dele (a casa rosa; no mapa ele está no sofá, `gato` com `nome: 'Joaquim'`). A [arte] já fez o
   Joaquim dormindo no sofá (respira, mexe a orelha e o rabo, com o nome em cima; `js/creatures/gato.js`): o resto vem
   com o comportamento
+  - [x] **[estrutura]** O comportamento (14/11; o dono: carinho sem bônus): `data/bichos.json` (chave `joaquim`),
+    entidade nova `pet` (nunca é alvo). Dorme em cima do sofá (ponto `joaquim`; pula para cima e para baixo), acorda e
+    se espreguiça, passeia pelo retângulo `joaquim-casa` sem sair dele nem entrar nos móveis, volta a dormir; mia
+    (uma vez) para quem chega a 2,5 m, acordado; tocar nele faz o herói ir até lá e fazer carinho: ele ronrona
+    (dormindo, continua dormindo). Sons: miado e ronronar. Gatinho provisório desenhado pelo motor (só com você
+    dentro da casa) até o da [arte]. Protocolo 30. Conferido no PC e no celular com o mapa do ramo do [mundo]
+  - [ ] **[arte]** Ligar o `gato.js` no Joaquim que anda: `canDraw('pet', 'joaquim')` na PD.View (aí o motor para de
+    desenhar o provisório e manda o bicho para a view, com `kind: 'pet'` e `asleep`), e as ações `wake`, `sleep`,
+    `meow`, `purr` (coração) e `dash` (o pulo do sofá); o gato decorativo do mapa sai quando ele entrar
+  - [ ] **[mundo]** A casa rosa na main (com o desenho das casas); aí tirar o `gato` decorativo do sofá
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`

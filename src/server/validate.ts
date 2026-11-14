@@ -122,6 +122,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       if (typeof msg.id !== 'string' || !/^[a-z0-9_-]{1,40}$/.test(msg.id)) return null;
       if (msg.npc !== undefined && !isId(msg.npc)) return null;
       return msg.npc !== undefined ? { t: 'quest', act: msg.act, id: msg.id, npc: msg.npc } : { t: 'quest', act: msg.act, id: msg.id };
+    case 'pet':
+      return isId(msg.id) ? { t: 'pet', id: msg.id } : null;
     case 'sell':
       return isId(msg.npc) && Number.isInteger(msg.i) && (msg.i as number) >= 0 && (msg.i as number) < BAG_SIZE && isCount(msg.n)
         ? { t: 'sell', npc: msg.npc, i: msg.i as number, n: msg.n }

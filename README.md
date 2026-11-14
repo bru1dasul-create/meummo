@@ -229,6 +229,14 @@ no corpo precisa de código (`src/client/itemArt.ts` e `src/client/game/gearArt.
 `npm run check` avisa se algum equipamento ficou sem desenho no personagem. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
 
+## Bichos de estimação (sem programar)
+
+O **Joaquim**, o gato da vó, mora na casa rosa do Capão. Ele fica em [`data/bichos.json`](data/bichos.json): quanto tempo
+dorme (`sonoSegundos`), quantos lugares visita acordado (`passeios`) e quanto fica parado em cada um
+(`paradaSegundos`), a velocidade, de quão perto ele mia para quem chega (`mia`) e de quão perto dá para fazer carinho
+(`carinho`). Onde ele dorme e por onde anda ficam no mapa (o ponto `joaquim` e o retângulo `joaquim-casa`, na camada
+`pontos`). Ele nunca é alvo: a pedra e a flecha passam por ele.
+
 ## Vendedores e loja (sem programar)
 
 Os personagens que não são jogadores (como a **Dona Iracema**, quitandeira do píer, no Refúgio) ficam em
