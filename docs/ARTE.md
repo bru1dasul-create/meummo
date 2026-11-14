@@ -914,7 +914,9 @@ confirmou.
 
 ## Esperando outras frentes
 - **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
-  no `makeActionBar` e o `tryJump` no `onAction`). Ideia, não pedida: pelo código, o tiro que acaba no fim do alcance
+  no `makeActionBar` e o `tryJump` no `onAction`). No `setKey` do botão da defesa (`guard.ts`), as classes `long` e
+  `longer` como no `ui.ts` (mais de 4 letras → `longer`, mais de 2 → `long`): o estilo já desenha "Espaço" e "Shift"
+  nele e já tem a letra menor pronta para os nomes compridos. Ideia, não pedida: pelo código, o tiro que acaba no fim do alcance
   em cima da água vem sem `on` e a flecha crava como se fosse chão; com `on: 'agua'` no `shot_end` sai o respingo.
   O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
   entraram na main em 14/11, e a [estrutura] ligou o arco (main 0765f59): conferi no jogo (a mochila equipa, o botão

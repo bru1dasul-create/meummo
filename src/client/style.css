@@ -2911,24 +2911,29 @@ body.jogo-novo #guard-button .key {
   pointer-events: none;
 }
 
-/* a etiqueta mostra a tecla de verdade (o jogador troca; ui.ts põe o nome em `data-key`). Nomes compridos com a
-   letra menor; "Espaço" e "Shift" não cabem: viram o desenho da barra de espaço e a seta do Shift */
-body.jogo-novo .action .key.long {
+/* a etiqueta mostra a tecla de verdade (o jogador troca; ui.ts e o botão da defesa põem o nome em `data-key`). Nomes
+   compridos com a letra menor; "Espaço" e "Shift" não cabem: viram o desenho da barra de espaço e a seta do Shift */
+body.jogo-novo .action .key.long,
+body.jogo-novo #guard-button .key.long {
   font-size: calc(13px * var(--as));
 }
 
-body.jogo-novo .action .key.longer {
+body.jogo-novo .action .key.longer,
+body.jogo-novo #guard-button .key.longer {
   font-size: calc(10px * var(--as));
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
 body.jogo-novo .action .key[data-key='Espaço'],
-body.jogo-novo .action .key[data-key='Shift'] {
+body.jogo-novo .action .key[data-key='Shift'],
+body.jogo-novo #guard-button .key[data-key='Espaço'],
+body.jogo-novo #guard-button .key[data-key='Shift'] {
   font-size: 0;
 }
 
-body.jogo-novo .action .key[data-key='Espaço']::after {
+body.jogo-novo .action .key[data-key='Espaço']::after,
+body.jogo-novo #guard-button .key[data-key='Espaço']::after {
   content: '';
   width: calc(20px * var(--as));
   height: calc(6px * var(--as));
@@ -2938,7 +2943,8 @@ body.jogo-novo .action .key[data-key='Espaço']::after {
   border-radius: 0 0 2px 2px;
 }
 
-body.jogo-novo .action .key[data-key='Shift']::after {
+body.jogo-novo .action .key[data-key='Shift']::after,
+body.jogo-novo #guard-button .key[data-key='Shift']::after {
   content: '';
   width: calc(19px * var(--as));
   height: calc(19px * var(--as));
