@@ -755,7 +755,13 @@ describe('Mapa 01 (Capão): casas com interior (pedido do dono em 13/11: "dar vi
     expect(prop(cenario.find((o) => o.type === 'estante' && inside(o, amarela!))!, 'tv')).toBe(true);
     expect(prop(cenario.find((o) => o.type === 'mesa-cozinha' && inside(o, amarela!))!, 'toalha')).toBe('xadrez');
     expect(prop(cenario.find((o) => o.type === 'sofa' && inside(o, rosa!))!, 'croche')).toBe(true);
-    expect(cenario.some((o) => o.type === 'gato' && inside(o, rosa!))).toBe(true);
+    // o Joaquim (o gato da vó, com vida, da [estrutura]): dorme em cima do sofá e anda pelo lado de dentro da casa
+    const pontos = layer('pontos');
+    const sono = pontos.find((o) => o.name === 'joaquim')!;
+    const casaJ = pontos.find((o) => o.name === 'joaquim-casa')!;
+    expect(inside(sono, rosa!) && inside(casaJ, rosa!)).toBe(true);
+    expect(boxes.some((b) => b.type === 'sofa' && sono.x / M >= b.x0 && sono.x / M <= b.x1 && sono.y / M >= b.y0 && sono.y / M <= b.y1)).toBe(true);
+    expect(cenario.some((o) => o.type === 'gato')).toBe(false); // o gatinho parado do sofá saiu quando ele ganhou vida
     expect(prop(cenario.find((o) => o.type === 'cama' && inside(o, rosa!))!, 'colcha')).toBe('retalhos');
     const tree = cenario.find((o) => o.type === 'arvore' && inside(o, abandonada!))!;
     expect(prop(tree, 'dentroDaCasa')).toBe(true);

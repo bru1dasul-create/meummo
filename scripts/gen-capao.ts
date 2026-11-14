@@ -1180,9 +1180,8 @@ if (reached('4c') && FLORESTA) {
   open(rosa, [65, 66.2], 'taco', 'vo');
   cenario.push(rect('cristaleira', 64.4, 65.8, 33.15, 33.6, { altura: 1.9, olhando: 90 }));
   cenario.push(rect('sofa', 64.15, 65, 35.6, 37.4, { altura: 0.9, olhando: 0, cor: '#6f8f5a', croche: true }));
-  // o Joaquim, o gato da vó (pedido do dono, 13/11): bem pequeno, todo branco com detalhes laranja, dormindo no sofá
-  cenario.push(point('gato', 64.6, 36.4, { nome: 'Joaquim', deitado: true, cor: '#ffffff', manchas: '#e8893a', tamanho: 'pequeno' }));
-  // para a [estrutura] dar vida a ele: onde ele dorme (no sofá) e o chão por onde anda (o lado de dentro da casa da vó;
+  // o Joaquim, o gato da vó (pedido do dono, 13/11), tem vida própria (a [estrutura], em data/bichos.json): aqui ficam
+  // onde ele dorme (em cima do sofá; ele pula para subir e descer) e o chão por onde anda (o lado de dentro da casa da vó;
   // ele desvia dos móveis pelas colisões e não sai pela porta)
   pontos.push(point('ponto', 64.6, 36.4, undefined, 'joaquim'));
   pontos.push(rect('area', BUDEGA_WALL + 64, 71 - BUDEGA_WALL, 33 + BUDEGA_WALL, 39.5 - BUDEGA_WALL, undefined, 'joaquim-casa'));

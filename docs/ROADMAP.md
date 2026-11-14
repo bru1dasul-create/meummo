@@ -212,7 +212,8 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   - [ ] **[arte]** Ligar o `gato.js` no Joaquim que anda: `canDraw('pet', 'joaquim')` na PD.View (aí o motor para de
     desenhar o provisório e manda o bicho para a view, com `kind: 'pet'` e `asleep`), e as ações `wake`, `sleep`,
     `meow`, `purr` (coração) e `dash` (o pulo do sofá); o gato decorativo do mapa sai quando ele entrar
-  - [ ] **[mundo]** A casa rosa na main (com o desenho das casas); aí tirar o `gato` decorativo do sofá
+  - [x] **[mundo]** A casa rosa na main (14/11, com o desenho das casas) e o `gato` decorativo do sofá saiu: o Joaquim
+    de verdade aparece lá (conferido no PC e no celular: dorme no sofá e passeia pela casa)
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
