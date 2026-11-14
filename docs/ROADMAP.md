@@ -517,21 +517,21 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade)
 - [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
   é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
-- [x] **[arte]** Arco: "o braço fica feio puxando" (14/11, no ramo da arte): puxando, o herói fica de lado para o
+- [x] **[arte]** Arco: "o braço fica feio puxando" (14/11, na main): puxando, o herói fica de lado para o
   alvo como arqueiro de verdade (o ombro do arco aponta para o alvo, o cotovelo da corda vai para trás na linha da
   flecha, a cabeça olha ao longo dela); antes o cotovelo subia e saía de lado, como asa
-- [x] **[arte]** Esquiva: "está feia demais" (14/11, no ramo da arte): no jogo ela não tinha movimento (o herói
+- [x] **[arte]** Esquiva: "está feia demais" (14/11, na main): no jogo ela não tinha movimento (o herói
   aparecia 3 m adiante de uma vez); agora ele rola no chão (abaixa, gira uma volta e levanta, 0,5 s), para todos
 - [x] **[mundo + arte]** A cama do quarto do Joaquim está invertida (14/11): o [mundo] virou a cama na planta
   (`olhando: 90`, ramo `mundo/cama-vo`) e o desenho da [arte] passou a ler o `olhando` (a cabeceira no lado oposto aos
-  pés; antes ficava sempre no oeste). Os dois ramos entram juntos na main
+  pés; antes ficava sempre no oeste). Na main (14/11), junto com o `mundo/lote1-mapa`
 - [x] **[mundo + arte]** A entrada da Budega ("está péssima") (14/11): o [mundo] marcou o vão da porta
   (`portaDe`/`portaAte`), tirou o varal da frente e levou o orelhão para o poste de luz da praça (ramo
   `mundo/budega-entrada`); a [arte] desenhou o vão da loja (a porta de aço enrolada, os trilhos, a soleira e, lá
   dentro, o piso de ladrilho, a geladeira, o balcão e as prateleiras acesas, sem o musgo da fachada por cima) e o
-  orelhão preso no poste. Os dois ramos entram juntos na main
-- [x] **[arte]** Entrada e saída dos interiores com animação (a volta para o mundo é muito repentina) (14/11, no ramo
-  da arte): o telhado e a frente saem e voltam em 0,6 s suaves; saindo, a casa continua em foco até o telhado voltar
+  orelhão preso no poste. Na main (14/11), junto com o `mundo/lote1-mapa`
+- [x] **[arte]** Entrada e saída dos interiores com animação (a volta para o mundo é muito repentina) (14/11, na
+  main): o telhado e a frente saem e voltam em 0,6 s suaves; saindo, a casa continua em foco até o telhado voltar
   (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto
 
 **Mundo:**

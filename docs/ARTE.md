@@ -771,7 +771,7 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   entrar na casa da vó (Capão, porta perto de x 65, y 40) e esperar ele acordar; conferi no PC e no celular deitado,
   com dois visitantes, sem erros.
 
-### A lista do dono de 14/11, lote 1 (o que está feio ou com defeito; o dono deu o "pode" para começar)
+### A lista do dono de 14/11, lote 1 (o que está feio ou com defeito; na main em 14/11, com o "pode" do dono)
 - **Cama do quarto do Joaquim** (`casas.js` `small.cama`): a cabeceira fica do lado oposto ao `olhando` (0 = pés para
   o leste e cabeceira em x0, o padrão sem `olhando`; 90 em y0; 180 em x1; 270 em y1); a do lado da câmera vai por
   último. O [mundo] virou a cama no mapa (`mundo/cama-vo`); os dois ramos entram juntos. O crucifixo foi para o meio da
