@@ -451,13 +451,16 @@ for (const [x, y, w, h] of [[12.5, 4.5, 3.6, 0.6], [34, 92, 3.4, 0.6], [6.5, 112
   reserved.push({ x, y, r: Math.max(w, h) / 2 + 1.3 });
   cenario.push(rect('tronco-caido', round(x - w / 2), round(x + w / 2), round(y - h / 2), round(y + h / 2), { altura: 0.6 }));
 }
-// capivaras descansando na margem oeste do lago (enfeite: não bloqueiam e não atacam)
+// o lugar das capivaras na margem oeste do lago. Até 14/11 eram três de enfeite, paradas; agora elas andam em bando (a
+// [estrutura], em data/bichos.json) e aqui fica só o lugar delas (a área e onde descansam, na camada `pontos`). Os
+// lugares continuam guardados (nada nasce em cima) e a mata em volta sai igual
 const shoreK = (a: number) => 1 + LAKE_WOBBLE * (0.6 * Math.sin(a * 3 + 1.3) + 0.4 * Math.cos(a * 5 + 0.4));
+const LAKE_CAPYS: [number, number][] = [];
 for (const a of [2.5, 2.85, 3.5]) {
   const k = shoreK(a);
   const [x, y] = [round(LAKE.x + Math.cos(a) * (LAKE.rx * k + 1.3)), round(LAKE.y + Math.sin(a) * (LAKE.ry * k + 1.2))];
   reserved.push({ x, y, r: 1.2 });
-  cenario.push(point('capivara', x, y, { olhando: round((a * 180) / Math.PI + 180) }));
+  LAKE_CAPYS.push([x, y]);
 }
 // pedras, em grupos (uma grande e uma ou duas pequenas): na beira da clareira, do lago, do riacho e no recanto
 const STONES: [number, number, number][] = [
@@ -848,7 +851,7 @@ if (reached('4c')) {
   const midY = (FIELD.y0 + FIELD.y1) / 2;
   cenario.push(rect('trave', FIELD.x0 + 0.2, FIELD.x0 + 0.4, midY - 1.5, midY + 1.5, { altura: 2, olhando: 0 }));
   cenario.push(rect('trave', FIELD.x1 - 0.4, FIELD.x1 - 0.2, midY - 1.5, midY + 1.5, { altura: 2, olhando: 180 }));
-  cenario.push(point('capivara', 72, 70.5, { olhando: 200 }), point('capivara', 74.6, 72.3, { olhando: 30 }));
+  // (as capivaras do campinho andam em bando, como as do lago: o lugar delas fica na camada `pontos`)
   for (const x of [66, 79]) cenario.push(rect('banco', x - 0.8, x + 0.8, 61.35, 61.85, { olhando: 90 }));
   cenario.push(rect('muro', MURAL.x0, MURAL.x1, MURAL.y0, MURAL.y1, { altura: 2.4, cor: '#c9c2b6', grafite: 'cores', lado: 'leste' }));
   for (let x = FIELD.x0; x <= FIELD.x1; x += 1) for (let y = FIELD.y0; y <= FIELD.y1; y += 1) VILLAGE_KEYS.push([x, y, 0]);
@@ -1336,6 +1339,19 @@ areas.push(rect('area', BANANA.x - BANANA.r - 2, BANANA.x + BANANA.r + 2, BANANA
 for (const d of DEEP) areas.push(rect('area', Math.max(0, d.x - d.rx), d.x + d.rx, Math.max(0, d.y - d.ry), Math.min(H, d.y + d.ry), { escuro: 0.5, neblina: 0.45 }, 'Mata Profunda'));
 areas.push(rect('area', PARK_X, W, 0, VILLAGE_S, undefined, 'Vila do Capão'));
 pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
+// as capivaras andando (pedido do dono, 14/11; o formato é da [estrutura]): por bando, o retângulo onde andam
+// (`capivaras-<lugar>`) e o ponto onde deitam (`capivaras-<lugar>-descanso`); quantas são fica em data/bichos.json
+{
+  const xs = LAKE_CAPYS.map(([x]) => x);
+  const ys = LAKE_CAPYS.map(([, y]) => y);
+  pontos.push(rect('area', round(Math.max(2, Math.min(...xs) - 3)), round(Math.max(...xs) + 2), round(Math.min(...ys) - 3), round(Math.max(...ys) + 3), undefined, 'capivaras-lago'));
+  const [mx, my] = LAKE_CAPYS[Math.floor(LAKE_CAPYS.length / 2)]!;
+  pontos.push(point('ponto', mx, my, undefined, 'capivaras-lago-descanso'));
+  if (reached('4c')) {
+    pontos.push(rect('area', FIELD.x0 + 1, FIELD.x1 - 1, FIELD.y0 + 1, FIELD.y1 - 1, undefined, 'capivaras-campinho'));
+    pontos.push(point('ponto', 73.3, 71.4, undefined, 'capivaras-campinho-descanso'));
+  }
+}
 /** Áreas de criaturas (camada "monstros"): o nome é o id em data/monsters.json; os saguis são os "encantados". */
 const monstros: Shape[] = [];
 if (CREATURES) {
