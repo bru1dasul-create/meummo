@@ -979,6 +979,10 @@ confirmou.
   - **Dia e noite** (main 95bfcf3, protocolo 33): `setTimeOfDay({ light, night })` no `WorldView` (light de 1 a 0 em
     passos de 0,01, o anoitecer e o amanhecer em 1 minuto; `night` = olhos vermelhos em todos os bichos). Testar: ADM
     "Virar dia"/"Virar noite" e `window.__mundoNovo.time()`. Lampiões: quando o [mundo] marcar.
+  - **O mapa (M) e o mini mapa** (main 5f01bf9, protocolo 36; o desenho provisório é o `mapWindow.ts` da [estrutura]):
+    deixar bonitos a `#map-window` (o mapa inteiro com a neblina, os nomes, os NPCs com ! e ?, a seta) e o `#minimap`
+    (PC: 148 px embaixo da mochila; celular: 96 px embaixo do retrato), tudo por CSS de id; girar a imagem para bater
+    com a câmera é pedido ao motor. Ganchos: `__mundoNovo.explored()` e `mapOpen()`.
   - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
     Capão vai a 96 × 180 m): só entra na main com o meu
     desenho: `arvore` `especie: 'paineira'` (tronco de garrafa com espinhos, copa de flor rosa `flores`, pétalas no
