@@ -787,3 +787,22 @@ describe('Mapa 01 (Capão): casas com interior (pedido do dono em 13/11: "dar vi
     expect(chao.some((o) => o.type === 'colchao' && inside(o, abandonada!))).toBe(true);
   });
 });
+
+describe('Mapa 01 (Capão): o mapa visto de cima, para a tecla M e o mini mapa (formato combinado com a [estrutura])', () => {
+  it('a imagem e a lista de nomes existem ao lado do mapa e têm o tamanho dele', () => {
+    const json = JSON.parse(readFileSync('public/assets/maps-iso/capao-mapa.json', 'utf8')) as {
+      escala: number;
+      largura: number;
+      altura: number;
+      nomes: { nome: string; x: number; y: number; tipo: string }[];
+    };
+    expect([json.largura, json.altura]).toEqual([map.width, map.height]);
+    // o PNG: a largura e a altura ficam nos bytes 16 a 23 do cabeçalho
+    const png = readFileSync('public/assets/maps-iso/capao-mapa.png');
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([map.width * json.escala, map.height * json.escala]);
+    // os nomes são os das áreas e os dos lugares com nome, dentro do mapa
+    for (const a of layer('areas').filter((o) => o.name)) expect(json.nomes.some((n) => n.nome === a.name), a.name).toBe(true);
+    for (const n of json.nomes) expect(n.x >= 0 && n.x <= map.width && n.y >= 0 && n.y <= map.height, n.nome).toBe(true);
+    expect(json.nomes.find((n) => n.nome === 'Vila do Capão')!.tipo).toBe('vila');
+  });
+});

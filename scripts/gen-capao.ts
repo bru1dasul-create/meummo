@@ -24,6 +24,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { writeMapImage } from './mapa-de-cima';
 import { mulberry32 } from './pixels';
 
 const outIndex = process.argv.indexOf('--out');
@@ -1413,7 +1414,10 @@ const map = {
 };
 mkdirSync(path.dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(map));
+// o mapa visto de cima, para a janela do mapa (tecla M) e o mini mapa: <id>-mapa.png e <id>-mapa.json ao lado do .tmj
+const mapImage = writeMapImage(OUT);
 const count = (type: string) => cenario.filter((s) => s.type === type).length;
 console.log(
   `Mapa gerado em ${path.relative(process.cwd(), OUT)}: ${W}x${H} m, ${count('arvore')} árvores, ${count('arbusto')} arbustos da mata fechada, ${colisao.length} retângulos de colisão.`,
 );
+console.log(`Mapa visto de cima (tecla M): ${path.relative(process.cwd(), mapImage.png)} e ${path.basename(mapImage.json)}.`);
