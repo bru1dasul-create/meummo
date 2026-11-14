@@ -172,7 +172,7 @@ function shootRight(world: World, player: Player): void {
 }
 
 describe('itens no mundo', () => {
-  it('quem ajudou a derrubar o monstro ganha os itens dele (cada um os seus)', () => {
+  it('quem ajudou a derrubar o monstro ganha os itens dele (cada um os seus, no chão; pega passando por cima)', () => {
     const world = arena();
     const ana = join(world, 'Ana');
     const beto = join(world, 'Beto');
@@ -180,25 +180,37 @@ describe('itens no mundo', () => {
     [...world.monsters.values()][0]!.contributors.add(beto.player.id); // Beto também bateu
     shootRight(world, ana.player);
     for (const { player, conn } of [ana, beto]) {
+      expect(player.inventory.slots[0]).toBeNull(); // ainda no chão
+      expect(conn.ofType('drop').map((d) => d.item)).toEqual([{ item: 'fruta', n: 2 }, { item: 'coroa', n: 1 }]);
+      expect(conn.ofType('sys').some((m) => m.text.startsWith('Ana conseguiu'))).toBe(false); // ninguém pegou ainda
+      player.x = 4; // em cima de onde o monstro caiu: os dois itens estão a até 1 tile
+      player.y = 1;
+    }
+    run(world, 500);
+    for (const { player, conn } of [ana, beto]) {
       expect(player.inventory.slots[0]).toEqual({ item: 'fruta', n: 2 });
       expect(player.inventory.slots[1]).toEqual({ item: 'coroa', n: 1 });
-      expect(conn.ofType('loot')[0]).toMatchObject({ x: 4, y: 1, items: [{ item: 'fruta', n: 2 }, { item: 'coroa', n: 1 }] });
       expect(conn.ofType('inv').at(-1)?.inv.slots[0]).toEqual({ item: 'fruta', n: 2 });
-      expect(conn.ofType('sys').some((m) => m.text === 'Você pegou: Fruta ×2, Coroa.')).toBe(true);
+      expect(conn.ofType('sys').some((m) => m.text === 'Você pegou: Fruta ×2.')).toBe(true);
+      expect(conn.ofType('sys').some((m) => m.text === 'Você pegou: Coroa.')).toBe(true);
     }
-    // item lendário: todo mundo fica sabendo
+    // item lendário: todo mundo fica sabendo (quando ele pega)
     expect(beto.conn.ofType('sys').some((m) => m.text === 'Ana conseguiu: Coroa!')).toBe(true);
+    expect(ana.conn.ofType('sys').some((m) => m.text === 'Beto conseguiu: Coroa!')).toBe(true);
   });
 
-  it('mochila cheia: o item fica no chão, com aviso', () => {
+  it('mochila cheia: o item continua no chão, com aviso quando você chega perto', () => {
     const world = arena();
     const ana = join(world);
     for (let i = 0; i < BAG_SIZE; i++) ana.player.inventory.add('espada', 1);
     world.tick();
     shootRight(world, ana.player);
     expect(ana.conn.ofType('loot')).toHaveLength(0);
-    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia! Ficou no chão: Fruta ×2, Coroa. Abra espaço e passe lá para pegar.')).toBe(true);
     expect(ana.conn.ofType('drop').map((d) => d.item)).toEqual([{ item: 'fruta', n: 2 }, { item: 'coroa', n: 1 }]);
+    ana.player.x = 4;
+    run(world, 500);
+    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia: Fruta ×2 continua no chão.')).toBe(true);
+    expect(world.drops.size).toBe(2);
   });
 
   it('equipar muda vida máxima e dano; tirar volta ao normal', () => {

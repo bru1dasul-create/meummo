@@ -79,6 +79,16 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — itens no chão (escolha A do dono):** `World.giveLoot` agora põe tudo no chão: o ouro no lugar do monstro
+e cada item num lugar livre em volta (`walkableAround`), por `ITEM_DROP_MS` (2 min). Pegar é o `pickUp` de sempre
+(passando por cima, depois de `DROP_READY_MS`), que agora manda "Você pegou: ..." e o anúncio do lendário. O `loot`
+não é mais mandado (o tipo ficou no protocolo; o jogo antigo ainda sabe mostrar). Sem mudar o protocolo. No 2.5D:
+`addDrop(..., item)` com ícone (`itemIconUrl`), raridade e quantidade; `drawDrops` desenha caindo com quique, "×N",
+brilho dourado (raro) e laranja com facho (lendário), e espalha um pouquinho dentro do lugar para não sobrepor; o
+`pickup` de item mostra "+Banana" (`onLoot`). Gancho novo: `__mundoNovo.drops()`. Testes em `gold.test.ts` e
+`items.test.ts`. Conferido: 8 saguis criados pelo menu ADM e derrubados → 3× banana ×2 e um chapéu de palha no
+chão, tudo pego passando por cima; mochila cheia → estilingue (raro) e gorro (lendário) esperando no chão.
+
 **14/11 — formato do mapa da tecla M (combinado com o [mundo]):** uma imagem por mapa, vista de cima com o norte
 para cima e sem texto, `public/assets/maps-iso/<id>-mapa.png`, e `<id>-mapa.json` = `{ escala (px por metro; 8 no
 Capão), largura, altura (metros), nomes: [{ nome, x, y, tipo? }] }`, os dois feitos pelo gerador do [mundo]. A [arte]

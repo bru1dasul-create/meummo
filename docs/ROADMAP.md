@@ -537,7 +537,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 **Sistemas:**
 - [ ] **[estrutura + arte]** Dia e noite: à noite os bichos ficam mais fortes e dão mais XP e ouro; olhos vermelhos (a
   [arte]); lampiões (o [mundo] marca, a [arte] acende)
-- [ ] **[estrutura]** Drop de itens nos bichos (e o arco e o estilingue de goiabeira nos bichos novos)
+- [x] **[estrutura]** Drop de itens nos bichos (14/11, escolha do dono: "no chão, como o ouro"): os itens caem em volta do
+  bicho, com o desenho de cada um (caindo com quique, "×2", brilho no raro e facho de luz no lendário), e você pega
+  passando por cima; ficam 2 minutos; com a mochila cheia, esperam no chão
+- [ ] **[estrutura]** O arco e o estilingue de goiabeira nos bichos novos, quando eles chegarem (hoje o estilingue cai do
+  sagui, 4%; o arco só na Budega)
+- [ ] **[arte]** (Opcional) restilizar o item no chão (`drawDrops` em `src/client/novo/combat.ts`: ícone, quique, brilho)
 - [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
   movimento delas; o som do vento acompanha)
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro

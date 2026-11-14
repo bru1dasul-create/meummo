@@ -379,6 +379,8 @@ class NewWorld implements NewWorldGame {
       },
       walkTo: (x: number, y: number) => game.walkToPoint(x, y),
       walking: () => game.route.length > 0,
+      // ouro e itens no chão (os seus): o tile, o pé (metros, para o walkTo) e o item
+      drops: () => game.combat.dropList(),
       safe: () => game.wasSafe,
       // x, y: posição "de canto" (a do servidor); feetX, feetY: o pé, em metros (é o que o screenOf espera)
       entities: () =>
@@ -2006,14 +2008,20 @@ class NewWorld implements NewWorldGame {
           });
         }
         break;
-      case 'drop':
-        this.combat.addDrop(msg.id, msg.x, msg.y, msg.gold !== undefined, performance.now() + msg.ms);
+      case 'drop': {
+        // ouro ou item no chão (só você vê os seus): o item com o desenho dele e o brilho da raridade
+        const def = msg.item ? this.items.get(msg.item.item) : undefined;
+        const item = def && msg.item ? { icon: def.icon, rarity: def.rarity, n: msg.item.n } : undefined;
+        this.combat.addDrop(msg.id, msg.x, msg.y, msg.gold !== undefined, performance.now() + msg.ms, item);
         break;
+      }
       case 'pickup':
         this.combat.removeDrop(msg.id);
-        this.sfx.play('coin');
-        if (msg.gold) this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', performance.now());
-        if (msg.item) this.bag.notifyNew();
+        if (msg.gold) {
+          this.sfx.play('coin');
+          this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', performance.now());
+        }
+        if (msg.item) this.onLoot([msg.item]); // "+Banana" em cima de você, o som e a mochila avisando
         break;
       case 'drop_gone':
         this.combat.removeDrop(msg.id);
