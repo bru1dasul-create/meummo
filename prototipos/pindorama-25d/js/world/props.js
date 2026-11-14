@@ -472,9 +472,19 @@
         // tronco abriu na parede logo abaixo do buraco da laje
         if (b.treeInside) treeOpenings(ctx, openings, W, H, r, b.innerTree ? b.innerTree.x - b.x0 : W * 0.48);
         if (b.abandoned) vines(ctx, W, H, r);
-        // a casa tomada pela mata: musgo e manchas de chuva, e o cipó cobrindo parte da fachada
+        // a casa tomada pela mata: musgo e manchas de chuva, e o cipó cobrindo parte da fachada (na vendinha que dá
+        // para entrar, fora do vão da porta: lá é o lado de dentro da loja)
+        const shopHole = shop && b.interior ? shopDoorRect(b, W, H) : null;
+        if (shopHole) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-50, -50, W + 100, H + 100);
+          ctx.rect(shopHole.x, shopHole.y, shopHole.w, shopHole.h);
+          ctx.clip('evenodd');
+        }
         if (b.moss) mossWall(ctx, W, H, r);
-        if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : null);
+        if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : shopHole ? [shopHole.x, shopHole.x + shopHole.w] : null);
+        if (shopHole) ctx.restore();
       });
       // ---- lado (+x): começa na quina da frente e vai para o fundo
       onWall(ctx, cam, { x: b.x1, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
@@ -1304,54 +1314,103 @@
    * verdade: escuro lá dentro, com a luz da lâmpada, o balcão e as prateleiras no fundo; a porta de aço enrolada na
    * caixa em cima do vão, os trilhos dela dos dois lados e a soleira de cimento. O vão é o do mapa (`portaDe`/`portaAte`).
    */
-  function shopDoorway(ctx, b, W, H, r) {
-    const s = b.shop;
+  /** O vão da porta da vendinha que dá para entrar, na parede da frente (cm da parede: x da quina, y do alto). */
+  function shopDoorRect(b, W, H) {
     const d0 = b.door ? Math.max(8, b.door.from - b.x0) : 34;
     const d1 = b.door ? Math.min(W - 8, b.door.to - b.x0) : W - 34;
-    const ox = d0, ow = d1 - d0;
     const oh = Math.min(205, H - 62);
+    return { x: d0 - 8, y: H - oh - 8, w: d1 - d0 + 16, h: oh + 8, d0, d1, oh };
+  }
+  function shopDoorway(ctx, b, W, H, r) {
+    const s = b.shop;
+    const hole = shopDoorRect(b, W, H);
+    const ox = hole.d0, ow = hole.d1 - hole.d0;
+    const oh = hole.oh;
     const oy = H - oh;
-    // o batente (contorno) e o escuro de dentro, mais quente embaixo
+    // o batente (contorno) e o lado de dentro: escuro em cima, mais claro e quente embaixo (a loja está acesa)
     ctx.fillStyle = INK;
     ctx.fillRect(ox - 8, oy - 8, ow + 16, oh + 8);
     const g = ctx.createLinearGradient(0, oy, 0, H);
-    g.addColorStop(0, '#1f150d');
-    g.addColorStop(0.5, '#33241a');
-    g.addColorStop(1, '#4a3424');
+    g.addColorStop(0, '#24180f');
+    g.addColorStop(0.45, '#4b3524');
+    g.addColorStop(1, '#6e5038');
     ctx.fillStyle = g;
     ctx.fillRect(ox, oy, ow, oh);
-    // lá no fundo: as prateleiras na meia-luz (pequenas: estão a 3 m da porta)
-    const goods = ['#9c3a2c', '#2f5f97', '#b39a3e', '#3b7442', '#a8a291', '#7c4a28', '#5e3a80'];
-    for (let sh = 0; sh < 2; sh++) {
-      const sy = oy + 46 + sh * 34;
-      ctx.fillStyle = '#4d3826';
-      ctx.fillRect(ox + 10, sy, ow - 20, 4);
-      for (let x = ox + 16; x < ox + ow - 24; x += 11 + r() * 7) {
-        const gh = 10 + r() * 14;
+    // o mesmo que está lá dentro, no lugar do mapa (quem entra vê os móveis de verdade nesses lugares): as prateleiras
+    // do fundo, a geladeira de bebidas à esquerda e o balcão com a caixa à direita, no chão de ladrilho
+    const floorY = H - 30;
+    const goods = ['#c0392b', '#2f73c4', '#f1c84a', '#3f9a4a', '#e8e2d0', '#a0522d', '#7d3fa8'];
+    for (let sh = 0; sh < 3; sh++) {
+      const sy = floorY - 70 - sh * 30;
+      ctx.fillStyle = '#5a412b';
+      ctx.fillRect(ox + 6, sy, ow - 12, 4);
+      for (let x = ox + 10; x < ox + ow - 16; x += 10 + r() * 6) {
+        const gh = 9 + r() * 12;
         ctx.fillStyle = goods[Math.floor(r() * goods.length)];
-        ctx.fillRect(x, sy - gh, 7 + r() * 4, gh);
+        ctx.fillRect(x, sy - gh, 6 + r() * 4, gh);
       }
     }
-    // o balcão, de lado para a porta (o do mapa: à direita, a um metro da porta), com a caixa registradora
-    const bx0 = ox + ow * 0.42, bx1 = ox + ow * 0.96;
-    ctx.fillStyle = '#2a1b10';
-    ctx.fillRect(bx0 - 3, H - 112, bx1 - bx0 + 6, 76);
-    ctx.fillStyle = '#6b4325';
-    ctx.fillRect(bx0, H - 109, bx1 - bx0, 70);
-    ctx.fillStyle = '#c9b48a';
-    ctx.fillRect(bx0 - 2, H - 113, bx1 - bx0 + 4, 7);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    for (let x = bx0 + 14; x < bx1 - 6; x += 16) ctx.fillRect(x, H - 104, 3, 62);
+    // o chão de ladrilho hidráulico (vermelho e creme), mais escuro lá no fundo
+    const rows = 3;
+    for (let i = 0; i < rows; i++) {
+      const y0 = floorY + (i * 30) / rows - 0, y1 = floorY + ((i + 1) * 30) / rows;
+      const tile = 9 + i * 3;
+      for (let x = ox, k = i; x < ox + ow; x += tile, k++) {
+        ctx.fillStyle = k % 2 ? '#b8473a' : '#e9dcc3';
+        ctx.fillRect(x, y0, Math.min(tile, ox + ow - x), y1 - y0);
+      }
+    }
+    const shade = ctx.createLinearGradient(0, floorY, 0, H);
+    shade.addColorStop(0, 'rgba(30, 18, 10, 0.55)');
+    shade.addColorStop(1, 'rgba(30, 18, 10, 0)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(ox, floorY, ow, 30);
+    // a geladeira de bebidas (a do mapa fica a 1,5 m da porta, do lado esquerdo)
+    const fx0 = ox + ow * 0.2, fx1 = ox + ow * 0.36;
+    ctx.fillStyle = INK;
+    ctx.fillRect(fx0 - 3, floorY - 150, fx1 - fx0 + 6, 152);
+    ctx.fillStyle = '#f4f2ec';
+    ctx.fillRect(fx0, floorY - 147, fx1 - fx0, 147);
+    ctx.fillStyle = '#9fd0de';
+    ctx.fillRect(fx0 + 5, floorY - 120, fx1 - fx0 - 10, 108);
+    for (let sy = floorY - 112; sy < floorY - 16; sy += 24) {
+      ctx.fillStyle = 'rgba(40, 60, 70, 0.45)';
+      ctx.fillRect(fx0 + 5, sy + 18, fx1 - fx0 - 10, 2);
+      for (let x = fx0 + 8; x < fx1 - 9; x += 7) {
+        ctx.fillStyle = goods[Math.floor(r() * goods.length)];
+        ctx.fillRect(x, sy + 2, 4, 16);
+      }
+    }
+    ctx.fillStyle = '#d63a2e';
+    ctx.fillRect(fx0, floorY - 147, fx1 - fx0, 22);
+    // o balcão (o do mapa, à direita), com o tampo claro, as tábuas e a caixa registradora
+    const bx0 = ox + ow * 0.43, bx1 = ox + ow * 0.97;
+    const bTop = floorY - 64;
+    ctx.fillStyle = INK;
+    ctx.fillRect(bx0 - 3, bTop - 3, bx1 - bx0 + 6, floorY - bTop + 5);
+    ctx.fillStyle = '#7a4c2a';
+    ctx.fillRect(bx0, bTop, bx1 - bx0, floorY - bTop + 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    for (let x = bx0 + 12; x < bx1 - 6; x += 14) ctx.fillRect(x, bTop + 8, 3, floorY - bTop - 6);
+    ctx.fillStyle = '#d8c39a';
+    ctx.fillRect(bx0 - 2, bTop - 5, bx1 - bx0 + 4, 8);
     ctx.fillStyle = '#3a3d42';
-    ctx.fillRect(bx1 - 46, H - 128, 26, 15);
+    ctx.fillRect(bx1 - 44, bTop - 19, 26, 15);
     ctx.fillStyle = '#7fd38a';
-    ctx.fillRect(bx1 - 42, H - 125, 10, 5);
-    // a lâmpada acesa no meio do vão (a loja está aberta)
-    const lx = ox + ow * 0.36, ly = oy + 28;
-    const glow = ctx.createRadialGradient(lx, ly, 2, lx, ly + 30, ow * 0.55);
-    glow.addColorStop(0, 'rgba(255, 216, 140, 0.55)');
-    glow.addColorStop(0.4, 'rgba(255, 196, 110, 0.18)');
-    glow.addColorStop(1, 'rgba(255, 196, 110, 0)');
+    ctx.fillRect(bx1 - 40, bTop - 16, 10, 5);
+    // o pote de balas no balcão
+    ctx.fillStyle = 'rgba(230, 240, 245, 0.85)';
+    ctx.fillRect(bx0 + 10, bTop - 18, 12, 14);
+    ctx.fillStyle = '#e8564a';
+    ctx.fillRect(bx0 + 12, bTop - 12, 3, 3);
+    ctx.fillStyle = '#4fa3e0';
+    ctx.fillRect(bx0 + 16, bTop - 9, 3, 3);
+    // a luz da lâmpada lá dentro (a loja está aberta)
+    const lx = ox + ow * 0.4, ly = oy + 40;
+    const glow = ctx.createRadialGradient(lx, ly + 40, 4, lx, ly + 70, ow * 0.6);
+    glow.addColorStop(0, 'rgba(255, 220, 150, 0.45)');
+    glow.addColorStop(0.45, 'rgba(255, 200, 120, 0.16)');
+    glow.addColorStop(1, 'rgba(255, 200, 120, 0)');
     ctx.fillStyle = glow;
     ctx.fillRect(ox, oy, ow, oh);
     ctx.strokeStyle = '#1a120b';
@@ -3271,14 +3330,21 @@
           ctx.lineWidth = 9 * cam.zoom + ink * 2;
           ctx.beginPath();
           if (d.pole) {
-            const b0 = P(d.x, d.y - 10, z0 + 196), b1 = P(d.x, d.y + 6, z0 + 196);
-            ctx.lineWidth = 5 * cam.zoom + ink * 2;
-            ctx.moveTo(b0.x, b0.y);
-            ctx.lineTo(b1.x, b1.y);
-            ctx.stroke();
-            ctx.strokeStyle = '#8a8d93';
-            ctx.lineWidth = 5 * cam.zoom;
-            ctx.stroke();
+            // dois braços de ferro da concha até o poste (o do mapa; sem ele, um suporte curto para trás)
+            const to = d.poleAt || { x: d.x, y: d.y - 14 };
+            for (const z of [z0 + 202, z0 + 152]) {
+              const b0 = P(d.x, d.y + 4, z), b1 = P(to.x, to.y, z);
+              ctx.strokeStyle = INK;
+              ctx.lineWidth = 5 * cam.zoom + ink * 2;
+              ctx.beginPath();
+              ctx.moveTo(b0.x, b0.y);
+              ctx.lineTo(b1.x, b1.y);
+              ctx.stroke();
+              ctx.strokeStyle = '#8a8d93';
+              ctx.lineWidth = 5 * cam.zoom;
+              ctx.stroke();
+            }
+            ctx.beginPath();
           } else {
             ctx.moveTo(base.x, base.y);
             ctx.lineTo(top.x, top.y);

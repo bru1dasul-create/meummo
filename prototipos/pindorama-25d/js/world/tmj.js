@@ -332,6 +332,16 @@
         const sofa = map.props.find((q) => q.kind === 'sofa' && within(q, p.x, p.y));
         p.perch = sofa ? (sofa.h || 90) * 0.5 : 0;
       }
+      // o orelhão preso no poste de luz (`poste`): o poste mais perto (até 1,5 m), para os braços irem até ele
+      if (p.kind === 'orelhao' && p.pole) {
+        let best = null, bd = 150;
+        for (const q of map.props) {
+          if (q.kind !== 'poste-praca') continue;
+          const d = Math.hypot(q.x - p.x, q.y - p.y);
+          if (d < bd) { bd = d; best = q; }
+        }
+        if (best) p.poleAt = { x: best.x, y: best.y };
+      }
     }
     // fiação: cada trecho da polilinha liga os dois postes mais perto das pontas (os fios saem das cruzetas)
     const poleNear = (q) => {
