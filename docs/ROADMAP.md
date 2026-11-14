@@ -511,7 +511,8 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 **Bugs e o que está feio (primeiro):**
 - [ ] **[estrutura]** Lag ao falar com NPC: medir (motor, câmera da conversa, janela) e passar à [arte] se for no desenho
 - [ ] **[estrutura]** O jogo trava ao dar e tirar zoom: medir (motor e view) e passar à [arte] se for no desenho
-- [ ] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais"
+- [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
+  é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
 - [ ] **[arte]** Arco: "o braço fica feio puxando"
 - [ ] **[arte]** Esquiva: "está feia demais"
 - [ ] **[mundo + arte]** A cama do quarto do Joaquim está invertida
