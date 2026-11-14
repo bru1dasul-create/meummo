@@ -747,7 +747,7 @@ if (reached('4b')) {
   // as casas e a Budega (uma casa com comércio: letreiro e toldo na frente, que dá para a praça)
   for (const h of HOUSES) cenario.push(rect('casa', h.x0, h.x1, h.y0, h.y1, { altura: h.altura, andares: h.andares, cor: h.cor, caixaDagua: true, ...h.extra }));
   // o logo da Budega (o escudo dourado do dono, sem tabacaria e sem narguilé) vai na fachada; o letreiro fica de reserva
-  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 2.6, andares: 1, cor: '#d4553a', caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA DISTRIBUIDORA', logo: 'budega', toldo: '#f1c84a', ...(FLORESTA ? { interior: true } : {}) }, 'Budega'));
+  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 2.6, andares: 1, cor: '#d4553a', caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA DISTRIBUIDORA', logo: 'budega', toldo: '#f1c84a', ...(FLORESTA ? { interior: true, portaDe: BUDEGA.x0 + BUDEGA_DOOR_SIDE, portaAte: BUDEGA.x1 - BUDEGA_DOOR_SIDE } : {}) }, 'Budega'));
 
   // a praça: fogueira com bancos em volta (virados para o fogo), mesas ao lado da Budega (sem fechar o caminho até o
   // balcão) e luz quente; o orelhão e a lixeira ficam encostados nas paredes da Budega (sem vão para o pé entalar)
@@ -770,7 +770,10 @@ if (reached('4b')) {
     furniture.push({ x, y, r: 0.3 });
   }
   // (nos cantos da frente da Budega, que a câmera vê: a parede oeste fica de costas para ela; o orelhão fica fora do toldo)
-  cenario.push(point('orelhao', BUDEGA.x0 - 0.25, BUDEGA.y1 + 0.25, { olhando: 90 }));
+  // (no padrão novo, o orelhão sai da quina da frente da Budega, onde ficava colado, e vai para o canto da praça, no poste
+  // de luz: pedido do dono, 14/11, "arrumar a entrada da Budega")
+  if (FLORESTA) cenario.push(point('orelhao', 61.7, 57.92, { olhando: 90, poste: true }));
+  else cenario.push(point('orelhao', BUDEGA.x0 - 0.25, BUDEGA.y1 + 0.25, { olhando: 90 }));
   // (com a porta de enrolar aberta, a lixeira sai da frente da porta e fica do lado de fora da parede leste)
   cenario.push(point('lixeira', FLORESTA ? BUDEGA.x1 + 0.3 : BUDEGA.x1 - 0.25, BUDEGA.y1 + 0.25));
   furniture.push({ x: BUDEGA_FRONT.x, y: BUDEGA_FRONT.y, r: 1.5 });
@@ -1138,8 +1141,10 @@ if (reached('4b') && FLORESTA) {
   }
   for (const [x, y] of [[60.4, 39.75], [73.2, 39.75], [88.6, 39.75]] as const) cenario.push(point('vaso', x, y, { planta: 'espada-de-sao-jorge' }));
   cenario.push(rect('lixo', 80.15, 80.75, 47.55, 48.15, { altura: 0.6 }));
-  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[61.7, 58.3], [69.5, 53.2], [78.3, 49.3]], props: { altura: 3.2 } });
-  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[67, 52.6], [72.5, 55.6], [76.4, 57.4]], props: { altura: 3 } });
+  // (por cima da praça, entre os postes de luz e a árvore: antes um varal passava na frente da porta da Budega, na altura
+  // da cabeça, e o dono achou a entrada péssima)
+  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[61.7, 58.3], [69.2, 58.7], [76.6, 58.2]], props: { altura: 3.2 } });
+  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[78.3, 49.3], [76.4, 53.2], [77.2, 57.6]], props: { altura: 3 } });
   // o mato invadindo os cantos da praça
   for (const [cx, cy, rx, ry] of [[61.9, 58.2, 1.4, 0.9], [78.1, 49.6, 1.2, 0.9]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
 }
@@ -1186,8 +1191,10 @@ if (reached('4c') && FLORESTA) {
   pontos.push(point('ponto', 64.6, 36.4, undefined, 'joaquim'));
   pontos.push(rect('area', BUDEGA_WALL + 64, 71 - BUDEGA_WALL, 33 + BUDEGA_WALL, 39.5 - BUDEGA_WALL, undefined, 'joaquim-casa'));
   cenario.push(rect('mesa-redonda', 66.5, 67.3, 34.8, 35.6, { altura: 0.75, cadeiras: 2, toalha: 'croche' }));
-  cenario.push(rect('maquina-costura', 67.6, 68.6, 33.15, 33.65, { altura: 0.8, olhando: 90 }));
-  cenario.push(rect('cama', 68.85, 70.85, 33.15, 34.55, { altura: 0.6, colcha: 'retalhos' }));
+  cenario.push(rect('maquina-costura', 68.25, 69.25, 33.15, 33.65, { altura: 0.8, olhando: 90 }));
+  // a cama com a cabeceira na parede do fundo (norte) e os pés para a sala (o dono achou a de antes invertida: a cabeceira
+  // ficava no meio do quarto); `olhando` 90 = os pés para o sul
+  cenario.push(rect('cama', 69.45, 70.85, 33.15, 35.15, { altura: 0.6, colcha: 'retalhos', olhando: 90 }));
   cenario.push(point('vaso', 64.4, 39.1, { planta: 'espada-de-sao-jorge' }));
   cenario.push(point('vaso', 70.6, 39.1, { planta: 'samambaia' }));
 
