@@ -8,6 +8,24 @@ export const EQUIP_SLOTS: readonly EquipSlot[] = ['weapon', 'head', 'body', 'cha
 export type ItemKind = 'equipment' | 'consumable' | 'material';
 export type Rarity = 'common' | 'rare' | 'legendary';
 
+/** O que pode sair voando de uma arma (o desenho e o som de cada um). */
+export const SHOT_KINDS = ['pedra', 'flecha'] as const;
+export type ShotKind = (typeof SHOT_KINDS)[number];
+
+/**
+ * Arma com tiro próprio (campo "tiro" de data/items.json, ex.: o Arco de Bambu): o que sai, o tempo da carga cheia, o
+ * alcance sem carga e com a carga cheia (metros, no mapa novo), o tempo entre tiros e a velocidade (metros por
+ * segundo). Arma sem "tiro" atira pedra com os números do combate.
+ */
+export interface WeaponShot {
+  projectile: ShotKind;
+  chargeMs: number;
+  rangeMin: number;
+  rangeMax: number;
+  cooldownMs: number;
+  speed: number;
+}
+
 /** Atributos que um equipamento soma ao personagem. */
 export interface ItemBonus {
   damage: number;
@@ -37,6 +55,8 @@ export interface ItemInfo {
   price: number;
   /** Consumível: em qual atalho ele entra (1 = comida, 2 = remédio; campo "atalho" de data/items.json). */
   quick?: 1 | 2;
+  /** Arma com tiro próprio (veja WeaponShot). */
+  shot?: WeaponShot;
 }
 
 /** O que o atalho usa agora: qual item, quantos você tem e em qual espaço da mochila está o primeiro. */

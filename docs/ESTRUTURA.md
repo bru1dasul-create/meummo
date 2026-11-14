@@ -75,6 +75,18 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**14/11 — fila do dono: arco, Joaquim, som.** O dono preferiu não abrir um quarto chat para som: o `sfx.ts` e o
+áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
+(volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
+
+**14/11 — Arco de Bambu (as regras):** `WeaponShot` em `ItemInfo.shot` (campo `tiro` em data/items.json, conferido por
+`parseWeaponShot`, limites em `WEAPON_SHOT_LIMITS`, os mesmos do painel). `shotProfile` em `src/shared/combat.ts`;
+`chargeFraction`/`chargedRange`/`chargedDamage` recebem o perfil do tiro (não mais as regras do combate). Servidor:
+`World.shotOf` (arma equipada, só no mapa novo). Motor: `engine.shot()`; o anel da carga recebe o tempo da arma
+(`setCharge(id, since, fullMs)`); `myShot(..., kind)`; sons `bow-release` e `sfx.charge(power, kind)`; flecha provisória
+no `drawShots`; `view.gear(id, gear)` ao aparecer e na mensagem `gear`. Pendências com a [arte]: ícone `arco` (trocar o
+`icone`), `projectileArt.ts` (ligar no `drawShots`) e `actionBar.setLook`. Protocolo 29.
+
 **13/11 — painel, parte 5 (números do combate):** `CombatRules` (`src/shared/combatRules.ts`, padrão das constantes
 `CHARGE_*`/`GUARD_*`, menos `GUARD_MAX_ENERGY`, que é a escala da barra). `chargeFraction`, `chargedRange`,
 `chargedDamage`, `guardCovers` e `blockHit` recebem as regras (sem padrão escondido: quem esquece não compila).

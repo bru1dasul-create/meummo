@@ -135,6 +135,10 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
 - **O seu tiro aparece na hora:** o cliente desenha a pedrinha assim que você clica, mandando um número
   (`cid`). Quando o servidor confirma (`shot` com o mesmo `cid`), os dois passam a ser o mesmo tiro (e vale o
   alcance que o servidor mandou).
+- **Armas com tiro próprio (o arco):** o item pode ter `tiro` (`WeaponShot`: o que sai, a carga, o alcance, o
+  intervalo e a velocidade). `shotProfile(regras, arma, mapaNovo)` (`src/shared/combat.ts`) diz o tiro de agora: o da
+  arma equipada ou a pedra (números do combate); o servidor (`World.shotOf`) e o motor (`engine.shot()`) fazem a mesma
+  conta, e a mensagem `shot` leva o `kind` (`pedra`, `flecha`). No mapa antigo, sempre pedra.
 - **Pedra com carga (jogo novo):** apertar manda `charge` e o servidor marca a hora (`Player.chargeStart`); soltar
   manda `shoot`, e a carga é o tempo entre os dois no relógio do servidor (`chargeFraction`, cheia em
   `CHARGE_FULL_MS`). A carga dá o dano (`chargedDamage`: até o dobro) e, no mapa novo, o alcance (`chargedRange`:

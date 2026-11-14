@@ -3,23 +3,52 @@
 
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
 import type { Tile, Walkable } from './map';
-import { SHOT_RANGE } from './constants';
+import { SHOT_COOLDOWN_MS, SHOT_RANGE, SHOT_SPEED } from './constants';
 import type { CombatRules } from './combatRules';
+import type { ShotKind, WeaponShot } from './items';
 import { canStep } from './movement';
 
-/** Quanto da carga do estilingue (0 a 1) depois de puxar `heldMs`. */
-export function chargeFraction(heldMs: number, rules: CombatRules): number {
-  return rules.chargeFullMs > 0 ? Math.max(0, Math.min(1, heldMs / rules.chargeFullMs)) : 1;
+/** O tiro de quem atira: a pedra (os números do combate) ou o da arma equipada (ex.: a flecha do arco). */
+export interface ShotProfile {
+  kind: ShotKind;
+  /** Tempo até a carga encher. */
+  chargeMs: number;
+  /** Alcance sem carga e com a carga cheia (metros, no mapa novo; no antigo, sempre SHOT_RANGE). */
+  rangeMin: number;
+  rangeMax: number;
+  /** Tempo entre um tiro e outro. */
+  cooldownMs: number;
+  /** Metros por segundo. */
+  speed: number;
+  /** Carga cheia: dano × (1 + damageBonus) (o mesmo para todas as armas: é número do combate). */
+  damageBonus: number;
 }
 
-/** Alcance da pedra com esta carga: no mapa novo, do alcance sem carga ao da carga cheia; no antigo, o de sempre. */
-export function chargedRange(charge: number, metric: boolean, rules: CombatRules): number {
-  return metric ? rules.chargeRangeMin + (rules.chargeRangeMax - rules.chargeRangeMin) * charge : SHOT_RANGE;
+/**
+ * O tiro com a arma `weapon` (o "tiro" dela; sem ele, ou no mapa antigo, a pedra de sempre). O servidor e o navegador
+ * fazem a mesma conta: a previsão do seu tiro bate com o que o servidor manda.
+ */
+export function shotProfile(rules: CombatRules, weapon: WeaponShot | null | undefined, metric = true): ShotProfile {
+  const base = { damageBonus: rules.chargeDamageBonus };
+  if (!weapon || !metric) {
+    return { ...base, kind: 'pedra', chargeMs: rules.chargeFullMs, rangeMin: rules.chargeRangeMin, rangeMax: rules.chargeRangeMax, cooldownMs: SHOT_COOLDOWN_MS, speed: SHOT_SPEED };
+  }
+  return { ...base, kind: weapon.projectile, chargeMs: weapon.chargeMs, rangeMin: weapon.rangeMin, rangeMax: weapon.rangeMax, cooldownMs: weapon.cooldownMs, speed: weapon.speed };
 }
 
-/** Dano da pedra com esta carga (carga cheia, no padrão: o dobro). */
-export function chargedDamage(base: number, charge: number, rules: CombatRules): number {
-  return Math.round(base * (1 + rules.chargeDamageBonus * charge));
+/** Quanto da carga (0 a 1) depois de puxar `heldMs`. */
+export function chargeFraction(heldMs: number, shot: Pick<ShotProfile, 'chargeMs'>): number {
+  return shot.chargeMs > 0 ? Math.max(0, Math.min(1, heldMs / shot.chargeMs)) : 1;
+}
+
+/** Alcance do tiro com esta carga: no mapa novo, do alcance sem carga ao da carga cheia; no antigo, o de sempre. */
+export function chargedRange(charge: number, metric: boolean, shot: Pick<ShotProfile, 'rangeMin' | 'rangeMax'>): number {
+  return metric ? shot.rangeMin + (shot.rangeMax - shot.rangeMin) * charge : SHOT_RANGE;
+}
+
+/** Dano do tiro com esta carga (carga cheia, no padrão: o dobro). */
+export function chargedDamage(base: number, charge: number, shot: Pick<ShotProfile, 'damageBonus'>): number {
+  return Math.round(base * (1 + shot.damageBonus * charge));
 }
 
 /** Diferença entre dois ângulos (radianos), de -π a π. */

@@ -37,6 +37,17 @@
     "descricao": "Forquilha de goiabeira e borracha de câmara de pneu. Atira mais forte.",
     "icone": "estilingue"
   },
+  "arco_bambu": {
+    "nome": "Arco de Bambu",
+    "preco": 300,
+    "tipo": "equipamento",
+    "parte": "arma",
+    "dano": 5,
+    "raridade": "raro",
+    "descricao": "Bambu do brejo curvado no fogo, corda de fibra de tucum.",
+    "icone": "estilingue",
+    "tiro": { "projetil": "flecha", "cargaMs": 1500, "alcanceMinimo": 8, "alcanceMaximo": 13, "intervaloMs": 700, "velocidade": 20 }
+  },
   "colar_presas": {
     "nome": "Colar de Presas",
     "preco": 120,

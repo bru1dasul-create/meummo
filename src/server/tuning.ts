@@ -12,7 +12,8 @@ import { DEFAULT_COMBAT_RULES, defaultCombatRules, type CombatRules } from '../s
 import type { ItemInfo } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import type { QuestInfo } from '../shared/quests';
-import { parseItemDefs } from './items';
+import { SHOT_COOLDOWN_MS, SHOT_SPEED } from '../shared/constants';
+import { parseItemDefs, WEAPON_SHOT_LIMITS } from './items';
 import { checkDrops, parseMonsterDefs, type MonsterDef } from './monsters';
 import { checkNpcs, parseNpcDefs, type NpcDef } from './npcs';
 import { ITEMS_FILE, MONSTERS_FILE, NPCS_FILE, QUESTS_FILE } from './paths';
@@ -281,7 +282,22 @@ const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [
   { campo: 'dano', rotulo: 'Dano', tipo: 'inteiro', ler: (d) => d.bonus.damage, vale: (d) => d.kind === 'equipment' },
   { campo: 'vida', rotulo: 'Vida', tipo: 'inteiro', ler: (d) => d.bonus.hp, vale: (d) => d.kind === 'equipment' },
   { campo: 'defesa', rotulo: 'Defesa', tipo: 'inteiro', ler: (d) => d.bonus.defense, vale: (d) => d.kind === 'equipment' },
+  // arma com tiro próprio (o arco): os números do tiro dela
+  ...weaponShotFields(),
 ];
+
+/** Os números do "tiro" de uma arma (só aparecem nas armas que têm, como o Arco de Bambu). */
+function weaponShotFields(): FieldSpec<ItemInfo>[] {
+  const L = WEAPON_SHOT_LIMITS;
+  const has = (d: ItemInfo) => d.shot !== undefined;
+  return [
+    { campo: 'tiro.cargaMs', rotulo: 'Tiro: tempo para carregar (ms)', tipo: 'inteiro', dica: `de ${L.cargaMs[0]} a ${L.cargaMs[1]}; o estilingue é ${DEFAULT_COMBAT_RULES.chargeFullMs}`, ler: (d) => d.shot?.chargeMs, vale: has },
+    { campo: 'tiro.alcanceMinimo', rotulo: 'Tiro: alcance sem carga (m)', tipo: 'numero', dica: `de ${L.alcance[0]} a ${L.alcance[1]}; no mapa novo`, ler: (d) => d.shot?.rangeMin, vale: has },
+    { campo: 'tiro.alcanceMaximo', rotulo: 'Tiro: alcance com a carga cheia (m)', tipo: 'numero', dica: `de ${L.alcance[0]} a ${L.alcance[1]}; no mapa novo`, ler: (d) => d.shot?.rangeMax, vale: has },
+    { campo: 'tiro.intervaloMs', rotulo: 'Tiro: tempo entre tiros (ms)', tipo: 'inteiro', dica: `de ${L.intervaloMs[0]} a ${L.intervaloMs[1]}; o estilingue é ${SHOT_COOLDOWN_MS}`, ler: (d) => d.shot?.cooldownMs, vale: has },
+    { campo: 'tiro.velocidade', rotulo: 'Tiro: velocidade (m/s)', tipo: 'numero', dica: `de ${L.velocidade[0]} a ${L.velocidade[1]}; a pedra é ${SHOT_SPEED}`, ler: (d) => d.shot?.speed, vale: has },
+  ];
+}
 
 const AREA_FIELDS: FieldSpec<AreaDef>[] = [
   { campo: 'monstro', rotulo: 'Qual monstro', tipo: 'texto', dica: 'a chave dele (ex.: sagui, jararaca); a lista está na aba Monstros', ler: (d) => d.monster },

@@ -133,7 +133,9 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
 
 - **Monstros:** vida, dano do golpe, tempo do aviso no chão, tempo entre golpes, XP, ouro, velocidade, se ataca
   sozinho, distância que percebe e persegue, tempo para renascer.
-- **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa).
+- **Itens:** preço na loja, cura (consumíveis) e o que os equipamentos somam (dano, vida, defesa). Nas armas com
+  tiro próprio (o Arco de Bambu): tempo para carregar, alcance sem carga e com a carga cheia, tempo entre tiros e a
+  velocidade da flecha.
 - **Áreas de monstros:** cada área de cada mapa (nome, onde fica e o padrão do mapa): **qual monstro** nasce ali e
   **quantos** (0 a 50). Vale na hora: os monstros da área completam, somem ou trocam de tipo. O lugar da área é o do
   mapa (quem desenha os mapas muda no Tiled).

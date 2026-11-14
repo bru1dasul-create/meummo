@@ -20,10 +20,8 @@ import {
   REGEN_DELAY_MS,
   REGEN_EVERY_MS,
   REGEN_FRACTION,
-  SHOT_COOLDOWN_MS,
   SHOT_HIT_RADIUS,
   SHOT_RANGE,
-  SHOT_SPEED,
   STEP_MS,
   TICK_MS,
   TRADE_RANGE,
@@ -52,6 +50,8 @@ import {
   chargeFraction,
   chargedDamage,
   chargedRange,
+  shotProfile,
+  type ShotProfile,
   tileIn,
 } from '../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../shared/combatRules';
@@ -735,14 +735,22 @@ export class World {
       player.chargeStart = null;
       return;
     }
-    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart, this.combat) : 0;
+    // o tiro da arma equipada (o arco atira flecha, com os números dele); sem arma de tiro, a pedra de sempre
+    const shot = this.shotOf(player);
+    const charge = player.chargeStart !== null ? chargeFraction(now - player.chargeStart, shot) : 0;
     player.chargeStart = null;
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
-    player.nextShotAt = Math.max(now, player.nextShotAt) + SHOT_COOLDOWN_MS;
+    player.nextShotAt = Math.max(now, player.nextShotAt) + shot.cooldownMs;
     this.faceAngle(player, angle);
     const [min, max] = player.damage();
-    this.spawnProjectile(player, angle, SHOT_SPEED, chargedRange(charge, this.map.metric, this.combat), chargedDamage(this.rollRange(min, max), charge, this.combat), 'pedra', cid);
+    this.spawnProjectile(player, angle, shot.speed, chargedRange(charge, this.map.metric, shot), chargedDamage(this.rollRange(min, max), charge, shot), shot.kind, cid);
+  }
+
+  /** O tiro de quem atira: o da arma equipada (no mapa novo) ou a pedra (veja shotProfile). */
+  private shotOf(player: Player): ShotProfile {
+    const weapon = player.inventory.equipped.weapon;
+    return shotProfile(this.combat, weapon ? this.items.get(weapon)?.shot : null, this.map.metric);
   }
 
   useSkill(player: Player, n: number, angle: number): void {

@@ -10,8 +10,6 @@ import {
   GM_FLY_FACTOR,
   GUARD_MAX_ENERGY,
   MAX_PENDING_WALKS,
-  SHOT_COOLDOWN_MS,
-  SHOT_SPEED,
   TRADE_RANGE,
   TRADE_SLACK,
   WALK_SLICE_MS,
@@ -32,7 +30,7 @@ import { ShopWindow } from '../shop';
 import { npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
-import { angleDiff, chargedRange, chargeFraction } from '../../shared/combat';
+import { angleDiff, chargedRange, chargeFraction, shotProfile, type ShotProfile } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
 import { GmPanel } from './gm';
@@ -487,6 +485,7 @@ class NewWorld implements NewWorldGame {
     const feet = feetAt(e.x, e.y);
     this.facing.set(e.id, degreesOfDir(e.dir));
     this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me });
+    if (e.kind === 'player') this.view?.gear?.(e.id, e.gear ?? {}); // o que ele tem na mão (o arco fica sempre à vista)
   }
 
   /**
@@ -989,7 +988,7 @@ class NewWorld implements NewWorldGame {
     const angle = this.aimFor(aim, 0);
     this.charging = { since: now, aim, sentAngle: angle };
     this.conn.send({ t: 'charge' });
-    this.combat.setCharge(this.myId, now);
+    this.combat.setCharge(this.myId, now, this.shot().chargeMs);
     this.view?.action?.(this.myId, 'sling-pull', toDegrees(angle)); // já puxa para a mira
     this.faceStill(angle, now);
   }
@@ -1001,8 +1000,9 @@ class NewWorld implements NewWorldGame {
   private updateCharge(now: number): void {
     const charging = this.charging;
     if (!charging) return;
-    const charge = chargeFraction(now - charging.since, this.rules);
-    this.sfx.charge(charge);
+    const shot = this.shot();
+    const charge = chargeFraction(now - charging.since, shot);
+    this.sfx.charge(charge, shot.kind); // o elástico do estilingue ou a corda do arco
     const angle = this.aimFor(charging.aim, charge);
     if (Math.abs(angleDiff(charging.sentAngle, angle)) > PULL_AIM_RESEND) {
       charging.sentAngle = angle;
@@ -1026,7 +1026,7 @@ class NewWorld implements NewWorldGame {
     this.combat.setCharge(this.myId, null);
     // durante a recarga, sai assim que der, com a carga contada até lá (o servidor conta igual, até o tiro chegar)
     if (now < this.nextShotAt) this.pendingShot = { at: this.nextShotAt, aim: charging.aim, since: charging.since };
-    else if (!this.fireAim(charging.aim, chargeFraction(now - charging.since, this.rules), now)) this.view?.action?.(this.myId, 'sling-cancel');
+    else if (!this.fireAim(charging.aim, chargeFraction(now - charging.since, this.shot()), now)) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   /** Solta a pedra sem atirar (esquiva, golpe recebido, desmaio, troca de mapa, janela sem foco). */
@@ -1044,7 +1044,7 @@ class NewWorld implements NewWorldGame {
     const pending = this.pendingShot;
     if (!pending || now < pending.at) return;
     this.pendingShot = null;
-    if (!this.fireAim(pending.aim, chargeFraction(now - pending.since, this.rules), now)) this.view?.action?.(this.myId, 'sling-cancel');
+    if (!this.fireAim(pending.aim, chargeFraction(now - pending.since, this.shot()), now)) this.view?.action?.(this.myId, 'sling-cancel');
   }
 
   /** Atira para onde a mira manda: no monstro (onde ele está de verdade), para o mouse, ou no mais perto. */
@@ -1062,7 +1062,7 @@ class NewWorld implements NewWorldGame {
       angle = this.mouseAim();
     }
     // a mira automática procura até onde esta pedra chega (com carga cheia, mais longe)
-    return angle ?? this.autoAim(chargedRange(charge, this.map.metric, this.rules) + AUTO_AIM_SLACK);
+    return angle ?? this.autoAim(chargedRange(charge, this.map.metric, this.shot()) + AUTO_AIM_SLACK);
   }
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
@@ -1255,21 +1255,31 @@ class NewWorld implements NewWorldGame {
     return true;
   }
 
-  /** Estilingue: uma pedra na direção `angle` (radianos), com a carga (0 a 1). Aparece na hora; o servidor decide. */
+  /**
+   * O tiro de agora: o da arma equipada (o arco: flecha, com carga, alcance, intervalo e velocidade dele) ou a pedra.
+   * A mesma conta do servidor (shotProfile), para a previsão bater.
+   */
+  private shot(): ShotProfile {
+    const weapon = this.lastInv.equipped.weapon;
+    return shotProfile(this.rules, weapon ? this.items.get(weapon)?.shot : null, this.map.metric);
+  }
+
+  /** Atira na direção `angle` (radianos), com a carga (0 a 1): a pedra ou a flecha aparece na hora; o servidor decide. */
   private tryShoot(angle: number, now: number, charge: number): boolean {
     if (this.dead || this.guardHeld || now < this.nextShotAt) return false;
     if (this.refuseInSafeArea(now)) return false;
+    const shot = this.shot();
     // um pouco mais que a recarga do servidor, para a variação da rede não fazer um tiro ser recusado
-    this.nextShotAt = now + SHOT_COOLDOWN_MS + 40;
+    this.nextShotAt = now + shot.cooldownMs + 40;
     const cid = ++this.shotCid;
     this.conn.send({ t: 'shoot', cid, a: round3(angle) });
     const feet = this.myFeet();
     const origin = shotOriginOfFeet(feet.x, feet.y);
-    this.combat.myShot(cid, origin.x, origin.y, angle, SHOT_SPEED, chargedRange(charge, this.map.metric, this.rules), now);
-    this.sfx.play('shot');
+    this.combat.myShot(cid, origin.x, origin.y, angle, shot.speed, chargedRange(charge, this.map.metric, shot), now, shot.kind);
+    this.sfx.play(shot.kind === 'flecha' ? 'bow-release' : 'shot');
     this.faceAngle(toDegrees(angle));
     this.view?.action?.(this.myId, 'shoot', toDegrees(angle));
-    this.actionBar.setCooldown('shot', this.nextShotAt, SHOT_COOLDOWN_MS);
+    this.actionBar.setCooldown('shot', this.nextShotAt, shot.cooldownMs);
     return true;
   }
 
@@ -1792,6 +1802,13 @@ class NewWorld implements NewWorldGame {
       case 'inv':
         this.onInventory(msg.inv);
         break;
+      case 'gear': {
+        // alguém (ou você) trocou o equipamento: a view muda o desenho (o arco na mão)
+        const e = this.entities.get(msg.id);
+        if (e) e.gear = msg.gear;
+        this.view?.gear?.(msg.id, msg.gear);
+        break;
+      }
       case 'items':
         // o administrador ajustou os itens (preço, cura, bônus): a mochila e a loja mostram os números novos
         for (const item of msg.items) this.items.set(item.id, item);

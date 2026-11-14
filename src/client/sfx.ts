@@ -1,5 +1,8 @@
 // Efeitos sonoros sintetizados na hora (Web Audio), sem arquivos de som.
 // Quando tivermos sons de verdade, dá para trocar cada receita por um arquivo carregado.
+// Desde 14/11 o som é da [estrutura] (escolha do dono): quem liga o som no motor também faz o som.
+
+import type { ShotKind } from '../shared/items';
 
 export type SoundName =
   | 'shot'
@@ -23,7 +26,8 @@ export type SoundName =
   | 'sell'
   | 'block'
   | 'guard-break'
-  | 'pull-full';
+  | 'pull-full'
+  | 'bow-release';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -34,8 +38,11 @@ export class Sfx {
   private master: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly lastPlayed = new Map<SoundName, number>();
-  /** O zumbido do elástico enquanto o estilingue é puxado (revisão 17): um som contínuo que sobe com a carga. */
-  private pull: { osc: OscillatorNode; gain: GainNode; full: boolean } | null = null;
+  /**
+   * O som contínuo da puxada, que sobe com a carga: o zumbido do elástico do estilingue (revisão 17) ou o rangido da
+   * corda do arco (mais grave e áspero).
+   */
+  private pull: { osc: OscillatorNode; gain: GainNode; filter: BiquadFilterNode | null; kind: ShotKind; full: boolean } | null = null;
   muted: boolean;
 
   constructor() {
@@ -64,10 +71,11 @@ export class Sfx {
   }
 
   /**
-   * Puxando o estilingue: chame a cada quadro com a carga (0 a 1). O tom sobe e fica mais forte com a carga; quando
-   * enche, um "plim". As receitas são as da revisão 17 do protótipo (js/audio.js).
+   * Puxando o estilingue (`pedra`) ou o arco (`flecha`): chame a cada quadro com a carga (0 a 1). O tom sobe e fica
+   * mais forte com a carga; quando enche, um "plim". O do estilingue é a receita da revisão 17 do protótipo
+   * (js/audio.js); o do arco é um rangido de corda, mais grave, passando por um filtro.
    */
-  charge(power: number): void {
+  charge(power: number, kind: ShotKind = 'pedra'): void {
     const ctx = this.ctx;
     if (this.muted || !ctx || ctx.state !== 'running') {
       this.stopCharge();
@@ -75,18 +83,36 @@ export class Sfx {
     }
     const p = Math.max(0, Math.min(1, power));
     const t = ctx.currentTime;
+    if (this.pull && this.pull.kind !== kind) this.stopCharge(); // trocou de arma no meio: recomeça com o som certo
     if (!this.pull) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = 105;
       gain.gain.value = 0;
-      osc.connect(gain).connect(this.master!);
+      let filter: BiquadFilterNode | null = null;
+      if (kind === 'flecha') {
+        osc.type = 'sawtooth';
+        osc.frequency.value = 70;
+        filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 520;
+        filter.Q.value = 4;
+        osc.connect(filter).connect(gain).connect(this.master!);
+      } else {
+        osc.type = 'triangle';
+        osc.frequency.value = 105;
+        osc.connect(gain).connect(this.master!);
+      }
       osc.start(t);
-      this.pull = { osc, gain, full: false };
+      this.pull = { osc, gain, filter, kind, full: false };
     }
-    this.pull.osc.frequency.setTargetAtTime(105 + p * 250, t, 0.05);
-    this.pull.gain.gain.setTargetAtTime(0.05 + p * 0.07, t, 0.035);
+    if (kind === 'flecha') {
+      this.pull.osc.frequency.setTargetAtTime(70 + p * 120, t, 0.06);
+      this.pull.filter?.frequency.setTargetAtTime(520 + p * 900, t, 0.06);
+      this.pull.gain.gain.setTargetAtTime(0.04 + p * 0.06, t, 0.04);
+    } else {
+      this.pull.osc.frequency.setTargetAtTime(105 + p * 250, t, 0.05);
+      this.pull.gain.gain.setTargetAtTime(0.05 + p * 0.07, t, 0.035);
+    }
     if (p >= 1 && !this.pull.full) {
       this.pull.full = true;
       this.play('pull-full');
@@ -105,6 +131,7 @@ export class Sfx {
       v.osc.stop(t + 0.05);
       v.osc.onended = () => {
         v.osc.disconnect();
+        v.filter?.disconnect();
         v.gain.disconnect();
       };
     } catch {
@@ -213,8 +240,13 @@ export class Sfx {
         this.noise(t, 0.24, 'lowpass', 950, 300, 0.55);
         this.tone('triangle', 180, 48, t, 0.26, 0.4);
         break;
-      case 'pull-full': // o estilingue chegou na carga máxima (revisão 17)
+      case 'pull-full': // o estilingue (ou o arco) chegou na carga máxima (revisão 17)
         this.tone('triangle', 690, 1050, t, 0.18, 0.24);
+        break;
+      case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
+        this.tone('triangle', 260, 120, t, 0.16, 0.3);
+        this.tone('sine', 520, 300, t, 0.08, 0.1);
+        this.noise(t + 0.02, 0.14, 'bandpass', 3200, 900, 0.22);
         break;
     }
   }

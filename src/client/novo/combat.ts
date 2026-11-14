@@ -126,8 +126,8 @@ export class CombatLayer {
   private floaters: Floater[] = [];
   private flashes: Flash[] = [];
   private poofs: { x: number; y: number; start: number }[] = [];
-  /** Puxando o estilingue: de quem e desde quando (o anel em volta do pé enche até a carga cheia). */
-  private chargeRing: { id: number; since: number } | null = null;
+  /** Puxando o estilingue (ou o arco): de quem, desde quando e em quanto tempo enche (o anel em volta do pé). */
+  private chargeRing: { id: number; since: number; fullMs: number } | null = null;
   /** Aviso curto embaixo do pé ("carga perdida", "defesa quebrou!"). */
   private footNote: { id: number; text: string; color: string; start: number } | null = null;
   /** Defesas levantadas: de quem, para onde (radianos) e desde quando (protege depois de guardReadyMs). */
@@ -170,8 +170,8 @@ export class CombatLayer {
   }
 
   /** O seu tiro, desenhado na hora (o servidor confirma depois com o mesmo `cid`). */
-  myShot(cid: number, x: number, y: number, angle: number, speed: number, range: number, now: number): void {
-    this.myShots.set(cid, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind: 'pedra', fromMonster: false });
+  myShot(cid: number, x: number, y: number, angle: number, speed: number, range: number, now: number, kind = 'pedra'): void {
+    this.myShots.set(cid, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster: false });
   }
 
   /** O servidor confirmou o seu tiro `cid` com o número `id`. */
@@ -204,8 +204,9 @@ export class CombatLayer {
   }
 
   /** Começou (`since`) ou parou (null) de puxar o estilingue. */
-  setCharge(id: number, since: number | null): void {
-    this.chargeRing = since === null ? null : { id, since };
+  /** Começou a puxar (`since`) ou soltou (null). `fullMs`: em quanto tempo a carga enche (o arco é mais lento). */
+  setCharge(id: number, since: number | null, fullMs = this.rules.chargeFullMs): void {
+    this.chargeRing = since === null ? null : { id, since, fullMs };
     if (since !== null && this.footNote?.id === id) this.footNote = null;
   }
 
@@ -399,7 +400,7 @@ export class CombatLayer {
     const ring = this.chargeRing;
     const feet = ring ? feetOf(ring.id) : null;
     if (!ring || !feet) return;
-    const progress = this.rules.chargeFullMs > 0 ? Math.min(1, (now - ring.since) / this.rules.chargeFullMs) : 1;
+    const progress = ring.fullMs > 0 ? Math.min(1, (now - ring.since) / ring.fullMs) : 1;
     const full = progress >= 1;
     const ctx = this.ctx;
     const radius = CHARGE_RING_RADIUS;
@@ -640,6 +641,28 @@ export class CombatLayer {
         const shadow = screen(ground.x, ground.y, 0);
         const p = screen(ground.x, ground.y, 0.9);
         const ctx = this.ctx;
+        if (shot.kind === 'flecha') {
+          // flecha provisória (a [arte] desenha a de verdade): uma haste na direção do voo, com a ponta clara
+          const tail = screen(ground.x - shot.dx * 0.6, ground.y - shot.dy * 0.6, 0.9);
+          const tailShadow = screen(ground.x - shot.dx * 0.6, ground.y - shot.dy * 0.6, 0);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+          ctx.lineWidth = Math.max(2, m * 0.04);
+          ctx.beginPath();
+          ctx.moveTo(tailShadow.x, tailShadow.y);
+          ctx.lineTo(shadow.x, shadow.y);
+          ctx.stroke();
+          ctx.strokeStyle = '#7a5530';
+          ctx.lineWidth = Math.max(2, m * 0.035);
+          ctx.beginPath();
+          ctx.moveTo(tail.x, tail.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+          ctx.fillStyle = '#e8e2d2';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(2, m * 0.035), 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
         ctx.ellipse(shadow.x, shadow.y, m * 0.1, m * 0.045, 0, 0, Math.PI * 2);

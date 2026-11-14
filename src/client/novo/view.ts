@@ -4,6 +4,7 @@
 //
 // Tudo em METROS, no chão: x para o leste, y para o sul (como o servidor). As posições são do PÉ do personagem.
 
+import type { GearLook } from '../../shared/items';
 import type { TiledMap, TiledObject } from '../../shared/map';
 
 export interface ActorInfo {
@@ -55,6 +56,11 @@ export interface WorldView {
   setZoom?(factor: number): number;
   /** Sinal de missão em cima de um NPC: '!' tem missão nova, '?' tem missão para concluir, '' nada. */
   mark?(id: number, mark: '!' | '?' | ''): void;
+  /**
+   * O equipamento de um jogador (você ou outro): ao aparecer e quando ele troca. A view usa o `weapon` (ex.: 'arco':
+   * o arco fica sempre na mão).
+   */
+  gear?(id: number, gear: GearLook): void;
 
   // ---- opcionais (conversa com NPC) ----
   /**
