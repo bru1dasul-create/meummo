@@ -795,8 +795,10 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   lâmpada). O musgo e o cipó da fachada são recortados fora do vão. O orelhão com `poste: true` (`tmj.js` acha o
   `poste-praca` mais perto, até 1,5 m: `poleAt`) liga dois braços de ferro até o poste. Os caixotes de frutas, a
   lousinha e o degrau com capacho dependem da resposta do dono à proposta do [mundo].
-- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] já pôs no mapa (`mundo/floresta-dentro`,
-  dentro do `mundo/budega-entrada`) a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
+- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] refez a parte do mapa em cima da main nova
+  (ramo `mundo/lote2-floresta-dentro`, 90e0059, sobre a 6dd462e; é esse que entra, no lugar do `mundo/budega-entrada`,
+  que ficou velho): a raiz no piso, o mato nas frestas, a samambaia nos cantos e o cipó de dentro. Na versão
+  anterior, o mapa tinha a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
   `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
   samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
   minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
@@ -914,7 +916,8 @@ confirmou.
 
 ## Esperando outras frentes
 - **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
-  no `makeActionBar` e o `tryJump` no `onAction`). No `setKey` do botão da defesa (`guard.ts`), as classes `long` e
+  no `makeActionBar` e o `tryJump` no `onAction`). Ela liga assim que o meu ramo (o `ActionSlot` 'jump' do `ui.ts`)
+  entrar na main (antes disso a main não compila): **avisar a [estrutura] quando entrar**. No `setKey` do botão da defesa (`guard.ts`), as classes `long` e
   `longer` como no `ui.ts` (mais de 4 letras → `longer`, mais de 2 → `long`): o estilo já desenha "Espaço" e "Shift"
   nele e já tem a letra menor pronta para os nomes compridos. Ideia, não pedida: pelo código, o tiro que acaba no fim do alcance
   em cima da água vem sem `on` e a flecha crava como se fosse chão; com `on: 'agua'` no `shot_end` sai o respingo.
@@ -931,6 +934,8 @@ confirmou.
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
 0. Pintar o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
+   - Opcional: restilizar os itens dos bichos no chão (hoje o desenho provisório da [estrutura], `drawDrops` no
+     `combat.ts`: o ícone do item caindo com quique, "×N", brilho dourado no raro, laranja com facho no lendário).
 1. **Piloto do estilo desenhado** com o Nano Banana (esperando os exemplos do dono, veja acima).
 2. **Monstros antigos no capricho novo** (`monsterPaint.ts`): sagui, jararaca, saci, corpo-seco, capelobo e Mula sem
    Cabeça. Hoje são 16x16 e menores que um jogador. Se o piloto aprovar o estilo desenhado, faça já nesse estilo.
