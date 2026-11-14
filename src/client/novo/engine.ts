@@ -646,6 +646,7 @@ class NewWorld implements NewWorldGame {
         { slot: 'shot', label: 'Estilingue', key: this.keys.label('atirar') }, // segurar puxa, soltar atira (pedra com carga)
         ...SKILLS.map((skill, i) => ({ slot: `skill${i}` as ActionSlot, label: skill.name, key: this.keys.label(SKILL_KEYS[i] ?? 'golpe') })),
         { slot: 'dash', label: 'Esquiva', key: this.keys.label('esquiva') },
+        { slot: 'jump', label: 'Pular', key: this.keys.label('pular') }, // no celular, o botão de pular (o desenho é da [arte])
       ],
       (slot, down) => this.onAction(slot, down),
     );
@@ -1467,6 +1468,7 @@ class NewWorld implements NewWorldGame {
     }
     if (!down) return;
     if (slot === 'dash') this.tryDash(now);
+    else if (slot === 'jump') this.tryJump(now);
     else if (slot === 'skill0') this.trySkill(0, this.autoAim(MELEE_AIM_RANGE), now);
     else if (slot === 'skill1') this.trySkill(1, 0, now);
   }
