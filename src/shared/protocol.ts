@@ -105,7 +105,11 @@ export type GmCommand =
   | { do: 'tp'; x: number; y: number }
   | { do: 'heal' }
   | { do: 'npc'; npc: string } // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
-  | { do: 'time'; phase: 'dia' | 'noite' }; // vira o relógio para o começo do dia ou da noite (todos os mapas)
+  | { do: 'time'; phase: 'dia' | 'noite' } // vira o relógio para o começo do dia ou da noite (todos os mapas)
+  | { do: 'wind'; level: WindLevel }; // muda o vento na hora (todos os mapas)
+
+/** Como está o vento: calmo, brisa ou forte. */
+export type WindLevel = 'calmo' | 'brisa' | 'forte';
 
 /** Entrar com um personagem que já existe, ou criar um novo (a tela inicial com "Criar uma conta"). */
 export type LoginMode = 'login' | 'create';
@@ -159,6 +163,8 @@ export type ServerMsg =
       combat: CombatRules;
       /** Dia e noite: em que ponto do ciclo estamos agora (ms; de 0 até combat.dayMs é dia). O navegador anda sozinho daqui. */
       time: number;
+      /** O vento de agora: força (0 a 1) e para onde sopra (graus no chão: 0 = leste, 90 = sul). */
+      wind: { strength: number; angle: number };
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
@@ -212,6 +218,8 @@ export type ServerMsg =
   // dia e noite: em que ponto do ciclo estamos agora (ms). Vem quando o dia vira noite (e vice-versa), quando o
   // administrador vira o relógio ou muda quanto dura cada um: o navegador acerta o relógio dele
   | { t: 'time'; at: number }
+  // o vento mudou: chega a esta força (0 a 1) e direção (graus no chão, para onde sopra) em `ms`, devagar
+  | { t: 'wind'; strength: number; angle: number; ms: number }
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }

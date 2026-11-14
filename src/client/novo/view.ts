@@ -77,6 +77,11 @@ export interface WorldView {
    * em passos de 0,01); `night` = é noite: os bichos estão mais fortes (olhos vermelhos em todos eles).
    */
   setTimeOfDay?(time: { light: number; night: boolean }): void;
+  /**
+   * O vento: `strength` de 0 (parado) a 1 (forte) e `angle` = para onde sopra, em graus no chão (0 = leste, 90 = sul).
+   * Vem só quando muda (as mudanças do servidor são devagar: o motor manda os passos do meio).
+   */
+  setWind?(strength: number, angle?: number): void;
 
   // ---- opcionais (conversa com NPC) ----
   /**

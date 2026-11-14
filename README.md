@@ -258,6 +258,12 @@ onde estava quando o servidor reinicia). Escurece devagar no fim do dia e clarei
 pela coruja. Os números mudam no painel (Combate → Dia e noite). Para testar sem esperar: menu ADM no jogo (tecla G)
 → **Virar dia** / **Virar noite**.
 
+## Vento
+
+Um vento só para o mundo todo: fica **calmo**, em **brisa** ou **forte** por 2 a 6 minutos e muda devagar, girando um
+pouco a direção. As árvores balançam conforme a força e o som do vento, das rajadas e das folhas acompanha. É só
+desenho e som (não mexe nos tiros). Para testar: menu ADM (tecla G) → **Calmo**, **Brisa** ou **Vento forte**.
+
 ## Bichos de estimação (sem programar)
 
 O **Joaquim**, o gato da vó, mora na casa rosa do Capão. Ele fica em [`data/bichos.json`](data/bichos.json): quanto tempo

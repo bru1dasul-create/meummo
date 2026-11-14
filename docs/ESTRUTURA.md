@@ -79,6 +79,13 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — vento forte e fraco:** protocolo **35**. `src/server/wind.ts` (`WindWeather`: calmo/brisa/forte, faixas e
+chances em `LEVELS`; um só no reino, que atualiza no `tick` e manda `wind` para todos; num mundo sem reino, o mundo
+cuida do seu). O vento sorteia com `Math.random` próprio: usar o sorteio do mundo mudou a ordem e quebrou o teste do
+Joaquim. `welcome.wind`; GM `{ do: 'wind', level }`. Motor: `windNow` (passagem suave, ângulo pelo lado mais curto) →
+`view.setWind(força, ângulo)` (o formato do PD.View da [arte], com dois números) e `Ambient.setWind`. Testes:
+`tests/vento.test.ts`. Gancho `wind()`.
+
 **14/11 — bichos novos (aprovados pelo dono):** `quati`, `tatu_bola`, `marimbondo` e `filhote_boitata` em
 data/monsters.json (só acrescentados no fim, no estilo do arquivo). Campos novos: `casca` (`shell`), `desvioTiro`
 (`shotDodge`) e `soNoite` (`nightOnly`); protocolo **34** (`fx` `dizzy`, `dodge`, `vanish`; a casca usa o `blk: 1` do

@@ -578,13 +578,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura]** O arco e o estilingue de goiabeira nos bichos novos, quando eles chegarem (hoje o estilingue cai do
   sagui, 4%; o arco só na Budega)
 - [ ] **[arte]** (Opcional) restilizar o item no chão (`drawDrops` em `src/client/novo/combat.ts`: ícone, quique, brilho)
-- [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
-  movimento delas; o som do vento acompanha). Parte da [arte] feita (14/11): `PD.View.setWind(força, ângulo)` (força de
-  0 = parado a 1 = forte; ângulo em graus no chão, para onde sopra); até a [estrutura] mandar, uma brisa (0,35). As
-  rajadas viajam no sentido do vento (as árvores cedem uma depois da outra), cada árvore com o seu ritmo, inclinada
-  para onde ele sopra; a copa balança em faixas (o alto mexe mais, junto do tronco quase nada). No zoom normal: parado
-  ~1 px, brisa ~2,6 px, forte ~9 px no alto da copa; as pétalas do ipê voam com ele. Falta a [estrutura]: o vento no
-  servidor (todos veem o mesmo), o `setWind?` no `WorldView` e o som
+- [x] **[estrutura]** Vento forte e fraco, as regras (14/11): um vento só para o mundo, calmo, brisa ou forte por 2 a 6
+  min, mudando devagar (20 s) e girando a direção; `welcome.wind` e a mensagem `wind` (protocolo 35); o motor passa
+  à view `setWind(força, ângulo)`; o som do vento, das rajadas e das folhas acompanha; menu ADM "Calmo / Brisa / Vento
+  forte"
+- [x] **[arte]** As árvores no vento (14/11): `PD.View.setWind(força, ângulo)` (força de 0 = parado a 1 = forte;
+  ângulo em graus no chão, para onde sopra); sem chamar, uma brisa (0,35). As rajadas viajam no sentido do vento (as
+  árvores cedem uma depois da outra), cada árvore com o seu ritmo, inclinada para onde ele sopra; a copa balança em
+  faixas (o alto mexe mais, junto do tronco quase nada). No zoom normal: parado ~1 px, brisa ~2,6 px, forte ~9 px no
+  alto da copa; as pétalas do ipê voam com ele
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)

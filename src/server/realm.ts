@@ -11,6 +11,7 @@ import type { ItemInfo } from '../shared/items';
 import type { TuningFile } from './tuning';
 import { defaultCombatRules } from '../shared/combatRules';
 import { DayNightClock } from './dayNight';
+import { WindWeather } from './wind';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
 
 export type RealmOptions = Omit<WorldOptions, 'links'> & {
@@ -71,6 +72,8 @@ export class Realm {
   /** Id do jogador → mapa onde ele está agora. */
   private readonly where = new Map<number, World>();
   private readonly travels: { player: Player; to: string; arrival: string }[] = [];
+  /** O vento do mundo (o mesmo em todos os mapas). */
+  readonly wind: WindWeather;
 
   constructor(maps: GameMap[], options: RealmOptions = {}) {
     if (maps.length === 0) throw new Error('Nenhum mapa encontrado em public/assets/maps.');
@@ -87,9 +90,11 @@ export class Realm {
     };
     // um sol só: o mesmo relógio do dia e noite em todos os mapas
     const dayNight = options.dayNight ?? new DayNightClock(options.combat ?? defaultCombatRules(), options.now ?? Date.now);
+    // e um vento só (o reino cuida dele no tick e avisa todo mundo quando muda)
+    this.wind = options.wind ?? new WindWeather(options.now ?? (() => performance.now()));
     for (const map of maps) {
       if (this.worlds.has(map.id)) throw new Error(`Dois mapas com o mesmo id: "${map.id}".`);
-      this.worlds.set(map.id, new World(map, { ...options, links, dayNight }));
+      this.worlds.set(map.id, new World(map, { ...options, links, dayNight, wind: this.wind }));
     }
     if (options.startMap && !this.worlds.has(options.startMap)) {
       throw new Error(`O mapa inicial "${options.startMap}" não existe. Use um destes: ${[...this.worlds.keys()].join(', ')}.`);
@@ -222,6 +227,7 @@ export class Realm {
 
   /** Um tick em todos os mapas; depois, quem pisou numa saída troca de mapa. */
   tick(): void {
+    if (this.wind.update()) this.announce(this.wind.message());
     for (const world of this.worlds.values()) world.tick();
     const travels = this.travels.splice(0);
     for (const { player, to, arrival } of travels) {
