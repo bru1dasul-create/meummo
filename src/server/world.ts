@@ -1639,6 +1639,8 @@ export class World {
         end.x = round3(shot.x);
         end.y = round3(shot.y);
         if (result === 'wall') end.on = this.map.shotBlockerAt(shot.x + shot.dx * 0.02, shot.y + shot.dy * 0.02) ?? 'bloco';
+        // caiu no fim do alcance em cima da água (que não segura tiro): respingo, não flecha cravada no chão
+        else if (this.map.kindUnderShot(shot.x, shot.y) === 'agua') end.on = 'agua';
       }
       for (const id of shot.viewers) this.players.get(id)?.outbox.push(end);
       if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx), shot.push ?? 0);

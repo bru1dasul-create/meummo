@@ -66,6 +66,9 @@ export class GuardButton {
   setKey(name: string): void {
     this.key.textContent = name;
     this.key.dataset.key = name;
+    // nome comprido ("Num 5", "Page Up"): letra menor, como na barra de ações (ui.ts)
+    this.key.classList.toggle('longer', name.length > 4);
+    this.key.classList.toggle('long', name.length > 2 && name.length <= 4);
     this.el.title = name && name !== '—' ? `Defender (segure ${name})` : 'Defender (segure)';
   }
 

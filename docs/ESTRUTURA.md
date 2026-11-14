@@ -79,6 +79,12 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — ajustes pedidos pela [arte]:** a flecha que cai no fim do alcance em cima da água vem com `on: 'agua'`
+(`GameMap.kindUnderShot`: o tipo do retângulo da `colisao` embaixo, mesmo os que não seguram tiro), para o respingo; e
+o botão da defesa ganhou as classes `long`/`longer` na etiqueta da tecla (como a barra). A flecha cravada no tronco
+(lascas, quique na pedra, respingo) está no ramo da [arte], esperando o "pode" do dono; o botão de pular eu ligo
+quando o `ActionSlot` 'jump' dela entrar na main.
+
 **14/11 — combinados com o [mundo] (a floresta maior, esperando o dono):** o Capão passa a 96 × 180 m (cresce só
 para o sul; nada muda de lugar). Áreas reservadas na camada `monstros` (x0–x1 × y0–y1): A 20–38 × 112–140 (mata do
 meio do parque), B 2–24 × 150–178 (mata profunda do sul e cachoeirinha, a mais forte), C 52–86 × 92–136 (mata da
