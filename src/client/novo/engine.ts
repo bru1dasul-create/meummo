@@ -330,6 +330,7 @@ class NewWorld implements NewWorldGame {
       () => this.startGuard(performance.now()),
       () => this.stopGuard(),
     );
+    this.guardButton.setKey(this.keys.label('defesa'));
     this.gmPanel = new GmPanel({
       spawn: (monster, n) => this.conn.send({ t: 'gm', cmd: { do: 'spawn', monster, n } }),
       clear: () => this.conn.send({ t: 'gm', cmd: { do: 'clear' } }),
@@ -654,6 +655,7 @@ class NewWorld implements NewWorldGame {
   private keysChanged(): void {
     this.actionBar.destroy();
     this.actionBar = this.makeActionBar();
+    this.guardButton.setKey(this.keys.label('defesa'));
     this.updateShotLook(this.gearNow);
     this.actionBar.setCooldown('shot', this.nextShotAt, this.shot().cooldownMs);
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);

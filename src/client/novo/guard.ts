@@ -1,10 +1,12 @@
-// Botão da defesa do jogo novo (combate passo 2b): segurar levanta a defesa, soltar baixa. No PC também vale a tecla F.
+// Botão da defesa do jogo novo (combate passo 2b): segurar levanta a defesa, soltar baixa. No PC também vale a tecla da
+// defesa (F no padrão; o jogador troca na janela das teclas, e o botão mostra a de agora).
 // Visual simples (botão redondo perto dos atalhos de comida e remédio); a [arte] restiliza (#guard-button) ou leva
 // para a HUD nova. A energia aparece embaixo do pé (desenho do combate, src/client/novo/combat.ts).
 
 export class GuardButton {
   private readonly el = document.createElement('button');
   private readonly style = document.createElement('style');
+  private readonly key = document.createElement('span');
   private pointer: number | null = null;
 
   constructor(
@@ -26,15 +28,13 @@ export class GuardButton {
     this.el.id = 'guard-button';
     this.el.type = 'button';
     this.el.tabIndex = -1;
-    this.el.title = 'Defender (segure F)';
     const shield = document.createElement('span');
     shield.className = 'shield';
     const label = document.createElement('span');
     label.textContent = 'Defesa';
-    const key = document.createElement('span');
-    key.className = 'key';
-    key.textContent = 'F';
-    this.el.append(shield, label, key);
+    this.key.className = 'key';
+    this.setKey('F');
+    this.el.append(shield, label, this.key);
     this.el.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -57,6 +57,16 @@ export class GuardButton {
     this.el.addEventListener('lostpointercapture', release);
     this.el.addEventListener('contextmenu', (event) => event.preventDefault());
     document.body.append(this.el);
+  }
+
+  /**
+   * A tecla da defesa de agora (o nome que aparece; '—' sem tecla). Vai também em `data-key`: o estilo da [arte] troca
+   * "Espaço" e "Shift" por desenho, como na barra de ações.
+   */
+  setKey(name: string): void {
+    this.key.textContent = name;
+    this.key.dataset.key = name;
+    this.el.title = name && name !== '—' ? `Defender (segure ${name})` : 'Defender (segure)';
   }
 
   /** Mostra se está segurando e se a defesa quebrou. */
