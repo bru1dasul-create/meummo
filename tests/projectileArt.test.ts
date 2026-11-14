@@ -1,5 +1,5 @@
 // Desenho dos tiros que param sem acertar ninguém (projectileArt.ts, da [arte]): a flecha crava no chão, na madeira
-// (na altura em que bateu; do lado de lá do tronco, escondida), quica na pedra e some na água; a pedra levanta poeira.
+// (na altura em que bateu; do lado de lá do tronco, escondida), quica na pedra e mergulha na água; a pedra levanta poeira.
 // Cada um some depois do seu tempo, e a camada do combate fica acesa enquanto algum está à vista.
 
 import { describe, expect, it } from 'vitest';
@@ -84,12 +84,16 @@ describe('flecha e pedra que param sem acertar ninguém', () => {
     clear(t);
   });
 
-  it('cai na água: respingo curto, sem flecha', () => {
+  it('cai na água: a flecha mergulha, o esguicho e os anéis, e some em menos de 1 s', () => {
     const t = 4e7;
     clear(t);
     projectileEnded('flecha', 10, 10, 0, t, { on: 'agua', z: 0.9 });
-    expect(frameAt(t + 100)).toContain('ellipse');
-    expect(landedBusy(t + 701)).toBe(false);
+    const start = frameAt(t + 100);
+    expect(start).toContain('ellipse'); // os anéis e o esguicho
+    expect(start).toContain('clip'); // a flecha entrando, cortada na linha da água
+    expect(frameAt(t + 600)).not.toContain('clip'); // já afundou: só os anéis
+    expect(landedBusy(t + 850)).toBe(true);
+    expect(landedBusy(t + 901)).toBe(false);
     clear(t);
   });
 

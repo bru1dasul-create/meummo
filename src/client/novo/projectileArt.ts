@@ -154,7 +154,7 @@ interface Landed {
 /** Quanto tempo a flecha fica (e quanto leva para sumir), em ms; o respingo e a poeira duram menos. */
 const STAY_MS = 1600;
 const FADE_MS = 450;
-const SPLASH_MS = 700;
+const SPLASH_MS = 900;
 const DUST_MS = 380;
 const MAX_LANDED = 24;
 const landed: Landed[] = [];
@@ -373,34 +373,95 @@ function drawBounced(ctx: CanvasRenderingContext2D, screen: Screen, f: Landed, m
   arrow(ctx, tail, head, m, alpha, true);
 }
 
-/** Caiu na água: dois anéis abrindo e umas gotinhas subindo e caindo. */
+/**
+ * Caiu na água (no fim do alcance, em cima do lago): a flecha mergulha inclinada e afunda com as penas por último, sobe
+ * um esguicho no meio e uma coroa de gotas, e três anéis abrem e somem. O branco tem um contorno azul-escuro por baixo
+ * para aparecer tanto na água clara quanto na escura (e não se confundir com o brilho do lago).
+ */
 function drawSplash(ctx: CanvasRenderingContext2D, screen: Screen, f: Landed, m: number, k: number): void {
   const c = screen(f.x, f.y, 0);
+  const cx = Math.cos(f.a);
+  const cy = Math.sin(f.a);
   ctx.save();
-  ctx.strokeStyle = '#e8f6ff';
+  // os anéis, um depois do outro
   for (const [delay, grow] of [
-    [0, 0.42],
-    [0.18, 0.3],
+    [0, 0.62],
+    [0.12, 0.46],
+    [0.26, 0.32],
   ] as const) {
-    const t = Math.max(0, (k - delay) / (1 - delay));
-    if (t <= 0) continue;
-    ctx.globalAlpha = (1 - t) * 0.8;
-    ctx.lineWidth = Math.max(1, 0.025 * m * (1 - t));
+    const t = (k - delay) / (1 - delay);
+    if (t <= 0 || t >= 1) continue;
+    const rx = (0.07 + t * grow) * m;
+    ctx.globalAlpha = (1 - t) ** 1.2 * 0.95;
+    ctx.lineWidth = Math.max(1.6, 0.034 * m * (1 - t * 0.5));
+    ctx.strokeStyle = 'rgba(6, 34, 44, 0.5)';
     ctx.beginPath();
-    ctx.ellipse(c.x, c.y, (0.05 + t * grow) * m, (0.025 + t * grow * 0.5) * m, 0, 0, Math.PI * 2);
+    ctx.ellipse(c.x, c.y + 1.2, rx, rx * 0.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#f4fcff';
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, rx, rx * 0.5, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
+  // a flecha mergulhando (uns 55° para baixo, na direção do voo): a parte de baixo d'água é cortada na linha da água
   if (k < 0.5) {
     const t = k / 0.5;
-    ctx.globalAlpha = 1 - t;
-    ctx.fillStyle = '#d8f0ff';
-    for (let i = 0; i < 6; i++) {
-      const ang = (i / 6) * Math.PI * 2;
-      const r = (0.04 + t * 0.16) * m;
-      const up = (t * 0.35 - t * t * 0.4) * m;
+    const len = 0.74;
+    const out = 0.5 * (1 - t) ** 1.4; // metros ainda fora d'água
+    if (out > 0.015) {
+      const h = Math.cos(0.96);
+      const v = Math.sin(0.96);
+      const tail = screen(f.x - cx * h * out, f.y - cy * h * out, v * out);
+      const tip = screen(f.x + cx * h * (len - out), f.y + cy * h * (len - out), -v * (len - out));
+      const dx = tip.x - tail.x;
+      const dy = tip.y - tail.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const ux = dx / d;
+      const uy = dy / d;
+      const big = 4 * m + 40;
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(c.x + Math.cos(ang) * r, c.y + Math.sin(ang) * r * 0.5 - up, Math.max(1, 0.025 * m), 0, Math.PI * 2);
+      ctx.moveTo(c.x - uy * big, c.y + ux * big);
+      ctx.lineTo(c.x + uy * big, c.y - ux * big);
+      ctx.lineTo(c.x + uy * big - ux * big, c.y - ux * big - uy * big);
+      ctx.lineTo(c.x - uy * big - ux * big, c.y + ux * big - uy * big);
+      ctx.closePath();
+      ctx.clip();
+      arrow(ctx, tail, tip, m, 1 - t * 0.35, false);
+      ctx.restore();
+    }
+  }
+  // o esguicho do meio: uma gota comprida que sobe e desce
+  if (k < 0.42) {
+    const t = k / 0.42;
+    const hgt = Math.sin(t * Math.PI) * 0.3 * m;
+    const w = Math.max(1.6, 0.04 * m * (1 - t * 0.4));
+    ctx.globalAlpha = 0.95 * (1 - t * 0.5);
+    ctx.fillStyle = '#f4fcff';
+    ctx.strokeStyle = 'rgba(6, 34, 44, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y - hgt * 0.5, w, Math.max(w, hgt * 0.5), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  // a coroa: gotas que sobem em arco e caem de volta, umas mais altas que as outras
+  if (k < 0.75) {
+    const t = k / 0.75;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = 'rgba(6, 34, 44, 0.5)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2 + 0.35;
+      const spread = 0.06 + t * (0.2 + (i % 3) * 0.05);
+      const up = 4 * (0.16 + (i % 2) * 0.1) * t * (1 - t) * m;
+      const r = Math.max(1.3, 0.03 * m * (1 - t * 0.5));
+      ctx.globalAlpha = 1 - t * t;
+      ctx.beginPath();
+      ctx.arc(c.x + Math.cos(ang) * spread * m, c.y + Math.sin(ang) * spread * m * 0.5 - up, r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
     }
   }
   ctx.restore();

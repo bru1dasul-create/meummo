@@ -817,7 +817,9 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - **Flecha que para sem acertar ninguém** (`src/client/novo/projectileArt.ts`; o `combat.ts` chama
   `projectileEnded(kind, x, y, angle, now, stuck?)`): `chao` (sem `stuck`, ou `borda`: crava no chão), `cravada` (a
   madeira de `HOLDS`: na altura `stuck.z`, treme, lascas, furinho), `quica` (o resto: faíscas, cai deitada com
-  sombra), `agua` (respingo) e `poeira` (a pedra do estilingue). Vindo até uns 30° da direção da câmera
+  sombra), `agua` (a flecha mergulha, cortada na linha da água, com o esguicho, a coroa de gotas e três anéis com
+  contorno escuro, para não sumir no brilho do lago; a [estrutura] manda `on: 'agua'` também no fim do alcance em
+  cima da água) e `poeira` (a pedra do estilingue). Vindo até uns 30° da direção da câmera
   (`towardCamera > 0.87`), ela bateu do lado de lá: só as lascas ou as faíscas aparecem (a camada do combate fica por
   cima de tudo, então o tronco não tem como cobrir a haste). Teste: `tests/projectileArt.test.ts`; no jogo:
   `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
@@ -917,11 +919,9 @@ confirmou.
 ## Esperando outras frentes
 - **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
   no `makeActionBar` e o `tryJump` no `onAction`). Ela liga assim que o meu ramo (o `ActionSlot` 'jump' do `ui.ts`)
-  entrar na main (antes disso a main não compila): **avisar a [estrutura] quando entrar**. No `setKey` do botão da defesa (`guard.ts`), as classes `long` e
-  `longer` como no `ui.ts` (mais de 4 letras → `longer`, mais de 2 → `long`): o estilo já desenha "Espaço" e "Shift"
-  nele e já tem a letra menor pronta para os nomes compridos. Ideia, não pedida: pelo código, o tiro que acaba no fim do alcance
-  em cima da água vem sem `on` e a flecha crava como se fosse chão; com `on: 'agua'` no `shot_end` sai o respingo.
-  O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
+  entrar na main (antes disso a main não compila): **avisar a [estrutura] quando entrar**. Já feitos por ela (main
+  6e44ee0): a letra menor no botão da defesa (`long`/`longer` no `setKey`) e o `on: 'agua'` no fim do alcance em cima
+  da água (conferi o mergulho da flecha no lago). O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
   entraram na main em 14/11, e a [estrutura] ligou o arco (main 0765f59): conferi no jogo (a mochila equipa, o botão
   vira "Arco", a flecha voa e crava). Observação dela: no zoom padrão a tela mostra uns 10 m do herói; a flecha com
   carga cheia (13 m) pode cravar fora da tela (não é erro). Se o dono quiser, a câmera pode andar um pouco para onde
