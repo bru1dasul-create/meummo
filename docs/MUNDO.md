@@ -75,6 +75,29 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   coisa fecha de ponta a ponta (`blockedBetween`), o que permite paredes finas entre o dentro e o fora. O **Joaquim**
   (gato da vó, pedido do dono): o `gato` decorativo no sofá sai quando a [estrutura] o fizer de verdade; ela usa o ponto
   `joaquim` e o retângulo `joaquim-casa` da camada `pontos`.
+- **A floresta maior (14/11, planta aprovada: "pode seguir com a planta da floresta maior"; ramo `mundo/floresta-maior`,
+  espera o desenho da [arte] para entrar na `main`).** O mapa passou de 96 × 120 para **96 × 180** (só para o sul; nada
+  muda de lugar). Planta: `docs/referencias/floresta-maior-planta.jpg`; conceitos: `floresta-maior-paineira.jpg` e
+  `floresta-maior-posto.jpg`. O que entrou: a **Clareira da Paineira** (32, 150; a `arvore` 'Paineira' de `especie:
+  'paineira'` com `flores`, e o parquinho antigo: `parquinho` com `brinquedo` 'balanco' (só os dois pés seguram),
+  'escorregador' e 'gira-gira'), a **Cachoeirinha** (o poço em 14,3; 159,5 e a `cachoeira` na ponta norte dele), as
+  **pedras de atravessar** (`pinguela` com `pedras: true`, abaixo do poço), a **mata profunda do sul** com o recanto do
+  Véu (6,5; 173), o **buraco no gradil** (y 160 a 162,4, com um pedaço `estado: 'quebrado'` em cada ponta), a **mata
+  da estrada** (a mata ao sul da vila, x 48 a 88, agora de andar), o **posto abandonado** (pátio de `calcada` rachada
+  em 73 a 88 × 139 a 150, `cobertura` com 4 pilares, duas `bomba`, a lojinha como `casa` com `posto: true`, `pneus` e
+  uma `placa` com `texto: ''`; a parede de mata da rua abre na frente dele), a estrada até a `barreira` em y 173,85
+  e **13 árvores novas na vila** (o terreno dos fundos virou bosque). Dá para dar a volta inteira a pé (parque → buraco
+  → mata da estrada → posto → rua → vila); o teste prova as duas passagens. **Regras novas no gerador:** tudo o que é
+  sorteado até y = 120 usa `H0` (o sorteio antigo sai igual; a faixa nova usa `SEED + 14` e `SEED + 15`); a mata só
+  "conhece" o riacho novo e o poço depois de sorteada a antiga (`STREAMS`/`PONDS`); `pruneWedges` tira as plantas
+  sorteadas que ficam num vão de entalar e para tudo se o vão for entre duas coisas postas à mão; `pocketOpen`: só é
+  vão de entalar se couber um quadrado de 0,3 m entre as duas coisas, fora das outras (os dentes entre os arbustos da
+  parede não contam). Bichos: áreas `reservada-sul-1` (20 a 38 × 112 a 140), `-2` (52 a 86 × 92 a 136), `-3` (52 a
+  86 × 154 a 177) com 3 cada e `reservada-sul-chefe` (2 a 12 × 167 a 178, o recanto) com 1; a [estrutura] propôs ao
+  dono quati, tatu-bola, marimbondo e filhote de boitatá (só de noite) e manda as chaves. **Capivaras andando** (formato
+  da [estrutura]): em `pontos`, `capivaras-lago` e `capivaras-campinho` (retângulos) e os pontos `-descanso`; as de
+  enfeite saem quando as dela entrarem. **Mapa da tecla M:** o gerador escreve junto `capao-mapa.png` (8 px por metro,
+  sem texto) e `capao-mapa.json` (`escala`, `largura`, `altura`, `nomes`), por `scripts/mapa-de-cima.ts`.
 - **O parque antigo está na `main` (13/11)**, com o desenho da [arte]. Antes no ramo `mundo/parque-antigo` (bloco
   `FLORESTA` antes da etapa 4b, sorteio `SEED + 13`; tudo fora das trilhas e sem vão de entalar, com a função `near`
   procurando lugar em espiral). Tipos e propriedades: `placa` (`tamanho: 'grande'`, `mato`), `bebedouro` (`quebrado`,
@@ -240,6 +263,12 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
+- **[arte] (14/11):** desenhar as coisas da floresta maior para ela entrar na `main`: a `paineira` (tronco de garrafa com
+  espinhos, copa de flor rosa), o `parquinho` (balanço, escorregador, gira-gira enferrujados), a `cachoeira` (pedras com a
+  água caindo no poço), a `pinguela` com `pedras`, a `cobertura` do posto (some ou fica transparente com o herói embaixo
+  ou atrás, como o telhado), a `bomba`, os `pneus`, a lojinha (`casa` com `posto`) e a placa em branco. Lote 2 (a floresta
+  de dentro das casas): ramo `mundo/lote2-floresta-dentro`, espera o "pode" do dono.
+- **[estrutura] (14/11):** as chaves dos bichos novos (para trocar os nomes `reservada-sul-*`) e as capivaras andando.
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois

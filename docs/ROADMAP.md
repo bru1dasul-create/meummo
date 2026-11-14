@@ -541,15 +541,24 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto
 
 **Mundo:**
-- [ ] **[mundo]** Aumentar a floresta
+- [ ] **[mundo]** Aumentar a floresta — **pronta no ramo `mundo/floresta-maior`** (planta aprovada em 14/11): o parque
+  cresce mais 60 m para o sul (Clareira da Paineira com o parquinho antigo, Cachoeirinha, mata profunda do sul com o
+  recanto do Véu, buraco no gradil), a mata ao sul da vila vira mata de andar com o posto abandonado na beira da rua, a
+  rua desce até o fim novo e a vila ganha 13 árvores. Entra na `main` com o desenho da [arte] (item abaixo)
+- [ ] **[arte]** Desenhar as coisas da floresta maior: `paineira`, `parquinho` (balanço, escorregador, gira-gira),
+  `cachoeira`, `pinguela` com `pedras`, `cobertura` do posto, `bomba`, `pneus`, a lojinha (`casa` com `posto`) e a placa
+  em branco (lista no `docs/MUNDO.md`, "Esperando outras frentes")
 - [ ] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
 - [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
-  as áreas e a [arte] desenha
+  as áreas e a [arte] desenha. O [mundo] já reservou 4 áreas na floresta maior (`reservada-sul-1` a `-3` e
+  `reservada-sul-chefe`, no ramo `mundo/floresta-maior`); faltam as chaves que o dono escolher
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
-  comportamento, o [mundo] marca a área e a [arte] anima
+  comportamento, o [mundo] marca a área e a [arte] anima. O [mundo] marcou `capivaras-lago` e `capivaras-campinho`
+  (com os pontos `-descanso`) no ramo `mundo/floresta-maior`
 - [ ] **[estrutura + mundo + arte]** Mapa: o M abre o mapa completo, que só mostra o que você já andou, e um mini mapa.
   A [estrutura] guarda o explorado (no personagem) e a tecla; o [mundo] faz a imagem de cima de cada mapa; a [arte]
-  desenha a janela e o mini mapa
+  desenha a janela e o mini mapa. A imagem do Capão sai junto com o mapa (`capao-mapa.png` e `capao-mapa.json`, no
+  ramo `mundo/floresta-maior`)
 
 **Sistemas:**
 - [ ] **[estrutura + arte]** Dia e noite: à noite os bichos ficam mais fortes e dão mais XP e ouro; olhos vermelhos (a
