@@ -131,6 +131,7 @@ describe('arquivo de personagens', () => {
       look: 4_000_000_000,
       inventory: { slots: [{ item: 'banana', n: 3 }, null], equipped: { head: 'chapeu_palha' } },
       quests: { saguis_travessos: { state: 'active', count: 2 } },
+      explored: { capao: '24:AQI=' }, // o mapa explorado (passo 5 do arquivo)
     };
     store.save([{ id: login.id, data }]);
     store.close();

@@ -79,6 +79,21 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — mapa da tecla M e mini mapa:** protocolo **36** e `MIGRATIONS` passo **5** (coluna `explored`, JSON mapa →
+texto). `src/shared/explore.ts` (grade de 4 m, raio de 12 m, texto `colunas:base64` que se ajeita se o mapa mudar de
+largura). `World.explore` a cada 500 ms (`EXPLORE_EVERY_MS`), `exploredField` nas boas-vindas e no `zone`;
+`characterData` junta o salvo (mapas por onde ele não passou desta vez) com as grades de agora. Navegador:
+`src/client/novo/mapWindow.ts` (`MapPicture`, `MapWindow`, `Minimap`; procura a imagem do [mundo] e, sem ela, um 404
+quieto no console). Testes: `tests/mapa-explorado.test.ts` e o salvamento em `save.test.ts`. Ganchos `explored()` e
+`mapOpen()`.
+
+**14/11 — vento forte e fraco:** protocolo **35**. `src/server/wind.ts` (`WindWeather`: calmo/brisa/forte, faixas e
+chances em `LEVELS`; um só no reino, que atualiza no `tick` e manda `wind` para todos; num mundo sem reino, o mundo
+cuida do seu). O vento sorteia com `Math.random` próprio: usar o sorteio do mundo mudou a ordem e quebrou o teste do
+Joaquim. `welcome.wind`; GM `{ do: 'wind', level }`. Motor: `windNow` (passagem suave, ângulo pelo lado mais curto) →
+`view.setWind(força, ângulo)` (o formato do PD.View da [arte], com dois números) e `Ambient.setWind`. Testes:
+`tests/vento.test.ts`. Gancho `wind()`.
+
 **14/11 — bichos novos (aprovados pelo dono):** `quati`, `tatu_bola`, `marimbondo` e `filhote_boitata` em
 data/monsters.json (só acrescentados no fim, no estilo do arquivo). Campos novos: `casca` (`shell`), `desvioTiro`
 (`shotDodge`) e `soNoite` (`nightOnly`); protocolo **34** (`fx` `dizzy`, `dodge`, `vanish`; a casca usa o `blk: 1` do

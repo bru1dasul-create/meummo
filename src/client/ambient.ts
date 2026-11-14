@@ -69,6 +69,8 @@ export class Ambient {
   private scene: AmbientScene | null = null;
   /** É noite (os bichos da noite no lugar dos passarinhos)? */
   private night = false;
+  /** O vento (0 a 1): o chiado do vento, as rajadas e as folhas acompanham. */
+  private windStrength = 0.35;
   private readonly nextAt: Record<CallKind, number> = { ...none };
   private lastCheck = 0;
 
@@ -94,6 +96,13 @@ export class Ambient {
     if (night === this.night) return;
     this.night = night;
     this.soon();
+  }
+
+  /** O vento mudou de força (0 a 1): o som acompanha devagar (só quando muda de verdade). */
+  setWind(strength: number): void {
+    if (Math.abs(strength - this.windStrength) < 0.05) return;
+    this.windStrength = strength;
+    this.mix();
   }
 
   /** É noite no som? (para os testes) */
@@ -141,9 +150,11 @@ export class Ambient {
     if (!beds || !audio || !this.scene) return;
     const m = MIXES[this.scene];
     const t = audio.ctx.currentTime;
-    beds.wind.gain.setTargetAtTime(m.wind * BED_GAIN.wind, t, FADE_S);
-    beds.gust.gain.setTargetAtTime(m.wind * BED_GAIN.wind * 0.45, t, FADE_S);
-    beds.leaves.gain.setTargetAtTime(m.leaves * BED_GAIN.leaves, t, FADE_S);
+    // o vento do mundo: calmo (0,1) quase some; brisa (0,35) é o de sempre; forte (0,9) bem mais alto e com rajadas
+    const w = this.windStrength;
+    beds.wind.gain.setTargetAtTime(m.wind * BED_GAIN.wind * (0.3 + 2 * w), t, FADE_S);
+    beds.gust.gain.setTargetAtTime(m.wind * BED_GAIN.wind * 0.45 * (0.1 + 2.6 * w), t, FADE_S);
+    beds.leaves.gain.setTargetAtTime(m.leaves * BED_GAIN.leaves * (0.5 + 1.4 * w), t, FADE_S);
     beds.water.gain.setTargetAtTime(m.water * BED_GAIN.water, t, FADE_S);
     beds.hum.gain.setTargetAtTime(m.hum * BED_GAIN.hum, t, FADE_S);
   }

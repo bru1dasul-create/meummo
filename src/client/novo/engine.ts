@@ -45,6 +45,7 @@ import { SoundPanel } from './soundPanel';
 import { KeyBindings, type KeyAction } from './keys';
 import { cyclePosition, daylightAt, isNightAt } from '../../shared/dayNight';
 import { KeysPanel } from './keysPanel';
+import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
 /** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
 const SKILL_KEYS: KeyAction[] = ['golpe', 'folego'];
@@ -225,6 +226,16 @@ class NewWorld implements NewWorldGame {
   /** O que a view já sabe da hora (manda de novo só quando muda). */
   private lightShown = -1;
   private nightShown: boolean | null = null;
+  /** O mapa da tecla M e o mini mapa: as imagens do mapa de agora (com o explorado), a janela e o canto da tela. */
+  private mapPicture: MapPicture | null = null;
+  private readonly mapWindow = new MapWindow();
+  private readonly minimap = new Minimap(() => this.mapWindow.toggle());
+  /** Os sinais de missão dos NPCs (! e ?), para o mapa. */
+  private readonly npcMarks = new Map<number, '!' | '?' | ''>();
+  /** O vento: de onde vem e para onde vai a mudança de agora (força 0 a 1; ângulo em graus), começando em `start`. */
+  private wind = { from: { strength: 0.35, angle: 0 }, to: { strength: 0.35, angle: 0 }, start: 0, ms: 0 };
+  /** O que a view já sabe do vento (manda de novo só quando muda). */
+  private windShown = { strength: -1, angle: -1 };
   private readonly skillReadyAt = SKILLS.map(() => 0);
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
@@ -296,6 +307,7 @@ class NewWorld implements NewWorldGame {
     this.updateSoundButton();
     this.updateShotLook(deps.welcome.you.gear ?? {}); // entrou já com o arco equipado
     this.setClock(deps.welcome.time);
+    this.wind.from = this.wind.to = { ...deps.welcome.wind };
     const welcome = deps.welcome;
     for (const item of welcome.items) this.items.set(item.id, item);
     this.lastInv = welcome.inv;
@@ -354,6 +366,7 @@ class NewWorld implements NewWorldGame {
       },
       npc: (id) => this.conn.send({ t: 'gm', cmd: { do: 'npc', npc: id } }),
       time: (phase) => this.conn.send({ t: 'gm', cmd: { do: 'time', phase } }),
+      wind: (level) => this.conn.send({ t: 'gm', cmd: { do: 'wind', level } }),
     });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
@@ -410,6 +423,11 @@ class NewWorld implements NewWorldGame {
         const position = cyclePosition(performance.now() - game.timeBase, game.rules);
         return { position, light: daylightAt(position, game.rules), night: isNightAt(position, game.rules) };
       },
+      // o mapa explorado: quantos quadradinhos já foram vistos (e quantos tem), e se a janela do mapa está aberta
+      explored: () => game.mapPicture?.progress() ?? null,
+      mapOpen: () => game.mapWindow.isOpen,
+      // o vento de agora (força 0 a 1, ângulo em graus) e para onde ele está indo
+      wind: () => ({ ...game.windNow(performance.now()), to: { ...game.wind.to } }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -421,9 +439,12 @@ class NewWorld implements NewWorldGame {
     const json = await loadMap(msg.map);
     if (this.destroyed) return;
     this.map = GameMap.fromTiled(json, msg.map);
+    // o mapa da tecla M e o mini mapa (só nos mapas do formato novo), com o que já foi explorado
+    this.mapPicture = this.map.metric ? new MapPicture(json, msg.map, msg.explored) : null;
     this.view?.destroy();
     this.view = createView(this.container, json);
     this.lightShown = -1; // a view nova precisa saber a hora
+    this.windShown = { strength: -1, angle: -1 }; // e o vento
     this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
     this.viewZoom = this.zoom;
     this.zoomAnim = null;
@@ -490,6 +511,8 @@ class NewWorld implements NewWorldGame {
     this.soundButton?.removeEventListener('click', this.openSoundPanel);
     this.soundPanel.destroy();
     this.keysPanel.destroy();
+    this.mapWindow.destroy();
+    this.minimap.destroy();
     this.ambient.destroy();
     this.sfx.music.stop();
     this.keyboard.destroy();
@@ -522,6 +545,8 @@ class NewWorld implements NewWorldGame {
     this.updateGuard(now);
     this.updateAmbient(now);
     this.updateTimeOfDay(now);
+    this.updateWind(now);
+    this.drawMaps();
     this.updateConversation(now);
     this.checkNpcArrival();
     this.cuddleIfNear();
@@ -610,7 +635,8 @@ class NewWorld implements NewWorldGame {
         this.zoomBy(ZOOM_STEP);
         break;
       case 'Escape':
-        if (this.talk.isOpen) this.talk.close();
+        if (this.mapWindow.isOpen) this.mapWindow.close();
+        else if (this.talk.isOpen) this.talk.close();
         else if (this.shop.isOpen) this.shop.close();
         else if (this.bag.isOpen) this.bag.close();
         else if (this.soundPanel.isOpen) this.soundPanel.close();
@@ -643,7 +669,8 @@ class NewWorld implements NewWorldGame {
         this.bag.toggle();
         break;
       case 'mapa':
-        this.openMap();
+        if (this.mapPicture) this.mapWindow.toggle();
+        else this.toast.show('Este lugar não tem mapa');
         break;
       case 'devagar':
         this.toggleSlowWalk();
@@ -685,10 +712,7 @@ class NewWorld implements NewWorldGame {
     this.toast.show(this.slowWalk ? `Andando devagar (${key} para correr)` : `Correndo (${key} para andar devagar)`);
   }
 
-  /** O mapa (M no padrão): vem numa próxima etapa (o mapa inteiro, só com o que você já andou, e o mini mapa). */
-  private openMap(): void {
-    this.toast.show('O mapa ainda está sendo feito: vai abrir nesta tecla.');
-  }
+
 
   private readonly onBlur = () => {
     this.cancelCharge(); // sem foco, o soltar do botão não chega: solta a pedra sem atirar
@@ -1733,6 +1757,37 @@ class NewWorld implements NewWorldGame {
     if (turned) this.toast.show(night ? 'Anoiteceu: os bichos ficam mais fortes (e dão mais XP e ouro)' : 'Amanheceu', 3500);
   }
 
+  /** O mini mapa (sempre) e o mapa inteiro (se a janela estiver aberta): você, os NPCs já vistos e a neblina. */
+  private drawMaps(): void {
+    const picture = this.mapPicture;
+    if (!picture || !this.predicted) return;
+    const feet = this.myFeet();
+    const me = { x: feet.x, y: feet.y, angle: this.myAngle };
+    const markers: MapMarker[] = [...this.npcs].map(([id, n]) => ({ ...feetAt(n.e.x, n.e.y), mark: this.npcMarks.get(id) ?? '' }));
+    this.minimap.draw(picture, me, markers);
+    this.mapWindow.draw(picture, this.map.name, me, markers);
+  }
+
+  /** O vento agora: o caminho entre o de antes e o novo (a direção gira pelo lado mais curto). */
+  private windNow(now: number): { strength: number; angle: number } {
+    const w = this.wind;
+    const t = w.ms > 0 ? Math.min(1, Math.max(0, (now - w.start) / w.ms)) : 1;
+    const k = t * t * (3 - 2 * t);
+    const turn = ((((w.to.angle - w.from.angle) % 360) + 540) % 360) - 180;
+    return { strength: w.from.strength + (w.to.strength - w.from.strength) * k, angle: (((w.from.angle + turn * k) % 360) + 360) % 360 };
+  }
+
+  /** O vento vai para a view (as árvores balançam) e para o som (o vento da mata), só quando muda. */
+  private updateWind(now: number): void {
+    const w = this.windNow(now);
+    const strength = Math.round(w.strength * 100) / 100;
+    const angle = Math.round(w.angle);
+    if (strength === this.windShown.strength && angle === this.windShown.angle) return;
+    this.windShown = { strength, angle };
+    this.view?.setWind?.(strength, angle);
+    this.ambient.setWind(strength);
+  }
+
   /** O som de ambiente acompanha o lugar onde você está (de vez em quando: lugar não muda a cada quadro). */
   private updateAmbient(now: number): void {
     if (now >= this.ambientCheckAt && this.predicted) {
@@ -1816,6 +1871,7 @@ class NewWorld implements NewWorldGame {
     this.talk.update(ctx);
     for (const [id, npc] of this.npcs) {
       const mark = npcMark(npc.e.type, this.questList, ctx);
+      this.npcMarks.set(id, mark);
       if (this.view?.mark) this.view.mark(id, mark);
       else this.combat.setMark(id, mark);
     }
@@ -2107,6 +2163,15 @@ class NewWorld implements NewWorldGame {
       case 'time':
         this.setClock(msg.at); // virou dia ou noite, ou o administrador mexeu no relógio
         break;
+      case 'explored':
+        this.mapPicture?.reveal(msg.cells); // você andou e viu mais um pedaço do mapa
+        break;
+      case 'wind': {
+        // o vento muda devagar: daqui (onde está agora) até o novo, em msg.ms
+        const now = performance.now();
+        this.wind = { from: this.windNow(now), to: { strength: msg.strength, angle: msg.angle }, start: now, ms: msg.ms };
+        break;
+      }
       case 'questDefs':
         // o painel mudou as missões: troca dentro da mesma lista (a conversa e a lista na tela usam ela)
         this.questList.splice(0, this.questList.length, ...msg.quests);

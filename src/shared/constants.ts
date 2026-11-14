@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 34;
+export const PROTOCOL_VERSION = 36;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -126,6 +126,14 @@ export const NIGHT_HP_FACTOR = 1.25;
 export const NIGHT_DAMAGE_FACTOR = 1.25;
 export const NIGHT_XP_FACTOR = 1.5;
 export const NIGHT_GOLD_FACTOR = 1.5;
+
+/**
+ * Vento (pedido do dono, 14/11: "vento forte/fraco"): um só para o mundo todo. Fica calmo, em brisa ou forte por
+ * WIND_MIN_MS a WIND_MAX_MS e muda devagar (WIND_TRANSITION_MS). Força de 0 (parado) a 1 (forte); só desenho e som.
+ */
+export const WIND_MIN_MS = 2 * 60_000;
+export const WIND_MAX_MS = 6 * 60_000;
+export const WIND_TRANSITION_MS = 20_000;
 
 /** Quanto tempo o jogador fica desmaiado antes de voltar para a vila. */
 export const DEATH_MS = 3000;

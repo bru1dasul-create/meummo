@@ -77,6 +77,11 @@ export interface WorldView {
    * em passos de 0,01); `night` = é noite: os bichos estão mais fortes (olhos vermelhos em todos eles).
    */
   setTimeOfDay?(time: { light: number; night: boolean }): void;
+  /**
+   * O vento: `strength` de 0 (parado) a 1 (forte) e `angle` = para onde sopra, em graus no chão (0 = leste, 90 = sul).
+   * Vem só quando muda (as mudanças do servidor são devagar: o motor manda os passos do meio).
+   */
+  setWind?(strength: number, angle?: number): void;
 
   // ---- opcionais (conversa com NPC) ----
   /**
@@ -91,7 +96,7 @@ export interface WorldView {
 // ======================= desenho provisório =======================
 
 /** Uma forma do mapa, em metros: retângulo, elipse (dentro da caixa), polígono ou linha com largura (trilha). */
-interface Shape {
+export interface Shape {
   x0: number;
   y0: number;
   x1: number;
@@ -107,7 +112,7 @@ interface Shape {
 }
 
 /** Objeto do Tiled → forma em metros. */
-function shapeOf(o: TiledObject, px: number): Shape {
+export function shapeOf(o: TiledObject, px: number): Shape {
   const kind = typeOf(o);
   const pts = o.polygon ?? o.polyline;
   if (pts && pts.length > 0) {
@@ -144,8 +149,8 @@ interface Actor extends ActorInfo {
 /** Quanto dura o pulinho do desenho provisório. */
 const JUMP_DRAW_MS = 550;
 
-/** Cores do chão por tipo (camada `chao` do mapa). */
-const GROUND: Record<string, string> = {
+/** Cores do chão por tipo (camada `chao` do mapa). O mapa da tecla M usa as mesmas. */
+export const GROUND: Record<string, string> = {
   mata: '#1f4a24',
   terra: '#6b5232',
   grama: '#3f7a35',
@@ -168,7 +173,7 @@ const FLAT: Record<string, string> = { agua: 'rgba(47, 111, 159, 0.85)' };
 const HEIGHT: Record<string, number> = { tronco: 1.6, poste: 3, pedra: 0.5, gradil: 1, portao: 2.2, pilar: 2.6, 'mata-fechada': 2.5, 'tronco-caido': 0.6 };
 const ACTOR_COLORS = { me: '#f2c14e', player: '#6fa8ff', npc: '#7bd389', monster: '#ff6b6b', pet: '#f6f2ea' };
 
-const typeOf = (o: { type?: string; class?: string }) => o.type || o.class || '';
+export const typeOf = (o: { type?: string; class?: string }) => o.type || o.class || '';
 
 export class ProvisionalView implements WorldView {
   /** A luz do dia (1) até a noite fechada (0): setTimeOfDay. */

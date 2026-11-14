@@ -14,6 +14,8 @@ export interface GmActions {
   npc(id: string): void;
   /** Vira o relógio para o começo do dia ou da noite (todos os mapas). */
   time(phase: 'dia' | 'noite'): void;
+  /** Muda o vento na hora (todos os mapas). */
+  wind(level: 'calmo' | 'brisa' | 'forte'): void;
 }
 
 export interface GmState {
@@ -92,13 +94,16 @@ export class GmPanel {
     const time = document.createElement('div');
     time.className = 'row';
     time.append(make('Virar dia', () => this.actions.time('dia')), make('Virar noite', () => this.actions.time('noite')));
+    const wind = document.createElement('div');
+    wind.className = 'row';
+    wind.append(make('Calmo', () => this.actions.wind('calmo')), make('Brisa', () => this.actions.wind('brisa')), make('Vento forte', () => this.actions.wind('forte')));
     const others = document.createElement('div');
     others.className = 'row';
     others.append(make('Derrubar monstros perto', () => this.actions.clear()), make('Curar', () => this.actions.heal()));
     const hint = document.createElement('p');
     hint.className = 'hint';
     hint.textContent = 'Monstros criados não renascem. Voando, você atravessa tudo. Tudo fica registrado no servidor.';
-    this.panel.append(title, spawnRow, others, toggles, time, this.teleportButton, npcRow, hint);
+    this.panel.append(title, spawnRow, others, toggles, time, wind, this.teleportButton, npcRow, hint);
     // clique no menu não vira clique no jogo (andar, atirar)
     for (const el of [this.panel, this.button]) {
       el.addEventListener('pointerdown', (event) => event.stopPropagation());

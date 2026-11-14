@@ -54,7 +54,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 | Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
-| Mapa | `M` (ainda sendo feito: por enquanto só avisa) | — |
+| Mapa (só o que você já andou) | `M`, ou clique no mini mapa do canto | toque no mini mapa |
 | Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | 🔊 no painel (sem tecla; dá para escolher uma) | 🔊 no painel |
 | Trocar as teclas | 🔊 no painel → **Teclas**: clique na tecla e aperte a nova (fica guardado neste navegador) | — |
 
@@ -257,6 +257,20 @@ onde estava quando o servidor reinicia). Escurece devagar no fim do dia e clarei
 25% mais fortes** (vida e dano) **e dão 50% a mais de XP e ouro**; o som da mata troca os passarinhos pelos grilos e
 pela coruja. Os números mudam no painel (Combate → Dia e noite). Para testar sem esperar: menu ADM no jogo (tecla G)
 → **Virar dia** / **Virar noite**.
+
+## Mapa
+
+O mapa mostra só o que você já andou: cada pedaço do mapa (quadradinhos de 4 m) a até 12 m de onde você passa fica
+aberto, e o resto fica na neblina. Fica salvo no personagem. O **mini mapa** fica no canto da tela; o **M** (ou tocar no
+mini mapa) abre o mapa inteiro, com os nomes dos lugares já vistos, os NPCs (com ! e ? das missões) e uma seta onde você
+está. Por enquanto o desenho é feito das formas do mapa; a imagem de cima de cada mapa (do chat do Mundo) entra no
+lugar quando ficar pronta.
+
+## Vento
+
+Um vento só para o mundo todo: fica **calmo**, em **brisa** ou **forte** por 2 a 6 minutos e muda devagar, girando um
+pouco a direção. As árvores balançam conforme a força e o som do vento, das rajadas e das folhas acompanha. É só
+desenho e som (não mexe nos tiros). Para testar: menu ADM (tecla G) → **Calmo**, **Brisa** ou **Vento forte**.
 
 ## Bichos de estimação (sem programar)
 

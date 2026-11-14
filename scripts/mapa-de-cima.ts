@@ -307,8 +307,10 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     if (!o.name) continue;
     nomes.push({ nome: o.name, x: round((o.x + (o.width ?? 0) / 2) / M), y: round((o.y + (o.height ?? 0) / 2) / M), tipo: tipoDe(o.name, true) });
   }
+  // (o semáforo tem nome só para a [arte] achar ele; no mapa não é um lugar)
+  const NOT_A_PLACE = new Set(['semaforo']);
   for (const o of scen) {
-    if (!o.name || nomes.some((n) => n.nome === o.name)) continue;
+    if (!o.name || NOT_A_PLACE.has(o.type ?? '') || nomes.some((n) => n.nome === o.name)) continue;
     const [cx, cy] = o.point ? [o.x, o.y] : [o.x + (o.width ?? 0) / 2, o.y + (o.height ?? 0) / 2];
     nomes.push({ nome: o.name, x: round(cx / M), y: round(cy / M), tipo: 'lugar' });
   }

@@ -561,12 +561,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
   comportamento, o [mundo] marca a área e a [arte] anima. O [mundo] marcou `capivaras-lago` e `capivaras-campinho`
   (com os pontos `-descanso`) no ramo `mundo/floresta-maior`
-- [ ] **[estrutura + mundo + arte]** Mapa: o M abre o mapa completo, que só mostra o que você já andou, e um mini mapa.
-  A [estrutura] guarda o explorado (no personagem) e a tecla; o [mundo] faz a imagem de cima de cada mapa; a [arte]
-  desenha a janela e o mini mapa. A imagem do Capão sai junto com o mapa (`capao-mapa.png` e `capao-mapa.json`, no
-  ramo `mundo/floresta-maior`)
-
-**Sistemas:**
+- [x] **[estrutura]** Mapa da tecla M e mini mapa, a parte das regras e o desenho provisório (14/11): o mapa em
+  quadradinhos de 4 m, explorado a até 12 m de onde você anda, salvo no personagem (passo 5 do arquivo); o M (ou tocar
+  no mini mapa) abre o mapa inteiro com a neblina, os nomes dos lugares já vistos, os NPCs (com ! e ?) e a sua seta;
+  o mini mapa fica no canto (protocolo 36)
+- [ ] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
+  procura e, quando existir, ela entra no lugar do desenho provisório. A do Capão sai junto com o mapa
+  (`capao-mapa.png` e `capao-mapa.json`): pronta no ramo `mundo/mapa-m`; a da floresta maior vai junto com ela
+- [ ] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
+  e talvez girar a imagem para bater com a câmera
 - [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
   para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
   e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
@@ -579,8 +582,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura]** O arco e o estilingue de goiabeira nos bichos novos, quando eles chegarem (hoje o estilingue cai do
   sagui, 4%; o arco só na Budega)
 - [ ] **[arte]** (Opcional) restilizar o item no chão (`drawDrops` em `src/client/novo/combat.ts`: ícone, quique, brilho)
-- [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
-  movimento delas; o som do vento acompanha)
+- [x] **[estrutura]** Vento forte e fraco, as regras (14/11): um vento só para o mundo, calmo, brisa ou forte por 2 a 6
+  min, mudando devagar (20 s) e girando a direção; `welcome.wind` e a mensagem `wind` (protocolo 35); o motor passa
+  à view `setWind(força, ângulo)`; o som do vento, das rajadas e das folhas acompanha; menu ADM "Calmo / Brisa / Vento
+  forte"
+- [ ] **[arte]** As árvores no vento (`setWind` do PD.View, já pronto no ramo da [arte], entra com o "pode" do dono)
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
