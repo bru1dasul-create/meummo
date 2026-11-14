@@ -1984,8 +1984,8 @@
         oratorio(ctx, u(b.x0 + 15 + 225), Hh - 205);
         frameOval(ctx, u(b.x0 + 15 + 300), Hh - 215, 18, 24);
         frameOval(ctx, u(b.x0 + 15 + 330), Hh - 200, 14, 19);
-        // o crucifixo em cima da cama
-        const cx = u(b.x0 + 15 + 560);
+        // o crucifixo em cima da cabeceira da cama (a cama encosta na parede do fundo, x 69,45 a 70,85)
+        const cx = u(b.x0 + 15 + 600);
         ctx.fillStyle = '#5a3220';
         ctx.fillRect(cx - 2, Hh - 170, 4, 30);
         ctx.fillRect(cx - 10, Hh - 162, 20, 4);
