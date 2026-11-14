@@ -9,7 +9,8 @@ import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from '.
 import type { QuestInfo, QuestLog } from './quests';
 import type { CombatRules } from './combatRules';
 
-export type EntityKind = 'player' | 'monster' | 'npc';
+/** 'pet': bicho de estimação (o Joaquim, o gato da vó): anda sozinho, mia e ronrona; nunca é alvo. */
+export type EntityKind = 'player' | 'monster' | 'npc' | 'pet';
 
 /** Tudo que o cliente precisa saber para desenhar alguém. */
 export interface EntityState {
@@ -30,6 +31,10 @@ export interface EntityState {
   stepMs?: number;
   /** Jogadores: o equipamento que aparece no personagem (chapéu, couraça, arma...). */
   gear?: GearLook;
+  /** Bichos: dormindo agora (quem chega vê ele já enroladinho). */
+  asleep?: true;
+  /** Bichos: o retângulo do mapa (camada `pontos`) onde ele mora, ex.: 'joaquim-casa'. */
+  home?: string;
 }
 
 /** Um personagem do jogo que não é jogador (vendedora...). Fica parado no lugar dele. */
@@ -76,6 +81,7 @@ export type ClientMsg =
   | { t: 'buy'; npc: number; item: string; n: number } // comprar n deste item do vendedor `npc`
   | { t: 'sell'; npc: number; i: number; n: number } // vender n do item do espaço i da mochila para o vendedor `npc`
   | { t: 'quest'; act: QuestAction; id: string; npc?: number } // aceitar ou concluir (perto de quem dá a missão) ou abandonar
+  | { t: 'pet'; id: number } // fazer carinho no bicho (perto dele)
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
@@ -119,7 +125,9 @@ export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge' | 'song';
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'whirlwind' | 'charge' | 'song' | PetFx;
+/** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
+export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 
 /** Servidor → cliente. O servidor sempre envia uma lista (um pacote por tick). */
 /** A defesa do jogador: baixada, levantada, ou quebrada (sem energia; só levanta de novo soltando o botão). */

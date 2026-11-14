@@ -38,6 +38,8 @@ import { GuardButton } from './guard';
 import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
 import { ProvisionalView, type WorldView } from './view';
+import { Ambient, sceneOfPlace } from '../ambient';
+import { SoundPanel } from './soundPanel';
 
 export interface NewWorldDeps {
   conn: Connection;
@@ -63,6 +65,10 @@ const GUARD_AIM_RANGE = 8;
 /** Defesa levantada: manda a direção nova quando ela muda mais que isto, no máximo a cada GUARD_RESEND_MS. */
 const GUARD_RESEND_ANGLE = (10 * Math.PI) / 180;
 const GUARD_RESEND_MS = 120;
+/** Carinho no bicho: daqui (metros, de pé a pé; o servidor aceita um pouco mais). */
+const PET_REACH = 1.5;
+/** A altura do bicho na tela, para tocar nele (metros). */
+const PET_HEIGHT = 0.45;
 /** Puxando o estilingue: a mira nova vai para a view quando muda mais que isto (o corpo e os braços acompanham). */
 const PULL_AIM_RESEND = (5 * Math.PI) / 180;
 /** A barra de energia anda até o valor do servidor nesta velocidade (pontos por segundo). */
@@ -133,6 +139,11 @@ class NewWorld implements NewWorldGame {
   private readonly rules: CombatRules;
   private readonly actionBar: ActionBar;
   private readonly soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
+  /** O painel do som (o botão do som abre): ligar/desligar e o volume da música, dos efeitos e do ambiente. */
+  private readonly soundPanel: SoundPanel;
+  /** O som de ambiente do lugar onde você está (mata, água, vila...). */
+  private readonly ambient: Ambient;
+  private ambientCheckAt = 0;
   // mochila, loja e conversa com missões (as janelas do jogo de sempre; a [arte] deixa no jeito do 2.5D depois)
   private readonly items = new Map<string, ItemInfo>();
   private readonly bag: Bag;
@@ -174,6 +185,9 @@ class NewWorld implements NewWorldGame {
   private stuckSlices = 0;
   /** Indo conversar com este NPC (fala quando chegar perto). */
   private goingToNpc: number | null = null;
+  /** O bicho que você foi fazer carinho (faz quando chega perto) e quantas vezes ainda corrige o caminho (ele anda). */
+  private goingToPet: number | null = null;
+  private petRetries = 0;
 
   private readonly entities = new Map<number, EntityState>();
   /** Para onde cada um olha (graus), para o desenho girar contínuo. */
@@ -258,7 +272,12 @@ class NewWorld implements NewWorldGame {
       ],
       (slot, down) => this.onAction(slot, down),
     );
-    this.soundButton?.addEventListener('click', this.toggleSound);
+    this.soundPanel = new SoundPanel({
+      toggleMute: () => this.toggleSound(),
+      setVolume: (part, value) => this.sfx.setVolume(part, value),
+    });
+    this.ambient = new Ambient(this.sfx);
+    this.soundButton?.addEventListener('click', this.openSoundPanel);
     this.updateSoundButton();
     const welcome = deps.welcome;
     for (const item of welcome.items) this.items.set(item.id, item);
@@ -363,6 +382,8 @@ class NewWorld implements NewWorldGame {
       zoom: () => game.zoom,
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
+      // o som: o lugar do ambiente, os volumes, se está desligado e se o navegador já liberou o áudio
+      sound: () => ({ scene: game.ambient.current, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -439,7 +460,9 @@ class NewWorld implements NewWorldGame {
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
     window.removeEventListener('blur', this.onBlur);
-    this.soundButton?.removeEventListener('click', this.toggleSound);
+    this.soundButton?.removeEventListener('click', this.openSoundPanel);
+    this.soundPanel.destroy();
+    this.ambient.destroy();
     this.keyboard.destroy();
     this.joystick.destroy();
     this.toast.destroy();
@@ -468,11 +491,14 @@ class NewWorld implements NewWorldGame {
     this.handlePendingShot(now);
     this.updateCharge(now);
     this.updateGuard(now);
+    this.updateAmbient(now);
     this.updateConversation(now);
     this.checkNpcArrival();
+    this.cuddleIfNear();
     this.checkNpcDistance();
     this.checkSafeArea();
     this.view.frame(now);
+    this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
     this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
     this.actionBar.update(now);
     this.quick.update(now);
@@ -484,7 +510,13 @@ class NewWorld implements NewWorldGame {
     this.entities.set(e.id, e);
     const feet = feetAt(e.x, e.y);
     this.facing.set(e.id, degreesOfDir(e.dir));
-    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me });
+    if (e.kind === 'pet' && !this.view?.canDraw?.('pet', e.type)) {
+      // a view ainda não desenha este bicho: o gatinho provisório fica por cima (só aparece com você na casa dele)
+      const home = e.home ? (this.map.regions.get(e.home) ?? null) : null;
+      this.combat.setPet(e.id, e.name, feet.x, feet.y, (degreesOfDir(e.dir) * Math.PI) / 180, e.asleep === true, home);
+      return;
+    }
+    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}) });
     if (e.kind === 'player') this.view?.gear?.(e.id, e.gear ?? {}); // o que ele tem na mão (o arco fica sempre à vista)
   }
 
@@ -809,11 +841,23 @@ class NewWorld implements NewWorldGame {
     if (npc) {
       const feet = feetAt(npc.e.x, npc.e.y);
       this.goingToNpc = npc.e.id;
+      this.goingToPet = null;
       this.walkToPoint(feet.x, feet.y + 1);
+      return;
+    }
+    // tocou no Joaquim: carinho (longe, vai até ele primeiro)
+    const petId = this.actorAtScreen(clientX, clientY, 'pet');
+    const pet = petId !== null ? this.entities.get(petId) : undefined;
+    if (pet) {
+      this.goingToNpc = null;
+      this.goingToPet = pet.id;
+      this.petRetries = 4;
+      if (!this.cuddleIfNear()) this.walkToPet(pet.id);
       return;
     }
     const point = this.view.toWorld(clientX, clientY);
     this.goingToNpc = null;
+    this.goingToPet = null;
     if (this.gmTeleport && this.gmPanel.admin) {
       this.clearRoute();
       this.conn.send({ t: 'gm', cmd: { do: 'tp', x: round3(point.x), y: round3(point.y) } });
@@ -827,7 +871,7 @@ class NewWorld implements NewWorldGame {
    * desenhado quanto onde o servidor diz que ele está (o desenho anda um pouco atrás de quem corre). No dedo, a folga
    * é maior. Funciona com qualquer câmera: usa só o toScreen da view.
    */
-  private actorAtScreen(clientX: number, clientY: number, kind: 'monster' | 'npc'): number | null {
+  private actorAtScreen(clientX: number, clientY: number, kind: 'monster' | 'npc' | 'pet'): number | null {
     if (!this.view) return null;
     const point = { x: clientX, y: clientY };
     let best: number | null = null;
@@ -837,7 +881,7 @@ class NewWorld implements NewWorldGame {
       for (const feet of [this.drawnFeet(e.id), feetAt(e.x, e.y)]) {
         if (!feet) continue;
         const foot = this.view.toScreen(feet.x, feet.y, 0);
-        const head = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT);
+        const head = this.view.toScreen(feet.x, feet.y, kind === 'pet' ? PET_HEIGHT : BODY_HEIGHT);
         const height = Math.hypot(head.x - foot.x, head.y - foot.y);
         const reach = this.usingTouch ? Math.max(32, height * 0.6) : Math.max(18, height * 0.4);
         const score = distanceToSegment(point, foot, head) / reach;
@@ -848,6 +892,66 @@ class NewWorld implements NewWorldGame {
       }
     }
     return best;
+  }
+
+  /** Indo fazer carinho no bicho: perto o bastante, faz (e para de andar). Devolve true se fez. */
+  private cuddleIfNear(): boolean {
+    if (this.goingToPet === null) return false;
+    const pet = this.entities.get(this.goingToPet);
+    if (!pet) {
+      this.goingToPet = null;
+      return false;
+    }
+    const me = feetAt(this.predicted.x, this.predicted.y);
+    const feet = this.drawnFeet(pet.id) ?? feetAt(pet.x, pet.y);
+    if (Math.hypot(me.x - feet.x, me.y - feet.y) > PET_REACH) {
+      if (this.route.length > 0) return false;
+      // chegou onde ele estava, mas ele andou: vai de novo até onde ele está agora (algumas vezes)
+      if (this.petRetries > 0 && Math.hypot(me.x - feet.x, me.y - feet.y) < 10) {
+        this.petRetries -= 1;
+        this.walkToPet(pet.id);
+      } else {
+        this.goingToPet = null; // não deu para chegar
+      }
+      return false;
+    }
+    this.goingToPet = null;
+    this.clearRoute();
+    this.conn.send({ t: 'pet', id: pet.id });
+    this.faceAngle(toDegrees(aimAngle(me, feet)));
+    return true;
+  }
+
+  /** Anda até ficar do lado do bicho (do lado mais perto de você). */
+  private walkToPet(id: number): void {
+    const pet = this.entities.get(id);
+    if (!pet) return;
+    const feet = this.drawnFeet(id) ?? feetAt(pet.x, pet.y);
+    const me = this.myFeet();
+    const d = Math.hypot(me.x - feet.x, me.y - feet.y) || 1;
+    this.walkToPoint(feet.x + ((me.x - feet.x) / d) * 0.7, feet.y + ((me.y - feet.y) / d) * 0.7);
+  }
+
+  /** O bicho miou, ronronou (carinho), acordou ou dormiu: o som e, no gatinho provisório, o desenho. */
+  private onPetFx(id: number, kind: string, angle?: number): void {
+    const now = performance.now();
+    const provisional = this.combat.hasPet(id);
+    if (kind === 'wake' || kind === 'sleep') {
+      if (provisional) this.combat.petAsleep(id, kind === 'sleep');
+      else this.view?.action?.(id, kind);
+      return;
+    }
+    const feet = this.drawnFeet(id);
+    const me = this.myFeet();
+    const near = feet !== null && Math.hypot(feet.x - me.x, feet.y - me.y) < 8;
+    if (kind === 'meow') {
+      if (near) this.sfx.play('meow');
+      if (provisional) this.combat.floater(id, 'miau!', '#f6e7c8', now);
+    } else if (kind === 'purr') {
+      if (near) this.sfx.play('purr');
+      if (provisional) this.combat.floater(id, '♥', '#ff7aa8', now);
+    }
+    if (!provisional) this.view?.action?.(id, kind, angle !== undefined ? toDegrees(angle) : undefined);
   }
 
   /** Chegou perto do NPC que foi procurar: ele fala. */
@@ -1491,6 +1595,24 @@ class NewWorld implements NewWorldGame {
 
   private updateSoundButton(): void {
     if (this.soundButton) this.soundButton.textContent = this.sfx.muted ? '🔇' : '🔊';
+    this.soundPanel.show(this.sfx.muted, this.sfx.volumes());
+  }
+
+  /** O botão do som da HUD: abre (e fecha) o painel do som. */
+  private readonly openSoundPanel = () => {
+    this.sfx.unlock();
+    this.soundPanel.show(this.sfx.muted, this.sfx.volumes());
+    this.soundPanel.toggle();
+  };
+
+  /** O som de ambiente acompanha o lugar onde você está (de vez em quando: lugar não muda a cada quadro). */
+  private updateAmbient(now: number): void {
+    if (now >= this.ambientCheckAt && this.predicted) {
+      this.ambientCheckAt = now + 500;
+      const feet = feetAt(this.predicted.x, this.predicted.y);
+      this.ambient.setScene(sceneOfPlace(this.map.placeAt(feet.x, feet.y)));
+    }
+    this.ambient.update();
   }
 
   // ======================= servidor =======================
@@ -1621,6 +1743,8 @@ class NewWorld implements NewWorldGame {
         this.entities.delete(msg.id);
         this.facing.delete(msg.id);
         this.combat.setGuard(msg.id, null, 0);
+        this.combat.removePet(msg.id);
+        if (this.goingToPet === msg.id) this.goingToPet = null;
         this.view?.removeActor(msg.id);
         break;
       case 'move': {
@@ -1632,6 +1756,11 @@ class NewWorld implements NewWorldGame {
         e.dir = msg.dir;
         const feet = feetAt(msg.x, msg.y);
         const duration = e.kind === 'monster' ? (e.stepMs ?? 320) : 120;
+        if (this.combat.hasPet(msg.id)) {
+          // o gatinho provisório: anda (ou pula para o sofá, mais devagar) até o ponto novo
+          this.combat.movePet(msg.id, feet.x, feet.y, (angle * Math.PI) / 180, performance.now(), msg.dash ? 300 : duration);
+          break;
+        }
         this.view?.moveActor(msg.id, feet.x, feet.y, angle, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
         if (msg.dash) this.view?.action?.(msg.id, 'dash', angle);
         break;
@@ -1699,6 +1828,10 @@ class NewWorld implements NewWorldGame {
         this.combat.endShot(msg.id);
         break;
       case 'fx': {
+        if (this.entities.get(msg.id)?.kind === 'pet') {
+          this.onPetFx(msg.id, msg.kind, msg.a);
+          break;
+        }
         const feet = this.drawnFeet(msg.id);
         const wide = msg.a === undefined || msg.kind === 'spin' || msg.kind === 'whirlwind';
         if (feet && msg.kind !== 'song') this.combat.flash(feet.x, feet.y, msg.a ?? 0, msg.r ?? 1.4, wide, performance.now());

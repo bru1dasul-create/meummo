@@ -17,6 +17,7 @@ import { Realm } from './realm';
 import { Session, type Lobby } from './session';
 import { Tuning } from './tuning';
 import type { World } from './world';
+import { loadPetDefs } from './pets';
 
 export { MAPS_DIR, ROOT, SAVE_FILE } from './paths';
 const HEARTBEAT_MS = 30_000;
@@ -98,6 +99,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     npcs: tuning.npcs,
     areas: tuning.areas,
     quests: tuning.quests,
+    pets: loadPetDefs(),
     combat: tuning.combat,
     saver: store,
     startMap: options.startMap,

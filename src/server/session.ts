@@ -111,6 +111,9 @@ export class Session {
       case 'quest':
         this.lobby.realm.questAction(this.player, msg.act, msg.id, msg.npc);
         break;
+      case 'pet':
+        this.lobby.realm.cuddle(this.player, msg.id);
+        break;
       case 'loaded':
         this.lobby.realm.loaded(this.player);
         break;

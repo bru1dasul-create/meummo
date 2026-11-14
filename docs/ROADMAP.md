@@ -179,12 +179,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
   academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. A placa grande fica alta,
   acima do pilar do portão (como na imagem aprovada), e o poste do parque da entrada saiu da frente do poste do portão
-- [ ] **[mundo]** Casas com interior (pedido do dono, 13/11: "dar vida para alguns interiores de casa"; planta aprovada:
+- [x] **[mundo]** Casas com interior (**na main em 14/11**, com o desenho da [arte]; pedido do dono, 13/11: "dar vida para alguns interiores de casa"; planta aprovada:
   "pode mandar as casas pra arte"; `docs/referencias/casas-interior-planta.jpg` e os alvos `casa-amarela-dentro.jpg`,
   `casa-rosa-dentro.jpg` e `casa-abandonada-dentro.jpg`, que só dão o clima): a amarela (a família: cozinha no fundo,
   sala na frente), a rosa (a casa da vó) e a abandonada do fundo (a árvore nasce do chão de dentro e sai pelo buraco da
-  laje). No ramo `mundo/casas-interior`: `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis
-  sem vão de entalar. Entra com o desenho da [arte]
+  laje): `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis sem vão de entalar (a conferência
+  de vãos pula o par que uma terceira coisa fecha de ponta a ponta: a parede de uma casa, com um dentro e o outro fora; o
+  fogão entre a pia e o filtro). A placa PARQUE SANTO DIAS foi junto: do lado de fora do portão, na altura dos olhos (o
+  dono achou errada atrás do pilar)
 - [x] **[arte]** Casas com interior, o desenho (**na main em 14/11**; `js/world/casas.js`): os móveis, os pisos, as
   paredes de dentro de cada morador, a porta aberta no vão do mapa (a abandonada arrombada) e a árvore de dentro com o pé
   e as raízes da Figueira da Esquina. Com o herói dentro, **só a casa aparece** (o resto da tela escurece e a câmera vai
@@ -201,6 +203,17 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   [mundo] marca a casa dele (a casa rosa; no mapa ele está no sofá, `gato` com `nome: 'Joaquim'`). A [arte] já fez o
   Joaquim dormindo no sofá (respira, mexe a orelha e o rabo, com o nome em cima; `js/creatures/gato.js`): o resto vem
   com o comportamento
+  - [x] **[estrutura]** O comportamento (14/11; o dono: carinho sem bônus): `data/bichos.json` (chave `joaquim`),
+    entidade nova `pet` (nunca é alvo). Dorme em cima do sofá (ponto `joaquim`; pula para cima e para baixo), acorda e
+    se espreguiça, passeia pelo retângulo `joaquim-casa` sem sair dele nem entrar nos móveis, volta a dormir; mia
+    (uma vez) para quem chega a 2,5 m, acordado; tocar nele faz o herói ir até lá e fazer carinho: ele ronrona
+    (dormindo, continua dormindo). Sons: miado e ronronar. Gatinho provisório desenhado pelo motor (só com você
+    dentro da casa) até o da [arte]. Protocolo 30. Conferido no PC e no celular com o mapa do ramo do [mundo]
+  - [ ] **[arte]** Ligar o `gato.js` no Joaquim que anda: `canDraw('pet', 'joaquim')` na PD.View (aí o motor para de
+    desenhar o provisório e manda o bicho para a view, com `kind: 'pet'` e `asleep`), e as ações `wake`, `sleep`,
+    `meow`, `purr` (coração) e `dash` (o pulo do sofá); o gato decorativo do mapa sai quando ele entrar
+  - [x] **[mundo]** A casa rosa na main (14/11, com o desenho das casas) e o `gato` decorativo do sofá saiu: o Joaquim
+    de verdade aparece lá (conferido no PC e no celular: dorme no sofá e passeia pela casa)
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`
@@ -406,6 +419,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `shot_end` vem com `hit` 0 (e no fim do alcance), `drawLanded` a cada quadro e `landedBusy(agora)` no `busy()`; e o
   `setLook('shot', ...)` quando a sua arma muda
 - [ ] **[estrutura]** Arco e estilingue de goiabeira caindo dos bichos novos (quando eles entrarem)
+- [x] **[estrutura]** Som, parte 1 (14/11; o som passou para a [estrutura], escolha do dono): **volume separado** para
+  música, efeitos e ambiente (guardado no navegador; o botão do som da HUD abre o painel `#sound-panel`, e o `M`
+  continua ligando e desligando tudo) e **som de ambiente** feito por código, pelo lugar do mapa (camada `areas`; a
+  propriedade `som` do lugar manda, senão o nome): vila (bem-te-vi, sabiá, vento leve), clareira (passarinhos e um
+  zumbido mágico baixinho), mata (vento, folhas, cigarras), mata profunda (vento mais forte, grilos, coruja) e água
+  (água correndo, gotas, sapos). Troca suave de um lugar para o outro. Conferido no PC e no celular
+- [ ] **[estrutura]** Som, parte 2: a música do Capão (vila e mata), depois de o dono escolher a origem (licença livre,
+  banco pago, IA ou feita por código; recomendação: começar pelas de licença livre)
+- [ ] **[arte]** O botão do som na HUD do celular (hoje ele some no celular, e o painel do som só abre por ele)
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar

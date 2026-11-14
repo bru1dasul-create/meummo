@@ -657,11 +657,10 @@ if (FLORESTA) {
     }
     throw new Error(`Não achei lugar para uma coisa do parque antigo perto de (${x}, ${y}).`);
   }
-  // a placa da entrada, do lado de dentro do portão (atrás da trilha, para a câmera)
-  {
-    const [x, y] = near(46.2, 40, 0.2, 0.2, 0.6);
-    cenario.push(point('placa', x, y, { texto: 'PARQUE SANTO DIAS', poste: true, tamanho: 'grande', mato: true }));
-  }
+  // a placa da entrada, do lado de fora do portão, logo ao sul do pilar e encostada no gradil, virada para a rua (como
+  // na imagem aprovada). Dentro do parque, atrás do pilar norte, o pilar ficava na frente dela na tela e ela tinha de
+  // subir acima dele (o dono achou errado). Aqui ela fica na frente do gradil e do pilar, na altura dos olhos.
+  cenario.push(point('placa', 48.2, 48.6, { texto: 'PARQUE SANTO DIAS', poste: true, tamanho: 'grande', mato: true, olhando: 0 }));
   // o bebedouro, perto do portão
   {
     const [x, y] = near(45.3, 46.8, 0.5, 0.5, 0.4);
@@ -1146,6 +1145,65 @@ if (reached('4b') && FLORESTA) {
 }
 
 // ---------------- colisão (tirada do cenário) ----------------
+// ---------------- casas com interior (pedido do dono, 13/11: "dar vida para alguns interiores de casa") ----------------
+// Como a Budega: com o herói dentro, o telhado e a frente somem. A porta tem 1,2 m (mais estreita, o pé entala), as
+// paredes têm 15 cm, e os móveis ficam colados (até 0,3 m) ou com 1,2 m livres. O que tem frente fica nas paredes do
+// fundo (norte) e da esquerda (oeste), virado para a câmera; a frente e a direita são as paredes que somem.
+if (reached('4c') && FLORESTA) {
+  const house = (x0: number, y0: number) => {
+    const h = cenario.find((o) => o.type === 'casa' && o.x === x0 && o.y === y0);
+    if (!h) throw new Error(`Casa em (${x0}, ${y0}) não achada.`);
+    return h;
+  };
+  /** Abre a casa: interior, o vão da porta (de portaDe a portaAte, na frente) e o piso de dentro. */
+  const open = (h: Shape, door: [number, number], piso: string, morador: string) => {
+    h.props = { ...h.props, interior: true, portaDe: door[0], portaAte: door[1], morador };
+    const t = BUDEGA_WALL;
+    chao.push(rect('piso', h.x + t, h.x + h.w! - t, h.y + t, h.y + h.h! - t, { desenho: piso }));
+  };
+
+  // ----- a casa amarela (a das cadeiras na calçada): uma família vive aqui. A cozinha no fundo, a sala na frente -----
+  const amarela = house(81, 32);
+  open(amarela, [81.75, 82.95], 'ceramica', 'familia');
+  cenario.push(rect('pia', 81.15, 82.35, 32.15, 32.75, { altura: 0.9, olhando: 90 }));
+  cenario.push(rect('fogao', 82.45, 83.2, 32.15, 32.8, { altura: 0.9, olhando: 90, panela: true }));
+  cenario.push(rect('filtro', 83.3, 83.8, 32.15, 32.6, { altura: 1.2 })); // o filtro de barro, num banquinho
+  cenario.push(rect('geladeira', 85.15, 85.85, 32.15, 32.85, { altura: 1.7, olhando: 90 }));
+  cenario.push(rect('mesa-cozinha', 82.4, 83.4, 34.05, 35.35, { altura: 0.8, cadeiras: 2, toalha: 'xadrez' }));
+  // a TV de tubo na estante, de frente para o sofá (e para a câmera); o tapete no meio
+  cenario.push(rect('estante', 83.6, 85.6, 36, 36.4, { altura: 1.4, olhando: 90, tv: true }));
+  chao.push(rect('tapete', 83.8, 85.4, 36.7, 38.3, { cor: '#b5503c' }));
+  cenario.push(rect('sofa', 83.4, 85.85, 38.5, 39.35, { altura: 0.9, olhando: 270, cor: '#7c5a3a' }));
+
+  // ----- a casa rosa (a da figueira na frente): a casa da vó -----
+  const rosa = house(64, 33);
+  open(rosa, [65, 66.2], 'taco', 'vo');
+  cenario.push(rect('cristaleira', 64.4, 65.8, 33.15, 33.6, { altura: 1.9, olhando: 90 }));
+  cenario.push(rect('sofa', 64.15, 65, 35.6, 37.4, { altura: 0.9, olhando: 0, cor: '#6f8f5a', croche: true }));
+  // o Joaquim, o gato da vó (pedido do dono, 13/11), tem vida própria (a [estrutura], em data/bichos.json): aqui ficam
+  // onde ele dorme (em cima do sofá; ele pula para subir e descer) e o chão por onde anda (o lado de dentro da casa da vó;
+  // ele desvia dos móveis pelas colisões e não sai pela porta)
+  pontos.push(point('ponto', 64.6, 36.4, undefined, 'joaquim'));
+  pontos.push(rect('area', BUDEGA_WALL + 64, 71 - BUDEGA_WALL, 33 + BUDEGA_WALL, 39.5 - BUDEGA_WALL, undefined, 'joaquim-casa'));
+  cenario.push(rect('mesa-redonda', 66.5, 67.3, 34.8, 35.6, { altura: 0.75, cadeiras: 2, toalha: 'croche' }));
+  cenario.push(rect('maquina-costura', 67.6, 68.6, 33.15, 33.65, { altura: 0.8, olhando: 90 }));
+  cenario.push(rect('cama', 68.85, 70.85, 33.15, 34.55, { altura: 0.6, colcha: 'retalhos' }));
+  cenario.push(point('vaso', 64.4, 39.1, { planta: 'espada-de-sao-jorge' }));
+  cenario.push(point('vaso', 70.6, 39.1, { planta: 'samambaia' }));
+
+  // ----- a casa abandonada do fundo: a árvore nasceu lá dentro e saiu pelo telhado; o mato entrou junto -----
+  const abandonada = house(62, 13);
+  open(abandonada, [62.75, 63.95], 'cimento', 'ninguem');
+  // (no meio da casa: é onde o desenho da [arte] põe o buraco da laje e o tronco subindo)
+  cenario.push(point('arvore', 64.5, 16.5, { especie: 'mata', copa: 3, altura: 7.5, tronco: 0.8, dentroDaCasa: true }));
+  cenario.push(rect('sofa', 62.15, 63, 13.15, 14.95, { altura: 0.9, olhando: 0, cor: '#6b5a4a', rasgado: true, mato: true }));
+  chao.push(rect('colchao', 62.4, 63.6, 16.2, 18.2, { velho: true }));
+  chao.push(point('entulho', 65.9, 17.9, { cadeiraCaida: true }));
+  for (const [cx, cy, rx, ry] of [[63, 16.5, 0.7, 0.9], [66.2, 18.9, 0.6, 0.5], [65.6, 13.8, 0.8, 0.5]] as const) {
+    chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
+  }
+}
+
 for (const s of cenario) {
   const p = s.props ?? {};
   if (s.type === 'arvore') colisao.push(block('tronco', s.x, s.y, Number(p.tronco)));
@@ -1158,17 +1216,24 @@ for (const s of cenario) {
   // a vila: casa e carro seguram a pedrinha; o que é baixo ou fino (banco, mesa, fogueira, lixeira, orelhão) deixa passar.
   // A altura vai junto, para o desenho provisório levantar a caixa certa.
   else if (s.type === 'casa' && p.interior) {
-    // a casa que tem interior (a Budega): só as paredes, com o vão da porta de enrolar na frente
+    // a casa que tem interior: só as paredes, com o vão da porta na frente. Na vendinha (a Budega) a porta de enrolar
+    // é a frente toda, menos 34 cm de cada ponta, e a parede do fundo vai até a frente das prateleiras; na casa, o vão
+    // vai de portaDe a portaAte
     const [x0, x1, y0, y1, t, altura] = [s.x, s.x + s.w!, s.y, s.y + s.h!, BUDEGA_WALL, Number(p.altura)];
-    colisao.push(rect('parede', x0, x1, y0, y0 + t + BUDEGA_SHELF, { altura })); // fundo, com as prateleiras coladas nele
+    const [d0, d1] = p.portaDe !== undefined ? [Number(p.portaDe), Number(p.portaAte)] : [x0 + BUDEGA_DOOR_SIDE, x1 - BUDEGA_DOOR_SIDE];
+    colisao.push(rect('parede', x0, x1, y0, y0 + t + (p.comercio ? BUDEGA_SHELF : 0), { altura })); // fundo
     colisao.push(rect('parede', x0, x0 + t, y0, y1, { altura })); // esquerda
     colisao.push(rect('parede', x1 - t, x1, y0, y1, { altura })); // direita
-    colisao.push(rect('parede', x0, x0 + BUDEGA_DOOR_SIDE, y1 - t, y1, { altura })); // as pontas da frente, dos lados da porta
-    colisao.push(rect('parede', x1 - BUDEGA_DOOR_SIDE, x1, y1 - t, y1, { altura }));
+    colisao.push(rect('parede', x0, d0, y1 - t, y1, { altura })); // a frente, dos dois lados da porta
+    colisao.push(rect('parede', d1, x1, y1 - t, y1, { altura }));
   } else if (s.type === 'casa' || s.type === 'carro') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
   // os móveis da Budega: a geladeira segura a pedrinha; o balcão e os engradados são baixos (as prateleiras já estão
   // na parede do fundo)
   else if (s.type === 'geladeira') colisao.push(rect('geladeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  // os móveis das casas: o que é alto (estante com TV, cristaleira, filtro) segura a pedrinha; o que é baixo, não
+  else if (['pia', 'fogao', 'filtro', 'mesa-cozinha', 'mesa-redonda', 'sofa', 'estante', 'cristaleira', 'maquina-costura', 'cama'].includes(s.type)) {
+    colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: Number(p.altura) >= 1.2, altura: Number(p.altura) }));
+  }
   else if (s.type === 'balcao') colisao.push(rect('balcao', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'engradado') colisao.push(rect('engradado', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: round(0.3 * Number(p.pilha)) }));
   else if (s.type === 'banco') colisao.push(rect('banco', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: 0.5 }));
@@ -1199,6 +1264,23 @@ if (reached('4b') && FLORESTA) {
   const hit = colisao.find((c) => x0 < c.x + c.w! && x1 > c.x && y0 < c.y + c.h! && y1 > c.y);
   if (hit) throw new Error(`A Xiovanna não cabe atrás do balcão: bate em ${hit.type} (${hit.x}, ${hit.y}).`);
 }
+/**
+ * Outra coisa sólida fecha o vão entre a e b de ponta a ponta (a parede de uma casa, com um dentro e o outro fora; o
+ * fogão entre a pia e o filtro)? Aí o vão vira dois, e cada um é conferido no seu par.
+ */
+function blockedBetween(a: Shape, b: Shape, all: Shape[]): boolean {
+  const [ax1, ay1, bx1, by1] = [a.x + a.w!, a.y + a.h!, b.x + b.w!, b.y + b.h!];
+  const inX = ax1 <= b.x || bx1 <= a.x; // separados no x (de frente um para o outro na horizontal)
+  // o vão: no eixo em que estão separados, de uma beirada à outra; no outro, a parte em comum
+  const [gx0, gx1] = ax1 <= b.x ? [ax1, b.x] : bx1 <= a.x ? [bx1, a.x] : [Math.max(a.x, b.x), Math.min(ax1, bx1)];
+  const [gy0, gy1] = ay1 <= b.y ? [ay1, b.y] : by1 <= a.y ? [by1, a.y] : [Math.max(a.y, b.y), Math.min(ay1, by1)];
+  const e = 1e-6;
+  return all.some((c) => {
+    if (c === a || c === b) return false;
+    const [cx1, cy1] = [c.x + c.w!, c.y + c.h!];
+    return inX ? c.x < gx1 && cx1 > gx0 && c.y <= gy0 + e && cy1 >= gy1 - e : c.y < gy1 && cy1 > gy0 && c.x <= gx0 + e && cx1 >= gx1 - e;
+  });
+}
 // na vila, nenhum vão estreito entre duas coisas sólidas de frente uma para a outra: abaixo de 0,3 m o pé nem entra; de
 // 0,3 a MIN_GAP ele entra de lado e entala. (Na diagonal, canto com canto, sempre há por onde sair.)
 if (reached('4b')) {
@@ -1209,6 +1291,7 @@ if (reached('4b')) {
       const [dx, dy] = [Math.max(0, b.x - (a.x + a.w!), a.x - (b.x + b.w!)), Math.max(0, b.y - (a.y + a.h!), a.y - (b.y + b.h!))];
       if ((dx > 0 && dy > 0) || (a.type === 'mata-fechada' && b.type === 'mata-fechada')) continue; // canto com canto; a mata é parede
       const gap = dx + dy;
+      if (gap > 0.3 && gap < MIN_GAP && blockedBetween(a, b, village)) continue; // uma parede ou um móvel no meio
       if (gap > 0.3 && gap < MIN_GAP) throw new Error(`Vão de ${gap.toFixed(2)} m entre ${a.type} (${a.x}, ${a.y}) e ${b.type} (${b.x}, ${b.y}): o pé entala.`);
     }
   }

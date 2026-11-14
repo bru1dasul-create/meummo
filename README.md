@@ -53,7 +53,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 | Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
-| Som ligado/desligado | `M` ou 🔊 no painel | 🔊 no painel |
+| Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | `M` liga e desliga · 🔊 no painel abre o volume | 🔊 no painel |
 
 Levar um golpe, esquivar ou levantar a defesa solta a pedra que você estava puxando. A defesa vira sozinha para o
 monstro mais perto; a barra embaixo do pé é a energia dela (acabou, ela quebra: solte e espere voltar). O jogo
@@ -228,6 +228,14 @@ O equipamento também aparece no personagem, pelo ícone: `chapeu_palha` e `gorr
 no corpo precisa de código (`src/client/itemArt.ts` e `src/client/game/gearArt.ts`) — é só pedir; o
 `npm run check` avisa se algum equipamento ficou sem desenho no personagem. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
+
+## Bichos de estimação (sem programar)
+
+O **Joaquim**, o gato da vó, mora na casa rosa do Capão. Ele fica em [`data/bichos.json`](data/bichos.json): quanto tempo
+dorme (`sonoSegundos`), quantos lugares visita acordado (`passeios`) e quanto fica parado em cada um
+(`paradaSegundos`), a velocidade, de quão perto ele mia para quem chega (`mia`) e de quão perto dá para fazer carinho
+(`carinho`). Onde ele dorme e por onde anda ficam no mapa (o ponto `joaquim` e o retângulo `joaquim-casa`, na camada
+`pontos`). Ele nunca é alvo: a pedra e a flecha passam por ele.
 
 ## Vendedores e loja (sem programar)
 

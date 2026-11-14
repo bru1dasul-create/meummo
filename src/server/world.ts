@@ -62,7 +62,7 @@ import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
-import type { FailReason, GmCommand, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
+import type { FailReason, FxKind, GmCommand, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../shared/quests';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
@@ -72,6 +72,7 @@ import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import type { NpcDef, NpcShop } from './npcs';
+import { Pet, petHome, type PetDef } from './pets';
 import { sanitizeChat } from './validate';
 
 export { Monster, Npc, Player, type Conn } from './entities';
@@ -128,6 +129,8 @@ export interface WorldOptions {
   areas?: ReadonlyMap<string, AreaDef>;
   /** Números do combate (carga, defesa, empurrão) com os ajustes do painel; sem isto, o padrão. */
   combat?: CombatRules;
+  /** Bichos de estimação (data/bichos.json); cada mapa fica com os seus (o Joaquim mora no Capão). */
+  pets?: ReadonlyMap<string, PetDef>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -190,6 +193,8 @@ export class World {
   readonly quests: ReadonlyMap<string, QuestInfo>;
   /** Números do combate (o painel muda no lugar: o mundo sempre lê o valor de agora). */
   readonly combat: CombatRules;
+  /** Os bichos deste mapa (o Joaquim): andam sozinhos e nunca são alvo. */
+  readonly pets = new Map<number, Pet>();
   /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
   private readonly npcDefs: ReadonlyMap<string, NpcDef>;
   /** Todos os monstros que existem (o administrador pode criar qualquer um, em qualquer mapa). */
@@ -251,6 +256,18 @@ export class World {
       }
       this.addZone(`${map.id}#${i + 1}`, { ...zone, monster, count: area?.count ?? zone.count }, def);
     });
+
+    for (const def of options.pets?.values() ?? []) {
+      if (def.map !== map.id) continue;
+      const home = petHome(map, def);
+      if (!home) {
+        this.log(`aviso: ${def.name} não tem casa no mapa "${map.id}" (falta o ponto "${def.bed}" ou o retângulo "${def.area}" na camada pontos, ou chão livre ao lado da cama)`);
+        continue;
+      }
+      const pet = new Pet(this.links.nextId(), def, home.bed, home.hop, home.area, home.bed.x, home.bed.y);
+      pet.until = this.now() + def.sleepS[0] * 1000; // começa dormindo na cama
+      this.pets.set(pet.id, pet);
+    }
   }
 
   private addZone(areaId: string, zone: MonsterZone, def: MonsterDef): ZoneState {
@@ -1255,6 +1272,7 @@ export class World {
     this.updateHazards(now);
     this.respawnMonsters(now);
     this.updateDrops(now);
+    this.updatePets(now, dt);
 
     for (const player of this.players.values()) this.updateView(player);
     if (now >= this.nextAutosaveAt) {
@@ -1293,6 +1311,36 @@ export class World {
       monster.changed = false;
       monster.dashed = false;
     }
+    for (const pet of this.pets.values()) {
+      pet.changed = false;
+      pet.dashed = false;
+    }
+  }
+
+  // ======================= bichos (o Joaquim) =======================
+
+  private updatePets(now: number, dt: number): void {
+    if (this.pets.size === 0) return;
+    const players = [...this.players.values()].filter((p) => !p.dead && !p.loading).map((p) => ({ id: p.id, ...feetAt(p.fx, p.fy) }));
+    for (const pet of this.pets.values()) {
+      pet.update(now, dt, this.map, this.random, players, (kind, angle) => this.petFx(pet, kind, angle));
+    }
+  }
+
+  /** Avisa quem está vendo o bicho (miou, ronronou, acordou, dormiu). */
+  private petFx(pet: Pet, kind: FxKind, angle?: number): void {
+    const msg: ServerMsg = { t: 'fx', id: pet.id, kind, ...(angle !== undefined ? { a: round3(angle) } : {}) };
+    for (const player of this.players.values()) if (player.known.has(pet.id)) player.outbox.push(msg);
+  }
+
+  /** Carinho: só perto do bicho (o servidor confere a distância). */
+  cuddle(player: Player, petId: number): void {
+    const pet = this.pets.get(petId);
+    if (!pet || player.loading || player.dead) return;
+    const me = feetAt(player.fx, player.fy);
+    const feet = pet.feet();
+    if (Math.hypot(me.x - feet.x, me.y - feet.y) > pet.def.petRange + 0.3) return this.fail(player, 'too_far');
+    pet.cuddle(this.now(), me, (kind, angle) => this.petFx(pet, kind, angle));
   }
 
   // ======================= jogadores =======================
@@ -2138,6 +2186,24 @@ export class World {
   private updateView(player: Player): void {
     for (const other of this.players.values()) if (other !== player) this.see(player, other);
     for (const monster of this.monsters.values()) this.see(player, monster);
+    for (const pet of this.pets.values()) this.seePet(player, pet);
+  }
+
+  /** Como `see`, para os bichos (posição com fração, como a dos jogadores). */
+  private seePet(player: Player, pet: Pet): void {
+    const dx = Math.abs(pet.x - player.x);
+    const dy = Math.abs(pet.y - player.y);
+    if (player.known.has(pet.id)) {
+      if (dx > VIEW_RADIUS_X + VIEW_HYSTERESIS || dy > VIEW_RADIUS_Y + VIEW_HYSTERESIS) {
+        player.known.delete(pet.id);
+        player.outbox.push({ t: 'despawn', id: pet.id });
+      } else if (pet.changed) {
+        player.outbox.push({ t: 'move', id: pet.id, x: round3(pet.x), y: round3(pet.y), dir: pet.dir, ...(pet.dashed ? { dash: true as const } : {}) });
+      }
+    } else if (dx <= VIEW_RADIUS_X && dy <= VIEW_RADIUS_Y) {
+      player.known.add(pet.id);
+      player.outbox.push({ t: 'spawn', e: pet.state() });
+    }
   }
 
   private see(player: Player, other: Entity): void {

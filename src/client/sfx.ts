@@ -27,15 +27,28 @@ export type SoundName =
   | 'block'
   | 'guard-break'
   | 'pull-full'
-  | 'bow-release';
+  | 'bow-release'
+  | 'meow'
+  | 'purr';
 
 const MUTE_KEY = 'meummo:som-desligado';
+const VOLUME_KEY = 'meummo:volumes';
+/** O volume geral (tudo junto); cada parte (efeitos, ambiente, música) tem o seu, de 0 a 1, por cima dele. */
+const MASTER_VOLUME = 0.35;
+
+/** As partes do som que têm volume próprio (o jogador ajusta no painel do som). */
+export type SoundPart = 'efeitos' | 'ambiente' | 'musica';
+export type SoundVolumes = Record<SoundPart, number>;
+const DEFAULT_VOLUMES: SoundVolumes = { efeitos: 1, ambiente: 0.7, musica: 0.6 };
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
 const MIN_GAP_MS = 45;
 
 export class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** Cada parte passa pelo seu volume antes do geral. */
+  private readonly buses: Partial<Record<SoundPart, GainNode>> = {};
+  private readonly volume: SoundVolumes = readVolumes();
   private noiseBuffer: AudioBuffer | null = null;
   private readonly lastPlayed = new Map<SoundName, number>();
   /**
@@ -57,8 +70,14 @@ export class Sfx {
         if (!AudioCtor) return;
         this.ctx = new AudioCtor();
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.35;
+        this.master.gain.value = this.muted ? 0 : MASTER_VOLUME;
         this.master.connect(this.ctx.destination);
+        for (const part of ['efeitos', 'ambiente', 'musica'] as const) {
+          const bus = this.ctx.createGain();
+          bus.gain.value = this.volume[part];
+          bus.connect(this.master);
+          this.buses[part] = bus;
+        }
         const length = this.ctx.sampleRate;
         this.noiseBuffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
@@ -96,11 +115,11 @@ export class Sfx {
         filter.type = 'lowpass';
         filter.frequency.value = 520;
         filter.Q.value = 4;
-        osc.connect(filter).connect(gain).connect(this.master!);
+        osc.connect(filter).connect(gain).connect(this.buses.efeitos!);
       } else {
         osc.type = 'triangle';
         osc.frequency.value = 105;
-        osc.connect(gain).connect(this.master!);
+        osc.connect(gain).connect(this.buses.efeitos!);
       }
       osc.start(t);
       this.pull = { osc, gain, filter, kind, full: false };
@@ -142,12 +161,39 @@ export class Sfx {
   toggleMute(): boolean {
     this.muted = !this.muted;
     if (this.muted) this.stopCharge();
+    // o ambiente e a música continuam tocando por baixo: desligar o som abaixa tudo (sem estalo) e ligar volta
+    if (this.ctx && this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : MASTER_VOLUME, this.ctx.currentTime, 0.05);
     try {
       localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0');
     } catch {
       // sem armazenamento: só não lembra a escolha
     }
     return this.muted;
+  }
+
+  /** Os volumes de agora (0 a 1). */
+  volumes(): SoundVolumes {
+    return { ...this.volume };
+  }
+
+  /** Muda o volume de uma parte (0 a 1); fica guardado neste navegador. */
+  setVolume(part: SoundPart, value: number): void {
+    const v = Math.max(0, Math.min(1, Number.isFinite(value) ? value : DEFAULT_VOLUMES[part]));
+    this.volume[part] = v;
+    const bus = this.buses[part];
+    if (this.ctx && bus) bus.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05);
+    try {
+      localStorage.setItem(VOLUME_KEY, JSON.stringify(this.volume));
+    } catch {
+      // sem armazenamento: vale só nesta visita
+    }
+  }
+
+  /** Para o som de ambiente e a música (ambient.ts): o áudio do navegador, a saída de cada parte e o chiado pronto. */
+  get audio(): { ctx: AudioContext; out: (part: SoundPart) => GainNode; noise: AudioBuffer } | null {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running' || !this.noiseBuffer) return null;
+    return { ctx, out: (part) => this.buses[part]!, noise: this.noiseBuffer };
   }
 
   play(name: SoundName): void {
@@ -243,6 +289,12 @@ export class Sfx {
       case 'pull-full': // o estilingue (ou o arco) chegou na carga máxima (revisão 17)
         this.tone('triangle', 690, 1050, t, 0.18, 0.24);
         break;
+      case 'meow': // o Joaquim miando: "mi-au" (a voz sobe e desce, e a boca abre e fecha num filtro)
+        this.meow(t, 0.16);
+        break;
+      case 'purr': // o Joaquim ronronando no carinho: um rom-rom grave que pulsa
+        this.purr(t, 1.6, 0.5);
+        break;
       case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
         this.tone('triangle', 260, 120, t, 0.16, 0.3);
         this.tone('sine', 520, 300, t, 0.08, 0.1);
@@ -272,9 +324,62 @@ export class Sfx {
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    osc.connect(gain).connect(this.master!);
+    osc.connect(gain).connect(this.buses.efeitos!);
     osc.start(start);
     osc.stop(start + duration + 0.02);
+  }
+
+  /** "Mi-au": a voz (dente de serra) sobe e desce; um filtro faz o "i" virar "a" e depois "u". */
+  private meow(start: number, volume: number): void {
+    const ctx = this.ctx!;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(430, start);
+    osc.frequency.linearRampToValueAtTime(650, start + 0.16);
+    osc.frequency.linearRampToValueAtTime(460, start + 0.5);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 5;
+    filter.frequency.setValueAtTime(1000, start);
+    filter.frequency.linearRampToValueAtTime(1900, start + 0.18);
+    filter.frequency.linearRampToValueAtTime(750, start + 0.5);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.05);
+    gain.gain.setValueAtTime(volume, start + 0.36);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.55);
+    osc.connect(filter).connect(gain).connect(this.buses.efeitos!);
+    osc.start(start);
+    osc.stop(start + 0.6);
+  }
+
+  /** Ronronar: um chiado bem grave que pulsa umas 24 vezes por segundo, subindo e sumindo devagar. */
+  private purr(start: number, duration: number, volume: number): void {
+    const ctx = this.ctx!;
+    const source = ctx.createBufferSource();
+    source.buffer = this.noiseBuffer;
+    source.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 240;
+    const pulse = ctx.createGain();
+    pulse.gain.value = 0.5;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 24;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.5;
+    lfo.connect(depth).connect(pulse.gain);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.25);
+    gain.gain.setValueAtTime(volume, start + duration - 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.connect(filter).connect(pulse).connect(gain).connect(this.buses.efeitos!);
+    source.start(start);
+    lfo.start(start);
+    source.stop(start + duration + 0.05);
+    lfo.stop(start + duration + 0.05);
   }
 
   private noise(start: number, duration: number, filterType: BiquadFilterType, from: number, to: number, volume: number): void {
@@ -288,9 +393,19 @@ export class Sfx {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(volume, start);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    source.connect(filter).connect(gain).connect(this.master!);
+    source.connect(filter).connect(gain).connect(this.buses.efeitos!);
     source.start(start);
     source.stop(start + duration + 0.02);
+  }
+}
+
+function readVolumes(): SoundVolumes {
+  try {
+    const saved = JSON.parse(localStorage.getItem(VOLUME_KEY) ?? '{}') as Partial<SoundVolumes>;
+    const pick = (part: SoundPart) => (typeof saved[part] === 'number' && saved[part]! >= 0 && saved[part]! <= 1 ? saved[part]! : DEFAULT_VOLUMES[part]);
+    return { efeitos: pick('efeitos'), ambiente: pick('ambiente'), musica: pick('musica') };
+  } catch {
+    return { ...DEFAULT_VOLUMES };
   }
 }
 
