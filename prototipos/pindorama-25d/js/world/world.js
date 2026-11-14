@@ -174,6 +174,18 @@
       // as imagens ficam (velhas): enquanto não são refeitas, saem esticadas para o zoom novo
       for (const p of this.props) p.spriteKey = '';
       for (const f of this.flats || []) f.spriteKey = '';
+      // o zoom acabou de mudar (e pode continuar mudando: a câmera da conversa, a roda do mouse)
+      this._zoomAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    }
+
+    /**
+     * O zoom mudou há pouco? Enquanto ele muda, as imagens dos objetos saem esticadas e nada é refeito (o que fosse
+     * refeito num zoom do meio do caminho seria jogado fora no quadro seguinte).
+     */
+    zoomSettling() {
+      if (!this._zoomAt) return false;
+      const t = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      return t - this._zoomAt < 180;
     }
 
     /**
@@ -217,8 +229,8 @@
       const care = (p) => {
         const b = p.bounds;
         if (overlap(b, near)) {
-          if (!p.spriteReady && !this.buildBusy()) p._ensureSprite();
-        } else if (sweep && p.sprite && !overlap(b, far)) p.dropSprite();
+          if (!p.spriteReady && p._ensureSprite && !this.buildBusy() && !this.zoomSettling()) p._ensureSprite();
+        } else if (sweep && p.sprite && p.dropSprite && !overlap(b, far)) p.dropSprite();
       };
       for (const p of this.props) care(p);
       for (const f of this.flats || []) care(f);

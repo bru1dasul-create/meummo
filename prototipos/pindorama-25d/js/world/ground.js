@@ -6,6 +6,25 @@
   const M = PD.math;
   const K = PD.ISO_K;
   const CHUNK = 512; // px de tela (CSS) por pedaço
+  /**
+   * Zoom mudando (a câmera da conversa muda a cada quadro por meio segundo; a roda do mouse, a cada passo): os pedaços
+   * do zoom de antes saem esticados e os novos só são feitos quando o zoom fica parado esse tempo (ms). Antes, cada zoom
+   * novo apagava o chão inteiro e refazia (quadros de 100 a 250 ms: o "lag ao falar com NPC" e a trava no zoom).
+   */
+  const SETTLE_MS = 180;
+  /** Quanto tempo (ms) um quadro pode gastar fazendo pedaços novos, com os velhos esticados por baixo. */
+  const BUILD_MS = 6;
+  // obriga o navegador a pintar os pixels do pedaço novo na hora (ele só pinta no primeiro drawImage dele): assim o
+  // tempo de verdade de fazer o pedaço entra na conta do quadro
+  const PROBE = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+  if (PROBE) PROBE.width = PROBE.height = 1;
+  const PROBE_CTX = PROBE ? PROBE.getContext('2d') : null;
+  function rasterNow(c) {
+    if (!PROBE_CTX) return;
+    PROBE_CTX.clearRect(0, 0, 1, 1);
+    PROBE_CTX.drawImage(c, 0, 0, 1, 1);
+  }
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   /** Contorno simplificado do estado de São Paulo (o desenho do mosaico das calçadas paulistanas). */
   const SP_MAP = [[0, 0.42], [0.1, 0.34], [0.22, 0.3], [0.34, 0.18], [0.47, 0.12], [0.58, 0.05], [0.7, 0.08], [0.8, 0.02], [0.92, 0.1], [1, 0.22], [0.96, 0.38], [0.86, 0.52], [0.74, 0.62], [0.6, 0.7], [0.48, 0.66], [0.36, 0.6], [0.24, 0.56], [0.12, 0.52]];
   const PAD = 1800; // o chão continua além do mapa (o personagem não chega lá, mas a câmera vê)
@@ -29,6 +48,11 @@
       this.cache = new Map();
       this.key = '';
       this.maxChunks = 90;
+      /** Os pedaços de um zoom anterior (esticados enquanto os novos não ficam prontos): { cache, zoom }. */
+      this.old = null;
+      /** Os pedaços de agora cobrem a tela toda? (só então eles viram os "velhos" no próximo zoom) */
+      this.complete = false;
+      this.changedAt = 0;
     }
 
     /** Altura do chão no ponto (rua 0, resto 14 cm). Nos mapas do mundo novo o chão é todo no nível 0. */
@@ -41,11 +65,20 @@
     }
 
     _ensureKey() {
-      const k = `${this.cam.zoom.toFixed(4)}|${this.cam.dpr}|${this.cam.pitchDeg}`;
-      if (k !== this.key) {
-        this.key = k;
-        this.cache.clear();
-      }
+      const cam = this.cam;
+      const k = `${cam.zoom.toFixed(4)}|${cam.dpr}|${cam.pitchDeg}`;
+      if (k === this.key) return;
+      // mudou o zoom: os pedaços de agora, se cobriam a tela, viram os velhos (saem esticados até os novos ficarem
+      // prontos). Se não cobriam (o zoom ainda estava mudando), os velhos continuam os de antes. Com outra inclinação
+      // da câmera, esticar não serve
+      if (this.pitch !== cam.pitchDeg) this.old = null;
+      else if (this.cache.size && this.complete) this.old = { cache: this.cache, zoom: this.zoom };
+      this.cache = new Map();
+      this.complete = false;
+      this.key = k;
+      this.zoom = cam.zoom;
+      this.pitch = cam.pitchDeg;
+      this.changedAt = now();
     }
 
     /** Desenha os pedaços visíveis (ctx já em px de tela do mundo). */
@@ -56,14 +89,30 @@
       const y0 = Math.floor(cam.viewY / CHUNK);
       const x1 = Math.floor((cam.viewX + cam.viewW) / CHUNK);
       const y1 = Math.floor((cam.viewY + cam.viewH) / CHUNK);
+      let missing = false;
+      for (let cy = y0; cy <= y1 && !missing; cy++) for (let cx = x0; cx <= x1; cx++) if (!this.cache.has(cx + ',' + cy)) missing = true;
+      // falta pedaço do zoom de agora: os velhos esticados por baixo (sem buraco no chão)
+      if (missing && this.old) this._drawOld(ctx);
+      // com os velhos por baixo, só faz pedaço novo com o zoom parado, e pouco por quadro; sem eles (a primeira vez,
+      // depois de um teletransporte), até 4 por quadro, como sempre
+      const old = !!this.old;
+      const settling = old && now() - this.changedAt < SETTLE_MS;
       let made = 0;
+      let spent = 0;
+      let skipped = false;
       for (let cy = y0; cy <= y1; cy++) {
         for (let cx = x0; cx <= x1; cx++) {
           const key = cx + ',' + cy;
           let c = this.cache.get(key);
           if (!c) {
-            if (made > 3 && this.cache.size > 0) continue; // no máximo 4 por quadro (não trava ao andar rápido)
+            const full = old ? settling || (made >= 1 && spent > BUILD_MS) : made > 3 && this.cache.size > 0;
+            if (full) {
+              skipped = true;
+              continue;
+            }
+            const t0 = now();
             c = this._render(cx, cy);
+            spent += now() - t0;
             this.cache.set(key, c);
             made++;
             if (this.cache.size > this.maxChunks) this.cache.delete(this.cache.keys().next().value);
@@ -75,7 +124,28 @@
           ctx.drawImage(c, cx * CHUNK, cy * CHUNK, CHUNK, CHUNK);
         }
       }
-      this.pending = made > 3;
+      this.complete = !skipped;
+      // os novos cobrem a tela: os velhos saem
+      if (this.complete) this.old = null;
+      this.pending = skipped;
+    }
+
+    /** Os pedaços do zoom anterior, esticados para o zoom de agora (a posição na tela é proporcional ao zoom). */
+    _drawOld(ctx) {
+      const cam = this.cam;
+      const o = this.old;
+      const S = CHUNK * (cam.zoom / o.zoom);
+      const x0 = Math.floor(cam.viewX / S);
+      const y0 = Math.floor(cam.viewY / S);
+      const x1 = Math.floor((cam.viewX + cam.viewW) / S);
+      const y1 = Math.floor((cam.viewY + cam.viewH) / S);
+      for (let cy = y0; cy <= y1; cy++) {
+        for (let cx = x0; cx <= x1; cx++) {
+          const c = o.cache.get(cx + ',' + cy);
+          // (um tiquinho maior, para não aparecer a emenda entre dois pedaços esticados)
+          if (c) ctx.drawImage(c, cx * S, cy * S, S + 1, S + 1);
+        }
+      }
     }
 
     _render(cx, cy) {
@@ -87,6 +157,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, -cx * CHUNK * dpr, -cy * CHUNK * dpr);
       // limites do pedaço no chão (para pular o que não aparece)
       this._paint(ctx, { x: cx * CHUNK, y: cy * CHUNK, w: CHUNK, h: CHUNK });
+      rasterNow(c);
       return c;
     }
 

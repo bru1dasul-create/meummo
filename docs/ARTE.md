@@ -795,14 +795,34 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   lâmpada). O musgo e o cipó da fachada são recortados fora do vão. O orelhão com `poste: true` (`tmj.js` acha o
   `poste-praca` mais perto, até 1,5 m: `poleAt`) liga dois braços de ferro até o poste. Os caixotes de frutas, a
   lousinha e o degrau com capacho dependem da resposta do dono à proposta do [mundo].
-- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] já pôs no mapa (`mundo/floresta-dentro`,
-  dentro do `mundo/budega-entrada`) a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
+- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] refez a parte do mapa em cima da main nova
+  (ramo `mundo/lote2-floresta-dentro`, 90e0059, sobre a 6dd462e; é esse que entra, no lugar do `mundo/budega-entrada`,
+  que ficou velho): a raiz no piso, o mato nas frestas, a samambaia nos cantos e o cipó de dentro. Na versão
+  anterior, o mapa tinha a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
   `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
   samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
   minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
-- **Próximo da lista (pedido da [estrutura], que mediu):** o zoom e a conversa travam porque o chão (`ground.js`) se
-  refaz inteiro a cada zoom novo; esticar os pedaços velhos enquanto o zoom muda e refazer quando parar, e o
-  `buildBusy` contar o primeiro desenho de cada imagem nova.
+- **Zoom e conversa que travavam** (pedido da [estrutura], que mediu): feito depois do lote 1 (a seção abaixo).
+
+### Depois do lote 1 (14/11): controles, zoom e flecha (na main em 14/11, com o "pode" do dono)
+- **Pulo e botão de pular** (`view.js` ação `jump` → `jumpPulse`, que liga o `input.jump` antes do `ch.update`;
+  `ui.ts` `ActionSlot` 'jump'; `paintedIcons.ts` `paintJump`): no computador, o 6º quadrado da moldura; no celular, em
+  cima da coluna da esquerda (`right: 76px`: em cima da direita fica a mochila).
+- **Etiqueta das teclas** (`ui.ts` `data-key`, `style.css`): "Espaço" vira a barra de espaço, "Shift" a seta; nomes
+  compridos com a letra menor (`.long`, `.longer`). O "Como jogar" (`index.html`) com as teclas novas.
+- **Zoom sem travar** (`ground.js`, `props.js`, `world.js`): o chão guarda os pedaços do zoom anterior e os estica
+  enquanto o zoom muda (`World.zoomSettling`, 180 ms); os novos só com o zoom parado, uns 6 ms por quadro, com os
+  velhos por baixo. Os objetos e a casa cortada também esticam; `rasterNow` pinta cada imagem nova na hora em que é
+  feita (a conta do quadro fica certa). Medir: `zoom-medir.cjs` e `zoom-quadros.cjs` (scratchpad).
+- **Flecha que para sem acertar ninguém** (`src/client/novo/projectileArt.ts`; o `combat.ts` chama
+  `projectileEnded(kind, x, y, angle, now, stuck?)`): `chao` (sem `stuck`, ou `borda`: crava no chão), `cravada` (a
+  madeira de `HOLDS`: na altura `stuck.z`, treme, lascas, furinho), `quica` (o resto: faíscas, cai deitada com
+  sombra), `agua` (a flecha mergulha, cortada na linha da água, com o esguicho, a coroa de gotas e três anéis com
+  contorno escuro, para não sumir no brilho do lago; a [estrutura] manda `on: 'agua'` também no fim do alcance em
+  cima da água) e `poeira` (a pedra do estilingue). Vindo até uns 30° da direção da câmera
+  (`towardCamera > 0.87`), ela bateu do lado de lá: só as lascas ou as faíscas aparecem (a camada do combate fica por
+  cima de tudo, então o tronco não tem como cobrir a haste). Teste: `tests/projectileArt.test.ts`; no jogo:
+  `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
@@ -897,7 +917,11 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura]:** nada pendente da arte. O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
+- **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
+  no `makeActionBar` e o `tryJump` no `onAction`). Ela liga assim que o meu ramo (o `ActionSlot` 'jump' do `ui.ts`)
+  entrar na main (antes disso a main não compila): **avisar a [estrutura] quando entrar**. Já feitos por ela (main
+  6e44ee0): a letra menor no botão da defesa (`long`/`longer` no `setKey`) e o `on: 'agua'` no fim do alcance em cima
+  da água (conferi o mergulho da flecha no lago). O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
   entraram na main em 14/11, e a [estrutura] ligou o arco (main 0765f59): conferi no jogo (a mochila equipa, o botão
   vira "Arco", a flecha voa e crava). Observação dela: no zoom padrão a tela mostra uns 10 m do herói; a flecha com
   carga cheia (13 m) pode cravar fora da tela (não é erro). Se o dono quiser, a câmera pode andar um pouco para onde
@@ -910,6 +934,8 @@ confirmou.
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
 0. Pintar o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
+   - Opcional: restilizar os itens dos bichos no chão (hoje o desenho provisório da [estrutura], `drawDrops` no
+     `combat.ts`: o ícone do item caindo com quique, "×N", brilho dourado no raro, laranja com facho no lendário).
 1. **Piloto do estilo desenhado** com o Nano Banana (esperando os exemplos do dono, veja acima).
 2. **Monstros antigos no capricho novo** (`monsterPaint.ts`): sagui, jararaca, saci, corpo-seco, capelobo e Mula sem
    Cabeça. Hoje são 16x16 e menores que um jogador. Se o piloto aprovar o estilo desenhado, faça já nesse estilo.

@@ -79,6 +79,7 @@
       const ctx = c.getContext('2d');
       ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -b.x0 * cam.dpr, -b.y0 * cam.dpr);
       this.paint(ctx);
+      rasterNow(c);
       this.sprite = { c, x: b.x0, y: b.y0, w: b.w, h: b.h, zoom: cam.zoom };
       this.spriteKey = key;
       // o mundo conta quanto tempo do quadro foi gasto fazendo imagens (veja World.buildBusy)
@@ -100,7 +101,9 @@
      */
     _spriteNow() {
       const s = this.sprite;
-      if (s && this.spriteKey !== this._zoomKey() && this.world.buildBusy && this.world.buildBusy()) {
+      const w = this.world;
+      // (e enquanto o zoom ainda está mudando: a imagem feita agora já estaria velha no quadro seguinte)
+      if (s && this.spriteKey !== this._zoomKey() && w && ((w.zoomSettling && w.zoomSettling()) || (w.buildBusy && w.buildBusy()))) {
         const k = this.cam.zoom / s.zoom;
         return { c: s.c, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k };
       }
@@ -113,6 +116,17 @@
       ctx.drawImage(s.c, s.x, s.y, s.w, s.h);
       ctx.globalAlpha = 1;
     }
+  }
+
+  // obriga o navegador a pintar os pixels da imagem nova na hora (ele só pinta no primeiro drawImage dela): assim o
+  // tempo de verdade de fazer a imagem entra na conta do quadro (World.buildBusy), e não estoura no desenho da tela
+  const PROBE = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+  if (PROBE) PROBE.width = PROBE.height = 1;
+  const PROBE_CTX = PROBE ? PROBE.getContext('2d') : null;
+  function rasterNow(c) {
+    if (!PROBE_CTX) return;
+    PROBE_CTX.clearRect(0, 0, 1, 1);
+    PROBE_CTX.drawImage(c, 0, 0, 1, 1);
   }
 
   // ------------------------------------------------------------------ utilidades de desenho
@@ -369,6 +383,13 @@
       const cam = this.cam;
       const key = this._zoomKey();
       if (this._cut && this._cutKey === key) return this._cut;
+      // zoom mudando: a de antes, esticada
+      const w = this.world;
+      if (this._cut && w && w.zoomSettling && w.zoomSettling()) {
+        const s = this._cut;
+        const k = cam.zoom / s.zoom;
+        return { c: s.c, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k, zoom: s.zoom };
+      }
       const b = this.bounds;
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.ceil(b.w * cam.dpr));
@@ -376,7 +397,8 @@
       const ctx = c.getContext('2d');
       ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -b.x0 * cam.dpr, -b.y0 * cam.dpr);
       this.paintCut(ctx);
-      this._cut = { c, x: b.x0, y: b.y0, w: b.w, h: b.h };
+      rasterNow(c);
+      this._cut = { c, x: b.x0, y: b.y0, w: b.w, h: b.h, zoom: cam.zoom };
       this._cutKey = key;
       return this._cut;
     }

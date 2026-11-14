@@ -167,8 +167,8 @@ export type ServerMsg =
   | { t: 'stats'; stats: PlayerStats }
   | { t: 'shot'; id: number; by: number; x: number; y: number; a: number; speed: number; range: number; kind: string; cid?: number }
   // projétil acabou (hit = id de quem levou, ou 0). Sem acertar ninguém: onde parou (x, y, como no `shot`) e, se bateu
-  // em algo, `on` = o tipo do que segurou (ex.: 'tronco', 'parede', 'pedra'; 'borda' = fim do mapa); sem `on`, caiu no
-  // chão no fim do alcance
+  // em algo, `on` = o tipo do que segurou (ex.: 'tronco', 'parede', 'pedra'; 'borda' = fim do mapa). No fim do alcance:
+  // `on: 'agua'` se caiu na água; sem `on`, caiu no chão
   | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string }
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
   | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number } // r = alcance do golpe (bote, investida)

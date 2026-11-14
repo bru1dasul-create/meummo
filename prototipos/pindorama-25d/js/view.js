@@ -7,7 +7,7 @@
 //   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
-//   action(id, tipo, angulo)  golpes e reações; por enquanto só nas criaturas (js/creatures: o sagui)
+//   action(id, tipo, angulo)  golpes e reações (gente: tiro, defesa, 'dash' = rola, 'jump' = pula; criaturas: os delas)
 //   gear(id, gear)            o que o jogador tem equipado (o ícone de cada parte): o arco (`weapon: 'arco'`) fica na mão
 //   canDraw(kind, tipo)       desenha este bicho? (kind 'pet': o Joaquim, 'joaquim'; ações wake, sleep, meow, purr, dash)
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
@@ -221,6 +221,10 @@
         case 'sling-cancel':
           if (S && slinging()) S.cancel(ch);
           return;
+        case 'jump':
+          // o pulo (Espaço; por enquanto só enfeite: o servidor não muda o lugar): o animador pula no próximo quadro
+          a.jumpPulse = true;
+          return;
         case 'dash': {
           // a esquiva: rola no chão até onde o servidor já pôs o herói (antes ele aparecia lá de uma vez, 3 m adiante)
           const T = a.target;
@@ -353,6 +357,10 @@
         if (ch.guard) ch.guard.energy = PD.guard.RULES.maxEnergy;
         input.guardHeld = !!a.guardHeld;
         if (a.guardDir !== undefined) input.guardDir = a.guardDir;
+      }
+      if (a.jumpPulse) {
+        input.jump = true;
+        a.jumpPulse = false;
       }
       ch.update(dt, input, null);
       // a forquilha sai da mão quando o tiro (ou a puxada cancelada) termina

@@ -249,7 +249,7 @@ export class Hud {
   }
 }
 
-export type ActionSlot = 'shot' | 'skill0' | 'skill1' | 'dash';
+export type ActionSlot = 'shot' | 'skill0' | 'skill1' | 'dash' | 'jump';
 
 export interface ActionDef {
   slot: ActionSlot;
@@ -301,6 +301,11 @@ export class ActionBar {
       const key = document.createElement('span');
       key.className = 'key';
       key.textContent = def.key;
+      // o nome da tecla de verdade (o jogador troca): "Espaço" e "Shift" viram desenho (style.css lê o `data-key`);
+      // nomes compridos ("Home", "Page Up") ficam com a letra menor, para caber na etiqueta da moldura
+      key.dataset.key = def.key;
+      if (def.key.length > 4) key.classList.add('longer');
+      else if (def.key.length > 2) key.classList.add('long');
       const cooldown = document.createElement('span');
       cooldown.className = 'cd';
       const secs = document.createElement('span');

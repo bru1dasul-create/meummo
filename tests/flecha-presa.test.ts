@@ -105,6 +105,46 @@ describe('o servidor diz onde a flecha parou', () => {
     expect(end!.x).toBeLessThan(3.52);
   });
 
+  it('caiu na água no fim do alcance (a água não segura tiro): on = "agua", para o respingo', () => {
+    const clock = new FakeClock();
+    const obj = (id: number, x: number, y: number, w: number, h: number): TiledObject => ({
+      id, x: x * PX, y: y * PX, width: w * PX, height: h * PX, type: 'agua',
+      properties: [{ name: 'bloqueiaTiro', type: 'bool', value: false }],
+    });
+    const lake = GameMap.fromTiled(
+      {
+        width: 40, height: 12, tilewidth: PX, tileheight: PX, orientation: 'orthogonal',
+        properties: [{ name: 'nome', type: 'string', value: 'Lago' }], tilesets: [],
+        layers: [
+          { type: 'objectgroup', name: 'colisao', objects: [obj(1, 11, 0, 29, 12)] }, // água do x = 11 até a borda
+          { type: 'objectgroup', name: 'pontos', objects: [{ id: 0, name: 'spawn', x: 8 * PX, y: 5 * PX, point: true }] },
+        ],
+      },
+      'lago',
+    );
+    expect(lake.kindUnderShot(20, 5)).toBe('agua');
+    expect(lake.kindUnderShot(9, 5)).toBeNull();
+    const world = new World(lake, { now: clock.now, random: () => 0 });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const corner = cornerAtFeet(8, 6);
+    Object.assign(joined.player, { fx: corner.x, fy: corner.y, x: Math.floor(corner.x), y: Math.floor(corner.y) });
+    for (let t = 0; t < TICK_MS * 2; t += TICK_MS) {
+      clock.advance(TICK_MS);
+      world.tick();
+    }
+    world.shoot(joined.player, 1, 0); // para o leste, por cima da água
+    for (let t = 0; t < 2000; t += TICK_MS) {
+      clock.advance(TICK_MS);
+      world.tick();
+    }
+    const end = conn.ofType('shot_end')[0]!;
+    expect(end.hit).toBe(0);
+    expect(end.x!).toBeGreaterThan(11);
+    expect(end.on).toBe('agua');
+  });
+
   it('não bateu em nada: diz onde caiu, no fim do alcance (sem on)', () => {
     const { world, conn, player, run } = setup();
     const shot = conn.ofType('shot').length;

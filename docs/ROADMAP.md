@@ -512,9 +512,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[estrutura]** Lag ao falar com NPC e o jogo travando ao dar e tirar zoom: medidos (14/11). A causa é a mesma
   e está no desenho: cada mudança de zoom apaga e refaz o chão inteiro, e a câmera da conversa muda o zoom a cada
   quadro por meio segundo (quadros de 100 a 250 ms). Passado à [arte] (abaixo)
-- [ ] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
+- [x] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
   muda e refazer só quando ele parar, como os objetos já fazem; e o orçamento de refazer imagens (`buildBusy`) contar
-  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade)
+  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade) (14/11): o chão guarda os pedaços do
+  zoom anterior e os estica enquanto o zoom muda; os novos só são feitos com o zoom parado (180 ms), uns 6 ms por
+  quadro, com os velhos por baixo (sem buraco). Os objetos e a casa cortada também esticam e não se refazem enquanto o
+  zoom muda (`World.zoomSettling`), e cada imagem nova é pintada na hora em que é feita (`rasterNow`), para a conta do
+  quadro ser a de verdade. Medido no Chromium sem placa de vídeo (parado, 33 a 50 ms por quadro): no zoom da conversa
+  o pior quadro caiu de 200–267 ms para 83–117 ms e os acima de 100 ms de 10 para 0–2; na roda, de 183–200 ms para
+  83–117 ms e de 16–23 acima de 100 ms para 0–1
 - [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
   é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
 - [x] **[arte]** Arco: "o braço fica feio puxando" (14/11, na main): puxando, o herói fica de lado para o
@@ -559,19 +565,29 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
-- [ ] **[arte]** Desenhar a flecha cravada no tronco (na altura do voo, `stuck.z`), em vez de no chão ao pé da árvore
+- [x] **[arte]** Desenhar a flecha cravada no tronco (na altura do voo, `stuck.z`), em vez de no chão ao pé da árvore
+  (14/11): na madeira (tronco, bambu, tronco caído, mata fechada e os móveis) ela crava na altura em que bateu, treme,
+  solta lascas e deixa o furinho; vindo quase na direção da câmera (até uns 30°) ela bate do lado de lá e o tronco a
+  esconde (só as lascas aparecem). Na pedra, na parede e no resto ela quica com faíscas e cai deitada no chão, com
+  sombra; na água (`on: 'agua'`, que a [estrutura] manda também no fim do alcance em cima do lago) ela mergulha com
+  um esguicho, uma coroa de gotas e três anéis; a pedra do estilingue só levanta poeira. Tudo some em uns 2 s
+  (`tests/projectileArt.test.ts`)
 
 **Personagem e controles:**
 - [x] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (14/11): janela das teclas (botão "Teclas" no
   painel do som, só no computador; fica guardado no navegador), o pulo passa pelo servidor e quem está perto vê
   (protocolo 31; por enquanto só de enfeite), o andar devagar foi para o `C` (liga e desliga), o som ficou sem tecla
   (painel do som) e o `M` está reservado para o mapa (por enquanto só avisa)
-- [ ] **[arte]** O pulo de verdade no boneco (o motor manda `action(id, 'jump')`, seu e dos outros; o animador do
+- [x] **[arte]** O pulo de verdade no boneco (o motor manda `action(id, 'jump')`, seu e dos outros; o animador do
   protótipo já pula com `input.jump`) e um botão de pular no celular (o tipo `ActionSlot` com 'jump' e o ícone; o motor
-  põe na barra)
-- [ ] **[arte]** A etiqueta da tecla da esquiva na barra: o estilo desenha a barra de espaço fixa
+  põe na barra) (14/11): a view pula (`jumpPulse`); o `ActionSlot` 'jump' com o ícone pintado (o pé subindo); no
+  computador ele vai no 6º quadrado da moldura e, no celular, em cima da coluna da esquerda (em cima da direita fica a
+  mochila). Falta a [estrutura] pôr o `{ slot: 'jump' }` na barra e o `tryJump` no `onAction`
+- [x] **[arte]** A etiqueta da tecla da esquiva na barra: o estilo desenha a barra de espaço fixa
   (`.action[data-slot='dash'] .key`), mas a esquiva agora é o Shift e o jogador pode trocar; e o "Como jogar" da tela
-  de entrada (`index.html`) com as teclas novas
+  de entrada (`index.html`) com as teclas novas (14/11): a etiqueta mostra a tecla de verdade (`data-key`): "Espaço"
+  vira a barra de espaço, "Shift" a seta do Shift e os nomes compridos ficam com a letra menor; o "Como jogar" com
+  Shift esquiva, Espaço pula, C anda devagar, M mapa (em breve) e as teclas no 🔊 → Teclas
 - [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
   botão de atirar, à parte)
 

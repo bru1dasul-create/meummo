@@ -442,7 +442,65 @@ function paintGuard(ctx: CanvasRenderingContext2D): void {
   ctx.restore();
 }
 
-export type PaintedAction = 'shot' | 'skill0' | 'skill1' | 'dash' | 'guard' | 'bow';
+/** Pular: o pé subindo (o mesmo da esquiva, de pé), os riscos do impulso embaixo dele e o chão com a poeirinha. */
+function paintJump(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.ceu;
+  slotBackground(ctx, t, 61);
+  // o chão e a poeira do impulso
+  const ground = new Path2D();
+  ground.moveTo(22, 106);
+  ground.lineTo(106, 106);
+  glowStroke(ctx, ground, 3.4, t, [22, 102, 106, 110], 10);
+  const dust = new Path2D();
+  for (const [x, y, r] of [
+    [34, 100, 4.2],
+    [27, 103, 3],
+    [94, 100, 4.2],
+    [101, 103, 3],
+  ] as const) {
+    dust.moveTo(x + r, y);
+    dust.arc(x, y, r, 0, Math.PI * 2);
+  }
+  glowFill(ctx, dust, t, [22, 95, 106, 107], 8, 1.4);
+  // os riscos de subida, embaixo do pé
+  for (const [x, y0, y1, w] of [
+    [48, 96, 74, 3.6],
+    [64, 99, 70, 4.4],
+    [80, 96, 75, 3.2],
+  ] as const) {
+    const s = new Path2D();
+    s.moveTo(x, y0);
+    s.lineTo(x, y1);
+    glowStroke(ctx, s, w, t, [x - 3, y1, x + 3, y0], 12);
+  }
+  // o pé subindo, com os dedos para cima
+  ctx.save();
+  ctx.translate(64, 44);
+  ctx.rotate(-0.1);
+  ctx.scale(0.92, 0.92);
+  const foot = new Path2D();
+  foot.ellipse(0, -9, 14, 17, 0, 0, Math.PI * 2);
+  foot.moveTo(10, 16);
+  foot.ellipse(-1, 16, 10.5, 13, 0.08, 0, Math.PI * 2);
+  foot.moveTo(9, 2);
+  foot.ellipse(-1, 4, 10, 12, 0, 0, Math.PI * 2);
+  glowFill(ctx, foot, t, [-14, -26, 14, 30], 18, 2.2);
+  const toes = new Path2D();
+  for (const [x, y, r] of [
+    [-11, -31, 4.6],
+    [-3, -35, 4.2],
+    [5, -34, 3.8],
+    [11.5, -30, 3.3],
+    [15.5, -24, 2.8],
+  ] as const) {
+    toes.moveTo(x + r, y);
+    toes.arc(x, y, r, 0, Math.PI * 2);
+  }
+  glowFill(ctx, toes, t, [-16, -40, 18, -20], 10, 1.8);
+  ctx.restore();
+}
+
+export type PaintedAction = 'shot' | 'skill0' | 'skill1' | 'dash' | 'jump' | 'guard' | 'bow';
 
 const ACTION_PAINTERS: Record<PaintedAction, (ctx: CanvasRenderingContext2D) => void> = {
   shot: paintShot,
@@ -450,6 +508,7 @@ const ACTION_PAINTERS: Record<PaintedAction, (ctx: CanvasRenderingContext2D) => 
   skill0: paintClub,
   skill1: paintBreath,
   dash: paintDodge,
+  jump: paintJump,
   guard: paintGuard,
 };
 

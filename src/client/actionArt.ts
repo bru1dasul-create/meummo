@@ -73,6 +73,28 @@ const ICONS: Record<ActionSlot, IconArt> = {
       '................',
     ],
   },
+  // Pular (só no jogo 2.5D; aqui só para o tipo): seta para cima com o chão
+  jump: {
+    colors: { W: '#e8f6ff', B: '#7cc8f0' },
+    rows: [
+      '................',
+      '.......WW.......',
+      '......WWWW......',
+      '.....WWWWWW.....',
+      '....WWWWWWWW....',
+      '.......WW.......',
+      '.......WW.......',
+      '.......WW.......',
+      '.......WW.......',
+      '.......WW.......',
+      '................',
+      '..B..........B..',
+      '.BBBBBBBBBBBBBB.',
+      '................',
+      '................',
+      '................',
+    ],
+  },
   // Esquiva: rajada de vento
   dash: {
     colors: { W: '#c9f0ff', B: '#7cc8f0' },
