@@ -1764,6 +1764,9 @@
         y: cPitch * 0.32 + lookPitch + (2 * run * g + 4) * DEG + nod + 4 * DEG * guardK,
         z: cRoll * 0.5 - weight * 0.8 * DEG,
       };
+      // puxando o arco (de lado para o alvo), a cabeça olha ao longo da flecha (slingshot.js: `look.bowHead`)
+      const bowHead = this.look.bowHead;
+      if (bowHead && bowHead.k > 0) hTarget.x = lerp(hTarget.x, bowHead.yaw, bowHead.k);
       if (!this.headSpring) this.headSpring = new M.Spring3(hTarget);
       const hv = this.headSpring.step(hTarget, lerp(3.4, 6.5, guardK), 0.82, dt);
       const head = { yaw: hv.x - cYaw, pitch: hv.y - cPitch, roll: hv.z - cRoll };
