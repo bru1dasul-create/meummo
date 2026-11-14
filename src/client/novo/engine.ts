@@ -225,6 +225,10 @@ class NewWorld implements NewWorldGame {
   /** O que a view já sabe da hora (manda de novo só quando muda). */
   private lightShown = -1;
   private nightShown: boolean | null = null;
+  /** O vento: de onde vem e para onde vai a mudança de agora (força 0 a 1; ângulo em graus), começando em `start`. */
+  private wind = { from: { strength: 0.35, angle: 0 }, to: { strength: 0.35, angle: 0 }, start: 0, ms: 0 };
+  /** O que a view já sabe do vento (manda de novo só quando muda). */
+  private windShown = { strength: -1, angle: -1 };
   private readonly skillReadyAt = SKILLS.map(() => 0);
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
@@ -296,6 +300,7 @@ class NewWorld implements NewWorldGame {
     this.updateSoundButton();
     this.updateShotLook(deps.welcome.you.gear ?? {}); // entrou já com o arco equipado
     this.setClock(deps.welcome.time);
+    this.wind.from = this.wind.to = { ...deps.welcome.wind };
     const welcome = deps.welcome;
     for (const item of welcome.items) this.items.set(item.id, item);
     this.lastInv = welcome.inv;
@@ -354,6 +359,7 @@ class NewWorld implements NewWorldGame {
       },
       npc: (id) => this.conn.send({ t: 'gm', cmd: { do: 'npc', npc: id } }),
       time: (phase) => this.conn.send({ t: 'gm', cmd: { do: 'time', phase } }),
+      wind: (level) => this.conn.send({ t: 'gm', cmd: { do: 'wind', level } }),
     });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
@@ -410,6 +416,8 @@ class NewWorld implements NewWorldGame {
         const position = cyclePosition(performance.now() - game.timeBase, game.rules);
         return { position, light: daylightAt(position, game.rules), night: isNightAt(position, game.rules) };
       },
+      // o vento de agora (força 0 a 1, ângulo em graus) e para onde ele está indo
+      wind: () => ({ ...game.windNow(performance.now()), to: { ...game.wind.to } }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -424,6 +432,7 @@ class NewWorld implements NewWorldGame {
     this.view?.destroy();
     this.view = createView(this.container, json);
     this.lightShown = -1; // a view nova precisa saber a hora
+    this.windShown = { strength: -1, angle: -1 }; // e o vento
     this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
     this.viewZoom = this.zoom;
     this.zoomAnim = null;
@@ -522,6 +531,7 @@ class NewWorld implements NewWorldGame {
     this.updateGuard(now);
     this.updateAmbient(now);
     this.updateTimeOfDay(now);
+    this.updateWind(now);
     this.updateConversation(now);
     this.checkNpcArrival();
     this.cuddleIfNear();
@@ -1733,6 +1743,26 @@ class NewWorld implements NewWorldGame {
     if (turned) this.toast.show(night ? 'Anoiteceu: os bichos ficam mais fortes (e dão mais XP e ouro)' : 'Amanheceu', 3500);
   }
 
+  /** O vento agora: o caminho entre o de antes e o novo (a direção gira pelo lado mais curto). */
+  private windNow(now: number): { strength: number; angle: number } {
+    const w = this.wind;
+    const t = w.ms > 0 ? Math.min(1, Math.max(0, (now - w.start) / w.ms)) : 1;
+    const k = t * t * (3 - 2 * t);
+    const turn = ((((w.to.angle - w.from.angle) % 360) + 540) % 360) - 180;
+    return { strength: w.from.strength + (w.to.strength - w.from.strength) * k, angle: (((w.from.angle + turn * k) % 360) + 360) % 360 };
+  }
+
+  /** O vento vai para a view (as árvores balançam) e para o som (o vento da mata), só quando muda. */
+  private updateWind(now: number): void {
+    const w = this.windNow(now);
+    const strength = Math.round(w.strength * 100) / 100;
+    const angle = Math.round(w.angle);
+    if (strength === this.windShown.strength && angle === this.windShown.angle) return;
+    this.windShown = { strength, angle };
+    this.view?.setWind?.(strength, angle);
+    this.ambient.setWind(strength);
+  }
+
   /** O som de ambiente acompanha o lugar onde você está (de vez em quando: lugar não muda a cada quadro). */
   private updateAmbient(now: number): void {
     if (now >= this.ambientCheckAt && this.predicted) {
@@ -2107,6 +2137,12 @@ class NewWorld implements NewWorldGame {
       case 'time':
         this.setClock(msg.at); // virou dia ou noite, ou o administrador mexeu no relógio
         break;
+      case 'wind': {
+        // o vento muda devagar: daqui (onde está agora) até o novo, em msg.ms
+        const now = performance.now();
+        this.wind = { from: this.windNow(now), to: { strength: msg.strength, angle: msg.angle }, start: now, ms: msg.ms };
+        break;
+      }
       case 'questDefs':
         // o painel mudou as missões: troca dentro da mesma lista (a conversa e a lista na tela usam ela)
         this.questList.splice(0, this.questList.length, ...msg.quests);

@@ -569,8 +569,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura]** O arco e o estilingue de goiabeira nos bichos novos, quando eles chegarem (hoje o estilingue cai do
   sagui, 4%; o arco só na Budega)
 - [ ] **[arte]** (Opcional) restilizar o item no chão (`drawDrops` em `src/client/novo/combat.ts`: ícone, quique, brilho)
-- [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
-  movimento delas; o som do vento acompanha)
+- [x] **[estrutura]** Vento forte e fraco, as regras (14/11): um vento só para o mundo, calmo, brisa ou forte por 2 a 6
+  min, mudando devagar (20 s) e girando a direção; `welcome.wind` e a mensagem `wind` (protocolo 35); o motor passa
+  à view `setWind(força, ângulo)`; o som do vento, das rajadas e das folhas acompanha; menu ADM "Calmo / Brisa / Vento
+  forte"
+- [ ] **[arte]** As árvores no vento (`setWind` do PD.View, já pronto no ramo da [arte], entra com o "pode" do dono)
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)

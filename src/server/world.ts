@@ -74,6 +74,7 @@ import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { DayNightClock } from './dayNight';
+import { WindWeather } from './wind';
 import type { NpcDef, NpcShop } from './npcs';
 import { Pet, petHome, type PetDef } from './pets';
 import { sanitizeChat } from './validate';
@@ -136,6 +137,8 @@ export interface WorldOptions {
   pets?: ReadonlyMap<string, PetDef>;
   /** O relógio do dia e noite (o reino passa o mesmo para todos os mapas); sem isto, um só deste mapa. */
   dayNight?: DayNightClock;
+  /** O vento (o reino passa o mesmo para todos os mapas e cuida dele); sem isto, um só deste mapa. */
+  wind?: WindWeather;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -202,6 +205,10 @@ export class World {
   readonly dayNight: DayNightClock;
   /** É noite agora (os bichos estão mais fortes)? Conferido a cada tick. */
   private night: boolean;
+  /** O vento (o mesmo em todos os mapas). */
+  readonly wind: WindWeather;
+  /** O vento é só deste mapa (sem o reino, como nos testes): este mapa cuida dele. */
+  private readonly ownWind: boolean;
   /** Os bichos deste mapa (o Joaquim): andam sozinhos e nunca são alvo. */
   readonly pets = new Map<number, Pet>();
   /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
@@ -237,6 +244,9 @@ export class World {
     this.combat = options.combat ?? defaultCombatRules();
     this.dayNight = options.dayNight ?? new DayNightClock(this.combat, options.now ?? Date.now);
     this.night = this.dayNight.isNight();
+    this.ownWind = !options.wind;
+    // o vento sorteia com o sorteio dele (é só desenho e som: não mexe na ordem dos sorteios do jogo)
+    this.wind = options.wind ?? new WindWeather(this.now);
     this.npcDefs = options.npcs ?? new Map();
     let ids = 1;
     this.links = options.links ?? {
@@ -424,6 +434,7 @@ export class World {
         questLog: { ...player.quests },
         combat: { ...this.combat },
         time: Math.round(this.dayNight.position()),
+        wind: { strength: this.wind.strength, angle: this.wind.angle },
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
@@ -627,6 +638,14 @@ export class World {
         this.updateNight();
         say(cmd.phase === 'noite' ? 'virou noite (os bichos ficam mais fortes).' : 'virou dia.');
         this.log(`ADM ${player.name}: virou ${cmd.phase}`);
+        return;
+      }
+      case 'wind': {
+        // muda o vento na hora (vale para todos os mapas), com uma passagem curta para dar para ver
+        this.wind.set(cmd.level);
+        this.links.announce(this.wind.message(3000));
+        say(`vento ${cmd.level} (força ${this.wind.strength.toFixed(2)}).`);
+        this.log(`ADM ${player.name}: vento ${cmd.level}`);
         return;
       }
       case 'clear': {
@@ -1345,6 +1364,7 @@ export class World {
     this.lastTickAt = now;
 
     this.updateNight();
+    if (this.ownWind && this.wind.update()) this.broadcastLocal(this.wind.message()); // sem o reino: o vento é daqui
     for (const player of this.players.values()) this.updatePlayer(player, now);
     this.updateProjectiles(dt, now);
     for (const monster of [...this.monsters.values()]) {
