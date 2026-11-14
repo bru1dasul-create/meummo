@@ -512,9 +512,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[estrutura]** Lag ao falar com NPC e o jogo travando ao dar e tirar zoom: medidos (14/11). A causa é a mesma
   e está no desenho: cada mudança de zoom apaga e refaz o chão inteiro, e a câmera da conversa muda o zoom a cada
   quadro por meio segundo (quadros de 100 a 250 ms). Passado à [arte] (abaixo)
-- [ ] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
+- [x] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
   muda e refazer só quando ele parar, como os objetos já fazem; e o orçamento de refazer imagens (`buildBusy`) contar
-  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade)
+  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade) (14/11): o chão guarda os pedaços do
+  zoom anterior e os estica enquanto o zoom muda; os novos só são feitos com o zoom parado (180 ms), uns 6 ms por
+  quadro, com os velhos por baixo (sem buraco). Os objetos e a casa cortada também esticam e não se refazem enquanto o
+  zoom muda (`World.zoomSettling`), e cada imagem nova é pintada na hora em que é feita (`rasterNow`), para a conta do
+  quadro ser a de verdade. Medido no Chromium sem placa de vídeo (parado, 33 a 50 ms por quadro): no zoom da conversa
+  o pior quadro caiu de 200–267 ms para 83–117 ms e os acima de 100 ms de 10 para 0–2; na roda, de 183–200 ms para
+  83–117 ms e de 16–23 acima de 100 ms para 0–1
 - [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
   é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
 - [x] **[arte]** Arco: "o braço fica feio puxando" (14/11, na main): puxando, o herói fica de lado para o
