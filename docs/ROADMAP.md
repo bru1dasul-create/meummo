@@ -560,7 +560,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
-- [ ] **[arte]** Desenhar a flecha cravada no tronco (na altura do voo, `stuck.z`), em vez de no chão ao pé da árvore
+- [x] **[arte]** Desenhar a flecha cravada no tronco (na altura do voo, `stuck.z`), em vez de no chão ao pé da árvore
+  (14/11): na madeira (tronco, bambu, tronco caído, mata fechada e os móveis) ela crava na altura em que bateu, treme,
+  solta lascas e deixa o furinho; vindo quase na direção da câmera (até uns 30°) ela bate do lado de lá e o tronco a
+  esconde (só as lascas aparecem). Na pedra, na parede e no resto ela quica com faíscas e cai deitada no chão, com
+  sombra; na água (`on: 'agua'`), um respingo curto, sem flecha; a pedra do estilingue só levanta poeira. Tudo some em
+  uns 2 s (`tests/projectileArt.test.ts`)
 
 **Personagem e controles:**
 - [x] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (14/11): janela das teclas (botão "Teclas" no

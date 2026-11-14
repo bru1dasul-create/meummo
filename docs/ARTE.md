@@ -800,9 +800,25 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
   samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
   minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
-- **Próximo da lista (pedido da [estrutura], que mediu):** o zoom e a conversa travam porque o chão (`ground.js`) se
-  refaz inteiro a cada zoom novo; esticar os pedaços velhos enquanto o zoom muda e refazer quando parar, e o
-  `buildBusy` contar o primeiro desenho de cada imagem nova.
+- **Zoom e conversa que travavam** (pedido da [estrutura], que mediu): feito depois do lote 1 (a seção abaixo).
+
+### Depois do lote 1 (14/11): controles, zoom e flecha (no ramo; vão para a main com o "pode" do dono)
+- **Pulo e botão de pular** (`view.js` ação `jump` → `jumpPulse`, que liga o `input.jump` antes do `ch.update`;
+  `ui.ts` `ActionSlot` 'jump'; `paintedIcons.ts` `paintJump`): no computador, o 6º quadrado da moldura; no celular, em
+  cima da coluna da esquerda (`right: 76px`: em cima da direita fica a mochila).
+- **Etiqueta das teclas** (`ui.ts` `data-key`, `style.css`): "Espaço" vira a barra de espaço, "Shift" a seta; nomes
+  compridos com a letra menor (`.long`, `.longer`). O "Como jogar" (`index.html`) com as teclas novas.
+- **Zoom sem travar** (`ground.js`, `props.js`, `world.js`): o chão guarda os pedaços do zoom anterior e os estica
+  enquanto o zoom muda (`World.zoomSettling`, 180 ms); os novos só com o zoom parado, uns 6 ms por quadro, com os
+  velhos por baixo. Os objetos e a casa cortada também esticam; `rasterNow` pinta cada imagem nova na hora em que é
+  feita (a conta do quadro fica certa). Medir: `zoom-medir.cjs` e `zoom-quadros.cjs` (scratchpad).
+- **Flecha que para sem acertar ninguém** (`src/client/novo/projectileArt.ts`; o `combat.ts` chama
+  `projectileEnded(kind, x, y, angle, now, stuck?)`): `chao` (sem `stuck`, ou `borda`: crava no chão), `cravada` (a
+  madeira de `HOLDS`: na altura `stuck.z`, treme, lascas, furinho), `quica` (o resto: faíscas, cai deitada com
+  sombra), `agua` (respingo) e `poeira` (a pedra do estilingue). Vindo até uns 30° da direção da câmera
+  (`towardCamera > 0.87`), ela bateu do lado de lá: só as lascas ou as faíscas aparecem (a camada do combate fica por
+  cima de tudo, então o tronco não tem como cobrir a haste). Teste: `tests/projectileArt.test.ts`; no jogo:
+  `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
@@ -897,7 +913,10 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura]:** nada pendente da arte. O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
+- **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
+  no `makeActionBar` e o `tryJump` no `onAction`). Ideia, não pedida: pelo código, o tiro que acaba no fim do alcance
+  em cima da água vem sem `on` e a flecha crava como se fosse chão; com `on: 'agua'` no `shot_end` sai o respingo.
+  O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
   entraram na main em 14/11, e a [estrutura] ligou o arco (main 0765f59): conferi no jogo (a mochila equipa, o botão
   vira "Arco", a flecha voa e crava). Observação dela: no zoom padrão a tela mostra uns 10 m do herói; a flecha com
   carga cheia (13 m) pode cravar fora da tela (não é erro). Se o dono quiser, a câmera pode andar um pouco para onde
