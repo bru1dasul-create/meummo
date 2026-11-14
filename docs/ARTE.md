@@ -795,13 +795,7 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   lâmpada). O musgo e o cipó da fachada são recortados fora do vão. O orelhão com `poste: true` (`tmj.js` acha o
   `poste-praca` mais perto, até 1,5 m: `poleAt`) liga dois braços de ferro até o poste. Os caixotes de frutas, a
   lousinha e o degrau com capacho dependem da resposta do dono à proposta do [mundo].
-- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] refez a parte do mapa em cima da main nova
-  (ramo `mundo/lote2-floresta-dentro`, 90e0059, sobre a 6dd462e; é esse que entra, no lugar do `mundo/budega-entrada`,
-  que ficou velho): a raiz no piso, o mato nas frestas, a samambaia nos cantos e o cipó de dentro. Na versão
-  anterior, o mapa tinha a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
-  `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
-  samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
-  minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
+- **Floresta dentro das casas** (lote 2): veja a seção do lote 2, abaixo.
 - **Zoom e conversa que travavam** (pedido da [estrutura], que mediu): feito depois do lote 1 (a seção abaixo).
 
 ### Depois do lote 1 (14/11): controles, zoom e flecha (na main em 14/11, com o "pode" do dono)
@@ -824,6 +818,25 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   cima de tudo, então o tronco não tem como cobrir a haste). Teste: `tests/projectileArt.test.ts`; no jogo:
   `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
+
+### Lote 2 da lista do dono de 14/11 (com o "pode" do dono; vai para a main com o "pode" de juntar)
+O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
+andando, (10) floresta dentro das casas.
+- **(10) Floresta dentro das casas**, com o mapa do [mundo] (`mundo/lote2-floresta-dentro`, 90e0059, juntado no meu
+  ramo; entra na main junto):
+  - `tmj.js`: a linha `raiz` com `dentro` vira `inside` na forma do chão; a `planta` com `dentro`, `inside` no objeto;
+    a casa ganha `vineInside` (`cipoDentro`, 0 a 1) e `mossInside` (`musgoDentro`).
+  - `world.js`: o objeto com `inside` fica com `house` (como os móveis de `INSIDE_KINDS`): só aparece com a casa
+    cortada e é "da casa" no foco.
+  - `street.js` `innerRoot`: a raiz de dentro usa o `rootNetwork` das raízes da figueira com `home` = a casa (galho não
+    atravessa parede nem sofá), `rise` (o começo sai de baixo da parede: o lombo sobe nos primeiros 22%) e
+    `liftedFloor` (pedaços do piso levantados dos dois lados: placas de cerâmica, ladrilho e cimento, tábuas de taco;
+    a beirada do lado da raiz sobe 4 a 10 cm e mostra a fresta escura). `groundAt` reconhece os pisos de dentro
+    (`piso-ceramica`, `piso-taco`, `piso-ladrilho`, `piso-cimento`) e o tapete (lá, nada de pedaço: só a terra).
+  - `casas.js` `innerGreen` (depois do `WALLS[morador]`): o musgo subindo do rodapé (`mossInside`) e o cipó: ramos que
+    sobem do chão perto dos cantos (com um galho de lado) e, nas casas com gente, um ou outro descendo de uma fresta do
+    teto (`PD.city.vine`). Na Budega (0,25) o cipó é pouquinho e fica atrás das prateleiras e dos engradados.
+  - Conferir: `foto-casas.cjs` (scratchpad): fotos de fora e de dentro das quatro casas.
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na

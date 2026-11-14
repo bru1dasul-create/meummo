@@ -78,8 +78,9 @@
       this.trafficLights = (m.trafficLights || []).map((d) => add(new P.TrafficLight(this, d)));
       for (const d of m.props || []) {
         const p = add(new P.Small(this, d));
-        // os móveis de dentro de uma casa que dá para entrar só aparecem com o herói lá dentro (House.cutK)
-        if (INSIDE_KINDS.has(d.kind)) {
+        // os móveis de dentro de uma casa que dá para entrar só aparecem com o herói lá dentro (House.cutK); as plantas
+        // marcadas `dentro` (a samambaia no canto) também
+        if (INSIDE_KINDS.has(d.kind) || d.inside) {
           const cx = d.x0 !== undefined ? (d.x0 + d.x1) / 2 : d.x;
           const cy = d.y0 !== undefined ? (d.y0 + d.y1) / 2 : d.y;
           p.house = this.interiors.find((h) => cx > h.b.x0 && cx < h.b.x1 && cy > h.b.y0 && cy < h.b.y1) || null;

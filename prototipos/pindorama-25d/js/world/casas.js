@@ -2082,11 +2082,74 @@
     ctx.fill();
   }
 
+  /**
+   * A mata entrando pelas paredes de dentro (pedido do dono, 14/11: "o interior deve ter partes da floresta também"):
+   * `musgoDentro` sobe do rodapé em manchas; `cipoDentro` (0 a 1) é quanto cipó: ramos que sobem do chão perto dos
+   * cantos (por onde a raiz e o mato entraram) e, nas casas com gente, um ou outro que desce de uma fresta do teto (na
+   * abandonada, esses já estão no desenho dela).
+   */
+  function innerGreen(ctx, b, wall, len, Hh) {
+    const amount = b.vineInside || 0;
+    const r = seeded(b.x0, b.y0, wall === 'fundo' ? 1741 : 1743);
+    if (b.mossInside) {
+      for (let k = 0; k < len / 45; k++) {
+        const x = r() * len;
+        const up = r() * r();
+        ctx.fillStyle = r() < 0.5 ? 'rgba(74, 104, 46, 0.5)' : 'rgba(96, 126, 56, 0.42)';
+        ctx.beginPath();
+        ctx.ellipse(x, Hh - 6 - up * Hh * 0.55, 10 + r() * 22 * (1 - up * 0.6), 5 + r() * 9, 0, 0, M.TAU);
+        ctx.fill();
+      }
+    }
+    if (!amount || !PD.city.vine) return;
+    const climb = Math.max(1, Math.round((amount * len) / 230));
+    for (let k = 0; k < climb; k++) {
+      // perto de um canto (um de cada lado, alternando), subindo encostado e se abrindo um pouco para o meio
+      const right = k % 2 === 1;
+      const x0 = right ? len - 12 - r() * len * 0.14 : 12 + r() * len * 0.14;
+      const L = Hh * Math.min(0.92, 0.3 + amount * 0.45 + r() * 0.2);
+      const pts = [];
+      for (let s = 0; s <= 9; s++) pts.push({ x: x0 + Math.sin(s * 1.1 + k * 2.3) * 7 + (right ? -1 : 1) * s * 2.5, y: Hh - 8 - (L * s) / 9 });
+      PD.city.vine(ctx, pts, r, 1.3, 1.6);
+      // um galho que sai para o lado no meio do caminho, num arco macio (com folhas: um ponto a cada 7 cm)
+      if (r() < 0.7) {
+        const m = pts[4 + Math.floor(r() * 3)];
+        const dir = right ? -1 : 1;
+        const L2 = 30 + r() * 30;
+        const side = [];
+        for (let s = 0; s <= 8; s++) {
+          const t = s / 8;
+          side.push({ x: m.x + dir * L2 * t, y: m.y - L2 * 0.45 * t - Math.sin(t * Math.PI) * 7 });
+        }
+        PD.city.vine(ctx, side, r, 1.1, 1.4);
+      }
+    }
+    if (b.resident === 'ninguem') return;
+    const hang = Math.round((amount * len) / 300);
+    for (let k = 0; k < hang; k++) {
+      const x = len * (0.2 + r() * 0.6);
+      const L = 35 + r() * (50 + amount * 90);
+      // a fresta no alto da parede por onde ele entrou
+      ctx.strokeStyle = 'rgba(52, 38, 24, 0.6)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(x - 14, 2);
+      ctx.lineTo(x - 5, 9);
+      ctx.lineTo(x + 3, 5);
+      ctx.lineTo(x + 12, 13);
+      ctx.stroke();
+      const pts = [];
+      for (let s = 0; s <= 6; s++) pts.push({ x: x + Math.sin(s * 1.3 + k) * 5, y: 4 + (L * s) / 6 });
+      PD.city.vine(ctx, pts, r, 1.2, 1.5);
+    }
+  }
+
   PD.casas = {
     floor,
     /** Uma parede de dentro da casa com `morador` ('oeste' = a da esquerda, 'fundo' = a de trás), em cm da parede. */
     innerWall(ctx, b, wall, len, Hh) {
       (WALLS[b.resident] || WALLS.familia)(ctx, b, wall, len, Hh, wall === 'oeste');
+      innerGreen(ctx, b, wall, len, Hh);
     },
   };
 })(window.PD = window.PD || {});

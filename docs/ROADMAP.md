@@ -542,7 +542,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 
 **Mundo:**
 - [ ] **[mundo]** Aumentar a floresta
-- [ ] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
+- [x] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
+  (14/11): o [mundo] marcou no mapa (`mundo/lote2-floresta-dentro`) a raiz `dentro`, o capim nas frestas, a samambaia
+  `dentro` nos cantos e o `cipoDentro`/`musgoDentro` das casas; a [arte] desenhou: a raiz sai de baixo da parede, corre
+  pelo piso levantando os pedaços (cerâmica, taco, ladrilho ou cimento, da cor do piso; no tapete, rasga e mostra a
+  terra) e afunda no fim; a samambaia é da casa (aparece com o herói lá dentro, como os móveis); o cipó sobe do chão
+  perto dos cantos e, nas casas com gente, desce de uma fresta do teto; o musgo sobe do rodapé na abandonada
 - [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
   as áreas e a [arte] desenha
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
