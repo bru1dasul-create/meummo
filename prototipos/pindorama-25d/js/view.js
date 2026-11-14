@@ -465,7 +465,8 @@
           goal = { x: this.focusPoint.x + d, y: this.focusPoint.y + d, z: 0 };
         }
         // dentro de uma casa (o telhado sai): a câmera vai para o meio dela, para a casa toda ficar no centro da tela
-        const home = this.world.insideHouse;
+        // (saindo, a câmera volta para o herói junto com o telhado: a casa ainda em foco é a `focusHouse`)
+        const home = this.world.insideHouse || this.world.focusHouse;
         if (home && !this.focusPoint) {
           const hb = home.b;
           const k = 0.7 * (home.cutK || 0);

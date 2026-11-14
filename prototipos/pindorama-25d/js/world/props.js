@@ -317,6 +317,9 @@
   // quebradas, porta tapada com tábuas, parede manchada e cipó subindo. A vendinha (a Budega) tem porta de enrolar meio
   // aberta com as prateleiras acesas, letreiro e toldo listrado — e nada de cigarro ou tabaco no desenho.
   const BLOCK = { base: '#a59d90', mortar: '#7f786d', light: '#b9b1a3' };
+  /** Quanto dura (s) o telhado e a frente saírem (ou voltarem) ao entrar (ou sair) de uma casa com interior. */
+  const CUT_TIME = 0.6;
+
   class House extends Building {
     constructor(world, b) {
       super(world, b);
@@ -331,14 +334,17 @@
         // telhado e as paredes da frente saem com suavidade (`cutK` de 0 a 1) e fica só a base delas.
         this.fp = { x0: b.x0, x1: b.x1, y0: b.y1 - 20, y1: b.y1 };
         this.cutK = 0;
+        this.cutT = 0;
       }
     }
     draw(ctx, t) {
       if (!this.b.interior) return super.draw(ctx, t);
       const w = this.world;
-      this.cutK = M.damp(this.cutK, w.insideHouse === this ? 1 : 0, 9, w._dt || 1 / 60);
-      if (this.cutK > 0.999) this.cutK = 1;
-      if (this.cutK < 0.001) this.cutK = 0;
+      // entrar e sair num tempo fixo, começando e terminando devagar (pedido do dono: "a volta pro mundo normal é muito
+      // repentina"; antes era um amortecimento rápido, que começava de supetão)
+      const step = (w._dt || 1 / 60) / CUT_TIME;
+      this.cutT = w.insideHouse === this ? Math.min(1, this.cutT + step) : Math.max(0, this.cutT - step);
+      this.cutK = M.smoothstep(0, 1, this.cutT);
       // cortada, ela não cobre o herói: sem a "janela" transparente das casas
       this.fades = this.cutK < 0.5;
       const a = this.alpha;
