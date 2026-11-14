@@ -31,7 +31,8 @@ export type SoundName =
   | 'pull-full'
   | 'bow-release'
   | 'meow'
-  | 'purr';
+  | 'purr'
+  | 'capy';
 
 const MUTE_KEY = 'meummo:som-desligado';
 const VOLUME_KEY = 'meummo:volumes';
@@ -315,6 +316,13 @@ export class Sfx {
         break;
       case 'purr': // o Joaquim ronronando no carinho: um rom-rom grave que pulsa
         this.purr(t, 1.6, 0.5);
+        break;
+      case 'capy': // a capivara contente: uns estalinhos baixos e rápidos ("tc-tc-tc"), duas rodadas
+        for (let i = 0; i < 14; i++) {
+          const at = t + i * 0.055 + (i >= 7 ? 0.18 : 0);
+          this.tone('triangle', 380, 300, at, 0.025, 0.06);
+          this.noise(at, 0.012, 'bandpass', 1400, 900, 0.03);
+        }
         break;
       case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
         this.tone('triangle', 260, 120, t, 0.16, 0.3);

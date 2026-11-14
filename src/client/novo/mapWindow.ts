@@ -124,16 +124,26 @@ export class MapPicture {
       }
     }
     if (names) {
+      // um nome não cobre o outro: tenta um pouco acima ou abaixo; se não couber, esse fica sem nome
+      const size = Math.round(Math.max(11, Math.min(15, k * 2.2)));
+      ctx.font = `700 ${size}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(12, 18, 16, 0.85)';
+      ctx.fillStyle = '#f4ead2';
+      const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
       for (const n of this.names) {
         if (!this.seen(n.x, n.y)) continue;
         const p = at(n.x, n.y);
-        ctx.font = `700 ${Math.round(Math.max(11, Math.min(15, k * 2.2)))}px system-ui, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(12, 18, 16, 0.85)';
-        ctx.fillStyle = '#f4ead2';
-        ctx.strokeText(n.name, p.x, p.y);
-        ctx.fillText(n.name, p.x, p.y);
+        const half = ctx.measureText(n.name).width / 2 + 3;
+        for (const dy of [0, -size - 2, size + 2]) {
+          const box = { x0: p.x - half, y0: p.y + dy - size, x1: p.x + half, y1: p.y + dy + 3 };
+          if (placed.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)) continue;
+          placed.push(box);
+          ctx.strokeText(n.name, p.x, p.y + dy);
+          ctx.fillText(n.name, p.x, p.y + dy);
+          break;
+        }
       }
     }
     // você: a seta amarela apontando para onde olha

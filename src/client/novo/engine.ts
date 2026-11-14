@@ -566,9 +566,10 @@ class NewWorld implements NewWorldGame {
     const feet = feetAt(e.x, e.y);
     this.facing.set(e.id, degreesOfDir(e.dir));
     if (e.kind === 'pet' && !this.view?.canDraw?.('pet', e.type)) {
-      // a view ainda não desenha este bicho: o gatinho provisório fica por cima (só aparece com você na casa dele)
+      // a view ainda não desenha este bicho: o provisório fica por cima (o gatinho só aparece com você na casa dele; a
+      // capivara, que mora fora, sempre)
       const home = e.home ? (this.map.regions.get(e.home) ?? null) : null;
-      this.combat.setPet(e.id, e.name, feet.x, feet.y, (degreesOfDir(e.dir) * Math.PI) / 180, e.asleep === true, home);
+      this.combat.setPet(e.id, e.name, feet.x, feet.y, (degreesOfDir(e.dir) * Math.PI) / 180, e.asleep === true, home, e.type === 'capivara');
       return;
     }
     this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}) });
@@ -1057,7 +1058,8 @@ class NewWorld implements NewWorldGame {
       if (near) this.sfx.play('meow');
       if (provisional) this.combat.floater(id, 'miau!', '#f6e7c8', now);
     } else if (kind === 'purr') {
-      if (near) this.sfx.play('purr');
+      // carinho: o gato ronrona; a capivara contente faz uns estalinhos baixos
+      if (near) this.sfx.play(this.entities.get(id)?.type === 'capivara' ? 'capy' : 'purr');
       if (provisional) this.combat.floater(id, '♥', '#ff7aa8', now);
     }
     if (!provisional) this.view?.action?.(id, kind, angle !== undefined ? toDegrees(angle) : undefined);
