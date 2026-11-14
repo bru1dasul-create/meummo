@@ -8,7 +8,7 @@ import type { GearLook } from '../../shared/items';
 import type { TiledMap, TiledObject } from '../../shared/map';
 
 export interface ActorInfo {
-  kind: 'player' | 'npc' | 'monster';
+  kind: 'player' | 'npc' | 'monster' | 'pet';
   /** 'player' ou o id do monstro/NPC (ex.: 'curupira_capao'). */
   type: string;
   name: string;
@@ -19,6 +19,8 @@ export interface ActorInfo {
   angle: number;
   /** É o seu personagem (a câmera segue, desenho destacado). */
   me?: boolean;
+  /** Bicho (kind 'pet'): já está dormindo quando aparece. */
+  asleep?: boolean;
 }
 
 export interface WorldView {
@@ -61,6 +63,12 @@ export interface WorldView {
    * o arco fica sempre na mão).
    */
   gear?(id: number, gear: GearLook): void;
+  /**
+   * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
+   * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',
+   * 'wake', 'sleep' e 'dash' (o pulo para o sofá e de volta).
+   */
+  canDraw?(kind: string, type: string): boolean;
 
   // ---- opcionais (conversa com NPC) ----
   /**
@@ -145,7 +153,7 @@ const GROUND: Record<string, string> = {
 const FLAT: Record<string, string> = { agua: 'rgba(47, 111, 159, 0.85)' };
 /** Altura (metros) de cada tipo de coisa que bloqueia (camada `colisao`). */
 const HEIGHT: Record<string, number> = { tronco: 1.6, poste: 3, pedra: 0.5, gradil: 1, portao: 2.2, pilar: 2.6, 'mata-fechada': 2.5, 'tronco-caido': 0.6 };
-const ACTOR_COLORS = { me: '#f2c14e', player: '#6fa8ff', npc: '#7bd389', monster: '#ff6b6b' };
+const ACTOR_COLORS = { me: '#f2c14e', player: '#6fa8ff', npc: '#7bd389', monster: '#ff6b6b', pet: '#f6f2ea' };
 
 const typeOf = (o: { type?: string; class?: string }) => o.type || o.class || '';
 

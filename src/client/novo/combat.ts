@@ -11,6 +11,7 @@
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
 import type { CombatRules } from '../../shared/combatRules';
+import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
 import type { GuardState } from '../../shared/protocol';
 import type { WorldView } from './view';
@@ -71,6 +72,22 @@ interface Flying {
   start: number;
   kind: string;
   fromMonster: boolean;
+}
+
+/** Um bicho que a view ainda não desenha (o Joaquim, até o desenho da [arte]): o gatinho provisório. */
+interface ProvisionalPet {
+  name: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  start: number;
+  duration: number;
+  /** Para onde olha (radianos, no chão). */
+  angle: number;
+  asleep: boolean;
+  /** A casa dele: só aparece com você lá dentro (de fora, o telhado esconde). */
+  home: MapRegion | null;
 }
 
 interface Floater {
@@ -141,6 +158,9 @@ export class CombatLayer {
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
   private readonly windups = new Map<number, { start: number; until: number }>();
   private readonly drops = new Map<number, GroundDrop>();
+  private readonly pets = new Map<number, ProvisionalPet>();
+  /** O seu pé (para saber se você está dentro da casa do bicho). */
+  private viewer: Point | null = null;
 
   constructor(
     container: HTMLElement,
@@ -152,6 +172,145 @@ export class CombatLayer {
     this.canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;';
     container.append(this.canvas);
     this.ctx = this.canvas.getContext('2d')!;
+  }
+
+  // ---- bichos que a view ainda não desenha (o gatinho provisório) ----
+
+  setPet(id: number, name: string, x: number, y: number, angle: number, asleep: boolean, home: MapRegion | null): void {
+    this.pets.set(id, { name, fromX: x, fromY: y, toX: x, toY: y, start: 0, duration: 0, angle, asleep, home });
+  }
+
+  movePet(id: number, x: number, y: number, angle: number, now: number, durationMs: number): void {
+    const pet = this.pets.get(id);
+    if (!pet) return;
+    const at = this.petAt(pet, now);
+    Object.assign(pet, { fromX: at.x, fromY: at.y, toX: x, toY: y, start: now, duration: durationMs, angle });
+  }
+
+  petAsleep(id: number, asleep: boolean): void {
+    const pet = this.pets.get(id);
+    if (pet) pet.asleep = asleep;
+  }
+
+  removePet(id: number): void {
+    this.pets.delete(id);
+  }
+
+  hasPet(id: number): boolean {
+    return this.pets.has(id);
+  }
+
+  /** O seu pé agora (o motor manda a cada quadro). */
+  setViewer(feet: Point | null): void {
+    this.viewer = feet;
+  }
+
+  private petAt(pet: ProvisionalPet, now: number): Point {
+    const t = pet.duration > 0 ? Math.min(1, (now - pet.start) / pet.duration) : 1;
+    return { x: pet.fromX + (pet.toX - pet.fromX) * t, y: pet.fromY + (pet.toY - pet.fromY) * t };
+  }
+
+  private petVisible(pet: ProvisionalPet): boolean {
+    const home = pet.home;
+    const me = this.viewer;
+    if (!home) return true;
+    return me !== null && me.x >= home.x0 - 0.3 && me.x <= home.x1 + 0.3 && me.y >= home.y0 - 0.3 && me.y <= home.y1 + 0.6;
+  }
+
+  /** O gatinho provisório: branco com orelhas, máscara e rabo laranja; dormindo, enroladinho com "z". */
+  private drawPets(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    const ctx = this.ctx;
+    for (const pet of this.pets.values()) {
+      if (!this.petVisible(pet)) continue;
+      const at = this.petAt(pet, now);
+      const m = meter(at.x, at.y);
+      const shadow = screen(at.x, at.y, 0);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(shadow.x, shadow.y, m * 0.2, m * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const white = '#f6f2ea';
+      const orange = '#e8913a';
+      ctx.lineWidth = Math.max(1, m * 0.012);
+      ctx.strokeStyle = '#6b5a48';
+      if (pet.asleep) {
+        const c = screen(at.x, at.y, 0.1);
+        ctx.fillStyle = white;
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, m * 0.17, m * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = orange;
+        ctx.lineWidth = Math.max(2, m * 0.04);
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, m * 0.15, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.fillStyle = orange;
+        ctx.beginPath();
+        ctx.arc(c.x - m * 0.1, c.y - m * 0.05, m * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        const rise = (now / 900) % 1;
+        ctx.fillStyle = `rgba(240, 240, 255, ${(1 - rise).toFixed(2)})`;
+        ctx.font = `700 ${Math.round(Math.max(10, m * 0.14))}px system-ui, sans-serif`;
+        ctx.fillText('z', c.x + m * 0.12, c.y - m * (0.18 + rise * 0.25));
+      } else {
+        const dx = Math.cos(pet.angle);
+        const dy = Math.sin(pet.angle);
+        const body = screen(at.x, at.y, 0.14);
+        const head = screen(at.x + dx * 0.15, at.y + dy * 0.15, 0.24);
+        const tail = screen(at.x - dx * 0.18, at.y - dy * 0.18, 0.3);
+        const tailBase = screen(at.x - dx * 0.12, at.y - dy * 0.12, 0.14);
+        ctx.strokeStyle = orange;
+        ctx.lineWidth = Math.max(2, m * 0.035);
+        ctx.beginPath();
+        ctx.moveTo(tailBase.x, tailBase.y);
+        ctx.quadraticCurveTo(tailBase.x, tail.y, tail.x, tail.y);
+        ctx.stroke();
+        ctx.fillStyle = white;
+        ctx.strokeStyle = '#6b5a48';
+        ctx.lineWidth = Math.max(1, m * 0.012);
+        ctx.beginPath();
+        ctx.ellipse(body.x, body.y, m * 0.15, m * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // orelhas laranja e a cabeça branca com a máscara laranja na testa
+        const r = m * 0.075;
+        ctx.fillStyle = orange;
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          ctx.moveTo(head.x + side * r * 0.9, head.y - r * 0.3);
+          ctx.lineTo(head.x + side * r * 0.75, head.y - r * 1.55);
+          ctx.lineTo(head.x + side * r * 0.1, head.y - r * 0.85);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.fillStyle = white;
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = orange;
+        ctx.beginPath();
+        ctx.ellipse(head.x, head.y - r * 0.55, r * 0.55, r * 0.35, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#5aa9e6'; // olhos azuis, como o gato do dono
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          ctx.arc(head.x + side * r * 0.38, head.y - r * 0.05, Math.max(1, r * 0.16), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // o nome em cima
+      const label = screen(at.x, at.y, pet.asleep ? 0.45 : 0.55);
+      ctx.font = `700 ${Math.round(Math.max(11, m * 0.13))}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.strokeText(pet.name, label.x, label.y);
+      ctx.fillStyle = '#f6e7c8';
+      ctx.fillText(pet.name, label.x, label.y);
+      ctx.textAlign = 'start';
+    }
   }
 
   /** Aviso de golpe nestes tiles ([x1, y1, x2, y2, ...]) por `ms`; `fire`: chão pegando fogo. */
@@ -326,6 +485,7 @@ export class CombatLayer {
     const below = this.drawEnergy(now, feetOf, screen, meter);
     this.drawFootNote(now, feetOf, screen, meter, below);
     this.drawDrops(now, screen, meter);
+    this.drawPets(now, screen, meter);
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
     this.drawShots(now, screen, meter);
@@ -340,6 +500,7 @@ export class CombatLayer {
     if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
+    for (const pet of this.pets.values()) if (this.petVisible(pet)) return true;
     for (const id of this.marks.keys()) {
       const feet = feetOf(id);
       if (!feet) continue;

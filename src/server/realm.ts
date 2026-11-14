@@ -197,6 +197,11 @@ export class Realm {
     this.worldOf(player)?.questAction(player, act, id, npc);
   }
 
+  /** Carinho num bicho (o Joaquim): só vale perto dele. */
+  cuddle(player: Player, petId: number): void {
+    this.worldOf(player)?.cuddle(player, petId);
+  }
+
   chat(player: Player, text: string): void {
     this.worldOf(player)?.chat(player, text);
   }

@@ -805,7 +805,7 @@ export class WorldScene extends Phaser.Scene {
     const now = performance.now();
     switch (msg.t) {
       case 'spawn': {
-        if (msg.e.id === this.myId) break;
+        if (msg.e.id === this.myId || msg.e.kind === 'pet') break; // bicho (o Joaquim) só existe no jogo 2.5D
         this.entities.get(msg.e.id)?.destroy();
         this.addEntity(msg.e, false).setThreat(this.myLevel);
         break;

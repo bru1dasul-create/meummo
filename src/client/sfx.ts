@@ -27,7 +27,9 @@ export type SoundName =
   | 'block'
   | 'guard-break'
   | 'pull-full'
-  | 'bow-release';
+  | 'bow-release'
+  | 'meow'
+  | 'purr';
 
 const MUTE_KEY = 'meummo:som-desligado';
 /** O mesmo som não toca mais de uma vez nesse intervalo (evita barulheira). */
@@ -243,6 +245,12 @@ export class Sfx {
       case 'pull-full': // o estilingue (ou o arco) chegou na carga máxima (revisão 17)
         this.tone('triangle', 690, 1050, t, 0.18, 0.24);
         break;
+      case 'meow': // o Joaquim miando: "mi-au" (a voz sobe e desce, e a boca abre e fecha num filtro)
+        this.meow(t, 0.16);
+        break;
+      case 'purr': // o Joaquim ronronando no carinho: um rom-rom grave que pulsa
+        this.purr(t, 1.6, 0.5);
+        break;
       case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
         this.tone('triangle', 260, 120, t, 0.16, 0.3);
         this.tone('sine', 520, 300, t, 0.08, 0.1);
@@ -275,6 +283,59 @@ export class Sfx {
     osc.connect(gain).connect(this.master!);
     osc.start(start);
     osc.stop(start + duration + 0.02);
+  }
+
+  /** "Mi-au": a voz (dente de serra) sobe e desce; um filtro faz o "i" virar "a" e depois "u". */
+  private meow(start: number, volume: number): void {
+    const ctx = this.ctx!;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(430, start);
+    osc.frequency.linearRampToValueAtTime(650, start + 0.16);
+    osc.frequency.linearRampToValueAtTime(460, start + 0.5);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 5;
+    filter.frequency.setValueAtTime(1000, start);
+    filter.frequency.linearRampToValueAtTime(1900, start + 0.18);
+    filter.frequency.linearRampToValueAtTime(750, start + 0.5);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.05);
+    gain.gain.setValueAtTime(volume, start + 0.36);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.55);
+    osc.connect(filter).connect(gain).connect(this.master!);
+    osc.start(start);
+    osc.stop(start + 0.6);
+  }
+
+  /** Ronronar: um chiado bem grave que pulsa umas 24 vezes por segundo, subindo e sumindo devagar. */
+  private purr(start: number, duration: number, volume: number): void {
+    const ctx = this.ctx!;
+    const source = ctx.createBufferSource();
+    source.buffer = this.noiseBuffer;
+    source.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 240;
+    const pulse = ctx.createGain();
+    pulse.gain.value = 0.5;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 24;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.5;
+    lfo.connect(depth).connect(pulse.gain);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.25);
+    gain.gain.setValueAtTime(volume, start + duration - 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.connect(filter).connect(pulse).connect(gain).connect(this.master!);
+    source.start(start);
+    lfo.start(start);
+    source.stop(start + duration + 0.05);
+    lfo.stop(start + duration + 0.05);
   }
 
   private noise(start: number, duration: number, filterType: BiquadFilterType, from: number, to: number, volume: number): void {
