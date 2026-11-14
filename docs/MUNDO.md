@@ -68,6 +68,13 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   de tampar). Agora em (68; 40,25), com raízes novas (as `raiz` que começam perto do tronco viram o pé dela no desenho
   da [arte]) e o poste da casa rosa em x = 71,2. **Regra:** árvore alta da vila não tampa trilha do parque (o gerador
   confere a figueira com `hidesView`; o teste confere todas as árvores da vila).
+- **Casas com interior na `main` (14/11)**, com o desenho da [arte] (que pôs o "modo foco": com o herói dentro, só a casa
+  aparece). A casa amarela (`morador: 'familia'`), a rosa (`'vo'`, com o Joaquim) e a abandonada (`'ninguem'`, a `arvore`
+  com `dentroDaCasa` no meio da casa; a casa mantém `arvoreDentro` para o buraco da laje). Cada uma: `interior`, `piso`
+  (`desenho`), porta de 1,2 m em `portaDe`–`portaAte` e os móveis. **Regra de vão:** a conferência pula o par que outra
+  coisa fecha de ponta a ponta (`blockedBetween`), o que permite paredes finas entre o dentro e o fora. O **Joaquim**
+  (gato da vó, pedido do dono): o `gato` decorativo no sofá sai quando a [estrutura] o fizer de verdade; ela usa o ponto
+  `joaquim` e o retângulo `joaquim-casa` da camada `pontos`.
 - **O parque antigo está na `main` (13/11)**, com o desenho da [arte]. Antes no ramo `mundo/parque-antigo` (bloco
   `FLORESTA` antes da etapa 4b, sorteio `SEED + 13`; tudo fora das trilhas e sem vão de entalar, com a função `near`
   procurando lugar em espiral). Tipos e propriedades: `placa` (`tamanho: 'grande'`, `mato`), `bebedouro` (`quebrado`,

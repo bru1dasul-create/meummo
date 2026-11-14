@@ -179,12 +179,14 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   bancos de concreto com lixeira, postes de parque apagados e tortos, pedaços da pista de caminhada de cimento e a
   academia ao ar livre enferrujada na Clareira das Bananeiras; nada da mata muda de lugar. A placa grande fica alta,
   acima do pilar do portão (como na imagem aprovada), e o poste do parque da entrada saiu da frente do poste do portão
-- [ ] **[mundo]** Casas com interior (pedido do dono, 13/11: "dar vida para alguns interiores de casa"; planta aprovada:
+- [x] **[mundo]** Casas com interior (**na main em 14/11**, com o desenho da [arte]; pedido do dono, 13/11: "dar vida para alguns interiores de casa"; planta aprovada:
   "pode mandar as casas pra arte"; `docs/referencias/casas-interior-planta.jpg` e os alvos `casa-amarela-dentro.jpg`,
   `casa-rosa-dentro.jpg` e `casa-abandonada-dentro.jpg`, que só dão o clima): a amarela (a família: cozinha no fundo,
   sala na frente), a rosa (a casa da vó) e a abandonada do fundo (a árvore nasce do chão de dentro e sai pelo buraco da
-  laje). No ramo `mundo/casas-interior`: `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis
-  sem vão de entalar. Entra com o desenho da [arte]
+  laje): `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis sem vão de entalar (a conferência
+  de vãos pula o par que uma terceira coisa fecha de ponta a ponta: a parede de uma casa, com um dentro e o outro fora; o
+  fogão entre a pia e o filtro). A placa PARQUE SANTO DIAS foi junto: do lado de fora do portão, na altura dos olhos (o
+  dono achou errada atrás do pilar)
 - [x] **[arte]** Casas com interior, o desenho (**na main em 14/11**; `js/world/casas.js`): os móveis, os pisos, as
   paredes de dentro de cada morador, a porta aberta no vão do mapa (a abandonada arrombada) e a árvore de dentro com o pé
   e as raízes da Figueira da Esquina. Com o herói dentro, **só a casa aparece** (o resto da tela escurece e a câmera vai
