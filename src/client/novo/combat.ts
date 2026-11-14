@@ -112,6 +112,8 @@ interface ProvisionalPet {
   asleep: boolean;
   /** A casa dele: só aparece com você lá dentro (de fora, o telhado esconde). */
   home: MapRegion | null;
+  /** É uma capivara (o desenho provisório muda: marrom, deitada quando dorme). */
+  capy: boolean;
 }
 
 interface Floater {
@@ -215,8 +217,8 @@ export class CombatLayer {
 
   // ---- bichos que a view ainda não desenha (o gatinho provisório) ----
 
-  setPet(id: number, name: string, x: number, y: number, angle: number, asleep: boolean, home: MapRegion | null): void {
-    this.pets.set(id, { name, fromX: x, fromY: y, toX: x, toY: y, start: 0, duration: 0, angle, asleep, home });
+  setPet(id: number, name: string, x: number, y: number, angle: number, asleep: boolean, home: MapRegion | null, capy = false): void {
+    this.pets.set(id, { name, fromX: x, fromY: y, toX: x, toY: y, start: 0, duration: 0, angle, asleep, home, capy });
   }
 
   movePet(id: number, x: number, y: number, angle: number, now: number, durationMs: number): void {
@@ -256,6 +258,41 @@ export class CombatLayer {
     return me !== null && me.x >= home.x0 - 0.3 && me.x <= home.x1 + 0.3 && me.y >= home.y0 - 0.3 && me.y <= home.y1 + 0.6;
   }
 
+  /** A capivara provisória (até o desenho da [arte]): um barril marrom com focinho quadrado; deitada, com "z". */
+  private drawCapy(pet: ProvisionalPet, at: Point, now: number, screen: (x: number, y: number, z?: number) => Point, m: number): void {
+    const ctx = this.ctx;
+    const fur = '#8a5a36';
+    const dark = '#5b3a22';
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = Math.max(1, m * 0.012);
+    const dx = Math.cos(pet.angle);
+    const dy = Math.sin(pet.angle);
+    const z = pet.asleep ? 0.12 : 0.22;
+    const body = screen(at.x, at.y, z);
+    const head = screen(at.x + dx * 0.32, at.y + dy * 0.32, z + (pet.asleep ? 0.02 : 0.08));
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.ellipse(body.x, body.y, m * 0.3, m * (pet.asleep ? 0.13 : 0.17), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(head.x - m * 0.11, head.y - m * 0.09, m * 0.22, m * 0.17, m * 0.06);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = dark;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(head.x + side * m * 0.07, head.y - m * 0.09, m * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (pet.asleep) {
+      const rise = (now / 900) % 1;
+      ctx.fillStyle = `rgba(240, 240, 255, ${(1 - rise).toFixed(2)})`;
+      ctx.font = `700 ${Math.round(Math.max(10, m * 0.14))}px system-ui, sans-serif`;
+      ctx.fillText('z', body.x + m * 0.2, body.y - m * (0.2 + rise * 0.25));
+    }
+  }
+
   /** O gatinho provisório: branco com orelhas, máscara e rabo laranja; dormindo, enroladinho com "z". */
   private drawPets(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
     const ctx = this.ctx;
@@ -272,7 +309,9 @@ export class CombatLayer {
       const orange = '#e8913a';
       ctx.lineWidth = Math.max(1, m * 0.012);
       ctx.strokeStyle = '#6b5a48';
-      if (pet.asleep) {
+      if (pet.capy) {
+        this.drawCapy(pet, at, now, screen, m);
+      } else if (pet.asleep) {
         const c = screen(at.x, at.y, 0.1);
         ctx.fillStyle = white;
         ctx.beginPath();

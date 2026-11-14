@@ -246,6 +246,8 @@ export class Monster {
   dashed = false;
   /** Tonto até aqui (o tatu-bola depois da investida): parado e sem a casca. */
   dizzyUntil = 0;
+  /** Indo embora (o filhote de boitatá ao amanhecer): sai do mapa neste momento; até lá, não faz nem leva nada. */
+  leavingAt: number | null = null;
   /** Jogadores que bateram neste monstro (todos ganham XP quando ele cai). */
   readonly contributors = new Set<number>();
 
