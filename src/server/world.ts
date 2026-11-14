@@ -1644,7 +1644,14 @@ export class World {
       });
       if (result === 'flying') continue;
       this.projectiles.delete(shot.id);
-      for (const id of shot.viewers) this.players.get(id)?.outbox.push({ t: 'shot_end', id: shot.id, hit: hit.target?.id ?? 0 });
+      const end: Extract<ServerMsg, { t: 'shot_end' }> = { t: 'shot_end', id: shot.id, hit: hit.target?.id ?? 0 };
+      if (!hit.target) {
+        // onde parou (a flecha fica cravada ali) e, se bateu em algo, no quê (logo à frente da beirada em que parou)
+        end.x = round3(shot.x);
+        end.y = round3(shot.y);
+        if (result === 'wall') end.on = this.map.shotBlockerAt(shot.x + shot.dx * 0.02, shot.y + shot.dy * 0.02) ?? 'bloco';
+      }
+      for (const id of shot.viewers) this.players.get(id)?.outbox.push(end);
       if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx), shot.push ?? 0);
     }
   }

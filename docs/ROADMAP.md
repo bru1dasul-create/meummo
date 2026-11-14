@@ -540,7 +540,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[estrutura]** Drop de itens nos bichos (e o arco e o estilingue de goiabeira nos bichos novos)
 - [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
   movimento delas; o som do vento acompanha)
-- [ ] **[estrutura + arte]** A flecha que acerta a árvore fica presa nela (a [estrutura] diz onde parou; a [arte] desenha)
+- [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
+  parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
+  desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
+- [ ] **[arte]** Desenhar a flecha cravada no tronco (na altura do voo, `stuck.z`), em vez de no chão ao pé da árvore
 
 **Personagem e controles:**
 - [x] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (14/11): janela das teclas (botão "Teclas" no

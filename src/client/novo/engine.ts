@@ -1912,7 +1912,8 @@ class NewWorld implements NewWorldGame {
         this.onShot(msg);
         break;
       case 'shot_end':
-        this.combat.endShot(msg.id, msg.hit); // sem acertar ninguém, a flecha crava no chão
+        // sem acertar ninguém, a flecha crava onde o servidor diz que parou: no chão ou no que segurou (o tronco)
+        this.combat.endShot(msg.id, msg.hit, msg.x !== undefined && msg.y !== undefined ? { x: msg.x, y: msg.y, ...(msg.on ? { on: msg.on } : {}) } : undefined);
         break;
       case 'fx': {
         if (this.entities.get(msg.id)?.kind === 'pet') {

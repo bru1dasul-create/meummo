@@ -97,6 +97,9 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   (sx, sy + 0,5), na altura do peito; mirar é do seu pé ao pé do alvo. A view pode ajudar com dois métodos
   opcionais: `action(id, tipo, ângulo)` (animações: 'windup', 'shoot', 'arc', 'dash', 'jump', 'hurt', 'faint', 'revive'
   e os golpes dos monstros) e `actorPosition(id)` (onde o pé está desenhado, para barra e número seguirem o desenho).
+  O tiro que bate em algo para na beirada (`advanceShot` volta até o último ponto livre) e o `shot_end` diz onde e no
+  quê (`GameMap.shotBlockerAt`: o tipo do retângulo da `colisao`, 'bloco' sem tipo, 'borda' fora do mapa): o motor
+  deixa o desenho voar até lá e a flecha crava (`projectileEnded(..., stuck)`, da [arte]).
   O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada). No formato novo, a pedra
   bate pelo retângulo exato da `colisao` (com `bloqueiaTiro`) embaixo dela (`GameMap.blocksShotAt`, `SHOT_FEET_DY`):
   um tronco de 0,3 m segura a pedra só nos 0,3 m dele. Tocar/clicar num monstro vale tanto onde ele está desenhado
@@ -359,7 +362,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial (exata) depois do pedido `seq` / você foi levado para outro lugar no mesmo mapa |
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |
-| servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou) |
+| servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou; sem acertar ninguém, `x`, `y` = onde parou e `on` = no que bateu, ex. 'tronco'; sem `on`, caiu no fim do alcance) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
 | servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
 | servidor | `fx` | efeito visual (arco, giro, bote, esquiva, pulo, redemoinho, investida), com o alcance do golpe quando precisa |
