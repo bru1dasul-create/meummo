@@ -552,11 +552,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
   comportamento, o [mundo] marca a área e a [arte] anima
-- [ ] **[estrutura + mundo + arte]** Mapa: o M abre o mapa completo, que só mostra o que você já andou, e um mini mapa.
-  A [estrutura] guarda o explorado (no personagem) e a tecla; o [mundo] faz a imagem de cima de cada mapa; a [arte]
-  desenha a janela e o mini mapa
-
-**Sistemas:**
+- [x] **[estrutura]** Mapa da tecla M e mini mapa, a parte das regras e o desenho provisório (14/11): o mapa em
+  quadradinhos de 4 m, explorado a até 12 m de onde você anda, salvo no personagem (passo 5 do arquivo); o M (ou tocar
+  no mini mapa) abre o mapa inteiro com a neblina, os nomes dos lugares já vistos, os NPCs (com ! e ?) e a sua seta;
+  o mini mapa fica no canto (protocolo 36)
+- [ ] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
+  procura e, quando existir, ela entra no lugar do desenho provisório
+- [ ] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
+  e talvez girar a imagem para bater com a câmera
 - [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
   para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
   e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
