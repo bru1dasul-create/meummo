@@ -979,7 +979,8 @@ confirmou.
   - **Dia e noite** (main 95bfcf3, protocolo 33): `setTimeOfDay({ light, night })` no `WorldView` (light de 1 a 0 em
     passos de 0,01, o anoitecer e o amanhecer em 1 minuto; `night` = olhos vermelhos em todos os bichos). Testar: ADM
     "Virar dia"/"Virar noite" e `window.__mundoNovo.time()`. Lampiões: quando o [mundo] marcar.
-  - **Floresta maior do [mundo]** (`mundo/floresta-maior`, c795246; o Capão vai a 96 × 180 m): só entra na main com o meu
+  - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
+    Capão vai a 96 × 180 m): só entra na main com o meu
     desenho: `arvore` `especie: 'paineira'` (tronco de garrafa com espinhos, copa de flor rosa `flores`, pétalas no
     chão); `parquinho` (`brinquedo` 'balanco' com `quebrado`, 'escorregador' com `olhando`, 'gira-gira' com `plantas`;
     `ferrugem`, `cipo`); `cachoeira` (pedras de onde o riacho cai: `altura`, `queda`, `musgo`); `pinguela` com `pedras`;
