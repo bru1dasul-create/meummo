@@ -127,7 +127,9 @@ export type ByeReason = 'replaced' | 'shutdown' | 'kicked';
 export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_full' | 'no_gold' | 'too_far' | 'cant_trade';
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | PetFx;
+// 'dizzy' = o bicho ficou tonto (o tatu-bola depois da investida); 'dodge' = o tiro passou pelo meio do enxame sem acertar;
+// 'vanish' = o bicho foi embora (o filhote de boitatá ao amanhecer: em seguida vem o `despawn`)
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 

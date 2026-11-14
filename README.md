@@ -202,6 +202,11 @@ O `canto` (a Iara) encanta quem fica perto: `"canto": { "cadaMs": 10000, "alcanc
 "duracaoMs": 3000, "puxaACadaMs": 450, "falas": ["..."] }` — de quanto em quanto tempo canta, até quantos tiles
 pega, o tempo do aviso no chão, quanto o encanto dura (o encantado não anda; a esquiva solta na hora) e de quanto
 em quanto tempo ele é puxado um passo para perto dela. Esses números também estão no painel do administrador.
+Três jeitos especiais (os bichos da mata do sul do Capão):
+- `"casca": { "seguraPorcento": 70, "angulo": 140, "tontoMs": 2000 }` (o tatu-bola): o golpe que vem pela frente
+  (dentro do `angulo`) perde `seguraPorcento` do dano; depois da investida ele fica tonto `tontoMs`, parado e sem casca;
+- `"desvioTiro": 40` (os marimbondos): a chance, em %, de uma pedra ou flecha passar pelo meio do enxame sem acertar;
+- `"soNoite": true` (o filhote de boitatá): só aparece de noite e vai embora quando amanhece.
 Salve e reinicie o servidor. Se algo estiver errado no arquivo, o servidor explica o quê.
 
 O que cada monstro deixa fica na lista `itens` dele: `item` (o id em `data/items.json`), `chance` (em %, de 0 a 100)

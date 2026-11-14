@@ -36,6 +36,7 @@ import {
 import {
   advanceShot,
   angleBetween,
+  angleDiff,
   angleOfDir,
   arcTiles,
   areaTiles,
@@ -690,6 +691,7 @@ export class World {
   private gmSpawn(player: Player, id: string, n: number): string {
     const def = this.monsterDefs.get(id);
     if (!def) return `não existe o monstro "${id}".`;
+    if (def.nightOnly && !this.night) return `${def.name} só aparece de noite (use "Virar noite").`;
     const made = [...this.monsters.values()].filter((m) => m.zone.temporary).length;
     const count = Math.min(n, GM_SPAWN_MAX, GM_SPAWN_MAP_MAX - made);
     if (count <= 0) return `já tem ${made} monstros criados neste mapa: derrube alguns antes.`;
@@ -1069,10 +1071,29 @@ export class World {
     const night = this.dayNight.isNight();
     if (night === this.night) return;
     this.night = night;
-    for (const monster of this.monsters.values()) this.fitMonsterHp(monster);
+    this.nightTurned();
     const at = Math.round(this.dayNight.position());
     for (const player of this.players.values()) player.outbox.push({ t: 'time', at });
     this.log(`${this.map.name}: ${night ? 'anoiteceu' : 'amanheceu'}`);
+  }
+
+  /** Virou: a força dos bichos muda, e os bichos só da noite chegam ao anoitecer e vão embora ao amanhecer. */
+  private nightTurned(): void {
+    for (const monster of [...this.monsters.values()]) {
+      if (monster.def.nightOnly && !this.night) {
+        this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'vanish' });
+        this.removeMonster(monster);
+        continue;
+      }
+      this.fitMonsterHp(monster);
+    }
+    for (const zone of this.zones) {
+      if (!zone.def.nightOnly) continue;
+      zone.respawnAt = [];
+      while (this.night && zone.alive.size < zone.zone.count && this.spawnMonster(zone)) {
+        // de noite chegam todos
+      }
+    }
   }
 
   /** A vida máxima do bicho agora (à noite, × nightHpFactor). */
@@ -1143,8 +1164,13 @@ export class World {
     const at = Math.round(this.dayNight.position()); // o dia ou a noite pode ter mudado de tamanho
     for (const player of this.players.values()) player.outbox.push({ t: 'combat', rules }, { t: 'time', at });
     // talvez tenha virado (ou a força da noite mudou): os bichos acompanham
-    this.night = this.dayNight.isNight();
-    for (const monster of this.monsters.values()) this.fitMonsterHp(monster);
+    const night = this.dayNight.isNight();
+    if (night !== this.night) {
+      this.night = night;
+      this.nightTurned();
+    } else {
+      for (const monster of this.monsters.values()) this.fitMonsterHp(monster);
+    }
   }
 
   /** O painel mudou as missões (textos, objetivo, recompensa): quem está jogando recebe a lista nova. */
@@ -1680,7 +1706,7 @@ export class World {
     for (const shot of [...this.projectiles.values()]) {
       const hit: { target: Entity | null } = { target: null };
       const result = advanceShot(shot, dt, this.map, (x, y) => {
-        hit.target = shot.fromMonster ? this.playerTouchedBy(x, y, now) : this.monsterTouchedBy(x, y);
+        hit.target = shot.fromMonster ? this.playerTouchedBy(x, y, now) : this.monsterTouchedBy(x, y, shot);
         return hit.target !== null;
       });
       if (result === 'flying') continue;
@@ -1699,9 +1725,21 @@ export class World {
     }
   }
 
-  private monsterTouchedBy(x: number, y: number): Monster | null {
+  private monsterTouchedBy(x: number, y: number, shot?: Projectile): Monster | null {
     for (const monster of this.monsters.values()) {
-      if (shotTouches(x, y, monster.x, monster.y, SHOT_HIT_RADIUS)) return monster;
+      if (!shotTouches(x, y, monster.x, monster.y, SHOT_HIT_RADIUS)) continue;
+      // enxame (o marimbondo): um sorteio por tiro; se passou pelo meio, segue voando
+      if (shot && monster.def.shotDodge > 0) {
+        shot.swarms ??= new Map();
+        let passes = shot.swarms.get(monster.id);
+        if (passes === undefined) {
+          passes = this.random() < monster.def.shotDodge;
+          shot.swarms.set(monster.id, passes);
+          if (passes) this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'dodge' });
+        }
+        if (passes) continue;
+      }
+      return monster;
     }
     return null;
   }
@@ -1735,6 +1773,14 @@ export class World {
       if (block.broke) this.breakGuard(target, now);
       this.sendEnergy(target, now, true);
     }
+    // a casca do tatu-bola: o golpe que vem pela frente perde parte do dano (tonto, depois da investida, fica sem ela)
+    if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil) {
+      const from = this.hitFrom(target, attackerId, travel);
+      if (from !== null && Math.abs(angleDiff(angleOfDir(target.dir), from)) <= target.def.shell.halfArc) {
+        amount = Math.max(1, Math.round(amount * (1 - target.def.shell.block)));
+        blocked = 1;
+      }
+    }
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamagedAt = now;
     if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
@@ -1759,9 +1805,17 @@ export class World {
     }
   }
 
+  /** De que lado veio o golpe (ângulo, do alvo para quem bateu): o contrário do caminho do tiro, ou onde está quem bateu. */
+  private hitFrom(target: Entity, attackerId: number, travel?: number): number | null {
+    if (travel !== undefined) return travel + Math.PI;
+    const attacker = this.players.get(attackerId);
+    return attacker ? angleBetween(spotOf(target), spotOf(attacker)) : null;
+  }
+
   // ======================= monstros =======================
 
   private spawnMonster(zone: ZoneState): boolean {
+    if (zone.def.nightOnly && !this.night) return false; // só de noite (o filhote de boitatá)
     const tile = this.freeTileInZone(zone);
     if (!tile) return false;
     const monster = new Monster(this.links.nextId(), zone.def, zone, tile.x, tile.y);
@@ -1775,6 +1829,7 @@ export class World {
 
   private respawnMonsters(now: number): void {
     for (const zone of this.zones) {
+      if (zone.def.nightOnly && !this.night) continue; // só de noite: espera anoitecer (nightTurned)
       while (zone.respawnAt.length > 0 && zone.respawnAt[0]! <= now && zone.alive.size < zone.zone.count) {
         zone.respawnAt.shift();
         if (!this.spawnMonster(zone)) {
@@ -1805,6 +1860,7 @@ export class World {
   }
 
   private updateMonster(monster: Monster, now: number): void {
+    if (now < monster.dizzyUntil) return; // tonto (o tatu-bola depois da investida): parado
     if (monster.windup) {
       if (now >= monster.windup.resolveAt) this.resolveWindup(monster, now);
       return; // parado enquanto prepara o golpe
@@ -2024,6 +2080,13 @@ export class World {
     }
     monster.nextStepAt = now + CHARGE_REST_MS;
     if (attack.fire) this.setFire(monster, run, attack.fire, now);
+    // o tatu-bola desenrola tonto: uns segundos parado e sem a casca (a hora de bater nele)
+    const shell = monster.def.shell;
+    if (shell && shell.dizzyMs > 0) {
+      monster.dizzyUntil = now + shell.dizzyMs;
+      monster.nextAttackAt = Math.max(monster.nextAttackAt, monster.dizzyUntil);
+      this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'dizzy' });
+    }
   }
 
   private setFire(monster: Monster, tiles: Tile[], fire: { durationMs: number; damage: [number, number] }, now: number): void {

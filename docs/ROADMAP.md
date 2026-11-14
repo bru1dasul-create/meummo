@@ -548,8 +548,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   pelo piso levantando os pedaços (cerâmica, taco, ladrilho ou cimento, da cor do piso; no tapete, rasga e mostra a
   terra) e afunda no fim; a samambaia é da casa (aparece com o herói lá dentro, como os móveis); o cipó sobe do chão
   perto dos cantos e, nas casas com gente, desce de uma fresta do teto; o musgo sobe do rodapé na abandonada
-- [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
-  as áreas e a [arte] desenha
+- [x] **[estrutura]** Mais bichos, as regras (14/11, aprovados pelo dono): `quati` (nível 2, bando de 4), `tatu_bola`
+  (nível 3: casca que segura 70% de frente e tonto 2 s depois da investida), `marimbondo` (nível 3: enxame, 40% das
+  pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
+  (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
+- [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
+- [ ] **[arte]** Desenhar os quatro bichos novos (hoje aparecem como bonecos de gente com o nome) e as ações `dizzy`
+  (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
 - [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
   comportamento, o [mundo] marca a área e a [arte] anima. Parte da [arte] feita (14/11): a criatura `capivara`
   (`js/creatures/capivara.js`, o desenho da capivara do cenário em bolas): anda com as patas em diagonal e o corpo
