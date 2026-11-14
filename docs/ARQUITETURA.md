@@ -114,6 +114,13 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   `M` mapa, `C` andar devagar e o som sem tecla. Ficam fixas (não dá para escolher) as de andar, `Enter`, `Esc`, o zoom,
   `1` a `4` e o `G` do menu ADM; Ctrl, Alt, Caps Lock e F1–F12 são recusadas (Ctrl + W fecha a aba). Trocar com uma
   tecla já usada troca as duas ações. Fica no aparelho (`meummo:teclas`); a barra de ações é refeita com as novas.
+- **Mapa explorado** (protocolo 36): `src/shared/explore.ts` (a grade de quadradinhos de `EXPLORE_CELL` = 4 m, um bit
+  cada; `revealAround` marca os que ficam a até `EXPLORE_RADIUS` = 12 m do pé; o texto `colunas:base64`, que continua
+  batendo se o mapa crescer). O servidor confere a cada 500 ms (`World.explore`), manda `explored` com os quadradinhos
+  novos e salva no personagem (`CharacterData.explored`, mapa → texto; passo 5 de `MIGRATIONS`); as boas-vindas e o
+  `zone` trazem o explorado do mapa. No navegador, `mapWindow.ts` (`MapPicture`: o chão de cima, das formas do mapa,
+  ou a imagem `/assets/maps-iso/<id>-mapa.png` + `.json` do [mundo] quando existir, e a neblina; `MapWindow`, a tecla M;
+  `Minimap`, o canto da tela).
 - **Vento** (protocolo 35): `src/server/wind.ts` (`WindWeather`: um só, criado pelo reino, que o atualiza no tick e
   avisa todo mundo com `wind` quando muda; fica calmo, brisa ou forte por `WIND_MIN_MS` a `WIND_MAX_MS`; sorteia com
   o sorteio dele, para não mexer na ordem dos sorteios do jogo). As boas-vindas trazem `wind`. O motor anima a mudança
@@ -402,6 +409,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `combat` | o administrador ajustou os números do combate (carga, defesa, empurrão): use os novos |
 | cliente | `pet` | fazer carinho no bicho (o Joaquim), perto dele |
 | cliente | `jump` | pulei (só de enfeite: o servidor confere a recarga e manda o `fx` `jump` para quem está perto) |
+| servidor | `explored` | o mapa explorado: os quadradinhos que você acabou de ver (e no `welcome`/`zone`, o `explored` do mapa) |
 | servidor | `wind` | o vento mudou: a força (0 a 1) e para onde sopra (graus), alcançados em `ms`, devagar (e no `welcome`, o `wind`) |
 | servidor | `time` | dia e noite: em que ponto do ciclo estamos (ms); vem na virada, quando o administrador vira o relógio e quando o painel muda os tamanhos (e no `welcome`, o `time`) |
 | servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |

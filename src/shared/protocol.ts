@@ -165,9 +165,11 @@ export type ServerMsg =
       time: number;
       /** O vento de agora: força (0 a 1) e para onde sopra (graus no chão: 0 = leste, 90 = sul). */
       wind: { strength: number; angle: number };
+      /** O mapa explorado deste mapa (só no formato novo): a grade em texto (src/shared/explore.ts). */
+      explored?: string;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
-  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog }
+  | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog; explored?: string }
   | { t: 'reject'; reason: RejectReason }
   | { t: 'bye'; reason: ByeReason } // sessão encerrada: entrou com o personagem em outro lugar, ou servidor desligando
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
@@ -218,6 +220,8 @@ export type ServerMsg =
   // dia e noite: em que ponto do ciclo estamos agora (ms). Vem quando o dia vira noite (e vice-versa), quando o
   // administrador vira o relógio ou muda quanto dura cada um: o navegador acerta o relógio dele
   | { t: 'time'; at: number }
+  // o mapa explorado: estes quadradinhos (de EXPLORE_CELL metros, linha por linha) acabaram de ser vistos
+  | { t: 'explored'; cells: number[] }
   // o vento mudou: chega a esta força (0 a 1) e direção (graus no chão, para onde sopra) em `ms`, devagar
   | { t: 'wind'; strength: number; angle: number; ms: number }
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)

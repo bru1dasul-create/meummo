@@ -1,6 +1,7 @@
 // As "coisas vivas" do mundo: jogadores e monstros. Só dados e pequenas ajudas;
 // as regras ficam em world.ts.
 
+import type { ExploreGrid } from '../shared/explore';
 import { DOWN, type Dir } from '../shared/dir';
 import type { ShotPath } from '../shared/combat';
 import { lookFromName } from '../shared/look';
@@ -79,6 +80,12 @@ export class Player {
   quests: QuestLog = {};
   /** O progresso nas missões mudou neste tick (o dono precisa saber). */
   questsDirty = false;
+  /** O mapa explorado salvo (mapa → texto da grade): os mapas por onde ele não passou nesta vez ficam assim. */
+  exploredSaved: Record<string, string> = {};
+  /** As grades dos mapas por onde passou nesta vez (lidas do salvo na hora em que chega no mapa). */
+  readonly explored = new Map<string, ExploreGrid>();
+  /** Quando olhar de novo o que ele está vendo (o mapa explorado). */
+  nextExploreAt = 0;
 
   /** Trocando de mapa: o navegador está carregando o mapa novo (pedidos são ignorados até ele avisar). */
   loading = false;

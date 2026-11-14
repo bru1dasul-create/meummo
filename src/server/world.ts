@@ -74,6 +74,7 @@ import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { DayNightClock } from './dayNight';
+import { decodeGrid, encodeGrid, revealAround, type ExploreGrid } from '../shared/explore';
 import { WindWeather } from './wind';
 import type { NpcDef, NpcShop } from './npcs';
 import { Pet, petHome, type PetDef } from './pets';
@@ -181,6 +182,8 @@ export interface GroundDrop {
 
 /** As moedas pulam do monstro antes de dar para pegar (para dar tempo de ver e ouvir caírem). */
 export const DROP_READY_MS = 400;
+/** De quanto em quanto tempo o servidor olha o que cada jogador está vendo (o mapa explorado). */
+const EXPLORE_EVERY_MS = 500;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
 export const AUTOSAVE_MS = 30_000;
 
@@ -435,6 +438,7 @@ export class World {
         combat: { ...this.combat },
         time: Math.round(this.dayNight.position()),
         wind: { strength: this.wind.strength, angle: this.wind.angle },
+        ...this.exploredField(player),
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
@@ -498,6 +502,7 @@ export class World {
         online: this.links.online(),
         npcs: this.npcList(),
         questLog: { ...player.quests },
+        ...this.exploredField(player),
       },
       ...(player.admin ? [this.gmState(player)] : []),
     ]);
@@ -545,6 +550,7 @@ export class World {
     player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
     if (samePlace) player.dir = saved.dir;
     player.quests = this.cleanQuestLog(saved.quests);
+    player.exploredSaved = cleanExplored(saved.explored);
   }
 
   /** O diário de missões salvo, conferido: missão que sumiu do arquivo sai; números estranhos são corrigidos. */
@@ -1115,6 +1121,37 @@ export class World {
     }
   }
 
+  // ======================= mapa explorado =======================
+
+  /** A grade do mapa explorado deste mapa para o jogador (só nos mapas do formato novo; lida do salvo na hora). */
+  private exploreGridOf(player: Player): ExploreGrid | null {
+    if (!this.map.metric) return null;
+    let grid = player.explored.get(this.map.id);
+    if (!grid) {
+      grid = decodeGrid(player.exploredSaved[this.map.id], this.map.width, this.map.height);
+      player.explored.set(this.map.id, grid);
+    }
+    return grid;
+  }
+
+  /** O que dá para ver em volta do pé fica explorado; o navegador recebe os quadradinhos novos. */
+  private explore(player: Player): void {
+    const grid = this.exploreGridOf(player);
+    if (!grid || player.dead) return;
+    const feet = feetAt(player.fx, player.fy);
+    const fresh = revealAround(grid, feet.x, feet.y);
+    if (fresh.length > 0) player.outbox.push({ t: 'explored', cells: fresh });
+  }
+
+  /** Nas boas-vindas e na chegada a um mapa: o explorado dele (já com o que se vê de onde ele está). */
+  private exploredField(player: Player): { explored?: string } {
+    const grid = this.exploreGridOf(player);
+    if (!grid) return {};
+    const feet = feetAt(player.fx, player.fy);
+    revealAround(grid, feet.x, feet.y);
+    return { explored: encodeGrid(grid) };
+  }
+
   /** A vida máxima do bicho agora (à noite, × nightHpFactor). */
   private monsterMaxHp(def: MonsterDef): number {
     return Math.max(1, Math.round(def.hp * (this.night ? this.combat.nightHpFactor : 1)));
@@ -1447,6 +1484,10 @@ export class World {
   // ======================= jogadores =======================
 
   private updatePlayer(player: Player, now: number): void {
+    if (!player.loading && now >= player.nextExploreAt) {
+      player.nextExploreAt = now + EXPLORE_EVERY_MS;
+      this.explore(player);
+    }
     if (player.loading && player.dead) return; // indo acordar na vila, em outro mapa
     if (player.dead) {
       player.queue.length = 0;
@@ -2463,8 +2504,20 @@ function playerMaxHp(player: Player): number {
 }
 
 /** O que fica salvo de um jogador. */
+/** O mapa explorado salvo, conferido: só textos (mapa → grade), até 64 mapas. */
+function cleanExplored(saved: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (typeof saved !== 'object' || saved === null || Array.isArray(saved)) return out;
+  for (const [map, text] of Object.entries(saved as Record<string, unknown>).slice(0, 64)) {
+    if (typeof text === 'string' && text.length <= 20_000) out[map] = text;
+  }
+  return out;
+}
+
 export function characterData(player: Player, zone: string): CharacterData {
-  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests } };
+  const explored: Record<string, string> = { ...player.exploredSaved };
+  for (const [map, grid] of player.explored) explored[map] = encodeGrid(grid);
+  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored };
   // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
   if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
   return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };
