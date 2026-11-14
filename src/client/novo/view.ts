@@ -71,6 +71,13 @@ export interface WorldView {
    */
   canDraw?(kind: string, type: string): boolean;
 
+  // ---- opcional (dia e noite) ----
+  /**
+   * A hora do dia: `light` de 1 (dia) a 0 (noite fechada), com o anoitecer e o amanhecer suaves (vem só quando muda,
+   * em passos de 0,01); `night` = é noite: os bichos estão mais fortes (olhos vermelhos em todos eles).
+   */
+  setTimeOfDay?(time: { light: number; night: boolean }): void;
+
   // ---- opcionais (conversa com NPC) ----
   /**
    * Modo conversa: a câmera vai, com suavidade, olhar para este ponto do chão (metros; o pé de quem fala) em vez de
@@ -164,6 +171,8 @@ const ACTOR_COLORS = { me: '#f2c14e', player: '#6fa8ff', npc: '#7bd389', monster
 const typeOf = (o: { type?: string; class?: string }) => o.type || o.class || '';
 
 export class ProvisionalView implements WorldView {
+  /** A luz do dia (1) até a noite fechada (0): setTimeOfDay. */
+  private light = 1;
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly actors = new Map<number, Actor>();
@@ -328,6 +337,15 @@ export class ProvisionalView implements WorldView {
       ctx.ellipse(center.x, center.y - 4.5 * this.scale * 0.8, c.r * this.scale * 0.9, c.r * this.scale * 0.6, 0, 0, Math.PI * 2);
       ctx.fill();
     }
+    // a noite: um véu azul-escuro por cima de tudo (o desenho de verdade, da [arte], faz o dele)
+    if (this.light < 1) {
+      ctx.fillStyle = `rgba(8, 14, 38, ${((1 - this.light) * 0.55).toFixed(3)})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  setTimeOfDay(time: { light: number; night: boolean }): void {
+    this.light = Math.max(0, Math.min(1, time.light));
   }
 
   destroy(): void {

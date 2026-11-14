@@ -43,6 +43,7 @@ import { Ambient, sceneOfPlace } from '../ambient';
 import { trackOfScene } from '../music';
 import { SoundPanel } from './soundPanel';
 import { KeyBindings, type KeyAction } from './keys';
+import { cyclePosition, daylightAt, isNightAt } from '../../shared/dayNight';
 import { KeysPanel } from './keysPanel';
 
 /** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
@@ -219,6 +220,11 @@ class NewWorld implements NewWorldGame {
   private nextShotAt = 0;
   private dashReadyAt = 0;
   private jumpReadyAt = 0;
+  /** Dia e noite: o instante (performance.now) em que o ciclo começou, pelo relógio do servidor. */
+  private timeBase = 0;
+  /** O que a view já sabe da hora (manda de novo só quando muda). */
+  private lightShown = -1;
+  private nightShown: boolean | null = null;
   private readonly skillReadyAt = SKILLS.map(() => 0);
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
@@ -289,6 +295,7 @@ class NewWorld implements NewWorldGame {
     this.soundButton?.addEventListener('click', this.openSoundPanel);
     this.updateSoundButton();
     this.updateShotLook(deps.welcome.you.gear ?? {}); // entrou já com o arco equipado
+    this.setClock(deps.welcome.time);
     const welcome = deps.welcome;
     for (const item of welcome.items) this.items.set(item.id, item);
     this.lastInv = welcome.inv;
@@ -346,6 +353,7 @@ class NewWorld implements NewWorldGame {
         this.gmTeleport = on;
       },
       npc: (id) => this.conn.send({ t: 'gm', cmd: { do: 'npc', npc: id } }),
+      time: (phase) => this.conn.send({ t: 'gm', cmd: { do: 'time', phase } }),
     });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
@@ -396,7 +404,12 @@ class NewWorld implements NewWorldGame {
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
       // o som: o lugar do ambiente, os volumes, se está desligado e se o navegador já liberou o áudio
-      sound: () => ({ scene: game.ambient.current, music: game.sfx.music.current, playing: game.sfx.music.playing, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
+      sound: () => ({ scene: game.ambient.current, night: game.ambient.isNight, music: game.sfx.music.current, playing: game.sfx.music.playing, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
+      // dia e noite: em que ponto do ciclo (ms), a luz (1 dia, 0 noite) e se os bichos estão "da noite"
+      time: () => {
+        const position = cyclePosition(performance.now() - game.timeBase, game.rules);
+        return { position, light: daylightAt(position, game.rules), night: isNightAt(position, game.rules) };
+      },
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -410,6 +423,7 @@ class NewWorld implements NewWorldGame {
     this.map = GameMap.fromTiled(json, msg.map);
     this.view?.destroy();
     this.view = createView(this.container, json);
+    this.lightShown = -1; // a view nova precisa saber a hora
     this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
     this.viewZoom = this.zoom;
     this.zoomAnim = null;
@@ -507,6 +521,7 @@ class NewWorld implements NewWorldGame {
     this.updateCharge(now);
     this.updateGuard(now);
     this.updateAmbient(now);
+    this.updateTimeOfDay(now);
     this.updateConversation(now);
     this.checkNpcArrival();
     this.cuddleIfNear();
@@ -1695,6 +1710,29 @@ class NewWorld implements NewWorldGame {
     this.soundPanel.toggle();
   };
 
+  /** O relógio do dia e noite: o servidor disse que estamos em `at` ms do ciclo (daqui, o navegador anda sozinho). */
+  private setClock(at: number): void {
+    this.timeBase = performance.now() - at;
+  }
+
+  /**
+   * Dia e noite: a luz (de 1, dia, a 0, noite fechada, com o anoitecer e o amanhecer suaves) e se os bichos estão
+   * "da noite" (mais fortes, de olhos vermelhos) vão para a view; o som do ambiente troca os passarinhos pelos grilos.
+   * Na virada, um aviso.
+   */
+  private updateTimeOfDay(now: number): void {
+    const position = cyclePosition(now - this.timeBase, this.rules);
+    const light = Math.round(daylightAt(position, this.rules) * 100) / 100;
+    const night = isNightAt(position, this.rules);
+    if (light === this.lightShown && night === this.nightShown) return;
+    const turned = this.nightShown !== null && night !== this.nightShown;
+    this.lightShown = light;
+    this.nightShown = night;
+    this.view?.setTimeOfDay?.({ light, night });
+    this.ambient.setNight(night);
+    if (turned) this.toast.show(night ? 'Anoiteceu: os bichos ficam mais fortes (e dão mais XP e ouro)' : 'Amanheceu', 3500);
+  }
+
   /** O som de ambiente acompanha o lugar onde você está (de vez em quando: lugar não muda a cada quadro). */
   private updateAmbient(now: number): void {
     if (now >= this.ambientCheckAt && this.predicted) {
@@ -2058,7 +2096,10 @@ class NewWorld implements NewWorldGame {
         this.onQuestLog(msg.log);
         break;
       case 'combat':
-        Object.assign(this.rules, msg.rules); // o desenho do combate usa o mesmo objeto
+        Object.assign(this.rules, msg.rules); // o desenho do combate usa o mesmo objeto (e o dia e noite, os tamanhos)
+        break;
+      case 'time':
+        this.setClock(msg.at); // virou dia ou noite, ou o administrador mexeu no relógio
         break;
       case 'questDefs':
         // o painel mudou as missões: troca dentro da mesma lista (a conversa e a lista na tela usam ela)
