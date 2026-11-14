@@ -53,7 +53,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 | Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
-| Som ligado/desligado | `M` ou 🔊 no painel | 🔊 no painel |
+| Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | `M` liga e desliga · 🔊 no painel abre o volume | 🔊 no painel |
 
 Levar um golpe, esquivar ou levantar a defesa solta a pedra que você estava puxando. A defesa vira sozinha para o
 monstro mais perto; a barra embaixo do pé é a energia dela (acabou, ela quebra: solte e espere voltar). O jogo

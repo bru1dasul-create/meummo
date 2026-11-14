@@ -411,6 +411,15 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   `sling-pull`/`shoot`, a flecha voando e cravada (`projectileArt.ts`: a [estrutura] liga as três funções no `combat.ts`
   quando o arquivo entrar) e o `actionBar.setLook` (idem)
 - [ ] **[estrutura]** Arco e estilingue de goiabeira caindo dos bichos novos (quando eles entrarem)
+- [x] **[estrutura]** Som, parte 1 (14/11; o som passou para a [estrutura], escolha do dono): **volume separado** para
+  música, efeitos e ambiente (guardado no navegador; o botão do som da HUD abre o painel `#sound-panel`, e o `M`
+  continua ligando e desligando tudo) e **som de ambiente** feito por código, pelo lugar do mapa (camada `areas`; a
+  propriedade `som` do lugar manda, senão o nome): vila (bem-te-vi, sabiá, vento leve), clareira (passarinhos e um
+  zumbido mágico baixinho), mata (vento, folhas, cigarras), mata profunda (vento mais forte, grilos, coruja) e água
+  (água correndo, gotas, sapos). Troca suave de um lugar para o outro. Conferido no PC e no celular
+- [ ] **[estrutura]** Som, parte 2: a música do Capão (vila e mata), depois de o dono escolher a origem (licença livre,
+  banco pago, IA ou feita por código; recomendação: começar pelas de licença livre)
+- [ ] **[arte]** O botão do som na HUD do celular (hoje ele some no celular, e o painel do som só abre por ele)
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
   vir a msg por cima com ela falando, mexendo a boca; aceitar ou desistir, mesma coisa; qualquer conversa direta com
   NPC"): ao abrir conversa (missão ou loja) a câmera chega perto em ~0,5 s (zoom 1,25) e volta quando fecha; levar

@@ -79,6 +79,14 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — som, parte 1 (volume e ambiente):** `sfx.ts` ganhou um volume por parte (`efeitos`, `ambiente`, `musica`,
+`localStorage` `meummo:volumes`), cada uma num `GainNode` antes do geral; o "desligar" abaixa o geral (o ambiente
+continua por baixo). `src/client/ambient.ts`: `sceneOfPlace` (propriedade `som` do lugar, senão o nome) e `Ambient`
+(sons contínuos com volume por lugar, trocando com `setTargetAtTime`, e bichos sorteados por minuto). `GameMap.places`
+e `placeAt` (camada `areas`, o menor lugar que contém o ponto). Painel `src/client/novo/soundPanel.ts` (o botão do som
+da HUD abre). Gancho de teste `__mundoNovo.sound()`. Falta a música (o dono escolhe a origem). Pendência da [arte]: o
+botão do som some no celular.
+
 **14/11 — Joaquim, o gato da vó (o comportamento):** `src/server/pets.ts` (`PetDef`, `parsePetDefs`, `Pet`,
 `petHome`): a cama é um ponto da camada `pontos` (pode estar dentro de um móvel sólido: o gato pula, `dashed`), o chão
 livre ao lado é procurado em anéis em volta; ele anda com `walkSlice` (o mesmo corpo do jogador) e nunca sai do

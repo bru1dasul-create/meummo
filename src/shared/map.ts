@@ -135,6 +135,15 @@ export interface MapRegion {
   y1: number;
 }
 
+/**
+ * Um lugar com nome da camada `areas` (Vila do Capão, Mata Profunda, Lago do Parque...), em tiles = metros. `sound`: a
+ * propriedade `som` do lugar (o som de ambiente: 'vila', 'mata'...), se o mapa disser; sem ela, vale o nome.
+ */
+export interface MapPlace extends MapRegion {
+  name: string;
+  sound: string | null;
+}
+
 /** Informações do mapa que vêm das propriedades e objetos do Tiled. */
 export interface MapInfo {
   id?: string;
@@ -148,6 +157,8 @@ export interface MapInfo {
   spots?: ReadonlyMap<string, { x: number; y: number }>;
   /** Retângulos com nome da camada `pontos` (ex.: `joaquim-casa`, por onde o gato da vó anda). */
   regions?: ReadonlyMap<string, MapRegion>;
+  /** Os lugares com nome da camada `areas`. */
+  places?: readonly MapPlace[];
   /** Formato novo: 1 tile = 1 metro e pontos/NPCs dizem onde fica o pé, exato. */
   metric?: boolean;
   /** Retângulos que seguram o pé (camada `colisao`). */
@@ -198,6 +209,8 @@ export class GameMap implements Walkable {
   readonly spots: ReadonlyMap<string, { x: number; y: number }>;
   /** Retângulos com nome da camada `pontos` (em tiles = metros). Os nomes ficam em minúsculas. */
   readonly regions: ReadonlyMap<string, MapRegion>;
+  /** Os lugares com nome da camada `areas` (para o som de ambiente de cada um). */
+  readonly places: readonly MapPlace[];
   /** Formato novo (1 tile = 1 metro; pontos e NPCs dizem onde fica o pé, exato). */
   readonly metric: boolean;
   /** Áreas seguras (camada `seguro`). */
@@ -232,6 +245,7 @@ export class GameMap implements Walkable {
     this.points = info.points ?? new Map();
     this.spots = info.spots ?? new Map();
     this.regions = info.regions ?? new Map();
+    this.places = info.places ?? [];
     this.metric = info.metric ?? false;
     this.safeAreas = info.safeAreas ?? [];
     this.width = width;
@@ -295,6 +309,7 @@ export class GameMap implements Walkable {
     const points = new Map<string, Tile>();
     const spots = new Map<string, { x: number; y: number }>();
     const regions = new Map<string, MapRegion>();
+    const places: MapPlace[] = [];
     const solids: SolidRect[] = [];
     const safeAreas: SafeArea[] = [];
     const tw = json.tilewidth;
@@ -328,8 +343,17 @@ export class GameMap implements Walkable {
         const isSolidLayer = layerName === 'colisao' || layerName === 'colisão';
         const isSafeLayer = layerName === 'seguro';
         const isPointsLayer = layerName === 'pontos';
+        const isPlacesLayer = layerName === 'areas' || layerName === 'áreas';
         for (const obj of layer.objects ?? []) {
           const objName = obj.name?.trim().toLowerCase();
+          if (isPlacesLayer && !obj.point && obj.name?.trim() && !obj.polygon && !obj.polyline) {
+            const rect = rectOf(obj);
+            const sound = obj.properties?.find((p) => p.name === 'som')?.value;
+            if (rect.x1 > rect.x0 && rect.y1 > rect.y0) {
+              places.push({ ...rect, name: obj.name.trim(), sound: typeof sound === 'string' && sound.trim() ? sound.trim().toLowerCase() : null });
+            }
+            continue;
+          }
           if (obj.point && objName) {
             points.set(objName, { x: Math.floor(obj.x / json.tilewidth), y: Math.floor(obj.y / json.tileheight) });
             spots.set(objName, { x: obj.x / tw, y: obj.y / th });
@@ -404,10 +428,26 @@ export class GameMap implements Walkable {
       points,
       spots,
       regions,
+      places,
       metric,
       solids,
       safeAreas,
     });
+  }
+
+  /** O lugar com nome (camada `areas`) onde fica o ponto (x, y): o menor que contém o ponto (o mais específico). */
+  placeAt(x: number, y: number): MapPlace | null {
+    let best: MapPlace | null = null;
+    let bestArea = Infinity;
+    for (const place of this.places) {
+      if (x < place.x0 || x > place.x1 || y < place.y0 || y > place.y1) continue;
+      const area = (place.x1 - place.x0) * (place.y1 - place.y0);
+      if (area < bestArea) {
+        best = place;
+        bestArea = area;
+      }
+    }
+    return best;
   }
 
   inside(x: number, y: number): boolean {

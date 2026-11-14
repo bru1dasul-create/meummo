@@ -38,6 +38,8 @@ import { GuardButton } from './guard';
 import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
 import { ProvisionalView, type WorldView } from './view';
+import { Ambient, sceneOfPlace } from '../ambient';
+import { SoundPanel } from './soundPanel';
 
 export interface NewWorldDeps {
   conn: Connection;
@@ -137,6 +139,11 @@ class NewWorld implements NewWorldGame {
   private readonly rules: CombatRules;
   private readonly actionBar: ActionBar;
   private readonly soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
+  /** O painel do som (o botão do som abre): ligar/desligar e o volume da música, dos efeitos e do ambiente. */
+  private readonly soundPanel: SoundPanel;
+  /** O som de ambiente do lugar onde você está (mata, água, vila...). */
+  private readonly ambient: Ambient;
+  private ambientCheckAt = 0;
   // mochila, loja e conversa com missões (as janelas do jogo de sempre; a [arte] deixa no jeito do 2.5D depois)
   private readonly items = new Map<string, ItemInfo>();
   private readonly bag: Bag;
@@ -265,7 +272,12 @@ class NewWorld implements NewWorldGame {
       ],
       (slot, down) => this.onAction(slot, down),
     );
-    this.soundButton?.addEventListener('click', this.toggleSound);
+    this.soundPanel = new SoundPanel({
+      toggleMute: () => this.toggleSound(),
+      setVolume: (part, value) => this.sfx.setVolume(part, value),
+    });
+    this.ambient = new Ambient(this.sfx);
+    this.soundButton?.addEventListener('click', this.openSoundPanel);
     this.updateSoundButton();
     const welcome = deps.welcome;
     for (const item of welcome.items) this.items.set(item.id, item);
@@ -370,6 +382,8 @@ class NewWorld implements NewWorldGame {
       zoom: () => game.zoom,
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
+      // o som: o lugar do ambiente, os volumes, se está desligado e se o navegador já liberou o áudio
+      sound: () => ({ scene: game.ambient.current, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -446,7 +460,9 @@ class NewWorld implements NewWorldGame {
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
     window.removeEventListener('blur', this.onBlur);
-    this.soundButton?.removeEventListener('click', this.toggleSound);
+    this.soundButton?.removeEventListener('click', this.openSoundPanel);
+    this.soundPanel.destroy();
+    this.ambient.destroy();
     this.keyboard.destroy();
     this.joystick.destroy();
     this.toast.destroy();
@@ -475,6 +491,7 @@ class NewWorld implements NewWorldGame {
     this.handlePendingShot(now);
     this.updateCharge(now);
     this.updateGuard(now);
+    this.updateAmbient(now);
     this.updateConversation(now);
     this.checkNpcArrival();
     this.cuddleIfNear();
@@ -1578,6 +1595,24 @@ class NewWorld implements NewWorldGame {
 
   private updateSoundButton(): void {
     if (this.soundButton) this.soundButton.textContent = this.sfx.muted ? '🔇' : '🔊';
+    this.soundPanel.show(this.sfx.muted, this.sfx.volumes());
+  }
+
+  /** O botão do som da HUD: abre (e fecha) o painel do som. */
+  private readonly openSoundPanel = () => {
+    this.sfx.unlock();
+    this.soundPanel.show(this.sfx.muted, this.sfx.volumes());
+    this.soundPanel.toggle();
+  };
+
+  /** O som de ambiente acompanha o lugar onde você está (de vez em quando: lugar não muda a cada quadro). */
+  private updateAmbient(now: number): void {
+    if (now >= this.ambientCheckAt && this.predicted) {
+      this.ambientCheckAt = now + 500;
+      const feet = feetAt(this.predicted.x, this.predicted.y);
+      this.ambient.setScene(sceneOfPlace(this.map.placeAt(feet.x, feet.y)));
+    }
+    this.ambient.update();
   }
 
   // ======================= servidor =======================

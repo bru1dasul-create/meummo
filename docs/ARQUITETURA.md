@@ -135,6 +135,11 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
 - **O seu tiro aparece na hora:** o cliente desenha a pedrinha assim que você clica, mandando um número
   (`cid`). Quando o servidor confirma (`shot` com o mesmo `cid`), os dois passam a ser o mesmo tiro (e vale o
   alcance que o servidor mandou).
+- **Som:** efeitos sintetizados na hora (`src/client/sfx.ts`), cada parte com seu volume (efeitos, ambiente, música;
+  guardado no navegador) por cima do volume geral, que o "desligar" abaixa. O ambiente (`src/client/ambient.ts`) é por
+  lugar: o motor olha o lugar do mapa onde você está (`GameMap.placeAt`, camada `areas`) a cada meio segundo e o
+  `Ambient` troca a mistura devagar (vento, folhas, água, zumbido) e chama os bichos de vez em quando (bem-te-vi,
+  sabiá, cigarra, grilos, coruja, sapo, gotas).
 - **Bichos (o Joaquim):** `data/bichos.json` (`src/server/pets.ts`). Cada bicho mora num mapa: dorme num ponto da
   camada `pontos` (pode ser em cima de um móvel: ele pula) e anda num retângulo com nome da mesma camada
   (`GameMap.regions`). É uma entidade à parte (`World.pets`, kind `pet`), fora da lista de monstros, então nunca é alvo.
