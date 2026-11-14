@@ -1626,7 +1626,7 @@ class NewWorld implements NewWorldGame {
       return;
     }
     this.combat.floater(id, `-${dmg}`, blocked ? BLOCKED_COLOR : e?.kind === 'monster' ? '#ffe08a' : '#ffffff', now);
-    if (e?.kind === 'monster') this.sfx.play('hit');
+    if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : 'hit'); // a casca do tatu-bola soa como a defesa
   }
 
   private onDeath(id: number): void {
@@ -1966,6 +1966,12 @@ class NewWorld implements NewWorldGame {
         }
         if (msg.kind === 'jump') {
           this.view?.action?.(msg.id, 'jump'); // o pulo de outro jogador: só o desenho
+          break;
+        }
+        if (msg.kind === 'dizzy' || msg.kind === 'dodge' || msg.kind === 'vanish') {
+          // tonto (o tatu-bola depois da investida), o tiro que passou pelo enxame e o bicho que foi embora
+          this.view?.action?.(msg.id, msg.kind);
+          if (msg.kind !== 'vanish') this.combat.floater(msg.id, msg.kind === 'dizzy' ? 'tonto!' : 'passou!', msg.kind === 'dizzy' ? '#ffe08a' : '#d6d6d6', performance.now());
           break;
         }
         const feet = this.drawnFeet(msg.id);

@@ -114,6 +114,12 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   `M` mapa, `C` andar devagar e o som sem tecla. Ficam fixas (não dá para escolher) as de andar, `Enter`, `Esc`, o zoom,
   `1` a `4` e o `G` do menu ADM; Ctrl, Alt, Caps Lock e F1–F12 são recusadas (Ctrl + W fecha a aba). Trocar com uma
   tecla já usada troca as duas ações. Fica no aparelho (`meummo:teclas`); a barra de ações é refeita com as novas.
+- **Bichos com jeito especial** (protocolo 34; campos de data/monsters.json lidos em `monsters.ts`): `casca`
+  (`MonsterDef.shell`: no `World.damage`, golpe que vem pela frente, pelo `dir` do bicho e pelo caminho do tiro ou
+  por onde está quem bateu (`hitFrom`), perde parte do dano e sai com `blk: 1`; depois da investida, `dizzyUntil`:
+  parado e sem casca, com o `fx` `dizzy`), `desvioTiro` (`shotDodge`: no `monsterTouchedBy`, um sorteio por tiro e por
+  enxame, guardado em `Projectile.swarms`; se passou, o tiro segue e vai o `fx` `dodge`) e `soNoite` (`nightOnly`:
+  `spawnMonster` recusa de dia; `nightTurned` traz todos ao anoitecer e tira ao amanhecer com o `fx` `vanish`).
 - **Dia e noite** (protocolo 33): `src/shared/dayNight.ts` (contas puras: posição no ciclo, `isNightAt`, a luz
   `daylightAt` com o anoitecer e o amanhecer de `TWILIGHT_MS` dentro do dia) e `src/server/dayNight.ts`
   (`DayNightClock`: um só, criado pelo reino e passado a todos os mundos, andando com `Date.now`, então continua depois

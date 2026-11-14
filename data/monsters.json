@@ -231,5 +231,86 @@
       { "item": "escama_iara", "chance": 60 },
       { "item": "colar_presas", "chance": 20 }
     ]
+  },
+  "quati": {
+    "nome": "Quati",
+    "nivel": 2,
+    "vida": 30,
+    "xp": 12,
+    "ouro": [2, 4],
+    "passoMs": 230,
+    "agressivo": true,
+    "alcanceAgressao": 5,
+    "perseguicao": 10,
+    "renascerMs": 18000,
+    "ataque": { "tipo": "mordida", "preparoMs": 450, "intervaloMs": 1200, "dano": [3, 6] },
+    "itens": [
+      { "item": "banana", "chance": 40, "quantidade": [1, 2] },
+      { "item": "chapeu_palha", "chance": 5 },
+      { "item": "estilingue_goiabeira", "chance": 3 }
+    ]
+  },
+  "tatu_bola": {
+    "nome": "Tatu-Bola",
+    "nivel": 3,
+    "vida": 70,
+    "xp": 22,
+    "ouro": [3, 6],
+    "passoMs": 380,
+    "agressivo": true,
+    "alcanceAgressao": 5,
+    "perseguicao": 9,
+    "renascerMs": 25000,
+    "ataque": { "tipo": "investida", "alcance": 5, "preparoMs": 900, "intervaloMs": 3000, "dano": [8, 12] },
+    "casca": { "seguraPorcento": 70, "angulo": 140, "tontoMs": 2000 },
+    "itens": [
+      { "item": "sucata", "chance": 40 },
+      { "item": "erva_arruda", "chance": 20 },
+      { "item": "couraca_lata", "chance": 4 }
+    ]
+  },
+  "marimbondo": {
+    "nome": "Marimbondos",
+    "nivel": 3,
+    "vida": 32,
+    "xp": 20,
+    "ouro": [2, 5],
+    "passoMs": 220,
+    "agressivo": true,
+    "alcanceAgressao": 5,
+    "perseguicao": 11,
+    "renascerMs": 20000,
+    "ataque": { "tipo": "giro", "alcance": 1, "preparoMs": 600, "intervaloMs": 1500, "dano": [4, 7] },
+    "desvioTiro": 40,
+    "itens": [
+      { "item": "erva_arruda", "chance": 30 },
+      { "item": "banana", "chance": 15 }
+    ]
+  },
+  "filhote_boitata": {
+    "nome": "Filhote de Boitatá",
+    "nivel": 5,
+    "vida": 150,
+    "xp": 70,
+    "ouro": [10, 18],
+    "passoMs": 300,
+    "agressivo": true,
+    "alcanceAgressao": 6,
+    "perseguicao": 12,
+    "renascerMs": 120000,
+    "ataque": {
+      "tipo": "investida",
+      "alcance": 6,
+      "preparoMs": 900,
+      "intervaloMs": 2600,
+      "dano": [10, 16],
+      "rastroFogo": { "duracaoMs": 2000, "dano": [3, 5] }
+    },
+    "soNoite": true,
+    "itens": [
+      { "item": "erva_arruda", "chance": 60, "quantidade": [1, 2] },
+      { "item": "arco_bambu", "chance": 4 },
+      { "item": "ferradura_brasa", "chance": 2 }
+    ]
   }
 }

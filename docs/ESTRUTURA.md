@@ -79,6 +79,14 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — bichos novos (aprovados pelo dono):** `quati`, `tatu_bola`, `marimbondo` e `filhote_boitata` em
+data/monsters.json (só acrescentados no fim, no estilo do arquivo). Campos novos: `casca` (`shell`), `desvioTiro`
+(`shotDodge`) e `soNoite` (`nightOnly`); protocolo **34** (`fx` `dizzy`, `dodge`, `vanish`; a casca usa o `blk: 1` do
+`hit`, e o navegador toca o som da defesa). Testes: `tests/bichos-novos.test.ts`. Conferido pelo menu ADM no Capão
+(cuidado nos testes: os bichos criados pelo menu ficam no mundo até reiniciar o servidor). O desenho de verdade
+mostra bicho desconhecido como um boneco de gente com o nome, até a [arte] pintar; no mapa, só quando o [mundo]
+marcar as áreas da floresta maior (esperando o dono aprovar a planta).
+
 **14/11 — dia e noite (números aprovados pelo dono) e o botão de pular:** protocolo **33**. `src/shared/dayNight.ts`
 (contas puras) e `src/server/dayNight.ts` (`DayNightClock`: um só no reino, com `Date.now`; nos testes, o relógio
 falso; `turnTo` para o menu ADM). Números em `CombatRules` (`dayMs`, `nightMs`, `nightHpFactor`, `nightDamageFactor`,

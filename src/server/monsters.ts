@@ -44,6 +44,15 @@ export interface MonsterDef {
   whirlwind: { distance: number; everyMs: number; lines: string[] } | null;
   /** Só a Iara (por enquanto): o canto encanta quem está perto e puxa para ela; a esquiva solta. */
   song: MonsterSong | null;
+  /**
+   * Casca (o tatu-bola, campo "casca"): o golpe que vem pela frente perde `block` (0 a 1) do dano; `halfArc` = metade do
+   * ângulo da frente (radianos). Depois da investida ele fica tonto `dizzyMs`: parado e sem a casca.
+   */
+  shell: { block: number; halfArc: number; dizzyMs: number } | null;
+  /** Enxame (o marimbondo, campo "desvioTiro" em %): a chance (0 a 1) de uma pedra ou flecha passar pelo meio sem acertar. */
+  shotDodge: number;
+  /** Só aparece de noite (o filhote de boitatá, "soNoite"): de dia a área fica vazia e ele vai embora ao amanhecer. */
+  nightOnly: boolean;
   /** O que ele pode deixar para quem ajudou a derrubá-lo. */
   drops: MonsterDrop[];
   /** Ouro que cada um que ajudou ganha: sorteado entre [mínimo, máximo] ([0, 0] = nenhum). */
@@ -140,6 +149,18 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         lines: Array.isArray(lines) ? lines.filter((l): l is string => typeof l === 'string' && l.trim() !== '') : [],
       };
     }
+    const shellData = r.object('casca', true);
+    let shell: MonsterDef['shell'] = null;
+    if (shellData) {
+      const c = new Reader(shellData, FILE, `casca do monstro "${rawId}"`);
+      const block = c.number('seguraPorcento', { min: 0, fallback: 70 });
+      const angle = c.number('angulo', { min: 10, fallback: 140 });
+      if (block > 100) throw new Error(`Erro em ${FILE} (casca do monstro "${rawId}"): "seguraPorcento" é de 0 a 100.`);
+      if (angle > 360) throw new Error(`Erro em ${FILE} (casca do monstro "${rawId}"): "angulo" é de 10 a 360 (graus).`);
+      shell = { block: block / 100, halfArc: ((angle / 2) * Math.PI) / 180, dizzyMs: c.number('tontoMs', { min: 0, fallback: 2000 }) };
+    }
+    const dodge = r.number('desvioTiro', { min: 0, fallback: 0 });
+    if (dodge > 90) throw new Error(`Erro em ${FILE} (monstro "${rawId}"): "desvioTiro" é em %, de 0 a 90.`);
     defs.set(id, {
       id,
       name: r.text('nome'),
@@ -165,6 +186,9 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       },
       whirlwind,
       song,
+      shell,
+      shotDodge: dodge / 100,
+      nightOnly: r.bool('soNoite', false),
       drops: parseDrops(r.list('itens'), rawId),
       gold: r.wholeRange('ouro'),
     });
