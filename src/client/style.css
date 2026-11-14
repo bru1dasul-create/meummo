@@ -2830,6 +2830,11 @@ body.jogo-novo .action[data-slot='dash'] {
   --i: 3;
 }
 
+/* pular: no 6º quadrado (o 5º é o da defesa) */
+body.jogo-novo .action[data-slot='jump'] {
+  --i: 5;
+}
+
 body.jogo-novo .action:hover,
 body.jogo-novo .action.pressed {
   background: transparent;
@@ -2906,12 +2911,24 @@ body.jogo-novo #guard-button .key {
   pointer-events: none;
 }
 
-/* "Espaço" não cabe na etiqueta: vira o desenho da barra de espaço */
-body.jogo-novo .action[data-slot='dash'] .key {
+/* a etiqueta mostra a tecla de verdade (o jogador troca; ui.ts põe o nome em `data-key`). Nomes compridos com a
+   letra menor; "Espaço" e "Shift" não cabem: viram o desenho da barra de espaço e a seta do Shift */
+body.jogo-novo .action .key.long {
+  font-size: calc(13px * var(--as));
+}
+
+body.jogo-novo .action .key.longer {
+  font-size: calc(10px * var(--as));
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+body.jogo-novo .action .key[data-key='Espaço'],
+body.jogo-novo .action .key[data-key='Shift'] {
   font-size: 0;
 }
 
-body.jogo-novo .action[data-slot='dash'] .key::after {
+body.jogo-novo .action .key[data-key='Espaço']::after {
   content: '';
   width: calc(20px * var(--as));
   height: calc(6px * var(--as));
@@ -2919,6 +2936,14 @@ body.jogo-novo .action[data-slot='dash'] .key::after {
   border: calc(2.5px * var(--as)) solid #f6e8c6;
   border-top: 0;
   border-radius: 0 0 2px 2px;
+}
+
+body.jogo-novo .action .key[data-key='Shift']::after {
+  content: '';
+  width: calc(19px * var(--as));
+  height: calc(19px * var(--as));
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 2.5 2.8 10.2h4.3V17h5.8v-6.8h4.3Z' fill='none' stroke='%23f6e8c6' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 1px 1px #000);
 }
 
 /* defesa (botão do motor): no 5º quadrado, com o ícone pintado (a variável vem de ui.ts) */
@@ -3338,6 +3363,13 @@ body.jogo-novo .talk-chip img {
 
   body.jogo-novo .action .key {
     display: none;
+  }
+
+  /* pular: em cima da coluna da esquerda, fora do quadrado de 2x2 (em cima da direita fica o botão da mochila) */
+  body.jogo-novo .action[data-slot='jump'] {
+    position: absolute;
+    right: 76px;
+    bottom: calc(100% + 12px);
   }
 
   body.jogo-novo .action .secs {

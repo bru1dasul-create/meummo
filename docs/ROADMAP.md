@@ -561,12 +561,16 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   painel do som, só no computador; fica guardado no navegador), o pulo passa pelo servidor e quem está perto vê
   (protocolo 31; por enquanto só de enfeite), o andar devagar foi para o `C` (liga e desliga), o som ficou sem tecla
   (painel do som) e o `M` está reservado para o mapa (por enquanto só avisa)
-- [ ] **[arte]** O pulo de verdade no boneco (o motor manda `action(id, 'jump')`, seu e dos outros; o animador do
+- [x] **[arte]** O pulo de verdade no boneco (o motor manda `action(id, 'jump')`, seu e dos outros; o animador do
   protótipo já pula com `input.jump`) e um botão de pular no celular (o tipo `ActionSlot` com 'jump' e o ícone; o motor
-  põe na barra)
-- [ ] **[arte]** A etiqueta da tecla da esquiva na barra: o estilo desenha a barra de espaço fixa
+  põe na barra) (14/11): a view pula (`jumpPulse`); o `ActionSlot` 'jump' com o ícone pintado (o pé subindo); no
+  computador ele vai no 6º quadrado da moldura e, no celular, em cima da coluna da esquerda (em cima da direita fica a
+  mochila). Falta a [estrutura] pôr o `{ slot: 'jump' }` na barra e o `tryJump` no `onAction`
+- [x] **[arte]** A etiqueta da tecla da esquiva na barra: o estilo desenha a barra de espaço fixa
   (`.action[data-slot='dash'] .key`), mas a esquiva agora é o Shift e o jogador pode trocar; e o "Como jogar" da tela
-  de entrada (`index.html`) com as teclas novas
+  de entrada (`index.html`) com as teclas novas (14/11): a etiqueta mostra a tecla de verdade (`data-key`): "Espaço"
+  vira a barra de espaço, "Shift" a seta do Shift e os nomes compridos ficam com a letra menor; o "Como jogar" com
+  Shift esquiva, Espaço pula, C anda devagar, M mapa (em breve) e as teclas no 🔊 → Teclas
 - [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
   botão de atirar, à parte)
 
