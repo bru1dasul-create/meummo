@@ -422,9 +422,10 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     // o ladrilho cobre o lado de dentro, e os móveis estão lá dentro
     expect(box(layer('chao').find((o) => o.type === 'piso')!)).toEqual([inside.x0, inside.x1, inside.y0, inside.y1]);
     const of = (t: string) => cenario.filter((o) => o.type === t);
-    expect([of('prateleira').length, of('geladeira').length, of('balcao').length, of('engradado').length]).toEqual([2, 1, 1, 2]);
+    const inBudega = (o: TiledObject) => o.x / M >= 62 && (o.x + o.width) / M <= 67 && o.y / M >= 49.5 && (o.y + o.height) / M <= 52.5;
+    expect(['prateleira', 'geladeira', 'balcao', 'engradado'].map((t) => of(t).filter(inBudega).length)).toEqual([2, 1, 1, 2]);
     expect(prop(of('balcao')[0]!, 'caixa')).toBe(true);
-    for (const o of ['prateleira', 'geladeira', 'balcao', 'engradado'].flatMap(of)) {
+    for (const o of ['prateleira', 'geladeira', 'balcao', 'engradado'].flatMap(of).filter(inBudega)) {
       const [x0, x1, y0, y1] = box(o);
       expect(x0 >= inside.x0 && x1 <= inside.x1 && y0 >= inside.y0 && y1 <= inside.y1, `${o.type} dentro da Budega`).toBe(true);
     }
@@ -460,6 +461,15 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
   it('na vila não há vão de entalar: duas coisas sólidas de frente uma para a outra ficam coladas ou a 1,2 m', () => {
     // (um orelhão a 40 cm de um poste prendeu o personagem no "andar até"; canto com canto, na diagonal, tem saída)
     const village = boxes.filter((b) => b.x1 > 48.5 && b.y0 < 80);
+    // (se outra coisa fecha o vão de ponta a ponta, como a parede de uma casa com um dentro e o outro fora, ou o fogão
+    // entre a pia e o filtro, o vão vira dois e cada um é conferido no seu par)
+    const blockedBetween = (a: Box, b: Box) => {
+      const inX = a.x1 <= b.x0 || b.x1 <= a.x0;
+      const [gx0, gx1] = a.x1 <= b.x0 ? [a.x1, b.x0] : b.x1 <= a.x0 ? [b.x1, a.x0] : [Math.max(a.x0, b.x0), Math.min(a.x1, b.x1)];
+      const [gy0, gy1] = a.y1 <= b.y0 ? [a.y1, b.y0] : b.y1 <= a.y0 ? [b.y1, a.y0] : [Math.max(a.y0, b.y0), Math.min(a.y1, b.y1)];
+      const e = 1e-6;
+      return village.some((c) => c !== a && c !== b && (inX ? c.x0 < gx1 && c.x1 > gx0 && c.y0 <= gy0 + e && c.y1 >= gy1 - e : c.y0 < gy1 && c.y1 > gy0 && c.x0 <= gx0 + e && c.x1 >= gx1 - e));
+    };
     for (let i = 0; i < village.length; i++) {
       for (let j = i + 1; j < village.length; j++) {
         const [a, b] = [village[i]!, village[j]!];
@@ -467,6 +477,7 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
         const [dx, dy] = [Math.max(0, b.x0 - a.x1, a.x0 - b.x1), Math.max(0, b.y0 - a.y1, a.y0 - b.y1)];
         if (dx > 0 && dy > 0) continue;
         const gap = dx + dy;
+        if (gap > 0.3 && gap < 1.2 && blockedBetween(a, b)) continue;
         expect(gap <= 0.3 || gap >= 1.2, `vão de ${gap.toFixed(2)} m entre ${a.type} (${a.x0}, ${a.y0}) e ${b.type} (${b.x0}, ${b.y0})`).toBe(true);
       }
     }
@@ -636,7 +647,10 @@ describe('Mapa 01 (Capão): o resto do Capão (4c) no padrão novo (aprovado pel
     expect(prop(one('onibus'), 'horta')).toBe(true);
     const abandoned = cenario.find((o) => o.type === 'casa' && prop(o, 'abandonada') === true)!;
     expect(prop(abandoned, 'arvoreDentro')).toBe(true);
-    expect(reach(at(abandoned).x, at(abandoned).y)).toBe(false); // continua uma casa (não dá para entrar)
+    // continua uma casa inteira; desde 13/11 dá para entrar (pedido do dono: a árvore nasce lá dentro)
+    expect(prop(abandoned, 'interior')).toBe(true);
+    const inside = (o: TiledObject) => o.x >= abandoned.x && o.x <= abandoned.x + abandoned.width && o.y >= abandoned.y && o.y <= abandoned.y + abandoned.height;
+    expect(cenario.some((o) => o.type === 'arvore' && prop(o, 'dentroDaCasa') === true && inside(o))).toBe(true);
     expect(cenario.filter((o) => o.type === 'cipo').length).toBeGreaterThan(8);
   });
 
@@ -671,5 +685,88 @@ describe('Mapa 01 (Capão): o resto do Capão (4c) no padrão novo (aprovado pel
     expect(x).toBeLessThan(48); // no parque
     expect(y).toBeLessThan(10); // perto do viaduto (y 2 a 6)
     expect(reachNear(x, y + 2.5, 0.5)).toBe(true); // dá para chegar perto do tronco
+  });
+});
+
+describe('Mapa 01 (Capão): o Parque Santo Dias de antes, engolido pela floresta (aprovado pelo dono em 13/11)', () => {
+  const cenario = layer('cenario');
+  const of = (t: string) => cenario.filter((o) => o.type === t);
+
+  it('a placa PARQUE SANTO DIAS fica do lado de fora do portão, na frente do gradil e dos pilares (na tela), virada para a rua, sem fechar a calçada', () => {
+    // (dentro do parque, atrás do pilar norte, o pilar ficava na frente dela e ela subia acima dele: o dono achou errado)
+    const placa = of('placa').find((o) => prop(o, 'texto') === 'PARQUE SANTO DIAS')!;
+    const { x, y } = at(placa);
+    expect(x).toBeGreaterThan(48); // fora do gradil
+    for (const p of of('pilar').filter((o) => Math.abs(o.x / M - 48) < 1)) expect(x + y, 'na frente do pilar, na tela').toBeGreaterThan((p.x + p.width + p.y + p.height) / M);
+    expect(prop(placa, 'olhando')).toBe(0); // virada para a rua (leste)
+    for (let yy = y - 1; yy <= y + 1; yy += 0.25) expect(footFree(49.1, yy), `calçada em y = ${yy}`).toBe(true);
+  });
+
+  it('as coisas do parque antigo estão lá: bebedouro, bancos de concreto, postes apagados, a academia e a pista de cimento', () => {
+    expect(of('bebedouro').length).toBe(1);
+    expect(of('banco').filter((o) => prop(o, 'material') === 'concreto').length).toBe(3);
+    expect(of('poste-praca').filter((o) => prop(o, 'apagado') === true).length).toBe(3);
+    expect(of('academia').map((o) => String(prop(o, 'aparelho'))).sort()).toEqual(['barra', 'remada', 'simulador-caminhada']);
+    expect(layer('chao').filter((o) => o.type === 'calcada' && prop(o, 'quebrada') === true).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('o poste do parque da entrada não fica, na tela, na mesma linha do poste de concreto do portão (os dois se confundiam)', () => {
+    const sx = (x: number, y: number) => (x - y) * Math.SQRT1_2;
+    const gate = of('poste').find((o) => Math.abs(at(o).x - 50.5) < 0.01 && Math.abs(at(o).y - 40) < 0.01)!;
+    for (const p of of('poste-praca').filter((o) => prop(o, 'apagado') === true)) {
+      expect(Math.abs(sx(at(p).x, at(p).y) - sx(at(gate).x, at(gate).y))).toBeGreaterThan(0.5);
+    }
+  });
+});
+
+describe('Mapa 01 (Capão): casas com interior (pedido do dono em 13/11: "dar vida para alguns interiores de casa")', () => {
+  const cenario = layer('cenario');
+  const chao = layer('chao');
+  const casa = (x0: number, y0: number) => cenario.find((o) => o.type === 'casa' && o.x / M === x0 && o.y / M === y0)!;
+  const HOUSES = [
+    { nome: 'amarela', casa: casa(81, 32), morador: 'familia', dentro: [83, 37] as const, moveis: ['pia', 'fogao', 'filtro', 'geladeira', 'mesa-cozinha', 'estante', 'sofa'] },
+    { nome: 'rosa', casa: casa(64, 33), morador: 'vo', dentro: [66, 37.5] as const, moveis: ['cristaleira', 'sofa', 'mesa-redonda', 'maquina-costura', 'cama', 'vaso'] },
+    { nome: 'abandonada', casa: casa(62, 13), morador: 'ninguem', dentro: [63.5, 17.5] as const, moveis: ['arvore', 'sofa'] },
+  ];
+  const inside = (o: TiledObject, h: TiledObject) => o.x >= h.x - 1e-6 && o.x + (o.width ?? 0) <= h.x + h.width + 1e-6 && o.y >= h.y - 1e-6 && o.y + (o.height ?? 0) <= h.y + h.height + 1e-6;
+
+  it('cada uma tem interior, piso, uma porta de 1,2 m na frente por onde dá para entrar, e paredes no resto', () => {
+    for (const { nome, casa: h, morador, dentro } of HOUSES) {
+      expect(prop(h, 'interior'), nome).toBe(true);
+      expect(prop(h, 'morador'), nome).toBe(morador);
+      const [d0, d1] = [Number(prop(h, 'portaDe')), Number(prop(h, 'portaAte'))];
+      expect(d1 - d0, `porta da ${nome}`).toBeCloseTo(1.2);
+      expect(chao.some((o) => o.type === 'piso' && inside(o, h)), `piso da ${nome}`).toBe(true);
+      const [x0, x1, y0, y1] = [h.x / M, (h.x + h.width) / M, h.y / M, (h.y + h.height) / M];
+      expect(reach((d0 + d1) / 2, y1 + 0.5), `na frente da porta da ${nome}`).toBe(true);
+      expect(reach((d0 + d1) / 2, y1 - 0.5), `logo depois da porta da ${nome}`).toBe(true);
+      expect(reach(dentro[0], dentro[1]), `lá dentro da ${nome}`).toBe(true);
+      // fora da porta, a frente é parede; os lados e o fundo também
+      for (let x = x0 + 0.2; x <= x1 - 0.2; x += 0.25) if (x < d0 - 0.35 || x > d1 + 0.35) expect(footFree(x, y1 - 0.05), `frente da ${nome} em x = ${x}`).toBe(false);
+      for (let y = y0 + 0.3; y <= y1 - 0.3; y += 0.5) for (const x of [x0 + 0.05, x1 - 0.05]) expect(footFree(x, y), `parede da ${nome} em (${x}, ${y})`).toBe(false);
+    }
+  });
+
+  it('os móveis de cada casa ficam lá dentro: a cozinha e a sala da família, a casa da vó e a árvore que nasceu na casa abandonada', () => {
+    for (const { nome, casa: h, moveis } of HOUSES) {
+      for (const t of moveis) expect(cenario.some((o) => o.type === t && inside(o, h)), `${t} na ${nome}`).toBe(true);
+    }
+    const [amarela, rosa, abandonada] = HOUSES.map((h) => h.casa);
+    expect(prop(cenario.find((o) => o.type === 'estante' && inside(o, amarela!))!, 'tv')).toBe(true);
+    expect(prop(cenario.find((o) => o.type === 'mesa-cozinha' && inside(o, amarela!))!, 'toalha')).toBe('xadrez');
+    expect(prop(cenario.find((o) => o.type === 'sofa' && inside(o, rosa!))!, 'croche')).toBe(true);
+    // o Joaquim (o gato da vó, com vida, da [estrutura]): dorme em cima do sofá e anda pelo lado de dentro da casa
+    const pontos = layer('pontos');
+    const sono = pontos.find((o) => o.name === 'joaquim')!;
+    const casaJ = pontos.find((o) => o.name === 'joaquim-casa')!;
+    expect(inside(sono, rosa!) && inside(casaJ, rosa!)).toBe(true);
+    expect(boxes.some((b) => b.type === 'sofa' && sono.x / M >= b.x0 && sono.x / M <= b.x1 && sono.y / M >= b.y0 && sono.y / M <= b.y1)).toBe(true);
+    expect(cenario.some((o) => o.type === 'gato')).toBe(false); // o gatinho parado do sofá saiu quando ele ganhou vida
+    expect(prop(cenario.find((o) => o.type === 'cama' && inside(o, rosa!))!, 'colcha')).toBe('retalhos');
+    const tree = cenario.find((o) => o.type === 'arvore' && inside(o, abandonada!))!;
+    expect(prop(tree, 'dentroDaCasa')).toBe(true);
+    expect(boxes.some((b) => b.type === 'tronco' && Math.abs((b.x0 + b.x1) / 2 - at(tree).x) < 0.01)).toBe(true);
+    expect(prop(cenario.find((o) => o.type === 'sofa' && inside(o, abandonada!))!, 'rasgado')).toBe(true);
+    expect(chao.some((o) => o.type === 'colchao' && inside(o, abandonada!))).toBe(true);
   });
 });
