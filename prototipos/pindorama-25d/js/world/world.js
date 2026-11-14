@@ -50,6 +50,49 @@
       this.petals = [];
       this.sparks = [];
       this.order = null;
+      // o vento (lote 2 da lista do dono, 14/11): a força (0 = parado, 1 = vento forte) vem da [estrutura] (setWind);
+      // até lá, uma brisa. `angle`: para onde ele sopra, no chão (o padrão vai para a direita da tela)
+      this.wind = { strength: 0.35, angle: -Math.PI / 4 };
+      this._windScreen = null;
+    }
+
+    /** O vento: `strength` de 0 (parado) a 1 (forte) e, se vier, `angle` (para onde sopra, em graus no chão). */
+    setWind(strength, angle) {
+      const s = Number(strength);
+      this.wind.strength = isFinite(s) ? M.clamp(s, 0, 1.5) : this.wind.strength;
+      if (angle != null && isFinite(Number(angle))) {
+        this.wind.angle = (Number(angle) * Math.PI) / 180;
+        this._windScreen = null;
+      }
+    }
+
+    /**
+     * O empurrão do vento num ponto do chão (cm) no instante `t` (s): a força com as rajadas, que viajam no sentido do
+     * vento (as árvores vizinhas cedem uma depois da outra, e não todas juntas). De 0 a uns 1,3 × a força.
+     */
+    windAt(x, y, t) {
+      const w = this.wind;
+      const s = w.strength;
+      if (s <= 0) return 0;
+      const ca = Math.cos(w.angle), sa = Math.sin(w.angle);
+      const along = x * ca + y * sa;
+      const across = x * sa - y * ca;
+      const v = 150 + s * 300; // cm/s: com vento forte, as rajadas passam mais depressa
+      const g1 = Math.sin(M.TAU * ((along - t * v) / 2600));
+      const g2 = Math.sin(M.TAU * ((along - t * v * 1.3) / 950) + 1.7 + across / 1700);
+      const gust = M.clamp(0.5 + 0.38 * g1 + 0.22 * g2, 0, 1);
+      return s * (0.55 + 0.75 * gust * gust);
+    }
+
+    /** Para onde o vento sopra, na tela (vetor de tamanho 1). */
+    windScreen() {
+      if (this._windScreen) return this._windScreen;
+      const a = this.wind.angle;
+      const p0 = this.cam.p({ x: 0, y: 0, z: 0 });
+      const p1 = this.cam.p({ x: Math.cos(a) * 100, y: Math.sin(a) * 100, z: 0 });
+      const l = Math.hypot(p1.x - p0.x, p1.y - p0.y) || 1;
+      this._windScreen = { x: (p1.x - p0.x) / l, y: (p1.y - p0.y) / l };
+      return this._windScreen;
     }
 
     _build() {
@@ -297,12 +340,14 @@
           this.petals.push({ x: tr.x + Math.cos(a) * d, y: tr.y + Math.sin(a) * d, z: tr.h * 0.8 + Math.random() * 60, t: 0, spin: Math.random() * M.TAU, seed: Math.random() * 10 });
         }
       }
+      // (o vento leva as pétalas: mais longe e mais depressa quando ele é forte)
+      const wv = 30 + this.wind.strength * 150, wca = Math.cos(this.wind.angle), wsa = Math.sin(this.wind.angle);
       for (const p of this.petals) {
         p.t += dt;
         p.z -= 38 * dt;
-        p.x += (60 + Math.sin(t * 1.3 + p.seed) * 40) * dt;
-        p.y += (-25 + Math.cos(t * 1.7 + p.seed) * 30) * dt;
-        p.spin += dt * 3;
+        p.x += (wca * wv + Math.sin(t * 1.3 + p.seed) * 40) * dt;
+        p.y += (wsa * wv + Math.cos(t * 1.7 + p.seed) * 30) * dt;
+        p.spin += dt * (3 + this.wind.strength * 4);
       }
       this.petals = this.petals.filter((p) => p.z > 14);
       // faíscas do círculo do despertar

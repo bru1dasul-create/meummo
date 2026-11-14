@@ -844,6 +844,13 @@ andando, (10) floresta dentro das casas.
   `grid-area` (bordunada, fôlego / pulo, esquiva); a mochila em cima do tiro (deitado) ou do 2x2 (em pé); deitado, a
   defesa e os frascos andam 100 px para a esquerda; em pé ficam (a metade esquerda é do joystick). Conferir:
   `celular-barra.cjs` (scratchpad): computador, deitado e em pé, com as caixas de cada botão.
+- **(7) Árvores no vento** (parte da arte; a força vem da [estrutura]): `World.wind` ({ strength, angle }), `setWind`,
+  `windAt(x, y, t)` (força × (0,55 + 0,75 × rajada²); as rajadas são duas ondas que andam no sentido do vento, a 1,5 a
+  4,5 m/s) e `windScreen()` (o sentido na tela). `TreeCanopy._sway`: a mola do empurrão (2,4/s), o ritmo de cada árvore
+  (0,45 a 0,95 Hz, as altas mais devagar) e a inclinação; o `draw` desenha a imagem pronta em 6 faixas (o alto vai
+  mais; meio apagada ou quase parada, inteira). `PD.View.setWind(força, ângulo)`. Medido no zoom 1 (6 copas): parado
+  1,1 px, brisa 2,6, forte 8,9; quadro médio 22 a 27 ms, igual ao jogo parado. Conferir: `vento.cjs` (scratchpad),
+  que grava o vídeo com a legenda e mede.
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
