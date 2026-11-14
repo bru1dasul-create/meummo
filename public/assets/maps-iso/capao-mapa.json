@@ -4,16 +4,28 @@
   "altura": 120,
   "nomes": [
     {
+      "nome": "Vila do Capão",
+      "x": 72,
+      "y": 40,
+      "tipo": "vila"
+    },
+    {
+      "nome": "Portão I",
+      "x": 48,
+      "y": 44,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Budega",
+      "x": 64.5,
+      "y": 51,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Clareira dos Despertos",
       "x": 37,
       "y": 43,
       "tipo": "clareira"
-    },
-    {
-      "nome": "Mata do Parque Santo Dias",
-      "x": 24,
-      "y": 60,
-      "tipo": "mata"
     },
     {
       "nome": "Lago do Parque",
@@ -40,10 +52,10 @@
       "tipo": "mata"
     },
     {
-      "nome": "Vila do Capão",
-      "x": 72,
-      "y": 40,
-      "tipo": "vila"
+      "nome": "Mata do Parque Santo Dias",
+      "x": 24,
+      "y": 60,
+      "tipo": "mata"
     },
     {
       "nome": "Figueira dos Despertos",
@@ -55,18 +67,6 @@
       "nome": "Pedra do Véu",
       "x": 7.5,
       "y": 9.5,
-      "tipo": "lugar"
-    },
-    {
-      "nome": "Portão I",
-      "x": 48,
-      "y": 44,
-      "tipo": "lugar"
-    },
-    {
-      "nome": "Budega",
-      "x": 64.5,
-      "y": 51,
       "tipo": "lugar"
     },
     {
