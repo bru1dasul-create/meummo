@@ -968,6 +968,25 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
+- **Pedidos novos das frentes (14/11, esperando o dono escolher a ordem):**
+  - **Os quatro bichos novos** (main 7d6a75f, protocolo 34; hoje saem como boneco de gente com o nome): `quati`
+    (bando de 4, focinho comprido, rabo listrado em pé; golpe 'bite'), `tatu_bola` (carapaça em gomos; 'charge' =
+    vira bola, rola e abre; 'block' = a casca segurou o golpe de frente, o "tlinc"; 'dizzy' = desenrola tonto, 2 s),
+    `marimbondo` (enxame de 4 a 6 vespas em volta de um centro; 'spin' = ferroada em volta; 'dodge' = a pedra passou
+    pelo meio, as vespas se espalham) e `filhote_boitata` (cobra pequena de fogo azulado e laranja, olhos acesos; 'charge'
+    com o rastro de fogo da Mula; 'vanish' = vai embora ao amanhecer: a [estrutura] atrasa o despawn uns 600 ms se eu
+    pedir). Criar pelo menu ADM (tecla G; o boitatá só de noite).
+  - **Dia e noite** (main 95bfcf3, protocolo 33): `setTimeOfDay({ light, night })` no `WorldView` (light de 1 a 0 em
+    passos de 0,01, o anoitecer e o amanhecer em 1 minuto; `night` = olhos vermelhos em todos os bichos). Testar: ADM
+    "Virar dia"/"Virar noite" e `window.__mundoNovo.time()`. Lampiões: quando o [mundo] marcar.
+  - **Floresta maior do [mundo]** (`mundo/floresta-maior`, c795246; o Capão vai a 96 × 180 m): só entra na main com o meu
+    desenho: `arvore` `especie: 'paineira'` (tronco de garrafa com espinhos, copa de flor rosa `flores`, pétalas no
+    chão); `parquinho` (`brinquedo` 'balanco' com `quebrado`, 'escorregador' com `olhando`, 'gira-gira' com `plantas`;
+    `ferrugem`, `cipo`); `cachoeira` (pedras de onde o riacho cai: `altura`, `queda`, `musgo`); `pinguela` com `pedras`;
+    o posto abandonado: `cobertura` (some ou fica transparente com o herói embaixo/atrás, como o telhado; `pilares`,
+    `mato`, `cipo`, `arvoresNoTopo`), `bomba`, `pneus` (`pilha`), a lojinha `casa` com `posto`, `vitrineQuebrada` (porta de
+    enrolar meio aberta) e a `placa` grande em branco `torta`; o `gradil` com `estado: 'quebrado'`. Referências no ramo
+    dele: `docs/referencias/floresta-maior-*.jpg`.
 0. Pintar o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
    - Opcional: restilizar os itens dos bichos no chão (hoje o desenho provisório da [estrutura], `drawDrops` no
      `combat.ts`: o ícone do item caindo com quique, "×N", brilho dourado no raro, laranja com facho no lendário).
