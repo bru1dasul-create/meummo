@@ -557,8 +557,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   desenha a janela e o mini mapa
 
 **Sistemas:**
-- [ ] **[estrutura + arte]** Dia e noite: à noite os bichos ficam mais fortes e dão mais XP e ouro; olhos vermelhos (a
-  [arte]); lampiões (o [mundo] marca, a [arte] acende)
+- [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
+  para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
+  e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
+  mata troca os passarinhos pelos grilos e a coruja; o desenho provisório escurece (protocolo 33)
+- [ ] **[arte]** O desenho da noite: escurecer com `view.setTimeOfDay({ light, night })` (luz de 1 a 0, o anoitecer e o
+  amanhecer suaves) e os olhos vermelhos em todos os bichos enquanto `night`; lampiões acesos (o [mundo] marca)
 - [x] **[estrutura]** Drop de itens nos bichos (14/11, escolha do dono: "no chão, como o ouro"): os itens caem em volta do
   bicho, com o desenho de cada um (caindo com quique, "×2", brilho no raro e facho de luz no lendário), e você pega
   passando por cima; ficam 2 minutos; com a mochila cheia, esperam no chão

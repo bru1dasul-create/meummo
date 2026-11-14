@@ -152,8 +152,9 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   que já fez (se a quantidade baixar, já pode entregar). Quem dá a missão e a ordem delas ficam em `data/missoes.json`.
 - **Combate:** a **pedra com carga** (tempo para carregar, dano e alcance com a carga cheia), a **defesa** (quanto do
   golpe segura, o ângulo que cobre, o tempo para subir, a energia que gasta e que volta, o tempo quebrada e a
-  velocidade andando com ela) e quanto do **empurrão** a defesa segura. Vale na hora para quem está jogando; o
-  empurrão de cada monstro fica na aba Monstros.
+  velocidade andando com ela), quanto do **empurrão** a defesa segura e o **dia e noite** (quanto dura cada um e o
+  quanto os bichos mudam à noite: vida, dano, XP e ouro). Vale na hora para quem está jogando; o empurrão de cada
+  monstro fica na aba Monstros.
 - **Loja e personagens:** o que cada um diz, **onde fica** (mapa, x e y — com vírgula no mapa novo, em metros), o que
   vende e quanto paga pelo que você vende. Mais fácil para mudar o lugar: no jogo, menu ADM → **Trazer para cá**
   (o personagem vem para onde você está e fica salvo; "voltar ao padrão" no painel devolve ao lugar dele).
@@ -243,6 +244,14 @@ Cada lugar do Capão tem a sua música (licença livre, CC0; créditos em
 [`public/assets/audio/musica/CREDITOS.md`](public/assets/audio/musica/CREDITOS.md)): a vila, a mata (e a clareira e o
 lago) e a Mata Profunda. A troca é devagar, e o volume da música se ajusta no painel do som (🔊). Para trocar uma
 música, ponha o arquivo novo na mesma pasta com o mesmo nome e anote a licença na tabela de créditos.
+
+## Dia e noite
+
+O mundo tem um relógio só, igual em todos os mapas: **30 minutos de dia e 10 de noite**, de verdade (continua de
+onde estava quando o servidor reinicia). Escurece devagar no fim do dia e clareia no começo. **À noite os bichos ficam
+25% mais fortes** (vida e dano) **e dão 50% a mais de XP e ouro**; o som da mata troca os passarinhos pelos grilos e
+pela coruja. Os números mudam no painel (Combate → Dia e noite). Para testar sem esperar: menu ADM no jogo (tecla G)
+→ **Virar dia** / **Virar noite**.
 
 ## Bichos de estimação (sem programar)
 

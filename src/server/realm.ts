@@ -9,6 +9,8 @@ import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import type { GmCommand, ItemAction, QuestAction, ServerMsg } from '../shared/protocol';
 import type { ItemInfo } from '../shared/items';
 import type { TuningFile } from './tuning';
+import { defaultCombatRules } from '../shared/combatRules';
+import { DayNightClock } from './dayNight';
 import { World, type Conn, type JoinProfile, type JoinResult, type Player, type WorldLinks, type WorldOptions } from './world';
 
 export type RealmOptions = Omit<WorldOptions, 'links'> & {
@@ -83,9 +85,11 @@ export class Realm {
         return true;
       },
     };
+    // um sol só: o mesmo relógio do dia e noite em todos os mapas
+    const dayNight = options.dayNight ?? new DayNightClock(options.combat ?? defaultCombatRules(), options.now ?? Date.now);
     for (const map of maps) {
       if (this.worlds.has(map.id)) throw new Error(`Dois mapas com o mesmo id: "${map.id}".`);
-      this.worlds.set(map.id, new World(map, { ...options, links }));
+      this.worlds.set(map.id, new World(map, { ...options, links, dayNight }));
     }
     if (options.startMap && !this.worlds.has(options.startMap)) {
       throw new Error(`O mapa inicial "${options.startMap}" não existe. Use um destes: ${[...this.worlds.keys()].join(', ')}.`);

@@ -1,5 +1,5 @@
-// Números do combate que o administrador ajusta no painel (aba "Combate"): a pedra com carga, a defesa e o quanto a
-// defesa segura do empurrão. O padrão (revisão 17 do protótipo) está em constants.ts. O servidor manda os números
+// Números do combate que o administrador ajusta no painel (aba "Combate"): a pedra com carga, a defesa, o quanto a
+// defesa segura do empurrão e o dia e noite (quanto dura cada um e o quanto os bichos ficam mais fortes à noite). O padrão (revisão 17 do protótipo) está em constants.ts. O servidor manda os números
 // para o navegador ao entrar e quando mudam: o navegador usa os mesmos (o andar com a defesa precisa bater com o do
 // servidor; o anel da carga e o arco da defesa mostram o que vale).
 
@@ -8,6 +8,7 @@ import {
   CHARGE_FULL_MS,
   CHARGE_RANGE_MAX,
   CHARGE_RANGE_MIN,
+  DAY_MS,
   GUARD_BREAK_MS,
   GUARD_BREAK_PUSH_FACTOR,
   GUARD_DAMAGE_FACTOR,
@@ -21,6 +22,11 @@ import {
   GUARD_REGEN_DELAY_MS,
   GUARD_REGEN_PER_S,
   GUARD_WALK_FACTOR,
+  NIGHT_DAMAGE_FACTOR,
+  NIGHT_GOLD_FACTOR,
+  NIGHT_HP_FACTOR,
+  NIGHT_MS,
+  NIGHT_XP_FACTOR,
 } from './constants';
 
 export interface CombatRules {
@@ -53,6 +59,14 @@ export interface CombatRules {
   /** O que passa do empurrão: com a defesa que segura o golpe e com a que quebra nele. */
   guardPushFactor: number;
   guardBreakPushFactor: number;
+  /** Dia e noite: quanto dura cada um (ms). Sem noite (0), é sempre dia. */
+  dayMs: number;
+  nightMs: number;
+  /** À noite: vida e dano dos bichos × estes; a XP e o ouro de quem derruba um bicho de noite, × estes. */
+  nightHpFactor: number;
+  nightDamageFactor: number;
+  nightXpFactor: number;
+  nightGoldFactor: number;
 }
 
 export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
@@ -73,6 +87,12 @@ export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
   guardWalkFactor: GUARD_WALK_FACTOR,
   guardPushFactor: GUARD_PUSH_FACTOR,
   guardBreakPushFactor: GUARD_BREAK_PUSH_FACTOR,
+  dayMs: DAY_MS,
+  nightMs: NIGHT_MS,
+  nightHpFactor: NIGHT_HP_FACTOR,
+  nightDamageFactor: NIGHT_DAMAGE_FACTOR,
+  nightXpFactor: NIGHT_XP_FACTOR,
+  nightGoldFactor: NIGHT_GOLD_FACTOR,
 });
 
 /** Uma cópia dos números padrão (para mudar sem mexer no padrão). */

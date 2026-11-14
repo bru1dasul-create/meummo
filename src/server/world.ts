@@ -72,6 +72,7 @@ import type { AreaDef } from './tuning';
 import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
+import { DayNightClock } from './dayNight';
 import type { NpcDef, NpcShop } from './npcs';
 import { Pet, petHome, type PetDef } from './pets';
 import { sanitizeChat } from './validate';
@@ -132,6 +133,8 @@ export interface WorldOptions {
   combat?: CombatRules;
   /** Bichos de estimação (data/bichos.json); cada mapa fica com os seus (o Joaquim mora no Capão). */
   pets?: ReadonlyMap<string, PetDef>;
+  /** O relógio do dia e noite (o reino passa o mesmo para todos os mapas); sem isto, um só deste mapa. */
+  dayNight?: DayNightClock;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -194,6 +197,10 @@ export class World {
   readonly quests: ReadonlyMap<string, QuestInfo>;
   /** Números do combate (o painel muda no lugar: o mundo sempre lê o valor de agora). */
   readonly combat: CombatRules;
+  /** O relógio do dia e noite (o mesmo em todos os mapas). */
+  readonly dayNight: DayNightClock;
+  /** É noite agora (os bichos estão mais fortes)? Conferido a cada tick. */
+  private night: boolean;
   /** Os bichos deste mapa (o Joaquim): andam sozinhos e nunca são alvo. */
   readonly pets = new Map<number, Pet>();
   /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
@@ -227,6 +234,8 @@ export class World {
     this.items = options.items ?? new Map();
     this.quests = options.quests ?? new Map();
     this.combat = options.combat ?? defaultCombatRules();
+    this.dayNight = options.dayNight ?? new DayNightClock(this.combat, options.now ?? Date.now);
+    this.night = this.dayNight.isNight();
     this.npcDefs = options.npcs ?? new Map();
     let ids = 1;
     this.links = options.links ?? {
@@ -413,6 +422,7 @@ export class World {
         quests: [...this.quests.values()],
         questLog: { ...player.quests },
         combat: { ...this.combat },
+        time: Math.round(this.dayNight.position()),
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
@@ -607,6 +617,15 @@ export class World {
         const text = this.gmSpawn(player, cmd.monster, cmd.n);
         say(text);
         this.log(`ADM ${player.name}: ${text} (${this.map.name}, ${player.x}, ${player.y})`);
+        return;
+      }
+      case 'time': {
+        // vira o relógio (vale para todos os mapas); cada mapa acerta os bichos no próximo tick
+        this.dayNight.turnTo(cmd.phase);
+        this.links.announce({ t: 'time', at: Math.round(this.dayNight.position()) });
+        this.updateNight();
+        say(cmd.phase === 'noite' ? 'virou noite (os bichos ficam mais fortes).' : 'virou dia.');
+        this.log(`ADM ${player.name}: virou ${cmd.phase}`);
         return;
       }
       case 'clear': {
@@ -873,7 +892,8 @@ export class World {
    */
   private giveLoot(player: Player, monster: Monster, now: number): void {
     const [goldMin, goldMax] = monster.def.gold;
-    const gold = goldMax > 0 ? this.rollRange(goldMin, goldMax) : 0;
+    const rolled = goldMax > 0 ? this.rollRange(goldMin, goldMax) : 0;
+    const gold = this.night ? Math.round(rolled * this.combat.nightGoldFactor) : rolled;
     const items: ItemStack[] = [];
     for (const drop of monster.def.drops) {
       if (this.random() * 100 >= drop.chance) continue;
@@ -1039,13 +1059,40 @@ export class World {
 
   /** A vida dos monstros mudou no painel: os que estão no mapa acompanham (na mesma proporção). */
   refreshMonsters(): void {
-    for (const monster of this.monsters.values()) {
-      const max = monster.def.hp;
-      if (max === monster.maxHp) continue;
-      monster.hp = Math.max(1, Math.min(max, Math.round((monster.hp / monster.maxHp) * max)));
-      monster.maxHp = max;
-      this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
-    }
+    for (const monster of this.monsters.values()) this.fitMonsterHp(monster);
+  }
+
+  // ======================= dia e noite =======================
+
+  /** O dia virou noite (ou a noite virou dia): os bichos mudam de força, e quem está aqui acerta o relógio. */
+  private updateNight(): void {
+    const night = this.dayNight.isNight();
+    if (night === this.night) return;
+    this.night = night;
+    for (const monster of this.monsters.values()) this.fitMonsterHp(monster);
+    const at = Math.round(this.dayNight.position());
+    for (const player of this.players.values()) player.outbox.push({ t: 'time', at });
+    this.log(`${this.map.name}: ${night ? 'anoiteceu' : 'amanheceu'}`);
+  }
+
+  /** A vida máxima do bicho agora (à noite, × nightHpFactor). */
+  private monsterMaxHp(def: MonsterDef): number {
+    return Math.max(1, Math.round(def.hp * (this.night ? this.combat.nightHpFactor : 1)));
+  }
+
+  /** Acerta a vida máxima do bicho (painel, dia ou noite), mantendo a proporção da vida que ele tem. */
+  private fitMonsterHp(monster: Monster): void {
+    const max = this.monsterMaxHp(monster.def);
+    if (max === monster.maxHp) return;
+    monster.hp = Math.max(1, Math.min(max, Math.round((monster.hp / monster.maxHp) * max)));
+    monster.maxHp = max;
+    this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
+  }
+
+  /** O dano de um golpe de bicho (e do fogo que ele deixa): sorteado na faixa e, à noite, × nightDamageFactor. */
+  private monsterDamage(range: readonly [number, number]): number {
+    const base = this.rollRange(range[0], range[1]);
+    return this.night ? Math.max(1, Math.round(base * this.combat.nightDamageFactor)) : base;
   }
 
   /** Os itens mudaram no painel: refaz o que os equipamentos somam e manda a lista nova para quem está aqui. */
@@ -1093,7 +1140,11 @@ export class World {
   /** O painel mudou os números do combate: quem está jogando recebe os novos (o navegador usa os mesmos). */
   refreshCombat(): void {
     const rules = { ...this.combat };
-    for (const player of this.players.values()) player.outbox.push({ t: 'combat', rules });
+    const at = Math.round(this.dayNight.position()); // o dia ou a noite pode ter mudado de tamanho
+    for (const player of this.players.values()) player.outbox.push({ t: 'combat', rules }, { t: 'time', at });
+    // talvez tenha virado (ou a força da noite mudou): os bichos acompanham
+    this.night = this.dayNight.isNight();
+    for (const monster of this.monsters.values()) this.fitMonsterHp(monster);
   }
 
   /** O painel mudou as missões (textos, objetivo, recompensa): quem está jogando recebe a lista nova. */
@@ -1267,6 +1318,7 @@ export class World {
     const dt = Math.min(0.1, Math.max(0, (now - this.lastTickAt) / 1000));
     this.lastTickAt = now;
 
+    this.updateNight();
     for (const player of this.players.values()) this.updatePlayer(player, now);
     this.updateProjectiles(dt, now);
     for (const monster of [...this.monsters.values()]) {
@@ -1713,6 +1765,7 @@ export class World {
     const tile = this.freeTileInZone(zone);
     if (!tile) return false;
     const monster = new Monster(this.links.nextId(), zone.def, zone, tile.x, tile.y);
+    monster.maxHp = monster.hp = this.monsterMaxHp(zone.def); // nasceu de noite: já mais forte
     monster.nextWanderAt = this.now() + this.random() * 3000;
     this.monsters.set(monster.id, monster);
     this.monsterAt.set(this.tileKey(tile.x, tile.y), monster.id);
@@ -1740,11 +1793,12 @@ export class World {
     for (const player of this.players.values()) {
       if (player.known.delete(monster.id)) player.outbox.push({ t: 'death', id: monster.id });
     }
-    // Todo mundo que ajudou leva a XP inteira (incentiva caçar em grupo).
+    // Todo mundo que ajudou leva a XP inteira (incentiva caçar em grupo); de noite, mais XP (e mais ouro, no giveLoot).
+    const xp = this.night ? Math.round(monster.def.xp * this.combat.nightXpFactor) : monster.def.xp;
     for (const id of monster.contributors) {
       const player = this.players.get(id);
       if (!player || player.dead) continue;
-      this.giveXp(player, monster.def.xp);
+      this.giveXp(player, xp);
       this.giveLoot(player, monster, now);
       this.countQuestKill(player, monster.def.id);
     }
@@ -1923,7 +1977,7 @@ export class World {
       // Mira onde o alvo está agora: o projétil é lento e dá para desviar.
       const target = monster.targetId !== null ? this.players.get(monster.targetId) : undefined;
       const angle = target && !target.dead ? angleBetween(monster, spotOf(target)) : windup.angle;
-      this.spawnProjectile(monster, angle, attack.speed, attack.range + 1.5, this.rollRange(...attack.damage), attack.projectile);
+      this.spawnProjectile(monster, angle, attack.speed, attack.range + 1.5, this.monsterDamage(attack.damage), attack.projectile);
       return;
     }
 
@@ -1932,7 +1986,7 @@ export class World {
     if (windup.kind === 'charge') return this.resolveCharge(monster, windup.tiles, now);
     for (const player of [...this.players.values()]) {
       if (!player.dead && tileIn(windup.tiles, player.x, player.y)) {
-        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)), attack.pushCm / 100);
+        this.damage(player, this.monsterDamage(attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)), attack.pushCm / 100);
       }
     }
     // Saci: depois do giro, some num redemoinho.
@@ -1953,7 +2007,7 @@ export class World {
     const run = path.slice(0, last + 1);
     for (const player of [...this.players.values()]) {
       if (!player.dead && tileIn(run, player.x, player.y)) {
-        this.damage(player, this.rollRange(...attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)), attack.pushCm / 100);
+        this.damage(player, this.monsterDamage(attack.damage), monster.id, now, angleBetween(spotOf(monster), spotOf(player)), attack.pushCm / 100);
       }
     }
     // não para em cima de ninguém: se tem gente no fim, para um tile antes
@@ -1985,7 +2039,7 @@ export class World {
       if (now < hazard.nextPulseAt) continue;
       hazard.nextPulseAt += FIRE_PULSE_MS;
       for (const player of [...this.players.values()]) {
-        if (!player.dead && tileIn(hazard.tiles, player.x, player.y)) this.damage(player, this.rollRange(...hazard.damage), hazard.ownerId, now);
+        if (!player.dead && tileIn(hazard.tiles, player.x, player.y)) this.damage(player, this.monsterDamage(hazard.damage), hazard.ownerId, now);
       }
     }
   }

@@ -317,7 +317,7 @@ describe('números do combate pelo painel', () => {
     expect(tuning.combat).toEqual(DEFAULT_COMBAT_RULES); // de % e graus de volta aos números do jogo, sem perder nada
     const group = tuning.view().grupos.find((g) => g.arquivo === 'combate')!;
     expect(group.titulo).toBe('Combate');
-    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo']);
+    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo', 'noite']);
     const value = (part: number, field: string) => group.lista[part]!.campos.find((c) => c.campo === field)!.valor;
     expect(group.lista[0]!.campos.map((c) => [c.campo, c.valor])).toEqual([
       ['tempoMs', 1100],
@@ -330,6 +330,15 @@ describe('números do combate pelo painel', () => {
     expect(value(1, 'andarPorcento')).toBe(70);
     expect(value(2, 'defesaSeguraPorcento')).toBe(75);
     expect(value(2, 'defesaQuebradaPorcento')).toBe(50);
+    // dia e noite (decisão do dono, 14/11): 30 min de dia, 10 de noite; à noite, bichos 25% mais fortes e 50% mais XP e ouro
+    expect(group.lista[3]!.campos.map((c) => [c.campo, c.valor])).toEqual([
+      ['diaMinutos', 30],
+      ['noiteMinutos', 10],
+      ['vidaPorcento', 125],
+      ['danoPorcento', 125],
+      ['xpPorcento', 150],
+      ['ouroPorcento', 150],
+    ]);
   });
 
   it('confere os limites e muda no lugar (o mundo lê o mesmo objeto)', () => {

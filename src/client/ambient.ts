@@ -45,6 +45,11 @@ const MIXES: Record<AmbientScene, SceneMix> = {
   agua: { wind: 0.2, leaves: 0.15, water: 1, hum: 0, perMinute: { ...none, chirp: 2, sabia: 0.5, frog: 3, drop: 8 } },
 };
 
+/** De noite: os passarinhos e as cigarras dormem; os grilos e a coruja aparecem (e o sapo, na água, continua). */
+function nightCalls(day: Record<CallKind, number>): Record<CallKind, number> {
+  return { ...day, bemtevi: 0, sabia: 0, chirp: 0, cicada: 0, crickets: Math.max(day.crickets, 3), owl: Math.max(day.owl, 0.6) };
+}
+
 /** Volume máximo de cada som contínuo (os bichos têm o seu em cada receita). */
 const BED_GAIN = { wind: 0.22, leaves: 0.05, water: 0.16, hum: 0.025 };
 /** Troca de lugar: quanto tempo (s) leva a mistura nova (constante de tempo). */
@@ -62,6 +67,8 @@ interface Beds {
 export class Ambient {
   private beds: Beds | null = null;
   private scene: AmbientScene | null = null;
+  /** É noite (os bichos da noite no lugar dos passarinhos)? */
+  private night = false;
   private readonly nextAt: Record<CallKind, number> = { ...none };
   private lastCheck = 0;
 
@@ -78,10 +85,26 @@ export class Ambient {
   setScene(scene: AmbientScene): void {
     if (scene === this.scene) return;
     this.scene = scene;
-    // os bichos do lugar novo aparecem logo (não esperam a vez do lugar antigo)
+    this.soon();
+    this.mix();
+  }
+
+  /** Anoiteceu (ou amanheceu): os bichos da hora entram logo. */
+  setNight(night: boolean): void {
+    if (night === this.night) return;
+    this.night = night;
+    this.soon();
+  }
+
+  /** É noite no som? (para os testes) */
+  get isNight(): boolean {
+    return this.night;
+  }
+
+  /** Os bichos do lugar (e da hora) novos aparecem logo (não esperam a vez dos de antes). */
+  private soon(): void {
     const now = performance.now() / 1000;
     for (const kind of CALLS) this.nextAt[kind] = now + 1 + this.random() * 4;
-    this.mix();
   }
 
   /** A cada quadro: começa quando o som do navegador estiver liberado (depois do primeiro toque) e chama os bichos. */
@@ -96,9 +119,10 @@ export class Ambient {
       this.mix();
     }
     const mix = MIXES[this.scene];
+    const perMinute = this.night ? nightCalls(mix.perMinute) : mix.perMinute;
     for (const kind of CALLS) {
       if (now < this.nextAt[kind]) continue;
-      const rate = mix.perMinute[kind];
+      const rate = perMinute[kind];
       if (rate > 0 && !this.sfx.muted) this.call(kind, audio.ctx, audio.out('ambiente'));
       // o próximo: em média `60 / rate` segundos (sem padrão fixo, como na natureza)
       this.nextAt[kind] = now + (rate > 0 ? Math.max(2, -Math.log(1 - this.random()) * (60 / rate)) : 5);
