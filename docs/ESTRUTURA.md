@@ -79,6 +79,15 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — formato do mapa da tecla M (combinado com o [mundo]):** uma imagem por mapa, vista de cima com o norte
+para cima e sem texto, `public/assets/maps-iso/<id>-mapa.png`, e `<id>-mapa.json` = `{ escala (px por metro; 8 no
+Capão), largura, altura (metros), nomes: [{ nome, x, y, tipo? }] }`, os dois feitos pelo gerador do [mundo]. A [arte]
+mostra a imagem girada para bater com a câmera isométrica (no mapa e no mini mapa) e escreve os nomes. O "explorado" é
+meu: salvo no personagem (passo novo em `MIGRATIONS`), numa grade de quadradinhos de alguns metros por mapa. A [arte]
+combina os outros formatos quando cada item chegar: `view.setWind(forca)`, a hora do dia e a marca dos olhos vermelhos.
+Pendente do dono: como o drop de itens deve funcionar (no chão como o ouro, ou voando para a mochila) e se o pulo faz
+algo no jogo.
+
 **14/11 — flecha presa na árvore (as regras):** `SolidRect.kind` (o tipo do objeto da `colisao` no Tiled) e
 `GameMap.shotBlockerAt(x, y)` (o tipo do que segura o tiro, 'bloco' sem tipo, 'borda' fora do mapa). O `advanceShot`
 volta até a beirada quando bate (8 metades, ~1 mm). `shot_end` ganhou `x`, `y` (onde parou, sem acertar ninguém) e
