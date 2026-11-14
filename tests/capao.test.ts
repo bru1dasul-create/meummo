@@ -119,8 +119,8 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
     expect(footFree(42.5, 44.5)).toBe(true);
   });
 
-  it('tem 96 × 120 metros (o parque cresceu para o sul), tile de 32 px e as camadas combinadas', () => {
-    expect([map.width, map.height, map.tilewidth, map.tileheight]).toEqual([96, 120, 32, 32]);
+  it('tem 96 × 180 metros (o parque cresceu duas vezes para o sul), tile de 32 px e as camadas combinadas', () => {
+    expect([map.width, map.height, map.tilewidth, map.tileheight]).toEqual([96, 180, 32, 32]);
     // a camada "monstros" só aparece quando as criaturas estão ligadas no gerador (CREATURES)
     expect(map.layers.map((l) => l.name).filter((n) => n !== 'monstros')).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos']);
     expect(map.layers.every((l) => l.type === 'objectgroup')).toBe(true);
@@ -208,10 +208,11 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
   }
   for (let x = 0; x < 48; x += 1) for (let y = 0; y < map.height; y += 1) if (inPolygon(x, y, lake)) keys.push([x, y]);
 
-  it('o parque cresceu para o sul (48 × 120 m) e o pedaço ao sul da vila é mata fechada, onde ninguém chega', () => {
-    expect(map.height).toBe(120);
-    expect(reachNear(30, 112, 2)).toBe(true); // o fundo do parque
-    expect(reach(70, 100)).toBe(false); // a mata fechada ao sul da vila
+  it('o parque cresceu para o sul (48 × 180 m na floresta maior) e a mata ao sul da vila virou mata de andar', () => {
+    expect(map.height).toBe(180);
+    expect(reachNear(30, 112, 2)).toBe(true); // o fundo do parque de antes
+    expect(reachNear(30, 170, 2)).toBe(true); // o fundo novo
+    expect(reachNear(70, 100, 2)).toBe(true); // a mata da estrada, ao sul da vila (antes, mata fechada)
   });
 
   it('dá para andar por todas as trilhas, mas não entrar no lago nem no riacho', () => {
@@ -228,15 +229,18 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     for (const o of tall) {
       const { x, y } = at(o);
       const fig = prop(o, 'especie') === 'figueira';
+      const paineira = prop(o, 'especie') === 'paineira';
       const copa = o.type === 'bambu' ? Number(prop(o, 'raio')) * 1.3 : Number(prop(o, 'copa'));
       const [cx, cy] = screen(x, y, Number(prop(o, 'altura')));
       for (const [kx, ky] of keys) {
         if ((fig && Math.hypot(kx - 37, ky - 43) <= 9.01) || kx + ky >= x + y) continue; // só cobre o que está atrás dela
+        if (paineira && Math.hypot(kx - 32, ky - 150) <= 6.51) continue; // a paineira cobre a clareira dela
         const [sx, sy] = screen(kx, ky);
         if (Math.hypot(sx - cx, sy - cy) < copa * 1.05) bad.push(`${o.type} ${prop(o, 'especie') ?? ''} em (${x}, ${y}) tampa (${kx.toFixed(1)}, ${ky.toFixed(1)})`);
       }
-      // de cima: a copa não fica por cima da trilha (a figueira, colada no círculo, é a exceção)
-      if (o.type === 'arvore' && !fig) {
+      // de cima: a copa não fica por cima da trilha (a figueira, colada no círculo, e a paineira, na beira da clareira
+      // dela, são as exceções: as trilhas chegam embaixo delas)
+      if (o.type === 'arvore' && !fig && !paineira) {
         const gap = Math.min(...trails.map((t) => pathDist(x, y, pts(t)) - Number(prop(t, 'largura')) / 2));
         if (gap < copa - 0.05) bad.push(`copa de ${prop(o, 'especie')} em (${x}, ${y}) por cima da trilha`);
       }
@@ -261,7 +265,7 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
 
   it('a mata ficou mais aberta: no parque, no máximo uma árvore grande a cada 40 m²', () => {
     const big = cenario.filter((o) => inPark(o) && o.type === 'arvore' && Number(prop(o, 'copa')) >= 1.7 && prop(o, 'especie') !== 'figueira');
-    expect(big.length).toBeLessThanOrEqual((48 * 120) / 40);
+    expect(big.length).toBeLessThanOrEqual((48 * map.height) / 40);
   });
 
   it('as plantas novas estão lá, os ipês de cor forte saíram, e a mata é mais sombria (mais ainda na mata profunda)', () => {
@@ -309,9 +313,9 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     }
   });
 
-  it('o círculo, a figueira, a Pedra do Véu, a ponta do deque e o recanto do outro lado do riacho têm o brilho do Véu, e dá para chegar perto', () => {
+  it('o círculo, a figueira, a Pedra do Véu, a ponta do deque, o recanto do outro lado do riacho e o recanto da mata profunda do sul têm o brilho do Véu, e dá para chegar perto', () => {
     const veus = cenario.filter((o) => o.type === 'veu');
-    expect(veus).toHaveLength(5);
+    expect(veus).toHaveLength(6);
     for (const v of veus) expect(reachNear(at(v).x, at(v).y, 3), `véu em (${at(v).x}, ${at(v).y})`).toBe(true);
     const stone = cenario.find((o) => o.type === 'pedra' && prop(o, 'ancestral') === true)!;
     expect(veus.some((v) => Math.hypot(at(v).x - at(stone).x, at(v).y - at(stone).y) < 0.01)).toBe(true);
@@ -323,10 +327,15 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     expect(zones.map((z) => [z.name, prop(z, 'quantidade')])).toEqual([
       ['sagui', 4],
       ['jararaca', 3],
+      // os bichos novos da floresta maior (nomes provisórios até o dono escolher; a [estrutura] manda as chaves)
+      ['reservada-sul-1', 3],
+      ['reservada-sul-2', 3],
+      ['reservada-sul-3', 3],
+      ['reservada-sul-chefe', 1],
     ]);
     for (const z of zones) {
       const [x0, y0, x1, y1] = [z.x / M, z.y / M, (z.x + z.width) / M, (z.y + z.height) / M];
-      expect(x1 <= 48, z.name).toBe(true); // dentro do parque
+      expect(x1 <= 48 || (x0 >= 48 && x1 <= 88 && y0 >= 80), z.name).toBe(true); // no parque ou na mata da estrada
       for (const s of layer('seguro')) {
         const [sx0, sy0, sx1, sy1] = [s.x / M, s.y / M, (s.x + s.width) / M, (s.y + s.height) / M];
         expect(x0 < sx1 && x1 > sx0 && y0 < sy1 && y1 > sy0, `${z.name} encosta em ${s.name}`).toBe(false);
@@ -341,10 +350,10 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     const names = layer('areas').map((a) => a.name);
     expect(names).toEqual(expect.arrayContaining(['Clareira dos Despertos', 'Mata do Parque Santo Dias', 'Lago do Parque', 'Clareira das Bananeiras', 'Mata Profunda', 'Vila do Capão']));
     const deep = layer('areas').filter((a) => a.name === 'Mata Profunda');
-    expect(deep).toHaveLength(2);
+    expect(deep).toHaveLength(3); // a do noroeste, a do sul de antes e a do sul novo (floresta maior)
     for (const d of deep) expect(Number(prop(d, 'neblina'))).toBeGreaterThan(0);
     const dark = (name: string) => Number(prop(layer('areas').find((a) => a.name === name)!, 'escuro'));
-    for (const c of ['Clareira dos Despertos', 'Clareira das Bananeiras']) expect(dark(c)).toBeLessThan(dark('Mata do Parque Santo Dias'));
+    for (const c of ['Clareira dos Despertos', 'Clareira das Bananeiras', 'Clareira da Paineira']) expect(dark(c)).toBeLessThan(dark('Mata do Parque Santo Dias'));
   });
 });
 
@@ -382,7 +391,7 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
       if (x < 87.5 || x > 94.5) expect(reach(x, 80 - 0.75), `beira sul em x = ${x}`).toBe(false);
     }
     for (let y = 1; y <= 80 - 1; y += 0.5) expect(reach(map.width - 0.75, y), `beira leste em y = ${y}`).toBe(false);
-    expect(houses.length).toBe(8); // 7 casas e a Budega
+    expect(houses.filter((h) => h.y / M < 80).length).toBe(8); // 7 casas e a Budega (a lojinha do posto fica na mata da estrada)
     for (const h of houses.filter((c) => prop(c, 'interior') !== true)) {
       const [x0, y0, x1, y1] = [h.x / M, h.y / M, (h.x + h.width) / M, (h.y + h.height) / M];
       for (let x = x0 + 0.5; x < x1; x += 1) for (let y = y0 + 0.5; y < y1; y += 1) expect(reach(x, y), `${h.name || 'casa'} em (${x}, ${y})`).toBe(false);
@@ -539,7 +548,10 @@ describe('Mapa 01 (Capão): a rua e a praça da Budega no padrão novo (a flores
     expect(of('faixa-rua').length).toBeGreaterThanOrEqual(3);
     for (const type of ['remendo', 'buraco', 'rachadura', 'bueiro', 'tampa']) expect(of(type).length, type).toBeGreaterThan(2);
     for (const o of [...of('buraco'), ...of('bueiro'), ...of('tampa')]) expect(onAsphalt(o.x / M, o.y / M), `${o.type} em (${o.x / M}, ${o.y / M})`).toBe(true);
-    for (const r of of('rachadura')) for (const [x, y] of ptsOf(r)) expect(onAsphalt(x, y), `rachadura em (${x}, ${y})`).toBe(true);
+    // (as do pátio de concreto do posto abandonado, na floresta maior, ficam no concreto dele)
+    const posto = chao.find((o) => o.type === 'calcada' && prop(o, 'estado') === 'rachado');
+    const onPosto = (x: number, y: number) => !!posto && x >= posto.x / M && x <= (posto.x + posto.width) / M && y >= posto.y / M && y <= (posto.y + posto.height) / M;
+    for (const r of of('rachadura')) for (const [x, y] of ptsOf(r)) expect(onAsphalt(x, y) || onPosto(x, y), `rachadura em (${x}, ${y})`).toBe(true);
     // a calçada é de placas de cimento e a praça tem musgo
     for (const c of of('calcada')) expect(prop(c, 'desenho')).toBe('placas');
     expect(prop(of('praca')[0]!, 'musgo')).toBe(true);
@@ -642,9 +654,12 @@ describe('Mapa 01 (Capão), etapa 4c: campinho, viaduto e saídas', () => {
   });
 
   it('a rua para Guarapiranga atravessa a mata até a barreira com placa; a mata dos lados continua fechada; a rua leste termina no mato com a placa da estação', () => {
-    for (let y = 81; y <= 113; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
-    expect(reach(91, 116.5)).toBe(false); // depois da barreira (a saída abre quando o Mapa 02 existir)
-    expect(reach(84, 100)).toBe(false); // a mata ao sul da vila
+    // (na floresta maior a rua desce até o fim novo do mapa, e a barreira foi junto)
+    const barrier = cenario.find((o) => o.type === 'barreira')!;
+    const by = barrier.y / M;
+    expect(by).toBeGreaterThan(170);
+    for (let y = 81; y <= by - 1; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
+    expect(reach(91, by + 1.5)).toBe(false); // depois da barreira (a saída abre quando o Mapa 02 existir)
     const placas = cenario.filter((o) => o.type === 'placa').map((o) => prop(o, 'texto'));
     expect(placas).toEqual(expect.arrayContaining(['GUARAPIRANGA', 'ESTAÇÃO CAPÃO REDONDO']));
     expect(reach(95.25, 44)).toBe(false); // o fim da rua da vila (a estação fica para depois)
@@ -721,8 +736,10 @@ describe('Mapa 01 (Capão): o Parque Santo Dias de antes, engolido pela floresta
 
   it('as coisas do parque antigo estão lá: bebedouro, bancos de concreto, postes apagados, a academia e a pista de cimento', () => {
     expect(of('bebedouro').length).toBe(1);
-    expect(of('banco').filter((o) => prop(o, 'material') === 'concreto').length).toBe(3);
-    expect(of('poste-praca').filter((o) => prop(o, 'apagado') === true).length).toBe(3);
+    // (os da floresta maior ficam na Clareira da Paineira, mais ao sul)
+    const old = (o: TiledObject) => o.y / M < 120;
+    expect(of('banco').filter((o) => old(o) && prop(o, 'material') === 'concreto').length).toBe(3);
+    expect(of('poste-praca').filter((o) => old(o) && prop(o, 'apagado') === true).length).toBe(3);
     expect(of('academia').map((o) => String(prop(o, 'aparelho'))).sort()).toEqual(['barra', 'remada', 'simulador-caminhada']);
     expect(layer('chao').filter((o) => o.type === 'calcada' && prop(o, 'quebrada') === true).length).toBeGreaterThanOrEqual(5);
   });
@@ -785,5 +802,196 @@ describe('Mapa 01 (Capão): casas com interior (pedido do dono em 13/11: "dar vi
     expect(boxes.some((b) => b.type === 'tronco' && Math.abs((b.x0 + b.x1) / 2 - at(tree).x) < 0.01)).toBe(true);
     expect(prop(cenario.find((o) => o.type === 'sofa' && inside(o, abandonada!))!, 'rasgado')).toBe(true);
     expect(chao.some((o) => o.type === 'colchao' && inside(o, abandonada!))).toBe(true);
+  });
+});
+
+describe('Mapa 01 (Capão): a floresta maior (pedido do dono em 14/11, "aumentar a floresta"; planta aprovada)', () => {
+  const cenario = layer('cenario');
+  const chao = layer('chao');
+  const of = (type: string) => cenario.filter((o) => o.type === type);
+  const inRect = (x: number, y: number, o: TiledObject, pad = 0) => x >= o.x / M - pad && x <= (o.x + o.width) / M + pad && y >= o.y / M - pad && y <= (o.y + o.height) / M + pad;
+  const screen = (x: number, y: number, z = 0) => [(x - y) * Math.SQRT1_2, (x + y) * Math.SQRT1_2 * 0.5 - z * 0.866] as const;
+  /** Por onde o pé vai a partir do nascimento, com caixas a mais fechando passagens (para provar que há duas). */
+  const floodWith = (extra: Box[]) => {
+    const cols = Math.round(map.width / STEP);
+    const rows = Math.round(map.height / STEP);
+    const seen = new Uint8Array(cols * rows);
+    const free = (x: number, y: number) =>
+      footFree(x, y) && !extra.some((b) => x - FOOT.w / 2 < b.x1 && x + FOOT.w / 2 > b.x0 && y - FOOT.h / 2 < b.y1 && y + FOOT.h / 2 > b.y0);
+    const queue = [Math.round(SPAWN.y / STEP) * cols + Math.round(SPAWN.x / STEP)];
+    seen[queue[0]!] = 1;
+    while (queue.length > 0) {
+      const cell = queue.pop()!;
+      const [i, j] = [cell % cols, Math.floor(cell / cols)];
+      for (const [ni, nj] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]] as const) {
+        if (ni < 2 || nj < 2 || ni >= cols - 2 || nj >= rows - 2) continue;
+        const k = nj * cols + ni;
+        if (seen[k] || !free(ni * STEP, nj * STEP)) continue;
+        seen[k] = 1;
+        queue.push(k);
+      }
+    }
+    return (x: number, y: number) => seen[Math.round(y / STEP) * cols + Math.round(x / STEP)] === 1;
+  };
+
+  it('o parque ao sul: a Clareira da Paineira com o parquinho antigo, a Cachoeirinha, as pedras do riacho e o recanto do Véu', () => {
+    const paineira = cenario.find((o) => o.type === 'arvore' && prop(o, 'especie') === 'paineira')!;
+    expect(paineira.name).toBe('Paineira');
+    expect(Math.hypot(at(paineira).x - 32, at(paineira).y - 150)).toBeLessThan(8);
+    expect(reachNear(32, 150, 1)).toBe(true); // a clareira
+    expect(of('parquinho').map((o) => String(prop(o, 'brinquedo'))).sort()).toEqual(['balanco', 'escorregador', 'gira-gira']);
+    for (const o of of('parquinho')) expect(Math.hypot(at(o).x - 32, at(o).y - 150), String(prop(o, 'brinquedo'))).toBeLessThan(6.5);
+    // a cachoeirinha: as pedras de onde o riacho cai, na ponta norte do poço
+    const fall = of('cachoeira')[0]!;
+    expect(fall.name).toBe('Cachoeirinha');
+    const pool = chao.find((o) => o.type === 'agua' && o.polygon && inPolygon(14.3, 159.5, o))!;
+    expect(pool).toBeDefined();
+    expect(inPolygon(at(fall).x, at(fall).y + 1, pool)).toBe(true);
+    expect(reach(14.3, 159.5)).toBe(false); // ninguém anda dentro do poço
+    // as pedras de atravessar o riacho: dá para andar em cima, e logo acima e abaixo delas é água
+    const stones = of('pinguela').find((o) => prop(o, 'pedras') === true)!;
+    const [sx, sy] = [at(stones).x, at(stones).y];
+    expect(reach(sx, sy)).toBe(true);
+    for (const dy of [-2, 2]) expect(footFree(sx, sy + dy), `riacho em y = ${sy + dy}`).toBe(false);
+    // o recanto do Véu no fim da trilha da mata profunda do sul, do outro lado do riacho
+    const veu = of('veu').find((v) => at(v).y > 160)!;
+    expect(at(veu).x).toBeLessThan(sx);
+    expect(reachNear(at(veu).x, at(veu).y, 2)).toBe(true);
+    const names = layer('areas').map((a) => a.name);
+    expect(names).toEqual(expect.arrayContaining(['Clareira da Paineira', 'Cachoeirinha', 'Mata da Estrada', 'Posto Abandonado', 'Estrada para Guarapiranga']));
+    expect(prop(layer('areas').find((a) => a.name === 'Cachoeirinha')!, 'som')).toBe('agua');
+  });
+
+  it('dá para dar a volta inteira sem voltar pelo mesmo caminho: parque, buraco no gradil, mata da estrada, posto e rua', () => {
+    // o gradil só abre no Portão I e no buraco
+    const gradis = of('gradil');
+    const hole = { y0: 160, y1: 162.4 };
+    for (let y = 48; y < 179.5; y += 0.5) if (y < hole.y0 - 0.25 || y > hole.y1 + 0.25) expect(footFree(48, y), `gradil em y = ${y}`).toBe(false);
+    expect(footFree(48, (hole.y0 + hole.y1) / 2)).toBe(true);
+    expect(gradis.filter((g) => prop(g, 'estado') === 'quebrado')).toHaveLength(2); // um pedaço torto em cada ponta do buraco
+    // a parede de mata da rua só abre na boca do posto
+    const posto = chao.find((o) => o.type === 'calcada' && prop(o, 'estado') === 'rachado')!;
+    const [py0, py1] = [posto.y / M, (posto.y + posto.height) / M];
+    // (os arbustos da parede ficam de 1,1 em 1,1 m: a boca passa até um arbusto da beira do pátio)
+    for (let y = 82; y < 173; y += 0.5) if (y < py0 - 1.2 || y > py1 + 1.2) expect(footFree(87.3, y), `parede da rua em y = ${y}`).toBe(false);
+    // duas passagens para a mata da estrada: fechando o buraco, ainda se chega no posto pela rua; fechando a boca do posto,
+    // ainda se chega nele pelo parque (então dá para ir por um lado e voltar pelo outro)
+    const noHole = floodWith([{ x0: 47.5, x1: 48.5, y0: hole.y0, y1: hole.y1, type: 'teste' }]);
+    const noMouth = floodWith([{ x0: 86, x1: 88.5, y0: py0 - 1, y1: py1 + 1, type: 'teste' }]);
+    for (const go of [noHole, noMouth]) {
+      expect(go(76, 146)).toBe(true); // o pátio do posto, entre a lojinha e a árvore que rompeu o concreto
+      expect(go(91, 160)).toBe(true); // a rua
+      expect(go(55, 160.5)).toBe(true); // a trilha da mata da estrada
+    }
+  });
+
+  it('o posto abandonado: a cobertura (só os pilares seguram o pé) com duas bombas, a lojinha, os pneus e a placa em branco, sem marca nenhuma', () => {
+    const roof = of('cobertura')[0]!;
+    expect(Number(prop(roof, 'altura'))).toBeGreaterThan(3.5);
+    const pillars = boxes.filter((b) => b.type === 'pilar-cobertura');
+    expect(pillars).toHaveLength(4);
+    for (const p of pillars) expect(inRect((p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2, roof)).toBe(true);
+    expect(footFree(at(roof).x, at(roof).y - 2.4)).toBe(true); // embaixo da cobertura dá para andar
+    const pumps = of('bomba');
+    expect(pumps).toHaveLength(2);
+    for (const b of pumps) expect(inRect(at(b).x, at(b).y, roof)).toBe(true);
+    const shop = of('casa').find((o) => prop(o, 'posto') === true)!;
+    expect(inRect(at(shop).x, at(shop).y, chao.find((o) => o.type === 'calcada' && prop(o, 'estado') === 'rachado')!)).toBe(true);
+    expect(of('pneus')).toHaveLength(1);
+    const sign = of('placa').find((o) => inRect(at(o).x, at(o).y, chao.find((c) => c.type === 'calcada' && prop(c, 'estado') === 'rachado')!))!;
+    expect(prop(sign, 'texto')).toBe(''); // em branco: lugar real sim, marca não
+    // tudo que é novo tem a sua colisão; a pedrinha passa pelo que é baixo ou fino
+    for (const o of [...pumps, shop, ...of('pneus'), ...of('cachoeira'), ...of('parquinho').filter((p) => prop(p, 'brinquedo') !== 'balanco')]) {
+      expect(boxes.some((b) => at(o).x >= b.x0 - 1e-6 && at(o).x <= b.x1 + 1e-6 && at(o).y >= b.y0 - 1e-6 && at(o).y <= b.y1 + 1e-6), `${o.type} em (${at(o).x}, ${at(o).y})`).toBe(true);
+    }
+    const swing = of('parquinho').find((p) => prop(p, 'brinquedo') === 'balanco')!;
+    expect(boxes.filter((b) => b.type === 'parquinho' && inRect((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, swing))).toHaveLength(2); // só os pés de ferro
+    expect(footFree(at(swing).x, at(swing).y)).toBe(true);
+    for (const o of layer('colisao').filter((c) => ['pilar-cobertura', 'pneus', 'parquinho'].includes(c.type))) expect(prop(o, 'bloqueiaTiro'), o.type).toBe(false);
+  });
+
+  it('na mata da estrada e na faixa nova do parque não há vão de entalar (onde o pé de 0,6 × 0,4 começaria a entrar)', () => {
+    const region = boxes.filter((b) => b.type !== 'agua' && ((b.x1 > 47.8 && b.y1 > 78) || (b.y1 > 117 && b.x0 < 48.3)));
+    /** Cabe um quadrado de 0,3 m no vão, fora das outras caixas? (os arbustos da parede se encostam e deixam só dentes) */
+    const pocket = (a: Box, b: Box) => {
+      const inX = a.x1 <= b.x0 || b.x1 <= a.x0;
+      const [g0, g1] = inX ? (a.x1 <= b.x0 ? [a.x1, b.x0] : [b.x1, a.x0]) : a.y1 <= b.y0 ? [a.y1, b.y0] : [b.y1, a.y0];
+      const [m0, m1] = inX ? [Math.max(a.y0, b.y0), Math.min(a.y1, b.y1)] : [Math.max(a.x0, b.x0), Math.min(a.x1, b.x1)];
+      const r = inX ? { x0: g0!, x1: g1!, y0: m0, y1: m1 } : { x0: m0, x1: m1, y0: g0!, y1: g1! };
+      const others = region.filter((c) => c !== a && c !== b && c.x1 > r.x0 && c.x0 < r.x1 && c.y1 > r.y0 && c.y0 < r.y1);
+      for (let x = r.x0; x + 0.3 <= r.x1 + 1e-6; x += 0.05) {
+        for (let y = r.y0; y + 0.3 <= r.y1 + 1e-6; y += 0.05) if (!others.some((c) => x < c.x1 && x + 0.3 > c.x0 && y < c.y1 && y + 0.3 > c.y0)) return true;
+      }
+      return false;
+    };
+    const bad: string[] = [];
+    for (let i = 0; i < region.length; i++) {
+      for (let j = i + 1; j < region.length; j++) {
+        const [a, b] = [region[i]!, region[j]!];
+        if (a.type === 'mata-fechada' && b.type === 'mata-fechada') continue;
+        const [dx, dy] = [Math.max(0, b.x0 - a.x1, a.x0 - b.x1), Math.max(0, b.y0 - a.y1, a.y0 - b.y1)];
+        if ((dx > 0 && dy > 0) || dx + dy <= 0.3 || dx + dy >= 1.2) continue;
+        if (pocket(a, b)) bad.push(`vão de ${(dx + dy).toFixed(2)} m entre ${a.type} (${a.x0.toFixed(2)}, ${a.y0.toFixed(2)}) e ${b.type} (${b.x0.toFixed(2)}, ${b.y0.toFixed(2)})`);
+      }
+    }
+    expect(bad.slice(0, 5)).toEqual([]);
+  });
+
+  it('as árvores da mata da estrada não tampam, vistas da câmera, a rua, a trilha do gradil nem o pátio do posto', () => {
+    const keys: [number, number][] = [];
+    const trail = chao.find((o) => o.type === 'trilha' && o.polyline && Math.abs(o.x / M + o.polyline[0]!.x / M - 48) < 0.01)!;
+    const tp = trail.polyline!.map((p) => [(trail.x + p.x) / M, (trail.y + p.y) / M] as [number, number]);
+    for (let i = 0; i + 1 < tp.length; i++) {
+      const [[ax, ay], [bx, by]] = [tp[i]!, tp[i + 1]!];
+      const len = Math.hypot(bx - ax, by - ay);
+      for (let d = 0; d <= len; d += 1) keys.push([ax + ((bx - ax) * d) / len, ay + ((by - ay) * d) / len]);
+    }
+    const barrier = of('barreira')[0]!;
+    for (let x = 89; x <= 93; x += 1) for (let y = 80; y < barrier.y / M; y += 2) keys.push([x, y]);
+    const posto = chao.find((o) => o.type === 'calcada' && prop(o, 'estado') === 'rachado')!;
+    const shop = of('casa').find((o) => prop(o, 'posto') === true)!;
+    for (let x = posto.x / M + 1; x < (posto.x + posto.width) / M; x += 2) for (let y = posto.y / M + 1; y < (posto.y + posto.height) / M; y += 2) if (!inRect(x, y, shop)) keys.push([x, y]);
+    const bad: string[] = [];
+    for (const o of cenario.filter((c) => (c.type === 'arvore' || c.type === 'bambu') && at(c).x > 48 && at(c).y > 80)) {
+      const { x, y } = at(o);
+      const copa = o.type === 'bambu' ? Number(prop(o, 'raio')) * 1.3 : Number(prop(o, 'copa'));
+      const [cx, cy] = screen(x, y, Number(prop(o, 'altura')));
+      for (const [kx, ky] of keys) {
+        if (kx + ky >= x + y) continue;
+        const [sx, sy] = screen(kx, ky);
+        if (Math.hypot(sx - cx, sy - cy) < copa * 1.05) {
+          bad.push(`${o.type} em (${x}, ${y}) tampa (${kx.toFixed(1)}, ${ky.toFixed(1)})`);
+          break;
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('os bichos novos têm as áreas reservadas e as capivaras têm onde andar e onde descansar', () => {
+    const zones = layer('monstros').filter((z) => String(z.name).startsWith('reservada-sul'));
+    expect(zones.map((z) => z.name)).toEqual(['reservada-sul-1', 'reservada-sul-2', 'reservada-sul-3', 'reservada-sul-chefe']);
+    const chefe = zones.find((z) => z.name === 'reservada-sul-chefe')!;
+    expect(prop(chefe, 'quantidade')).toBe(1); // o mais forte mora sozinho, no recanto do Véu
+    const veu = of('veu').find((v) => at(v).y > 160)!;
+    expect(inRect(at(veu).x, at(veu).y, chefe)).toBe(true);
+    const pontos = layer('pontos');
+    for (const lugar of ['lago', 'campinho']) {
+      const area = pontos.find((o) => o.name === `capivaras-${lugar}`)!;
+      const rest = pontos.find((o) => o.name === `capivaras-${lugar}-descanso`)!;
+      expect(area.width, lugar).toBeGreaterThan(0);
+      expect(inRect(rest.x / M, rest.y / M, area), lugar).toBe(true);
+      expect(reachNear(rest.x / M, rest.y / M, 1.5), lugar).toBe(true);
+    }
+  });
+
+  it('a vila ganhou árvores no terreno dos fundos e na beira do campinho, sem nenhuma em rua, calçada, praça ou campinho', () => {
+    const back = cenario.filter((o) => o.type === 'arvore' && at(o).x > 57 && at(o).x < 95 && at(o).y > 7 && at(o).y < 30);
+    expect(back.length).toBeGreaterThanOrEqual(15); // as 5 de antes e as 10 novas (fora a da casa abandonada)
+    const paved = chao.filter((o) => ['asfalto', 'calcada', 'praca', 'campinho', 'faixa'].includes(o.type) && !o.polygon && !o.polyline && o.y / M < 80);
+    // (a Árvore da Praça e a Figueira da Esquina, com nome, ficam na praça e na calçada de propósito)
+    for (const t of cenario.filter((o) => o.type === 'arvore' && !o.name && at(o).x > 57 && at(o).y < 80 && prop(o, 'rompendo') !== true && prop(o, 'dentroDaCasa') !== true)) {
+      expect(paved.some((p) => inRect(at(t).x, at(t).y, p)), `árvore em (${at(t).x}, ${at(t).y})`).toBe(false);
+    }
   });
 });
