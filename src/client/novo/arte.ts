@@ -30,6 +30,8 @@ import '../../../prototipos/pindorama-25d/js/creatures/jararaca.js';
 import '../../../prototipos/pindorama-25d/js/creatures/xiovanna.js';
 // o Joaquim, o gato da vó
 import '../../../prototipos/pindorama-25d/js/creatures/gato.js';
+// as capivaras que andam (bicho do ambiente, como o Joaquim)
+import '../../../prototipos/pindorama-25d/js/creatures/capivara.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
 

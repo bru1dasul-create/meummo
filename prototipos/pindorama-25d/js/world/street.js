@@ -720,12 +720,19 @@
   };
   const MOSS = ['rgba(74, 104, 46, 0.85)', 'rgba(92, 124, 54, 0.82)'];
   // lascas do chão levantadas pela raiz, da cor do chão em que ela passa (a de cima de todas as formas no ponto)
-  const CHIP = { asfalto: ['#45484e', '#5a5d63'], faixa: ['#45484e', '#5a5d63'], calcada: ['#8f8b81', '#aaa69b'], praca: ['#cbc4b4', '#e0dacb'], terra: ['#5a4632', '#6c5640'], campinho: ['#7a5c3c', '#8c6d4a'] };
+  const CHIP = {
+    asfalto: ['#45484e', '#5a5d63'], faixa: ['#45484e', '#5a5d63'], calcada: ['#8f8b81', '#aaa69b'], praca: ['#cbc4b4', '#e0dacb'], terra: ['#5a4632', '#6c5640'], campinho: ['#7a5c3c', '#8c6d4a'],
+    // os pisos de dentro das casas (a raiz que entrou, `dentro`) e o tapete rasgado por ela
+    'piso-ceramica': ['#e6d8b8', '#b8a684'], 'piso-taco': ['#a8723f', '#6e4524'], 'piso-ladrilho': ['#e6d9bd', '#b3a483'], 'piso-cimento': ['#8f8b83', '#66625b'], tapete: ['#8e3d2d', '#5e281d'],
+  };
   function groundAt(map, x, y) {
     const list = (map && map.shapes) || [];
     for (let i = list.length - 1; i >= 0; i--) {
       const s = list[i];
-      if (CHIP[s.type] && s.kind !== 'line' && s.kind !== 'point' && G.inside(s, x, y)) return s.type;
+      if (s.kind === 'line' || s.kind === 'point') continue;
+      if (s.type === 'tapete' && G.inside(s, x, y)) return 'tapete';
+      if (s.type === 'piso' && G.inside(s, x, y)) return 'piso-' + (s.pattern || 'ladrilho');
+      if (CHIP[s.type] && G.inside(s, x, y)) return s.type;
     }
     return 'terra';
   }
@@ -769,6 +776,10 @@
   // `home` é a casa dela — aí "dentro de casa" vira o contrário: a raiz fica do lado de dentro das paredes e não passa
   // por baixo do sofá (o colchão e o entulho ficam por cima dela: o colchão é pintado de novo depois, ground.js)
   let home = null;
+  // a raiz que entrou numa casa (`dentro`, innerRoot): a casa (para levantar o piso) e quanto do começo ela leva para
+  // sair de baixo da parede (de 0 a 1 do comprimento)
+  let innerHouse = null;
+  let rise = 0;
   const homeOf = (t, map) => (t.inside ? (map.houses || []).find((h) => t.x > h.x0 && t.x < h.x1 && t.y > h.y0 && t.y < h.y1) || null : null);
   const underFurniture = (map, x, y) => (map.props || []).some((p) => p.kind === 'sofa' && x > p.x0 - 12 && x < p.x1 + 12 && y > p.y0 - 12 && y < p.y1 + 12);
   const inHouse = (map, x, y) =>
@@ -841,7 +852,7 @@
    * enterrada), as beiradas e o corte em meia elipse (lombo redondo). A ponta afunda no fim; num trecho `cut`
    * (opcional) a raiz passa por baixo do chão.
    */
-  function rootShape(cam, line, wa, cut, rnd) {
+  function rootShape(cam, line, wa, cut, rnd, rise0 = 0) {
     const pts = walk(line, 6);
     const n = pts.length;
     const len = lengthOf(line);
@@ -852,6 +863,7 @@
       const u = i / Math.max(1, n - 1);
       const w = rootWidth(wa, u * len, len) * (1 + 0.06 * Math.sin(i * 0.55));
       let k = fadeOut(u, 0.8, 1);
+      if (rise0) k = Math.min(k, M.smoothstep(0, rise0, u));
       if (cut) {
         const d = i < cut[0] ? cut[0] - i : i > cut[1] ? i - cut[1] : 0;
         k = Math.min(k, M.clamp(d / 4, 0, 1));
@@ -974,7 +986,7 @@
         const g0 = first + Math.floor((n - first) * (0.15 + rnd() * 0.3));
         cut = [g0, g0 + 6 + Math.floor(rnd() * 5)];
       }
-      return { depth: r.depth, g: rootShape(cam, r.line, r.wa, cut, rnd), cut };
+      return { depth: r.depth, g: rootShape(cam, r.line, r.wa, cut, rnd, r.depth ? 0 : rise), cut };
     });
     // o chão trincado em volta da principal (na mata, não)
     const mp = walk(main, 8);
@@ -1045,6 +1057,8 @@
         ctx.stroke();
       });
     }
+    // dentro de casa, a raiz levanta os pedaços do piso (cerâmica, taco, ladrilho, cimento) dos dois lados
+    if (innerHouse) for (const s of shapes) if (!s.depth) liftedFloor(ctx, cam, map, s.g, rnd);
     // 3) os corpos: a sombra; em pedaços curtos (a raiz faz curva e a luz muda), as faixas do lombo de trás para a
     //    frente, cada uma com a cor da luz que recebe; antes, o contorno de todas onde a raiz está bem fora do chão
     const runs = [];
@@ -1144,7 +1158,89 @@
     }
   }
 
+  // tamanho das peças dos pisos de dentro (cm)
+  const TILE = { 'piso-ceramica': 40, 'piso-taco': 30, 'piso-ladrilho': 25, 'piso-cimento': 34 };
+  /**
+   * Os pedaços do piso levantados dos dois lados da raiz que entrou em casa: a beirada do lado da raiz sobe (4 a 10 cm),
+   * a de fora fica no chão, e embaixo aparece a fresta escura. Cerâmica, ladrilho e cimento saem em placas (o cimento,
+   * mais torto), o taco em tábuas compridas; no tapete, nada (lá a raiz só rasga e mostra a terra).
+   */
+  function liftedFloor(ctx, cam, map, g, rnd) {
+    for (let i = 3; i < g.length - 3; i += 3) {
+      const q = g[i];
+      if (q.k < 0.5 || rnd() > 0.62) continue;
+      const sideK = rnd() < 0.5 ? 1 : -1;
+      const nx = -Math.sin(q.p.a) * sideK, ny = Math.cos(q.p.a) * sideK;
+      const kind = groundAt(map, q.p.x + nx * (q.half + 12), q.p.y + ny * (q.half + 12));
+      const S = TILE[kind];
+      if (!S) continue;
+      const col = CHIP[kind];
+      const plank = kind === 'piso-taco';
+      const w = plank ? S * 0.33 : S * (0.5 + rnd() * 0.35);
+      const l = plank ? S * (0.75 + rnd() * 0.35) : w * (0.85 + rnd() * 0.3);
+      // alinhada com o piso (reto em x e y), um pouco torta por estar solta; o taco às vezes de comprido para a raiz
+      const ang = (Math.abs(nx) > Math.abs(ny) ? Math.PI / 2 : 0) + (rnd() - 0.5) * (kind === 'piso-cimento' ? 0.7 : 0.3) + (plank && rnd() < 0.5 ? Math.PI / 2 : 0);
+      const ux = Math.cos(ang), uy = Math.sin(ang), vx = -uy, vy = ux;
+      const ext = Math.abs(ux * nx + uy * ny) * l * 0.5 + Math.abs(vx * nx + vy * ny) * w * 0.5;
+      const d = q.half + 1 + ext;
+      const cx = q.p.x + nx * d, cy = q.p.y + ny * d;
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => ({ x: cx + ux * (l / 2) * a + vx * (w / 2) * b, y: cy + uy * (l / 2) * a + vy * (w / 2) * b }));
+      // os dois cantos mais perto da raiz sobem
+      const out = corners.map((p, j) => ({ j, n: (p.x - q.p.x) * nx + (p.y - q.p.y) * ny })).sort((a, b) => a.n - b.n);
+      const up = new Set([out[0].j, out[1].j]);
+      const lz = liftOf(cam, 4 + rnd() * 6);
+      const top = corners.map((p, j) => (up.has(j) ? { x: p.x - lz, y: p.y - lz } : p));
+      // a fresta escura (o buraco de onde a peça saiu) e a peça por cima, com o contorno
+      ctx.fillStyle = 'rgba(24, 17, 11, 0.75)';
+      poly(ctx, corners);
+      ctx.fill();
+      poly(ctx, top);
+      ctx.fillStyle = col[0];
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(32, 23, 16, 0.85)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      // o brilho na beirada que subiu (o esmalte da cerâmica e do ladrilho; o veio do taco)
+      const a0 = top[out[0].j], a1 = top[out[1].j];
+      ctx.strokeStyle = plank ? 'rgba(60, 34, 16, 0.5)' : 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(a0.x + (cx - a0.x) * 0.15, a0.y + (cy - a0.y) * 0.15);
+      ctx.lineTo(a1.x + (cx - a1.x) * 0.15, a1.y + (cy - a1.y) * 0.15);
+      ctx.stroke();
+    }
+  }
+  /**
+   * Raiz que entrou numa casa (`dentro`, do [mundo]): sai de baixo da parede (o começo encosta nela), corre pelo piso
+   * levantando os pedaços e afunda de novo no fim. O mesmo lombo redondo das raízes da figueira (rootNetwork), com a
+   * casa como `home` (um galho não atravessa a parede nem passa por baixo do sofá).
+   */
+  function innerRoot(ctx, sh, env) {
+    const map = env.map;
+    const p0 = sh.pts[0];
+    const rnd = seeded(p0.x, p0.y, 557);
+    const house = (map.houses || []).find((h) => p0.x > h.x0 - 40 && p0.x < h.x1 + 40 && p0.y > h.y0 - 40 && p0.y < h.y1 + 40) || null;
+    const wa = sh.width || 22;
+    const ph = rnd() * M.TAU;
+    const raw = walk(chaikin(sh.pts, 2), 10);
+    const total = Math.max(1, raw.length - 1);
+    const wav = raw.map((p, i) => {
+      const off = wa * 0.35 * Math.sin((i / total) * 5 + ph) * Math.min(1, (i / total) * 3);
+      return { x: p.x - Math.sin(p.a) * off, y: p.y + Math.cos(p.a) * off };
+    });
+    const prev = [home, innerHouse, rise];
+    home = house;
+    innerHouse = house;
+    rise = 0.22;
+    try {
+      rootNetwork(ctx, env.g.cam, map, chaikin(wav, 1), wa, rnd, 0);
+    } finally {
+      [home, innerHouse, rise] = prev;
+    }
+  }
+
   paint.raiz = (ctx, sh, env) => {
+    if (sh.inside) return innerRoot(ctx, sh, env);
     const cam = env.g.cam;
     const map = env.map;
     const p0 = sh.pts[0];

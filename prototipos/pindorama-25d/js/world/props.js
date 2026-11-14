@@ -2786,15 +2786,51 @@
       const cy = Math.max(box.y0, Math.min(c.y, box.y1));
       return (cx - c.x) ** 2 + (cy - c.y) ** 2 < r * r;
     }
+    /**
+     * Quanto a copa vai para o lado agora (px na tela, no alto dela), com o vento do mundo (World.windAt): a rajada
+     * chega e a árvore cede e volta macio (mola); cada árvore tem o seu ritmo (as altas, mais devagar) e, além do
+     * vaivém, fica inclinada para onde o vento sopra, mais quanto mais forte ele é.
+     */
+    _sway(time) {
+      const w = this.world;
+      const t = this.t;
+      const strength = w && w.wind ? w.wind.strength : 0.35;
+      const push = w && w.windAt ? w.windAt(t.x, t.y, time) : strength;
+      const dt = this._swayT != null ? M.clamp(time - this._swayT, 0, 0.1) : 0;
+      this._swayT = time;
+      this._push = this._push == null ? push : this._push + (push - this._push) * (1 - Math.exp(-dt * 2.4));
+      const P = this._push;
+      const f = 0.45 + 0.5 * (1 - M.clamp(t.h / 1400, 0, 1));
+      if (this._phase == null) this._phase = (Math.abs(t.x * 0.0137 + t.y * 0.0071) % 1) * M.TAU;
+      const ph = this._phase;
+      const osc = Math.sin(time * M.TAU * f + ph) * (0.2 + 0.55 * P) + Math.sin(time * M.TAU * f * 2.3 + ph * 1.7) * 0.1 * (0.3 + P);
+      const units = P * 0.9 + osc;
+      const amp = (t.kind === 'ipe' ? 3.2 : 2.6) * this.cam.zoom * (1 + strength * 0.9);
+      const d = w && w.windScreen ? w.windScreen() : { x: 1, y: 0 };
+      return { x: d.x * units * amp, y: d.y * units * amp * 0.6 };
+    }
     draw(ctx, time) {
       const s = this._spriteNow();
-      // balanço da copa: desliza a imagem pronta (girar uma imagem grande custa caro a cada quadro);
-      // o passo é de meio pixel do aparelho, então o movimento fica suave sem refazer pixel nenhum
+      // balanço da copa: desliza a imagem pronta em faixas (girar ou entortar uma imagem grande custa caro a cada
+      // quadro): a de cima vai mais, a de baixo, junto do tronco, quase nada (a copa não descola do tronco); o passo é
+      // de meio pixel do aparelho, então o movimento fica suave sem refazer pixel nenhum
       const dpr = this.cam.dpr;
-      const amp = (this.t.kind === 'ipe' ? 3.2 : 2.6) * this.cam.zoom;
-      const off = Math.round((Math.sin(time * 0.9 + this.t.x * 0.01) * 0.8 + Math.sin(time * 2.3 + this.t.y) * 0.2) * amp * dpr) / dpr;
+      const sw = this._sway(time);
+      const snap = (v) => Math.round(v * dpr) / dpr;
       if (this.alpha < 0.999) ctx.globalAlpha = this.alpha;
-      ctx.drawImage(s.c, s.x + off, s.y, s.w, s.h);
+      // (meio apagada, a copa vai inteira: as faixas se cobrem numa linha e a linha apareceria mais escura)
+      if (this.alpha < 0.999 || Math.abs(sw.x) + Math.abs(sw.y) < 0.6) {
+        ctx.drawImage(s.c, s.x + snap(sw.x * 0.6), s.y + snap(sw.y * 0.6), s.w, s.h);
+      } else {
+        const N = 6;
+        const sh = s.c.height / N;
+        const dh = s.h / N;
+        for (let i = 0; i < N; i++) {
+          const k = Math.pow((N - i - 0.5) / N, 1.3);
+          const last = i === N - 1;
+          ctx.drawImage(s.c, 0, i * sh, s.c.width, last ? sh : sh + 1, s.x + snap(sw.x * k), s.y + i * dh + snap(sw.y * k), s.w, last ? dh : dh + 1 / dpr);
+        }
+      }
       ctx.globalAlpha = 1;
     }
   }

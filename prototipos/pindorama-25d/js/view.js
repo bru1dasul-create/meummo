@@ -423,6 +423,14 @@
     }
 
     /** Zoom do jogador: 1 = "médio", 0,7 = "longe". */
+    /**
+     * O vento (a [estrutura] manda, do servidor): `strength` de 0 (parado) a 1 (forte); `angle` (opcional), para onde
+     * ele sopra, em graus no chão (0 = leste, 90 = sul). As copas balançam e as pétalas voam com ele.
+     */
+    setWind(strength, angle) {
+      if (this.world && this.world.setWind) this.world.setWind(strength, angle);
+    }
+
     setZoom(f) {
       this.zoomUser = M.clamp(f, ZOOM.min, ZOOM.max);
       this._resize();
