@@ -209,7 +209,8 @@
         map.props.push({ kind: 'fogueira', x, y, r: (pr.raio || 0.6) * 100, light: pr.luz || '#ffb347' });
       } else if (k === 'orelhao' || k === 'lixeira') {
         // `mato`: a lixeira verde do parque antigo, com mato em volta (sem ele, a laranja de rua)
-        map.props.push({ kind: k, x, y, angle: pr.olhando, weeds: !!pr.mato });
+        // (`poste`: o orelhão preso no poste de luz do lado, sem o cano dele)
+        map.props.push({ kind: k, x, y, angle: pr.olhando, weeds: !!pr.mato, pole: !!pr.poste });
       } else if (k === 'bebedouro') {
         map.props.push({ kind: 'bebedouro', x, y, r: 24, broken: !!pr.quebrado, moss: !!pr.musgo });
       } else if (k === 'academia') {
