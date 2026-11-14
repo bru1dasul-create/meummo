@@ -509,8 +509,12 @@ Pedido: "distribui as outras tarefas para os outros chats". Cada frente pega as 
 quem começa. (A música de licença livre, primeiro item da lista, já está acima.)
 
 **Bugs e o que está feio (primeiro):**
-- [ ] **[estrutura]** Lag ao falar com NPC: medir (motor, câmera da conversa, janela) e passar à [arte] se for no desenho
-- [ ] **[estrutura]** O jogo trava ao dar e tirar zoom: medir (motor e view) e passar à [arte] se for no desenho
+- [x] **[estrutura]** Lag ao falar com NPC e o jogo travando ao dar e tirar zoom: medidos (14/11). A causa é a mesma
+  e está no desenho: cada mudança de zoom apaga e refaz o chão inteiro, e a câmera da conversa muda o zoom a cada
+  quadro por meio segundo (quadros de 100 a 250 ms). Passado à [arte] (abaixo)
+- [ ] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
+  muda e refazer só quando ele parar, como os objetos já fazem; e o orçamento de refazer imagens (`buildBusy`) contar
+  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade)
 - [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
   é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
 - [ ] **[arte]** Arco: "o braço fica feio puxando"
