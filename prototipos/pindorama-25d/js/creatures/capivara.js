@@ -40,7 +40,9 @@
       /** Parada (0) a andando (1), e correndo (0 a 1). */
       this.walk = 0;
       this.run = 0;
-      this.acts = { sleep: { dur: 0.8 }, wake: { dur: 0.8 }, eat: { dur: 6 }, dash: { dur: 0.5 } };
+      this.acts = { sleep: { dur: 0.8 }, wake: { dur: 0.8 }, eat: { dur: 6 }, dash: { dur: 0.5 }, purr: { dur: 1.8 } };
+      /** Contente com o carinho ('purr'): 0 a 1 (fecha os olhos e ergue o focinho). */
+      this.happy = 0;
     }
 
     /** Aparece já deitada, descansando (como o Joaquim dormindo: `addActor` com `asleep`). */
@@ -65,9 +67,13 @@
       const eating = !!(this.act && this.act.kind === 'eat');
       const wantGraze = this.lie < 0.5 && this.walk < 0.2 && (eating || (this.still > 1.2 && M.noise1(this.time * 0.11 + this.seed * 30) > 0.4));
       this.graze = M.damp(this.graze, wantGraze ? 1 : 0, wantGraze ? 2.2 : 4.5, dt);
+      // o carinho ('purr'): fecha os olhos e ergue o focinho, contente (para de pastar enquanto isso)
+      const petted = !!(this.act && this.act.kind === 'purr');
+      this.happy = M.damp(this.happy, petted ? 1 : 0, petted ? 6 : 3, dt);
+      if (this.happy > 0.3) this.graze = M.damp(this.graze, 0, 6, dt);
       // a passada: uns 64 cm por ciclo (correndo, mais comprida)
       this.phase = (this.phase + (this.speed * dt) / (64 + 40 * this.run)) % 1;
-      this.label = this.lie > 0.5 ? 'deitada' : this.run > 0.5 ? 'correndo' : this.walk > 0.5 ? 'andando' : this.graze > 0.5 ? 'pastando' : 'parada';
+      this.label = this.happy > 0.5 ? 'contente' : this.lie > 0.5 ? 'deitada' : this.run > 0.5 ? 'correndo' : this.walk > 0.5 ? 'andando' : this.graze > 0.5 ? 'pastando' : 'parada';
     }
 
     /** As bolas do corpo nesta pose. */
@@ -112,9 +118,11 @@
       }
 
       // cabeça: abaixa em volta do pescoço (pastando) e, parada de cabeça alta, olha em volta
-      const look = (M.noise1(t * 0.3 + this.seed * 17) - 0.5) * 0.9 * (1 - walk) * (1 - graze) * (1 - lie * 0.6);
+      const happy = M.smoothstep(0, 1, this.happy);
+      const look = (M.noise1(t * 0.3 + this.seed * 17) - 0.5) * 0.9 * (1 - walk) * (1 - graze) * (1 - lie * 0.6) * (1 - happy);
       const hy = this.yaw + look;
-      const pitch = graze * 0.95 + lie * 0.22 - hurt * 0.15;
+      // contente (carinho): o focinho sobe um pouco e balança devagar
+      const pitch = graze * 0.95 + lie * 0.22 - hurt * 0.15 - happy * (0.22 + Math.sin(t * 3.2) * 0.04);
       const neck = at(28, 0, 36 - drop * 0.9 - graze * 3 + bob * 0.8 + breath * 0.5);
       const fwd = { x: Math.cos(hy), y: Math.sin(hy), z: 0 };
       const side = { x: -Math.sin(hy), y: Math.cos(hy), z: 0 };
@@ -138,7 +146,8 @@
       const decals = [{ c: M.add(nose, M.scale(ahead, 10.6)), n: ahead, u: side, v: up, ru: 7, rv: 5.5, color: NOSE, minFacing: 0.02 }];
       for (const sgn of [-1, 1]) {
         const out = M.scale(side, sgn);
-        decals.push({ c: M.add(onHead(17, 0, 5), M.scale(out, 12.6)), n: out, u: ahead, v: up, ru: 2.6, rv: 2.6, color: EYE, minFacing: 0.08 });
+        // contente, o olho fecha (vira um risquinho)
+        decals.push({ c: M.add(onHead(17, 0, 5), M.scale(out, 12.6)), n: out, u: ahead, v: up, ru: 2.6 + happy * 0.6, rv: Math.max(0.5, 2.6 * (1 - happy * 0.82)), color: EYE, minFacing: 0.08 });
       }
       groups.push({ balls: head, ref: onHead(16, 0, 0), decals });
       // orelhinhas pequenas no alto, atrás na cabeça (giram junto); pastando, ficam da cor da cabeça (de frente, as

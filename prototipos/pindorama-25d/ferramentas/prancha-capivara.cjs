@@ -1,6 +1,7 @@
 // Prancha da capivara que anda (js/creatures/capivara.js), sem precisar entrar no jogo:
 //   node ferramentas/prancha-capivara.cjs saida.png
-// Linha 1: parada, andando (dois momentos), correndo, pastando, deitando, deitada, de perto (zoom 1,7).
+// Linha 1: parada, andando (dois momentos), correndo, pastando, deitando, deitada e contente com o carinho ('purr'),
+// de perto (zoom 1,7).
 // Linha 2: andando nas 4 direções e pastando nas 4 direções.
 // Linha 3: o passo em 8 quadros (de lado).
 // Linha 4: no tamanho do jogo (zoom 1,14 do PC), ao lado da capivara do cenário (props.js) para comparar.
@@ -36,10 +37,11 @@ window.__prancha = () => {
     else if (s === 'deitando') { c.action('sleep', yaw); sim(c, 0.45); }
     else if (s === 'deitada') { c.action('sleep', yaw); sim(c, 3); }
     else if (s === 'olhando') sim(c, 0.9);
+    else if (s === 'carinho') { sim(c, 0.6); c.action('purr', yaw); sim(c, 0.6); }
     return c;
   }
   const rows = [
-    { zoom: 1.7, h: 200, cells: [['parada', 0.5], ['andando', 0.5], ['andando', 0.5, 0.11], ['correndo', 0.5], ['pastando', 0.5], ['deitando', 0.5], ['deitada', 0.5]] },
+    { zoom: 1.7, h: 200, cells: [['parada', 0.5], ['andando', 0.5], ['andando', 0.5, 0.11], ['correndo', 0.5], ['pastando', 0.5], ['deitando', 0.5], ['deitada', 0.5], ['carinho', 0.5], ['carinho', 2.0]] },
     { zoom: 2.0, h: 170, cells: [['andando', 0.45], ['andando', 2.0], ['andando', -2.6], ['andando', -1.1], ['pastando', 0.45], ['pastando', 2.0], ['pastando', -2.6], ['pastando', -1.1]] },
     { zoom: 2.0, h: 160, cells: [0, 1, 2, 3, 4, 5, 6, 7].map((k) => ['andando', -0.78, 1.4 + k * 0.035]) },
     { zoom: 1.14, h: 100, cells: [['parada', 0.5], ['andando', 0.5], ['pastando', 0.5], ['deitada', 0.5], ['cenario', 0.5], ['andando', 2.0], ['pastando', -1.1], ['cenario', -1.1]] },
