@@ -185,7 +185,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   sala na frente), a rosa (a casa da vó) e a abandonada do fundo (a árvore nasce do chão de dentro e sai pelo buraco da
   laje). No ramo `mundo/casas-interior`: `interior`, porta de 1,2 m na frente (`portaDe`/`portaAte`), `piso` e os móveis
   sem vão de entalar. Entra com o desenho da [arte]
-- [ ] **[arte]** Casas com interior, o desenho: como a Budega (o telhado e a frente somem com o herói dentro), a porta
+- [x] **[arte]** Casas com interior, o desenho (**na main em 14/11**; `js/world/casas.js`): os móveis, os pisos, as
+  paredes de dentro de cada morador, a porta aberta no vão do mapa (a abandonada arrombada) e a árvore de dentro com o pé
+  e as raízes da Figueira da Esquina. Com o herói dentro, **só a casa aparece** (o resto da tela escurece e a câmera vai
+  para o meio dela, pedido do dono). O pedido era: como a Budega (o telhado e a frente somem com o herói dentro), a porta
   aberta no vão do mapa, o `piso` (`desenho`: `ceramica`, `taco`, `cimento`) e os móveis novos: `pia`, `fogao` (`panela`),
   `filtro` (de barro, no banquinho), `mesa-cozinha` (`toalha: 'xadrez'`, `cadeiras`), `estante` (`tv`: a TV de tubo),
   `tapete`, `sofa` (`cor`, `croche`, `rasgado`, `mato`), `cristaleira`, `mesa-redonda` (`toalha: 'croche'`),
@@ -195,7 +198,9 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   detalhes laranja (a máscara na testa e no focinho, as orelhas e o rabo), olhos azuis, como o gato do dono
   (`docs/referencias/joaquim-1.jpg` e `joaquim-2.jpg`), e com vida: dorme no sofá da vó, acorda, se espreguiça, anda
   pela casa, mia e dá para fazer carinho. A [estrutura] define a chave e o comportamento, a [arte] desenha e anima, e o
-  [mundo] marca a casa dele (a casa rosa; no mapa ele está no sofá, `gato` com `nome: 'Joaquim'`)
+  [mundo] marca a casa dele (a casa rosa; no mapa ele está no sofá, `gato` com `nome: 'Joaquim'`). A [arte] já fez o
+  Joaquim dormindo no sofá (respira, mexe a orelha e o rabo, com o nome em cima; `js/creatures/gato.js`): o resto vem
+  com o comportamento
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o
   telhado e a frente somem com suavidade e aparecem a parede do fundo por dentro (azulejo, relógio, "FIADO SÓ
   AMANHÃ", lousa de preços), o piso de ladrilho hidráulico (`piso`) e os móveis (`prateleira`, `geladeira`, `balcao`

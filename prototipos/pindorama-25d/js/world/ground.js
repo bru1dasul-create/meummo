@@ -534,6 +534,7 @@
       broke = true;
       if (!PD.street) return;
       for (const t of m.trees || []) {
+        if (t.inside) continue; // a de dentro de casa vai depois do piso da casa (lá embaixo)
         if ((t.breaks || t.kind === 'figueira') && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) PD.street.breaks(ctx, t, env);
       }
     };
@@ -578,6 +579,18 @@
       if (sh.type === 'circulo') this._circleStone(ctx, sh);
     });
     if (!broke) breaks();
+    // a árvore que nasceu dentro de casa: o chão quebrado e as raízes vão por cima do piso da casa (no mapa, o piso vem
+    // depois dos detalhes da rua); o colchão e o tapete voltam por cima delas
+    const inner = PD.street ? (m.trees || []).filter((t) => t.inside && t.x + 700 > box.x0 && t.x - 700 < box.x1 && t.y + 700 > box.y0 && t.y - 700 < box.y1) : [];
+    for (const t of inner) PD.street.breaks(ctx, t, env);
+    if (inner.length) {
+      m.shapes.forEach((sh, n) => {
+        if (sh.type !== 'colchao' && sh.type !== 'tapete') return;
+        const b = shapeBox(sh);
+        if (b.x1 < box.x0 || b.x0 > box.x1 || b.y1 < box.y0 || b.y0 > box.y1) return;
+        this._texture(ctx, sh, box, n);
+      });
+    }
     // sombras do que fica em pé (fixas), só das coisas perto deste pedaço
     ctx.fillStyle = C.shadow;
     const shade = new Path2D();

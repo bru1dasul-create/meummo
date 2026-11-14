@@ -114,7 +114,8 @@
       if (k === 'arvore') {
         // `dentroDaCasa`: a árvore que nasceu dentro da casa abandonada (o tronco só aparece com a casa cortada; a casa
         // desenha o buraco da laje em volta dela e não um segundo tronco)
-        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo, hugs: pr.abraca || null, inside: !!pr.dentroDaCasa });
+        // (e rompe o chão de dentro: o pé e as raízes são os da Figueira da Esquina, os que o dono aprovou)
+        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo || !!pr.dentroDaCasa, hugs: pr.abraca || null, inside: !!pr.dentroDaCasa });
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {
@@ -315,15 +316,13 @@
       }
       if (best && bd < 800) best.hug = { x: t.x, y: t.y, trunk: t.trunk };
     }
-    // casas com interior: a árvore de dentro (a casa abre o buraco da laje em volta dela; o piso ganha as raízes), a
-    // geladeira de casa (a da Budega é a de bebidas) e o gato deitado no sofá (na altura do assento)
+    // casas com interior: a árvore de dentro (a casa abre o buraco da laje em volta dela), a geladeira de casa (a da
+    // Budega é a de bebidas) e o gato deitado no sofá (na altura do assento)
     const within = (q, x, y) => x > q.x0 && x < q.x1 && y > q.y0 && y < q.y1;
     for (const t of map.trees) {
       if (!t.inside) continue;
       const house = map.houses.find((q) => within(q, t.x, t.y));
       if (house) house.innerTree = t;
-      const floor = map.shapes.find((s) => s.type === 'piso' && s.kind === 'rect' && within(s, t.x, t.y));
-      if (floor) floor.tree = { x: t.x, y: t.y, r: t.trunk };
     }
     for (const p of map.props) {
       if (p.kind === 'geladeira') p.home = map.houses.some((q) => q.resident && within(q, (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2));

@@ -1063,7 +1063,7 @@
       const base = P(x, y, z);
       const ww = w0 * 0.92;
       const stub = [{ x: base.x - ww, y: base.y }, { x: top.x - ww * 0.86, y: top.y }, { x: top.x + ww * 0.86, y: top.y }, { x: base.x + ww, y: base.y }];
-      poly(ctx, stub, BARK.mata ? BARK.mata[0] : '#6b4a30', INK, ink * 2.2);
+      poly(ctx, stub, FIG.bark.base, INK, ink * 2.2);
       poly(ctx, [stub[0], stub[1], { x: top.x - ww * 0.3, y: top.y }, { x: base.x - ww * 0.35, y: base.y }], 'rgba(255, 240, 210, 0.16)');
     }
     const shape = trunkShape(z);
@@ -1928,8 +1928,9 @@
     }
     constructor(world, t) {
       const rr = Math.max(22, t.trunk || 0);
-      // a figueira é larga (tronco de 2 m e galhos): fica transparente se esconder o personagem, como a copa
-      super(world, { x0: t.x - rr, x1: t.x + rr, y0: t.y - rr, y1: t.y + rr }, { fades: t.kind === 'figueira' });
+      // a figueira é larga (tronco de 2 m e galhos): fica transparente se esconder o personagem, como a copa (e a
+      // árvore que nasceu dentro de casa, que tem o pé dela)
+      super(world, { x0: t.x - rr, x1: t.x + rr, y0: t.y - rr, y1: t.y + rr }, { fades: t.kind === 'figueira' || !!t.inside });
       this.t = t;
       this.collider = { type: 'circle', x: t.x, y: t.y, r: t.trunk ? t.trunk + 4 : 26 };
     }
@@ -1937,7 +1938,7 @@
       const t = this.t;
       const fl = PD.flora && PD.flora.tree[t.kind];
       if (fl && fl.trunkBox) return fl.trunkBox(this.cam, t, this.z0);
-      const roots = t.kind === 'figueira' ? (t.trunk || 60) * 4.2 : 40;
+      const roots = t.kind === 'figueira' || t.inside ? (t.trunk || 60) * 4.2 : 40;
       return bbox([this.P(t.x, t.y, this.z0), this.P(t.x, t.y, this.z0 + t.h * 0.72)], Math.max(40, roots) * this.cam.zoom);
     }
     shadow(path) {
@@ -1959,7 +1960,9 @@
       const twist = t.kind === 'seca' ? 10 : t.trunk ? 3 : 6;
       const lean = (k) => Math.sin(k * 1.3 + t.x) * twist;
       const bark = BARK[t.kind];
-      if (t.kind === 'figueira') {
+      // a árvore que nasceu dentro da casa abandonada tem o pé da figueira (o tronco abrindo nas raízes que rompem o
+      // chão de dentro, as mesmas do chão: as que o dono aprovou na Figueira da Esquina)
+      if (t.kind === 'figueira' || t.inside) {
         this._figPaint(ctx);
         return;
       }

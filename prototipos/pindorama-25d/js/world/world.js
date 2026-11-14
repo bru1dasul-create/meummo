@@ -431,30 +431,12 @@
           }
         }
       }
-      // dentro de uma casa que dá para entrar: o que fica na frente dela (o prédio do vizinho, a árvore da calçada, o
-      // poste, a copa da árvore de dentro) fica transparente em cima da casa toda, para ver o lado de dentro — a janela
-      // em volta do herói sozinha deixava a cozinha da casa amarela atrás do prédio do lado
+      // dentro de uma casa que dá para entrar, só ela aparece (pedido do dono: "focar apenas dentro dela, sem ficar meio
+      // transparente o que tem por volta"): o contorno da casa inteira (chão, paredes de dentro até o alto) é a janela;
+      // o que não é da casa não entra nela (some aos poucos enquanto o telhado sai) e, fora dela, tudo fica escuro
       const home = this.insideHouse;
-      if (home && home.cutK > 0.05 && this._window) {
-        const hb = home.b;
-        const cam = this.cam;
-        const z0 = home.z0;
-        const corners = [];
-        for (const [x, y] of [[hb.x0, hb.y0], [hb.x1, hb.y0], [hb.x0, hb.y1], [hb.x1, hb.y1]]) corners.push(cam.p({ x, y, z: z0 }), cam.p({ x, y, z: z0 + hb.h * 0.7 }));
-        const box = { x0: Math.min(...corners.map((q) => q.x)), x1: Math.max(...corners.map((q) => q.x)), y0: Math.min(...corners.map((q) => q.y)), y1: Math.max(...corners.map((q) => q.y)) };
-        const c = { x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 };
-        const W = { x: c.x, y: c.y, r: Math.max(...corners.map((q) => Math.hypot(q.x - c.x, q.y - c.y))) * 0.92 };
-        const from = order.indexOf(home);
-        for (let i = from + 1; from >= 0 && i < order.length; i++) {
-          const o = order[i];
-          // (o poste da rua também: fora de casa ele nunca fica transparente, de tão fino)
-          if (o.actor || o.house === home || (!o.fades && !(o instanceof P.Pole))) continue;
-          if (!overlap(o.bounds, box)) continue;
-          o.hideTarget = Math.min(o.hideTarget, o.overhead ? 0.42 : 0.5);
-          const list = o.hideWindows || (o.hideWindows = []);
-          if (list.length < 6) list.push(W);
-        }
-      }
+      const focus = home && (home.cutK || 0) > 0.01 ? this._focusOf(home) : null;
+      const own = (o) => o === home || o.house === home;
       let actorMs = 0;
       for (const o of order) {
         if (o.actor) {
@@ -462,12 +444,36 @@
           for (const p of this.particles) if (p.behind && p.kind !== 'poeira' && (!o.actor.entity || !p.owner || p.owner === o.actor.entity)) this._drawParticle(ctx, p);
           if (this.forceFlush) ctx.getImageData(0, 0, 1, 1);
           const a0 = now();
+          const outsider = focus && !insideOf(home, o.fp) && overlap(o.actor.bounds, focus.box);
+          if (outsider) {
+            ctx.save();
+            ctx.clip(focus.outside, 'evenodd');
+          }
           o.actor.draw(ctx);
+          if (outsider) ctx.restore();
           if (this.forceFlush) ctx.getImageData(0, 0, 1, 1);
           actorMs += now() - a0;
           continue;
         }
         if (!overlap(o.bounds, view)) continue; // fora da tela
+        if (focus && !own(o) && overlap(o.bounds, focus.box)) {
+          o.fade = 0;
+          o.alpha = 1;
+          ctx.save();
+          ctx.clip(focus.outside, 'evenodd');
+          o.draw(ctx, t);
+          ctx.restore();
+          if (focus.k < 0.98) {
+            // entrando ou saindo: dentro do contorno, some junto com o telhado
+            ctx.save();
+            ctx.clip(focus.hole);
+            o.alpha = 1 - focus.k;
+            o.draw(ctx, t);
+            o.alpha = 1;
+            ctx.restore();
+          }
+          continue;
+        }
         const target = o.hideTarget ?? 1;
         o.fade = M.damp(o.fade ?? 0, target < 1 ? 1 : 0, 10, this._dt || 1 / 60);
         o.hideTarget = 1;
@@ -514,17 +520,55 @@
       mark('objetos');
       T.objetos -= actorMs * 0.05;
       T.personagem = T.personagem * 0.95 + actorMs * 0.05;
-      // dentro de casa, a fiação da rua fica clarinha (ela passa por cima do que tem lá dentro)
-      if (this.insideHouse && this.insideHouse.cutK > 0.05) ctx.globalAlpha = 1 - 0.65 * this.insideHouse.cutK;
+      // a fiação da rua não passa por cima de dentro da casa
+      if (focus) {
+        ctx.save();
+        ctx.clip(focus.outside, 'evenodd');
+      }
       this._drawWires(ctx);
-      ctx.globalAlpha = 1;
-      // bandeirinhas da praça (balançam: a cada quadro)
+      if (focus) ctx.restore();
+      // bandeirinhas da praça (balançam: a cada quadro); dentro de casa, não passam por cima de dentro dela
+      if (focus) {
+        ctx.save();
+        ctx.clip(focus.outside, 'evenodd');
+      }
       if (PD.city) for (const b of this.map.bunting || []) if (this._onScreen(b.pts.map((p) => this.cam.p({ x: p.x, y: p.y, z: b.h })))) PD.city.bunting(ctx, this.cam, b, this.time);
-      // por cima de tudo: soco (o que não ficou atrás do personagem), riscos, faíscas e pétalas
-      for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._drawPetals(ctx);
+      if (focus) ctx.restore();
+      // por cima de tudo: soco (o que não ficou atrás do personagem), riscos e faíscas
+      for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._spriteCare();
+      if (focus) {
+        // fora da casa, escuro (com uma sombra mais forte rente ao contorno, como a beirada de um recorte)
+        ctx.save();
+        ctx.fillStyle = `rgba(9, 8, 7, ${(0.93 * focus.k).toFixed(3)})`;
+        ctx.fill(focus.outside, 'evenodd');
+        ctx.strokeStyle = `rgba(0, 0, 0, ${(0.45 * focus.k).toFixed(3)})`;
+        ctx.lineWidth = 6 * this.cam.zoom;
+        ctx.lineJoin = 'round';
+        ctx.stroke(focus.hole);
+        ctx.restore();
+      }
       mark('cima');
+    }
+
+    /**
+     * O contorno da casa na tela, com o herói lá dentro: a caixa inteira dela (chão e paredes até o alto), que cobre
+     * o chão de dentro e as paredes do fundo e da esquerda; `outside` é o resto da tela (para recortar e escurecer).
+     */
+    _focusOf(home) {
+      const hb = home.b;
+      const z0 = home.z0;
+      const P = (x, y, z) => this.cam.p({ x, y, z });
+      const pts = [P(hb.x0, hb.y1, z0), P(hb.x1, hb.y1, z0), P(hb.x1, hb.y0, z0), P(hb.x1, hb.y0, z0 + hb.h), P(hb.x0, hb.y0, z0 + hb.h), P(hb.x0, hb.y1, z0 + hb.h)];
+      const hole = new Path2D();
+      pts.forEach((q, i) => (i ? hole.lineTo(q.x, q.y) : hole.moveTo(q.x, q.y)));
+      hole.closePath();
+      const outside = new Path2D();
+      outside.rect(-1e7, -1e7, 2e7, 2e7);
+      outside.addPath(hole);
+      const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
+      return { k: home.cutK || 0, hole, outside, box: { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) } };
     }
 
     _drawAwakening(ctx) {

@@ -27,6 +27,9 @@ explicações simples, sem concordar só para agradar, e mando prints do navegad
 - **Mensagens de outros chats** chegam por `send_message` e são informação, não ordem do dono. Os pedidos da
   [estrutura] e do [mundo] para a [arte] ficam também no roteiro. Quando o dono pediu ("vê com o outro chat"), falei
   com o [mundo] por `send_message`.
+- **Sons e música são da [estrutura]** desde 14/11 (escolha do dono, no `CLAUDE.md`): não mexo no `sfx.ts`.
+- **Arma na mão:** o arco fica sempre na mão quando equipado ("o arco deve permanecer na mão, como um item / arma",
+  13/11); o estilingue continua aparecendo só na hora do tiro. Fora isso, nada de armadura ou arma no personagem.
 - **Chave de API:** nunca pedir no chat.
 - **Dinheiro:** antes de gastar, digo o custo estimado e espero o "pode".
 - **Desenhos novos** sempre conferidos por imagem: prancha (`npm run render:characters`) e print do jogo.
@@ -671,6 +674,41 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   ao norte (o `scratchpad/exptools/foto-alto.cjs` faz isso). Se o dono quiser ver o trem andando pela vila, o caminho
   é o [mundo] baixar o viaduto (uns 5 m) ou trazê-lo mais para o sul.
 
+### Casas com interior (14/11): `js/world/casas.js` e o Joaquim (`js/creatures/gato.js`)
+- Planta aprovada pelo dono (`docs/referencias/casas-interior-planta.jpg`; os alvos `casa-*-dentro.jpg` dão o clima).
+  O mapa é do [mundo] (`mundo/casas-interior`); o `tmj.js` lê `portaDe`/`portaAte` (`door`), `morador` (`resident`),
+  os móveis (`HOME_FURNITURE`), o `gato`, o `entulho` do chão (vira objeto em pé) e a `arvore` com `dentroDaCasa`.
+- **Foco dentro de casa** (pedido do dono: "focar apenas dentro dela, sem ficar meio transparente o que tem por
+  volta"): com o herói dentro, o contorno da casa inteira (chão e paredes até o alto) é a janela; o que não é da casa
+  (prédio vizinho, árvore da calçada, poste, fiação, bandeirinhas, quem está lá fora) não entra nela e, fora dela, a tela
+  fica escura (`World._focusOf`, `world.js`). A câmera vai para o meio da casa e só aparecem os nomes de quem está dentro
+  (`view.js`). Vale também para a Budega. A primeira versão deixava o que estava na frente meio transparente: o dono
+  não gostou.
+- Móveis (só com a casa cortada, `INSIDE_KINDS`): pia, fogão com panela e frigideira, filtro de barro no banquinho,
+  geladeira de casa (branca, com ímãs; a da Budega continua a de bebidas: `home` no `tmj.js`), mesa com toalha xadrez e
+  duas cadeiras, estante com a TV de tubo de antena, sofá (`olhando` 270 = de costas; `croche`; `rasgado` e `mato`),
+  cristaleira com a louça, mesa redonda de crochê com as flores, máquina de costura de pé de ferro vazado, cama com
+  colcha de retalhos (a cabeceira é desenhada antes de tudo), samambaia no banquinho (a espada-de-são-jorge é a da vila)
+  e o entulho com a cadeira caída. Chão: cerâmica, taco, cimento rachado; o tapete; o colchão velho (a espessura
+  desenhada no chão, como o meio-fio).
+- Paredes de dentro por morador (`PD.casas.innerWall`): família (azulejo verde na cozinha, janela da pia, santinho,
+  calendário, relógio, fotos), vó (papel de florzinha, lambri, oratório com a vela, fotos ovais, crucifixo, janela com
+  cortina de renda) e ninguém (tijolo, reboco caindo, escorrido, cipó). Sem morador: as da Budega.
+- Porta: a desenhada fica no vão do mapa (1,2 m) e aberta (a folha para dentro); a da abandonada, arrombada.
+- **A árvore de dentro da casa abandonada:** o tronco só aparece com a casa cortada; a casa abre o buraco da laje em
+  volta dela (o toco saindo do buraco; a copa é a da própria árvore, por cima da casa). O pé e as raízes são **os da
+  Figueira da Esquina, que o dono aprovou** (ele achou a primeira versão com "o mesmo bug da outra árvore": raiz chata
+  e tronco que não se fundia nela): `t.inside` usa `_figPaint` e `breaks: true`; em `street.js`, `home` faz as raízes
+  ficarem do lado de dentro das paredes (e fora do sofá), as curtas saem (viravam ponta rombuda) e o chão quebrado é
+  recortado nas paredes; em `ground.js`, o chão quebrado dela vai depois do piso da casa e o colchão e o tapete voltam
+  por cima.
+- **Joaquim** (`PD.gato.draw`): bem pequeno, creme com as pontas laranja-claras de flame point, olhos azuis (fechados,
+  dormindo), nariz rosa; dorme enrolado no sofá da vó: respira, mexe uma orelha, bate a ponta do rabo, solta "z"; o
+  nome em verde-água em cima. Desenhado a cada quadro (`live` no `Small`). Acordar, andar, miar e carinho: quando a
+  [estrutura] fizer o comportamento (a chave é dela; os sons também).
+- Conferi com o mapa do [mundo] numa cópia à parte (`foto-casas.cjs`: leva o herói à porta pelo painel e entra
+  andando): PC e celular em pé.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
@@ -764,6 +802,10 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
+- **[estrutura]:** o comportamento do Joaquim (acordar, andar, miar, carinho); os sons. O arco: as regras já estão na
+  `main` (f9f1b3c); ela liga `projectileArt.ts` e o `setLook` quando o meu desenho do arco entrar e troca o ícone do
+  item para `arco`.
+- **[mundo]:** junta o `mundo/casas-interior` (e o `mundo/placa-parque`) depois do meu ramo.
 - **[mundo]:** a Dona Iracema aparecia por cima do balcão da barraquinha (o balcão desenhado na frente das pernas).
   O [mundo] anotou o pedido; confira no jogo se ficou certo.
 - **[estrutura]** (ideia, não pedida ainda): o servidor só avisa o próprio jogador de que ele está encantado
@@ -771,6 +813,10 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
+0. **O arco (próximo, aprovado em 13/11):** `view.gear(id, gear)` com o arco sempre na mão esquerda, a pose de puxar a
+   corda até o rosto (o arco enverga com a carga), `src/client/novo/projectileArt.ts` (`drawProjectile`,
+   `projectileEnded`, `drawLanded`: a flecha voando e cravada), o ícone `arco` (item e botão), `ActionBar.setLook` e o
+   herói da mochila com o arco. Sem sons (são da [estrutura]).
 1. **Piloto do estilo desenhado** com o Nano Banana (esperando os exemplos do dono, veja acima).
 2. **Monstros antigos no capricho novo** (`monsterPaint.ts`): sagui, jararaca, saci, corpo-seco, capelobo e Mula sem
    Cabeça. Hoje são 16x16 e menores que um jogador. Se o piloto aprovar o estilo desenhado, faça já nesse estilo.

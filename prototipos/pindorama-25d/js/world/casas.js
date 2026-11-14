@@ -1473,8 +1473,8 @@
     return true;
   };
   /**
-   * Cimento queimado velho (a casa abandonada): manchas, rachaduras, folhas secas, musgo na beirada e, se a árvore
-   * nasceu aqui (`sh.tree`, tmj.js), as raízes grossas rompendo o chão em volta do tronco.
+   * Cimento queimado velho (a casa abandonada): manchas, rachaduras, folhas secas e musgo na beirada. As raízes da
+   * árvore que nasceu aqui são as da Figueira da Esquina (street.js, `breaks`), pintadas por cima.
    */
   floor.cimento = (ctx, sh, box) => {
     const sb = G.shapeBox(sh);
@@ -1511,7 +1511,6 @@
       ctx.ellipse(x, y, 6 + rr() * 12, 4 + rr() * 6, rr() * 3, 0, M.TAU);
       ctx.fill();
     }
-    if (sh.tree) treeRoots(ctx, sh.tree);
     // folhas secas espalhadas (por cima das raízes também)
     const LEAF = ['#c8963c', '#a8692c', '#d9b25a', '#8a5a2a', '#b98a3a'];
     for (let k = 0; k < 60; k++) {
@@ -1524,82 +1523,6 @@
     ctx.restore();
     return true;
   };
-  /** As raízes da árvore que nasceu dentro de casa: grossas no pé, afinando, com o cimento levantado e rachado em volta. */
-  function treeRoots(ctx, t) {
-    const r = seeded(t.x, t.y, 1631);
-    const R0 = (t.r || 40) * 0.9;
-    const roots = [];
-    const n = 9;
-    for (let k = 0; k < n; k++) {
-      const a = (k / n) * M.TAU + (r() - 0.5) * 0.5;
-      roots.push({ a, len: 80 + r() * 130, w0: 22 + r() * 12, seed: r() * 10 });
-    }
-    // primeiro o cimento quebrado em placas em volta do pé (levantadas: um lado claro, a borda escura)
-    for (let k = 0; k < 9; k++) {
-      const a = r() * M.TAU, d = R0 + 10 + r() * 50;
-      const cx = t.x + Math.cos(a) * d, cy = t.y + Math.sin(a) * d;
-      ctx.fillStyle = '#a7a299';
-      ctx.strokeStyle = 'rgba(30, 26, 20, 0.85)';
-      ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const b = a + (i / 5) * M.TAU;
-        const rr = 10 + r() * 10;
-        if (i) ctx.lineTo(cx + Math.cos(b) * rr, cy + Math.sin(b) * rr);
-        else ctx.moveTo(cx + Math.cos(b) * rr, cy + Math.sin(b) * rr);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(52, 38, 26, 0.85)';
-    ctx.beginPath();
-    ctx.ellipse(t.x, t.y, R0 + 26, R0 + 22, 0, 0, M.TAU);
-    ctx.fill();
-    for (const q of roots) {
-      const pts = [];
-      const N = 10;
-      for (let i = 0; i <= N; i++) {
-        const s = i / N;
-        const a = q.a + Math.sin(s * 3 + q.seed) * 0.22;
-        const d = R0 * 0.7 + q.len * s;
-        pts.push({ x: t.x + Math.cos(a) * d, y: t.y + Math.sin(a) * d, w: q.w0 * Math.max(0.12, 1 - Math.pow(s, 0.7) * 0.9) });
-      }
-      // a rachadura que a raiz abriu, dos dois lados
-      ctx.strokeStyle = 'rgba(30, 26, 20, 0.6)';
-      ctx.lineWidth = 1.4;
-      for (const sgn of [-1, 1]) {
-        ctx.beginPath();
-        pts.forEach((p, i) => {
-          const nx = -Math.sin(q.a) * (p.w * 0.5 + 4) * sgn, ny = Math.cos(q.a) * (p.w * 0.5 + 4) * sgn;
-          if (i) ctx.lineTo(p.x + nx, p.y + ny);
-          else ctx.moveTo(p.x + nx, p.y + ny);
-        });
-        ctx.stroke();
-      }
-      // a raiz: contorno, casca e a luz em cima
-      for (const [extra, color] of [[3.2, '#1b100d'], [0, '#6b4a30']]) {
-        ctx.strokeStyle = color;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        for (let i = 1; i < pts.length; i++) {
-          ctx.lineWidth = pts[i].w + extra;
-          ctx.beginPath();
-          ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-          ctx.lineTo(pts[i].x, pts[i].y);
-          ctx.stroke();
-        }
-      }
-      ctx.strokeStyle = 'rgba(190, 150, 110, 0.55)';
-      for (let i = 1; i < pts.length; i++) {
-        ctx.lineWidth = Math.max(1, pts[i].w * 0.3);
-        ctx.beginPath();
-        ctx.moveTo(pts[i - 1].x - 2, pts[i - 1].y - 2);
-        ctx.lineTo(pts[i].x - 2, pts[i].y - 2);
-        ctx.stroke();
-      }
-    }
-  }
   // o piso escolhe o desenho pelo `desenho` do mapa; sem ele, o ladrilho hidráulico da Budega (street.js)
   const ladrilho = texture.piso;
   texture.piso = (ctx, sh, box, seed, ground, map) => (sh.pattern && floor[sh.pattern] ? floor[sh.pattern](ctx, sh, box, seed, ground) : ladrilho(ctx, sh, box, seed, ground, map));
