@@ -112,8 +112,8 @@ function shootRight(world: World, player: Player): void {
   run(world, SHOT_COOLDOWN_MS + TICK_MS);
 }
 
-describe('ouro no chão', () => {
-  it('cai onde o monstro estava, um montinho para cada um que ajudou (cada um só vê o seu)', () => {
+describe('ouro e itens no chão', () => {
+  it('cai onde o monstro estava, um montinho para cada um que ajudou (cada um só vê o seu); o item cai do lado', () => {
     const world = arena('rico');
     const ana = join(world, 'Ana');
     const beto = join(world, 'Beto');
@@ -122,11 +122,13 @@ describe('ouro no chão', () => {
     shootRight(world, ana.player);
     for (const { player, conn } of [ana, beto]) {
       expect(player.inventory.gold).toBe(0); // ainda está no chão
-      expect(conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [{ item: 'fruta', n: 2 }] });
+      expect(player.inventory.slots[0]).toBeNull(); // o item também (escolha do dono, 14/11: "no chão, como o ouro")
+      expect(conn.ofType('loot')).toHaveLength(0);
       const drops = conn.ofType('drop');
-      expect(drops).toHaveLength(1); // só o seu
+      expect(drops).toHaveLength(2); // só os seus: o ouro e a fruta
       expect(drops[0]).toMatchObject({ x: 4, y: 1, gold: 2, ms: GOLD_DROP_MS });
-      expect(conn.ofType('sys').some((m) => m.text === 'Você pegou: Fruta ×2.')).toBe(true);
+      expect(drops[1]).toMatchObject({ item: { item: 'fruta', n: 2 }, ms: ITEM_DROP_MS });
+      expect(Math.max(Math.abs(drops[1]!.x - 4), Math.abs(drops[1]!.y - 1))).toBe(1); // ao lado do ouro
     }
     expect(ana.conn.ofType('drop')[0]!.id).not.toBe(beto.conn.ofType('drop')[0]!.id);
   });
@@ -197,13 +199,32 @@ describe('ouro no chão', () => {
     expect(world.drops.size).toBe(0);
   });
 
-  it('monstro sem ouro não deixa nada no chão', () => {
+  it('monstro sem ouro: só o item cai, onde ele estava; passando por cima, vai para a mochila (com aviso no chat)', () => {
     const world = arena('pobre');
     const ana = join(world);
     world.tick();
     shootRight(world, ana.player);
-    expect(ana.conn.ofType('drop')).toHaveLength(0);
-    expect(ana.conn.ofType('loot')[0]).toEqual({ t: 'loot', x: 4, y: 1, items: [{ item: 'fruta', n: 1 }] });
+    const drops = ana.conn.ofType('drop');
+    expect(drops).toHaveLength(1);
+    expect(drops[0]).toMatchObject({ x: 4, y: 1, item: { item: 'fruta', n: 1 }, ms: ITEM_DROP_MS });
+    expect(drops[0]!.gold).toBeUndefined();
+    ana.player.x = 4;
+    run(world, DROP_READY_MS + TICK_MS);
+    expect(ana.player.inventory.slots[0]).toEqual({ item: 'fruta', n: 1 });
+    expect(ana.conn.ofType('pickup').at(-1)).toEqual({ t: 'pickup', id: drops[0]!.id, item: { item: 'fruta', n: 1 } });
+    expect(ana.conn.ofType('sys').some((m) => m.text === 'Você pegou: Fruta.')).toBe(true);
+  });
+
+  it('o item some se ninguém pegar em ITEM_DROP_MS (mais tempo que o ouro)', () => {
+    const world = arena('pobre');
+    const ana = join(world);
+    world.tick();
+    shootRight(world, ana.player);
+    const dropId = ana.conn.ofType('drop')[0]!.id;
+    run(world, GOLD_DROP_MS);
+    expect(ana.conn.ofType('drop_gone')).toHaveLength(0); // o ouro já teria sumido; o item, não
+    run(world, ITEM_DROP_MS - GOLD_DROP_MS);
+    expect(ana.conn.ofType('drop_gone')).toEqual([{ t: 'drop_gone', id: dropId }]);
   });
 
   it('mochila cheia: o item também fica no chão, esperando você abrir espaço', () => {
@@ -217,7 +238,6 @@ describe('ouro no chão', () => {
     expect(drops.map((d) => d.gold ?? d.item)).toEqual([2, { item: 'fruta', n: 2 }]);
     expect(drops[1]!.ms).toBe(ITEM_DROP_MS);
     expect(Math.max(Math.abs(drops[1]!.x - 4), Math.abs(drops[1]!.y - 1))).toBe(1); // ao lado do ouro
-    expect(ana.conn.ofType('sys').some((m) => m.text === 'Mochila cheia! Ficou no chão: Fruta ×2. Abra espaço e passe lá para pegar.')).toBe(true);
 
     // chega perto com a mochila cheia: pega o ouro, avisa uma vez só que a fruta não cabe
     ana.player.x = 4;

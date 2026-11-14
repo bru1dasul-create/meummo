@@ -95,15 +95,28 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   no chão. Contas que batem com o servidor (há teste em `tests/combate-novo.test.ts`): o pé de quem está no tile
   (tx, ty) fica no quadrado [tx, tx+1] × [ty+0,2, ty+1,2] do chão; um projétil em (sx, sy) é desenhado sobre o chão em
   (sx, sy + 0,5), na altura do peito; mirar é do seu pé ao pé do alvo. A view pode ajudar com dois métodos
-  opcionais: `action(id, tipo, ângulo)` (animações: 'windup', 'shoot', 'arc', 'dash', 'hurt', 'faint', 'revive' e os
-  golpes dos monstros) e `actorPosition(id)` (onde o pé está desenhado, para barra e número seguirem o desenho).
+  opcionais: `action(id, tipo, ângulo)` (animações: 'windup', 'shoot', 'arc', 'dash', 'jump', 'hurt', 'faint', 'revive'
+  e os golpes dos monstros) e `actorPosition(id)` (onde o pé está desenhado, para barra e número seguirem o desenho).
+  O tiro que bate em algo para na beirada (`advanceShot` volta até o último ponto livre) e o `shot_end` diz onde e no
+  quê (`GameMap.shotBlockerAt`: o tipo do retângulo da `colisao`, 'bloco' sem tipo, 'borda' fora do mapa): o motor
+  deixa o desenho voar até lá e a flecha crava (`projectileEnded(..., stuck)`, da [arte]).
   O servidor recusa ataque de quem está numa área segura (`World.shoot` e a Bordunada). No formato novo, a pedra
   bate pelo retângulo exato da `colisao` (com `bloqueiaTiro`) embaixo dela (`GameMap.blocksShotAt`, `SHOT_FEET_DY`):
   um tronco de 0,3 m segura a pedra só nos 0,3 m dele. Tocar/clicar num monstro vale tanto onde ele está desenhado
   quanto onde o servidor diz que ele está, com mais folga no dedo.
 - **Velocidade** (decisão do dono em 13/11): no mundo novo, correr é o normal (`RUN_SPEED`, 4,5 m/s) e andar devagar
-  (`WALK_SPEED`, 2 m/s) é segurando Shift ou empurrando pouco o joystick; o pedido `walk` leva `slow: true` (protocolo
-  18) e o servidor anda o pedaço do tamanho certo (`sliceDistance`). No jogo de hoje continua 5 tiles por segundo.
+  (`WALK_SPEED`, 2 m/s) é com o andar devagar ligado (tecla `C`, liga e desliga) ou empurrando pouco o joystick; o
+  pedido `walk` leva `slow: true` (protocolo 18) e o servidor anda o pedaço do tamanho certo (`sliceDistance`). No jogo
+  de hoje continua 5 tiles por segundo.
+- **Teclas** (`keys.ts` e `keysPanel.ts`, pedido do dono em 14/11): cada ação tem a sua tecla (`KeyboardEvent.code`;
+  os dois Shifts contam como um) e o jogador troca na janela das teclas (botão "Teclas" no painel do som, só no
+  computador). Padrão: `Shift` esquiva, `Espaço` pula, `J` atira, `F` defende, `Q` e `E` as habilidades, `I` mochila,
+  `M` mapa, `C` andar devagar e o som sem tecla. Ficam fixas (não dá para escolher) as de andar, `Enter`, `Esc`, o zoom,
+  `1` a `4` e o `G` do menu ADM; Ctrl, Alt, Caps Lock e F1–F12 são recusadas (Ctrl + W fecha a aba). Trocar com uma
+  tecla já usada troca as duas ações. Fica no aparelho (`meummo:teclas`); a barra de ações é refeita com as novas.
+- **Pulo** (`Espaço`, protocolo 31): por enquanto só de enfeite. O navegador pula na hora (`view.action(id, 'jump')`)
+  e manda `jump`; o servidor confere a recarga (`JUMP_COOLDOWN_MS`, 0,8 s) e se não está desmaiado, defendendo ou
+  puxando o tiro, e manda o `fx` `jump` para quem está perto (não para quem pulou).
 
 ## Por que não tem atraso ao andar
 Esperar a resposta do servidor para mover o personagem daria sensação de lag. Por isso o cliente
@@ -202,13 +215,16 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
 ## Itens e mochila
 - Os tipos de item vêm de `data/items.json` (lido por `src/server/items.ts`) e vão para o navegador no `welcome`.
   O servidor confere ao ligar se todo item que os monstros deixam existe.
-- Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro: os itens vão direto para
-  a mochila dele (`loot` para o efeito do item voando, `inv` com a mochila nova). Mochila cheia: o item se perde,
-  com aviso. Item raro ou lendário salva o personagem na hora.
+- Quando um monstro cai, **cada jogador que ajudou** sorteia a lista `itens` do monstro. Desde 14/11 (escolha do
+  dono) os itens caem no chão, em volta de onde o monstro estava (`giveLoot`: o ouro no lugar dele, cada item num
+  lugar livre ao lado), e o jogador pega passando por cima (abaixo). O `loot` (item voando direto para a mochila)
+  não é mais mandado. Ao pegar: `pickup`, "Você pegou: ..." no chat e o anúncio para todos do item lendário; item
+  raro ou lendário salva o personagem na hora. No jogo 2.5D, `CombatLayer.drawDrops` desenha o ícone do item caindo
+  (com quique), "×N", e o brilho do raro (dourado) e do lendário (laranja, com facho de luz).
 - **Ouro:** cada um que ajudou também sorteia o `ouro` do monstro (`MonsterDef.gold`). O ouro fica em
   `Inventory.gold` (não ocupa espaço; máximo `MAX_GOLD` em `src/shared/items.ts`), vai no `inv` (`gold`) e é salvo
   dentro do JSON da mochila — save de antes do ouro entra com 0.
-- **No chão (`World.drops`):** o ouro sorteado e o item que não coube na mochila viram um `GroundDrop` com dono:
+- **No chão (`World.drops`):** o ouro e os itens sorteados (e o que o administrador deu e não coube) viram um `GroundDrop` com dono:
   só ele recebe o `drop` (posição, ouro ou item, tempo que falta) e só ele pega. A cada tick, o dono a
   `PICKUP_RANGE` tile (depois de `DROP_READY_MS`, o tempo das moedas caírem) pega: `pickup` (com o que pegou) e `inv`.
   Some em `GOLD_DROP_MS` / `ITEM_DROP_MS` (`drop_gone`). Item com a mochila ainda cheia continua no chão (avisa
@@ -349,10 +365,10 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
 | servidor | `ack` / `teleport` | sua posição oficial (exata) depois do pedido `seq` / você foi levado para outro lugar no mesmo mapa |
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |
-| servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou) |
+| servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou; sem acertar ninguém, `x`, `y` = onde parou e `on` = no que bateu, ex. 'tronco'; sem `on`, caiu no fim do alcance) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
 | servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
-| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, redemoinho, investida), com o alcance do golpe quando precisa |
+| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, pulo, redemoinho, investida), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `gm` | você é administrador: o menu ADM aparece, com o voo, o invencível e os monstros que dá para criar (só administrador recebe) |
 | servidor | `guard` / `energy` | outro jogador levantou ou baixou a defesa / a sua energia e a defesa (baixada, levantada, quebrada); no `hit`, `blk` diz se a defesa segurou (1) ou segurou e quebrou (2) |
@@ -366,6 +382,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `questDefs` | o administrador ajustou as missões (textos, objetivo, recompensa): use a lista nova |
 | servidor | `combat` | o administrador ajustou os números do combate (carga, defesa, empurrão): use os novos |
 | cliente | `pet` | fazer carinho no bicho (o Joaquim), perto dele |
+| cliente | `jump` | pulei (só de enfeite: o servidor confere a recarga e manda o `fx` `jump` para quem está perto) |
 | servidor | `charm` / `pull` | você foi encantado pelo canto por `ms` (0 = acabou) / o canto te puxou para esta posição |
 | servidor | `gear` | alguém que você vê (ou você) trocou de equipamento: o desenho de cada parte |
 | servidor | `say` / `chat` / `sys` | balão de fala / chat / aviso do sistema |

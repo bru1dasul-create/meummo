@@ -141,7 +141,8 @@
         // e os detalhes: `panela` (fogão), `tv` (estante), `cadeiras` e `toalha` (mesas), `cor`, `croche`, `rasgado` e
         // `mato` (sofá), `colcha` (cama)
         const r0 = o.width || o.height ? rect(o) : { x0: x - 25, x1: x + 25, y0: y - 25, y1: y + 25 };
-        map.props.push({ kind: k, ...r0, x: (r0.x0 + r0.x1) / 2, y: (r0.y0 + r0.y1) / 2, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, pot: !!pr.panela, tv: !!pr.tv, chairs: pr.cadeiras || 0, cloth: pr.toalha || null, color: pr.cor || null, doily: !!pr.croche, torn: !!pr.rasgado, weeds: !!pr.mato, quilt: pr.colcha || null });
+        // (a cama sem `olhando` fica com os pés para o leste, como sempre foi; os outros móveis, de frente para o sul)
+        map.props.push({ kind: k, ...r0, x: (r0.x0 + r0.x1) / 2, y: (r0.y0 + r0.y1) / 2, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? (k === 'cama' ? 0 : 90), pot: !!pr.panela, tv: !!pr.tv, chairs: pr.cadeiras || 0, cloth: pr.toalha || null, color: pr.cor || null, doily: !!pr.croche, torn: !!pr.rasgado, weeds: !!pr.mato, quilt: pr.colcha || null });
       } else if (k === 'gato') {
         // o gato da casa (o Joaquim, da vó; creatures/gato.js): `nome`, `cor`, `manchas` e `tamanho`; dorme no sofá
         map.props.push({ kind: 'gato', x, y, r: 20, name: pr.nome || o.name || '', color: pr.cor || null, marks: pr.manchas || null, size: pr.tamanho || null });
@@ -208,7 +209,8 @@
         map.props.push({ kind: 'fogueira', x, y, r: (pr.raio || 0.6) * 100, light: pr.luz || '#ffb347' });
       } else if (k === 'orelhao' || k === 'lixeira') {
         // `mato`: a lixeira verde do parque antigo, com mato em volta (sem ele, a laranja de rua)
-        map.props.push({ kind: k, x, y, angle: pr.olhando, weeds: !!pr.mato });
+        // (`poste`: o orelhão preso no poste de luz do lado, sem o cano dele)
+        map.props.push({ kind: k, x, y, angle: pr.olhando, weeds: !!pr.mato, pole: !!pr.poste });
       } else if (k === 'bebedouro') {
         map.props.push({ kind: 'bebedouro', x, y, r: 24, broken: !!pr.quebrado, moss: !!pr.musgo });
       } else if (k === 'academia') {
@@ -329,6 +331,16 @@
       if (p.kind === 'gato') {
         const sofa = map.props.find((q) => q.kind === 'sofa' && within(q, p.x, p.y));
         p.perch = sofa ? (sofa.h || 90) * 0.5 : 0;
+      }
+      // o orelhão preso no poste de luz (`poste`): o poste mais perto (até 1,5 m), para os braços irem até ele
+      if (p.kind === 'orelhao' && p.pole) {
+        let best = null, bd = 150;
+        for (const q of map.props) {
+          if (q.kind !== 'poste-praca') continue;
+          const d = Math.hypot(q.x - p.x, q.y - p.y);
+          if (d < bd) { bd = d; best = q; }
+        }
+        if (best) p.poleAt = { x: best.x, y: best.y };
       }
     }
     // fiação: cada trecho da polilinha liga os dois postes mais perto das pontas (os fios saem das cruzetas)

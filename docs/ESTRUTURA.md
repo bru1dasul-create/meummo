@@ -79,6 +79,74 @@ novo, passo 1 (roteiro). Avisei o [mundo].
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).
 
+**14/11 — combinados com o [mundo] (a floresta maior, esperando o dono):** o Capão passa a 96 × 180 m (cresce só
+para o sul; nada muda de lugar). Áreas reservadas na camada `monstros` (x0–x1 × y0–y1): A 20–38 × 112–140 (mata do
+meio do parque), B 2–24 × 150–178 (mata profunda do sul e cachoeirinha, a mais forte), C 52–86 × 92–136 (mata da
+estrada, norte), D 52–86 × 154–177 (mata da estrada, sul, perto do posto). Minha proposta ao dono: A quati (2), C
+tatu-bola (3), D marimbondo (3), B filhote de boitatá (5, só de noite). Monstro que ainda não existe numa área: o
+servidor só avisa ao ligar. **Capivaras:** por grupo, em `pontos`, o retângulo `capivaras-<lugar>` (onde andam) e o
+ponto `capivaras-<lugar>-descanso`; quantidade e o resto em data/bichos.json (como o Joaquim: `area`, `descanso`).
+
+**14/11 — itens no chão (escolha A do dono):** `World.giveLoot` agora põe tudo no chão: o ouro no lugar do monstro
+e cada item num lugar livre em volta (`walkableAround`), por `ITEM_DROP_MS` (2 min). Pegar é o `pickUp` de sempre
+(passando por cima, depois de `DROP_READY_MS`), que agora manda "Você pegou: ..." e o anúncio do lendário. O `loot`
+não é mais mandado (o tipo ficou no protocolo; o jogo antigo ainda sabe mostrar). Sem mudar o protocolo. No 2.5D:
+`addDrop(..., item)` com ícone (`itemIconUrl`), raridade e quantidade; `drawDrops` desenha caindo com quique, "×N",
+brilho dourado (raro) e laranja com facho (lendário), e espalha um pouquinho dentro do lugar para não sobrepor; o
+`pickup` de item mostra "+Banana" (`onLoot`). Gancho novo: `__mundoNovo.drops()`. Testes em `gold.test.ts` e
+`items.test.ts`. Conferido: 8 saguis criados pelo menu ADM e derrubados → 3× banana ×2 e um chapéu de palha no
+chão, tudo pego passando por cima; mochila cheia → estilingue (raro) e gorro (lendário) esperando no chão.
+
+**14/11 — formato do mapa da tecla M (combinado com o [mundo]):** uma imagem por mapa, vista de cima com o norte
+para cima e sem texto, `public/assets/maps-iso/<id>-mapa.png`, e `<id>-mapa.json` = `{ escala (px por metro; 8 no
+Capão), largura, altura (metros), nomes: [{ nome, x, y, tipo? }] }`, os dois feitos pelo gerador do [mundo]. A [arte]
+mostra a imagem girada para bater com a câmera isométrica (no mapa e no mini mapa) e escreve os nomes. O "explorado" é
+meu: salvo no personagem (passo novo em `MIGRATIONS`), numa grade de quadradinhos de alguns metros por mapa. A [arte]
+combina os outros formatos quando cada item chegar: `view.setWind(forca)`, a hora do dia e a marca dos olhos vermelhos.
+Pendente do dono: como o drop de itens deve funcionar (no chão como o ouro, ou voando para a mochila) e se o pulo faz
+algo no jogo.
+
+**14/11 — flecha presa na árvore (as regras):** `SolidRect.kind` (o tipo do objeto da `colisao` no Tiled) e
+`GameMap.shotBlockerAt(x, y)` (o tipo do que segura o tiro, 'bloco' sem tipo, 'borda' fora do mapa). O `advanceShot`
+volta até a beirada quando bate (8 metades, ~1 mm). `shot_end` ganhou `x`, `y` (onde parou, sem acertar ninguém) e
+`on` (no que bateu) — protocolo **32**. O motor (`CombatLayer.endShot`) deixa o desenho voar até o ponto e chama o
+`projectileEnded(kind, x, y, ângulo, agora, stuck)` com `stuck = { on, z: SHOT_DRAW_Z }` (0,9 m, a altura do voo).
+Conferido no Capão: tronco em x = 44,83, o servidor disse x = 44,824, `on: 'tronco'`. Falta a [arte] desenhar
+cravada no tronco (hoje crava no chão, ao pé da árvore). `tests/flecha-presa.test.ts`.
+
+**14/11 — controles novos (pedido do dono):** `src/client/novo/keys.ts` (`KeyBindings`: cada ação com uma tecla,
+`KeyboardEvent.code`, os dois Shifts como um; troca com tecla já usada troca as duas; recusa as de andar, as fixas e
+Ctrl/Alt/Caps/F1–F12; guarda em `meummo:teclas`) e `keysPanel.ts` (janela das teclas, aberta pelo botão "Teclas" do
+painel do som, escondido no celular; avisa das "Teclas de Aderência" do Windows com a esquiva no Shift). Padrão:
+Shift esquiva, Espaço pula, J atira, F defende, Q/E habilidades, I mochila, M mapa (só um aviso até o mapa existir),
+C liga e desliga o andar devagar (antes, segurar Shift), som sem tecla. A barra de ações é refeita com as teclas novas
+(`makeActionBar`/`keysChanged`). **Pulo** (protocolo **31**): o cliente manda `jump`, o servidor confere a recarga
+(`JUMP_COOLDOWN_MS`, 0,8 s), recusa desmaiado, defendendo ou puxando o tiro, e manda `fx` `jump` a quem está perto
+(`tests/pulo.test.ts`); som `jump` no `sfx.ts`; o desenho provisório dá um pulinho. Pedidos à [arte]: o pulo no boneco
+(o animador já pula com `input.jump`), o botão de pular no celular, a etiqueta da tecla da esquiva (o estilo desenha a
+barra de espaço fixa) e o "Como jogar" da tela de entrada.
+
+**14/11 — lag na conversa e trava no zoom (medido) e o som do arco:** perfil no Chromium sem placa de vídeo (CDP
+Profiler + tarefas longas, build com `npx vite build --minify false`): ao abrir e fechar a conversa e ao dar zoom,
+quadros de 100 a 250 ms, quase tudo em `drawImage`. A causa é do desenho (da [arte]): `Ground._ensureKey()`
+(`prototipos/pindorama-25d/js/world/ground.js`) apaga todos os pedaços do chão a cada zoom novo, e a câmera da conversa
+muda o zoom a cada quadro por 450 ms (`CONVERSATION_ZOOM_MS`); e o `World.buildBusy()` conta só a gravação da pintura
+(o Chrome pinta de verdade no primeiro `drawImage` de cada imagem). Pedido mandado à [arte]: esticar os pedaços velhos
+enquanto o zoom muda e refazer quando ele parar. O motor ficou como está (se ela pedir, dou menos passos na animação
+da conversa). Som da puxada do arco refeito (`Sfx.charge(power, 'flecha')`): sem tom contínuo; chiado fino de corda
+(ruído num filtro estreito, 2400→3500 Hz) e estalinhos de madeira (`creak`) que aceleram com a carga.
+
+**14/11 — música (licença livre) e a lista grande do dono:** três músicas CC0 do OpenGameArt em
+`public/assets/audio/musica/` (créditos em `CREDITOS.md`; igualadas a -20 LUFS com o `loudnorm` do ffmpeg, MP3 112 kbps):
+vila → Down The River (Komiku), mata/clareira/lago → Forest Whisper Theme (Cleyton Kauffman), mata profunda → Peaceful
+Forest (Samza). `src/client/music.ts`: dois tocadores `HTMLAudioElement` (tocam aos poucos, sem carregar tudo) ligados
+ao volume "música" por `MediaElementSource`; trocam devagar; liberados no primeiro clique (`Sfx.unlock` → `prime`, por
+causa do iPhone). O Pixabay e o Freesound recusam acesso automático daqui; o OpenGameArt, o FMA e o Incompetech
+funcionam. O dono mandou a lista grande (no roteiro, "A lista do dono de 14/11"): distribuí para a [arte] e o [mundo].
+Minha fila, na ordem: lag ao falar com NPC e trava no zoom (medir), som do arco, controles (Shift esquiva, Espaço
+pula, M mapa), flecha presa na árvore, drop de itens, dia e noite, vento, mapa explorado, capivaras, mais bichos e as
+habilidades (estas duas pedem decisões do dono).
+
 **14/11 — arco e Joaquim desenhados (da [arte], com o "pode" do dono):** liguei a flecha de verdade
 (`projectileArt.ts`: `drawProjectile` no `drawShots`, `projectileEnded` no `endShot(id, hit)` e no fim do alcance,
 `drawLanded`, `landedBusy` no `busy()`), o ícone `arco` no item e o `actionBar.setLook` (ao entrar e na mensagem `gear`

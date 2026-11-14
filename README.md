@@ -43,17 +43,24 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 
 | Ação | Computador | Celular |
 |---|---|---|
-| Andar | `W` `A` `S` `D` / setas, ou clique no chão (`Shift` anda devagar) | joystick ou toque no chão |
+| Andar | `W` `A` `S` `D` / setas, ou clique no chão (`C` liga e desliga o andar devagar) | joystick ou toque no chão |
 | Estilingue | **segure e solte**: botão esquerdo em cima do monstro, botão direito (vai para o mouse) ou `J` (no monstro mais perto). Quanto mais segurar (até ~1 s), mais forte e mais longe | segure e solte o botão **Estilingue**; toque rápido no monstro = pedra fraca na hora |
 | Bordunada (golpe em arco) | `Q` | botão **Bordunada** |
 | Fôlego (cura) | `E` | botão **Fôlego** |
-| Esquiva | `Espaço` | botão **Esquiva** |
+| Esquiva | `Shift` | botão **Esquiva** |
+| Pular (por enquanto só de enfeite: quem está perto vê) | `Espaço` | — (o botão vem com o desenho do pulo) |
 | Defesa (segura os golpes da frente e gasta energia) | segure `F` | segure o botão **Defesa** |
 | Comida e remédio (atalhos) | `3` e `4` | os dois botões redondos |
 | Afastar/aproximar a câmera | roda do mouse ou `−` e `+` | — |
 | Conversar | `Enter` | toque na caixa de conversa |
 | Mochila (itens e equipamentos) | `I` ou o botão **Mochila** · clique duplo num item equipa/usa · `Esc` fecha | botão **Mochila** |
-| Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | `M` liga e desliga · 🔊 no painel abre o volume | 🔊 no painel |
+| Mapa | `M` (ainda sendo feito: por enquanto só avisa) | — |
+| Som (ligar/desligar e o volume da música, dos efeitos e do ambiente) | 🔊 no painel (sem tecla; dá para escolher uma) | 🔊 no painel |
+| Trocar as teclas | 🔊 no painel → **Teclas**: clique na tecla e aperte a nova (fica guardado neste navegador) | — |
+
+As teclas acima são o padrão: andar (`W` `A` `S` `D` e setas), `Enter`, `Esc`, `−` `+` e os números `1` a `4` são
+fixos; as outras dá para trocar. No Windows, apertar o `Shift` 5 vezes seguidas abre o aviso das "Teclas de
+Aderência": para desligar, Configurações → Acessibilidade → Teclado → Teclas de Aderência → desmarque o atalho.
 
 Levar um golpe, esquivar ou levantar a defesa solta a pedra que você estava puxando. A defesa vira sozinha para o
 monstro mais perto; a barra embaixo do pé é a energia dela (acabou, ela quebra: solte e espere voltar). O jogo
@@ -201,9 +208,10 @@ e `quantidade` (opcional: um número, ou [mínimo, máximo]). Exemplo:
 `"itens": [{ "item": "banana", "chance": 50, "quantidade": [1, 2] }]`. Cada um que ajudou sorteia os seus.
 
 O ouro que cada monstro deixa fica no campo `ouro`: um número (ex.: `"ouro": 5`) ou [mínimo, máximo]
-(ex.: `"ouro": [2, 6]`). Sem o campo, o monstro não deixa ouro. Como os itens, cada um que ajudou ganha o seu —
-mas o ouro **cai no chão** onde o monstro estava: cada um vê só o seu montinho e pega chegando perto (some em
-1 minuto, piscando antes). Item que não cabe na mochila também fica no chão, por 2 minutos.
+(ex.: `"ouro": [2, 6]`). Sem o campo, o monstro não deixa ouro. Como os itens, cada um que ajudou ganha o seu.
+O ouro e os itens **caem no chão** (escolha do dono, 14/11): o ouro onde o monstro estava e os itens em volta, com o
+desenho de cada um (o raro brilha dourado; o lendário, laranja, com um facho de luz). Cada um vê só os seus e pega
+passando por cima. O ouro some em 1 minuto e o item em 2, piscando antes; com a mochila cheia, o item espera no chão.
 
 ## Criar e ajustar itens (sem programar)
 
@@ -228,6 +236,13 @@ O equipamento também aparece no personagem, pelo ícone: `chapeu_palha` e `gorr
 no corpo precisa de código (`src/client/itemArt.ts` e `src/client/game/gearArt.ts`) — é só pedir; o
 `npm run check` avisa se algum equipamento ficou sem desenho no personagem. Se um item for apagado do
 arquivo, ele some das mochilas na próxima vez que cada um entrar (o servidor avisa no terminal).
+
+## Música
+
+Cada lugar do Capão tem a sua música (licença livre, CC0; créditos em
+[`public/assets/audio/musica/CREDITOS.md`](public/assets/audio/musica/CREDITOS.md)): a vila, a mata (e a clareira e o
+lago) e a Mata Profunda. A troca é devagar, e o volume da música se ajusta no painel do som (🔊). Para trocar uma
+música, ponha o arquivo novo na mesma pasta com o mesmo nome e anote a licença na tabela de créditos.
 
 ## Bichos de estimação (sem programar)
 

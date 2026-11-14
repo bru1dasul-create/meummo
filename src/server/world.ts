@@ -5,6 +5,7 @@
 import {
   DASH_COOLDOWN_MS,
   DASH_INVULNERABLE_MS,
+  JUMP_COOLDOWN_MS,
   DASH_TILES,
   DEATH_MS,
   GM_CLEAR_RANGE,
@@ -742,6 +743,19 @@ export class World {
     if (on && turned && player.guardUpAt !== null) this.emitGuard(player);
   }
 
+  /**
+   * Pulo (Espaço): por enquanto só de enfeite — quem está perto vê (o próprio jogador já pulou no navegador). Não pula
+   * desmaiado, defendendo nem puxando o tiro (o desenho também não deixa). A recarga é conferida aqui, para ninguém
+   * encher a tela dos outros de pulos.
+   */
+  jump(player: Player): void {
+    const now = this.now();
+    if (player.loading || player.dead || player.guardWanted || player.chargeStart !== null) return;
+    if (now < player.jumpReadyAt - SKILL_TOLERANCE_MS) return;
+    player.jumpReadyAt = Math.max(now, player.jumpReadyAt) + JUMP_COOLDOWN_MS;
+    this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'jump' }, player.id);
+  }
+
   /** Estilingue: atira uma pedrinha na direção do ângulo, mais forte e mais longe quanto mais tempo puxou. */
   shoot(player: Player, cid: number, angle: number): void {
     const now = this.now();
@@ -854,39 +868,24 @@ export class World {
 
   /**
    * O monstro caiu: cada um que ajudou sorteia os itens e o ouro dele (cada um tem os seus, ninguém rouba de ninguém).
-   * Os itens vão direto para a mochila; o ouro (e o item que não coube) cai no chão, perto do monstro, para o dono pegar.
+   * Tudo cai no chão (escolha do dono, 14/11: "no chão, como o ouro"): o ouro onde o monstro estava e os itens em
+   * volta. O dono pega passando por cima (updateDrops); o item fica ITEM_DROP_MS no chão e o ouro, GOLD_DROP_MS.
    */
   private giveLoot(player: Player, monster: Monster, now: number): void {
-    const got: ItemStack[] = [];
-    const lost: ItemStack[] = [];
-    let precious = false;
     const [goldMin, goldMax] = monster.def.gold;
     const gold = goldMax > 0 ? this.rollRange(goldMin, goldMax) : 0;
+    const items: ItemStack[] = [];
     for (const drop of monster.def.drops) {
       if (this.random() * 100 >= drop.chance) continue;
-      const def = this.items.get(drop.item);
-      if (!def) continue;
-      const n = this.rollRange(drop.min, drop.max);
-      const added = player.inventory.add(drop.item, n);
-      if (added > 0) got.push({ item: drop.item, n: added });
-      if (added < n) lost.push({ item: drop.item, n: n - added });
-      if (added > 0 && def.rarity !== 'common') precious = true;
-      if (added > 0 && def.rarity === 'legendary') this.links.announce({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
+      if (!this.items.has(drop.item)) continue;
+      items.push({ item: drop.item, n: this.rollRange(drop.min, drop.max) });
     }
-    if (got.length > 0) {
-      player.invDirty = true;
-      player.outbox.push({ t: 'loot', x: monster.x, y: monster.y, items: got });
-      player.outbox.push({ t: 'sys', text: `Você pegou: ${this.describe(got)}.` });
-      if (precious) this.saveCharacters([player]); // item raro não pode sumir se o servidor cair
-    }
-    // O ouro cai onde o monstro estava; o que não coube na mochila, nos tiles livres em volta.
+    // um lugar livre para cada coisa: o ouro no meio, os itens nos lugares em volta
     const spots = this.map.walkableAround(monster.x, monster.y, 1);
-    const spot = (i: number): Tile => spots[Math.min(i, spots.length - 1)] ?? { x: monster.x, y: monster.y };
-    if (gold > 0) this.dropOnGround(player, spot(0), gold, null, now, GOLD_DROP_MS);
-    lost.forEach((stack, i) => this.dropOnGround(player, spot(i + 1), 0, stack, now, ITEM_DROP_MS));
-    if (lost.length > 0) {
-      player.outbox.push({ t: 'sys', text: `Mochila cheia! Ficou no chão: ${this.describe(lost)}. Abra espaço e passe lá para pegar.` });
-    }
+    let next = 0;
+    const spot = (): Tile => spots[Math.min(next++, spots.length - 1)] ?? { x: monster.x, y: monster.y };
+    if (gold > 0) this.dropOnGround(player, spot(), gold, null, now, GOLD_DROP_MS);
+    for (const stack of items) this.dropOnGround(player, spot(), 0, stack, now, ITEM_DROP_MS);
   }
 
   /** Põe ouro ou um item no chão para o jogador (só ele vê). */
@@ -960,11 +959,15 @@ export class World {
       return;
     }
     player.invDirty = true;
-    player.outbox.push({ t: 'pickup', id: drop.id, item: { item: stack.item, n: added } });
+    const got: ItemStack = { item: stack.item, n: added };
+    player.outbox.push({ t: 'pickup', id: drop.id, item: got });
+    player.outbox.push({ t: 'sys', text: `Você pegou: ${this.describe([got])}.` });
+    const def = this.items.get(stack.item);
+    if (def?.rarity === 'legendary') this.links.announce({ t: 'sys', text: `${player.name} conseguiu: ${def.name}!` });
     stack.n -= added;
     if (stack.n > 0) player.outbox.push(this.dropMsg(drop, now)); // só uma parte coube: o resto continua lá
     else this.drops.delete(drop.id);
-    if (this.items.get(stack.item)?.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
+    if (def && def.rarity !== 'common') this.saveCharacters([player]); // item raro não pode sumir
   }
 
   // ======================= ferramentas do administrador =======================
@@ -1630,7 +1633,14 @@ export class World {
       });
       if (result === 'flying') continue;
       this.projectiles.delete(shot.id);
-      for (const id of shot.viewers) this.players.get(id)?.outbox.push({ t: 'shot_end', id: shot.id, hit: hit.target?.id ?? 0 });
+      const end: Extract<ServerMsg, { t: 'shot_end' }> = { t: 'shot_end', id: shot.id, hit: hit.target?.id ?? 0 };
+      if (!hit.target) {
+        // onde parou (a flecha fica cravada ali) e, se bateu em algo, no quê (logo à frente da beirada em que parou)
+        end.x = round3(shot.x);
+        end.y = round3(shot.y);
+        if (result === 'wall') end.on = this.map.shotBlockerAt(shot.x + shot.dx * 0.02, shot.y + shot.dy * 0.02) ?? 'bloco';
+      }
+      for (const id of shot.viewers) this.players.get(id)?.outbox.push(end);
       if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx), shot.push ?? 0);
     }
   }

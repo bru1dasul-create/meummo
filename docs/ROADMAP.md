@@ -428,8 +428,12 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   propriedade `som` do lugar manda, senão o nome): vila (bem-te-vi, sabiá, vento leve), clareira (passarinhos e um
   zumbido mágico baixinho), mata (vento, folhas, cigarras), mata profunda (vento mais forte, grilos, coruja) e água
   (água correndo, gotas, sapos). Troca suave de um lugar para o outro. Conferido no PC e no celular
-- [ ] **[estrutura]** Som, parte 2: a música do Capão (vila e mata), depois de o dono escolher a origem (licença livre,
-  banco pago, IA ou feita por código; recomendação: começar pelas de licença livre)
+- [x] **[estrutura]** Som, parte 2: a música do Capão (14/11, o dono: "pode começar pelas músicas de licença livre").
+  Três músicas CC0 do OpenGameArt (`public/assets/audio/musica/`, créditos em `CREDITOS.md`, volume igualado):
+  Vila do Capão → "Down The River" (Komiku); a mata, a Clareira e o Lago → "Forest Whisper Theme" (Cleyton
+  Kauffman); a Mata Profunda → "Peaceful Forest" (Samza). Troca devagar de uma para a outra, toca aos poucos (não
+  carrega a música inteira), pelo volume "música" do painel. Conferido no PC e no celular. Falta o dono ouvir e dizer
+  se ficam
 - [x] **[arte]** O botão do som na HUD do celular (14/11): o 🔊 aparece no celular (deitado e em pé) e abre o painel
   do som; conferido pela [estrutura]
 - [x] **[estrutura]** Conversa com NPC, parte 1 (13/11, pedido do dono: "a câmera deve se posicionar na Xiovanna e
@@ -499,6 +503,84 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
 - [ ] **[arte]** Aplicar a câmera decidida no 2.5D (no protótipo: zoom do jogador com padrão 1,0, afastando até 0,7) e
   combinar com o dono o enquadramento no celular (em pé, a tela mostra só uns 6 m de largura) — na `PD.View` já está
   assim; provisório até o dono decidir: aproximar até 1,4 e, em pé, uns 9 m de largura
+
+## 📋 A lista do dono de 14/11 (distribuída pela [estrutura] entre as frentes)
+Pedido: "distribui as outras tarefas para os outros chats". Cada frente pega as suas; o que passa por mais de uma diz
+quem começa. (A música de licença livre, primeiro item da lista, já está acima.)
+
+**Bugs e o que está feio (primeiro):**
+- [x] **[estrutura]** Lag ao falar com NPC e o jogo travando ao dar e tirar zoom: medidos (14/11). A causa é a mesma
+  e está no desenho: cada mudança de zoom apaga e refaz o chão inteiro, e a câmera da conversa muda o zoom a cada
+  quadro por meio segundo (quadros de 100 a 250 ms). Passado à [arte] (abaixo)
+- [ ] **[arte]** Zoom sem travar (conversa, roda e +/-): o chão (`ground.js`) esticar os pedaços velhos enquanto o zoom
+  muda e refazer só quando ele parar, como os objetos já fazem; e o orçamento de refazer imagens (`buildBusy`) contar
+  o primeiro desenho de cada imagem nova (é onde o navegador pinta de verdade)
+- [x] **[estrutura]** Som do arco: "quando puxa parece um motor girando, feio demais" (14/11): sem tom contínuo; agora
+  é a madeira do arco rangendo (estalinhos que aceleram e ficam mais fortes com a carga) e um chiado fino de corda
+- [x] **[arte]** Arco: "o braço fica feio puxando" (14/11, na main): puxando, o herói fica de lado para o
+  alvo como arqueiro de verdade (o ombro do arco aponta para o alvo, o cotovelo da corda vai para trás na linha da
+  flecha, a cabeça olha ao longo dela); antes o cotovelo subia e saía de lado, como asa
+- [x] **[arte]** Esquiva: "está feia demais" (14/11, na main): no jogo ela não tinha movimento (o herói
+  aparecia 3 m adiante de uma vez); agora ele rola no chão (abaixa, gira uma volta e levanta, 0,5 s), para todos
+- [x] **[mundo + arte]** A cama do quarto do Joaquim está invertida (14/11): o [mundo] virou a cama na planta
+  (`olhando: 90`, ramo `mundo/cama-vo`) e o desenho da [arte] passou a ler o `olhando` (a cabeceira no lado oposto aos
+  pés; antes ficava sempre no oeste). Na main (14/11), junto com o `mundo/lote1-mapa`
+- [x] **[mundo + arte]** A entrada da Budega ("está péssima") (14/11): o [mundo] marcou o vão da porta
+  (`portaDe`/`portaAte`), tirou o varal da frente e levou o orelhão para o poste de luz da praça (ramo
+  `mundo/budega-entrada`); a [arte] desenhou o vão da loja (a porta de aço enrolada, os trilhos, a soleira e, lá
+  dentro, o piso de ladrilho, a geladeira, o balcão e as prateleiras acesas, sem o musgo da fachada por cima) e o
+  orelhão preso no poste. Na main (14/11), junto com o `mundo/lote1-mapa`
+- [x] **[arte]** Entrada e saída dos interiores com animação (a volta para o mundo é muito repentina) (14/11, na
+  main): o telhado e a frente saem e voltam em 0,6 s suaves; saindo, a casa continua em foco até o telhado voltar
+  (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto
+
+**Mundo:**
+- [ ] **[mundo]** Aumentar a floresta
+- [ ] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
+- [ ] **[estrutura + mundo + arte]** Mais bichos: a [estrutura] define os novos (dados e comportamento), o [mundo] marca
+  as áreas e a [arte] desenha
+- [ ] **[estrutura + mundo + arte]** As capivaras andando (bicho do ambiente, como o Joaquim): a [estrutura] faz o
+  comportamento, o [mundo] marca a área e a [arte] anima
+- [ ] **[estrutura + mundo + arte]** Mapa: o M abre o mapa completo, que só mostra o que você já andou, e um mini mapa.
+  A [estrutura] guarda o explorado (no personagem) e a tecla; o [mundo] faz a imagem de cima de cada mapa; a [arte]
+  desenha a janela e o mini mapa
+
+**Sistemas:**
+- [ ] **[estrutura + arte]** Dia e noite: à noite os bichos ficam mais fortes e dão mais XP e ouro; olhos vermelhos (a
+  [arte]); lampiões (o [mundo] marca, a [arte] acende)
+- [x] **[estrutura]** Drop de itens nos bichos (14/11, escolha do dono: "no chão, como o ouro"): os itens caem em volta do
+  bicho, com o desenho de cada um (caindo com quique, "×2", brilho no raro e facho de luz no lendário), e você pega
+  passando por cima; ficam 2 minutos; com a mochila cheia, esperam no chão
+- [ ] **[estrutura]** O arco e o estilingue de goiabeira nos bichos novos, quando eles chegarem (hoje o estilingue cai do
+  sagui, 4%; o arco só na Budega)
+- [ ] **[arte]** (Opcional) restilizar o item no chão (`drawDrops` em `src/client/novo/combat.ts`: ícone, quique, brilho)
+- [ ] **[estrutura + arte]** Vento forte e fraco (a [estrutura] manda a força; a [arte] balança as árvores e arruma o
+  movimento delas; o som do vento acompanha)
+- [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
+  parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
+  desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
+- [ ] **[arte]** Desenhar a flecha cravada no tronco (na altura do voo, `stuck.z`), em vez de no chão ao pé da árvore
+
+**Personagem e controles:**
+- [x] **[estrutura]** Esquiva no Shift (configurável) e Espaço para pular (14/11): janela das teclas (botão "Teclas" no
+  painel do som, só no computador; fica guardado no navegador), o pulo passa pelo servidor e quem está perto vê
+  (protocolo 31; por enquanto só de enfeite), o andar devagar foi para o `C` (liga e desliga), o som ficou sem tecla
+  (painel do som) e o `M` está reservado para o mapa (por enquanto só avisa)
+- [ ] **[arte]** O pulo de verdade no boneco (o motor manda `action(id, 'jump')`, seu e dos outros; o animador do
+  protótipo já pula com `input.jump`) e um botão de pular no celular (o tipo `ActionSlot` com 'jump' e o ícone; o motor
+  põe na barra)
+- [ ] **[arte]** A etiqueta da tecla da esquiva na barra: o estilo desenha a barra de espaço fixa
+  (`.action[data-slot='dash'] .key`), mas a esquiva agora é o Shift e o jogador pode trocar; e o "Como jogar" da tela
+  de entrada (`index.html`) com as teclas novas
+- [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
+  botão de atirar, à parte)
+
+**Habilidades (combinar os detalhes com o dono antes):**
+- [ ] **[estrutura + arte]** Habilidades que sobem de nível com o personagem (mais dano e o visual muda) e a primeira
+  classe, o **Caçador da Floresta** (DPS à distância: arco, velocidade, precisão e espíritos dos bichos): Chuva de
+  Flechas (área; evolui com mais flechas e área maior), Flecha Ancestral (dano espiritual), Olhos de Gavião (ver
+  inimigos e rastros de longe), Chamado Selvagem (invoca uma onça ou uma águia espiritual) e Fúria da Onça
+  (transformação: corpo a corpo, mais agressivo)
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.

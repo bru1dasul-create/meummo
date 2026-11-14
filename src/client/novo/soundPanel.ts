@@ -1,12 +1,14 @@
-// Painel do som do jogo 2.5D: o botão do som da HUD abre (e a tecla M continua ligando e desligando tudo). Liga e
-// desliga o som e ajusta o volume de cada parte: música, efeitos (golpes, moedas...) e ambiente (mata, água, vila).
-// Visual simples (provisório): a [arte] restiliza (#sound-panel) quando quiser.
+// Painel do som do jogo 2.5D: o botão do som da HUD abre. Liga e desliga o som e ajusta o volume de cada parte:
+// música, efeitos (golpes, moedas...) e ambiente (mata, água, vila). No computador, tem também o botão das teclas
+// (keysPanel.ts). Visual simples (provisório): a [arte] restiliza (#sound-panel) quando quiser.
 
 import type { SoundPart, SoundVolumes } from '../sfx';
 
 export interface SoundPanelActions {
   toggleMute(): void;
   setVolume(part: SoundPart, value: number): void;
+  /** Abre a janela das teclas (só no computador: no celular não tem teclado). */
+  openKeys?(): void;
 }
 
 const PARTS: { part: SoundPart; label: string }[] = [
@@ -30,7 +32,8 @@ export class SoundPanel {
       #sound-panel input[type=range] { width: 100%; accent-color: #e8a33a; }
       #sound-panel .mute { padding: 6px 8px; border-radius: 6px; border: 1px solid #8a5a2b; background: #3a2616; color: #f1e4c8; font: 600 12px system-ui, sans-serif; cursor: pointer; }
       #sound-panel .mute.off { background: #5b1e16; border-color: #c0392b; }
-      @media (pointer: coarse) { #sound-panel { top: calc(126px + env(safe-area-inset-top)); } #sound-panel input[type=range] { height: 28px; } }`;
+      #sound-panel .keys { padding: 6px 8px; border-radius: 6px; border: 1px solid #8a5a2b; background: #3a2616; color: #f1e4c8; font: 600 12px system-ui, sans-serif; cursor: pointer; }
+      @media (pointer: coarse) { #sound-panel { top: calc(126px + env(safe-area-inset-top)); } #sound-panel input[type=range] { height: 28px; } #sound-panel .keys { display: none; } }`;
     document.head.append(this.style);
     this.panel.id = 'sound-panel';
     this.panel.hidden = true;
@@ -64,6 +67,18 @@ export class SoundPanel {
       row.append(name, slider, value);
       this.sliders.set(part, slider);
       this.panel.append(row);
+    }
+    if (actions.openKeys) {
+      const keys = document.createElement('button');
+      keys.type = 'button';
+      keys.className = 'keys';
+      keys.id = 'keys-button';
+      keys.textContent = '⌨️ Teclas';
+      keys.addEventListener('click', () => {
+        this.close();
+        actions.openKeys?.();
+      });
+      this.panel.append(keys);
     }
     // clique no painel não vira clique no jogo (andar, atirar)
     for (const type of ['pointerdown', 'keydown'] as const) this.panel.addEventListener(type, (event) => event.stopPropagation());

@@ -239,6 +239,9 @@
         }
       }
       this.insideHouse = inside;
+      // a casa de onde ele acabou de sair continua em foco enquanto o telhado volta (o escuro abre aos poucos)
+      if (inside) this.focusHouse = inside;
+      else if (this.focusHouse && !(this.focusHouse.cutK > 0.002)) this.focusHouse = null;
       // eventos do personagem: poeira e soco
       for (const character of [hero, ...others]) {
         for (const ev of character.events) {
@@ -434,7 +437,7 @@
       // dentro de uma casa que dá para entrar, só ela aparece (pedido do dono: "focar apenas dentro dela, sem ficar meio
       // transparente o que tem por volta"): o contorno da casa inteira (chão, paredes de dentro até o alto) é a janela;
       // o que não é da casa não entra nela (some aos poucos enquanto o telhado sai) e, fora dela, tudo fica escuro
-      const home = this.insideHouse;
+      const home = this.insideHouse || this.focusHouse || null;
       const focus = home && (home.cutK || 0) > 0.01 ? this._focusOf(home) : null;
       const own = (o) => o === home || o.house === home;
       let actorMs = 0;
@@ -444,7 +447,8 @@
           for (const p of this.particles) if (p.behind && p.kind !== 'poeira' && (!o.actor.entity || !p.owner || p.owner === o.actor.entity)) this._drawParticle(ctx, p);
           if (this.forceFlush) ctx.getImageData(0, 0, 1, 1);
           const a0 = now();
-          const outsider = focus && !insideOf(home, o.fp) && overlap(o.actor.bounds, focus.box);
+          // (o herói que está saindo pela porta não é cortado: ele está indo para fora)
+          const outsider = focus && !o.actor.primary && !insideOf(home, o.fp) && overlap(o.actor.bounds, focus.box);
           if (outsider) {
             ctx.save();
             ctx.clip(focus.outside, 'evenodd');
@@ -539,9 +543,19 @@
       for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._spriteCare();
       if (focus) {
-        // fora da casa, escuro (com uma sombra mais forte rente ao contorno, como a beirada de um recorte)
+        // fora da casa, escuro (com uma sombra mais forte rente ao contorno, como a beirada de um recorte). Entrando, o
+        // escuro fecha como uma íris, de longe para perto da casa; saindo, abre de perto para longe
+        const cx = (focus.box.x0 + focus.box.x1) / 2, cy = (focus.box.y0 + focus.box.y1) / 2;
+        const vr = this._viewRect(0);
+        const far = Math.max(Math.hypot(vr.x0 - cx, vr.y0 - cy), Math.hypot(vr.x1 - cx, vr.y0 - cy), Math.hypot(vr.x0 - cx, vr.y1 - cy), Math.hypot(vr.x1 - cx, vr.y1 - cy));
+        const feather = far * 0.45;
+        const r0 = M.lerp(far, -feather, focus.k);
+        const inner = Math.max(0, r0), outer = Math.max(inner + 1, r0 + feather);
+        const iris = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+        iris.addColorStop(0, `rgba(9, 8, 7, ${(0.93 * M.clamp01(-r0 / feather)).toFixed(3)})`);
+        iris.addColorStop(1, 'rgba(9, 8, 7, 0.93)');
         ctx.save();
-        ctx.fillStyle = `rgba(9, 8, 7, ${(0.93 * focus.k).toFixed(3)})`;
+        ctx.fillStyle = iris;
         ctx.fill(focus.outside, 'evenodd');
         ctx.strokeStyle = `rgba(0, 0, 0, ${(0.45 * focus.k).toFixed(3)})`;
         ctx.lineWidth = 6 * this.cam.zoom;

@@ -1190,26 +1190,52 @@
     blocks: 0,
     box: boxOf(60, 6),
     shadow: shadowOf(0.4),
+    /**
+     * A cama vira para `olhando` (o lado dos pés; a cabeceira fica do lado oposto, encostada na parede): 0 = os pés para
+     * o leste (cabeceira no oeste, x0), 90 = para o sul (cabeceira no norte, y0), 180 = para o oeste (cabeceira no
+     * leste, x1), 270 = para o norte (cabeceira no sul, y1). Sem `olhando`, 0 (como era).
+     */
     paint(ctx, cam, d, z0, ink) {
       const h = d.h || 60;
       const wood = tone('#6d4628');
-      // a cabeceira fica do lado oeste (o travesseiro na planta): é a coisa mais do fundo, vem primeiro
-      const head = { x0: d.x0, x1: d.x0 + 7, y0: d.y0, y1: d.y1 };
-      H.box(ctx, cam, head.x0, head.x1, head.y0, head.y1, z0, z0 + h + 40, wood, ink);
-      face(ctx, cam, head, 'x', z0 + h + 40, (L) => {
-        ctx.strokeStyle = 'rgba(30, 14, 4, 0.55)';
-        ctx.lineWidth = 2;
-        rrect(ctx, 8, 8, L - 16, 30, 6);
-        ctx.stroke();
-      });
+      const dir = ((Math.round(((d.angle || 0) % 360) / 90) % 4) + 4) % 4;
+      const alongX = dir === 0 || dir === 2;
+      const L = alongX ? d.x1 - d.x0 : d.y1 - d.y0; // o comprimento (da cabeceira aos pés)
+      const W = alongX ? d.y1 - d.y0 : d.x1 - d.x0; // a largura
+      // (u, v) da cama: u da cabeceira para os pés, v de um lado para o outro → retângulo no mundo
+      const R = (u0, u1, v0, v1) => {
+        if (dir === 0) return { x0: d.x0 + u0, x1: d.x0 + u1, y0: d.y0 + v0, y1: d.y0 + v1 };
+        if (dir === 2) return { x0: d.x1 - u1, x1: d.x1 - u0, y0: d.y0 + v0, y1: d.y0 + v1 };
+        if (dir === 1) return { x0: d.x0 + v0, x1: d.x0 + v1, y0: d.y0 + u0, y1: d.y0 + u1 };
+        return { x0: d.x0 + v0, x1: d.x0 + v1, y0: d.y1 - u1, y1: d.y1 - u0 };
+      };
+      // a cabeceira: do lado do fundo (oeste ou norte) vem antes de tudo; do lado da câmera (leste ou sul), depois
+      const head = R(0, 7, 0, W);
+      const headFar = dir === 0 || dir === 1;
+      const drawHead = () => {
+        H.box(ctx, cam, head.x0, head.x1, head.y0, head.y1, z0, z0 + h + 40, wood, ink);
+        // o painel entalhado na face que a câmera vê
+        face(ctx, cam, head, alongX ? 'x' : 'y', z0 + h + 40, (len) => {
+          ctx.strokeStyle = 'rgba(30, 14, 4, 0.55)';
+          ctx.lineWidth = 2;
+          rrect(ctx, 8, 8, len - 16, 30, 6);
+          ctx.stroke();
+        });
+      };
+      if (headFar) drawHead();
       // os pés, o estrado e o colchão
       const list = [];
-      for (const [x, y] of [[d.x0 + 8, d.y0 + 3], [d.x1 - 7, d.y0 + 3], [d.x0 + 8, d.y1 - 7], [d.x1 - 7, d.y1 - 7]]) list.push(bx(x, x + 4, y, y + 4, z0, z0 + 14, tone('#4a2e1a'), 0.6));
-      list.push(bx(d.x0 + 6, d.x1, d.y0 + 2, d.y1 - 2, z0 + 14, z0 + 30, wood, 1));
+      for (const [u, v] of [[8, 3], [L - 7, 3], [8, W - 7], [L - 7, W - 7]]) {
+        const r = R(u, u + 4, v, v + 4);
+        list.push(bx(r.x0, r.x1, r.y0, r.y1, z0, z0 + 14, tone('#4a2e1a'), 0.6));
+      }
+      const frame = R(6, L, 2, W - 2);
+      list.push(bx(frame.x0, frame.x1, frame.y0, frame.y1, z0 + 14, z0 + 30, wood, 1));
       boxes(ctx, cam, list, ink);
-      H.box(ctx, cam, d.x0 + 8, d.x1 - 1, d.y0 + 4, d.y1 - 4, z0 + 30, z0 + h - 6, { front: '#f3efe6', side: '#d6d0c4', top: '#faf7f1' }, ink);
-      // o travesseiro e a colcha de retalhos (dobrada perto do travesseiro, caindo pelos lados)
-      const pil = { x0: d.x0 + 12, x1: d.x0 + 48, y0: d.y0 + 12, y1: d.y1 - 12 };
+      const bed = R(8, L - 1, 4, W - 4);
+      H.box(ctx, cam, bed.x0, bed.x1, bed.y0, bed.y1, z0 + 30, z0 + h - 6, { front: '#f3efe6', side: '#d6d0c4', top: '#faf7f1' }, ink);
+      // o travesseiro (perto da cabeceira) e a colcha de retalhos (dobrada perto do travesseiro, caindo pelos lados)
+      const pil = R(12, 48, 12, W - 12);
       const P = (x, y, z) => cam.p({ x, y, z });
       const pz = z0 + h - 6;
       ctx.fillStyle = '#fbfaf6';
@@ -1231,10 +1257,13 @@
       ctx.ellipse((pts[1].x + pts[2].x) / 2, (pts[1].y + pts[2].y) / 2 - 4 * cam.zoom, 10 * cam.zoom, 3 * cam.zoom, 0.4, 0, M.TAU);
       ctx.fill();
       if (d.quilt) {
-        clothBox(ctx, cam, d.x0 + 52, d.x1 + 2, d.y0 + 1, d.y1 + 1, z0 + h - 4, 26, d.quilt === 'retalhos' ? 'retalhos' : 'xadrez', ink, Math.round(d.y0));
+        const q = R(52, L + 2, -1, W + 1);
+        clothBox(ctx, cam, q.x0, q.x1, q.y0, q.y1, z0 + h - 4, 26, d.quilt === 'retalhos' ? 'retalhos' : 'xadrez', ink, Math.round(d.y0));
         // a dobra branca do lençol aparecendo na beirada da colcha
-        H.box(ctx, cam, d.x0 + 48, d.x0 + 56, d.y0 + 2, d.y1, z0 + h - 6, z0 + h - 2, { front: '#f3efe6', side: '#d6d0c4', top: '#fdfbf6' }, ink * 0.8);
+        const f = R(48, 56, 2, W);
+        H.box(ctx, cam, f.x0, f.x1, f.y0, f.y1, z0 + h - 6, z0 + h - 2, { front: '#f3efe6', side: '#d6d0c4', top: '#fdfbf6' }, ink * 0.8);
       }
+      if (!headFar) drawHead();
     },
   };
   /**
@@ -1955,8 +1984,8 @@
         oratorio(ctx, u(b.x0 + 15 + 225), Hh - 205);
         frameOval(ctx, u(b.x0 + 15 + 300), Hh - 215, 18, 24);
         frameOval(ctx, u(b.x0 + 15 + 330), Hh - 200, 14, 19);
-        // o crucifixo em cima da cama
-        const cx = u(b.x0 + 15 + 560);
+        // o crucifixo em cima da cabeceira da cama (a cama encosta na parede do fundo, x 69,45 a 70,85)
+        const cx = u(b.x0 + 15 + 600);
         ctx.fillStyle = '#5a3220';
         ctx.fillRect(cx - 2, Hh - 170, 4, 30);
         ctx.fillRect(cx - 10, Hh - 162, 20, 4);

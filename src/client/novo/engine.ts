@@ -9,6 +9,7 @@ import {
   DASH_TILES,
   GM_FLY_FACTOR,
   GUARD_MAX_ENERGY,
+  JUMP_COOLDOWN_MS,
   MAX_PENDING_WALKS,
   TRADE_RANGE,
   TRADE_SLACK,
@@ -39,7 +40,13 @@ import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
 import { ProvisionalView, type WorldView } from './view';
 import { Ambient, sceneOfPlace } from '../ambient';
+import { trackOfScene } from '../music';
 import { SoundPanel } from './soundPanel';
+import { KeyBindings, type KeyAction } from './keys';
+import { KeysPanel } from './keysPanel';
+
+/** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
+const SKILL_KEYS: KeyAction[] = ['golpe', 'folego'];
 
 export interface NewWorldDeps {
   conn: Connection;
@@ -137,10 +144,15 @@ class NewWorld implements NewWorldGame {
   private readonly combat: CombatLayer;
   /** Os números do combate que valem (vêm do servidor; o painel do administrador pode mudar com o jogo rodando). */
   private readonly rules: CombatRules;
-  private readonly actionBar: ActionBar;
+  private actionBar: ActionBar;
   private readonly soundButton = document.getElementById('hud-sound') as HTMLButtonElement | null;
   /** O painel do som (o botão do som abre): ligar/desligar e o volume da música, dos efeitos e do ambiente. */
   private readonly soundPanel: SoundPanel;
+  /** As teclas de cada ação (o jogador troca na janela das teclas; fica guardado neste aparelho). */
+  private readonly keys = new KeyBindings();
+  private readonly keysPanel: KeysPanel;
+  /** O que o jogador tem equipado (o botão do tiro mostra a arma; a barra é refeita quando as teclas mudam). */
+  private gearNow: GearLook = {};
   /** O som de ambiente do lugar onde você está (mata, água, vila...). */
   private readonly ambient: Ambient;
   private ambientCheckAt = 0;
@@ -170,9 +182,10 @@ class NewWorld implements NewWorldGame {
   private predicted!: Pose;
   /** `guard`: segurava a defesa quando mandou (anda devagar; o servidor conta igual, na ordem das mensagens). */
   private pending: { seq: number; a: number; dash: boolean; slow: boolean; guard: boolean; fly: boolean }[] = [];
-  /** Andando devagar agora (Shift segurado, ou o joystick empurrado só um pouco); o normal é correr. */
+  /** Andando devagar agora (a tecla do "devagar" ligada, ou o joystick empurrado só um pouco); o normal é correr. */
   private slow = false;
-  private shiftDown = false;
+  /** O "andar devagar" do teclado (C no padrão: liga e desliga). */
+  private slowWalk = false;
   private seq = 0;
   private walkCredit = WALK_SLICE_MS;
   private walkAt = 0;
@@ -205,6 +218,7 @@ class NewWorld implements NewWorldGame {
   private shotCid = 0;
   private nextShotAt = 0;
   private dashReadyAt = 0;
+  private jumpReadyAt = 0;
   private readonly skillReadyAt = SKILLS.map(() => 0);
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
@@ -264,17 +278,12 @@ class NewWorld implements NewWorldGame {
     // os números do combate: o mesmo objeto aqui e no desenho do combate (o servidor manda os novos, se mudarem)
     this.rules = { ...defaultCombatRules(), ...deps.welcome.combat };
     this.combat = new CombatLayer(this.container, this.rules);
-    this.actionBar = new ActionBar(
-      [
-        { slot: 'shot', label: 'Estilingue', key: 'J' }, // segurar puxa, soltar atira (pedra com carga)
-        ...SKILLS.map((skill, i) => ({ slot: `skill${i}` as ActionSlot, label: skill.name, key: skill.key })),
-        { slot: 'dash', label: 'Esquiva', key: 'Espaço' },
-      ],
-      (slot, down) => this.onAction(slot, down),
-    );
+    this.actionBar = this.makeActionBar();
+    this.keysPanel = new KeysPanel(this.keys, () => this.keysChanged());
     this.soundPanel = new SoundPanel({
       toggleMute: () => this.toggleSound(),
       setVolume: (part, value) => this.sfx.setVolume(part, value),
+      openKeys: () => this.keysPanel.open(),
     });
     this.ambient = new Ambient(this.sfx);
     this.soundButton?.addEventListener('click', this.openSoundPanel);
@@ -321,6 +330,7 @@ class NewWorld implements NewWorldGame {
       () => this.startGuard(performance.now()),
       () => this.stopGuard(),
     );
+    this.guardButton.setKey(this.keys.label('defesa'));
     this.gmPanel = new GmPanel({
       spawn: (monster, n) => this.conn.send({ t: 'gm', cmd: { do: 'spawn', monster, n } }),
       clear: () => this.conn.send({ t: 'gm', cmd: { do: 'clear' } }),
@@ -370,6 +380,8 @@ class NewWorld implements NewWorldGame {
       },
       walkTo: (x: number, y: number) => game.walkToPoint(x, y),
       walking: () => game.route.length > 0,
+      // ouro e itens no chão (os seus): o tile, o pé (metros, para o walkTo) e o item
+      drops: () => game.combat.dropList(),
       safe: () => game.wasSafe,
       // x, y: posição "de canto" (a do servidor); feetX, feetY: o pé, em metros (é o que o screenOf espera)
       entities: () =>
@@ -384,7 +396,7 @@ class NewWorld implements NewWorldGame {
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
       // o som: o lugar do ambiente, os volumes, se está desligado e se o navegador já liberou o áudio
-      sound: () => ({ scene: game.ambient.current, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
+      sound: () => ({ scene: game.ambient.current, music: game.sfx.music.current, playing: game.sfx.music.playing, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
       dead: () => game.dead,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
@@ -463,7 +475,9 @@ class NewWorld implements NewWorldGame {
     window.removeEventListener('blur', this.onBlur);
     this.soundButton?.removeEventListener('click', this.openSoundPanel);
     this.soundPanel.destroy();
+    this.keysPanel.destroy();
     this.ambient.destroy();
+    this.sfx.music.stop();
     this.keyboard.destroy();
     this.joystick.destroy();
     this.toast.destroy();
@@ -535,7 +549,7 @@ class NewWorld implements NewWorldGame {
   // ======================= andar =======================
 
   /**
-   * Quanto anda um pedaço: correndo (o normal), devagar (Shift / joystick empurrado de leve) ou, segurando a defesa,
+   * Quanto anda um pedaço: correndo (o normal), devagar (o C liga e desliga / joystick empurrado de leve) ou, segurando a defesa,
    * devagar × guardWalkFactor (o mesmo número do servidor).
    */
   private sliceOf(slow: boolean, guard = this.guardHeld, fly = this.gmFly): number {
@@ -545,50 +559,32 @@ class NewWorld implements NewWorldGame {
   }
 
   private readonly onKey = (event: KeyboardEvent) => {
-    if (event.key === 'Shift') this.shiftDown = event.type === 'keydown';
-    // J: segurar puxa o estilingue, soltar atira no monstro mais perto (como no protótipo)
-    if (event.code === 'KeyJ' && event.type === 'keyup') {
-      if (this.charging?.aim.by === 'key') this.releaseCharge(performance.now());
+    const action = this.keys.actionOf(event.code);
+    // soltar: o tiro e a defesa são de segurar (segurar puxa a pedra ou levanta a defesa; soltar atira ou baixa)
+    if (event.type === 'keyup') {
+      if (action === 'atirar' && this.charging?.aim.by === 'key') this.releaseCharge(performance.now());
+      if (action === 'defesa') this.stopGuard();
       return;
     }
-    // F: segurar levanta a defesa, soltar baixa (como no protótipo)
-    if (event.code === 'KeyF' && event.type === 'keyup') {
-      this.stopGuard();
-      return;
-    }
-    if (event.type !== 'keydown' || this.chat.isTyping()) return;
+    if (event.type !== 'keydown' || this.chat.isTyping() || this.keysPanel.listening) return;
     const now = performance.now();
+    if (action) {
+      event.preventDefault(); // o Espaço não rola a página e o Tab não pula de botão
+      if (!event.repeat) this.keyAction(action, now);
+      return;
+    }
+    // as fixas (não dá para trocar): os números da barra, o menu ADM, o zoom e o Esc
     switch (event.code) {
-      case 'Space':
-        event.preventDefault();
-        if (!event.repeat) this.tryDash(now);
-        break;
-      case 'KeyQ':
       case 'Digit1':
-        if (!event.repeat) this.trySkill(0, this.usingTouch ? this.autoAim(MELEE_AIM_RANGE) : (this.mouseAim() ?? this.autoAim(MELEE_AIM_RANGE)), now);
-        break;
-      case 'KeyE':
       case 'Digit2':
-        if (!event.repeat) this.trySkill(1, 0, now);
+        if (!event.repeat) this.keyAction(SKILL_KEYS[event.code === 'Digit1' ? 0 : 1]!, now);
         break;
       case 'Digit3':
       case 'Digit4':
         if (!event.repeat) this.useQuick(event.code === 'Digit3' ? 1 : 2, now);
         break;
-      case 'KeyJ':
-        if (!event.repeat) this.startCharge({ by: 'key' }, now);
-        break;
-      case 'KeyF':
-        if (!event.repeat) this.startGuard(now);
-        break;
       case 'KeyG':
         if (!event.repeat) this.gmPanel.toggle(); // só abre para administrador
-        break;
-      case 'KeyM':
-        if (!event.repeat) this.toggleSound();
-        break;
-      case 'KeyI':
-        if (!event.repeat) this.bag.toggle();
         break;
       case 'Minus':
       case 'NumpadSubtract':
@@ -602,11 +598,83 @@ class NewWorld implements NewWorldGame {
         if (this.talk.isOpen) this.talk.close();
         else if (this.shop.isOpen) this.shop.close();
         else if (this.bag.isOpen) this.bag.close();
+        else if (this.soundPanel.isOpen) this.soundPanel.close();
         break;
     }
   };
+
+  /** O que cada ação faz (a tecla de cada uma está em keys.ts; o jogador troca na janela das teclas). */
+  private keyAction(action: KeyAction, now: number): void {
+    switch (action) {
+      case 'esquiva':
+        this.tryDash(now);
+        break;
+      case 'pular':
+        this.tryJump(now);
+        break;
+      case 'atirar':
+        this.startCharge({ by: 'key' }, now);
+        break;
+      case 'defesa':
+        this.startGuard(now);
+        break;
+      case 'golpe':
+        this.trySkill(0, this.usingTouch ? this.autoAim(MELEE_AIM_RANGE) : (this.mouseAim() ?? this.autoAim(MELEE_AIM_RANGE)), now);
+        break;
+      case 'folego':
+        this.trySkill(1, 0, now);
+        break;
+      case 'mochila':
+        this.bag.toggle();
+        break;
+      case 'mapa':
+        this.openMap();
+        break;
+      case 'devagar':
+        this.toggleSlowWalk();
+        break;
+      case 'som':
+        this.toggleSound();
+        break;
+    }
+  }
+
+  /** A barra de ações, com as teclas de agora (refeita quando o jogador troca uma tecla). */
+  private makeActionBar(): ActionBar {
+    return new ActionBar(
+      [
+        { slot: 'shot', label: 'Estilingue', key: this.keys.label('atirar') }, // segurar puxa, soltar atira (pedra com carga)
+        ...SKILLS.map((skill, i) => ({ slot: `skill${i}` as ActionSlot, label: skill.name, key: this.keys.label(SKILL_KEYS[i] ?? 'golpe') })),
+        { slot: 'dash', label: 'Esquiva', key: this.keys.label('esquiva') },
+      ],
+      (slot, down) => this.onAction(slot, down),
+    );
+  }
+
+  /** O jogador trocou uma tecla: a barra mostra as novas (com a arma e as recargas que estavam correndo). */
+  private keysChanged(): void {
+    this.actionBar.destroy();
+    this.actionBar = this.makeActionBar();
+    this.guardButton.setKey(this.keys.label('defesa'));
+    this.updateShotLook(this.gearNow);
+    this.actionBar.setCooldown('shot', this.nextShotAt, this.shot().cooldownMs);
+    this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
+    SKILLS.forEach((skill, i) => this.actionBar.setCooldown(`skill${i}` as ActionSlot, this.skillReadyAt[i]!, skill.cooldownMs));
+  }
+
+  /** Andar devagar (C no padrão): liga e desliga. O normal é correr. */
+  private toggleSlowWalk(): void {
+    this.slowWalk = !this.slowWalk;
+    const key = this.keys.label('devagar');
+    this.toast.show(this.slowWalk ? `Andando devagar (${key} para correr)` : `Correndo (${key} para andar devagar)`);
+  }
+
+  /** O mapa (M no padrão): vem numa próxima etapa (o mapa inteiro, só com o que você já andou, e o mini mapa). */
+  private openMap(): void {
+    this.toast.show('O mapa ainda está sendo feito: vai abrir nesta tecla.');
+  }
+
   private readonly onBlur = () => {
-    this.shiftDown = false;
     this.cancelCharge(); // sem foco, o soltar do botão não chega: solta a pedra sem atirar
     this.stopGuard(); // e baixa a defesa
   };
@@ -641,7 +709,7 @@ class NewWorld implements NewWorldGame {
     const held = this.keyboard.current();
     if (held !== null) {
       this.clearRoute();
-      this.slow = this.shiftDown;
+      this.slow = this.slowWalk;
       return this.screenDegrees(DX[held.dir], DY[held.dir]);
     }
     const stick = this.joystick.direction();
@@ -650,7 +718,7 @@ class NewWorld implements NewWorldGame {
       this.slow = stick.light;
       return this.screenDegrees(stick.dx, stick.dy);
     }
-    this.slow = this.shiftDown; // "andar até" com Shift segurado vai devagar
+    this.slow = this.slowWalk; // "andar até" com o andar devagar ligado vai devagar
     if (this.route.length === 0) return null;
     if (this.gmFly) {
       // voando: em linha reta até o ponto, atravessando tudo
@@ -1464,6 +1532,18 @@ class NewWorld implements NewWorldGame {
     this.clearRoute();
   }
 
+  /**
+   * Pular (Espaço no padrão): por enquanto só de enfeite. Pula na hora; o servidor confere a recarga e mostra para
+   * quem está perto. Defendendo ou puxando o tiro, não pula (o desenho também não deixa).
+   */
+  private tryJump(now: number): void {
+    if (this.dead || this.guardHeld || this.charging || now < this.jumpReadyAt) return;
+    this.jumpReadyAt = now + JUMP_COOLDOWN_MS + 40;
+    this.conn.send({ t: 'jump' });
+    this.view?.action?.(this.myId, 'jump');
+    this.sfx.play('jump');
+  }
+
   /** Habilidade `n` (Bordunada: golpe na frente, mirando em `angle`; Fôlego: cura). */
   private trySkill(n: number, angle: number, now: number): void {
     const skill = SKILLS[n];
@@ -1591,7 +1671,8 @@ class NewWorld implements NewWorldGame {
   private readonly toggleSound = () => {
     this.sfx.toggleMute();
     this.updateSoundButton();
-    this.toast.show(this.sfx.muted ? 'Som desligado (M para ligar)' : 'Som ligado');
+    const key = this.keys.get('som').code ? this.keys.label('som') : null;
+    this.toast.show(this.sfx.muted ? (key ? `Som desligado (${key} ou o botão do som ligam de novo)` : 'Som desligado (o botão do som liga de novo)') : 'Som ligado');
   };
 
   private updateSoundButton(): void {
@@ -1601,6 +1682,7 @@ class NewWorld implements NewWorldGame {
 
   /** O botão do tiro mostra a arma de agora: com o arco, "Arco" (e o ícone dele); senão, o estilingue. */
   private updateShotLook(gear: GearLook): void {
+    this.gearNow = gear;
     this.actionBar.setLook('shot', gear.weapon === 'arco' ? { label: 'Arco', icon: 'arco' } : { label: 'Estilingue', icon: null });
   }
 
@@ -1616,9 +1698,12 @@ class NewWorld implements NewWorldGame {
     if (now >= this.ambientCheckAt && this.predicted) {
       this.ambientCheckAt = now + 500;
       const feet = feetAt(this.predicted.x, this.predicted.y);
-      this.ambient.setScene(sceneOfPlace(this.map.placeAt(feet.x, feet.y)));
+      const scene = sceneOfPlace(this.map.placeAt(feet.x, feet.y));
+      this.ambient.setScene(scene);
+      this.sfx.music.play(trackOfScene(scene)); // a música do lugar (troca devagar)
     }
     this.ambient.update();
+    this.sfx.music.update();
   }
 
   // ======================= servidor =======================
@@ -1831,11 +1916,16 @@ class NewWorld implements NewWorldGame {
         this.onShot(msg);
         break;
       case 'shot_end':
-        this.combat.endShot(msg.id, msg.hit); // sem acertar ninguém, a flecha crava no chão
+        // sem acertar ninguém, a flecha crava onde o servidor diz que parou: no chão ou no que segurou (o tronco)
+        this.combat.endShot(msg.id, msg.hit, msg.x !== undefined && msg.y !== undefined ? { x: msg.x, y: msg.y, ...(msg.on ? { on: msg.on } : {}) } : undefined);
         break;
       case 'fx': {
         if (this.entities.get(msg.id)?.kind === 'pet') {
           this.onPetFx(msg.id, msg.kind, msg.a);
+          break;
+        }
+        if (msg.kind === 'jump') {
+          this.view?.action?.(msg.id, 'jump'); // o pulo de outro jogador: só o desenho
           break;
         }
         const feet = this.drawnFeet(msg.id);
@@ -1920,14 +2010,20 @@ class NewWorld implements NewWorldGame {
           });
         }
         break;
-      case 'drop':
-        this.combat.addDrop(msg.id, msg.x, msg.y, msg.gold !== undefined, performance.now() + msg.ms);
+      case 'drop': {
+        // ouro ou item no chão (só você vê os seus): o item com o desenho dele e o brilho da raridade
+        const def = msg.item ? this.items.get(msg.item.item) : undefined;
+        const item = def && msg.item ? { icon: def.icon, rarity: def.rarity, n: msg.item.n } : undefined;
+        this.combat.addDrop(msg.id, msg.x, msg.y, msg.gold !== undefined, performance.now() + msg.ms, item);
         break;
+      }
       case 'pickup':
         this.combat.removeDrop(msg.id);
-        this.sfx.play('coin');
-        if (msg.gold) this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', performance.now());
-        if (msg.item) this.bag.notifyNew();
+        if (msg.gold) {
+          this.sfx.play('coin');
+          this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', performance.now());
+        }
+        if (msg.item) this.onLoot([msg.item]); // "+Banana" em cima de você, o som e a mochila avisando
         break;
       case 'drop_gone':
         this.combat.removeDrop(msg.id);

@@ -27,6 +27,8 @@
   // joelho. Só com `input.agile`: o jogo do protótipo não muda. Medido em ferramentas/seguir.cjs.
   const AGILE = { accel: 1.8, turn: 1.6, pivot: 1.8, step: 0.85, release: 75, pivotSpeed: 150 };
   const DODGE = { total: 0.4, distance: 100, moveStart: 0.018, moveEnd: 0.245, cooldown: 0.2 };
+  // O rolamento da esquiva do jogo (3 m, o servidor já pôs o herói lá): encolhe, rola uma volta no chão e levanta
+  const ROLL = { total: 0.5, moveStart: 0.04, moveEnd: 0.4, cooldown: 0.05 };
   const DEATH = { total: 1.35, impact: 0.64 };
   const HIT = { total: 0.64, lock: 0.22 };
   // para onde o cotovelo aponta (frente, fora, cima, no espaço do peito)
@@ -711,6 +713,24 @@
       return true;
     }
 
+    /**
+     * Esquiva do jogo (pedido do dono, 14/11: "está feia demais"; ela era um pulo de 3 m sem movimento nenhum): vira
+     * para onde vai, abaixa e se encolhe como uma bola, rola uma volta inteira no chão e levanta. `distance` em cm (o
+     * que o servidor andou); a vista não tem paredes, o caminho já vem livre.
+     */
+    startRoll(direction, distance) {
+      if (this.death) return false;
+      this._cancelActionInputs();
+      this.yaw = this.faceYaw = direction;
+      const from = JSON.parse(JSON.stringify(this.pose()));
+      const dir = { x: Math.cos(direction), y: Math.sin(direction) };
+      this.dodge = { t: 0, from, start: { ...this.pos }, direction: dir, lead: 0, distance, entrySpeed: this.speed,
+        carry: { x: 0, y: 0 }, footProgress: [0, 0], roll: true, timing: ROLL, dustEnd: false };
+      this._recoverPose = null;
+      this.events.push({ type: 'poeira', x: this.pos.x, y: this.pos.y, strength: 0.45 });
+      return true;
+    }
+
     _cancelActionInputs() {
       PD.guard?.release(this, true);
       this._knockback = null; this._lastPushVelocity = null;
@@ -755,8 +775,14 @@
           this.events.push({ type: 'poeira', x: this.pos.x, y: this.pos.y, strength: 0.65 });
         }
       } else {
-        const travel = (smoother((a.t - DODGE.moveStart) / (DODGE.moveEnd - DODGE.moveStart)) -
-          smoother((was - DODGE.moveStart) / (DODGE.moveEnd - DODGE.moveStart))) * a.distance;
+        const T = a.timing || DODGE;
+        const travel = (smoother((a.t - T.moveStart) / (T.moveEnd - T.moveStart)) -
+          smoother((was - T.moveStart) / (T.moveEnd - T.moveStart))) * a.distance;
+        // a poeira de quando levanta do rolamento
+        if (a.roll && !a.dustEnd && a.t >= T.moveEnd) {
+          a.dustEnd = true;
+          this.events.push({ type: 'poeira', x: this.pos.x, y: this.pos.y, strength: 0.35 });
+        }
         dx = a.direction.x * travel; dy = a.direction.y * travel;
         a.resume = this._dodgeResume(input, a, world);
         if (a.resume && a.resume.aligned && a.entrySpeed > 50) {
@@ -773,15 +799,16 @@
       this.speed = 0; this.gait = 0; this.runBlend = 0; this.crouch = 0;
       this.stanceLead = 0; this.leanPitch = 0; this.leanRoll = 0;
       this._pose = null;
-      if (this.dodge && a.resume && a.t >= DODGE.moveEnd - 1e-8) this._finishDodge(a.resume, previous);
-      else if (this.dodge && a.t >= DODGE.total - 1e-8) this._finishDodge();
+      const T = (this.dodge && this.dodge.timing) || DODGE;
+      if (this.dodge && a.resume && !a.roll && a.t >= T.moveEnd - 1e-8) this._finishDodge(a.resume, previous);
+      else if (this.dodge && a.t >= T.total - 1e-8) this._finishDodge();
     }
 
     _finishDodge(resume = null, previous = null) {
       const a = this.dodge;
       const last = this._actionPose();
       const grounded = this.footLock.map(st => st.planted && !st.step);
-      this.dodge = null; this.dodgeCooldown = DODGE.cooldown;
+      this.dodge = null; this.dodgeCooldown = (a.timing || DODGE).cooldown;
       this._recoverPose = { from: last, start: this.time, duration: 0.18 };
       // A altura da esquiva já está em recoverPose. Reaplicá-la como correção de
       // alcance abaixava o quadril uma segunda vez por alguns quadros.
@@ -815,7 +842,54 @@
       this._pose = last;
     }
 
+    /**
+     * O rolamento: a pose encolhida (agachado bem baixo, as costas curvas, o queixo no peito, as mãos nas canelas) e o
+     * giro da queda do rig (`fall`: gira o corpo todo em volta do pé e encosta no chão). O pé da pose anda para trás
+     * conforme gira, para o meio da bola seguir reto pelo caminho (sem ir e voltar).
+     */
+    _rollPose() {
+      const a = this.dodge, from = a.from, T = a.timing;
+      this.look.slingDraw = 0;
+      this.look.slingBand = 0; this.look.slingLoaded = false;
+      const t = Math.min(T.total, a.t), u = t / T.total;
+      const tuck = smoothstep(0, 0.17, u) * (1 - smoothstep(0.6, 0.92, u));
+      const spin = smoother(clamp01((u - 0.08) / 0.6));
+      const theta = spin * TAU;
+      const enter = smoother(a.t / 0.06);
+      const ground = { x: this.pos.x, y: this.pos.y, z: this.groundZ + this.pos.z };
+      const body = M.frameYaw(ground, this.yaw);
+      const hipZ = lerp(B.hipStand, 42, tuck);
+      // o meio do corpo encolhido fica a ~0,8 da altura do quadril: o pé da pose recua para ele girar no lugar certo
+      const h = hipZ * 0.8;
+      const root = M.add(ground, M.scale(body.f, -h * Math.sin(theta)));
+      const mixObject = (old, target) => Object.fromEntries(Object.keys(target).map(key => [key, lerp(old[key] || 0, target[key], enter)]));
+      const pelvis = mixObject(from.pelvis, { dx: 0, dy: 0, dz: (hipZ - B.hipStand), yaw: 0, pitch: 28 * DEG * tuck, roll: 0 });
+      const spine = mixObject(from.spine, { yaw: 0, pitch: 52 * DEG * tuck, roll: 0 });
+      const head = mixObject(from.head, { yaw: 0, pitch: 38 * DEG * tuck, roll: 0 });
+      const hands = from.hands.map((hd, i) => {
+        // as mãos abraçam as canelas (na frente dos joelhos)
+        const target = mixV({ x: 4.6, y: 5, z: -51 }, { x: 4, y: 30, z: -26 - i * 2 }, tuck);
+        return { local: mixV(hd.local, target, enter), twist: lerp(hd.twist || 0, -0.4, enter),
+          poleLocal: mixPole(hd.poleLocal || POLE.solto, POLE.guarda, enter), fist: lerp(hd.fist, 0.6, enter), flex: lerp(hd.flex || 0, 0.1, enter) };
+      });
+      const rootFrame = M.frameYaw(root, this.yaw);
+      const feet = from.feet.map((ft, i) => {
+        const side = i ? 1 : -1;
+        const target = M.at(rootFrame, side * lerp(B.footSide, 10, tuck), lerp(0, 12, tuck), B.ankleHeight);
+        const start = M.add(root, M.sub(ft.pos, from.root));
+        return { pos: mixV(start, target, enter), pitch: lerp(ft.pitch, 0, enter), yaw: this.yaw + side * B.toeOut * DEG, toeBend: 0 };
+      });
+      for (const st of this.footLock) st.planted = false;
+      this.look.blink = 0;
+      this.look.restGround = undefined;
+      this.look.gazeX = 0; this.look.gazeY = 0; this.look.mouthOpen = 0.1 * tuck; this.look.browRaise = -0.3 * tuck;
+      return { root, yaw: this.yaw, pelvis, spine, head, hands, feet,
+        shrug: [0, 0], shoulderFwd: [0, 0],
+        fall: { pitch: theta, roll: 0, groundZ: this.groundZ } };
+    }
+
     _actionPose() {
+      if (this.dodge && this.dodge.roll) return this._rollPose();
       const a = this.death || this.dodge, from = a.from;
       this.look.slingDraw = 0;
       this.look.slingBand = 0; this.look.slingLoaded = false;
@@ -1764,6 +1838,9 @@
         y: cPitch * 0.32 + lookPitch + (2 * run * g + 4) * DEG + nod + 4 * DEG * guardK,
         z: cRoll * 0.5 - weight * 0.8 * DEG,
       };
+      // puxando o arco (de lado para o alvo), a cabeça olha ao longo da flecha (slingshot.js: `look.bowHead`)
+      const bowHead = this.look.bowHead;
+      if (bowHead && bowHead.k > 0) hTarget.x = lerp(hTarget.x, bowHead.yaw, bowHead.k);
       if (!this.headSpring) this.headSpring = new M.Spring3(hTarget);
       const hv = this.headSpring.step(hTarget, lerp(3.4, 6.5, guardK), 0.82, dt);
       const head = { yaw: hv.x - cYaw, pitch: hv.y - cPitch, roll: hv.z - cRoll };

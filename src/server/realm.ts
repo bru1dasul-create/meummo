@@ -202,6 +202,10 @@ export class Realm {
     this.worldOf(player)?.cuddle(player, petId);
   }
 
+  jump(player: Player): void {
+    this.worldOf(player)?.jump(player);
+  }
+
   chat(player: Player, text: string): void {
     this.worldOf(player)?.chat(player, text);
   }

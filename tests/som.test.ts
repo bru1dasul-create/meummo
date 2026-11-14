@@ -2,8 +2,10 @@
 // tem o seu som: a vila, a clareira, a mata, a mata profunda e a água. O mapa pode dizer o som pela propriedade `som`;
 // sem ela, vale o nome do lugar.
 
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { sceneOfPlace } from '../src/client/ambient';
+import { trackOfScene } from '../src/client/music';
 import { loadMaps } from '../src/server/server';
 import { GameMap } from '../src/shared/map';
 
@@ -33,5 +35,22 @@ describe('o som de cada lugar', () => {
     expect(at(37, 43)).toBe('clareira');
     expect(at(40, 100)).toBe('mata');
     expect(capao.placeAt(10, 50)!.name).toBe('Lago do Parque');
+  });
+});
+
+describe('a música de cada lugar (licença livre)', () => {
+  it('a vila tem a sua, a mata profunda a sua, e o resto usa a da mata', () => {
+    expect(trackOfScene('vila')).toBe('vila');
+    expect(trackOfScene('mata-profunda')).toBe('mata-profunda');
+    for (const scene of ['mata', 'clareira', 'agua'] as const) expect(trackOfScene(scene)).toBe('mata');
+  });
+
+  it('os arquivos existem e cada um tem o crédito e a licença anotados', () => {
+    const credits = readFileSync('public/assets/audio/musica/CREDITOS.md', 'utf8');
+    for (const file of ['vila-capao.mp3', 'mata.mp3', 'mata-profunda.mp3']) {
+      expect(existsSync(`public/assets/audio/musica/${file}`)).toBe(true);
+      expect(credits).toContain(`\`${file}\``);
+    }
+    expect(credits).toContain('CC0');
   });
 });

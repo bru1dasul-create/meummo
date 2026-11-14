@@ -771,6 +771,39 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   entrar na casa da vó (Capão, porta perto de x 65, y 40) e esperar ele acordar; conferi no PC e no celular deitado,
   com dois visitantes, sem erros.
 
+### A lista do dono de 14/11, lote 1 (o que está feio ou com defeito; na main em 14/11, com o "pode" do dono)
+- **Cama do quarto do Joaquim** (`casas.js` `small.cama`): a cabeceira fica do lado oposto ao `olhando` (0 = pés para
+  o leste e cabeceira em x0, o padrão sem `olhando`; 90 em y0; 180 em x1; 270 em y1); a do lado da câmera vai por
+  último. O [mundo] virou a cama no mapa (`mundo/cama-vo`); os dois ramos entram juntos. O crucifixo foi para o meio da
+  cabeceira (x 70,15).
+- **Braço do arco** (`slingshot.js`): puxando, de lado para o alvo: `BOW_TURN` 75° do peito para a flecha (o quadril
+  dá `BOW_HIPS` 28°, menos andando), a mão do arco esticada para o alvo (x da mão esquerda conta para fora), o cotovelo
+  da corda guiado para trás na linha da flecha, a cabeça olhando ao longo dela (`look.bowHead`, lido no animator) e o
+  arco virado para onde a flecha vai (`look.bowDir`). Conferir: `arco-prancha.cjs` (scratchpad) e no jogo.
+- **Esquiva** (`animator.js` `startRoll`/`_rollPose`, `view.js` ação `dash`): no jogo ela era um pulo de 3 m sem
+  movimento. Agora é um rolamento de 0,5 s: a pose encolhida e o giro da queda do rig (`fall`), com o pé da pose
+  recuando para o meio da bola seguir reto; a vista não teletransporta enquanto rola. A esquiva curta do protótipo
+  (`_startDodge`) não mudou (os testes do protótipo passam).
+- **Entrar e sair das casas** (`props.js` `CUT_TIME`, `world.js` `focusHouse`, `view.js`): 0,6 s com começo e fim
+  suaves; saindo, a casa continua em foco até o telhado voltar; o escuro fecha e abre como íris; a câmera volta junto;
+  o herói que sai não é cortado.
+- **Entrada da Budega** (`props.js` `shopDoorway`/`shopDoorRect`; o mapa é do [mundo], `mundo/budega-entrada`): a
+  frente da vendinha que dá para entrar era uma parede de prateleiras pintada (o herói parecia atravessá-la). Agora é
+  o vão da loja no lugar do `portaDe`/`portaAte` (sem eles, a frente toda menos 34 cm de cada lado): a porta de aço
+  enrolada na caixa em cima, os trilhos dos dois lados, a soleira de cimento e, lá dentro, o que o mapa tem nesses
+  lugares (piso de ladrilho, geladeira à esquerda, balcão com a caixa à direita, prateleiras no fundo, a luz da
+  lâmpada). O musgo e o cipó da fachada são recortados fora do vão. O orelhão com `poste: true` (`tmj.js` acha o
+  `poste-praca` mais perto, até 1,5 m: `poleAt`) liga dois braços de ferro até o poste. Os caixotes de frutas, a
+  lousinha e o degrau com capacho dependem da resposta do dono à proposta do [mundo].
+- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] já pôs no mapa (`mundo/floresta-dentro`,
+  dentro do `mundo/budega-entrada`) a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
+  `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
+  samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
+  minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
+- **Próximo da lista (pedido da [estrutura], que mediu):** o zoom e a conversa travam porque o chão (`ground.js`) se
+  refaz inteiro a cada zoom novo; esticar os pedaços velhos enquanto o zoom muda e refazer quando parar, e o
+  `buildBusy` contar o primeiro desenho de cada imagem nova.
+
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
@@ -864,9 +897,11 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura]:** o arco: ligar o desenho (veja o roteiro: o `icone` `arco`, as chamadas do `projectileArt.ts` no
-  `combat.ts` e o `setLook`). O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular entraram na main em
-  14/11 (avisei a [estrutura] para conferir o Joaquim no navegador).
+- **[estrutura]:** nada pendente da arte. O desenho do arco, o Joaquim (`canDraw`) e o botão do som no celular
+  entraram na main em 14/11, e a [estrutura] ligou o arco (main 0765f59): conferi no jogo (a mochila equipa, o botão
+  vira "Arco", a flecha voa e crava). Observação dela: no zoom padrão a tela mostra uns 10 m do herói; a flecha com
+  carga cheia (13 m) pode cravar fora da tela (não é erro). Se o dono quiser, a câmera pode andar um pouco para onde
+  se mira enquanto puxa o arco (é da view: `follow`).
 - **[mundo]:** a Dona Iracema aparecia por cima do balcão da barraquinha (o balcão desenhado na frente das pernas).
   O [mundo] anotou o pedido; confira no jogo se ficou certo.
 - **[estrutura]** (ideia, não pedida ainda): o servidor só avisa o próprio jogador de que ele está encantado

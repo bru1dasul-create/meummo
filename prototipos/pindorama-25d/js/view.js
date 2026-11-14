@@ -221,6 +221,16 @@
         case 'sling-cancel':
           if (S && slinging()) S.cancel(ch);
           return;
+        case 'dash': {
+          // a esquiva: rola no chão até onde o servidor já pôs o herói (antes ele aparecia lá de uma vez, 3 m adiante)
+          const T = a.target;
+          const dx = T.x - ch.pos.x, dy = T.y - ch.pos.y, dist = Math.hypot(dx, dy);
+          if (dist < 20 || !ch.startRoll) return;
+          if (slinging() && S) S.cancel(ch);
+          ch.startRoll(Math.atan2(dy, dx), dist);
+          a.dash = false;
+          return;
+        }
         case 'guard':
           // defesa levantada (o motor manda de novo quando a mira da defesa muda)
           a.guardHeld = true;
@@ -311,8 +321,9 @@
       const dx = T.x - ch.pos.x;
       const dy = T.y - ch.pos.y;
       const d = Math.hypot(dx, dy);
-      if (d > 300 || a.dash) {
-        // teleporte ou esquiva: sem andar o caminho (a esquiva ganha animação própria com view.action)
+      const rolling = !!(ch.dodge && ch.dodge.roll);
+      if ((d > 300 && !rolling) || a.dash) {
+        // teleporte (ou esquiva sem o rolamento): sem andar o caminho; a esquiva rola (view.action 'dash')
         ch.pos.x = T.x;
         ch.pos.y = T.y;
         for (const st of ch.footLock) {
@@ -454,7 +465,8 @@
           goal = { x: this.focusPoint.x + d, y: this.focusPoint.y + d, z: 0 };
         }
         // dentro de uma casa (o telhado sai): a câmera vai para o meio dela, para a casa toda ficar no centro da tela
-        const home = this.world.insideHouse;
+        // (saindo, a câmera volta para o herói junto com o telhado: a casa ainda em foco é a `focusHouse`)
+        const home = this.world.insideHouse || this.world.focusHouse;
         if (home && !this.focusPoint) {
           const hb = home.b;
           const k = 0.7 * (home.cutK || 0);

@@ -85,6 +85,8 @@ export interface SolidRect {
   y1: number;
   /** Segura projéteis também (`bloqueiaTiro`). */
   shot: boolean;
+  /** O tipo do objeto no Tiled (ex.: 'tronco', 'parede', 'pedra'): o tiro que para nele diz em que bateu. */
+  kind?: string;
 }
 
 /** Retângulo (em tiles = metros) de área segura: camada `seguro`. */
@@ -370,7 +372,8 @@ export class GameMap implements Walkable {
           if (isSolidLayer && !obj.point) {
             const rect = rectOf(obj);
             const shot = obj.properties?.find((p) => p.name === 'bloqueiaTiro')?.value;
-            if (rect.x1 > rect.x0 && rect.y1 > rect.y0) solids.push({ ...rect, shot: shot !== false });
+            const kind = (obj.type ?? obj.class ?? '').trim();
+            if (rect.x1 > rect.x0 && rect.y1 > rect.y0) solids.push({ ...rect, shot: shot !== false, ...(kind ? { kind } : {}) });
             continue;
           }
           if (isSafeLayer && !obj.point) {
@@ -516,17 +519,30 @@ export class GameMap implements Walkable {
    * formato antigo, continua o tile inteiro.
    */
   blocksShotAt(x: number, y: number): boolean {
-    if (!this.metric) return this.blocksShot(Math.floor(x), Math.floor(y));
+    return this.shotBlockerAt(x, y) !== null;
+  }
+
+  /**
+   * O que segura o projétil no ponto (x, y) da pedra: o tipo do retângulo de colisão (ex.: 'tronco'), 'borda' (fora do
+   * mapa), 'bloco' (tile que segura, ou retângulo sem tipo) ou null (passa).
+   */
+  shotBlockerAt(x: number, y: number): string | null {
+    if (!this.metric) {
+      const tx = Math.floor(x);
+      const ty = Math.floor(y);
+      if (!this.inside(tx, ty)) return 'borda';
+      return this.blocksShot(tx, ty) ? 'bloco' : null;
+    }
     const gy = y + SHOT_FEET_DY;
     const tx = Math.floor(x);
     const ty = Math.floor(gy);
-    if (!this.inside(tx, ty)) return true;
+    if (!this.inside(tx, ty)) return 'borda';
     const i = ty * this.width + tx;
-    if (this.tileCover[i] === 1) return true;
+    if (this.tileCover[i] === 1) return 'bloco';
     for (const r of this.solidsByTile[i] ?? NO_SOLIDS) {
-      if (r.shot && x > r.x0 && x < r.x1 && gy > r.y0 && gy < r.y1) return true;
+      if (r.shot && x > r.x0 && x < r.x1 && gy > r.y0 && gy < r.y1) return r.kind ?? 'bloco';
     }
-    return false;
+    return null;
   }
 
   /** Procura o tile livre mais próximo (busca em largura, passando por cima de obstáculos). */

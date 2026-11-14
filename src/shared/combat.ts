@@ -220,7 +220,8 @@ export function makeShot(fromTile: Point, angle: number, speed: number, range: n
 
 /**
  * Avança um projétil `dt` segundos, em pedacinhos de no máximo 1/4 de tile (para não atravessar nada).
- * A cada pedacinho chama `hits(x, y)`: se devolver true, o projétil acertou alguém e para.
+ * A cada pedacinho chama `hits(x, y)`: se devolver true, o projétil acertou alguém e para. Quando bate numa parede
+ * ou num tronco ('wall'), ele fica na beirada do que segurou (a flecha crava na casca, não 25 cm dentro).
  */
 export function advanceShot(
   shot: ShotPath,
@@ -232,11 +233,27 @@ export function advanceShot(
   while (remaining > 1e-9) {
     const step = Math.min(0.25, remaining, shot.range - shot.traveled);
     if (step <= 1e-9) return 'range';
+    const x0 = shot.x;
+    const y0 = shot.y;
     shot.x += shot.dx * step;
     shot.y += shot.dy * step;
     shot.traveled += step;
     remaining -= step;
-    if (map.blocksShotAt ? map.blocksShotAt(shot.x, shot.y) : map.blocksShot(Math.floor(shot.x), Math.floor(shot.y))) return 'wall';
+    const blocked = (x: number, y: number) => (map.blocksShotAt ? map.blocksShotAt(x, y) : map.blocksShot(Math.floor(x), Math.floor(y)));
+    if (blocked(shot.x, shot.y)) {
+      // volta até a beirada: o último ponto livre do pedacinho (8 metades: ~1 mm)
+      let free = 0;
+      let hit = step;
+      for (let i = 0; i < 8; i++) {
+        const mid = (free + hit) / 2;
+        if (blocked(x0 + shot.dx * mid, y0 + shot.dy * mid)) hit = mid;
+        else free = mid;
+      }
+      shot.x = x0 + shot.dx * free;
+      shot.y = y0 + shot.dy * free;
+      shot.traveled -= step - free;
+      return 'wall';
+    }
     if (hits?.(shot.x, shot.y)) return 'hit';
     if (shot.traveled >= shot.range - 1e-9) return 'range';
   }
