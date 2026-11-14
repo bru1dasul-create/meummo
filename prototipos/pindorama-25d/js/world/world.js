@@ -26,7 +26,9 @@
   }
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
   // móveis de dentro de casa (só aparecem com o herói lá dentro)
-  const INSIDE_KINDS = new Set(['prateleira', 'geladeira', 'balcao', 'engradado']);
+  const INSIDE_KINDS = new Set(['prateleira', 'geladeira', 'balcao', 'engradado',
+    // as casas da família, da vó e a abandonada (casas.js)
+    'pia', 'fogao', 'filtro', 'mesa-cozinha', 'estante', 'sofa', 'cristaleira', 'mesa-redonda', 'maquina-costura', 'cama', 'vaso', 'gato', 'entulho']);
   /** O pé (caixa) está dentro da casa que dá para entrar `o` (a casa, não a parede do fundo)? */
   const insideOf = (o, fp) => {
     const b = o.b && o.b.interior && o.cutK !== undefined ? o.b : null;
@@ -60,8 +62,16 @@
       for (const p of this.interiors) add(new P.HouseBack(this, p));
       for (const w of m.walls || []) add(new P.Wall(this, w));
       for (const t of m.trees || []) {
-        add(new P.TreeTrunk(this, t));
-        add(new P.TreeCanopy(this, t));
+        const trunk = add(new P.TreeTrunk(this, t));
+        const crown = add(new P.TreeCanopy(this, t));
+        if (!t.inside) continue;
+        // a árvore que nasceu dentro da casa abandonada: o tronco (e as raízes, no piso) só aparece com a casa cortada;
+        // a copa sai pelo buraco da laje e fica por cima da casa (o pé dela cobre a casa toda: vem depois dela)
+        const house = this.interiors.find((h) => t.x > h.b.x0 && t.x < h.b.x1 && t.y > h.b.y0 && t.y < h.b.y1);
+        if (!house) continue;
+        trunk.house = house;
+        const f = crown.fp, hb = house.b;
+        crown.fp = { x0: Math.min(f.x0, hb.x0), x1: Math.max(f.x1, hb.x1), y0: Math.min(f.y0, hb.y0), y1: Math.max(f.y1, hb.y1) };
       }
       this.poles = (m.poles || []).map((p) => add(new P.Pole(this, p)));
       if (m.trafficLight) add(new P.TrafficLight(this, m.trafficLight));
@@ -421,6 +431,30 @@
           }
         }
       }
+      // dentro de uma casa que dá para entrar: o que fica na frente dela (o prédio do vizinho, a árvore da calçada, o
+      // poste, a copa da árvore de dentro) fica transparente em cima da casa toda, para ver o lado de dentro — a janela
+      // em volta do herói sozinha deixava a cozinha da casa amarela atrás do prédio do lado
+      const home = this.insideHouse;
+      if (home && home.cutK > 0.05 && this._window) {
+        const hb = home.b;
+        const cam = this.cam;
+        const z0 = home.z0;
+        const corners = [];
+        for (const [x, y] of [[hb.x0, hb.y0], [hb.x1, hb.y0], [hb.x0, hb.y1], [hb.x1, hb.y1]]) corners.push(cam.p({ x, y, z: z0 }), cam.p({ x, y, z: z0 + hb.h * 0.7 }));
+        const box = { x0: Math.min(...corners.map((q) => q.x)), x1: Math.max(...corners.map((q) => q.x)), y0: Math.min(...corners.map((q) => q.y)), y1: Math.max(...corners.map((q) => q.y)) };
+        const c = { x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 };
+        const W = { x: c.x, y: c.y, r: Math.max(...corners.map((q) => Math.hypot(q.x - c.x, q.y - c.y))) * 0.92 };
+        const from = order.indexOf(home);
+        for (let i = from + 1; from >= 0 && i < order.length; i++) {
+          const o = order[i];
+          // (o poste da rua também: fora de casa ele nunca fica transparente, de tão fino)
+          if (o.actor || o.house === home || (!o.fades && !(o instanceof P.Pole))) continue;
+          if (!overlap(o.bounds, box)) continue;
+          o.hideTarget = Math.min(o.hideTarget, o.overhead ? 0.42 : 0.5);
+          const list = o.hideWindows || (o.hideWindows = []);
+          if (list.length < 6) list.push(W);
+        }
+      }
       let actorMs = 0;
       for (const o of order) {
         if (o.actor) {
@@ -480,7 +514,10 @@
       mark('objetos');
       T.objetos -= actorMs * 0.05;
       T.personagem = T.personagem * 0.95 + actorMs * 0.05;
+      // dentro de casa, a fiação da rua fica clarinha (ela passa por cima do que tem lá dentro)
+      if (this.insideHouse && this.insideHouse.cutK > 0.05) ctx.globalAlpha = 1 - 0.65 * this.insideHouse.cutK;
       this._drawWires(ctx);
+      ctx.globalAlpha = 1;
       // bandeirinhas da praça (balançam: a cada quadro)
       if (PD.city) for (const b of this.map.bunting || []) if (this._onScreen(b.pts.map((p) => this.cam.p({ x: p.x, y: p.y, z: b.h })))) PD.city.bunting(ctx, this.cam, b, this.time);
       // por cima de tudo: soco (o que não ficou atrás do personagem), riscos, faíscas e pétalas
