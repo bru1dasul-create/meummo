@@ -210,9 +210,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
     (dormindo, continua dormindo). Sons: miado e ronronar. Gatinho provisório desenhado pelo motor (só com você
     dentro da casa) até o da [arte]. Protocolo 30. Conferido no PC e no celular com o mapa do ramo do [mundo]
   - [x] **[arte]** Ligar o `gato.js` no Joaquim que anda (14/11, no ramo da arte; entra na main com o "pode" do
-    dono): `canDraw('pet', 'joaquim')` na PD.View e a criatura de bolas acordada (em pé, andando no passo de gato,
-    sentado, espreguiçando, o pulo do sofá, "miau!" e o coração do carinho; olha para quem está perto). Dormindo,
-    continua o desenho enrolado aprovado. Conferido no PC e no celular deitado, na casa da vó
+    dono): `canDraw('pet', 'joaquim')` na PD.View e o Joaquim acordado pintado como o gato enrolado (refeito depois
+    que o dono achou a versão de bolas feia): em pé, andando no passo de gato, sentado, espreguiçando, o pulo do sofá,
+    "miau!" e o coração do carinho; pisca e olha para quem está perto. Dormindo, continua o desenho enrolado aprovado.
+    Conferido no PC e no celular deitado, na casa da vó
   - [x] **[mundo]** A casa rosa na main (14/11, com o desenho das casas) e o `gato` decorativo do sofá saiu: o Joaquim
     de verdade aparece lá (conferido no PC e no celular: dorme no sofá e passeia pela casa)
 - [x] **[arte]** Budega com interior, o desenho (13/11, pedido do dono: "igual HumanitZ"): com o herói dentro, o

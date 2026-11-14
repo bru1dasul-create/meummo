@@ -736,21 +736,30 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
 - A [estrutura] fez o comportamento (o bicho `pet` `joaquim`, protocolo 30). Na PD.View: `canDraw('pet', 'joaquim')`
   (aí o motor para de desenhar o gatinho provisório e manda o bicho para a view), o `asleep` de quando ele aparece
   (`setAsleep`) e a cor do nome (`NAME_COLOR.pet`, a dos NPCs).
-- A criatura `Joaquim` (de bolas, como o sagui): poses em pé, sentado, espreguiçando (`wake`), no pulo (`LEAP`) e
-  enrolado, e o desenho passa de uma para a outra. **Dormindo, é o desenho aprovado** (`sleeping`, o mesmo do
-  `PD.gato.draw`), que entra e sai com um esmaecer rápido (~0,2 s) quando ele enrola ou acorda.
-- Do jeito do gato do dono: orelhas grandes (uma "concha" de 4 pontos, rosada por dentro e com a ponta laranja; a de
-  trás vai antes da cabeça e a da frente depois, pelos ganchos `under`/`over` que pus nos grupos do `creature.js`),
-  cabeça larga embaixo (bochechas) com focinho curto, máscara laranja-clara na testa e no nariz, olhos azuis (fechados
-  dormindo e no carinho), rabo em pé com a ponta virando. Parado e acordado, vira a cabeça para quem está perto.
-- O passo é de gato (a pata de trás e, um quarto de passada depois, a da frente do mesmo lado; a pata no chão vai para
-  trás, sem escorregar para a frente). As costas são de bolas bem juntas (espaçadas, o contorno saía encaroçado, de
-  carneiro).
-- Em cima do sofá (`perch`, 46 cm): desenhado depois do sofá (`lift`), a sombra vai no assento (`PD.creatures.drawShadow`
-  com a altura) e não no chão. O pulo (`dash`) é um arco de 0,42 s, virado para onde ele pula.
-- "miau!" e o coração do carinho saem do lado da cabeça, abaixo do nome (em cima, o nome escondia os dois).
-- O erro da primeira versão: o "para cima" da cabeça era frente × lado ao contrário; as orelhas e a máscara ficavam
-  embaixo do queixo (pareciam presas brancas).
+- **O dono achou a primeira versão "bem feia"** (bolas e tubos com contorno grosso, como bicho de bexiga: pernas de
+  salsicha, rosto de manchas chapadas, rabo de antena). Refeito **pintado como o gato enrolado aprovado**: o esqueleto
+  3D continua (poses, IK das pernas, passo de gato), mas o desenho é próprio (`paintAwake`), e as bolas da criatura só
+  servem para a sombra e a caixa.
+  - Corpo: duas partes (traseiro e peito, cada uma o fecho convexo de círculos) com um contorno só em volta das duas
+    (cada parte riscada com o dobro da tinta e o recheio por cima): sobra a cintura e as costas descem do quadril para
+    o ombro. Peito fundo, barriga recolhida, degradê de cima (claro) para baixo; de lado, um risco suave na frente da
+    coxa.
+  - Cabeça de gatinho (grande): crânio, bochechas e focinho curto num contorno só, degradê com a luz. O rosto é pintado
+    no plano que encosta na cabeça (encurta quando ela vira): máscara laranja esfumada com três listrinhas, a faixa do
+    nariz, olhos em amêndoa azuis com pupila, brilho e pálpebra mais grossa (fechados: o risquinho do gato dormindo;
+    ele pisca de vez em quando), nariz rosa, boca em "w" (aberta no miado), bigodes brancos quase deitados.
+  - Orelhas grandes em concha (rosadas por dentro, a ponta alaranjada): a de trás antes da cabeça, a da frente
+    depois, sem risco na base (emenda na cabeça).
+  - Pernas finas que afinam (`limbPath`), atrás do corpo (as do lado de lá mais escuras) e a patinha oval; sentado, as
+    da frente vão na frente da barriga, nascendo do peito (o começo some no pelo). Rabo que afina, do creme ao laranja,
+    com aneizinhos, em "ponto de interrogação".
+- Dormindo, é o desenho aprovado (`sleeping`); a troca enrolado ↔ acordado esmaece em ~0,1 s.
+- Em cima do sofá (`perch`, 46 cm): desenhado depois do sofá (`lift`), a sombra vai no assento
+  (`PD.creatures.drawShadow` com a altura). O pulo (`dash`) é um arco de 0,42 s. "miau!" e o coração saem do lado da
+  cabeça, abaixo do nome.
+- Erros que já aconteceram: o "para cima" da cabeça era frente × lado ao contrário (orelhas embaixo do queixo); pontos
+  do rabo quase em cima um do outro na tela torciam a ponta (`limbPath` tira os repetidos); o rabo na sombra virava
+  pontilhado e depois um risco comprido (o rabo não faz sombra).
 - Conferir sem entrar no jogo: `node ferramentas/prancha-joaquim.cjs saida.png poses` (todas as poses em 4 direções e
   nos tamanhos do PC e do celular) e `... saida.png tiras` (o passo, o pulo, acordar e deitar em quadros). No jogo:
   entrar na casa da vó (Capão, porta perto de x 65, y 40) e esperar ele acordar; conferi no PC e no celular deitado,
