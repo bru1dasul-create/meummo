@@ -369,6 +369,11 @@
         a.dash = false;
       }
       const S = PD.SPEED || { walk: 160, run: 440 };
+      // a esquiva "dava uma travada no final" (dono, 15/11): o rolamento anda até 0,4 s mas dura 0,5 s, e quem continua
+      // andando já está mais à frente. Se o alvo seguiu adiante, o fim do rolamento emenda direto na corrida
+      if (rolling && ch.dodge.timing && ch.dodge.t >= ch.dodge.timing.moveEnd && d > 30 && ch._finishDodge) {
+        ch._finishDodge({ velocity: { x: (dx / d) * S.run, y: (dy / d) * S.run }, speed: S.run, run: true });
+      }
       // velocidade para alcançar o alvo em ~0,12 s (o servidor manda posição a cada 50 ms). O jogo corre a 4,5 m/s
       // (um pouco mais que a corrida do protótipo) e, atrasado numa virada (ele gira plantando os pés, o servidor
       // inverte na hora), precisa recuperar: até 35% mais rápido, sem escorregar o pé. O passo (andar ou correr) sai
