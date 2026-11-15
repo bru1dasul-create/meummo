@@ -40,8 +40,17 @@
       },
       "olhos_de_gaviao": {
         "nome": "Olhos de Gavião",
-        "descricao": "Enxerga os inimigos de longe e revela rastros e ameaças escondidas.",
-        "nivel": 10
+        "descricao": "Por uns segundos você enxerga como o gavião: vê os bichos de mais longe (eles aparecem no mini mapa), destacados mesmo atrás das árvores e no escuro, com o nível e a cor do perigo. Com 3 pontos, eles levam mais dano seu enquanto durar.",
+        "nivel": 10,
+        "tipo": "olhos",
+        "recargaSegundos": 30,
+        "pontos": [
+          { "duracaoSegundos": 8, "visaoPorcento": 50 },
+          { "duracaoSegundos": 10, "visaoPorcento": 60 },
+          { "duracaoSegundos": 12, "visaoPorcento": 75, "danoExtraPorcento": 10 },
+          { "duracaoSegundos": 14, "visaoPorcento": 85, "danoExtraPorcento": 15 },
+          { "duracaoSegundos": 16, "visaoPorcento": 100, "danoExtraPorcento": 20 }
+        ]
       },
       "chamado_selvagem": {
         "nome": "Chamado Selvagem",

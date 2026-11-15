@@ -986,8 +986,19 @@ export class World {
     const { skill } = found;
     const now = this.now();
     if (player.dead) return this.fail(player, 'dead');
-    if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
     const readyAt = player.castReadyAt.get(skill.id) ?? 0;
+    if (skill.kind === 'olhos') {
+      // os Olhos de Gavião não atacam: valem até na vila e defendendo (é só olhar), e não soltam a pedra puxada
+      if (now < readyAt - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
+      player.hawkUntil = now + numbers.durationMs;
+      player.hawkVision = numbers.visionPct / 100;
+      player.hawkBonus = numbers.bonusPct / 100;
+      this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'hawk', ms: numbers.durationMs }, player.id);
+      player.castReadyAt.set(skill.id, Math.max(now, readyAt) + skill.cooldownMs);
+      player.outbox.push({ t: 'scd', s: skill.id, ms: skill.cooldownMs });
+      return;
+    }
+    if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
     if (now < readyAt - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
     if (this.inSafeArea(player)) return; // da área segura ninguém ataca (veja shoot)
     const feet = feetAt(player.fx, player.fy);
@@ -2079,6 +2090,11 @@ export class World {
     }
     // a casca do tatu-bola: o golpe que vem pela frente perde parte do dano (tonto, depois da investida, fica sem ela)
     if (target.kind === 'monster' && now < target.markedUntil) amount = Math.round(amount * (1 + target.markPct / 100));
+    // os Olhos de Gavião (com 3 pontos ou mais): quem está com eles ativos bate mais forte nos bichos
+    if (target.kind === 'monster') {
+      const hunter = this.players.get(attackerId);
+      if (hunter && now < hunter.hawkUntil && hunter.hawkBonus > 0) amount = Math.round(amount * (1 + hunter.hawkBonus));
+    }
     if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil && !ignoreShell) {
       const from = this.hitFrom(target, attackerId, travel);
       if (from !== null && Math.abs(angleDiff(angleOfDir(target.dir), from)) <= target.def.shell.halfArc) {
@@ -2622,15 +2638,17 @@ export class World {
 
   /** Área de visão: cada jogador só recebe notícias de quem está perto dele. */
   private updateView(player: Player): void {
-    for (const other of this.players.values()) if (other !== player) this.see(player, other);
-    for (const monster of this.monsters.values()) this.see(player, monster);
-    for (const pet of this.pets.values()) this.seePet(player, pet);
+    // com os Olhos de Gavião ativos, o jogador enxerga mais longe (os bichos de longe também chegam)
+    const reach = this.now() < player.hawkUntil ? 1 + player.hawkVision : 1;
+    for (const other of this.players.values()) if (other !== player) this.see(player, other, reach);
+    for (const monster of this.monsters.values()) this.see(player, monster, reach);
+    for (const pet of this.pets.values()) this.seePet(player, pet, reach);
   }
 
   /** Como `see`, para os bichos (posição com fração, como a dos jogadores). */
-  private seePet(player: Player, pet: Pet): void {
-    const dx = Math.abs(pet.x - player.x);
-    const dy = Math.abs(pet.y - player.y);
+  private seePet(player: Player, pet: Pet, reach = 1): void {
+    const dx = Math.abs(pet.x - player.x) / reach;
+    const dy = Math.abs(pet.y - player.y) / reach;
     if (player.known.has(pet.id)) {
       if (dx > VIEW_RADIUS_X + VIEW_HYSTERESIS || dy > VIEW_RADIUS_Y + VIEW_HYSTERESIS) {
         player.known.delete(pet.id);
@@ -2644,9 +2662,10 @@ export class World {
     }
   }
 
-  private see(player: Player, other: Entity): void {
-    const dx = Math.abs(other.x - player.x);
-    const dy = Math.abs(other.y - player.y);
+  /** `reach`: quantas vezes a visão de sempre (os Olhos de Gavião aumentam). */
+  private see(player: Player, other: Entity, reach = 1): void {
+    const dx = Math.abs(other.x - player.x) / reach;
+    const dy = Math.abs(other.y - player.y) / reach;
     if (player.known.has(other.id)) {
       if (dx > VIEW_RADIUS_X + VIEW_HYSTERESIS || dy > VIEW_RADIUS_Y + VIEW_HYSTERESIS) {
         player.known.delete(other.id);

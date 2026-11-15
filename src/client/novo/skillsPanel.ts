@@ -27,6 +27,11 @@ export function pointText(skill: ClassSkillInfo, point: SkillPointInfo): string 
     if (point.burstRadius > 0) parts.push(`explode no fim (${meters(point.burstRadius)}, ${point.burstPct}%)`);
     return parts.join(' · ');
   }
+  if (skill.kind === 'olhos') {
+    const parts = [`${Math.round(point.durationMs / 1000)} s`, `vê ${point.visionPct}% mais longe`];
+    if (point.bonusPct > 0) parts.push(`+${point.bonusPct}% de dano seu nos bichos`);
+    return parts.join(' · ');
+  }
   return '';
 }
 
@@ -257,7 +262,7 @@ export class SkillsPanel {
     const next = has < max ? skillPoint(skill, has + 1) : null;
     if (now) info.append(this.line('numbers', `Agora: ${pointText(skill, now)}`));
     if (next) info.append(this.line('next', `${has === 0 ? 'Com 1 ponto' : 'Próximo ponto'}: ${pointText(skill, next)}`));
-    if (skill.kind && has === 0) info.append(this.line('next', `Recarga de ${Math.round(skill.cooldownMs / 1000)} s · mira até ${meters(skill.range)}`));
+    if (skill.kind && has === 0) info.append(this.line('next', `Recarga de ${Math.round(skill.cooldownMs / 1000)} s${skill.range > 0 ? ` · mira até ${meters(skill.range)}` : ''}`));
     const blocker = learnBlocker(cls, skill, this.level, this.hero.skills);
     const why =
       blocker === 'soon'

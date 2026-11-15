@@ -75,6 +75,14 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — Olhos de Gavião ("pode ser" do dono):** `tipo: "olhos"` (`duracaoSegundos`, `visaoPorcento`,
+`danoExtraPorcento`; sem `alcance` nem `danoPorcento`), protocolo **39** (`fx` `'hawk'`). `Player.hawkUntil`/`hawkVision`/
+`hawkBonus`; `see(player, other, reach)` divide a distância pelo `reach`; o dano a mais no `damage`. Não atacam (vila,
+defesa e pedra puxada valem). Navegador: `hab3` (T), `hawkTags.ts` (etiquetas HTML: o destaque não precisou mexer no
+`combat.ts`, que a [arte] está mexendo), `MapMarker.monster` (a cor do perigo no mini mapa). A view da [arte] trava o
+zoom em 0,7: afastar a câmera ficou pedido a ela. 3 testes novos em `tests/classe.test.ts` e o `dangerColor` em
+`tests/teclas.test.ts`.
+
 **15/11 — Flecha Ancestral (o "pode" do dono para a minha proposta):** atravessa a linha, marca com 3 pontos, explode
 com 5. `tipo: "flecha"` em data/classes.json (`velocidade`; nos pontos, `marcaPorcento`/`marcaSegundos` e
 `explosaoRaio`/`explosaoPorcento`); `SkillPointInfo` agora tem todos os campos (0 = não tem) e `ClassSkillInfo.speed`.

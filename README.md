@@ -45,7 +45,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 |---|---|---|
 | Andar | `W` `A` `S` `D` / setas, ou clique no chão (`C` liga e desliga o andar devagar) | joystick ou toque no chão |
 | Estilingue | **segure e solte**: botão esquerdo em cima do monstro, botão direito (vai para o mouse) ou `J` (no monstro mais perto). Quanto mais segurar (até ~1 s), mais forte e mais longe | segure e solte o botão **Estilingue**; toque rápido no monstro = pedra fraca na hora |
-| Habilidades da classe (no Caçador: `Q` a **Chuva de Flechas**, `R` a **Flecha Ancestral**) | **segure** a tecla: o círculo (ou a linha da flecha) segue o mouse; solte para usar | botão da habilidade (mira sozinho onde pega mais bichos) |
+| Habilidades da classe (no Caçador: `Q` a **Chuva de Flechas**, `R` a **Flecha Ancestral**, `T` os **Olhos de Gavião**) | **segure** a tecla: o círculo (ou a linha da flecha) segue o mouse; solte para usar. Os Olhos valem na hora | botão da habilidade (mira sozinho onde pega mais bichos) |
 | Habilidades (escolher a classe e pôr os pontos) | `K` ou o botão **✦ Habilidades** | botão **✦** |
 | Fôlego (cura) | `E` | botão **Fôlego** |
 | Esquiva | `Shift` | botão **Esquiva** |
@@ -301,7 +301,7 @@ pontos (de graça, por enquanto).
 |---|---|---|
 | **Chuva de Flechas** | 3 | Segure `Q` e mire: as flechas sobem e caem no círculo, acertando todos os bichos dentro (de cima: nem a casca do tatu-bola segura). Com o estilingue, chovem pedras. Cada ponto: mais flechas, área maior e mais dano |
 | **Flecha Ancestral** | 6 | Segure `R` e mire: uma flecha do espírito que atravessa **todos** os bichos da linha (nem a casca do tatu-bola nem o enxame de marimbondos seguram; parede e tronco, sim). Com 3 pontos, quem ela atravessa fica **marcado** (uma runa verde) e leva mais dano de todo mundo por uns segundos; com 5, ela **explode** no fim |
-| Olhos de Gavião | 10 | em breve |
+| **Olhos de Gavião** | 10 | Aperte `T`: por uns segundos você enxerga mais longe (chegam bichos de mais longe e eles aparecem no mini mapa), e cada bicho ganha uma etiqueta com o nível na cor do perigo — verde fácil, amarelo parelho, vermelho perigoso — por cima das árvores e do escuro. Com 3 pontos, eles levam mais dano seu enquanto durar. Vale até na vila e defendendo (é só olhar) |
 | Chamado Selvagem | 15 | em breve |
 | Fúria da Onça | 20 | em breve |
 
@@ -316,6 +316,7 @@ Tudo fica em [`data/classes.json`](data/classes.json):
 | `recargaSegundos`, `alcance` | a recarga e até onde dá para mirar (metros; na flecha, até onde ela voa) |
 | `demoraMs` (chuva) | quanto demora do tiro até as flechas caírem |
 | `velocidade`, `largura` (flecha) | metros por segundo, e quanto ela pega de cada lado da linha (metros, no pé do bicho; sem o campo, 0,8) |
+| `pontos` dos olhos | `duracaoSegundos`, `visaoPorcento` (quanto a mais se enxerga) e, se quiser, `danoExtraPorcento` (quanto a mais de dano seu os bichos levam enquanto dura); os olhos não têm `alcance` nem `danoPorcento` |
 | `pontos` | os números de cada ponto (o 1º da lista é com 1 ponto; o tamanho da lista é o máximo de pontos). Os dois tipos: `danoPorcento` (do tiro sem carga, em cada bicho que pega). Chuva: `flechas` (o desenho) e `raio` da área (metros). Flecha, se quiser: `marcaPorcento` e `marcaSegundos` (a marca: quanto de dano a mais e por quanto tempo) e `explosaoRaio` e `explosaoPorcento` (a explosão do fim) |
 
 Salve e reinicie o servidor. Se algo estiver errado (um número fora do lugar, a missão que não existe), o servidor

@@ -49,13 +49,14 @@ import { KeysPanel } from './keysPanel';
 import { SkillsPanel } from './skillsPanel';
 import { skillIconUrl } from './skillIcons';
 import { ExtraSkillButtons } from './skillButtons';
+import { dangerColor, HawkTags } from './hawkTags';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
 /** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
 /** As teclas 1 e 2 da barra: a 1ª habilidade da classe e o Fôlego. */
 const SKILL_KEYS: KeyAction[] = ['hab1', 'folego'];
 /** A tecla de cada habilidade da classe, na ordem de data/classes.json (a 1ª no Q, a 2ª no R). */
-const CLASS_KEYS: KeyAction[] = ['hab1', 'hab2'];
+const CLASS_KEYS: KeyAction[] = ['hab1', 'hab2', 'hab3'];
 /** O Fôlego na lista de SKILLS (src/shared/skills.ts). A Bordunada (a 0) saiu do jogo novo em 15/11: a classe entrou. */
 const FOLEGO = 1;
 
@@ -255,6 +256,9 @@ class NewWorld implements NewWorldGame {
   private aiming: ClassSkillInfo | null = null;
   /** Os botões das habilidades da classe da 2ª em diante (provisórios, até a barra ter quadrados para elas). */
   private readonly extraButtons = new ExtraSkillButtons((id) => this.onExtraSkill(id));
+  /** Olhos de Gavião: até quando valem (performance.now) e as etiquetas de nível em cima dos bichos. */
+  private hawkUntil = 0;
+  private readonly hawkTags = new HawkTags();
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
   private charging: { since: number; aim: Aim; sentAngle: number } | null = null;
@@ -459,6 +463,8 @@ class NewWorld implements NewWorldGame {
       // a classe, os pontos de cada habilidade e quantos sobram; se a janela das Habilidades está aberta
       hero: () => ({ ...game.hero, skills: { ...game.hero.skills } }),
       skillsOpen: () => game.skillsPanel.isOpen,
+      // os Olhos de Gavião: quantos ms ainda valem (0 = desligados)
+      hawk: () => Math.max(0, Math.round(game.hawkUntil - performance.now())),
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
   }
@@ -544,6 +550,7 @@ class NewWorld implements NewWorldGame {
     this.keysPanel.destroy();
     this.skillsPanel.destroy();
     this.extraButtons.destroy();
+    this.hawkTags.destroy();
     this.mapWindow.destroy();
     this.minimap.destroy();
     this.ambient.destroy();
@@ -576,6 +583,7 @@ class NewWorld implements NewWorldGame {
     this.handlePendingShot(now);
     this.updateCharge(now);
     this.updateAim();
+    this.updateHawk(now);
     this.updateGuard(now);
     this.updateAmbient(now);
     this.updateTimeOfDay(now);
@@ -704,6 +712,9 @@ class NewWorld implements NewWorldGame {
         break;
       case 'hab2':
         this.startAim(1, now);
+        break;
+      case 'hab3':
+        this.startAim(2, now);
         break;
       case 'folego':
         this.trySkill(FOLEGO, 0, now);
@@ -1698,6 +1709,28 @@ class NewWorld implements NewWorldGame {
     return skill && skill.kind && (this.hero.skills[skill.id] ?? 0) > 0 ? skill : null;
   }
 
+  /**
+   * A cada quadro, com os Olhos de Gavião valendo: a etiqueta de nível (na cor do perigo) em cima de cada bicho que
+   * está na tela, por cima das copas e do escuro. Acabou: as etiquetas somem.
+   */
+  private updateHawk(now: number): void {
+    if (now >= this.hawkUntil || !this.view || this.dead) {
+      this.hawkTags.clear();
+      return;
+    }
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const tags = [];
+    for (const e of this.entities.values()) {
+      if (e.kind !== 'monster') continue;
+      const feet = this.drawnFeet(e.id) ?? feetAt(e.x, e.y);
+      const p = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT + 0.15); // logo acima do nome (bicho pequeno não fica longe)
+      if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) continue;
+      tags.push({ id: e.id, x: p.x, y: p.y, level: e.level, color: dangerColor(e.level, this.myLevel) });
+    }
+    this.hawkTags.show(tags);
+  }
+
   /** Apertou o botão de uma habilidade da 2ª em diante: usa mirando sozinha. */
   private onExtraSkill(id: string): void {
     const cls = this.classes.find((c) => c.id === this.hero.class);
@@ -1726,12 +1759,13 @@ class NewWorld implements NewWorldGame {
 
   /** Dá para usar esta habilidade agora? (Avisa o porquê, se não der.) */
   private castable(skill: ClassSkillInfo, now: number): boolean {
-    if (this.dead || this.guardHeld) return false;
+    const look = skill.kind === 'olhos'; // os Olhos de Gavião não atacam: valem defendendo e na área segura
+    if (this.dead || (this.guardHeld && !look)) return false;
     if (now < (this.castReadyAt.get(skill.id) ?? 0)) {
       this.toast.show('Ainda recarregando...');
       return false;
     }
-    return !this.refuseInSafeArea(now);
+    return look || !this.refuseInSafeArea(now);
   }
 
   /**
@@ -1747,7 +1781,8 @@ class NewWorld implements NewWorldGame {
       return;
     }
     if (this.aiming || !this.castable(skill, now)) return;
-    if (!this.mouse || this.usingTouch) {
+    // sem mouse (no celular), ou uma habilidade que não mira (os Olhos de Gavião): usa na hora
+    if (!this.mouse || this.usingTouch || skill.kind === 'olhos') {
       this.castAuto(skill, now);
       return;
     }
@@ -1805,6 +1840,10 @@ class NewWorld implements NewWorldGame {
   private castAuto(skill: ClassSkillInfo, now: number): void {
     const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
     if (!numbers || !this.castable(skill, now)) return;
+    if (skill.kind === 'olhos') {
+      this.castAt(skill, this.myFeet(), now); // não mira: vale em volta de você
+      return;
+    }
     const spot = skill.kind === 'flecha' ? this.bestArrowSpot(skill.range, skill.width) : this.bestRainSpot(skill.range, numbers.radius);
     if (!spot) {
       this.toast.show('Nenhum bicho ao alcance');
@@ -1866,11 +1905,20 @@ class NewWorld implements NewWorldGame {
     const numbers = skillPoint(skill, rank);
     if (!numbers || !this.castable(skill, now)) return;
     const feet = this.myFeet();
-    this.cancelCharge(); // usar a habilidade solta a pedra que estava puxando (o servidor faz o mesmo)
     const readyAt = now + skill.cooldownMs;
     this.castReadyAt.set(skill.id, readyAt);
     if (this.barSkill()?.id === skill.id) this.actionBar.setCooldown('skill0', readyAt, skill.cooldownMs);
     this.extraButtons.setCooldown(skill.id, readyAt, skill.cooldownMs);
+    if (skill.kind === 'olhos') {
+      // os Olhos de Gavião: enxerga mais longe por um tempo (o servidor manda os bichos de longe; aqui, as etiquetas
+      // e os pontos no mini mapa). Não soltam a pedra puxada.
+      this.conn.send({ t: 'cast', id: skill.id, x: round3(feet.x), y: round3(feet.y) });
+      this.hawkUntil = now + numbers.durationMs;
+      this.combat.floater(this.myId, 'Olhos de Gavião!', '#ffd23f', now);
+      this.sfx.play('hawk');
+      return;
+    }
+    this.cancelCharge(); // usar a habilidade solta a pedra que estava puxando (o servidor faz o mesmo)
     if (skill.kind === 'flecha') {
       // a Flecha Ancestral sai como um tiro (o desenho já voa daqui; o servidor liga pelo número `cid`)
       const angle = Math.hypot(point.x - feet.x, point.y - feet.y) > 0.01 ? aimAngle(feet, point) : (this.myAngle * Math.PI) / 180;
@@ -2050,6 +2098,12 @@ class NewWorld implements NewWorldGame {
     const feet = this.myFeet();
     const me = { x: feet.x, y: feet.y, angle: this.myAngle };
     const markers: MapMarker[] = [...this.npcs].map(([id, n]) => ({ ...feetAt(n.e.x, n.e.y), mark: this.npcMarks.get(id) ?? '' }));
+    // com os Olhos de Gavião, os bichos viram pontos na cor do perigo
+    if (performance.now() < this.hawkUntil) {
+      for (const e of this.entities.values()) {
+        if (e.kind === 'monster') markers.push({ ...feetAt(e.x, e.y), monster: dangerColor(e.level, this.myLevel) });
+      }
+    }
     this.minimap.draw(picture, me, markers);
     this.mapWindow.draw(picture, this.map.name, me, markers);
   }
@@ -2314,6 +2368,11 @@ class NewWorld implements NewWorldGame {
         }
         if (msg.kind === 'jump') {
           this.view?.action?.(msg.id, 'jump'); // o pulo de outro jogador: só o desenho
+          break;
+        }
+        if (msg.kind === 'hawk') {
+          // outro jogador usou os Olhos de Gavião (só ele enxerga mais longe; os outros veem o aviso)
+          this.combat.floater(msg.id, 'Olhos de Gavião!', '#ffd23f', performance.now());
           break;
         }
         if (msg.kind === 'mark') {
