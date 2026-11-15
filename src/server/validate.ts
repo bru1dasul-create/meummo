@@ -28,7 +28,7 @@ function parseGmCommand(raw: unknown): GmCommand | null {
     case 'npc':
       return typeof c.npc === 'string' && /^[a-z0-9_-]{1,40}$/.test(c.npc) ? { do: 'npc', npc: c.npc } : null;
     case 'time':
-      return c.phase === 'dia' || c.phase === 'noite' ? { do: 'time', phase: c.phase } : null;
+      return c.phase === 'dia' || c.phase === 'tarde' || c.phase === 'noite' ? { do: 'time', phase: c.phase } : null;
     case 'wind':
       return c.level === 'calmo' || c.level === 'brisa' || c.level === 'forte' ? { do: 'wind', level: c.level } : null;
     case 'fly':

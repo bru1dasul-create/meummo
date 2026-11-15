@@ -13,7 +13,7 @@ export interface GmActions {
   /** Traz o NPC (a chave dele) para onde o administrador está (fica salvo nos ajustes do painel). */
   npc(id: string): void;
   /** Vira o relógio para o começo do dia ou da noite (todos os mapas). */
-  time(phase: 'dia' | 'noite'): void;
+  time(phase: 'dia' | 'tarde' | 'noite'): void;
   /** Muda o vento na hora (todos os mapas). */
   wind(level: 'calmo' | 'brisa' | 'forte'): void;
 }
@@ -93,7 +93,11 @@ export class GmPanel {
     toggles.append(this.flyButton, this.godButton);
     const time = document.createElement('div');
     time.className = 'row';
-    time.append(make('Virar dia', () => this.actions.time('dia')), make('Virar noite', () => this.actions.time('noite')));
+    time.append(
+      make('Virar dia', () => this.actions.time('dia')),
+      make('Virar tarde', () => this.actions.time('tarde')), // o começo do anoitecer: o pôr do sol, sem esperar
+      make('Virar noite', () => this.actions.time('noite')),
+    );
     const wind = document.createElement('div');
     wind.className = 'row';
     wind.append(make('Calmo', () => this.actions.wind('calmo')), make('Brisa', () => this.actions.wind('brisa')), make('Vento forte', () => this.actions.wind('forte')));

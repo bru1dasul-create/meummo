@@ -258,7 +258,7 @@ O mundo tem um relógio só, igual em todos os mapas: **30 minutos de dia e 10 d
 onde estava quando o servidor reinicia). Escurece devagar no fim do dia e clareia no começo. **À noite os bichos ficam
 25% mais fortes** (vida e dano) **e dão 50% a mais de XP e ouro**; o som da mata troca os passarinhos pelos grilos e
 pela coruja. Os números mudam no painel (Combate → Dia e noite). Para testar sem esperar: menu ADM no jogo (tecla G)
-→ **Virar dia** / **Virar noite**.
+→ **Virar dia** / **Virar tarde** (o começo do anoitecer: o pôr do sol em 1 minuto) / **Virar noite**.
 
 ## Mapa
 

@@ -57,6 +57,14 @@ describe('as contas do dia e noite', () => {
     clock.turnTo('noite');
     clock.turnTo('dia');
     expect(clock.position()).toBe(0);
+    // a tarde: o começo do anoitecer (ainda dia, a luz cheia), e em TWILIGHT_MS vem a noite
+    clock.turnTo('tarde');
+    expect(clock.position()).toBe(DAY_MS - TWILIGHT_MS);
+    expect(clock.isNight()).toBe(false);
+    t += TWILIGHT_MS / 2;
+    expect(daylightAt(clock.position(), R)).toBeCloseTo(0.5);
+    t += TWILIGHT_MS / 2;
+    expect(clock.isNight()).toBe(true);
   });
 });
 
@@ -155,9 +163,10 @@ describe('a noite no mundo', () => {
     expect(bicho().maxHp).toBe(50);
   });
 
-  it('o comando do ADM: só dia ou noite; quem não é administrador não vira nada', () => {
+  it('o comando do ADM: dia, tarde ou noite; quem não é administrador não vira nada', () => {
     expect(parseClientMsg(JSON.stringify({ t: 'gm', cmd: { do: 'time', phase: 'noite' } }))).toEqual({ t: 'gm', cmd: { do: 'time', phase: 'noite' } });
-    expect(parseClientMsg(JSON.stringify({ t: 'gm', cmd: { do: 'time', phase: 'tarde' } }))).toBeNull();
+    expect(parseClientMsg(JSON.stringify({ t: 'gm', cmd: { do: 'time', phase: 'tarde' } }))).toEqual({ t: 'gm', cmd: { do: 'time', phase: 'tarde' } });
+    expect(parseClientMsg(JSON.stringify({ t: 'gm', cmd: { do: 'time', phase: 'madrugada' } }))).toBeNull();
     const { world, player, run, bicho } = setup();
     player.admin = false;
     turn(world, player, 'noite');

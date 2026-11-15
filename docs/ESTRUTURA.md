@@ -75,6 +75,10 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — "Virar tarde" no menu ADM (o "sim" do dono; ideia da [arte] para ver o pôr do sol):** `DayPhase` ganhou
+'tarde' (a posição `dayMs − twilightMs`: a luz cheia, escurecendo até a noite em 1 minuto). Protocolo **40** (o `phase`
+do `time` no `gm`). Teste em `tests/dia-noite.test.ts`.
+
 **15/11 — Olhos de Gavião ("pode ser" do dono):** `tipo: "olhos"` (`duracaoSegundos`, `visaoPorcento`,
 `danoExtraPorcento`; sem `alcance` nem `danoPorcento`), protocolo **39** (`fx` `'hawk'`). `Player.hawkUntil`/`hawkVision`/
 `hawkBonus`; `see(player, other, reach)` divide a distância pelo `reach`; o dano a mais no `damage`. Não atacam (vila,
