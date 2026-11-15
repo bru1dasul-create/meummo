@@ -75,6 +75,11 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — Chamado Selvagem e Fúria da Onça pausados (decisão do dono, opção 1):** medi que um bicho a mais na tela
+custa ~0,3–0,4 ms por quadro (sem placa de vídeo) e que o nível 15 pede 12.799 XP (~700 bichos do Capão, que vão até o
+nível 5). Primeiro a região nova (níveis 5 a 10). Proposta ao dono: as Ruínas de Santo Amaro (Corpo-Seco, Capelobo,
+Saci e a Mula sem Cabeça de chefe — o servidor já sabe lutar com todos), a Guarapiranga como região 3.
+
 **15/11 — "Virar tarde" no menu ADM (o "sim" do dono; ideia da [arte] para ver o pôr do sol):** `DayPhase` ganhou
 'tarde' (a posição `dayMs − twilightMs`: a luz cheia, escurecendo até a noite em 1 minuto). Protocolo **40** (o `phase`
 do `time` no `gm`). Teste em `tests/dia-noite.test.ts`.
