@@ -14,8 +14,9 @@
 //     corpo: { altura: 1, largura: 1, feminino: true },
 //     gestos: { aceno: true, cabelo: true },
 //   });
-// Tudo é opcional (o que faltar vem do PADRAO). Todo NPC do molde respira, muda o peso de perna, pisca, vira o corpo e a
-// cabeça para quem chega perto, acena na chegada e gesticula quando fala (`view.say`/`talk`). `PD.creatures.Person` é a
+// Tudo é opcional (o que faltar vem do PADRAO). Todo NPC do molde respira, muda o peso de perna, pisca, fica virado
+// para onde o servidor manda (não segue quem passa: pedido do dono), anda com passo de verdade quando o servidor o
+// move (`moveTo`) e, quando fala (`view.say`/`talk`), acena, olha para quem fala com ele e gesticula. `PD.creatures.Person` é a
 // classe (para um NPC com gestos próprios, estenda e registre com `PD.creatures.define`).
 // As bolas do `parts` servem só para a sombra no chão e para a caixa do desenho; quem desenha é o `_paint`.
 (function (PD) {
@@ -197,7 +198,10 @@
       this._hairUntil = 0;
       this._talkUntil = 0;
       this._blinkAt = 1 + this.seed * 3;
-      this._heroWasNear = false;
+      this._lastTalk = -99;
+      /** O andar: 0 parado .. 1 andando, e a fase do passo (rad). */
+      this.walk = 0;
+      this.stride = 0;
       /** Para a prancha: força um gesto ({ wave, hair, speak, look, blink }). */
       this.force = null;
     }
@@ -220,33 +224,35 @@
     }
 
     talk(ms) {
+      // começou uma conversa (não a cada fala dela): acena
+      if (ms > 0 && this.time - this._lastTalk > 8 && this.app.gestos.aceno) this._waveUntil = this.time + 1.4;
+      if (ms > 0) this._lastTalk = this.time + ms / 1000;
       this._talkUntil = this.time + ms / 1000;
+    }
+
+    /** O servidor mandou andar (ou virar): o corpo fica virado para esse lado. */
+    moveTo(x, y, yaw, durationMs, dash) {
+      super.moveTo(x, y, yaw, durationMs, dash);
+      if (Number.isFinite(yaw)) this.baseYaw = yaw;
     }
 
     animate(dt) {
       const t = this.time;
       const G = this.app.gestos;
-      // vira para quem chega perto (o corpo até 45°, a cabeça mais um tanto) e acena na chegada
-      let lookTarget = (M.noise1(t * 0.25 + this.seed * 9) - 0.5) * 0.9;
-      let bodyTarget = this.baseYaw;
+      // o passo: anda quando o servidor a move
+      const moving = this.speed > 8;
+      this.walk = M.damp(this.walk, moving ? 1 : 0, 9, dt);
+      if (this.walk > 0.02) this.stride += (this.speed * dt * M.TAU) / 112;
+      // a cabeça passeia devagar; falando, olha para quem fala com ela (o corpo fica onde o servidor mandou)
+      let lookTarget = moving ? 0 : (M.noise1(t * 0.25 + this.seed * 9) - 0.5) * 0.7;
       const hero = this.near && this.near.hero;
-      if (hero) {
+      if (hero && t < this._talkUntil + 1.5) {
         const dx = hero.x - this.pos.x, dy = hero.y - this.pos.y;
-        const d = Math.hypot(dx, dy);
-        if (d < 600) {
-          const want = Math.atan2(dy, dx);
-          const off = M.angleDiff(this.baseYaw, want);
-          bodyTarget = this.baseYaw + M.clamp(off, -0.8, 0.8);
-          lookTarget = M.clamp(M.angleDiff(bodyTarget, want), -0.9, 0.9);
-        }
-        const near = d < 400;
-        if (near && !this._heroWasNear && G.aceno) this._waveUntil = t + 1.6;
-        if (d > 700) this._heroWasNear = false;
-        else if (near) this._heroWasNear = true;
+        if (Math.hypot(dx, dy) < 600) lookTarget = M.clamp(M.angleDiff(this.baseYaw, Math.atan2(dy, dx)), -1, 1);
       }
-      this.yawTarget = bodyTarget;
+      this.yawTarget = this.baseYaw;
       // mão no cabelo de vez em quando (não no meio de outro gesto)
-      if (G.cabelo && t > this._hairAt && t > this._waveUntil && t > this._talkUntil) {
+      if (G.cabelo && !moving && t > this._hairAt && t > this._waveUntil && t > this._talkUntil) {
         this._hairUntil = t + 2.2;
         this._hairAt = t + 9 + ((this.seed * 7 + t) % 6);
       }
@@ -258,7 +264,7 @@
       this.speak = f.speak ?? M.damp(this.speak, t < this._talkUntil ? 1 : 0, 6, dt);
       this.look = f.look ?? M.damp(this.look, lookTarget, 5, dt);
       this.blink = f.blink ?? (t >= this._blinkAt && t < this._blinkAt + 0.14 ? 1 : 0);
-      this.label = this.wave > 0.5 ? 'acenando' : this.hair > 0.5 ? 'mão no cabelo' : this.speak > 0.5 ? 'falando' : 'parada';
+      this.label = this.walk > 0.5 ? 'andando' : this.wave > 0.5 ? 'acenando' : this.hair > 0.5 ? 'mão no cabelo' : this.speak > 0.5 ? 'falando' : 'parada';
     }
 
     /** Ponto em volta do pé, já no tamanho da pessoa (`altura`). */
@@ -276,13 +282,16 @@
       const yaw = this.yaw;
       const fwd = { x: Math.cos(yaw), y: Math.sin(yaw), z: 0 };
       const side = { x: -fwd.y, y: fwd.x, z: 0 };
-      const at = (a, s, z) => this._at(a, s, z);
+      // andando: o corpo sobe e desce um pouco a cada passo (do quadril para cima)
+      const wk = this.walk;
+      const bob = wk * Math.abs(Math.cos(this.stride)) * 1.6;
+      const at = (a, s, z) => this._at(a, s, z > 40 ? z + bob : z);
       const COL = this.COL;
-      // peso de uma perna para a outra e a respiração
-      const sway = Math.sin(t * 0.55 + this.seed * 4) * 1.6;
+      // peso de uma perna para a outra (parado) e a respiração
+      const sway = Math.sin(t * 0.55 + this.seed * 4) * 1.6 * (1 - wk);
       const breath = Math.sin(t * 2.2 + this.seed * 3) * 0.5;
       const nod = this.speak * Math.sin(t * 7) * 0.06;
-      const J = (this._j = { t, yaw, fwd, side, sway, breath, legs: [], arms: [] });
+      const J = (this._j = { t, yaw, fwd, side, sway, breath, bob, legs: [], arms: [] });
       const groups = [];
       const g = (balls, ref, extra) => groups.push({ balls, ref, ...(extra || {}) });
 
@@ -290,7 +299,9 @@
       const hipW = (fem ? 8 : 8.6) * W;
       for (const sg of [-1, 1]) {
         const hip = at(0, hipW * sg + sway, 80);
-        const ankle = at(0, (hipW + 0.6) * sg, 8);
+        // o passo: o pé vai e volta, e sobe quando vem para a frente
+        const ph = this.stride + (sg > 0 ? 0 : Math.PI);
+        const ankle = at(19 * wk * Math.sin(ph), (hipW + 0.6) * sg, 8 + wk * Math.max(0, Math.cos(ph)) * 7);
         const knee = bend(hip, ankle, 37 * S, 36 * S, M.add(fwd, { x: 0, y: 0, z: 0.1 }));
         J.legs.push({ sg, hip, knee, ankle });
         const leg = [];
@@ -351,7 +362,9 @@
       const shW = (fem ? 13.3 : 15.4) * W;
       for (const sg of [-1, 1]) {
         const sh0 = at(-0.5, shW * sg, 126.8 + breath);
-        let hand = at(4, (shW + 2.4) * sg + sway * 0.3, 84);
+        // (andando, o braço balança ao contrário da perna do mesmo lado)
+        const swing = wk * Math.sin(this.stride + (sg > 0 ? Math.PI : 0));
+        let hand = at(4 + 13 * swing, (shW + 2.4) * sg + sway * 0.3, 84 + 3 * Math.abs(swing));
         let hint = M.add(M.scale(fwd, -0.6), M.add(M.scale(side, 0.6 * sg), { x: 0, y: 0, z: -0.2 }));
         if (sg < 0 && this.wave > 0.001) {
           const wv = at(5, -25 + Math.sin(t * 9) * 6, 160);
@@ -402,7 +415,7 @@
       const iw = Math.max(1, 1.05 * z);
       const P = (p) => cam.p(p);
       const { fwd, side, sway, breath } = J;
-      const at = (a, sd, zz) => this._at(a, sd, zz);
+      const at = (a, sd, zz) => this._at(a, sd, zz > 40 ? zz + J.bob : zz);
       const TC = cam.toCamera;
       const facing = (n) => n.x * TC.x + n.y * TC.y + n.z * TC.z;
       const parts = [];
