@@ -120,6 +120,9 @@ export class Player {
   guardSent: GuardState = 'off';
   dashReadyAt = 0;
   jumpReadyAt = 0;
+  /** Quando pulou e quando rolou pela última vez (um não sai no meio do outro). */
+  jumpAt = -Infinity;
+  dashAt = -Infinity;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);
   /** A classe (chave em data/classes.json), ou null até escolher depois das missões do começo. */
   heroClass: string | null = null;

@@ -6,9 +6,11 @@
 
 import {
   DASH_COOLDOWN_MS,
+  DASH_ROLL_MS,
   DASH_TILES,
   GM_FLY_FACTOR,
   GUARD_MAX_ENERGY,
+  JUMP_AIR_MS,
   JUMP_COOLDOWN_MS,
   MAX_PENDING_WALKS,
   SHOT_MOVING_MS,
@@ -242,6 +244,9 @@ class NewWorld implements NewWorldGame {
   private shotCid = 0;
   private nextShotAt = 0;
   private dashReadyAt = 0;
+  /** Quando rolou e quando pulou pela última vez: um não sai no meio do outro. */
+  private dashedAt = -Infinity;
+  private jumpedAt = -Infinity;
   private jumpReadyAt = 0;
   /** Dia e noite: o instante (performance.now) em que o ciclo começou, pelo relógio do servidor. */
   private timeBase = 0;
@@ -1809,6 +1814,7 @@ class NewWorld implements NewWorldGame {
   /** Esquiva: rola DASH_TILES metros (desliza no que tiver no caminho); some do golpe por um instante. */
   private tryDash(now: number): void {
     if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_WALKS) return;
+    if (now - this.jumpedAt < JUMP_AIR_MS) return; // no ar, não rola (o servidor também recusa)
     const degrees = this.dashDegrees();
     const result = sweepBody(this.map, this.predicted, degrees, DASH_TILES);
     if (!result.moved) {
@@ -1826,6 +1832,7 @@ class NewWorld implements NewWorldGame {
     this.view?.moveActor(this.myId, feet.x, feet.y, degrees, { durationMs: 140, dash: true });
     this.view?.action?.(this.myId, 'dash', degrees);
     this.dashReadyAt = now + DASH_COOLDOWN_MS + 120;
+    this.dashedAt = now;
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
     this.clearRoute();
   }
@@ -1836,6 +1843,8 @@ class NewWorld implements NewWorldGame {
    */
   private tryJump(now: number): void {
     if (this.dead || this.guardHeld || this.charging || now < this.jumpReadyAt) return;
+    if (now - this.dashedAt < DASH_ROLL_MS) return; // rolando, não pula (o servidor também recusa)
+    this.jumpedAt = now;
     this.jumpReadyAt = now + JUMP_COOLDOWN_MS + 40;
     this.conn.send({ t: 'jump' });
     this.view?.action?.(this.myId, 'jump');
