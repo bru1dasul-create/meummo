@@ -1,6 +1,6 @@
 // Janela das Habilidades do jogo 2.5D (tecla K ou o botão ✦): escolher a classe (depois das missões do começo) e pôr
 // os pontos nas habilidades dela (1 por nível). Quem decide tudo é o servidor: a janela só mostra o que ele mandou e
-// pede. Visual simples (provisório): a [arte] restiliza (#skills-panel, #skills-button) quando quiser.
+// pede. O visual (o CSS abaixo, no estilo da HUD: a moldura da mochila, o dourado e o "+" redondo) é da [arte].
 
 import { learnBlocker, levelForPoint, skillPoint, type ClassInfo, type ClassSkillInfo, type HeroState, type SkillPointInfo } from '../../shared/classes';
 import { skillIconUrl } from './skillIcons';
@@ -46,39 +46,54 @@ export class SkillsPanel {
 
   constructor(private readonly actions: SkillsPanelActions) {
     this.style.textContent = `
-      #skills-button { position: fixed; z-index: 6; top: calc(258px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 2px solid #8a5a2b; background: rgba(28, 18, 12, 0.92); color: #f1e4c8; font: 700 13px system-ui, sans-serif; cursor: pointer; }
-      #skills-button .star { color: #ffd98a; font-size: 16px; }
-      #skills-button kbd { font: 600 11px system-ui, sans-serif; padding: 0 4px; border-radius: 4px; border: 1px solid #8a5a2b; }
-      #skills-button .badge { min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e8a33a; color: #2a1606; font: 800 12px/18px system-ui, sans-serif; text-align: center; }
+      #skills-button { position: fixed; z-index: 6; top: calc(258px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: flex; align-items: center; gap: 7px; padding: 6px 10px 6px 8px; border-radius: 999px; border: 1px solid rgba(214, 170, 104, 0.75); background: linear-gradient(180deg, rgba(48, 37, 25, 0.95), rgba(16, 12, 8, 0.95)); color: #f1e4c8; font: 700 13px system-ui, sans-serif; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 224, 170, 0.18), 0 3px 10px rgba(0, 0, 0, 0.45); }
+      #skills-button:hover { filter: brightness(1.15); }
+      #skills-button .star { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #ffd23e; font-size: 14px; background: radial-gradient(circle at 50% 40%, rgba(255, 200, 90, 0.28), rgba(0, 0, 0, 0)); text-shadow: 0 0 6px rgba(255, 190, 70, 0.8); }
+      #skills-button kbd { font: 700 11px system-ui, sans-serif; padding: 0 5px; border-radius: 4px; border: 1px solid rgba(214, 170, 104, 0.6); background: rgba(0, 0, 0, 0.35); color: #e9d6ae; }
+      #skills-button .badge { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: radial-gradient(circle at 50% 35%, #ffe08a, #e09a26 70%); color: #2a1606; font: 900 12px/20px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 1px rgba(80, 44, 8, 0.8); }
       #skills-button .badge:empty { display: none; }
-      #skills-button.news { animation: skills-news 1.2s ease-in-out infinite; border-color: #e8a33a; }
-      @keyframes skills-news { 50% { box-shadow: 0 0 12px 2px rgba(232, 163, 58, 0.8); } }
-      #skills-panel { position: fixed; z-index: 21; left: 50%; top: calc(60px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(460px, calc(100vw - 24px)); max-height: calc(100vh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; padding: 12px 14px; border-radius: 12px; border: 2px solid #8a5a2b; background: rgba(28, 18, 12, 0.96); color: #f1e4c8; font: 13px/1.35 system-ui, sans-serif; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); }
-      #skills-panel h3 { margin: 0 0 8px; font: 800 15px system-ui, sans-serif; color: #ffd98a; display: flex; align-items: center; gap: 8px; }
-      #skills-panel h3 .pts { margin-left: auto; font: 700 12px system-ui, sans-serif; color: #f1e4c8; }
-      #skills-panel h3 .pts b { color: #ffd98a; }
-      #skills-panel h3 button { background: none; border: 0; color: #f1e4c8; font-size: 18px; cursor: pointer; padding: 0 2px; }
+      #skills-button.news { animation: skills-news 1.2s ease-in-out infinite; border-color: #ffc864; }
+      @keyframes skills-news { 50% { box-shadow: inset 0 1px 0 rgba(255, 224, 170, 0.18), 0 0 14px 3px rgba(255, 190, 70, 0.75); } }
+      #skills-panel { position: fixed; z-index: 21; left: 50%; top: calc(60px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(480px, calc(100vw - 24px)); max-height: calc(100vh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; padding: 12px 16px 18px; border-radius: 12px; border: 1px solid rgba(214, 170, 104, 0.65); background: url('/assets/ui/hud/canto-tribal.webp') right -1px bottom -1px / 46px auto no-repeat, linear-gradient(180deg, rgba(42, 33, 23, 0.97), rgba(14, 11, 8, 0.97)); color: #f1e4c8; font: 13px/1.38 system-ui, sans-serif; box-shadow: inset 0 1px 0 rgba(255, 224, 170, 0.14), 0 12px 36px rgba(0, 0, 0, 0.55); scrollbar-color: rgba(214, 170, 104, 0.5) transparent; }
+      #skills-panel h3 { margin: 0 0 10px; padding-bottom: 9px; border-bottom: 1px solid rgba(214, 170, 104, 0.35); font: 700 19px/1.2 var(--title-font, Georgia, serif); color: #ffd23e; text-shadow: 0 1px 2px #000; display: flex; align-items: center; gap: 8px; }
+      #skills-panel h3 .pts { margin-left: auto; padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(214, 170, 104, 0.45); background: rgba(0, 0, 0, 0.3); font: 600 12px system-ui, sans-serif; color: #e9d6ae; text-shadow: none; }
+      #skills-panel h3 .pts b { color: #ffd23e; font-size: 14px; }
+      #skills-panel h3 button { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid rgba(214, 170, 104, 0.6); background: rgba(20, 14, 9, 0.9); color: #f1e4c8; font: 13px/24px system-ui, sans-serif; text-shadow: none; cursor: pointer; }
+      #skills-panel h3 button:hover { filter: brightness(1.25); }
       #skills-panel p { margin: 4px 0; }
-      #skills-panel .intro { color: #d8c8a6; }
-      #skills-panel .card { margin-top: 8px; padding: 10px; border-radius: 10px; border: 1px solid #6e4a26; background: rgba(58, 38, 22, 0.6); }
-      #skills-panel .card b.name { font-size: 15px; color: #ffe3a6; }
-      #skills-panel .card ul { margin: 6px 0; padding-left: 18px; color: #d8c8a6; }
-      #skills-panel .skill { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid rgba(138, 90, 43, 0.45); }
-      #skills-panel .skill img { width: 48px; height: 48px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6); }
-      #skills-panel .skill.locked img { filter: grayscale(0.85) brightness(0.65); }
-      #skills-panel .skill .rank { margin-left: 6px; font-weight: 800; color: #ffd98a; }
-      #skills-panel .skill .numbers { color: #bfe3a0; font-size: 12px; }
-      #skills-panel .skill .next { color: #d8c8a6; font-size: 12px; }
-      #skills-panel .skill .why { color: #e8a33a; font-size: 12px; }
-      #skills-panel button.act { min-width: 40px; padding: 8px 10px; border-radius: 8px; border: 1px solid #c58a3a; background: #6b4216; color: #fff2d2; font: 800 14px system-ui, sans-serif; cursor: pointer; }
-      #skills-panel button.act:disabled { opacity: 0.35; cursor: default; }
-      #skills-panel button.act.confirm { background: #8a2c16; border-color: #e8a33a; }
-      #skills-panel .reset { margin-top: 10px; width: 100%; font-size: 12px; }
+      #skills-panel .intro { color: #d9c7a2; }
+      #skills-panel .intro b { color: #ffd23e; font-family: var(--title-font, Georgia, serif); font-size: 15px; }
+      #skills-panel .card { margin-top: 10px; padding: 12px; border-radius: 10px; border: 1px solid rgba(165, 124, 66, 0.55); background: radial-gradient(circle at 50% 0%, rgba(110, 82, 44, 0.35), rgba(0, 0, 0, 0) 70%), rgba(8, 6, 4, 0.55); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6); }
+      #skills-panel .card b.name { font: 700 17px var(--title-font, Georgia, serif); color: #ffd23e; text-shadow: 0 1px 2px #000; }
+      #skills-panel .card ul { margin: 8px 0 10px; padding: 0; list-style: none; color: #d9c7a2; }
+      #skills-panel .card li { padding-left: 18px; position: relative; }
+      #skills-panel .card li::before { content: '✦'; position: absolute; left: 2px; color: #c9974a; font-size: 11px; }
+      #skills-panel .skill { display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; margin-top: 8px; padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(165, 124, 66, 0.4); background: linear-gradient(180deg, rgba(64, 50, 34, 0.45), rgba(10, 8, 5, 0.55)); }
+      #skills-panel .skill b { color: #ffe9b8; font-size: 14px; }
+      #skills-panel .skill img { width: 54px; height: 54px; border-radius: 9px; border: 2px solid rgba(214, 170, 104, 0.85); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 3px 8px rgba(0, 0, 0, 0.5); }
+      #skills-panel .skill.locked { border-color: rgba(120, 96, 66, 0.3); background: rgba(10, 8, 5, 0.45); }
+      #skills-panel .skill.locked img { filter: grayscale(0.85) brightness(0.6); border-color: rgba(120, 96, 66, 0.6); }
+      #skills-panel .skill.locked b { color: #cbb894; }
+      #skills-panel .skill .rank { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(214, 170, 104, 0.5); font: 800 11px system-ui, sans-serif; color: #ffd23e; vertical-align: 1px; }
+      #skills-panel .skill .rank:empty { display: none; }
+      #skills-panel .skill .numbers { color: #b8e39a; font-size: 12px; }
+      #skills-panel .skill .next { color: #c9b994; font-size: 12px; }
+      #skills-panel .skill .why { color: #f0ae4a; font-size: 12px; font-weight: 600; }
+      #skills-panel button.act { min-width: 40px; padding: 8px 12px; border-radius: 8px; border: 1px solid #ffc864; background: linear-gradient(180deg, #8a5a1e, #5a3510); color: #fff2d2; font: 800 14px system-ui, sans-serif; text-shadow: 0 1px 1px #000; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.35), 0 2px 6px rgba(0, 0, 0, 0.5); }
+      #skills-panel button.act:hover:not(:disabled) { filter: brightness(1.18); }
+      #skills-panel button.act:disabled { opacity: 0.32; cursor: default; filter: grayscale(0.6); }
+      #skills-panel button.act.learn { width: 40px; height: 40px; min-width: 0; padding: 0; border-radius: 50%; font: 900 22px/1 system-ui, sans-serif; background: radial-gradient(circle at 50% 35%, #ffe08a, #d58f22 62%, #8a5414); color: #3a1e04; text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6); border: 1px solid #5a340c; box-shadow: 0 0 0 2px rgba(214, 170, 104, 0.45), 0 3px 8px rgba(0, 0, 0, 0.55); }
+      #skills-panel button.act.learn:not(:disabled) { animation: skills-learn 1.6s ease-in-out infinite; }
+      @keyframes skills-learn { 50% { box-shadow: 0 0 0 2px rgba(255, 210, 120, 0.8), 0 0 12px 3px rgba(255, 190, 70, 0.55); } }
+      #skills-panel button.act.choose { display: block; width: 100%; padding: 10px; font: 700 15px var(--title-font, Georgia, serif); color: #ffe9b8; }
+      #skills-panel button.act.confirm { background: linear-gradient(180deg, #a3381c, #6e1f0c); border-color: #ffb46a; }
+      #skills-panel .reset { margin-top: 12px; width: 100%; padding: 7px; font-size: 12px; font-weight: 600; background: rgba(0, 0, 0, 0.35); border-color: rgba(214, 170, 104, 0.45); color: #d9c7a2; box-shadow: none; }
       @media (pointer: coarse) {
         #skills-button { top: calc(228px + env(safe-area-inset-top)); right: auto; left: calc(8px + env(safe-area-inset-left)); padding: 8px 10px; }
         #skills-button .label, #skills-button kbd { display: none; }
         #skills-panel { max-height: calc(100vh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
         #skills-panel button.act { min-width: 48px; min-height: 44px; }
+        #skills-panel button.act.learn { width: 46px; height: 46px; }
       }`;
     document.head.append(this.style);
 

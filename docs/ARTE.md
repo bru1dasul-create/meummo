@@ -843,7 +843,19 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    servidor). Olhos à noite: `PD.creatures.eyes.night` (o dia e noite liga), `eyeColor(day)` e `eyeGlow(dayGlow)` para
    os bichos novos. Conferir: `node ferramentas/prancha-bichos.cjs saida.png 2` e, no jogo, `bichos-jogo.cjs` e
    `boitata-amanhecer.cjs` (scratchpad: menu ADM, fora da zona segura em 37,5; 35,5).
-4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia e noite.
+4. **Caçador, parte grande** (feito): `rainArt.ts` (arquivo da [arte], com o "pode" da [estrutura] para as trocas no
+   `combat.ts`: os tipos `RainLook`/`RainAimLook` são estruturais, o `RAIN_LINGER_MS` sai daqui e o combate importa; a
+   conta — spots, start/land, o filtro e o busy — e a faixa da Ancestral (`aim.line`) ficam no combate). Fases
+   `rainTier(rank)`: madeira (1–2), ouro (3–4), espírito (5); tiers `WOOD`/`GOLD`/`SPIRIT` com anel, brilho, haste,
+   ponta, penas (aletas preenchidas) e rastro. Pedra: sempre cinza, halo na cor da fase e `streak` (o risco). A mira:
+   arco pontilhado (pico 1 + 0,18 × distância), anel duplo (escuro por baixo), anel de dentro tracejado andando, 8
+   dentes girando e a estrelinha. A janela das Habilidades: só o CSS do `<style>` do `skillsPanel.ts` (as classes e os
+   elementos não mudam: os testes do navegador clicam neles). Conferir: a prancha fora do jogo (`chuva/entry.ts` +
+   `prancha.cjs` no scratchpad, com esbuild) e, no jogo, `chuva-jogo2.cjs` (copia as telas em tempos exatos depois de
+   soltar o Q; estilingue e Arco de Bambu, 1/3/5 pontos) e `chuva-celular.cjs`. Ficou para depois (pedir ao dono): a
+   pose de atirar para cima (o motor manda `shoot` com o ângulo; precisaria de uma ação nova da [estrutura]), os
+   quadrados 2 a 5 da barra e o desenho da Flecha Ancestral.
+5. O desenho da floresta maior. 6. Dia e noite.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
