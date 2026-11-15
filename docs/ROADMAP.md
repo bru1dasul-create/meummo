@@ -553,8 +553,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
   (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
 - [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
-- [ ] **[arte]** Desenhar os quatro bichos novos (hoje aparecem como bonecos de gente com o nome) e as ações `dizzy`
-  (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
+- [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
+  `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
+  e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
+  em bola e rola, solta a faísca do tlinc e fica com as estrelinhas; as 5 vespas fecham, abrem num anel na ferroada,
+  se espalham e despencam; o boitatá é chama sem contorno com brilho no chão, investe e apaga com fumaça. Os olhos
+  de todos os bichos ficam vermelhos à noite (`PD.creatures.eyes.night`, a ligar no dia e noite). Prancha:
+  `node ferramentas/prancha-bichos.cjs saida.png [escala]`
 - [x] **[estrutura]** As capivaras andando, as regras (14/11): os bichos de data/bichos.json ganharam `tipo`,
   `quantidade` (bando), `dentroDeCasa` e `"mia": false`; dois bandos no Capão (lago 3, campinho 2), que deitam lado a
   lado em volta do ponto de descanso, acordam cada um numa hora e gostam de carinho (estalinhos); desenho provisório

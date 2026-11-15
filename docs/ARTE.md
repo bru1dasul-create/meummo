@@ -833,7 +833,17 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    `ActionDef.icon` e o `setLook(slot, { iconUrl })` no `ui.ts`; o "Como jogar". Conferir: `cacador.cjs` (scratchpad;
    o personagem de teste com nível 6 e a missão `saguis_encantados` feita no banco de teste). Os quadrados a mais na
    barra ficam para quando chegarem as outras habilidades.
-3. Os quatro bichos novos. 4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia e noite.
+3. **Os quatro bichos novos** (feito): `quati.js` (S 1,35; trote em diagonal, `sniff` com o focinho baixo, `windup`
+   encolhe e `bite` abre o queixo), `tatu.js` (`tatu_bola`, S 1,7; `curl` junta as fatias numa bola de raio 15 e `roll`
+   gira as faixas na investida; `block` e `dizzy` em relógios próprios, `blockT` e `dizzyT`, sem cortar o resto),
+   `marimbondo.js` (5 vespas de 6 bolas; asas no `after`, que precisa do `this._cam`; uma sombra macia só, no `under`
+   da primeira vespa; `dodge` espalha; morte própria: despencam em 0,3 s, antes do sumiço geral de 0,4 a 0,7 s) e
+   `boitata.js` (`filhote_boitata`; segue o próprio rastro como a jararaca; bolas `noInk` nas cores do fogo, brilho
+   `lighter` no chão, línguas de fogo de base azulada; `vanish` e a morte apagam em 0,6 s, igual ao `VANISH_MS` do
+   servidor). Olhos à noite: `PD.creatures.eyes.night` (o dia e noite liga), `eyeColor(day)` e `eyeGlow(dayGlow)` para
+   os bichos novos. Conferir: `node ferramentas/prancha-bichos.cjs saida.png 2` e, no jogo, `bichos-jogo.cjs` e
+   `boitata-amanhecer.cjs` (scratchpad: menu ADM, fora da zona segura em 37,5; 35,5).
+4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia e noite.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
