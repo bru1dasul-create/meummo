@@ -6,17 +6,26 @@
 
 import type { QuestLog } from './quests';
 
-/** O que a habilidade faz (o código dela). Habilidade sem tipo ainda não existe no jogo: aparece como "em breve". */
-export type ClassSkillKind = 'chuva';
+/**
+ * O que a habilidade faz (o código dela). 'chuva': as flechas caem numa área; 'flecha': uma flecha do espírito que
+ * atravessa todos os bichos da linha. Habilidade sem tipo ainda não existe no jogo: aparece como "em breve".
+ */
+export type ClassSkillKind = 'chuva' | 'flecha';
 
-/** Os números de um ponto da habilidade (na lista, o primeiro é com 1 ponto, o segundo com 2...). */
+/** Os números de um ponto da habilidade (na lista, o primeiro é com 1 ponto, o segundo com 2...). 0 = não tem. */
 export interface SkillPointInfo {
+  /** O dano em cada bicho que ela pega (% do tiro sem carga). */
+  damagePct: number;
   /** Chuva: quantas flechas sobem (o desenho; mais flechas, mais dano). */
   arrows: number;
   /** Chuva: o raio da área onde elas caem (metros). */
   radius: number;
-  /** Chuva: o dano em cada bicho da área (% do tiro sem carga). */
-  damagePct: number;
+  /** Flecha: quem ela atravessa fica marcado e leva mais este tanto de dano (%) de todo mundo, por `markMs`. */
+  markPct: number;
+  markMs: number;
+  /** Flecha: no fim do voo, explode neste raio (metros), com este dano (% do tiro sem carga). */
+  burstRadius: number;
+  burstPct: number;
 }
 
 export interface ClassSkillInfo {
@@ -28,10 +37,14 @@ export interface ClassSkillInfo {
   /** null = ainda não existe no jogo (aparece como "em breve" e não recebe pontos). */
   kind: ClassSkillKind | null;
   cooldownMs: number;
-  /** Até onde dá para mirar (metros, do pé). */
+  /** Até onde dá para mirar (metros, do pé); na flecha, até onde ela voa. */
   range: number;
-  /** Do tiro até as flechas caírem (ms): dá para ver a área antes. */
+  /** Chuva: do tiro até as flechas caírem (ms): dá para ver a área antes. */
   delayMs: number;
+  /** Flecha: a velocidade dela (metros por segundo). */
+  speed: number;
+  /** Flecha: quanto ela pega de cada lado da linha (metros, medido no pé do bicho). */
+  width: number;
   /** Os números de cada ponto (o máximo de pontos é o tamanho da lista). Vazia nas "em breve". */
   points: SkillPointInfo[];
 }

@@ -94,8 +94,11 @@ interface Flying {
   start: number;
   kind: string;
   fromMonster: boolean;
-  /** O servidor já disse onde ele para (a distância do começo e, se bateu em algo, no quê): o desenho voa até lá. */
-  stop?: { at: number; on?: string };
+  /**
+   * O servidor já disse onde ele para (a distância do começo e, se bateu em algo, no quê): o desenho voa até lá.
+   * `burst`: a Flecha Ancestral explode lá, neste raio (metros).
+   */
+  stop?: { at: number; on?: string; burst?: number };
 }
 
 /** Um bicho que a view ainda não desenha (o Joaquim, até o desenho da [arte]): o gatinho provisório. */
@@ -166,13 +169,30 @@ interface RainFx {
   spots: { dx: number; dy: number; delay: number; lean: number }[];
 }
 
-/** O círculo da mira da Chuva (segurando a tecla): de onde sai e onde cai. */
+/**
+ * A mira de uma habilidade (segurando a tecla): de onde sai e onde cai. Círculo (a Chuva: raio `r`) ou, com `line`, a
+ * linha da Flecha Ancestral até (x, y) (`r` = a largura de cada lado).
+ */
 export interface RainAim {
   from: Point;
   x: number;
   y: number;
   r: number;
+  line?: boolean;
 }
+
+/** O fim da Flecha Ancestral: o brilho do espírito onde ela parou e, com `r`, a explosão. */
+interface SpiritEnd {
+  x: number;
+  y: number;
+  r: number;
+  start: number;
+}
+
+/** Quanto dura o brilho do fim da Flecha Ancestral (e a explosão abrindo). */
+const SPIRIT_END_MS = 420;
+/** A cor do espírito (a Flecha Ancestral, a marca e a explosão), até a [arte] fazer a de verdade. */
+const SPIRIT = [130, 255, 200] as const;
 
 /** As flechas cravadas ficam este tanto no chão depois de cair (somem devagar). */
 const RAIN_LINGER_MS = 900;
@@ -235,6 +255,9 @@ export class CombatLayer {
   /** Chuvas de Flechas no ar (ou cravadas no chão) e a mira da sua (segurando a tecla). */
   private rains: RainFx[] = [];
   private aim: RainAim | null = null;
+  /** O fim das Flechas Ancestrais (o brilho e a explosão) e os bichos marcados por elas (até quando). */
+  private spiritEnds: SpiritEnd[] = [];
+  private readonly marked = new Map<number, number>();
   /** O seu pé (para saber se você está dentro da casa do bicho). */
   private viewer: Point | null = null;
 
@@ -462,13 +485,13 @@ export class CombatLayer {
    * (x, y como no `shot`) e no que bateu (`on`): o desenho continua voando até lá e então a flecha crava (no chão ou
    * no tronco). Sem `end` (servidor antigo), crava onde está desenhada agora.
    */
-  endShot(id: number, hit = 0, end?: { x: number; y: number; on?: string }): void {
+  endShot(id: number, hit = 0, end?: { x: number; y: number; on?: string; burst?: number }): void {
     const cid = this.shotOfServer.get(id);
     const shot = this.shots.get(id) ?? (cid !== undefined ? this.myShots.get(cid) : undefined);
     if (shot && hit === 0 && end) {
       // a distância do começo até onde parou (no caminho do tiro)
       const at = Math.max(0, (end.x - shot.x) * shot.dx + (end.y - shot.y) * shot.dy);
-      shot.stop = { at, ...(end.on ? { on: end.on } : {}) };
+      shot.stop = { at, ...(end.on ? { on: end.on } : {}), ...(end.burst ? { burst: end.burst } : {}) };
       return; // o drawShots crava quando o desenho chegar lá
     }
     if (shot && hit === 0) {
@@ -583,10 +606,17 @@ export class CombatLayer {
     this.aim = aim;
   }
 
+  /** A Flecha Ancestral marcou este bicho: ele leva mais dano por `ms` (a runa em cima da cabeça). */
+  mark(id: number, ms: number, now: number): void {
+    this.marked.set(id, Math.max(this.marked.get(id) ?? 0, now + ms));
+  }
+
   /** Mudou de mapa: limpa tudo. */
   clear(): void {
     this.rains = [];
     this.aim = null;
+    this.spiritEnds = [];
+    this.marked.clear();
     this.warnings = [];
     this.shots.clear();
     this.myShots.clear();
@@ -656,6 +686,7 @@ export class CombatLayer {
     this.drawPoofs(now, screen, meter);
     this.drawShots(now, screen, meter);
     this.drawRainAir(now, screen, meter);
+    this.drawSpirit(now, feetOf, screen, meter);
     this.drawBars(feetOf, bars, screen, meter);
     this.drawMarks(now, feetOf, screen, meter);
     this.drawFloaters(now, feetOf, screen, meter);
@@ -664,7 +695,7 @@ export class CombatLayer {
   /** Tem algo para desenhar agora? (Sinal de missão só conta se o NPC estiver na tela.) */
   private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
     if (bars || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
-    if (this.rains.length > 0 || this.aim !== null) return true;
+    if (this.rains.length > 0 || this.aim !== null || this.spiritEnds.length > 0 || this.marked.size > 0) return true;
     if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
@@ -722,11 +753,35 @@ export class CombatLayer {
     return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha)).toFixed(3)})`;
   }
 
-  /** A mira: o círculo tracejado onde vai cair e a linha do seu pé até ele. */
+  /** A mira: o círculo tracejado onde vai cair e a linha do seu pé até ele (na Flecha Ancestral, a faixa até o fim). */
   private drawAim(screen: (x: number, y: number, z?: number) => Point): void {
     const aim = this.aim;
     if (!aim) return;
     const ctx = this.ctx;
+    if (aim.line) {
+      // a faixa do chão por onde a flecha passa (quem estiver nela leva)
+      const angle = Math.atan2(aim.y - aim.from.y, aim.x - aim.from.x);
+      const nx = -Math.sin(angle) * aim.r;
+      const ny = Math.cos(angle) * aim.r;
+      const corners = [
+        screen(aim.from.x + nx, aim.from.y + ny),
+        screen(aim.x + nx, aim.y + ny),
+        screen(aim.x - nx, aim.y - ny),
+        screen(aim.from.x - nx, aim.from.y - ny),
+      ];
+      ctx.save();
+      ctx.beginPath();
+      corners.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0.14)`;
+      ctx.fill();
+      ctx.setLineDash([7, 6]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0.85)`;
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.setLineDash([7, 6]);
     ctx.lineWidth = 2;
@@ -851,6 +906,83 @@ export class CombatLayer {
           ctx.globalAlpha = 1;
         }
       });
+      ctx.restore();
+    }
+  }
+
+  /** A Flecha Ancestral voando (provisória): o rastro verde e a flecha clara na frente. */
+  private spiritArrow(tail: Point, at: Point, ahead: Point, m: number): void {
+    const ctx = this.ctx;
+    ctx.save();
+    const trail = ctx.createLinearGradient(tail.x, tail.y, at.x, at.y);
+    trail.addColorStop(0, `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0)`);
+    trail.addColorStop(1, `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0.75)`);
+    ctx.strokeStyle = trail;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(4, m * 0.12);
+    ctx.beginPath();
+    ctx.moveTo(tail.x, tail.y);
+    ctx.lineTo(at.x, at.y);
+    ctx.stroke();
+    ctx.shadowColor = `rgb(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]})`;
+    ctx.shadowBlur = 12;
+    const dx = ahead.x - at.x;
+    const dy = ahead.y - at.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const head = { x: at.x + (dx / d) * m * 0.35, y: at.y + (dy / d) * m * 0.35 };
+    this.arrowLine({ x: at.x - (dx / d) * m * 0.4, y: at.y - (dy / d) * m * 0.4 }, head, '#e8fff4', Math.max(2, m * 0.05));
+    ctx.restore();
+  }
+
+  /** O fim da Flecha Ancestral (o brilho e, com raio, a explosão abrindo) e as runas dos bichos marcados. */
+  private drawSpirit(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    const ctx = this.ctx;
+    this.spiritEnds = this.spiritEnds.filter((end) => now - end.start < SPIRIT_END_MS);
+    for (const end of this.spiritEnds) {
+      const k = (now - end.start) / SPIRIT_END_MS;
+      const m = meter(end.x, end.y);
+      const p = screen(end.x, end.y, 0.6);
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, m * (0.4 + 0.4 * k));
+      glow.addColorStop(0, `rgba(235, 255, 245, ${(0.9 * (1 - k)).toFixed(3)})`);
+      glow.addColorStop(1, `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0)`);
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, m * (0.4 + 0.4 * k), 0, Math.PI * 2);
+      ctx.fill();
+      if (end.r > 0) {
+        this.groundCircle(end.x, end.y, end.r * (0.35 + 0.65 * Math.min(1, k * 1.6)), screen);
+        ctx.fillStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, ${(0.28 * (1 - k)).toFixed(3)})`;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, ${(0.9 * (1 - k)).toFixed(3)})`;
+        ctx.stroke();
+      }
+    }
+    for (const [id, until] of this.marked) {
+      const feet = now < until ? feetOf(id) : null;
+      if (!feet) {
+        if (now >= until) this.marked.delete(id);
+        continue;
+      }
+      // a runa do espírito em cima da cabeça, pulsando (pisca no último segundo)
+      const m = meter(feet.x, feet.y);
+      const p = screen(feet.x, feet.y, BODY_HEIGHT + 0.42);
+      const size = m * (0.16 + 0.02 * Math.sin(now / 140));
+      const alpha = until - now < 1000 ? 0.45 + 0.45 * Math.abs(Math.sin(now / 90)) : 0.9;
+      ctx.save();
+      ctx.shadowColor = `rgb(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]})`;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, ${alpha.toFixed(3)})`;
+      ctx.strokeStyle = `rgba(20, 60, 40, ${alpha.toFixed(3)})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - size);
+      ctx.lineTo(p.x + size * 0.7, p.y);
+      ctx.lineTo(p.x, p.y + size);
+      ctx.lineTo(p.x - size * 0.7, p.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.restore();
     }
   }
@@ -1190,7 +1322,9 @@ export class CombatLayer {
         if (traveled >= (shot.stop ? stopAt : shot.range + 0.2)) {
           const end = shotFeet(shot.x + shot.dx * stopAt, shot.y + shot.dy * stopAt);
           const on = shot.stop?.on;
-          ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: SHOT_DRAW_Z } : undefined);
+          // a Flecha Ancestral não crava: o espírito brilha (e explode, com 5 pontos) onde ela parou
+          if (shot.kind === 'ancestral') this.spiritEnds.push({ x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now });
+          else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: SHOT_DRAW_Z } : undefined);
           shots.delete(key);
           if (shots === this.shots) this.shotOfServer.delete(key);
           else for (const [id, cid] of this.shotOfServer) if (cid === key) this.shotOfServer.delete(id);
@@ -1204,6 +1338,12 @@ export class CombatLayer {
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
         const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, SHOT_DRAW_Z);
         if (drawProjectile(ctx, shot.kind, p, shadow, ahead, m)) continue;
+        if (shot.kind === 'ancestral') {
+          // provisório, até a [arte]: a flecha do espírito, verde e brilhando, com um rastro
+          const tail = screen(ground.x - shot.dx * 1.4, ground.y - shot.dy * 1.4, SHOT_DRAW_Z);
+          this.spiritArrow(tail, p, ahead, m);
+          continue;
+        }
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
         ctx.ellipse(shadow.x, shadow.y, m * 0.1, m * 0.045, 0, 0, Math.PI * 2);

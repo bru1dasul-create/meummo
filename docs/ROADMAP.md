@@ -585,8 +585,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
   procura e, quando existir, ela entra no lugar do desenho provisório. A do Capão na `main` em 15/11 (o gerador escreve
   as duas junto com o mapa, por `scripts/mapa-de-cima.ts`; os nomes saem em ordem de importância)
-- [ ] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
-  e talvez girar a imagem para bater com a câmera
+- [x] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
+  e talvez girar a imagem para bater com a câmera (15/11; o dono achou o provisório "horrível"): os dois giram 45° como
+  a câmera (a rua que na tela corre de lado corre de lado no mapa), com os nomes e os sinais em pé; você é um ponto
+  dourado com contorno branco, pulsando (os NPCs são verde-água); a neblina escurece sem esconder o contorno; o mini
+  mapa é redondo, com anel de madeira trançada, a faixa vermelha tribal, folhas e o N (PC: embaixo da mochila; celular:
+  menor, embaixo do retrato); o mapa do M é um losango na moldura da mochila (o visual do `mapWindow.ts` é da [arte])
 - [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
   para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
   e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
@@ -651,10 +655,19 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   **Chuva de Flechas** de ponta a ponta: segurar `Q` mira com um círculo e soltar usa (o botão e o celular miram
   sozinhos onde pega mais bichos); as flechas (pedras, com o estilingue) caem 0,45 s depois em todos do círculo, de
   cima (a casca do tatu-bola não segura); recarga 10 s. Desenho e ícones provisórios
-- [ ] **[arte]** Os ícones das 5 habilidades (o id de `data/classes.json`), o desenho da Chuva (flechas e pedras; muda
-  com 3 e com 5 pontos), a janela das Habilidades e o círculo da mira no estilo da HUD, o "Como jogar" com o `Q` e o
-  `K`, e mais quadrados na barra para as próximas habilidades
-- [ ] **[estrutura]** Flecha Ancestral (nível 6: a flecha do espírito, dano especial)
+- [x] **[arte]** Os ícones das 5 habilidades e o "Como jogar" (15/11): `paintedSkillIcon(id)` em `paintedIcons.ts` (a
+  Chuva de Flechas caindo no alvo, a Flecha Ancestral com a espiral do espírito, o olho dourado do gavião, a pegada da
+  onça espiritual e as três garras sobre as pintas), usados pelo `skillIconUrl` (janela e barra); o "Como jogar" com o
+  `Q` (mirar a Chuva), o `K` e o ✦ (Habilidades) e o `M` (mapa); no `ui.ts`, o jeito oficial de pôr o ícone no botão
+  (`ActionDef.icon`, ou `setLook(slot, { iconUrl })`) no lugar do remendo do `skill0`
+- [ ] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
+  da mira no estilo da HUD, e mais quadrados na barra quando chegarem as próximas habilidades
+- [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
+  uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
+  com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
+  (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
+- [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
+  runa da marca), o quadrado dela na barra (hoje um botão provisório do motor) e o `R` no "Como jogar"
 - [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo)

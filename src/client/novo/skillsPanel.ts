@@ -21,6 +21,12 @@ function meters(value: number): string {
 /** Os números de um ponto, em texto ("6 flechas · área de 2 m · dano 130%"). */
 export function pointText(skill: ClassSkillInfo, point: SkillPointInfo): string {
   if (skill.kind === 'chuva') return `${point.arrows} flechas · área de ${meters(point.radius)} · dano ${point.damagePct}%`;
+  if (skill.kind === 'flecha') {
+    const parts = [`dano ${point.damagePct}% em cada um`];
+    if (point.markPct > 0) parts.push(`marca: +${point.markPct}% de dano por ${Math.round(point.markMs / 100) / 10} s`.replace('.', ','));
+    if (point.burstRadius > 0) parts.push(`explode no fim (${meters(point.burstRadius)}, ${point.burstPct}%)`);
+    return parts.join(' · ');
+  }
   return '';
 }
 
@@ -40,7 +46,7 @@ export class SkillsPanel {
 
   constructor(private readonly actions: SkillsPanelActions) {
     this.style.textContent = `
-      #skills-button { position: fixed; z-index: 6; top: calc(250px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 2px solid #8a5a2b; background: rgba(28, 18, 12, 0.92); color: #f1e4c8; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+      #skills-button { position: fixed; z-index: 6; top: calc(258px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 2px solid #8a5a2b; background: rgba(28, 18, 12, 0.92); color: #f1e4c8; font: 700 13px system-ui, sans-serif; cursor: pointer; }
       #skills-button .star { color: #ffd98a; font-size: 16px; }
       #skills-button kbd { font: 600 11px system-ui, sans-serif; padding: 0 4px; border-radius: 4px; border: 1px solid #8a5a2b; }
       #skills-button .badge { min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e8a33a; color: #2a1606; font: 800 12px/18px system-ui, sans-serif; text-align: center; }

@@ -32,7 +32,9 @@ export type SoundName =
   | 'bow-release'
   | 'meow'
   | 'purr'
-  | 'capy';
+  | 'capy'
+  | 'spirit'
+  | 'burst';
 
 const MUTE_KEY = 'meummo:som-desligado';
 const VOLUME_KEY = 'meummo:volumes';
@@ -323,6 +325,17 @@ export class Sfx {
           this.tone('triangle', 380, 300, at, 0.025, 0.06);
           this.noise(at, 0.012, 'bandpass', 1400, 900, 0.03);
         }
+        break;
+      case 'spirit': // a Flecha Ancestral: a corda e um sopro que sobe, com um sininho do espírito
+        this.tone('triangle', 240, 110, t, 0.14, 0.24);
+        this.noise(t + 0.01, 0.3, 'bandpass', 900, 3600, 0.18);
+        this.tone('sine', 880, 1320, t + 0.03, 0.35, 0.09);
+        this.tone('sine', 1320, 1980, t + 0.08, 0.3, 0.05);
+        break;
+      case 'burst': // a Flecha Ancestral explode no fim: um baque fundo e o brilho subindo
+        this.tone('sine', 150, 50, t, 0.35, 0.3);
+        this.noise(t, 0.25, 'lowpass', 1200, 200, 0.25);
+        this.tone('sine', 660, 1320, t + 0.05, 0.4, 0.07);
         break;
       case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
         this.tone('triangle', 260, 120, t, 0.16, 0.3);

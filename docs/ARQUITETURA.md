@@ -130,6 +130,14 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   sozinhos onde pega mais bichos) e `combat.ts` (o círculo, as flechas subindo e caindo e as cravadas, provisório). A
   Bordunada saiu do jogo novo (o 1º quadrado da barra, o `skill0`, é o da 1ª habilidade da classe); o jogo antigo
   continua com ela.
+- **Flecha Ancestral** (protocolo 38, `tipo: "flecha"`): o `cast` traz o `cid` e o servidor solta um tiro de verdade
+  (`spawnProjectile` com `PierceShot`, kind `'ancestral'`): `updatePiercing` acerta todo monstro que ela encosta, uma vez
+  cada (sem o sorteio do enxame e com `ignoreShell` no `damage`), marca (`Monster.markedUntil`/`markPct`: o `damage` soma
+  a porcentagem, de qualquer um; `fx` `'mark'` com `ms`) e para só no que segura tiro ou no fim do alcance, onde pode
+  explodir (`shot_end` com `burst` = o raio). No navegador: `R` (ação `hab2`) mira com a faixa da linha; o desenho voa na
+  hora (`myShot` com o `cid`); `combat.ts` desenha a flecha verde, o brilho e a explosão do fim e a runa da marca
+  (provisório). A 2ª habilidade em diante ganha um botão provisório (`skillButtons.ts`, `.action.extra-skill` dentro do
+  `#actions`: no PC o 6º quadrado; no celular em cima do da 1ª) até a [arte] fazer os quadrados novos.
 - **Mapa explorado** (protocolo 36): `src/shared/explore.ts` (a grade de quadradinhos de `EXPLORE_CELL` = 4 m, um bit
   cada; `revealAround` marca os que ficam a até `EXPLORE_RADIUS` = 12 m do pé; o texto `colunas:base64`, que continua
   batendo se o mapa crescer). O servidor confere a cada 500 ms (`World.explore`), manda `explored` com os quadradinhos
@@ -430,7 +438,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | cliente | `pet` | fazer carinho no bicho (o Joaquim), perto dele |
 | cliente | `jump` | pulei (só de enfeite: o servidor confere a recarga e manda o `fx` `jump` para quem está perto) |
 | cliente | `class` / `learn` / `unlearn` | escolher a classe / pôr um ponto numa habilidade dela / recomeçar os pontos |
-| cliente | `cast` | usar a habilidade `id` da classe mirando no ponto (`x`, `y`) do chão, em metros |
+| cliente | `cast` | usar a habilidade `id` da classe mirando no ponto (`x`, `y`) do chão, em metros (a flecha vai na direção dele, com o `cid` do desenho) |
 | servidor | `hero` | a sua classe, os pontos de cada habilidade, quantos sobram e se já pode escolher (e no `welcome`, o `hero` e as `classes`) |
 | servidor | `scd` / `cast` | a habilidade `s` da sua classe entrou em recarga / alguém usou uma habilidade da classe: cai em (`x`, `y`), raio `r`, em `ms` (`n` flechas, `p` pontos, `kind` = flecha ou pedra) |
 | servidor | `explored` | o mapa explorado: os quadradinhos que você acabou de ver (e no `welcome`/`zone`, o `explored` do mapa) |

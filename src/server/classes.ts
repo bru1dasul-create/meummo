@@ -10,7 +10,7 @@ import { Reader } from './data-reader';
 import { CLASSES_FILE } from './paths';
 
 const FILE = 'data/classes.json';
-const KINDS: readonly ClassSkillKind[] = ['chuva'];
+const KINDS: readonly ClassSkillKind[] = ['chuva', 'flecha'];
 /** No máximo tantos pontos numa habilidade (o dono combinou 5; a lista "pontos" diz quantos). */
 const MAX_POINTS = 10;
 
@@ -44,21 +44,34 @@ function parseSkill(rawId: string, raw: unknown, className: string): ClassSkillI
   const where = `habilidade "${rawId}" da classe "${className}"`;
   const r = new Reader(objectOf(raw, `a ${where}`), FILE, where);
   const base = { id, name: r.text('nome'), description: r.text('descricao'), level: whole(r, 'nivel', 1, MAX_LEVEL) };
-  if (!r.has('tipo')) return { ...base, kind: null, cooldownMs: 0, range: 0, delayMs: 0, points: [] };
+  if (!r.has('tipo')) return { ...base, kind: null, cooldownMs: 0, range: 0, delayMs: 0, speed: 0, width: 0, points: [] };
   const kind = r.text('tipo').toLowerCase() as ClassSkillKind;
   if (!KINDS.includes(kind)) r.fail('tipo', `precisa ser ${KINDS.map((k) => `"${k}"`).join(' ou ')} (ou ficar de fora: a habilidade aparece como "em breve")`);
   const list = r.list('pontos');
   if (list.length < 1 || list.length > MAX_POINTS) r.fail('pontos', `precisa ser uma lista de 1 a ${MAX_POINTS} pontos (o primeiro é com 1 ponto)`);
   const points = list.map((value, i): SkillPointInfo => {
     const p = new Reader(objectOf(value, `o ponto ${i + 1} da ${where}`), FILE, `ponto ${i + 1} da ${where}`);
-    return { arrows: whole(p, 'flechas', 1, 40), radius: upTo(p, 'raio', 0.5, 8), damagePct: upTo(p, 'danoPorcento', 1, 1000) };
+    const point: SkillPointInfo = { damagePct: upTo(p, 'danoPorcento', 1, 1000), arrows: 0, radius: 0, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 };
+    if (kind === 'chuva') return { ...point, arrows: whole(p, 'flechas', 1, 40), radius: upTo(p, 'raio', 0.5, 8) };
+    // flecha: a marca (os dois campos juntos) e a explosão no fim (os dois juntos), cada uma só se tiver
+    if (p.has('marcaPorcento') || p.has('marcaSegundos')) {
+      point.markPct = upTo(p, 'marcaPorcento', 1, 200);
+      point.markMs = Math.round(upTo(p, 'marcaSegundos', 0.5, 30) * 1000);
+    }
+    if (p.has('explosaoRaio') || p.has('explosaoPorcento')) {
+      point.burstRadius = upTo(p, 'explosaoRaio', 0.5, 6);
+      point.burstPct = upTo(p, 'explosaoPorcento', 1, 1000);
+    }
+    return point;
   });
   return {
     ...base,
     kind,
     cooldownMs: Math.round(upTo(r, 'recargaSegundos', 1, 600) * 1000),
     range: upTo(r, 'alcance', 1, 30),
-    delayMs: Math.round(upTo(r, 'demoraMs', 0, 5000)),
+    delayMs: kind === 'chuva' ? Math.round(upTo(r, 'demoraMs', 0, 5000)) : 0,
+    speed: kind === 'flecha' ? upTo(r, 'velocidade', 5, 60) : 0,
+    width: kind === 'flecha' ? upTo(r, 'largura', 0.3, 3, 0.8) : 0,
     points,
   };
 }

@@ -227,8 +227,8 @@ export class Realm {
     this.worldOf(player)?.unlearnSkills(player);
   }
 
-  castSkill(player: Player, id: string, x: number, y: number): void {
-    this.worldOf(player)?.castSkill(player, id, x, y);
+  castSkill(player: Player, id: string, x: number, y: number, cid?: number): void {
+    this.worldOf(player)?.castSkill(player, id, x, y, cid);
   }
 
   chat(player: Player, text: string): void {

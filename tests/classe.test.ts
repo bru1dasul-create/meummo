@@ -1,7 +1,8 @@
 // Classes e habilidades (pedido do dono, 14/11): todo mundo começa igual; depois das missões do começo escolhe a classe
 // (por enquanto só o Caçador da Floresta: arco e flecha ou estilingue). 1 ponto por nível, a partir do 2; cada
 // habilidade libera num nível e vai até 5 pontos (entre um ponto e o próximo, alguns níveis). A primeira que funciona é
-// a Chuva de Flechas: as flechas sobem e caem na área escolhida, acertando todos os bichos dentro.
+// a Chuva de Flechas: as flechas sobem e caem na área escolhida, acertando todos os bichos dentro. A segunda (o "pode" do
+// dono em 15/11), a Flecha Ancestral: atravessa todos os bichos da linha, marca (mais dano de todos) e explode no fim.
 
 import { describe, expect, it } from 'vitest';
 import { checkClasses, loadClassDefs, parseClassDefs } from '../src/server/classes';
@@ -39,6 +40,20 @@ const CLASSES = {
         ],
       },
       futura: { nome: 'Futura', descricao: 'Em breve.', nivel: 6 },
+      flecha: {
+        nome: 'Flecha',
+        descricao: 'Atravessa.',
+        nivel: 1,
+        tipo: 'flecha',
+        recargaSegundos: 8,
+        alcance: 20,
+        velocidade: 24,
+        pontos: [
+          { danoPorcento: 100 },
+          { danoPorcento: 100, marcaPorcento: 50, marcaSegundos: 4 },
+          { danoPorcento: 100, marcaPorcento: 50, marcaSegundos: 4, explosaoRaio: 2, explosaoPorcento: 100 },
+        ],
+      },
     },
   },
 };
@@ -46,6 +61,7 @@ const classes = parseClassDefs(CLASSES);
 const cacador = classes.get('cacador')!;
 const chuva = cacador.skills[0]!;
 const futura = cacador.skills[1]!;
+const flecha = cacador.skills[2]!;
 
 describe('data/classes.json', () => {
   it('o Caçador da Floresta: libera depois dos saguis encantados, com as 5 habilidades e só a Chuva de Flechas pronta', () => {
@@ -54,7 +70,7 @@ describe('data/classes.json', () => {
     expect(hunter).toMatchObject({ name: 'Caçador da Floresta', unlockQuest: 'saguis_encantados', levelsBetweenPoints: 2 });
     expect(hunter.skills.map((s) => [s.id, s.level, s.kind])).toEqual([
       ['chuva_de_flechas', 3, 'chuva'],
-      ['flecha_ancestral', 6, null],
+      ['flecha_ancestral', 6, 'flecha'],
       ['olhos_de_gaviao', 10, null],
       ['chamado_selvagem', 15, null],
       ['furia_da_onca', 20, null],
@@ -68,6 +84,12 @@ describe('data/classes.json', () => {
       expect(rain.points[i]!.radius).toBeGreaterThan(rain.points[i - 1]!.radius);
       expect(rain.points[i]!.damagePct).toBeGreaterThan(rain.points[i - 1]!.damagePct);
     }
+    // a Flecha Ancestral: mais dano a cada ponto; a marca com 3 e a explosão com 5
+    const arrow = hunter.skills[1]!;
+    expect(arrow).toMatchObject({ name: 'Flecha Ancestral', cooldownMs: 8000, range: 14, speed: 24, width: 0.8 });
+    expect(arrow.points.map((p) => p.markPct > 0)).toEqual([false, false, true, true, true]);
+    expect(arrow.points.map((p) => p.burstRadius > 0)).toEqual([false, false, false, false, true]);
+    for (let i = 1; i < arrow.points.length; i++) expect(arrow.points[i]!.damagePct).toBeGreaterThan(arrow.points[i - 1]!.damagePct);
     expect(() => checkClasses(real, loadQuestDefs())).not.toThrow();
   });
 
@@ -81,12 +103,16 @@ describe('data/classes.json', () => {
       cooldownMs: 10_000,
       range: 10,
       delayMs: 600,
+      speed: 0,
+      width: 0,
       points: [
-        { arrows: 6, radius: 2, damagePct: 100 },
-        { arrows: 8, radius: 2.5, damagePct: 200 },
+        { arrows: 6, radius: 2, damagePct: 100, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 },
+        { arrows: 8, radius: 2.5, damagePct: 200, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 },
       ],
     });
     expect(futura).toMatchObject({ kind: null, points: [] });
+    expect(flecha).toMatchObject({ kind: 'flecha', cooldownMs: 8000, range: 20, speed: 24, delayMs: 0, width: 0.8 }); // sem "largura": 0,8 m
+    expect(flecha.points[2]).toEqual({ damagePct: 100, arrows: 0, radius: 0, markPct: 50, markMs: 4000, burstRadius: 2, burstPct: 100 });
   });
 
   it('explica o erro em português', () => {
@@ -96,6 +122,11 @@ describe('data/classes.json', () => {
     expect(bad({ pontos: [] })).toThrow(/"pontos" precisa ser uma lista de 1 a 10 pontos/);
     expect(bad({ nivel: 0 })).toThrow(/"nivel" precisa ser pelo menos 1/);
     expect(bad({ pontos: [{ flechas: 6, raio: 20, danoPorcento: 100 }] })).toThrow(/"raio" precisa ser no máximo 8/);
+    const arrow = CLASSES.cacador.habilidades.flecha;
+    const badArrow = (change: Record<string, unknown>) => () => parseClassDefs({ c: { ...CLASSES.cacador, habilidades: { h: { ...arrow, ...change } } } });
+    expect(badArrow({ pontos: [{ danoPorcento: 100, marcaPorcento: 20 }] })).toThrow(/"marcaSegundos" precisa ser um número/);
+    expect(badArrow({ pontos: [{ danoPorcento: 100, explosaoPorcento: 80 }] })).toThrow(/"explosaoRaio" precisa ser um número/);
+    expect(badArrow({ velocidade: 100 })).toThrow(/"velocidade" precisa ser no máximo 60/);
     expect(() => parseClassDefs({ 'Caçador': CLASSES.cacador })).toThrow(/só pode ter letras sem acento/);
     expect(() => checkClasses(classes, parseQuestDefs({}))).toThrow(/"liberaDepoisDe" é "espantar", que não é uma missão/);
   });
@@ -138,6 +169,8 @@ describe('as regras dos pontos', () => {
     expect(parseClientMsg(JSON.stringify({ t: 'class', id: 'Caçador!' }))).toBeNull();
     expect(parseClientMsg(JSON.stringify({ t: 'cast', id: 'chuva', x: 'longe', y: 4 }))).toBeNull();
     expect(parseClientMsg(JSON.stringify({ t: 'cast', id: 'chuva', x: 1e9, y: 4 }))).toBeNull();
+    expect(parseClientMsg(JSON.stringify({ t: 'cast', id: 'flecha', x: 3, y: 4, cid: 7 }))).toEqual({ t: 'cast', id: 'flecha', x: 3, y: 4, cid: 7 });
+    expect(parseClientMsg(JSON.stringify({ t: 'cast', id: 'flecha', x: 3, y: 4, cid: -1 }))).toBeNull();
   });
 });
 
@@ -147,8 +180,9 @@ const items = parseItemDefs({ fruta: { nome: 'Fruta', preco: 5, tipo: 'consumive
 const ATTACK = { tipo: 'mordida', preparoMs: 500, intervaloMs: 1000, dano: [1, 1] };
 const monsters = parseMonsterDefs({
   bicho: { nome: 'Bicho', nivel: 1, vida: 1, xp: 1, passoMs: 1e9, renascerMs: 100, agressivo: false, ataque: ATTACK },
-  alvo: { nome: 'Alvo', nivel: 1, vida: 100, xp: 1, passoMs: 1e9, renascerMs: 60_000, agressivo: false, ataque: ATTACK },
-  tatu: { nome: 'Tatu', nivel: 1, vida: 100, xp: 1, passoMs: 1e9, renascerMs: 60_000, agressivo: false, ataque: ATTACK, casca: { seguraPorcento: 90, angulo: 360, tontoMs: 2000 } },
+  alvo: { nome: 'Alvo', nivel: 1, vida: 100, xp: 1, passoMs: 1e9, renascerMs: 60_000, agressivo: false, perseguicao: 30, ataque: ATTACK },
+  tatu: { nome: 'Tatu', nivel: 1, vida: 100, xp: 1, passoMs: 1e9, renascerMs: 60_000, agressivo: false, perseguicao: 30, ataque: ATTACK, casca: { seguraPorcento: 90, angulo: 360, tontoMs: 2000 } },
+  enxame: { nome: 'Enxame', nivel: 1, vida: 100, xp: 1, passoMs: 1e9, renascerMs: 60_000, agressivo: false, perseguicao: 30, ataque: ATTACK, desvioTiro: 90 },
 });
 const npcs = parseNpcDefs({ velho: { nome: 'Seu Velho', titulo: 'do mato', mapa: 'campo', x: 1, y: 0, fala: 'Oi!' } });
 const quests = parseQuestDefs({
@@ -407,5 +441,114 @@ describe('a classe fica salva', () => {
     const again = world.join('Ana', conn2, { character: { ...base, id: 2, hero: { class: 'sumiu', skills: { chuva: 1 } } }, created: false });
     if (!again.ok) throw new Error(again.reason);
     expect(conn2.ofType('welcome')[0]!.hero).toEqual({ class: null, skills: {}, points: 3, canChoose: true });
+  });
+});
+
+describe('a Flecha Ancestral', () => {
+  /**
+   * Uma linha de 20 × 5 com uma parede (que segura tiro) na coluna 17, com uma passagem lá em cima: o jogador no tile
+   * (1, 2); na mesma linha, dois alvos (5 e 8), um tatu-bola (11, casca de 90% para todo lado), um enxame (14, 90% das
+   * pedras passam), um alvo colado na parede (16) e outro atrás dela (19). Pontos: o 1º no nível 1, o 2º no 3, o 3º no 5.
+   */
+  function line(level: number, points: number) {
+    const clock = new FakeClock();
+    const rows = Array.from({ length: 5 }, (_, i) => (i === 0 ? '.'.repeat(20) : '.'.repeat(17) + '#..'));
+    const zones = [
+      { monster: 'alvo', x: 5 },
+      { monster: 'alvo', x: 8 },
+      { monster: 'tatu', x: 11 },
+      { monster: 'enxame', x: 14 },
+      { monster: 'alvo', x: 16 },
+      { monster: 'alvo', x: 19 },
+    ].map((z) => ({ ...z, y: 2, w: 1, h: 1 }));
+    const map = GameMap.fromTiled(tiledFromAscii(rows, { x: 1, y: 2 }, zones), 'linha');
+    const world = new World(map, { now: clock.now, random: () => 0, monsters, items, npcs, quests, classes });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    Object.assign(player, { x: 1, y: 2, level });
+    player.quests.espantar = { state: 'done', count: 1 };
+    world.chooseClass(player, 'cacador');
+    for (let i = 0; i < points; i++) world.learnSkill(player, 'flecha');
+    const run = (ms: number) => {
+      for (let t = 0; t < ms; t += TICK_MS) {
+        clock.advance(TICK_MS);
+        world.tick();
+      }
+    };
+    run(TICK_MS);
+    const at = (x: number) => [...world.monsters.values()].find((m) => m.x === x && m.y === 2)!;
+    const row = [5, 8, 11, 14, 16, 19].map(at);
+    // mira no leste, na altura do pé
+    const fire = (cid?: number) => world.castSkill(player, 'flecha', 20, feetAt(player.x, player.y).y, cid);
+    return { world, conn, player, run, row, fire };
+  }
+
+  it('atravessa todos os bichos da linha, cada um uma vez: nem a casca do tatu nem o enxame seguram; a parede, sim', () => {
+    const { conn, run, row, fire } = line(2, 1);
+    fire(7);
+    run(1500);
+    // nível 2, sorteio no mínimo: 4 de dano × 100%, em cada um
+    expect(row.map((m) => m.hp)).toEqual([96, 96, 96, 96, 96, 100]);
+    const shot = conn.ofType('shot').at(-1)!;
+    expect(shot).toMatchObject({ kind: 'ancestral', cid: 7, speed: 24, range: 20 });
+    const end = conn.ofType('shot_end').find((m) => m.id === shot.id)!;
+    expect(end.hit).toBe(0);
+    expect(end.on).toBeDefined(); // parou na parede
+    expect(end.burst).toBeUndefined();
+    expect(conn.ofType('fx').some((m) => m.kind === 'mark')).toBe(false); // com 1 ponto, ainda sem marca
+  });
+
+  it('com a marca (2 pontos): quem ela atravessou leva mais dano de todo mundo, por uns segundos', () => {
+    const { world, conn, player, run, row, fire } = line(3, 2);
+    fire();
+    run(1500);
+    const first = row[0]!;
+    expect(first.hp).toBe(95); // nível 3: 5 × 100%
+    expect(conn.ofType('fx').find((m) => m.kind === 'mark' && m.id === first.id)).toMatchObject({ ms: 4000 });
+    world.shoot(player, 1, 0); // a pedra de sempre (5) leva +50%: 7,5 → 8
+    run(SHOT_COOLDOWN_MS + 300);
+    expect(first.hp).toBe(87);
+    run(3000); // a marca acabou
+    world.shoot(player, 2, 0);
+    run(SHOT_COOLDOWN_MS + 300);
+    expect(first.hp).toBe(82);
+  });
+
+  it('com a explosão (3 pontos): no fim, todo bicho no raio leva o dano dela (o marcado, a mais)', () => {
+    const { conn, run, row, fire } = line(5, 3);
+    fire();
+    run(1500);
+    const end = conn.ofType('shot_end').at(-1)!;
+    expect(end.burst).toBe(2);
+    // nível 5: 7 de dano. O colado na parede: a flecha (7) e a explosão (7 + 50% da marca = 10,5 → 11)
+    expect(row[4]!.hp).toBe(100 - 7 - 11);
+    expect(row[0]!.hp).toBe(93); // longe do fim: só a flecha
+    expect(row[5]!.hp).toBe(100); // atrás da parede
+  });
+
+  it('a largura ("largura", 0,8 m sem o campo): pega quem tem o pé a até 0,8 m da linha (o tiro de sempre, só 0,6)', () => {
+    const near = line(2, 1);
+    Object.assign(near.player, { fx: 1, fy: 2.7 }); // a flecha passa 0,7 m ao sul do pé dos bichos
+    near.world.castSkill(near.player, 'flecha', 20, feetAt(1, 2.7).y);
+    near.run(1500);
+    expect(near.row[0]!.hp).toBe(96);
+    const far = line(2, 1);
+    Object.assign(far.player, { fx: 1, fy: 2.9 }); // 0,9 m: passa longe
+    far.world.castSkill(far.player, 'flecha', 20, feetAt(1, 2.9).y);
+    far.run(1500);
+    expect(far.row[0]!.hp).toBe(100);
+  });
+
+  it('recarga: de novo antes da hora, não sai', () => {
+    const { conn, run, fire } = line(2, 1);
+    fire();
+    run(TICK_MS);
+    fire();
+    run(TICK_MS);
+    expect(conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'cooldown' });
+    expect(conn.ofType('scd')).toEqual([{ t: 'scd', s: 'flecha', ms: 8000 }]);
+    expect(conn.ofType('shot').filter((m) => m.kind === 'ancestral')).toHaveLength(1);
   });
 });

@@ -255,6 +255,11 @@ export interface ActionDef {
   slot: ActionSlot;
   label: string;
   key: string;
+  /**
+   * O ícone do botão, como URL (opcional): a habilidade da classe no `skill0` (o motor passa o `skillIconUrl(id)`); sem
+   * ele, o ícone pintado do lugar (`actionIconUrl`).
+   */
+  icon?: string;
 }
 
 interface ActionButton {
@@ -292,7 +297,7 @@ export class ActionBar {
       art.className = 'art';
       const icon = document.createElement('img');
       icon.className = 'icon';
-      icon.src = actionIconUrl(def.slot);
+      icon.src = def.icon || actionIconUrl(def.slot);
       icon.alt = '';
       icon.draggable = false;
       const label = document.createElement('span');
@@ -347,15 +352,17 @@ export class ActionBar {
 
   /**
    * Troca o nome e o ícone de um botão (o motor chama quando a arma muda: com o Arco de Bambu, o botão do estilingue vira
-   * `{ label: 'Arco', icon: 'arco' }`; sem ele, `{ label: 'Estilingue', icon: null }` volta ao de sempre).
+   * `{ label: 'Arco', icon: 'arco' }`; sem ele, `{ label: 'Estilingue', icon: null }` volta ao de sempre). `iconUrl`: um
+   * ícone pronto (a habilidade da classe que mudou no `skill0`: `skillIconUrl(id)`); ganha do `icon`.
    */
-  setLook(slot: ActionSlot, look: { label?: string; icon?: string | null }): void {
+  setLook(slot: ActionSlot, look: { label?: string; icon?: string | null; iconUrl?: string }): void {
     const button = this.buttons.get(slot);
     if (!button) return;
     const label = look.label ?? button.def.label;
     button.label.textContent = label;
     button.el.title = `${label} (${button.def.key})`;
-    if (look.icon !== undefined) button.icon.src = (look.icon && weaponActionIconUrl(look.icon)) || actionIconUrl(slot);
+    if (look.iconUrl) button.icon.src = look.iconUrl;
+    else if (look.icon !== undefined) button.icon.src = (look.icon && weaponActionIconUrl(look.icon)) || button.def.icon || actionIconUrl(slot);
   }
 
   setCooldown(slot: ActionSlot, readyAt: number, duration: number): void {
