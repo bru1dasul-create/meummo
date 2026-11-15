@@ -738,18 +738,13 @@ class NewWorld implements NewWorldGame {
     const bar = new ActionBar(
       [
         { slot: 'shot', label: 'Estilingue', key: this.keys.label('atirar') }, // segurar puxa, soltar atira (pedra com carga)
-        ...(classSkill ? [{ slot: 'skill0' as ActionSlot, label: classSkill.name, key: this.keys.label('hab1') }] : []),
+        ...(classSkill ? [{ slot: 'skill0' as ActionSlot, label: classSkill.name, key: this.keys.label('hab1'), icon: skillIconUrl(classSkill.id) }] : []),
         { slot: 'skill1', label: SKILLS[FOLEGO]!.name, key: this.keys.label('folego') },
         { slot: 'dash', label: 'Esquiva', key: this.keys.label('esquiva') },
         { slot: 'jump', label: 'Pular', key: this.keys.label('pular') }, // no celular, o botão de pular (o desenho é da [arte])
       ],
       (slot, down) => this.onAction(slot, down),
     );
-    if (classSkill) {
-      // o ícone provisório da habilidade (a [arte] ainda não pintou o dela)
-      const icon = document.querySelector<HTMLImageElement>('#actions .action[data-slot="skill0"] .icon');
-      if (icon) icon.src = skillIconUrl(classSkill.id);
-    }
     // da 2ª habilidade da classe em diante: os botões provisórios (dentro da barra nova)
     const extras: { skill: ClassSkillInfo; index: number }[] = [];
     for (let index = 1; index < CLASS_KEYS.length; index++) {

@@ -46,7 +46,7 @@ export class SkillsPanel {
 
   constructor(private readonly actions: SkillsPanelActions) {
     this.style.textContent = `
-      #skills-button { position: fixed; z-index: 6; top: calc(250px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 2px solid #8a5a2b; background: rgba(28, 18, 12, 0.92); color: #f1e4c8; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+      #skills-button { position: fixed; z-index: 6; top: calc(258px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 2px solid #8a5a2b; background: rgba(28, 18, 12, 0.92); color: #f1e4c8; font: 700 13px system-ui, sans-serif; cursor: pointer; }
       #skills-button .star { color: #ffd98a; font-size: 16px; }
       #skills-button kbd { font: 600 11px system-ui, sans-serif; padding: 0 4px; border-radius: 4px; border: 1px solid #8a5a2b; }
       #skills-button .badge { min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e8a33a; color: #2a1606; font: 800 12px/18px system-ui, sans-serif; text-align: center; }
