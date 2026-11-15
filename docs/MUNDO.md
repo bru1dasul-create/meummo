@@ -75,6 +75,14 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   coisa fecha de ponta a ponta (`blockedBetween`), o que permite paredes finas entre o dentro e o fora. O **Joaquim**
   (gato da vó, pedido do dono): o `gato` decorativo no sofá sai quando a [estrutura] o fizer de verdade; ela usa o ponto
   `joaquim` e o retângulo `joaquim-casa` da camada `pontos`.
+- **Na `main` em 15/11 (com o "pode" do dono): a imagem da tecla M e as capivaras andando.** O gerador do Capão escreve
+  junto `capao-mapa.png` (norte para cima, 8 px por metro, sem texto) e `capao-mapa.json` (`escala`, `largura`, `altura`,
+  `nomes`) por `scripts/mapa-de-cima.ts`; a janela do mapa e o mini mapa da [estrutura] usam os dois. Os nomes saem em
+  ordem de importância (na janela, quem vem primeiro fica quando dois se tocam) e o semáforo não entra. As capivaras de
+  enfeite saíram: em `pontos`, `capivaras-lago` e `capivaras-campinho` (retângulo onde o bando anda) e os pontos
+  `-descanso` (o bando de data/bichos.json, da [estrutura], usa os dois). **O dono achou o mini mapa "horrível"** (15/11,
+  ainda sem a imagem): o jeito dele (moldura, lugar, girar para bater com a câmera, a neblina) é da [arte] e da
+  [estrutura]; do meu lado, dá para redesenhar a imagem num jeito mais de jogo, se ele quiser.
 - **A floresta maior (14/11, planta aprovada: "pode seguir com a planta da floresta maior"; ramo `mundo/floresta-maior`,
   espera o desenho da [arte] para entrar na `main`).** O mapa passou de 96 × 120 para **96 × 180** (só para o sul; nada
   muda de lugar). Planta: `docs/referencias/floresta-maior-planta.jpg`; conceitos: `floresta-maior-paineira.jpg` e
