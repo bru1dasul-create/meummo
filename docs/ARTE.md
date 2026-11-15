@@ -1111,7 +1111,9 @@ confirmou.
     `mato`, `cipo`, `arvoresNoTopo`), `bomba`, `pneus` (`pilha`), a lojinha `casa` com `posto`, `vitrineQuebrada` (porta de
     enrolar meio aberta) e a `placa` grande em branco `torta`; o `gradil` com `estado: 'quebrado'`. Referências no ramo
     dele: `docs/referencias/floresta-maior-*.jpg`.
-0. Pintar o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
+0. Feito em 15/11: os ícones pintados do Estilingue de Goiabeira (`estilingue`) e da Faca de Sucata (`faca`), em
+   `paintedIcons.ts` (`limb` = galho ou cabo em traço grosso). Ainda em pixel: `chapeu_palha`, `gorro`, `gibao`,
+   `couraca`, `colar`, `couro`, `dente`, `escama`, `ferradura` e `sucata`. Prancha: `icones/entry.ts` no scratchpad.
    - Opcional: restilizar os itens dos bichos no chão (hoje o desenho provisório da [estrutura], `drawDrops` no
      `combat.ts`: o ícone do item caindo com quique, "×N", brilho dourado no raro, laranja com facho no lendário).
 1. **Piloto do estilo desenhado** com o Nano Banana (esperando os exemplos do dono, veja acima).

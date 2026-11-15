@@ -1203,11 +1203,269 @@ function paintBag(ctx: CanvasRenderingContext2D): void {
   shine(ctx, s, 0.3);
 }
 
+/** Um galho (ou cabo) pintado como traço grosso: contorno, a cor com degradê e a luz de um lado. */
+function limb(ctx: CanvasRenderingContext2D, path: Path2D, width: number, light: string, mid: string, dark: string, box: Box, ink = '#24150a'): void {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = width + 5.2;
+  ctx.stroke(path);
+  const g = ctx.createLinearGradient(box[0], box[1], box[2], box[3]);
+  g.addColorStop(0, light);
+  g.addColorStop(0.5, mid);
+  g.addColorStop(1, dark);
+  ctx.strokeStyle = g;
+  ctx.lineWidth = width;
+  ctx.stroke(path);
+  ctx.restore();
+}
+
+/**
+ * O Estilingue de Goiabeira (o item): a forquilha de goiabeira (casca lisa, clara, com as manchas de onde ela solta), as
+ * tiras pretas de câmara de pneu amarradas nas pontas, a bolsinha de couro e o cabo enrolado com cordão.
+ */
+function paintSlingshotItem(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 62, 114, 34);
+  // as tiras de borracha: das pontas até a bolsinha, por dentro da forquilha (desenhadas depois dela)
+  const pouch = [64, 58] as const;
+  const tips = [
+    [33, 22],
+    [93, 24],
+  ] as const;
+  const band = (from: readonly [number, number], bend: number, width: number, color: string): void => {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(from[0], from[1]);
+    ctx.quadraticCurveTo((from[0] + pouch[0]) / 2 + bend, (from[1] + pouch[1]) / 2 + 9, pouch[0] + (from[0] < pouch[0] ? -7 : 7), pouch[1]);
+    ctx.stroke();
+    ctx.restore();
+  };
+  // a forquilha: o cabo e os dois galhos
+  const fork = new Path2D();
+  fork.moveTo(57, 112);
+  fork.quadraticCurveTo(60, 90, 62, 72);
+  fork.quadraticCurveTo(44, 56, 34, 24);
+  fork.moveTo(62, 72);
+  fork.quadraticCurveTo(84, 58, 92, 26);
+  limb(ctx, fork, 13, '#f0d9a8', '#c9a368', '#7a5a30', [34, 20, 92, 112]);
+  // as manchas da casca da goiabeira (rosadas e esverdeadas) e a luz de um lado
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (const [x, y, rx, ry, rot, color] of [
+    [42, 46, 3.6, 6, 0.5, 'rgba(196, 122, 96, 0.75)'],
+    [84, 46, 3.2, 5.5, -0.45, 'rgba(150, 160, 96, 0.7)'],
+    [60, 88, 3.4, 6.5, 0.08, 'rgba(196, 122, 96, 0.7)'],
+    [50, 62, 2.6, 4, 0.7, 'rgba(150, 160, 96, 0.65)'],
+    [76, 60, 2.4, 3.6, -0.7, 'rgba(120, 84, 48, 0.55)'],
+  ] as const) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(255, 246, 214, 0.75)';
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(55, 104);
+  ctx.quadraticCurveTo(57, 88, 58, 75);
+  ctx.quadraticCurveTo(42, 58, 33, 34);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(68, 70);
+  ctx.quadraticCurveTo(82, 58, 88, 36);
+  ctx.stroke();
+  ctx.restore();
+  // o cordão enrolado no cabo
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let k = 0; k < 5; k++) {
+    const y = 92 + k * 4.6;
+    const x = 58.6 - k * 0.5;
+    ctx.strokeStyle = '#24150a';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x - 8.5, y + 1.2);
+    ctx.lineTo(x + 8.5, y - 1.2);
+    ctx.stroke();
+    ctx.strokeStyle = k % 2 ? '#b23a2a' : '#d8563e';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  ctx.restore();
+  // as amarras de borracha nas pontas
+  for (const [x, y, rot] of [
+    [35, 27, 0.32],
+    [91, 29, -0.3],
+  ] as const) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.lineCap = 'round';
+    for (const dy of [-4, 1, 6]) {
+      ctx.strokeStyle = '#0d0b0a';
+      ctx.lineWidth = 5.4;
+      ctx.beginPath();
+      ctx.moveTo(-8.5, dy);
+      ctx.lineTo(8.5, dy);
+      ctx.stroke();
+      ctx.strokeStyle = '#3a3633';
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  for (const [i, tip] of tips.entries()) {
+    const bend = i === 0 ? 9 : -9;
+    band(tip, bend, 7.5, '#0d0b0a');
+    band(tip, bend, 4.4, '#34302d');
+    band(tip, bend + (i === 0 ? -1 : 1), 1.2, 'rgba(200, 200, 195, 0.55)');
+  }
+  // a bolsinha de couro (onde vai a pedra), na frente
+  const cup = new Path2D();
+  cup.moveTo(52, 53);
+  cup.quadraticCurveTo(64, 49, 76, 53);
+  cup.quadraticCurveTo(79, 60, 75, 66);
+  cup.quadraticCurveTo(64, 70, 53, 66);
+  cup.quadraticCurveTo(49, 60, 52, 53);
+  cup.closePath();
+  body(ctx, cup, '#c98a52', '#8e5a2c', '#553214', [50, 50, 78, 68], '#1f1006', 2.2);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(40, 20, 8, 0.7)';
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([2.4, 2.4]);
+  ctx.beginPath();
+  ctx.moveTo(56, 56);
+  ctx.quadraticCurveTo(64, 53.5, 72, 56);
+  ctx.stroke();
+  ctx.restore();
+  const s = new Path2D();
+  s.ellipse(59, 59, 4, 2.2, -0.2, 0, Math.PI * 2);
+  shine(ctx, s, 0.35);
+}
+
+/**
+ * A Faca de Sucata (o item): a lâmina de lata recortada e afiada na pedra (o fio claro, a ferrugem, os amassados e um
+ * resto de tinta da lata) e o cabo enrolado com fio de cobre.
+ */
+function paintKnifeItem(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 62, 112, 40);
+  // a lâmina: as costas retas, a barriga curva e a ponta para cima à direita
+  const blade = new Path2D();
+  blade.moveTo(46, 66);
+  blade.lineTo(88, 22);
+  blade.lineTo(94, 20);
+  blade.lineTo(108, 10);
+  blade.quadraticCurveTo(104, 42, 84, 62);
+  blade.lineTo(80, 62);
+  blade.lineTo(64, 82);
+  blade.closePath();
+  body(ctx, blade, '#f4f6f6', '#aab4b8', '#5c666c', [56, 14, 100, 78], '#161a1c');
+  ctx.save();
+  ctx.clip(blade);
+  // o resto da tinta da lata (uma faixa vermelha desbotada) e a ferrugem
+  ctx.fillStyle = 'rgba(196, 62, 44, 0.5)';
+  ctx.beginPath();
+  ctx.moveTo(52, 60);
+  ctx.lineTo(64, 47);
+  ctx.lineTo(76, 58);
+  ctx.lineTo(66, 72);
+  ctx.closePath();
+  ctx.fill();
+  for (const [x, y, r] of [
+    [78, 38, 5],
+    [92, 26, 3.4],
+    [60, 70, 4],
+  ] as const) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(150, 78, 30, 0.75)');
+    g.addColorStop(1, 'rgba(150, 78, 30, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // o fio afiado na pedra: a faixa clara ao longo da barriga, com os riscos da pedra
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(106, 12);
+  ctx.quadraticCurveTo(102, 41, 83, 60);
+  ctx.moveTo(79, 63);
+  ctx.lineTo(65, 80);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(70, 80, 86, 0.45)';
+  ctx.lineWidth = 1;
+  for (let k = 0; k < 7; k++) {
+    const u = k / 6;
+    const x = 100 - u * 30;
+    const y = 30 + u * 36;
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y - 2.5);
+    ctx.lineTo(x + 2.5, y + 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // os amassados da lata (as dobras, perto das costas)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(40, 48, 54, 0.55)';
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(54, 64);
+  ctx.lineTo(90, 26);
+  ctx.stroke();
+  ctx.restore();
+  // o cabo: madeira por baixo, o fio de cobre enrolado em volta
+  const grip = new Path2D();
+  grip.moveTo(57, 73);
+  grip.lineTo(24, 108);
+  limb(ctx, grip, 15, '#8a6238', '#5e3e1e', '#35200c', [24, 73, 57, 108]);
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let k = 0; k < 8; k++) {
+    const u = (k + 0.6) / 8.4;
+    const x = 56 - u * 30;
+    const y = 74 + u * 32;
+    ctx.strokeStyle = '#2a1206';
+    ctx.lineWidth = 5.2;
+    ctx.beginPath();
+    ctx.moveTo(x - 6.2, y - 5.4);
+    ctx.lineTo(x + 6.2, y + 5.4);
+    ctx.stroke();
+    const g = ctx.createLinearGradient(x - 6, y - 5, x + 6, y + 5);
+    g.addColorStop(0, '#ffc98a');
+    g.addColorStop(0.45, '#e07a34');
+    g.addColorStop(1, '#8a3c12');
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 3.2;
+    ctx.stroke();
+  }
+  // a ponta solta do fio, torcida no fim do cabo
+  ctx.strokeStyle = '#2a1206';
+  ctx.lineWidth = 4.4;
+  ctx.beginPath();
+  ctx.moveTo(22, 104);
+  ctx.quadraticCurveTo(12, 104, 14, 114);
+  ctx.quadraticCurveTo(17, 121, 24, 117);
+  ctx.stroke();
+  ctx.strokeStyle = '#e07a34';
+  ctx.lineWidth = 2.4;
+  ctx.stroke();
+  ctx.restore();
+}
+
 const ITEM_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
   arco: paintBowItem,
   banana: paintBanana,
   agua_coco: paintCoconut,
   erva: paintRue,
+  estilingue: paintSlingshotItem,
+  faca: paintKnifeItem,
   garrafada: paintBottle,
   mochila: paintBag,
 };
