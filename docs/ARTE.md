@@ -979,8 +979,22 @@ confirmou.
   - **Dia e noite** (main 95bfcf3, protocolo 33): `setTimeOfDay({ light, night })` no `WorldView` (light de 1 a 0 em
     passos de 0,01, o anoitecer e o amanhecer em 1 minuto; `night` = olhos vermelhos em todos os bichos). Testar: ADM
     "Virar dia"/"Virar noite" e `window.__mundoNovo.time()`. Lampiões: quando o [mundo] marcar.
+  - **Caçador da Floresta** (main 7b2155b; regras e visual provisório da [estrutura]; o dono decidiu em 15/11: todo
+    mundo começa igual, escolhe a classe depois das missões do começo, 1 ponto por nível, até 5 em cada habilidade, o
+    visual muda com 3 e com 5 pontos; a Bordunada saiu do jogo novo e o Fôlego ficou): (1) os ícones pintados das 5
+    habilidades (ids de data/classes.json: `chuva_de_flechas`, `flecha_ancestral`, `olhos_de_gaviao`,
+    `chamado_selvagem`, `furia_da_onca`; hoje provisórios em `src/client/novo/skillIcons.ts`, ou um
+    `paintedSkillIcon(id)` no `paintedIcons.ts`); (2) a barra: o `skill0` agora é a 1ª habilidade da classe (o motor
+    troca o ícone por fora; um jeito oficial no `ui.ts`, ex. `ActionDef.icon`), e mais quadrados para as próximas 4
+    habilidades (PC e celular); (3) o desenho da Chuva de Flechas (hoje `drawAim`/`drawRainGround`/`drawRainAir` no
+    `combat.ts`; por pontos: 1–2 madeira, 3–4 brilho dourado, 5 espírito verde; ou um `view.rain?(...)` na PD.View);
+    (4) a janela das Habilidades (`#skills-panel`, `#skills-button`, `skillsPanel.ts`) no estilo da HUD; (5) o "Como
+    jogar" (Q mira a Chuva, K abre as Habilidades; no celular, ✦); (6) talvez uma pose de atirar para o alto (dizer o
+    nome da ação à [estrutura]). Testar: missão `saguis_encantados` concluída e nível 3+; `__mundoNovo.hero()`.
   - **O mapa (M) e o mini mapa** (main 5f01bf9, protocolo 36; o desenho provisório é o `mapWindow.ts` da [estrutura]):
     deixar bonitos a `#map-window` (o mapa inteiro com a neblina, os nomes, os NPCs com ! e ?, a seta) e o `#minimap`
+    (o dono, 15/11: "horrível"; o rascunho redondo, girado como a câmera, com anel de madeira e N, está proposto; e
+    "ao invés de setinha deveria ser um ponto": um ponto dourado com contorno branco, pulsando)
     (PC: 148 px embaixo da mochila; celular: 96 px embaixo do retrato), tudo por CSS de id; girar a imagem para bater
     com a câmera é pedido ao motor. Ganchos: `__mundoNovo.explored()` e `mapOpen()`.
   - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
