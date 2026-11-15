@@ -548,7 +548,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[arte]** Desenhar as coisas da floresta maior: `paineira`, `parquinho` (balanço, escorregador, gira-gira),
   `cachoeira`, `pinguela` com `pedras`, `cobertura` do posto, `bomba`, `pneus`, a lojinha (`casa` com `posto`) e a placa
   em branco (lista no `docs/MUNDO.md`, "Esperando outras frentes")
-- [ ] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
+- [x] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
+  (14/11): o [mundo] marcou no mapa (`mundo/lote2-floresta-dentro`) a raiz `dentro`, o capim nas frestas, a samambaia
+  `dentro` nos cantos e o `cipoDentro`/`musgoDentro` das casas; a [arte] desenhou: a raiz sai de baixo da parede, corre
+  pelo piso levantando os pedaços (cerâmica, taco, ladrilho ou cimento, da cor do piso; no tapete, rasga e mostra a
+  terra) e afunda no fim; a samambaia é da casa (aparece com o herói lá dentro, como os móveis); o cipó sobe do chão
+  perto dos cantos e, nas casas com gente, desce de uma fresta do teto; o musgo sobe do rodapé na abandonada
 - [x] **[estrutura]** Mais bichos, as regras (14/11, aprovados pelo dono): `quati` (nível 2, bando de 4), `tatu_bola`
   (nível 3: casca que segura 70% de frente e tonto 2 s depois da investida), `marimbondo` (nível 3: enxame, 40% das
   pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
@@ -562,6 +567,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   `quantidade` (bando), `dentroDeCasa` e `"mia": false`; dois bandos no Capão (lago 3, campinho 2), que deitam lado a
   lado em volta do ponto de descanso, acordam cada um numa hora e gostam de carinho (estalinhos); desenho provisório
   marrom até o da [arte]. Conferido com o mapa do ramo do [mundo] (os pontos ainda não estão na main)
+- [x] **[arte]** O desenho da capivara que anda (14/11): a criatura `capivara` (`js/creatures/capivara.js`, o desenho
+  da capivara do cenário em bolas): anda com as patas em diagonal e o corpo subindo e descendo, corre (passada
+  aberta), parada pasta (a cabeça desce e mastiga) e olha em volta, deita (`sleep`/`wake`; com `asleep` já aparece
+  deitada) e fica contente com o carinho (`purr`: fecha os olhos e ergue o focinho). Prancha:
+  `ferramentas/prancha-capivara.cjs`
 - [ ] **[mundo + arte]** Juntar os pontos das capivaras e o desenho da capivara na main, e tirar as capivaras de enfeite
   do mapa — **a parte do [mundo] pronta no ramo `mundo/mapa-m`** (os pontos `capivaras-lago` e `capivaras-campinho`,
   com o `-descanso`, e as cinco de enfeite fora), junto com a imagem da tecla M; espera o "pode" do dono
@@ -590,7 +600,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   min, mudando devagar (20 s) e girando a direção; `welcome.wind` e a mensagem `wind` (protocolo 35); o motor passa
   à view `setWind(força, ângulo)`; o som do vento, das rajadas e das folhas acompanha; menu ADM "Calmo / Brisa / Vento
   forte"
-- [ ] **[arte]** As árvores no vento (`setWind` do PD.View, já pronto no ramo da [arte], entra com o "pode" do dono)
+- [x] **[arte]** As árvores no vento (14/11): `PD.View.setWind(força, ângulo)` (força de 0 = parado a 1 = forte;
+  ângulo em graus no chão, para onde sopra); sem chamar, uma brisa (0,35). As rajadas viajam no sentido do vento (as
+  árvores cedem uma depois da outra), cada árvore com o seu ritmo, inclinada para onde ele sopra; a copa balança em
+  faixas (o alto mexe mais, junto do tronco quase nada). No zoom normal: parado ~1 px, brisa ~2,6 px, forte ~9 px no
+  alto da copa; as pétalas do ipê voam com ele
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
@@ -617,8 +631,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   de entrada (`index.html`) com as teclas novas (14/11): a etiqueta mostra a tecla de verdade (`data-key`): "Espaço"
   vira a barra de espaço, "Shift" a seta do Shift e os nomes compridos ficam com a letra menor; o "Como jogar" com
   Shift esquiva, Espaço pula, C anda devagar, M mapa (em breve) e as teclas no 🔊 → Teclas
-- [ ] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
-  botão de atirar, à parte)
+- [x] **[arte]** Tirar o J da barra de habilidades: o tiro é o ataque básico, não é habilidade (no celular continua um
+  botão de atirar, à parte) (14/11): no computador a barra é bordunada, fôlego, esquiva, defesa (4º quadrado) e pulo
+  (5º); o 6º fica livre para a próxima habilidade; o tiro é o clique (a tecla J continua valendo). No celular, o tiro é
+  o botão grande (88 px) no canto de baixo à direita; a bordunada, o fôlego, o pulo e a esquiva num 2x2 ao lado dele
+  (deitado) ou em cima (em pé), com a esquiva colada no tiro (só `style.css`)
 
 **Habilidades (combinar os detalhes com o dono antes):**
 - [ ] **[estrutura + arte]** Habilidades que sobem de nível com o personagem (mais dano e o visual muda) e a primeira

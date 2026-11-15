@@ -27,6 +27,7 @@
     "js/creatures/jararaca.js",
     "js/creatures/xiovanna.js",
     "js/creatures/gato.js",
+    "js/creatures/capivara.js",
     "js/view.js",
     "js/portrait.js"
   ]

@@ -86,7 +86,8 @@
       if (o.polyline) {
         const pts = o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM }));
         // linhas da rua (meio-fio, faixa-rua, rachadura, raiz): altura, tracejada, apagada, sarjeta e mato
-        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor, height: pr.altura != null ? pr.altura * 100 : null, dashed: !!pr.tracejada, faded: !!pr.apagada, gutter: !!pr.sarjeta, weeds: !!pr.mato });
+        // (`dentro`: a raiz que entrou numa casa; sai de baixo da parede e levanta o piso, street.js)
+        map.shapes.push({ type: k, kind: 'line', pts, width: (pr.largura || 2) * 100, color: pr.cor, height: pr.altura != null ? pr.altura * 100 : null, dashed: !!pr.tracejada, faded: !!pr.apagada, gutter: !!pr.sarjeta, weeds: !!pr.mato, inside: !!pr.dentro });
       } else if (o.ellipse) {
         const r = rect(o);
         const s = { type: k, kind: 'ellipse', cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2, rx: (r.x1 - r.x0) / 2, ry: (r.y1 - r.y0) / 2, color: pr.cor };
@@ -184,6 +185,9 @@
           // a porta (de onde até onde, em x, na frente) e quem mora (as paredes de dentro: 'familia', 'vo', 'ninguem')
           door: pr.portaDe != null && pr.portaAte != null ? { from: pr.portaDe * 100, to: pr.portaAte * 100 } : null,
           resident: pr.morador || null,
+          // a mata entrando: `cipoDentro` (0 a 1, o cipó nas paredes de dentro) e `musgoDentro` (casas.js)
+          vineInside: typeof pr.cipoDentro === 'number' ? Math.max(0, Math.min(1, pr.cipoDentro)) : pr.cipoDentro ? 0.5 : 0,
+          mossInside: !!pr.musgoDentro,
         });
       } else if (k === 'predio') {
         // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje
@@ -241,8 +245,9 @@
         // moita de bambu (bloqueia): `raio` e `altura` em metros
         map.props.push({ kind: 'bambu', x, y, r: (pr.raio || 1.2) * 100, h: (pr.altura || 7) * 100 });
       } else if (k === 'planta') {
-        // samambaia, helicônia, taboa e cogumelo (com `brilho`): enfeite, não bloqueia
-        map.props.push({ kind: 'planta-' + (pr.tipo || 'samambaia'), x, y, r: (pr.raio || 0.5) * 100, glow: pr.brilho || null });
+        // samambaia, helicônia, taboa e cogumelo (com `brilho`): enfeite, não bloqueia. Com `dentro`, é da casa em que
+        // está (aparece com o herói lá dentro, como os móveis; world.js)
+        map.props.push({ kind: 'planta-' + (pr.tipo || 'samambaia'), x, y, r: (pr.raio || 0.5) * 100, glow: pr.brilho || null, inside: !!pr.dentro });
       } else if (k === 'trave') {
         // trave do campinho (caixa fina ao longo do gol): `olhando` = para onde a boca do gol dá (a rede fica atrás)
         const r0 = rect(o);

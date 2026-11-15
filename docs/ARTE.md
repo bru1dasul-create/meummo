@@ -795,13 +795,7 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   lâmpada). O musgo e o cipó da fachada são recortados fora do vão. O orelhão com `poste: true` (`tmj.js` acha o
   `poste-praca` mais perto, até 1,5 m: `poleAt`) liga dois braços de ferro até o poste. Os caixotes de frutas, a
   lousinha e o degrau com capacho dependem da resposta do dono à proposta do [mundo].
-- **Floresta dentro das casas** (lote 2, ainda sem o "pode"): o [mundo] refez a parte do mapa em cima da main nova
-  (ramo `mundo/lote2-floresta-dentro`, 90e0059, sobre a 6dd462e; é esse que entra, no lugar do `mundo/budega-entrada`,
-  que ficou velho): a raiz no piso, o mato nas frestas, a samambaia nos cantos e o cipó de dentro. Na versão
-  anterior, o mapa tinha a `raiz` com `dentro` (linha do chão), a `planta` samambaia com `dentro` e o
-  `cipoDentro`/`musgoDentro` na casa. Hoje, no meu desenho: a raiz sai como uma linha marrom deitada no chão, a
-  samambaia não aparece (no modo foco ela é cortada, porque não é "da casa") e o cipó de dentro não existe. Falta a
-  minha parte: tratar a planta `dentro` como móvel da casa, a raiz levantando o piso e o cipó nas paredes de dentro.
+- **Floresta dentro das casas** (lote 2): veja a seção do lote 2, abaixo.
 - **Zoom e conversa que travavam** (pedido da [estrutura], que mediu): feito depois do lote 1 (a seção abaixo).
 
 ### Depois do lote 1 (14/11): controles, zoom e flecha (na main em 14/11, com o "pode" do dono)
@@ -824,6 +818,47 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   cima de tudo, então o tronco não tem como cobrir a haste). Teste: `tests/projectileArt.test.ts`; no jogo:
   `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
+
+### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
+O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
+andando, (10) floresta dentro das casas.
+- **(10) Floresta dentro das casas**, com o mapa do [mundo] (`mundo/lote2-floresta-dentro`, 90e0059, juntado no meu
+  ramo; entra na main junto):
+  - `tmj.js`: a linha `raiz` com `dentro` vira `inside` na forma do chão; a `planta` com `dentro`, `inside` no objeto;
+    a casa ganha `vineInside` (`cipoDentro`, 0 a 1) e `mossInside` (`musgoDentro`).
+  - `world.js`: o objeto com `inside` fica com `house` (como os móveis de `INSIDE_KINDS`): só aparece com a casa
+    cortada e é "da casa" no foco.
+  - `street.js` `innerRoot`: a raiz de dentro usa o `rootNetwork` das raízes da figueira com `home` = a casa (galho não
+    atravessa parede nem sofá), `rise` (o começo sai de baixo da parede: o lombo sobe nos primeiros 22%) e
+    `liftedFloor` (pedaços do piso levantados dos dois lados: placas de cerâmica, ladrilho e cimento, tábuas de taco;
+    a beirada do lado da raiz sobe 4 a 10 cm e mostra a fresta escura). `groundAt` reconhece os pisos de dentro
+    (`piso-ceramica`, `piso-taco`, `piso-ladrilho`, `piso-cimento`) e o tapete (lá, nada de pedaço: só a terra).
+  - `casas.js` `innerGreen` (depois do `WALLS[morador]`): o musgo subindo do rodapé (`mossInside`) e o cipó: ramos que
+    sobem do chão perto dos cantos (com um galho de lado) e, nas casas com gente, um ou outro descendo de uma fresta do
+    teto (`PD.city.vine`). Na Budega (0,25) o cipó é pouquinho e fica atrás das prateleiras e dos engradados.
+  - Conferir: `foto-casas.cjs` (scratchpad): fotos de fora e de dentro das quatro casas.
+- **(6) O J saiu da barra** (só `style.css`): no computador, `.action[data-slot='shot']` não aparece e os outros andam
+  uma casa (bordunada 0, fôlego 1, esquiva 2, defesa 3 — o `left` do `#guard-button` —, pulo 4; o 6º fica vazio). No
+  celular (fim do arquivo), o tiro é `position: absolute` de 88 px no canto (deitado: o `#actions` anda 100 px para a
+  esquerda e o tiro fica à direita dele; em pé: o `#actions` sobe 100 px e o tiro fica embaixo); o 2x2 com
+  `grid-area` (bordunada, fôlego / pulo, esquiva); a mochila em cima do tiro (deitado) ou do 2x2 (em pé); deitado, a
+  defesa e os frascos andam 100 px para a esquerda; em pé ficam (a metade esquerda é do joystick). Conferir:
+  `celular-barra.cjs` (scratchpad): computador, deitado e em pé, com as caixas de cada botão.
+- **(7) Árvores no vento** (parte da arte; a força vem da [estrutura]): `World.wind` ({ strength, angle }), `setWind`,
+  `windAt(x, y, t)` (força × (0,55 + 0,75 × rajada²); as rajadas são duas ondas que andam no sentido do vento, a 1,5 a
+  4,5 m/s) e `windScreen()` (o sentido na tela). `TreeCanopy._sway`: a mola do empurrão (2,4/s), o ritmo de cada árvore
+  (0,45 a 0,95 Hz, as altas mais devagar) e a inclinação; o `draw` desenha a imagem pronta em 6 faixas (o alto vai
+  mais; meio apagada ou quase parada, inteira). `PD.View.setWind(força, ângulo)`. Medido no zoom 1 (6 copas): parado
+  1,1 px, brisa 2,6, forte 8,9; quadro médio 22 a 27 ms, igual ao jogo parado. Conferir: `vento.cjs` (scratchpad),
+  que grava o vídeo com a legenda e mede.
+- **(9) Capivaras andando** (parte da arte; o comportamento é da [estrutura], a área do [mundo]):
+  `js/creatures/capivara.js` (`PD.creatures.define('capivara')`, no `arte.ts` e no `view-scripts.json`): as fatias da
+  capivara do cenário (corpo de barril de -48 a +30 cm, cabeça de +30 a +60 girando em volta do pescoço), as 4 patas
+  em diagonal (passada de 64 cm; correndo, mais aberta), o corpo sobe e desce; parada mais de 1,2 s, pasta quando o
+  ruído deixa (a cabeça desce 55° e mastiga; as orelhas ficam da cor da cabeça); deitada (`lie`), o corpo desce 12 cm
+  e as patas se recolhem. Ações: `sleep`/`deitar`, `wake`/`levantar`, `eat`/`pastar`, `dash`; `setAsleep`. Conferir:
+  `ferramentas/prancha-capivara.cjs saida.png` e, no jogo, `capivara-jogo.cjs` (scratchpad: `PD.view.addActor` com
+  `kind: 'pet', type: 'capivara'`).
 ## Onde estamos (9 de novembro de 2026)
 Tudo na `main` (commit f9b1871, "Arte: personagem em camadas, loja e ouro..."):
 - **Personagem em camadas** (`doll/`): quadro 64x64 desenhado com o dobro de pixels (`DENSITY` 2) e mostrado na
@@ -933,6 +968,30 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
+- **Pedidos novos das frentes (14/11, esperando o dono escolher a ordem):**
+  - **Os quatro bichos novos** (main 7d6a75f, protocolo 34; hoje saem como boneco de gente com o nome): `quati`
+    (bando de 4, focinho comprido, rabo listrado em pé; golpe 'bite'), `tatu_bola` (carapaça em gomos; 'charge' =
+    vira bola, rola e abre; 'block' = a casca segurou o golpe de frente, o "tlinc"; 'dizzy' = desenrola tonto, 2 s),
+    `marimbondo` (enxame de 4 a 6 vespas em volta de um centro; 'spin' = ferroada em volta; 'dodge' = a pedra passou
+    pelo meio, as vespas se espalham) e `filhote_boitata` (cobra pequena de fogo azulado e laranja, olhos acesos; 'charge'
+    com o rastro de fogo da Mula; 'vanish' = vai embora ao amanhecer: a [estrutura] atrasa o despawn uns 600 ms se eu
+    pedir). Criar pelo menu ADM (tecla G; o boitatá só de noite).
+  - **Dia e noite** (main 95bfcf3, protocolo 33): `setTimeOfDay({ light, night })` no `WorldView` (light de 1 a 0 em
+    passos de 0,01, o anoitecer e o amanhecer em 1 minuto; `night` = olhos vermelhos em todos os bichos). Testar: ADM
+    "Virar dia"/"Virar noite" e `window.__mundoNovo.time()`. Lampiões: quando o [mundo] marcar.
+  - **O mapa (M) e o mini mapa** (main 5f01bf9, protocolo 36; o desenho provisório é o `mapWindow.ts` da [estrutura]):
+    deixar bonitos a `#map-window` (o mapa inteiro com a neblina, os nomes, os NPCs com ! e ?, a seta) e o `#minimap`
+    (PC: 148 px embaixo da mochila; celular: 96 px embaixo do retrato), tudo por CSS de id; girar a imagem para bater
+    com a câmera é pedido ao motor. Ganchos: `__mundoNovo.explored()` e `mapOpen()`.
+  - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
+    Capão vai a 96 × 180 m): só entra na main com o meu
+    desenho: `arvore` `especie: 'paineira'` (tronco de garrafa com espinhos, copa de flor rosa `flores`, pétalas no
+    chão); `parquinho` (`brinquedo` 'balanco' com `quebrado`, 'escorregador' com `olhando`, 'gira-gira' com `plantas`;
+    `ferrugem`, `cipo`); `cachoeira` (pedras de onde o riacho cai: `altura`, `queda`, `musgo`); `pinguela` com `pedras`;
+    o posto abandonado: `cobertura` (some ou fica transparente com o herói embaixo/atrás, como o telhado; `pilares`,
+    `mato`, `cipo`, `arvoresNoTopo`), `bomba`, `pneus` (`pilha`), a lojinha `casa` com `posto`, `vitrineQuebrada` (porta de
+    enrolar meio aberta) e a `placa` grande em branco `torta`; o `gradil` com `estado: 'quebrado'`. Referências no ramo
+    dele: `docs/referencias/floresta-maior-*.jpg`.
 0. Pintar o ícone do Estilingue de Goiabeira e o da Faca de Sucata (hoje são os de pixel).
    - Opcional: restilizar os itens dos bichos no chão (hoje o desenho provisório da [estrutura], `drawDrops` no
      `combat.ts`: o ícone do item caindo com quique, "×N", brilho dourado no raro, laranja com facho no lendário).
