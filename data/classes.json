@@ -1,0 +1,58 @@
+{
+  "cacador": {
+    "nome": "Caçador da Floresta",
+    "descricao": "Luta de longe, com arco e flecha ou estilingue: velocidade, precisão e os poderes espirituais dos bichos do Brasil.",
+    "liberaDepoisDe": "saguis_encantados",
+    "niveisEntrePontos": 2,
+    "habilidades": {
+      "chuva_de_flechas": {
+        "nome": "Chuva de Flechas",
+        "descricao": "Atira várias flechas para o alto; elas caem na área que você escolher e acertam todos os bichos dentro. Boa contra bandos. Com o estilingue, chovem pedras.",
+        "nivel": 3,
+        "tipo": "chuva",
+        "recargaSegundos": 10,
+        "alcance": 10,
+        "demoraMs": 450,
+        "pontos": [
+          { "flechas": 6, "raio": 2, "danoPorcento": 130 },
+          { "flechas": 7, "raio": 2.2, "danoPorcento": 150 },
+          { "flechas": 9, "raio": 2.5, "danoPorcento": 175 },
+          { "flechas": 10, "raio": 2.7, "danoPorcento": 200 },
+          { "flechas": 14, "raio": 3, "danoPorcento": 230 }
+        ]
+      },
+      "flecha_ancestral": {
+        "nome": "Flecha Ancestral",
+        "descricao": "Uma flecha de energia espiritual que atravessa todos os bichos na linha: nem a casca do tatu nem o enxame seguram. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, ela explode no fim.",
+        "nivel": 6,
+        "tipo": "flecha",
+        "recargaSegundos": 8,
+        "alcance": 14,
+        "velocidade": 24,
+        "largura": 0.8,
+        "pontos": [
+          { "danoPorcento": 200 },
+          { "danoPorcento": 230 },
+          { "danoPorcento": 260, "marcaPorcento": 20, "marcaSegundos": 4 },
+          { "danoPorcento": 290, "marcaPorcento": 25, "marcaSegundos": 5 },
+          { "danoPorcento": 320, "marcaPorcento": 30, "marcaSegundos": 6, "explosaoRaio": 2, "explosaoPorcento": 150 }
+        ]
+      },
+      "olhos_de_gaviao": {
+        "nome": "Olhos de Gavião",
+        "descricao": "Enxerga os inimigos de longe e revela rastros e ameaças escondidas.",
+        "nivel": 10
+      },
+      "chamado_selvagem": {
+        "nome": "Chamado Selvagem",
+        "descricao": "Chama um animal espiritual para lutar ao seu lado: a onça ou a águia.",
+        "nivel": 15
+      },
+      "furia_da_onca": {
+        "nome": "Fúria da Onça",
+        "descricao": "Transformação: você ganha a força da onça e luta corpo a corpo, mais agressivo.",
+        "nivel": 20
+      }
+    }
+  }
+}

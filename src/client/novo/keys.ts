@@ -6,7 +6,9 @@
 // da esquerda e da direita) contam como uma só. Algumas ficam fixas (andar, conversar, zoom, os números da barra):
 // essas não podem ser escolhidas para outra ação.
 
-export type KeyAction = 'esquiva' | 'pular' | 'atirar' | 'defesa' | 'golpe' | 'folego' | 'mochila' | 'mapa' | 'devagar' | 'som';
+// 'hab1' e 'hab2' = a 1ª e a 2ª habilidade da classe (no Caçador, a Chuva de Flechas e a Flecha Ancestral); até 15/11 o
+// 'hab1' era a Bordunada ('golpe')
+export type KeyAction = 'esquiva' | 'pular' | 'atirar' | 'defesa' | 'hab1' | 'hab2' | 'folego' | 'mochila' | 'habilidades' | 'mapa' | 'devagar' | 'som';
 
 export interface KeyActionInfo {
   action: KeyAction;
@@ -19,9 +21,11 @@ export const KEY_ACTIONS: readonly KeyActionInfo[] = [
   { action: 'pular', label: 'Pular' },
   { action: 'atirar', label: 'Atirar (segure para puxar)' },
   { action: 'defesa', label: 'Defesa (segure)' },
-  { action: 'golpe', label: 'Bordunada' },
+  { action: 'hab1', label: '1ª habilidade da classe (segure para mirar)' },
+  { action: 'hab2', label: '2ª habilidade da classe (segure para mirar)' },
   { action: 'folego', label: 'Fôlego' },
   { action: 'mochila', label: 'Mochila' },
+  { action: 'habilidades', label: 'Habilidades (classe e pontos)' },
   { action: 'mapa', label: 'Mapa' },
   { action: 'devagar', label: 'Andar devagar (liga e desliga)' },
   { action: 'som', label: 'Ligar e desligar o som' },
@@ -38,9 +42,11 @@ const DEFAULTS: Record<KeyAction, string> = {
   pular: 'Space',
   atirar: 'KeyJ',
   defesa: 'KeyF',
-  golpe: 'KeyQ',
+  hab1: 'KeyQ',
+  hab2: 'KeyR',
   folego: 'KeyE',
   mochila: 'KeyI',
+  habilidades: 'KeyK',
   mapa: 'KeyM',
   devagar: 'KeyC',
   som: '',
@@ -229,7 +235,8 @@ export class KeyBindings {
     }
     if (typeof data !== 'object' || data === null || Array.isArray(data)) return;
     for (const { action } of KEY_ACTIONS) {
-      const b = (data as Record<string, unknown>)[action];
+      // a tecla da Bordunada ('golpe', até 15/11) vale para a 1ª habilidade da classe, que ficou no lugar dela
+      const b = (data as Record<string, unknown>)[action] ?? (action === 'hab1' ? (data as Record<string, unknown>).golpe : undefined);
       if (typeof b !== 'object' || b === null) continue;
       const { code, label } = b as Record<string, unknown>;
       if (code === '') this.keys.set(action, { code: '', label: '—' });

@@ -132,6 +132,7 @@ describe('arquivo de personagens', () => {
       inventory: { slots: [{ item: 'banana', n: 3 }, null], equipped: { head: 'chapeu_palha' } },
       quests: { saguis_travessos: { state: 'active', count: 2 } },
       explored: { capao: '24:AQI=' }, // o mapa explorado (passo 5 do arquivo)
+      hero: { class: 'cacador', skills: { chuva_de_flechas: 2 } }, // a classe e os pontos (passo 6)
     };
     store.save([{ id: login.id, data }]);
     store.close();

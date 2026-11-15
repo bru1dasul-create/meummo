@@ -32,7 +32,9 @@ export type SoundName =
   | 'bow-release'
   | 'meow'
   | 'purr'
-  | 'capy';
+  | 'capy'
+  | 'spirit'
+  | 'burst';
 
 const MUTE_KEY = 'meummo:som-desligado';
 const VOLUME_KEY = 'meummo:volumes';
@@ -324,11 +326,45 @@ export class Sfx {
           this.noise(at, 0.012, 'bandpass', 1400, 900, 0.03);
         }
         break;
+      case 'spirit': // a Flecha Ancestral: a corda e um sopro que sobe, com um sininho do espírito
+        this.tone('triangle', 240, 110, t, 0.14, 0.24);
+        this.noise(t + 0.01, 0.3, 'bandpass', 900, 3600, 0.18);
+        this.tone('sine', 880, 1320, t + 0.03, 0.35, 0.09);
+        this.tone('sine', 1320, 1980, t + 0.08, 0.3, 0.05);
+        break;
+      case 'burst': // a Flecha Ancestral explode no fim: um baque fundo e o brilho subindo
+        this.tone('sine', 150, 50, t, 0.35, 0.3);
+        this.noise(t, 0.25, 'lowpass', 1200, 200, 0.25);
+        this.tone('sine', 660, 1320, t + 0.05, 0.4, 0.07);
+        break;
       case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
         this.tone('triangle', 260, 120, t, 0.16, 0.3);
         this.tone('sine', 520, 300, t, 0.08, 0.1);
         this.noise(t + 0.02, 0.14, 'bandpass', 3200, 900, 0.22);
         break;
+    }
+  }
+
+  /**
+   * A Chuva de Flechas: as cordas do arco soltando uma atrás da outra (com o estilingue, o elástico), o assobio subindo
+   * e, quando elas chegam (daqui a `delayMs`), a chuvarada de "tucs" no chão. Tudo marcado no relógio do som.
+   */
+  volley(delayMs: number, count: number, stone: boolean): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const strings = Math.max(3, Math.min(8, Math.round(count / 2)));
+    for (let i = 0; i < strings; i++) {
+      const at = t + i * 0.045;
+      if (stone) this.tone('triangle', 900, 300, at, 0.06, 0.12);
+      else this.tone('triangle', 250 + i * 12, 120, at, 0.1, 0.16);
+    }
+    this.noise(t + 0.03, 0.35, 'bandpass', 1800, 4200, 0.12); // o assobio subindo
+    const land = t + Math.max(0.1, delayMs / 1000);
+    for (let i = 0; i < Math.min(16, Math.max(3, count)); i++) {
+      const at = land - 0.08 + Math.random() * 0.2;
+      this.noise(at, 0.04, 'lowpass', stone ? 1600 : 900, 300, 0.16);
+      this.tone('sine', stone ? 300 : 180, 90, at, 0.05, 0.08);
     }
   }
 

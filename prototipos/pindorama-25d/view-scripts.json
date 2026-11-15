@@ -28,6 +28,10 @@
     "js/creatures/xiovanna.js",
     "js/creatures/gato.js",
     "js/creatures/capivara.js",
+    "js/creatures/quati.js",
+    "js/creatures/tatu.js",
+    "js/creatures/marimbondo.js",
+    "js/creatures/boitata.js",
     "js/view.js",
     "js/portrait.js"
   ]

@@ -8,6 +8,7 @@ import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
 import type { CombatRules } from './combatRules';
+import type { ClassInfo, HeroState } from './classes';
 
 /** 'pet': bicho de estimação (o Joaquim, o gato da vó): anda sozinho, mia e ronrona; nunca é alvo. */
 export type EntityKind = 'player' | 'monster' | 'npc' | 'pet';
@@ -83,6 +84,12 @@ export type ClientMsg =
   | { t: 'quest'; act: QuestAction; id: string; npc?: number } // aceitar ou concluir (perto de quem dá a missão) ou abandonar
   | { t: 'pet'; id: number } // fazer carinho no bicho (perto dele)
   | { t: 'jump' } // pular (só de enfeite por enquanto: quem está perto vê)
+  | { t: 'class'; id: string } // escolher a classe (a chave em data/classes.json; o servidor confere se já pode)
+  | { t: 'learn'; id: string } // pôr um ponto nesta habilidade da sua classe
+  | { t: 'unlearn' } // tirar os pontos de todas as habilidades (voltam para gastar de novo)
+  // usar a habilidade `id` da sua classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
+  // A flecha (Flecha Ancestral) vai na direção do ponto; `cid` = número do tiro no cliente (como no `shoot`)
+  | { t: 'cast'; id: string; x: number; y: number; cid?: number }
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
@@ -132,8 +139,9 @@ export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_fu
 
 /** Tipos de efeito visual que o servidor manda mostrar. */
 // 'dizzy' = o bicho ficou tonto (o tatu-bola depois da investida); 'dodge' = o tiro passou pelo meio do enxame sem acertar;
-// 'vanish' = o bicho foi embora (o filhote de boitatá ao amanhecer: em seguida vem o `despawn`)
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | PetFx;
+// 'vanish' = o bicho foi embora (o filhote de boitatá ao amanhecer: em seguida vem o `despawn`); 'mark' = a Flecha
+// Ancestral marcou o bicho: ele leva mais dano de todo mundo por `ms`
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 
@@ -167,6 +175,10 @@ export type ServerMsg =
       wind: { strength: number; angle: number };
       /** O mapa explorado deste mapa (só no formato novo): a grade em texto (src/shared/explore.ts). */
       explored?: string;
+      /** As classes (de data/classes.json) e as habilidades de cada uma. */
+      classes: ClassInfo[];
+      /** A sua classe, os pontos de cada habilidade e quantos sobram. */
+      hero: HeroState;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog; explored?: string }
@@ -182,9 +194,10 @@ export type ServerMsg =
   // projétil acabou (hit = id de quem levou, ou 0). Sem acertar ninguém: onde parou (x, y, como no `shot`) e, se bateu
   // em algo, `on` = o tipo do que segurou (ex.: 'tronco', 'parede', 'pedra'; 'borda' = fim do mapa). No fim do alcance:
   // `on: 'agua'` se caiu na água; sem `on`, caiu no chão
-  | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string }
+  // `burst`: a Flecha Ancestral explodiu no fim, neste raio (metros)
+  | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string; burst?: number }
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
-  | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number } // r = alcance do golpe (bote, investida)
+  | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number; ms?: number } // r = alcance do golpe (bote, investida); ms = quanto dura (a marca)
   | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)
   // blk: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou
   | { t: 'hit'; id: number; by: number; dmg: number; hp: number; blk?: 1 | 2 }
@@ -199,6 +212,12 @@ export type ServerMsg =
   | { t: 'levelup'; id: number; level: number; maxHp: number }
   | { t: 'gear'; id: number; gear: GearLook } // alguém trocou o equipamento (muda o desenho dele)
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
+  | { t: 'hero'; hero: HeroState } // a sua classe ou os pontos das habilidades mudaram (subiu de nível, escolheu...)
+  | { t: 'scd'; s: string; ms: number } // a habilidade `s` da sua classe entrou em recarga
+  // alguém (`id`) usou a habilidade `s` da classe: cai em (x, y) (metros, no chão), num raio `r`, daqui a `ms`. n = quantas
+  // flechas sobem; p = quantos pontos ela tem (o desenho muda com 3 e com 5); kind = o que chove ('flecha' ou 'pedra': o
+  // tiro da arma de quem usou). Quem usou não recebe: já desenhou na hora
+  | { t: 'cast'; id: number; s: string; x: number; y: number; r: number; n: number; p: number; ms: number; kind: string }
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila ou da loja)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
   // estes itens do monstro que caiu em (x, y) foram para a sua mochila. Desde 14/11 o servidor não manda mais: os itens

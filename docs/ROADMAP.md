@@ -561,8 +561,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
   — **marcadas no ramo `mundo/floresta-maior`** (quati 4, tatu_bola 3, marimbondo 3, filhote_boitata 1 no recanto do
   Véu); entram na `main` com a floresta maior
-- [ ] **[arte]** Desenhar os quatro bichos novos (hoje aparecem como bonecos de gente com o nome) e as ações `dizzy`
-  (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
+- [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
+  `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
+  e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
+  em bola e rola, solta a faísca do tlinc e fica com as estrelinhas; as 5 vespas fecham, abrem num anel na ferroada,
+  se espalham e despencam; o boitatá é chama sem contorno com brilho no chão, investe e apaga com fumaça. Os olhos
+  de todos os bichos ficam vermelhos à noite (`PD.creatures.eyes.night`, a ligar no dia e noite). Prancha:
+  `node ferramentas/prancha-bichos.cjs saida.png [escala]`
 - [x] **[estrutura]** As capivaras andando, as regras (14/11): os bichos de data/bichos.json ganharam `tipo`,
   `quantidade` (bando), `dentroDeCasa` e `"mia": false`; dois bandos no Capão (lago 3, campinho 2), que deitam lado a
   lado em volta do ponto de descanso, acordam cada um numa hora e gostam de carinho (estalinhos); desenho provisório
@@ -582,8 +587,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
   procura e, quando existir, ela entra no lugar do desenho provisório. A do Capão na `main` em 15/11 (o gerador escreve
   as duas junto com o mapa, por `scripts/mapa-de-cima.ts`; os nomes saem em ordem de importância)
-- [ ] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
-  e talvez girar a imagem para bater com a câmera
+- [x] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
+  e talvez girar a imagem para bater com a câmera (15/11; o dono achou o provisório "horrível"): os dois giram 45° como
+  a câmera (a rua que na tela corre de lado corre de lado no mapa), com os nomes e os sinais em pé; você é um ponto
+  dourado com contorno branco, pulsando (os NPCs são verde-água); a neblina escurece sem esconder o contorno; o mini
+  mapa é redondo, com anel de madeira trançada, a faixa vermelha tribal, folhas e o N (PC: embaixo da mochila; celular:
+  menor, embaixo do retrato); o mapa do M é um losango na moldura da mochila (o visual do `mapWindow.ts` é da [arte])
 - [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
   para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
   e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
@@ -637,12 +646,35 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   o botão grande (88 px) no canto de baixo à direita; a bordunada, o fôlego, o pulo e a esquiva num 2x2 ao lado dele
   (deitado) ou em cima (em pé), com a esquiva colada no tiro (só `style.css`)
 
-**Habilidades (combinar os detalhes com o dono antes):**
-- [ ] **[estrutura + arte]** Habilidades que sobem de nível com o personagem (mais dano e o visual muda) e a primeira
-  classe, o **Caçador da Floresta** (DPS à distância: arco, velocidade, precisão e espíritos dos bichos): Chuva de
-  Flechas (área; evolui com mais flechas e área maior), Flecha Ancestral (dano espiritual), Olhos de Gavião (ver
-  inimigos e rastros de longe), Chamado Selvagem (invoca uma onça ou uma águia espiritual) e Fúria da Onça
-  (transformação: corpo a corpo, mais agressivo)
+**Habilidades (combinadas com o dono em 15/11):** todo mundo começa igual; as missões do começo liberam a escolha da
+classe; por enquanto só o **Caçador da Floresta** (arco e flecha ou estilingue: DPS à distância, velocidade, precisão e
+os espíritos dos bichos); 1 ponto por nível para pôr nas habilidades, até 5 em cada (mais dano, e o visual muda com 3
+e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
+- [x] **[estrutura]** Passo 1 (15/11): a classe e os pontos salvos no personagem (passo 6 de `MIGRATIONS`, protocolo
+  37), a escolha depois de "Saguis Encantados" (`liberaDepoisDe` em `data/classes.json`), 1 ponto por nível (o 1º no
+  nível da habilidade, os outros a cada 2 níveis), a janela das **Habilidades** (`K` ou o botão ✦: escolher, pôr
+  pontos, recomeçar de graça), a Bordunada fora do jogo novo (o `Q` e o 1º quadrado da barra são da classe) e a
+  **Chuva de Flechas** de ponta a ponta: segurar `Q` mira com um círculo e soltar usa (o botão e o celular miram
+  sozinhos onde pega mais bichos); as flechas (pedras, com o estilingue) caem 0,45 s depois em todos do círculo, de
+  cima (a casca do tatu-bola não segura); recarga 10 s. Desenho e ícones provisórios
+- [x] **[arte]** Os ícones das 5 habilidades e o "Como jogar" (15/11): `paintedSkillIcon(id)` em `paintedIcons.ts` (a
+  Chuva de Flechas caindo no alvo, a Flecha Ancestral com a espiral do espírito, o olho dourado do gavião, a pegada da
+  onça espiritual e as três garras sobre as pintas), usados pelo `skillIconUrl` (janela e barra); o "Como jogar" com o
+  `Q` (mirar a Chuva), o `K` e o ✦ (Habilidades) e o `M` (mapa); no `ui.ts`, o jeito oficial de pôr o ícone no botão
+  (`ActionDef.icon`, ou `setLook(slot, { iconUrl })`) no lugar do remendo do `skill0`
+- [ ] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
+  da mira no estilo da HUD, e mais quadrados na barra quando chegarem as próximas habilidades
+- [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
+  uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
+  com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
+  (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
+- [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
+  runa da marca), o quadrado dela na barra (hoje um botão provisório do motor) e o `R` no "Como jogar"
+- [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
+- [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
+  transformação, corpo a corpo)
+- [ ] **[dono]** Depois: a escolha da classe virar o ritual na figueira (decisão de 12/11); trocar de classe; recomeçar
+  os pontos custar ouro?
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
@@ -749,10 +781,11 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 
 ## M6 — Caminhos (classes)
 Ideia que voltou com o documento do ChatGPT (10/11). Só depois do movimento livre, e começando por um Caminho só.
-- [ ] **[dono]** Decidir os Caminhos. Proposta da [estrutura], com a cara do folclore: **Caçador da Mata** (arco,
-  agilidade, bichos), **Benzedeira/Benzedor** (cura e espíritos), **Guardião** (escudo e corpo a corpo) e
-  **Capoeirista** (rápido, esquiva e golpes; no lugar do "Ladino das Sombras")
-- [ ] **[estrutura]** Energia (barra azul) para as habilidades e o primeiro Caminho com 3 habilidades
+- [x] **[dono]** O primeiro Caminho (14/11): o **Caçador da Floresta** (veja "Habilidades", acima; começou em 15/11)
+- [ ] **[dono]** Os outros Caminhos. Proposta da [estrutura], com a cara do folclore: **Benzedeira/Benzedor** (cura e
+  espíritos), **Guardião** (escudo e corpo a corpo) e **Capoeirista** (rápido, esquiva e golpes; no lugar do "Ladino
+  das Sombras")
+- [ ] **[estrutura]** Energia (barra azul) para as habilidades (hoje cada uma tem só a recarga)
 
 ## Ideias para depois (só se o básico estiver divertido)
 Crafting, PvP em áreas específicas, chefões, eventos,

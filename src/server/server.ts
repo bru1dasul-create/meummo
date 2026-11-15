@@ -18,6 +18,7 @@ import { Session, type Lobby } from './session';
 import { Tuning } from './tuning';
 import type { World } from './world';
 import { loadPetDefs } from './pets';
+import { checkClasses, loadClassDefs } from './classes';
 
 export { MAPS_DIR, ROOT, SAVE_FILE } from './paths';
 const HEARTBEAT_MS = 30_000;
@@ -92,6 +93,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     options.tuningFile !== undefined ? options.tuningFile : options.saveFile === ':memory:' ? null : path.join(path.dirname(options.saveFile), 'ajustes.json');
   const tuning = Tuning.load(tuningFile, maps, log);
   const store = new CharacterStore(options.saveFile, { cost: options.hashCost });
+  // as classes e as habilidades (data/classes.json); a missão que libera cada uma precisa existir
+  const classes = loadClassDefs();
+  checkClasses(classes, tuning.quests);
   const realm = new Realm(maps, {
     log,
     monsters: tuning.monsters,
@@ -100,6 +104,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     areas: tuning.areas,
     quests: tuning.quests,
     pets: loadPetDefs(),
+    classes,
     combat: tuning.combat,
     saver: store,
     startMap: options.startMap,

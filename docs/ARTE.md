@@ -819,6 +819,32 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
 
+### As 6 etapas de 15/11 (com o "pode" do dono: "pode, seguir para terminar as 6 etapas"; cada uma vai para a main)
+1. **Mini mapa e mapa do M** (feito): o visual do `src/client/novo/mapWindow.ts` passou para a [arte] (a [estrutura]
+   fica com a grade do explorado, o `draw(picture, me, markers)` e os ganchos). `TURN` = 45° (no sentido do relógio,
+   como a câmera: o norte fica para cima e para a direita); `MapPicture.draw(..., turn)` gira o chão e a neblina em volta
+   do meio de `dest` e põe os NPCs, os ! e ?, os nomes e você (o ponto dourado pulsando, 1,6 s) em pé com o `at()`
+   girado; `FOG` 0,62. `Minimap`: canvas de 172 px (PC; 100 px no celular), o mapa num círculo e o anel pronto
+   (`paintRing`: madeira trançada, a faixa vermelha tribal à esquerda como a do retrato, folhas e o N), refeito só
+   quando muda o tamanho. `MapWindow`: o canvas é a caixa do mapa girado (um losango), a moldura da mochila (canto
+   tribal). Conferir: `minimapa.cjs` (scratchpad).
+2. **Caçador, parte rápida** (feito): os temas `ambar` e `espirito` e os 5 ícones em `paintedIcons.ts`
+   (`paintedSkillIcon(id)`, com `iconArrow`); o `skillIconUrl` da [estrutura] (que liberou) usa o pintado quando tem; o
+   `ActionDef.icon` e o `setLook(slot, { iconUrl })` no `ui.ts`; o "Como jogar". Conferir: `cacador.cjs` (scratchpad;
+   o personagem de teste com nível 6 e a missão `saguis_encantados` feita no banco de teste). Os quadrados a mais na
+   barra ficam para quando chegarem as outras habilidades.
+3. **Os quatro bichos novos** (feito): `quati.js` (S 1,35; trote em diagonal, `sniff` com o focinho baixo, `windup`
+   encolhe e `bite` abre o queixo), `tatu.js` (`tatu_bola`, S 1,7; `curl` junta as fatias numa bola de raio 15 e `roll`
+   gira as faixas na investida; `block` e `dizzy` em relógios próprios, `blockT` e `dizzyT`, sem cortar o resto),
+   `marimbondo.js` (5 vespas de 6 bolas; asas no `after`, que precisa do `this._cam`; uma sombra macia só, no `under`
+   da primeira vespa; `dodge` espalha; morte própria: despencam em 0,3 s, antes do sumiço geral de 0,4 a 0,7 s) e
+   `boitata.js` (`filhote_boitata`; segue o próprio rastro como a jararaca; bolas `noInk` nas cores do fogo, brilho
+   `lighter` no chão, línguas de fogo de base azulada; `vanish` e a morte apagam em 0,6 s, igual ao `VANISH_MS` do
+   servidor). Olhos à noite: `PD.creatures.eyes.night` (o dia e noite liga), `eyeColor(day)` e `eyeGlow(dayGlow)` para
+   os bichos novos. Conferir: `node ferramentas/prancha-bichos.cjs saida.png 2` e, no jogo, `bichos-jogo.cjs` e
+   `boitata-amanhecer.cjs` (scratchpad: menu ADM, fora da zona segura em 37,5; 35,5).
+4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia e noite.
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
@@ -979,8 +1005,22 @@ confirmou.
   - **Dia e noite** (main 95bfcf3, protocolo 33): `setTimeOfDay({ light, night })` no `WorldView` (light de 1 a 0 em
     passos de 0,01, o anoitecer e o amanhecer em 1 minuto; `night` = olhos vermelhos em todos os bichos). Testar: ADM
     "Virar dia"/"Virar noite" e `window.__mundoNovo.time()`. Lampiões: quando o [mundo] marcar.
+  - **Caçador da Floresta** (main 7b2155b; regras e visual provisório da [estrutura]; o dono decidiu em 15/11: todo
+    mundo começa igual, escolhe a classe depois das missões do começo, 1 ponto por nível, até 5 em cada habilidade, o
+    visual muda com 3 e com 5 pontos; a Bordunada saiu do jogo novo e o Fôlego ficou): (1) os ícones pintados das 5
+    habilidades (ids de data/classes.json: `chuva_de_flechas`, `flecha_ancestral`, `olhos_de_gaviao`,
+    `chamado_selvagem`, `furia_da_onca`; hoje provisórios em `src/client/novo/skillIcons.ts`, ou um
+    `paintedSkillIcon(id)` no `paintedIcons.ts`); (2) a barra: o `skill0` agora é a 1ª habilidade da classe (o motor
+    troca o ícone por fora; um jeito oficial no `ui.ts`, ex. `ActionDef.icon`), e mais quadrados para as próximas 4
+    habilidades (PC e celular); (3) o desenho da Chuva de Flechas (hoje `drawAim`/`drawRainGround`/`drawRainAir` no
+    `combat.ts`; por pontos: 1–2 madeira, 3–4 brilho dourado, 5 espírito verde; ou um `view.rain?(...)` na PD.View);
+    (4) a janela das Habilidades (`#skills-panel`, `#skills-button`, `skillsPanel.ts`) no estilo da HUD; (5) o "Como
+    jogar" (Q mira a Chuva, K abre as Habilidades; no celular, ✦); (6) talvez uma pose de atirar para o alto (dizer o
+    nome da ação à [estrutura]). Testar: missão `saguis_encantados` concluída e nível 3+; `__mundoNovo.hero()`.
   - **O mapa (M) e o mini mapa** (main 5f01bf9, protocolo 36; o desenho provisório é o `mapWindow.ts` da [estrutura]):
     deixar bonitos a `#map-window` (o mapa inteiro com a neblina, os nomes, os NPCs com ! e ?, a seta) e o `#minimap`
+    (o dono, 15/11: "horrível"; o rascunho redondo, girado como a câmera, com anel de madeira e N, está proposto; e
+    "ao invés de setinha deveria ser um ponto": um ponto dourado com contorno branco, pulsando)
     (PC: 148 px embaixo da mochila; celular: 96 px embaixo do retrato), tudo por CSS de id; girar a imagem para bater
     com a câmera é pedido ao motor. Ganchos: `__mundoNovo.explored()` e `mapOpen()`.
   - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o

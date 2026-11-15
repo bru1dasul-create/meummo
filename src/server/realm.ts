@@ -215,6 +215,22 @@ export class Realm {
     this.worldOf(player)?.jump(player);
   }
 
+  chooseClass(player: Player, id: string): void {
+    this.worldOf(player)?.chooseClass(player, id);
+  }
+
+  learnSkill(player: Player, id: string): void {
+    this.worldOf(player)?.learnSkill(player, id);
+  }
+
+  unlearnSkills(player: Player): void {
+    this.worldOf(player)?.unlearnSkills(player);
+  }
+
+  castSkill(player: Player, id: string, x: number, y: number, cid?: number): void {
+    this.worldOf(player)?.castSkill(player, id, x, y, cid);
+  }
+
   chat(player: Player, text: string): void {
     this.worldOf(player)?.chat(player, text);
   }

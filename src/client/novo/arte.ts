@@ -32,6 +32,11 @@ import '../../../prototipos/pindorama-25d/js/creatures/xiovanna.js';
 import '../../../prototipos/pindorama-25d/js/creatures/gato.js';
 // as capivaras que andam (bicho do ambiente, como o Joaquim)
 import '../../../prototipos/pindorama-25d/js/creatures/capivara.js';
+// os bichos da mata do sul (15/11): quati, tatu-bola, marimbondos e o filhote de boitatá
+import '../../../prototipos/pindorama-25d/js/creatures/quati.js';
+import '../../../prototipos/pindorama-25d/js/creatures/tatu.js';
+import '../../../prototipos/pindorama-25d/js/creatures/marimbondo.js';
+import '../../../prototipos/pindorama-25d/js/creatures/boitata.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
 

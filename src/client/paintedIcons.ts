@@ -26,6 +26,9 @@ const THEMES = {
   fogo: { bg0: '#5e260a', bg1: '#110503', glow: '#ff9a2c', light: '#fff4c4', mid: '#ffb23e', dark: '#c64e0e', ink: '#2a0c03' },
   agua: { bg0: '#0f4652', bg1: '#030d0e', glow: '#72f3ff', light: '#ecffff', mid: '#6adcf2', dark: '#1b8bae', ink: '#05202a' },
   ceu: { bg0: '#163f70', bg1: '#030813', glow: '#64c6ff', light: '#f0f9ff', mid: '#78c4ff', dark: '#2a68c8', ink: '#061329' },
+  // as habilidades do Caçador da Floresta: o âmbar (as flechas) e o espírito (verde-água)
+  ambar: { bg0: '#5a3a0c', bg1: '#120902', glow: '#ffcf5a', light: '#fff6d0', mid: '#f2c050', dark: '#a8661a', ink: '#2a1604' },
+  espirito: { bg0: '#0f4a3a', bg1: '#03100c', glow: '#6dffc8', light: '#eafff6', mid: '#7ee8c0', dark: '#1f8f6a', ink: '#062019' },
 } satisfies Record<string, Theme>;
 
 type Box = readonly [number, number, number, number];
@@ -522,6 +525,231 @@ export function paintedActionIcon(slot: PaintedAction): string {
     ACTION_PAINTERS[slot](ctx);
     url = canvas.toDataURL();
     actionUrls.set(slot, url);
+  }
+  return url;
+}
+
+// ------------------------------------------------------------------------------------------------ habilidades da classe
+// O Caçador da Floresta (data/classes.json, 15/11): um ícone pintado para cada habilidade, pelo id.
+
+/** Uma flecha (no ícone): a haste, as penas e a ponta, de (x0, y0) até a ponta (x1, y1). */
+function iconArrow(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, t: Theme, w: number, blur = 12): void {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  const ux = Math.cos(a);
+  const uy = Math.sin(a);
+  const head = w * 3.4;
+  const shaft = new Path2D();
+  shaft.moveTo(x0, y0);
+  shaft.lineTo(x1 - ux * head * 0.8, y1 - uy * head * 0.8);
+  glowStroke(ctx, shaft, w, t, [Math.min(x0, x1), Math.min(y0, y1), Math.max(x0, x1), Math.max(y0, y1)], blur);
+  // as penas (duas, abertas para trás)
+  const fl = new Path2D();
+  for (const side of [-1, 1]) {
+    const bx = x0 + ux * head * 0.2;
+    const by = y0 + uy * head * 0.2;
+    fl.moveTo(bx + ux * head * 0.9, by + uy * head * 0.9);
+    fl.lineTo(bx - uy * side * head * 0.55 - ux * head * 0.15, by + ux * side * head * 0.55 - uy * head * 0.15);
+    fl.lineTo(bx - uy * side * head * 0.35 + ux * head * 0.35, by + ux * side * head * 0.35 + uy * head * 0.35);
+    fl.closePath();
+  }
+  glowFill(ctx, fl, THEMES.fogo, [x0 - head, y0 - head, x0 + head, y0 + head], 6, 1.4);
+  // a ponta de pedra
+  const tip = new Path2D();
+  tip.moveTo(x1, y1);
+  tip.lineTo(x1 - ux * head + uy * head * 0.48, y1 - uy * head - ux * head * 0.48);
+  tip.lineTo(x1 - ux * head * 0.72, y1 - uy * head * 0.72);
+  tip.lineTo(x1 - ux * head - uy * head * 0.48, y1 - uy * head + ux * head * 0.48);
+  tip.closePath();
+  glowFill(ctx, tip, t, [x1 - head, y1 - head, x1 + head, y1 + head], 8, 1.6);
+}
+
+/** Chuva de Flechas: as flechas caindo do céu no círculo do alvo, com os riscos da queda. */
+function paintRainOfArrows(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.ambar;
+  slotBackground(ctx, t, 71);
+  // o alvo no chão
+  const ring = new Path2D();
+  ring.ellipse(64, 100, 40, 13, 0, 0, Math.PI * 2);
+  glowStroke(ctx, ring, 3.4, t, [24, 87, 104, 113], 14);
+  const ring2 = new Path2D();
+  ring2.ellipse(64, 100, 22, 7, 0, 0, Math.PI * 2);
+  glowStroke(ctx, ring2, 2.2, t, [42, 93, 86, 107], 8);
+  // os riscos da queda
+  ctx.save();
+  ctx.strokeStyle = rgba(t.light, 0.45);
+  ctx.lineCap = 'round';
+  for (const [x, y, len] of [[30, 14, 20], [58, 8, 16], [86, 16, 18], [104, 30, 12], [20, 40, 12]] as const) {
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - len * 0.25, y - len);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // as flechas, caindo inclinadas para o alvo
+  iconArrow(ctx, 22, 20, 40, 92, t, 3.4);
+  iconArrow(ctx, 52, 8, 60, 96, t, 3.8);
+  iconArrow(ctx, 86, 18, 82, 90, t, 3.4);
+  iconArrow(ctx, 106, 40, 98, 88, t, 2.8, 8);
+  sparkle(ctx, 64, 100, 7, t);
+}
+
+/** Flecha Ancestral: uma flecha grande, na diagonal, com a energia do espírito enrolando nela. */
+function paintAncestralArrow(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.espirito;
+  slotBackground(ctx, t, 73);
+  // a espiral de energia em volta da haste
+  ctx.save();
+  ctx.translate(64, 64);
+  ctx.rotate(-Math.PI / 4);
+  const spiral = new Path2D();
+  for (let i = 0; i <= 60; i++) {
+    const u = i / 60;
+    const x = -46 + u * 84;
+    const y = Math.sin(u * Math.PI * 4.5) * (6 + u * 9);
+    i ? spiral.lineTo(x, y) : spiral.moveTo(x, y);
+  }
+  glowStroke(ctx, spiral, 2.6, t, [-46, -16, 38, 16], 16);
+  ctx.restore();
+  iconArrow(ctx, 22, 106, 104, 24, t, 6, 20);
+  for (const [x, y, r] of [[96, 44, 6], [34, 78, 4.5], [76, 22, 4]] as const) sparkle(ctx, x, y, r, t);
+}
+
+/** Olhos de Gavião: o olho do gavião, dourado, com a sobrancelha de penas e as linhas do olhar. */
+function paintHawkEyes(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.ceu;
+  slotBackground(ctx, t, 79);
+  // as linhas do olhar, saindo para a frente
+  ctx.save();
+  ctx.strokeStyle = rgba(t.glow, 0.55);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 2.4;
+  for (const a of [-0.32, -0.1, 0.12, 0.34]) {
+    ctx.beginPath();
+    ctx.moveTo(90 + Math.cos(a) * 10, 66 + Math.sin(a) * 10);
+    ctx.lineTo(90 + Math.cos(a) * 30, 66 + Math.sin(a) * 30);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // o olho (amêndoa) com a íris dourada
+  const eye = new Path2D();
+  eye.moveTo(18, 68);
+  eye.quadraticCurveTo(52, 34, 92, 64);
+  eye.quadraticCurveTo(54, 96, 18, 68);
+  eye.closePath();
+  glowFill(ctx, eye, t, [18, 40, 92, 92], 16, 2.4);
+  ctx.save();
+  ctx.clip(eye);
+  const iris = ctx.createRadialGradient(56, 64, 3, 56, 66, 22);
+  iris.addColorStop(0, '#fff3b0');
+  iris.addColorStop(0.45, '#f2b830');
+  iris.addColorStop(1, '#8a4a0a');
+  ctx.fillStyle = iris;
+  ctx.beginPath();
+  ctx.arc(56, 66, 21, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#100703';
+  ctx.beginPath();
+  ctx.ellipse(56, 66, 6.5, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.beginPath();
+  ctx.arc(50, 58, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = rgba(t.ink, 0.95);
+  ctx.stroke(eye);
+  ctx.restore();
+  // a sobrancelha de penas (do gavião), por cima
+  const brow = new Path2D();
+  brow.moveTo(12, 56);
+  brow.quadraticCurveTo(50, 22, 100, 46);
+  brow.lineTo(88, 52);
+  brow.quadraticCurveTo(52, 36, 22, 62);
+  brow.closePath();
+  glowFill(ctx, brow, THEMES.ambar, [12, 22, 100, 62], 10, 2);
+}
+
+/** Chamado Selvagem: a pegada da onça, de espírito, com o círculo do chamado. */
+function paintWildCall(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.espirito;
+  slotBackground(ctx, t, 83);
+  const ring = new Path2D();
+  ring.arc(64, 66, 46, 0, Math.PI * 2);
+  glowStroke(ctx, ring, 2.4, t, [18, 20, 110, 112], 16);
+  // as ondinhas do chamado (dos dois lados)
+  for (const side of [-1, 1]) {
+    for (const r of [52, 58]) {
+      const w = new Path2D();
+      const c = side > 0 ? 0 : Math.PI;
+      w.arc(64, 66, r, c - 0.42, c + 0.42);
+      glowStroke(ctx, w, 1.8, t, [8, 10, 120, 120], 8);
+    }
+  }
+  // a pegada: a almofada grande e os quatro dedos
+  const paw = new Path2D();
+  paw.moveTo(64 + 21, 80);
+  paw.ellipse(64, 80, 21, 17, 0, 0, Math.PI * 2);
+  for (const [x, y, rx, ry] of [[38, 56, 8.5, 10.5], [53, 44, 9, 11.5], [75, 44, 9, 11.5], [90, 56, 8.5, 10.5]] as const) {
+    paw.moveTo(x + rx, y);
+    paw.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  }
+  glowFill(ctx, paw, t, [30, 32, 98, 98], 20, 2.4);
+  sparkle(ctx, 100, 30, 6, t);
+  sparkle(ctx, 28, 100, 4.5, t);
+}
+
+/** Fúria da Onça: três garras rasgando por cima das pintas (rosetas) da onça. */
+function paintJaguarFury(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.fogo;
+  slotBackground(ctx, t, 89);
+  // as rosetas da onça no fundo
+  ctx.save();
+  const r = rng(89);
+  for (let i = 0; i < 9; i++) {
+    const x = 14 + r() * 100;
+    const y = 14 + r() * 100;
+    const rad = 7 + r() * 5;
+    ctx.fillStyle = 'rgba(20, 8, 2, 0.55)';
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2 + r();
+      ctx.beginPath();
+      ctx.ellipse(x + Math.cos(a) * rad, y + Math.sin(a) * rad, 3.4, 2.4, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+  // as três garradas, de cima à direita para baixo à esquerda
+  for (const [dx, w] of [[-20, 6], [0, 7.5], [20, 6]] as const) {
+    const claw = new Path2D();
+    claw.moveTo(92 + dx, 18);
+    claw.quadraticCurveTo(70 + dx, 60, 34 + dx, 108);
+    glowStroke(ctx, claw, w, t, [30 + dx, 18, 96 + dx, 108], 18);
+  }
+  sparkle(ctx, 98, 20, 6, t);
+}
+
+const SKILL_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
+  chuva_de_flechas: paintRainOfArrows,
+  flecha_ancestral: paintAncestralArrow,
+  olhos_de_gaviao: paintHawkEyes,
+  chamado_selvagem: paintWildCall,
+  furia_da_onca: paintJaguarFury,
+};
+const skillUrls = new Map<string, string>();
+
+/** O ícone pintado da habilidade da classe (o id de data/classes.json), como URL; null se ainda não tem pintura. */
+export function paintedSkillIcon(id: string): string | null {
+  const painter = SKILL_PAINTERS[id];
+  if (!painter) return null;
+  let url = skillUrls.get(id);
+  if (!url) {
+    const [canvas, ctx] = newCanvas();
+    painter(ctx);
+    url = canvas.toDataURL();
+    skillUrls.set(id, url);
   }
   return url;
 }

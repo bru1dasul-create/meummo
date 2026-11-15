@@ -25,6 +25,9 @@ describe('teclas: o padrão', () => {
     expect(keys.actionOf('KeyJ')).toBe('atirar');
     expect(keys.actionOf('KeyF')).toBe('defesa');
     expect(keys.actionOf('KeyC')).toBe('devagar');
+    expect(keys.actionOf('KeyQ')).toBe('hab1'); // a 1ª habilidade da classe (no lugar da Bordunada, desde 15/11)
+    expect(keys.actionOf('KeyR')).toBe('hab2'); // a 2ª (a Flecha Ancestral, no Caçador)
+    expect(keys.actionOf('KeyK')).toBe('habilidades');
     expect(keys.get('som').code).toBe('');
     expect(keys.label('esquiva')).toBe('Shift');
     expect(keys.label('pular')).toBe('Espaço');
@@ -40,17 +43,17 @@ describe('teclas: o padrão', () => {
 });
 
 describe('teclas: trocar', () => {
-  it('trocar a esquiva para o Q: a Bordunada (que era do Q) fica com o Shift', () => {
+  it('trocar a esquiva para o Q: a 1ª habilidade da classe (que era do Q) fica com o Shift', () => {
     const store = fakeStore();
     const keys = new KeyBindings(store);
     expect(keys.set('esquiva', 'KeyQ', 'q')).toBeNull();
     expect(keys.actionOf('KeyQ')).toBe('esquiva');
-    expect(keys.actionOf('ShiftLeft')).toBe('golpe');
+    expect(keys.actionOf('ShiftLeft')).toBe('hab1');
     expect(keys.label('esquiva')).toBe('Q');
     // guardou neste aparelho: abrir de novo lembra
     const again = new KeyBindings(store);
     expect(again.actionOf('KeyQ')).toBe('esquiva');
-    expect(again.actionOf('Shift')).toBe('golpe');
+    expect(again.actionOf('Shift')).toBe('hab1');
   });
 
   it('recusa as teclas de andar, as fixas e as que o navegador usa (e nada muda)', () => {
@@ -98,6 +101,12 @@ describe('teclas: o que estava guardado', () => {
     expect(new KeyBindings(fakeStore({ [KEYS_STORAGE]: '{não é json' })).isDefault()).toBe(true);
     const keys = new KeyBindings(fakeStore({ [KEYS_STORAGE]: JSON.stringify({ esquiva: { code: 'KeyW' }, voar: { code: 'KeyX' }, pular: 'Space' }) }));
     expect(keys.isDefault()).toBe(true);
+  });
+
+  it('a tecla que o jogador deu à Bordunada (até 15/11) fica com a 1ª habilidade da classe', () => {
+    const keys = new KeyBindings(fakeStore({ [KEYS_STORAGE]: JSON.stringify({ golpe: { code: 'KeyT', label: 'T' } }) }));
+    expect(keys.actionOf('KeyT')).toBe('hab1');
+    expect(keys.actionOf('KeyQ')).toBeNull();
   });
 
   it('sem armazenamento (navegador fechado para isso): funciona, só não lembra', () => {

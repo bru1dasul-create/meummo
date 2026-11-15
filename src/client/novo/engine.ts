@@ -23,6 +23,7 @@ import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
 import { SKILLS } from '../../shared/skills';
+import { castPoint, skillPoint, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
 import { Bag } from '../bag';
 import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
@@ -45,10 +46,18 @@ import { SoundPanel } from './soundPanel';
 import { KeyBindings, type KeyAction } from './keys';
 import { cyclePosition, daylightAt, isNightAt } from '../../shared/dayNight';
 import { KeysPanel } from './keysPanel';
+import { SkillsPanel } from './skillsPanel';
+import { skillIconUrl } from './skillIcons';
+import { ExtraSkillButtons } from './skillButtons';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
 /** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
-const SKILL_KEYS: KeyAction[] = ['golpe', 'folego'];
+/** As teclas 1 e 2 da barra: a 1ª habilidade da classe e o Fôlego. */
+const SKILL_KEYS: KeyAction[] = ['hab1', 'folego'];
+/** A tecla de cada habilidade da classe, na ordem de data/classes.json (a 1ª no Q, a 2ª no R). */
+const CLASS_KEYS: KeyAction[] = ['hab1', 'hab2'];
+/** O Fôlego na lista de SKILLS (src/shared/skills.ts). A Bordunada (a 0) saiu do jogo novo em 15/11: a classe entrou. */
+const FOLEGO = 1;
 
 export interface NewWorldDeps {
   conn: Connection;
@@ -84,8 +93,6 @@ const PULL_AIM_RESEND = (5 * Math.PI) / 180;
 const ENERGY_ANIM_PER_S = 80;
 /** Número do dano que passou pela defesa (azul-claro, a cor da defesa). */
 const BLOCKED_COLOR = '#bfe6f0';
-/** Alcance da mira automática da Bordunada (golpe de perto). */
-const MELEE_AIM_RANGE = 2.5;
 /** Monstro que caiu: tempo para a view mostrar a queda ('die') antes de o desenho sair. */
 const DIE_MS = 700;
 /**
@@ -237,6 +244,17 @@ class NewWorld implements NewWorldGame {
   /** O que a view já sabe do vento (manda de novo só quando muda). */
   private windShown = { strength: -1, angle: -1 };
   private readonly skillReadyAt = SKILLS.map(() => 0);
+  /** As classes (do servidor) e o que o jogador tem: a classe, os pontos de cada habilidade e quantos sobram. */
+  private classes: ClassInfo[] = [];
+  private hero: HeroState = { class: null, skills: {}, points: 0, canChoose: false };
+  /** A janela das Habilidades (K ou o botão ✦): escolher a classe e pôr os pontos. */
+  private readonly skillsPanel: SkillsPanel;
+  /** A recarga de cada habilidade da classe (performance.now de quando fica pronta). */
+  private readonly castReadyAt = new Map<string, number>();
+  /** Segurando a tecla da habilidade: mirando (o círculo segue o mouse); soltar usa. */
+  private aiming: ClassSkillInfo | null = null;
+  /** Os botões das habilidades da classe da 2ª em diante (provisórios, até a barra ter quadrados para elas). */
+  private readonly extraButtons = new ExtraSkillButtons((id) => this.onExtraSkill(id));
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
   private charging: { since: number; aim: Aim; sentAngle: number } | null = null;
@@ -269,7 +287,7 @@ class NewWorld implements NewWorldGame {
   private zoomAnim: { from: number; to: number; start: number } | null = null;
   /** Onde está o mouse (tela), para mirar. */
   private mouse: Point | null = null;
-  /** O último toque foi com o dedo (a Bordunada mira sozinha). */
+  /** O último toque foi com o dedo (as habilidades miram sozinhas). */
   private usingTouch = false;
   /** Outros jogadores desmaiados (acordam quando a vida volta). */
   private readonly fainted = new Set<number>();
@@ -295,6 +313,8 @@ class NewWorld implements NewWorldGame {
     // os números do combate: o mesmo objeto aqui e no desenho do combate (o servidor manda os novos, se mudarem)
     this.rules = { ...defaultCombatRules(), ...deps.welcome.combat };
     this.combat = new CombatLayer(this.container, this.rules);
+    this.classes = deps.welcome.classes ?? [];
+    if (deps.welcome.hero) this.hero = deps.welcome.hero;
     this.actionBar = this.makeActionBar();
     this.keysPanel = new KeysPanel(this.keys, () => this.keysChanged());
     this.soundPanel = new SoundPanel({
@@ -344,6 +364,13 @@ class NewWorld implements NewWorldGame {
       },
     });
     this.tracker = new QuestTracker(this.questList);
+    this.skillsPanel = new SkillsPanel({
+      choose: (id) => this.conn.send({ t: 'class', id }),
+      learn: (id) => this.conn.send({ t: 'learn', id }),
+      unlearn: () => this.conn.send({ t: 'unlearn' }),
+    });
+    this.skillsPanel.update(this.classes, this.hero, welcome.stats.level);
+    this.skillsPanel.show();
     this.quick = new QuickSlots((n) => this.useQuick(n, performance.now()));
     this.guardButton = new GuardButton(
       () => this.startGuard(performance.now()),
@@ -429,6 +456,9 @@ class NewWorld implements NewWorldGame {
       // o vento de agora (força 0 a 1, ângulo em graus) e para onde ele está indo
       wind: () => ({ ...game.windNow(performance.now()), to: { ...game.wind.to } }),
       dead: () => game.dead,
+      // a classe, os pontos de cada habilidade e quantos sobram; se a janela das Habilidades está aberta
+      hero: () => ({ ...game.hero, skills: { ...game.hero.skills } }),
+      skillsOpen: () => game.skillsPanel.isOpen,
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
   }
@@ -460,6 +490,7 @@ class NewWorld implements NewWorldGame {
     this.goingToNpc = null;
     this.wasSafe = null;
     this.cancelCharge();
+    this.cancelAim();
     this.forgetGuard();
     this.setDead(false);
     if (msg.t === 'welcome') {
@@ -511,6 +542,8 @@ class NewWorld implements NewWorldGame {
     this.soundButton?.removeEventListener('click', this.openSoundPanel);
     this.soundPanel.destroy();
     this.keysPanel.destroy();
+    this.skillsPanel.destroy();
+    this.extraButtons.destroy();
     this.mapWindow.destroy();
     this.minimap.destroy();
     this.ambient.destroy();
@@ -542,6 +575,7 @@ class NewWorld implements NewWorldGame {
     this.handleMovement(now);
     this.handlePendingShot(now);
     this.updateCharge(now);
+    this.updateAim();
     this.updateGuard(now);
     this.updateAmbient(now);
     this.updateTimeOfDay(now);
@@ -556,6 +590,7 @@ class NewWorld implements NewWorldGame {
     this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
     this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
     this.actionBar.update(now);
+    this.extraButtons.update(now);
     this.quick.update(now);
     this.fpsMeter?.tick(now, performance.now() - workStart);
     this.raf = requestAnimationFrame(this.loop);
@@ -605,6 +640,8 @@ class NewWorld implements NewWorldGame {
     if (event.type === 'keyup') {
       if (action === 'atirar' && this.charging?.aim.by === 'key') this.releaseCharge(performance.now());
       if (action === 'defesa') this.stopGuard();
+      // soltou a tecla da habilidade (ou o 1): usa onde a mira está
+      if ((action === 'hab1' || action === 'hab2' || event.code === 'Digit1') && this.aiming) this.releaseAim(performance.now());
       return;
     }
     if (event.type !== 'keydown' || this.chat.isTyping() || this.keysPanel.listening) return;
@@ -636,7 +673,9 @@ class NewWorld implements NewWorldGame {
         this.zoomBy(ZOOM_STEP);
         break;
       case 'Escape':
-        if (this.mapWindow.isOpen) this.mapWindow.close();
+        if (this.aiming) this.cancelAim();
+        else if (this.skillsPanel.isOpen) this.skillsPanel.close();
+        else if (this.mapWindow.isOpen) this.mapWindow.close();
         else if (this.talk.isOpen) this.talk.close();
         else if (this.shop.isOpen) this.shop.close();
         else if (this.bag.isOpen) this.bag.close();
@@ -660,11 +699,17 @@ class NewWorld implements NewWorldGame {
       case 'defesa':
         this.startGuard(now);
         break;
-      case 'golpe':
-        this.trySkill(0, this.usingTouch ? this.autoAim(MELEE_AIM_RANGE) : (this.mouseAim() ?? this.autoAim(MELEE_AIM_RANGE)), now);
+      case 'hab1':
+        this.startAim(0, now);
+        break;
+      case 'hab2':
+        this.startAim(1, now);
         break;
       case 'folego':
-        this.trySkill(1, 0, now);
+        this.trySkill(FOLEGO, 0, now);
+        break;
+      case 'habilidades':
+        this.skillsPanel.toggle();
         break;
       case 'mochila':
         this.bag.toggle();
@@ -682,28 +727,51 @@ class NewWorld implements NewWorldGame {
     }
   }
 
-  /** A barra de ações, com as teclas de agora (refeita quando o jogador troca uma tecla). */
+  /**
+   * A barra de ações, com as teclas de agora (refeita quando o jogador troca uma tecla ou aprende a habilidade). No 1º
+   * quadrado (o 'skill0', que era da Bordunada), a 1ª habilidade da classe, quando ela já tem ponto; depois o Fôlego.
+   */
   private makeActionBar(): ActionBar {
-    return new ActionBar(
+    const classSkill = this.barSkill();
+    const bar = new ActionBar(
       [
         { slot: 'shot', label: 'Estilingue', key: this.keys.label('atirar') }, // segurar puxa, soltar atira (pedra com carga)
-        ...SKILLS.map((skill, i) => ({ slot: `skill${i}` as ActionSlot, label: skill.name, key: this.keys.label(SKILL_KEYS[i] ?? 'golpe') })),
+        ...(classSkill ? [{ slot: 'skill0' as ActionSlot, label: classSkill.name, key: this.keys.label('hab1'), icon: skillIconUrl(classSkill.id) }] : []),
+        { slot: 'skill1', label: SKILLS[FOLEGO]!.name, key: this.keys.label('folego') },
         { slot: 'dash', label: 'Esquiva', key: this.keys.label('esquiva') },
         { slot: 'jump', label: 'Pular', key: this.keys.label('pular') }, // no celular, o botão de pular (o desenho é da [arte])
       ],
       (slot, down) => this.onAction(slot, down),
     );
+    // da 2ª habilidade da classe em diante: os botões provisórios (dentro da barra nova)
+    const extras: { skill: ClassSkillInfo; index: number }[] = [];
+    for (let index = 1; index < CLASS_KEYS.length; index++) {
+      const skill = this.classSkillAt(index);
+      if (skill) extras.push({ skill, index });
+    }
+    this.extraButtons.build(
+      extras.map(({ skill, index }) => ({ id: skill.id, name: skill.name, key: this.keys.label(CLASS_KEYS[index]!), icon: skillIconUrl(skill.id) })),
+      (id) => ({ at: this.castReadyAt.get(id) ?? 0, duration: this.classes.flatMap((c) => c.skills).find((s) => s.id === id)?.cooldownMs ?? 0 }),
+    );
+    return bar;
   }
 
   /** O jogador trocou uma tecla: a barra mostra as novas (com a arma e as recargas que estavam correndo). */
   private keysChanged(): void {
+    this.guardButton.setKey(this.keys.label('defesa'));
+    this.rebuildActionBar();
+  }
+
+  /** Refaz a barra (teclas novas, habilidade nova), com a arma e as recargas que estavam correndo. */
+  private rebuildActionBar(): void {
     this.actionBar.destroy();
     this.actionBar = this.makeActionBar();
-    this.guardButton.setKey(this.keys.label('defesa'));
     this.updateShotLook(this.gearNow);
     this.actionBar.setCooldown('shot', this.nextShotAt, this.shot().cooldownMs);
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
-    SKILLS.forEach((skill, i) => this.actionBar.setCooldown(`skill${i}` as ActionSlot, this.skillReadyAt[i]!, skill.cooldownMs));
+    this.actionBar.setCooldown('skill1', this.skillReadyAt[FOLEGO]!, SKILLS[FOLEGO]!.cooldownMs);
+    const classSkill = this.barSkill();
+    if (classSkill) this.actionBar.setCooldown('skill0', this.castReadyAt.get(classSkill.id) ?? 0, classSkill.cooldownMs);
   }
 
   /** Andar devagar (C no padrão): liga e desliga. O normal é correr. */
@@ -716,6 +784,7 @@ class NewWorld implements NewWorldGame {
 
 
   private readonly onBlur = () => {
+    this.cancelAim(); // sem foco, o soltar da tecla não chega: a mira some sem usar
     this.cancelCharge(); // sem foco, o soltar do botão não chega: solta a pedra sem atirar
     this.stopGuard(); // e baixa a defesa
   };
@@ -1510,8 +1579,10 @@ class NewWorld implements NewWorldGame {
     if (!down) return;
     if (slot === 'dash') this.tryDash(now);
     else if (slot === 'jump') this.tryJump(now);
-    else if (slot === 'skill0') this.trySkill(0, this.autoAim(MELEE_AIM_RANGE), now);
-    else if (slot === 'skill1') this.trySkill(1, 0, now);
+    else if (slot === 'skill0') {
+      const skill = this.barSkill();
+      if (skill) this.castAuto(skill, now); // o botão mira sozinho: onde a chuva pega mais bichos
+    } else if (slot === 'skill1') this.trySkill(FOLEGO, 0, now);
   }
 
   /** O seu personagem vira para `degrees` (atirando, golpeando). */
@@ -1587,7 +1658,7 @@ class NewWorld implements NewWorldGame {
     this.sfx.play('jump');
   }
 
-  /** Habilidade `n` (Bordunada: golpe na frente, mirando em `angle`; Fôlego: cura). */
+  /** Habilidade `n` de SKILLS (no jogo novo, só o Fôlego: cura; a Bordunada ficou no jogo antigo). */
   private trySkill(n: number, angle: number, now: number): void {
     const skill = SKILLS[n];
     if (!skill || this.dead || this.guardHeld) return;
@@ -1613,6 +1684,218 @@ class NewWorld implements NewWorldGame {
     }
   }
 
+  // ======================= classe e habilidades =======================
+
+  /** A 1ª habilidade da classe, se ela já tem ponto (é a do Q e do 1º quadrado da barra), ou null. */
+  private barSkill(): ClassSkillInfo | null {
+    return this.classSkillAt(0);
+  }
+
+  /** A habilidade número `index` da classe (na ordem de data/classes.json), se ela já tem ponto, ou null. */
+  private classSkillAt(index: number): ClassSkillInfo | null {
+    const cls = this.classes.find((c) => c.id === this.hero.class);
+    const skill = cls?.skills[index];
+    return skill && skill.kind && (this.hero.skills[skill.id] ?? 0) > 0 ? skill : null;
+  }
+
+  /** Apertou o botão de uma habilidade da 2ª em diante: usa mirando sozinha. */
+  private onExtraSkill(id: string): void {
+    const cls = this.classes.find((c) => c.id === this.hero.class);
+    const index = cls?.skills.findIndex((s) => s.id === id) ?? -1;
+    const skill = index >= 0 ? this.classSkillAt(index) : null;
+    if (skill) this.castAuto(skill, performance.now());
+  }
+
+  /** Quantas habilidades com ponto (para saber se a barra muda: aprendeu uma nova, ou tirou os pontos). */
+  private learnedOnBar(): string {
+    return CLASS_KEYS.map((_, i) => this.classSkillAt(i)?.id ?? '').join(',');
+  }
+
+  /** O servidor mandou a classe e os pontos (escolheu, aprendeu, subiu de nível...): a janela e a barra acompanham. */
+  private setHero(hero: HeroState): void {
+    const before = this.hero;
+    const hadOnBar = this.learnedOnBar();
+    this.hero = hero;
+    if (!before.canChoose && hero.canChoose) this.toast.show('Você já pode escolher a sua classe: abra as Habilidades (K)', 4500);
+    this.skillsPanel.update(this.classes, hero, this.myLevel);
+    if (this.learnedOnBar() !== hadOnBar) {
+      this.cancelAim();
+      this.rebuildActionBar(); // aprendeu (ou tirou os pontos): o botão da habilidade aparece (ou sai)
+    }
+  }
+
+  /** Dá para usar esta habilidade agora? (Avisa o porquê, se não der.) */
+  private castable(skill: ClassSkillInfo, now: number): boolean {
+    if (this.dead || this.guardHeld) return false;
+    if (now < (this.castReadyAt.get(skill.id) ?? 0)) {
+      this.toast.show('Ainda recarregando...');
+      return false;
+    }
+    return !this.refuseInSafeArea(now);
+  }
+
+  /**
+   * Apertou a tecla de uma habilidade da classe (Q a 1ª, R a 2ª): começa a mirar — o círculo (ou a linha) segue o mouse e
+   * soltar a tecla usa. Sem mouse (no celular), usa na hora, mirando sozinha.
+   */
+  private startAim(index: number, now: number): void {
+    const skill = this.classSkillAt(index);
+    if (!skill) {
+      const cls = this.classes.find((c) => c.id === this.hero.class);
+      const name = cls?.skills[index]?.name;
+      this.toast.show(!this.hero.class ? 'Escolha a sua classe nas Habilidades (K)' : name ? `Ponha um ponto em ${name}: abra as Habilidades (K)` : 'Esta tecla ainda não tem habilidade');
+      return;
+    }
+    if (this.aiming || !this.castable(skill, now)) return;
+    if (!this.mouse || this.usingTouch) {
+      this.castAuto(skill, now);
+      return;
+    }
+    this.aiming = skill;
+    this.updateAim();
+  }
+
+  /**
+   * Onde a habilidade vai, mirando no mouse: a Chuva, o ponto do chão apontado (trazido para dentro do alcance); a
+   * Flecha, o fim do voo na direção do mouse.
+   */
+  private aimSpot(skill: ClassSkillInfo): Point | null {
+    if (!this.mouse || !this.view || !this.map) return null;
+    const feet = this.myFeet();
+    // com o mouse em cima de um bicho (no corpo dele), mira no pé dele: é para onde quem joga está olhando
+    const hovered = this.actorAtScreen(this.mouse.x, this.mouse.y, 'monster');
+    const pointed = (hovered !== null ? this.drawnFeet(hovered) : null) ?? this.view.toWorld(this.mouse.x, this.mouse.y);
+    if (skill.kind === 'flecha') {
+      const angle = Math.hypot(pointed.x - feet.x, pointed.y - feet.y) > 0.01 ? aimAngle(feet, pointed) : (this.myAngle * Math.PI) / 180;
+      return { x: feet.x + Math.cos(angle) * skill.range, y: feet.y + Math.sin(angle) * skill.range };
+    }
+    const aimed = castPoint(feet, pointed, skill.range);
+    return { x: Math.max(0, Math.min(this.map.width, aimed.x)), y: Math.max(0, Math.min(this.map.height, aimed.y)) };
+  }
+
+  /** A cada quadro, mirando: o círculo (ou a linha da flecha) vai para onde o mouse aponta. */
+  private updateAim(): void {
+    const skill = this.aiming;
+    if (!skill) return;
+    const spot = this.aimSpot(skill);
+    const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
+    if (!spot || !numbers || this.dead) {
+      this.cancelAim();
+      return;
+    }
+    const line = skill.kind === 'flecha';
+    this.combat.setAim({ from: this.myFeet(), x: spot.x, y: spot.y, r: line ? skill.width : numbers.radius, line });
+  }
+
+  /** Soltou a tecla: usa onde o círculo está. */
+  private releaseAim(now: number): void {
+    const skill = this.aiming;
+    if (!skill) return;
+    const spot = this.aimSpot(skill);
+    this.cancelAim();
+    if (spot) this.castAt(skill, spot, now);
+  }
+
+  private cancelAim(): void {
+    this.aiming = null;
+    this.combat.setAim(null);
+  }
+
+  /** Usa mirando sozinha (botão da barra, celular): onde pega mais bichos. Sem bicho ao alcance, avisa. */
+  private castAuto(skill: ClassSkillInfo, now: number): void {
+    const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
+    if (!numbers || !this.castable(skill, now)) return;
+    const spot = skill.kind === 'flecha' ? this.bestArrowSpot(skill.range, skill.width) : this.bestRainSpot(skill.range, numbers.radius);
+    if (!spot) {
+      this.toast.show('Nenhum bicho ao alcance');
+      return;
+    }
+    this.castAt(skill, spot, now);
+  }
+
+  /**
+   * Para a Flecha Ancestral: o pé do monstro (até `range` metros) cuja direção pega mais monstros na linha (empate: o
+   * mais perto).
+   */
+  private bestArrowSpot(range: number, width: number): Point | null {
+    const me = this.myFeet();
+    const monsters = [...this.entities.values()].filter((e) => e.kind === 'monster').map((e) => this.drawnFeet(e.id) ?? feetAt(e.x, e.y));
+    let best: Point | null = null;
+    let bestCount = 0;
+    let bestDistance = Infinity;
+    for (const spot of monsters) {
+      const distance = Math.hypot(spot.x - me.x, spot.y - me.y);
+      if (distance > range || distance < 0.01) continue;
+      const end = { x: me.x + ((spot.x - me.x) / distance) * range, y: me.y + ((spot.y - me.y) / distance) * range };
+      const count = monsters.filter((m) => distanceToSegment(m, me, end) <= width).length;
+      if (count > bestCount || (count === bestCount && distance < bestDistance)) {
+        best = spot;
+        bestCount = count;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /** O pé do monstro onde um círculo deste raio pega mais monstros, até `range` metros de você (empate: o mais perto). */
+  private bestRainSpot(range: number, radius: number): Point | null {
+    const me = this.myFeet();
+    const monsters = [...this.entities.values()].filter((e) => e.kind === 'monster').map((e) => this.drawnFeet(e.id) ?? feetAt(e.x, e.y));
+    let best: Point | null = null;
+    let bestCount = 0;
+    let bestDistance = Infinity;
+    for (const spot of monsters) {
+      const distance = Math.hypot(spot.x - me.x, spot.y - me.y);
+      if (distance > range) continue;
+      const count = monsters.filter((m) => Math.hypot(m.x - spot.x, m.y - spot.y) <= radius).length;
+      if (count > bestCount || (count === bestCount && distance < bestDistance)) {
+        best = spot;
+        bestCount = count;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Usa a habilidade no ponto: o pedido vai para o servidor (que confere tudo e faz cair de verdade) e o desenho já
+   * começa aqui (as flechas subindo, o círculo no chão e o som), sem esperar a resposta.
+   */
+  private castAt(skill: ClassSkillInfo, point: Point, now: number): void {
+    const rank = this.hero.skills[skill.id] ?? 0;
+    const numbers = skillPoint(skill, rank);
+    if (!numbers || !this.castable(skill, now)) return;
+    const feet = this.myFeet();
+    this.cancelCharge(); // usar a habilidade solta a pedra que estava puxando (o servidor faz o mesmo)
+    const readyAt = now + skill.cooldownMs;
+    this.castReadyAt.set(skill.id, readyAt);
+    if (this.barSkill()?.id === skill.id) this.actionBar.setCooldown('skill0', readyAt, skill.cooldownMs);
+    this.extraButtons.setCooldown(skill.id, readyAt, skill.cooldownMs);
+    if (skill.kind === 'flecha') {
+      // a Flecha Ancestral sai como um tiro (o desenho já voa daqui; o servidor liga pelo número `cid`)
+      const angle = Math.hypot(point.x - feet.x, point.y - feet.y) > 0.01 ? aimAngle(feet, point) : (this.myAngle * Math.PI) / 180;
+      const cid = ++this.shotCid;
+      this.conn.send({ t: 'cast', id: skill.id, x: round3(point.x), y: round3(point.y), cid });
+      const origin = shotOriginOfFeet(feet.x, feet.y);
+      this.combat.myShot(cid, origin.x, origin.y, angle, skill.speed, skill.range, now, 'ancestral');
+      this.faceAngle(toDegrees(angle));
+      this.view?.action?.(this.myId, 'shoot', toDegrees(angle));
+      this.sfx.play('spirit');
+      return;
+    }
+    const aimed = castPoint(feet, point, skill.range);
+    const spot = { x: Math.max(0, Math.min(this.map.width, aimed.x)), y: Math.max(0, Math.min(this.map.height, aimed.y)) };
+    this.conn.send({ t: 'cast', id: skill.id, x: round3(spot.x), y: round3(spot.y) });
+    if (spot.x !== feet.x || spot.y !== feet.y) {
+      const degrees = toDegrees(aimAngle(feet, spot));
+      this.faceAngle(degrees);
+      this.view?.action?.(this.myId, 'shoot', degrees);
+    }
+    const kind = this.shot().kind;
+    this.combat.rain(feet, spot.x, spot.y, numbers.radius, numbers.arrows, rank, skill.delayMs, kind, now);
+    this.sfx.volley(skill.delayMs, numbers.arrows, kind === 'pedra');
+  }
+
   private onShot(msg: Extract<ServerMsg, { t: 'shot' }>): void {
     if (msg.by === this.myId && msg.cid !== undefined) {
       this.combat.linkMyShot(msg.cid, msg.id, msg.range); // o seu tiro já está voando desde o clique
@@ -1620,6 +1903,7 @@ class NewWorld implements NewWorldGame {
     }
     const fromMonster = this.entities.get(msg.by)?.kind === 'monster';
     this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, performance.now());
+    if (msg.kind === 'ancestral') this.sfx.play('spirit'); // outro jogador soltou a Flecha Ancestral
     this.view?.action?.(msg.by, 'shoot', toDegrees(msg.a));
   }
 
@@ -1815,6 +2099,7 @@ class NewWorld implements NewWorldGame {
     this.hud.setXp(stats.xp, stats.xpNext, stats.level);
     this.myLevel = stats.level;
     this.bag?.setStats(stats);
+    this.skillsPanel?.update(this.classes, this.hero, stats.level); // o nível novo pode liberar um ponto
     if (this.talk) this.refreshQuests(); // nível novo pode liberar missões
   }
 
@@ -2015,7 +2300,12 @@ class NewWorld implements NewWorldGame {
         break;
       case 'shot_end':
         // sem acertar ninguém, a flecha crava onde o servidor diz que parou: no chão ou no que segurou (o tronco)
-        this.combat.endShot(msg.id, msg.hit, msg.x !== undefined && msg.y !== undefined ? { x: msg.x, y: msg.y, ...(msg.on ? { on: msg.on } : {}) } : undefined);
+        this.combat.endShot(
+          msg.id,
+          msg.hit,
+          msg.x !== undefined && msg.y !== undefined ? { x: msg.x, y: msg.y, ...(msg.on ? { on: msg.on } : {}), ...(msg.burst ? { burst: msg.burst } : {}) } : undefined,
+        );
+        if (msg.burst) this.sfx.play('burst'); // a Flecha Ancestral explodiu no fim
         break;
       case 'fx': {
         if (this.entities.get(msg.id)?.kind === 'pet') {
@@ -2024,6 +2314,11 @@ class NewWorld implements NewWorldGame {
         }
         if (msg.kind === 'jump') {
           this.view?.action?.(msg.id, 'jump'); // o pulo de outro jogador: só o desenho
+          break;
+        }
+        if (msg.kind === 'mark') {
+          // a Flecha Ancestral marcou o bicho: a runa em cima dele enquanto durar
+          this.combat.mark(msg.id, msg.ms ?? 0, performance.now());
           break;
         }
         if (msg.kind === 'dizzy' || msg.kind === 'dodge' || msg.kind === 'vanish') {
@@ -2092,10 +2387,30 @@ class NewWorld implements NewWorldGame {
         if (msg.n === DASH_SLOT) {
           this.dashReadyAt = now + msg.ms;
           this.actionBar.setCooldown('dash', this.dashReadyAt, msg.ms);
-        } else if (msg.n >= 0 && msg.n < SKILLS.length) {
+        } else if (msg.n === FOLEGO) {
           this.skillReadyAt[msg.n] = now + msg.ms;
-          this.actionBar.setCooldown(`skill${msg.n}` as ActionSlot, this.skillReadyAt[msg.n]!, msg.ms);
+          this.actionBar.setCooldown('skill1', this.skillReadyAt[msg.n]!, msg.ms);
         }
+        break;
+      }
+      case 'scd': {
+        // a recarga da habilidade da classe (a conta do servidor vale)
+        const now = performance.now();
+        this.castReadyAt.set(msg.s, now + msg.ms);
+        if (this.barSkill()?.id === msg.s) this.actionBar.setCooldown('skill0', now + msg.ms, msg.ms);
+        this.extraButtons.setCooldown(msg.s, now + msg.ms, msg.ms);
+        break;
+      }
+      case 'hero':
+        this.setHero(msg.hero);
+        break;
+      case 'cast': {
+        // outro jogador usou a Chuva: sobe dele e cai no círculo (você vê e ouve)
+        const now = performance.now();
+        const from = this.drawnFeet(msg.id) ?? { x: msg.x, y: msg.y };
+        this.combat.rain(from, msg.x, msg.y, msg.r, msg.n, msg.p, msg.ms, msg.kind, now);
+        if (msg.x !== from.x || msg.y !== from.y) this.view?.action?.(msg.id, 'shoot', toDegrees(aimAngle(from, msg)));
+        this.sfx.volley(msg.ms, msg.n, msg.kind === 'pedra');
         break;
       }
       case 'fail':
@@ -2107,11 +2422,8 @@ class NewWorld implements NewWorldGame {
         else if (msg.reason === 'dead') this.toast.show('Você está desmaiado');
         else if (msg.reason === 'full_hp') {
           this.toast.show('Sua vida já está cheia');
-          SKILLS.forEach((skill, i) => {
-            if (skill.kind !== 'heal') return;
-            this.skillReadyAt[i] = 0;
-            this.actionBar.setCooldown(`skill${i}` as ActionSlot, 0, 0);
-          });
+          this.skillReadyAt[FOLEGO] = 0;
+          this.actionBar.setCooldown('skill1', 0, 0);
         }
         break;
       case 'drop': {
