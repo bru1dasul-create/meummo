@@ -1,10 +1,12 @@
 // O relógio do dia e noite do servidor: um só para todos os mapas (o reino cria e passa para cada mundo). Ele anda com
 // o relógio de verdade (Date.now), então continua de onde estava depois que o servidor reinicia; nos testes, com o
-// relógio falso. O administrador pode virar para o começo do dia ou da noite (menu ADM), para testar sem esperar.
+// relógio falso. O administrador pode virar para o começo do dia, da tarde (o anoitecer) ou da noite (menu ADM), para
+// testar sem esperar.
 
-import { cyclePosition, isNightAt, type DayNightLengths } from '../shared/dayNight';
+import { cyclePosition, isNightAt, twilightMs, type DayNightLengths } from '../shared/dayNight';
 
-export type DayPhase = 'dia' | 'noite';
+/** 'tarde' = o começo do anoitecer: escurece devagar até a noite (para ver o pôr do sol sem esperar o dia todo). */
+export type DayPhase = 'dia' | 'tarde' | 'noite';
 
 export class DayNightClock {
   /** O quanto o administrador adiantou ou voltou o relógio (ms). */
@@ -25,9 +27,9 @@ export class DayNightClock {
     return isNightAt(this.position(), this.rules);
   }
 
-  /** Vira para o começo do dia ou da noite (vale para todos os mapas). */
+  /** Vira para o começo do dia, do anoitecer ou da noite (vale para todos os mapas). */
   turnTo(phase: DayPhase): void {
-    const target = phase === 'dia' ? 0 : this.rules.dayMs;
+    const target = phase === 'dia' ? 0 : phase === 'tarde' ? this.rules.dayMs - twilightMs(this.rules) : this.rules.dayMs;
     this.offset += target - this.position();
   }
 }

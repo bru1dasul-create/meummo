@@ -112,7 +112,7 @@ export type GmCommand =
   | { do: 'tp'; x: number; y: number }
   | { do: 'heal' }
   | { do: 'npc'; npc: string } // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
-  | { do: 'time'; phase: 'dia' | 'noite' } // vira o relógio para o começo do dia ou da noite (todos os mapas)
+  | { do: 'time'; phase: 'dia' | 'tarde' | 'noite' } // vira o relógio para o começo do dia, do anoitecer ou da noite (todos os mapas)
   | { do: 'wind'; level: WindLevel }; // muda o vento na hora (todos os mapas)
 
 /** Como está o vento: calmo, brisa ou forte. */

@@ -88,6 +88,7 @@ import { Inventory } from './inventory';
 import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type PierceShot, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { DayNightClock } from './dayNight';
+import { twilightMs } from '../shared/dayNight';
 import { decodeGrid, encodeGrid, revealAround, type ExploreGrid } from '../shared/explore';
 import { WindWeather } from './wind';
 import type { NpcDef, NpcShop } from './npcs';
@@ -689,7 +690,13 @@ export class World {
         this.dayNight.turnTo(cmd.phase);
         this.links.announce({ t: 'time', at: Math.round(this.dayNight.position()) });
         this.updateNight();
-        say(cmd.phase === 'noite' ? 'virou noite (os bichos ficam mais fortes).' : 'virou dia.');
+        say(
+          cmd.phase === 'noite'
+            ? 'virou noite (os bichos ficam mais fortes).'
+            : cmd.phase === 'tarde'
+              ? `virou tarde (escurece em ${Math.round(twilightMs(this.combat) / 1000)} s e vem a noite).`
+              : 'virou dia.',
+        );
         this.log(`ADM ${player.name}: virou ${cmd.phase}`);
         return;
       }
