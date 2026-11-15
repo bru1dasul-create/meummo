@@ -819,6 +819,18 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   `arco-alvo.cjs` (scratchpad), na Figueira (36,5; 38).
 
 
+### As 6 etapas de 15/11 (com o "pode" do dono: "pode, seguir para terminar as 6 etapas"; cada uma vai para a main)
+1. **Mini mapa e mapa do M** (feito): o visual do `src/client/novo/mapWindow.ts` passou para a [arte] (a [estrutura]
+   fica com a grade do explorado, o `draw(picture, me, markers)` e os ganchos). `TURN` = 45° (no sentido do relógio,
+   como a câmera: o norte fica para cima e para a direita); `MapPicture.draw(..., turn)` gira o chão e a neblina em volta
+   do meio de `dest` e põe os NPCs, os ! e ?, os nomes e você (o ponto dourado pulsando, 1,6 s) em pé com o `at()`
+   girado; `FOG` 0,62. `Minimap`: canvas de 172 px (PC; 100 px no celular), o mapa num círculo e o anel pronto
+   (`paintRing`: madeira trançada, a faixa vermelha tribal à esquerda como a do retrato, folhas e o N), refeito só
+   quando muda o tamanho. `MapWindow`: o canvas é a caixa do mapa girado (um losango), a moldura da mochila (canto
+   tribal). Conferir: `minimapa.cjs` (scratchpad).
+2. Caçador, parte rápida. 3. Os quatro bichos novos. 4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia
+   e noite.
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.

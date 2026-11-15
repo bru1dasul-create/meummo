@@ -574,8 +574,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
   procura e, quando existir, ela entra no lugar do desenho provisório. A do Capão na `main` em 15/11 (o gerador escreve
   as duas junto com o mapa, por `scripts/mapa-de-cima.ts`; os nomes saem em ordem de importância)
-- [ ] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
-  e talvez girar a imagem para bater com a câmera
+- [x] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
+  e talvez girar a imagem para bater com a câmera (15/11; o dono achou o provisório "horrível"): os dois giram 45° como
+  a câmera (a rua que na tela corre de lado corre de lado no mapa), com os nomes e os sinais em pé; você é um ponto
+  dourado com contorno branco, pulsando (os NPCs são verde-água); a neblina escurece sem esconder o contorno; o mini
+  mapa é redondo, com anel de madeira trançada, a faixa vermelha tribal, folhas e o N (PC: embaixo da mochila; celular:
+  menor, embaixo do retrato); o mapa do M é um losango na moldura da mochila (o visual do `mapWindow.ts` é da [arte])
 - [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
   para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
   e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
