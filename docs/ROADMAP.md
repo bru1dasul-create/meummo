@@ -697,7 +697,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   `hawkTags.ts`), afastar a câmera enquanto valem (hoje a view trava no zoom 0,7), o quadrado da 3ª habilidade na
   barra (hoje um botão provisório em cima do 6º quadrado) e o `T` no "Como jogar"
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
-  transformação, corpo a corpo)
+  transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
+  (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova
+  (níveis 5 a 10). Combinado para quando voltar: o espírito escolhido na janela (onça ou águia), ele pode apanhar e
+  sumir, e a ordem águia → onça → Fúria
 - [ ] **[dono]** Depois: a escolha da classe virar o ritual na figueira (decisão de 12/11); trocar de classe; recomeçar
   os pontos custar ouro?
 
