@@ -237,7 +237,7 @@
           decals.push({ c: eyeC, n: eyeN, u: fh, v: ev, ru: 1.5 * S, rv: 0.3 * S, color: '#1b100d' });
           continue;
         }
-        decals.push({ c: eyeC, n: eyeN, u: fh, v: ev, ru: 1.55 * S, rv: 1.35 * S, color: EYE, glow: 'rgba(255, 220, 90, 0.5)' });
+        decals.push({ c: eyeC, n: eyeN, u: fh, v: ev, ru: 1.55 * S, rv: 1.35 * S, color: C.eyeColor ? C.eyeColor(EYE) : EYE, glow: C.eyeGlow ? C.eyeGlow('rgba(255, 220, 90, 0.5)') : 'rgba(255, 220, 90, 0.5)' });
         decals.push({ c: M.add(eyeC, M.scale(eyeN, 0.05)), n: eyeN, u: fh, v: ev, ru: 0.32 * S, rv: 1.1 * S, color: '#1b100d' });
       }
       groups.push({ balls: headBalls, ref: hp, bias: 0, body: true, decals });

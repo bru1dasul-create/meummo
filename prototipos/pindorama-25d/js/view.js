@@ -431,6 +431,18 @@
       if (this.world && this.world.setWind) this.world.setWind(strength, angle);
     }
 
+    /**
+     * Dia e noite (o motor manda a cada mudança): `light` de 1 (dia) a 0 (noite fechada), com o anoitecer e o amanhecer
+     * suaves; `night` = é noite (os bichos ficam mais fortes: os olhos deles ficam vermelhos). O escuro azul, o tom
+     * laranja do pôr do sol e as luzes acesas (postes, fogueiras, as portas das casas com gente, o boitatá) ficam no
+     * `_drawAtmosphere`.
+     */
+    setTimeOfDay(time) {
+      this.daylight = M.clamp(time && typeof time.light === 'number' ? time.light : 1, 0, 1);
+      this.isNight = !!(time && time.night);
+      if (PD.creatures && PD.creatures.eyes) PD.creatures.eyes.night = this.isNight;
+    }
+
     setZoom(f) {
       this.zoomUser = M.clamp(f, ZOOM.min, ZOOM.max);
       this._resize();
@@ -537,7 +549,12 @@
       const atm = this.atm || (this.atm = { ...want });
       atm.dark = M.damp(atm.dark, want.dark, 1.2, dt);
       atm.fog = M.damp(atm.fog, want.fog, 1.2, dt);
-      if (atm.dark < 0.01 && atm.fog < 0.01) return;
+      // a noite (setTimeOfDay): o quanto escureceu, suave mesmo quando vira de uma vez (o menu ADM)
+      const nightWant = this.daylight == null ? 0 : 1 - this.daylight;
+      atm.night = M.damp(atm.night ?? nightWant, nightWant, 1.6, dt);
+      // o pôr do sol (e o nascer): um tom laranja quente no meio do caminho entre o dia e a noite
+      const dusk = this.daylight == null ? 0 : Math.max(0, 1 - Math.abs(1 - atm.night - 0.55) / 0.32);
+      if (atm.dark < 0.01 && atm.fog < 0.01 && atm.night < 0.01 && dusk < 0.01) return;
       const W = cam.viewW, H = cam.viewH;
       const pxm = 100 * cam.zoom; // px por metro (no chão, de lado)
       const c = hero ? this.toScreen(hero.ch.pos.x / 100, hero.ch.pos.y / 100, 1) : { x: W / 2, y: H / 2 };
@@ -598,7 +615,21 @@
         }
         fl.globalAlpha = 1;
       }
-      this._drawGlows(fl, Q, W, H, pxm, Math.max(atm.dark, atm.fog * 0.6));
+      if (dusk >= 0.01) {
+        fl.fillStyle = `rgba(255, 126, 54, ${(0.11 * dusk).toFixed(3)})`;
+        fl.fillRect(0, 0, lw, lh);
+      }
+      if (atm.night >= 0.01) {
+        // a noite: azul frio por cima de tudo, mais fraco em volta do herói (dá para ver quem chega)
+        const a = Math.min(0.78, atm.night * 0.78);
+        const g = fl.createRadialGradient(c.x / Q, c.y / Q, (pxm * 1.6) / Q, c.x / Q, c.y / Q, (pxm * 8.5) / Q);
+        g.addColorStop(0, `rgba(6, 12, 34, ${a * 0.5})`);
+        g.addColorStop(1, `rgba(6, 12, 34, ${a})`);
+        fl.fillStyle = g;
+        fl.fillRect(0, 0, lw, lh);
+      }
+      this._drawGlows(fl, Q, W, H, pxm, Math.max(atm.dark, atm.fog * 0.6, atm.night));
+      if (atm.night >= 0.05) this._drawNightLights(fl, Q, W, H, pxm, atm.night);
       const dpr = cam.dpr;
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -715,6 +746,83 @@
         fl.globalCompositeOperation = 'source-over';
         fl.globalAlpha = Math.min(1, g.k * k * breathe * 1.1);
         fl.drawImage(sprite(g.color), x, y, w, h);
+      }
+      fl.globalCompositeOperation = 'source-over';
+      fl.globalAlpha = 1;
+    }
+
+    /**
+     * As luzes acesas à noite (na mesma camada do escuro, como os brilhos da mata): o poste aceso faz uma poça de luz
+     * no chão e um halo na lâmpada (os `apagado` ficam apagados); a fogueira tremula; as casas com gente (e a Budega)
+     * deixam a luz quente sair pela porta; o filhote de boitatá ilumina em volta dele. Cada uma abre o escuro e tinge
+     * o ar da cor dela.
+     */
+    _nightSources() {
+      if (this._nightList) return this._nightList;
+      const out = [];
+      const map = this.map;
+      for (const p of map.poles || []) if (p.lamp) out.push({ x: p.x, y: p.y, z: 0, r: 260, color: p.light || '#ffe9a6', k: 0.75, head: p.h });
+      for (const p of map.props || []) {
+        if (p.kind === 'poste-praca' && !p.off) out.push({ x: p.x, y: p.y, z: 0, r: 220, color: p.light || '#ffe9a6', k: 0.7, head: p.h });
+        if (p.kind === 'fogueira') out.push({ x: p.x, y: p.y, z: 0, r: 240, color: p.light || '#ffb347', k: 0.9, flicker: true });
+      }
+      for (const b of map.houses || []) {
+        if (!(b.resident || b.shop || b.interior) || b.abandoned) continue;
+        const dx = b.door ? (b.door.from + b.door.to) / 2 : (b.x0 + b.x1) / 2;
+        out.push({ x: dx, y: b.y1 + 50, z: 0, r: 150, color: '#ffd58a', k: 0.45 });
+      }
+      this._nightList = out;
+      return out;
+    }
+
+    _drawNightLights(fl, Q, W, H, pxm, k) {
+      const list = this._nightSources().slice();
+      // quem tem luz própria e anda: o filhote de boitatá (aceso)
+      for (const a of this.actors.values()) {
+        if (a.type !== 'filhote_boitata' || !a.creature || a.creature.dying !== null) continue;
+        const lit = a.creature._lit ? a.creature._lit() : 1;
+        if (lit > 0.05) list.push({ x: a.creature.pos.x, y: a.creature.pos.y, z: 0, r: 240, color: '#ff9a3a', k: 0.85 * lit, flicker: true });
+      }
+      if (!list.length) return;
+      const sprites = this._glowSprites || (this._glowSprites = new Map());
+      const sprite = (color) => {
+        let sp = sprites.get(color);
+        if (sp) return sp;
+        sp = document.createElement('canvas');
+        sp.width = sp.height = 64;
+        const g = sp.getContext('2d');
+        const n = parseInt(color.slice(1), 16);
+        const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+        const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gr.addColorStop(0, `rgba(${rgb}, 1)`);
+        gr.addColorStop(0.4, `rgba(${rgb}, 0.5)`);
+        gr.addColorStop(1, `rgba(${rgb}, 0)`);
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 64, 64);
+        sprites.set(color, sp);
+        return sp;
+      };
+      const t = this.world.time || 0;
+      const sinP = this.cam.sinP || 0.6;
+      const put = (x, y, z, r, color, kk) => {
+        const p = this.toScreen(x / 100, y / 100, z / 100);
+        const rx = (r / 100) * pxm;
+        const ry = rx * Math.max(0.55, sinP);
+        if (p.x < -rx || p.x > W + rx || p.y < -ry || p.y > H + ry) return;
+        const bx = (p.x - rx) / Q, by = (p.y - ry) / Q, bw = (2 * rx) / Q, bh = (2 * ry) / Q;
+        // abre o escuro só em parte (a poça de luz não vira dia) e tinge com a cor da luz
+        fl.globalCompositeOperation = 'destination-out';
+        fl.globalAlpha = Math.min(0.85, kk * 0.9);
+        fl.drawImage(sprite('#ffffff'), bx, by, bw, bh);
+        fl.globalCompositeOperation = 'source-over';
+        fl.globalAlpha = Math.min(1, kk * 0.55);
+        fl.drawImage(sprite(color), bx, by, bw, bh);
+      };
+      for (const L of list) {
+        const flick = L.flicker ? 0.85 + 0.15 * Math.sin(t * 9 + L.x * 0.01) * Math.sin(t * 5.3 + L.y * 0.02) : 1;
+        put(L.x, L.y, L.z, L.r * flick, L.color, L.k * k * flick);
+        // o halo da lâmpada lá em cima
+        if (L.head) put(L.x, L.y, L.head, 70, '#fff3c8', 0.9 * k);
       }
       fl.globalCompositeOperation = 'source-over';
       fl.globalAlpha = 1;

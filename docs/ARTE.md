@@ -867,7 +867,16 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    (scratchpad; `NOME` = um personagem que já existe, porque criar muitos seguidos esbarra no limite do servidor;
    `ALTURA`/`LARG` para a janela; `CIMA` para o recorte), por exemplo a clareira (30, 150), a cachoeira (18, 157) e o
    posto (83, 141).
-6. Dia e noite.
+6. **Dia e noite** (feito): no view.js, `setTimeOfDay` guarda `daylight`/`isNight` e liga o `PD.creatures.eyes.night`
+   (sagui e jararaca passaram a usar o `C.eyeColor`/`C.eyeGlow` como os quatro novos; capivara e Joaquim não: são
+   bichos mansos). No `_drawAtmosphere`, na mesma camada 4× menor do escuro da mata: `atm.night` amortecido (1,6/s; o
+   "Virar noite" do ADM pula de uma vez), o azul (6, 12, 34) até 0,78 com o miolo de 1,6 a 8,5 m em volta do herói, e o
+   laranja do pôr do sol (pico na luz 0,55). `_nightSources` (feito uma vez: postes com lâmpada, `poste-praca` acesos,
+   fogueiras e as portas das casas com `morador`/comércio/interior, menos as abandonadas) e o boitatá aceso a cada
+   quadro; `_drawNightLights` abre o escuro em parte (até 0,85) e tinge com a cor da luz. Lembrete: o "Virar dia" do
+   ADM começa no amanhecer (a luz sobe em 60 s, o `TWILIGHT_MS`), e o anoitecer de verdade só acontece no fim do dia
+   (o ADM pula direto para a noite). Conferir: `noite-jogo.cjs` e `noite-vila.cjs` (scratchpad); o pôr do sol na foto
+   é forçado com `PD.view.setTimeOfDay({ light: 0.5, night: false })`.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

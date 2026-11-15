@@ -292,7 +292,7 @@
           out.push({ ...eye, ...tg, ru: 0.19 * rh, rv: 0.035 * rh, color: '#1b100d' });
           continue;
         }
-        out.push({ ...eye, ...tg, ru: 0.2 * rh, rv: 0.2 * rh, color: EYE, glow: EYE_GLOW });
+        out.push({ ...eye, ...tg, ru: 0.2 * rh, rv: 0.2 * rh, color: C.eyeColor ? C.eyeColor(EYE) : EYE, glow: C.eyeGlow ? C.eyeGlow(EYE_GLOW) : EYE_GLOW });
         out.push({ ...eye, ...tg, c: M.add(eye.c, M.scale(eye.n, 0.01 * rh)), ru: 0.05 * rh, rv: 0.15 * rh, color: '#1b100d' });
         out.push({ ...eye, ...tg, c: M.add(eye.c, M.add(M.scale(tg.u, -0.07 * rh), M.scale(tg.v, 0.08 * rh))), ru: 0.045 * rh, rv: 0.045 * rh, color: '#fffbe8' });
       }

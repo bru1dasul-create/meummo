@@ -603,8 +603,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   para todos os mapas, preso ao relógio de verdade; à noite os bichos com 25% a mais de vida e dano e 50% a mais de XP
   e ouro; painel (Combate → Dia e noite); menu ADM "Virar dia / Virar noite"; aviso ao anoitecer e amanhecer; o som da
   mata troca os passarinhos pelos grilos e a coruja; o desenho provisório escurece (protocolo 33)
-- [ ] **[arte]** O desenho da noite: escurecer com `view.setTimeOfDay({ light, night })` (luz de 1 a 0, o anoitecer e o
-  amanhecer suaves) e os olhos vermelhos em todos os bichos enquanto `night`; lampiões acesos (o [mundo] marca)
+- [x] **[arte]** O desenho da noite (15/11): o `PD.View.setTimeOfDay({ light, night })` (view.js) escurece a tela com um
+  azul frio (mais fraco em volta do herói, para ver quem chega), passa um laranja quente no meio do anoitecer e do
+  amanhecer e acende as luzes: os postes (poça de luz no chão e o halo na lâmpada; os `apagado` ficam apagados), a
+  fogueira tremendo, a luz saindo pela porta das casas com gente e da Budega, e o filhote de boitatá iluminando em
+  volta dele; os cogumelos e os véus brilham mais. Os olhos dos bichos (sagui, jararaca e os quatro novos) ficam
+  vermelhos enquanto `night` (`PD.creatures.eyes.night`). Lampião novo é só o [mundo] marcar um `poste`/`poste-praca`
+  com `luz` (ou uma `fogueira`)
 - [x] **[estrutura]** Drop de itens nos bichos (14/11, escolha do dono: "no chão, como o ouro"): os itens caem em volta do
   bicho, com o desenho de cada um (caindo com quique, "×2", brilho no raro e facho de luz no lendário), e você pega
   passando por cima; ficam 2 minutos; com a mochila cheia, esperam no chão
