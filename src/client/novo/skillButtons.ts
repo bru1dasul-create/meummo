@@ -47,13 +47,14 @@ export class ExtraSkillButtons {
     this.buttons = [];
     const root = document.getElementById('actions');
     if (!root) return;
-    for (const def of defs) {
+    defs.forEach((def, i) => {
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'action extra-skill';
       el.tabIndex = -1;
       el.dataset.slot = 'class-extra';
       el.dataset.skill = def.id;
+      el.dataset.index = String(i + 1); // 1 = a 2ª habilidade da classe (o R), 2 = a 3ª (o T): para o CSS da [arte] achar
       el.title = `${def.name} (${def.key})`;
       const art = document.createElement('span');
       art.className = 'art';
@@ -91,7 +92,7 @@ export class ExtraSkillButtons {
       root.append(el);
       const ready = readyAt(def.id);
       this.buttons.push({ def, el, cd, secs, readyAt: ready.at, duration: ready.duration, shownSecs: 0 });
-    }
+    });
   }
 
   setCooldown(id: string, readyAt: number, duration: number): void {
