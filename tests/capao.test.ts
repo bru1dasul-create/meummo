@@ -366,7 +366,7 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
   /** A frente da porta de enrolar da Budega, do lado da praça: fica livre. */
   const COUNTER = { x: 66.5, y: 55.2 };
   /** O pé da Xiovanna, atrás do caixa (a [estrutura] põe o mesmo número no data/npcs.json). */
-  const XIOVANNA = { x: 66, y: 50.55 };
+  const XIOVANNA = { x: 66.6, y: 50.55 };
   /** Onde o pé do herói para quando ele toca nela (o jogo leva o pé até 1 m ao sul do pé do NPC): na frente do caixa. */
   const CUSTOMER = { x: XIOVANNA.x, y: XIOVANNA.y + 1 };
 
@@ -511,11 +511,18 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
       const [x0, x1, y0, y1] = box(o);
       return x0 >= inside.x0 && x1 <= inside.x1 && y0 >= inside.y0 && y1 <= inside.y1;
     };
-    const FURNITURE = ['prateleira', 'geladeira', 'vitrine', 'balcao-vidro', 'balcao', 'freezer', 'parede-verde'];
-    expect(FURNITURE.map((t) => of(t).filter(inBudega).length)).toEqual([2, 2, 1, 1, 1, 1, 1]);
+    // (igual às imagens que o dono aprovou, docs/referencias/budega-maior-*.jpg: ele pediu de novo, "era pra ser parecido")
+    const FURNITURE = ['prateleira', 'geladeira', 'vitrine', 'balcao-vidro', 'balcao', 'freezer', 'parede-verde', 'ventilador', 'vaso'];
+    expect(FURNITURE.map((t) => of(t).filter(inBudega).length)).toEqual([2, 1, 1, 1, 2, 1, 1, 1, 1]);
     expect(of('engradado').filter(inBudega)).toHaveLength(0);
-    const caixa = of('balcao').find(inBudega)!;
-    expect(prop(caixa, 'caixa')).toBe(true);
+    // o caixa em L (a frente com a registradora e a volta até a parede do fundo) e a dracena no canto dele
+    expect(of('balcao').filter(inBudega).map((o) => prop(o, 'caixa') === true)).toEqual([true, false]);
+    expect(prop(of('vaso').find(inBudega)!, 'planta')).toBe('dracena');
+    // o freezer fica solto na frente das prateleiras da esquerda (como na imagem e na loja), não colado no caixa
+    const freezer = box(of('freezer').find(inBudega)!);
+    expect(freezer[1] < 64.85 && freezer[2] > 52).toBe(true);
+    // a vitrine é parte da frente (com o herói lá dentro, sai junto com a parede da frente)
+    expect(prop(of('vitrine').find(inBudega)!, 'frente')).toBe(true);
     const verde = of('parede-verde').find(inBudega)!;
     expect([prop(verde, 'logo'), prop(verde, 'neon'), prop(verde, 'flores')]).toEqual(['budega', true, 'amarelas']);
     expect(JSON.stringify(cenario.filter(inBudega)).toLowerCase()).not.toMatch(/tabac|cigarr|fumo|narguil/);
@@ -523,20 +530,19 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     // a vitrine mostra os produtos para a praça; o caixa e o freezer, para o freguês; o que fica na parede da esquerda,
     // para o leste; e a lousinha da calçada, para a praça
     const facing = (t: string) => of(t).filter(inBudega).map((o) => prop(o, 'olhando'));
-    expect([facing('vitrine'), facing('balcao'), facing('freezer')]).toEqual([[90], [90], [90]]);
-    expect(facing('geladeira').sort()).toEqual([0, 0]);
+    expect([facing('vitrine'), facing('balcao'), facing('freezer'), facing('geladeira')]).toEqual([[90], [90, 180], [90], [0]]);
     expect(prop(cenario.find((o) => o.type === 'lousa' && at(o).x > 60 && at(o).x < 69 && at(o).y > 54 && at(o).y < 56)!, 'olhando')).toBe(90);
     // as paredes têm 15 cm (a do fundo vai até a frente das prateleiras), e a frente é parede do lado da vitrine
     for (const x of [bx0 + 0.075, bx1 - 0.075]) for (let y = by0 + 0.5; y <= by1 - 0.25; y += 0.25) expect(footFree(x, y), `parede em (${x}, ${y})`).toBe(false);
     for (let x = bx0 + 0.5; x <= 64.6; x += 0.25) expect(footFree(x, by1 - 0.075), `frente em x = ${x}`).toBe(false);
     // da praça dá para entrar: a porta, o meio da loja, o corredor da esquerda, a frente da vitrine e o corredor do fundo
-    for (const [x, y] of [[66.5, 54.3], [66.5, 53.3], [61.65, 52.5], [63, 53], [62.75, 50.25], [64.4, 51]] as const) expect(reach(x, y), `(${x}, ${y})`).toBe(true);
+    for (const [x, y] of [[66.5, 54.3], [66.5, 53.3], [61.65, 52.5], [64.3, 53.2], [63.4, 51.95], [62.75, 50.25], [64.85, 51]] as const) expect(reach(x, y), `(${x}, ${y})`).toBe(true);
     // quem vai comprar para na frente do caixa, a 1 m dela: o pé cabe ali e dá para chegar
     expect(footFree(CUSTOMER.x, CUSTOMER.y - FOOT.h / 2)).toBe(true);
     expect(reachNear(CUSTOMER.x, CUSTOMER.y - FOOT.h / 2, 0.25)).toBe(true);
-    // atrás do caixa ninguém passa (fechado pela geladeira pequena, pelo caixa, pelo freezer e pelas paredes), mas é chão
-    // livre, e a Xiovanna cabe lá
-    for (const [x, y] of [[65.75, 50], [66.5, 49.9], [67.75, 50.1]] as const) {
+    // atrás do caixa ninguém passa (fechado pelo caixa em L, pela dracena e pelas paredes), mas é chão livre, e a
+    // Xiovanna cabe lá
+    for (const [x, y] of [[66.3, 50], [67, 49.9], [67.9, 50.1]] as const) {
       expect(footFree(x, y), `chão atrás do caixa (${x}, ${y})`).toBe(true);
       expect(reach(x, y), `atrás do caixa (${x}, ${y})`).toBe(false);
     }
