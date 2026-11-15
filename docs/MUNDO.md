@@ -88,9 +88,36 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   `-descanso` (o bando de data/bichos.json, da [estrutura], usa os dois). **O dono achou o mini mapa "horrível"** (15/11,
   ainda sem a imagem): o jeito dele (moldura, lugar, girar para bater com a câmera, a neblina) é da [arte] e da
   [estrutura]; do meu lado, dá para redesenhar a imagem num jeito mais de jogo, se ele quiser.
+- **A Budega maior, igual à de verdade (15/11, com as fotos do dono; aprovada: "ficou ótimo, lembre-se de colocar
+  interior com infestação da floresta"). Ramo `mundo/budega-maior`, esperando o desenho da [arte]; a Xiovanna no
+  lugar novo já vai junto (a [estrutura] autorizou a troca das duas linhas do `data/npcs.json` no mesmo commit):** de
+  5 × 3 m para 8 × 5,5 m no mesmo canto da praça (60,5 a 68,5 × 48,9 a 54,4), sem toldo: fachada
+  preta (`fachada: 'preta'`), moldura amarela (`moldura`), faixa de luz (`led`) e o escudo (`logo`); a vitrine à
+  esquerda e a porta de enrolar de 3 m à direita (`portaDe` 65, `portaAte` 68). Dentro: `piso` (`desenho: 'porcelanato'`,
+  `folhas`), duas `prateleira` pretas com nichos amarelos (`cor`, `nichos`, `cipo`), a `geladeira` de duas portas de
+  vidro no canto do fundo (`portas`, `vidro`, `cipo`), o `ventilador` na parede (`parede`, `dentro`), a `vitrine`
+  (fundo amarelo, `fundo`; `frente`: sai com a parede da frente quando o herói entra) atrás do vidro da frente, o
+  `balcao-vidro` dos doces no meio (`doces`), o caixa em L (dois `balcao` com `cor` e `faixa`: a frente com `caixa`,
+  50 cm de fundo, e a volta até a parede do fundo), a `dracena` no `vaso` do canto do caixa (`dentro`), a
+  `parede-verde` (grama com o escudo aceso, `neon`, e as flores amarelas) no fundo atrás do caixa (a câmera vê a parede
+  do fundo e a da esquerda; a da direita, não) e o `freezer` solto na frente das prateleiras da esquerda. **O
+  arranjo segue as duas imagens aprovadas** (`budega-maior-fachada.jpg` e `budega-maior-dentro.jpg`): o dono pediu de
+  novo, "era pra ser parecido". A Xiovanna fica atrás do caixa, em (66,6; 50,55), fechada pelo caixa em L, pela
+  dracena e pelas paredes; quem toca nela para 1 m ao sul, em (66,6; 51,55), e o pé cabe ali. A floresta entrando:
+  `cipoDentro` 0,7 e `musgoDentro`, cinco raízes, sete tufos de capim e duas samambaias. Na frente, como na imagem da
+  fachada: o `degrau` com `capacho` (chão), o `vaso` de `dracena` à esquerda da porta, a `lousa` (`cavalete`) à
+  direita e dois `caixote` (`fruta`: banana e laranja) na frente da vitrine, tudo encostado na fachada. Na praça: a fogueira foi para
+  (71,5; 56), as mesas para (62,4; 56,9) e (64,6; 58,3), a lixeira para a parede oeste, a árvore da praça ficou em
+  (77; 58) e ganhou um terceiro poste de luz em (71; 61,5), entre a praça e o campinho. **Regras novas:** as
+  bandeirinhas são desenhadas por cima de tudo, então nenhum varal pode passar, na tela, por cima da fachada nem de
+  quem está na porta (o varal do sul desce até o poste novo); e a copa da árvore da praça cobre, na tela, o telhado do
+  lado do caixa, mas com o herói lá dentro o jogo mostra só a casa (por isso o teste confere a porta, não o caixa).
+  Fotos (borradas: pessoas, telas, número da casa, placas, cartazes e telefones) e desenhos:
+  `docs/referencias/budega-real-*.jpg`, `budega-maior-fachada.jpg`, `budega-maior-dentro.jpg` e `budega-maior-planta.jpg`
+  (as duas imagens são o alvo do desenho; "Tabacaria", narguilé e marcas não entram no jogo).
 - **A floresta maior (14/11, planta aprovada: "pode seguir com a planta da floresta maior"; na `main` em 15/11, junto
-  com o desenho da [arte], 7ce727a, conferido por ela no jogo no PC e no celular).** O mapa passou de 96 × 120 para **96 × 180** (só para o sul; nada
-  muda de lugar). Planta: `docs/referencias/floresta-maior-planta.jpg`; conceitos: `floresta-maior-paineira.jpg` e
+  com o desenho da [arte], 7ce727a, conferido por ela no jogo no PC e no celular).** O mapa passou de 96 × 120 para
+  **96 × 180** (só para o sul; nada muda de lugar). Planta: `docs/referencias/floresta-maior-planta.jpg`; conceitos: `floresta-maior-paineira.jpg` e
   `floresta-maior-posto.jpg`. O que entrou: a **Clareira da Paineira** (32, 150; a `arvore` 'Paineira' de `especie:
   'paineira'` com `flores`, e o parquinho antigo: `parquinho` com `brinquedo` 'balanco' (só os dois pés seguram),
   'escorregador' e 'gira-gira'), a **Cachoeirinha** (o poço em 14,3; 159,5 e a `cachoeira` na ponta norte dele), as
@@ -276,7 +303,14 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
-- **[estrutura] (14/11):** as capivaras andando (os lugares já estão marcados em `pontos`).
+- **Budega maior (15/11):** a [arte] desenha, igual às imagens aprovadas, a fachada (preta, moldura amarela, faixa
+  de luz, a vitrine de fundo amarelo à esquerda e a porta de enrolar à direita, sem toldo), a `vitrine` (que sai com a
+  frente quando o herói entra), o `balcao-vidro`, o `freezer`, a `parede-verde`, o `ventilador`, a `prateleira` com
+  `cor`/`nichos`/`cipo`, a `geladeira` com `portas`/`vidro`/`cipo`, o caixa em L preto e amarelo, o `piso` porcelanato
+  com `folhas`, o `degrau` com `capacho`, a `lousa`, a `dracena` (no `vaso` de fora e no de dentro) e os `caixote` de
+  fruta. Hoje os tipos novos não aparecem (viram paredes invisíveis): só entra na `main` junto. Ao
+  juntar, avisar o dono (aviso da [estrutura]): se ele já mudou o lugar da Xiovanna pelo painel ou pelo menu ADM, esse
+  ajuste fica no `saves/ajustes.json` e vale por cima do arquivo; aí é só voltar o ajuste da Budega ao padrão no painel.
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois
