@@ -828,8 +828,12 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    (`paintRing`: madeira trançada, a faixa vermelha tribal à esquerda como a do retrato, folhas e o N), refeito só
    quando muda o tamanho. `MapWindow`: o canvas é a caixa do mapa girado (um losango), a moldura da mochila (canto
    tribal). Conferir: `minimapa.cjs` (scratchpad).
-2. Caçador, parte rápida. 3. Os quatro bichos novos. 4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia
-   e noite.
+2. **Caçador, parte rápida** (feito): os temas `ambar` e `espirito` e os 5 ícones em `paintedIcons.ts`
+   (`paintedSkillIcon(id)`, com `iconArrow`); o `skillIconUrl` da [estrutura] (que liberou) usa o pintado quando tem; o
+   `ActionDef.icon` e o `setLook(slot, { iconUrl })` no `ui.ts`; o "Como jogar". Conferir: `cacador.cjs` (scratchpad;
+   o personagem de teste com nível 6 e a missão `saguis_encantados` feita no banco de teste). Os quadrados a mais na
+   barra ficam para quando chegarem as outras habilidades.
+3. Os quatro bichos novos. 4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia e noite.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

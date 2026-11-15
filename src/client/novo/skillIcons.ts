@@ -1,6 +1,8 @@
 // Ícones PROVISÓRIOS das habilidades da classe (janela das Habilidades e barra), desenhados por código até a [arte]
 // pintar os de verdade (o mesmo id de data/classes.json). Cada um é um quadrado com um desenho simples em cima.
 
+import { paintedSkillIcon } from '../paintedIcons';
+
 const SIZE = 96;
 const urls = new Map<string, string>();
 
@@ -118,6 +120,9 @@ const PAINTERS: Record<string, { bg: [string, string]; paint: Painter }> = {
 
 /** O ícone (imagem em texto) da habilidade `id`; habilidade sem desenho ganha uma estrela. */
 export function skillIconUrl(id: string): string {
+  // o ícone pintado da [arte] (paintedIcons.ts), quando a habilidade já tem; senão, o provisório daqui
+  const painted = paintedSkillIcon(id);
+  if (painted) return painted;
   let url = urls.get(id);
   if (url) return url;
   const canvas = document.createElement('canvas');

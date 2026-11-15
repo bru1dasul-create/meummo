@@ -644,9 +644,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   **Chuva de Flechas** de ponta a ponta: segurar `Q` mira com um círculo e soltar usa (o botão e o celular miram
   sozinhos onde pega mais bichos); as flechas (pedras, com o estilingue) caem 0,45 s depois em todos do círculo, de
   cima (a casca do tatu-bola não segura); recarga 10 s. Desenho e ícones provisórios
-- [ ] **[arte]** Os ícones das 5 habilidades (o id de `data/classes.json`), o desenho da Chuva (flechas e pedras; muda
-  com 3 e com 5 pontos), a janela das Habilidades e o círculo da mira no estilo da HUD, o "Como jogar" com o `Q` e o
-  `K`, e mais quadrados na barra para as próximas habilidades
+- [x] **[arte]** Os ícones das 5 habilidades e o "Como jogar" (15/11): `paintedSkillIcon(id)` em `paintedIcons.ts` (a
+  Chuva de Flechas caindo no alvo, a Flecha Ancestral com a espiral do espírito, o olho dourado do gavião, a pegada da
+  onça espiritual e as três garras sobre as pintas), usados pelo `skillIconUrl` (janela e barra); o "Como jogar" com o
+  `Q` (mirar a Chuva), o `K` e o ✦ (Habilidades) e o `M` (mapa); no `ui.ts`, o jeito oficial de pôr o ícone no botão
+  (`ActionDef.icon`, ou `setLook(slot, { iconUrl })`) no lugar do remendo do `skill0`
+- [ ] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
+  da mira no estilo da HUD, e mais quadrados na barra quando chegarem as próximas habilidades
 - [ ] **[estrutura]** Flecha Ancestral (nível 6: a flecha do espírito, dano especial)
 - [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
