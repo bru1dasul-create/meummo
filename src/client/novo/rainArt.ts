@@ -46,13 +46,13 @@ export interface RainAimLook {
 }
 
 /** Quanto tempo as flechas ficam cravadas no chão (as pedras quicam e somem no mesmo tempo). */
-export const RAIN_LINGER_MS = 900;
+export const RAIN_LINGER_MS = 2200;
 /** Quanto tempo cada flecha leva caindo lá de cima. */
 const RAIN_FALL_MS = 240;
 /** A altura de onde caem (m). */
 const RAIN_HEIGHT = 7;
 /** Quanto dura o impacto no chão. */
-const IMPACT_MS = 420;
+const IMPACT_MS = 560;
 
 type RGB = readonly [number, number, number];
 
@@ -397,12 +397,32 @@ export function drawRainGround(ctx: CanvasRenderingContext2D, rain: RainLook, no
   if (since >= 0 && since < IMPACT_MS) {
     const k = since / IMPACT_MS;
     const out = 1 - k;
-    const grow = rain.rank >= 5 ? 0.38 : rain.rank >= 3 ? 0.24 : 0.16;
-    if (rain.rank >= 5) {
-      // o clarão verde
-      groundPath(ctx, rain.x, rain.y, rain.r * (1 + k * grow), screen);
-      ctx.fillStyle = rgba(tier.ring, 0.32 * out);
-      ctx.fill();
+    const grow = rain.rank >= 5 ? 0.42 : rain.rank >= 3 ? 0.3 : 0.22;
+    // mais ênfase (pedido do dono, 15/11): o clarão no chão em todas as fases (mais forte no espírito), os riscos da
+    // pancada saindo do meio e uma segunda onda, mais larga, logo atrás da primeira
+    groundPath(ctx, rain.x, rain.y, rain.r * (1 + k * grow), screen);
+    ctx.fillStyle = rgba(tier.ring, (rain.rank >= 5 ? 0.4 : 0.26) * out * out);
+    ctx.fill();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1.5, m * 0.035);
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2 + i * 0.37;
+      const r0 = rain.r * (0.25 + 0.75 * k);
+      const r1 = rain.r * (0.5 + 0.8 * k);
+      const p0 = screen(rain.x + Math.cos(a) * r0, rain.y + Math.sin(a) * r0);
+      const p1 = screen(rain.x + Math.cos(a) * r1, rain.y + Math.sin(a) * r1);
+      ctx.strokeStyle = rgba(tier.ring, 0.7 * out);
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+    }
+    if (k > 0.12) {
+      const k2 = (k - 0.12) / 0.88;
+      groundPath(ctx, rain.x, rain.y, rain.r * (1 + k2 * grow * 2.1), screen);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = rgba(tier.ring, 0.5 * (1 - k2));
+      ctx.stroke();
     }
     groundPath(ctx, rain.x, rain.y, rain.r * (1 + k * grow), screen);
     if (tier.glow > 0) {
@@ -502,7 +522,8 @@ export function drawRainAir(ctx: CanvasRenderingContext2D, rain: RainLook, now: 
       }
     } else if (now >= landAt && now < landAt + RAIN_LINGER_MS) {
       const life = 1 - (now - landAt) / RAIN_LINGER_MS;
-      ctx.globalAlpha = rain.rank >= 5 ? life * life : life;
+      // ficam inteiras cravadas e somem só no último meio segundo (antes iam sumindo desde a batida)
+      ctx.globalAlpha = clamp01((life * RAIN_LINGER_MS) / 500);
       if (isStone) {
         const p = screen(gx, gy, Math.max(0, 0.25 * Math.sin(Math.min(1, (now - landAt) / 250) * Math.PI)));
         stone(ctx, p, stoneSize * 0.9, tier);

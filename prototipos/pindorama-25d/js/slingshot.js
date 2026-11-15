@@ -78,6 +78,8 @@
       if (Number.isFinite(input.attackDir) && !a.releaseRequested) a.dir = input.attackDir;
       a.aimYaw = M.dampAngle(a.aimYaw, a.dir, 12, dt);
       if (a.controlled && (input.attackReleased || input.attackHeld === false)) a.releaseRequested = true;
+      // a Chuva de Flechas segura a mira para o alto um instante antes de soltar
+      if (a.volley && a.age >= 0.32) a.releaseRequested = true;
       if (!a.releaseRequested) a.heldFor = Math.min(RULES.maxCharge, a.heldFor + dt);
       a.power = powerOf(a, RULES); a.t = a.age;
       if (a.releaseRequested && a.age >= RULES.minDraw - 1e-8) {
@@ -135,11 +137,14 @@
       parts.spine.yaw += aim * blend;
       character.look.bowHead = null;
     }
-    parts.spine.pitch += 2 * M.DEG * blend;
+    // a Chuva de Flechas (`volley`, da view): mira para o alto — o tronco deita para trás, o braço do arco sobe e a
+    // flecha aponta para cima
+    const up = a.volley ? 1 : 0;
+    parts.spine.pitch += (2 - 30 * up) * M.DEG * blend;
     // o arco: o braço dele esticado para o alvo, na altura do ombro (de lado, o alvo fica à esquerda do peito; o x da mão
     // esquerda conta para fora), e a outra mão puxa a corda
-    const bowHand = { x: Math.sin(BOW_TURN) * BOW_REACH, y: Math.cos(BOW_TURN) * BOW_REACH, z: 6 };
-    const targets = bow ? [bowHand, { x: -6, y: M.lerp(30, 4, draw), z: 4 }] : [{ x: -24, y: 44, z: -4 }, { x: -8, y: M.lerp(39, 14, draw), z: 8 }];
+    const bowHand = { x: Math.sin(BOW_TURN) * BOW_REACH, y: Math.cos(BOW_TURN) * BOW_REACH, z: 6 + 44 * up };
+    const targets = bow ? [bowHand, { x: -6, y: M.lerp(30, 4, draw), z: 4 }] : [{ x: -24, y: 44, z: -4 + 44 * up }, { x: -8, y: M.lerp(39, 14, draw), z: 8 }];
     const baseRight = { ...parts.hands[1].local };
     const basePole = parts.hands[1].poleLocal.slice();
     for (let i = 0; i < 2; i++) {
@@ -155,7 +160,7 @@
     // a partir dos dedos, em vez de enfiar a mão no centro do peito.
     const root = { x: character.pos.x, y: character.pos.y, z: character.groundZ + character.pos.z };
     const body = M.frameYaw(root, character.yaw), direction = character.yaw + aim;
-    const forward = { x: Math.cos(direction), y: Math.sin(direction), z: 0 };
+    const forward = M.norm({ x: Math.cos(direction), y: Math.sin(direction), z: 1.1 * up });
     const goalHands = [{ ...parts.hands[0], local: targets[0], twist: 0.25, flex: 0, poleLocal: bow ? [-0.2, 0.15, -0.95] : [-0.45, 0.5, -0.65] }, parts.hands[1]];
     if (bow) character.look.bowDir = forward;
     const pose = { root, yaw: character.yaw, pelvis: parts.pelvis, spine: parts.spine, hands: goalHands,

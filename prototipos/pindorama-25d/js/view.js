@@ -7,7 +7,8 @@
 //   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
-//   action(id, tipo, angulo)  golpes e reações (gente: tiro, defesa, 'dash' = rola, 'jump' = pula; criaturas: os delas)
+//   action(id, tipo, angulo)  golpes e reações (gente: tiro, defesa, 'dash' = rola, 'jump' = pula, 'volley' = atira para o
+//                             alto, a Chuva de Flechas, 'hawk' = os olhos acendem; criaturas: os delas)
 //   gear(id, gear)            o que o jogador tem equipado (o ícone de cada parte): o arco (`weapon: 'arco'`) fica na mão
 //   canDraw(kind, tipo)       desenha este bicho? (kind 'pet': o Joaquim, 'joaquim'; ações wake, sleep, meow, purr, dash)
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
@@ -246,6 +247,18 @@
           at.aimYaw = dir;
           at.poseAim = M.clamp(M.angleDiff(ch.yaw, dir), -65 * M.DEG, 65 * M.DEG);
           at.releaseRequested = true;
+          ch.faceYaw = dir;
+          ch._pose = null;
+          return;
+        }
+        case 'volley': {
+          // a Chuva de Flechas: puxa mirando para o alto e solta (a pose de `volley` é do slingshot.js)
+          if (!S) return;
+          const dir = yaw ?? ch.yaw;
+          if (ch.guard && ch.guard.active) G.release(ch, true);
+          arm();
+          S.start(ch, dir, { attackHeld: true });
+          ch.attack.volley = true; // (solta sozinha depois de 0,32 s: slingshot.js)
           ch.faceYaw = dir;
           ch._pose = null;
           return;

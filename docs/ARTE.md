@@ -942,6 +942,24 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
 - Conferir: `xio-prancha.cjs` (scratchpad): a Xiovanna em 5 lados, os gestos, 5 NPCs de exemplo feitos só trocando a
   aparência, e todos no tamanho do jogo.
 
+### A lista do dono de 15/11 depois de jogar (repassada pela [estrutura]; com o "pode" dele)
+- **Molde de gente:** anda com passo de verdade no `moveTo` (`walk`/`stride`; o sobe-e-desce é o `bob`), fica virado
+  para o ângulo do último `moveActor` (`baseYaw`) e não segue mais quem passa; no `talk` acena uma vez e vira só a
+  cabeça. No caixa, 90° (sul) mostra o rosto. O pé dela a 5 cm do balcão é dado da [estrutura] (pedi 30 cm de folga).
+- **Olhos de Gavião, o lag:** o destaque pronto de cada bicho fica numa tela própria (`_hawkCache`), refeito a cada 5
+  quadros (um bicho por quadro) e desenhado no pé dele; a câmera afasta num tween de 0,4 s. Medido com 17 bichos:
+  15 → 20 ms por quadro (antes 15 → 45). Medir: `gaviao-lag.cjs`.
+- **Esquiva:** no `_drive`, se o rolamento passou do `moveEnd` e o alvo seguiu adiante, `_finishDodge` com `resume`
+  (emenda na corrida). O braço do arco "bugando": não reproduzi (8 direções, parado e andando: `arco-braco*.cjs`);
+  o que parece erro mirando para longe da câmera é a perspectiva (o braço do arco aparece na altura da cabeça).
+- **Quadro da missão:** PC a 300 px do alto (embaixo do mini mapa e do botão das Habilidades); celular ao lado do mini
+  mapa (`left: 108px`).
+- **Chuva com ênfase:** a ação `'volley'` na view (o `slingshot.js` deita o tronco, sobe o braço do arco e aponta a
+  flecha para cima; solta sozinha em 0,32 s); `RAIN_LINGER_MS` 2200 (inteiras até o último meio segundo), o clarão, os
+  riscos e a segunda onda no impacto (`IMPACT_MS` 560).
+- **Flecha carregada e dica:** `.action[data-armed='1']` (anel verde pulsando) e `.skill-tip` no painel da HUD (com
+  `!important`, até a [estrutura] tirar os estilos inline).
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
