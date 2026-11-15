@@ -75,6 +75,10 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — decisões do dono:** a Xiovanna fica parada por enquanto (tirei o `passeio` dos dados; o código fica) e a
+explosão da Flecha Ancestral só no máximo (5 pontos), caindo onde foi mirado. O defeito das pernas dela aparece quando
+o personagem do jogador encosta ou anda grudado no balcão (passado à [arte]).
+
 **15/11 — o passeio da Xiovanna ligado** (o passo da [arte] entrou, main 448b950): `budega` em y 50,3 (30 cm do balcão,
 pedido da [arte]) com `"passeio": [[67.9, 50.25], [67.2, 50.1]]`; o motor vira ela de frente (90°) ao chegar e para quem
 abre a conversa (`npcStrolls`). Se o dono tiver mexido a Xiovanna pelo painel, o `saves/ajustes.json` dele ganha do x/y.

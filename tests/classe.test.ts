@@ -97,11 +97,11 @@ describe('data/classes.json', () => {
       expect(rain.points[i]!.radius).toBeGreaterThan(rain.points[i - 1]!.radius);
       expect(rain.points[i]!.damagePct).toBeGreaterThan(rain.points[i - 1]!.damagePct);
     }
-    // a Flecha Ancestral: mais dano a cada ponto; a marca com 3; explode sempre onde foi mirada (maior com 5)
+    // a Flecha Ancestral: mais dano a cada ponto; a marca com 3; com 5, explode onde foi mirada
     const arrow = hunter.skills[1]!;
     expect(arrow).toMatchObject({ name: 'Flecha Ancestral', cooldownMs: 8000, range: 14, speed: 24, width: 0.8 });
     expect(arrow.points.map((p) => p.markPct > 0)).toEqual([false, false, true, true, true]);
-    expect(arrow.points.map((p) => p.burstRadius)).toEqual([1.2, 1.2, 1.5, 1.5, 2.2]);
+    expect(arrow.points.map((p) => p.burstRadius)).toEqual([0, 0, 0, 0, 2.2]);
     for (let i = 1; i < arrow.points.length; i++) expect(arrow.points[i]!.damagePct).toBeGreaterThan(arrow.points[i - 1]!.damagePct);
     // os Olhos de Gavião: duram mais e enxergam mais longe a cada ponto; o dano a mais com 3
     const eyes = hunter.skills[2]!;
