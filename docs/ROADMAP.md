@@ -654,22 +654,30 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   onça espiritual e as três garras sobre as pintas), usados pelo `skillIconUrl` (janela e barra); o "Como jogar" com o
   `Q` (mirar a Chuva), o `K` e o ✦ (Habilidades) e o `M` (mapa); no `ui.ts`, o jeito oficial de pôr o ícone no botão
   (`ActionDef.icon`, ou `setLook(slot, { iconUrl })`) no lugar do remendo do `skill0`
-- [ ] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
-  da mira no estilo da HUD, e mais quadrados na barra quando chegarem as próximas habilidades
+- [x] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
+  da mira no estilo da HUD (15/11): `src/client/novo/rainArt.ts` (o `combat.ts` guarda a conta e chama daqui) — 1 e 2
+  pontos = madeira (flecha de madeira com ponta de pedra e penas de ponta vermelha, poeira), 3 e 4 = ouro (dourada,
+  brilho e rastro, faíscas), 5 = espírito (verde de luz, rastro comprido, clarão e luzinhas); as pedras do estilingue
+  são sempre pedra (o brilho em volta muda com a fase, para não parecer moeda) com o risco de velocidade; no chão, o
+  anel que fecha até o meio mostra quando caem; a mira é o círculo dourado da HUD com os dentes girando, a estrelinha
+  no meio e o arco pontilhado do tiro. A janela das Habilidades com a moldura da mochila, o "+" redondo dourado e a
+  insígnia dos pontos (só o CSS do `skillsPanel.ts`)
+- [ ] **[arte]** Mais quadrados na barra para as habilidades 2 a 5 (um `ActionSlot` novo no `ui.ts`, no PC e no celular;
+  a [estrutura] passa a usar e apaga o botão provisório do `skillButtons.ts`)
 - [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
   uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
   com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
   (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
 - [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
-  runa da marca), o quadrado dela na barra (hoje um botão provisório do motor) e o `R` no "Como jogar"
+  runa da marca) e o quadrado dela na barra (hoje um botão provisório do motor). O `R` no "Como jogar" já foi (15/11)
 - [x] **[estrutura]** Passo 3 (15/11, com o "pode" do dono): os **Olhos de Gavião** (nível 10, tecla `T`): por 8 a 16 s
   enxerga mais longe (+50% a +100%: os bichos de longe chegam e aparecem no mini mapa e no mapa do M), cada bicho ganha
   a etiqueta do nível na cor do perigo (verde, amarelo, vermelho) por cima das árvores e do escuro, e com 3 pontos eles
   levam +10% a +20% de dano seu. Recarga 30 s. Protocolo 39. Etiquetas provisórias (HTML); "revelar o que está
   escondido" fica para quando houver um bicho escondido
 - [ ] **[arte]** Os Olhos de Gavião: o destaque de verdade (o contorno do bicho, no lugar das etiquetas de
-  `hawkTags.ts`), afastar a câmera enquanto valem (hoje a view trava no zoom 0,7) e o quadrado da 3ª habilidade na
-  barra (hoje um botão provisório em cima do 6º quadrado)
+  `hawkTags.ts`), afastar a câmera enquanto valem (hoje a view trava no zoom 0,7), o quadrado da 3ª habilidade na
+  barra (hoje um botão provisório em cima do 6º quadrado) e o `T` no "Como jogar"
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo)
 - [ ] **[dono]** Depois: a escolha da classe virar o ritual na figueira (decisão de 12/11); trocar de classe; recomeçar
