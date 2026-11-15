@@ -734,8 +734,8 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   10 s) e recarregam em 20 s; **dica** com o mouse em cima das habilidades da barra. Protocolo 41
 - [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
   anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
-  com ele. Protocolo 42 (`npc_walk`, `talk`). **Ainda desligado nos dados** (a Xiovanna sem `passeio`): espera o passo
-  de andar do molde de gente, da [arte], senão ela desliza. Pontos testados atrás do balcão: `[[67.9, 50.3], [67.2, 50.1]]`
+  com ele. Protocolo 42 (`npc_walk`, `talk`). **Ligado na Xiovanna** (15/11, com o passo de andar
+  da [arte]): atrás do balcão, a 30 cm dele; parada, fica de frente (90°); vira o corpo para quem vem falar
 - [ ] **[mundo]** Para a Xiovanna andar pela loja toda (e não só 2 m atrás do balcão): hoje ela fica num bolso fechado
   pela colisão do balcão (livre só de x 66,5 a 68, y 50 a 50,5); precisa de uma passagem no balcão (se o dono quiser)
 - [ ] **[arte]** Do mesmo teste do dono: o fim da esquiva trava (o rolamento dura 0,5 s e anda só até 0,4 s); o braço

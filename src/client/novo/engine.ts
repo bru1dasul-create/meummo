@@ -84,6 +84,8 @@ const toDegrees = (radians: number) => ((Math.round((radians * 180) / Math.PI) %
 const AUTO_AIM_SLACK = 0.5;
 /** Com a conversa aberta, avisa o servidor a cada tanto (o NPC espera NPC_BUSY_MS depois do último aviso). */
 const TALK_PING_MS = 5000;
+/** O NPC que passeia, parado: de frente para a loja e para a câmera (sul). */
+const NPC_FRONT_DEGREES = 90;
 /** Mirando num bicho, o tiro vai até um pouco depois do pé dele (para chegar nele antes de cair). */
 const AIM_TARGET_SLACK = 0.75;
 /** Depois do tiro, o corpo fica virado para ele por este tempo (mesmo andando para outro lado). */
@@ -290,6 +292,8 @@ class NewWorld implements NewWorldGame {
   private lastWalkAt = 0;
   /** Quando avisar o servidor de novo que a conversa continua aberta. */
   private talkPingAt = 0;
+  /** Os NPCs que passeiam (já andaram neste mapa): viram o corpo para quem vem falar. */
+  private readonly npcStrolls = new Set<number>();
   /** O último pedaço andado foi devagar (ou defendendo)? Atirar andando espalha: correndo mais, devagar menos. */
   private lastWalkSlow = false;
   /** Puxando (e um instante depois do tiro), o corpo fica virado para a mira, mesmo andando para outro lado. */
@@ -1556,6 +1560,9 @@ class NewWorld implements NewWorldGame {
       this.talkPingAt = 0;
       if (npc) {
         const feet = feetAt(npc.e.x, npc.e.y);
+        // quem passeia vira o corpo para quem veio falar (os outros NPCs ficam como estão)
+        const me = this.myFeet();
+        if (this.npcStrolls.has(npc.e.id) && Math.hypot(me.x - feet.x, me.y - feet.y) > 0.05) this.view?.moveActor(npc.e.id, feet.x, feet.y, toDegrees(aimAngle(feet, me)), { durationMs: 0 });
         this.view?.focus?.({ x: feet.x, y: feet.y });
         this.animateZoom(Math.max(this.zoom, CONVERSATION_ZOOM), now);
         this.speak(npc.e.id, this.openingLine(npc));
@@ -2644,12 +2651,18 @@ class NewWorld implements NewWorldGame {
         const npc = this.npcs.get(msg.id);
         const old = this.entities.get(msg.id);
         if (!npc || !old) break;
+        this.npcStrolls.add(msg.id);
         const from = feetAt(old.x, old.y);
         const to = feetAt(msg.x, msg.y);
         const moved = { ...old, x: msg.x, y: msg.y };
         this.entities.set(msg.id, moved);
         this.npcs.set(msg.id, { ...npc, e: moved });
         this.view?.moveActor(msg.id, to.x, to.y, toDegrees(aimAngle(from, to)), { durationMs: msg.ms });
+        // chegou: vira de frente (para a loja e para a câmera), se não saiu de novo nem está em conversa
+        window.setTimeout(() => {
+          const now = this.entities.get(msg.id);
+          if (now && now.x === msg.x && now.y === msg.y && this.conversationNpc !== msg.id) this.view?.moveActor(msg.id, to.x, to.y, NPC_FRONT_DEGREES, { durationMs: 0 });
+        }, msg.ms + 150);
         break;
       }
       case 'hero':

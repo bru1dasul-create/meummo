@@ -39,7 +39,8 @@
     "titulo": "Budega Distribuidora",
     "mapa": "capao",
     "x": 66.6,
-    "y": 50.55,
+    "y": 50.3,
+    "passeio": [[67.9, 50.25], [67.2, 50.1]],
     "fala": "Oi, eu sou a Xiovanna! Bem-vindo à Budega. Água de coco geladinha, garrafada da benzedeira e banana fresca. Compro também o que você trouxer da mata.",
     "veste": [],
     "loja": {

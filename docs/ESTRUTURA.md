@@ -75,6 +75,10 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — o passeio da Xiovanna ligado** (o passo da [arte] entrou, main 448b950): `budega` em y 50,3 (30 cm do balcão,
+pedido da [arte]) com `"passeio": [[67.9, 50.25], [67.2, 50.1]]`; o motor vira ela de frente (90°) ao chegar e para quem
+abre a conversa (`npcStrolls`). Se o dono tiver mexido a Xiovanna pelo painel, o `saves/ajustes.json` dele ganha do x/y.
+
 **15/11 — parte 2, NPC que passeia (pronto no servidor, desligado nos dados):** `NpcDef.stroll` ("passeio"), `Npc.strollAt`/
 `busyUntil`, `World.updateNpcs` (anda em linha reta, sem conferir colisão no caminho: os pontos têm que se enxergar),
 `World.talk` (mensagem `talk`, o motor manda ao abrir a conversa/loja e a cada 5 s), `npc_walk` para todos do mapa.
