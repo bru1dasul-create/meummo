@@ -519,6 +519,13 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
     const verde = of('parede-verde').find(inBudega)!;
     expect([prop(verde, 'logo'), prop(verde, 'neon'), prop(verde, 'flores')]).toEqual(['budega', true, 'amarelas']);
     expect(JSON.stringify(cenario.filter(inBudega)).toLowerCase()).not.toMatch(/tabac|cigarr|fumo|narguil/);
+    // a frente de cada coisa (`olhando`: 90 = sul, 0 = leste) dá para quem compra e para a câmera, que olha do sudeste:
+    // a vitrine mostra os produtos para a praça; o caixa e o freezer, para o freguês; o que fica na parede da esquerda,
+    // para o leste; e a lousinha da calçada, para a praça
+    const facing = (t: string) => of(t).filter(inBudega).map((o) => prop(o, 'olhando'));
+    expect([facing('vitrine'), facing('balcao'), facing('freezer')]).toEqual([[90], [90], [90]]);
+    expect(facing('geladeira').sort()).toEqual([0, 0]);
+    expect(prop(cenario.find((o) => o.type === 'lousa' && at(o).x > 60 && at(o).x < 69 && at(o).y > 54 && at(o).y < 56)!, 'olhando')).toBe(90);
     // as paredes têm 15 cm (a do fundo vai até a frente das prateleiras), e a frente é parede do lado da vitrine
     for (const x of [bx0 + 0.075, bx1 - 0.075]) for (let y = by0 + 0.5; y <= by1 - 0.25; y += 0.25) expect(footFree(x, y), `parede em (${x}, ${y})`).toBe(false);
     for (let x = bx0 + 0.5; x <= 64.6; x += 0.25) expect(footFree(x, by1 - 0.075), `frente em x = ${x}`).toBe(false);

@@ -818,19 +818,20 @@ if (reached('4b')) {
     cenario.push(rect('prateleira', x0, 64.8, y0, shelf, { altura: 2.1, olhando: 90, ...PRETO }));
     cenario.push(rect('prateleira', x0, x0 + 0.35, 51.2, 53.65, { altura: 2.1, olhando: 0, ...PRETO }));
     cenario.push(rect('geladeira', x0, x0 + 0.7, shelf, 51.2, { altura: 2, olhando: 0, portas: 2, vidro: true, cipo: true }));
-    cenario.push(rect('vitrine', x0, BUDEGA_DOOR.x0 - BUDEGA_WALL, 53.65, y1, { altura: 2.2, olhando: 270, fundo: '#f2c84b' }));
+    // (`olhando`: para onde a frente dá, 90 = sul: a vitrine mostra os produtos para a praça, com o fundo amarelo atrás)
+    cenario.push(rect('vitrine', x0, BUDEGA_DOOR.x0 - BUDEGA_WALL, 53.65, y1, { altura: 2.2, olhando: 90, fundo: '#f2c84b' }));
     cenario.push(rect('balcao-vidro', 62.3, 64, 51.6, 52.3, { altura: 1, doces: true }));
     // a parede de grama com o escudo aceso e as flores amarelas, na parede do fundo atrás do caixa (a câmera vê a do fundo)
     cenario.push(rect('parede-verde', 64.8, x1, y0, shelf, { logo: 'budega', neon: true, flores: 'amarelas' }));
     cenario.push(rect('geladeira', 64.8, 65.4, shelf, 50.6, { altura: 1.3, olhando: 0, portas: 1, vidro: true, pequena: true }));
     // (o caixa tem 50 cm de fundo: quem vai comprar para 1 m ao sul do pé dela, e o pé cabe ali, encostado no caixa)
     cenario.push(rect('balcao', 65.4, x1, 50.6, 51.1, { altura: 1, olhando: 90, caixa: true, cor: '#26262a', faixa: '#e8c020' }));
-    cenario.push(rect('freezer', 66.95, x1, 51.1, 51.8, { altura: 0.9, olhando: 270 }));
+    cenario.push(rect('freezer', 66.95, x1, 51.1, 51.8, { altura: 0.9, olhando: 90 }));
     // ----- a entrada (aprovada pelo dono em 15/11): o degrau de cimento com o capacho de palha na porta, a lousinha do
     // lado da porta, o vaso de dracena do outro lado e dois caixotes de fruta na frente da vitrine (tudo encostado na
     // fachada, sem vão de entalar) -----
     chao.push(rect('degrau', BUDEGA_DOOR.x0, BUDEGA_DOOR.x1, BUDEGA.y1, BUDEGA.y1 + 0.35, { altura: 0.12, capacho: true }));
-    cenario.push(point('lousa', 64.7, BUDEGA.y1 + 0.35, { olhando: 270, cavalete: true }));
+    cenario.push(point('lousa', 64.7, BUDEGA.y1 + 0.35, { olhando: 90, cavalete: true }));
     cenario.push(point('vaso', BUDEGA.x1 - 0.2, BUDEGA.y1 + 0.35, { planta: 'dracena' }));
     cenario.push(rect('caixote', 61.1, 62.1, BUDEGA.y1 + 0.05, BUDEGA.y1 + 0.55, { altura: 0.5, fruta: 'banana' }));
     cenario.push(rect('caixote', 62.25, 63.25, BUDEGA.y1 + 0.05, BUDEGA.y1 + 0.55, { altura: 0.5, fruta: 'laranja' }));
