@@ -47,6 +47,7 @@ const vendedor = (): NpcDef => ({
   wears: [],
   line: 'Oi!',
   shop: null,
+  stroll: [],
 } as unknown as NpcDef);
 
 describe('nível e XP pelo painel', () => {

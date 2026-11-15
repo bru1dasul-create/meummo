@@ -309,6 +309,9 @@ export type Entity = Player | Monster;
 export class Npc {
   readonly kind = 'npc' as const;
   readonly look: number;
+  /** O passeio: quando sai para o próximo ponto e até quando espera parado (alguém falou ou negociou com ele). */
+  strollAt = 0;
+  busyUntil = 0;
 
   constructor(
     readonly id: number,

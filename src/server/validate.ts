@@ -140,6 +140,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
         : null;
     case 'unequip':
       return EQUIP_SLOTS.includes(msg.part as EquipSlot) ? { t: 'unequip', part: msg.part as EquipSlot } : null;
+    case 'talk':
+      return isId(msg.npc) ? { t: 'talk', npc: msg.npc } : null;
     case 'buy':
       return isId(msg.npc) && typeof msg.item === 'string' && /^[a-z0-9_-]{1,40}$/.test(msg.item) && isCount(msg.n)
         ? { t: 'buy', npc: msg.npc, item: msg.item, n: msg.n }

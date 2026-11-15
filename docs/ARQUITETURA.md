@@ -140,6 +140,10 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   habilidade; a recarga começa ali). Desmaiar, trocar de mapa ou tirar os pontos descarrega. No motor: `toggleArmed`,
   `showArmedAim` (a faixa enquanto puxa), `data-armed` no quadrado da barra. A dica das habilidades (mouse em cima do
   quadrado): `skillTip.ts` + `tipOf` no motor.
+- **NPC que passeia** (protocolo 42): `"passeio"` em data/npcs.json (pontos `[x, y]`, o pé em metros) → `NpcDef.stroll`.
+  `World.updateNpcs` leva o NPC de um ponto a outro (ou ao lugar dele) e manda `npc_walk` (`id`, destino, `ms`) a todos do
+  mapa; o motor anda o desenho nesse tempo. `talk` (o motor manda com a conversa ou a loja aberta), comprar e vender
+  seguram o NPC parado por `NPC_BUSY_MS`.
 - **Flecha Ancestral** (protocolo 38, `tipo: "flecha"`; desde o 41 ela sai pelo `shoot`, veja acima): o `cast` traz o `cid` e o servidor solta um tiro de verdade
   (`spawnProjectile` com `PierceShot`, kind `'ancestral'`): `updatePiercing` acerta todo monstro que ela encosta, uma vez
   cada (sem o sorteio do enxame e com `ignoreShell` no `damage`), marca (`Monster.markedUntil`/`markPct`: o `damage` soma

@@ -31,6 +31,8 @@ export interface NpcDef {
   /** Itens que aparecem nela (chapéu, roupa...), como o equipamento dos jogadores. */
   wears: string[];
   shop: NpcShop | null;
+  /** O passeio: os pontos (o pé, em metros) por onde anda, além do lugar dele. Vazio = fica parado. */
+  stroll: { x: number; y: number }[];
 }
 
 export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
@@ -65,6 +67,12 @@ export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
       line: r.optionalText('fala'),
       wears: itemIds(r, 'veste'),
       shop,
+      stroll: r.list('passeio').map((value) => {
+        const ok = Array.isArray(value) && value.length === 2 && value.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0);
+        if (!ok) r.fail('passeio', 'precisa ser uma lista de pontos [x, y], por exemplo [[66, 50.5], [68.2, 51]]');
+        const [x, y] = value as [number, number];
+        return { x, y };
+      }),
     });
   }
   return defs;

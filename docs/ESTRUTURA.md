@@ -75,6 +75,13 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — parte 2, NPC que passeia (pronto no servidor, desligado nos dados):** `NpcDef.stroll` ("passeio"), `Npc.strollAt`/
+`busyUntil`, `World.updateNpcs` (anda em linha reta, sem conferir colisão no caminho: os pontos têm que se enxergar),
+`World.talk` (mensagem `talk`, o motor manda ao abrir a conversa/loja e a cada 5 s), `npc_walk` para todos do mapa.
+Protocolo **42**. Teste em `tests/mapa-novo.test.ts`. Para ligar: pôr `"passeio": [[67.9, 50.3], [67.2, 50.1]]` na
+`budega` quando a [arte] avisar que o molde de gente anda. A Xiovanna está num bolso de 2 m atrás do balcão: andar pela
+loja toda depende do [mundo] abrir uma passagem.
+
 **15/11 — o dono jogou e pediu ajustes (parte 1 feita; respostas dele: "concordo, e mais lento puxando"; "quanto mais
 puxar e segurar mais longe ela vai"; "o R deveria carregar uma nova flecha especializada"):** protocolo **41**. `shoot`
 com `d` (cai onde mira: `aimedRange`), `shotSpread` (espalha andando; números no painel, Combate › Pedra com carga),
