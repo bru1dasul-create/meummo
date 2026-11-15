@@ -651,7 +651,12 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   (`ActionDef.icon`, ou `setLook(slot, { iconUrl })`) no lugar do remendo do `skill0`
 - [ ] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
   da mira no estilo da HUD, e mais quadrados na barra quando chegarem as próximas habilidades
-- [ ] **[estrutura]** Flecha Ancestral (nível 6: a flecha do espírito, dano especial)
+- [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
+  uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
+  com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
+  (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
+- [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
+  runa da marca), o quadrado dela na barra (hoje um botão provisório do motor) e o `R` no "Como jogar"
 - [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo)

@@ -256,6 +256,9 @@ export class Monster {
   dizzyUntil = 0;
   /** Indo embora (o filhote de boitatá ao amanhecer): sai do mapa neste momento; até lá, não faz nem leva nada. */
   leavingAt: number | null = null;
+  /** Marcado pela Flecha Ancestral até aqui: leva `markPct`% a mais de dano de todo mundo. */
+  markedUntil = 0;
+  markPct = 0;
   /** Jogadores que bateram neste monstro (todos ganham XP quando ele cai). */
   readonly contributors = new Set<number>();
 
@@ -342,4 +345,17 @@ export interface Projectile extends ShotPath {
   push?: number;
   /** Enxames que o tiro já cruzou: passou pelo meio (true) ou acertou (false). Um sorteio por enxame e por tiro. */
   swarms?: Map<number, boolean>;
+  /** A Flecha Ancestral: atravessa os bichos (cada um uma vez), marca e, no fim, pode explodir. */
+  pierce?: PierceShot;
+}
+
+/** O que a Flecha Ancestral leva: quem ela já atravessou, a largura, a marca e a explosão do fim (0 = não tem). */
+export interface PierceShot {
+  hit: Set<number>;
+  /** Quanto ela pega de cada lado da linha (metros). */
+  width: number;
+  markPct: number;
+  markMs: number;
+  burstRadius: number;
+  burstDamage: number;
 }

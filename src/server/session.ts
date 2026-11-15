@@ -127,7 +127,7 @@ export class Session {
         this.lobby.realm.unlearnSkills(this.player);
         break;
       case 'cast':
-        this.lobby.realm.castSkill(this.player, msg.id, msg.x, msg.y);
+        this.lobby.realm.castSkill(this.player, msg.id, msg.x, msg.y, msg.cid);
         break;
       case 'loaded':
         this.lobby.realm.loaded(this.player);
