@@ -542,6 +542,17 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 
 **Mundo:**
 - [ ] **[mundo]** Aumentar a floresta
+- [ ] **[mundo + arte + estrutura]** A Budega maior, igual à de verdade (15/11, com as fotos do dono; aprovada: "ficou
+  ótimo, lembre-se de colocar interior com infestação da floresta"). **A parte do [mundo] está pronta** no ramo
+  `mundo/budega-maior`: 8 × 5,5 m no mesmo canto da praça; a vitrine à esquerda e a porta de enrolar de 3 m à direita;
+  dentro, o piso branco, as prateleiras pretas e amarelas, a geladeira de duas portas, o balcão de vidro dos doces, o
+  caixa na frente da parede de grama com o escudo aceso (a Xiovanna atrás, só ela passa), o freezer e a floresta
+  entrando (raiz, mato, samambaia, cipó e musgo); na frente, o degrau com capacho, a lousinha, o vaso de dracena e dois
+  caixotes de fruta; a fogueira andou 2 m para a direita, as mesas desceram e o varal do sul passa por um poste novo,
+  entre a praça e o campinho. Fotos e desenhos: `docs/referencias/budega-*.jpg`
+- [ ] **[arte]** O desenho da Budega maior (a lista está no `docs/MUNDO.md`, "Esperando outras frentes")
+- [x] **[estrutura]** A Xiovanna no lugar novo, (66; 50,55), atrás do caixa, no `data/npcs.json` (a [estrutura]
+  autorizou o [mundo] a trocar as duas linhas no mesmo commit do mapa, no ramo `mundo/budega-maior`)
 - [x] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
   (14/11): o [mundo] marcou no mapa (`mundo/lote2-floresta-dentro`) a raiz `dentro`, o capim nas frestas, a samambaia
   `dentro` nos cantos e o `cipoDentro`/`musgoDentro` das casas; a [arte] desenhou: a raiz sai de baixo da parede, corre

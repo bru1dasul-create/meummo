@@ -115,9 +115,17 @@ const STREET = { x0: 56, x1: W, y0: 41, y1: 47 };
 const ROAD_S = { x0: 88, x1: 94, y0: 47, y1: VILLAGE_S };
 /** A praça (pedra portuguesa) e a Budega, a vendinha da praça (o negócio do dono; nada de tabaco). */
 const SQUARE = { x0: 61, x1: 79, y0: 48.5, y1: 59 };
-const BUDEGA = { x0: 62, x1: 67, y0: 49.5, y1: 52.5 };
+/**
+ * A Budega maior, igual à de verdade (15/11, pedido do dono, com as fotos dele): 8 × 5,5 m (antes 5 × 3), no mesmo
+ * canto da praça. Fachada preta com o escudo dourado e moldura amarela; a vitrine grande à esquerda e a porta de enrolar
+ * larga à direita (como na loja dele); por dentro, piso branco, prateleiras pretas e amarelas, a parede de grama com o
+ * escudo aceso e as flores, e a floresta entrando (sem "tabacaria", sem narguilé e sem marcas).
+ */
+const BUDEGA = { x0: 60.5, x1: 68.5, y0: 48.9, y1: 54.4 };
+/** A porta de enrolar (3 m), na frente, do lado direito; a vitrine fica do lado esquerdo. */
+const BUDEGA_DOOR = { x0: 65, x1: 68 };
 /** A frente da porta da Budega, do lado da praça: fica livre (nada da praça encosta aqui). */
-const BUDEGA_FRONT = { x: 64.5, y: 53.3 };
+const BUDEGA_FRONT = { x: 66.5, y: 55.2 };
 /**
  * A Budega por dentro (padrão novo; pedido do dono, como no HumanitZ: com o herói lá dentro, o telhado e a frente
  * somem). Paredes de 15 cm; a porta é o vão da porta de enrolar (a frente toda, menos 34 cm de cada ponta). A Xiovanna
@@ -128,11 +136,16 @@ const BUDEGA_DOOR_SIDE = 0.34;
 /** As prateleiras ficam coladas na parede do fundo: na colisão, a parede do fundo vai até a frente delas. */
 const BUDEGA_SHELF = 0.35;
 const BUDEGA_INSIDE = { x0: BUDEGA.x0 + BUDEGA_WALL, x1: BUDEGA.x1 - BUDEGA_WALL, y0: BUDEGA.y0 + BUDEGA_WALL, y1: BUDEGA.y1 - BUDEGA_WALL };
-/** O pé da Xiovanna, atrás do balcão, na ponta da geladeira (o mesmo número vai para o data/npcs.json, pela [estrutura]; mais
- * para o leste, a copa da árvore da praça cobre ela na tela). */
-const XIOVANNA = { x: 64.6, y: 51 };
-/** A fogueira da praça, com bancos em volta (a oeste da árvore, para a copa não cobrir o fogo). */
-const FIRE = { x: 69.5, y: 56 };
+/**
+ * O pé da Xiovanna, atrás do caixa, na frente da parede de grama com o escudo aceso (o mesmo número vai para o
+ * data/npcs.json, pela [estrutura]). Quem compra fica do outro lado do caixa, 1 m ao sul dela.
+ */
+const XIOVANNA = { x: 66, y: 50.55 };
+/**
+ * A fogueira da praça, com bancos em volta (a oeste da árvore, para a copa não cobrir o fogo). Com a Budega maior ela
+ * andou 2 m para a direita (antes em 69,5; 56); mais para lá a copa da árvore da praça cobre o fogo na tela.
+ */
+const FIRE = { x: 71.5, y: 56 };
 interface House {
   x0: number;
   x1: number;
@@ -751,7 +764,9 @@ if (reached('4b')) {
   // as casas e a Budega (uma casa com comércio: letreiro e toldo na frente, que dá para a praça)
   for (const h of HOUSES) cenario.push(rect('casa', h.x0, h.x1, h.y0, h.y1, { altura: h.altura, andares: h.andares, cor: h.cor, caixaDagua: true, ...h.extra }));
   // o logo da Budega (o escudo dourado do dono, sem tabacaria e sem narguilé) vai na fachada; o letreiro fica de reserva
-  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 2.6, andares: 1, cor: '#d4553a', caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA DISTRIBUIDORA', logo: 'budega', toldo: '#f1c84a', ...(FLORESTA ? { interior: true, portaDe: BUDEGA.x0 + BUDEGA_DOOR_SIDE, portaAte: BUDEGA.x1 - BUDEGA_DOOR_SIDE } : {}) }, 'Budega'));
+  // (como a loja de verdade: a fachada preta brilhante, a moldura amarela em volta da vitrine e da porta, a faixa de
+  // LED contornando a frente à noite; a vitrine com o fundo amarelo fica do lado esquerdo da porta)
+  cenario.push(rect('casa', BUDEGA.x0, BUDEGA.x1, BUDEGA.y0, BUDEGA.y1, { altura: 3.4, andares: 1, cor: '#1c1c1f', fachada: 'preta', moldura: '#e8c020', led: true, caixaDagua: true, comercio: 'vendinha', letreiro: 'BUDEGA DISTRIBUIDORA', logo: 'budega', ...(FLORESTA ? { interior: true, portaDe: BUDEGA_DOOR.x0, portaAte: BUDEGA_DOOR.x1 } : {}) }, 'Budega'));
 
   // a praça: fogueira com bancos em volta (virados para o fogo), mesas ao lado da Budega (sem fechar o caminho até o
   // balcão) e luz quente; o orelhão e a lixeira ficam encostados nas paredes da Budega (sem vão para o pé entalar)
@@ -765,11 +780,14 @@ if (reached('4b')) {
   ];
   for (const [x0, x1, y0, y1, olhando] of benches) cenario.push(rect('banco', round(x0), round(x1), round(y0), round(y1), { olhando }));
   const furniture: { x: number; y: number; r: number }[] = [{ x: FIRE.x, y: FIRE.y, r: 3.1 }];
-  for (const [x, y] of [[62.6, 55.4], [63.8, 57.8]] as const) {
+  // (com a Budega maior, as mesas desceram um pouco: antes em 62,6; 55,4 e 63,8; 57,8)
+  for (const [x, y] of [[62.4, 56.9], [64.6, 58.3]] as const) {
     cenario.push(point('mesa', x, y, { cadeiras: 2 }));
     furniture.push({ x, y, r: 0.9 });
   }
-  for (const [x, y] of [[78.3, 49.3], [61.7, 58.3]] as const) {
+  // (o terceiro, entre a praça e o campinho, segura o varal de bandeirinhas no meio: com a Budega maior, a porta foi
+  // para a direita e o varal reto passava, na tela, por cima de quem está na porta)
+  for (const [x, y] of [[78.3, 49.3], [61.7, 58.3], [71, 61.5]] as const) {
     cenario.push(point('poste-praca', x, y, { altura: 3.2, luz: '#ffd36b' }));
     furniture.push({ x, y, r: 0.3 });
   }
@@ -778,32 +796,57 @@ if (reached('4b')) {
   // de luz: pedido do dono, 14/11, "arrumar a entrada da Budega")
   if (FLORESTA) cenario.push(point('orelhao', 61.7, 57.92, { olhando: 90, poste: true }));
   else cenario.push(point('orelhao', BUDEGA.x0 - 0.25, BUDEGA.y1 + 0.25, { olhando: 90 }));
-  // (com a porta de enrolar aberta, a lixeira sai da frente da porta e fica do lado de fora da parede leste)
-  cenario.push(point('lixeira', FLORESTA ? BUDEGA.x1 + 0.3 : BUDEGA.x1 - 0.25, BUDEGA.y1 + 0.25));
+  // (a lixeira fica encostada na parede oeste da Budega, longe da porta e da vitrine)
+  cenario.push(point('lixeira', BUDEGA.x0 - 0.3, BUDEGA.y1 - 0.4));
   furniture.push({ x: BUDEGA_FRONT.x, y: BUDEGA_FRONT.y, r: 1.5 });
   // ----- a Budega por dentro: ladrilho, prateleiras no fundo, a geladeira e o balcão com o caixa, e engradados nos
   // cantos da porta. Atrás do balcão fica fechado (só a Xiovanna passa), e nenhum vão é de entalar: tudo fica colado
   // (até 0,3 m) ou com 1,2 m livre -----
   if (FLORESTA) {
+    // ----- a Budega maior por dentro (15/11), como a loja de verdade: piso branco; prateleiras pretas com nichos amarelos
+    // na parede do fundo (até a frente delas é parede, na colisão) e na da esquerda; a geladeira de bebidas de duas
+    // portas; a vitrine de fundo amarelo atrás do vidro da frente; o balcão de vidro dos doces no meio; e o caixa preto e
+    // amarelo na frente da parede de grama com o escudo aceso e as flores, com a Xiovanna atrás (fechado pelo cooler e
+    // pela parede: só ela passa). O freezer de gelo fica colado no caixa. Nenhum vão é de entalar: tudo colado (até
+    // 0,3 m) ou com 1,2 m livre -----
     const { x0, x1, y0, y1 } = BUDEGA_INSIDE;
-    chao.push(rect('piso', x0, x1, y0, y1));
-    cenario.push(rect('prateleira', x0, 65, y0, y0 + BUDEGA_SHELF, { altura: 2, olhando: 90 }));
-    cenario.push(rect('prateleira', 65.2, x1, y0, y0 + BUDEGA_SHELF, { altura: 2, olhando: 90 }));
-    // a geladeira, colada na ponta do balcão (fecha a passagem para trás dele) e de frente para quem entra
-    cenario.push(rect('geladeira', 63.4, 64.1, 50.25, 50.95, { altura: 1.9, olhando: 90 }));
-    // o balcão com a caixa registradora e o baleiro; atrás dele, 1,25 m para a Xiovanna
-    cenario.push(rect('balcao', 64.2, 66.6, 51.25, 51.75, { altura: 1, olhando: 90, caixa: true }));
-    cenario.push(rect('engradado', 66.45, x1, 51.85, 52.15, { pilha: 3 }));
-    cenario.push(rect('engradado', x0, 62.55, 51.95, y1, { pilha: 2 }));
+    const shelf = y0 + BUDEGA_SHELF;
+    chao.push(rect('piso', x0, x1, y0, y1, { desenho: 'porcelanato', cor: '#efeee9', folhas: true }));
+    // (a floresta entrando, pedido do dono, 15/11: "interior com infestação da floresta"): cipó subindo pelas prateleiras e
+    // pela geladeira, folhas secas no piso, além da raiz, do mato, da samambaia, do musgo e do cipó das paredes (lá embaixo)
+    const PRETO = { cor: '#26262a', nichos: '#e8c020', cipo: true };
+    cenario.push(rect('prateleira', x0, 64.8, y0, shelf, { altura: 2.1, olhando: 90, ...PRETO }));
+    cenario.push(rect('prateleira', x0, x0 + 0.35, 51.2, 53.65, { altura: 2.1, olhando: 0, ...PRETO }));
+    cenario.push(rect('geladeira', x0, x0 + 0.7, shelf, 51.2, { altura: 2, olhando: 0, portas: 2, vidro: true, cipo: true }));
+    cenario.push(rect('vitrine', x0, BUDEGA_DOOR.x0 - BUDEGA_WALL, 53.65, y1, { altura: 2.2, olhando: 270, fundo: '#f2c84b' }));
+    cenario.push(rect('balcao-vidro', 62.3, 64, 51.6, 52.3, { altura: 1, doces: true }));
+    // a parede de grama com o escudo aceso e as flores amarelas, na parede do fundo atrás do caixa (a câmera vê a do fundo)
+    cenario.push(rect('parede-verde', 64.8, x1, y0, shelf, { logo: 'budega', neon: true, flores: 'amarelas' }));
+    cenario.push(rect('geladeira', 64.8, 65.4, shelf, 50.6, { altura: 1.3, olhando: 0, portas: 1, vidro: true, pequena: true }));
+    // (o caixa tem 50 cm de fundo: quem vai comprar para 1 m ao sul do pé dela, e o pé cabe ali, encostado no caixa)
+    cenario.push(rect('balcao', 65.4, x1, 50.6, 51.1, { altura: 1, olhando: 90, caixa: true, cor: '#26262a', faixa: '#e8c020' }));
+    cenario.push(rect('freezer', 66.95, x1, 51.1, 51.8, { altura: 0.9, olhando: 270 }));
+    // ----- a entrada (aprovada pelo dono em 15/11): o degrau de cimento com o capacho de palha na porta, a lousinha do
+    // lado da porta, o vaso de dracena do outro lado e dois caixotes de fruta na frente da vitrine (tudo encostado na
+    // fachada, sem vão de entalar) -----
+    chao.push(rect('degrau', BUDEGA_DOOR.x0, BUDEGA_DOOR.x1, BUDEGA.y1, BUDEGA.y1 + 0.35, { altura: 0.12, capacho: true }));
+    cenario.push(point('lousa', 64.7, BUDEGA.y1 + 0.35, { olhando: 270, cavalete: true }));
+    cenario.push(point('vaso', BUDEGA.x1 - 0.2, BUDEGA.y1 + 0.35, { planta: 'dracena' }));
+    cenario.push(rect('caixote', 61.1, 62.1, BUDEGA.y1 + 0.05, BUDEGA.y1 + 0.55, { altura: 0.5, fruta: 'banana' }));
+    cenario.push(rect('caixote', 62.25, 63.25, BUDEGA.y1 + 0.05, BUDEGA.y1 + 0.55, { altura: 0.5, fruta: 'laranja' }));
   }
   // a árvore da praça: o lugar mais perto do da planta (70, 54) que não tampa a rua, o balcão, o letreiro nem a fogueira
   const SQ_TREE = { especie: 'sibipiruna', copa: 3.6, altura: 6.5, tronco: 0.7 };
-  let spot: { x: number; y: number } | undefined;
+  // (o lugar aprovado, 77; 58, vale primeiro: com a Budega maior e a fogueira no lugar novo ela não sai de lá)
+  const APPROVED_TREE = { x: 77, y: 58 };
+  let spot: { x: number; y: number } | undefined =
+    !furniture.some((f) => dist(APPROVED_TREE.x, APPROVED_TREE.y, f.x, f.y) < f.r + SQ_TREE.tronco / 2 + 1.5) && !canopyHides(APPROVED_TREE.x, APPROVED_TREE.y, SQ_TREE.copa, SQ_TREE.altura) ? APPROVED_TREE : undefined;
   for (let x = SQUARE.x0 + 1; x <= SQUARE.x1 - 1; x += 0.5) {
     for (let y = SQUARE.y0 + 1; y <= SQUARE.y1 - 1; y += 0.5) {
       if (x < BUDEGA.x1 + 1.5 && y < BUDEGA.y1 + 1.5) continue;
       if (furniture.some((f) => dist(x, y, f.x, f.y) < f.r + SQ_TREE.tronco / 2 + 1.5)) continue;
       if (canopyHides(x, y, SQ_TREE.copa, SQ_TREE.altura)) continue;
+      if (spot === APPROVED_TREE) continue;
       if (!spot || dist(x, y, 70, 54) < dist(spot.x, spot.y, 70, 54)) spot = { x, y };
     }
   }
@@ -1146,8 +1189,9 @@ if (reached('4b') && FLORESTA) {
   for (const [x, y] of [[60.4, 39.75], [73.2, 39.75], [88.6, 39.75]] as const) cenario.push(point('vaso', x, y, { planta: 'espada-de-sao-jorge' }));
   cenario.push(rect('lixo', 80.15, 80.75, 47.55, 48.15, { altura: 0.6 }));
   // (por cima da praça, entre os postes de luz e a árvore: antes um varal passava na frente da porta da Budega, na altura
-  // da cabeça, e o dono achou a entrada péssima)
-  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[61.7, 58.3], [69.2, 58.7], [76.6, 58.2]], props: { altura: 3.2 } });
+  // da cabeça, e o dono achou a entrada péssima. As bandeirinhas são desenhadas por cima de tudo: por isso o varal do
+  // sul desce até o poste do campinho e, na tela, passa abaixo de quem está na porta da Budega maior)
+  cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[61.7, 58.3], [71, 61.5], [76.6, 58.2]], props: { altura: 3.2 } });
   cenario.push({ type: 'bandeirinhas', x: 0, y: 0, polyline: [[78.3, 49.3], [76.4, 53.2], [77.2, 57.6]], props: { altura: 3 } });
   // o mato invadindo os cantos da praça
   for (const [cx, cy, rx, ry] of [[61.9, 58.2, 1.4, 0.9], [78.1, 49.6, 1.2, 0.9]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
@@ -1218,10 +1262,17 @@ if (reached('4c') && FLORESTA) {
   // o mapa em geral"): raiz levantando o piso, mato nas frestas, samambaia nos cantos e cipó nas paredes de dentro
   // (`cipoDentro`, de 0 a 1, desenhado pela [arte]). Nada disso segura o pé: o caminho de dentro continua livre -----
   const budega = cenario.find((o) => o.type === 'casa' && o.name === 'Budega')!;
-  const inside: [Shape, number, boolean][] = [[budega, 0.25, false], [amarela, 0.35, false], [rosa, 0.3, false], [abandonada, 0.9, true]];
+  const inside: [Shape, number, boolean][] = [[budega, 0.7, true], [amarela, 0.35, false], [rosa, 0.3, false], [abandonada, 0.9, true]];
   for (const [h, cipo, musgo] of inside) h.props = { ...h.props, cipoDentro: cipo, ...(musgo ? { musgoDentro: true } : {}) };
   const ROOTS_INSIDE: [number, number][][] = [
-    [[62.15, 51.2], [62.9, 51.4], [63.3, 51.15]], // Budega: entra por baixo da parede, no corredor ao lado da geladeira
+    // a Budega maior: uma raiz sai de baixo da prateleira da esquerda e outra entra por baixo da frente, do lado da porta
+    [[61.05, 52.5], [61.6, 52.75], [62.15, 52.65], [62.5, 52.95]],
+    [[65.15, 54.2], [65.6, 53.55], [66.4, 53.25], [66.85, 53.4]],
+    // (a infestação, 15/11) mais três: pela parede da direita, do lado da porta; pela parede de grama, atrás do caixa; e
+    // por baixo da prateleira do fundo, na frente da geladeira
+    [[68.3, 52.9], [67.8, 52.6], [67.1, 52.75], [66.6, 52.5]],
+    [[67.6, 49.45], [67.3, 49.9], [66.8, 50.1]],
+    [[62.4, 49.45], [62.75, 49.95], [63.4, 50.15], [63.8, 50.6]],
     [[85.85, 37.1], [85.1, 37.45], [84.3, 37.35]], // a família: levanta a cerâmica perto do sofá
     [[70.85, 36.3], [70.15, 36.6], [69.4, 36.4]], // a vó: levanta o taco perto da cama
     [[62.15, 18.6], [62.9, 18.3], [63.4, 18.6]], // a abandonada: mais raiz entrando pelas paredes
@@ -1229,8 +1280,8 @@ if (reached('4c') && FLORESTA) {
   ];
   for (const pts of ROOTS_INSIDE) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.22, altura: 0.12, cor: '#6b4a2e', dentro: true } });
   // mato nas frestas do piso (perto das portas e dos cantos) e samambaia nos cantos
-  for (const [x, y] of [[62.6, 52.2], [82.2, 38.95], [65.25, 38.95], [62.6, 19.4], [65.9, 19.5], [66.5, 16.2]] as const) chao.push(point('planta', x, y, { tipo: 'capim', raio: 0.22 }));
-  for (const [x, y, raio] of [[85.5, 33.3, 0.35], [64.5, 34.6, 0.35], [66.3, 13.7, 0.45], [62.6, 15.6, 0.4]] as const) cenario.push(point('planta', x, y, { tipo: 'samambaia', raio, dentro: true }));
+  for (const [x, y] of [[61.25, 53.4], [64.5, 49.65], [67.75, 53.95], [62.6, 53.35], [68.1, 52.2], [64.3, 51.35], [65.3, 52.7], [82.2, 38.95], [65.25, 38.95], [62.6, 19.4], [65.9, 19.5], [66.5, 16.2]] as const) chao.push(point('planta', x, y, { tipo: 'capim', raio: 0.22 }));
+  for (const [x, y, raio] of [[61.7, 49.85, 0.35], [68.05, 53.9, 0.3], [85.5, 33.3, 0.35], [64.5, 34.6, 0.35], [66.3, 13.7, 0.45], [62.6, 15.6, 0.4]] as const) cenario.push(point('planta', x, y, { tipo: 'samambaia', raio, dentro: true }));
 }
 
 for (const s of cenario) {
@@ -1259,6 +1310,12 @@ for (const s of cenario) {
   // os móveis da Budega: a geladeira segura a pedrinha; o balcão e os engradados são baixos (as prateleiras já estão
   // na parede do fundo)
   else if (s.type === 'geladeira') colisao.push(rect('geladeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  // a Budega maior: a prateleira e a vitrine seguram a pedrinha; o balcão de vidro, o freezer, os caixotes e a lousa são
+  // baixos (a pedrinha passa); a parede de grama é só o desenho da parede do fundo; o degrau é chão
+  else if (s.type === 'prateleira' || s.type === 'vitrine') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  else if (s.type === 'balcao-vidro' || s.type === 'freezer' || s.type === 'caixote') {
+    colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  } else if (s.type === 'lousa') colisao.push(block('lousa', s.x, s.y, 0.45, { bloqueiaTiro: false, altura: 1.2 }));
   // os móveis das casas: o que é alto (estante com TV, cristaleira, filtro) segura a pedrinha; o que é baixo, não
   else if (['pia', 'fogao', 'filtro', 'mesa-cozinha', 'mesa-redonda', 'sofa', 'estante', 'cristaleira', 'maquina-costura', 'cama'].includes(s.type)) {
     colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: Number(p.altura) >= 1.2, altura: Number(p.altura) }));
