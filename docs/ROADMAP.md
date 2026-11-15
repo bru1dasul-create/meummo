@@ -354,6 +354,10 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   folhas recortadas. E o jogo só prepara a imagem dos objetos
   perto da tela: no mapa novo (1.107 objetos) entrar caiu de ~2 s para 0,1–0,2 s e a memória das imagens, de
   240–325 MB para 20–70 MB
+- [x] **[arte]** O molde de gente dos NPCs e a Xiovanna nova (15/11, pedido do dono): `js/creatures/pessoa.js`
+  (`PD.creatures.definePerson('chave', aparência)`: pele, cabelo afro/curto/coque/longo/careca, rosto, jaqueta ou
+  camiseta, calça/bermuda/saia, tênis ou chinelo, altura e largura); corpo de gente no traço do herói (tronco, braços
+  com cotovelo, mãos com dedos), piscando e falando. A Xiovanna é a primeira aparência dele
 - [x] **[arte]** Xiovanna, a vendedora da Budega (13/11, pedido do dono, com fotos de referência que não vão para o
   repositório): morena, black power grande, flor de hibisco, uniforme preto (jaqueta de zíper com capuz, escudo
   dourado no peito, emblema na manga), jeans e tênis. Vira para quem chega, acena, leva a mão ao cabelo e gesticula
