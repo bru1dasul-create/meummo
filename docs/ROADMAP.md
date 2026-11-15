@@ -541,7 +541,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto
 
 **Mundo:**
-- [ ] **[mundo]** Aumentar a floresta
+- [ ] **[mundo]** Aumentar a floresta — **pronta no ramo `mundo/floresta-maior`** (planta aprovada em 14/11): o parque
+  cresce mais 60 m para o sul (Clareira da Paineira com o parquinho antigo, Cachoeirinha, mata profunda do sul com o
+  recanto do Véu, buraco no gradil), a mata ao sul da vila vira mata de andar com o posto abandonado na beira da rua, a
+  rua desce até o fim novo e a vila ganha 13 árvores. Entra na `main` com o desenho da [arte] (item abaixo)
+- [ ] **[arte]** Desenhar as coisas da floresta maior: `paineira`, `parquinho` (balanço, escorregador, gira-gira),
+  `cachoeira`, `pinguela` com `pedras`, `cobertura` do posto, `bomba`, `pneus`, a lojinha (`casa` com `posto`) e a placa
+  em branco (lista no `docs/MUNDO.md`, "Esperando outras frentes")
 - [x] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
   (14/11): o [mundo] marcou no mapa (`mundo/lote2-floresta-dentro`) a raiz `dentro`, o capim nas frestas, a samambaia
   `dentro` nos cantos e o `cipoDentro`/`musgoDentro` das casas; a [arte] desenhou: a raiz sai de baixo da parede, corre
@@ -553,6 +559,8 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
   (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
 - [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
+  — **marcadas no ramo `mundo/floresta-maior`** (quati 4, tatu_bola 3, marimbondo 3, filhote_boitata 1 no recanto do
+  Véu); entram na `main` com a floresta maior
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha

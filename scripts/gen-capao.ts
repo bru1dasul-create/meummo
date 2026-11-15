@@ -53,8 +53,15 @@ const CREATURES = true;
  */
 const FLORESTA = true;
 const W = 96;
-/** O mapa cresceu para o sul em 13/11 (o dono pediu a mata 50% maior): o parque vai até y = 120 e a vila até y = 80. */
-const H = 120;
+/**
+ * O mapa cresceu para o sul em 13/11 (o dono pediu a mata 50% maior: o parque foi até y = 120 e a vila até y = 80) e de
+ * novo em 14/11 (a floresta maior, planta aprovada): mais 60 m para o sul, sem mudar nada de lugar. Tudo o que é sorteado
+ * até y = H0 usa H0 (sai igual a antes); a faixa nova (y de H0 a H) tem sorteios próprios.
+ */
+const H = 180;
+const H0 = 120;
+/** Liga a faixa nova da floresta maior (o parque ao sul, a mata da estrada, o posto e as árvores novas da vila). */
+const FLORESTA_MAIOR = true;
 const VILLAGE_S = 80;
 const SEED = 20261113;
 
@@ -108,6 +115,46 @@ const SAGUI_ZONE = { x0: 32, x1: 46, y0: 6, y1: 24 };
 const JARARACA_ZONE = { x0: 16, x1: 26, y0: 92, y1: 112 };
 /** Distância mínima entre troncos (borda a borda), para o pé de 0,6 × 0,4 passar. */
 const TRUNK_GAP = 1.2;
+
+// ---------------- a floresta maior (14/11): o parque ao sul ----------------
+/** A Clareira da Paineira (o parquinho antigo engolido pela mata, debaixo da paineira). */
+const PAINEIRA_C = { x: 32, y: 150, r: 6.5 };
+/** O poço da Cachoeirinha: o riacho cai das pedras do norte, enche o poço e sai pelo sul. */
+const POOL = { x: 14.3, y: 159.5, rx: 3.8, ry: 3.2 };
+/** O riacho continua do fim antigo (14,5; 120) até a beira nova do mapa, passando pelo poço. */
+const STREAM_SOUTH: [number, number][] = [[14.5, H0], [12, 131], [15.5, 142], [13.5, 153], [14.3, 159.5], [15.5, 171], [13.5, H]];
+/** A mata profunda do sul (neblina, escuro, os bichos mais fortes) e o recanto do Véu no fim da trilha dela. */
+const DEEP_SOUTH = { x: 11, y: 169, rx: 10.5, ry: 9 };
+const RECANTO = { x: 6.5, y: 173, r: 3.5 };
+/**
+ * As trilhas novas: da trilha do sul (no meio do trecho que desce para a pinguela) até a paineira; da paineira ao poço;
+ * do poço, pelas pedras do riacho, ao recanto; e da paineira ao buraco no gradil. A primeira passa pela mata antiga: só
+ * três árvores saem do caminho (o traçado que menos tira).
+ */
+const SOUTH_TRAILS: { pts: [number, number][]; largura: number }[] = [
+  { pts: [[22.25, 102.25], [25, 108], [30.5, 116], [29.5, 124], [31, 133], [31.6, 143.6]], largura: TRAIL_W },
+  { pts: [[26, 152.6], [21.5, 155.5], [18.6, 158.6]], largura: TRAIL_W },
+  { pts: [[18.6, 160.6], [17.6, 163.4], [16.6, 165], [13.1, 165], [10.5, 168.5], [8.6, 170.8]], largura: 1.6 },
+  { pts: [[38.2, 152.4], [43, 157.5], [48, 161.2]], largura: TRAIL_W },
+];
+/** As árvores da mata antiga que saem do caminho da trilha nova (x, y do tronco). */
+const SOUTH_TRAIL_CLEARED: [number, number][] = [[26.9, 107.3], [23.9, 105.2], [35.0, 117.2]];
+/** O buraco no gradil: a passagem do parque para a mata da estrada (com um pedaço de gradil torto em cada ponta). */
+const FENCE_HOLE = { y0: 160, y1: 162.4 };
+/** Áreas dos bichos novos (quati, tatu-bola, marimbondos e o filhote de boitatá), com a mata mais aberta. */
+const NEW_ZONES = {
+  meio: { x0: 20, x1: 38, y0: 112, y1: 140 },
+  chefe: { x0: 2, x1: 12, y0: 167, y1: 178 },
+  estradaNorte: { x0: 52, x1: 86, y0: 92, y1: 136 },
+  estradaSul: { x0: 52, x1: 86, y0: 154, y1: 177 },
+};
+// ---------------- a floresta maior: a mata da estrada e o posto ----------------
+/** O posto abandonado na beira da estrada: o pátio de concreto, a cobertura das bombas e a lojinha. */
+const POSTO = { x0: 73, x1: 88, y0: 139, y1: 150 };
+const POSTO_ROOF = { x0: 79.4, x1: 86.6, y0: 140.6, y1: 147.4 };
+const POSTO_SHOP = { x0: 73.6, x1: 78, y0: 139.6, y1: 144.2 };
+/** A trilha do buraco no gradil até o fundo do posto, pela mata da estrada. */
+const EAST_TRAIL: [number, number][] = [[48, 161.2], [53, 161], [60, 158.5], [66, 153], [71.4, 148.4], [73.4, 147.6]];
 
 // ---------------- a Vila do Capão (etapa 4b) ----------------
 /** A rua que sai do portão para o leste e a rua para o sul (a saída para Guarapiranga só abre na etapa 4c). */
@@ -188,7 +235,10 @@ const BUS = { x0: 70, x1: 86, y0: 12.5, y1: 15.5 };
  * placa fecha a rua perto do fim; a saída leste (Estação Capão Redondo, depois) também fica numa barreira.
  */
 const ROAD_GUARA = { x0: ROAD_S.x0, x1: ROAD_S.x1, y0: VILLAGE_S, y1: H };
-const SOUTH_BARRIER_Y = 114.5;
+/** A barreira com a placa: na floresta maior ela desceu para o fim novo da rua (antes ficava em SOUTH_BARRIER_Y0). */
+const SOUTH_BARRIER_Y0 = 114.5;
+/** (na mesma linha de um arbusto das paredes da rua, que vão de 1,1 em 1,1 m: assim a barreira encosta nos dois lados) */
+const SOUTH_BARRIER_Y = FLORESTA_MAIOR ? Math.round((VILLAGE_S + 0.6 + 1.1 * Math.round((H - 5.5 - VILLAGE_S - 0.6) / 1.1) - 0.25) * 100) / 100 : SOUTH_BARRIER_Y0;
 
 /**
  * Entre duas coisas sólidas da vila o vão é zero (encostadas) ou de pelo menos este tanto: num vão menor que isso o
@@ -292,9 +342,23 @@ function crossing(a: [number, number][], b: [number, number][]): [number, number
 }
 const [bridgeX, bridgeY] = crossing(TRAILS[2]!, STREAM);
 const PINGUELA = { x0: round(bridgeX - 1.7), x1: round(bridgeX + 1.7), y0: round(bridgeY - 0.7), y1: round(bridgeY + 0.7) };
-/** Água de verdade (onde o pé não entra): o lago e o riacho, menos o deque e a pinguela. */
+/** As pedras de atravessar o riacho, logo abaixo do poço da cachoeirinha (onde a trilha do recanto cruza o riacho). */
+const [stonesX, stonesY] = crossing(SOUTH_TRAILS[2]!.pts, STREAM_SOUTH);
+const PEDRAS = { x0: round(stonesX - 1.7), x1: round(stonesX + 1.7), y0: round(stonesY - 0.7), y1: round(stonesY + 0.7) };
+/** O contorno da água do poço. */
+const POOL_PTS = blob(POOL.x, POOL.y, POOL.rx, POOL.ry, 0.12, 28);
+/**
+ * Os riachos e poços que a mata já conhece. Começa só com o riacho antigo: o da floresta maior entra depois que a mata
+ * antiga foi sorteada (a distância até a água decide onde nasce cada planta, e a mata antiga tem de sair igual).
+ */
+const STREAMS: [number, number][][] = [STREAM];
+const PONDS: [number, number][][] = [];
+/** Água de verdade (onde o pé não entra): o lago, o riacho e o poço, menos o deque, a pinguela e as pedras. */
 const isWater = (x: number, y: number) =>
-  (inside(x, y, WATER_PTS) || distToPath(x, y, STREAM) <= STREAM_W / 2) && !inRect(x, y, DECK) && !inRect(x, y, PINGUELA);
+  (inside(x, y, WATER_PTS) || PONDS.some((p) => inside(x, y, p)) || STREAMS.some((s) => distToPath(x, y, s) <= STREAM_W / 2)) &&
+  !inRect(x, y, DECK) &&
+  !inRect(x, y, PINGUELA) &&
+  !inRect(x, y, PEDRAS);
 
 chao.push(rect('mata', 0, PARK_X, 0, H));
 chao.push(rect('terra', PARK_X, W, 0, VILLAGE_S)); // a vila
@@ -400,7 +464,13 @@ const trailGap = (x: number, y: number) => Math.min(...ALL_TRAILS.map((t) => dis
 /** Quanto falta até a água (o lago ou o riacho); negativo dentro do lago. */
 const SHORE = [...WATER_PTS, WATER_PTS[0]!];
 const lakeGap = (x: number, y: number) => (inside(x, y, WATER_PTS) ? -1 : 1) * distToPath(x, y, SHORE);
-const waterGap = (x: number, y: number) => Math.min(lakeGap(x, y), distToPath(x, y, STREAM) - STREAM_W / 2);
+/** Quanto falta até a água (o lago, os riachos e os poços que a mata já conhece); negativo dentro do lago ou do poço. */
+const waterGap = (x: number, y: number) =>
+  Math.min(
+    lakeGap(x, y),
+    ...STREAMS.map((s) => distToPath(x, y, s) - STREAM_W / 2),
+    ...PONDS.map((p) => (inside(x, y, p) ? -1 : 1) * distToPath(x, y, [...p, p[0]!])),
+  );
 /** Lugares guardados (centro, raio): nada alto em cima. */
 const reserved: { x: number; y: number; r: number }[] = [];
 const free = (x: number, y: number, r: number) => !reserved.some((q) => dist(x, y, q.x, q.y) < q.r + r);
@@ -488,7 +558,7 @@ const SPECIES: Record<string, { tronco: number; copa: number; altura: number }> 
 };
 for (let tries = 0; tries < 9000; tries++) {
   const x = 2 + rng() * (PARK_X - 4);
-  const y = 2 + rng() * (H - 4);
+  const y = 2 + rng() * (H0 - 4);
   const k = rng();
   const especie = k < 0.1 ? 'jeriva' : k < 0.22 ? 'embauba' : 'mata';
   const d = SPECIES[especie] ?? { tronco: round(0.4 + rng() * 0.25), copa: round(1.7 + rng() * 1.2), altura: round(5 + rng() * 3.5) };
@@ -502,12 +572,12 @@ for (const d of DEEP) {
   }
 }
 for (let i = 0, n = 0; i < 1500 && n < 8; i++) {
-  const [x, y] = [2 + rng() * (PARK_X - 4), 2 + rng() * (H - 4)];
+  const [x, y] = [2 + rng() * (PARK_X - 4), 2 + rng() * (H0 - 4)];
   if (!DEEP.some((d) => inEllipse(x, y, d)) && plant(x, y, 'seca', SPECIES.seca!, TRUNK_GAP + 1.5)) n++;
 }
 // xaxins na beira da água, onde é úmido
 for (let i = 0, n = 0; i < 4000 && n < 18; i++) {
-  const [x, y] = [2 + rng() * (PARK_X - 4), 30 + rng() * (H - 32)];
+  const [x, y] = [2 + rng() * (PARK_X - 4), 30 + rng() * (H0 - 32)];
   const g = waterGap(x, y);
   if (g > 1 && g < 6 && plant(x, y, 'xaxim', SPECIES.xaxim!, TRUNK_GAP + 0.6)) n++;
 }
@@ -534,9 +604,13 @@ for (let i = 0, n = 0; i < 1500 && n < 8; i++) {
 }
 // a beira do mapa: mata fechada nas pontas do parque (oeste, norte e sul)
 const edge: [number, number][] = [];
-for (let y = 0.6; y < H; y += 1.1) edge.push([0.6, y]);
-for (let x = 1.7; x < PARK_X - 0.6; x += 1.1) edge.push([x, 0.6], [x, H - 0.6]);
-for (const [x, y] of edge) cenario.push(point('arbusto', round(x), round(y), { raio: round(0.9 + rng() * 0.25), fechado: true }));
+for (let y = 0.6; y < H0; y += 1.1) edge.push([0.6, y]);
+for (let x = 1.7; x < PARK_X - 0.6; x += 1.1) edge.push([x, 0.6], [x, H0 - 0.6]);
+for (const [x, y] of edge) {
+  const raio = round(0.9 + rng() * 0.25); // sorteado sempre, na mesma ordem (o resto da mata não muda)
+  // na floresta maior a beira sul antiga sai: o parque continua para o sul (a beira nova fica no fim do mapa)
+  if (!(FLORESTA_MAIOR && y > H0 - 1)) cenario.push(point('arbusto', round(x), round(y), { raio, fechado: true }));
+}
 
 // ----- o chão da mata (não bloqueia): samambaias, helicônias, taboas, aguapés e cogumelos que brilham -----
 const lowFits = (x: number, y: number, raio: number) =>
@@ -546,13 +620,13 @@ const lowFits = (x: number, y: number, raio: number) =>
   trees.every((t) => dist(x, y, t.x, t.y) > t.tronco / 2 + raio * 0.6) &&
   clumps.every((c) => dist(x, y, c.x, c.y) > c.r + raio * 0.5);
 for (let i = 0, n = 0; i < 4000 && n < 130; i++) {
-  const [x, y, raio] = [2 + rng() * (PARK_X - 4), 2 + rng() * (H - 4), round(0.5 + rng() * 0.4)];
+  const [x, y, raio] = [2 + rng() * (PARK_X - 4), 2 + rng() * (H0 - 4), round(0.5 + rng() * 0.4)];
   if (waterGap(x, y) < raio || !lowFits(x, y, raio)) continue;
   cenario.push(point('planta', round(x), round(y), { tipo: 'samambaia', raio }));
   n++;
 }
 for (let i = 0, n = 0; i < 4000 && n < 24; i++) {
-  const [x, y, raio] = [2 + rng() * (PARK_X - 4), 30 + rng() * (H - 32), round(0.5 + rng() * 0.3)];
+  const [x, y, raio] = [2 + rng() * (PARK_X - 4), 30 + rng() * (H0 - 32), round(0.5 + rng() * 0.3)];
   const g = waterGap(x, y);
   const byClearing = Math.abs(dist(x, y, BANANA.x, BANANA.y) - BANANA.r - 1.2) < 1;
   if (((g > raio && g < 3.5) || byClearing) && lowFits(x, y, raio)) {
@@ -574,7 +648,7 @@ for (let i = 0, n = 0; i < 400 && n < 6; i++) {
   const s = Math.floor(rng() * (STREAM.length - 1));
   const t = rng();
   const [x, y] = [STREAM[s]![0] + (STREAM[s + 1]![0] - STREAM[s]![0]) * t + (rng() < 0.5 ? -0.45 : 0.45), STREAM[s]![1] + (STREAM[s + 1]![1] - STREAM[s]![1]) * t];
-  if (y < H - 3 && isWater(x, y) && trailGap(x, y) > 1.5) {
+  if (y < H0 - 3 && isWater(x, y) && trailGap(x, y) > 1.5) {
     cenario.push(point('planta', round(x), round(y), { tipo: 'taboa', raio: 0.4 }));
     n++;
   }
@@ -605,7 +679,7 @@ for (const o of cenario.filter((c) => c.type === 'aguape')) {
 for (let i = 0, n = 0; i < 3000 && n < 24; i++) {
   const spot = [...DEEP, { x: NOOK.x, y: NOOK.y, rx: 4, ry: 4 }, { x: ANCESTRAL.x, y: ANCESTRAL.y, rx: 4, ry: 4 }][i % 4]!;
   const [x, y] = [spot.x + (rng() * 2 - 1) * spot.rx, spot.y + (rng() * 2 - 1) * spot.ry];
-  if (x > 2 && y > 2 && y < H - 2 && inEllipse(x, y, spot) && waterGap(x, y) > 0.5 && lowFits(x, y, 0.3) && free(x, y, 0.2)) {
+  if (x > 2 && y > 2 && y < H0 - 2 && inEllipse(x, y, spot) && waterGap(x, y) > 0.5 && lowFits(x, y, 0.3) && free(x, y, 0.2)) {
     cenario.push(point('planta', round(x), round(y), { tipo: 'cogumelo', raio: round(0.25 + rng() * 0.15), brilho: '#3fd6c8' }));
     n++;
   }
@@ -613,7 +687,14 @@ for (let i = 0, n = 0; i < 3000 && n < 24; i++) {
 
 // o gradil do parque (ferro velho com cipó, até o fim do parque, lá no sul) e o Portão I, que abre na etapa 4b
 cenario.push(rect('gradil', PARK_X - 0.1, PARK_X + 0.1, 0, GATE.y0 - 0.3, { altura: 1.8, estado: 'inteiro' }));
-cenario.push(rect('gradil', PARK_X - 0.1, PARK_X + 0.1, GATE.y1 + 0.3, H, { altura: 1.8, estado: 'inteiro' }));
+if (FLORESTA_MAIOR) {
+  // na floresta maior o gradil vai até o fim novo do parque, com o buraco que dá para a mata da estrada (um pedaço torto
+  // em cada ponta do buraco)
+  const [a, b] = [FENCE_HOLE.y0, FENCE_HOLE.y1];
+  for (const [y0, y1, estado] of [[GATE.y1 + 0.3, a - 1.6, 'inteiro'], [a - 1.6, a, 'quebrado'], [b, b + 1.6, 'quebrado'], [b + 1.6, H, 'inteiro']] as const) {
+    cenario.push(rect('gradil', PARK_X - 0.1, PARK_X + 0.1, y0, y1, { altura: 1.8, estado }));
+  }
+} else cenario.push(rect('gradil', PARK_X - 0.1, PARK_X + 0.1, GATE.y1 + 0.3, H, { altura: 1.8, estado: 'inteiro' }));
 cenario.push(rect('portao', PARK_X - 0.1, PARK_X + 0.1, GATE.y0 + 0.3, GATE.y1 - 0.3, { aberto: reached('4b') }, 'Portão I'));
 for (const y of [GATE.y0, GATE.y1]) cenario.push(rect('pilar', PARK_X - 0.3, PARK_X + 0.3, y - 0.3, y + 0.3, { altura: 2.6 }));
 // poste com luz quente do lado de fora do portão (aparece entre as grades)
@@ -869,8 +950,14 @@ if (reached('4c')) {
   cenario.push(rect('barreira', ROAD_GUARA.x0, ROAD_GUARA.x1, SOUTH_BARRIER_Y, SOUTH_BARRIER_Y + 0.5, { altura: 1.1 }));
   cenario.push(point('placa', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 0.3, { texto: 'GUARAPIRANGA', seta: 'sul' }));
   // paredes de mata dos dois lados da rua: a mata ao sul da vila continua só de enfeite
+  // (na floresta maior as paredes descem até o fim novo do mapa, e a do oeste abre na frente do posto abandonado; o
+  // tamanho de cada arbusto é sorteado sempre, na mesma ordem)
   for (let y = VILLAGE_S + 0.6; y < H; y += 1.1) {
-    for (const x of [ROAD_GUARA.x0 - 0.7, ROAD_GUARA.x1 + 0.7]) cenario.push(point('arbusto', round(x), round(y), { raio: round(0.9 + crng() * 0.25), fechado: true }));
+    for (const x of [ROAD_GUARA.x0 - 0.7, ROAD_GUARA.x1 + 0.7]) {
+      const raio = round(0.9 + crng() * 0.25);
+      const postoOpen = FLORESTA_MAIOR && x < ROAD_GUARA.x0 && y > POSTO.y0 - 1.1 && y < POSTO.y1 + 1.1;
+      if (!postoOpen) cenario.push(point('arbusto', round(x), round(y), { raio, fechado: true }));
+    }
   }
   for (let x = ROAD_GUARA.x0 + 1; x <= ROAD_GUARA.x1 - 1; x += 1) for (let y = VILLAGE_S; y < SOUTH_BARRIER_Y; y += 2) VILLAGE_KEYS.push([x, y, 0]);
   // a saída leste (Estação Capão Redondo) fica para depois: a rua da vila termina no mato, com uma placa num poste na
@@ -912,7 +999,8 @@ if (reached('4c') && FLORESTA) {
 
   // ----- a rua para Guarapiranga: faixa apagada, rachaduras com mato, buracos com água, raízes saindo da mata, capim -----
   chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: [[91, VILLAGE_S + 0.5], [91, SOUTH_BARRIER_Y - 1]], props: { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true } });
-  const onRoad = (x: number, y: number) => x > ROAD_GUARA.x0 + 0.3 && x < ROAD_GUARA.x1 - 0.3 && y > VILLAGE_S + 0.5 && y < SOUTH_BARRIER_Y - 0.5;
+  // (as rachaduras de antes ficam iguais: elas param onde ficava a barreira antes da floresta maior)
+  const onRoad = (x: number, y: number) => x > ROAD_GUARA.x0 + 0.3 && x < ROAD_GUARA.x1 - 0.3 && y > VILLAGE_S + 0.5 && y < SOUTH_BARRIER_Y0 - 0.5;
   for (let i = 0, n = 0; i < 300 && n < 9; i++) {
     let [x, y]: [number, number] = [ROAD_GUARA.x0 + 0.5 + grng() * 5, VILLAGE_S + 1 + grng() * 32];
     if (!onRoad(x, y)) continue;
@@ -939,7 +1027,8 @@ if (reached('4c') && FLORESTA) {
   ];
   for (const pts of ROAD_ROOTS) chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.3, altura: 0.2, cor: '#6b4a2e' } });
   for (const x of [ROAD_GUARA.x0 + 0.25, ROAD_GUARA.x1 - 0.25]) {
-    for (let y = VILLAGE_S + 1 + grng() * 2; y < SOUTH_BARRIER_Y - 1; y += 1.5 + grng() * 3) chao.push(point('planta', x, round(y), { tipo: 'capim', raio: round(0.2 + grng() * 0.15) }));
+    // (até onde ficava a barreira antes da floresta maior; o trecho novo ganha o seu capim lá na floresta maior)
+    for (let y = VILLAGE_S + 1 + grng() * 2; y < SOUTH_BARRIER_Y0 - 1; y += 1.5 + grng() * 3) chao.push(point('planta', x, round(y), { tipo: 'capim', raio: round(0.2 + grng() * 0.15) }));
   }
   // o fim da rua da vila, no leste, engolido pelo mato
   for (const [cx, cy, rx, ry] of [[95.2, 42.6, 1.1, 1.4], [94.8, 45.9, 0.9, 0.8]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
@@ -966,7 +1055,7 @@ if (reached('4c') && FLORESTA) {
   const nearRoad = (x: number, r: number) => reached('4c') && x + r > ROAD_GUARA.x0 - 2.2 && x - r < ROAD_GUARA.x1 + 2.2;
   const southFits = (x: number, y: number, r: number) => !nearRoad(x, r) && south.every((t) => dist(x, y, t.x, t.y) - t.tronco / 2 - r >= TRUNK_GAP + 1.4);
   for (let i = 0, n = 0; i < 3000 && n < 45; i++) {
-    const [x, y] = [PARK_X + 1.5 + srng() * (W - PARK_X - 3), VILLAGE_S + 3 + srng() * (H - VILLAGE_S - 4.5)];
+    const [x, y] = [PARK_X + 1.5 + srng() * (W - PARK_X - 3), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 4.5)];
     const k = srng();
     const especie = k < 0.15 ? 'jeriva' : k < 0.3 ? 'embauba' : 'mata';
     const d = SPECIES[especie] ?? { tronco: round(0.4 + srng() * 0.25), copa: round(1.7 + srng() * 1.2), altura: round(5 + srng() * 3.5) };
@@ -976,14 +1065,14 @@ if (reached('4c') && FLORESTA) {
     n++;
   }
   for (let i = 0, n = 0; i < 2000 && n < 14; i++) {
-    const [x, y, r] = [PARK_X + 2 + srng() * (W - PARK_X - 4), VILLAGE_S + 3 + srng() * (H - VILLAGE_S - 5), round(1 + srng() * 0.4)];
+    const [x, y, r] = [PARK_X + 2 + srng() * (W - PARK_X - 4), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 5), round(1 + srng() * 0.4)];
     if (!southFits(x, y, r) || canopyHides(x, y, r * 1.3, 7)) continue;
     south.push({ x, y, tronco: r * 2 });
     cenario.push(point('bambu', round(x), round(y), { raio: r, altura: 7 }));
     n++;
   }
   for (let i = 0, n = 0; i < 2000 && n < 10; i++) {
-    const [x, y] = [PARK_X + 2 + srng() * (W - PARK_X - 4), VILLAGE_S + 3 + srng() * (H - VILLAGE_S - 5)];
+    const [x, y] = [PARK_X + 2 + srng() * (W - PARK_X - 4), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 5)];
     if (!southFits(x, y, 0.2) || canopyHides(x, y, SPECIES.bananeira!.copa, SPECIES.bananeira!.altura)) continue;
     south.push({ x, y, tronco: 0.35 });
     cenario.push(point('arvore', round(x), round(y), { especie: 'bananeira', ...SPECIES.bananeira! }));
@@ -1153,6 +1242,523 @@ if (reached('4b') && FLORESTA) {
   for (const [cx, cy, rx, ry] of [[61.9, 58.2, 1.4, 0.9], [78.1, 49.6, 1.2, 0.9]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
 }
 
+// ---------------- a floresta maior (14/11, pedido do dono: "aumentar a floresta"; planta aprovada) ----------------
+// O parque cresce mais 60 m para o sul: a Clareira da Paineira com o parquinho antigo, a Cachoeirinha (o riacho caindo
+// das pedras num poço), a mata profunda do sul com o recanto do Véu e o buraco no gradil. A mata ao sul da vila, que era
+// só enfeite, vira mata de andar (a mata da estrada), com o posto abandonado na beira da rua para Guarapiranga, que desce
+// até o fim novo do mapa. A vila ganha árvores novas. Nada do que já existia muda de lugar: saem só as três árvores do
+// caminho da trilha nova e as árvores da mata ao sul da vila que ficariam num vão de entalar. Sorteios próprios:
+// SEED + 14 (o parque), SEED + 15 (a mata da estrada).
+/** O que é sólido na mata da estrada, para conferir os vãos de entalar enquanto planta (x0, x1, y0, y1). */
+interface Box {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+const boxGapOk = (a: Box, b: Box) => {
+  const dx = Math.max(0, b.x0 - a.x1, a.x0 - b.x1);
+  const dy = Math.max(0, b.y0 - a.y1, a.y0 - b.y1);
+  return (dx > 0 && dy > 0) || dx + dy <= 0.3 || dx + dy >= MIN_GAP;
+};
+const squareBox = (x: number, y: number, side: number): Box => ({ x0: x - side / 2, x1: x + side / 2, y0: y - side / 2, y1: y + side / 2 });
+/** A caixa do pé de uma coisa do cenário que segura o pé (a mesma conta da colisão, para as que importam aqui). */
+function footBox(s: Shape): Box | null {
+  const p = s.props ?? {};
+  if (s.type === 'arvore') return squareBox(s.x, s.y, Number(p.tronco));
+  if (s.type === 'bambu') return squareBox(s.x, s.y, round(Number(p.raio) * 1.6));
+  if (s.type === 'arbusto' && p.fechado) return squareBox(s.x, s.y, round(Number(p.raio) * 1.8));
+  if (s.type === 'pedra') return squareBox(s.x, s.y, round(Number(p.raio) * 1.5));
+  if (s.type === 'poste-praca') return squareBox(s.x, s.y, 0.25);
+  if (s.type === 'lixeira') return squareBox(s.x, s.y, 0.5);
+  if (s.type === 'placa' && p.poste) return squareBox(s.x, s.y, 0.2);
+  if (s.type === 'pneus') return squareBox(s.x, s.y, round(Number(p.raio) * 1.8));
+  if (s.point) return null;
+  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
+  return null;
+}
+/** As caixas que seguram o pé (a cobertura do posto só nos quatro pilares; o balanço só nos dois pés de ferro). */
+function boxesOf(s: Shape): Box[] {
+  const p = s.props ?? {};
+  if (s.type === 'cobertura') {
+    const [i, side] = [0.6, Number(p.pilares)];
+    return [[s.x + i, s.y + i], [s.x + s.w! - i, s.y + i], [s.x + i, s.y + s.h! - i], [s.x + s.w! - i, s.y + s.h! - i]].map(([x, y]) => squareBox(x!, y!, side));
+  }
+  if (s.type === 'parquinho' && p.brinquedo === 'balanco') {
+    const along = s.w! >= s.h!;
+    const ends = along ? [[s.x + 0.125, s.y + s.h! / 2], [s.x + s.w! - 0.125, s.y + s.h! / 2]] : [[s.x + s.w! / 2, s.y + 0.125], [s.x + s.w! / 2, s.y + s.h! - 0.125]];
+    return ends.map(([x, y]) => squareBox(x!, y!, 0.25));
+  }
+  if (s.type === 'parquinho' && p.brinquedo === 'escorregador') return [{ x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! }];
+  if (s.type === 'parquinho') return [squareBox(s.x, s.y, round(Number(p.raio) * 1.75))];
+  const b = footBox(s);
+  return b ? [b] : [];
+}
+/**
+ * Cabe no vão entre a e b (de frente um para o outro) um quadrado de 0,3 m fora das outras caixas? É onde o pé de
+ * 0,6 × 0,4 começa a entrar de lado e entala (como entre o orelhão e o poste). Quando outras coisas enchem o vão e só
+ * sobra uma fresta mais fina que isso (os arbustos da parede se encostam e, quando um é menor que o vizinho, sobra um
+ * dente), o pé não entra.
+ */
+function pocketOpen(a: Box, b: Box, all: Box[]): boolean {
+  const inX = a.x1 <= b.x0 || b.x1 <= a.x0; // separados no x: o vão corre no y
+  const [g0, g1] = inX ? (a.x1 <= b.x0 ? [a.x1, b.x0] : [b.x1, a.x0]) : a.y1 <= b.y0 ? [a.y1, b.y0] : [b.y1, a.y0];
+  const [m0, m1] = inX ? [Math.max(a.y0, b.y0), Math.min(a.y1, b.y1)] : [Math.max(a.x0, b.x0), Math.min(a.x1, b.x1)];
+  const r = inX ? { x0: g0, x1: g1, y0: m0, y1: m1 } : { x0: m0, x1: m1, y0: g0, y1: g1 };
+  const STEP = 0.05;
+  const N = Math.round(0.3 / STEP);
+  const [cols, rows] = [Math.round((r.x1 - r.x0) / STEP), Math.round((r.y1 - r.y0) / STEP)];
+  if (cols < N || rows < N) return false;
+  const others = all.filter((c) => c !== a && c !== b && c.x1 > r.x0 && c.x0 < r.x1 && c.y1 > r.y0 && c.y0 < r.y1);
+  // soma acumulada das células ocupadas, para achar um quadrado N × N todo livre
+  const W1 = cols + 1;
+  const sum = new Float64Array((rows + 1) * W1);
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const [cx, cy] = [r.x0 + (j + 0.5) * STEP, r.y0 + (i + 0.5) * STEP];
+      const taken = others.some((o) => cx > o.x0 && cx < o.x1 && cy > o.y0 && cy < o.y1) ? 1 : 0;
+      sum[(i + 1) * W1 + j + 1] = taken + sum[i * W1 + j + 1]! + sum[(i + 1) * W1 + j]! - sum[i * W1 + j]!;
+    }
+  }
+  for (let i = N; i <= rows; i++) {
+    for (let j = N; j <= cols; j++) if (sum[i * W1 + j]! - sum[(i - N) * W1 + j]! - sum[i * W1 + j - N]! + sum[(i - N) * W1 + j - N]! === 0) return true;
+  }
+  return false;
+}
+/**
+ * Tira do cenário as plantas sorteadas (`prunable`) que ficaram num vão de entalar (0,3 a MIN_GAP, de frente) com outra
+ * coisa sólida da região. Se o vão for entre duas coisas postas à mão, para tudo: é preciso mudar o lugar de uma delas.
+ */
+function pruneWedges(region: (o: Shape) => boolean, prunable: (o: Shape) => boolean): number {
+  let removed = 0;
+  for (;;) {
+    const items = cenario.filter(region).flatMap((o) => boxesOf(o).map((b) => ({ o, b })));
+    let culprit: Shape | undefined;
+    for (let i = 0; i < items.length && !culprit; i++) {
+      for (let j = i + 1; j < items.length && !culprit; j++) {
+        const [a, b] = [items[i]!, items[j]!];
+        if (a.o === b.o || (a.o.type === 'arbusto' && b.o.type === 'arbusto')) continue; // a mata fechada é parede
+        const dx = Math.max(0, b.b.x0 - a.b.x1, a.b.x0 - b.b.x1);
+        const dy = Math.max(0, b.b.y0 - a.b.y1, a.b.y0 - b.b.y1);
+        if ((dx > 0 && dy > 0) || dx + dy <= 0.3 || dx + dy >= MIN_GAP) continue;
+        if (!pocketOpen(a.b, b.b, items.map((i) => i.b))) continue;
+        culprit = prunable(b.o) ? b.o : prunable(a.o) ? a.o : undefined;
+        if (!culprit) throw new Error(`Vão de entalar (${(dx + dy).toFixed(2)} m) entre ${a.o.type} (${a.o.x}, ${a.o.y}) e ${b.o.type} (${b.o.x}, ${b.o.y}).`);
+      }
+    }
+    if (!culprit) return removed;
+    cenario.splice(cenario.indexOf(culprit), 1);
+    removed++;
+  }
+}
+if (FLORESTA_MAIOR) {
+  const prng2 = mulberry32(SEED + 14);
+  // ----- o riacho novo e o poço passam a existir para a mata (a mata antiga já foi sorteada) -----
+  STREAMS.push(STREAM_SOUTH);
+  PONDS.push(POOL_PTS);
+  // ----- o chão: a mata profunda, a lama e a água entram junto das do mesmo tipo (por baixo das trilhas); as clareiras e
+  // as trilhas novas por cima de tudo -----
+  const after = (type: string, ...items: Shape[]) => chao.splice(chao.map((c) => c.type).lastIndexOf(type) + 1, 0, ...items);
+  after('mata-profunda', { type: 'mata-profunda', x: 0, y: 0, polygon: blob(DEEP_SOUTH.x, DEEP_SOUTH.y, DEEP_SOUTH.rx, DEEP_SOUTH.ry, 0.12) });
+  after(
+    'lama',
+    { type: 'lama', x: 0, y: 0, polygon: blob(POOL.x, POOL.y, POOL.rx + 1.2, POOL.ry + 1.1, 0.12, 28) },
+    { type: 'lama', x: 0, y: 0, polyline: STREAM_SOUTH, props: { largura: STREAM_W + 1.4 } },
+  );
+  // (o riacho primeiro e o poço por cima: senão a faixa do riacho aparece atravessando o poço)
+  after(
+    'agua',
+    { type: 'agua', x: 0, y: 0, polyline: STREAM_SOUTH, props: { cor: '#2f6f6a', largura: STREAM_W } },
+    { type: 'agua', x: 0, y: 0, polygon: POOL_PTS, props: { cor: '#2f7a73' } },
+  );
+  chao.push(ellipse('grama', PAINEIRA_C.x, PAINEIRA_C.y, PAINEIRA_C.r));
+  chao.push(ellipse('grama', RECANTO.x, RECANTO.y, RECANTO.r));
+  for (const t of SOUTH_TRAILS) chao.push({ type: 'trilha', x: 0, y: 0, polyline: t.pts, props: { largura: t.largura } });
+
+  // ----- o que a câmera precisa ver livre (as trilhas, as clareiras, o poço e as pedras) e por onde nada alto nasce -----
+  for (const t of SOUTH_TRAILS) {
+    ALL_TRAILS.push({ pts: t.pts, half: t.largura / 2 });
+    VIEW_KEYS.push(...pathPoints(t.pts, t.largura));
+  }
+  for (const c of [PAINEIRA_C, RECANTO]) {
+    for (let x = c.x - c.r; x <= c.x + c.r; x += 1) for (let y = c.y - c.r; y <= c.y + c.r; y += 1) if (dist(x, y, c.x, c.y) <= c.r) VIEW_KEYS.push([x, y]);
+  }
+  for (let x = POOL.x - POOL.rx; x <= POOL.x + POOL.rx; x += 1) for (let y = POOL.y - POOL.ry; y <= POOL.y + POOL.ry; y += 1) if (inside(x, y, POOL_PTS)) VIEW_KEYS.push([x, y]);
+  VIEW_KEYS.push([PEDRAS.x0, PEDRAS.y0], [PEDRAS.x1, PEDRAS.y0], [PEDRAS.x0, PEDRAS.y1], [PEDRAS.x1, PEDRAS.y1], [stonesX, stonesY]);
+
+  // ----- a mata antiga abre caminho para a trilha nova: saem três árvores e as plantas baixas que ficavam nela -----
+  for (const [x, y] of SOUTH_TRAIL_CLEARED) {
+    const i = cenario.findIndex((o) => o.type === 'arvore' && Math.abs(o.x - x) < 0.06 && Math.abs(o.y - y) < 0.06);
+    if (i === -1) throw new Error(`A árvore (${x}, ${y}) do caminho da trilha nova não está mais lá: confira o traçado.`);
+    const [o] = cenario.splice(i, 1);
+    trees.splice(trees.findIndex((t) => Math.abs(t.x - o!.x) < 0.01 && Math.abs(t.y - o!.y) < 0.01), 1);
+  }
+  for (let i = cenario.length - 1; i >= 0; i--) {
+    const o = cenario[i]!;
+    if (o.type !== 'planta' || o.y > H0) continue;
+    if (SOUTH_TRAILS.some((t) => distToPath(o.x, o.y, t.pts) < t.largura / 2 + Number(o.props?.raio ?? 0.4) + 0.2)) cenario.splice(i, 1);
+  }
+  // nada da mata antiga em cima da trilha nova, nem copa tampando ela na tela (as mesmas regras de quando a mata nasceu)
+  {
+    const t = SOUTH_TRAILS[0]!;
+    const keys = pathPoints(t.pts, t.largura);
+    const hides = (o: Shape, copa: number, altura: number) => keys.some(([kx, ky]) => covers(o.x, o.y, copa, altura, kx, ky));
+    for (const o of cenario) {
+      if (o.x > PARK_X || o.y > H0 + 1) continue;
+      const p = o.props ?? {};
+      const gap = distToPath(o.x, o.y, t.pts) - t.largura / 2;
+      const bad =
+        (o.type === 'arvore' && (gap < Number(p.copa) + 0.3 || hides(o, Number(p.copa), Number(p.altura)))) ||
+        (o.type === 'bambu' && (gap < Number(p.raio) + 0.8 || hides(o, Number(p.raio) * 1.3, Number(p.altura)))) ||
+        (o.type === 'arbusto' && p.fechado === true && gap < Number(p.raio) + 0.8) ||
+        (o.type === 'pedra' && gap < Number(p.raio) + 0.3);
+      if (bad) throw new Error(`${o.type} em (${o.x}, ${o.y}) fica em cima da trilha nova ou tampa ela: tire do caminho (SOUTH_TRAIL_CLEARED).`);
+    }
+  }
+
+  // ----- a cachoeirinha: as pedras de onde o riacho cai no poço (na ponta norte dele), uma pedra de cada lado, e as
+  // pedras de atravessar o riacho logo abaixo do poço (dá para andar em cima, como na pinguela) -----
+  const fallY = round(POOL.y - POOL.ry - 0.25);
+  const fallX = round(13.5 + ((14.3 - 13.5) * (fallY - 153)) / (159.5 - 153)); // onde o riacho chega no poço
+  const FALL = { x0: round(fallX - 1.7), x1: round(fallX + 1.7), y0: round(fallY - 0.7), y1: round(fallY + 0.7) };
+  cenario.push(rect('cachoeira', FALL.x0, FALL.x1, FALL.y0, FALL.y1, { altura: 1.6, queda: 'sul', musgo: true }, 'Cachoeirinha'));
+  reserved.push({ x: fallX, y: fallY, r: 3.2 });
+  for (const [dx, raio] of [[-2.3, 0.6], [2.25, 0.55]] as const) cenario.push(point('pedra', round(fallX + dx), round(fallY + 0.2), { raio, musgo: true }));
+  cenario.push(rect('pinguela', PEDRAS.x0, PEDRAS.x1, PEDRAS.y0, PEDRAS.y1, { altura: 0.2, pedras: true }));
+  reserved.push({ x: stonesX, y: stonesY, r: 2.4 });
+  // o recanto do Véu, no fim da trilha da mata profunda do sul (a clareira pequena onde vai morar o bicho mais forte)
+  reserved.push({ x: RECANTO.x, y: RECANTO.y, r: RECANTO.r + 0.5 });
+  cenario.push(point('veu', RECANTO.x, RECANTO.y, { raio: 1.4 }));
+  // troncos caídos na mata profunda do sul e na beira da mata (longe das trilhas)
+  for (const [x, y, w, h] of [[19.5, 176, 3.4, 0.6], [3.4, 152, 0.6, 3.2], [40.5, 172.5, 3.6, 0.6]] as const) {
+    if (trailGap(x, y) < Math.max(w, h) / 2 + 1 || waterGap(x, y) < Math.max(w, h) / 2 + 0.8) throw new Error(`O tronco caído em (${x}, ${y}) fica perto da trilha ou da água.`);
+    reserved.push({ x, y, r: Math.max(w, h) / 2 + 1.3 });
+    cenario.push(rect('tronco-caido', round(x - w / 2), round(x + w / 2), round(y - h / 2), round(y + h / 2), { altura: 0.6 }));
+  }
+
+  // ----- a paineira: na beirada da clareira, onde o tronco não pisa em trilha e a copa alta não tampa nenhuma trilha,
+  // o poço nem as pedras (só a própria clareira, como a Figueira dos Despertos). De preferência ao noroeste: a copa
+  // "sobe" na tela para trás da clareira e deixa o parquinho à vista -----
+  const PAINEIRA = { especie: 'paineira', copa: 5, altura: 9, tronco: 1.6 };
+  let pSpot: [number, number] | undefined;
+  let pScore = Infinity;
+  for (const d of [PAINEIRA_C.r - 0.5, PAINEIRA_C.r, PAINEIRA_C.r + 0.8]) {
+    for (let a = 0; a < 360; a += 5) {
+      const [x, y] = [round(PAINEIRA_C.x + Math.cos((a * Math.PI) / 180) * d), round(PAINEIRA_C.y + Math.sin((a * Math.PI) / 180) * d)];
+      if (trailGap(x, y) < PAINEIRA.tronco / 2 + 1 || waterGap(x, y) < 3 || !free(x, y, PAINEIRA.tronco / 2 + 1)) continue;
+      if (!trees.every((t) => dist(x, y, t.x, t.y) - (t.tronco + PAINEIRA.tronco) / 2 >= TRUNK_GAP + 1.5)) continue;
+      const hides = VIEW_KEYS.some(([kx, ky]) => dist(kx, ky, PAINEIRA_C.x, PAINEIRA_C.y) > PAINEIRA_C.r + 0.01 && covers(x, y, PAINEIRA.copa, PAINEIRA.altura, kx, ky));
+      if (hides) continue;
+      const score = Math.abs(((a - 225 + 540) % 360) - 180); // longe do noroeste (225°, com y para baixo) é pior
+      if (score < pScore) [pSpot, pScore] = [[x, y], score];
+    }
+  }
+  if (!pSpot) throw new Error('Não achei lugar para a paineira na beira da clareira sem tampar trilha, poço ou pedras.');
+  trees.push({ x: pSpot[0], y: pSpot[1], tronco: PAINEIRA.tronco });
+  reserved.push({ x: pSpot[0], y: pSpot[1], r: PAINEIRA.tronco / 2 + 0.6 });
+  cenario.push(point('arvore', pSpot[0], pSpot[1], { ...PAINEIRA, flores: '#e58fb0' }, 'Paineira'));
+
+  // ----- o parquinho antigo, enferrujado e com cipó: balanço, escorregador e gira-gira; um banco de concreto com a
+  // lixeira e um poste de parque apagado. Tudo fora das trilhas e sem vão de entalar (como o parque antigo) -----
+  /** As caixas sólidas da clareira e em volta, para nada encostar errado. */
+  const parkSolids: Box[] = [];
+  for (const o of cenario) {
+    if (dist(o.x, o.y, PAINEIRA_C.x, PAINEIRA_C.y) > PAINEIRA_C.r + 8) continue;
+    const b = footBox(o);
+    if (b) parkSolids.push(b);
+  }
+  const fitsPark = (b: Box, trailMargin: number) => {
+    const [cx, cy] = [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2];
+    const half = Math.max(b.x1 - b.x0, b.y1 - b.y0) / 2;
+    if (trailGap(cx, cy) < half + trailMargin || waterGap(cx, cy) < half + 0.6) return false;
+    return parkSolids.every((s) => boxGapOk(b, s));
+  };
+  /** O lugar mais perto de (x, y) onde a caixa w × h cabe (anda em espiral, de 0,25 em 0,25 m). */
+  const nearPark = (x: number, y: number, w: number, h: number, trailMargin: number): [number, number] => {
+    for (let d = 0; d <= 3; d += 0.25) {
+      for (let k = 0; k < (d === 0 ? 1 : 16); k++) {
+        const [px, py] = [round(x + Math.cos((k / 16) * Math.PI * 2) * d), round(y + Math.sin((k / 16) * Math.PI * 2) * d)];
+        const b = { x0: px - w / 2, x1: px + w / 2, y0: py - h / 2, y1: py + h / 2 };
+        if (fitsPark(b, trailMargin)) {
+          parkSolids.push(b);
+          reserved.push({ x: px, y: py, r: Math.max(w, h) / 2 + 0.4 });
+          return [px, py];
+        }
+      }
+    }
+    throw new Error(`Não achei lugar para uma coisa do parquinho perto de (${x}, ${y}).`);
+  };
+  {
+    // o balanço (só os dois pés de ferro seguram o pé), comprido no sentido leste-oeste
+    const [x, y] = nearPark(PAINEIRA_C.x + 0.2, PAINEIRA_C.y - 2.4, 3, 0.6, 0.8);
+    cenario.push(rect('parquinho', round(x - 1.5), round(x + 1.5), round(y - 0.3), round(y + 0.3), { brinquedo: 'balanco', altura: 2.2, ferrugem: true, cipo: true, quebrado: true }));
+  }
+  {
+    // o escorregador, comprido no sentido norte-sul (a escada no norte, a rampa descendo para o sul)
+    const [x, y] = nearPark(PAINEIRA_C.x + 3.6, PAINEIRA_C.y + 0.2, 0.7, 2.6, 0.8);
+    cenario.push(rect('parquinho', round(x - 0.35), round(x + 0.35), round(y - 1.3), round(y + 1.3), { brinquedo: 'escorregador', altura: 1.8, ferrugem: true, cipo: true, olhando: 90 }));
+  }
+  {
+    // o gira-gira, com samambaia nascendo no meio
+    const [x, y] = nearPark(PAINEIRA_C.x - 0.6, PAINEIRA_C.y + 2.6, 1.6, 1.6, 0.8);
+    cenario.push(point('parquinho', x, y, { brinquedo: 'gira-gira', raio: 0.8, altura: 0.6, ferrugem: true, plantas: true }));
+  }
+  {
+    // o banco de concreto na beira da clareira, virado para o parquinho, com a lixeira encostada
+    const [x, y] = nearPark(PAINEIRA_C.x - 3.6, PAINEIRA_C.y + 4.6, 2.1, 0.5, 0.5);
+    cenario.push(rect('banco', round(x - 1.05), round(x + 0.55), round(y - 0.25), round(y + 0.25), { olhando: 270, material: 'concreto', mato: true }));
+    cenario.push(point('lixeira', round(x + 0.8), y, { mato: true }));
+  }
+  {
+    const [x, y] = nearPark(PAINEIRA_C.x + 5, PAINEIRA_C.y - 4.4, 0.25, 0.25, 0.4);
+    cenario.push(point('poste-praca', x, y, { altura: 3.2, apagado: true, torto: true, cipo: true }));
+  }
+
+  reserved.push({ x: PAINEIRA_C.x, y: PAINEIRA_C.y, r: PAINEIRA_C.r + 0.5 });
+
+  // ----- as árvores da faixa nova (do mesmo jeito da mata antiga; mais espaçadas onde vão viver os bichos novos) -----
+  const inNewZone = (x: number, y: number) => [NEW_ZONES.meio, NEW_ZONES.chefe].some((z) => inRect(x, y, z));
+  const southY = (pad = 0) => H0 - 2 + prng2() * (H - H0 - pad);
+  for (let tries = 0; tries < 6000; tries++) {
+    const x = 2 + prng2() * (PARK_X - 4);
+    const y = southY();
+    const k = prng2();
+    const especie = k < 0.1 ? 'jeriva' : k < 0.22 ? 'embauba' : 'mata';
+    const d = SPECIES[especie] ?? { tronco: round(0.4 + prng2() * 0.25), copa: round(1.7 + prng2() * 1.2), altura: round(5 + prng2() * 3.5) };
+    plant(x, y, especie, d, TRUNK_GAP + (inNewZone(x, y) ? 5 : 2.6));
+  }
+  // árvores secas: mais na mata profunda do sul
+  for (let i = 0, n = 0; i < 800 && n < 6; i++) {
+    const [x, y] = [DEEP_SOUTH.x + (prng2() * 2 - 1) * DEEP_SOUTH.rx, DEEP_SOUTH.y + (prng2() * 2 - 1) * DEEP_SOUTH.ry];
+    if (inEllipse(x, y, DEEP_SOUTH) && plant(x, y, 'seca', SPECIES.seca!, TRUNK_GAP + 1.5)) n++;
+  }
+  for (let i = 0, n = 0; i < 1000 && n < 3; i++) {
+    const [x, y] = [2 + prng2() * (PARK_X - 4), southY()];
+    if (!inEllipse(x, y, DEEP_SOUTH) && plant(x, y, 'seca', SPECIES.seca!, TRUNK_GAP + 1.5)) n++;
+  }
+  // xaxins na beira do riacho e do poço; bananeiras em volta da clareira da paineira
+  for (let i = 0, n = 0; i < 3000 && n < 9; i++) {
+    const [x, y] = [2 + prng2() * (PARK_X - 4), southY()];
+    const g = waterGap(x, y);
+    if (g > 1 && g < 6 && plant(x, y, 'xaxim', SPECIES.xaxim!, TRUNK_GAP + 0.6)) n++;
+  }
+  for (let i = 0, n = 0; i < 3000 && n < 7; i++) {
+    const a = prng2() * Math.PI * 2;
+    const rr = PAINEIRA_C.r + 1.5 + prng2() * 4;
+    if (plant(PAINEIRA_C.x + Math.cos(a) * rr, PAINEIRA_C.y + Math.sin(a) * rr, 'bananeira', SPECIES.bananeira!, TRUNK_GAP + 0.8)) n++;
+  }
+  // moitas de bambu e de mata fechada: paredes na mata profunda do sul e na faixa oeste, do outro lado do riacho
+  for (let i = 0, nb = 0, na = 0; i < 1500 && (nb < 8 || na < 6); i++) {
+    const [x, y] = [DEEP_SOUTH.x + (prng2() * 2 - 1) * DEEP_SOUTH.rx, DEEP_SOUTH.y + (prng2() * 2 - 1) * DEEP_SOUTH.ry];
+    if (!inEllipse(x, y, DEEP_SOUTH)) continue;
+    const bamboo = nb < 8 && (na >= 6 || prng2() < 0.55);
+    const r = round(bamboo ? 1 + prng2() * 0.4 : 0.7 + prng2() * 0.45);
+    if (plantClump(x, y, r, bamboo ? 'bambu' : 'arbusto', bamboo ? 7 : 1.2)) bamboo ? nb++ : na++;
+  }
+  for (let i = 0, n = 0; i < 1500 && n < 5; i++) {
+    const [x, y] = [2.5 + prng2() * 7, H0 + prng2() * 38];
+    if (STREAMS.every((s) => distToPath(x, y, s) > 2.5) && plantClump(x, y, round(1 + prng2() * 0.4), 'bambu', 7)) n++;
+  }
+  // a beira nova do parque: mata fechada no oeste e no sul (a beira sul antiga saiu)
+  for (let y = 0.6 + 1.1 * Math.ceil((H0 - 0.6) / 1.1); y < H; y += 1.1) cenario.push(point('arbusto', 0.6, round(y), { raio: round(0.9 + prng2() * 0.25), fechado: true }));
+  for (let x = 1.7; x < PARK_X - 0.6; x += 1.1) cenario.push(point('arbusto', round(x), H - 0.6, { raio: round(0.9 + prng2() * 0.25), fechado: true }));
+  // pedras em grupos na beira do poço e do riacho
+  for (const [x, y, raio] of [[18.9, 157.2, 0.7], [19.7, 157.9, 0.35], [10.1, 162.6, 0.65], [9.4, 161.7, 0.35], [17.1, 146.8, 0.55], [11.2, 138.6, 0.5]] as const) {
+    if (trailGap(x, y) < raio + 0.3 || waterGap(x, y) < 0.1 || !free(x, y, raio)) continue;
+    reserved.push({ x, y, r: raio + 0.4 });
+    cenario.push(point('pedra', x, y, { raio }));
+  }
+
+  // ----- o chão da mata nova (não bloqueia): samambaias, helicônias, taboas no poço e cogumelos que brilham -----
+  const lowFitsSouth = (x: number, y: number, raio: number) =>
+    lowFits(x, y, raio) && dist(x, y, PAINEIRA_C.x, PAINEIRA_C.y) >= PAINEIRA_C.r - 1 && dist(x, y, RECANTO.x, RECANTO.y) >= RECANTO.r - 1 && free(x, y, raio * 0.5);
+  for (let i = 0, n = 0; i < 3000 && n < 70; i++) {
+    const [x, y, raio] = [2 + prng2() * (PARK_X - 4), southY(), round(0.5 + prng2() * 0.4)];
+    if (y > H - 2 || waterGap(x, y) < raio || !lowFitsSouth(x, y, raio)) continue;
+    cenario.push(point('planta', round(x), round(y), { tipo: 'samambaia', raio }));
+    n++;
+  }
+  for (let i = 0, n = 0; i < 3000 && n < 14; i++) {
+    const [x, y, raio] = [2 + prng2() * (PARK_X - 4), southY(), round(0.5 + prng2() * 0.3)];
+    const g = waterGap(x, y);
+    const byClearing = Math.abs(dist(x, y, PAINEIRA_C.x, PAINEIRA_C.y) - PAINEIRA_C.r - 1.2) < 1;
+    if (y < H - 2 && ((g > raio && g < 3.5) || byClearing) && lowFitsSouth(x, y, raio)) {
+      cenario.push(point('planta', round(x), round(y), { tipo: 'heliconia', raio }));
+      n++;
+    }
+  }
+  for (let i = 0, n = 0; i < 400 && n < 6; i++) {
+    const a = 1.2 + prng2() * 3.2; // a margem oeste e sul do poço, longe da queda d'água
+    const k = 0.72 + prng2() * 0.16;
+    const [x, y] = [round(POOL.x + Math.cos(a) * POOL.rx * k), round(POOL.y + Math.sin(a) * POOL.ry * k)];
+    if (isWater(x, y) && dist(x, y, fallX, fallY) > 2) {
+      cenario.push(point('planta', x, y, { tipo: 'taboa', raio: round(0.4 + prng2() * 0.2) }));
+      n++;
+    }
+  }
+  for (let i = 0, n = 0; i < 3000 && n < 16; i++) {
+    const spot = [DEEP_SOUTH, { x: RECANTO.x, y: RECANTO.y, rx: RECANTO.r + 2, ry: RECANTO.r + 2 }][i % 2]!;
+    const [x, y] = [spot.x + (prng2() * 2 - 1) * spot.rx, spot.y + (prng2() * 2 - 1) * spot.ry];
+    if (x > 2 && y < H - 2 && inEllipse(x, y, spot) && waterGap(x, y) > 0.5 && lowFits(x, y, 0.3) && free(x, y, 0.2)) {
+      cenario.push(point('planta', round(x), round(y), { tipo: 'cogumelo', raio: round(0.25 + prng2() * 0.15), brilho: '#3fd6c8' }));
+      n++;
+    }
+  }
+
+  // ---------------- a mata da estrada e o posto abandonado ----------------
+  const erng = mulberry32(SEED + 15);
+  const inEast = (o: Shape) => o.x > PARK_X - 0.3 && o.y > VILLAGE_S - 2;
+  // a trilha do buraco no gradil até o fundo do posto
+  chao.push({ type: 'trilha', x: 0, y: 0, polyline: EAST_TRAIL, props: { largura: 1.8 } });
+  VILLAGE_KEYS.push(...pathPoints(EAST_TRAIL, 1.8).map(([x, y]) => [x, y, 0] as [number, number, number]));
+  for (let x = POSTO.x0 + 1; x < POSTO.x1; x += 2) for (let y = POSTO.y0 + 1; y < POSTO.y1; y += 2) if (!inRect(x, y, POSTO_SHOP)) VILLAGE_KEYS.push([x, y, 0]);
+
+  // ----- o posto: o pátio de concreto rachado, a cobertura das bombas (só os quatro pilares seguram o pé), duas bombas
+  // enferrujadas, a lojinha de vidro quebrado, a pilha de pneus e a placa em branco (sem marca nenhuma) -----
+  chao.push(rect('calcada', POSTO.x0, POSTO.x1, POSTO.y0, POSTO.y1, { desenho: 'placas', estado: 'rachado', cor: '#8f8c82' }));
+  cenario.push(rect('cobertura', POSTO_ROOF.x0, POSTO_ROOF.x1, POSTO_ROOF.y0, POSTO_ROOF.y1, { altura: 4.2, pilares: 0.4, mato: true, cipo: 0.6, arvoresNoTopo: true }));
+  for (const [x0, x1] of [[81.8, 82.3], [83.6, 84.1]] as const) {
+    cenario.push(rect('bomba', x0, x1, 143.4, 144.6, { altura: 1.6, ferrugem: true, plantas: true, olhando: 0 }));
+  }
+  cenario.push(rect('casa', POSTO_SHOP.x0, POSTO_SHOP.x1, POSTO_SHOP.y0, POSTO_SHOP.y1, { altura: 3, andares: 1, cor: '#d8d2c4', caixaDagua: false, posto: true, vitrineQuebrada: true, cipo: 0.7, plantas: true, musgo: true }));
+  cenario.push(point('pneus', 77.6, 148.3, { raio: 0.55, pilha: 4 }));
+  cenario.push(point('placa', 87.1, 149.4, { texto: '', poste: true, torta: true }));
+  // uma árvore rompeu o pátio, no canto do fundo (a copa por cima do concreto)
+  {
+    const d = { tronco: 0.5, copa: 2.6, altura: 6.5 };
+    if (canopyHides(74.6, 148.2, d.copa, d.altura)) throw new Error('A árvore do pátio do posto tampa a estrada, a trilha ou o pátio.');
+    cenario.push(point('arvore', 74.6, 148.2, { especie: 'mata', ...d, rompendo: true }));
+  }
+  // o mato tomando o pátio: rachaduras com capim, moitas de grama nos cantos e raízes saindo da mata
+  for (const [cx, cy, rx, ry] of [[73.9, 145.8, 0.9, 1.6], [87.2, 139.6, 0.8, 0.6], [79.4, 149.4, 1.4, 0.6]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.25) });
+  for (let i = 0, n = 0; i < 200 && n < 7; i++) {
+    let [x, y]: [number, number] = [POSTO.x0 + 0.6 + erng() * (POSTO.x1 - POSTO.x0 - 1.2), POSTO.y0 + 0.6 + erng() * (POSTO.y1 - POSTO.y0 - 1.2)];
+    const pts: [number, number][] = [[round(x), round(y)]];
+    let a = erng() * Math.PI * 2;
+    for (let k = 0; k < 3 + Math.floor(erng() * 3); k++) {
+      a += (erng() - 0.5) * 1.6;
+      const l = 0.5 + erng() * 0.9;
+      const [nx, ny] = [x + Math.cos(a) * l, y + Math.sin(a) * l];
+      if (!inRect(nx, ny, { x0: POSTO.x0 + 0.3, x1: POSTO.x1 - 0.3, y0: POSTO.y0 + 0.3, y1: POSTO.y1 - 0.3 }) || inRect(nx, ny, POSTO_SHOP)) break;
+      [x, y] = [nx, ny];
+      pts.push([round(x), round(y)]);
+    }
+    if (pts.length < 3 || inRect(pts[0]![0], pts[0]![1], POSTO_SHOP)) continue;
+    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { largura: 0.06, cor: '#3a3a36', mato: true } });
+    n++;
+  }
+  for (const pts of [[[74.6, 148.6], [75.9, 149.3], [77, 149.1]], [[74.2, 147.9], [73.5, 146.8]]] as [number, number][][]) {
+    chao.push({ type: 'raiz', x: 0, y: 0, polyline: pts, props: { largura: 0.3, altura: 0.2, cor: '#6b4a2e' } });
+  }
+  // ----- a rua para Guarapiranga no trecho novo: a faixa já desce até a barreira; rachaduras, um buraco com água e o
+  // capim nas beiradas (o trecho de antes fica igual) -----
+  const onNewRoad = (x: number, y: number) => x > ROAD_GUARA.x0 + 0.3 && x < ROAD_GUARA.x1 - 0.3 && y > SOUTH_BARRIER_Y0 && y < SOUTH_BARRIER_Y - 0.5;
+  for (let i = 0, n = 0; i < 300 && n < 12; i++) {
+    let [x, y]: [number, number] = [ROAD_GUARA.x0 + 0.5 + erng() * 5, SOUTH_BARRIER_Y0 + 1 + erng() * (SOUTH_BARRIER_Y - SOUTH_BARRIER_Y0 - 2)];
+    if (!onNewRoad(x, y)) continue;
+    const pts: [number, number][] = [[round(x), round(y)]];
+    let a = erng() * Math.PI * 2;
+    for (let k = 0; k < 3 + Math.floor(erng() * 3); k++) {
+      a += (erng() - 0.5) * 1.6;
+      const l = 0.5 + erng() * 0.9;
+      const [nx, ny] = [x + Math.cos(a) * l, y + Math.sin(a) * l];
+      if (!onNewRoad(nx, ny)) break;
+      [x, y] = [nx, ny];
+      pts.push([round(x), round(y)]);
+    }
+    if (pts.length < 3) continue;
+    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { largura: 0.06, cor: '#1e2022', mato: erng() < 0.7 } });
+    n++;
+  }
+  chao.push(point('buraco', 90.4, 131.5, { raio: 0.5, agua: true }), point('buraco', 92.2, 158.6, { raio: 0.45, agua: true }));
+  for (const [cx, cy, rx, ry] of [[89.4, 126, 1.2, 3], [92.8, 164, 1.1, 2.6]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.2) });
+  for (const x of [ROAD_GUARA.x0 + 0.25, ROAD_GUARA.x1 - 0.25]) {
+    for (let y = SOUTH_BARRIER_Y0 + erng() * 2; y < SOUTH_BARRIER_Y - 1; y += 1.5 + erng() * 3) {
+      if (x < ROAD_GUARA.x0 + 1 && y > POSTO.y0 && y < POSTO.y1) continue; // na boca do posto, não
+      chao.push(point('planta', x, round(y), { tipo: 'capim', raio: round(0.2 + erng() * 0.15) }));
+    }
+  }
+
+  // ----- as árvores da mata da estrada (como as de antes: troncos bem espaçados; mais ainda onde vão viver os bichos
+  // novos), longe da rua, do pátio e da trilha, sem tampar a rua, a trilha nem o posto e sem vão de entalar -----
+  const eastBoxes: Box[] = cenario.filter((o) => inEast(o) || o.type === 'gradil').flatMap(boxesOf);
+  const eastTrees: Tree[] = cenario.filter((o) => inEast(o) && o.y > VILLAGE_S && (o.type === 'arvore' || o.type === 'bambu')).map((o) => ({ x: o.x, y: o.y, tronco: o.type === 'bambu' ? Number(o.props!.raio) * 2 : Number(o.props!.tronco) }));
+  const inEastZone = (x: number, y: number) => inRect(x, y, NEW_ZONES.estradaSul);
+  const eastFits = (x: number, y: number, tronco: number, copa: number, altura: number, side: number) => {
+    if (x < PARK_X + 1.4 || x > ROAD_GUARA.x0 - 2.2 - tronco / 2 || y < H0 - 1 || y > H - 2.2) return false;
+    if (inRect(x, y, { x0: POSTO.x0 - 1.5, x1: POSTO.x1, y0: POSTO.y0 - 1.5, y1: POSTO.y1 + 1.5 })) return false;
+    if (distToPath(x, y, EAST_TRAIL) - 0.9 < copa + 0.3) return false;
+    if (!eastTrees.every((t) => dist(x, y, t.x, t.y) - (t.tronco + tronco) / 2 >= TRUNK_GAP + (inEastZone(x, y) ? 3.5 : 1.4))) return false;
+    if (canopyHides(x, y, copa, altura) || hidesView(x, y, copa, altura)) return false; // nem a rua e o posto, nem as trilhas do parque
+    return eastBoxes.every((b) => boxGapOk(squareBox(x, y, side), b));
+  };
+  const plantEast = (x: number, y: number, s: Shape, tronco: number, side: number) => {
+    eastTrees.push({ x, y, tronco });
+    eastBoxes.push(squareBox(x, y, side));
+    cenario.push(s);
+  };
+  for (let i = 0, n = 0; i < 4000 && n < 62; i++) {
+    const [x, y] = [PARK_X + 1.5 + erng() * (ROAD_GUARA.x0 - PARK_X - 3.5), H0 - 1 + erng() * (H - H0 - 1)];
+    const k = erng();
+    const especie = k < 0.15 ? 'jeriva' : k < 0.3 ? 'embauba' : 'mata';
+    const d = SPECIES[especie] ?? { tronco: round(0.4 + erng() * 0.25), copa: round(1.7 + erng() * 1.2), altura: round(5 + erng() * 3.5) };
+    if (!eastFits(x, y, d.tronco, d.copa, d.altura, d.tronco)) continue;
+    plantEast(x, y, point('arvore', round(x), round(y), { especie, ...d }), d.tronco, d.tronco);
+    n++;
+  }
+  for (let i = 0, n = 0; i < 2000 && n < 14; i++) {
+    const [x, y, r] = [PARK_X + 2 + erng() * (ROAD_GUARA.x0 - PARK_X - 4), H0 + erng() * (H - H0 - 2), round(1 + erng() * 0.4)];
+    if (!eastFits(x, y, r * 2, r * 1.3, 7, round(r * 1.6))) continue;
+    plantEast(x, y, point('bambu', round(x), round(y), { raio: r, altura: 7 }), r * 2, round(r * 1.6));
+    n++;
+  }
+  for (let i = 0, n = 0; i < 2000 && n < 12; i++) {
+    const [x, y] = [PARK_X + 2 + erng() * (ROAD_GUARA.x0 - PARK_X - 4), H0 + erng() * (H - H0 - 2)];
+    const b = SPECIES.bananeira!;
+    if (!eastFits(x, y, b.tronco, b.copa, b.altura, b.tronco)) continue;
+    plantEast(x, y, point('arvore', round(x), round(y), { especie: 'bananeira', ...b }), b.tronco, b.tronco);
+    n++;
+  }
+  // a beira sul da mata da estrada (mata fechada até a parede da rua)
+  for (let x = PARK_X + 0.7; x < ROAD_GUARA.x0 - 1.6; x += 1.1) {
+    const s = point('arbusto', round(x), H - 0.6, { raio: round(0.9 + erng() * 0.25), fechado: true });
+    const b = footBox(s)!;
+    // (sem vão de entalar com uma árvore perto da beira: aí o arbusto não entra e a árvore fecha o canto)
+    if (eastBoxes.every((o) => boxGapOk(b, o) || (o.y1 > b.y0 - 0.01 && o.y0 < b.y1 && o.x1 > b.x0 && o.x0 < b.x1))) {
+      eastBoxes.push(b);
+      cenario.push(s);
+    }
+  }
+  // o chão da mata da estrada (agora dá para andar): samambaias e capim (não bloqueiam)
+  for (let i = 0, n = 0; i < 3000 && n < 70; i++) {
+    const [x, y, raio] = [PARK_X + 1 + erng() * (ROAD_GUARA.x0 - PARK_X - 3), VILLAGE_S + 1 + erng() * (H - VILLAGE_S - 2), round(0.45 + erng() * 0.4)];
+    if (inRect(x, y, POSTO) || distToPath(x, y, EAST_TRAIL) < 0.9 + raio) continue;
+    if (!eastTrees.every((t) => dist(x, y, t.x, t.y) > t.tronco / 2 + raio * 0.6)) continue;
+    cenario.push(point('planta', round(x), round(y), { tipo: erng() < 0.75 ? 'samambaia' : 'capim', raio }));
+    n++;
+  }
+  // ----- sem vão de entalar na faixa nova do parque e na mata da estrada: o que foi sorteado e ficou num vão sai -----
+  const randomPlant = (o: Shape) => (o.type === 'arvore' && !o.name && !o.props?.rompendo) || o.type === 'bambu';
+  const prunedPark = pruneWedges((o) => (o.y > H0 - 3 && o.x < PARK_X + 0.3) || o.type === 'gradil', randomPlant);
+  const prunedEast = pruneWedges((o) => (o.x > PARK_X - 0.3 && o.y > VILLAGE_S - 2) || o.type === 'gradil', randomPlant);
+  console.log(`Floresta maior: saíram ${prunedPark} plantas da faixa nova do parque e ${prunedEast} da mata da estrada que ficavam num vão de entalar.`);
+
+  // ---------------- a vila mais tomada pela mata: árvores novas no terreno dos fundos e na beira do campinho ----------------
+  // (lugares conferidos: fora de rua, calçada, praça, campinho e trilha; longe das casas; a copa não tampa a rua, as portas
+  // nem o campinho). Cada uma ganha samambaia no pé.
+  const VILLAGE_TREES_2: [number, number, string][] = [
+    [59.5, 17.5, 'embauba'], [85.5, 17.5, 'mata'], [69, 18, 'jeriva'], [75, 19, 'mata'], [63.5, 22.5, 'mata'], [92, 24, 'embauba'],
+    [85, 25, 'jeriva'], [78, 26, 'mata'], [60.5, 28.5, 'mata'], [66.5, 29.5, 'embauba'], [83.5, 60.5, 'mata'], [63.5, 61.5, 'bananeira'], [86, 66, 'mata'],
+  ];
+  for (const [x, y, especie] of VILLAGE_TREES_2) {
+    const d = SPECIES[especie] ?? { tronco: 0.5, copa: 2.4, altura: 6 };
+    if (canopyHides(x, y, d.copa, d.altura) || hidesView(x, y, d.copa, d.altura)) throw new Error(`A árvore nova da vila em (${x}, ${y}) tampa a rua, uma porta, o campinho ou uma trilha do parque.`);
+    trees.push({ x, y, tronco: d.tronco });
+    cenario.push(point('arvore', x, y, { especie, ...d }));
+    for (const [dx, dy] of [[0.9, 0.5], [-0.7, 0.8]] as const) cenario.push(point('planta', round(x + dx), round(y + dy), { tipo: 'samambaia', raio: 0.45 }));
+  }
+}
+
 // ---------------- colisão (tirada do cenário) ----------------
 // ---------------- casas com interior (pedido do dono, 13/11: "dar vida para alguns interiores de casa") ----------------
 // Como a Budega: com o herói dentro, o telhado e a frente somem. A porta tem 1,2 m (mais estreita, o pé entala), as
@@ -1286,6 +1892,14 @@ for (const s of cenario) {
   else if (s.type === 'academia') colisao.push(rect('academia', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'bebedouro') colisao.push(block('bebedouro', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 1 }));
   else if (s.type === 'vaso') colisao.push(block('vaso', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.6 }));
+  // a floresta maior: a cobertura do posto (só os pilares), as bombas, a pilha de pneus, o parquinho (do balanço, só os
+  // pés de ferro) e as pedras da cachoeirinha. As pedras de atravessar o riacho são como a pinguela: dá para andar em cima
+  else if (s.type === 'cobertura') for (const b of boxesOf(s)) colisao.push(rect('pilar-cobertura', b.x0, b.x1, b.y0, b.y1, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'bomba') colisao.push(rect('bomba', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  else if (s.type === 'pneus') colisao.push(block('pneus', s.x, s.y, round(Number(p.raio) * 1.8), { bloqueiaTiro: false, altura: 0.9 }));
+  else if (s.type === 'parquinho') {
+    for (const b of boxesOf(s)) colisao.push(rect('parquinho', b.x0, b.x1, b.y0, b.y1, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  } else if (s.type === 'cachoeira') colisao.push(rect('cachoeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
 }
 // a Xiovanna cabe atrás do balcão da Budega (a caixa do pé dela, 0,6 × 0,4 m, com o pé no meio da beirada de baixo)
 if (reached('4b') && FLORESTA) {
@@ -1356,6 +1970,16 @@ areas.push(rect('area', LAKE.x - LAKE.rx - 2, LAKE.x + LAKE.rx + 2, LAKE.y - LAK
 areas.push(rect('area', BANANA.x - BANANA.r - 2, BANANA.x + BANANA.r + 2, BANANA.y - BANANA.r - 2, BANANA.y + BANANA.r + 2, { escuro: 0.15, neblina: 0.05 }, 'Clareira das Bananeiras'));
 for (const d of DEEP) areas.push(rect('area', Math.max(0, d.x - d.rx), d.x + d.rx, Math.max(0, d.y - d.ry), Math.min(H, d.y + d.ry), { escuro: 0.5, neblina: 0.45 }, 'Mata Profunda'));
 areas.push(rect('area', PARK_X, W, 0, VILLAGE_S, undefined, 'Vila do Capão'));
+if (FLORESTA_MAIOR) {
+  // os lugares da floresta maior (o som de cada um sai do nome; a cachoeirinha diz que é água)
+  areas.push(rect('area', PAINEIRA_C.x - PAINEIRA_C.r - 2, PAINEIRA_C.x + PAINEIRA_C.r + 2, PAINEIRA_C.y - PAINEIRA_C.r - 2, PAINEIRA_C.y + PAINEIRA_C.r + 2, { escuro: 0.1, neblina: 0.05 }, 'Clareira da Paineira'));
+  areas.push(rect('area', POOL.x - POOL.rx - 2.5, POOL.x + POOL.rx + 2.5, POOL.y - POOL.ry - 4, POOL.y + POOL.ry + 2, { escuro: 0.2, neblina: 0.3, som: 'agua' }, 'Cachoeirinha'));
+  const d = DEEP_SOUTH;
+  areas.push(rect('area', Math.max(0, d.x - d.rx), d.x + d.rx, d.y - d.ry, Math.min(H, d.y + d.ry), { escuro: 0.5, neblina: 0.45 }, 'Mata Profunda'));
+  areas.push(rect('area', PARK_X, ROAD_GUARA.x0, VILLAGE_S, H, { escuro: 0.25, neblina: 0.1 }, 'Mata da Estrada'));
+  areas.push(rect('area', POSTO.x0, POSTO.x1, POSTO.y0, POSTO.y1, { escuro: 0.1, neblina: 0.05 }, 'Posto Abandonado'));
+  areas.push(rect('area', ROAD_GUARA.x0, W, VILLAGE_S, H, { escuro: 0.15, neblina: 0.05 }, 'Estrada para Guarapiranga'));
+}
 pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
 // as capivaras andando (pedido do dono, 14/11; o formato é da [estrutura]): por bando, o retângulo onde andam
 // (`capivaras-<lugar>`) e o ponto onde deitam (`capivaras-<lugar>-descanso`); quantas são fica em data/bichos.json
@@ -1375,6 +1999,15 @@ const monstros: Shape[] = [];
 if (CREATURES) {
   monstros.push(rect('area', SAGUI_ZONE.x0, SAGUI_ZONE.x1, SAGUI_ZONE.y0, SAGUI_ZONE.y1, { quantidade: 4 }, 'sagui'));
   monstros.push(rect('area', JARARACA_ZONE.x0, JARARACA_ZONE.x1, JARARACA_ZONE.y0, JARARACA_ZONE.y1, { quantidade: 3 }, 'jararaca'));
+  if (FLORESTA_MAIOR) {
+    // os bichos novos da floresta maior (escolhidos pelo dono em 14/11; regras e dados da [estrutura]): o bando de quatis
+    // na mata do meio do parque, os tatus-bola e os marimbondos na mata da estrada, e o filhote de boitatá sozinho no
+    // recanto do Véu da mata profunda do sul (só de noite: de dia a área fica vazia)
+    const z = NEW_ZONES;
+    for (const [zone, quantidade, nome] of [[z.meio, 4, 'quati'], [z.estradaNorte, 3, 'tatu_bola'], [z.estradaSul, 3, 'marimbondo'], [z.chefe, 1, 'filhote_boitata']] as const) {
+      monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade }, nome));
+    }
+  }
 }
 
 // ---------------- escreve o .tmj ----------------
