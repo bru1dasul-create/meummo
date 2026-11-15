@@ -556,12 +556,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   no flora.js, a `pinguela` de `pedras`
 - [x] **[mundo + arte + estrutura]** A Budega maior, igual à de verdade (15/11, com as fotos do dono; aprovada: "ficou
   ótimo, lembre-se de colocar interior com infestação da floresta"; **na main em 15/11**, com o desenho da [arte]). O
-  mapa do [mundo] (ramo `mundo/budega-maior`): 8 × 5,5 m no mesmo canto da praça; a vitrine à esquerda e a porta de enrolar de 3 m à direita;
-  dentro, igual à imagem aprovada, o piso branco, as prateleiras pretas e amarelas, a geladeira de duas portas, o
+  mapa do [mundo] (ramo `mundo/budega-maior`): 8 × 5,5 m no mesmo canto da praça; a vitrine à esquerda e a porta de
+  enrolar de 3 m à direita; dentro, igual à imagem aprovada, o piso branco, as prateleiras pretas e amarelas, a geladeira de duas portas, o
   ventilador, o balcão de vidro dos doces, o freezer solto, o caixa em L na frente da parede de grama com o escudo
   aceso (a Xiovanna atrás, só ela passa) e a dracena no canto, e a floresta entrando (raiz, mato, samambaia, cipó e
   musgo); na frente, o degrau com capacho, o vaso de dracena, a lousinha e dois caixotes de fruta; a fogueira andou 2 m
-  para a direita, as mesas desceram e o varal do sul passa por um poste novo, entre a praça e o campinho. Fotos e desenhos: `docs/referencias/budega-*.jpg`
+  para a direita, as mesas desceram e o varal do sul passa por um poste novo, entre a praça e o campinho. Fotos e
+  desenhos: `docs/referencias/budega-*.jpg`
 - [x] **[arte]** O desenho da Budega maior (15/11, `js/world/budega.js`, igual às imagens aprovadas): a fachada preta
   com a moldura amarela, o escudo na faixa, a vitrine de fundo amarelo, a porta de enrolar mostrando o fundo e o LED
   branco; dentro, o piso porcelanato, as paredes com azulejo e "FIADO SÓ AMANHÃ", os armários de nichos, a geladeira

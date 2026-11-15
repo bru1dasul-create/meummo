@@ -89,8 +89,9 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   ainda sem a imagem): o jeito dele (moldura, lugar, girar para bater com a câmera, a neblina) é da [arte] e da
   [estrutura]; do meu lado, dá para redesenhar a imagem num jeito mais de jogo, se ele quiser.
 - **A Budega maior, igual à de verdade (15/11, com as fotos do dono; aprovada: "ficou ótimo, lembre-se de colocar
-  interior com infestação da floresta"). Ramo `mundo/budega-maior`, esperando o desenho da [arte]; a Xiovanna no
-  lugar novo já vai junto (a [estrutura] autorizou a troca das duas linhas do `data/npcs.json` no mesmo commit):** de
+  interior com infestação da floresta"). **Na `main` em 15/11**, com o desenho da [arte] (2d52691), conferido por mim
+  no jogo de dia e de noite; a Xiovanna foi junto para o lugar novo (a [estrutura] autorizou a troca das duas linhas
+  do `data/npcs.json` no mesmo commit):** de
   5 × 3 m para 8 × 5,5 m no mesmo canto da praça (60,5 a 68,5 × 48,9 a 54,4), sem toldo: fachada
   preta (`fachada: 'preta'`), moldura amarela (`moldura`), faixa de luz (`led`) e o escudo (`logo`); a vitrine à
   esquerda e a porta de enrolar de 3 m à direita (`portaDe` 65, `portaAte` 68). Dentro: `piso` (`desenho: 'porcelanato'`,
@@ -303,14 +304,6 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
-- **Budega maior (15/11):** a [arte] desenha, igual às imagens aprovadas, a fachada (preta, moldura amarela, faixa
-  de luz, a vitrine de fundo amarelo à esquerda e a porta de enrolar à direita, sem toldo), a `vitrine` (que sai com a
-  frente quando o herói entra), o `balcao-vidro`, o `freezer`, a `parede-verde`, o `ventilador`, a `prateleira` com
-  `cor`/`nichos`/`cipo`, a `geladeira` com `portas`/`vidro`/`cipo`, o caixa em L preto e amarelo, o `piso` porcelanato
-  com `folhas`, o `degrau` com `capacho`, a `lousa`, a `dracena` (no `vaso` de fora e no de dentro) e os `caixote` de
-  fruta. Hoje os tipos novos não aparecem (viram paredes invisíveis): só entra na `main` junto. Ao
-  juntar, avisar o dono (aviso da [estrutura]): se ele já mudou o lugar da Xiovanna pelo painel ou pelo menu ADM, esse
-  ajuste fica no `saves/ajustes.json` e vale por cima do arquivo; aí é só voltar o ajuste da Budega ao padrão no painel.
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois
