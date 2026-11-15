@@ -2851,18 +2851,6 @@ body.jogo-novo .action[data-slot='jump'] {
   --i: 6;
 }
 
-/* PONTE, até a [estrutura] trocar os botões provisórios (skillButtons.ts) pelos quadrados 'class1' e 'class2': a 2ª e a
-   3ª habilidade da classe já vão para o lugar delas (o estilo de lá punha no 6º quadrado, que agora é o da defesa) */
-html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='1'] {
-  --i: 1;
-  top: calc(103px * var(--as));
-}
-
-html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='2'] {
-  --i: 2;
-  top: calc(103px * var(--as));
-}
-
 body.jogo-novo .action:hover,
 body.jogo-novo .action.pressed {
   background: transparent;
@@ -3592,23 +3580,6 @@ body.jogo-novo .talk-chip img {
 
   body.jogo-novo .action[data-slot='dash'] {
     grid-area: 3 / 2;
-  }
-
-  /* PONTE (veja a do computador): os botões provisórios da classe na fileira de cima */
-  html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index] {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    left: auto;
-    top: auto;
-  }
-
-  html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='1'] {
-    grid-area: 1 / 1;
-  }
-
-  html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='2'] {
-    grid-area: 1 / 2;
   }
 }
 

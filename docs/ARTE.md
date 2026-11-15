@@ -905,8 +905,8 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
   `barra/moldura7.py` no scratchpad: tira o enfeite do meio e refaz a corda com um trecho limpo, põe uma volta inteira
   (108 px) no vão entre o 3º e o 4º quadrado, com degradê na emenda, e recoloca o enfeite no meio novo. Ordem: Q, R, T, E,
   esquiva, defesa (o `#guard-button`, no 6º) e pulo; o chat usa a largura nova. Celular: a fileira R/T em cima do 2×2 (a
-  mochila em pé subiu para 340 px) e o aviso rápido acima dos botões. PONTE no `style.css`: os botões provisórios da
-  [estrutura] (`.extra-skill` com `data-index` 1 e 2) vão para os quadrados novos; sai quando ela trocar.
+  mochila em pé subiu para 340 px) e o aviso rápido acima dos botões. A [estrutura] ligou os quadrados no motor
+  (b4b1885) e apagou os botões provisórios; a ponte do CSS saiu junto.
 - **Flecha Ancestral:** `src/client/novo/spiritArt.ts`. O voo vem pelo `drawProjectile` (`drawSpiritArrow`: a fita de
   luz, a espiral de dois fios girando, as luzinhas largadas e a flecha de luz com o clarão na ponta). No `combat.ts`
   (com o "pode" da [estrutura]): `paintSpiritAim` (a faixa dourada com setas andando), `paintSpiritEnd` (sem raio, o
