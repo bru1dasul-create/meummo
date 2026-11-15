@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseClientMsg } from '../src/server/validate';
 import { World } from '../src/server/world';
-import { JUMP_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
+import { DASH_ROLL_MS, JUMP_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
 import { GameMap, type TiledObject } from '../src/shared/map';
 import { FakeClock, FakeConn } from './helpers';
 
@@ -74,6 +74,29 @@ describe('pulo', () => {
     world.jump(ana.player);
     run(TICK_MS);
     expect(jumpsSeen()).toBe(2);
+  });
+
+  it('pulo e esquiva não se misturam: no ar não rola (vira um passo), e rolando não pula', () => {
+    const { world, ana, run, jumpsSeen } = setup();
+    const x0 = ana.player.fx;
+    world.jump(ana.player);
+    world.requestWalk(ana.player, 1, 0, true); // esquiva no meio do pulo
+    run(TICK_MS);
+    expect(ana.player.fx - x0).toBeLessThan(1); // andou um pedaço, não rolou
+    expect(ana.player.dashAt).toBe(-Infinity);
+    run(JUMP_COOLDOWN_MS);
+    const x1 = ana.player.fx;
+    world.requestWalk(ana.player, 2, 0, true); // no chão: rola
+    run(TICK_MS);
+    expect(ana.player.fx - x1).toBeGreaterThan(1);
+    const before = jumpsSeen();
+    world.jump(ana.player); // rolando: não pula
+    run(TICK_MS);
+    expect(jumpsSeen()).toBe(before);
+    run(DASH_ROLL_MS);
+    world.jump(ana.player);
+    run(TICK_MS);
+    expect(jumpsSeen()).toBe(before + 1);
   });
 
   it('não pula desmaiado, defendendo nem puxando o tiro', () => {

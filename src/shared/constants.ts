@@ -131,6 +131,12 @@ export const DASH_INVULNERABLE_MS = 350;
  * nem desvia de golpe). A recarga é do tamanho do pulo do desenho, para ninguém encher a tela dos outros de pulos.
  */
 export const JUMP_COOLDOWN_MS = 800;
+/**
+ * Pulo e esquiva não se misturam (achado do dono, 15/11: pular e rolar junto bagunçava o boneco): no ar (JUMP_AIR_MS
+ * depois do pulo) não rola, e rolando (DASH_ROLL_MS depois da esquiva) não pula.
+ */
+export const JUMP_AIR_MS = 650;
+export const DASH_ROLL_MS = 700;
 
 /**
  * Dia e noite (decisão do dono, 14/11): 30 minutos de dia e 10 de noite, de verdade (o relógio é o mesmo em todos os

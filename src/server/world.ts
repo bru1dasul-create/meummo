@@ -22,6 +22,8 @@ import {
   REGEN_EVERY_MS,
   REGEN_FRACTION,
   SHOT_HIT_RADIUS,
+  DASH_ROLL_MS,
+  JUMP_AIR_MS,
   NPC_BUSY_MS,
   NPC_PAUSE_MAX_MS,
   NPC_PAUSE_MIN_MS,
@@ -864,6 +866,8 @@ export class World {
     const now = this.now();
     if (player.loading || player.dead || player.guardWanted || player.chargeStart !== null) return;
     if (now < player.jumpReadyAt - SKILL_TOLERANCE_MS) return;
+    if (now - player.dashAt < DASH_ROLL_MS - SKILL_TOLERANCE_MS) return; // rolando, não pula
+    player.jumpAt = now;
     player.jumpReadyAt = Math.max(now, player.jumpReadyAt) + JUMP_COOLDOWN_MS;
     this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'jump' }, player.id);
   }
@@ -1823,7 +1827,8 @@ export class World {
       const input = player.queue[0]!;
       // Esquiva pronta não espera a caminhada (no cliente ela também acontece na hora).
       // Esquiva ainda recarregando vira um pedaço de caminhada normal (o cliente se corrige com o ack).
-      const dash = input.dash && now >= player.dashReadyAt - SKILL_TOLERANCE_MS;
+      // no ar (logo depois do pulo), a esquiva não sai: vira um pedaço de caminhada, como a que ainda recarrega
+      const dash = input.dash && now >= player.dashReadyAt - SKILL_TOLERANCE_MS && now - player.jumpAt >= JUMP_AIR_MS - SKILL_TOLERANCE_MS;
       if (!dash && now < player.charmedUntil) {
         // Encantado: não anda (só a esquiva solta). O navegador corrige a posição pelo ack.
         player.queue.shift();
@@ -1850,6 +1855,7 @@ export class World {
         player.dashReadyAt = Math.max(now, player.dashReadyAt) + DASH_COOLDOWN_MS;
         player.invulnerableUntil = now + DASH_INVULNERABLE_MS;
         player.dashed = true;
+        player.dashAt = now;
         player.outbox.push({ t: 'cd', n: DASH_SLOT, ms: DASH_COOLDOWN_MS });
         this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'dash' }, player.id);
         this.breakCharm(player); // a esquiva quebra o encanto
