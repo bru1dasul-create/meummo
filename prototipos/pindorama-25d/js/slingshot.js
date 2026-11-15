@@ -118,6 +118,7 @@
     const a = character.attack;
     if (!a || a.kind !== 'slingshot') {
       if (bow) character.look.bowAim = 0;
+      character.look.bowCant = 0;
       character.look.bowHead = null;
       character.look.bowDir = null;
       return 0;
@@ -143,7 +144,14 @@
     parts.spine.pitch += (2 - 30 * up) * M.DEG * blend;
     // o arco: o braço dele esticado para o alvo, na altura do ombro (de lado, o alvo fica à esquerda do peito; o x da mão
     // esquerda conta para fora), e a outra mão puxa a corda
-    const bowHand = { x: Math.sin(BOW_TURN) * BOW_REACH, y: Math.cos(BOW_TURN) * BOW_REACH, z: 6 + 44 * up };
+    // a câmera olha de cima, do lado de +x +y: mirando para LONGE dela, o braço esticado na altura do ombro aparecia na
+    // tela acima da cabeça ("o braço buga", dono, 15/11), e o arco em pé, visto de quina, virava um risco. Então, para
+    // longe da câmera, as mãos descem (o braço aparece na altura do ombro); e, na linha da câmera (indo ou vindo), o
+    // arco deita de lado para aparecer como arco
+    const camK = bow && !up ? (Math.cos(character.yaw + aim) + Math.sin(character.yaw + aim)) * Math.SQRT1_2 : 0;
+    const away = M.smoothstep(0.15, 0.95, -camK);
+    character.look.bowCant = M.smoothstep(0.35, 0.95, Math.abs(camK)) * blend;
+    const bowHand = { x: Math.sin(BOW_TURN) * BOW_REACH, y: Math.cos(BOW_TURN) * BOW_REACH, z: 6 + 44 * up - 24 * away };
     const targets = bow ? [bowHand, { x: -6, y: M.lerp(30, 4, draw), z: 4 }] : [{ x: -24, y: 44, z: -4 + 44 * up }, { x: -8, y: M.lerp(39, 14, draw), z: 8 }];
     const baseRight = { ...parts.hands[1].local };
     const basePole = parts.hands[1].poleLocal.slice();
@@ -212,7 +220,7 @@
     const restAxis = M.norm(M.add(M.scale(f, 0.6), M.scale(u, 0.8)));
     // puxando, o arco fica quase em pé, um pouco deitado para longe do rosto (a direção da flecha vem da pose)
     const shot = look.bowDir && aimK > 0 ? M.norm(M.lerp3(f, look.bowDir, aimK)) : f;
-    const drawAxis = M.norm(M.add(M.scale(u, 0.97), M.scale(M.norm(M.cross(u, shot)), 0.16)));
+    const drawAxis = M.norm(M.add(M.scale(u, 0.97), M.scale(M.norm(M.cross(u, shot)), 0.16 + 0.6 * M.clamp01(look.bowCant || 0))));
     const axis = M.norm(M.lerp3(restAxis, drawAxis, aimK));
     // a barriga do arco olha para onde a flecha vai (sem o que o eixo já tem dela)
     const front = M.norm(M.sub(shot, M.scale(axis, M.dot(shot, axis))));
