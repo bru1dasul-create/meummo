@@ -75,6 +75,11 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   coisa fecha de ponta a ponta (`blockedBetween`), o que permite paredes finas entre o dentro e o fora. O **Joaquim**
   (gato da vó, pedido do dono): o `gato` decorativo no sofá sai quando a [estrutura] o fizer de verdade; ela usa o ponto
   `joaquim` e o retângulo `joaquim-casa` da camada `pontos`.
+- **O mapa visto de cima com cara de jogo (15/11, na `main`, "pode sim" do dono):** `scripts/mapa-de-cima.ts` desenha as
+  copas em nuvenzinhas (contorno escuro, luz no noroeste; jerivá, bananeira e xaxim em folhas; a seca só galhos; a paineira
+  rosa), casas com telhado iluminado, cumeeira, contorno, sombra e caixa d'água, textura no chão (manchas na mata, grão no
+  asfalto, placas na calçada, ondas de pedra portuguesa na praça), água com a beira clara e trilhas com borda. A janela
+  do M mostra a imagem a 4 px por metro e o mini mapa a ~2,6: o desenho é feito para ler pequeno.
 - **Na `main` em 15/11 (com o "pode" do dono): a imagem da tecla M e as capivaras andando.** O gerador do Capão escreve
   junto `capao-mapa.png` (norte para cima, 8 px por metro, sem texto) e `capao-mapa.json` (`escala`, `largura`, `altura`,
   `nomes`) por `scripts/mapa-de-cima.ts`; a janela do mapa e o mini mapa da [estrutura] usam os dois. Os nomes saem em
