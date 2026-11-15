@@ -10,7 +10,7 @@ import { Reader } from './data-reader';
 import { CLASSES_FILE } from './paths';
 
 const FILE = 'data/classes.json';
-const KINDS: readonly ClassSkillKind[] = ['chuva', 'flecha'];
+const KINDS: readonly ClassSkillKind[] = ['chuva', 'flecha', 'olhos'];
 /** No máximo tantos pontos numa habilidade (o dono combinou 5; a lista "pontos" diz quantos). */
 const MAX_POINTS = 10;
 
@@ -51,7 +51,17 @@ function parseSkill(rawId: string, raw: unknown, className: string): ClassSkillI
   if (list.length < 1 || list.length > MAX_POINTS) r.fail('pontos', `precisa ser uma lista de 1 a ${MAX_POINTS} pontos (o primeiro é com 1 ponto)`);
   const points = list.map((value, i): SkillPointInfo => {
     const p = new Reader(objectOf(value, `o ponto ${i + 1} da ${where}`), FILE, `ponto ${i + 1} da ${where}`);
-    const point: SkillPointInfo = { damagePct: upTo(p, 'danoPorcento', 1, 1000), arrows: 0, radius: 0, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 };
+    const none = { damagePct: 0, arrows: 0, radius: 0, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0, durationMs: 0, visionPct: 0, bonusPct: 0 };
+    if (kind === 'olhos') {
+      // os Olhos não acertam ninguém: quanto tempo duram, quanto a mais se enxerga e (se quiser) o dano a mais
+      return {
+        ...none,
+        durationMs: Math.round(upTo(p, 'duracaoSegundos', 1, 120) * 1000),
+        visionPct: upTo(p, 'visaoPorcento', 0, 200),
+        bonusPct: p.has('danoExtraPorcento') ? upTo(p, 'danoExtraPorcento', 0, 200) : 0,
+      };
+    }
+    const point: SkillPointInfo = { ...none, damagePct: upTo(p, 'danoPorcento', 1, 1000) };
     if (kind === 'chuva') return { ...point, arrows: whole(p, 'flechas', 1, 40), radius: upTo(p, 'raio', 0.5, 8) };
     // flecha: a marca (os dois campos juntos) e a explosão no fim (os dois juntos), cada uma só se tiver
     if (p.has('marcaPorcento') || p.has('marcaSegundos')) {
@@ -68,7 +78,7 @@ function parseSkill(rawId: string, raw: unknown, className: string): ClassSkillI
     ...base,
     kind,
     cooldownMs: Math.round(upTo(r, 'recargaSegundos', 1, 600) * 1000),
-    range: upTo(r, 'alcance', 1, 30),
+    range: kind === 'olhos' ? 0 : upTo(r, 'alcance', 1, 30),
     delayMs: kind === 'chuva' ? Math.round(upTo(r, 'demoraMs', 0, 5000)) : 0,
     speed: kind === 'flecha' ? upTo(r, 'velocidade', 5, 60) : 0,
     width: kind === 'flecha' ? upTo(r, 'largura', 0.3, 3, 0.8) : 0,

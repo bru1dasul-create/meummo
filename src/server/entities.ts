@@ -129,6 +129,10 @@ export class Player {
   readonly castReadyAt = new Map<string, number>();
   /** A classe ou os pontos mudaram neste tick (o dono precisa saber). */
   heroDirty = false;
+  /** Olhos de Gavião: até quando, quanto a mais enxerga (0,5 = +50%) e quanto a mais de dano nos bichos (0,1 = +10%). */
+  hawkUntil = 0;
+  hawkVision = 0;
+  hawkBonus = 0;
   lastDamagedAt = -Infinity;
   nextRegenAt = 0;
   statsDirty = false;

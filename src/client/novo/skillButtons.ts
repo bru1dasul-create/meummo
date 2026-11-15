@@ -1,7 +1,8 @@
 // Os botões das habilidades da classe que ainda não têm quadrado próprio na barra da [arte]: da 2ª em diante (a 1ª
 // fica no quadrado que era da Bordunada). PROVISÓRIO, como o botão da defesa foi: o mesmo jeito dos botões da barra
-// (as classes `.action`, `.art`, `.icon`, `.cd`, `.label` e `.key` do style.css), no PC no 6º quadrado da moldura e no
-// celular em cima do quadrado da 1ª habilidade. A [arte] leva para a barra quando fizer os quadrados novos.
+// (as classes `.action`, `.art`, `.icon`, `.cd`, `.label` e `.key` do style.css): a 2ª no 6º quadrado da moldura e a 3ª
+// em cima dele (no celular, em cima do quadrado da 1ª, uma sobre a outra). A [arte] leva para a barra quando fizer os
+// quadrados novos.
 
 export interface ExtraSkillDef {
   id: string;
@@ -28,9 +29,11 @@ export class ExtraSkillButtons {
   constructor(private readonly onPress: (skillId: string) => void) {
     this.style.textContent = `
       #actions .action.extra-skill { --i: 5; }
-      #actions .action.extra-skill + .action.extra-skill { --i: 6; }
+      /* a 3ª habilidade (provisório, até a barra ter mais quadrados): em cima do 6º quadrado, fora da moldura */
+      #actions .action.extra-skill + .action.extra-skill { top: calc(-100px * var(--as)); }
       @media (pointer: coarse) {
         body.jogo-novo #actions .action.extra-skill { position: absolute; right: 76px; bottom: calc(100% + 12px); left: auto; top: auto; width: 64px; height: 64px; }
+        body.jogo-novo #actions .action.extra-skill + .action.extra-skill { bottom: calc(100% + 88px); }
       }`;
     document.head.append(this.style);
   }

@@ -8,9 +8,10 @@ import type { QuestLog } from './quests';
 
 /**
  * O que a habilidade faz (o código dela). 'chuva': as flechas caem numa área; 'flecha': uma flecha do espírito que
- * atravessa todos os bichos da linha. Habilidade sem tipo ainda não existe no jogo: aparece como "em breve".
+ * atravessa todos os bichos da linha; 'olhos': por um tempo você enxerga mais longe, os bichos ficam destacados e
+ * levam mais dano seu. Habilidade sem tipo ainda não existe no jogo: aparece como "em breve".
  */
-export type ClassSkillKind = 'chuva' | 'flecha';
+export type ClassSkillKind = 'chuva' | 'flecha' | 'olhos';
 
 /** Os números de um ponto da habilidade (na lista, o primeiro é com 1 ponto, o segundo com 2...). 0 = não tem. */
 export interface SkillPointInfo {
@@ -26,6 +27,10 @@ export interface SkillPointInfo {
   /** Flecha: no fim do voo, explode neste raio (metros), com este dano (% do tiro sem carga). */
   burstRadius: number;
   burstPct: number;
+  /** Olhos: quanto tempo dura (ms), quanto a mais você enxerga (%) e quanto a mais de dano seu os bichos levam (%). */
+  durationMs: number;
+  visionPct: number;
+  bonusPct: number;
 }
 
 export interface ClassSkillInfo {

@@ -662,7 +662,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
 - [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
   runa da marca), o quadrado dela na barra (hoje um botão provisório do motor) e o `R` no "Como jogar"
-- [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
+- [x] **[estrutura]** Passo 3 (15/11, com o "pode" do dono): os **Olhos de Gavião** (nível 10, tecla `T`): por 8 a 16 s
+  enxerga mais longe (+50% a +100%: os bichos de longe chegam e aparecem no mini mapa e no mapa do M), cada bicho ganha
+  a etiqueta do nível na cor do perigo (verde, amarelo, vermelho) por cima das árvores e do escuro, e com 3 pontos eles
+  levam +10% a +20% de dano seu. Recarga 30 s. Protocolo 39. Etiquetas provisórias (HTML); "revelar o que está
+  escondido" fica para quando houver um bicho escondido
+- [ ] **[arte]** Os Olhos de Gavião: o destaque de verdade (o contorno do bicho, no lugar das etiquetas de
+  `hawkTags.ts`), afastar a câmera enquanto valem (hoje a view trava no zoom 0,7) e o quadrado da 3ª habilidade na
+  barra (hoje um botão provisório em cima do 6º quadrado)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo)
 - [ ] **[dono]** Depois: a escolha da classe virar o ritual na figueira (decisão de 12/11); trocar de classe; recomeçar
