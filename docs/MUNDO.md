@@ -88,8 +88,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   `-descanso` (o bando de data/bichos.json, da [estrutura], usa os dois). **O dono achou o mini mapa "horrível"** (15/11,
   ainda sem a imagem): o jeito dele (moldura, lugar, girar para bater com a câmera, a neblina) é da [arte] e da
   [estrutura]; do meu lado, dá para redesenhar a imagem num jeito mais de jogo, se ele quiser.
-- **A floresta maior (14/11, planta aprovada: "pode seguir com a planta da floresta maior"; ramo `mundo/floresta-maior`,
-  espera o desenho da [arte] para entrar na `main`).** O mapa passou de 96 × 120 para **96 × 180** (só para o sul; nada
+- **A floresta maior (14/11, planta aprovada: "pode seguir com a planta da floresta maior"; na `main` em 15/11, junto
+  com o desenho da [arte], 7ce727a, conferido por ela no jogo no PC e no celular).** O mapa passou de 96 × 120 para **96 × 180** (só para o sul; nada
   muda de lugar). Planta: `docs/referencias/floresta-maior-planta.jpg`; conceitos: `floresta-maior-paineira.jpg` e
   `floresta-maior-posto.jpg`. O que entrou: a **Clareira da Paineira** (32, 150; a `arvore` 'Paineira' de `especie:
   'paineira'` com `flores`, e o parquinho antigo: `parquinho` com `brinquedo` 'balanco' (só os dois pés seguram),
@@ -276,11 +276,6 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
-- **[arte] (14/11):** desenhar as coisas da floresta maior para ela entrar na `main`: a `paineira` (tronco de garrafa com
-  espinhos, copa de flor rosa), o `parquinho` (balanço, escorregador, gira-gira enferrujados), a `cachoeira` (pedras com a
-  água caindo no poço), a `pinguela` com `pedras`, a `cobertura` do posto (some ou fica transparente com o herói embaixo
-  ou atrás, como o telhado), a `bomba`, os `pneus`, a lojinha (`casa` com `posto`) e a placa em branco. Lote 2 (a floresta
-  de dentro das casas): ramo `mundo/lote2-floresta-dentro`, espera o "pode" do dono.
 - **[estrutura] (14/11):** as capivaras andando (os lugares já estão marcados em `pontos`).
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).

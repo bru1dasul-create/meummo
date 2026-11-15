@@ -541,10 +541,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto
 
 **Mundo:**
-- [ ] **[mundo]** Aumentar a floresta — **pronta no ramo `mundo/floresta-maior`** (planta aprovada em 14/11): o parque
+- [x] **[mundo]** Aumentar a floresta (**na main em 15/11**, com o desenho da [arte]; planta aprovada em 14/11): o parque
   cresce mais 60 m para o sul (Clareira da Paineira com o parquinho antigo, Cachoeirinha, mata profunda do sul com o
   recanto do Véu, buraco no gradil), a mata ao sul da vila vira mata de andar com o posto abandonado na beira da rua, a
-  rua desce até o fim novo e a vila ganha 13 árvores. Entra na `main` com o desenho da [arte] (item abaixo)
+  rua desce até o fim novo e a vila ganha 13 árvores
 - [x] **[arte]** Desenhar as coisas da floresta maior (15/11, com o `mundo/floresta-maior` junto na main): o arquivo novo
   `prototipos/pindorama-25d/js/world/sul.js` — a `paineira` (tronco de garrafa verde com espinhos e raízes de tábua, copa
   cor-de-rosa com as florzinhas, pétalas caindo e o tapete de flores no chão), o `parquinho` (balanço com a corrente
@@ -564,9 +564,8 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (nível 3: casca que segura 70% de frente e tonto 2 s depois da investida), `marimbondo` (nível 3: enxame, 40% das
   pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
   (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
-- [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
-  — **marcadas no ramo `mundo/floresta-maior`** (quati 4, tatu_bola 3, marimbondo 3, filhote_boitata 1 no recanto do
-  Véu); entram na `main` com a floresta maior
+- [x] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
+  (**na main em 15/11**, com a floresta maior): quati 4, tatu_bola 3, marimbondo 3 e filhote_boitata 1 no recanto do Véu
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
