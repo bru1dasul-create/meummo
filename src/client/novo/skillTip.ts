@@ -1,6 +1,6 @@
 // A dica das habilidades da barra (pedido do dono, 15/11): com o mouse em cima de um quadrado, um quadrinho diz o que
 // ela faz, o dano e a recarga. Só com o mouse (no celular, tocar usa a habilidade; lá os números ficam na janela das
-// Habilidades). O visual é simples, do jeito da [estrutura]: a [arte] pode vestir pelas classes `.skill-tip`.
+// Habilidades). O visual é da [arte] (style.css, classes `.skill-tip`, `.skill-tip-title`, `.skill-tip-line`).
 
 export interface SkillTipText {
   title: string;
@@ -16,19 +16,8 @@ export class SkillTip {
   constructor(private readonly textOf: (slot: string) => SkillTipText | null) {
     this.box.className = 'skill-tip';
     this.box.hidden = true;
-    Object.assign(this.box.style, {
-      position: 'fixed',
-      zIndex: '60',
-      maxWidth: '280px',
-      padding: '10px 12px',
-      borderRadius: '10px',
-      border: '1px solid rgba(214, 170, 92, 0.7)',
-      background: 'rgba(24, 16, 10, 0.94)',
-      color: '#f3e6cf',
-      font: '14px/1.35 system-ui, sans-serif',
-      pointerEvents: 'none',
-      boxShadow: '0 6px 18px rgba(0, 0, 0, 0.45)',
-    });
+    // só o que é de lugar; a cara (cor, borda, fundo, letra) é da [arte], em style.css
+    Object.assign(this.box.style, { position: 'fixed', zIndex: '60', pointerEvents: 'none' });
     document.body.append(this.box);
     this.root?.addEventListener('pointerover', this.onOver);
     this.root?.addEventListener('pointerout', this.onOut);
@@ -46,7 +35,6 @@ export class SkillTip {
     const title = document.createElement('strong');
     title.className = 'skill-tip-title';
     title.textContent = text.title;
-    Object.assign(title.style, { display: 'block', color: '#ffd98a', marginBottom: '4px', fontSize: '15px' });
     const lines = text.lines.map((line) => {
       const p = document.createElement('div');
       p.className = 'skill-tip-line';
