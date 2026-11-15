@@ -645,4 +645,16 @@ describe('os Olhos de Gavião', () => {
     guarding.world.castSkill(guarding.player, 'olhos', 0, 0);
     expect(guarding.player.hawkUntil).toBeGreaterThan(0);
   });
+
+  it('acabam quando desmaia (a recarga continua correndo)', () => {
+    const { world, conn, player, run, clock } = hunter(10);
+    world.learnSkill(player, 'olhos');
+    world.castSkill(player, 'olhos', 0, 0);
+    run(TICK_MS);
+    expect(player.hawkUntil).toBeGreaterThan(0);
+    (world as unknown as { damage(target: Player, amount: number, by: number, now: number): void }).damage(player, player.hp, 0, clock.now());
+    expect(player.dead).toBe(true);
+    expect(player.hawkUntil).toBe(0); // a visão volta a ser a de sempre (e o navegador apaga o destaque)
+    expect(conn.ofType('scd').at(-1)).toEqual({ t: 'scd', s: 'olhos', ms: 30_000 });
+  });
 });

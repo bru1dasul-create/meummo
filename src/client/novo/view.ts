@@ -82,6 +82,16 @@ export interface WorldView {
    * Vem só quando muda (as mudanças do servidor são devagar: o motor manda os passos do meio).
    */
   setWind?(strength: number, angle?: number): void;
+  /**
+   * Os Olhos de Gavião: os bichos destacados agora (o contorno na cor do perigo, por cima das copas e do escuro, e o
+   * selo com o nível). O motor chama a cada quadro enquanto os Olhos valem; lista vazia = nenhum.
+   */
+  highlight?(list: { id: number; color: string; level: number }[]): void;
+  /**
+   * Os Olhos de Gavião: quanto a mais você enxerga (`percent`, 50 a 100; 0 = o normal). A view afasta a câmera com
+   * suavidade além do limite do zoom (e volta no 0); o `setZoom` continua devolvendo só o zoom do jogador.
+   */
+  setVision?(percent: number): void;
 
   // ---- opcionais (conversa com NPC) ----
   /**

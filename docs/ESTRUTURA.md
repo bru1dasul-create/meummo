@@ -75,6 +75,15 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — o Caçador com o desenho final da [arte] (parte 3 dela, main 4380f90):** o motor usa os quadrados novos
+(`CLASS_SLOTS` = `skill0`, `class1`, `class2` para Q, R, T; `classSlotOf(id)` para a recarga) e saiu o
+`skillButtons.ts` provisório; os Olhos chamam `highlight(lista)` a cada quadro (a cor do perigo veio para `danger.ts`),
+`setVision(porcento)` e a ação `'hawk'` da view, e saiu o `hawkTags.ts`; o desenho provisório da Flecha saiu do
+`combat.ts` (fica o `drawProjectile` da [arte]). Os Olhos acabam também quando desmaia ou troca de mapa, no navegador
+e no servidor (`killPlayer` e `adopt` zeram o `hawkUntil`; teste novo em `tests/classe.test.ts`): a view nova começa
+sem o destaque e sem a câmera afastada, e a recarga continua. Conferido no navegador (PC, celular em pé e deitado):
+os 7 quadrados com os ícones, a câmera afastando 20% com 3 pontos e voltando no fim, a runa da marca na Mula.
+
 **15/11 — Chamado Selvagem e Fúria da Onça pausados (decisão do dono, opção 1):** medi que um bicho a mais na tela
 custa ~0,3–0,4 ms por quadro (sem placa de vídeo) e que o nível 15 pede 12.799 XP (~700 bichos do Capão, que vão até o
 nível 5). Primeiro a região nova (níveis 5 a 10). Proposta ao dono: as Ruínas de Santo Amaro (Corpo-Seco, Capelobo,

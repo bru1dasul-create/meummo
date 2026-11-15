@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { KeyBindings, KEYS_STORAGE, keyName, refusalOf } from '../src/client/novo/keys';
-import { dangerColor } from '../src/client/novo/hawkTags';
+import { dangerColor } from '../src/client/novo/danger';
 
 /** Um "localStorage" de mentira. */
 function fakeStore(initial: Record<string, string> = {}) {

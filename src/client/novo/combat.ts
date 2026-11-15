@@ -191,9 +191,6 @@ interface SpiritEnd {
   start: number;
 }
 
-/** A cor do espírito do spiritArrow provisório (a Flecha voando agora vem do drawProjectile, em spiritArt.ts). */
-const SPIRIT = [130, 255, 200] as const;
-
 /** A queda do item: do alto do monstro até o chão, com um quique, nesse tempo (o servidor espera 0,4 s para deixar pegar). */
 const DROP_FALL_MS = 450;
 
@@ -727,19 +724,6 @@ export class CombatLayer {
 
   // ---- Chuva de Flechas: aqui a conta (spots, start/land, quanto fica); o desenho é da [arte], em rainArt.ts ----
 
-  /** Um círculo do chão (x, y, r), já na perspectiva da câmera. */
-  private groundCircle(x: number, y: number, r: number, screen: (x: number, y: number, z?: number) => Point): void {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    for (let i = 0; i <= 36; i++) {
-      const a = (i / 36) * Math.PI * 2;
-      const p = screen(x + Math.cos(a) * r, y + Math.sin(a) * r);
-      if (i === 0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
-    }
-    ctx.closePath();
-  }
-
   /** A mira: o círculo da Chuva (o desenho é da [arte], em rainArt.ts) ou, na Flecha Ancestral, a faixa até o fim. */
   private drawAim(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
     const aim = this.aim;
@@ -783,30 +767,6 @@ export class CombatLayer {
   /** No ar: as flechas (ou pedras) subindo, caindo e cravadas no chão (o desenho é da [arte], em rainArt.ts). */
   private drawRainAir(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
     for (const rain of this.rains) paintRainAir(this.ctx, rain, now, screen, meter);
-  }
-
-  /** A Flecha Ancestral voando (provisória): o rastro verde e a flecha clara na frente. */
-  private spiritArrow(tail: Point, at: Point, ahead: Point, m: number): void {
-    const ctx = this.ctx;
-    ctx.save();
-    const trail = ctx.createLinearGradient(tail.x, tail.y, at.x, at.y);
-    trail.addColorStop(0, `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0)`);
-    trail.addColorStop(1, `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0.75)`);
-    ctx.strokeStyle = trail;
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(4, m * 0.12);
-    ctx.beginPath();
-    ctx.moveTo(tail.x, tail.y);
-    ctx.lineTo(at.x, at.y);
-    ctx.stroke();
-    ctx.shadowColor = `rgb(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]})`;
-    ctx.shadowBlur = 12;
-    const dx = ahead.x - at.x;
-    const dy = ahead.y - at.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const head = { x: at.x + (dx / d) * m * 0.35, y: at.y + (dy / d) * m * 0.35 };
-    this.arrowLine({ x: at.x - (dx / d) * m * 0.4, y: at.y - (dy / d) * m * 0.4 }, head, '#e8fff4', Math.max(2, m * 0.05));
-    ctx.restore();
   }
 
   /**
@@ -1166,13 +1126,7 @@ export class CombatLayer {
         const ctx = this.ctx;
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
         const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, SHOT_DRAW_Z);
-        if (drawProjectile(ctx, shot.kind, p, shadow, ahead, m)) continue;
-        if (shot.kind === 'ancestral') {
-          // provisório, até a [arte]: a flecha do espírito, verde e brilhando, com um rastro
-          const tail = screen(ground.x - shot.dx * 1.4, ground.y - shot.dy * 1.4, SHOT_DRAW_Z);
-          this.spiritArrow(tail, p, ahead, m);
-          continue;
-        }
+        if (drawProjectile(ctx, shot.kind, p, shadow, ahead, m)) continue; // a flecha, a pedra e a Flecha Ancestral
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
         ctx.ellipse(shadow.x, shadow.y, m * 0.1, m * 0.045, 0, 0, Math.PI * 2);

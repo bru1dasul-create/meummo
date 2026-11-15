@@ -48,15 +48,16 @@ import { cyclePosition, daylightAt, isNightAt } from '../../shared/dayNight';
 import { KeysPanel } from './keysPanel';
 import { SkillsPanel } from './skillsPanel';
 import { skillIconUrl } from './skillIcons';
-import { ExtraSkillButtons } from './skillButtons';
-import { dangerColor, HawkTags } from './hawkTags';
+import { dangerColor } from './danger';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
 /** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
 /** As teclas 1 e 2 da barra: a 1ª habilidade da classe e o Fôlego. */
 const SKILL_KEYS: KeyAction[] = ['hab1', 'folego'];
-/** A tecla de cada habilidade da classe, na ordem de data/classes.json (a 1ª no Q, a 2ª no R). */
+/** A tecla de cada habilidade da classe, na ordem de data/classes.json (a 1ª no Q, a 2ª no R, a 3ª no T). */
 const CLASS_KEYS: KeyAction[] = ['hab1', 'hab2', 'hab3'];
+/** O quadrado da barra de cada habilidade da classe (na mesma ordem): a 1ª no que era da Bordunada, as outras nos novos. */
+const CLASS_SLOTS: ActionSlot[] = ['skill0', 'class1', 'class2'];
 /** O Fôlego na lista de SKILLS (src/shared/skills.ts). A Bordunada (a 0) saiu do jogo novo em 15/11: a classe entrou. */
 const FOLEGO = 1;
 
@@ -255,10 +256,9 @@ class NewWorld implements NewWorldGame {
   /** Segurando a tecla da habilidade: mirando (o círculo segue o mouse); soltar usa. */
   private aiming: ClassSkillInfo | null = null;
   /** Os botões das habilidades da classe da 2ª em diante (provisórios, até a barra ter quadrados para elas). */
-  private readonly extraButtons = new ExtraSkillButtons((id) => this.onExtraSkill(id));
-  /** Olhos de Gavião: até quando valem (performance.now) e as etiquetas de nível em cima dos bichos. */
+  /** Olhos de Gavião: até quando valem (performance.now), e se a view está mostrando (o destaque e a câmera afastada). */
   private hawkUntil = 0;
-  private readonly hawkTags = new HawkTags();
+  private hawkShown = false;
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
   private charging: { since: number; aim: Aim; sentAngle: number } | null = null;
@@ -497,6 +497,8 @@ class NewWorld implements NewWorldGame {
     this.wasSafe = null;
     this.cancelCharge();
     this.cancelAim();
+    this.hawkUntil = 0; // trocou de mapa: a view nova começa sem o destaque e sem a câmera afastada
+    this.hawkShown = false;
     this.forgetGuard();
     this.setDead(false);
     if (msg.t === 'welcome') {
@@ -549,8 +551,7 @@ class NewWorld implements NewWorldGame {
     this.soundPanel.destroy();
     this.keysPanel.destroy();
     this.skillsPanel.destroy();
-    this.extraButtons.destroy();
-    this.hawkTags.destroy();
+
     this.mapWindow.destroy();
     this.minimap.destroy();
     this.ambient.destroy();
@@ -598,7 +599,6 @@ class NewWorld implements NewWorldGame {
     this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
     this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
     this.actionBar.update(now);
-    this.extraButtons.update(now);
     this.quick.update(now);
     this.fpsMeter?.tick(now, performance.now() - workStart);
     this.raf = requestAnimationFrame(this.loop);
@@ -739,32 +739,25 @@ class NewWorld implements NewWorldGame {
   }
 
   /**
-   * A barra de ações, com as teclas de agora (refeita quando o jogador troca uma tecla ou aprende a habilidade). No 1º
-   * quadrado (o 'skill0', que era da Bordunada), a 1ª habilidade da classe, quando ela já tem ponto; depois o Fôlego.
+   * A barra de ações, com as teclas de agora (refeita quando o jogador troca uma tecla ou aprende a habilidade). As
+   * habilidades da classe que já têm ponto ficam nos quadrados delas (a 1ª no 'skill0', que era da Bordunada; a 2ª e a
+   * 3ª no 'class1' e no 'class2'); depois o Fôlego, a esquiva e o pulo.
    */
   private makeActionBar(): ActionBar {
-    const classSkill = this.barSkill();
-    const bar = new ActionBar(
+    const classDefs = CLASS_SLOTS.flatMap((slot, i) => {
+      const skill = this.classSkillAt(i);
+      return skill ? [{ slot, label: skill.name, key: this.keys.label(CLASS_KEYS[i]!), icon: skillIconUrl(skill.id) }] : [];
+    });
+    return new ActionBar(
       [
         { slot: 'shot', label: 'Estilingue', key: this.keys.label('atirar') }, // segurar puxa, soltar atira (pedra com carga)
-        ...(classSkill ? [{ slot: 'skill0' as ActionSlot, label: classSkill.name, key: this.keys.label('hab1'), icon: skillIconUrl(classSkill.id) }] : []),
+        ...classDefs,
         { slot: 'skill1', label: SKILLS[FOLEGO]!.name, key: this.keys.label('folego') },
         { slot: 'dash', label: 'Esquiva', key: this.keys.label('esquiva') },
         { slot: 'jump', label: 'Pular', key: this.keys.label('pular') }, // no celular, o botão de pular (o desenho é da [arte])
       ],
       (slot, down) => this.onAction(slot, down),
     );
-    // da 2ª habilidade da classe em diante: os botões provisórios (dentro da barra nova)
-    const extras: { skill: ClassSkillInfo; index: number }[] = [];
-    for (let index = 1; index < CLASS_KEYS.length; index++) {
-      const skill = this.classSkillAt(index);
-      if (skill) extras.push({ skill, index });
-    }
-    this.extraButtons.build(
-      extras.map(({ skill, index }) => ({ id: skill.id, name: skill.name, key: this.keys.label(CLASS_KEYS[index]!), icon: skillIconUrl(skill.id) })),
-      (id) => ({ at: this.castReadyAt.get(id) ?? 0, duration: this.classes.flatMap((c) => c.skills).find((s) => s.id === id)?.cooldownMs ?? 0 }),
-    );
-    return bar;
   }
 
   /** O jogador trocou uma tecla: a barra mostra as novas (com a arma e as recargas que estavam correndo). */
@@ -781,8 +774,16 @@ class NewWorld implements NewWorldGame {
     this.actionBar.setCooldown('shot', this.nextShotAt, this.shot().cooldownMs);
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
     this.actionBar.setCooldown('skill1', this.skillReadyAt[FOLEGO]!, SKILLS[FOLEGO]!.cooldownMs);
-    const classSkill = this.barSkill();
-    if (classSkill) this.actionBar.setCooldown('skill0', this.castReadyAt.get(classSkill.id) ?? 0, classSkill.cooldownMs);
+    CLASS_SLOTS.forEach((slot, i) => {
+      const skill = this.classSkillAt(i);
+      if (skill) this.actionBar.setCooldown(slot, this.castReadyAt.get(skill.id) ?? 0, skill.cooldownMs);
+    });
+  }
+
+  /** O quadrado da barra desta habilidade da classe (ou null, se ela não está na barra). */
+  private classSlotOf(skillId: string): ActionSlot | null {
+    const i = CLASS_SLOTS.findIndex((_, index) => this.classSkillAt(index)?.id === skillId);
+    return i >= 0 ? CLASS_SLOTS[i]! : null;
   }
 
   /** Andar devagar (C no padrão): liga e desliga. O normal é correr. */
@@ -1590,10 +1591,11 @@ class NewWorld implements NewWorldGame {
     if (!down) return;
     if (slot === 'dash') this.tryDash(now);
     else if (slot === 'jump') this.tryJump(now);
-    else if (slot === 'skill0') {
-      const skill = this.barSkill();
-      if (skill) this.castAuto(skill, now); // o botão mira sozinho: onde a chuva pega mais bichos
-    } else if (slot === 'skill1') this.trySkill(FOLEGO, 0, now);
+    else if (slot === 'skill1') this.trySkill(FOLEGO, 0, now);
+    else if (CLASS_SLOTS.includes(slot)) {
+      const skill = this.classSkillAt(CLASS_SLOTS.indexOf(slot));
+      if (skill) this.castAuto(skill, now); // o botão mira sozinho: onde pega mais bichos
+    }
   }
 
   /** O seu personagem vira para `degrees` (atirando, golpeando). */
@@ -1710,33 +1712,29 @@ class NewWorld implements NewWorldGame {
   }
 
   /**
-   * A cada quadro, com os Olhos de Gavião valendo: a etiqueta de nível (na cor do perigo) em cima de cada bicho que
-   * está na tela, por cima das copas e do escuro. Acabou: as etiquetas somem.
+   * A cada quadro, com os Olhos de Gavião valendo: a view destaca todos os bichos que você conhece (o contorno na cor
+   * do perigo, por cima das copas e do escuro, e o nível). Acabou (ou desmaiou): o destaque some e a câmera volta.
    */
   private updateHawk(now: number): void {
-    if (now >= this.hawkUntil || !this.view || this.dead) {
-      this.hawkTags.clear();
+    if (this.dead) this.hawkUntil = 0; // desmaiou: os Olhos acabam
+    if (now >= this.hawkUntil || !this.view) {
+      this.endHawk();
       return;
     }
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const tags = [];
+    this.hawkShown = true;
+    const list = [];
     for (const e of this.entities.values()) {
-      if (e.kind !== 'monster') continue;
-      const feet = this.drawnFeet(e.id) ?? feetAt(e.x, e.y);
-      const p = this.view.toScreen(feet.x, feet.y, BODY_HEIGHT + 0.15); // logo acima do nome (bicho pequeno não fica longe)
-      if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) continue;
-      tags.push({ id: e.id, x: p.x, y: p.y, level: e.level, color: dangerColor(e.level, this.myLevel) });
+      if (e.kind === 'monster') list.push({ id: e.id, color: dangerColor(e.level, this.myLevel), level: e.level });
     }
-    this.hawkTags.show(tags);
+    this.view.highlight?.(list);
   }
 
-  /** Apertou o botão de uma habilidade da 2ª em diante: usa mirando sozinha. */
-  private onExtraSkill(id: string): void {
-    const cls = this.classes.find((c) => c.id === this.hero.class);
-    const index = cls?.skills.findIndex((s) => s.id === id) ?? -1;
-    const skill = index >= 0 ? this.classSkillAt(index) : null;
-    if (skill) this.castAuto(skill, performance.now());
+  /** Os Olhos de Gavião acabaram (ou desmaiou, ou trocou de mapa): tira o destaque e volta a câmera. */
+  private endHawk(): void {
+    if (!this.hawkShown) return;
+    this.hawkShown = false;
+    this.view?.highlight?.([]);
+    this.view?.setVision?.(0);
   }
 
   /** Quantas habilidades com ponto (para saber se a barra muda: aprendeu uma nova, ou tirou os pontos). */
@@ -1907,13 +1905,15 @@ class NewWorld implements NewWorldGame {
     const feet = this.myFeet();
     const readyAt = now + skill.cooldownMs;
     this.castReadyAt.set(skill.id, readyAt);
-    if (this.barSkill()?.id === skill.id) this.actionBar.setCooldown('skill0', readyAt, skill.cooldownMs);
-    this.extraButtons.setCooldown(skill.id, readyAt, skill.cooldownMs);
+    const slot = this.classSlotOf(skill.id);
+    if (slot) this.actionBar.setCooldown(slot, readyAt, skill.cooldownMs);
     if (skill.kind === 'olhos') {
       // os Olhos de Gavião: enxerga mais longe por um tempo (o servidor manda os bichos de longe; aqui, as etiquetas
       // e os pontos no mini mapa). Não soltam a pedra puxada.
       this.conn.send({ t: 'cast', id: skill.id, x: round3(feet.x), y: round3(feet.y) });
       this.hawkUntil = now + numbers.durationMs;
+      this.view?.setVision?.(numbers.visionPct); // a câmera afasta (e volta no fim: endHawk)
+      this.view?.action?.(this.myId, 'hawk'); // o brilho dourado nos olhos
       this.combat.floater(this.myId, 'Olhos de Gavião!', '#ffd23f', now);
       this.sfx.play('hawk');
       return;
@@ -2371,8 +2371,8 @@ class NewWorld implements NewWorldGame {
           break;
         }
         if (msg.kind === 'hawk') {
-          // outro jogador usou os Olhos de Gavião (só ele enxerga mais longe; os outros veem o aviso)
-          this.combat.floater(msg.id, 'Olhos de Gavião!', '#ffd23f', performance.now());
+          // outro jogador usou os Olhos de Gavião (só ele enxerga mais longe; os outros veem o brilho nos olhos dele)
+          this.view?.action?.(msg.id, 'hawk');
           break;
         }
         if (msg.kind === 'mark') {
@@ -2456,8 +2456,8 @@ class NewWorld implements NewWorldGame {
         // a recarga da habilidade da classe (a conta do servidor vale)
         const now = performance.now();
         this.castReadyAt.set(msg.s, now + msg.ms);
-        if (this.barSkill()?.id === msg.s) this.actionBar.setCooldown('skill0', now + msg.ms, msg.ms);
-        this.extraButtons.setCooldown(msg.s, now + msg.ms, msg.ms);
+        const slot = this.classSlotOf(msg.s);
+        if (slot) this.actionBar.setCooldown(slot, now + msg.ms, msg.ms);
         break;
       }
       case 'hero':

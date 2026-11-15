@@ -135,16 +135,18 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   cada (sem o sorteio do enxame e com `ignoreShell` no `damage`), marca (`Monster.markedUntil`/`markPct`: o `damage` soma
   a porcentagem, de qualquer um; `fx` `'mark'` com `ms`) e para só no que segura tiro ou no fim do alcance, onde pode
   explodir (`shot_end` com `burst` = o raio). No navegador: `R` (ação `hab2`) mira com a faixa da linha; o desenho voa na
-  hora (`myShot` com o `cid`); `combat.ts` desenha a flecha verde, o brilho e a explosão do fim e a runa da marca
-  (provisório). A 2ª habilidade em diante ganha um botão provisório (`skillButtons.ts`, `.action.extra-skill` dentro do
-  `#actions`: no PC o 6º quadrado; no celular em cima do da 1ª) até a [arte] fazer os quadrados novos.
+  hora (`myShot` com o `cid`); o desenho é da [arte] (`spiritArt.ts`, pelo `drawProjectile(ctx, 'ancestral', ...)`: a
+  flecha, a explosão do fim e a runa da marca). Cada habilidade da classe tem o seu quadrado na barra: `CLASS_SLOTS` no
+  motor (`skill0`, `class1`, `class2` = Q, R, T, na ordem do nível; `classSlotOf(id)` acha o quadrado para a recarga).
 - **Olhos de Gavião** (protocolo 39, `tipo: "olhos"`): o `cast` liga `Player.hawkUntil`/`hawkVision`/`hawkBonus`. Com
   eles valendo, o `updateView` enxerga `1 + hawkVision` vezes mais longe (o `see` divide a distância por esse tanto, os
   bichos de longe chegam e, quando acaba, saem) e o `damage` soma `hawkBonus` no dano do jogador nos monstros. Não
   atacam: valem na área segura e defendendo e não soltam a pedra puxada. Quem vê recebe o `fx` `'hawk'` com `ms`. No
-  navegador: tecla `T` (`hab3`, na hora, sem mira), `hawkTags.ts` (as etiquetas de nível em HTML por cima da tela, na
-  cor do perigo de `dangerColor`) e os pontos no mini mapa e no mapa do M (`MapMarker.monster`). A câmera ainda não
-  afasta além do zoom de sempre (a trava é da view da [arte]).
+  navegador: tecla `T` (`hab3`, na hora, sem mira); a cada quadro o motor manda à view `highlight(lista)` (cada bicho
+  conhecido com a cor do perigo de `dangerColor`, em `danger.ts`, e o nível: a view desenha o contorno por cima das
+  copas e do escuro e o selo "Nv"), `setVision(porcento)` (a câmera afasta, passando do limite do zoom do jogador) e a
+  ação `'hawk'` (os olhos acendem; quem vê de fora recebe pelo `fx`); quando acaba, desmaia ou troca de mapa,
+  `highlight([])` e `setVision(0)` (o servidor também zera o `hawkUntil` no desmaio e na troca de mapa). Os bichos de longe também aparecem no mini mapa e no mapa do M (`MapMarker.monster`).
 - **Mapa explorado** (protocolo 36): `src/shared/explore.ts` (a grade de quadradinhos de `EXPLORE_CELL` = 4 m, um bit
   cada; `revealAround` marca os que ficam a até `EXPLORE_RADIUS` = 12 m do pé; o texto `colunas:base64`, que continua
   batendo se o mapa crescer). O servidor confere a cada 500 ms (`World.explore`), manda `explored` com os quadradinhos

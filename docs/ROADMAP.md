@@ -699,9 +699,8 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   insígnia dos pontos (só o CSS do `skillsPanel.ts`)
 - [x] **[arte]** Mais quadrados na barra para as habilidades da classe (15/11): os `ActionSlot` `class1` (R) e `class2`
   (T) no `ui.ts`; no PC, a moldura de 7 quadrados (Q, R, T, E, esquiva, defesa, pulo), feita da pintada de 6 com um
-  quadrado a mais e o enfeite de novo no meio; no celular, uma fileira (R e T) em cima do 2×2. Até a [estrutura] trocar
-  os botões provisórios (`skillButtons.ts`) pelos quadrados novos, o CSS põe os provisórios no lugar deles (pelo
-  `data-index`). O 4º e o 5º esperam o Chamado e a Fúria (pausados)
+  quadrado a mais e o enfeite de novo no meio; no celular, uma fileira (R e T) em cima do 2×2. A [estrutura] ligou no
+  motor (15/11: `CLASS_SLOTS`, o `skillButtons.ts` provisório saiu). O 4º e o 5º esperam o Chamado e a Fúria (pausados)
 - [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
   uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
   com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
@@ -722,8 +721,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   transparente na mesma cor e o selo "Nv" em cima; `setVision(porcento)` afasta a câmera com suavidade (até 1/(1 +
   0,35 × visão), passando do limite do zoom do jogador; o `setZoom` continua devolvendo só o zoom do jogador); a ação
   `'hawk'` acende os olhos de quem usou (dourados, com o risco de luz) e os seus ficam brilhando de leve enquanto valem.
-  O quadrado é o `class2` e o `T` no "Como jogar" já foi. Falta a [estrutura] ligar no motor (os nomes combinados) e
-  apagar o `hawkTags.ts`
+  O quadrado é o `class2` e o `T` no "Como jogar" já foi. A [estrutura] ligou no motor (15/11) e apagou o `hawkTags.ts`
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

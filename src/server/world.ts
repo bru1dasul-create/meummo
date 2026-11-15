@@ -524,6 +524,7 @@ export class World {
       this.refillEnergy(player, now);
     }
     this.dropGuard(player); // mapa novo: a defesa começa baixada (o navegador também solta)
+    player.hawkUntil = 0; // e os Olhos de Gavião acabam (o mapa novo começa sem o destaque; a recarga continua)
     player.energyClock = now;
     player.x = spot.x;
     player.y = spot.y;
@@ -1891,6 +1892,7 @@ export class World {
   private killPlayer(player: Player, now: number): void {
     player.deadUntil = now + DEATH_MS;
     player.chargeStart = null;
+    player.hawkUntil = 0; // os Olhos de Gavião acabam (o navegador também apaga o destaque)
     this.dropGuard(player);
     player.queue.length = 0;
     this.emitToViewers(player, { t: 'death', id: player.id });
@@ -2095,13 +2097,14 @@ export class World {
       if (block.broke) this.breakGuard(target, now);
       this.sendEnergy(target, now, true);
     }
-    // a casca do tatu-bola: o golpe que vem pela frente perde parte do dano (tonto, depois da investida, fica sem ela)
+    // a marca da Flecha Ancestral: o bicho marcado leva mais dano de qualquer um
     if (target.kind === 'monster' && now < target.markedUntil) amount = Math.round(amount * (1 + target.markPct / 100));
     // os Olhos de Gavião (com 3 pontos ou mais): quem está com eles ativos bate mais forte nos bichos
     if (target.kind === 'monster') {
       const hunter = this.players.get(attackerId);
       if (hunter && now < hunter.hawkUntil && hunter.hawkBonus > 0) amount = Math.round(amount * (1 + hunter.hawkBonus));
     }
+    // a casca do tatu-bola: o golpe que vem pela frente perde parte do dano (tonto, depois da investida, fica sem ela)
     if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil && !ignoreShell) {
       const from = this.hitFrom(target, attackerId, travel);
       if (from !== null && Math.abs(angleDiff(angleOfDir(target.dir), from)) <= target.def.shell.halfArc) {
