@@ -564,14 +564,16 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   aberta), parada pasta (a cabeça desce e mastiga) e olha em volta, deita (`sleep`/`wake`; com `asleep` já aparece
   deitada) e fica contente com o carinho (`purr`: fecha os olhos e ergue o focinho). Prancha:
   `ferramentas/prancha-capivara.cjs`
-- [ ] **[mundo + arte]** Juntar a floresta maior (os pontos das capivaras) e o desenho da capivara na main, e tirar as
-  capivaras de enfeite do mapa
+- [x] **[mundo + arte]** Juntar os pontos das capivaras e o desenho da capivara na main, e tirar as capivaras de enfeite
+  do mapa (15/11, com o "pode" do dono): `capivaras-lago` e `capivaras-campinho`, com o `-descanso`, e as cinco paradas
+  fora
 - [x] **[estrutura]** Mapa da tecla M e mini mapa, a parte das regras e o desenho provisório (14/11): o mapa em
   quadradinhos de 4 m, explorado a até 12 m de onde você anda, salvo no personagem (passo 5 do arquivo); o M (ou tocar
   no mini mapa) abre o mapa inteiro com a neblina, os nomes dos lugares já vistos, os NPCs (com ! e ?) e a sua seta;
   o mini mapa fica no canto (protocolo 36)
-- [ ] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
-  procura e, quando existir, ela entra no lugar do desenho provisório
+- [x] **[mundo]** A imagem de cima de cada mapa (`<id>-mapa.png` + `<id>-mapa.json`, o formato combinado): o jogo já
+  procura e, quando existir, ela entra no lugar do desenho provisório. A do Capão na `main` em 15/11 (o gerador escreve
+  as duas junto com o mapa, por `scripts/mapa-de-cima.ts`; os nomes saem em ordem de importância)
 - [ ] **[arte]** Deixar bonitos a janela do mapa (`#map-window`) e o mini mapa (`#minimap`): a moldura, o lugar na tela
   e talvez girar a imagem para bater com a câmera
 - [x] **[estrutura]** Dia e noite, as regras (14/11, números aprovados pelo dono): 30 min de dia e 10 de noite, um relógio só
