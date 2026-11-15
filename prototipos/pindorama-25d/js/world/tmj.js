@@ -102,7 +102,8 @@
         map.shapes.push({ type: k, kind: 'point', x: o.x * CM, y: o.y * CM, r: pr.raio ? pr.raio * 100 : null, angle: pr.olhando || 0, water: !!pr.agua, plant: pr.tipo || null, color: pr.cor });
       } else {
         // `estado` (asfalto rachado), `musgo` (praça) e `linhas` (campinho)
-        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras, state: pr.estado || null, moss: !!pr.musgo, lines: !!pr.linhas });
+        // (`folhas`: as folhas secas no piso da Budega; `capacho`: o degrau da porta com o capacho)
+        map.shapes.push({ type: k, kind: 'rect', ...rect(o), color: pr.cor, pattern: pr.desenho, stripes: pr.listras, state: pr.estado || null, moss: !!pr.musgo, lines: !!pr.linhas, leaves: !!pr.folhas, mat: !!pr.capacho });
       }
     }
 
@@ -139,7 +140,8 @@
         // móveis de dentro da casa que dá para entrar (retângulo): `altura`, `olhando` (para onde a frente dá: 90 = sul,
         // 0 = leste), `caixa` (balcão com a caixa registradora), `pilha` (quantos engradados), `cor`
         const r0 = o.width || o.height ? rect(o) : { x0: x - 20, x1: x + 20, y0: y - 15, y1: y + 15 };
-        map.props.push({ kind: k, ...r0, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, register: !!pr.caixa, stack: pr.pilha || 3, color: pr.cor || null });
+        // a Budega maior (budega.js): `nichos` (a cor do fundo dos nichos), `cipo`, `portas`, `vidro`, `pequena`, `faixa`
+        map.props.push({ kind: k, ...r0, h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, register: !!pr.caixa, stack: pr.pilha || 3, color: pr.cor || null, niches: pr.nichos || null, vine: !!pr.cipo, doors: pr.portas || 1, glass: !!pr.vidro, small: !!pr.pequena, stripe: pr.faixa || null });
       } else if (HOME_FURNITURE.has(k)) {
         // móveis das casas com interior (casas.js): `altura`, `olhando` (90 = sul, 0 = leste, 270 = norte, 180 = oeste)
         // e os detalhes: `panela` (fogão), `tv` (estante), `cadeiras` e `toalha` (mesas), `cor`, `croche`, `rasgado` e
@@ -193,6 +195,10 @@
           mossInside: !!pr.musgoDentro,
           // a lojinha do posto abandonado (floresta maior): vitrine (quebrada, com `vitrineQuebrada`) e porta de enrolar
           station: !!pr.posto,
+          // a Budega maior (budega.js): `fachada: 'preta'`, a `moldura` amarela e o `led` branco
+          facade: pr.fachada || null,
+          frame: pr.moldura || null,
+          led: !!pr.led,
           brokenWindow: !!pr.vitrineQuebrada,
         });
       } else if (k === 'predio') {
@@ -234,7 +240,8 @@
       } else if (k === 'cadeira') {
         map.props.push({ kind: 'cadeira', x, y, r: 25, angle: pr.olhando || 0, color: pr.cor || '#f2f2ee' });
       } else if (k === 'vaso') {
-        map.props.push({ kind: 'vaso', x, y, r: 25, plant: pr.planta || 'espada-de-sao-jorge' });
+        // (`dentro`: o vaso de dentro da loja, que só aparece com o herói lá dentro)
+        map.props.push({ kind: 'vaso', x, y, r: 25, plant: pr.planta || 'espada-de-sao-jorge', inside: !!pr.dentro });
       } else if (k === 'lixo') {
         map.props.push({ kind: 'lixo', ...rect(o), h: (pr.altura || 0.6) * 100 });
       } else if (k === 'placa-rua') {
@@ -307,6 +314,16 @@
       } else if (k === 'deque' || k === 'pinguela') {
         // dá para andar em cima: o lado comprido diz a direção (`pedras`: a pinguela de pedras de atravessar)
         map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100, stones: !!pr.pedras });
+      } else if (k === 'vitrine' || k === 'balcao-vidro' || k === 'freezer' || k === 'parede-verde' || k === 'caixote') {
+        // a Budega maior (budega.js): a `vitrine` (`fundo`, `frente`), o balcão de vidro (`doces`), o freezer, a parede de
+        // grama (`logo`, `neon`, `flores`) e os caixotes da calçada (`fruta`)
+        map.props.push({ kind: k, ...rect(o), h: pr.altura != null ? pr.altura * 100 : null, angle: pr.olhando ?? 90, back: pr.fundo || null, front: !!pr.frente, sweets: pr.doces !== false, logo: pr.logo || null, neon: !!pr.neon, flowers: pr.flores || null, fruit: pr.fruta || null });
+      } else if (k === 'ventilador') {
+        // o ventilador de parede (ponto na parede): `altura`, `dentro`
+        map.props.push({ kind: 'ventilador', x, y, r: 30, h: (pr.altura || 2.5) * 100, inside: !!pr.dentro });
+      } else if (k === 'lousa') {
+        // a lousinha de cavalete da calçada
+        map.props.push({ kind: 'lousa', x, y, r: 30, angle: pr.olhando ?? 90 });
       } else if (k === 'parquinho') {
         // o parquinho antigo (floresta maior; sul.js): `brinquedo` ('balanco', 'escorregador', 'gira-gira'), `ferrugem`,
         // `cipo`, `quebrado` (o balanço com uma corrente arrebentada), `plantas` (o gira-gira com mato no meio), `olhando`

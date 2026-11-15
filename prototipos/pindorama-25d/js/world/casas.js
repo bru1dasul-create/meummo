@@ -2146,6 +2146,8 @@
 
   PD.casas = {
     floor,
+    /** A mata entrando pelas paredes de dentro (a Budega maior usa também: budega.js). */
+    innerGreen,
     /** Uma parede de dentro da casa com `morador` ('oeste' = a da esquerda, 'fundo' = a de trás), em cm da parede. */
     innerWall(ctx, b, wall, len, Hh) {
       (WALLS[b.resident] || WALLS.familia)(ctx, b, wall, len, Hh, wall === 'oeste');

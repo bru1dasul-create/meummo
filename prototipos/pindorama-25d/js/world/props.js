@@ -460,6 +460,11 @@
         if (b.pixo) pixo(ctx, W, H - 150, M.rng(b.x0 + 9), 0.9);
         for (let f = 0; f < floors; f++) {
           const yTop = H - (f + 1) * fh; // topo deste andar (y desce a partir da laje)
+          if (f === 0 && b.facade === 'preta' && PD.budega) {
+            // a Budega maior: a frente preta com a vitrine e a porta (budega.js)
+            PD.budega.front(ctx, b, W, H, r);
+            continue;
+          }
           if (f === 0 && shop) {
             vendinha(ctx, b, W, H, r);
             continue;
@@ -509,7 +514,7 @@
           ctx.rect(shopHole.x, shopHole.y, shopHole.w, shopHole.h);
           ctx.clip('evenodd');
         }
-        if (b.moss) mossWall(ctx, W, H, r);
+        if (b.moss && b.facade !== 'preta') mossWall(ctx, W, H, r);
         const stationDoor = b.station ? stationDoorRect(W, H) : null;
         if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : shopHole ? [shopHole.x, shopHole.x + shopHole.w] : stationDoor ? [stationDoor.x, stationDoor.x + stationDoor.w] : null);
         if (shopHole) ctx.restore();
@@ -518,6 +523,11 @@
       onWall(ctx, cam, { x: b.x1, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
         const r = M.rng(Math.round(b.y0 * 5 + 3));
         const sideOpenings = [];
+        if (b.facade === 'preta' && PD.budega) {
+          PD.budega.side(ctx, b, D, H, r);
+          if (b.moss) mossWall(ctx, D, H, r);
+          return;
+        }
         wallTexture(ctx, b, D, H, r, true);
         ctx.fillStyle = M.shade(b.wall, -0.36);
         ctx.fillRect(0, 0, D, 16);
@@ -537,7 +547,8 @@
       });
       // ---- laje: caixa d'água, plantas, árvore e varal (do fundo para a frente) e, nas de 2 andares, os ferros
       roofItems(ctx, cam, b, z0 + H, ink);
-      if (b.logo) onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => logoBoard(ctx, b, W));
+      // (a Budega maior leva o escudo na faixa preta da frente, não na placa em cima da laje)
+      if (b.logo && b.facade !== 'preta') onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => logoBoard(ctx, b, W));
       if (floors >= 2) {
         ctx.strokeStyle = '#5a4a3e';
         ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
@@ -628,8 +639,10 @@
       poly(ctx, [P(b.x0 + T, b.y1, z0), P(b.x0 + T, b.y0 + T, z0), P(b.x0 + T, b.y0 + T, z0 + H), P(b.x0 + T, b.y1, z0 + H)], null, INK, ink * 2.2);
       // as casas com morador (família, vó, a abandonada) têm as paredes delas (casas.js)
       const home = b.resident && PD.casas;
+      const big = b.facade === 'preta' && PD.budega;
       onWall(ctx, cam, { x: b.x0 + T, y: b.y1, z: z0 + H }, { x: 0, y: -1 }, () => {
         if (home) return PD.casas.innerWall(ctx, b, 'oeste', lenW, H);
+        if (big) return PD.budega.innerWall(ctx, b, 'oeste', lenW, H);
         face(lenW, true);
         // lousa de preços (sem marca, nada de tabaco) e um calendário
         const bx = lenW * 0.55, by = 46;
@@ -657,6 +670,7 @@
       poly(ctx, [P(b.x0 + T, b.y0 + T, z0), P(b.x1, b.y0 + T, z0), P(b.x1, b.y0 + T, z0 + H), P(b.x0 + T, b.y0 + T, z0 + H)], null, INK, ink * 2.2);
       onWall(ctx, cam, { x: b.x0 + T, y: b.y0 + T, z: z0 + H }, { x: 1, y: 0 }, () => {
         if (home) return PD.casas.innerWall(ctx, b, 'fundo', lenN, H);
+        if (big) return PD.budega.innerWall(ctx, b, 'fundo', lenN, H);
         face(lenN, false);
         // relógio de parede
         const cx = lenN * 0.18, cy = 32;

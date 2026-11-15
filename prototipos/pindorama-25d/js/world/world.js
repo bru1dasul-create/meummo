@@ -27,6 +27,8 @@
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
   // móveis de dentro de casa (só aparecem com o herói lá dentro)
   const INSIDE_KINDS = new Set(['prateleira', 'geladeira', 'balcao', 'engradado',
+    // a Budega maior (budega.js)
+    'vitrine', 'balcao-vidro', 'freezer', 'parede-verde', 'ventilador',
     // as casas da família, da vó e a abandonada (casas.js)
     'pia', 'fogao', 'filtro', 'mesa-cozinha', 'estante', 'sofa', 'cristaleira', 'mesa-redonda', 'maquina-costura', 'cama', 'vaso', 'gato', 'entulho']);
   /** O pé (caixa) está dentro da casa que dá para entrar `o` (a casa, não a parede do fundo)? */

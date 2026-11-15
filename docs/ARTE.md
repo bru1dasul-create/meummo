@@ -878,6 +878,27 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    (o ADM pula direto para a noite). Conferir: `noite-jogo.cjs` e `noite-vila.cjs` (scratchpad); o pôr do sol na foto
    é forçado com `PD.view.setTimeOfDay({ light: 0.5, night: false })`.
 
+### A Budega maior (15/11, com o "Ok, pode ir" do dono; o `mundo/budega-maior` entrou na main junto)
+Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e `budega-maior-dentro.jpg`). Tudo em
+`js/world/budega.js` (`PD.budega`, depois do sul.js no view-scripts.json e no arte.ts):
+- **Fachada:** a `casa` com `fachada: 'preta'` (mais `moldura` = a cor da moldura e `led`) passa a frente, o lado e as
+  paredes de dentro para o `PD.budega` (`front`, `side`, `innerWall`); o props.js desvia no laço da frente, no lado e
+  no `HouseBack`, sem musgo nem a placa de cima. A frente: a faixa preta com o escudo escuro, a vitrine de fundo amarelo
+  com prateleiras pretas e o reflexo do vidro, a porta de enrolar aberta mostrando o fundo (nichos, a parede de grama
+  com o escudo aceso, o piso branco e o balcão), a moldura amarela e as linhas brancas do LED. O escudo é
+  `shield(ctx, cx, top, w, dark)`: escuro (preto, borda e letra douradas) ou neon (placa escura e brilho).
+- **Dentro** (só com o herói dentro: `INSIDE_KINDS` do world.js): parede creme com azulejo branco até 96 cm, faixa
+  azul e a placa "FIADO SÓ AMANHÃ" na parede do fundo; `prateleira` com `nichos` (armário preto de nichos amarelos,
+  `cipo`); `geladeira` com `vidro` e `portas`; o caixa em L (`balcao` com `faixa`/`cor` e `caixa`); a `vitrine` (só o
+  rodapé preto com a faixa amarela: o vidro é o da frente da casa); `balcao-vidro` (`doces` e os três potes);
+  `freezer`; `parede-verde` (grama, `flores`, `logo` com o escudo aceso, `neon`); `ventilador` (de parede, `dentro`); o
+  piso `porcelanato` (`PD.casas.floor.porcelanato`, 60 cm, `folhas` perto da porta).
+- **Calçada:** o `degrau` (`capacho`), a `lousa` (OFERTAS em giz), os `caixote`s (`fruta`: banana ou laranja) e o
+  `vaso` com `planta: 'dracena'` (de cimento fora; de barro com `dentro`).
+- **Noite** (view.js, `_nightSources`): o `led` acende pontinhos nas duas linhas da faixa; a fachada preta solta a luz
+  amarela da vitrine, a branca da porta e a poça no chão.
+- Conferir: `budega-fotos.cjs` (scratchpad: fachada, dentro e noite; `celular` no fim).
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.

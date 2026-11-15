@@ -770,6 +770,20 @@
         if (!(b.resident || b.shop || b.interior) || b.abandoned) continue;
         const dx = b.door ? (b.door.from + b.door.to) / 2 : (b.x0 + b.x1) / 2;
         out.push({ x: dx, y: b.y1 + 50, z: 0, r: 150, color: '#ffd58a', k: 0.45 });
+        // a Budega maior: o LED branco contornando a frente (luzinhas na beirada de cima) e a vitrine amarela acesa
+        if (b.led) {
+          for (let x = b.x0 + 40; x <= b.x1 - 40; x += 110) {
+            out.push({ x, y: b.y1 + 6, z: (b.h || 300) - 8, r: 60, color: '#f4f7ff', k: 0.6 });
+            out.push({ x, y: b.y1 + 6, z: (b.h || 300) - 118, r: 55, color: '#f4f7ff', k: 0.5 });
+          }
+        }
+        if (b.facade === 'preta') {
+          // a vitrine e a porta acesas (a loja brilha de noite) e a luz que elas jogam na calçada
+          const vx = (b.x0 + (b.door ? b.door.from : b.x1)) / 2;
+          out.push({ x: vx, y: b.y1 + 10, z: 140, r: 240, color: '#ffe27a', k: 0.7 });
+          if (b.door) out.push({ x: (b.door.from + b.door.to) / 2, y: b.y1 + 10, z: 120, r: 170, color: '#f4f2e6', k: 0.6 });
+          out.push({ x: vx, y: b.y1 + 70, z: 0, r: 210, color: '#ffd84a', k: 0.5 });
+        }
       }
       this._nightList = out;
       return out;

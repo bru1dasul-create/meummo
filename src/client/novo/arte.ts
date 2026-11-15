@@ -25,6 +25,8 @@ import '../../../prototipos/pindorama-25d/js/world/parque.js';
 import '../../../prototipos/pindorama-25d/js/world/casas.js';
 // o sul da floresta maior: a paineira, o parquinho, a cachoeirinha e o posto abandonado
 import '../../../prototipos/pindorama-25d/js/world/sul.js';
+// a Budega maior: a fachada preta, a vitrine, os móveis novos, o porcelanato e a calçada
+import '../../../prototipos/pindorama-25d/js/world/budega.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';
