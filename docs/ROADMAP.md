@@ -627,12 +627,26 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   o botão grande (88 px) no canto de baixo à direita; a bordunada, o fôlego, o pulo e a esquiva num 2x2 ao lado dele
   (deitado) ou em cima (em pé), com a esquiva colada no tiro (só `style.css`)
 
-**Habilidades (combinar os detalhes com o dono antes):**
-- [ ] **[estrutura + arte]** Habilidades que sobem de nível com o personagem (mais dano e o visual muda) e a primeira
-  classe, o **Caçador da Floresta** (DPS à distância: arco, velocidade, precisão e espíritos dos bichos): Chuva de
-  Flechas (área; evolui com mais flechas e área maior), Flecha Ancestral (dano espiritual), Olhos de Gavião (ver
-  inimigos e rastros de longe), Chamado Selvagem (invoca uma onça ou uma águia espiritual) e Fúria da Onça
-  (transformação: corpo a corpo, mais agressivo)
+**Habilidades (combinadas com o dono em 15/11):** todo mundo começa igual; as missões do começo liberam a escolha da
+classe; por enquanto só o **Caçador da Floresta** (arco e flecha ou estilingue: DPS à distância, velocidade, precisão e
+os espíritos dos bichos); 1 ponto por nível para pôr nas habilidades, até 5 em cada (mais dano, e o visual muda com 3
+e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
+- [x] **[estrutura]** Passo 1 (15/11): a classe e os pontos salvos no personagem (passo 6 de `MIGRATIONS`, protocolo
+  37), a escolha depois de "Saguis Encantados" (`liberaDepoisDe` em `data/classes.json`), 1 ponto por nível (o 1º no
+  nível da habilidade, os outros a cada 2 níveis), a janela das **Habilidades** (`K` ou o botão ✦: escolher, pôr
+  pontos, recomeçar de graça), a Bordunada fora do jogo novo (o `Q` e o 1º quadrado da barra são da classe) e a
+  **Chuva de Flechas** de ponta a ponta: segurar `Q` mira com um círculo e soltar usa (o botão e o celular miram
+  sozinhos onde pega mais bichos); as flechas (pedras, com o estilingue) caem 0,45 s depois em todos do círculo, de
+  cima (a casca do tatu-bola não segura); recarga 10 s. Desenho e ícones provisórios
+- [ ] **[arte]** Os ícones das 5 habilidades (o id de `data/classes.json`), o desenho da Chuva (flechas e pedras; muda
+  com 3 e com 5 pontos), a janela das Habilidades e o círculo da mira no estilo da HUD, o "Como jogar" com o `Q` e o
+  `K`, e mais quadrados na barra para as próximas habilidades
+- [ ] **[estrutura]** Flecha Ancestral (nível 6: a flecha do espírito, dano especial)
+- [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
+- [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
+  transformação, corpo a corpo)
+- [ ] **[dono]** Depois: a escolha da classe virar o ritual na figueira (decisão de 12/11); trocar de classe; recomeçar
+  os pontos custar ouro?
 
 ## 🎨 Design (visual)
 Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código.
@@ -739,10 +753,11 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 
 ## M6 — Caminhos (classes)
 Ideia que voltou com o documento do ChatGPT (10/11). Só depois do movimento livre, e começando por um Caminho só.
-- [ ] **[dono]** Decidir os Caminhos. Proposta da [estrutura], com a cara do folclore: **Caçador da Mata** (arco,
-  agilidade, bichos), **Benzedeira/Benzedor** (cura e espíritos), **Guardião** (escudo e corpo a corpo) e
-  **Capoeirista** (rápido, esquiva e golpes; no lugar do "Ladino das Sombras")
-- [ ] **[estrutura]** Energia (barra azul) para as habilidades e o primeiro Caminho com 3 habilidades
+- [x] **[dono]** O primeiro Caminho (14/11): o **Caçador da Floresta** (veja "Habilidades", acima; começou em 15/11)
+- [ ] **[dono]** Os outros Caminhos. Proposta da [estrutura], com a cara do folclore: **Benzedeira/Benzedor** (cura e
+  espíritos), **Guardião** (escudo e corpo a corpo) e **Capoeirista** (rápido, esquiva e golpes; no lugar do "Ladino
+  das Sombras")
+- [ ] **[estrutura]** Energia (barra azul) para as habilidades (hoje cada uma tem só a recarga)
 
 ## Ideias para depois (só se o básico estiver divertido)
 Crafting, PvP em áreas específicas, chefões, eventos,

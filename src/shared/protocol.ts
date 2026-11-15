@@ -8,6 +8,7 @@ import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
 import type { CombatRules } from './combatRules';
+import type { ClassInfo, HeroState } from './classes';
 
 /** 'pet': bicho de estimação (o Joaquim, o gato da vó): anda sozinho, mia e ronrona; nunca é alvo. */
 export type EntityKind = 'player' | 'monster' | 'npc' | 'pet';
@@ -83,6 +84,11 @@ export type ClientMsg =
   | { t: 'quest'; act: QuestAction; id: string; npc?: number } // aceitar ou concluir (perto de quem dá a missão) ou abandonar
   | { t: 'pet'; id: number } // fazer carinho no bicho (perto dele)
   | { t: 'jump' } // pular (só de enfeite por enquanto: quem está perto vê)
+  | { t: 'class'; id: string } // escolher a classe (a chave em data/classes.json; o servidor confere se já pode)
+  | { t: 'learn'; id: string } // pôr um ponto nesta habilidade da sua classe
+  | { t: 'unlearn' } // tirar os pontos de todas as habilidades (voltam para gastar de novo)
+  // usar a habilidade `id` da sua classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance
+  | { t: 'cast'; id: string; x: number; y: number }
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
   | { t: 'ping'; id: number };
@@ -167,6 +173,10 @@ export type ServerMsg =
       wind: { strength: number; angle: number };
       /** O mapa explorado deste mapa (só no formato novo): a grade em texto (src/shared/explore.ts). */
       explored?: string;
+      /** As classes (de data/classes.json) e as habilidades de cada uma. */
+      classes: ClassInfo[];
+      /** A sua classe, os pontos de cada habilidade e quantos sobram. */
+      hero: HeroState;
     }
   /** Você foi para outro mapa: carregue o mapa `map`, recomece a tela e responda com `loaded`. */
   | { t: 'zone'; map: string; you: EntityState; stats: PlayerStats; inv: InventoryState; online: number; npcs: NpcInfo[]; questLog: QuestLog; explored?: string }
@@ -199,6 +209,12 @@ export type ServerMsg =
   | { t: 'levelup'; id: number; level: number; maxHp: number }
   | { t: 'gear'; id: number; gear: GearLook } // alguém trocou o equipamento (muda o desenho dele)
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
+  | { t: 'hero'; hero: HeroState } // a sua classe ou os pontos das habilidades mudaram (subiu de nível, escolheu...)
+  | { t: 'scd'; s: string; ms: number } // a habilidade `s` da sua classe entrou em recarga
+  // alguém (`id`) usou a habilidade `s` da classe: cai em (x, y) (metros, no chão), num raio `r`, daqui a `ms`. n = quantas
+  // flechas sobem; p = quantos pontos ela tem (o desenho muda com 3 e com 5); kind = o que chove ('flecha' ou 'pedra': o
+  // tiro da arma de quem usou). Quem usou não recebe: já desenhou na hora
+  | { t: 'cast'; id: number; s: string; x: number; y: number; r: number; n: number; p: number; ms: number; kind: string }
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila ou da loja)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
   // estes itens do monstro que caiu em (x, y) foram para a sua mochila. Desde 14/11 o servidor não manda mais: os itens

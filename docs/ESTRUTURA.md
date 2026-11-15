@@ -75,6 +75,20 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — classe e habilidades, passo 1 (as respostas do dono):** "todos são o mesmo personagem; fazendo as missões
+iniciais libera escolher a classe; por enquanto só o arco e flecha e o estilingue, a classe Caçador da Floresta";
+pontos por nível; tirar a Bordunada e manter o Fôlego. Feito: `data/classes.json` (o Caçador, as 5 habilidades; só a
+Chuva de Flechas com `tipo`, as outras "em breve"), `src/shared/classes.ts` (as regras), `src/server/classes.ts` (leitor
+e `checkClasses`), protocolo **37** (`class`, `learn`, `unlearn`, `cast`; `hero`, `scd`, `cast`; `classes` e `hero` no
+`welcome`), `MIGRATIONS` passo **6** (coluna `hero`, JSON `{ class, skills }`). No mundo: `chooseClass` (salva na hora
+e avisa todo mundo), `learnSkill`/`unlearnSkills` (não salvam na hora: os pontos vêm do nível), `castSkill` + `rains`
+(cai no tick, `fromAbove` no `damage`). Navegador: `skillsPanel.ts`, `skillIcons.ts` (provisórios), `keys.ts` (`hab1`
+no Q no lugar do `golpe`, `habilidades` no K), o motor (segurar Q mira; botão e celular miram sozinhos: `bestRainSpot`)
+e `combat.ts` (`rain`, `setAim`). A missão "Saguis Encantados" ganhou uma frase no fim sobre escolher o caminho. A
+demora da Chuva ficou 0,45 s (com 0,65 s os quatis, rápidos, escapavam). Testes: `tests/classe.test.ts` (20). Conferido
+no navegador (PC e celular) com o personagem preparado direto no arquivo de teste (missão feita, nível 5). Próximos:
+Flecha Ancestral (6), Olhos de Gavião (10), Chamado Selvagem e Fúria da Onça (15 e 20, muito desenho da [arte]).
+
 **14/11 — fila do dono: arco, Joaquim, som.** O dono preferiu não abrir um quarto chat para som: o `sfx.ts` e o
 áudio passaram para a [estrutura] (CLAUDE.md). Fila: Arco de Bambu → Joaquim (o gato da vó, carinho sem bônus) → som
 (volume separado, ambiente, música do Capão; antes, 2–3 opções de música para ele escolher a origem).

@@ -47,6 +47,16 @@ function isAngle(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 10;
 }
 
+/** A chave de algo dos dados (classe, habilidade): letras sem acento, números, _ ou -. */
+function isKey(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z0-9_-]{1,40}$/.test(value);
+}
+
+/** Um ponto do mapa (metros): número de verdade e dentro de um tamanho razoável (o mundo confere o alcance). */
+function isSpot(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) < 100000;
+}
+
 function isId(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
 }
@@ -94,6 +104,14 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return { t: 'charge' };
     case 'jump':
       return { t: 'jump' };
+    case 'class':
+    case 'learn':
+      // a chave de uma classe ou habilidade (data/classes.json): o mundo confere se existe
+      return isKey(msg.id) ? { t: msg.t, id: msg.id } : null;
+    case 'unlearn':
+      return { t: 'unlearn' };
+    case 'cast':
+      return isKey(msg.id) && isSpot(msg.x) && isSpot(msg.y) ? { t: 'cast', id: msg.id, x: msg.x, y: msg.y } : null;
     case 'guard':
       return typeof msg.on === 'boolean' && isAngle(msg.a) ? { t: 'guard', on: msg.on, a: msg.a } : null;
     case 'oops':

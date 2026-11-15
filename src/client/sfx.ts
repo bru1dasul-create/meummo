@@ -332,6 +332,29 @@ export class Sfx {
     }
   }
 
+  /**
+   * A Chuva de Flechas: as cordas do arco soltando uma atrás da outra (com o estilingue, o elástico), o assobio subindo
+   * e, quando elas chegam (daqui a `delayMs`), a chuvarada de "tucs" no chão. Tudo marcado no relógio do som.
+   */
+  volley(delayMs: number, count: number, stone: boolean): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const strings = Math.max(3, Math.min(8, Math.round(count / 2)));
+    for (let i = 0; i < strings; i++) {
+      const at = t + i * 0.045;
+      if (stone) this.tone('triangle', 900, 300, at, 0.06, 0.12);
+      else this.tone('triangle', 250 + i * 12, 120, at, 0.1, 0.16);
+    }
+    this.noise(t + 0.03, 0.35, 'bandpass', 1800, 4200, 0.12); // o assobio subindo
+    const land = t + Math.max(0.1, delayMs / 1000);
+    for (let i = 0; i < Math.min(16, Math.max(3, count)); i++) {
+      const at = land - 0.08 + Math.random() * 0.2;
+      this.noise(at, 0.04, 'lowpass', stone ? 1600 : 900, 300, 0.16);
+      this.tone('sine', stone ? 300 : 180, 90, at, 0.05, 0.08);
+    }
+  }
+
   /** Som de metal (moeda, sino): a nota e dois harmônicos "tortos", como num sino de verdade, morrendo rápido. */
   private bell(freq: number, start: number, duration: number, volume: number): void {
     for (const [ratio, gain] of [

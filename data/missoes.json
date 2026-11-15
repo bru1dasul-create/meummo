@@ -50,7 +50,7 @@
     "quemDa": "budega",
     "depoisDe": "o_despertar",
     "pedido": "Os saguis da mata estão encantados: o desequilíbrio entre os mundos deixou eles bravos, roubando fruta e jogando em quem passa. Não precisa machucar: uma pedrada certeira e o encanto sai, e eles voltam pro mato. Acalme 4 deles e volte aqui.",
-    "concluida": "Quatro saguis em paz! A mata agradece, e eu também. Leve esta garrafada: receita de benzedeira, cura de verdade.",
+    "concluida": "Quatro saguis em paz! A mata agradece, e eu também. Leve esta garrafada: receita de benzedeira, cura de verdade. E a mata já te reconhece: está na hora de escolher o seu caminho.",
     "objetivo": { "tipo": "derrotar", "monstro": "sagui", "quantidade": 4, "rotulo": "Acalmar 4 saguis encantados" },
     "recompensa": { "xp": 40, "ouro": 15, "itens": [{ "item": "garrafada", "quantidade": 1 }] }
   }

@@ -68,6 +68,20 @@ import type { FailReason, FxKind, GmCommand, ItemAction, QuestAction, RejectReas
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../shared/quests';
 import { DASH_SLOT } from '../shared/protocol';
 import { SKILLS } from '../shared/skills';
+import {
+  castPoint,
+  classUnlocked,
+  cleanSkills,
+  earnedPoints,
+  learnBlocker,
+  levelForPoint,
+  pointsLeft,
+  skillPoint,
+  spentPoints,
+  type ClassInfo,
+  type ClassSkillInfo,
+  type HeroState,
+} from '../shared/classes';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
 import type { AreaDef } from './tuning';
 import { Inventory } from './inventory';
@@ -140,6 +154,8 @@ export interface WorldOptions {
   dayNight?: DayNightClock;
   /** O vento (o reino passa o mesmo para todos os mapas e cuida dele); sem isto, um só deste mapa. */
   wind?: WindWeather;
+  /** As classes e as habilidades delas (data/classes.json). */
+  classes?: ReadonlyMap<string, ClassInfo>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -193,6 +209,21 @@ const round3 = (v: number) => Math.round(v * 1000) / 1000;
 /** Onde a entidade está exatamente ("de canto"): jogadores andam soltos; monstros e NPCs, de tile em tile. */
 const spotOf = (e: Entity): Tile => (e.kind === 'player' ? { x: e.fx, y: e.fy } : { x: e.x, y: e.y });
 
+/** Uma Chuva de Flechas no ar: cai em `landAt`, no círculo (x, y, radius), com o dano de quem atirou. */
+interface Rain {
+  by: number;
+  x: number;
+  y: number;
+  radius: number;
+  landAt: number;
+  /** O dano do tiro sem carga de quem atirou (na hora do tiro) e o quanto dele cada bicho leva. */
+  damage: [number, number];
+  power: number;
+}
+
+/** Folga no raio da Chuva: o corpo do bicho (o pé dele um pouco fora do círculo ainda conta). */
+const RAIN_BODY_SLACK = 0.4;
+
 export class World {
   readonly players = new Map<number, Player>();
   readonly monsters = new Map<number, Monster>();
@@ -204,6 +235,10 @@ export class World {
   readonly zones: ZoneState[] = [];
   readonly items: ReadonlyMap<string, ItemInfo>;
   readonly quests: ReadonlyMap<string, QuestInfo>;
+  /** As classes (data/classes.json). */
+  readonly classes: ReadonlyMap<string, ClassInfo>;
+  /** Chuvas de Flechas no ar (caem no tick). */
+  private rains: Rain[] = [];
   /** Números do combate (o painel muda no lugar: o mundo sempre lê o valor de agora). */
   readonly combat: CombatRules;
   /** O relógio do dia e noite (o mesmo em todos os mapas). */
@@ -246,6 +281,7 @@ export class World {
     this.saver = options.saver ?? null;
     this.items = options.items ?? new Map();
     this.quests = options.quests ?? new Map();
+    this.classes = options.classes ?? new Map();
     this.combat = options.combat ?? defaultCombatRules();
     this.dayNight = options.dayNight ?? new DayNightClock(this.combat, options.now ?? Date.now);
     this.night = this.dayNight.isNight();
@@ -444,6 +480,8 @@ export class World {
         time: Math.round(this.dayNight.position()),
         wind: { strength: this.wind.strength, angle: this.wind.angle },
         ...this.exploredField(player),
+        classes: [...this.classes.values()],
+        hero: this.heroState(player),
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
@@ -556,6 +594,10 @@ export class World {
     if (samePlace) player.dir = saved.dir;
     player.quests = this.cleanQuestLog(saved.quests);
     player.exploredSaved = cleanExplored(saved.explored);
+    // a classe que sumiu do arquivo volta a ser escolhida; os pontos são conferidos com os números de agora
+    const heroClass = typeof saved.hero?.class === 'string' && this.classes.has(saved.hero.class) ? saved.hero.class : null;
+    player.heroClass = heroClass;
+    player.skillPoints = heroClass ? cleanSkills(this.classes.get(heroClass), player.level, saved.hero?.skills) : {};
   }
 
   /** O diário de missões salvo, conferido: missão que sumiu do arquivo sai; números estranhos são corrigidos. */
@@ -864,6 +906,117 @@ export class World {
     player.outbox.push({ t: 'cd', n, ms: skill.cooldownMs });
   }
 
+  // ======================= classe e habilidades =======================
+
+  /** A classe, os pontos de cada habilidade e quantos sobram (o que a janela das Habilidades mostra). */
+  heroState(player: Player): HeroState {
+    const canChoose = player.heroClass === null && [...this.classes.values()].some((cls) => classUnlocked(cls, player.quests));
+    return { class: player.heroClass, skills: { ...player.skillPoints }, points: pointsLeft(player.level, player.skillPoints), canChoose };
+  }
+
+  /** A classe do jogador e a habilidade `id` dela (as duas, ou null). */
+  private classSkill(player: Player, id: string): { cls: ClassInfo; skill: ClassSkillInfo } | null {
+    const cls = player.heroClass ? this.classes.get(player.heroClass) : undefined;
+    const skill = cls?.skills.find((s) => s.id === id);
+    return cls && skill ? { cls, skill } : null;
+  }
+
+  /** Escolher a classe: uma vez só, depois de concluir a missão do começo (a de `liberaDepoisDe`). */
+  chooseClass(player: Player, id: string): void {
+    const cls = this.classes.get(id);
+    if (!cls || player.loading || player.heroClass !== null) return;
+    if (!classUnlocked(cls, player.quests)) {
+      player.outbox.push({ t: 'sys', text: 'Ainda não: termine antes as missões do começo.' });
+      return;
+    }
+    player.heroClass = cls.id;
+    player.skillPoints = {};
+    player.heroDirty = true;
+    const points = earnedPoints(player.level);
+    player.outbox.push({ t: 'sys', text: `Agora você é ${cls.name}!${points > 0 ? ' Ponha os seus pontos nas habilidades.' : ''}` });
+    this.links.announce({ t: 'sys', text: `${player.name} seguiu o caminho: ${cls.name}.` }, player.id);
+    this.saveCharacters([player]); // escolher a classe é importante demais para esperar o próximo salvamento
+  }
+
+  /**
+   * Pôr um ponto numa habilidade da classe. O servidor confere tudo: a habilidade já existe no jogo, ainda não está no
+   * máximo, o nível deixa (o primeiro ponto no nível dela, os outros a cada `niveisEntrePontos`) e sobram pontos.
+   * (Não salva na hora: os pontos vêm do nível, e o salvamento de sempre guarda onde foram postos.)
+   */
+  learnSkill(player: Player, id: string): void {
+    const found = this.classSkill(player, id);
+    if (!found || player.loading) return;
+    const { cls, skill } = found;
+    const has = player.skillPoints[skill.id] ?? 0;
+    const blocker = learnBlocker(cls, skill, player.level, player.skillPoints);
+    if (blocker) {
+      const why = {
+        soon: `${skill.name} ainda não chegou no jogo: em breve!`,
+        max: `${skill.name} já está no máximo.`,
+        level: `O próximo ponto em ${skill.name} é no nível ${levelForPoint(cls, skill, has + 1)}.`,
+        points: 'Sem pontos para gastar: suba de nível para ganhar mais.',
+      };
+      player.outbox.push({ t: 'sys', text: why[blocker] });
+      return;
+    }
+    player.skillPoints = { ...player.skillPoints, [skill.id]: has + 1 };
+    player.heroDirty = true;
+    player.outbox.push({ t: 'sys', text: has === 0 ? `Você aprendeu: ${skill.name}!` : `${skill.name}: ${has + 1} de ${skill.points.length}.` });
+  }
+
+  /** Tirar os pontos de todas as habilidades (de graça, por enquanto): eles voltam para gastar de novo. */
+  unlearnSkills(player: Player): void {
+    if (player.loading || spentPoints(player.skillPoints) === 0) return;
+    player.skillPoints = {};
+    player.heroDirty = true;
+    player.outbox.push({ t: 'sys', text: 'Os pontos das habilidades voltaram: escolha de novo.' });
+  }
+
+  /**
+   * Usar a habilidade `id` da classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
+   * Chuva de Flechas: as flechas (ou pedras, com o estilingue) sobem e caem no círculo daqui a `delayMs`, acertando
+   * todos os bichos dentro dele — de cima, então nem a casca do tatu-bola segura.
+   */
+  castSkill(player: Player, id: string, x: number, y: number): void {
+    const found = this.classSkill(player, id);
+    const rank = player.skillPoints[id] ?? 0;
+    const numbers = found ? skillPoint(found.skill, rank) : null;
+    if (!found || !numbers || !found.skill.kind || player.loading) return;
+    const { skill } = found;
+    const now = this.now();
+    if (player.dead) return this.fail(player, 'dead');
+    if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
+    const readyAt = player.castReadyAt.get(skill.id) ?? 0;
+    if (now < readyAt - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
+    if (this.inSafeArea(player)) return; // da área segura ninguém ataca (veja shoot)
+    const feet = feetAt(player.fx, player.fy);
+    const aimed = castPoint(feet, { x, y }, skill.range);
+    const spot = { x: Math.max(0, Math.min(this.map.width, aimed.x)), y: Math.max(0, Math.min(this.map.height, aimed.y)) };
+    player.chargeStart = null; // usar a habilidade solta a pedra que estava puxando
+    if (spot.x !== feet.x || spot.y !== feet.y) this.faceAngle(player, Math.atan2(spot.y - feet.y, spot.x - feet.x));
+    const shot = this.shotOf(player);
+    this.rains.push({ by: player.id, x: spot.x, y: spot.y, radius: numbers.radius, landAt: now + skill.delayMs, damage: player.damage(), power: numbers.damagePct / 100 });
+    const msg: ServerMsg = { t: 'cast', id: player.id, s: skill.id, x: round3(spot.x), y: round3(spot.y), r: numbers.radius, n: numbers.arrows, p: rank, ms: skill.delayMs, kind: shot.kind };
+    this.emitToViewers(player, msg, player.id); // quem usou já desenhou na hora
+    player.castReadyAt.set(skill.id, Math.max(now, readyAt) + skill.cooldownMs);
+    player.outbox.push({ t: 'scd', s: skill.id, ms: skill.cooldownMs });
+  }
+
+  /** As Chuvas de Flechas que chegaram ao chão: cada bicho dentro do círculo leva o dano (uma vez por chuva). */
+  private updateRains(now: number): void {
+    if (this.rains.length === 0 || this.rains.every((rain) => now < rain.landAt)) return;
+    const landed = this.rains.filter((rain) => now >= rain.landAt);
+    this.rains = this.rains.filter((rain) => now < rain.landAt);
+    for (const rain of landed) {
+      for (const monster of [...this.monsters.values()]) {
+        const feet = feetAt(monster.x, monster.y);
+        if (Math.hypot(feet.x - rain.x, feet.y - rain.y) > rain.radius + RAIN_BODY_SLACK) continue;
+        const [min, max] = rain.damage;
+        this.damage(monster, Math.max(1, Math.round(this.rollRange(min, max) * rain.power)), rain.by, now, undefined, 0, true);
+      }
+    }
+  }
+
   // ======================= mochila =======================
 
   /** Equipar, usar (comer) ou jogar fora o item do espaço `i` da mochila. */
@@ -1048,6 +1201,13 @@ export class World {
     player.maxHp = playerMaxHp(player);
     if (!player.dead) player.hp = player.maxHp;
     player.statsDirty = true;
+    // nível menor: os pontos que passaram do que o nível dá voltam para gastar de novo
+    const skills = cleanSkills(player.heroClass ? this.classes.get(player.heroClass) : undefined, player.level, player.skillPoints);
+    if (spentPoints(skills) !== spentPoints(player.skillPoints)) {
+      player.skillPoints = skills;
+      player.outbox.push({ t: 'sys', text: 'Com o nível novo, os pontos das habilidades voltaram: escolha de novo.' });
+    }
+    player.heroDirty = true;
     this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
     this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
     player.outbox.push({ t: 'sys', text: `O administrador mudou o seu nível para ${player.level}.` });
@@ -1301,6 +1461,11 @@ export class World {
     player.quests[id] = { state: 'done', count: goal.count };
     player.questsDirty = true;
     this.giveQuestReward(player, quest);
+    // a missão do começo libera a escolha da classe
+    if (player.heroClass === null && [...this.classes.values()].some((cls) => cls.unlockQuest === id)) {
+      player.heroDirty = true;
+      player.outbox.push({ t: 'sys', text: 'A mata te reconhece: agora você pode escolher a sua classe (nas Habilidades).' });
+    }
     this.saveCharacters([player]); // missão concluída não pode se perder se o servidor cair
   }
 
@@ -1413,6 +1578,7 @@ export class World {
     if (this.ownWind && this.wind.update()) this.broadcastLocal(this.wind.message()); // sem o reino: o vento é daqui
     for (const player of this.players.values()) this.updatePlayer(player, now);
     this.updateProjectiles(dt, now);
+    this.updateRains(now);
     for (const monster of [...this.monsters.values()]) {
       if (this.monsters.has(monster.id)) this.updateMonster(monster, now);
     }
@@ -1438,6 +1604,10 @@ export class World {
       if (player.questsDirty) {
         player.outbox.push({ t: 'quests', log: { ...player.quests } });
         player.questsDirty = false;
+      }
+      if (player.heroDirty) {
+        player.outbox.push({ t: 'hero', hero: this.heroState(player) });
+        player.heroDirty = false;
       }
       if (player.ackPending) {
         player.outbox.push({ t: 'ack', seq: player.ackSeq, x: player.fx, y: player.fy, dir: player.dir });
@@ -1731,6 +1901,7 @@ export class World {
     if (leveled) {
       player.maxHp = playerMaxHp(player);
       player.hp = player.maxHp;
+      player.heroDirty = true; // ganhou pontos de habilidade
       this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
       this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
       this.links.announce({ t: 'sys', text: `${player.name} chegou ao nível ${player.level}!` });
@@ -1829,7 +2000,8 @@ export class World {
    * `travel`: para onde o golpe anda (radianos), para a defesa saber se ele veio pela frente. Sem direção (fogo no
    * chão), a defesa não segura. `push`: quanto o golpe empurra o jogador nessa direção (metros; recuo, passo 2c).
    */
-  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0): void {
+  /** `fromAbove`: veio de cima (a Chuva de Flechas): a casca do tatu-bola, que é só na frente, não segura. */
+  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0, fromAbove = false): void {
     if (target.hp <= 0) return;
     if (target.kind === 'monster' && target.leavingAt !== null) return; // indo embora: ninguém acerta mais
     if (target.kind === 'player' && (target.dead || target.god || now < target.invulnerableUntil || this.inSafeArea(target))) return;
@@ -1846,7 +2018,7 @@ export class World {
       this.sendEnergy(target, now, true);
     }
     // a casca do tatu-bola: o golpe que vem pela frente perde parte do dano (tonto, depois da investida, fica sem ela)
-    if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil) {
+    if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil && !fromAbove) {
       const from = this.hitFrom(target, attackerId, travel);
       if (from !== null && Math.abs(angleDiff(angleOfDir(target.dir), from)) <= target.def.shell.halfArc) {
         amount = Math.max(1, Math.round(amount * (1 - target.def.shell.block)));
@@ -2532,7 +2704,8 @@ function cleanExplored(saved: unknown): Record<string, string> {
 export function characterData(player: Player, zone: string): CharacterData {
   const explored: Record<string, string> = { ...player.exploredSaved };
   for (const [map, grid] of player.explored) explored[map] = encodeGrid(grid);
-  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored };
+  const hero = { class: player.heroClass, skills: { ...player.skillPoints } };
+  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored, hero };
   // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
   if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
   return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };

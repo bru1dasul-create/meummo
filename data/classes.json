@@ -1,0 +1,46 @@
+{
+  "cacador": {
+    "nome": "Caçador da Floresta",
+    "descricao": "Luta de longe, com arco e flecha ou estilingue: velocidade, precisão e os poderes espirituais dos bichos do Brasil.",
+    "liberaDepoisDe": "saguis_encantados",
+    "niveisEntrePontos": 2,
+    "habilidades": {
+      "chuva_de_flechas": {
+        "nome": "Chuva de Flechas",
+        "descricao": "Atira várias flechas para o alto; elas caem na área que você escolher e acertam todos os bichos dentro. Boa contra bandos. Com o estilingue, chovem pedras.",
+        "nivel": 3,
+        "tipo": "chuva",
+        "recargaSegundos": 10,
+        "alcance": 10,
+        "demoraMs": 450,
+        "pontos": [
+          { "flechas": 6, "raio": 2, "danoPorcento": 130 },
+          { "flechas": 7, "raio": 2.2, "danoPorcento": 150 },
+          { "flechas": 9, "raio": 2.5, "danoPorcento": 175 },
+          { "flechas": 10, "raio": 2.7, "danoPorcento": 200 },
+          { "flechas": 14, "raio": 3, "danoPorcento": 230 }
+        ]
+      },
+      "flecha_ancestral": {
+        "nome": "Flecha Ancestral",
+        "descricao": "Uma flecha carregada de energia espiritual, com dano especial.",
+        "nivel": 6
+      },
+      "olhos_de_gaviao": {
+        "nome": "Olhos de Gavião",
+        "descricao": "Enxerga os inimigos de longe e revela rastros e ameaças escondidas.",
+        "nivel": 10
+      },
+      "chamado_selvagem": {
+        "nome": "Chamado Selvagem",
+        "descricao": "Chama um animal espiritual para lutar ao seu lado: a onça ou a águia.",
+        "nivel": 15
+      },
+      "furia_da_onca": {
+        "nome": "Fúria da Onça",
+        "descricao": "Transformação: você ganha a força da onça e luta corpo a corpo, mais agressivo.",
+        "nivel": 20
+      }
+    }
+  }
+}

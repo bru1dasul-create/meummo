@@ -121,6 +121,14 @@ export class Player {
   dashReadyAt = 0;
   jumpReadyAt = 0;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);
+  /** A classe (chave em data/classes.json), ou null até escolher depois das missões do começo. */
+  heroClass: string | null = null;
+  /** Os pontos postos em cada habilidade da classe (só as que têm pelo menos 1). */
+  skillPoints: Record<string, number> = {};
+  /** Recarga das habilidades da classe: até quando cada uma espera. */
+  readonly castReadyAt = new Map<string, number>();
+  /** A classe ou os pontos mudaram neste tick (o dono precisa saber). */
+  heroDirty = false;
   lastDamagedAt = -Infinity;
   nextRegenAt = 0;
   statsDirty = false;

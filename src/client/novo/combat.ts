@@ -149,6 +149,38 @@ interface GroundDrop {
   item?: DropItem;
 }
 
+/** Uma Chuva de Flechas no desenho (provisório, até a [arte]): sobe de quem atirou e cai no círculo. */
+interface RainFx {
+  /** O pé de quem atirou, na hora do tiro. */
+  from: Point;
+  x: number;
+  y: number;
+  r: number;
+  /** Quantos pontos a habilidade tem (o desenho muda com 3 e com 5). */
+  rank: number;
+  /** O que chove: 'flecha' (arco) ou 'pedra' (estilingue). */
+  kind: string;
+  start: number;
+  land: number;
+  /** Onde cada flecha cai (em volta do centro), quanto antes ou depois das outras e para que lado fica torta. */
+  spots: { dx: number; dy: number; delay: number; lean: number }[];
+}
+
+/** O círculo da mira da Chuva (segurando a tecla): de onde sai e onde cai. */
+export interface RainAim {
+  from: Point;
+  x: number;
+  y: number;
+  r: number;
+}
+
+/** As flechas cravadas ficam este tanto no chão depois de cair (somem devagar). */
+const RAIN_LINGER_MS = 900;
+/** Quanto tempo cada flecha leva caindo do alto até o chão. */
+const RAIN_FALL_MS = 240;
+/** Até onde (metros) as flechas sobem antes de virar e cair. */
+const RAIN_HEIGHT = 7;
+
 /** A queda do item: do alto do monstro até o chão, com um quique, nesse tempo (o servidor espera 0,4 s para deixar pegar). */
 const DROP_FALL_MS = 450;
 
@@ -200,6 +232,9 @@ export class CombatLayer {
   /** Os desenhos dos itens no chão (e da moeda), um por ícone. */
   private readonly dropImages = new Map<string, HTMLImageElement>();
   private readonly pets = new Map<number, ProvisionalPet>();
+  /** Chuvas de Flechas no ar (ou cravadas no chão) e a mira da sua (segurando a tecla). */
+  private rains: RainFx[] = [];
+  private aim: RainAim | null = null;
   /** O seu pé (para saber se você está dentro da casa do bicho). */
   private viewer: Point | null = null;
 
@@ -529,8 +564,29 @@ export class CombatLayer {
     this.drops.delete(id);
   }
 
+  /**
+   * Alguém usou a Chuva de Flechas: as flechas (ou pedras) sobem de `from` (o pé de quem atirou) e caem espalhadas no
+   * círculo (x, y, r) daqui a `ms`. `rank` = pontos da habilidade (o desenho muda com 3 e com 5).
+   */
+  rain(from: Point, x: number, y: number, r: number, arrows: number, rank: number, ms: number, kind: string, now: number): void {
+    const spots: RainFx['spots'] = [];
+    for (let i = 0; i < Math.max(1, Math.min(40, arrows)); i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.sqrt(Math.random()) * r * 0.9; // espalhadas por igual pelo círculo
+      spots.push({ dx: Math.cos(a) * d, dy: Math.sin(a) * d, delay: (Math.random() - 0.6) * 160, lean: Math.random() - 0.5 });
+    }
+    this.rains.push({ from: { x: from.x, y: from.y }, x, y, r, rank, kind, start: now, land: now + Math.max(0, ms), spots });
+  }
+
+  /** A mira da Chuva: o círculo onde ela vai cair (segurando a tecla), ou null. */
+  setAim(aim: RainAim | null): void {
+    this.aim = aim;
+  }
+
   /** Mudou de mapa: limpa tudo. */
   clear(): void {
+    this.rains = [];
+    this.aim = null;
     this.warnings = [];
     this.shots.clear();
     this.myShots.clear();
@@ -587,6 +643,8 @@ export class CombatLayer {
     const meter = (x: number, y: number) => Math.max(8, Math.abs(screen(x, y, 0).y - screen(x, y, 1).y));
 
     this.drawWarnings(now, screen);
+    this.drawAim(screen);
+    this.drawRainGround(now, screen);
     this.drawWindups(now, feetOf, screen);
     this.drawGuards(now, feetOf, screen);
     this.drawChargeRing(now, feetOf, screen);
@@ -597,6 +655,7 @@ export class CombatLayer {
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
     this.drawShots(now, screen, meter);
+    this.drawRainAir(now, screen, meter);
     this.drawBars(feetOf, bars, screen, meter);
     this.drawMarks(now, feetOf, screen, meter);
     this.drawFloaters(now, feetOf, screen, meter);
@@ -605,6 +664,7 @@ export class CombatLayer {
   /** Tem algo para desenhar agora? (Sinal de missão só conta se o NPC estiver na tela.) */
   private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
     if (bars || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
+    if (this.rains.length > 0 || this.aim !== null) return true;
     if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
@@ -639,6 +699,171 @@ export class CombatLayer {
         ctx.stroke();
       }
     }
+  }
+
+  // ---- Chuva de Flechas (desenho provisório: a [arte] faz o de verdade, com o 3º e o 5º ponto mudando) ----
+
+  /** Um círculo do chão (x, y, r), já na perspectiva da câmera. */
+  private groundCircle(x: number, y: number, r: number, screen: (x: number, y: number, z?: number) => Point): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    for (let i = 0; i <= 36; i++) {
+      const a = (i / 36) * Math.PI * 2;
+      const p = screen(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+  }
+
+  /** A cor de cada fase: até 2 pontos, dourado claro; com 3 e 4, mais forte; com 5, o verde do espírito. */
+  private rainColor(rank: number, alpha: number): string {
+    const [r, g, b] = rank >= 5 ? [140, 255, 190] : rank >= 3 ? [255, 190, 80] : [255, 228, 150];
+    return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha)).toFixed(3)})`;
+  }
+
+  /** A mira: o círculo tracejado onde vai cair e a linha do seu pé até ele. */
+  private drawAim(screen: (x: number, y: number, z?: number) => Point): void {
+    const aim = this.aim;
+    if (!aim) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.setLineDash([7, 6]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 236, 170, 0.55)';
+    const a = screen(aim.from.x, aim.from.y);
+    const b = screen(aim.x, aim.y);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    this.groundCircle(aim.x, aim.y, aim.r, screen);
+    ctx.fillStyle = 'rgba(255, 236, 170, 0.14)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 236, 170, 0.9)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** No chão: o círculo de onde a chuva vai cair (fica mais forte até cair) e o anel do impacto. */
+  private drawRainGround(now: number, screen: (x: number, y: number, z?: number) => Point): void {
+    const ctx = this.ctx;
+    this.rains = this.rains.filter((rain) => now < rain.land + RAIN_LINGER_MS + 200);
+    for (const rain of this.rains) {
+      const total = Math.max(1, rain.land - rain.start);
+      const progress = Math.min(1, (now - rain.start) / total);
+      const fade = now > rain.land ? Math.max(0, 1 - (now - rain.land) / 300) : 1;
+      if (fade > 0) {
+        this.groundCircle(rain.x, rain.y, rain.r, screen);
+        ctx.fillStyle = this.rainColor(rain.rank, (0.08 + 0.2 * progress) * fade);
+        ctx.fill();
+        ctx.lineWidth = rain.rank >= 3 ? 3 : 2;
+        ctx.strokeStyle = this.rainColor(rain.rank, (0.5 + 0.45 * progress) * fade);
+        ctx.stroke();
+      }
+      // o impacto: um anel que abre quando as flechas chegam (com 5 pontos, maior)
+      const since = now - rain.land;
+      if (since >= 0 && since < 320) {
+        const k = since / 320;
+        this.groundCircle(rain.x, rain.y, rain.r * (1 + k * (rain.rank >= 5 ? 0.35 : 0.18)), screen);
+        ctx.lineWidth = rain.rank >= 5 ? 4 : 2.5;
+        ctx.strokeStyle = this.rainColor(rain.rank, 0.8 * (1 - k));
+        ctx.stroke();
+      }
+    }
+  }
+
+  /** Uma flecha na tela, da cauda até a ponta (com a ponta e as penas). */
+  private arrowLine(tail: Point, head: Point, color: string, width: number): void {
+    const ctx = this.ctx;
+    const a = Math.atan2(head.y - tail.y, head.x - tail.x);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(tail.x, tail.y);
+    ctx.lineTo(head.x, head.y);
+    ctx.stroke();
+    const size = width * 3;
+    ctx.beginPath();
+    ctx.moveTo(head.x + Math.cos(a) * size * 0.6, head.y + Math.sin(a) * size * 0.6);
+    ctx.lineTo(head.x + Math.cos(a + 2.5) * size, head.y + Math.sin(a + 2.5) * size);
+    ctx.lineTo(head.x + Math.cos(a - 2.5) * size, head.y + Math.sin(a - 2.5) * size);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /** No ar: as flechas subindo de quem atirou, caindo no círculo e depois cravadas no chão (as pedras quicam e somem). */
+  private drawRainAir(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    const ctx = this.ctx;
+    for (const rain of this.rains) {
+      const total = Math.max(1, rain.land - rain.start);
+      const rise = Math.max(160, total * 0.5);
+      const stone = rain.kind === 'pedra';
+      const shaft = rain.rank >= 5 ? '#d8ffe9' : rain.rank >= 3 ? '#ffe2a0' : '#f1e6cc';
+      const glow = rain.rank >= 3;
+      const m = meter(rain.x, rain.y);
+      const width = Math.max(1.8, m * 0.04);
+      const stoneSize = Math.max(3.5, m * 0.08);
+      ctx.save();
+      if (glow) {
+        ctx.shadowColor = this.rainColor(rain.rank, 0.9);
+        ctx.shadowBlur = rain.rank >= 5 ? 10 : 6;
+      }
+      rain.spots.forEach((spot, i) => {
+        // subindo: saem uma atrás da outra de quem atirou
+        const k = (now - rain.start - i * 14) / rise;
+        if (k >= 0 && k <= 1) {
+          const sx = rain.from.x + spot.dx * 0.12;
+          const sy = rain.from.y + spot.dy * 0.12;
+          const z = 1.1 + k * RAIN_HEIGHT;
+          if (stone) this.stone(screen(sx, sy, z), stoneSize, shaft);
+          else this.arrowLine(screen(sx, sy, z), screen(sx, sy, z + 0.8), shaft, width);
+        }
+        // caindo no círculo e, depois, cravadas no chão
+        const landAt = rain.land + spot.delay;
+        const gx = rain.x + spot.dx;
+        const gy = rain.y + spot.dy;
+        if (now >= landAt - RAIN_FALL_MS && now < landAt) {
+          const fall = 1 - (landAt - now) / RAIN_FALL_MS;
+          const z = RAIN_HEIGHT * (1 - fall);
+          // a sombra no chão cresce conforme ela chega (mostra onde vai cair)
+          const shadow = screen(gx, gy, 0);
+          ctx.save();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(0, 0, 0, ${(0.12 + 0.25 * fall).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.ellipse(shadow.x, shadow.y, m * (0.06 + 0.08 * fall), m * (0.025 + 0.035 * fall), 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          if (stone) this.stone(screen(gx, gy, z), stoneSize, shaft);
+          else this.arrowLine(screen(gx + spot.lean * 0.25, gy, z + 0.85), screen(gx, gy, z), shaft, width);
+        } else if (now >= landAt && now < landAt + RAIN_LINGER_MS) {
+          const life = 1 - (now - landAt) / RAIN_LINGER_MS;
+          ctx.globalAlpha = life;
+          if (stone) {
+            const p = screen(gx, gy, Math.max(0, 0.25 * Math.sin(Math.min(1, (now - landAt) / 250) * Math.PI)));
+            this.stone(p, stoneSize * 0.9, shaft);
+          } else {
+            this.arrowLine(screen(gx + spot.lean * 0.18, gy, 0.42), screen(gx, gy, 0), shaft, width);
+          }
+          ctx.globalAlpha = 1;
+        }
+      });
+      ctx.restore();
+    }
+  }
+
+  private stone(p: Point, radius: number, color: string): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = 'rgba(60, 50, 40, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, radius, radius, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   }
 
   private drawWindups(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point): void {

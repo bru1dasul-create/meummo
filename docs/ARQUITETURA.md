@@ -110,10 +110,26 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   de hoje continua 5 tiles por segundo.
 - **Teclas** (`keys.ts` e `keysPanel.ts`, pedido do dono em 14/11): cada ação tem a sua tecla (`KeyboardEvent.code`;
   os dois Shifts contam como um) e o jogador troca na janela das teclas (botão "Teclas" no painel do som, só no
-  computador). Padrão: `Shift` esquiva, `Espaço` pula, `J` atira, `F` defende, `Q` e `E` as habilidades, `I` mochila,
+  computador). Padrão: `Shift` esquiva, `Espaço` pula, `J` atira, `F` defende, `Q` a 1ª habilidade da classe (ação
+  `hab1`; a tecla que alguém deu à Bordunada, `golpe`, passa para ela), `E` o Fôlego, `I` mochila, `K` Habilidades,
   `M` mapa, `C` andar devagar e o som sem tecla. Ficam fixas (não dá para escolher) as de andar, `Enter`, `Esc`, o zoom,
   `1` a `4` e o `G` do menu ADM; Ctrl, Alt, Caps Lock e F1–F12 são recusadas (Ctrl + W fecha a aba). Trocar com uma
   tecla já usada troca as duas ações. Fica no aparelho (`meummo:teclas`); a barra de ações é refeita com as novas.
+- **Classes e habilidades** (protocolo 37, pedido do dono em 14/11): as regras em `src/shared/classes.ts` (1 ponto por
+  nível a partir do 2: `earnedPoints`; o ponto `n` de uma habilidade no nível `levelForPoint`; `learnBlocker` diz por
+  que não dá; `cleanSkills` confere os pontos salvos; `castPoint` traz a mira para dentro do alcance), os dados em
+  `data/classes.json` (lidos e conferidos por `src/server/classes.ts`; `checkClasses` confere a missão de
+  `liberaDepoisDe`). O `Player` guarda `heroClass` e `skillPoints` (salvos em `CharacterData.hero`, passo 6 de
+  `MIGRATIONS`) e a recarga de cada habilidade (`castReadyAt`). Pedidos: `class` (escolher: uma vez, depois da missão),
+  `learn` (pôr um ponto), `unlearn` (recomeçar os pontos) e `cast` (usar mirando num ponto do chão). O servidor manda
+  `hero` quando muda (escolheu, aprendeu, subiu de nível, concluiu a missão que libera), `scd` (a recarga) e `cast` para
+  quem vê (quem usou desenha na hora). A Chuva de Flechas (`tipo: "chuva"`) fica no ar `demoraMs` (`World.rains`) e cai
+  em todo monstro com o pé no círculo (`RAIN_BODY_SLACK` de folga), uma vez, com `danoPorcento` do tiro sem carga e
+  `fromAbove` (a casca do tatu-bola não segura). No navegador: `skillsPanel.ts` (a janela, `K`), `skillIcons.ts` (os
+  ícones provisórios, até a [arte]), o motor (segurar `Q` mira com o círculo; soltar usa; o botão e o celular miram
+  sozinhos onde pega mais bichos) e `combat.ts` (o círculo, as flechas subindo e caindo e as cravadas, provisório). A
+  Bordunada saiu do jogo novo (o 1º quadrado da barra, o `skill0`, é o da 1ª habilidade da classe); o jogo antigo
+  continua com ela.
 - **Mapa explorado** (protocolo 36): `src/shared/explore.ts` (a grade de quadradinhos de `EXPLORE_CELL` = 4 m, um bit
   cada; `revealAround` marca os que ficam a até `EXPLORE_RADIUS` = 12 m do pé; o texto `colunas:base64`, que continua
   batendo se o mapa crescer). O servidor confere a cada 500 ms (`World.explore`), manda `explored` com os quadradinhos
@@ -413,6 +429,10 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `combat` | o administrador ajustou os números do combate (carga, defesa, empurrão): use os novos |
 | cliente | `pet` | fazer carinho no bicho (o Joaquim), perto dele |
 | cliente | `jump` | pulei (só de enfeite: o servidor confere a recarga e manda o `fx` `jump` para quem está perto) |
+| cliente | `class` / `learn` / `unlearn` | escolher a classe / pôr um ponto numa habilidade dela / recomeçar os pontos |
+| cliente | `cast` | usar a habilidade `id` da classe mirando no ponto (`x`, `y`) do chão, em metros |
+| servidor | `hero` | a sua classe, os pontos de cada habilidade, quantos sobram e se já pode escolher (e no `welcome`, o `hero` e as `classes`) |
+| servidor | `scd` / `cast` | a habilidade `s` da sua classe entrou em recarga / alguém usou uma habilidade da classe: cai em (`x`, `y`), raio `r`, em `ms` (`n` flechas, `p` pontos, `kind` = flecha ou pedra) |
 | servidor | `explored` | o mapa explorado: os quadradinhos que você acabou de ver (e no `welcome`/`zone`, o `explored` do mapa) |
 | servidor | `wind` | o vento mudou: a força (0 a 1) e para onde sopra (graus), alcançados em `ms`, devagar (e no `welcome`, o `wind`) |
 | servidor | `time` | dia e noite: em que ponto do ciclo estamos (ms); vem na virada, quando o administrador vira o relógio e quando o painel muda os tamanhos (e no `welcome`, o `time`) |

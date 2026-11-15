@@ -117,6 +117,18 @@ export class Session {
       case 'jump':
         this.lobby.realm.jump(this.player);
         break;
+      case 'class':
+        this.lobby.realm.chooseClass(this.player, msg.id);
+        break;
+      case 'learn':
+        this.lobby.realm.learnSkill(this.player, msg.id);
+        break;
+      case 'unlearn':
+        this.lobby.realm.unlearnSkills(this.player);
+        break;
+      case 'cast':
+        this.lobby.realm.castSkill(this.player, msg.id, msg.x, msg.y);
+        break;
       case 'loaded':
         this.lobby.realm.loaded(this.player);
         break;
