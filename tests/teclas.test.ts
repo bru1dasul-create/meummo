@@ -26,6 +26,7 @@ describe('teclas: o padrão', () => {
     expect(keys.actionOf('KeyF')).toBe('defesa');
     expect(keys.actionOf('KeyC')).toBe('devagar');
     expect(keys.actionOf('KeyQ')).toBe('hab1'); // a 1ª habilidade da classe (no lugar da Bordunada, desde 15/11)
+    expect(keys.actionOf('KeyR')).toBe('hab2'); // a 2ª (a Flecha Ancestral, no Caçador)
     expect(keys.actionOf('KeyK')).toBe('habilidades');
     expect(keys.get('som').code).toBe('');
     expect(keys.label('esquiva')).toBe('Shift');
@@ -103,8 +104,8 @@ describe('teclas: o que estava guardado', () => {
   });
 
   it('a tecla que o jogador deu à Bordunada (até 15/11) fica com a 1ª habilidade da classe', () => {
-    const keys = new KeyBindings(fakeStore({ [KEYS_STORAGE]: JSON.stringify({ golpe: { code: 'KeyR', label: 'R' } }) }));
-    expect(keys.actionOf('KeyR')).toBe('hab1');
+    const keys = new KeyBindings(fakeStore({ [KEYS_STORAGE]: JSON.stringify({ golpe: { code: 'KeyT', label: 'T' } }) }));
+    expect(keys.actionOf('KeyT')).toBe('hab1');
     expect(keys.actionOf('KeyQ')).toBeNull();
   });
 

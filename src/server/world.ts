@@ -85,7 +85,7 @@ import {
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
 import type { AreaDef } from './tuning';
 import { Inventory } from './inventory';
-import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type Projectile, type ZoneState } from './entities';
+import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type PierceShot, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { DayNightClock } from './dayNight';
 import { decodeGrid, encodeGrid, revealAround, type ExploreGrid } from '../shared/explore';
@@ -975,9 +975,10 @@ export class World {
   /**
    * Usar a habilidade `id` da classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
    * Chuva de Flechas: as flechas (ou pedras, com o estilingue) sobem e caem no círculo daqui a `delayMs`, acertando
-   * todos os bichos dentro dele — de cima, então nem a casca do tatu-bola segura.
+   * todos os bichos dentro dele — de cima, então nem a casca do tatu-bola segura. Flecha Ancestral: um tiro na direção
+   * do ponto que atravessa todos os bichos da linha (veja updatePiercing); `cid` liga ao desenho de quem atirou.
    */
-  castSkill(player: Player, id: string, x: number, y: number): void {
+  castSkill(player: Player, id: string, x: number, y: number, cid?: number): void {
     const found = this.classSkill(player, id);
     const rank = player.skillPoints[id] ?? 0;
     const numbers = found ? skillPoint(found.skill, rank) : null;
@@ -990,14 +991,30 @@ export class World {
     if (now < readyAt - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
     if (this.inSafeArea(player)) return; // da área segura ninguém ataca (veja shoot)
     const feet = feetAt(player.fx, player.fy);
-    const aimed = castPoint(feet, { x, y }, skill.range);
-    const spot = { x: Math.max(0, Math.min(this.map.width, aimed.x)), y: Math.max(0, Math.min(this.map.height, aimed.y)) };
     player.chargeStart = null; // usar a habilidade solta a pedra que estava puxando
-    if (spot.x !== feet.x || spot.y !== feet.y) this.faceAngle(player, Math.atan2(spot.y - feet.y, spot.x - feet.x));
-    const shot = this.shotOf(player);
-    this.rains.push({ by: player.id, x: spot.x, y: spot.y, radius: numbers.radius, landAt: now + skill.delayMs, damage: player.damage(), power: numbers.damagePct / 100 });
-    const msg: ServerMsg = { t: 'cast', id: player.id, s: skill.id, x: round3(spot.x), y: round3(spot.y), r: numbers.radius, n: numbers.arrows, p: rank, ms: skill.delayMs, kind: shot.kind };
-    this.emitToViewers(player, msg, player.id); // quem usou já desenhou na hora
+    if (skill.kind === 'flecha') {
+      // a Flecha Ancestral sai como um tiro, na direção do ponto (parado em cima do próprio pé: para onde ele olha)
+      const angle = x !== feet.x || y !== feet.y ? Math.atan2(y - feet.y, x - feet.x) : angleOfDir(player.dir);
+      this.faceAngle(player, angle);
+      const [min, max] = player.damage();
+      const base = this.rollRange(min, max);
+      const pierce: PierceShot = {
+        hit: new Set(),
+        markPct: numbers.markPct,
+        markMs: numbers.markMs,
+        burstRadius: numbers.burstRadius,
+        burstDamage: Math.max(1, Math.round(base * numbers.burstPct / 100)),
+      };
+      this.spawnProjectile(player, angle, skill.speed, skill.range, Math.max(1, Math.round(base * numbers.damagePct / 100)), 'ancestral', cid, pierce);
+    } else {
+      const aimed = castPoint(feet, { x, y }, skill.range);
+      const spot = { x: Math.max(0, Math.min(this.map.width, aimed.x)), y: Math.max(0, Math.min(this.map.height, aimed.y)) };
+      if (spot.x !== feet.x || spot.y !== feet.y) this.faceAngle(player, Math.atan2(spot.y - feet.y, spot.x - feet.x));
+      const shot = this.shotOf(player);
+      this.rains.push({ by: player.id, x: spot.x, y: spot.y, radius: numbers.radius, landAt: now + skill.delayMs, damage: player.damage(), power: numbers.damagePct / 100 });
+      const msg: ServerMsg = { t: 'cast', id: player.id, s: skill.id, x: round3(spot.x), y: round3(spot.y), r: numbers.radius, n: numbers.arrows, p: rank, ms: skill.delayMs, kind: shot.kind };
+      this.emitToViewers(player, msg, player.id); // quem usou já desenhou na hora
+    }
     player.castReadyAt.set(skill.id, Math.max(now, readyAt) + skill.cooldownMs);
     player.outbox.push({ t: 'scd', s: skill.id, ms: skill.cooldownMs });
   }
@@ -1912,7 +1929,7 @@ export class World {
 
   // ======================= projéteis =======================
 
-  private spawnProjectile(owner: Entity, angle: number, speed: number, range: number, damage: number, kind: string, cid?: number): void {
+  private spawnProjectile(owner: Entity, angle: number, speed: number, range: number, damage: number, kind: string, cid?: number, pierce?: PierceShot): Projectile {
     const shot: Projectile = {
       ...makeShot(spotOf(owner), angle, speed, range),
       id: this.links.nextId(),
@@ -1922,6 +1939,7 @@ export class World {
       kind,
       viewers: new Set(),
       ...(owner.kind === 'monster' ? { push: owner.def.attack.pushCm / 100 } : {}),
+      ...(pierce ? { pierce } : {}),
     };
     this.projectiles.set(shot.id, shot);
     const msg: ServerMsg = {
@@ -1942,10 +1960,15 @@ export class World {
         shot.viewers.add(player.id);
       }
     }
+    return shot;
   }
 
   private updateProjectiles(dt: number, now: number): void {
     for (const shot of [...this.projectiles.values()]) {
+      if (shot.pierce) {
+        this.updatePiercing(shot, shot.pierce, dt, now);
+        continue;
+      }
       const hit: { target: Entity | null } = { target: null };
       const result = advanceShot(shot, dt, this.map, (x, y) => {
         hit.target = shot.fromMonster ? this.playerTouchedBy(x, y, now) : this.monsterTouchedBy(x, y, shot);
@@ -1964,6 +1987,39 @@ export class World {
       }
       for (const id of shot.viewers) this.players.get(id)?.outbox.push(end);
       if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx), shot.push ?? 0);
+    }
+  }
+
+  /**
+   * A Flecha Ancestral: atravessa todo bicho que encosta (cada um uma vez; de espírito, o enxame não desvia e a casca não
+   * segura), marca quem atravessou e para só no que segura tiro ou no fim do alcance — onde pode explodir.
+   */
+  private updatePiercing(shot: Projectile, pierce: PierceShot, dt: number, now: number): void {
+    const travel = Math.atan2(shot.dy, shot.dx);
+    const result = advanceShot(shot, dt, this.map, (x, y) => {
+      for (const monster of [...this.monsters.values()]) {
+        if (monster.leavingAt !== null || pierce.hit.has(monster.id) || !shotTouches(x, y, monster.x, monster.y, SHOT_HIT_RADIUS)) continue;
+        pierce.hit.add(monster.id);
+        this.damage(monster, shot.damage, shot.ownerId, now, travel, 0, true);
+        if (pierce.markPct > 0 && this.monsters.has(monster.id) && monster.hp > 0) {
+          monster.markPct = Math.max(now < monster.markedUntil ? monster.markPct : 0, pierce.markPct);
+          monster.markedUntil = Math.max(monster.markedUntil, now + pierce.markMs);
+          this.emitToViewers(monster, { t: 'fx', id: monster.id, kind: 'mark', ms: pierce.markMs });
+        }
+      }
+      return false; // segue voando
+    });
+    if (result === 'flying') return;
+    this.projectiles.delete(shot.id);
+    const end: Extract<ServerMsg, { t: 'shot_end' }> = { t: 'shot_end', id: shot.id, hit: 0, x: round3(shot.x), y: round3(shot.y) };
+    if (result === 'wall') end.on = this.map.shotBlockerAt(shot.x + shot.dx * 0.02, shot.y + shot.dy * 0.02) ?? 'bloco';
+    if (pierce.burstRadius > 0) end.burst = pierce.burstRadius;
+    for (const id of shot.viewers) this.players.get(id)?.outbox.push(end);
+    if (pierce.burstRadius <= 0) return;
+    // a explosão do fim: todo bicho no raio (até os que ela já atravessou)
+    for (const monster of [...this.monsters.values()]) {
+      if (monster.leavingAt !== null || !shotTouches(shot.x, shot.y, monster.x, monster.y, pierce.burstRadius)) continue;
+      this.damage(monster, pierce.burstDamage, shot.ownerId, now, undefined, 0, true);
     }
   }
 
@@ -2000,8 +2056,11 @@ export class World {
    * `travel`: para onde o golpe anda (radianos), para a defesa saber se ele veio pela frente. Sem direção (fogo no
    * chão), a defesa não segura. `push`: quanto o golpe empurra o jogador nessa direção (metros; recuo, passo 2c).
    */
-  /** `fromAbove`: veio de cima (a Chuva de Flechas): a casca do tatu-bola, que é só na frente, não segura. */
-  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0, fromAbove = false): void {
+  /**
+   * `ignoreShell`: a casca do tatu-bola (só na frente) não segura — o golpe veio de cima (Chuva de Flechas) ou é do
+   * espírito (Flecha Ancestral). Bicho marcado pela Flecha Ancestral leva mais dano de todo mundo.
+   */
+  private damage(target: Entity, amount: number, attackerId: number, now: number, travel?: number, push = 0, ignoreShell = false): void {
     if (target.hp <= 0) return;
     if (target.kind === 'monster' && target.leavingAt !== null) return; // indo embora: ninguém acerta mais
     if (target.kind === 'player' && (target.dead || target.god || now < target.invulnerableUntil || this.inSafeArea(target))) return;
@@ -2018,7 +2077,8 @@ export class World {
       this.sendEnergy(target, now, true);
     }
     // a casca do tatu-bola: o golpe que vem pela frente perde parte do dano (tonto, depois da investida, fica sem ela)
-    if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil && !fromAbove) {
+    if (target.kind === 'monster' && now < target.markedUntil) amount = Math.round(amount * (1 + target.markPct / 100));
+    if (target.kind === 'monster' && target.def.shell && now >= target.dizzyUntil && !ignoreShell) {
       const from = this.hitFrom(target, attackerId, travel);
       if (from !== null && Math.abs(angleDiff(angleOfDir(target.dir), from)) <= target.def.shell.halfArc) {
         amount = Math.max(1, Math.round(amount * (1 - target.def.shell.block)));

@@ -23,8 +23,19 @@
       },
       "flecha_ancestral": {
         "nome": "Flecha Ancestral",
-        "descricao": "Uma flecha carregada de energia espiritual, com dano especial.",
-        "nivel": 6
+        "descricao": "Uma flecha de energia espiritual que atravessa todos os bichos na linha: nem a casca do tatu nem o enxame seguram. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, ela explode no fim.",
+        "nivel": 6,
+        "tipo": "flecha",
+        "recargaSegundos": 8,
+        "alcance": 14,
+        "velocidade": 24,
+        "pontos": [
+          { "danoPorcento": 200 },
+          { "danoPorcento": 230 },
+          { "danoPorcento": 260, "marcaPorcento": 20, "marcaSegundos": 4 },
+          { "danoPorcento": 290, "marcaPorcento": 25, "marcaSegundos": 5 },
+          { "danoPorcento": 320, "marcaPorcento": 30, "marcaSegundos": 6, "explosaoRaio": 2, "explosaoPorcento": 150 }
+        ]
       },
       "olhos_de_gaviao": {
         "nome": "Olhos de Gavião",

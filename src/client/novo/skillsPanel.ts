@@ -21,6 +21,12 @@ function meters(value: number): string {
 /** Os números de um ponto, em texto ("6 flechas · área de 2 m · dano 130%"). */
 export function pointText(skill: ClassSkillInfo, point: SkillPointInfo): string {
   if (skill.kind === 'chuva') return `${point.arrows} flechas · área de ${meters(point.radius)} · dano ${point.damagePct}%`;
+  if (skill.kind === 'flecha') {
+    const parts = [`dano ${point.damagePct}% em cada um`];
+    if (point.markPct > 0) parts.push(`marca: +${point.markPct}% de dano por ${Math.round(point.markMs / 100) / 10} s`.replace('.', ','));
+    if (point.burstRadius > 0) parts.push(`explode no fim (${meters(point.burstRadius)}, ${point.burstPct}%)`);
+    return parts.join(' · ');
+  }
   return '';
 }
 

@@ -75,6 +75,17 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — Flecha Ancestral (o "pode" do dono para a minha proposta):** atravessa a linha, marca com 3 pontos, explode
+com 5. `tipo: "flecha"` em data/classes.json (`velocidade`; nos pontos, `marcaPorcento`/`marcaSegundos` e
+`explosaoRaio`/`explosaoPorcento`); `SkillPointInfo` agora tem todos os campos (0 = não tem) e `ClassSkillInfo.speed`.
+Protocolo **38**: `cid` no `cast`, `fx` `'mark'` com `ms`, `burst` no `shot_end`. Servidor: `spawnProjectile` devolve o
+tiro e aceita `PierceShot`; `updatePiercing` (o `hits` do `advanceShot` acerta e devolve false: segue voando);
+`damage(..., ignoreShell)` (era `fromAbove`) e a marca (`Monster.markedUntil`/`markPct`). Navegador: `hab2` (R),
+`classSkillAt(index)`, a mira em faixa (`RainAim.line`), `bestArrowSpot` (a direção que pega mais), `skillButtons.ts`
+(botão provisório da 2ª habilidade em diante, com as classes `.action` da [arte]), desenho provisório (flecha verde,
+brilho e explosão do fim, runa da marca) e os sons `spirit` e `burst`. Testes: 4 novos em `tests/classe.test.ts` (a
+linha com parede, tatu e enxame). Lembrete: nos testes, monstro longe sem `perseguicao` desiste, volta e recupera a vida.
+
 **15/11 — classe e habilidades, passo 1 (as respostas do dono):** "todos são o mesmo personagem; fazendo as missões
 iniciais libera escolher a classe; por enquanto só o arco e flecha e o estilingue, a classe Caçador da Floresta";
 pontos por nível; tirar a Bordunada e manter o Fôlego. Feito: `data/classes.json` (o Caçador, as 5 habilidades; só a
