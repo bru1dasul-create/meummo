@@ -194,6 +194,10 @@ export class Realm {
     this.worldOf(player)?.unequip(player, part);
   }
 
+  talk(player: Player, npc: number): void {
+    this.worldOf(player)?.talk(player, npc);
+  }
+
   buy(player: Player, npc: number, item: string, n: number): void {
     this.worldOf(player)?.buy(player, npc, item, n);
   }

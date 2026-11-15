@@ -732,12 +732,17 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   flecha **caem onde foi mirado** (mais puxada = mais longe); o `R` **carrega a Flecha Ancestral no arco** (o próximo
   tiro é ela, com a puxada; atravessa e explode onde mirou, com qualquer número de pontos); os Olhos duram menos (5 a
   10 s) e recarregam em 20 s; **dica** com o mouse em cima das habilidades da barra. Protocolo 41
-- [ ] **[estrutura]** Parte 2: a Xiovanna andando pela Budega (e voltando ao balcão para atender)
+- [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
+  anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
+  com ele. Protocolo 42 (`npc_walk`, `talk`). **Ainda desligado nos dados** (a Xiovanna sem `passeio`): espera o passo
+  de andar do molde de gente, da [arte], senão ela desliza. Pontos testados atrás do balcão: `[[67.9, 50.3], [67.2, 50.1]]`
+- [ ] **[mundo]** Para a Xiovanna andar pela loja toda (e não só 2 m atrás do balcão): hoje ela fica num bolso fechado
+  pela colisão do balcão (livre só de x 66,5 a 68, y 50 a 50,5); precisa de uma passagem no balcão (se o dono quiser)
 - [ ] **[arte]** Do mesmo teste do dono: o fim da esquiva trava (o rolamento dura 0,5 s e anda só até 0,4 s); o braço
   direito ao puxar o arco; a missão atrás do mini mapa; a pose de mirar para cima na Chuva e as flechas mais tempo no
   chão (`RAIN_LINGER_MS`); as pernas da Xiovanna atrás do balcão, ela virada de frente e sem seguir quem está na loja
   (só vira para quem fala com ela); o destaque dos Olhos pesa (medido sem placa de vídeo: de 13,5 para 76 ms por quadro
-  com uns 15 bichos); o brilho do quadrado com a flecha carregada (`data-armed`)
+  com uns 15 bichos); o brilho do quadrado com a flecha carregada (`data-armed`); o zoom da conversa dá um tranco (medido: quadro de 24 para 33 ms durante o zoom, o mais lento 117 ms)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

@@ -10,7 +10,7 @@ import { parseMonsterDefs } from '../src/server/monsters';
 import { parseClientMsg } from '../src/server/validate';
 import { World } from '../src/server/world';
 import { advanceShot, makeShot } from '../src/shared/combat';
-import { TICK_MS } from '../src/shared/constants';
+import { NPC_BUSY_MS, NPC_PAUSE_MIN_MS, TICK_MS } from '../src/shared/constants';
 import { DX, DY, RIGHT } from '../src/shared/dir';
 import { GameMap, type TiledMap, type TiledObject } from '../src/shared/map';
 import { BODY_HALF_W, bodyFits, bodySpotIn, bodyWalkable, degreesOfDir, feetAt, footTile, steerDegrees, walkSlice } from '../src/shared/movement';
@@ -231,7 +231,7 @@ describe('mapa do formato novo: o mundo', () => {
   it('NPC fica com o pé no ponto exato do data/npcs.json (com fração, só no formato novo)', () => {
     const clock = new FakeClock();
     const map = GameMap.fromTiled(metricMap(), 'teste');
-    const curupira: NpcDef = { id: 'curupira', name: 'Curupira', title: '', map: 'teste', x: 4.5, y: 7.5, line: 'Oi', wears: [], shop: null };
+    const curupira: NpcDef = { id: 'curupira', name: 'Curupira', title: '', map: 'teste', x: 4.5, y: 7.5, line: 'Oi', wears: [], shop: null, stroll: [] };
     const world = new World(map, { now: clock.now, random: () => 0, npcs: new Map([['curupira', curupira]]) });
     const npc = [...world.npcs.values()][0]!;
     expect(feetAt(npc.x, npc.y)).toEqual({ x: 4.5, y: 7.5 });
@@ -240,6 +240,42 @@ describe('mapa do formato novo: o mundo', () => {
     const old = GameMap.fromTiled(tiledFromAscii(['.....'], { x: 0, y: 0 }), 'velho');
     expect(() => checkNpcs(new Map([['c', { ...curupira, map: 'velho' }]]), new Map(), [old])).toThrow(/inteiros/);
     expect(() => checkNpcs(new Map([['c', curupira]]), new Map(), [map])).not.toThrow();
+  });
+
+  it('NPC com "passeio": anda de ponto em ponto, avisa todo mundo e espera parado quando alguém fala com ele', () => {
+    const clock = new FakeClock();
+    const map = GameMap.fromTiled(metricMap(), 'teste');
+    const defs = parseNpcDefs({ moca: { nome: 'Moça', mapa: 'teste', x: 4.5, y: 7.5, passeio: [[7.5, 7.5]] } });
+    expect(defs.get('moca')!.stroll).toEqual([{ x: 7.5, y: 7.5 }]);
+    expect(() => parseNpcDefs({ moca: { nome: 'Moça', mapa: 'teste', x: 1, y: 1, passeio: [[1]] } })).toThrow(/passeio/);
+    const world = new World(map, { now: clock.now, random: () => 0, npcs: defs });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const npc = [...world.npcs.values()][0]!;
+    const run = (ms: number) => {
+      for (let t = 0; t < ms; t += TICK_MS) {
+        clock.advance(TICK_MS);
+        world.tick();
+      }
+    };
+    run(NPC_PAUSE_MIN_MS - 500);
+    expect(conn.ofType('npc_walk')).toHaveLength(0); // ainda parada no lugar dela
+    run(1000);
+    // 3 m a 1,2 m/s = 2,5 s
+    expect(conn.ofType('npc_walk')).toEqual([{ t: 'npc_walk', id: npc.id, x: npc.x, y: npc.y, ms: 2500 }]);
+    expect(feetAt(npc.x, npc.y)).toEqual({ x: 7.5, y: 7.5 });
+    // alguém perto abre a conversa: ela espera (e continua esperando enquanto os avisos chegam)
+    Object.assign(joined.player, { fx: npc.x, fy: npc.y + 1 });
+    run(2500 + NPC_PAUSE_MIN_MS - 500);
+    world.talk(joined.player, npc.id);
+    run(NPC_BUSY_MS - 500);
+    expect(conn.ofType('npc_walk')).toHaveLength(1);
+    run(1000); // ninguém mais falando: volta para o lugar dela
+    expect(conn.ofType('npc_walk')).toHaveLength(2);
+    expect(feetAt(npc.x, npc.y)).toEqual({ x: 4.5, y: 7.5 });
+    expect(parseClientMsg(JSON.stringify({ t: 'talk', npc: 3 }))).toEqual({ t: 'talk', npc: 3 });
+    expect(parseClientMsg(JSON.stringify({ t: 'talk', npc: 'x' }))).toBeNull();
   });
 
   it('no mundo novo correr é o normal (4,5 m/s) e andar devagar é com Shift (2 m/s); o jogo de hoje não muda', () => {

@@ -22,6 +22,10 @@ import {
   REGEN_EVERY_MS,
   REGEN_FRACTION,
   SHOT_HIT_RADIUS,
+  NPC_BUSY_MS,
+  NPC_PAUSE_MAX_MS,
+  NPC_PAUSE_MIN_MS,
+  NPC_WALK_SPEED,
   SHOT_MOVING_MS,
   SHOT_RANGE,
   STEP_MS,
@@ -1592,6 +1596,43 @@ export class World {
   // ======================= loja =======================
 
   /** Comprar `n` deste item do vendedor `npcId` (pelo `preco` de data/items.json). */
+  /** Alguém abriu a conversa ou a loja do NPC (ou continua com ela aberta): ele espera parado. */
+  talk(player: Player, npcId: number): void {
+    const npc = this.npcs.get(npcId);
+    if (!npc || player.loading || player.dead || !this.nearNpc(player, npc)) return;
+    npc.busyUntil = this.now() + NPC_BUSY_MS;
+  }
+
+  /**
+   * O passeio dos NPCs ("passeio" em data/npcs.json): de tempos em tempos anda (em linha reta) até outro ponto dele ou
+   * de volta ao lugar dele. Com alguém falando ou negociando, espera. Sem ninguém no mapa, fica onde está.
+   */
+  private updateNpcs(now: number): void {
+    if (this.players.size === 0) return;
+    for (const npc of this.npcs.values()) {
+      const points = npc.def.stroll;
+      if (points.length === 0 || now < npc.strollAt || now < npc.busyUntil) continue;
+      if (npc.strollAt === 0) {
+        npc.strollAt = now + NPC_PAUSE_MIN_MS; // o primeiro passeio espera um pouco
+        continue;
+      }
+      const spots = [{ x: npc.def.x, y: npc.def.y }, ...points]
+        .map((p) => (this.map.metric ? cornerAtFeet(p.x, p.y) : { x: Math.floor(p.x), y: Math.floor(p.y) }))
+        .filter((p) => (p.x !== npc.x || p.y !== npc.y) && (this.map.metric ? bodyFits(this.map, p.x, p.y) : this.map.isWalkable(p.x, p.y)));
+      if (spots.length === 0) {
+        npc.strollAt = Infinity; // nenhum ponto serve (bloqueado no mapa): não tenta mais
+        this.log(`aviso: o passeio de ${npc.def.name} (data/npcs.json) não tem nenhum ponto livre no mapa "${this.map.id}"`);
+        continue;
+      }
+      const to = spots[Math.min(spots.length - 1, Math.floor(this.random() * spots.length))]!;
+      const ms = Math.round((Math.hypot(to.x - npc.x, to.y - npc.y) / NPC_WALK_SPEED) * 1000);
+      npc.x = to.x;
+      npc.y = to.y;
+      npc.strollAt = now + ms + NPC_PAUSE_MIN_MS + this.random() * (NPC_PAUSE_MAX_MS - NPC_PAUSE_MIN_MS);
+      for (const player of this.players.values()) player.outbox.push({ t: 'npc_walk', id: npc.id, x: round3(to.x), y: round3(to.y), ms });
+    }
+  }
+
   buy(player: Player, npcId: number, item: string, n: number): void {
     const shop = this.shopFor(player, npcId);
     if (!shop) return;
@@ -1635,6 +1676,7 @@ export class World {
       this.fail(player, 'too_far', true);
       return null;
     }
+    npc.busyUntil = this.now() + NPC_BUSY_MS; // negociando: ele espera parado
     return npc.def.shop;
   }
 
@@ -1666,6 +1708,7 @@ export class World {
     for (const player of this.players.values()) this.updatePlayer(player, now);
     this.updateProjectiles(dt, now);
     this.updateRains(now);
+    this.updateNpcs(now);
     for (const monster of [...this.monsters.values()]) {
       if (this.monsters.has(monster.id)) this.updateMonster(monster, now);
     }

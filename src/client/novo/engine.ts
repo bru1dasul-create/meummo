@@ -82,6 +82,8 @@ const round3 = (value: number) => Math.round(value * 1000) / 1000;
 const toDegrees = (radians: number) => ((Math.round((radians * 180) / Math.PI) % 360) + 360) % 360;
 /** O "atirar no mais perto" dos botões procura um pouco além do alcance da pedra (o monstro anda). */
 const AUTO_AIM_SLACK = 0.5;
+/** Com a conversa aberta, avisa o servidor a cada tanto (o NPC espera NPC_BUSY_MS depois do último aviso). */
+const TALK_PING_MS = 5000;
 /** Mirando num bicho, o tiro vai até um pouco depois do pé dele (para chegar nele antes de cair). */
 const AIM_TARGET_SLACK = 0.75;
 /** Depois do tiro, o corpo fica virado para ele por este tempo (mesmo andando para outro lado). */
@@ -286,6 +288,8 @@ class NewWorld implements NewWorldGame {
   /** Último pedaço de caminhada: para onde e quando (sem monstro perto, a defesa acompanha o andar). */
   private lastWalkDegrees = 90;
   private lastWalkAt = 0;
+  /** Quando avisar o servidor de novo que a conversa continua aberta. */
+  private talkPingAt = 0;
   /** O último pedaço andado foi devagar (ou defendendo)? Atirar andando espalha: correndo mais, devagar menos. */
   private lastWalkSlow = false;
   /** Puxando (e um instante depois do tiro), o corpo fica virado para a mira, mesmo andando para outro lado. */
@@ -1549,6 +1553,7 @@ class NewWorld implements NewWorldGame {
       this.conversationNpc = npcId;
       if (before !== null) this.view?.talk?.(before, 0);
       const npc = npcId !== null ? this.npcs.get(npcId) : undefined;
+      this.talkPingAt = 0;
       if (npc) {
         const feet = feetAt(npc.e.x, npc.e.y);
         this.view?.focus?.({ x: feet.x, y: feet.y });
@@ -1558,6 +1563,11 @@ class NewWorld implements NewWorldGame {
         this.view?.focus?.(null);
         this.animateZoom(this.zoom, now);
       }
+    }
+    // com a conversa (ou a loja) aberta, o servidor fica sabendo de tempos em tempos: o NPC que passeia espera parado
+    if (this.conversationNpc !== null && now >= this.talkPingAt) {
+      this.talkPingAt = now + TALK_PING_MS;
+      this.conn.send({ t: 'talk', npc: this.conversationNpc });
     }
     const anim = this.zoomAnim;
     if (anim && this.view?.setZoom) {
@@ -2629,6 +2639,19 @@ class NewWorld implements NewWorldGame {
       case 'armed':
         this.setArmed(msg.s); // o servidor é quem sabe (recusou por recarga, desmaiou, tirou os pontos)
         break;
+      case 'npc_walk': {
+        // o passeio do NPC: anda até lá no tempo que o servidor disse, olhando para onde vai
+        const npc = this.npcs.get(msg.id);
+        const old = this.entities.get(msg.id);
+        if (!npc || !old) break;
+        const from = feetAt(old.x, old.y);
+        const to = feetAt(msg.x, msg.y);
+        const moved = { ...old, x: msg.x, y: msg.y };
+        this.entities.set(msg.id, moved);
+        this.npcs.set(msg.id, { ...npc, e: moved });
+        this.view?.moveActor(msg.id, to.x, to.y, toDegrees(aimAngle(from, to)), { durationMs: msg.ms });
+        break;
+      }
       case 'hero':
         this.setHero(msg.hero);
         break;

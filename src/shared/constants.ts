@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 41;
+export const PROTOCOL_VERSION = 42;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -95,6 +95,15 @@ export const GUARD_WALK_FACTOR = 0.7;
 export const SHOT_SPREAD_RUN_DEG = 9;
 export const SHOT_SPREAD_WALK_DEG = 3;
 export const SHOT_MOVING_MS = 200;
+/**
+ * NPC que passeia ("passeio" em data/npcs.json; pedido do dono, 15/11: a Xiovanna andando pela Budega): anda a
+ * NPC_WALK_SPEED m/s de um ponto a outro, fica NPC_PAUSE_MIN_MS a NPC_PAUSE_MAX_MS em cada um e espera parada
+ * NPC_BUSY_MS depois que alguém fala ou negocia com ele.
+ */
+export const NPC_WALK_SPEED = 1.2;
+export const NPC_PAUSE_MIN_MS = 4000;
+export const NPC_PAUSE_MAX_MS = 10_000;
+export const NPC_BUSY_MS = 15_000;
 /** O tiro cai onde foi mirado (até onde a carga alcança), mas nunca mais perto que isto (metros). */
 export const SHOT_MIN_RANGE = 1.5;
 /**

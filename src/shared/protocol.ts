@@ -81,6 +81,7 @@ export type ClientMsg =
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
   | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
+  | { t: 'talk'; npc: number } // abri a conversa ou a loja deste NPC (e de tempos em tempos, enquanto aberta): ele espera parado
   | { t: 'buy'; npc: number; item: string; n: number } // comprar n deste item do vendedor `npc`
   | { t: 'sell'; npc: number; i: number; n: number } // vender n do item do espaço i da mochila para o vendedor `npc`
   | { t: 'quest'; act: QuestAction; id: string; npc?: number } // aceitar ou concluir (perto de quem dá a missão) ou abandonar
@@ -233,6 +234,7 @@ export type ServerMsg =
   | { t: 'pickup'; id: number; gold?: number; item?: ItemStack } // você pegou (tudo ou parte de) o que estava no chão
   | { t: 'drop_gone'; id: number } // o que estava no chão sumiu (o tempo acabou)
   | { t: 'items'; items: ItemInfo[] } // o administrador ajustou os itens (preço, cura, bônus): use estes daqui pra frente
+  | { t: 'npc_walk'; id: number; x: number; y: number; ms: number } // o NPC `id` anda até (x, y) em `ms` (o passeio dele)
   | { t: 'npcs'; npcs: NpcInfo[] } // o administrador ajustou os NPCs deste mapa (o que vendem, o que dizem...)
   | { t: 'say'; id: number; text: string } // fala curta (balão), sem ir para o chat
   | { t: 'chat'; id: number; name: string; text: string }
