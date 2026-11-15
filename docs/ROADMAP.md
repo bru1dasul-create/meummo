@@ -545,9 +545,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   cresce mais 60 m para o sul (Clareira da Paineira com o parquinho antigo, Cachoeirinha, mata profunda do sul com o
   recanto do Véu, buraco no gradil), a mata ao sul da vila vira mata de andar com o posto abandonado na beira da rua, a
   rua desce até o fim novo e a vila ganha 13 árvores. Entra na `main` com o desenho da [arte] (item abaixo)
-- [ ] **[arte]** Desenhar as coisas da floresta maior: `paineira`, `parquinho` (balanço, escorregador, gira-gira),
-  `cachoeira`, `pinguela` com `pedras`, `cobertura` do posto, `bomba`, `pneus`, a lojinha (`casa` com `posto`) e a placa
-  em branco (lista no `docs/MUNDO.md`, "Esperando outras frentes")
+- [x] **[arte]** Desenhar as coisas da floresta maior (15/11, com o `mundo/floresta-maior` junto na main): o arquivo novo
+  `prototipos/pindorama-25d/js/world/sul.js` — a `paineira` (tronco de garrafa verde com espinhos e raízes de tábua, copa
+  cor-de-rosa com as florzinhas, pétalas caindo e o tapete de flores no chão), o `parquinho` (balanço com a corrente
+  arrebentada, escorregador, gira-gira com mato no meio; ferrugem e cipó), a `cachoeira` (pedras com musgo, a água
+  descendo e a espuma mexendo), a `cobertura` do posto (mato e arvorezinhas em cima, faixa laranja, cipó pendurado;
+  fica por cima de quem está embaixo e transparente com o herói embaixo ou atrás) com os 4 pilares, as `bomba`s velhas
+  sem marca e a pilha de `pneus`; no props.js, a lojinha (`casa` com `posto`: vitrine quebrada e porta de enrolar meio
+  aberta) e o gradil `quebrado` (barras faltando e tortas, o corrimão partido); no fundo.js, a placa `torta` em branco;
+  no flora.js, a `pinguela` de `pedras`
 - [x] **[mundo + arte]** Os interiores com partes da floresta também (plantas, cipó, raiz), como o mapa em geral
   (14/11): o [mundo] marcou no mapa (`mundo/lote2-floresta-dentro`) a raiz `dentro`, o capim nas frestas, a samambaia
   `dentro` nos cantos e o `cipoDentro`/`musgoDentro` das casas; a [arte] desenhou: a raiz sai de baixo da parede, corre

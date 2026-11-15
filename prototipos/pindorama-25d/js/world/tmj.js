@@ -116,7 +116,10 @@
         // `dentroDaCasa`: a árvore que nasceu dentro da casa abandonada (o tronco só aparece com a casa cortada; a casa
         // desenha o buraco da laje em volta dela e não um segundo tronco)
         // (e rompe o chão de dentro: o pé e as raízes são os da Figueira da Esquina, os que o dono aprovou)
-        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo || !!pr.dentroDaCasa, hugs: pr.abraca || null, inside: !!pr.dentroDaCasa });
+        map.trees.push({ x, y, kind: pr.especie || 'mata', r: (pr.copa || 2.5) * 100, h: (pr.altura || 5) * 100, trunk: ((pr.tronco || 0.35) * 100) / 2, name: o.name || '', breaks: !!pr.rompendo || !!pr.dentroDaCasa, hugs: pr.abraca || null, inside: !!pr.dentroDaCasa, flowers: pr.flores || null });
+        // a paineira florida (floresta maior): as flores caídas fazem um tapete no chão em volta (rente ao chão, desenhado
+        // antes de todo mundo, como o deque)
+        if (pr.especie === 'paineira') map.flats.push({ kind: 'petalas', x, y, r: (pr.copa || 2.5) * 100 * 0.9, trunk: ((pr.tronco || 0.35) * 100) / 2, color: pr.flores || '#e58fb0' });
       } else if (k === 'arbusto') {
         map.props.push({ kind: 'arbusto', x, y, r: (pr.raio || 0.8) * 100, dense: !!pr.fechado, wild: true });
       } else if (k === 'pedra') {
@@ -188,6 +191,9 @@
           // a mata entrando: `cipoDentro` (0 a 1, o cipó nas paredes de dentro) e `musgoDentro` (casas.js)
           vineInside: typeof pr.cipoDentro === 'number' ? Math.max(0, Math.min(1, pr.cipoDentro)) : pr.cipoDentro ? 0.5 : 0,
           mossInside: !!pr.musgoDentro,
+          // a lojinha do posto abandonado (floresta maior): vitrine (quebrada, com `vitrineQuebrada`) e porta de enrolar
+          station: !!pr.posto,
+          brokenWindow: !!pr.vitrineQuebrada,
         });
       } else if (k === 'predio') {
         // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje
@@ -297,10 +303,40 @@
         // a grande tem 2,4 m de tábua ao longo de y: o pé dela no chão é a tábua inteira (com o pé de um ponto só, o
         // gradil que ela encosta passava na frente dela no desenho)
         const foot = big ? { x0: x - 7, x1: x + 16, y0: y - 120, y1: y + 120 } : {};
-        map.props.push({ kind: 'placa', x, y, r: 14, ...foot, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big, weeds: !!pr.mato });
+        map.props.push({ kind: 'placa', x, y, r: 14, ...foot, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big, weeds: !!pr.mato, crooked: !!pr.torta });
       } else if (k === 'deque' || k === 'pinguela') {
-        // dá para andar em cima: o lado comprido diz a direção
-        map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100 });
+        // dá para andar em cima: o lado comprido diz a direção (`pedras`: a pinguela de pedras de atravessar)
+        map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100, stones: !!pr.pedras });
+      } else if (k === 'parquinho') {
+        // o parquinho antigo (floresta maior; sul.js): `brinquedo` ('balanco', 'escorregador', 'gira-gira'), `ferrugem`,
+        // `cipo`, `quebrado` (o balanço com uma corrente arrebentada), `plantas` (o gira-gira com mato no meio), `olhando`
+        const toy = pr.brinquedo || 'balanco';
+        const shape = toy === 'gira-gira' ? { x, y, r: (pr.raio || 0.8) * 100 } : rect(o);
+        map.props.push({ kind: 'parquinho', toy, ...shape, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, broken: !!pr.quebrado, plants: !!pr.plantas, angle: pr.olhando ?? 90 });
+      } else if (k === 'cachoeira') {
+        // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` ('sul', 'norte', 'leste', 'oeste')
+        map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo });
+      } else if (k === 'cobertura') {
+        // a cobertura do posto abandonado (sul.js): a laje no alto (por cima de quem está embaixo, fica transparente com
+        // o herói embaixo ou atrás) e os 4 pilares (objetos à parte, para cada um ficar na frente ou atrás do herói)
+        const r0 = rect(o);
+        const h = (pr.altura || 4.2) * 100;
+        const pw = (pr.pilares || 0.4) * 100;
+        const vine = typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0;
+        map.props.push({ kind: 'cobertura', ...r0, h, weeds: !!pr.mato, vine, trees: !!pr.arvoresNoTopo });
+        // (o meio de cada pilar a 0,6 m das beiradas, como as caixas de colisão `pilar-cobertura` do mapa)
+        const ix = Math.min(60, (r0.x1 - r0.x0) * 0.2), iy = Math.min(60, (r0.y1 - r0.y0) * 0.2);
+        for (const px of [r0.x0 + ix, r0.x1 - ix]) {
+          for (const py of [r0.y0 + iy, r0.y1 - iy]) {
+            map.props.push({ kind: 'pilar-cobertura', x0: px - pw / 2, x1: px + pw / 2, y0: py - pw / 2, y1: py + pw / 2, x: px, y: py, h, vine });
+          }
+        }
+      } else if (k === 'bomba') {
+        // bomba de combustível velha, sem marca (sul.js): `olhando` (para onde o visor dá), `ferrugem`, `plantas`
+        map.props.push({ kind: 'bomba', ...rect(o), h: (pr.altura || 1.6) * 100, angle: pr.olhando || 0, rust: !!pr.ferrugem, plants: !!pr.plantas });
+      } else if (k === 'pneus') {
+        // pilha de pneus velhos (sul.js): `raio` e `pilha` (quantos)
+        map.props.push({ kind: 'pneus', x, y, r: (pr.raio || 0.5) * 100, count: pr.pilha || 3 });
       }
     }
     // etapa 4c: a mureta da frente de cada pedaço do viaduto (outro objeto, desenhado depois do trem), o pedaço onde o

@@ -330,14 +330,14 @@
         }
       }
       this.particles = this.particles.filter((p) => p.t < p.life);
-      // pétalas do ipê caindo (com o vento)
+      // pétalas do ipê (e da paineira, cor-de-rosa) caindo, com o vento
       for (const tr of this.map.trees || []) {
-        if (tr.kind !== 'ipe' && tr.kind !== 'ipe-amarelo' && tr.kind !== 'ipe-roxo') continue;
+        if (tr.kind !== 'ipe' && tr.kind !== 'ipe-amarelo' && tr.kind !== 'ipe-roxo' && tr.kind !== 'paineira') continue;
         if (this.map.kind === 'tmj' && Math.random() > 0.15) continue; // muitas árvores: poucas soltam pétala
         if (Math.random() < dt * 1.6 && this.petals.length < 70) {
           const a = Math.random() * M.TAU;
           const d = Math.random() * tr.r * 0.8;
-          this.petals.push({ x: tr.x + Math.cos(a) * d, y: tr.y + Math.sin(a) * d, z: tr.h * 0.8 + Math.random() * 60, t: 0, spin: Math.random() * M.TAU, seed: Math.random() * 10 });
+          this.petals.push({ x: tr.x + Math.cos(a) * d, y: tr.y + Math.sin(a) * d, z: tr.h * 0.8 + Math.random() * 60, t: 0, spin: Math.random() * M.TAU, seed: Math.random() * 10, color: tr.flowers || null });
         }
       }
       // (o vento leva as pétalas: mais longe e mais depressa quando ele é forte)
@@ -885,7 +885,7 @@
       const cam = this.cam;
       for (const p of this.petals) {
         const q = cam.p(p);
-        ctx.fillStyle = '#f6c51f';
+        ctx.fillStyle = p.color || '#f6c51f';
         ctx.strokeStyle = '#1b100d';
         ctx.lineWidth = Math.max(0.6, 0.6 * cam.zoom);
         ctx.beginPath();

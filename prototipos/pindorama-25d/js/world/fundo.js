@@ -1271,12 +1271,14 @@
     },
     box(cam, d, z0) {
       if (d.big) return volBox(cam, d.x - 20, d.x + 30, d.y - 128, d.y + 128, z0, z0 + 235, 20);
+      if (d.crooked) return volBox(cam, d.x - 90, d.x + 140, d.y - 30, d.y + 40, z0, z0 + 340, 20);
       const pl = plateOf(d);
       const zt = z0 + (d.pole ? 300 : 140);
       return volBox(cam, d.x - pl.W / 2 - 10, d.x + pl.W / 2 + 10, d.y - 10, d.y + 10, z0, zt + 10, 16);
     },
     paint(ctx, cam, d, z0, ink) {
       if (d.big) return bigSign(ctx, cam, d, z0, ink);
+      if (d.crooked) return crookedSign(ctx, cam, d, z0, ink);
       const P = (x, y, z) => cam.p({ x, y, z });
       const pl = plateOf(d);
       const rnd = seeded(d.x, d.y, 2201);
@@ -1322,6 +1324,62 @@
       if (!d.pole) for (let k = 0; k < 2; k++) grass(ctx, cam, d.x + (rnd() - 0.5) * pl.W * 0.8, d.y + 14, z0, 24, rnd, ink);
     },
   };
+  /**
+   * A placa velha do posto abandonado (`torta`, floresta maior): o poste inclinado e a chapa em branco (o nome do posto
+   * sumiu: nada de marca), a tinta branca descascando, ferrugem nas beiradas, um canto amassado e dois parafusos.
+   */
+  function crookedSign(ctx, cam, d, z0, ink) {
+    const rnd = seeded(d.x, d.y, 2271);
+    const lean = { x: 62, y: 10 };
+    const zt = z0 + 286;
+    const base = { x: d.x, y: d.y, z: z0 };
+    const top = { x: d.x + lean.x, y: d.y + lean.y, z: zt };
+    grass(ctx, cam, d.x - 8, d.y + 6, z0, 26, rnd, ink);
+    inkLine(ctx, [cam.p(base), cam.p(top)], '#7d756a', Math.max(2, 6 * cam.zoom), ink);
+    // ferrugem no pé do poste
+    const rb = cam.p({ x: d.x + lean.x * 0.08, y: d.y + lean.y * 0.08, z: z0 + 24 });
+    ctx.fillStyle = 'rgba(140, 74, 36, 0.8)';
+    ctx.beginPath();
+    ctx.ellipse(rb.x, rb.y, 3.4 * cam.zoom, 9 * cam.zoom, 0.2, 0, M.TAU);
+    ctx.fill();
+    // a chapa, de frente para o sul (+y), inclinada junto com o poste
+    const W = 118, Hh = 74;
+    const tilt = -Math.atan2(lean.x, zt - z0) * 0.9;
+    H.onWall(ctx, cam, { x: top.x - 10, y: top.y + 4, z: zt + 6 }, { x: 1, y: 0 }, () => {
+      ctx.rotate(tilt);
+      ctx.translate(-W / 2, 0);
+      ctx.fillStyle = INK;
+      ctx.fillRect(-4, -4, W + 8, Hh + 8);
+      ctx.fillStyle = '#e4dece';
+      ctx.fillRect(0, 0, W, Hh);
+      // a tinta descascando (manchas cinza) e a ferrugem nas beiradas e escorrendo
+      for (let k = 0; k < 9; k++) {
+        ctx.fillStyle = k % 2 ? 'rgba(150, 146, 136, 0.55)' : 'rgba(184, 178, 166, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(rnd() * W, rnd() * Hh, 5 + rnd() * 12, 3 + rnd() * 7, rnd() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(146, 70, 30, 0.85)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, W - 6, Hh - 6);
+      ctx.fillStyle = 'rgba(146, 70, 30, 0.6)';
+      for (let k = 0; k < 5; k++) ctx.fillRect(8 + rnd() * (W - 20), Hh - 6, 4 + rnd() * 4, -(6 + rnd() * 22));
+      // o canto de baixo amassado (dobrado para dentro) e os parafusos
+      ctx.fillStyle = '#a49e90';
+      ctx.beginPath();
+      ctx.moveTo(W, Hh - 22);
+      ctx.lineTo(W, Hh);
+      ctx.lineTo(W - 24, Hh);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#5d5a54';
+      for (const bx of [W * 0.3, W * 0.7]) {
+        ctx.beginPath();
+        ctx.arc(bx, Hh / 2, 3.2, 0, M.TAU);
+        ctx.fill();
+      }
+    });
+  }
   /**
    * A placa grande da entrada do parque: tábua de madeira escura em dois postes, na altura dos olhos (1,2 a 2 m),
    * virada para a rua (o leste, +x), com o nome em letras claras em duas linhas; `mato`: musgo em cima, cipó só nos

@@ -464,6 +464,11 @@
             vendinha(ctx, b, W, H, r);
             continue;
           }
+          if (f === 0 && b.station) {
+            // a lojinha do posto abandonado (floresta maior): vitrine e porta de enrolar meio aberta
+            stationFront(ctx, b, W, H, r);
+            continue;
+          }
           if (f === 0 && b.tower) {
             // prédio do conjunto: a entrada no meio, com a placa do bloco
             towerEntrance(ctx, W, H, b);
@@ -505,7 +510,8 @@
           ctx.clip('evenodd');
         }
         if (b.moss) mossWall(ctx, W, H, r);
-        if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : shopHole ? [shopHole.x, shopHole.x + shopHole.w] : null);
+        const stationDoor = b.station ? stationDoorRect(W, H) : null;
+        if (b.vine) overgrowth(ctx, W, H, r, b.vine, b.tower ? [W / 2 - 170, W / 2 + 170] : shopHole ? [shopHole.x, shopHole.x + shopHole.w] : stationDoor ? [stationDoor.x, stationDoor.x + stationDoor.w] : null);
         if (shopHole) ctx.restore();
       });
       // ---- lado (+x): começa na quina da frente e vai para o fundo
@@ -1531,6 +1537,108 @@
     ctx.fillRect(ox + ow * 0.55, H - 88, ow * 0.45, 12);
     // letreiro pintado na parede, em cima da porta (quem tem logo ganha a placa em cima da laje no lugar dele)
     if (s.sign && !b.logo) sign(ctx, 22, 8, W - 44, Math.min(46, oy - 22), s.sign, '#7a2e22', '#fff4dc');
+  }
+  /** O vão da porta de enrolar da lojinha do posto (na ponta direita da frente). */
+  function stationDoorRect(W, H) {
+    const w = Math.min(230, W * 0.44);
+    const h = Math.min(230, H - 46);
+    return { x: W - w - 26, y: H - h, w, h };
+  }
+  /**
+   * A lojinha do posto abandonado (floresta maior; referência docs/referencias/floresta-maior-posto.jpg): à esquerda a
+   * vitrine de alumínio — com `vitrineQuebrada`, só os cacos presos na moldura e o escuro de dentro (a prateleira vazia
+   * e uma caixa caída) —, à direita a porta de enrolar enferrujada, meio aberta, com o vão escuro embaixo. Sem marca.
+   */
+  function stationFront(ctx, b, W, H, r) {
+    const door = stationDoorRect(W, H);
+    const wx = 30, ww = Math.max(80, door.x - 60), wh = Math.min(140, H - 110), wy = H - wh - 46;
+    // o peitoril de concreto embaixo da vitrine
+    ctx.fillStyle = INK;
+    ctx.fillRect(wx - 10, wy + wh - 2, ww + 20, 50);
+    ctx.fillStyle = '#b3ada0';
+    ctx.fillRect(wx - 6, wy + wh + 2, ww + 12, 44);
+    // o escuro de dentro: a prateleira vazia e uma caixa caída
+    ctx.fillStyle = INK;
+    ctx.fillRect(wx - 7, wy - 7, ww + 14, wh + 10);
+    ctx.fillStyle = '#1c2220';
+    ctx.fillRect(wx, wy, ww, wh);
+    ctx.fillStyle = '#2b322f';
+    ctx.fillRect(wx, wy + wh * 0.62, ww, wh * 0.38);
+    ctx.fillStyle = '#3d4440';
+    ctx.fillRect(wx + 12, wy + wh * 0.42, ww - 24, 7);
+    ctx.fillRect(wx + 12, wy + wh * 0.2, ww - 24, 6);
+    ctx.save();
+    ctx.translate(wx + ww * 0.62, wy + wh - 18);
+    ctx.rotate(-0.35);
+    ctx.fillStyle = '#6a5a40';
+    ctx.fillRect(-18, -14, 36, 22);
+    ctx.restore();
+    // o vidro: inteiro (o reflexo) ou só os cacos nas beiradas da moldura
+    if (b.brokenWindow) {
+      const shard = (pts) => {
+        ctx.beginPath();
+        pts.forEach(([x, y], i) => (i ? ctx.lineTo(wx + x * ww, wy + y * wh) : ctx.moveTo(wx + x * ww, wy + y * wh)));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(176, 204, 210, 0.55)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(235, 248, 250, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      };
+      shard([[0, 0], [0.34, 0], [0.12, 0.22], [0.05, 0.5], [0, 0.62]]);
+      shard([[1, 0], [0.7, 0], [0.86, 0.16], [0.92, 0.42], [1, 0.3]]);
+      shard([[0, 1], [0.24, 1], [0.1, 0.84]]);
+      shard([[1, 1], [0.66, 1], [0.84, 0.88], [0.95, 0.66], [1, 0.72]]);
+      shard([[0.42, 0], [0.56, 0], [0.5, 0.12]]);
+      // cacos no peitoril
+      ctx.fillStyle = 'rgba(200, 222, 226, 0.8)';
+      for (let k = 0; k < 7; k++) ctx.fillRect(wx + r() * ww, wy + wh + 4 + r() * 6, 5 + r() * 7, 3);
+    } else {
+      ctx.fillStyle = 'rgba(176, 204, 210, 0.35)';
+      ctx.fillRect(wx, wy, ww, wh);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(wx + ww * 0.15, wy + wh * 0.8);
+      ctx.lineTo(wx + ww * 0.45, wy + wh * 0.1);
+      ctx.stroke();
+    }
+    // a moldura de alumínio, com o montante do meio
+    ctx.strokeStyle = '#8c9296';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(wx, wy, ww, wh);
+    ctx.beginPath();
+    ctx.moveTo(wx + ww / 2, wy);
+    ctx.lineTo(wx + ww / 2, wy + wh);
+    ctx.stroke();
+    // a porta de enrolar: o escuro de dentro, a porta enferrujada até um pouco mais da metade e o perfil de baixo
+    ctx.fillStyle = INK;
+    ctx.fillRect(door.x - 7, door.y - 7, door.w + 14, door.h + 7);
+    ctx.fillStyle = '#121615';
+    ctx.fillRect(door.x, door.y, door.w, door.h);
+    const shut = door.h * 0.58;
+    ctx.fillStyle = '#8a7a62';
+    ctx.fillRect(door.x, door.y, door.w, shut);
+    ctx.strokeStyle = '#6d5f4a';
+    ctx.lineWidth = 3;
+    for (let y = door.y + 9; y < door.y + shut - 4; y += 11) {
+      ctx.beginPath();
+      ctx.moveTo(door.x, y);
+      ctx.lineTo(door.x + door.w, y);
+      ctx.stroke();
+    }
+    // ferrugem escorrendo e a tinta que sobrou
+    for (let k = 0; k < 9; k++) {
+      ctx.fillStyle = k % 3 ? 'rgba(150, 74, 36, 0.55)' : 'rgba(205, 200, 186, 0.5)';
+      ctx.fillRect(door.x + r() * (door.w - 14), door.y + r() * shut * 0.7, 6 + r() * 12, shut * (0.12 + r() * 0.3));
+    }
+    ctx.fillStyle = '#4f4638';
+    ctx.fillRect(door.x - 2, door.y + shut - 9, door.w + 4, 11);
+    // a caixa da porta enrolada, em cima
+    ctx.fillStyle = INK;
+    ctx.fillRect(door.x - 10, door.y - 30, door.w + 20, 26);
+    ctx.fillStyle = '#7c7060';
+    ctx.fillRect(door.x - 6, door.y - 26, door.w + 12, 18);
   }
   /** A placa com o escudo da Budega, em pé na beirada da laje, presa por dois ferros (na frente do que está na laje). */
   function logoBoard(ctx, b, W) {
@@ -3305,7 +3413,8 @@
       const fp = d.x0 !== undefined ? { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 } : { x0: d.x - (d.r || 30), x1: d.x + (d.r || 30), y0: d.y - (d.r || 30), y1: d.y + (d.r || 30) };
       // desenhos de fora: as plantas da mata (flora.js) e as coisas da rua (city.js)
       const fl = (PD.flora && PD.flora.small[d.kind]) || (PD.city && PD.city.small[d.kind]);
-      super(world, fp, { fades: d.kind === 'banca' || !!(fl && fl.fades) });
+      // `overhead` (a cobertura do posto, sul.js): no alto, por cima de quem está embaixo dela, como a copa das árvores
+      super(world, fp, { fades: d.kind === 'banca' || !!(fl && fl.fades), overhead: !!(fl && fl.overhead) });
       this.d = d;
       if (fl) {
         // desenho da flora: ela diz a altura, se segura o jogador e como desenha
@@ -4999,15 +5108,38 @@
       const H = f.h;
       const rails = gate ? [16, H * 0.5, H - 12] : [16, H - 12];
       const bars = Math.max(2, Math.round(len / 12));
+      // quebrado (o buraco do gradil da floresta maior): o corrimão de cima partido perto da ponta do buraco (a ponta
+      // solta caída), barras faltando e outras tortas, empurradas para o lado
+      const gapAt = f.broken ? 0.35 + rnd() * 0.3 : -1;
+      // o plano de cada barra, sorteado uma vez só (o contorno e o ferro precisam ser iguais)
+      const plan = [];
+      for (let i = 0; i <= bars; i++) {
+        const u = i / bars;
+        const post = i % 16 === 0 || i === bars;
+        const skip = f.broken && !post && rnd() < 0.3;
+        const lean = f.broken && !post && Math.abs(u - gapAt) < 0.22 ? (rnd() - 0.5) * 2 : 0;
+        plan.push({ u, post, skip, lean });
+      }
       // contorno de tinta primeiro (tudo), depois o ferro
       for (const pass of [0, 1]) {
         const w = (base) => (pass ? base * cam.zoom : base * cam.zoom + ink * 2);
         const color = pass ? iron : INK;
-        for (const z of rails) line(at(0, z), at(1, z), w(4), color);
-        for (let i = 0; i <= bars; i++) {
-          if (f.broken && rnd() < 0.18) continue;
-          const u = i / bars;
-          const post = i % 16 === 0 || i === bars;
+        for (const z of rails) {
+          if (f.broken && z > H * 0.5) {
+            // o corrimão de cima partido: um pedaço inteiro e a ponta caída até o meio
+            line(at(0, z), at(gapAt - 0.04, z), w(4), color);
+            line(at(gapAt + 0.04, z - H * 0.45), at(1, z), w(4), color);
+          } else line(at(0, z), at(1, z), w(4), color);
+        }
+        for (const { u, post, skip, lean } of plan) {
+          if (skip) continue;
+          if (lean) {
+            // barra torta: sai do pé e vai inclinando para o lado (e mais baixa)
+            const top = at(Math.min(1, Math.max(0, u + lean * 0.06)), H * (0.55 + Math.abs(lean) * 0.25));
+            const tq = { x: top.x + lean * 14 * cam.zoom, y: top.y + Math.abs(lean) * 8 * cam.zoom };
+            line(at(u, 0), tq, w(2.6), color);
+            continue;
+          }
           line(at(u, 0), at(u, H + (post ? 4 : 10)), w(post ? 7 : 2.6), color);
           if (!post && pass) {
             // ponta de lança

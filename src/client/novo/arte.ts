@@ -23,6 +23,8 @@ import '../../../prototipos/pindorama-25d/js/world/fundo.js';
 import '../../../prototipos/pindorama-25d/js/world/parque.js';
 // as casas com interior: móveis, pisos e paredes de dentro (família, vó, abandonada)
 import '../../../prototipos/pindorama-25d/js/world/casas.js';
+// o sul da floresta maior: a paineira, o parquinho, a cachoeirinha e o posto abandonado
+import '../../../prototipos/pindorama-25d/js/world/sul.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';

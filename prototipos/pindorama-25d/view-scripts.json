@@ -21,6 +21,7 @@
     "js/world/fundo.js",
     "js/world/parque.js",
     "js/world/casas.js",
+    "js/world/sul.js",
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",

@@ -855,7 +855,19 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    soltar o Q; estilingue e Arco de Bambu, 1/3/5 pontos) e `chuva-celular.cjs`. Ficou para depois (pedir ao dono): a
    pose de atirar para cima (o motor manda `shoot` com o ângulo; precisaria de uma ação nova da [estrutura]), os
    quadrados 2 a 5 da barra e o desenho da Flecha Ancestral.
-5. O desenho da floresta maior. 6. Dia e noite.
+5. **O desenho da floresta maior** (feito; o `mundo/floresta-maior` entrou na main junto): `world/sul.js` (depois do
+   casas.js no view-scripts.json e no arte.ts). A paineira é `PD.flora.tree.paineira` (`BOTTLE` = o perfil do tronco;
+   a copa usa o `H.crownPaint` com as cores `PINK` e um `crownPlan` igual ao do props.js para pôr as flores em cima dos
+   tufos; `H.BARK.paineira`); o tapete de flores é um "flat" (`petalas`, empurrado pelo tmj.js para cada paineira) e as
+   pétalas caindo vêm do world.js (agora com a cor da árvore, `flowers`). Objetos novos no `PD.city.small`:
+   `parquinho` (`toy`), `cachoeira` (só `live`, com `paint() {}`: a água mexe), `cobertura` (`overhead: true` — o Small
+   passou a aceitar — e `fades`), `pilar-cobertura` (o tmj.js faz os 4 a 0,6 m das beiradas, como as caixas do mapa),
+   `bomba` e `pneus`. No props.js: `stationFront`/`stationDoorRect` (a casa com `station`) e o gradil `broken` com o
+   plano das barras sorteado uma vez só (antes o contorno e o ferro sorteavam diferente). Conferir: `foto-lugar3.cjs`
+   (scratchpad; `NOME` = um personagem que já existe, porque criar muitos seguidos esbarra no limite do servidor;
+   `ALTURA`/`LARG` para a janela; `CIMA` para o recorte), por exemplo a clareira (30, 150), a cachoeira (18, 157) e o
+   posto (83, 141).
+6. Dia e noite.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
