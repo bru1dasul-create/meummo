@@ -16,8 +16,14 @@
   function behind(a, b) {
     const A = a.fp;
     const B = b.fp;
-    if (A.x1 <= B.x0 + 0.5 || A.y1 <= B.y0 + 0.5) return true;
-    if (B.x1 <= A.x0 + 0.5 || B.y1 <= A.y0 + 0.5) return false;
+    const aFirst = A.x1 <= B.x0 + 0.5 || A.y1 <= B.y0 + 0.5;
+    const bFirst = B.x1 <= A.x0 + 0.5 || B.y1 <= A.y0 + 0.5;
+    // separados nos dois eixos com respostas contrárias (um mais ao lado, o outro mais à frente): vale quem está mais
+    // perto da câmera. Antes o eixo x ganhava sempre: o herói encostado na ponta do balcão da Budega ficava "atrás" da
+    // Xiovanna, e ela era desenhada depois dele e do balcão, com as pernas por cima (visto pelo dono, 15/11)
+    if (aFirst && bFirst) return A.x0 + A.x1 + A.y0 + A.y1 < B.x0 + B.x1 + B.y0 + B.y1;
+    if (aFirst) return true;
+    if (bFirst) return false;
     // pés se cruzam: copa de árvore fica por cima de quem está embaixo dela
     if (!!a.overhead !== !!b.overhead) return !a.overhead;
     // coisa em cima de coisa (o trem em cima do viaduto, o viaduto em cima dos pilares): a de baixo primeiro
