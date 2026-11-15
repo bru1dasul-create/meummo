@@ -249,15 +249,19 @@ export class Hud {
   }
 }
 
-export type ActionSlot = 'shot' | 'skill0' | 'skill1' | 'dash' | 'jump';
+/**
+ * Os quadrados da barra. `skill0`: a 1ª habilidade da classe (no Q); `class1` e `class2`: a 2ª e a 3ª (no R e no T);
+ * `skill1`: o Fôlego. No jogo 2.5D a moldura tem 7 quadrados: Q, R, T, E, esquiva, defesa (o botão do motor) e pulo.
+ */
+export type ActionSlot = 'shot' | 'skill0' | 'class1' | 'class2' | 'skill1' | 'dash' | 'jump';
 
 export interface ActionDef {
   slot: ActionSlot;
   label: string;
   key: string;
   /**
-   * O ícone do botão, como URL (opcional): a habilidade da classe no `skill0` (o motor passa o `skillIconUrl(id)`); sem
-   * ele, o ícone pintado do lugar (`actionIconUrl`).
+   * O ícone do botão, como URL (opcional): as habilidades da classe no `skill0`, `class1` e `class2` (o motor passa o
+   * `skillIconUrl(id)`); sem ele, o ícone pintado do lugar (`actionIconUrl`).
    */
   icon?: string;
 }

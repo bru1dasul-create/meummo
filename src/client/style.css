@@ -2790,18 +2790,20 @@ body.jogo-novo #actions {
   z-index: 5;
   left: 50%;
   bottom: env(safe-area-inset-bottom);
-  width: calc(887px * var(--as));
+  width: calc(995px * var(--as));
   height: calc(234px * var(--as));
   display: block;
   transform: translateX(-50%);
-  background: url('/assets/ui/hud/habilidades-moldura.webp') 0 0 / 100% 100% no-repeat;
+  /* a moldura de 7 quadrados (995 x 234): a de 6 (habilidades-moldura.webp, recortada da imagem do dono) com um
+     quadrado a mais no meio e o enfeite no meio de novo (veja docs/ARTE.md) */
+  background: url('/assets/ui/hud/habilidades-moldura-7.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 -1px 3px rgba(0, 0, 0, 0.5));
   pointer-events: none;
 }
 
-/* quadrados da moldura: bordunada, fôlego, esquiva, a defesa (4º), o pulo (5º) e o 6º vazio (para a próxima
-   habilidade). O tiro não fica na barra no computador: é o clique (pedido do dono, 14/11: "o J não é habilidade"); no
-   celular ele é o botão grande do canto (lá embaixo, no fim do arquivo) */
+/* quadrados da moldura: as três habilidades da classe (Q, R e T), o fôlego (E), a esquiva, a defesa (6º, o botão do
+   motor) e o pulo (7º). Os da classe ficam vazios até ter ponto. O tiro não fica na barra no computador: é o clique
+   (pedido do dono, 14/11: "o J não é habilidade"); no celular ele é o botão grande do canto (no fim do arquivo) */
 body.jogo-novo .action {
   --i: 0;
   position: absolute;
@@ -2828,17 +2830,37 @@ body.jogo-novo .action[data-slot='skill0'] {
   --i: 0;
 }
 
-body.jogo-novo .action[data-slot='skill1'] {
+body.jogo-novo .action[data-slot='class1'] {
   --i: 1;
 }
 
-body.jogo-novo .action[data-slot='dash'] {
+body.jogo-novo .action[data-slot='class2'] {
   --i: 2;
 }
 
-/* pular: no 5º quadrado (o 4º é o da defesa) */
-body.jogo-novo .action[data-slot='jump'] {
+body.jogo-novo .action[data-slot='skill1'] {
+  --i: 3;
+}
+
+body.jogo-novo .action[data-slot='dash'] {
   --i: 4;
+}
+
+/* pular: no 7º quadrado (o 6º é o da defesa) */
+body.jogo-novo .action[data-slot='jump'] {
+  --i: 6;
+}
+
+/* PONTE, até a [estrutura] trocar os botões provisórios (skillButtons.ts) pelos quadrados 'class1' e 'class2': a 2ª e a
+   3ª habilidade da classe já vão para o lugar delas (o estilo de lá punha no 6º quadrado, que agora é o da defesa) */
+html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='1'] {
+  --i: 1;
+  top: calc(103px * var(--as));
+}
+
+html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='2'] {
+  --i: 2;
+  top: calc(103px * var(--as));
 }
 
 body.jogo-novo .action:hover,
@@ -2958,10 +2980,10 @@ body.jogo-novo #guard-button .key[data-key='Shift']::after {
   filter: drop-shadow(0 1px 1px #000);
 }
 
-/* defesa (botão do motor): no 4º quadrado, com o ícone pintado (a variável vem de ui.ts) */
+/* defesa (botão do motor): no 6º quadrado, com o ícone pintado (a variável vem de ui.ts) */
 body.jogo-novo #guard-button {
   z-index: 6;
-  left: calc(50% - 887px * var(--as) / 2 + (123px + 3 * 107.8px) * var(--as));
+  left: calc(50% - 995px * var(--as) / 2 + (123px + 5 * 107.8px) * var(--as));
   right: auto;
   top: auto;
   bottom: calc(env(safe-area-inset-bottom) + 36px * var(--as));
@@ -3215,7 +3237,7 @@ body.jogo-novo .tracker-bar > div {
 
 /* ---------------------------------------------------------------- chat no painel escuro com borda de bronze */
 body.jogo-novo #chat {
-  width: clamp(220px, calc(50vw - 887px * var(--as) / 2 - 22px), 380px);
+  width: clamp(220px, calc(50vw - 995px * var(--as) / 2 - 22px), 380px);
 }
 
 body.jogo-novo #chat-log {
@@ -3544,29 +3566,60 @@ body.jogo-novo .talk-chip img {
     border-radius: 18px;
   }
 
-  body.jogo-novo .action[data-slot='skill0'] {
+  /* a 2ª e a 3ª habilidade da classe numa fileira em cima (ficam vazias até ter ponto) */
+  body.jogo-novo .action[data-slot='class1'] {
     grid-area: 1 / 1;
   }
 
-  body.jogo-novo .action[data-slot='skill1'] {
+  body.jogo-novo .action[data-slot='class2'] {
     grid-area: 1 / 2;
   }
 
-  body.jogo-novo .action[data-slot='jump'] {
+  body.jogo-novo .action[data-slot='skill0'] {
     grid-area: 2 / 1;
+  }
+
+  body.jogo-novo .action[data-slot='skill1'] {
+    grid-area: 2 / 2;
+  }
+
+  body.jogo-novo .action[data-slot='jump'] {
+    grid-area: 3 / 1;
     position: relative;
     right: auto;
     bottom: auto;
   }
 
   body.jogo-novo .action[data-slot='dash'] {
-    grid-area: 2 / 2;
+    grid-area: 3 / 2;
+  }
+
+  /* PONTE (veja a do computador): os botões provisórios da classe na fileira de cima */
+  html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index] {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    top: auto;
+  }
+
+  html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='1'] {
+    grid-area: 1 / 1;
+  }
+
+  html body.jogo-novo #actions .action.extra-skill.extra-skill[data-index='2'] {
+    grid-area: 1 / 2;
   }
 }
 
 @media (pointer: coarse) and (orientation: landscape) {
   body.jogo-novo #actions {
     right: calc(112px + env(safe-area-inset-right));
+  }
+
+  /* o aviso rápido sobe para cima da defesa (antes ficava atrás dela) */
+  body.jogo-novo #toast {
+    bottom: calc(232px + env(safe-area-inset-bottom));
   }
 
   body.jogo-novo .action[data-slot='shot'] {
@@ -3590,12 +3643,17 @@ body.jogo-novo .talk-chip img {
     bottom: calc(112px + env(safe-area-inset-bottom));
   }
 
+  /* o aviso rápido fica acima dos botões e da mochila (antes ficava atrás da defesa) */
+  body.jogo-novo #toast {
+    bottom: calc(410px + env(safe-area-inset-bottom));
+  }
+
   body.jogo-novo .action[data-slot='shot'] {
     right: 0;
     bottom: -100px;
   }
 
   body:has(canvas.mundo-novo) #bag-button {
-    bottom: calc(264px + env(safe-area-inset-bottom));
+    bottom: calc(340px + env(safe-area-inset-bottom));
   }
 }

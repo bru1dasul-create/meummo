@@ -19,6 +19,7 @@ import { coinUrl } from '../coinArt';
 import { itemIconUrl } from '../itemArt';
 import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
 import { drawRainAim as paintRainAim, drawRainAir as paintRainAir, drawRainGround as paintRainGround, RAIN_LINGER_MS } from './rainArt';
+import { paintSpiritAim, paintSpiritEnd, paintSpiritMark, SPIRIT_END_MS } from './spiritArt';
 
 /** A altura (metros) em que os projéteis voam no desenho. */
 export const SHOT_DRAW_Z = 0.9;
@@ -190,9 +191,7 @@ interface SpiritEnd {
   start: number;
 }
 
-/** Quanto dura o brilho do fim da Flecha Ancestral (e a explosão abrindo). */
-const SPIRIT_END_MS = 420;
-/** A cor do espírito (a Flecha Ancestral, a marca e a explosão), até a [arte] fazer a de verdade. */
+/** A cor do espírito do spiritArrow provisório (a Flecha voando agora vem do drawProjectile, em spiritArt.ts). */
 const SPIRIT = [130, 255, 200] as const;
 
 /** A queda do item: do alto do monstro até o chão, com um quique, nesse tempo (o servidor espera 0,4 s para deixar pegar). */
@@ -747,27 +746,8 @@ export class CombatLayer {
     if (!aim) return;
     const ctx = this.ctx;
     if (aim.line) {
-      // a faixa do chão por onde a flecha passa (quem estiver nela leva)
-      const angle = Math.atan2(aim.y - aim.from.y, aim.x - aim.from.x);
-      const nx = -Math.sin(angle) * aim.r;
-      const ny = Math.cos(angle) * aim.r;
-      const corners = [
-        screen(aim.from.x + nx, aim.from.y + ny),
-        screen(aim.x + nx, aim.y + ny),
-        screen(aim.x - nx, aim.y - ny),
-        screen(aim.from.x - nx, aim.from.y - ny),
-      ];
-      ctx.save();
-      ctx.beginPath();
-      corners.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-      ctx.closePath();
-      ctx.fillStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0.14)`;
-      ctx.fill();
-      ctx.setLineDash([7, 6]);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0.85)`;
-      ctx.stroke();
-      ctx.restore();
+      // a faixa do chão por onde a flecha passa (quem estiver nela leva): o desenho é da [arte], em spiritArt.ts
+      paintSpiritAim(ctx, aim, now, screen, meter);
       return;
     }
     paintRainAim(ctx, aim, now, screen, meter);
@@ -829,56 +809,21 @@ export class CombatLayer {
     ctx.restore();
   }
 
-  /** O fim da Flecha Ancestral (o brilho e, com raio, a explosão abrindo) e as runas dos bichos marcados. */
+  /**
+   * O fim da Flecha Ancestral (o espírito se desfazendo ou, com raio, a explosão) e as runas dos bichos marcados: o
+   * desenho é da [arte], em spiritArt.ts.
+   */
   private drawSpirit(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
     const ctx = this.ctx;
     this.spiritEnds = this.spiritEnds.filter((end) => now - end.start < SPIRIT_END_MS);
-    for (const end of this.spiritEnds) {
-      const k = (now - end.start) / SPIRIT_END_MS;
-      const m = meter(end.x, end.y);
-      const p = screen(end.x, end.y, 0.6);
-      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, m * (0.4 + 0.4 * k));
-      glow.addColorStop(0, `rgba(235, 255, 245, ${(0.9 * (1 - k)).toFixed(3)})`);
-      glow.addColorStop(1, `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, 0)`);
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, m * (0.4 + 0.4 * k), 0, Math.PI * 2);
-      ctx.fill();
-      if (end.r > 0) {
-        this.groundCircle(end.x, end.y, end.r * (0.35 + 0.65 * Math.min(1, k * 1.6)), screen);
-        ctx.fillStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, ${(0.28 * (1 - k)).toFixed(3)})`;
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, ${(0.9 * (1 - k)).toFixed(3)})`;
-        ctx.stroke();
-      }
-    }
+    for (const end of this.spiritEnds) paintSpiritEnd(ctx, end, now, screen, meter);
     for (const [id, until] of this.marked) {
       const feet = now < until ? feetOf(id) : null;
       if (!feet) {
         if (now >= until) this.marked.delete(id);
         continue;
       }
-      // a runa do espírito em cima da cabeça, pulsando (pisca no último segundo)
-      const m = meter(feet.x, feet.y);
-      const p = screen(feet.x, feet.y, BODY_HEIGHT + 0.42);
-      const size = m * (0.16 + 0.02 * Math.sin(now / 140));
-      const alpha = until - now < 1000 ? 0.45 + 0.45 * Math.abs(Math.sin(now / 90)) : 0.9;
-      ctx.save();
-      ctx.shadowColor = `rgb(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]})`;
-      ctx.shadowBlur = 8;
-      ctx.fillStyle = `rgba(${SPIRIT[0]}, ${SPIRIT[1]}, ${SPIRIT[2]}, ${alpha.toFixed(3)})`;
-      ctx.strokeStyle = `rgba(20, 60, 40, ${alpha.toFixed(3)})`;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y - size);
-      ctx.lineTo(p.x + size * 0.7, p.y);
-      ctx.lineTo(p.x, p.y + size);
-      ctx.lineTo(p.x - size * 0.7, p.y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
+      paintSpiritMark(ctx, feet, until, now, screen, meter);
     }
   }
 

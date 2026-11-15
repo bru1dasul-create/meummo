@@ -696,22 +696,33 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   anel que fecha até o meio mostra quando caem; a mira é o círculo dourado da HUD com os dentes girando, a estrelinha
   no meio e o arco pontilhado do tiro. A janela das Habilidades com a moldura da mochila, o "+" redondo dourado e a
   insígnia dos pontos (só o CSS do `skillsPanel.ts`)
-- [ ] **[arte]** Mais quadrados na barra para as habilidades 2 a 5 (um `ActionSlot` novo no `ui.ts`, no PC e no celular;
-  a [estrutura] passa a usar e apaga o botão provisório do `skillButtons.ts`)
+- [x] **[arte]** Mais quadrados na barra para as habilidades da classe (15/11): os `ActionSlot` `class1` (R) e `class2`
+  (T) no `ui.ts`; no PC, a moldura de 7 quadrados (Q, R, T, E, esquiva, defesa, pulo), feita da pintada de 6 com um
+  quadrado a mais e o enfeite de novo no meio; no celular, uma fileira (R e T) em cima do 2×2. Até a [estrutura] trocar
+  os botões provisórios (`skillButtons.ts`) pelos quadrados novos, o CSS põe os provisórios no lugar deles (pelo
+  `data-index`). O 4º e o 5º esperam o Chamado e a Fúria (pausados)
 - [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
   uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
   com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
   (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
-- [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
-  runa da marca) e o quadrado dela na barra (hoje um botão provisório do motor). O `R` no "Como jogar" já foi (15/11)
+- [x] **[arte]** O desenho da Flecha Ancestral (15/11, `src/client/novo/spiritArt.ts`, com o "pode" da [estrutura] para
+  as trocas no `combat.ts`): a flecha de luz verde com a espiral do espírito enrolando no rastro, as luzinhas e a luz no
+  chão (pelo `drawProjectile`); a mira é a faixa dourada com as setas andando para a frente e o fio verde no meio; no
+  fim, o espírito se desfaz em luzinhas subindo e, com 5 pontos, explode (a coluna de luz, a onda no chão até o raio e
+  os raios); a marca é a runa do espírito (o losango com a espiral, como o enfeite da barra) em cima do bicho e o anel
+  tracejado no pé, piscando no último segundo. O quadrado dela na barra é o `class1` (veja acima)
 - [x] **[estrutura]** Passo 3 (15/11, com o "pode" do dono): os **Olhos de Gavião** (nível 10, tecla `T`): por 8 a 16 s
   enxerga mais longe (+50% a +100%: os bichos de longe chegam e aparecem no mini mapa e no mapa do M), cada bicho ganha
   a etiqueta do nível na cor do perigo (verde, amarelo, vermelho) por cima das árvores e do escuro, e com 3 pontos eles
   levam +10% a +20% de dano seu. Recarga 30 s. Protocolo 39. Etiquetas provisórias (HTML); "revelar o que está
   escondido" fica para quando houver um bicho escondido
-- [ ] **[arte]** Os Olhos de Gavião: o destaque de verdade (o contorno do bicho, no lugar das etiquetas de
-  `hawkTags.ts`), afastar a câmera enquanto valem (hoje a view trava no zoom 0,7), o quadrado da 3ª habilidade na
-  barra (hoje um botão provisório em cima do 6º quadrado) e o `T` no "Como jogar"
+- [x] **[arte]** Os Olhos de Gavião, o desenho (15/11, na PD.View): `highlight(lista)` desenha, por cima das copas e do
+  escuro, o contorno de cada bicho na cor do perigo (a silhueta do próprio desenho, engordada), o corpo meio
+  transparente na mesma cor e o selo "Nv" em cima; `setVision(porcento)` afasta a câmera com suavidade (até 1/(1 +
+  0,35 × visão), passando do limite do zoom do jogador; o `setZoom` continua devolvendo só o zoom do jogador); a ação
+  `'hawk'` acende os olhos de quem usou (dourados, com o risco de luz) e os seus ficam brilhando de leve enquanto valem.
+  O quadrado é o `class2` e o `T` no "Como jogar" já foi. Falta a [estrutura] ligar no motor (os nomes combinados) e
+  apagar o `hawkTags.ts`
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

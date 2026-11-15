@@ -6,7 +6,10 @@ import type { ActionSlot } from './ui';
 import { drawIcon, type IconArt } from './itemArt';
 import { paintedActionIcon } from './paintedIcons';
 
-const ICONS: Record<ActionSlot, IconArt> = {
+/** Os quadrados com desenho próprio (os da classe, `class1` e `class2`, sempre vêm com o ícone da habilidade). */
+type BaseSlot = Exclude<ActionSlot, 'class1' | 'class2'>;
+
+const ICONS: Record<BaseSlot, IconArt> = {
   // Estilingue: forquilha de madeira com o elástico vermelho
   shot: {
     colors: { D: '#9a6a3a', d: '#5e3c1e', r: '#e0533f', s: '#b9b2a4' },
@@ -119,14 +122,16 @@ const ICONS: Record<ActionSlot, IconArt> = {
   },
 };
 
-const urls = new Map<ActionSlot, string>();
+const urls = new Map<BaseSlot, string>();
 
 /** Jogo 2.5D aberto (main.ts marca o body)? */
 function newWorld(): boolean {
   return document.body.classList.contains('jogo-novo');
 }
 
-export function actionIconUrl(slot: ActionSlot): string {
+export function actionIconUrl(which: ActionSlot): string {
+  // (sem o ícone da habilidade, um quadrado da classe mostra o do 1º)
+  const slot: BaseSlot = which === 'class1' || which === 'class2' ? 'skill0' : which;
   if (newWorld()) return paintedActionIcon(slot);
   let url = urls.get(slot);
   if (!url) {

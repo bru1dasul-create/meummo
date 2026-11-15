@@ -46,6 +46,10 @@
       this.cam = new PD.IsoCamera();
       this.map = tmj && tmj.kind === 'tmj' ? tmj : PD.tmj.toMap(tmj);
       this.zoomUser = 1;
+      // Olhos de Gavião: o quanto a câmera afasta (setVision) e os bichos destacados (highlight)
+      this.visionWant = 0;
+      this.visionK = 1;
+      this._highlights = null;
       this.actors = new Map();
       this.followId = null;
       this.camTarget = null;
@@ -138,9 +142,37 @@
     action(id, kind, angle) {
       const a = this.actors.get(id);
       if (!a) return;
+      if (kind === 'hawk') {
+        // os Olhos de Gavião (o seu ou o de outro jogador): os olhos acendem dourados por um instante
+        if (!a.creature) a.hawkAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        return;
+      }
       const yaw = Number.isFinite(angle) ? rad(angle) : undefined;
       if (a.creature) a.creature.action(kind, yaw);
       else this._personAction(a, kind, yaw);
+    }
+
+    /**
+     * Olhos de Gavião: quanto mais longe enxerga (o `visaoPorcento` do ponto, de 50 a 100; 0 = normal). A câmera
+     * afasta com suavidade (passando do limite do zoom do jogador) e volta quando chega o 0.
+     */
+    setVision(percent) {
+      const v = Number.isFinite(percent) ? M.clamp(percent, 0, 200) / 100 : 0;
+      this.visionWant = v;
+    }
+
+    /**
+     * Olhos de Gavião: os bichos destacados agora (o motor manda a cada quadro; lista vazia = nenhum), cada um com a
+     * cor do perigo e o nível. O contorno e o selo do nível ficam por cima de tudo (das copas e do escuro).
+     */
+    highlight(list) {
+      if (!list || !list.length) {
+        this._highlights = null;
+        return;
+      }
+      const next = new Map();
+      for (const h of list) if (h && Number.isFinite(h.id)) next.set(h.id, { color: h.color || '#f2c14e', level: h.level | 0 });
+      this._highlights = next;
     }
 
     /**
@@ -412,7 +444,7 @@
       cam.dpr = dpr;
       cam.viewW = w;
       cam.viewH = h;
-      const z = this._baseZoom(w, h) * this.zoomUser;
+      const z = this._baseZoom(w, h) * this.zoomUser * (this.visionK || 1);
       if (Math.abs(z - cam.zoom) > 1e-4 || (this.world && this.world._dpr !== dpr)) {
         cam.zoom = z;
         if (this.world) {
@@ -472,8 +504,24 @@
       const t = now ?? (typeof performance !== 'undefined' ? performance.now() : Date.now());
       const dt = this.last ? Math.min(0.05, Math.max(0, (t - this.last) / 1000)) : 1 / 60;
       this.last = t;
+      // Olhos de Gavião: a câmera afasta até 1/(1 + 0,35 × visão) e volta (uns 0,6 s)
+      const visionGoal = 1 / (1 + 0.35 * (this.visionWant || 0));
+      if (Math.abs(this.visionK - visionGoal) > 1e-3) this.visionK = M.damp(this.visionK, visionGoal, 4.5, dt);
+      else this.visionK = visionGoal;
       this._resize();
       for (const a of this.actors.values()) this._drive(a, dt);
+      // o brilho dourado nos olhos de quem usou os Olhos de Gavião (e, fraco, nos seus enquanto valem)
+      for (const a of this.actors.values()) {
+        if (a.creature) continue;
+        let glow = 0;
+        if (a.hawkAt) {
+          const s = (t - a.hawkAt) / 1000;
+          glow = s < 0 ? 0 : s < 0.15 ? s / 0.15 : s < 1.2 ? 1 : Math.max(0, 1 - (s - 1.2) / 0.5);
+          if (s > 1.8) a.hawkAt = 0;
+        }
+        if (a.id === this.followId && this.visionWant > 0) glow = Math.max(glow, 0.45);
+        a.eyeGlow = glow;
+      }
       // quem a câmera segue é sempre gente (a PD.World lê o passo e o pulo dele)
       let hero = this.actors.get(this.followId);
       if (!hero || hero.creature) hero = [...this.actors.values()].find((a) => !a.creature);
@@ -521,6 +569,7 @@
       this.world.draw(ctx, actors);
       this._drawAtmosphere(ctx);
       this._drawVeilMotes(ctx);
+      this._drawHawk(ctx);
       this._drawNames(ctx);
       this._drawSpeech(ctx);
     }
@@ -842,6 +891,128 @@
       fl.globalAlpha = 1;
     }
 
+    /** Uma tela de rascunho do destaque (a silhueta e o contorno), do tamanho pedido (só cresce). */
+    _hawkCanvas(i, w, h) {
+      const list = this._hawkCanvases || (this._hawkCanvases = []);
+      let c = list[i];
+      if (!c) c = list[i] = document.createElement('canvas');
+      if (c.width < w || c.height < h) {
+        c.width = Math.max(c.width, Math.ceil(w));
+        c.height = Math.max(c.height, Math.ceil(h));
+      }
+      return c;
+    }
+
+    /**
+     * Olhos de Gavião (highlight): cada bicho destacado ganha, por cima de tudo, o contorno na cor do perigo (com
+     * brilho), o corpo meio transparente na mesma cor (aparece atrás da árvore e no escuro) e o selo do nível em cima.
+     * A silhueta sai do próprio desenho do bicho: ele é pintado numa tela de rascunho, vira uma cor só, é engordado em
+     * 8 direções e tem o miolo tirado (sobra a borda).
+     */
+    _drawHawk(ctx) {
+      const list = this._highlights;
+      if (!list || !list.size) return;
+      const cam = this.cam;
+      const dpr = cam.dpr;
+      const t = this.world.time || 0;
+      const vx0 = cam.viewX, vy0 = cam.viewY, vx1 = vx0 + cam.viewW, vy1 = vy0 + cam.viewH;
+      const margin = 320 * cam.zoom;
+      for (const [id, h] of list) {
+        const a = this.actors.get(id);
+        if (!a || !a.ch || (a.creature && a.creature.dying !== null)) continue;
+        // o motor manda todos os bichos que conhece: os longe da tela nem montam o desenho
+        const foot = cam.p({ x: a.ch.pos.x, y: a.ch.pos.y, z: 0 });
+        if (foot.x < vx0 - margin || foot.x > vx1 + margin || foot.y < vy0 - margin || foot.y > vy1 + margin * 2) continue;
+        const d = this._actorDrawable(a);
+        const b = d.bounds;
+        if (!b || !(b.x1 > b.x0) || !(b.y1 > b.y0)) continue;
+        if (b.x1 < vx0 || b.x0 > vx1 || b.y1 < vy0 || b.y0 > vy1) continue;
+        const P = 5;
+        const x = Math.floor(b.x0 - P), y = Math.floor(b.y0 - P);
+        const w = Math.ceil(b.x1 - b.x0 + 2 * P), hh = Math.ceil(b.y1 - b.y0 + 2 * P);
+        if (w > 900 || hh > 900) continue;
+        const W = Math.ceil(w * dpr), H = Math.ceil(hh * dpr);
+        // a silhueta, numa cor só
+        const sil = this._hawkCanvas(0, W, H);
+        const sc = sil.getContext('2d');
+        sc.setTransform(1, 0, 0, 1, 0, 0);
+        sc.globalCompositeOperation = 'source-over';
+        sc.globalAlpha = 1;
+        sc.clearRect(0, 0, W, H);
+        sc.setTransform(dpr, 0, 0, dpr, -x * dpr, -y * dpr);
+        d.draw(sc);
+        sc.setTransform(1, 0, 0, 1, 0, 0);
+        sc.globalCompositeOperation = 'source-in';
+        sc.fillStyle = h.color;
+        sc.fillRect(0, 0, W, H);
+        sc.globalCompositeOperation = 'source-over';
+        // a borda: a silhueta engordada em 8 direções, menos ela mesma
+        const rim = this._hawkCanvas(1, W, H);
+        const rc = rim.getContext('2d');
+        rc.setTransform(1, 0, 0, 1, 0, 0);
+        rc.globalCompositeOperation = 'source-over';
+        rc.clearRect(0, 0, W, H);
+        const R = 2.4 * dpr;
+        for (let k = 0; k < 8; k++) {
+          const ang = (k * Math.PI) / 4;
+          rc.drawImage(sil, 0, 0, W, H, Math.cos(ang) * R, Math.sin(ang) * R, W, H);
+        }
+        rc.globalCompositeOperation = 'destination-out';
+        rc.drawImage(sil, 0, 0, W, H, 0, 0, W, H);
+        rc.globalCompositeOperation = 'source-over';
+        // na tela: o corpo meio transparente e a borda acesa, pulsando devagar
+        const pulse = 0.8 + 0.2 * Math.sin(t * 4.5 + id);
+        ctx.save();
+        ctx.globalAlpha = 0.1;
+        ctx.drawImage(sil, 0, 0, W, H, x, y, w, hh);
+        ctx.globalAlpha = pulse;
+        ctx.shadowColor = h.color;
+        ctx.shadowBlur = 10;
+        ctx.drawImage(rim, 0, 0, W, H, x, y, w, hh);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.drawImage(rim, 0, 0, W, H, x, y, w, hh);
+        ctx.restore();
+        this._hawkBadge(ctx, a, h, b);
+      }
+    }
+
+    /** O selo do nível em cima do bicho destacado: "Nv 3" na cor do perigo, numa plaquinha escura com borda acesa. */
+    _hawkBadge(ctx, a, h, b) {
+      const q = this._overHead(a);
+      const top = Math.min(q.y, b.y0);
+      const label = 'Nv ' + h.level;
+      ctx.save();
+      ctx.font = '800 11px ' + UI_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(label).width;
+      const bw = tw + 12, bh = 16;
+      const cx = q.x, cy = top - 14 - (a.name ? 14 : 0);
+      const r = bh / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - bw / 2 + r, cy - r);
+      ctx.lineTo(cx + bw / 2 - r, cy - r);
+      ctx.arc(cx + bw / 2 - r, cy, r, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(cx + 4, cy + r);
+      ctx.lineTo(cx, cy + r + 5);
+      ctx.lineTo(cx - 4, cy + r);
+      ctx.lineTo(cx - bw / 2 + r, cy + r);
+      ctx.arc(cx - bw / 2 + r, cy, r, Math.PI / 2, (Math.PI * 3) / 2);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(14, 11, 7, 0.88)';
+      ctx.shadowColor = h.color;
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = h.color;
+      ctx.stroke();
+      ctx.fillStyle = h.color;
+      ctx.fillText(label, cx, cy + 0.5);
+      ctx.restore();
+    }
+
     /** Ponto da tela logo acima da cabeça (penas incluídas): onde ficam o nome e o balão. Segue o agachar e o pulo. */
     _overHead(a) {
       if (a.creature) {
@@ -971,7 +1142,10 @@
       const painter = a.renderer;
       const cam = this.cam;
       const alpha = this._conversationAlpha(a);
-      const paint = (c) => painter.draw(c, rig, ch.look, ch.equipped, a.appearance || PD.classes.appearanceOf(ch));
+      const paint = (c) => {
+        if (ch.look) ch.look.eyeGlow = a.eyeGlow || 0;
+        painter.draw(c, rig, ch.look, ch.equipped, a.appearance || PD.classes.appearanceOf(ch));
+      };
       return {
         entity: ch,
         primary: a.id === this.followId,

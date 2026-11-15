@@ -1189,7 +1189,8 @@
         const rx = Math.hypot(ix.x, ix.y);
         const ry = Math.hypot(iy.x, iy.y);
         const rot = Math.atan2(ix.y, ix.x);
-        ctx.fillStyle = PAL.iris;
+        // Olhos de Gavião (look.eyeGlow, da view): a íris fica dourada
+        ctx.fillStyle = (look.eyeGlow || 0) > 0.3 ? '#e8a514' : PAL.iris;
         ctx.beginPath();
         ctx.ellipse(ic.x, ic.y, Math.max(0.4, rx), Math.max(0.4, ry * 1.1), rot, 0, M.TAU);
         ctx.fill();
@@ -1238,6 +1239,33 @@
         ctx.moveTo(half[0].x, half[0].y);
         for (const q of half) ctx.lineTo(q.x, q.y);
         ctx.stroke();
+      }
+      // Olhos de Gavião: o brilho dourado em volta do olho e o risco de luz do olhar
+      const glow = clamp01(look.eyeGlow || 0);
+      if (glow > 0.01 && blink < 0.85) {
+        const ec = this.P(c.pt);
+        const e0 = pt(-w, 0), e1 = pt(w, 0);
+        const ew = Math.max(1.5, Math.hypot(e1.x - e0.x, e1.y - e0.y) / 2);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const R = ew * 4.2;
+        const g = ctx.createRadialGradient(ec.x, ec.y, 0, ec.x, ec.y, R);
+        g.addColorStop(0, `rgba(255, 238, 160, ${(0.9 * glow).toFixed(3)})`);
+        g.addColorStop(0.35, `rgba(255, 196, 60, ${(0.45 * glow).toFixed(3)})`);
+        g.addColorStop(1, 'rgba(255, 170, 30, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(ec.x, ec.y, R, 0, M.TAU);
+        ctx.fill();
+        const s0 = pt(-w * 3.4, tilt * -1.7), s1 = pt(w * 3.4, tilt * 1.7);
+        ctx.strokeStyle = `rgba(255, 244, 196, ${(0.75 * glow).toFixed(3)})`;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(0.9, ew * 0.3);
+        ctx.beginPath();
+        ctx.moveTo(s0.x, s0.y);
+        ctx.lineTo(s1.x, s1.y);
+        ctx.stroke();
+        ctx.restore();
       }
       // sobrancelha grossa, mais baixa no meio (cara de determinado)
       const B = MOD.HEAD.brow;

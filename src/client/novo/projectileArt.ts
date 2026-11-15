@@ -1,12 +1,15 @@
 // ARQUIVO DA [ARTE]: o desenho dos tiros que voam no jogo 2.5D. O combate (combat.ts, da [estrutura]) calcula onde o
 // tiro está e chama daqui; o que esta peça não sabe desenhar volta `false` e o combate desenha a bolinha de sempre.
-//   drawProjectile(ctx, tipo, noAr, sombra, aFrente, pxPorMetro) → true se desenhou (hoje: a 'flecha' do Arco de Bambu)
+//   drawProjectile(ctx, tipo, noAr, sombra, aFrente, pxPorMetro) → true se desenhou (hoje: a 'flecha' do Arco de Bambu
+//                                               e a 'ancestral', a Flecha Ancestral, que vem do spiritArt.ts)
 //   projectileEnded(tipo, x, y, angulo, agora, preso?)  o tiro parou sem acertar ninguém: no fim do alcance a flecha
 //                                               crava no chão; com `preso` ({ on, z }: bateu em algo do mapa) crava na
 //                                               madeira, quica na pedra ou some na água; a pedra levanta poeira
 //   drawLanded(ctx, tela, pxPorMetro, agora)    as flechas paradas, os respingos e a poeira (somem depois), a cada quadro
 //   landedBusy(agora)                           ainda tem algo disso à vista (a camada do combate não pode sumir)
 // Posições em metros (as do combate); `angulo` em radianos no chão, para onde o tiro ia.
+
+import { drawSpiritArrow } from './spiritArt';
 
 type Point = { x: number; y: number };
 
@@ -100,6 +103,10 @@ function arrow(ctx: CanvasRenderingContext2D, tail: Point, tip: Point, px: numbe
  * pouco à frente na direção do voo (para virar a flecha) e `m` quantos px tem um metro ali.
  */
 export function drawProjectile(ctx: CanvasRenderingContext2D, kind: string, at: Point, shadow: Point, ahead: Point, m: number): boolean {
+  if (kind === 'ancestral') {
+    drawSpiritArrow(ctx, at, shadow, ahead, m, performance.now());
+    return true;
+  }
   if (kind !== 'flecha') return false;
   const dx = ahead.x - at.x;
   const dy = ahead.y - at.y;

@@ -899,6 +899,31 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
   amarela da vitrine, a branca da porta e a poça no chão.
 - Conferir: `budega-fotos.cjs` (scratchpad: fachada, dentro e noite; `celular` no fim).
 
+### Caçador, parte 3 (15/11, com o "Ok, pode ir" do dono; os nomes dos ganchos combinados com a [estrutura])
+- **Barra:** `ActionSlot` `class1` (R) e `class2` (T) no `ui.ts` (o `actionArt.ts` usa o ícone do 1º quadrado se faltar
+  o da habilidade). PC: a moldura `habilidades-moldura-7.webp` (995 × 234), feita da de 6 (que fica como a fonte) por
+  `barra/moldura7.py` no scratchpad: tira o enfeite do meio e refaz a corda com um trecho limpo, põe uma volta inteira
+  (108 px) no vão entre o 3º e o 4º quadrado, com degradê na emenda, e recoloca o enfeite no meio novo. Ordem: Q, R, T, E,
+  esquiva, defesa (o `#guard-button`, no 6º) e pulo; o chat usa a largura nova. Celular: a fileira R/T em cima do 2×2 (a
+  mochila em pé subiu para 340 px) e o aviso rápido acima dos botões. PONTE no `style.css`: os botões provisórios da
+  [estrutura] (`.extra-skill` com `data-index` 1 e 2) vão para os quadrados novos; sai quando ela trocar.
+- **Flecha Ancestral:** `src/client/novo/spiritArt.ts`. O voo vem pelo `drawProjectile` (`drawSpiritArrow`: a fita de
+  luz, a espiral de dois fios girando, as luzinhas largadas e a flecha de luz com o clarão na ponta). No `combat.ts`
+  (com o "pode" da [estrutura]): `paintSpiritAim` (a faixa dourada com setas andando), `paintSpiritEnd` (sem raio, o
+  espírito se desfaz em 560 ms; com raio, a explosão em `SPIRIT_END_MS` = 720 ms) e `paintSpiritMark` (a runa a 2,02 m
+  e o anel no pé). O `spiritArrow` e o `groundCircle` do combate ficaram sem uso (a [estrutura] apaga).
+- **Olhos de Gavião** (view.js): `highlight(lista)` (a cada quadro, do motor; só os bichos perto da tela montam o
+  desenho): a silhueta sai do próprio `drawable` do bicho pintado numa tela de rascunho (`_hawkCanvas`), vira uma cor,
+  é engordada em 8 direções e perde o miolo (sobra a borda, com brilho), mais o corpo a 10% e o selo "Nv" em cima.
+  `setVision(porcento)`: `visionK` vai até 1/(1 + 0,35 × visão) (amortecido) e entra no `_resize` depois do zoom do
+  jogador. A ação `'hawk'` liga `a.hawkAt`; o quadro passa `a.eyeGlow` para o `ch.look.eyeGlow` e o `renderer.js`
+  (`_eye`) pinta a íris dourada, o brilho e o risco de luz.
+- Conferir: a prancha `espirito/entry.ts` (esbuild + `prancha.cjs`), e no jogo `cacador3.cjs` (barra, voo e o Gavião
+  pelos ganchos chamados do teste), `ancestral-jogo.cjs` (`LONGE=1` afasta a câmera para ver a explosão a 14 m; o 6º
+  argumento `filhote_boitata` e `noite` para ver a runa: os tatus morrem de uma flechada) e `barra-celular.cjs`. O banco
+  de teste com o Caçador nível 14 é `jogo-novo/cacador.db` (personagens `Cacador` e `CacadorCel`). O mouse precisa
+  passar por cima do jogo antes de segurar o R (senão o motor usa sozinho, mirando onde pega mais bichos).
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
