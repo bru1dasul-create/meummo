@@ -118,6 +118,8 @@ const COMBAT_NUMBERS: CombatNumber[] = [
   },
   { parte: 'carga', campo: 'alcanceMinimo', rotulo: 'Alcance sem carga (m)', tipo: 'numero', min: 2, max: 20, dica: 'no mapa novo', ler: (r) => r.chargeRangeMin },
   { parte: 'carga', campo: 'alcanceMaximo', rotulo: 'Alcance com a carga cheia (m)', tipo: 'numero', min: 2, max: 20, dica: 'no mapa novo', ler: (r) => r.chargeRangeMax },
+  { parte: 'carga', campo: 'espalhaCorrendo', rotulo: 'Atirar correndo: o tiro espalha até (graus)', tipo: 'numero', min: 0, max: 45, dica: 'para cada lado', ler: (r) => r.shotSpreadRunDeg },
+  { parte: 'carga', campo: 'espalhaAndando', rotulo: 'Atirar andando devagar: espalha até (graus)', tipo: 'numero', min: 0, max: 45, dica: 'puxando, anda devagar', ler: (r) => r.shotSpreadWalkDeg },
   {
     parte: 'defesa',
     campo: 'seguraPorcento',
@@ -233,6 +235,8 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
     guardBreakMs: d.quebradaMs!,
     guardRearmEnergy: d.energiaParaLevantar!,
     guardWalkFactor: d.andarPorcento! / 100,
+    shotSpreadRunDeg: c.espalhaCorrendo!,
+    shotSpreadWalkDeg: c.espalhaAndando!,
     guardPushFactor: 1 - r.defesaSeguraPorcento! / 100,
     guardBreakPushFactor: 1 - r.defesaQuebradaPorcento! / 100,
     dayMs: n.diaMinutos! * 60_000,

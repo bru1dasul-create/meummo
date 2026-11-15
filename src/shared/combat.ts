@@ -3,7 +3,7 @@
 
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
 import type { Tile, Walkable } from './map';
-import { SHOT_COOLDOWN_MS, SHOT_RANGE, SHOT_SPEED } from './constants';
+import { SHOT_COOLDOWN_MS, SHOT_MIN_RANGE, SHOT_RANGE, SHOT_SPEED } from './constants';
 import type { CombatRules } from './combatRules';
 import type { ShotKind, WeaponShot } from './items';
 import { canStep } from './movement';
@@ -44,6 +44,31 @@ export function chargeFraction(heldMs: number, shot: Pick<ShotProfile, 'chargeMs
 /** Alcance do tiro com esta carga: no mapa novo, do alcance sem carga ao da carga cheia; no antigo, o de sempre. */
 export function chargedRange(charge: number, metric: boolean, shot: Pick<ShotProfile, 'rangeMin' | 'rangeMax'>): number {
   return metric ? shot.rangeMin + (shot.rangeMax - shot.rangeMin) * charge : SHOT_RANGE;
+}
+
+/**
+ * O tiro cai onde foi mirado: `aimed` é a distância até o ponto da mira (sem ela, vai até o fim). Nunca passa do
+ * alcance da carga (mais puxada = mais longe) nem fica mais perto que SHOT_MIN_RANGE.
+ */
+export function aimedRange(range: number, aimed: number | undefined): number {
+  if (aimed === undefined || !Number.isFinite(aimed)) return range;
+  return Math.min(range, Math.max(SHOT_MIN_RANGE, aimed));
+}
+
+/** Como estava quem atirou: parado, andando devagar ou correndo. */
+export type ShotStance = 'still' | 'walk' | 'run';
+
+/**
+ * Quanto o tiro número `cid` desvia da mira (radianos): parado, nada; andando, até shotSpreadWalkDeg; correndo, até
+ * shotSpreadRunDeg, para um lado ou para o outro. Sai do número do tiro, para o navegador e o servidor fazerem a mesma
+ * conta (o desenho do tiro bate com o de verdade).
+ */
+export function shotSpread(cid: number, stance: ShotStance, rules: Pick<CombatRules, 'shotSpreadRunDeg' | 'shotSpreadWalkDeg'>): number {
+  const max = stance === 'run' ? rules.shotSpreadRunDeg : stance === 'walk' ? rules.shotSpreadWalkDeg : 0;
+  if (max <= 0) return 0;
+  const noise = Math.sin(cid * 12.9898 + 4.1414) * 43758.5453;
+  const unit = (noise - Math.floor(noise)) * 2 - 1; // de -1 a 1
+  return (unit * max * Math.PI) / 180;
 }
 
 /** Dano do tiro com esta carga (carga cheia, no padrão: o dobro). */

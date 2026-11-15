@@ -22,6 +22,7 @@ import {
   REGEN_EVERY_MS,
   REGEN_FRACTION,
   SHOT_HIT_RADIUS,
+  SHOT_MOVING_MS,
   SHOT_RANGE,
   STEP_MS,
   TICK_MS,
@@ -52,8 +53,11 @@ import {
   chargeFraction,
   chargedDamage,
   chargedRange,
+  aimedRange,
+  shotSpread,
   shotProfile,
   type ShotProfile,
+  type ShotStance,
   tileIn,
 } from '../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../shared/combatRules';
@@ -80,6 +84,7 @@ import {
   spentPoints,
   type ClassInfo,
   type ClassSkillInfo,
+  type SkillPointInfo,
   type HeroState,
 } from '../shared/classes';
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
@@ -525,6 +530,7 @@ export class World {
     }
     this.dropGuard(player); // mapa novo: a defesa começa baixada (o navegador também solta)
     player.hawkUntil = 0; // e os Olhos de Gavião acabam (o mapa novo começa sem o destaque; a recarga continua)
+    player.armed = null; // e a flecha especial sai do arco
     player.energyClock = now;
     player.x = spot.x;
     player.y = spot.y;
@@ -818,7 +824,8 @@ export class World {
       player.ackPending = true;
       return;
     }
-    player.queue.push({ seq, a: degrees, dash, slow, guard: player.guardWanted, fly: player.fly });
+    // puxando a pedra (ou a flecha), anda devagar (o navegador manda igual; aqui é para ninguém correr puxando)
+    player.queue.push({ seq, a: degrees, dash, slow: slow || player.chargeStart !== null, guard: player.guardWanted, fly: player.fly });
   }
 
   /** Começou a puxar o estilingue: a carga conta pelo relógio do servidor, até o tiro (veja shoot). */
@@ -857,8 +864,12 @@ export class World {
     this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'jump' }, player.id);
   }
 
-  /** Estilingue: atira uma pedrinha na direção do ângulo, mais forte e mais longe quanto mais tempo puxou. */
-  shoot(player: Player, cid: number, angle: number): void {
+  /**
+   * Estilingue (ou arco): atira na direção do ângulo, mais forte e mais longe quanto mais tempo puxou. O tiro cai no
+   * ponto mirado (`aimed` = a distância até ele), se a carga alcançar. Quem atira andando erra um pouco (shotSpread).
+   * Com a flecha especial carregada (a Flecha Ancestral, veja castSkill), é ela que sai.
+   */
+  shoot(player: Player, cid: number, angle: number, aimed?: number): void {
     const now = this.now();
     if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
     if (player.guardWanted) return; // defendendo, não atira (o navegador nem pede)
@@ -875,8 +886,52 @@ export class World {
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + shot.cooldownMs;
     this.faceAngle(player, angle);
+    const metric = this.map.metric;
+    const stance: ShotStance = !metric || now - player.lastMoveAt > SHOT_MOVING_MS ? 'still' : player.lastMoveSlow ? 'walk' : 'run';
+    const flight = angle + shotSpread(cid, stance, this.combat);
     const [min, max] = player.damage();
-    this.spawnProjectile(player, angle, shot.speed, chargedRange(charge, this.map.metric, shot), chargedDamage(this.rollRange(min, max), charge, shot), shot.kind, cid);
+    const base = this.rollRange(min, max);
+    const special = this.armedSkill(player, now);
+    if (special) {
+      // a Flecha Ancestral carregada: atravessa os bichos até o ponto mirado e explode lá; a puxada dá o alcance
+      const { skill, numbers } = special;
+      const reach = Math.max(shot.rangeMin, skill.range);
+      const range = aimedRange(shot.rangeMin + (reach - shot.rangeMin) * charge, aimed);
+      const pierce: PierceShot = {
+        hit: new Set(),
+        width: skill.width,
+        markPct: numbers.markPct,
+        markMs: numbers.markMs,
+        burstRadius: numbers.burstRadius,
+        burstDamage: Math.max(1, Math.round((base * numbers.burstPct) / 100)),
+      };
+      this.spawnProjectile(player, flight, skill.speed, range, Math.max(1, Math.round((base * numbers.damagePct) / 100)), 'ancestral', cid, pierce);
+      player.armed = null;
+      player.castReadyAt.set(skill.id, now + skill.cooldownMs);
+      player.outbox.push({ t: 'armed', s: null }, { t: 'scd', s: skill.id, ms: skill.cooldownMs });
+      return;
+    }
+    const range = aimedRange(chargedRange(charge, metric, shot), aimed);
+    this.spawnProjectile(player, flight, shot.speed, range, chargedDamage(base, charge, shot), shot.kind, cid);
+  }
+
+  /** A flecha especial carregada no arco deste jogador (a habilidade e os números dos pontos dele), se ainda vale. */
+  private armedSkill(player: Player, now: number): { skill: ClassSkillInfo; numbers: SkillPointInfo } | null {
+    if (!player.armed) return null;
+    const found = this.classSkill(player, player.armed);
+    const numbers = found ? skillPoint(found.skill, player.skillPoints[player.armed] ?? 0) : null;
+    if (!found || !numbers || now < (player.castReadyAt.get(found.skill.id) ?? 0) - SKILL_TOLERANCE_MS) {
+      this.disarm(player);
+      return null;
+    }
+    return { skill: found.skill, numbers };
+  }
+
+  /** Tira a flecha especial do arco (desmaiou, trocou de mapa, tirou os pontos, pediu de novo). */
+  private disarm(player: Player): void {
+    if (!player.armed) return;
+    player.armed = null;
+    player.outbox.push({ t: 'armed', s: null });
   }
 
   /** O tiro de quem atira: o da arma equipada (no mapa novo) ou a pedra (veja shotProfile). */
@@ -977,6 +1032,7 @@ export class World {
     if (player.loading || spentPoints(player.skillPoints) === 0) return;
     player.skillPoints = {};
     player.heroDirty = true;
+    this.disarm(player);
     player.outbox.push({ t: 'sys', text: 'Os pontos das habilidades voltaram: escolha de novo.' });
   }
 
@@ -986,7 +1042,7 @@ export class World {
    * todos os bichos dentro dele — de cima, então nem a casca do tatu-bola segura. Flecha Ancestral: um tiro na direção
    * do ponto que atravessa todos os bichos da linha (veja updatePiercing); `cid` liga ao desenho de quem atirou.
    */
-  castSkill(player: Player, id: string, x: number, y: number, cid?: number): void {
+  castSkill(player: Player, id: string, x: number, y: number, _cid?: number): void {
     const found = this.classSkill(player, id);
     const rank = player.skillPoints[id] ?? 0;
     const numbers = found ? skillPoint(found.skill, rank) : null;
@@ -1006,27 +1062,21 @@ export class World {
       player.outbox.push({ t: 'scd', s: skill.id, ms: skill.cooldownMs });
       return;
     }
+    if (skill.kind === 'flecha') {
+      // a Flecha Ancestral não sai na hora: fica carregada no arco e sai no próximo tiro, com a puxada de verdade
+      // (veja shoot). Pedir de novo descarrega. A recarga começa quando ela sai.
+      if (player.armed === skill.id) return this.disarm(player);
+      if (now < readyAt - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
+      player.armed = skill.id;
+      player.outbox.push({ t: 'armed', s: skill.id });
+      return;
+    }
     if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
     if (now < readyAt - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
     if (this.inSafeArea(player)) return; // da área segura ninguém ataca (veja shoot)
     const feet = feetAt(player.fx, player.fy);
     player.chargeStart = null; // usar a habilidade solta a pedra que estava puxando
-    if (skill.kind === 'flecha') {
-      // a Flecha Ancestral sai como um tiro, na direção do ponto (parado em cima do próprio pé: para onde ele olha)
-      const angle = x !== feet.x || y !== feet.y ? Math.atan2(y - feet.y, x - feet.x) : angleOfDir(player.dir);
-      this.faceAngle(player, angle);
-      const [min, max] = player.damage();
-      const base = this.rollRange(min, max);
-      const pierce: PierceShot = {
-        hit: new Set(),
-        width: skill.width,
-        markPct: numbers.markPct,
-        markMs: numbers.markMs,
-        burstRadius: numbers.burstRadius,
-        burstDamage: Math.max(1, Math.round(base * numbers.burstPct / 100)),
-      };
-      this.spawnProjectile(player, angle, skill.speed, skill.range, Math.max(1, Math.round(base * numbers.damagePct / 100)), 'ancestral', cid, pierce);
-    } else {
+    {
       const aimed = castPoint(feet, { x, y }, skill.range);
       const spot = { x: Math.max(0, Math.min(this.map.width, aimed.x)), y: Math.max(0, Math.min(this.map.height, aimed.y)) };
       if (spot.x !== feet.x || spot.y !== feet.y) this.faceAngle(player, Math.atan2(spot.y - feet.y, spot.x - feet.x));
@@ -1762,6 +1812,10 @@ export class World {
         this.breakCharm(player); // a esquiva quebra o encanto
       }
       if (result.moved || result.dir !== player.dir) player.changed = true;
+      if (result.moved && !dash) {
+        player.lastMoveAt = now;
+        player.lastMoveSlow = input.slow || input.guard;
+      }
       player.fx = result.x;
       player.fy = result.y;
       player.dir = result.dir;
@@ -1893,6 +1947,7 @@ export class World {
     player.deadUntil = now + DEATH_MS;
     player.chargeStart = null;
     player.hawkUntil = 0; // os Olhos de Gavião acabam (o navegador também apaga o destaque)
+    player.armed = null; // e a flecha especial sai do arco (o navegador também tira)
     this.dropGuard(player);
     player.queue.length = 0;
     this.emitToViewers(player, { t: 'death', id: player.id });

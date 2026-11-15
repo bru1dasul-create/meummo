@@ -91,7 +91,7 @@ export class Session {
         if (this.oopsBudget.take(this.now())) this.lobby.log(`erro no navegador de ${this.player.name}: ${msg.text.replace(/\r/g, '')}`);
         break;
       case 'shoot':
-        this.lobby.realm.shoot(this.player, msg.cid, msg.a);
+        this.lobby.realm.shoot(this.player, msg.cid, msg.a, msg.d);
         break;
       case 'skill':
         this.lobby.realm.useSkill(this.player, msg.n, msg.a);

@@ -14,7 +14,7 @@ import { loadQuestDefs, parseQuestDefs } from '../src/server/quests';
 import { parseClientMsg } from '../src/server/validate';
 import { characterData, World, type Player } from '../src/server/world';
 import { castPoint, cleanSkills, earnedPoints, learnBlocker, levelForPoint, pointsLeft } from '../src/shared/classes';
-import { SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
+import { CHARGE_FULL_MS, SHOT_COOLDOWN_MS, TICK_MS } from '../src/shared/constants';
 import { LEFT } from '../src/shared/dir';
 import { GameMap } from '../src/shared/map';
 import { feetAt } from '../src/shared/movement';
@@ -97,16 +97,16 @@ describe('data/classes.json', () => {
       expect(rain.points[i]!.radius).toBeGreaterThan(rain.points[i - 1]!.radius);
       expect(rain.points[i]!.damagePct).toBeGreaterThan(rain.points[i - 1]!.damagePct);
     }
-    // a Flecha Ancestral: mais dano a cada ponto; a marca com 3 e a explosão com 5
+    // a Flecha Ancestral: mais dano a cada ponto; a marca com 3; explode sempre onde foi mirada (maior com 5)
     const arrow = hunter.skills[1]!;
     expect(arrow).toMatchObject({ name: 'Flecha Ancestral', cooldownMs: 8000, range: 14, speed: 24, width: 0.8 });
     expect(arrow.points.map((p) => p.markPct > 0)).toEqual([false, false, true, true, true]);
-    expect(arrow.points.map((p) => p.burstRadius > 0)).toEqual([false, false, false, false, true]);
+    expect(arrow.points.map((p) => p.burstRadius)).toEqual([1.2, 1.2, 1.5, 1.5, 2.2]);
     for (let i = 1; i < arrow.points.length; i++) expect(arrow.points[i]!.damagePct).toBeGreaterThan(arrow.points[i - 1]!.damagePct);
     // os Olhos de Gavião: duram mais e enxergam mais longe a cada ponto; o dano a mais com 3
     const eyes = hunter.skills[2]!;
-    expect(eyes).toMatchObject({ name: 'Olhos de Gavião', cooldownMs: 30_000, range: 0 });
-    expect(eyes.points.map((p) => p.durationMs)).toEqual([8000, 10_000, 12_000, 14_000, 16_000]);
+    expect(eyes).toMatchObject({ name: 'Olhos de Gavião', cooldownMs: 20_000, range: 0 });
+    expect(eyes.points.map((p) => p.durationMs)).toEqual([5000, 6000, 7000, 8000, 10_000]);
     expect(eyes.points.map((p) => p.bonusPct > 0)).toEqual([false, false, true, true, true]);
     for (let i = 1; i < eyes.points.length; i++) expect(eyes.points[i]!.visionPct).toBeGreaterThan(eyes.points[i - 1]!.visionPct);
     expect(() => checkClasses(real, loadQuestDefs())).not.toThrow();
@@ -504,8 +504,13 @@ function line(level: number, points: number, skill = 'flecha') {
   run(TICK_MS);
   const at = (x: number) => [...world.monsters.values()].find((m) => m.x === x && m.y === 2)!;
   const row = [5, 8, 11, 14, 16, 19].map(at);
-  // mira no leste, na altura do pé
-  const fire = (cid?: number) => world.castSkill(player, 'flecha', 20, feetAt(player.x, player.y).y, cid);
+  // carrega a flecha especial no arco, puxa até o fim (a carga cheia leva ao alcance todo) e solta para o leste
+  const fire = (cid = 1) => {
+    world.castSkill(player, 'flecha', 0, 0);
+    world.charge(player);
+    run(CHARGE_FULL_MS + TICK_MS);
+    world.shoot(player, cid, 0, 30);
+  };
   return { world, conn, player, run, row, fire };
 }
 
@@ -556,25 +561,67 @@ describe('a Flecha Ancestral', () => {
   it('a largura ("largura", 0,8 m sem o campo): pega quem tem o pé a até 0,8 m da linha (o tiro de sempre, só 0,6)', () => {
     const near = line(2, 1);
     Object.assign(near.player, { fx: 1, fy: 2.7 }); // a flecha passa 0,7 m ao sul do pé dos bichos
-    near.world.castSkill(near.player, 'flecha', 20, feetAt(1, 2.7).y);
+    near.fire();
     near.run(1500);
     expect(near.row[0]!.hp).toBe(96);
     const far = line(2, 1);
     Object.assign(far.player, { fx: 1, fy: 2.9 }); // 0,9 m: passa longe
-    far.world.castSkill(far.player, 'flecha', 20, feetAt(1, 2.9).y);
+    far.fire();
     far.run(1500);
     expect(far.row[0]!.hp).toBe(100);
   });
 
-  it('recarga: de novo antes da hora, não sai', () => {
+  it('recarga: de novo antes da hora, não carrega (e o tiro que sai é a pedra de sempre)', () => {
     const { conn, run, fire } = line(2, 1);
     fire();
     run(TICK_MS);
-    fire();
+    fire(2);
     run(TICK_MS);
     expect(conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'cooldown' });
     expect(conn.ofType('scd')).toEqual([{ t: 'scd', s: 'flecha', ms: 8000 }]);
     expect(conn.ofType('shot').filter((m) => m.kind === 'ancestral')).toHaveLength(1);
+    expect(conn.ofType('shot').at(-1)).toMatchObject({ kind: 'pedra', cid: 2 });
+  });
+
+  it('fica carregada no arco até o tiro: R de novo descarrega; a puxada dá o alcance; cai e explode onde foi mirado', () => {
+    const { world, conn, player, run } = line(5, 3);
+    world.castSkill(player, 'flecha', 0, 0);
+    run(TICK_MS);
+    expect(player.armed).toBe('flecha');
+    expect(conn.ofType('armed').at(-1)).toEqual({ t: 'armed', s: 'flecha' });
+    expect(conn.ofType('shot')).toHaveLength(0); // ainda não saiu nada
+    expect(conn.ofType('scd')).toHaveLength(0); // nem a recarga começou
+    world.castSkill(player, 'flecha', 0, 0); // de novo: descarrega
+    run(TICK_MS);
+    expect(player.armed).toBeNull();
+    expect(conn.ofType('armed').at(-1)).toEqual({ t: 'armed', s: null });
+    // carregada e sem puxar: só o alcance sem carga (6,5 m), mesmo mirando longe
+    world.castSkill(player, 'flecha', 0, 0);
+    world.shoot(player, 1, 0, 30);
+    run(TICK_MS);
+    expect(conn.ofType('shot').at(-1)).toMatchObject({ kind: 'ancestral', range: 6.5 });
+    expect(player.armed).toBeNull();
+    expect(conn.ofType('scd').at(-1)).toEqual({ t: 'scd', s: 'flecha', ms: 8000 });
+    run(8000);
+    // puxada cheia, mirando a 9 m: voa só até lá e explode lá (3 pontos no teste)
+    world.castSkill(player, 'flecha', 0, 0);
+    world.charge(player);
+    run(CHARGE_FULL_MS + TICK_MS);
+    world.shoot(player, 2, 0, 9);
+    run(1500);
+    const shot = conn.ofType('shot').at(-1)!;
+    expect(shot).toMatchObject({ kind: 'ancestral', range: 9 });
+    const end = conn.ofType('shot_end').find((m) => m.id === shot.id)!;
+    expect(end.burst).toBe(2);
+    expect(end.x).toBeCloseTo(shot.x + 9, 1);
+  });
+
+  it('desmaiar tira a flecha do arco', () => {
+    const { world, player, run } = line(2, 1);
+    world.castSkill(player, 'flecha', 0, 0);
+    run(TICK_MS);
+    (world as unknown as { damage(target: Player, amount: number, by: number, now: number): void }).damage(player, player.hp, 0, 0);
+    expect(player.armed).toBeNull();
   });
 });
 

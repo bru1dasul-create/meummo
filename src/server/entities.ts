@@ -127,6 +127,11 @@ export class Player {
   skillPoints: Record<string, number> = {};
   /** Recarga das habilidades da classe: até quando cada uma espera. */
   readonly castReadyAt = new Map<string, number>();
+  /** A flecha especial carregada no arco (a habilidade): sai no próximo tiro. */
+  armed: string | null = null;
+  /** Quando andou pela última vez e se foi devagar (atirar andando espalha o tiro). */
+  lastMoveAt = -Infinity;
+  lastMoveSlow = false;
   /** A classe ou os pontos mudaram neste tick (o dono precisa saber). */
   heroDirty = false;
   /** Olhos de Gavião: até quando, quanto a mais enxerga (0,5 = +50%) e quanto a mais de dano nos bichos (0,1 = +10%). */

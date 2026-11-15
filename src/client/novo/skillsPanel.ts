@@ -24,7 +24,7 @@ export function pointText(skill: ClassSkillInfo, point: SkillPointInfo): string 
   if (skill.kind === 'flecha') {
     const parts = [`dano ${point.damagePct}% em cada um`];
     if (point.markPct > 0) parts.push(`marca: +${point.markPct}% de dano por ${Math.round(point.markMs / 100) / 10} s`.replace('.', ','));
-    if (point.burstRadius > 0) parts.push(`explode no fim (${meters(point.burstRadius)}, ${point.burstPct}%)`);
+    if (point.burstRadius > 0) parts.push(`explode onde mira (${meters(point.burstRadius)}, ${point.burstPct}%)`);
     return parts.join(' · ');
   }
   if (skill.kind === 'olhos') {

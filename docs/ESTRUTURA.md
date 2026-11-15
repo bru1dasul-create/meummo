@@ -75,6 +75,18 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — o dono jogou e pediu ajustes (parte 1 feita; respostas dele: "concordo, e mais lento puxando"; "quanto mais
+puxar e segurar mais longe ela vai"; "o R deveria carregar uma nova flecha especializada"):** protocolo **41**. `shoot`
+com `d` (cai onde mira: `aimedRange`), `shotSpread` (espalha andando; números no painel, Combate › Pedra com carga),
+`requestWalk` força devagar puxando, `Player.armed` + mensagem `armed` (o `cast` da Flecha só carrega; o `shoot` solta).
+Explosão em todos os pontos da Flecha (1,2 a 2,2 m) e Olhos mais curtos (5 a 10 s, recarga 20 s) em data/classes.json.
+Motor: `aimSpotFor` (ângulo + distância; o mouse em cima do bicho mira no pé dele também no tiro de sempre),
+`aimFacing`, `toggleArmed`/`setArmed`/`showArmedAim`, `skillTip.ts`. No PC o tiro é o **botão direito** (ou o clique no
+bicho). Medido: o destaque dos Olhos custa caro na view (13,5 → 76 ms por quadro com ~15 bichos, sem placa de vídeo):
+passado à [arte], junto com a esquiva (o rolamento da view para 0,1 s no fim), o braço do arco, a missão atrás do mini
+mapa e a Xiovanna (olhar, pernas). **Falta (meu):** a Xiovanna andando pela loja (o servidor não move NPC ainda) e
+medir o lag do zoom da conversa.
+
 **15/11 — o Caçador com o desenho final da [arte] (parte 3 dela, main 4380f90):** o motor usa os quadrados novos
 (`CLASS_SLOTS` = `skill0`, `class1`, `class2` para Q, R, T; `classSlotOf(id)` para a recarga) e saiu o
 `skillButtons.ts` provisório; os Olhos chamam `highlight(lista)` a cada quadro (a cor do perigo veio para `danger.ts`),

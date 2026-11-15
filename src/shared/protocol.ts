@@ -75,7 +75,9 @@ export type ClientMsg =
   | { t: 'guard'; on: boolean; a: number } // segurando (ou soltei) a defesa, virada para o ângulo `a` (radianos)
   | { t: 'gm'; cmd: GmCommand } // poder do administrador (o servidor confere se é administrador mesmo)
   | { t: 'oops'; text: string } // deu erro no navegador: o servidor anota nos registros (para corrigir depois)
-  | { t: 'shoot'; cid: number; a: number } // estilingue na direção do ângulo `a` (cid: número do tiro no cliente)
+  // estilingue (ou arco) na direção do ângulo `a` (cid: número do tiro no cliente); `d`: a distância até o ponto mirado,
+  // em metros (o tiro cai lá, se a carga alcançar). Com a flecha especial carregada (veja `armed`), é ela que sai
+  | { t: 'shoot'; cid: number; a: number; d?: number }
   | { t: 'skill'; n: number; a: number } // habilidade número n, mirando no ângulo `a`
   | { t: 'item'; act: ItemAction; i: number } // fazer algo com o item do espaço i da mochila
   | { t: 'unequip'; part: EquipSlot } // tirar o que está equipado nesta parte (volta para a mochila)
@@ -88,7 +90,8 @@ export type ClientMsg =
   | { t: 'learn'; id: string } // pôr um ponto nesta habilidade da sua classe
   | { t: 'unlearn' } // tirar os pontos de todas as habilidades (voltam para gastar de novo)
   // usar a habilidade `id` da sua classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
-  // A flecha (Flecha Ancestral) vai na direção do ponto; `cid` = número do tiro no cliente (como no `shoot`)
+  // A Flecha Ancestral não sai na hora: fica carregada no arco (o servidor responde `armed`) e sai no próximo `shoot`;
+  // pedir de novo descarrega. (`cid` não é mais usado.)
   | { t: 'cast'; id: string; x: number; y: number; cid?: number }
   | { t: 'loaded' } // terminei de carregar o mapa novo (depois de um `zone`)
   | { t: 'chat'; text: string }
@@ -215,6 +218,7 @@ export type ServerMsg =
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
   | { t: 'hero'; hero: HeroState } // a sua classe ou os pontos das habilidades mudaram (subiu de nível, escolheu...)
   | { t: 'scd'; s: string; ms: number } // a habilidade `s` da sua classe entrou em recarga
+  | { t: 'armed'; s: string | null } // a flecha especial carregada no seu arco (a habilidade `s`), ou null: saiu ou descarregou
   // alguém (`id`) usou a habilidade `s` da classe: cai em (x, y) (metros, no chão), num raio `r`, daqui a `ms`. n = quantas
   // flechas sobem; p = quantos pontos ela tem (o desenho muda com 3 e com 5); kind = o que chove ('flecha' ou 'pedra': o
   // tiro da arma de quem usou). Quem usou não recebe: já desenhou na hora

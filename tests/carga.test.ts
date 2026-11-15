@@ -4,7 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
-import { CHARGE_FULL_MS, CHARGE_RANGE_MAX, CHARGE_RANGE_MIN, SHOT_RANGE, TICK_MS } from '../src/shared/constants';
+import { shotSpread } from '../src/shared/combat';
+import { DEFAULT_COMBAT_RULES } from '../src/shared/combatRules';
+import { CHARGE_FULL_MS, CHARGE_RANGE_MAX, CHARGE_RANGE_MIN, SHOT_MIN_RANGE, SHOT_RANGE, TICK_MS } from '../src/shared/constants';
 import { GameMap, type TiledObject } from '../src/shared/map';
 import { FakeClock, FakeConn, tiledFromAscii } from './helpers';
 
@@ -98,5 +100,76 @@ describe('pedra com carga', () => {
     expect(parseClientMsg(JSON.stringify({ t: 'charge' }))).toEqual({ t: 'charge' });
     expect(parseClientMsg(JSON.stringify({ t: 'charge', extra: 1 }))).toEqual({ t: 'charge' });
     expect(TICK_MS).toBeGreaterThan(0);
+  });
+});
+
+describe('atirar andando e mirar o ponto (pedido do dono, 15/11)', () => {
+  const walk = (world: World, clock: FakeClock, player: Player, slices: number, slow = false) => {
+    for (let i = 0; i < slices; i++) {
+      world.requestWalk(player, player.lastSeq + 1, 0, false, slow);
+      clock.advance(TICK_MS);
+      world.tick();
+    }
+  };
+  const angleOf = (world: World) => {
+    const shot = lastShot(world);
+    return Math.atan2(shot.dy, shot.dx);
+  };
+
+  it('o tiro cai onde foi mirado: nunca além do alcance da carga, nem mais perto que 1,5 m', () => {
+    const { world, clock, player } = setup(metricMap());
+    world.shoot(player, 1, 0, 4);
+    expect(lastShot(world).range).toBe(4);
+    clock.advance(1000);
+    world.shoot(player, 2, 0, 30); // longe demais: até onde a pedra sem carga chega
+    expect(lastShot(world).range).toBe(CHARGE_RANGE_MIN);
+    clock.advance(1000);
+    world.shoot(player, 3, 0, 0.2);
+    expect(lastShot(world).range).toBe(SHOT_MIN_RANGE);
+    clock.advance(1000);
+    world.charge(player);
+    clock.advance(CHARGE_FULL_MS);
+    world.shoot(player, 4, 0, 9); // com a carga cheia, chega nos 9 m
+    expect(lastShot(world).range).toBe(9);
+    expect(parseClientMsg(JSON.stringify({ t: 'shoot', cid: 1, a: 0, d: 7.5 }))).toEqual({ t: 'shoot', cid: 1, a: 0, d: 7.5 });
+    expect(parseClientMsg(JSON.stringify({ t: 'shoot', cid: 1, a: 0, d: -3 }))).toEqual({ t: 'shoot', cid: 1, a: 0 });
+  });
+
+  it('parado, o tiro vai certinho; correndo, espalha (até 9°); andando devagar, pouco (até 3°)', () => {
+    const { world, clock, player } = setup(metricMap());
+    world.shoot(player, 5, 1);
+    expect(angleOf(world)).toBeCloseTo(1, 6);
+    clock.advance(1000);
+    walk(world, clock, player, 4);
+    world.shoot(player, 6, 1);
+    const run = shotSpread(6, 'run', DEFAULT_COMBAT_RULES);
+    expect(Math.abs(run)).toBeGreaterThan(0);
+    expect(Math.abs(run)).toBeLessThanOrEqual((9 * Math.PI) / 180);
+    expect(angleOf(world)).toBeCloseTo(1 + run, 6);
+    clock.advance(1000);
+    walk(world, clock, player, 4, true);
+    world.shoot(player, 7, 1);
+    expect(angleOf(world)).toBeCloseTo(1 + shotSpread(7, 'walk', DEFAULT_COMBAT_RULES), 6);
+    expect(Math.abs(shotSpread(7, 'walk', DEFAULT_COMBAT_RULES))).toBeLessThanOrEqual((3 * Math.PI) / 180);
+    clock.advance(1000); // parou faz tempo: certinho de novo
+    world.shoot(player, 8, 1);
+    expect(angleOf(world)).toBeCloseTo(1, 6);
+    // o desvio muda de tiro para tiro, para os dois lados
+    const many = Array.from({ length: 40 }, (_, cid) => shotSpread(cid, 'run', DEFAULT_COMBAT_RULES));
+    expect(many.some((v) => v > 0.05) && many.some((v) => v < -0.05)).toBe(true);
+  });
+
+  it('puxando, anda devagar (mesmo que o navegador peça para correr)', () => {
+    const { world, clock, player } = setup(metricMap());
+    const x0 = player.fx;
+    walk(world, clock, player, 4);
+    const running = player.fx - x0;
+    world.charge(player);
+    const x1 = player.fx;
+    walk(world, clock, player, 4);
+    const pulling = player.fx - x1;
+    expect(pulling).toBeGreaterThan(0);
+    expect(pulling).toBeLessThan(running * 0.6);
+    expect(player.lastMoveSlow).toBe(true);
   });
 });

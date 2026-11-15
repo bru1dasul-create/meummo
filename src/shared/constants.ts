@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 40;
+export const PROTOCOL_VERSION = 41;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -88,6 +88,15 @@ export const GUARD_REGEN_DELAY_MS = 700;
 export const GUARD_BREAK_MS = 850;
 export const GUARD_REARM_ENERGY = 20;
 export const GUARD_WALK_FACTOR = 0.7;
+/**
+ * Atirar andando (pedido do dono, 15/11): o tiro espalha até tantos graus para cada lado — correndo, muito; andando
+ * devagar (é como se anda puxando a pedra), pouco; parado, nada. "Andando" = mexeu há menos de SHOT_MOVING_MS.
+ */
+export const SHOT_SPREAD_RUN_DEG = 9;
+export const SHOT_SPREAD_WALK_DEG = 3;
+export const SHOT_MOVING_MS = 200;
+/** O tiro cai onde foi mirado (até onde a carga alcança), mas nunca mais perto que isto (metros). */
+export const SHOT_MIN_RANGE = 1.5;
 /**
  * Recuo (passo 2c): o golpe empurra quem leva na direção em que andava (o quanto vem do monstro, campo "recuo"). A
  * defesa que segura deixa GUARD_PUSH_FACTOR do empurrão; a que quebra no golpe, GUARD_BREAK_PUSH_FACTOR. Parede segura.

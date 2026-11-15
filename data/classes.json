@@ -23,7 +23,7 @@
       },
       "flecha_ancestral": {
         "nome": "Flecha Ancestral",
-        "descricao": "Uma flecha de energia espiritual que atravessa todos os bichos na linha: nem a casca do tatu nem o enxame seguram. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, ela explode no fim.",
+        "descricao": "Carrega no arco uma flecha de energia espiritual: o próximo tiro é ela. Puxe e solte como sempre (quanto mais puxar, mais longe): ela atravessa todos os bichos do caminho, nem a casca do tatu nem o enxame seguram, e explode onde você mirou. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, a explosão fica bem maior.",
         "nivel": 6,
         "tipo": "flecha",
         "recargaSegundos": 8,
@@ -31,11 +31,11 @@
         "velocidade": 24,
         "largura": 0.8,
         "pontos": [
-          { "danoPorcento": 200 },
-          { "danoPorcento": 230 },
-          { "danoPorcento": 260, "marcaPorcento": 20, "marcaSegundos": 4 },
-          { "danoPorcento": 290, "marcaPorcento": 25, "marcaSegundos": 5 },
-          { "danoPorcento": 320, "marcaPorcento": 30, "marcaSegundos": 6, "explosaoRaio": 2, "explosaoPorcento": 150 }
+          { "danoPorcento": 200, "explosaoRaio": 1.2, "explosaoPorcento": 60 },
+          { "danoPorcento": 230, "explosaoRaio": 1.2, "explosaoPorcento": 75 },
+          { "danoPorcento": 260, "marcaPorcento": 20, "marcaSegundos": 4, "explosaoRaio": 1.5, "explosaoPorcento": 90 },
+          { "danoPorcento": 290, "marcaPorcento": 25, "marcaSegundos": 5, "explosaoRaio": 1.5, "explosaoPorcento": 110 },
+          { "danoPorcento": 320, "marcaPorcento": 30, "marcaSegundos": 6, "explosaoRaio": 2.2, "explosaoPorcento": 150 }
         ]
       },
       "olhos_de_gaviao": {
@@ -43,13 +43,13 @@
         "descricao": "Por uns segundos você enxerga como o gavião: vê os bichos de mais longe (eles aparecem no mini mapa), destacados mesmo atrás das árvores e no escuro, com o nível e a cor do perigo. Com 3 pontos, eles levam mais dano seu enquanto durar.",
         "nivel": 10,
         "tipo": "olhos",
-        "recargaSegundos": 30,
+        "recargaSegundos": 20,
         "pontos": [
-          { "duracaoSegundos": 8, "visaoPorcento": 50 },
-          { "duracaoSegundos": 10, "visaoPorcento": 60 },
-          { "duracaoSegundos": 12, "visaoPorcento": 75, "danoExtraPorcento": 10 },
-          { "duracaoSegundos": 14, "visaoPorcento": 85, "danoExtraPorcento": 15 },
-          { "duracaoSegundos": 16, "visaoPorcento": 100, "danoExtraPorcento": 20 }
+          { "duracaoSegundos": 5, "visaoPorcento": 50 },
+          { "duracaoSegundos": 6, "visaoPorcento": 60 },
+          { "duracaoSegundos": 7, "visaoPorcento": 75, "danoExtraPorcento": 10 },
+          { "duracaoSegundos": 8, "visaoPorcento": 85, "danoExtraPorcento": 15 },
+          { "duracaoSegundos": 10, "visaoPorcento": 100, "danoExtraPorcento": 20 }
         ]
       },
       "chamado_selvagem": {

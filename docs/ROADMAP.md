@@ -727,6 +727,17 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   0,35 × visão), passando do limite do zoom do jogador; o `setZoom` continua devolvendo só o zoom do jogador); a ação
   `'hawk'` acende os olhos de quem usou (dourados, com o risco de luz) e os seus ficam brilhando de leve enquanto valem.
   O quadrado é o `class2` e o `T` no "Como jogar" já foi. A [estrutura] ligou no motor (15/11) e apagou o `hawkTags.ts`
+- [x] **[estrutura]** Ajustes do dono depois de jogar (15/11), parte 1: quem atira **vira para o tiro**; atirar
+  **correndo espalha** (até 9°; andando devagar, até 3°; parado, certinho); **puxando, anda devagar**; a pedra e a
+  flecha **caem onde foi mirado** (mais puxada = mais longe); o `R` **carrega a Flecha Ancestral no arco** (o próximo
+  tiro é ela, com a puxada; atravessa e explode onde mirou, com qualquer número de pontos); os Olhos duram menos (5 a
+  10 s) e recarregam em 20 s; **dica** com o mouse em cima das habilidades da barra. Protocolo 41
+- [ ] **[estrutura]** Parte 2: a Xiovanna andando pela Budega (e voltando ao balcão para atender)
+- [ ] **[arte]** Do mesmo teste do dono: o fim da esquiva trava (o rolamento dura 0,5 s e anda só até 0,4 s); o braço
+  direito ao puxar o arco; a missão atrás do mini mapa; a pose de mirar para cima na Chuva e as flechas mais tempo no
+  chão (`RAIN_LINGER_MS`); as pernas da Xiovanna atrás do balcão, ela virada de frente e sem seguir quem está na loja
+  (só vira para quem fala com ela); o destaque dos Olhos pesa (medido sem placa de vídeo: de 13,5 para 76 ms por quadro
+  com uns 15 bichos); o brilho do quadrado com a flecha carregada (`data-armed`)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

@@ -130,7 +130,17 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   sozinhos onde pega mais bichos) e `combat.ts` (o círculo, as flechas subindo e caindo e as cravadas, provisório). A
   Bordunada saiu do jogo novo (o 1º quadrado da barra, o `skill0`, é o da 1ª habilidade da classe); o jogo antigo
   continua com ela.
-- **Flecha Ancestral** (protocolo 38, `tipo: "flecha"`): o `cast` traz o `cid` e o servidor solta um tiro de verdade
+- **Tiro que cai onde mira, espalha andando e a flecha carregada** (protocolo 41, pedidos do dono de 15/11): o `shoot`
+  leva `d` (a distância até o ponto mirado): o tiro para lá (`aimedRange`: nunca além do alcance da carga, nem mais
+  perto que `SHOT_MIN_RANGE`). Quem atirou andando há menos de `SHOT_MOVING_MS` erra um pouco (`shotSpread(cid, ...)`:
+  sai do número do tiro, então o navegador e o servidor fazem a mesma conta; `shotSpreadRunDeg`/`shotSpreadWalkDeg` nos
+  números do combate, ajustáveis no painel). Puxando, anda devagar (`requestWalk` força `slow`; o motor manda igual) e
+  o corpo fica virado para a mira (`aimFacing`). A Flecha Ancestral não sai mais no `cast`: ele carrega a flecha
+  (`Player.armed`, mensagem `armed`) e o próximo `shoot` solta ela (`armedSkill`: a puxada dá o alcance até o da
+  habilidade; a recarga começa ali). Desmaiar, trocar de mapa ou tirar os pontos descarrega. No motor: `toggleArmed`,
+  `showArmedAim` (a faixa enquanto puxa), `data-armed` no quadrado da barra. A dica das habilidades (mouse em cima do
+  quadrado): `skillTip.ts` + `tipOf` no motor.
+- **Flecha Ancestral** (protocolo 38, `tipo: "flecha"`; desde o 41 ela sai pelo `shoot`, veja acima): o `cast` traz o `cid` e o servidor solta um tiro de verdade
   (`spawnProjectile` com `PierceShot`, kind `'ancestral'`): `updatePiercing` acerta todo monstro que ela encosta, uma vez
   cada (sem o sorteio do enxame e com `ignoreShell` no `damage`), marca (`Monster.markedUntil`/`markPct`: o `damage` soma
   a porcentagem, de qualquer um; `fx` `'mark'` com `ms`) e para só no que segura tiro ou no fim do alcance, onde pode

@@ -22,6 +22,8 @@ import {
   GUARD_REGEN_DELAY_MS,
   GUARD_REGEN_PER_S,
   GUARD_WALK_FACTOR,
+  SHOT_SPREAD_RUN_DEG,
+  SHOT_SPREAD_WALK_DEG,
   NIGHT_DAMAGE_FACTOR,
   NIGHT_GOLD_FACTOR,
   NIGHT_HP_FACTOR,
@@ -56,6 +58,9 @@ export interface CombatRules {
   guardRearmEnergy: number;
   /** Andando com a defesa: × o andar devagar. */
   guardWalkFactor: number;
+  /** Atirar andando: o tiro espalha até tantos graus para cada lado (correndo e andando devagar). */
+  shotSpreadRunDeg: number;
+  shotSpreadWalkDeg: number;
   /** O que passa do empurrão: com a defesa que segura o golpe e com a que quebra nele. */
   guardPushFactor: number;
   guardBreakPushFactor: number;
@@ -85,6 +90,8 @@ export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
   guardBreakMs: GUARD_BREAK_MS,
   guardRearmEnergy: GUARD_REARM_ENERGY,
   guardWalkFactor: GUARD_WALK_FACTOR,
+  shotSpreadRunDeg: SHOT_SPREAD_RUN_DEG,
+  shotSpreadWalkDeg: SHOT_SPREAD_WALK_DEG,
   guardPushFactor: GUARD_PUSH_FACTOR,
   guardBreakPushFactor: GUARD_BREAK_PUSH_FACTOR,
   dayMs: DAY_MS,

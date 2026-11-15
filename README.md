@@ -45,7 +45,7 @@ lendas voltaram. Tudo começa no **Refúgio de Guarapiranga**, uma vila flutuant
 |---|---|---|
 | Andar | `W` `A` `S` `D` / setas, ou clique no chão (`C` liga e desliga o andar devagar) | joystick ou toque no chão |
 | Estilingue | **segure e solte**: botão esquerdo em cima do monstro, botão direito (vai para o mouse) ou `J` (no monstro mais perto). Quanto mais segurar (até ~1 s), mais forte e mais longe | segure e solte o botão **Estilingue**; toque rápido no monstro = pedra fraca na hora |
-| Habilidades da classe (no Caçador: `Q` a **Chuva de Flechas**, `R` a **Flecha Ancestral**, `T` os **Olhos de Gavião**) | **segure** a tecla: o círculo (ou a linha da flecha) segue o mouse; solte para usar. Os Olhos valem na hora | botão da habilidade (mira sozinho onde pega mais bichos) |
+| Habilidades da classe (no Caçador: `Q` a **Chuva de Flechas**, `R` a **Flecha Ancestral**, `T` os **Olhos de Gavião**) | `Q`: **segure** a tecla, o círculo segue o mouse; solte para usar. `R`: **carrega a flecha especial no arco** — o próximo tiro é ela (puxe e solte como sempre; `R` de novo descarrega). `T`: vale na hora. Com o mouse em cima do quadrado, uma dica diz o que ela faz e o dano | botão da habilidade (a Chuva mira sozinha onde pega mais bichos; o `R` carrega a flecha e o botão de atirar solta) |
 | Habilidades (escolher a classe e pôr os pontos) | `K` ou o botão **✦ Habilidades** | botão **✦** |
 | Fôlego (cura) | `E` | botão **Fôlego** |
 | Esquiva | `Shift` | botão **Esquiva** |
@@ -300,7 +300,7 @@ pontos (de graça, por enquanto).
 | Habilidade | Libera no nível | O que faz |
 |---|---|---|
 | **Chuva de Flechas** | 3 | Segure `Q` e mire: as flechas sobem e caem no círculo, acertando todos os bichos dentro (de cima: nem a casca do tatu-bola segura). Com o estilingue, chovem pedras. Cada ponto: mais flechas, área maior e mais dano |
-| **Flecha Ancestral** | 6 | Segure `R` e mire: uma flecha do espírito que atravessa **todos** os bichos da linha (nem a casca do tatu-bola nem o enxame de marimbondos seguram; parede e tronco, sim). Com 3 pontos, quem ela atravessa fica **marcado** (uma runa verde) e leva mais dano de todo mundo por uns segundos; com 5, ela **explode** no fim |
+| **Flecha Ancestral** | 6 | Aperte `R`: a flecha do espírito fica **carregada no arco** e o próximo tiro é ela, com a puxada de verdade (quanto mais puxar, mais longe). Atravessa **todos** os bichos do caminho (nem a casca do tatu-bola nem o enxame de marimbondos seguram; parede e tronco, sim) e **explode onde você mirou**. Com 3 pontos, quem ela atravessa fica **marcado** (uma runa verde) e leva mais dano de todo mundo por uns segundos; com 5, a explosão fica bem maior. A recarga só começa quando ela sai |
 | **Olhos de Gavião** | 10 | Aperte `T`: por uns segundos você enxerga mais longe (chegam bichos de mais longe e eles aparecem no mini mapa), e cada bicho ganha uma etiqueta com o nível na cor do perigo — verde fácil, amarelo parelho, vermelho perigoso — por cima das árvores e do escuro. Com 3 pontos, eles levam mais dano seu enquanto durar. Vale até na vila e defendendo (é só olhar) |
 | Chamado Selvagem | 15 | em breve |
 | Fúria da Onça | 20 | em breve |

@@ -178,8 +178,8 @@ export class Realm {
     }
   }
 
-  shoot(player: Player, cid: number, angle: number): void {
-    this.worldOf(player)?.shoot(player, cid, angle);
+  shoot(player: Player, cid: number, angle: number, aimed?: number): void {
+    this.worldOf(player)?.shoot(player, cid, angle, aimed);
   }
 
   useSkill(player: Player, n: number, angle: number): void {

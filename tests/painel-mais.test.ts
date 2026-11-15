@@ -324,6 +324,8 @@ describe('números do combate pelo painel', () => {
       ['danoPorcento', 200],
       ['alcanceMinimo', 6.5],
       ['alcanceMaximo', 9.5],
+      ['espalhaCorrendo', 9],
+      ['espalhaAndando', 3],
     ]);
     expect(value(1, 'angulo')).toBe(140);
     expect(value(1, 'seguraPorcento')).toBe(75);

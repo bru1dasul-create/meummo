@@ -125,7 +125,7 @@ export function parseClientMsg(raw: string): ClientMsg | null {
     }
     case 'shoot':
       return Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0 && isAngle(msg.a)
-        ? { t: 'shoot', cid: msg.cid as number, a: msg.a }
+        ? { t: 'shoot', cid: msg.cid as number, a: msg.a, ...(typeof msg.d === 'number' && Number.isFinite(msg.d) && msg.d >= 0 && msg.d <= 100 ? { d: msg.d } : {}) }
         : null;
     case 'skill':
       return Number.isInteger(msg.n) && (msg.n as number) >= 0 && (msg.n as number) < 16 && isAngle(msg.a)
