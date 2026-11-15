@@ -505,9 +505,15 @@
       const dt = this.last ? Math.min(0.05, Math.max(0, (t - this.last) / 1000)) : 1 / 60;
       this.last = t;
       // Olhos de Gavião: a câmera afasta até 1/(1 + 0,35 × visão) e volta (uns 0,6 s)
+      // (em 0,4 s certinhos: cada quadro com o zoom mudando custa caro, então nada de cauda comprida)
       const visionGoal = 1 / (1 + 0.35 * (this.visionWant || 0));
-      if (Math.abs(this.visionK - visionGoal) > 1e-3) this.visionK = M.damp(this.visionK, visionGoal, 4.5, dt);
-      else this.visionK = visionGoal;
+      const vt = this._visionTween;
+      if (!vt || vt.to !== visionGoal) this._visionTween = { from: this.visionK, to: visionGoal, t: 0 };
+      const tw = this._visionTween;
+      if (tw.t < 1) {
+        tw.t = Math.min(1, tw.t + dt / 0.4);
+        this.visionK = tw.from + (tw.to - tw.from) * M.smoothstep(0, 1, tw.t);
+      }
       this._resize();
       for (const a of this.actors.values()) this._drive(a, dt);
       // o brilho dourado nos olhos de quem usou os Olhos de Gavião (e, fraco, nos seus enquanto valem)
@@ -907,73 +913,99 @@
      * Olhos de Gavião (highlight): cada bicho destacado ganha, por cima de tudo, o contorno na cor do perigo (com
      * brilho), o corpo meio transparente na mesma cor (aparece atrás da árvore e no escuro) e o selo do nível em cima.
      * A silhueta sai do próprio desenho do bicho: ele é pintado numa tela de rascunho, vira uma cor só, é engordado em
-     * 8 direções e tem o miolo tirado (sobra a borda).
+     * 8 direções e tem o miolo tirado (sobra a borda). Isso é caro (o dono sentiu o "lagzinho": com 15 bichos o quadro
+     * ia de 13 para 76 ms), então o destaque pronto de cada bicho fica guardado e é refeito só a cada 5 quadros (um
+     * bicho por vez, em quadros diferentes); nos outros quadros a imagem guardada acompanha o pé dele.
      */
     _drawHawk(ctx) {
       const list = this._highlights;
-      if (!list || !list.size) return;
+      const cache = this._hawkCache || (this._hawkCache = new Map());
+      if (!list || !list.size) {
+        if (cache.size) cache.clear();
+        return;
+      }
       const cam = this.cam;
       const dpr = cam.dpr;
       const t = this.world.time || 0;
+      const tick = (this._hawkTick = (this._hawkTick || 0) + 1);
       const vx0 = cam.viewX, vy0 = cam.viewY, vx1 = vx0 + cam.viewW, vy1 = vy0 + cam.viewH;
       const margin = 320 * cam.zoom;
+      for (const id of cache.keys()) if (!list.has(id)) cache.delete(id);
       for (const [id, h] of list) {
         const a = this.actors.get(id);
-        if (!a || !a.ch || (a.creature && a.creature.dying !== null)) continue;
+        if (!a || !a.ch || (a.creature && a.creature.dying !== null)) {
+          cache.delete(id);
+          continue;
+        }
         // o motor manda todos os bichos que conhece: os longe da tela nem montam o desenho
         const foot = cam.p({ x: a.ch.pos.x, y: a.ch.pos.y, z: 0 });
         if (foot.x < vx0 - margin || foot.x > vx1 + margin || foot.y < vy0 - margin || foot.y > vy1 + margin * 2) continue;
-        const d = this._actorDrawable(a);
-        const b = d.bounds;
-        if (!b || !(b.x1 > b.x0) || !(b.y1 > b.y0)) continue;
-        if (b.x1 < vx0 || b.x0 > vx1 || b.y1 < vy0 || b.y0 > vy1) continue;
-        const P = 5;
-        const x = Math.floor(b.x0 - P), y = Math.floor(b.y0 - P);
-        const w = Math.ceil(b.x1 - b.x0 + 2 * P), hh = Math.ceil(b.y1 - b.y0 + 2 * P);
-        if (w > 900 || hh > 900) continue;
-        const W = Math.ceil(w * dpr), H = Math.ceil(hh * dpr);
-        // a silhueta, numa cor só
-        const sil = this._hawkCanvas(0, W, H);
-        const sc = sil.getContext('2d');
-        sc.setTransform(1, 0, 0, 1, 0, 0);
-        sc.globalCompositeOperation = 'source-over';
-        sc.globalAlpha = 1;
-        sc.clearRect(0, 0, W, H);
-        sc.setTransform(dpr, 0, 0, dpr, -x * dpr, -y * dpr);
-        d.draw(sc);
-        sc.setTransform(1, 0, 0, 1, 0, 0);
-        sc.globalCompositeOperation = 'source-in';
-        sc.fillStyle = h.color;
-        sc.fillRect(0, 0, W, H);
-        sc.globalCompositeOperation = 'source-over';
-        // a borda: a silhueta engordada em 8 direções, menos ela mesma
-        const rim = this._hawkCanvas(1, W, H);
-        const rc = rim.getContext('2d');
-        rc.setTransform(1, 0, 0, 1, 0, 0);
-        rc.globalCompositeOperation = 'source-over';
-        rc.clearRect(0, 0, W, H);
-        const R = 2.4 * dpr;
-        for (let k = 0; k < 8; k++) {
-          const ang = (k * Math.PI) / 4;
-          rc.drawImage(sil, 0, 0, W, H, Math.cos(ang) * R, Math.sin(ang) * R, W, H);
+        let e = cache.get(id);
+        const stale = !e || e.color !== h.color || e.zoom !== cam.zoom || e.dpr !== dpr || (tick + id) % 5 === 0;
+        if (stale) {
+          const d = this._actorDrawable(a);
+          const b = d.bounds;
+          if (!b || !(b.x1 > b.x0) || !(b.y1 > b.y0)) continue;
+          const P = 14; // a folga em volta (a borda engordada e o brilho)
+          const x = Math.floor(b.x0 - P), y = Math.floor(b.y0 - P);
+          const w = Math.ceil(b.x1 - b.x0 + 2 * P), hh = Math.ceil(b.y1 - b.y0 + 2 * P);
+          if (w > 900 || hh > 900) continue;
+          const W = Math.ceil(w * dpr), H = Math.ceil(hh * dpr);
+          // a silhueta, numa cor só
+          const sil = this._hawkCanvas(0, W, H);
+          const sc = sil.getContext('2d');
+          sc.setTransform(1, 0, 0, 1, 0, 0);
+          sc.globalCompositeOperation = 'source-over';
+          sc.globalAlpha = 1;
+          sc.clearRect(0, 0, sil.width, sil.height);
+          sc.setTransform(dpr, 0, 0, dpr, -x * dpr, -y * dpr);
+          d.draw(sc);
+          sc.setTransform(1, 0, 0, 1, 0, 0);
+          sc.globalCompositeOperation = 'source-in';
+          sc.fillStyle = h.color;
+          sc.fillRect(0, 0, W, H);
+          sc.globalCompositeOperation = 'source-over';
+          // a borda: a silhueta engordada em 8 direções, menos ela mesma
+          const rim = this._hawkCanvas(1, W, H);
+          const rc = rim.getContext('2d');
+          rc.setTransform(1, 0, 0, 1, 0, 0);
+          rc.globalCompositeOperation = 'source-over';
+          rc.clearRect(0, 0, rim.width, rim.height);
+          const R = 2.4 * dpr;
+          for (let k = 0; k < 8; k++) {
+            const ang = (k * Math.PI) / 4;
+            rc.drawImage(sil, 0, 0, W, H, Math.cos(ang) * R, Math.sin(ang) * R, W, H);
+          }
+          rc.globalCompositeOperation = 'destination-out';
+          rc.drawImage(sil, 0, 0, W, H, 0, 0, W, H);
+          rc.globalCompositeOperation = 'source-over';
+          // o destaque pronto (o corpo a 10%, o brilho e a borda), guardado na tela do próprio bicho
+          if (!e) e = { cv: document.createElement('canvas') };
+          if (e.cv.width !== W || e.cv.height !== H) {
+            e.cv.width = W;
+            e.cv.height = H;
+          }
+          const oc = e.cv.getContext('2d');
+          oc.setTransform(1, 0, 0, 1, 0, 0);
+          oc.clearRect(0, 0, W, H);
+          oc.globalAlpha = 0.1;
+          oc.drawImage(sil, 0, 0, W, H, 0, 0, W, H);
+          oc.globalAlpha = 1;
+          oc.shadowColor = h.color;
+          oc.shadowBlur = 10 * dpr;
+          oc.drawImage(rim, 0, 0, W, H, 0, 0, W, H);
+          oc.shadowBlur = 0;
+          oc.drawImage(rim, 0, 0, W, H, 0, 0, W, H);
+          Object.assign(e, { color: h.color, zoom: cam.zoom, dpr, ox: x - foot.x, oy: y - foot.y, w, h: hh, top: b.y0 - foot.y });
+          cache.set(id, e);
         }
-        rc.globalCompositeOperation = 'destination-out';
-        rc.drawImage(sil, 0, 0, W, H, 0, 0, W, H);
-        rc.globalCompositeOperation = 'source-over';
-        // na tela: o corpo meio transparente e a borda acesa, pulsando devagar
-        const pulse = 0.8 + 0.2 * Math.sin(t * 4.5 + id);
+        if (foot.x + e.ox + e.w < vx0 || foot.x + e.ox > vx1 || foot.y + e.oy + e.h < vy0 || foot.y + e.oy > vy1) continue;
+        // na tela: a imagem guardada no pé do bicho, pulsando devagar
         ctx.save();
-        ctx.globalAlpha = 0.1;
-        ctx.drawImage(sil, 0, 0, W, H, x, y, w, hh);
-        ctx.globalAlpha = pulse;
-        ctx.shadowColor = h.color;
-        ctx.shadowBlur = 10;
-        ctx.drawImage(rim, 0, 0, W, H, x, y, w, hh);
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
-        ctx.drawImage(rim, 0, 0, W, H, x, y, w, hh);
+        ctx.globalAlpha = 0.82 + 0.18 * Math.sin(t * 4.5 + id);
+        ctx.drawImage(e.cv, foot.x + e.ox, foot.y + e.oy, e.w, e.h);
         ctx.restore();
-        this._hawkBadge(ctx, a, h, b);
+        this._hawkBadge(ctx, a, h, { y0: foot.y + e.top });
       }
     }
 
