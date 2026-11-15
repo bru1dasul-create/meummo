@@ -3632,12 +3632,12 @@ body.jogo-novo .talk-chip img {
 
 /* ---------------------------------------------------------------- a flecha carregada e a dica das habilidades */
 /* O quadrado da habilidade com a Flecha Ancestral carregada no arco (`data-armed="1"`, do motor): o anel de luz do
-   espírito pulsando em volta e o ícone mais vivo (o !important ganha do brilho provisório que o motor põe por estilo) */
+   espírito pulsando em volta e o ícone mais vivo (o ganha do brilho provisório que o motor põe por estilo) */
 body.jogo-novo .action[data-armed='1'] {
   box-shadow:
     0 0 0 2px #dcffec,
     0 0 0 4px rgba(60, 200, 130, 0.9),
-    0 0 18px 6px rgba(140, 255, 190, 0.75) !important;
+    0 0 18px 6px rgba(140, 255, 190, 0.75);
   animation: armed-pulse 0.9s ease-in-out infinite;
 }
 
@@ -3654,26 +3654,26 @@ body.jogo-novo .action[data-armed='1'] .icon {
 /* a dica (mouse em cima de um quadrado da barra; a caixa é do motor, `skillTip.ts`): o painel escuro da HUD, com o
    canto tribal, o título dourado na letra do jogo e as linhas claras */
 .skill-tip {
-  max-width: 300px !important;
-  padding: 11px 14px 12px !important;
-  border: 1px solid rgba(214, 170, 104, 0.8) !important;
-  border-radius: 10px !important;
+  max-width: 300px;
+  padding: 11px 14px 12px;
+  border: 1px solid rgba(214, 170, 104, 0.8);
+  border-radius: 10px;
   background:
     url('/assets/ui/hud/canto-tribal.webp') right -1px bottom -1px / 40px auto no-repeat,
-    linear-gradient(180deg, rgba(44, 34, 23, 0.97), rgba(14, 11, 8, 0.97)) !important;
+    linear-gradient(180deg, rgba(44, 34, 23, 0.97), rgba(14, 11, 8, 0.97));
   box-shadow:
     inset 0 1px 0 rgba(255, 224, 170, 0.16),
-    0 8px 22px rgba(0, 0, 0, 0.55) !important;
-  color: #eadfc8 !important;
-  font: 13.5px/1.4 system-ui, sans-serif !important;
+    0 8px 22px rgba(0, 0, 0, 0.55);
+  color: #eadfc8;
+  font: 13.5px/1.4 system-ui, sans-serif;
 }
 
 .skill-tip .skill-tip-title {
-  margin-bottom: 5px !important;
+  margin-bottom: 5px;
   padding-bottom: 5px;
   border-bottom: 1px solid rgba(214, 170, 104, 0.35);
-  color: #ffd66e !important;
-  font: 700 16px Georgia, 'Times New Roman', serif !important;
+  color: #ffd66e;
+  font: 700 16px Georgia, 'Times New Roman', serif;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
 }
 
