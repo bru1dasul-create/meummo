@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { KeyBindings, KEYS_STORAGE, keyName, refusalOf } from '../src/client/novo/keys';
+import { dangerColor } from '../src/client/novo/hawkTags';
 
 /** Um "localStorage" de mentira. */
 function fakeStore(initial: Record<string, string> = {}) {
@@ -27,6 +28,7 @@ describe('teclas: o padrão', () => {
     expect(keys.actionOf('KeyC')).toBe('devagar');
     expect(keys.actionOf('KeyQ')).toBe('hab1'); // a 1ª habilidade da classe (no lugar da Bordunada, desde 15/11)
     expect(keys.actionOf('KeyR')).toBe('hab2'); // a 2ª (a Flecha Ancestral, no Caçador)
+    expect(keys.actionOf('KeyT')).toBe('hab3'); // a 3ª (os Olhos de Gavião)
     expect(keys.actionOf('KeyK')).toBe('habilidades');
     expect(keys.get('som').code).toBe('');
     expect(keys.label('esquiva')).toBe('Shift');
@@ -104,8 +106,8 @@ describe('teclas: o que estava guardado', () => {
   });
 
   it('a tecla que o jogador deu à Bordunada (até 15/11) fica com a 1ª habilidade da classe', () => {
-    const keys = new KeyBindings(fakeStore({ [KEYS_STORAGE]: JSON.stringify({ golpe: { code: 'KeyT', label: 'T' } }) }));
-    expect(keys.actionOf('KeyT')).toBe('hab1');
+    const keys = new KeyBindings(fakeStore({ [KEYS_STORAGE]: JSON.stringify({ golpe: { code: 'KeyY', label: 'Y' } }) }));
+    expect(keys.actionOf('KeyY')).toBe('hab1');
     expect(keys.actionOf('KeyQ')).toBeNull();
   });
 
@@ -126,5 +128,14 @@ describe('teclas: o nome que aparece', () => {
     expect(keyName('Semicolon', ';')).toBe(';'); // teclado americano
     expect(keyName('Quote', 'Dead')).toBe('~'); // o acento não escreve sozinho: vale o ABNT2
     expect(keyName('')).toBe('—');
+  });
+});
+
+describe('os Olhos de Gavião: a cor do perigo de cada bicho', () => {
+  it('2 níveis ou mais acima de você: vermelho; parelho (até 1 de diferença): amarelo; 2 ou mais abaixo: verde', () => {
+    expect(dangerColor(16, 14)).toBe('#ff5a4a');
+    expect(dangerColor(15, 14)).toBe('#f2c14e');
+    expect(dangerColor(13, 14)).toBe('#f2c14e');
+    expect(dangerColor(12, 14)).toBe('#7bd389');
   });
 });

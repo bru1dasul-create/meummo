@@ -1055,12 +1055,66 @@
       ctx.restore();
     },
   };
+  /**
+   * As pedras de atravessar (a pinguela com `pedras`, abaixo da cachoeirinha): pedras chatas de margem a margem, um
+   * pouco em zigue-zague, cada uma com a beirada molhada, a água batendo em volta e musgo em cima.
+   */
+  function stepStones(ctx, cam, d, z0, ink) {
+    const rnd = seedOf(d.x0, d.y0, 41);
+    const alongX = d.x1 - d.x0 >= d.y1 - d.y0;
+    const len = alongX ? d.x1 - d.x0 : d.y1 - d.y0;
+    const wid = alongX ? d.y1 - d.y0 : d.x1 - d.x0;
+    const n = Math.max(3, Math.round(len / 62));
+    const stones = [];
+    for (let i = 0; i < n; i++) {
+      const a = ((i + 0.5) / n) * len;
+      const s = (i % 2 ? 1 : -1) * wid * 0.16 + (rnd() - 0.5) * wid * 0.1;
+      const c = alongX ? { x: d.x0 + a, y: (d.y0 + d.y1) / 2 + s } : { x: (d.x0 + d.x1) / 2 + s, y: d.y0 + a };
+      stones.push({ c, r: 24 + rnd() * 9, sq: 0.75 + rnd() * 0.2, rot: rnd() * Math.PI, h: 7 + rnd() * 5 });
+    }
+    stones.sort((p, q) => cam.depth({ ...p.c, z: z0 }) - cam.depth({ ...q.c, z: z0 }));
+    const outline = (st, z, k = 1) => {
+      const pts = [];
+      for (let j = 0; j < 14; j++) {
+        const t = (j / 14) * M.TAU;
+        const wob = 1 + 0.08 * Math.sin(t * 3 + st.rot * 5);
+        const lx = Math.cos(t) * st.r * k * wob, ly = Math.sin(t) * st.r * st.sq * k * wob;
+        pts.push(cam.p({ x: st.c.x + lx * Math.cos(st.rot) - ly * Math.sin(st.rot), y: st.c.y + lx * Math.sin(st.rot) + ly * Math.cos(st.rot), z }));
+      }
+      return polyPath(pts);
+    };
+    for (const st of stones) {
+      // a água batendo em volta (um anel claro) e a beirada molhada (escura)
+      ctx.strokeStyle = 'rgba(220, 240, 236, 0.55)';
+      ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+      ctx.stroke(outline(st, z0 - 4, 1.18));
+      inkFill(ctx, outline(st, z0 - 4, 1.02), '#4f5552', ink, 2.2);
+      // o topo, seco e claro, com o musgo
+      const top = outline(st, z0 - 4 + st.h, 0.92);
+      inkFill(ctx, top, '#9a9a8e', ink, 1.6);
+      ctx.save();
+      ctx.clip(top);
+      const q = cam.p({ ...st.c, z: z0 - 4 + st.h });
+      ctx.fillStyle = '#b4b3a6';
+      ctx.beginPath();
+      ctx.ellipse(q.x - st.r * 0.25 * cam.zoom, q.y - st.r * 0.12 * cam.zoom, st.r * 0.55 * cam.zoom, st.r * 0.3 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(86, 128, 58, 0.85)';
+      for (let k = 0; k < 3; k++) {
+        ctx.beginPath();
+        ctx.ellipse(q.x + (rnd() - 0.5) * st.r * cam.zoom, q.y + (rnd() - 0.2) * st.r * 0.4 * cam.zoom, (5 + rnd() * 6) * cam.zoom, (3 + rnd() * 3) * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
   small.pinguela = {
     height: () => 10,
     blocks: 0,
     shadow: null,
     box: (cam, d, z0) => boxOf(cam, [{ x: d.x0 - 10, y: d.y0 - 10, z: z0 + 10, r: 30 }, { x: d.x1 + 10, y: d.y1 + 10, z: z0 - 40, r: 30 }, { x: d.x0 - 10, y: d.y1 + 10, z: z0 - 40, r: 30 }, { x: d.x1 + 10, y: d.y0 - 10, z: z0 + 10, r: 30 }], 10),
     paint(ctx, cam, d, z0, ink) {
+      if (d.stones) return stepStones(ctx, cam, d, z0, ink);
       // tronco deitado de margem a margem (cilindro): a parte de baixo dentro da água e o topo rente ao chão
       const along = d.x1 - d.x0 >= d.y1 - d.y0 ? 'x' : 'y';
       const r = Math.max(16, Math.min(28, (along === 'x' ? d.y1 - d.y0 : d.x1 - d.x0) * 0.4));

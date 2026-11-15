@@ -90,7 +90,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   [estrutura]; do meu lado, dá para redesenhar a imagem num jeito mais de jogo, se ele quiser.
 - **A Budega maior, igual à de verdade (15/11, com as fotos do dono; aprovada: "ficou ótimo, lembre-se de colocar
   interior com infestação da floresta"). Ramo `mundo/budega-maior`, esperando o desenho da [arte]; a Xiovanna no
-  lugar novo já vai junto (a [estrutura] autorizou a troca das duas linhas do `data/npcs.json` no mesmo commit):** de 5 × 3 m para 8 × 5,5 m no mesmo canto da praça (60,5 a 68,5 × 48,9 a 54,4), sem toldo: fachada
+  lugar novo já vai junto (a [estrutura] autorizou a troca das duas linhas do `data/npcs.json` no mesmo commit):** de
+  5 × 3 m para 8 × 5,5 m no mesmo canto da praça (60,5 a 68,5 × 48,9 a 54,4), sem toldo: fachada
   preta (`fachada: 'preta'`), moldura amarela (`moldura`), faixa de luz (`led`) e o escudo (`logo`); a vitrine à
   esquerda e a porta de enrolar de 3 m à direita (`portaDe` 65, `portaAte` 68). Dentro: `piso` (`desenho: 'porcelanato'`,
   `folhas`), duas `prateleira` pretas com nichos amarelos (`cor`, `nichos`, `cipo`), a `geladeira` de duas portas de
@@ -114,6 +115,29 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   Fotos (borradas: pessoas, telas, número da casa, placas, cartazes e telefones) e desenhos:
   `docs/referencias/budega-real-*.jpg`, `budega-maior-fachada.jpg`, `budega-maior-dentro.jpg` e `budega-maior-planta.jpg`
   (as duas imagens são o alvo do desenho; "Tabacaria", narguilé e marcas não entram no jogo).
+- **A floresta maior (14/11, planta aprovada: "pode seguir com a planta da floresta maior"; na `main` em 15/11, junto
+  com o desenho da [arte], 7ce727a, conferido por ela no jogo no PC e no celular).** O mapa passou de 96 × 120 para
+  **96 × 180** (só para o sul; nada muda de lugar). Planta: `docs/referencias/floresta-maior-planta.jpg`; conceitos: `floresta-maior-paineira.jpg` e
+  `floresta-maior-posto.jpg`. O que entrou: a **Clareira da Paineira** (32, 150; a `arvore` 'Paineira' de `especie:
+  'paineira'` com `flores`, e o parquinho antigo: `parquinho` com `brinquedo` 'balanco' (só os dois pés seguram),
+  'escorregador' e 'gira-gira'), a **Cachoeirinha** (o poço em 14,3; 159,5 e a `cachoeira` na ponta norte dele), as
+  **pedras de atravessar** (`pinguela` com `pedras: true`, abaixo do poço), a **mata profunda do sul** com o recanto do
+  Véu (6,5; 173), o **buraco no gradil** (y 160 a 162,4, com um pedaço `estado: 'quebrado'` em cada ponta), a **mata
+  da estrada** (a mata ao sul da vila, x 48 a 88, agora de andar), o **posto abandonado** (pátio de `calcada` rachada
+  em 73 a 88 × 139 a 150, `cobertura` com 4 pilares, duas `bomba`, a lojinha como `casa` com `posto: true`, `pneus` e
+  uma `placa` com `texto: ''`; a parede de mata da rua abre na frente dele), a estrada até a `barreira` em y 173,85
+  e **13 árvores novas na vila** (o terreno dos fundos virou bosque). Dá para dar a volta inteira a pé (parque → buraco
+  → mata da estrada → posto → rua → vila); o teste prova as duas passagens. **Regras novas no gerador:** tudo o que é
+  sorteado até y = 120 usa `H0` (o sorteio antigo sai igual; a faixa nova usa `SEED + 14` e `SEED + 15`); a mata só
+  "conhece" o riacho novo e o poço depois de sorteada a antiga (`STREAMS`/`PONDS`); `pruneWedges` tira as plantas
+  sorteadas que ficam num vão de entalar e para tudo se o vão for entre duas coisas postas à mão; `pocketOpen`: só é
+  vão de entalar se couber um quadrado de 0,3 m entre as duas coisas, fora das outras (os dentes entre os arbustos da
+  parede não contam). Bichos (escolhidos pelo dono em 14/11; dados da [estrutura]): `quati` 4 (20 a 38 × 112 a 140, a mata
+  do meio do parque), `tatu_bola` 3 (52 a 86 × 92 a 136), `marimbondo` 3 (52 a 86 × 154 a 177, perto do posto) e
+  `filhote_boitata` 1 (2 a 12 × 167 a 178, o recanto do Véu; só de noite). **Capivaras andando** (formato
+  da [estrutura]): em `pontos`, `capivaras-lago` e `capivaras-campinho` (retângulos) e os pontos `-descanso`; as de
+  enfeite saem quando as dela entrarem. **Mapa da tecla M:** o gerador escreve junto `capao-mapa.png` (8 px por metro,
+  sem texto) e `capao-mapa.json` (`escala`, `largura`, `altura`, `nomes`), por `scripts/mapa-de-cima.ts`.
 - **O parque antigo está na `main` (13/11)**, com o desenho da [arte]. Antes no ramo `mundo/parque-antigo` (bloco
   `FLORESTA` antes da etapa 4b, sorteio `SEED + 13`; tudo fora das trilhas e sem vão de entalar, com a função `near`
   procurando lugar em espiral). Tipos e propriedades: `placa` (`tamanho: 'grande'`, `mato`), `bebedouro` (`quebrado`,

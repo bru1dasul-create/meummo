@@ -32,6 +32,8 @@ export interface MapMarker {
   x: number;
   y: number;
   mark?: '!' | '?' | '';
+  /** Um bicho (os Olhos de Gavião mostram, na cor do perigo); sem isto, um NPC. */
+  monster?: string;
 }
 
 /** As imagens prontas de um mapa: o chão (de cima) e a neblina do que falta ver. */
@@ -124,8 +126,20 @@ export class MapPicture {
     ctx.drawImage(this.base, src.x, src.y, src.w, src.h, dest.x, dest.y, dest.w, dest.h);
     ctx.drawImage(this.fog, src.x, src.y, src.w, src.h, dest.x, dest.y, dest.w, dest.h);
     ctx.restore();
-    // os NPCs já vistos: bolinha verde-água (com ! ou ? em cima)
+    // os NPCs já vistos: bolinha verde-água (com ! ou ? em cima); os bichos dos Olhos de Gavião: ponto na cor do perigo
+    // (esses aparecem até na neblina: é o gavião que está vendo)
     for (const m of markers) {
+      if (m.monster) {
+        const p = at(m.x, m.y);
+        ctx.fillStyle = m.monster;
+        ctx.strokeStyle = '#0c1210';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(2.5, k * 0.7), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        continue;
+      }
       if (!this.seen(m.x, m.y)) continue;
       const p = at(m.x, m.y);
       ctx.fillStyle = '#9fe6c9';

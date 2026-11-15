@@ -34,7 +34,8 @@ export type SoundName =
   | 'purr'
   | 'capy'
   | 'spirit'
-  | 'burst';
+  | 'burst'
+  | 'hawk';
 
 const MUTE_KEY = 'meummo:som-desligado';
 const VOLUME_KEY = 'meummo:volumes';
@@ -331,6 +332,12 @@ export class Sfx {
         this.noise(t + 0.01, 0.3, 'bandpass', 900, 3600, 0.18);
         this.tone('sine', 880, 1320, t + 0.03, 0.35, 0.09);
         this.tone('sine', 1320, 1980, t + 0.08, 0.3, 0.05);
+        break;
+      case 'hawk': // os Olhos de Gavião: o grito do gavião lá no alto ("kiiii-ah"), longe
+        this.tone('sine', 2300, 1500, t, 0.45, 0.07);
+        this.tone('sine', 2600, 1700, t + 0.02, 0.4, 0.04);
+        this.noise(t, 0.3, 'bandpass', 3000, 2200, 0.05);
+        this.tone('sine', 1900, 1200, t + 0.5, 0.3, 0.05);
         break;
       case 'burst': // a Flecha Ancestral explode no fim: um baque fundo e o brilho subindo
         this.tone('sine', 150, 50, t, 0.35, 0.3);

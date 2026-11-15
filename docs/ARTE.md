@@ -833,7 +833,41 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
    `ActionDef.icon` e o `setLook(slot, { iconUrl })` no `ui.ts`; o "Como jogar". Conferir: `cacador.cjs` (scratchpad;
    o personagem de teste com nível 6 e a missão `saguis_encantados` feita no banco de teste). Os quadrados a mais na
    barra ficam para quando chegarem as outras habilidades.
-3. Os quatro bichos novos. 4. Caçador, parte grande. 5. O desenho da floresta maior. 6. Dia e noite.
+3. **Os quatro bichos novos** (feito): `quati.js` (S 1,35; trote em diagonal, `sniff` com o focinho baixo, `windup`
+   encolhe e `bite` abre o queixo), `tatu.js` (`tatu_bola`, S 1,7; `curl` junta as fatias numa bola de raio 15 e `roll`
+   gira as faixas na investida; `block` e `dizzy` em relógios próprios, `blockT` e `dizzyT`, sem cortar o resto),
+   `marimbondo.js` (5 vespas de 6 bolas; asas no `after`, que precisa do `this._cam`; uma sombra macia só, no `under`
+   da primeira vespa; `dodge` espalha; morte própria: despencam em 0,3 s, antes do sumiço geral de 0,4 a 0,7 s) e
+   `boitata.js` (`filhote_boitata`; segue o próprio rastro como a jararaca; bolas `noInk` nas cores do fogo, brilho
+   `lighter` no chão, línguas de fogo de base azulada; `vanish` e a morte apagam em 0,6 s, igual ao `VANISH_MS` do
+   servidor). Olhos à noite: `PD.creatures.eyes.night` (o dia e noite liga), `eyeColor(day)` e `eyeGlow(dayGlow)` para
+   os bichos novos. Conferir: `node ferramentas/prancha-bichos.cjs saida.png 2` e, no jogo, `bichos-jogo.cjs` e
+   `boitata-amanhecer.cjs` (scratchpad: menu ADM, fora da zona segura em 37,5; 35,5).
+4. **Caçador, parte grande** (feito): `rainArt.ts` (arquivo da [arte], com o "pode" da [estrutura] para as trocas no
+   `combat.ts`: os tipos `RainLook`/`RainAimLook` são estruturais, o `RAIN_LINGER_MS` sai daqui e o combate importa; a
+   conta — spots, start/land, o filtro e o busy — e a faixa da Ancestral (`aim.line`) ficam no combate). Fases
+   `rainTier(rank)`: madeira (1–2), ouro (3–4), espírito (5); tiers `WOOD`/`GOLD`/`SPIRIT` com anel, brilho, haste,
+   ponta, penas (aletas preenchidas) e rastro. Pedra: sempre cinza, halo na cor da fase e `streak` (o risco). A mira:
+   arco pontilhado (pico 1 + 0,18 × distância), anel duplo (escuro por baixo), anel de dentro tracejado andando, 8
+   dentes girando e a estrelinha. A janela das Habilidades: só o CSS do `<style>` do `skillsPanel.ts` (as classes e os
+   elementos não mudam: os testes do navegador clicam neles). Conferir: a prancha fora do jogo (`chuva/entry.ts` +
+   `prancha.cjs` no scratchpad, com esbuild) e, no jogo, `chuva-jogo2.cjs` (copia as telas em tempos exatos depois de
+   soltar o Q; estilingue e Arco de Bambu, 1/3/5 pontos) e `chuva-celular.cjs`. Ficou para depois (pedir ao dono): a
+   pose de atirar para cima (o motor manda `shoot` com o ângulo; precisaria de uma ação nova da [estrutura]), os
+   quadrados 2 a 5 da barra e o desenho da Flecha Ancestral.
+5. **O desenho da floresta maior** (feito; o `mundo/floresta-maior` entrou na main junto): `world/sul.js` (depois do
+   casas.js no view-scripts.json e no arte.ts). A paineira é `PD.flora.tree.paineira` (`BOTTLE` = o perfil do tronco;
+   a copa usa o `H.crownPaint` com as cores `PINK` e um `crownPlan` igual ao do props.js para pôr as flores em cima dos
+   tufos; `H.BARK.paineira`); o tapete de flores é um "flat" (`petalas`, empurrado pelo tmj.js para cada paineira) e as
+   pétalas caindo vêm do world.js (agora com a cor da árvore, `flowers`). Objetos novos no `PD.city.small`:
+   `parquinho` (`toy`), `cachoeira` (só `live`, com `paint() {}`: a água mexe), `cobertura` (`overhead: true` — o Small
+   passou a aceitar — e `fades`), `pilar-cobertura` (o tmj.js faz os 4 a 0,6 m das beiradas, como as caixas do mapa),
+   `bomba` e `pneus`. No props.js: `stationFront`/`stationDoorRect` (a casa com `station`) e o gradil `broken` com o
+   plano das barras sorteado uma vez só (antes o contorno e o ferro sorteavam diferente). Conferir: `foto-lugar3.cjs`
+   (scratchpad; `NOME` = um personagem que já existe, porque criar muitos seguidos esbarra no limite do servidor;
+   `ALTURA`/`LARG` para a janela; `CIMA` para o recorte), por exemplo a clareira (30, 150), a cachoeira (18, 157) e o
+   posto (83, 141).
+6. Dia e noite.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

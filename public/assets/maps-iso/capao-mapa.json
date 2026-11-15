@@ -1,13 +1,25 @@
 {
   "escala": 8,
   "largura": 96,
-  "altura": 120,
+  "altura": 180,
   "nomes": [
     {
       "nome": "Vila do Capão",
       "x": 72,
       "y": 40,
       "tipo": "vila"
+    },
+    {
+      "nome": "Posto Abandonado",
+      "x": 80.5,
+      "y": 144.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Estrada para Guarapiranga",
+      "x": 92,
+      "y": 130,
+      "tipo": "lugar"
     },
     {
       "nome": "Portão I",
@@ -40,6 +52,18 @@
       "tipo": "clareira"
     },
     {
+      "nome": "Clareira da Paineira",
+      "x": 32,
+      "y": 150,
+      "tipo": "clareira"
+    },
+    {
+      "nome": "Cachoeirinha",
+      "x": 14.3,
+      "y": 158.5,
+      "tipo": "agua"
+    },
+    {
       "nome": "Mata Profunda",
       "x": 11.5,
       "y": 9,
@@ -52,9 +76,21 @@
       "tipo": "mata"
     },
     {
+      "nome": "Mata Profunda",
+      "x": 11,
+      "y": 169,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Mata da Estrada",
+      "x": 68,
+      "y": 130,
+      "tipo": "mata"
+    },
+    {
       "nome": "Mata do Parque Santo Dias",
       "x": 24,
-      "y": 60,
+      "y": 90,
       "tipo": "mata"
     },
     {
@@ -91,6 +127,12 @@
       "nome": "Bloco B",
       "x": 91.2,
       "y": 17.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Paineira",
+      "x": 27.76,
+      "y": 145.76,
       "tipo": "lugar"
     }
   ]

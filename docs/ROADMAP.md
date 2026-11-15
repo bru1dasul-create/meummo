@@ -541,15 +541,27 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (o escuro em volta abre como uma íris, em vez de sumir de uma vez) e a câmera volta junto
 
 **Mundo:**
-- [ ] **[mundo]** Aumentar a floresta
+- [x] **[mundo]** Aumentar a floresta (**na main em 15/11**, com o desenho da [arte]; planta aprovada em 14/11): o parque
+  cresce mais 60 m para o sul (Clareira da Paineira com o parquinho antigo, Cachoeirinha, mata profunda do sul com o
+  recanto do Véu, buraco no gradil), a mata ao sul da vila vira mata de andar com o posto abandonado na beira da rua, a
+  rua desce até o fim novo e a vila ganha 13 árvores
+- [x] **[arte]** Desenhar as coisas da floresta maior (15/11, com o `mundo/floresta-maior` junto na main): o arquivo novo
+  `prototipos/pindorama-25d/js/world/sul.js` — a `paineira` (tronco de garrafa verde com espinhos e raízes de tábua, copa
+  cor-de-rosa com as florzinhas, pétalas caindo e o tapete de flores no chão), o `parquinho` (balanço com a corrente
+  arrebentada, escorregador, gira-gira com mato no meio; ferrugem e cipó), a `cachoeira` (pedras com musgo, a água
+  descendo e a espuma mexendo), a `cobertura` do posto (mato e arvorezinhas em cima, faixa laranja, cipó pendurado;
+  fica por cima de quem está embaixo e transparente com o herói embaixo ou atrás) com os 4 pilares, as `bomba`s velhas
+  sem marca e a pilha de `pneus`; no props.js, a lojinha (`casa` com `posto`: vitrine quebrada e porta de enrolar meio
+  aberta) e o gradil `quebrado` (barras faltando e tortas, o corrimão partido); no fundo.js, a placa `torta` em branco;
+  no flora.js, a `pinguela` de `pedras`
 - [ ] **[mundo + arte + estrutura]** A Budega maior, igual à de verdade (15/11, com as fotos do dono; aprovada: "ficou
   ótimo, lembre-se de colocar interior com infestação da floresta"). **A parte do [mundo] está pronta** no ramo
   `mundo/budega-maior`: 8 × 5,5 m no mesmo canto da praça; a vitrine à esquerda e a porta de enrolar de 3 m à direita;
   dentro, igual à imagem aprovada, o piso branco, as prateleiras pretas e amarelas, a geladeira de duas portas, o
   ventilador, o balcão de vidro dos doces, o freezer solto, o caixa em L na frente da parede de grama com o escudo
   aceso (a Xiovanna atrás, só ela passa) e a dracena no canto, e a floresta entrando (raiz, mato, samambaia, cipó e
-  musgo); na frente, o degrau com capacho, o vaso de dracena, a lousinha e dois caixotes de fruta; a fogueira andou 2 m para a direita, as mesas desceram e o varal do sul passa por um poste novo,
-  entre a praça e o campinho. Fotos e desenhos: `docs/referencias/budega-*.jpg`
+  musgo); na frente, o degrau com capacho, o vaso de dracena, a lousinha e dois caixotes de fruta; a fogueira andou 2 m
+  para a direita, as mesas desceram e o varal do sul passa por um poste novo, entre a praça e o campinho. Fotos e desenhos: `docs/referencias/budega-*.jpg`
 - [ ] **[arte]** O desenho da Budega maior (a lista está no `docs/MUNDO.md`, "Esperando outras frentes")
 - [x] **[estrutura]** A Xiovanna no lugar novo, (66,6; 50,55), atrás do caixa, no `data/npcs.json` (a [estrutura]
   autorizou o [mundo] a trocar as duas linhas no mesmo commit do mapa, no ramo `mundo/budega-maior`)
@@ -563,9 +575,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (nível 3: casca que segura 70% de frente e tonto 2 s depois da investida), `marimbondo` (nível 3: enxame, 40% das
   pedras passam pelo meio) e `filhote_boitata` (nível 5, investida com rastro de fogo, só de noite) em data/monsters.json
   (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
-- [ ] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
-- [ ] **[arte]** Desenhar os quatro bichos novos (hoje aparecem como bonecos de gente com o nome) e as ações `dizzy`
-  (tonto), `dodge` (a pedra passou pelo enxame), `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou)
+- [x] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
+  (**na main em 15/11**, com a floresta maior): quati 4, tatu_bola 3, marimbondo 3 e filhote_boitata 1 no recanto do Véu
+- [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
+  `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
+  e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
+  em bola e rola, solta a faísca do tlinc e fica com as estrelinhas; as 5 vespas fecham, abrem num anel na ferroada,
+  se espalham e despencam; o boitatá é chama sem contorno com brilho no chão, investe e apaga com fumaça. Os olhos
+  de todos os bichos ficam vermelhos à noite (`PD.creatures.eyes.night`, a ligar no dia e noite). Prancha:
+  `node ferramentas/prancha-bichos.cjs saida.png [escala]`
 - [x] **[estrutura]** As capivaras andando, as regras (14/11): os bichos de data/bichos.json ganharam `tipo`,
   `quantidade` (bando), `dentroDeCasa` e `"mia": false`; dois bandos no Capão (lago 3, campinho 2), que deitam lado a
   lado em volta do ponto de descanso, acordam cada um numa hora e gostam de carinho (estalinhos); desenho provisório
@@ -660,15 +678,30 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   onça espiritual e as três garras sobre as pintas), usados pelo `skillIconUrl` (janela e barra); o "Como jogar" com o
   `Q` (mirar a Chuva), o `K` e o ✦ (Habilidades) e o `M` (mapa); no `ui.ts`, o jeito oficial de pôr o ícone no botão
   (`ActionDef.icon`, ou `setLook(slot, { iconUrl })`) no lugar do remendo do `skill0`
-- [ ] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
-  da mira no estilo da HUD, e mais quadrados na barra quando chegarem as próximas habilidades
+- [x] **[arte]** O desenho da Chuva (flechas e pedras; muda com 3 e com 5 pontos), a janela das Habilidades e o círculo
+  da mira no estilo da HUD (15/11): `src/client/novo/rainArt.ts` (o `combat.ts` guarda a conta e chama daqui) — 1 e 2
+  pontos = madeira (flecha de madeira com ponta de pedra e penas de ponta vermelha, poeira), 3 e 4 = ouro (dourada,
+  brilho e rastro, faíscas), 5 = espírito (verde de luz, rastro comprido, clarão e luzinhas); as pedras do estilingue
+  são sempre pedra (o brilho em volta muda com a fase, para não parecer moeda) com o risco de velocidade; no chão, o
+  anel que fecha até o meio mostra quando caem; a mira é o círculo dourado da HUD com os dentes girando, a estrelinha
+  no meio e o arco pontilhado do tiro. A janela das Habilidades com a moldura da mochila, o "+" redondo dourado e a
+  insígnia dos pontos (só o CSS do `skillsPanel.ts`)
+- [ ] **[arte]** Mais quadrados na barra para as habilidades 2 a 5 (um `ActionSlot` novo no `ui.ts`, no PC e no celular;
+  a [estrutura] passa a usar e apaga o botão provisório do `skillButtons.ts`)
 - [x] **[estrutura]** Passo 2 (15/11, com o "pode" do dono): a **Flecha Ancestral** (nível 6, tecla `R`): segurar mira com
   uma faixa; a flecha do espírito atravessa todos os bichos da linha (casca e enxame não seguram; parede e tronco, sim),
   com 3 pontos marca (mais dano de todo mundo por uns segundos) e com 5 explode no fim. Protocolo 38. Botão provisório
   (PC: o 6º quadrado; celular: em cima do da Chuva), desenho provisório
 - [ ] **[arte]** O desenho da Flecha Ancestral (kind `'ancestral'` no `drawProjectile`, o brilho e a explosão do fim, a
-  runa da marca), o quadrado dela na barra (hoje um botão provisório do motor) e o `R` no "Como jogar"
-- [ ] **[estrutura]** Olhos de Gavião (nível 10: ver os bichos de longe, rastros e ameaças escondidas)
+  runa da marca) e o quadrado dela na barra (hoje um botão provisório do motor). O `R` no "Como jogar" já foi (15/11)
+- [x] **[estrutura]** Passo 3 (15/11, com o "pode" do dono): os **Olhos de Gavião** (nível 10, tecla `T`): por 8 a 16 s
+  enxerga mais longe (+50% a +100%: os bichos de longe chegam e aparecem no mini mapa e no mapa do M), cada bicho ganha
+  a etiqueta do nível na cor do perigo (verde, amarelo, vermelho) por cima das árvores e do escuro, e com 3 pontos eles
+  levam +10% a +20% de dano seu. Recarga 30 s. Protocolo 39. Etiquetas provisórias (HTML); "revelar o que está
+  escondido" fica para quando houver um bicho escondido
+- [ ] **[arte]** Os Olhos de Gavião: o destaque de verdade (o contorno do bicho, no lugar das etiquetas de
+  `hawkTags.ts`), afastar a câmera enquanto valem (hoje a view trava no zoom 0,7), o quadrado da 3ª habilidade na
+  barra (hoje um botão provisório em cima do 6º quadrado) e o `T` no "Como jogar"
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo)
 - [ ] **[dono]** Depois: a escolha da classe virar o ritual na figueira (decisão de 12/11); trocar de classe; recomeçar

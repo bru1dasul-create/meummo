@@ -140,8 +140,9 @@ export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_fu
 /** Tipos de efeito visual que o servidor manda mostrar. */
 // 'dizzy' = o bicho ficou tonto (o tatu-bola depois da investida); 'dodge' = o tiro passou pelo meio do enxame sem acertar;
 // 'vanish' = o bicho foi embora (o filhote de boitatá ao amanhecer: em seguida vem o `despawn`); 'mark' = a Flecha
-// Ancestral marcou o bicho: ele leva mais dano de todo mundo por `ms`
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | PetFx;
+// Ancestral marcou o bicho: ele leva mais dano de todo mundo por `ms`; 'hawk' = o jogador usou os Olhos de Gavião
+// (enxerga mais longe por `ms`)
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | 'hawk' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 

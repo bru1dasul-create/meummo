@@ -349,9 +349,24 @@
     ctx.restore();
   }
 
+  /**
+   * À noite os bichos ficam mais fortes e de olhos vermelhos (todos; a view liga com o setTimeOfDay): os olhos de cada
+   * criatura passam por aqui.
+   */
+  const eyes = { night: false };
+  function eyeColor(day) {
+    return eyes.night ? '#ff3b26' : day;
+  }
+  function eyeGlow(dayGlow) {
+    return eyes.night ? 'rgba(255, 70, 40, 0.95)' : dayGlow;
+  }
+
   PD.creatures = {
     Creature,
     INK,
+    eyes,
+    eyeColor,
+    eyeGlow,
     tube,
     tint,
     /** Sombra das bolas projetada num plano de altura `z` (cm): o chão, ou o assento do sofá para o gato. */

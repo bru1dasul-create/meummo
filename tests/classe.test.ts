@@ -2,7 +2,8 @@
 // (por enquanto só o Caçador da Floresta: arco e flecha ou estilingue). 1 ponto por nível, a partir do 2; cada
 // habilidade libera num nível e vai até 5 pontos (entre um ponto e o próximo, alguns níveis). A primeira que funciona é
 // a Chuva de Flechas: as flechas sobem e caem na área escolhida, acertando todos os bichos dentro. A segunda (o "pode" do
-// dono em 15/11), a Flecha Ancestral: atravessa todos os bichos da linha, marca (mais dano de todos) e explode no fim.
+// dono em 15/11), a Flecha Ancestral: atravessa todos os bichos da linha, marca (mais dano de todos) e explode no fim. A
+// terceira, os Olhos de Gavião: por um tempo enxerga mais longe e, com mais pontos, bate mais forte nos bichos.
 
 import { describe, expect, it } from 'vitest';
 import { checkClasses, loadClassDefs, parseClassDefs } from '../src/server/classes';
@@ -54,6 +55,17 @@ const CLASSES = {
           { danoPorcento: 100, marcaPorcento: 50, marcaSegundos: 4, explosaoRaio: 2, explosaoPorcento: 100 },
         ],
       },
+      olhos: {
+        nome: 'Olhos',
+        descricao: 'Vê longe.',
+        nivel: 1,
+        tipo: 'olhos',
+        recargaSegundos: 30,
+        pontos: [
+          { duracaoSegundos: 8, visaoPorcento: 50 },
+          { duracaoSegundos: 10, visaoPorcento: 100, danoExtraPorcento: 50 },
+        ],
+      },
     },
   },
 };
@@ -62,6 +74,7 @@ const cacador = classes.get('cacador')!;
 const chuva = cacador.skills[0]!;
 const futura = cacador.skills[1]!;
 const flecha = cacador.skills[2]!;
+const olhos = cacador.skills[3]!;
 
 describe('data/classes.json', () => {
   it('o Caçador da Floresta: libera depois dos saguis encantados, com as 5 habilidades e só a Chuva de Flechas pronta', () => {
@@ -71,7 +84,7 @@ describe('data/classes.json', () => {
     expect(hunter.skills.map((s) => [s.id, s.level, s.kind])).toEqual([
       ['chuva_de_flechas', 3, 'chuva'],
       ['flecha_ancestral', 6, 'flecha'],
-      ['olhos_de_gaviao', 10, null],
+      ['olhos_de_gaviao', 10, 'olhos'],
       ['chamado_selvagem', 15, null],
       ['furia_da_onca', 20, null],
     ]);
@@ -90,6 +103,12 @@ describe('data/classes.json', () => {
     expect(arrow.points.map((p) => p.markPct > 0)).toEqual([false, false, true, true, true]);
     expect(arrow.points.map((p) => p.burstRadius > 0)).toEqual([false, false, false, false, true]);
     for (let i = 1; i < arrow.points.length; i++) expect(arrow.points[i]!.damagePct).toBeGreaterThan(arrow.points[i - 1]!.damagePct);
+    // os Olhos de Gavião: duram mais e enxergam mais longe a cada ponto; o dano a mais com 3
+    const eyes = hunter.skills[2]!;
+    expect(eyes).toMatchObject({ name: 'Olhos de Gavião', cooldownMs: 30_000, range: 0 });
+    expect(eyes.points.map((p) => p.durationMs)).toEqual([8000, 10_000, 12_000, 14_000, 16_000]);
+    expect(eyes.points.map((p) => p.bonusPct > 0)).toEqual([false, false, true, true, true]);
+    for (let i = 1; i < eyes.points.length; i++) expect(eyes.points[i]!.visionPct).toBeGreaterThan(eyes.points[i - 1]!.visionPct);
     expect(() => checkClasses(real, loadQuestDefs())).not.toThrow();
   });
 
@@ -106,13 +125,15 @@ describe('data/classes.json', () => {
       speed: 0,
       width: 0,
       points: [
-        { arrows: 6, radius: 2, damagePct: 100, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 },
-        { arrows: 8, radius: 2.5, damagePct: 200, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 },
+        { arrows: 6, radius: 2, damagePct: 100, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0, durationMs: 0, visionPct: 0, bonusPct: 0 },
+        { arrows: 8, radius: 2.5, damagePct: 200, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0, durationMs: 0, visionPct: 0, bonusPct: 0 },
       ],
     });
     expect(futura).toMatchObject({ kind: null, points: [] });
     expect(flecha).toMatchObject({ kind: 'flecha', cooldownMs: 8000, range: 20, speed: 24, delayMs: 0, width: 0.8 }); // sem "largura": 0,8 m
-    expect(flecha.points[2]).toEqual({ damagePct: 100, arrows: 0, radius: 0, markPct: 50, markMs: 4000, burstRadius: 2, burstPct: 100 });
+    expect(flecha.points[2]).toEqual({ damagePct: 100, arrows: 0, radius: 0, markPct: 50, markMs: 4000, burstRadius: 2, burstPct: 100, durationMs: 0, visionPct: 0, bonusPct: 0 });
+    expect(olhos).toMatchObject({ kind: 'olhos', cooldownMs: 30_000, range: 0 });
+    expect(olhos.points[1]).toMatchObject({ durationMs: 10_000, visionPct: 100, bonusPct: 50, damagePct: 0 });
   });
 
   it('explica o erro em português', () => {
@@ -127,6 +148,10 @@ describe('data/classes.json', () => {
     expect(badArrow({ pontos: [{ danoPorcento: 100, marcaPorcento: 20 }] })).toThrow(/"marcaSegundos" precisa ser um número/);
     expect(badArrow({ pontos: [{ danoPorcento: 100, explosaoPorcento: 80 }] })).toThrow(/"explosaoRaio" precisa ser um número/);
     expect(badArrow({ velocidade: 100 })).toThrow(/"velocidade" precisa ser no máximo 60/);
+    const eyes = CLASSES.cacador.habilidades.olhos;
+    const badEyes = (change: Record<string, unknown>) => () => parseClassDefs({ c: { ...CLASSES.cacador, habilidades: { h: { ...eyes, ...change } } } });
+    expect(badEyes({ pontos: [{ visaoPorcento: 50 }] })).toThrow(/"duracaoSegundos" precisa ser um número/);
+    expect(badEyes({ pontos: [{ duracaoSegundos: 8, visaoPorcento: 500 }] })).toThrow(/"visaoPorcento" precisa ser no máximo 200/);
     expect(() => parseClassDefs({ 'Caçador': CLASSES.cacador })).toThrow(/só pode ter letras sem acento/);
     expect(() => checkClasses(classes, parseQuestDefs({}))).toThrow(/"liberaDepoisDe" é "espantar", que não é uma missão/);
   });
@@ -444,47 +469,47 @@ describe('a classe fica salva', () => {
   });
 });
 
-describe('a Flecha Ancestral', () => {
-  /**
-   * Uma linha de 20 × 5 com uma parede (que segura tiro) na coluna 17, com uma passagem lá em cima: o jogador no tile
-   * (1, 2); na mesma linha, dois alvos (5 e 8), um tatu-bola (11, casca de 90% para todo lado), um enxame (14, 90% das
-   * pedras passam), um alvo colado na parede (16) e outro atrás dela (19). Pontos: o 1º no nível 1, o 2º no 3, o 3º no 5.
-   */
-  function line(level: number, points: number) {
-    const clock = new FakeClock();
-    const rows = Array.from({ length: 5 }, (_, i) => (i === 0 ? '.'.repeat(20) : '.'.repeat(17) + '#..'));
-    const zones = [
-      { monster: 'alvo', x: 5 },
-      { monster: 'alvo', x: 8 },
-      { monster: 'tatu', x: 11 },
-      { monster: 'enxame', x: 14 },
-      { monster: 'alvo', x: 16 },
-      { monster: 'alvo', x: 19 },
-    ].map((z) => ({ ...z, y: 2, w: 1, h: 1 }));
-    const map = GameMap.fromTiled(tiledFromAscii(rows, { x: 1, y: 2 }, zones), 'linha');
-    const world = new World(map, { now: clock.now, random: () => 0, monsters, items, npcs, quests, classes });
-    const conn = new FakeConn();
-    const joined = world.join('Ana', conn);
-    if (!joined.ok) throw new Error(joined.reason);
-    const player = joined.player;
-    Object.assign(player, { x: 1, y: 2, level });
-    player.quests.espantar = { state: 'done', count: 1 };
-    world.chooseClass(player, 'cacador');
-    for (let i = 0; i < points; i++) world.learnSkill(player, 'flecha');
-    const run = (ms: number) => {
-      for (let t = 0; t < ms; t += TICK_MS) {
-        clock.advance(TICK_MS);
-        world.tick();
-      }
-    };
-    run(TICK_MS);
-    const at = (x: number) => [...world.monsters.values()].find((m) => m.x === x && m.y === 2)!;
-    const row = [5, 8, 11, 14, 16, 19].map(at);
-    // mira no leste, na altura do pé
-    const fire = (cid?: number) => world.castSkill(player, 'flecha', 20, feetAt(player.x, player.y).y, cid);
-    return { world, conn, player, run, row, fire };
-  }
+/**
+ * Uma linha de 20 × 5 com uma parede (que segura tiro) na coluna 17, com uma passagem lá em cima: o jogador no tile
+ * (1, 2); na mesma linha, dois alvos (5 e 8), um tatu-bola (11, casca de 90% para todo lado), um enxame (14, 90% das
+ * pedras passam), um alvo colado na parede (16) e outro atrás dela (19). Pontos: o 1º no nível 1, o 2º no 3, o 3º no 5.
+ */
+function line(level: number, points: number, skill = 'flecha') {
+  const clock = new FakeClock();
+  const rows = Array.from({ length: 5 }, (_, i) => (i === 0 ? '.'.repeat(20) : '.'.repeat(17) + '#..'));
+  const zones = [
+    { monster: 'alvo', x: 5 },
+    { monster: 'alvo', x: 8 },
+    { monster: 'tatu', x: 11 },
+    { monster: 'enxame', x: 14 },
+    { monster: 'alvo', x: 16 },
+    { monster: 'alvo', x: 19 },
+  ].map((z) => ({ ...z, y: 2, w: 1, h: 1 }));
+  const map = GameMap.fromTiled(tiledFromAscii(rows, { x: 1, y: 2 }, zones), 'linha');
+  const world = new World(map, { now: clock.now, random: () => 0, monsters, items, npcs, quests, classes });
+  const conn = new FakeConn();
+  const joined = world.join('Ana', conn);
+  if (!joined.ok) throw new Error(joined.reason);
+  const player = joined.player;
+  Object.assign(player, { x: 1, y: 2, level });
+  player.quests.espantar = { state: 'done', count: 1 };
+  world.chooseClass(player, 'cacador');
+  for (let i = 0; i < points; i++) world.learnSkill(player, skill);
+  const run = (ms: number) => {
+    for (let t = 0; t < ms; t += TICK_MS) {
+      clock.advance(TICK_MS);
+      world.tick();
+    }
+  };
+  run(TICK_MS);
+  const at = (x: number) => [...world.monsters.values()].find((m) => m.x === x && m.y === 2)!;
+  const row = [5, 8, 11, 14, 16, 19].map(at);
+  // mira no leste, na altura do pé
+  const fire = (cid?: number) => world.castSkill(player, 'flecha', 20, feetAt(player.x, player.y).y, cid);
+  return { world, conn, player, run, row, fire };
+}
 
+describe('a Flecha Ancestral', () => {
   it('atravessa todos os bichos da linha, cada um uma vez: nem a casca do tatu nem o enxame seguram; a parede, sim', () => {
     const { conn, run, row, fire } = line(2, 1);
     fire(7);
@@ -550,5 +575,74 @@ describe('a Flecha Ancestral', () => {
     expect(conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'cooldown' });
     expect(conn.ofType('scd')).toEqual([{ t: 'scd', s: 'flecha', ms: 8000 }]);
     expect(conn.ofType('shot').filter((m) => m.kind === 'ancestral')).toHaveLength(1);
+  });
+});
+
+describe('os Olhos de Gavião', () => {
+  it('enxerga mais longe enquanto dura: o bicho a 29 m aparece e, quando acaba, some', () => {
+    const clock = new FakeClock();
+    const map = GameMap.fromTiled(tiledFromAscii(Array.from({ length: 5 }, () => '.'.repeat(50)), { x: 1, y: 2 }, [{ monster: 'alvo', x: 30, y: 2, w: 1, h: 1 }]), 'longe');
+    const world = new World(map, { now: clock.now, random: () => 0, monsters, items, npcs, quests, classes });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    Object.assign(player, { x: 1, y: 2, level: 2 });
+    player.quests.espantar = { state: 'done', count: 1 };
+    world.chooseClass(player, 'cacador');
+    world.learnSkill(player, 'olhos');
+    const run = (ms: number) => {
+      for (let t = 0; t < ms; t += TICK_MS) {
+        clock.advance(TICK_MS);
+        world.tick();
+      }
+    };
+    run(TICK_MS);
+    const far = [...world.monsters.values()][0]!;
+    const seen = () => player.known.has(far.id);
+    expect(seen()).toBe(false); // 29 m: longe demais (a visão de sempre vai até 20)
+    world.castSkill(player, 'olhos', 0, 0);
+    run(TICK_MS);
+    expect(seen()).toBe(true); // +50%: até 30 m
+    expect(conn.ofType('spawn').some((m) => m.e.id === far.id)).toBe(true);
+    expect(conn.ofType('scd').at(-1)).toEqual({ t: 'scd', s: 'olhos', ms: 30_000 });
+    run(8000); // acabou
+    expect(seen()).toBe(false);
+    expect(conn.ofType('despawn').some((m) => m.id === far.id)).toBe(true);
+  });
+
+  it('com o dano a mais (2 pontos no teste): a pedra de sempre bate 50% mais forte enquanto dura', () => {
+    const { world, player, run, row } = line(3, 2, 'olhos');
+    world.castSkill(player, 'olhos', 0, 0);
+    world.shoot(player, 1, 0); // nível 3: 5 de dano, +50% = 7,5 → 8
+    run(SHOT_COOLDOWN_MS + 300);
+    expect(row[0]!.hp).toBe(92);
+    run(10_000); // acabou
+    world.shoot(player, 2, 0);
+    run(SHOT_COOLDOWN_MS + 300);
+    expect(row[0]!.hp).toBe(87);
+  });
+
+  it('não ataca: vale na área segura e defendendo, não solta a pedra puxada; quem está perto vê; recarga', () => {
+    const { world, conn, player, run } = hunter(3, { safe: true });
+    world.learnSkill(player, 'olhos');
+    const other = new FakeConn();
+    world.join('Beto', other);
+    run(TICK_MS);
+    world.charge(player); // puxando a pedra
+    world.castSkill(player, 'olhos', 0, 0);
+    run(TICK_MS);
+    expect(player.hawkUntil).toBeGreaterThan(0); // na vila (área segura), vale
+    expect(player.chargeStart).not.toBeNull(); // e a pedra continua puxada
+    expect(other.ofType('fx').find((m) => m.kind === 'hawk')).toMatchObject({ id: player.id, ms: 8000 });
+    world.castSkill(player, 'olhos', 0, 0);
+    run(TICK_MS);
+    expect(conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'cooldown' });
+    // defendendo, também vale (é só olhar)
+    const guarding = hunter(3);
+    guarding.world.learnSkill(guarding.player, 'olhos');
+    guarding.world.guard(guarding.player, true, 0);
+    guarding.world.castSkill(guarding.player, 'olhos', 0, 0);
+    expect(guarding.player.hawkUntil).toBeGreaterThan(0);
   });
 });
