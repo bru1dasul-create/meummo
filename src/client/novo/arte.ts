@@ -31,6 +31,7 @@ import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';
 import '../../../prototipos/pindorama-25d/js/creatures/jararaca.js';
+import '../../../prototipos/pindorama-25d/js/creatures/pessoa.js';
 import '../../../prototipos/pindorama-25d/js/creatures/xiovanna.js';
 // o Joaquim, o gato da vó
 import '../../../prototipos/pindorama-25d/js/creatures/gato.js';

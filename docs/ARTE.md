@@ -924,6 +924,24 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
   de teste com o Caçador nível 14 é `jogo-novo/cacador.db` (personagens `Cacador` e `CacadorCel`). O mouse precisa
   passar por cima do jogo antes de segurar o R (senão o motor usa sozinho, mirando onde pega mais bichos).
 
+### O molde de gente dos NPCs (15/11, pedido do dono: "melhora a arte da Xiovanna, e já deixa para usar para futuros npc")
+- `js/creatures/pessoa.js` (antes do xiovanna.js no view-scripts.json e no arte.ts): `PD.creatures.Person` e
+  `PD.creatures.definePerson('chave da NPC', aparência)`. A aparência (tudo opcional, o resto vem do `PADRAO`): `pele`,
+  `cabelo` (`tipo`: afro, curto, coque, longo, careca; `cor`; `flor`), `rosto` (`olhos`, `delineado`, `labios`, `blush`,
+  `barba`, `brincos`), `cima` (`tipo`: jaqueta ou camiseta; `cor`, `ziper`, `capuz`, `escudo`, `emblema`), `baixo`
+  (calca, bermuda, saia), `pes` (tenis, chinelo), `corpo` (`altura`, `largura`, `feminino`) e `gestos` (`aceno`,
+  `cabelo`). A Xiovanna virou só a aparência dela (`xiovanna.js`, 20 linhas).
+- **Como desenha:** o `parts` calcula as juntas (`this._j`) e devolve bolas simples só para a sombra e a caixa; o
+  `drawable` troca o `draw` pelo `_paint`, que monta partes (cápsulas na tela, o contorno do tronco por fatias
+  `TORSO`/`PELVIS`/`SKIRT`), ordena pela profundidade da câmera e pinta cada uma com o contorno de tinta em volta do
+  conjunto, o `cel` (sombra, cor, fio de luz) e os detalhes (zíper, gola, escudo, punho, bolsos). O rosto são decalques
+  no plano da cabeça; ela pisca, e a boca abre ao falar. Cabelo novo = uma função em `HAIR` que devolve bolas nos eixos
+  da cabeça; roupa nova = um ramo no `_paint`.
+- **Limite visto no jogo:** no caixa da Budega ela fica de costas para a câmera (o balcão dá para dentro da loja), então
+  ali aparecem o cabelo e os ombros; o rosto aparece quando ela vira para o herói de lado.
+- Conferir: `xio-prancha.cjs` (scratchpad): a Xiovanna em 5 lados, os gestos, 5 NPCs de exemplo feitos só trocando a
+  aparência, e todos no tamanho do jogo.
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
