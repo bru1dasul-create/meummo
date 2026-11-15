@@ -29,6 +29,7 @@
         "recargaSegundos": 8,
         "alcance": 14,
         "velocidade": 24,
+        "largura": 0.8,
         "pontos": [
           { "danoPorcento": 200 },
           { "danoPorcento": 230 },

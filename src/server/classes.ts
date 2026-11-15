@@ -44,7 +44,7 @@ function parseSkill(rawId: string, raw: unknown, className: string): ClassSkillI
   const where = `habilidade "${rawId}" da classe "${className}"`;
   const r = new Reader(objectOf(raw, `a ${where}`), FILE, where);
   const base = { id, name: r.text('nome'), description: r.text('descricao'), level: whole(r, 'nivel', 1, MAX_LEVEL) };
-  if (!r.has('tipo')) return { ...base, kind: null, cooldownMs: 0, range: 0, delayMs: 0, speed: 0, points: [] };
+  if (!r.has('tipo')) return { ...base, kind: null, cooldownMs: 0, range: 0, delayMs: 0, speed: 0, width: 0, points: [] };
   const kind = r.text('tipo').toLowerCase() as ClassSkillKind;
   if (!KINDS.includes(kind)) r.fail('tipo', `precisa ser ${KINDS.map((k) => `"${k}"`).join(' ou ')} (ou ficar de fora: a habilidade aparece como "em breve")`);
   const list = r.list('pontos');
@@ -71,6 +71,7 @@ function parseSkill(rawId: string, raw: unknown, className: string): ClassSkillI
     range: upTo(r, 'alcance', 1, 30),
     delayMs: kind === 'chuva' ? Math.round(upTo(r, 'demoraMs', 0, 5000)) : 0,
     speed: kind === 'flecha' ? upTo(r, 'velocidade', 5, 60) : 0,
+    width: kind === 'flecha' ? upTo(r, 'largura', 0.3, 3, 0.8) : 0,
     points,
   };
 }

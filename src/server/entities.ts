@@ -349,9 +349,11 @@ export interface Projectile extends ShotPath {
   pierce?: PierceShot;
 }
 
-/** O que a Flecha Ancestral leva: quem ela já atravessou, a marca e a explosão do fim (0 = não tem). */
+/** O que a Flecha Ancestral leva: quem ela já atravessou, a largura, a marca e a explosão do fim (0 = não tem). */
 export interface PierceShot {
   hit: Set<number>;
+  /** Quanto ela pega de cada lado da linha (metros). */
+  width: number;
   markPct: number;
   markMs: number;
   burstRadius: number;

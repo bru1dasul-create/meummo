@@ -43,6 +43,8 @@ export interface ClassSkillInfo {
   delayMs: number;
   /** Flecha: a velocidade dela (metros por segundo). */
   speed: number;
+  /** Flecha: quanto ela pega de cada lado da linha (metros, medido no pé do bicho). */
+  width: number;
   /** Os números de cada ponto (o máximo de pontos é o tamanho da lista). Vazia nas "em breve". */
   points: SkillPointInfo[];
 }

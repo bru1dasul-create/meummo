@@ -1000,6 +1000,7 @@ export class World {
       const base = this.rollRange(min, max);
       const pierce: PierceShot = {
         hit: new Set(),
+        width: skill.width,
         markPct: numbers.markPct,
         markMs: numbers.markMs,
         burstRadius: numbers.burstRadius,
@@ -1998,7 +1999,7 @@ export class World {
     const travel = Math.atan2(shot.dy, shot.dx);
     const result = advanceShot(shot, dt, this.map, (x, y) => {
       for (const monster of [...this.monsters.values()]) {
-        if (monster.leavingAt !== null || pierce.hit.has(monster.id) || !shotTouches(x, y, monster.x, monster.y, SHOT_HIT_RADIUS)) continue;
+        if (monster.leavingAt !== null || pierce.hit.has(monster.id) || !shotTouches(x, y, monster.x, monster.y, pierce.width)) continue;
         pierce.hit.add(monster.id);
         this.damage(monster, shot.damage, shot.ownerId, now, travel, 0, true);
         if (pierce.markPct > 0 && this.monsters.has(monster.id) && monster.hp > 0) {

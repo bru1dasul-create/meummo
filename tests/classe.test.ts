@@ -86,7 +86,7 @@ describe('data/classes.json', () => {
     }
     // a Flecha Ancestral: mais dano a cada ponto; a marca com 3 e a explosão com 5
     const arrow = hunter.skills[1]!;
-    expect(arrow).toMatchObject({ name: 'Flecha Ancestral', cooldownMs: 8000, range: 14, speed: 24 });
+    expect(arrow).toMatchObject({ name: 'Flecha Ancestral', cooldownMs: 8000, range: 14, speed: 24, width: 0.8 });
     expect(arrow.points.map((p) => p.markPct > 0)).toEqual([false, false, true, true, true]);
     expect(arrow.points.map((p) => p.burstRadius > 0)).toEqual([false, false, false, false, true]);
     for (let i = 1; i < arrow.points.length; i++) expect(arrow.points[i]!.damagePct).toBeGreaterThan(arrow.points[i - 1]!.damagePct);
@@ -104,13 +104,14 @@ describe('data/classes.json', () => {
       range: 10,
       delayMs: 600,
       speed: 0,
+      width: 0,
       points: [
         { arrows: 6, radius: 2, damagePct: 100, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 },
         { arrows: 8, radius: 2.5, damagePct: 200, markPct: 0, markMs: 0, burstRadius: 0, burstPct: 0 },
       ],
     });
     expect(futura).toMatchObject({ kind: null, points: [] });
-    expect(flecha).toMatchObject({ kind: 'flecha', cooldownMs: 8000, range: 20, speed: 24, delayMs: 0 });
+    expect(flecha).toMatchObject({ kind: 'flecha', cooldownMs: 8000, range: 20, speed: 24, delayMs: 0, width: 0.8 }); // sem "largura": 0,8 m
     expect(flecha.points[2]).toEqual({ damagePct: 100, arrows: 0, radius: 0, markPct: 50, markMs: 4000, burstRadius: 2, burstPct: 100 });
   });
 
@@ -525,6 +526,19 @@ describe('a Flecha Ancestral', () => {
     expect(row[4]!.hp).toBe(100 - 7 - 11);
     expect(row[0]!.hp).toBe(93); // longe do fim: só a flecha
     expect(row[5]!.hp).toBe(100); // atrás da parede
+  });
+
+  it('a largura ("largura", 0,8 m sem o campo): pega quem tem o pé a até 0,8 m da linha (o tiro de sempre, só 0,6)', () => {
+    const near = line(2, 1);
+    Object.assign(near.player, { fx: 1, fy: 2.7 }); // a flecha passa 0,7 m ao sul do pé dos bichos
+    near.world.castSkill(near.player, 'flecha', 20, feetAt(1, 2.7).y);
+    near.run(1500);
+    expect(near.row[0]!.hp).toBe(96);
+    const far = line(2, 1);
+    Object.assign(far.player, { fx: 1, fy: 2.9 }); // 0,9 m: passa longe
+    far.world.castSkill(far.player, 'flecha', 20, feetAt(1, 2.9).y);
+    far.run(1500);
+    expect(far.row[0]!.hp).toBe(100);
   });
 
   it('recarga: de novo antes da hora, não sai', () => {

@@ -315,7 +315,7 @@ Tudo fica em [`data/classes.json`](data/classes.json):
 | `habilidades` | na ordem da janela (a primeira fica no `Q`, a segunda no `R`). Cada uma: `nome`, `descricao`, `nivel` (o do 1º ponto) e, se já existe no jogo, `tipo` (`"chuva"` ou `"flecha"`). Sem `tipo`, aparece como "em breve" |
 | `recargaSegundos`, `alcance` | a recarga e até onde dá para mirar (metros; na flecha, até onde ela voa) |
 | `demoraMs` (chuva) | quanto demora do tiro até as flechas caírem |
-| `velocidade` (flecha) | metros por segundo |
+| `velocidade`, `largura` (flecha) | metros por segundo, e quanto ela pega de cada lado da linha (metros, no pé do bicho; sem o campo, 0,8) |
 | `pontos` | os números de cada ponto (o 1º da lista é com 1 ponto; o tamanho da lista é o máximo de pontos). Os dois tipos: `danoPorcento` (do tiro sem carga, em cada bicho que pega). Chuva: `flechas` (o desenho) e `raio` da área (metros). Flecha, se quiser: `marcaPorcento` e `marcaSegundos` (a marca: quanto de dano a mais e por quanto tempo) e `explosaoRaio` e `explosaoPorcento` (a explosão do fim) |
 
 Salve e reinicie o servidor. Se algo estiver errado (um número fora do lugar, a missão que não existe), o servidor

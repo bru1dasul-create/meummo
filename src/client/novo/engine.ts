@@ -56,8 +56,6 @@ import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 const SKILL_KEYS: KeyAction[] = ['hab1', 'folego'];
 /** A tecla de cada habilidade da classe, na ordem de data/classes.json (a 1ª no Q, a 2ª no R). */
 const CLASS_KEYS: KeyAction[] = ['hab1', 'hab2'];
-/** A largura (de cada lado da linha) que a Flecha Ancestral pega: o raio do tiro (SHOT_HIT_RADIUS do servidor). */
-const ARROW_REACH = 0.6;
 /** O Fôlego na lista de SKILLS (src/shared/skills.ts). A Bordunada (a 0) saiu do jogo novo em 15/11: a classe entrou. */
 const FOLEGO = 1;
 
@@ -1764,7 +1762,9 @@ class NewWorld implements NewWorldGame {
   private aimSpot(skill: ClassSkillInfo): Point | null {
     if (!this.mouse || !this.view || !this.map) return null;
     const feet = this.myFeet();
-    const pointed = this.view.toWorld(this.mouse.x, this.mouse.y);
+    // com o mouse em cima de um bicho (no corpo dele), mira no pé dele: é para onde quem joga está olhando
+    const hovered = this.actorAtScreen(this.mouse.x, this.mouse.y, 'monster');
+    const pointed = (hovered !== null ? this.drawnFeet(hovered) : null) ?? this.view.toWorld(this.mouse.x, this.mouse.y);
     if (skill.kind === 'flecha') {
       const angle = Math.hypot(pointed.x - feet.x, pointed.y - feet.y) > 0.01 ? aimAngle(feet, pointed) : (this.myAngle * Math.PI) / 180;
       return { x: feet.x + Math.cos(angle) * skill.range, y: feet.y + Math.sin(angle) * skill.range };
@@ -1784,7 +1784,7 @@ class NewWorld implements NewWorldGame {
       return;
     }
     const line = skill.kind === 'flecha';
-    this.combat.setAim({ from: this.myFeet(), x: spot.x, y: spot.y, r: line ? ARROW_REACH : numbers.radius, line });
+    this.combat.setAim({ from: this.myFeet(), x: spot.x, y: spot.y, r: line ? skill.width : numbers.radius, line });
   }
 
   /** Soltou a tecla: usa onde o círculo está. */
@@ -1805,7 +1805,7 @@ class NewWorld implements NewWorldGame {
   private castAuto(skill: ClassSkillInfo, now: number): void {
     const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
     if (!numbers || !this.castable(skill, now)) return;
-    const spot = skill.kind === 'flecha' ? this.bestArrowSpot(skill.range) : this.bestRainSpot(skill.range, numbers.radius);
+    const spot = skill.kind === 'flecha' ? this.bestArrowSpot(skill.range, skill.width) : this.bestRainSpot(skill.range, numbers.radius);
     if (!spot) {
       this.toast.show('Nenhum bicho ao alcance');
       return;
@@ -1817,7 +1817,7 @@ class NewWorld implements NewWorldGame {
    * Para a Flecha Ancestral: o pé do monstro (até `range` metros) cuja direção pega mais monstros na linha (empate: o
    * mais perto).
    */
-  private bestArrowSpot(range: number): Point | null {
+  private bestArrowSpot(range: number, width: number): Point | null {
     const me = this.myFeet();
     const monsters = [...this.entities.values()].filter((e) => e.kind === 'monster').map((e) => this.drawnFeet(e.id) ?? feetAt(e.x, e.y));
     let best: Point | null = null;
@@ -1827,7 +1827,7 @@ class NewWorld implements NewWorldGame {
       const distance = Math.hypot(spot.x - me.x, spot.y - me.y);
       if (distance > range || distance < 0.01) continue;
       const end = { x: me.x + ((spot.x - me.x) / distance) * range, y: me.y + ((spot.y - me.y) / distance) * range };
-      const count = monsters.filter((m) => distanceToSegment(m, me, end) <= ARROW_REACH + 0.3).length;
+      const count = monsters.filter((m) => distanceToSegment(m, me, end) <= width).length;
       if (count > bestCount || (count === bestCount && distance < bestDistance)) {
         best = spot;
         bestCount = count;

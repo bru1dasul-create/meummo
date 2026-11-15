@@ -85,6 +85,8 @@ tiro e aceita `PierceShot`; `updatePiercing` (o `hits` do `advanceShot` acerta e
 (botão provisório da 2ª habilidade em diante, com as classes `.action` da [arte]), desenho provisório (flecha verde,
 brilho e explosão do fim, runa da marca) e os sons `spirit` e `burst`. Testes: 4 novos em `tests/classe.test.ts` (a
 linha com parede, tatu e enxame). Lembrete: nos testes, monstro longe sem `perseguicao` desiste, volta e recupera a vida.
+Achado no navegador: a faixa da mira é no chão (o pé), mas quem joga mira no corpo — com o mouse em cima de um bicho, a
+mira (da Flecha e da Chuva) vai no pé dele (`actorAtScreen`), e a Flecha pega `largura` (0,8 m) de cada lado da linha.
 
 **15/11 — classe e habilidades, passo 1 (as respostas do dono):** "todos são o mesmo personagem; fazendo as missões
 iniciais libera escolher a classe; por enquanto só o arco e flecha e o estilingue, a classe Caçador da Floresta";
