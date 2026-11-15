@@ -23,7 +23,7 @@
       },
       "flecha_ancestral": {
         "nome": "Flecha Ancestral",
-        "descricao": "Carrega no arco uma flecha de energia espiritual: o próximo tiro é ela. Puxe e solte como sempre (quanto mais puxar, mais longe): ela atravessa todos os bichos do caminho, nem a casca do tatu nem o enxame seguram, e explode onde você mirou. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, a explosão fica bem maior.",
+        "descricao": "Carrega no arco uma flecha de energia espiritual: o próximo tiro é ela. Puxe e solte como sempre (quanto mais puxar, mais longe): ela atravessa todos os bichos do caminho, nem a casca do tatu nem o enxame seguram, e cai onde você mirou. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, ela explode onde você mirou.",
         "nivel": 6,
         "tipo": "flecha",
         "recargaSegundos": 8,
@@ -31,10 +31,10 @@
         "velocidade": 24,
         "largura": 0.8,
         "pontos": [
-          { "danoPorcento": 200, "explosaoRaio": 1.2, "explosaoPorcento": 60 },
-          { "danoPorcento": 230, "explosaoRaio": 1.2, "explosaoPorcento": 75 },
-          { "danoPorcento": 260, "marcaPorcento": 20, "marcaSegundos": 4, "explosaoRaio": 1.5, "explosaoPorcento": 90 },
-          { "danoPorcento": 290, "marcaPorcento": 25, "marcaSegundos": 5, "explosaoRaio": 1.5, "explosaoPorcento": 110 },
+          { "danoPorcento": 200 },
+          { "danoPorcento": 230 },
+          { "danoPorcento": 260, "marcaPorcento": 20, "marcaSegundos": 4 },
+          { "danoPorcento": 290, "marcaPorcento": 25, "marcaSegundos": 5 },
           { "danoPorcento": 320, "marcaPorcento": 30, "marcaSegundos": 6, "explosaoRaio": 2.2, "explosaoPorcento": 150 }
         ]
       },

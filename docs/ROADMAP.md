@@ -730,11 +730,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
 - [x] **[estrutura]** Ajustes do dono depois de jogar (15/11), parte 1: quem atira **vira para o tiro**; atirar
   **correndo espalha** (até 9°; andando devagar, até 3°; parado, certinho); **puxando, anda devagar**; a pedra e a
   flecha **caem onde foi mirado** (mais puxada = mais longe); o `R` **carrega a Flecha Ancestral no arco** (o próximo
-  tiro é ela, com a puxada; atravessa e explode onde mirou, com qualquer número de pontos); os Olhos duram menos (5 a
+  tiro é ela, com a puxada; atravessa e cai onde mirou; a explosão continua só com 5 pontos, decisão do dono); os Olhos duram menos (5 a
   10 s) e recarregam em 20 s; **dica** com o mouse em cima das habilidades da barra. Protocolo 41
 - [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
   anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
-  com ele. Protocolo 42 (`npc_walk`, `talk`). **Ligado na Xiovanna** (15/11, com o passo de andar
+  com ele. Protocolo 42 (`npc_walk`, `talk`). **Desligado de novo na Xiovanna a pedido do dono ("por enquanto deixa ela parada")**; funcionou ligado (15/11, com o passo de andar
   da [arte]): atrás do balcão, a 30 cm dele; parada, fica de frente (90°); vira o corpo para quem vem falar
 - [ ] **[mundo]** Para a Xiovanna andar pela loja toda (e não só 2 m atrás do balcão): hoje ela fica num bolso fechado
   pela colisão do balcão (livre só de x 66,5 a 68, y 50 a 50,5); precisa de uma passagem no balcão (se o dono quiser)
