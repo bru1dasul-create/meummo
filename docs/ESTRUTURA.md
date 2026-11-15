@@ -75,6 +75,11 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**15/11 — a lista do dono fechada com a [arte] (main ccce2d2):** o motor chama a pose `'volley'` na Chuva (no seu e no
+`cast` dos outros); saíram os estilos provisórios (o `boxShadow` do `data-armed` e as cores do `skillTip.ts`: a [arte]
+vestiu no CSS). Dela: flechas 2,2 s no chão, o lag dos Olhos (45 → 20 ms com 17 bichos), a esquiva emendando na corrida,
+a missão fora do mini mapa. O braço do arco ela não reproduziu (vai perguntar ao dono).
+
 **15/11 — decisões do dono:** a Xiovanna fica parada por enquanto (tirei o `passeio` dos dados; o código fica) e a
 explosão da Flecha Ancestral só no máximo (5 pontos), caindo onde foi mirado. O defeito das pernas dela aparece quando
 o personagem do jogador encosta ou anda grudado no balcão (passado à [arte]).

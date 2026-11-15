@@ -859,7 +859,7 @@ class NewWorld implements NewWorldGame {
       lines.push(`Por ${secs(numbers.durationMs)}, você vê ${numbers.visionPct}% mais longe e todo bicho aparece destacado, com o nível e a cor do perigo.`);
       if (numbers.bonusPct > 0) lines.push(`Enquanto dura, seu dano nos bichos sobe ${numbers.bonusPct}%.`);
     }
-    lines.push(`Recarga de ${secs(skill.cooldownMs)} · ${rank} ${rank === 1 ? 'ponto' : 'pontos'} (K para pôr mais).`);
+    lines.push(`Recarga de ${secs(skill.cooldownMs)} · ${rank} ${rank === 1 ? 'ponto' : 'pontos'}${rank >= skill.points.length ? ' (no máximo)' : ' (K para pôr mais)'}.`);
     return { title: `${skill.name} (${key(CLASS_KEYS[index]!)})`, lines };
   }
 
@@ -2055,15 +2055,9 @@ class NewWorld implements NewWorldGame {
     if (!id) this.combat.setAim(null);
     const slot = id ? this.classSlotOf(id) : null;
     for (const el of document.querySelectorAll<HTMLElement>('#actions .action')) {
-      // o brilho verde é provisório (a [arte] veste pelo `data-armed`)
-      if (old && el.dataset.slot === old) {
-        delete el.dataset.armed;
-        el.style.boxShadow = '';
-      }
-      if (slot && el.dataset.slot === slot) {
-        el.dataset.armed = '1';
-        el.style.boxShadow = '0 0 0 3px #8dffc8, 0 0 16px 4px rgba(141, 255, 200, 0.8)';
-      }
+      // o anel verde pulsando é da [arte] (style.css, pelo `data-armed`)
+      if (old && el.dataset.slot === old) delete el.dataset.armed;
+      if (slot && el.dataset.slot === slot) el.dataset.armed = '1';
     }
   }
 
@@ -2118,7 +2112,7 @@ class NewWorld implements NewWorldGame {
     if (spot.x !== feet.x || spot.y !== feet.y) {
       const degrees = toDegrees(aimAngle(feet, spot));
       this.faceAngle(degrees);
-      this.view?.action?.(this.myId, 'shoot', degrees);
+      this.view?.action?.(this.myId, 'volley', degrees); // puxa mirando para o alto e solta (a pose é da [arte])
     }
     const kind = this.shot().kind;
     this.combat.rain(feet, spot.x, spot.y, numbers.radius, numbers.arrows, rank, skill.delayMs, kind, now);
@@ -2673,7 +2667,7 @@ class NewWorld implements NewWorldGame {
         const now = performance.now();
         const from = this.drawnFeet(msg.id) ?? { x: msg.x, y: msg.y };
         this.combat.rain(from, msg.x, msg.y, msg.r, msg.n, msg.p, msg.ms, msg.kind, now);
-        if (msg.x !== from.x || msg.y !== from.y) this.view?.action?.(msg.id, 'shoot', toDegrees(aimAngle(from, msg)));
+        if (msg.x !== from.x || msg.y !== from.y) this.view?.action?.(msg.id, 'volley', toDegrees(aimAngle(from, msg)));
         this.sfx.volley(msg.ms, msg.n, msg.kind === 'pedra');
         break;
       }
