@@ -276,8 +276,8 @@
           const dx = T.x - ch.pos.x, dy = T.y - ch.pos.y, dist = Math.hypot(dx, dy);
           if (dist < 20 || !ch.startRoll) return;
           if (slinging() && S) S.cancel(ch);
-          ch.startRoll(Math.atan2(dy, dx), dist);
-          a.dash = false;
+          // (no ar ele não rola: aí vale o jeito antigo, aparecer lá)
+          if (ch.startRoll(Math.atan2(dy, dx), dist)) a.dash = false;
           return;
         }
         case 'guard':

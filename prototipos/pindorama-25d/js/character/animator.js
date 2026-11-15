@@ -28,7 +28,8 @@
   const AGILE = { accel: 1.8, turn: 1.6, pivot: 1.8, step: 0.85, release: 75, pivotSpeed: 150 };
   const DODGE = { total: 0.4, distance: 100, moveStart: 0.018, moveEnd: 0.245, cooldown: 0.2 };
   // O rolamento da esquiva do jogo (3 m, o servidor já pôs o herói lá): encolhe, rola uma volta no chão e levanta
-  const ROLL = { total: 0.5, moveStart: 0.04, moveEnd: 0.4, cooldown: 0.05 };
+  // (15/11, dono: "um pouco mais lenta quando o boneco faz a animação": era 0,5 s com o movimento até 0,4 s)
+  const ROLL = { total: 0.62, moveStart: 0.05, moveEnd: 0.52, cooldown: 0.05 };
   const DEATH = { total: 1.35, impact: 0.64 };
   const HIT = { total: 0.64, lock: 0.22 };
   // para onde o cotovelo aponta (frente, fora, cima, no espaço do peito)
@@ -267,7 +268,7 @@
       if (input.crouchSet !== undefined && this.jump.state === 'chao') this.crouchWanted = input.crouchSet;
 
       // pular (do chão; agachado, levanta e pula)
-      if (input.jump && (this.jump.state === 'chao' || (this.jump.state === 'pouso' && this.jump.t > 0.12)) && !this.attackBusy()) {
+      if (input.jump && !(this.dodge && this.dodge.roll) && (this.jump.state === 'chao' || (this.jump.state === 'pouso' && this.jump.t > 0.12)) && !this.attackBusy()) {
         this.crouchWanted = false;
         this.jump.state = 'preparo';
         this.jump.t = 0;
@@ -720,6 +721,8 @@
      */
     startRoll(direction, distance) {
       if (this.death) return false;
+      // no ar não rola (o pulo e a esquiva de outro jogador podem chegar juntos, com o atraso da rede)
+      if (this.jump && this.jump.state !== 'chao' && this.jump.state !== 'pouso') return false;
       this._cancelActionInputs();
       this.yaw = this.faceYaw = direction;
       const from = JSON.parse(JSON.stringify(this.pose()));
