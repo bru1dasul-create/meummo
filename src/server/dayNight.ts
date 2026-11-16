@@ -27,9 +27,12 @@ export class DayNightClock {
     return isNightAt(this.position(), this.rules);
   }
 
-  /** Vira para o começo do dia, do anoitecer ou da noite (vale para todos os mapas). */
+  /**
+   * Vira para o dia, o começo do anoitecer ou a noite (vale para todos os mapas). O dia já chega com a luz cheia (logo
+   * depois do amanhecer): no instante 0 ainda está escuro, e "virar dia" parecia virar noite (achado do dono, 16/11).
+   */
   turnTo(phase: DayPhase): void {
-    const target = phase === 'dia' ? 0 : phase === 'tarde' ? this.rules.dayMs - twilightMs(this.rules) : this.rules.dayMs;
+    const target = phase === 'dia' ? twilightMs(this.rules) : phase === 'tarde' ? this.rules.dayMs - twilightMs(this.rules) : this.rules.dayMs;
     this.offset += target - this.position();
   }
 }
