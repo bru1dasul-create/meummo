@@ -588,6 +588,8 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (protocolo 34: os efeitos `dizzy`, `dodge` e `vanish`). Já dá para criar pelo menu ADM
 - [x] **[mundo]** As áreas dos bichos novos na mata do sul do Capão (A quati, C tatu_bola, D marimbondo, B filhote_boitata)
   (**na main em 15/11**, com a floresta maior): quati 4, tatu_bola 3, marimbondo 3 e filhote_boitata 1 no recanto do Véu
+- [x] **[mundo]** Mais bichos na mata do Capão (16/11, pedido do dono: "bastante mesmo"; na main): de 18 para 40 —
+  sagui 8, jararaca 6, quati 10, tatu_bola 8, marimbondo 6, filhote_boitata 2 (o peso medido pela [estrutura] com `?fps`)
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
