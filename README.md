@@ -172,7 +172,8 @@ rodando (o `jogar.bat` mostra esse endereço). Quem entra pela rede de casa não
   **Tornar administrador** (vale na hora, mesmo jogando, e até do celular: a senha dele protege). No jogo aparece o
   botão **ADM** (ou tecla **G**), com: **criar monstros** onde você está (até 10 por vez; eles não renascem),
   **derrubar os monstros perto** (você ganha a XP), **voar** (atravessa parede e árvore, rápido; ao pousar dentro de
-  algo, vai para o chão livre), **invencível** (não leva dano e os monstros te ignoram), **teleporte ao clicar** (o
+  algo, vai para o chão livre), **invencível** (não leva dano e os monstros te ignoram), **sem recarga** (as habilidades da classe e o Fôlego saem
+  uma atrás da outra, para testar), **teleporte ao clicar** (o
   clique no chão te leva até lá) e **curar**. Tudo fica registrado na janela do servidor.
 - **Registros:** o que o servidor anota (quem entrou e saiu, o que o administrador fez, avisos e **erros**, inclusive
   os que acontecerem no navegador de quem joga, no PC ou no celular, com o aparelho e onde foi). Filtre por "erro" e

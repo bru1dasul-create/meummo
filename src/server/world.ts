@@ -663,7 +663,7 @@ export class World {
   /** O que o menu ADM do navegador precisa saber: se é administrador, o voo, o invencível e os monstros que existem. */
   private gmState(player: Player): ServerMsg {
     const monsters = [...this.monsterDefs.values()].map((def) => ({ id: def.id, name: def.name }));
-    return { t: 'gm', admin: player.admin, fly: player.fly, god: player.god, monsters };
+    return { t: 'gm', admin: player.admin, fly: player.fly, god: player.god, nocd: player.noCooldown, monsters };
   }
 
   /** O painel marcou (ou desmarcou) este jogador como administrador. Perdeu: o voo e o invencível acabam. */
@@ -671,6 +671,7 @@ export class World {
     player.admin = admin;
     if (!admin) {
       player.god = false;
+      player.noCooldown = false;
       if (player.fly) {
         player.fly = false;
         this.unstick(player);
@@ -740,6 +741,18 @@ export class World {
         if (!cmd.on) this.unstick(player);
         player.outbox.push(this.gmState(player));
         say(cmd.on ? 'voando (atravessa tudo).' : 'pousou.');
+        return;
+      case 'nocd':
+        player.noCooldown = cmd.on;
+        if (cmd.on) {
+          // o que já estava recarregando fica pronto na hora
+          player.castReadyAt.clear();
+          player.skillReadyAt.fill(0);
+          for (const id of Object.keys(player.skillPoints)) player.outbox.push({ t: 'scd', s: id, ms: 0 });
+          SKILLS.forEach((_, n) => player.outbox.push({ t: 'cd', n, ms: 0 }));
+        }
+        player.outbox.push(this.gmState(player));
+        say(cmd.on ? 'habilidades sem recarga.' : 'habilidades com a recarga de sempre.');
         return;
       case 'god':
         player.god = cmd.on;
@@ -915,8 +928,9 @@ export class World {
       };
       this.spawnProjectile(player, flight, skill.speed, range, Math.max(1, Math.round((base * numbers.damagePct) / 100)), 'ancestral', cid, pierce);
       player.armed = null;
-      player.castReadyAt.set(skill.id, now + skill.cooldownMs);
-      player.outbox.push({ t: 'armed', s: null }, { t: 'scd', s: skill.id, ms: skill.cooldownMs });
+      const wait = this.cooldownOf(player, skill.cooldownMs);
+      player.castReadyAt.set(skill.id, now + wait);
+      player.outbox.push({ t: 'armed', s: null }, { t: 'scd', s: skill.id, ms: wait });
       return;
     }
     const range = aimedRange(chargedRange(charge, metric, shot), aimed);
@@ -973,8 +987,9 @@ export class World {
       player.hp += amount;
       this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
     }
-    player.skillReadyAt[n] = Math.max(now, player.skillReadyAt[n]!) + skill.cooldownMs;
-    player.outbox.push({ t: 'cd', n, ms: skill.cooldownMs });
+    const wait = this.cooldownOf(player, skill.cooldownMs);
+    player.skillReadyAt[n] = Math.max(now, player.skillReadyAt[n]!) + wait;
+    player.outbox.push({ t: 'cd', n, ms: wait });
   }
 
   // ======================= classe e habilidades =======================
@@ -1066,8 +1081,8 @@ export class World {
       player.hawkVision = numbers.visionPct / 100;
       player.hawkBonus = numbers.bonusPct / 100;
       this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'hawk', ms: numbers.durationMs }, player.id);
-      player.castReadyAt.set(skill.id, Math.max(now, readyAt) + skill.cooldownMs);
-      player.outbox.push({ t: 'scd', s: skill.id, ms: skill.cooldownMs });
+      player.castReadyAt.set(skill.id, Math.max(now, readyAt) + this.cooldownOf(player, skill.cooldownMs));
+      player.outbox.push({ t: 'scd', s: skill.id, ms: this.cooldownOf(player, skill.cooldownMs) });
       return;
     }
     if (skill.kind === 'flecha') {
@@ -1093,8 +1108,13 @@ export class World {
       const msg: ServerMsg = { t: 'cast', id: player.id, s: skill.id, x: round3(spot.x), y: round3(spot.y), r: numbers.radius, n: numbers.arrows, p: rank, ms: skill.delayMs, kind: shot.kind };
       this.emitToViewers(player, msg, player.id); // quem usou já desenhou na hora
     }
-    player.castReadyAt.set(skill.id, Math.max(now, readyAt) + skill.cooldownMs);
-    player.outbox.push({ t: 'scd', s: skill.id, ms: skill.cooldownMs });
+    player.castReadyAt.set(skill.id, Math.max(now, readyAt) + this.cooldownOf(player, skill.cooldownMs));
+    player.outbox.push({ t: 'scd', s: skill.id, ms: this.cooldownOf(player, skill.cooldownMs) });
+  }
+
+  /** A recarga que vale para este jogador: a de sempre, ou nenhuma (o poder "sem recarga" do administrador). */
+  private cooldownOf(player: Player, ms: number): number {
+    return player.noCooldown ? 0 : ms;
   }
 
   /** As Chuvas de Flechas que chegaram ao chão: cada bicho dentro do círculo leva o dano (uma vez por chuva). */

@@ -113,6 +113,7 @@ export type GmCommand =
   | { do: 'clear' }
   | { do: 'fly'; on: boolean }
   | { do: 'god'; on: boolean }
+  | { do: 'nocd'; on: boolean } // habilidades sem recarga (as da classe e o Fôlego), para testar
   | { do: 'tp'; x: number; y: number }
   | { do: 'heal' }
   | { do: 'npc'; npc: string } // traz o NPC (a chave dele em data/npcs.json) para onde o administrador está
@@ -210,7 +211,7 @@ export type ServerMsg =
   // a sua energia (0 a 100) e a defesa: baixada, levantada ou quebrada (solte e espere a energia voltar)
   | { t: 'energy'; v: number; g: GuardState }
   // você é administrador (o menu ADM aparece), com o voo e o invencível ligados ou não e os monstros que dá para criar
-  | { t: 'gm'; admin: boolean; fly: boolean; god: boolean; monsters: { id: string; name: string }[] }
+  | { t: 'gm'; admin: boolean; fly: boolean; god: boolean; nocd: boolean; monsters: { id: string; name: string }[] }
   | { t: 'heal'; id: number; amount: number; hp: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }

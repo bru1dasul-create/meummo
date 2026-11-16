@@ -7,6 +7,7 @@ export interface GmActions {
   clear(): void;
   fly(on: boolean): void;
   god(on: boolean): void;
+  nocd(on: boolean): void;
   heal(): void;
   /** Liga/desliga o "teleporte ao clicar" (fica só no navegador: o clique no chão vira um pedido de ir até lá). */
   teleportMode(on: boolean): void;
@@ -22,6 +23,7 @@ export interface GmState {
   admin: boolean;
   fly: boolean;
   god: boolean;
+  nocd: boolean;
   monsters: { id: string; name: string }[];
 }
 
@@ -34,8 +36,9 @@ export class GmPanel {
   private readonly count = document.createElement('input');
   private readonly flyButton: HTMLButtonElement;
   private readonly godButton: HTMLButtonElement;
+  private readonly nocdButton: HTMLButtonElement;
   private readonly teleportButton: HTMLButtonElement;
-  private state: GmState = { admin: false, fly: false, god: false, monsters: [] };
+  private state: GmState = { admin: false, fly: false, god: false, nocd: false, monsters: [] };
   private teleport = false;
 
   constructor(private readonly actions: GmActions) {
@@ -80,6 +83,7 @@ export class GmPanel {
     spawnRow.append(this.monster, this.count, make('Criar aqui', () => this.actions.spawn(this.monster.value, Math.max(1, Math.min(10, Math.floor(Number(this.count.value) || 1))))));
     this.flyButton = make('Voar', () => this.actions.fly(!this.state.fly));
     this.godButton = make('Invencível', () => this.actions.god(!this.state.god));
+    this.nocdButton = make('Sem recarga', () => this.actions.nocd(!this.state.nocd));
     this.teleportButton = make('Teleporte ao clicar', () => {
       this.teleport = !this.teleport;
       this.actions.teleportMode(this.teleport);
@@ -90,7 +94,7 @@ export class GmPanel {
     npcRow.append(this.npcSelect, make('Trazer para cá', () => this.npcSelect.value && this.actions.npc(this.npcSelect.value)));
     const toggles = document.createElement('div');
     toggles.className = 'row';
-    toggles.append(this.flyButton, this.godButton);
+    toggles.append(this.flyButton, this.godButton, this.nocdButton);
     const time = document.createElement('div');
     time.className = 'row';
     time.append(
@@ -168,6 +172,8 @@ export class GmPanel {
     this.flyButton.textContent = this.state.fly ? 'Voando (pousar)' : 'Voar';
     this.godButton.classList.toggle('on', this.state.god);
     this.godButton.textContent = this.state.god ? 'Invencível: ligado' : 'Invencível';
+    this.nocdButton.classList.toggle('on', this.state.nocd);
+    this.nocdButton.textContent = this.state.nocd ? 'Sem recarga: ligado' : 'Sem recarga';
     this.teleportButton.classList.toggle('on', this.teleport);
     this.teleportButton.textContent = this.teleport ? 'Teleporte ao clicar: ligado' : 'Teleporte ao clicar';
   }

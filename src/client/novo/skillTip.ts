@@ -4,9 +4,17 @@
 
 export interface SkillTipText {
   title: string;
-  /** Frases curtas, uma por linha. */
+  /** Frases curtas, uma por linha. Marcas de cor: [d]dano[/d], [t]tempo[/t], [a]área ou alcance[/a], [b]bônus[/b]. */
   lines: string[];
 }
+
+/** As marcas das frases e a cor de cada uma (a [arte] pode trocar pelas classes `.skill-tip-dano` etc.). */
+const TIP_KINDS = {
+  d: { name: 'dano', color: '#ff6b5a' },
+  t: { name: 'tempo', color: '#7fc8ff' },
+  a: { name: 'area', color: '#ffd98a' },
+  b: { name: 'bonus', color: '#8de08a' },
+} as const;
 
 export class SkillTip {
   private readonly box = document.createElement('div');
@@ -38,7 +46,20 @@ export class SkillTip {
     const lines = text.lines.map((line) => {
       const p = document.createElement('div');
       p.className = 'skill-tip-line';
-      p.textContent = line;
+      p.style.marginTop = '3px';
+      // os números ganham cor: [d]dano[/d] vermelho, [t]tempo[/t] azul, [a]área e alcance[/a] dourado, [b]bônus[/b] verde
+      for (const part of line.split(/(\[[dtab]\][^[]*\[\/[dtab]\])/)) {
+        const mark = /^\[([dtab])\]([^[]*)\[\/[dtab]\]$/.exec(part);
+        if (!mark) {
+          p.append(part);
+          continue;
+        }
+        const span = document.createElement('strong');
+        span.className = `skill-tip-${TIP_KINDS[mark[1] as keyof typeof TIP_KINDS].name}`;
+        span.style.color = TIP_KINDS[mark[1] as keyof typeof TIP_KINDS].color;
+        span.textContent = mark[2]!;
+        p.append(span);
+      }
       return p;
     });
     this.box.replaceChildren(title, ...lines);

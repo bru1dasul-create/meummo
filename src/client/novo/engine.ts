@@ -309,6 +309,8 @@ class NewWorld implements NewWorldGame {
   /** Menu ADM (só administrador): voando atravessa tudo; "teleporte ao clicar" troca o andar até pelo ir até lá. */
   private readonly gmPanel: GmPanel;
   private gmFly = false;
+  /** Poder do administrador: as habilidades (da classe e o Fôlego) sem recarga. */
+  private gmNoCd = false;
   private gmTeleport = false;
   /** `?fps` no endereço: quadros por segundo e o custo de cada quadro, para medir no aparelho de verdade. */
   private readonly fpsMeter = new URLSearchParams(location.search).has('fps') ? new FpsMeter() : null;
@@ -421,6 +423,7 @@ class NewWorld implements NewWorldGame {
         this.conn.send({ t: 'gm', cmd: { do: 'fly', on } });
       },
       god: (on) => this.conn.send({ t: 'gm', cmd: { do: 'god', on } }),
+      nocd: (on) => this.conn.send({ t: 'gm', cmd: { do: 'nocd', on } }),
       heal: () => this.conn.send({ t: 'gm', cmd: { do: 'heal' } }),
       teleportMode: (on) => {
         this.gmTeleport = on;
@@ -817,15 +820,21 @@ class NewWorld implements NewWorldGame {
     }
   }
 
-  /** A dica de um quadrado da barra (mouse em cima): o que faz, o dano com os seus números de agora e a recarga. */
+  /**
+   * A dica de um quadrado da barra (mouse em cima): o que faz, em frases curtas, com os seus números de agora — o dano
+   * em vermelho, os tempos em azul, área e alcance em dourado e os bônus em verde (as marcas de skillTip.ts).
+   */
   private tipOf(slot: ActionSlot): SkillTipText | null {
     const [min, max] = this.myDamage;
+    const num = (value: number) => String(Math.round(value * 10) / 10).replace('.', ',');
     const hit = (pct: number) => {
       const a = Math.max(1, Math.round((min * pct) / 100));
       const b = Math.max(1, Math.round((max * pct) / 100));
-      return a === b ? `${a}` : `${a} a ${b}`;
+      return `[d]${a === b ? a : `${a} a ${b}`} de dano[/d]`;
     };
-    const secs = (ms: number) => `${String(Math.round(ms / 100) / 10).replace('.', ',')} s`;
+    const secs = (ms: number) => `[t]${num(ms / 1000)} s[/t]`;
+    const meters = (m: number) => `[a]${num(m)} m[/a]`;
+    const cooldown = (ms: number) => (this.gmNoCd ? 'Recarga: [b]nenhuma (poder de ADM)[/b]' : `Recarga: ${secs(ms)}`);
     const key = (action: KeyAction) => this.keys.label(action);
     if (slot === 'shot') {
       const shot = this.shot();
@@ -833,18 +842,19 @@ class NewWorld implements NewWorldGame {
       return {
         title: `${bow ? 'Arco' : 'Estilingue'} (${key('atirar')})`,
         lines: [
-          `Segure para puxar e solte para atirar: a ${bow ? 'flecha' : 'pedra'} cai onde você mirar.`,
-          `Dano ${hit(100)}; com a puxada cheia, ${hit(100 * (1 + shot.damageBonus))}.`,
-          `Alcance de ${String(shot.rangeMin).replace('.', ',')} a ${String(shot.rangeMax).replace('.', ',')} m (mais puxada, mais longe).`,
-          'Correndo, o tiro espalha; puxando, você anda devagar.',
+          `Segure para puxar e solte: a ${bow ? 'flecha' : 'pedra'} cai onde você mirar.`,
+          `Dano: ${hit(100)}`,
+          `Puxada cheia: ${hit(100 * (1 + shot.damageBonus))}`,
+          `Alcance: de ${meters(shot.rangeMin)} a ${meters(shot.rangeMax)}`,
+          'Correndo, o tiro espalha. Puxando, você anda devagar.',
         ],
       };
     }
     if (slot === 'skill1') {
       const skill = SKILLS[FOLEGO]!;
-      return { title: `${skill.name} (${key('folego')})`, lines: [`Recupera ${Math.round(skill.power * 100)}% da sua vida.`, `Recarga de ${secs(skill.cooldownMs)}.`] };
+      return { title: `${skill.name} (${key('folego')})`, lines: [`Cura: [b]${Math.round(skill.power * 100)}% da sua vida[/b]`, cooldown(skill.cooldownMs)] };
     }
-    if (slot === 'dash') return { title: `Esquiva (${key('esquiva')})`, lines: [`Rola ${DASH_TILES} m para onde você anda; durante a rolada, nenhum golpe te acerta.`, `Recarga de ${secs(DASH_COOLDOWN_MS)}.`] };
+    if (slot === 'dash') return { title: `Esquiva (${key('esquiva')})`, lines: [`Rola ${meters(DASH_TILES)} para onde você anda.`, 'Durante a rolada, [b]nenhum golpe te acerta[/b].', `Recarga: ${secs(DASH_COOLDOWN_MS)}`] };
     if (slot === 'jump') return { title: `Pular (${key('pular')})`, lines: ['Um pulo (por enquanto, só de enfeite).'] };
     const index = CLASS_SLOTS.indexOf(slot);
     const skill = index >= 0 ? this.classSkillAt(index) : null;
@@ -853,18 +863,26 @@ class NewWorld implements NewWorldGame {
     if (!skill || !numbers) return null;
     const lines: string[] = [];
     if (skill.kind === 'chuva') {
-      lines.push(`Segure para mirar o círculo e solte: ${numbers.arrows} flechas caem numa área de ${String(numbers.radius).replace('.', ',')} m.`);
-      lines.push(`Cada bicho na área leva ${hit(numbers.damagePct)} de dano (nem a casca do tatu segura).`);
+      lines.push('Segure para mirar o círculo e solte: chovem flechas em todos os bichos da área.');
+      lines.push(`Dano em cada bicho: ${hit(numbers.damagePct)}`);
+      lines.push(`Área: ${meters(numbers.radius)} de raio · ${numbers.arrows} flechas`);
+      lines.push(`Alcance da mira: ${meters(skill.range)}`);
+      lines.push('[b]Nem a casca do tatu segura.[/b]');
     } else if (skill.kind === 'flecha') {
       lines.push('Carrega a flecha do espírito no arco: o próximo tiro é ela. Puxe e solte como sempre.');
-      lines.push(`Atravessa os bichos do caminho: ${hit(numbers.damagePct)} de dano em cada um.`);
-      if (numbers.burstRadius > 0) lines.push(`Explode onde você mirou: ${hit(numbers.burstPct)} de dano em ${String(numbers.burstRadius).replace('.', ',')} m.`);
-      if (numbers.markPct > 0) lines.push(`Marca quem atravessa: +${numbers.markPct}% de dano de todo mundo por ${secs(numbers.markMs)}.`);
+      lines.push(`Atravessa os bichos do caminho: ${hit(numbers.damagePct)} em cada um`);
+      if (numbers.burstRadius > 0) lines.push(`Explode onde você mirou: ${hit(numbers.burstPct)} em ${meters(numbers.burstRadius)}`);
+      else lines.push('Cai onde você mirou (com 5 pontos, explode lá).');
+      if (numbers.markPct > 0) lines.push(`Marca quem atravessa: [b]+${numbers.markPct}% de dano de todo mundo[/b] por ${secs(numbers.markMs)}`);
+      lines.push(`Alcance com a puxada cheia: ${meters(skill.range)}`);
     } else if (skill.kind === 'olhos') {
-      lines.push(`Por ${secs(numbers.durationMs)}, você vê ${numbers.visionPct}% mais longe e todo bicho aparece destacado, com o nível e a cor do perigo.`);
-      if (numbers.bonusPct > 0) lines.push(`Enquanto dura, seu dano nos bichos sobe ${numbers.bonusPct}%.`);
+      lines.push('Todo bicho aparece destacado, com o nível e a cor do perigo, mesmo atrás das árvores e no escuro.');
+      lines.push(`Duração: ${secs(numbers.durationMs)}`);
+      lines.push(`Você vê [a]${numbers.visionPct}% mais longe[/a]`);
+      if (numbers.bonusPct > 0) lines.push(`Enquanto dura: [d]+${numbers.bonusPct}% de dano seu[/d] nos bichos`);
     }
-    lines.push(`Recarga de ${secs(skill.cooldownMs)} · ${rank} ${rank === 1 ? 'ponto' : 'pontos'}${rank >= skill.points.length ? ' (no máximo)' : ' (K para pôr mais)'}.`);
+    lines.push(cooldown(skill.cooldownMs));
+    lines.push(`${rank} de ${skill.points.length} pontos${rank >= skill.points.length ? ' (no máximo)' : ' · K para pôr mais'}`);
     return { title: `${skill.name} (${key(CLASS_KEYS[index]!)})`, lines };
   }
 
@@ -1740,10 +1758,11 @@ class NewWorld implements NewWorldGame {
       this.combat.myShot(cid, origin.x, origin.y, flight, special.speed, this.armedRange(special, charge, d), now, 'ancestral');
       this.sfx.play('spirit');
       this.setArmed(null);
-      const readyAt = now + special.cooldownMs;
+      const wait = this.gmNoCd ? 0 : special.cooldownMs;
+      const readyAt = now + wait;
       this.castReadyAt.set(special.id, readyAt);
       const slot = this.classSlotOf(special.id);
-      if (slot) this.actionBar.setCooldown(slot, readyAt, special.cooldownMs);
+      if (slot) this.actionBar.setCooldown(slot, readyAt, wait);
     } else {
       this.combat.myShot(cid, origin.x, origin.y, flight, shot.speed, aimedRange(chargedRange(charge, this.map.metric, shot), d), now, shot.kind);
       this.sfx.play(shot.kind === 'flecha' ? 'bow-release' : 'shot');
@@ -1864,8 +1883,9 @@ class NewWorld implements NewWorldGame {
       return;
     }
     if (skill.kind === 'arc' && this.refuseInSafeArea(now)) return;
-    this.skillReadyAt[n] = now + skill.cooldownMs;
-    this.actionBar.setCooldown(`skill${n}` as ActionSlot, this.skillReadyAt[n]!, skill.cooldownMs);
+    const wait = this.gmNoCd ? 0 : skill.cooldownMs;
+    this.skillReadyAt[n] = now + wait;
+    this.actionBar.setCooldown(`skill${n}` as ActionSlot, this.skillReadyAt[n]!, wait);
     this.conn.send({ t: 'skill', n, a: round3(angle) });
     if (skill.kind === 'arc') {
       // o servidor não manda o efeito da Bordunada de volta para quem golpeou: mostra aqui mesmo
@@ -2099,10 +2119,11 @@ class NewWorld implements NewWorldGame {
     const numbers = skillPoint(skill, rank);
     if (!numbers || !this.castable(skill, now)) return;
     const feet = this.myFeet();
-    const readyAt = now + skill.cooldownMs;
+    const wait = this.gmNoCd ? 0 : skill.cooldownMs;
+    const readyAt = now + wait;
     this.castReadyAt.set(skill.id, readyAt);
     const slot = this.classSlotOf(skill.id);
-    if (slot) this.actionBar.setCooldown(slot, readyAt, skill.cooldownMs);
+    if (slot) this.actionBar.setCooldown(slot, readyAt, wait);
     if (skill.kind === 'olhos') {
       // os Olhos de Gavião: enxerga mais longe por um tempo (o servidor manda os bichos de longe; aqui, as etiquetas
       // e os pontos no mini mapa). Não soltam a pedra puxada.
@@ -2596,6 +2617,7 @@ class NewWorld implements NewWorldGame {
       }
       case 'gm':
         this.gmFly = msg.admin && msg.fly;
+        this.gmNoCd = msg.admin && msg.nocd;
         if (!msg.admin) this.gmTeleport = false;
         this.gmPanel.set(msg);
         break;

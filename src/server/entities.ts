@@ -103,6 +103,8 @@ export class Player {
   admin = false;
   fly = false;
   god = false;
+  /** Poder do administrador: as habilidades (da classe e o Fôlego) não entram em recarga. */
+  noCooldown = false;
   /** Defesa (passo 2b): segurando o botão? Virada para onde (radianos)? Levantada desde quando (null = baixada)? */
   guardWanted = false;
   guardAngle = 0;

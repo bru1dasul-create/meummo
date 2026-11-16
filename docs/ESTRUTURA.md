@@ -75,6 +75,11 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**16/11 — pedidos do dono:** poder de ADM "Sem recarga" (`gm` `nocd`, `Player.noCooldown`, `cooldownOf`: as habilidades
+da classe e o Fôlego; a esquiva e o tiro continuam com a recarga deles), protocolo **43** (`nocd` no estado `gm`). A dica
+das habilidades com cores (marcas `[d]` dano vermelho, `[t]` tempo azul, `[a]` área dourado, `[b]` bônus verde em
+`skillTip.ts`; classes `.skill-tip-dano` etc. para a [arte]). Teste em `tests/classe.test.ts`.
+
 **15/11 — pulo + esquiva bagunçava o boneco (achado do dono):** agora um não sai no meio do outro (`JUMP_AIR_MS` 650,
 `DASH_ROLL_MS` 700; motor e servidor: no ar a esquiva vira um passo, rolando o `jump` é recusado). Teste em
 `tests/pulo.test.ts`. Ele também pediu a animação da esquiva um pouco mais lenta: é o `ROLL` da view, pedido à [arte]

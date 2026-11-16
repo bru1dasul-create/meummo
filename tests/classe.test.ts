@@ -693,6 +693,29 @@ describe('os Olhos de Gavião', () => {
     expect(guarding.player.hawkUntil).toBeGreaterThan(0);
   });
 
+  it('poder do administrador "sem recarga": usa de novo na hora; desligou, a recarga volta; quem não é ADM não liga', () => {
+    const { world, conn, player, run } = hunter(10);
+    world.learnSkill(player, 'olhos');
+    world.gm(player, { do: 'nocd', on: true }); // não é administrador: nada
+    expect(player.noCooldown).toBe(false);
+    player.admin = true;
+    world.castSkill(player, 'olhos', 0, 0); // entra em recarga...
+    world.gm(player, { do: 'nocd', on: true }); // ...e o poder zera a que estava correndo
+    run(TICK_MS);
+    expect(conn.ofType('gm').at(-1)).toMatchObject({ nocd: true });
+    expect(conn.ofType('scd').at(-1)).toEqual({ t: 'scd', s: 'olhos', ms: 0 });
+    world.castSkill(player, 'olhos', 0, 0);
+    world.castSkill(player, 'olhos', 0, 0);
+    run(TICK_MS);
+    expect(conn.ofType('fail')).toHaveLength(0);
+    world.gm(player, { do: 'nocd', on: false });
+    world.castSkill(player, 'olhos', 0, 0);
+    world.castSkill(player, 'olhos', 0, 0);
+    run(TICK_MS);
+    expect(conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'cooldown' });
+    expect(conn.ofType('scd').at(-1)).toEqual({ t: 'scd', s: 'olhos', ms: 30_000 });
+  });
+
   it('acabam quando desmaia (a recarga continua correndo)', () => {
     const { world, conn, player, run, clock } = hunter(10);
     world.learnSkill(player, 'olhos');

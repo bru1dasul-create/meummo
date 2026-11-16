@@ -33,6 +33,7 @@ function parseGmCommand(raw: unknown): GmCommand | null {
       return c.level === 'calmo' || c.level === 'brisa' || c.level === 'forte' ? { do: 'wind', level: c.level } : null;
     case 'fly':
     case 'god':
+    case 'nocd':
       return typeof c.on === 'boolean' ? { do: c.do, on: c.on } : null;
     case 'tp':
       return typeof c.x === 'number' && typeof c.y === 'number' && Number.isFinite(c.x) && Number.isFinite(c.y) && Math.abs(c.x) < 100000 && Math.abs(c.y) < 100000
