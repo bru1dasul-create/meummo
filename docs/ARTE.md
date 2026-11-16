@@ -1003,6 +1003,35 @@ porque eu mexia em "para onde o cotovelo aponta" sem medir. **Lição: medir a p
 - **Ordem de desenho** (15/11, `world.js` `behind`): com os dois eixos separados e respostas opostas, ganha quem está
   mais perto da câmera (antes o eixo x sempre ganhava: a Xiovanna aparecia por cima do balcão com o herói encostado).
 
+### A esquiva comparada com o rolamento de referência (16/11; nada mudou no jogo, o dono escolhe)
+Escopo aprovado pelo dono ("pode ser"): comparar quadro a quadro, mostrar a prancha e a lista do que é diferente, e só
+mexer na esquiva depois de ele escolher. A referência é o `Roll_RM` da Universal Animation Library 1 (Quaternius, CC0).
+- **Como medi** (as três ferramentas ficam em `prototipos/pindorama-25d/ferramentas/`; a referência baixada fica FORA
+  do projeto, numa pasta só dela):
+  1. `python3 -I glb-juntas.py <zip> "Animation Library[Standard]/Godot/AnimationLibrary_Godot_Standard.glb" Roll_RM
+     ref.json`: lê o `.glb` como dado e dá, por quadro, quadril, peito, cabeça, ombros, cotovelos, punhos, dedos, coxas,
+     joelhos, tornozelos e pontas dos pés, em cm (direita, frente, cima), na escala do nosso herói (quadril em pé a
+     88,9 cm). Serve para qualquer animação das duas bibliotecas.
+  2. `node rolamento-medida.cjs nosso.json tira.png 300 11 1.3334`: as mesmas juntas do NOSSO rolamento (60 quadros por
+     segundo) e a tira do herói de verdade na câmera do jogo.
+  3. `python3 -I folha-rolamento.py ref.json nosso.json tira.png <pasta>`: a prancha lado a lado, nas mesmas frações
+     da duração de cada um.
+- **A referência** (1,47 s): começa agachada (quadril a 49 cm), **mergulha** (os pés saem do chão aos ~0,15 s; o
+  quadril sobe a 109 cm, 22 cm acima da altura de pé, aos 0,30 s), as mãos tocam o chão aos ~0,47 s, rola pelos ombros
+  e pelas costas (o quadril chega a 4 cm aos 0,70 s), põe os pés no chão aos 0,80 s num agachamento fundo e leva
+  0,67 s para levantar. Anda 4,76 m, tudo até 0,87 s, a 5,5 m/s constantes.
+- **O nosso** (0,63 s): dobra no lugar (de pé à bola em 0,10 s; o alto da cabeça desce de 175 a 4 cm em 0,15 s), gira
+  como uma bola sem sair do chão, com as mãos nas canelas o tempo todo (nunca tocam o chão), e abre em pé em 0,15 s.
+  Anda os 3 m do servidor entre 0,12 e 0,47 s, com pico de 12 m/s (o dobro da referência).
+- **As diferenças, em resumo:** (1) a referência mergulha e estica o corpo antes de rolar; o nosso vira bola no lugar;
+  (2) nela as mãos vão à frente e tocam o chão; no nosso ficam nas canelas; (3) nela a silhueta muda (esticado →
+  encolhido → agachado → de pé); no nosso é a mesma bola girando; (4) ela termina agachada e levanta devagar; o nosso
+  abre direto em pé; (5) ela é mais longa e mais lenta: o mergulho inteiro não cabe nos 0,62 s que o dono pediu.
+- **O que ofereci ao dono** (espero a escolha): A) deixar como está; B) "mergulho curto" nos mesmos 0,62 s e 3 m:
+  entrada se lançando para a frente com os braços estendidos (~0,12 s), as mãos tocam o chão e ele enrola (~0,30 s),
+  saída agachado com uma mão no chão e subindo já na corrida (~0,20 s); C) o B com 0,75 s (muda o tempo que ele pediu e
+  precisa da [estrutura]: o servidor segura o pulo por `DASH_ROLL_MS` 700 depois da esquiva). Recomendei o B.
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
@@ -1154,8 +1183,9 @@ confirmou.
 ## Próximos passos possíveis (o dono escolhe a ordem)
 - **Biblioteca de animações do Quaternius como REFERÊNCIA de movimento** (16/11; o dono disse "sim" à sugestão da
   [estrutura]: abrir, ver onde ficam cotovelo, quadril e pés quadro a quadro, e acertar as nossas poses por elas — sem
-  importar nada: o esqueleto delas não é o nosso). Mandei o escopo ao dono e **espero o "pode"** para começar pelo
-  rolamento da esquiva. O que já sei, lendo os arquivos de verdade:
+  importar nada: o esqueleto delas não é o nosso). O dono deu o "pode ser" (16/11) para o primeiro passo: a comparação
+  do rolamento está feita (seção "A esquiva comparada com o rolamento de referência") e **espero ele escolher** o que
+  muda na esquiva. O que sei da biblioteca, lendo os arquivos de verdade:
   - A pasta do PC dele (`E:\baixados-mmorpg`) não aparece daqui. Baixei os dois pacotes **gratuitos** (CC0, enviados
     pelo próprio Quaternius) para o rascunho, fora do projeto:
     `https://opengameart.org/sites/default/files/universal_animation_librarystandard.zip` e

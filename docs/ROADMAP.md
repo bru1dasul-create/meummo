@@ -754,6 +754,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   alcança até 150° para a esquerda (o tiro por cima do ombro de quem foge) e 65° para a direita. Conferido fora do jogo
   (72 direções × 3 cargas: o cotovelo nunca atrás das costas nem na altura da cabeça) e no jogo (16 direções com a carga
   cheia, andando para os 4 lados, soltando e a Chuva). Medir de novo: `ferramentas/arco-medida.cjs` (do protótipo)
+- [ ] **[arte]** A esquiva pela referência de movimento (16/11; o dono aprovou usar a biblioteca de animações do
+  Quaternius, CC0, como referência): a comparação quadro a quadro com o rolamento dela está feita e mostrada ao dono
+  (prancha lado a lado; detalhes e receitas em docs/ARTE.md). **Esperando o dono escolher** o que muda (A: fica como
+  está; B: mergulho curto nos mesmos 0,62 s; C: o B com 0,75 s). A puxada do arco não tem referência na biblioteca
 - [ ] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
   durante o zoom, o mais lento 117 ms). Esperando o dono pedir
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
