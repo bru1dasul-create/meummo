@@ -1228,6 +1228,11 @@ confirmou.
   - Outros materiais que ele baixou, da minha frente (só para saber; nada entrou no jogo, o jogo não abre 3D, e o
     estilo é fantasia medieval de poucos polígonos): KayKit Fantasy Weapons Bits, FlameFXFree e Stylized Nature MegaKit
     (CC0); MagicProjectilesVFX sem licença no zip (**não usar** até conferir).
+  - **Decisão do dono sobre esses materiais** (16/11, repassada pelo [mundo], que conferiu as licenças nas páginas
+    oficiais): os CC0 (Stylized Nature MegaKit, KayKit Furniture Bits, Cooking Assets) servem **só de modelo, de
+    referência** para criarmos o nosso desenho; o estilo medieval em si fica de fora; **nenhum arquivo é copiado para o
+    projeto**. O pacote "Campos do Jordão" (CraftPix) **não usar**: a licença proíbe distribuir os arquivos da arte, e o
+    projeto fica no GitHub.
 - **Pedidos novos das frentes (14/11, esperando o dono escolher a ordem):**
   - **Os quatro bichos novos** (main 7d6a75f, protocolo 34; hoje saem como boneco de gente com o nome): `quati`
     (bando de 4, focinho comprido, rabo listrado em pé; golpe 'bite'), `tatu_bola` (carapaça em gomos; 'charge' =
