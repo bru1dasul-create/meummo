@@ -756,8 +756,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   cheia, andando para os 4 lados, soltando e a Chuva). Medir de novo: `ferramentas/arco-medida.cjs` (do protótipo)
 - [ ] **[arte]** A esquiva pela referência de movimento (16/11; o dono aprovou usar a biblioteca de animações do
   Quaternius, CC0, como referência): a comparação quadro a quadro com o rolamento dela está feita e mostrada ao dono
-  (prancha lado a lado; detalhes e receitas em docs/ARTE.md). **Esperando o dono escolher** o que muda (A: fica como
-  está; B: mergulho curto nos mesmos 0,62 s; C: o B com 0,75 s). A puxada do arco não tem referência na biblioteca
+  (prancha lado a lado; detalhes e receitas em docs/ARTE.md). O dono escolheu a **B, o mergulho curto** (os mesmos
+  0,62 s e 3 m): ele se lança com os braços à frente, as mãos tocam o chão, rola pelas costas e sai agachado com a mão
+  direita no chão, levantando (ou emendando na corrida). Feito e conferido no jogo, **no ramo da arte: esperando o
+  "pode" do dono, com o antes e depois, para entrar na main**. A puxada do arco não tem referência na biblioteca
 - [ ] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
   durante o zoom, o mais lento 117 ms). Esperando o dono pedir
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:

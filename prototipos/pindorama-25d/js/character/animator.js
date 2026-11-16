@@ -30,6 +30,29 @@
   // O rolamento da esquiva do jogo (3 m, o servidor já pôs o herói lá): encolhe, rola uma volta no chão e levanta
   // (15/11, dono: "um pouco mais lenta quando o boneco faz a animação": era 0,5 s com o movimento até 0,4 s)
   const ROLL = { total: 0.62, moveStart: 0.05, moveEnd: 0.52, cooldown: 0.05 };
+  // A forma do rolamento (frações da duração; veja `_rollPose`). Sem congelar: a ferramenta rolamento-medida.cjs troca
+  // estes números para comparar duas afinações.
+  const ROLL_SHAPE = {
+    reach: [0, 0.18, 0.3, 0.44], // os braços estendidos à frente: entram de..até, saem de..até
+    plant: [0.2, 0.3], // ... e dobram quando as mãos acham o chão (senão ele pararia de mão, lá no alto), de..até
+    pike: [0.1, 0.28, 0.32, 0.44], // o tronco desce antes das pernas (dobra no quadril) para as mãos acharem o chão
+    tuck: [0.28, 0.44, 0.56, 0.72], // a bola (sai enquanto o agachado entra: as duas formas nunca somam mais que uma)
+    crouch: [0.56, 0.72, 0.76, 1.04], // a saída agachada (levanta até o fim do rolamento; correndo, a view emenda antes)
+    crouchPitch: [25, 35], // ... e quanto o quadril e as costas inclinam nela (graus): o ombro desce até a mão achar o chão
+    dive: [0.02, 0.3], diveTurn: 85, // a 1ª parte do giro (graus): o corpo deita no mergulho, de..até
+    spin: [0.26, 0.74], // a 2ª parte: o resto da volta, pelas costas, de..até (encolhido gira mais depressa)
+    hop: [0.06, 0.4], air: 52, // o pulinho do mergulho, de..até, e a altura dele (cm)
+    tuckHip: 42, crouchHip: 40, // a altura do quadril na bola e na saída (cm; em pé, 88,9)
+    handReach: { x: 3, y: 38, z: 32 }, // a mão estendida (a partir do ombro: para fora, para a frente, para cima)
+    handPlant: { x: 6, y: 15, z: 26 }, // a mão no chão com o braço dobrado (o tronco já de cabeça para baixo)
+    handDown: { x: 7, y: 47, z: -27 }, // a mão direita no chão, na saída (com as costas inclinadas, "para a frente" do peito é para baixo)
+    handBack: { x: 13, y: -12, z: -38 }, // a esquerda para trás, na saída
+    poleReach: [0.1, 0.9, -0.3], // o cotovelo com o braço estendido (frente, fora, cima)
+    feetReach: 7, feetCrouch: 13, // meia distância entre os pés no mergulho e na saída (cm)
+    trail: { y: -8, z: 12 }, // no mergulho, a perna direita fica um pouco dobrada (o pé recua e sobe, em cm)
+    stepFront: 14, stepBack: -16, // na saída: o pé esquerdo à frente, o direito atrás (cm)
+    toePoint: 0.9, heelPitch: 0.7, heelUp: 8, // o pé de ponta no mergulho; o calcanhar de trás levantado na saída
+  };
   const DEATH = { total: 1.35, impact: 0.64 };
   const HIT = { total: 0.64, lock: 0.22 };
   // para onde o cotovelo aponta (frente, fora, cima, no espaço do peito)
@@ -846,46 +869,71 @@
     }
 
     /**
-     * O rolamento: a pose encolhida (agachado bem baixo, as costas curvas, o queixo no peito, as mãos nas canelas) e o
-     * giro da queda do rig (`fall`: gira o corpo todo em volta do pé e encosta no chão). O pé da pose anda para trás
-     * conforme gira, para o meio da bola seguir reto pelo caminho (sem ir e voltar).
+     * O rolamento da esquiva: o "mergulho curto" (opção B do dono, 16/11, tirada da referência de movimento — o `Roll`
+     * da biblioteca do Quaternius, comparado quadro a quadro: docs/ARTE.md). Antes ele dobrava no lugar e girava como
+     * uma bola, com as mãos nas canelas o tempo todo. Agora, nos mesmos 0,62 s e na mesma distância:
+     *  1. ele se LANÇA para a frente, o corpo esticado e os braços estendidos (um pulinho: `ROLL_SHAPE.air`);
+     *  2. as mãos tocam o chão, ele encolhe (a bola) e rola pelos ombros e pelas costas;
+     *  3. sai AGACHADO, um pé à frente e a mão direita no chão, e levanta (ou emenda na corrida).
+     * Como antes, a pose é montada em pé e o giro é o da queda do rig (`fall`: gira o corpo todo em volta do pé e
+     * encosta no chão); o pé da pose anda para trás conforme gira, para o meio do corpo seguir reto pelo caminho.
      */
     _rollPose() {
-      const a = this.dodge, from = a.from, T = a.timing;
+      const a = this.dodge, from = a.from, T = a.timing, K = ROLL_SHAPE;
       this.look.slingDraw = 0;
       this.look.slingBand = 0; this.look.slingLoaded = false;
       const t = Math.min(T.total, a.t), u = t / T.total;
-      const tuck = smoothstep(0, 0.17, u) * (1 - smoothstep(0.6, 0.92, u));
-      const spin = smoother(clamp01((u - 0.08) / 0.6));
-      const theta = spin * TAU;
+      // as três formas do corpo ao longo do rolamento (0 a 1 cada uma; uma entra enquanto a outra sai)
+      const span = (w) => smoothstep(w[0], w[1], u) * (1 - smoothstep(w[2], w[3], u));
+      const reach = span(K.reach), pike = span(K.pike), tuck = span(K.tuck), crouch = span(K.crouch);
+      const plant = smoothstep(K.plant[0], K.plant[1], u);
+      // o giro: uma volta inteira em duas partes — o corpo deita no mergulho e, quando encolhe, completa a volta pelas
+      // costas mais depressa (como quem rola de verdade: encolhido gira mais rápido)
+      const theta = K.diveTurn * DEG * smoothstep(K.dive[0], K.dive[1], u) + (TAU - K.diveTurn * DEG) * smoothstep(K.spin[0], K.spin[1], u);
+      // o pulinho do mergulho: os pés saem do chão e o corpo voa um instante antes de as mãos tocarem
+      const hop = Math.sin(Math.PI * clamp01((u - K.hop[0]) / (K.hop[1] - K.hop[0])));
+      const air = K.air * hop * hop;
       const enter = smoother(a.t / 0.06);
       const ground = { x: this.pos.x, y: this.pos.y, z: this.groundZ + this.pos.z };
       const body = M.frameYaw(ground, this.yaw);
-      const hipZ = lerp(B.hipStand, 42, tuck);
-      // o meio do corpo encolhido fica a ~0,8 da altura do quadril: o pé da pose recua para ele girar no lugar certo
+      const hipZ = B.hipStand + (K.tuckHip - B.hipStand) * tuck + (K.crouchHip - B.hipStand) * crouch;
+      // o meio do corpo fica a ~0,8 da altura do quadril: o pé da pose recua para ele girar no lugar certo
       const h = hipZ * 0.8;
-      const root = M.add(ground, M.scale(body.f, -h * Math.sin(theta)));
+      const root = M.add(M.add(ground, M.scale(body.f, -h * Math.sin(theta))), { x: 0, y: 0, z: air });
       const mixObject = (old, target) => Object.fromEntries(Object.keys(target).map(key => [key, lerp(old[key] || 0, target[key], enter)]));
-      const pelvis = mixObject(from.pelvis, { dx: 0, dy: 0, dz: (hipZ - B.hipStand), yaw: 0, pitch: 28 * DEG * tuck, roll: 0 });
-      const spine = mixObject(from.spine, { yaw: 0, pitch: 52 * DEG * tuck, roll: 0 });
-      const head = mixObject(from.head, { yaw: 0, pitch: 38 * DEG * tuck, roll: 0 });
+      const pelvis = mixObject(from.pelvis, { dx: 0, dy: 0, dz: (hipZ - B.hipStand), yaw: 0, pitch: (28 * tuck + K.crouchPitch[0] * crouch + 8 * reach + 26 * pike) * DEG, roll: 0 });
+      const spine = mixObject(from.spine, { yaw: 0, pitch: (52 * tuck + K.crouchPitch[1] * crouch + 6 * reach + 30 * pike) * DEG, roll: 0 });
+      // a cabeça: olha para onde vai cair, encosta o queixo no peito antes de tocar o chão e levanta de novo na saída
+      const head = mixObject(from.head, { yaw: 0, pitch: (38 * tuck + 30 * pike - 14 * crouch - 12 * reach * (1 - pike)) * DEG, roll: 0 });
+      const rest = { x: 4.6, y: 5, z: -51 };
+      const add3 = (p, q, k) => ({ x: p.x + (q.x - rest.x) * k, y: p.y + (q.y - rest.y) * k, z: p.z + (q.z - rest.z) * k });
       const hands = from.hands.map((hd, i) => {
-        // as mãos abraçam as canelas (na frente dos joelhos)
-        const target = mixV({ x: 4.6, y: 5, z: -51 }, { x: 4, y: 30, z: -26 - i * 2 }, tuck);
+        // os braços: estendidos à frente (o mergulho), abraçando as canelas (a bola) e, na saída, a mão direita no chão
+        // e a esquerda para trás
+        const out = i ? K.handDown : K.handBack;
+        const target = add3(add3(add3(rest, mixV(K.handReach, K.handPlant, plant), reach), { x: 4, y: 30, z: -26 - i * 2 }, tuck), out, crouch);
+        const open = Math.max(reach, i ? crouch : 0);
         return { local: mixV(hd.local, target, enter), twist: lerp(hd.twist || 0, -0.4, enter),
-          poleLocal: mixPole(hd.poleLocal || POLE.solto, POLE.guarda, enter), fist: lerp(hd.fist, 0.6, enter), flex: lerp(hd.flex || 0, 0.1, enter) };
+          poleLocal: mixPole(hd.poleLocal || POLE.solto, mixPole(POLE.guarda, K.poleReach, reach), enter),
+          fist: lerp(hd.fist, lerp(0.6, 0.12, open), enter), flex: lerp(hd.flex || 0, 0.1, enter) };
       });
       const rootFrame = M.frameYaw(root, this.yaw);
       const feet = from.feet.map((ft, i) => {
         const side = i ? 1 : -1;
-        const target = M.at(rootFrame, side * lerp(B.footSide, 10, tuck), lerp(0, 12, tuck), B.ankleHeight);
+        // os pés: juntos e de ponta no mergulho, junto ao corpo na bola e, na saída, o esquerdo à frente e o direito atrás
+        const width = B.footSide + (K.feetReach - B.footSide) * reach + (10 - B.footSide) * tuck + (K.feetCrouch - B.footSide) * crouch;
+        const trail = i ? reach * (1 - tuck) : 0; // no mergulho, a perna direita um pouco dobrada
+        const forward = 12 * tuck + (i ? K.stepBack : K.stepFront) * crouch + K.trail.y * trail;
+        const heel = i ? crouch : 0; // na saída, o pé de trás fica na ponta
+        const target = M.at(rootFrame, side * width, forward, B.ankleHeight + K.heelUp * heel + K.trail.z * trail);
         const start = M.add(root, M.sub(ft.pos, from.root));
-        return { pos: mixV(start, target, enter), pitch: lerp(ft.pitch, 0, enter), yaw: this.yaw + side * B.toeOut * DEG, toeBend: 0 };
+        return { pos: mixV(start, target, enter), pitch: lerp(ft.pitch, -(K.toePoint * reach + K.heelPitch * heel), enter),
+          yaw: this.yaw + side * B.toeOut * DEG, toeBend: K.heelPitch * heel * enter };
       });
       for (const st of this.footLock) st.planted = false;
       this.look.blink = 0;
       this.look.restGround = undefined;
-      this.look.gazeX = 0; this.look.gazeY = 0; this.look.mouthOpen = 0.1 * tuck; this.look.browRaise = -0.3 * tuck;
+      this.look.gazeX = 0; this.look.gazeY = 0; this.look.mouthOpen = 0.1 * tuck + 0.18 * reach; this.look.browRaise = -0.3 * tuck;
       return { root, yaw: this.yaw, pelvis, spine, head, hands, feet,
         shrug: [0, 0], shoulderFwd: [0, 0],
         fall: { pitch: theta, roll: 0, groundZ: this.groundZ } };
@@ -1940,6 +1988,7 @@
   PD.AGILE = AGILE; // para os testes da virada ágil
   PD.PUNCH_AT = PUNCH_AT;
   PD.DODGE = DODGE;
+  PD.ROLL_SHAPE = ROLL_SHAPE; // a forma do rolamento da esquiva (a ferramenta rolamento-medida.cjs afina por aqui)
   PD.DEATH = DEATH;
   PD.HIT = HIT;
   PD.footRocker = rocker; // para os testes (ponto do pé que encosta no chão)

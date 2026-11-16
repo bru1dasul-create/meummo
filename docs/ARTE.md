@@ -1031,6 +1031,30 @@ mexer na esquiva depois de ele escolher. A referência é o `Roll_RM` da Univers
   entrada se lançando para a frente com os braços estendidos (~0,12 s), as mãos tocam o chão e ele enrola (~0,30 s),
   saída agachado com uma mão no chão e subindo já na corrida (~0,20 s); C) o B com 0,75 s (muda o tempo que ele pediu e
   precisa da [estrutura]: o servidor segura o pulo por `DASH_ROLL_MS` 700 depois da esquiva). Recomendei o B.
+- **Feito: a opção B, o "mergulho curto"** (escolha do dono, 16/11; `_rollPose` e `ROLL_SHAPE` no `animator.js`. O
+  `ROLL` não mudou: os mesmos 0,62 s e a distância do servidor). **No ramo, esperando o "pode" do dono para entrar na
+  main** (prometi mostrar o antes e depois no jogo antes).
+  - Como é feito: a pose continua montada em pé e girada pelo `fall` do rig (uma volta inteira, encostando no chão).
+    O que mudou é a FORMA do corpo ao longo da volta, em janelas (frações da duração; uma entra enquanto a outra sai):
+    `reach` (os braços estendidos à frente), `plant` (dobram quando as mãos acham o chão), `pike` (o tronco desce antes
+    das pernas), `tuck` (a bola) e `crouch` (a saída agachada: o pé esquerdo à frente, o direito atrás na ponta, a mão
+    direita no chão e a esquerda para trás). O giro vem em duas partes (`dive`: deita 85° no mergulho; `spin`: o resto
+    da volta, mais depressa, pelas costas) e o `hop`/`air` é o pulinho (52 cm) que tira os pés do chão.
+  - Duas armadilhas que apareceram medindo: (1) com o braço esticado até o chão ele parava de mão, com o quadril a
+    107 cm, e despencava: por isso o `plant` dobra o braço; (2) bola + agachado somando mais que 1 afundavam o corpo, a
+    mão passava do chão e o apoio do rig levantava o corpo inteiro (os pés ficavam 20 cm no ar): as janelas de `tuck` e
+    `crouch` agora se cruzam certinho.
+  - Medido (`rolamento-medida.cjs`): os pés saem do chão aos 0,08 s; o quadril sobe a 100 cm (0,10 s); as mãos tocam o
+    chão aos 0,15–0,17 s; rola pelas costas (quadril a 13 cm aos 0,32 s); os pés voltam aos ~0,38 s; agachado de três
+    apoios aos 0,43–0,48 s, com a mão direita a 2 cm do chão e os dois pés plantados; de pé no fim (quadril a 88 cm aos
+    0,63 s). Correndo, a view emenda aos 0,52 s e ele sobe correndo (altura de corrida aos ~0,65 s). O maior movimento
+    de uma junta num quadro ficou igual ao do rolamento antigo (45 cm, a cabeça) e o do quadril, menor (19 contra 25).
+  - Conferido: testes do protótipo (`teste-acoes` 624 cenários, `teste-refino-acoes` 24: sem falhas); fora do jogo em
+    4 direções da tela; no jogo, correndo para os 4 lados e parado, sem erro na página.
+  - Receitas: `rolamento-medida.cjs <json> <tira.png> 300 11 1.3334 '{...}' <tela>` (o json troca números de
+    `PD.ROLL_SHAPE`; `ANIM=<arquivo>` usa outro `animator.js`, para o antes e depois); no scratchpad,
+    `rolamento-correndo.cjs` (corre, esquiva e emenda, como a view) e `esquiva-jogo-final.cjs` (os quadros do jogo de
+    verdade, com a hora da própria animação em cada um).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

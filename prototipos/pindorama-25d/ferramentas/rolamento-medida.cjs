@@ -1,18 +1,21 @@
 // O NOSSO rolamento (a esquiva do jogo) medido fora do jogo: onde fica cada junta em cada quadro (o mesmo formato da
 // referência lida pelo glb_fk.py) e uma tira do herói de verdade, na câmera do jogo, rolando para a direita da tela.
-// Uso: node rolamento-medida.cjs <saida.json> <tira.png> [distância em cm] [quantas poses na tira] [zoom]
+// Uso: node rolamento-medida.cjs <saida.json> <tira.png> [distância em cm] [quantas poses na tira] [zoom] [json] [tela]
+//   json = números de PD.ROLL_SHAPE para trocar (afinar); tela = para onde ele rola na tira, em graus da tela (0 = direita,
+//   90 = para a câmera); ANIM=<arquivo> usa outro animator.js (comparar antes e depois).
 //   (11 poses e zoom 1.3334 dão células de 200 px, as da folha-rolamento.py). Precisa do Playwright com o Chromium.
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..') + '/';
 (async () => {
-  const [, , outJson, outPng, distArg = '300', nArg = '11', zoomArg = '1.25'] = process.argv;
+  const [, , outJson, outPng, distArg = '300', nArg = '11', zoomArg = '1.25', tuneArg = '{}', telaArg = '0'] = process.argv;
   const list = JSON.parse(fs.readFileSync(ROOT + 'view-scripts.json', 'utf8')).scripts;
-  const tags = list.map((s) => `<script src="file://${ROOT}${s}"></script>`).join('\n');
+  const tags = list.map((s) => `<script src="file://${process.env.ANIM && /animator\.js$/.test(s) ? process.env.ANIM : ROOT + s}"></script>`).join('\n');
   const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#222"><canvas id="c"></canvas>${tags}<script>
-window.__go = (dist, N, zoom) => {
+window.__go = (dist, N, zoom, tune, tela) => {
   const M = PD.math;
+  if (PD.ROLL_SHAPE) Object.assign(PD.ROLL_SHAPE, tune);
   // ---- 1) as juntas, quadro a quadro (60 por segundo), com o herói indo para +x ----
   const sample = () => {
     const ch = new PD.Character(0, 0, 0);
@@ -41,7 +44,7 @@ window.__go = (dist, N, zoom) => {
   const total = end > 0 ? frames[end].t : frames[frames.length - 1].t;
   // ---- 2) a tira: o herói de verdade na câmera do jogo, rolando para a direita da tela ----
   const cam = new PD.IsoCamera(); cam.zoom = zoom;
-  const g = cam.groundDir(1, 0);
+  const g = cam.groundDir(Math.cos(tela * Math.PI / 180), Math.sin(tela * Math.PI / 180)); // para onde ele rola, na TELA (0 = direita, 90 = para a câmera)
   const dir = Math.atan2(g.y, g.x);
   const CW = Math.round(150 * zoom), CH = Math.round(210 * zoom);
   const cv = document.getElementById('c'); cv.width = CW * N; cv.height = CH; const ctx = cv.getContext('2d');
@@ -76,7 +79,7 @@ window.__go = (dist, N, zoom) => {
   const p = await b.newPage({ viewport: { width: 2600, height: 900 } });
   const pe = []; p.on('pageerror', (e) => pe.push(String(e).slice(0, 300)));
   await p.goto('file://' + tmp);
-  const res = await p.evaluate(([d, n, z]) => window.__go(d, n, z), [+distArg, +nArg, +zoomArg]);
+  const res = await p.evaluate(([d, n, z, t, a]) => window.__go(d, n, z, t, a), [+distArg, +nArg, +zoomArg, JSON.parse(tuneArg), +telaArg]);
   await (await p.$('#c')).screenshot({ path: outPng });
   fs.writeFileSync(outJson, JSON.stringify({ nome: 'nosso-rolamento', total: res.total, distancia: +distArg, quadros: res.frames }));
   const errs = res.errs.concat(pe);
