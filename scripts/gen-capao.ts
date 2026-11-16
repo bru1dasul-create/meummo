@@ -2063,15 +2063,16 @@ pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
 }
 /** Áreas de criaturas (camada "monstros"): o nome é o id em data/monsters.json; os saguis são os "encantados". */
 const monstros: Shape[] = [];
+// (16/11, pedido do dono: "bastante mesmo na floresta": de 18 para 40 bichos, os números combinados com a [estrutura])
 if (CREATURES) {
-  monstros.push(rect('area', SAGUI_ZONE.x0, SAGUI_ZONE.x1, SAGUI_ZONE.y0, SAGUI_ZONE.y1, { quantidade: 4 }, 'sagui'));
-  monstros.push(rect('area', JARARACA_ZONE.x0, JARARACA_ZONE.x1, JARARACA_ZONE.y0, JARARACA_ZONE.y1, { quantidade: 3 }, 'jararaca'));
+  monstros.push(rect('area', SAGUI_ZONE.x0, SAGUI_ZONE.x1, SAGUI_ZONE.y0, SAGUI_ZONE.y1, { quantidade: 8 }, 'sagui'));
+  monstros.push(rect('area', JARARACA_ZONE.x0, JARARACA_ZONE.x1, JARARACA_ZONE.y0, JARARACA_ZONE.y1, { quantidade: 6 }, 'jararaca'));
   if (FLORESTA_MAIOR) {
     // os bichos novos da floresta maior (escolhidos pelo dono em 14/11; regras e dados da [estrutura]): o bando de quatis
     // na mata do meio do parque, os tatus-bola e os marimbondos na mata da estrada, e o filhote de boitatá sozinho no
     // recanto do Véu da mata profunda do sul (só de noite: de dia a área fica vazia)
     const z = NEW_ZONES;
-    for (const [zone, quantidade, nome] of [[z.meio, 4, 'quati'], [z.estradaNorte, 3, 'tatu_bola'], [z.estradaSul, 3, 'marimbondo'], [z.chefe, 1, 'filhote_boitata']] as const) {
+    for (const [zone, quantidade, nome] of [[z.meio, 10, 'quati'], [z.estradaNorte, 8, 'tatu_bola'], [z.estradaSul, 6, 'marimbondo'], [z.chefe, 2, 'filhote_boitata']] as const) {
       monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade }, nome));
     }
   }

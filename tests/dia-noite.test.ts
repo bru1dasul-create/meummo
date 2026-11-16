@@ -55,8 +55,9 @@ describe('as contas do dia e noite', () => {
     expect(clock.isNight()).toBe(false);
     expect(clock.position()).toBe(0);
     clock.turnTo('noite');
-    clock.turnTo('dia');
-    expect(clock.position()).toBe(0);
+    clock.turnTo('dia'); // já com a luz cheia (logo depois do amanhecer), não no escuro do instante 0
+    expect(clock.position()).toBe(TWILIGHT_MS);
+    expect(daylightAt(clock.position(), DEFAULT_COMBAT_RULES)).toBe(1);
     // a tarde: o começo do anoitecer (ainda dia, a luz cheia), e em TWILIGHT_MS vem a noite
     clock.turnTo('tarde');
     expect(clock.position()).toBe(DAY_MS - TWILIGHT_MS);
@@ -124,7 +125,7 @@ describe('a noite no mundo', () => {
     turn(world, player, 'dia');
     run(TICK_MS);
     expect(bicho()).toMatchObject({ hp: 20, maxHp: 40 });
-    expect(conn.ofType('time').at(-1)!.at).toBe(0);
+    expect(conn.ofType('time').at(-1)!.at).toBe(TWILIGHT_MS);
   });
 
   it('de noite o golpe do bicho dói 25% a mais', () => {

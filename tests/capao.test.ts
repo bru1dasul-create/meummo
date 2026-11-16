@@ -336,13 +336,14 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
     const game = GameMap.fromTiled(map as unknown as TiledMap, 'capao');
     const zones = layer('monstros');
     expect(zones.map((z) => [z.name, prop(z, 'quantidade')])).toEqual([
-      ['sagui', 4],
-      ['jararaca', 3],
+      // (16/11, pedido do dono: mais bichos para caçar, 40 no total)
+      ['sagui', 8],
+      ['jararaca', 6],
       // os bichos novos da floresta maior (escolhidos pelo dono em 14/11)
-      ['quati', 4],
-      ['tatu_bola', 3],
-      ['marimbondo', 3],
-      ['filhote_boitata', 1],
+      ['quati', 10],
+      ['tatu_bola', 8],
+      ['marimbondo', 6],
+      ['filhote_boitata', 2],
     ]);
     for (const z of zones) {
       const [x0, y0, x1, y1] = [z.x / M, z.y / M, (z.x + z.width) / M, (z.y + z.height) / M];
@@ -1090,7 +1091,7 @@ describe('Mapa 01 (Capão): a floresta maior (pedido do dono em 14/11, "aumentar
     expect(zones.map((z) => z.name)).toEqual(['quati', 'tatu_bola', 'marimbondo', 'filhote_boitata']);
     for (const z of zones) expect(Object.keys(monsters), String(z.name)).toContain(z.name);
     const chefe = zones.find((z) => z.name === 'filhote_boitata')!;
-    expect(prop(chefe, 'quantidade')).toBe(1); // o mais forte mora sozinho, no recanto do Véu
+    expect(prop(chefe, 'quantidade')).toBe(2); // os mais fortes são poucos, no recanto do Véu
     const veu = of('veu').find((v) => at(v).y > 160)!;
     expect(inRect(at(veu).x, at(veu).y, chefe)).toBe(true);
     const pontos = layer('pontos');
