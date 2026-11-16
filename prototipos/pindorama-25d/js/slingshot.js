@@ -177,11 +177,11 @@
     const rig = PD.rig.buildRig(pose);
     const center = bow ? bowGeometry(rig, { bowAim: 1 }).rest : geometry(rig).center;
     // o ponto pinçado: atrás do garfo (estilingue) ou da empunhadura (arco: a corda vem até perto do queixo)
-    const pinch = M.add(center, M.scale(forward, bow ? -(24 + 38 * draw) : -(17 + 17 * draw)));
+    const pinch = M.add(center, M.scale(forward, bow ? -(24 + 22 * draw) : -(17 + 17 * draw)));
     // o cotovelo da mão que puxa: para baixo e para fora (estilingue) ou para trás, na linha da flecha, um tiquinho acima
     // dela e para fora das costas (arco, de lado para o alvo)
     const elbowGuide = bow
-      ? M.add(M.scale(forward, -1), M.add(M.scale(rig.chest.u, 0.12), M.scale(rig.chest.f, -0.25)))
+      ? M.add(M.scale(forward, -1), M.add(M.scale(rig.chest.u, -0.45), M.scale(rig.chest.f, -0.55)))
       : M.add(rig.chest.r, M.add(M.scale(rig.chest.f, 0.2), M.scale(rig.chest.u, -0.3)));
     // A mão prolonga o antebraço em 7 cm até os dedos. Resolver essa extensão
     // diretamente evita trocar o lado do cotovelo por iterações do punho.

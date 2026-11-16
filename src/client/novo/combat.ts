@@ -19,6 +19,7 @@ import { coinUrl } from '../coinArt';
 import { itemIconUrl } from '../itemArt';
 import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
 import { drawRainAim as paintRainAim, drawRainAir as paintRainAir, drawRainGround as paintRainGround, RAIN_LINGER_MS } from './rainArt';
+import { paintChargeRing } from './chargeArt';
 import { paintSpiritAim, paintSpiritEnd, paintSpiritMark, SPIRIT_END_MS } from './spiritArt';
 
 /** A altura (metros) em que os projéteis voam no desenho. */
@@ -812,46 +813,14 @@ export class CombatLayer {
   }
 
   /** O anel da carga em volta do pé: enche no sentido do relógio; cheio, fica dourado e pulsa. */
+  /** O anel da carga no pé de quem puxa (o desenho é da [arte], em chargeArt.ts). */
   private drawChargeRing(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point): void {
     const ring = this.chargeRing;
     const feet = ring ? feetOf(ring.id) : null;
     if (!ring || !feet) return;
     const progress = ring.fullMs > 0 ? Math.min(1, (now - ring.since) / ring.fullMs) : 1;
-    const full = progress >= 1;
-    const ctx = this.ctx;
-    const radius = CHARGE_RING_RADIUS;
-    const arc = (from: number, to: number) => {
-      ctx.beginPath();
-      const steps = 32;
-      for (let i = 0; i <= steps; i++) {
-        const a = from + ((to - from) * i) / steps;
-        const p = screen(feet.x + Math.cos(a) * radius, feet.y + Math.sin(a) * radius);
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-    };
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(20, 12, 10, 0.35)';
-    arc(0, Math.PI * 2);
-    // enche como um relógio na tela: começa no ponto mais alto do anel e vai para a direita (com qualquer câmera)
-    let top = 0;
-    let topY = Infinity;
-    for (let i = 0; i < 48; i++) {
-      const a = (Math.PI * 2 * i) / 48;
-      const y = screen(feet.x + Math.cos(a) * radius, feet.y + Math.sin(a) * radius).y;
-      if (y < topY) {
-        topY = y;
-        top = a;
-      }
-    }
-    const step = Math.PI / 24;
-    const right = screen(feet.x + Math.cos(top + step) * radius, feet.y + Math.sin(top + step) * radius).x;
-    const left = screen(feet.x + Math.cos(top - step) * radius, feet.y + Math.sin(top - step) * radius).x;
-    const turn = right >= left ? 1 : -1;
-    ctx.strokeStyle = full ? `rgba(255, 205, 80, ${(0.75 + 0.25 * Math.sin(now / 80)).toFixed(3)})` : 'rgba(255, 240, 200, 0.95)';
-    ctx.lineWidth = full ? 5 : 4;
-    arc(top, top + turn * Math.PI * 2 * progress);
+    const meter = (x: number, y: number) => Math.max(8, Math.abs(screen(x, y, 0).y - screen(x, y, 1).y));
+    paintChargeRing(this.ctx, feet, progress, now, screen, meter);
   }
 
   /** O ponto mais baixo, na tela, de um círculo de `radius` metros no chão em volta de `feet`. */
