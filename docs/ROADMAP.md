@@ -754,12 +754,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   alcança até 150° para a esquerda (o tiro por cima do ombro de quem foge) e 65° para a direita. Conferido fora do jogo
   (72 direções × 3 cargas: o cotovelo nunca atrás das costas nem na altura da cabeça) e no jogo (16 direções com a carga
   cheia, andando para os 4 lados, soltando e a Chuva). Medir de novo: `ferramentas/arco-medida.cjs` (do protótipo)
-- [ ] **[arte]** A esquiva pela referência de movimento (16/11; o dono aprovou usar a biblioteca de animações do
-  Quaternius, CC0, como referência): a comparação quadro a quadro com o rolamento dela está feita e mostrada ao dono
-  (prancha lado a lado; detalhes e receitas em docs/ARTE.md). O dono escolheu a **B, o mergulho curto** (os mesmos
-  0,62 s e 3 m): ele se lança com os braços à frente, as mãos tocam o chão, rola pelas costas e sai agachado com a mão
-  direita no chão, levantando (ou emendando na corrida). Feito e conferido no jogo, **no ramo da arte: esperando o
-  "pode" do dono, com o antes e depois, para entrar na main**. A puxada do arco não tem referência na biblioteca
+- [x] **[arte]** A esquiva pela referência de movimento (16/11, na main com o "pode" do dono; ele aprovou usar a
+  biblioteca de animações do Quaternius, CC0, só como referência): comparei quadro a quadro o nosso rolamento com o
+  dela e ele escolheu a opção **B, o mergulho curto**, nos mesmos 0,62 s e 3 m: o herói se lança com os braços à frente
+  (os pés saem do chão), as mãos tocam o chão, rola pelas costas e sai agachado com a mão direita no chão, levantando
+  (ou emendando na corrida). Antes ele dobrava no lugar e girava como uma bola. Conferido no jogo (correndo para os
+  quatro lados e parado) e nos testes do protótipo. Detalhes, medidas e receitas em docs/ARTE.md. A puxada do arco não
+  tem referência na biblioteca (não há animação de arco nos pacotes gratuitos)
 - [ ] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
   durante o zoom, o mais lento 117 ms). Esperando o dono pedir
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:

@@ -1003,7 +1003,7 @@ porque eu mexia em "para onde o cotovelo aponta" sem medir. **Lição: medir a p
 - **Ordem de desenho** (15/11, `world.js` `behind`): com os dois eixos separados e respostas opostas, ganha quem está
   mais perto da câmera (antes o eixo x sempre ganhava: a Xiovanna aparecia por cima do balcão com o herói encostado).
 
-### A esquiva comparada com o rolamento de referência (16/11; nada mudou no jogo, o dono escolhe)
+### A esquiva comparada com o rolamento de referência (16/11; o dono escolheu a opção B, na main)
 Escopo aprovado pelo dono ("pode ser"): comparar quadro a quadro, mostrar a prancha e a lista do que é diferente, e só
 mexer na esquiva depois de ele escolher. A referência é o `Roll_RM` da Universal Animation Library 1 (Quaternius, CC0).
 - **Como medi** (as três ferramentas ficam em `prototipos/pindorama-25d/ferramentas/`; a referência baixada fica FORA
@@ -1027,13 +1027,15 @@ mexer na esquiva depois de ele escolher. A referência é o `Roll_RM` da Univers
   (2) nela as mãos vão à frente e tocam o chão; no nosso ficam nas canelas; (3) nela a silhueta muda (esticado →
   encolhido → agachado → de pé); no nosso é a mesma bola girando; (4) ela termina agachada e levanta devagar; o nosso
   abre direto em pé; (5) ela é mais longa e mais lenta: o mergulho inteiro não cabe nos 0,62 s que o dono pediu.
-- **O que ofereci ao dono** (espero a escolha): A) deixar como está; B) "mergulho curto" nos mesmos 0,62 s e 3 m:
+- **O que ofereci ao dono** (ele escolheu a B): A) deixar como está; B) "mergulho curto" nos mesmos 0,62 s e 3 m:
   entrada se lançando para a frente com os braços estendidos (~0,12 s), as mãos tocam o chão e ele enrola (~0,30 s),
   saída agachado com uma mão no chão e subindo já na corrida (~0,20 s); C) o B com 0,75 s (muda o tempo que ele pediu e
   precisa da [estrutura]: o servidor segura o pulo por `DASH_ROLL_MS` 700 depois da esquiva). Recomendei o B.
 - **Feito: a opção B, o "mergulho curto"** (escolha do dono, 16/11; `_rollPose` e `ROLL_SHAPE` no `animator.js`. O
-  `ROLL` não mudou: os mesmos 0,62 s e a distância do servidor). **No ramo, esperando o "pode" do dono para entrar na
-  main** (prometi mostrar o antes e depois no jogo antes).
+  `ROLL` não mudou: os mesmos 0,62 s e a distância do servidor). **Na main em 16/11, com o "pode" do dono** (viu o
+  antes e depois do jogo antes de entrar). Ficou combinado com ele: no PC dele (aqui o jogo roda a ~20 quadros por
+  segundo, sem placa de vídeo) conferir se o mergulho aparece bem; e, se a saída agachada der sensação de "travar no
+  fim", encurtar o agachamento (`ROLL_SHAPE.crouch`).
   - Como é feito: a pose continua montada em pé e girada pelo `fall` do rig (uma volta inteira, encostando no chão).
     O que mudou é a FORMA do corpo ao longo da volta, em janelas (frações da duração; uma entra enquanto a outra sai):
     `reach` (os braços estendidos à frente), `plant` (dobram quando as mãos acham o chão), `pike` (o tronco desce antes
@@ -1208,8 +1210,9 @@ confirmou.
 - **Biblioteca de animações do Quaternius como REFERÊNCIA de movimento** (16/11; o dono disse "sim" à sugestão da
   [estrutura]: abrir, ver onde ficam cotovelo, quadril e pés quadro a quadro, e acertar as nossas poses por elas — sem
   importar nada: o esqueleto delas não é o nosso). O dono deu o "pode ser" (16/11) para o primeiro passo: a comparação
-  do rolamento está feita (seção "A esquiva comparada com o rolamento de referência") e **espero ele escolher** o que
-  muda na esquiva. O que sei da biblioteca, lendo os arquivos de verdade:
+  do rolamento está feita, ele escolheu a opção B (o mergulho curto) e ela está na main (seção "A esquiva comparada
+  com o rolamento de referência"). Daqui para a frente a biblioteca serve para as poses novas (corpo a corpo, salto,
+  apanhar: a Fúria da Onça, quando voltar). O que sei dela, lendo os arquivos de verdade:
   - A pasta do PC dele (`E:\baixados-mmorpg`) não aparece daqui. Baixei os dois pacotes **gratuitos** (CC0, enviados
     pelo próprio Quaternius) para o rascunho, fora do projeto:
     `https://opengameart.org/sites/default/files/universal_animation_librarystandard.zip` e
