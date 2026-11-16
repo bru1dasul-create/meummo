@@ -1152,6 +1152,28 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
+- **Biblioteca de animações do Quaternius como REFERÊNCIA de movimento** (16/11; o dono disse "sim" à sugestão da
+  [estrutura]: abrir, ver onde ficam cotovelo, quadril e pés quadro a quadro, e acertar as nossas poses por elas — sem
+  importar nada: o esqueleto delas não é o nosso). Mandei o escopo ao dono e **espero o "pode"** para começar pelo
+  rolamento da esquiva. O que já sei, lendo os arquivos de verdade:
+  - A pasta do PC dele (`E:\baixados-mmorpg`) não aparece daqui. Baixei os dois pacotes **gratuitos** (CC0, enviados
+    pelo próprio Quaternius) para o rascunho, fora do projeto:
+    `https://opengameart.org/sites/default/files/universal_animation_librarystandard.zip` e
+    `.../universal_animation_library_2standard.zip`. Cada um traz um `.glb` com todas as animações.
+  - Um `.glb` se lê sem Blender e sem executar nada: cabeçalho de 12 bytes, um bloco JSON (os ossos em `nodes`/`skins`,
+    as animações em `animations`, com nome, canais e tempos) e um bloco binário com os números.
+  - **Biblioteca 1** (46 animações, 53 ossos `DEF-...`): tem `Roll` e `Roll_RM` (1,47 s; RM = o corpo anda de verdade),
+    `Jump_Start`/`Jump_Loop`/`Jump_Land`, `Punch_Jab`/`Punch_Cross`, `Sword_Attack`, `Hit_Chest`/`Hit_Head`, `Death01`,
+    andar, trotar, correr, agachar, nadar, sentar, pistola e magia. **Não tem arco.**
+  - **Biblioteca 2** (43 animações na gratuita, 65 ossos): `Slide_*`, `Shield_*`, `Sword_Regular_A/B/C` e o combo,
+    `Sword_Dash_RM`, `Melee_Hook`, `NinjaJump_*`, `OverhandThrow`, `Hit_Knockback`, `ClimbUp_1m_RM`, roça, zumbi.
+    **Não tem arco nem rolamento.** A versão paga (Source, US$ 14,99 cada) eu não vi por dentro: não sei se tem arco.
+  - Então a referência serve para o **rolamento** (e, depois, golpes de corpo a corpo, salto e apanhar: a Fúria da
+    Onça); para a **puxada do arco não há referência** nos pacotes gratuitos (ela foi refeita em 16/11 pela conta do
+    arqueiro, medida: seção "O braço do arco, redesenhado").
+  - Outros materiais que ele baixou, da minha frente (só para saber; nada entrou no jogo, o jogo não abre 3D, e o
+    estilo é fantasia medieval de poucos polígonos): KayKit Fantasy Weapons Bits, FlameFXFree e Stylized Nature MegaKit
+    (CC0); MagicProjectilesVFX sem licença no zip (**não usar** até conferir).
 - **Pedidos novos das frentes (14/11, esperando o dono escolher a ordem):**
   - **Os quatro bichos novos** (main 7d6a75f, protocolo 34; hoje saem como boneco de gente com o nome): `quati`
     (bando de 4, focinho comprido, rabo listrado em pé; golpe 'bite'), `tatu_bola` (carapaça em gomos; 'charge' =
