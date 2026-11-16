@@ -738,11 +738,22 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   da [arte]): atrás do balcão, a 30 cm dele; parada, fica de frente (90°); vira o corpo para quem vem falar
 - [ ] **[mundo]** Para a Xiovanna andar pela loja toda (e não só 2 m atrás do balcão): hoje ela fica num bolso fechado
   pela colisão do balcão (livre só de x 66,5 a 68, y 50 a 50,5); precisa de uma passagem no balcão (se o dono quiser)
-- [ ] **[arte]** Do mesmo teste do dono: o fim da esquiva trava (o rolamento dura 0,5 s e anda só até 0,4 s); o braço
-  direito ao puxar o arco; a missão atrás do mini mapa; a pose de mirar para cima na Chuva e as flechas mais tempo no
-  chão (`RAIN_LINGER_MS`); as pernas da Xiovanna atrás do balcão, ela virada de frente e sem seguir quem está na loja
-  (só vira para quem fala com ela); o destaque dos Olhos pesa (medido sem placa de vídeo: de 13,5 para 76 ms por quadro
-  com uns 15 bichos); o brilho do quadrado com a flecha carregada (`data-armed`); o zoom da conversa dá um tranco (medido: quadro de 24 para 33 ms durante o zoom, o mais lento 117 ms)
+- [x] **[arte]** Do mesmo teste do dono (15/11, na main): o fim da esquiva não trava mais (emenda na corrida; ela
+  ficou em 0,62 s e não mistura com o pulo); a missão saiu de trás do mini mapa; a pose de mirar para cima na Chuva e as
+  flechas mais tempo no chão (`RAIN_LINGER_MS`); as pernas da Xiovanna atrás do balcão, ela de frente e sem seguir quem
+  passa; o destaque dos Olhos leve (15 → 20 ms por quadro com 17 bichos); o brilho do quadrado com a flecha carregada
+  (`data-armed`); o anel da carga com efeito e sem passar por cima das pernas (`chargeArt.ts`)
+- [x] **[arte]** O braço direito ao puxar o arco, de verdade (16/11, na main, depois de três consertos que não
+  resolveram: "o braço direito está aparecendo nas costas do personagem; quando ele puxa de frente o braço direito some e
+  vai pra trás"). Medi a pose antes de mexer: a mão da corda parava na frente do ombro ESQUERDO, e o cotovelo direito ia
+  19 cm para trás das costas. A pose foi refeita na conta do arqueiro (`BOW_POSE` em `slingshot.js`): a mão da corda na
+  mandíbula, logo à frente do ombro direito; o cotovelo para trás, na linha da flecha; o braço do arco quase esticado; o
+  peito menos de lado (50°) e sem torcer mais que 70° (andando com o alvo à direita chegava a 140°). Andando, a mira
+  alcança até 150° para a esquerda (o tiro por cima do ombro de quem foge) e 65° para a direita. Conferido fora do jogo
+  (72 direções × 3 cargas: o cotovelo nunca atrás das costas nem na altura da cabeça) e no jogo (16 direções com a carga
+  cheia, andando para os 4 lados, soltando e a Chuva). Medir de novo: `ferramentas/arco-medida.cjs` (do protótipo)
+- [ ] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
+  durante o zoom, o mais lento 117 ms). Esperando o dono pedir
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

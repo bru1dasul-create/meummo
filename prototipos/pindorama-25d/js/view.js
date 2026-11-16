@@ -245,7 +245,7 @@
           const at = ch.attack;
           at.dir = dir;
           at.aimYaw = dir;
-          at.poseAim = M.clamp(M.angleDiff(ch.yaw, dir), -65 * M.DEG, 65 * M.DEG);
+          at.poseAim = S.poseAimOf(ch, M.angleDiff(ch.yaw, dir));
           at.releaseRequested = true;
           ch.faceYaw = dir;
           ch._pose = null;

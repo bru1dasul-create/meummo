@@ -24,12 +24,43 @@
   PD.equipment.define({ id: 'arco', nome: 'Arco de Bambu', slot: 'maoE', ocupa: ['maoE', 'maoD'], material: bamboo,
     pecas: [{ osso: 'mao', lado: 'E', esferas: [{ a: 6, d: 0, s: 0, r: 1.6 }] }] });
   const BOW_RULES = Object.freeze({ ...RULES, maxCharge: 1.5, minDraw: 0.3, snap: 0.06, recover: 0.42 });
-  // Puxando o arco, o herói fica de lado para o alvo, como arqueiro de verdade (pedido do dono, 14/11: "o braço fica
-  // feio puxando"; de frente para o alvo, o cotovelo da corda subia e saía de lado, como asa): o quadril vira um pouco,
-  // o peito mais, até o ombro do arco apontar para onde a flecha vai; a cabeça volta para olhar ao longo dela.
-  const BOW_TURN = 75 * M.DEG; // o peito, em relação à flecha
-  const BOW_HIPS = 28 * M.DEG; // a parte do giro que vem do quadril
-  const BOW_REACH = 49; // da mão do arco ao ombro (cm): o braço quase esticado
+  // A POSE DE ARQUEIRO (redesenho de 16/11, depois de três consertos que não resolveram: "o braço direito está aparecendo
+  // nas costas do personagem; quando ele puxa de frente o braço direito some e vai pra trás", dono). Medido antes de
+  // mexer: a mão da corda parava NA FRENTE DO OMBRO ESQUERDO (25 cm à frente do meio do peito), longe demais do ombro
+  // direito. Com o braço cruzando o peito, o cotovelo só tinha três lugares para ir, todos ruins: para cima (passava da
+  // cabeça), para trás do pescoço (19 cm atrás das costas) ou para a frente. Mexer no "para onde o cotovelo aponta" não
+  // resolvia: o defeito era o lugar da MÃO.
+  // Agora a conta é a do arqueiro de verdade, feita na base da MIRA (a = para onde a flecha vai, r = a direita dela):
+  //  - a linha da flecha passa rente à bochecha direita, por fora da cabeça (`side`, `up`);
+  //  - na carga cheia os dedos da corda param nessa linha, logo à frente do ombro direito (`ahead`: atrás da mandíbula).
+  //    Com a mão perto do ombro, o cotovelo cabe onde tem de ficar: para trás, na linha da flecha;
+  //  - a mão do arco fica na mesma linha, com o braço quase esticado (`reach`);
+  //  - o peito fica menos de lado (50°, eram 75°): a puxada dá ~72 cm, a de gente de verdade, e o ombro direito chega
+  //    perto da linha. E o peito nunca torce mais que `twist` em relação ao quadril (andando com o alvo à direita o giro
+  //    chegava a 140°: o tronco virava ao contrário).
+  // (Sem congelar: a ferramenta ferramentas/arco-medida.cjs troca estes números para comparar duas afinações.)
+  const BOW_POSE = {
+    turn: 50 * M.DEG, // o peito, em relação à flecha
+    hips: 22 * M.DEG, // a parte do giro que vem do quadril (parado)
+    twist: 70 * M.DEG, // o máximo que o peito torce em relação ao quadril
+    side: 15.5, // a linha da flecha: à direita do meio do peito (cm)...
+    up: 21, // ... e acima dele (a altura da mandíbula)
+    reach: 61, // do ombro do arco à empunhadura (cm): o braço quase esticado
+    ahead: 10, // carga cheia: os dedos da corda ficam isto à frente do ombro direito...
+    jaw: 3, // ... e nunca passam da mandíbula (cm à frente do meio do peito)
+    arrow: 82, // o comprimento da flecha (a puxada cheia não passa dele menos 5)
+    out: 0.2, // o cotovelo da corda: para trás e um tiquinho para fora
+    outCam: 1.1, // mirando na linha da câmera (indo ou vindo), mais para fora: o braço aparece ao lado da cabeça
+    down: 0.3, // ... e um tiquinho para baixo (no começo da puxada ele não sobe como asa)
+    openFrom: 0.55, // (quanto da linha da câmera até o cotovelo começar a abrir: 0 = a flecha de lado, 1 = bem na linha)
+    backCam: 0.85, // (na linha da câmera, quase nada para trás: para trás ele ficaria escondido pela cabeça, ou em cima dela)
+    downCam: 0.15, // (... e mais um tiquinho para baixo)
+    away: 14, // mirando para longe da câmera, a mão do arco desce isto (cm): senão ela aparece acima da cabeça
+    // andando, o corpo segue as pernas e só o tronco vira para a mira. O arco está na mão esquerda: para a esquerda o
+    // arqueiro alcança até quase atrás (o "tiro parta", por cima do ombro); para a direita, só até onde o peito vira
+    aimLeft: 150 * M.DEG,
+    aimRight: 65 * M.DEG,
+  };
   const isBow = c => c.equipped.maoE === 'arco';
   const isEquipped = c => c.equipped.maoE === 'estilingue' || isBow(c);
   /** As regras de quem atira (o arco puxa mais devagar que o estilingue). */
@@ -46,12 +77,25 @@
     return M.add(M.scale(a, Math.sin((1 - t) * angle) / sine), M.scale(b, Math.sin(t * angle) / sine));
   }
 
+  /**
+   * Até onde a pose consegue mirar, em relação a para onde o corpo está virado (`rel`, em radianos, + = direita). O
+   * estilingue: 65° para cada lado. O arco: BOW_POSE.aimLeft para a esquerda e aimRight para a direita; o que cai no
+   * canto morto (atrás, à direita) fica com a ponta mais próxima — a troca de lado acontece no meio dele, e não bem
+   * atrás do herói (onde o alvo de quem foge fica o tempo todo).
+   */
+  function poseAimOf(character, rel) {
+    if (!isBow(character)) return M.clamp(rel, -65 * M.DEG, 65 * M.DEG);
+    const P = BOW_POSE;
+    const flip = (P.aimRight + (M.TAU - P.aimLeft)) / 2;
+    return M.clamp(rel > flip ? rel - M.TAU : rel, -P.aimLeft, P.aimRight);
+  }
+
   function start(character, direction, input = {}) {
     const controlled = typeof input.attackHeld === 'boolean';
     character.attack = { kind: 'slingshot', stage: 'charging', age: 0, t: 0, heldFor: 0, power: 0,
       dir: direction, aimYaw: direction, hand: 0, lead: 0, hit: false, controlled,
       targetLock: input.attackTarget || null,
-      poseAim: M.clamp(M.angleDiff(character.yaw, direction), -65 * M.DEG, 65 * M.DEG),
+      poseAim: poseAimOf(character, M.angleDiff(character.yaw, direction)),
       releaseRequested: !controlled || !!input.attackReleased || input.attackHeld === false };
     character.faceYaw = direction;
   }
@@ -72,8 +116,9 @@
     if (input.attackCancel) { cancel(character); return; }
     const RULES = rulesOf(character);
     a.age += dt;
-    const wantedAim = M.clamp(M.angleDiff(character.yaw, a.aimYaw), -65 * M.DEG, 65 * M.DEG);
-    a.poseAim += M.clamp(M.angleDiff(a.poseAim, wantedAim), -720 * M.DEG * dt, 720 * M.DEG * dt);
+    // (a diferença é reta, sem dar a volta: de um lado para o outro a mira passa pela frente, nunca por trás das costas)
+    const wantedAim = poseAimOf(character, M.angleDiff(character.yaw, a.aimYaw));
+    a.poseAim += M.clamp(wantedAim - a.poseAim, -720 * M.DEG * dt, 720 * M.DEG * dt);
     if (a.stage === 'charging') {
       if (Number.isFinite(input.attackDir) && !a.releaseRequested) a.dir = input.attackDir;
       a.aimYaw = M.dampAngle(a.aimYaw, a.dir, 12, dt);
@@ -109,6 +154,78 @@
     return { grip, neck, center, tips, pouch, pulled };
   }
 
+  /** O eixo do arco puxado: quase em pé, um pouco deitado para longe do rosto (mais na linha da câmera: `cant`). */
+  function bowAxis(u, shot, cant) {
+    return M.norm(M.add(M.scale(u, 0.97), M.scale(M.norm(M.cross(u, shot)), 0.16 + 0.6 * M.clamp01(cant || 0))));
+  }
+
+  /**
+   * Os braços do arqueiro (veja BOW_POSE): vira o tronco, põe a mão do arco na linha da flecha e devolve onde ficam os
+   * dedos da corda (`pinch`) e para onde o cotovelo dela aponta (`elbowGuide`). `rig` = o esqueleto de prova (peito e
+   * ombros de verdade, já com o giro).
+   */
+  function bowArms(character, parts, o) {
+    const P = BOW_POSE, B = PD.BODY;
+    const { aim, blend, charging, draw, up, direction, probe } = o;
+    // de lado para o alvo: o quadril vira um pouco, o peito mais (a cabeça volta para olhar ao longo da flecha:
+    // animator.js lê `look.bowHead`). Andando, o quadril acompanha as pernas e o giro fica todo no peito
+    const hips = P.hips * (1 - M.smoothstep(30, 140, character.speed || 0));
+    parts.pelvis.yaw += hips * blend;
+    parts.spine.yaw += M.clamp(aim + P.turn - hips, -P.twist, P.twist) * blend;
+    // a Chuva de Flechas (`volley`, da view) mira para o alto: o tronco deita para trás
+    parts.spine.pitch += (2 - 30 * up) * M.DEG * blend;
+    character.look.bowHead = { yaw: aim, k: blend };
+    // a câmera olha de cima, do lado de +x +y. Na linha dela (a flecha indo ou vindo) o arco em pé, visto de quina,
+    // virava um risco (então ele deita de lado) e o braço da corda sumia atrás da cabeça (então o cotovelo abre)
+    const camK = up ? 0 : (Math.cos(direction) + Math.sin(direction)) * Math.SQRT1_2;
+    const along = M.smoothstep(P.openFrom, 0.95, Math.abs(camK));
+    const away = M.smoothstep(0.15, 0.95, -camK);
+    character.look.bowCant = M.smoothstep(0.35, 0.95, Math.abs(camK)) * blend;
+    const rig = probe(parts.hands);
+    const chest = rig.chest, L = rig.shoulder[0], R = rig.shoulder[1];
+    const av = { x: Math.cos(direction), y: Math.sin(direction), z: 0 }, rv = M.rightOf(av);
+    // a linha da flecha: rente à bochecha direita. Na carga cheia os dedos param nela, logo à frente do ombro direito
+    const ref = M.add(chest.o, M.add(M.scale(rv, P.side), M.scale(chest.u, P.up)));
+    const anchor = M.add(ref, M.scale(av, Math.min(M.dot(M.sub(R, ref), av) + P.ahead, P.jaw)));
+    // para onde a flecha aponta: para o alto na Chuva; para longe da câmera a ponta desce um pouco (a mão do arco fica
+    // uns 60 cm à frente da outra: descer `away` cm lá é inclinar a flecha away/60)
+    const dir = M.norm({ x: av.x, y: av.y, z: 1.1 * up - (P.away * away) / 60 });
+    character.look.bowDir = dir;
+    // a empunhadura: na linha, ao alcance do braço do arco (a flecha passa 2,5 cm acima dela, no eixo do arco: `rest`)
+    const axis = bowAxis(chest.u, dir, character.look.bowCant);
+    const q = M.sub(M.sub(anchor, M.scale(axis, 2.5)), L);
+    const qd = M.dot(q, dir);
+    const toRest = -qd + Math.sqrt(Math.max(0, qd * qd - M.dot(q, q) + P.reach * P.reach));
+    const rest = M.add(anchor, M.scale(dir, toRest));
+    const grip = M.sub(rest, M.scale(axis, 2.5));
+    // a puxada cheia: do arco até a âncora (sem passar do comprimento da flecha: a ponta não entra no arco)
+    const full = Math.min(toRest, P.arrow - 5);
+    // o punho do arco: 6 cm antes da empunhadura, na direção do antebraço (duas voltas bastam)
+    const poleL = M.add(M.scale(M.UP, -0.8), M.scale(rv, -0.6));
+    let wristL = M.sub(grip, M.scale(M.norm(M.sub(grip, L)), 6));
+    for (let i = 0; i < 2; i++) {
+      const arm = PD.rig.solveTwoBone(L, wristL, B.upperArm, B.forearm, poleL);
+      wristL = M.sub(grip, M.scale(M.norm(M.sub(arm.end, arm.mid)), 6));
+    }
+    const dL = M.sub(wristL, L);
+    const left = parts.hands[0], right = parts.hands[1];
+    left.local = M.lerp3(left.local, { x: -M.dot(dL, chest.r), y: M.dot(dL, chest.f), z: M.dot(dL, chest.u) }, blend);
+    const poleLocalL = [M.dot(poleL, chest.f), -M.dot(poleL, chest.r), M.dot(poleL, chest.u)];
+    left.poleLocal = left.poleLocal.map((v, j) => M.lerp(v, poleLocalL[j], blend));
+    left.fist = M.lerp(left.fist, 0.88, blend);
+    left.flex = M.lerp(left.flex || 0, 0, blend);
+    left.twist = M.lerp(left.twist || 0, 0.25, blend);
+    right.fist = M.lerp(right.fist, charging ? 0.88 : 0.18, blend);
+    right.flex = M.lerp(right.flex || 0, 0, blend);
+    right.twist = M.lerp(right.twist || 0, -0.5, blend);
+    // os dedos da corda: do começo da puxada (perto do arco) até a âncora, pela linha da flecha
+    const pinch = M.add(rest, M.scale(dir, -full * draw));
+    // o cotovelo da corda: para trás, na linha da flecha, um tiquinho para fora e para baixo. No começo da puxada (a
+    // mão ainda longe, à frente) isso dá o cotovelo para fora; conforme a mão chega, ele vai para trás sozinho
+    const elbowGuide = M.add(M.scale(av, -(1 - P.backCam * along)), M.add(M.scale(rv, P.out + P.outCam * along), M.scale(M.UP, -(P.down + P.downCam * along))));
+    return { rig, pinch, elbowGuide };
+  }
+
   function applyPose(character, parts) {
     if (!isEquipped(character)) return 0;
     const bow = isBow(character);
@@ -125,64 +242,44 @@
     }
     const charging = a.stage === 'charging';
     const blend = smoother(a.age / RULES.minDraw) * (charging ? 1 : 1 - smoother((a.t - 0.11) / (RULES.recover - 0.11)));
-    const draw = M.lerp(0.45, 1, a.power || 0);
-    const aim = a.poseAim;
-    if (bow) {
-      // de lado para o alvo: o quadril e o peito viram para a direita (a cabeça volta: animator.js lê `look.bowHead`)
-      // andando, o quadril acompanha as pernas (o giro fica todo no peito, para as pernas não torcerem)
-      const hips = BOW_HIPS * (1 - M.smoothstep(30, 140, character.speed || 0));
-      parts.pelvis.yaw += hips * blend;
-      parts.spine.yaw += (aim + BOW_TURN - hips) * blend;
-      character.look.bowHead = { yaw: aim, k: blend };
-    } else {
-      parts.spine.yaw += aim * blend;
-      character.look.bowHead = null;
-    }
-    // a Chuva de Flechas (`volley`, da view): mira para o alto — o tronco deita para trás, o braço do arco sobe e a
-    // flecha aponta para cima
     const up = a.volley ? 1 : 0;
-    parts.spine.pitch += (2 - 30 * up) * M.DEG * blend;
-    // o arco: o braço dele esticado para o alvo, na altura do ombro (de lado, o alvo fica à esquerda do peito; o x da mão
-    // esquerda conta para fora), e a outra mão puxa a corda
-    // a câmera olha de cima, do lado de +x +y: mirando para LONGE dela, o braço esticado na altura do ombro aparecia na
-    // tela acima da cabeça ("o braço buga", dono, 15/11), e o arco em pé, visto de quina, virava um risco. Então, para
-    // longe da câmera, as mãos descem (o braço aparece na altura do ombro); e, na linha da câmera (indo ou vindo), o
-    // arco deita de lado para aparecer como arco
-    const camK = bow && !up ? (Math.cos(character.yaw + aim) + Math.sin(character.yaw + aim)) * Math.SQRT1_2 : 0;
-    const away = M.smoothstep(0.15, 0.95, -camK);
-    character.look.bowCant = M.smoothstep(0.35, 0.95, Math.abs(camK)) * blend;
-    const bowHand = { x: Math.sin(BOW_TURN) * BOW_REACH, y: Math.cos(BOW_TURN) * BOW_REACH, z: 6 + 44 * up - 24 * away };
-    const targets = bow ? [bowHand, { x: -6, y: M.lerp(30, 4, draw), z: 4 }] : [{ x: -24, y: 44, z: -4 + 44 * up }, { x: -8, y: M.lerp(39, 14, draw), z: 8 }];
+    // (a Chuva de Flechas solta em 0,32 s: a pose dela já é a da puxada cheia, mirando para o alto)
+    const draw = up && bow ? 1 : M.lerp(0.45, 1, a.power || 0);
+    const aim = a.poseAim;
     const baseRight = { ...parts.hands[1].local };
     const basePole = parts.hands[1].poleLocal.slice();
-    for (let i = 0; i < 2; i++) {
-      const h = parts.hands[i];
-      h.local = M.lerp3(h.local, targets[i], blend);
-      h.fist = M.lerp(h.fist, i ? (charging ? 0.88 : 0.18) : 0.88, blend);
-      h.flex = M.lerp(h.flex || 0, 0, blend);
-      h.twist = M.lerp(h.twist || 0, i ? -0.5 : 0.25, blend);
-      const pole = i ? [-0.9, 1.1, -0.65] : bow ? [-0.2, 0.15, -0.95] : [-0.45, 0.5, -0.65];
-      h.poleLocal = h.poleLocal.map((v, j) => M.lerp(v, pole[j], blend));
-    }
-    // O ponto pinçado fica atrás do garfo na linha da mira. Resolve o punho
-    // a partir dos dedos, em vez de enfiar a mão no centro do peito.
     const root = { x: character.pos.x, y: character.pos.y, z: character.groundZ + character.pos.z };
     const body = M.frameYaw(root, character.yaw), direction = character.yaw + aim;
-    const forward = M.norm({ x: Math.cos(direction), y: Math.sin(direction), z: 1.1 * up });
-    const goalHands = [{ ...parts.hands[0], local: targets[0], twist: 0.25, flex: 0, poleLocal: bow ? [-0.2, 0.15, -0.95] : [-0.45, 0.5, -0.65] }, parts.hands[1]];
-    if (bow) character.look.bowDir = forward;
-    const pose = { root, yaw: character.yaw, pelvis: parts.pelvis, spine: parts.spine, hands: goalHands,
+    /** Esqueleto de prova (sem cabeça nem passo): onde ficam o peito, os ombros e as mãos com esta pose. */
+    const probe = (hands) => PD.rig.buildRig({ root, yaw: character.yaw, pelvis: parts.pelvis, spine: parts.spine, hands,
       head: { yaw: 0, pitch: 0, roll: 0 }, shoulderFwd: parts.shoulderFwd,
-      feet: [-1, 1].map(side => ({ pos: M.at(body, side * PD.BODY.footSide, 0, PD.BODY.ankleHeight), yaw: character.yaw, pitch: 0 })) };
-    const rig = PD.rig.buildRig(pose);
-    const center = bow ? bowGeometry(rig, { bowAim: 1 }).rest : geometry(rig).center;
-    // o ponto pinçado: atrás do garfo (estilingue) ou da empunhadura (arco: a corda vem até perto do queixo)
-    const pinch = M.add(center, M.scale(forward, bow ? -(24 + 22 * draw) : -(17 + 17 * draw)));
-    // o cotovelo da mão que puxa: para baixo e para fora (estilingue) ou para trás, na linha da flecha, um tiquinho acima
-    // dela e para fora das costas (arco, de lado para o alvo)
-    const elbowGuide = bow
-      ? M.add(M.scale(forward, -1), M.add(M.scale(rig.chest.u, -0.45), M.scale(rig.chest.f, -0.55)))
-      : M.add(rig.chest.r, M.add(M.scale(rig.chest.f, 0.2), M.scale(rig.chest.u, -0.3)));
+      feet: [-1, 1].map(side => ({ pos: M.at(body, side * PD.BODY.footSide, 0, PD.BODY.ankleHeight), yaw: character.yaw, pitch: 0 })) });
+    let rig, pinch, elbowGuide;
+    if (bow) ({ rig, pinch, elbowGuide } = bowArms(character, parts, { aim, blend, charging, draw, up, direction, probe }));
+    else {
+      // o estilingue: de frente para o alvo, a forquilha à frente do peito e a outra mão puxa o elástico
+      parts.spine.yaw += aim * blend;
+      character.look.bowHead = null;
+      character.look.bowCant = 0;
+      parts.spine.pitch += (2 - 30 * up) * M.DEG * blend;
+      const targets = [{ x: -24, y: 44, z: -4 + 44 * up }, { x: -8, y: M.lerp(39, 14, draw), z: 8 }];
+      for (let i = 0; i < 2; i++) {
+        const h = parts.hands[i];
+        h.local = M.lerp3(h.local, targets[i], blend);
+        h.fist = M.lerp(h.fist, i ? (charging ? 0.88 : 0.18) : 0.88, blend);
+        h.flex = M.lerp(h.flex || 0, 0, blend);
+        h.twist = M.lerp(h.twist || 0, i ? -0.5 : 0.25, blend);
+        const pole = i ? [-0.9, 1.1, -0.65] : [-0.45, 0.5, -0.65];
+        h.poleLocal = h.poleLocal.map((v, j) => M.lerp(v, pole[j], blend));
+      }
+      // O ponto pinçado fica atrás do garfo na linha da mira. Resolve o punho
+      // a partir dos dedos, em vez de enfiar a mão no centro do peito.
+      const forward = M.norm({ x: Math.cos(direction), y: Math.sin(direction), z: 1.1 * up });
+      rig = probe([{ ...parts.hands[0], local: targets[0], twist: 0.25, flex: 0, poleLocal: [-0.45, 0.5, -0.65] }, parts.hands[1]]);
+      pinch = M.add(geometry(rig).center, M.scale(forward, -(17 + 17 * draw)));
+      // o cotovelo da mão que puxa: para baixo e para fora
+      elbowGuide = M.add(rig.chest.r, M.add(M.scale(rig.chest.f, 0.2), M.scale(rig.chest.u, -0.3)));
+    }
     // A mão prolonga o antebraço em 7 cm até os dedos. Resolver essa extensão
     // diretamente evita trocar o lado do cotovelo por iterações do punho.
     const solved = PD.rig.solveTwoBone(rig.shoulder[1], pinch, PD.BODY.upperArm, PD.BODY.forearm + 7, elbowGuide);
@@ -220,7 +317,7 @@
     const restAxis = M.norm(M.add(M.scale(f, 0.6), M.scale(u, 0.8)));
     // puxando, o arco fica quase em pé, um pouco deitado para longe do rosto (a direção da flecha vem da pose)
     const shot = look.bowDir && aimK > 0 ? M.norm(M.lerp3(f, look.bowDir, aimK)) : f;
-    const drawAxis = M.norm(M.add(M.scale(u, 0.97), M.scale(M.norm(M.cross(u, shot)), 0.16 + 0.6 * M.clamp01(look.bowCant || 0))));
+    const drawAxis = bowAxis(u, shot, look.bowCant);
     const axis = M.norm(M.lerp3(restAxis, drawAxis, aimK));
     // a barriga do arco olha para onde a flecha vai (sem o que o eixo já tem dela)
     const front = M.norm(M.sub(shot, M.scale(axis, M.dot(shot, axis))));
@@ -271,7 +368,7 @@
     if (look.slingLoaded && (look.bowAim || 0) > 0.2) {
       // a flecha encaixada: do entalhe da corda para a frente, passando rente à empunhadura
       const dir = M.norm(M.sub(g.rest, g.nock));
-      const len = 74;
+      const len = BOW_POSE.arrow;
       const tip = M.add(g.nock, M.scale(dir, len));
       segment(g.nock, tip, 0.65, 0.65, shaft, 'flecha');
       const side = M.norm(M.cross ? M.cross(dir, g.axis) : g.axis);
@@ -385,5 +482,5 @@
     };
   }
 
-  PD.slingshot = { RULES, BOW_RULES, rulesOf, isBow, isEquipped, powerOf, strength, start, update, cancel, geometry, bowGeometry, applyPose, drawItems, drawCharge, drawImpact, actor };
+  PD.slingshot = { RULES, BOW_RULES, BOW_POSE, poseAimOf, rulesOf, isBow, isEquipped, powerOf, strength, start, update, cancel, geometry, bowGeometry, applyPose, drawItems, drawCharge, drawImpact, actor };
 })(window.PD = window.PD || {});

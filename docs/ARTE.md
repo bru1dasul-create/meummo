@@ -776,10 +776,9 @@ pela distância). Velocidade pedida ao servidor (decisão do dono): andar ~2 m/s
   o leste e cabeceira em x0, o padrão sem `olhando`; 90 em y0; 180 em x1; 270 em y1); a do lado da câmera vai por
   último. O [mundo] virou a cama no mapa (`mundo/cama-vo`); os dois ramos entram juntos. O crucifixo foi para o meio da
   cabeceira (x 70,15).
-- **Braço do arco** (`slingshot.js`): puxando, de lado para o alvo: `BOW_TURN` 75° do peito para a flecha (o quadril
-  dá `BOW_HIPS` 28°, menos andando), a mão do arco esticada para o alvo (x da mão esquerda conta para fora), o cotovelo
-  da corda guiado para trás na linha da flecha, a cabeça olhando ao longo dela (`look.bowHead`, lido no animator) e o
-  arco virado para onde a flecha vai (`look.bowDir`). Conferir: `arco-prancha.cjs` (scratchpad) e no jogo.
+- **Braço do arco** (`slingshot.js`): a primeira versão (14/11: de lado para o alvo, `BOW_TURN` 75°) foi refeita em
+  16/11 — veja "O braço do arco, redesenhado", mais abaixo. Continuam valendo: a cabeça olhando ao longo da flecha
+  (`look.bowHead`, lido no animator) e o arco virado para onde a flecha vai (`look.bowDir`).
 - **Esquiva** (`animator.js` `startRoll`/`_rollPose`, `view.js` ação `dash`): no jogo ela era um pulo de 3 m sem
   movimento. Agora é um rolamento de 0,5 s: a pose encolhida e o giro da queda do rig (`fall`), com o pé da pose
   recuando para o meio da bola seguir reto; a vista não teletransporta enquanto rola. A esquiva curta do protótipo
@@ -950,8 +949,10 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
   quadros (um bicho por quadro) e desenhado no pé dele; a câmera afasta num tween de 0,4 s. Medido com 17 bichos:
   15 → 20 ms por quadro (antes 15 → 45). Medir: `gaviao-lag.cjs`.
 - **Esquiva:** no `_drive`, se o rolamento passou do `moveEnd` e o alvo seguiu adiante, `_finishDodge` com `resume`
-  (emenda na corrida). O braço do arco "bugando": não reproduzi (8 direções, parado e andando: `arco-braco*.cjs`);
-  o que parece erro mirando para longe da câmera é a perspectiva (o braço do arco aparece na altura da cabeça).
+  (emenda na corrida). Depois ela ficou "um pouco mais lenta" (pedido do dono): `ROLL` com 0,62 s no total, andando
+  até 0,52 s; e não começa no ar (`startRoll` recusa), nem o pulo entra no meio dela ("quando pula e usa esquiva buga").
+  O braço do arco "bugando": eu disse que não reproduzia e que era perspectiva. **Estava errado** (meus testes fotografavam
+  antes da carga cheia e eu não media a pose): o conserto de verdade é a seção "O braço do arco, redesenhado".
 - **Quadro da missão:** PC a 300 px do alto (embaixo do mini mapa e do botão das Habilidades); celular ao lado do mini
   mapa (`left: 108px`).
 - **Chuva com ênfase:** a ação `'volley'` na view (o `slingshot.js` deita o tronco, sobe o braço do arco e aponta a
@@ -959,6 +960,48 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
   riscos e a segunda onda no impacto (`IMPACT_MS` 560).
 - **Flecha carregada e dica:** `.action[data-armed='1']` (anel verde pulsando) e `.skill-tip` no painel da HUD (com
   `!important`, até a [estrutura] tirar os estilos inline).
+
+### O braço do arco, redesenhado (16/11, na main)
+O dono reclamou três vezes ("o braço buga"; "ainda está com o bug do braço"; "o braço direito está aparecendo nas costas
+do personagem, quando ele puxa de frente o braço direito some e vai pra trás") e três consertos meus não resolveram,
+porque eu mexia em "para onde o cotovelo aponta" sem medir. **Lição: medir a pose antes de mexer.**
+- **A medida** (`prototipos/pindorama-25d/ferramentas/arco-medida.cjs`: prancha fora do jogo, 8 a 120 direções da tela ×
+  casos, com as juntas marcadas e os números de cada um): na carga cheia os dedos da corda paravam 25 cm À FRENTE do
+  meio do peito, na frente do ombro esquerdo; o braço direito cruzava o peito e o cotovelo só tinha três lugares para
+  ir: para cima (passava da cabeça: o 1º defeito), para trás do pescoço (19 cm atrás das costas: o 3º) ou para a frente.
+  E, andando com o alvo à direita ou atrás, o peito torcia até 140° em relação ao quadril.
+- **A pose nova** (`BOW_POSE` e `bowArms` no `slingshot.js`; o estilingue não mudou), na base da MIRA (a = para onde a
+  flecha vai, r = a direita dela):
+  - a linha da flecha passa rente à bochecha direita, por fora da cabeça (`side` 15,5 cm, `up` 21 cm acima do meio do
+    peito); na carga cheia os dedos param nela, 10 cm à frente do ombro direito (`ahead`), sem passar da mandíbula
+    (`jaw`). Com a mão perto do ombro o cotovelo cabe para trás, na linha da flecha;
+  - a mão do arco fica na mesma linha, com o braço quase esticado (`reach` 61 cm até a empunhadura: cotovelo a ~159°);
+  - o peito a 50° da flecha (`turn`; eram 75°): a puxada dá ~72 cm e a flecha tem 82 (`arrow`);
+  - o peito não torce mais que 70° (`twist`); o começo da puxada é 45% da cheia e a mão vem pela linha da flecha;
+  - o cotovelo: para trás, um tiquinho para fora e para baixo (`out`, `down`). Na linha da câmera (a flecha indo ou
+    vindo) ele abre para fora (`outCam`, `backCam`, `openFrom`): para trás ficaria escondido pela cabeça ou em cima dela.
+    Do lado de lá do corpo (mira para a esquerda e para baixo, ~145° a 165° da tela) o braço passa por trás da cabeça:
+    é o braço de longe mesmo;
+  - mirando para longe da câmera a ponta da flecha desce 14 cm (`away`): senão a mão do arco aparece acima da cabeça.
+- **Andando:** o corpo segue as pernas e só o tronco vira. `poseAimOf(ch, rel)`: o estilingue mira 65° para cada lado
+  (como antes); o arco, até 150° para a esquerda (o tiro por cima do ombro de quem foge do bicho) e 65° para a direita;
+  o canto morto (atrás, à direita) fica com a ponta mais próxima e a troca de lado acontece no meio dele (137,5°), não
+  bem atrás do herói. A `view.js` usa a mesma função no `'shoot'`.
+- **Chuva (`volley`):** a pose já é a da puxada cheia, mirando para o alto (a mão na mandíbula, o tronco deitado).
+- **Conferido:** fora do jogo, 72 direções × carga mínima, média e cheia: o cotovelo nunca fica atrás das costas (no
+  máximo 2,8 cm atrás do plano do peito, ao lado do ombro) nem na altura da cabeça (no máximo 25 cm acima do meio do
+  peito; o meio da cabeça fica a 33), sem erro de IK e sem salto entre direções vizinhas; os testes do protótipo
+  (`teste-estilingue`, `teste-carga`) passam. No jogo (`Cacador`, carga cheia): 16 direções parado, andando para os 4
+  lados com a mira em 4 direções, soltando e a Chuva em 8 direções.
+- **Receitas:** `node prototipos/pindorama-25d/ferramentas/arco-medida.cjs saida.png "cheia:1.9:-" '{}' 1.9 16`
+  (casos: `nome:segundos:andar:soltar`, andar em graus em relação à mira, `v` = Chuva; `NUMEROS=1` imprime as medidas;
+  `SEM_MARCAS=1` tira as juntas; `DIRS=0,4` escolhe direções; `SLING=arquivo` compara com outro `slingshot.js`). No
+  jogo: o botão direito do mouse segurado por 1,9 s (a carga do arco é 1,5 s) num ponto fora da zona segura (37; 35).
+- **O anel da carga** (15/11, `src/client/novo/chargeArt.ts`, com o "pode" da [estrutura] para trocar a chamada no
+  `combat.ts`): enche como relógio, com faísca na ponta; cheio, fica dourado, pulsa, solta uma onda e luzinhas sobem; a
+  metade de trás some atrás das pernas (a camada do combate fica por cima do personagem).
+- **Ordem de desenho** (15/11, `world.js` `behind`): com os dois eixos separados e respostas opostas, ganha quem está
+  mais perto da câmera (antes o eixo x sempre ganhava: a Xiovanna aparecia por cima do balcão com o herói encostado).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
