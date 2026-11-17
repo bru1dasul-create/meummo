@@ -137,6 +137,8 @@ export interface WorldLinks {
 export interface WorldOptions {
   /** Relógio em milissegundos (nos testes usamos um relógio falso). */
   now?: () => number;
+  /** Câmera lenta (painel de ajustes): o ritmo de agora e como mudar (o relógio é o do servidor inteiro). Sem isto, não tem. */
+  pace?: { get: () => number; set: (scale: number) => void };
   random?: () => number;
   log?: (message: string) => void;
   /** Tipos de monstro (de data/monsters.json). */
@@ -277,6 +279,7 @@ export class World {
   private readonly monsterAt = new Map<number, number>();
   private lastTickAt: number;
   private readonly now: () => number;
+  private readonly pace: { get: () => number; set: (scale: number) => void } | null;
   private readonly random: () => number;
   private readonly log: (message: string) => void;
   private readonly saver: CharacterSaver | null;
@@ -288,6 +291,7 @@ export class World {
     options: WorldOptions = {},
   ) {
     this.now = options.now ?? (() => performance.now());
+    this.pace = options.pace ?? null;
     this.random = options.random ?? Math.random;
     this.log = options.log ?? (() => {});
     this.saver = options.saver ?? null;
@@ -498,6 +502,7 @@ export class World {
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
+      ...(this.pace && this.pace.get() !== 1 ? [{ t: 'pace' as const, scale: this.pace.get() }] : []),
     ]);
     this.links.announce({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
     this.links.announce({ t: 'online', n: this.links.online() });
@@ -564,6 +569,7 @@ export class World {
         ...this.exploredField(player),
       },
       ...(player.admin ? [this.gmState(player)] : []),
+      ...(this.pace && this.pace.get() !== 1 ? [{ t: 'pace' as const, scale: this.pace.get() }] : []),
     ]);
     this.saveCharacters([player]);
     this.log(`${player.name} foi para ${this.map.name}`);
@@ -744,6 +750,15 @@ export class World {
         player.outbox.push(this.gmState(player));
         say(cmd.on ? 'voando (atravessa tudo).' : 'pousou.');
         return;
+      case 'pace': {
+        const pace = this.pace;
+        if (!pace) return say('câmera lenta não está ligada neste servidor.');
+        pace.set(cmd.scale);
+        this.links.announce({ t: 'pace', scale: cmd.scale }); // todos os mapas: o relógio é um só
+        say(cmd.scale === 1 ? 'ritmo normal.' : `câmera lenta: ${cmd.scale}x (o jogo inteiro, para todo mundo).`);
+        this.log(`ADM ${player.name}: ritmo ${cmd.scale}x`);
+        return;
+      }
       case 'nocd':
         player.noCooldown = cmd.on;
         if (cmd.on) {

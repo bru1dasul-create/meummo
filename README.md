@@ -269,7 +269,8 @@ dia e noite): soltou o slider, já vale; o **↺** volta ao padrão. Tem também
 1, 10 ou uma horda de 50 bichos, derrubar os de perto, virar dia/tarde/noite), o contador de FPS e de bichos à vista,
 **Copiar valores** (copia só o que você mudou, para colar no chat e virar o padrão) e **Resetar tudo**. A seção **Jogador** tem a velocidade, a vida (%) e o dano (%);
 a **Game feel** (só da sua tela) tem o tremor ao acertar e ao tomar dano, a pausa no impacto, as faíscas por acerto e
-o clarão ao tomar dano. O botão
+o clarão ao tomar dano. Em Atalhos, **Ritmo** põe o jogo em câmera lenta
+(0,25x ou 0,5x; vale para o servidor inteiro). O botão
 **Hitboxes** desenha por cima do jogo onde o tiro acerta cada bicho (vermelho), a caixa do pé (branco), a área em
 que o bicho percebe você (laranja) e o que bloqueia (amarelo segura tiro; cinza, só o passo). É o mesmo
 lugar onde o painel (`/admin`) guarda: o que muda num aparece no outro. **Vale para o servidor todo**, não só para você.

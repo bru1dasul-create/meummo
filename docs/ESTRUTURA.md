@@ -90,7 +90,12 @@ motor (as contas do servidor: `SHOT_HIT_RADIUS` no meio do tile do bicho, a caix
 `stats` a quem joga); parte `jogador` nos números do combate (por último na lista, para não mudar a ordem das outras);
 protocolo **44**. Game feel em `feel.ts` (só da tela, `localStorage`): `startShake` + `CombatLayer.shake` (desloca o
 contêiner do jogo), `hitStopUntil` (o quadro não é redesenhado), `CombatLayer.burst` (faíscas), o clarão com liga/
-desliga; vale só para os SEUS acertos (`hit.by`). **Falta:** 3) game feel (tremor, pausa no impacto, partículas, flash: os
+desliga; vale só para os SEUS acertos (`hit.by`). **Etapa 4 feita (17/11), a câmera lenta:** `src/shared/pace.ts` (`PacedClock`: o relógio de verdade × o ritmo, sem
+salto ao trocar). No servidor, `server.ts` cria um e passa como `now` do reino (o dia e noite segue no `Date.now`, à
+parte) e a opção `pace` do `World` (`gm` `pace`, avisa todos com a mensagem `pace`; quem entra já recebe). No
+navegador, `gameClock.ts` (`gameNow()`): o motor e o `combat.ts` trocaram o `performance.now()` por ele (ficaram no
+relógio de verdade o ping, o contador de quadros e o dia e noite). Protocolo **45**. Medido: 4,4 → 2,4 → 1,3 m/s.
+O painel F1 do pedido do dono está completo. (Texto antigo:) 3) game feel (tremor, pausa no impacto, partículas, flash: os
 números são do desenho, com a [arte]) e velocidade/vida do jogador; 4) câmera lenta.
 
 **16/11 — pedidos do dono:** poder de ADM "Sem recarga" (`gm` `nocd`, `Player.noCooldown`, `cooldownOf`: as habilidades

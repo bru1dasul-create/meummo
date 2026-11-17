@@ -220,3 +220,46 @@ describe('quem é administrador (salvo e pelo painel)', () => {
     });
   });
 });
+
+describe('câmera lenta (painel de ajustes)', () => {
+  it('o relógio com ritmo anda mais devagar e não dá salto ao trocar', async () => {
+    const { PacedClock } = await import('../src/shared/pace');
+    let real = 1000;
+    const clock = new PacedClock(() => real);
+    expect(clock.now()).toBe(1000);
+    real += 400;
+    expect(clock.now()).toBe(1400);
+    clock.setPace(0.25);
+    expect(clock.now()).toBe(1400); // sem salto
+    real += 400;
+    expect(clock.now()).toBe(1500); // 400 ms de verdade = 100 ms de jogo
+    clock.setPace(1);
+    real += 100;
+    expect(clock.now()).toBe(1600);
+    expect(clock.pace).toBe(1);
+  });
+
+  it('o administrador muda o ritmo e todo mundo fica sabendo; quem não é, não muda; só 0,25, 0,5 e 1', () => {
+    const clock = new FakeClock();
+    let pace = 1;
+    const announced: unknown[] = [];
+    const links = { nextId: (() => { let n = 1; return () => n++; })(), announce: (msg: unknown) => announced.push(msg), online: () => 1, travel: () => false };
+    const world = new World(metricMap(), { now: clock.now, random: () => 0.5, links, pace: { get: () => pace, set: (s) => (pace = s) } });
+    const conn = new FakeConn();
+    const character = { id: 1, name: 'Ana', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: 2 as const, look: 1, inventory: null, admin: false };
+    const joined = world.join('Ana', conn, { character, created: false });
+    if (!joined.ok) throw new Error(joined.reason);
+    world.gm(joined.player, { do: 'pace', scale: 0.25 });
+    expect(pace).toBe(1); // não é administrador
+    joined.player.admin = true;
+    world.gm(joined.player, { do: 'pace', scale: 0.25 });
+    expect(pace).toBe(0.25);
+    expect(announced).toContainEqual({ t: 'pace', scale: 0.25 });
+    expect(parseClientMsg(JSON.stringify({ t: 'gm', cmd: { do: 'pace', scale: 0.5 } }))).toEqual({ t: 'gm', cmd: { do: 'pace', scale: 0.5 } });
+    expect(parseClientMsg(JSON.stringify({ t: 'gm', cmd: { do: 'pace', scale: 3 } }))).toBeNull();
+    // quem entra com o jogo em câmera lenta já recebe o ritmo
+    const late = new FakeConn();
+    world.join('Beto', late);
+    expect(late.ofType('pace')).toEqual([{ t: 'pace', scale: 0.25 }]);
+  });
+});

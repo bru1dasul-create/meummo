@@ -10,6 +10,7 @@
 //   pés de quem ele acerta;
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
+import { gameNow } from './gameClock';
 import type { CombatRules } from '../../shared/combatRules';
 import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
@@ -573,7 +574,7 @@ export class CombatLayer {
       return; // o drawShots crava quando o desenho chegar lá
     }
     if (shot && hit === 0) {
-      const now = performance.now();
+      const now = gameNow();
       const traveled = Math.min(shot.range, (shot.speed * (now - shot.start)) / 1000);
       const feet = shotFeet(shot.x + shot.dx * traveled, shot.y + shot.dy * traveled);
       ended(shot.kind, feet.x, feet.y, Math.atan2(shot.dy, shot.dx), now);
@@ -652,7 +653,7 @@ export class CombatLayer {
   /** Ouro (ou item) no chão no tile (x, y), até `until`. */
   /** Ouro ou item no chão (x, y: o tile, como o servidor manda). De novo o mesmo (o resto que não coube): sem cair outra vez. */
   addDrop(id: number, x: number, y: number, gold: boolean, until: number, item?: DropItem): void {
-    const born = this.drops.get(id)?.born ?? performance.now();
+    const born = this.drops.get(id)?.born ?? gameNow();
     this.drops.set(id, { x, y, gold, until, born, ...(item ? { item } : {}) });
   }
 
@@ -780,7 +781,7 @@ export class CombatLayer {
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
     for (const pet of this.pets.values()) if (this.petVisible(pet)) return true;
-    if (landedBusy(performance.now())) return true; // flecha cravada no chão ainda à vista
+    if (landedBusy(gameNow())) return true; // flecha cravada no chão ainda à vista
     for (const id of this.marks.keys()) {
       const feet = feetOf(id);
       if (!feet) continue;

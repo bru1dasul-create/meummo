@@ -75,6 +75,7 @@ export class DebugPanel {
   private open = false;
   private monster = '';
   private showBoxes = false;
+  private pace = 1;
   private frames = 0;
   private fpsAt = 0;
   private fps = 0;
@@ -376,6 +377,13 @@ export class DebugPanel {
     };
     const spawns = document.createElement('div');
     spawns.append(pick, this.button('+1', () => spawn(1)), this.button('+10', () => spawn(10)), this.button('Horda 50', () => spawn(50)), this.button('Derrubar perto', () => this.hooks.gm({ do: 'clear' })));
+    const paces = document.createElement('div');
+    paces.append('Ritmo: ');
+    for (const scale of [0.25, 0.5, 1]) {
+      const b = this.button(scale === 1 ? '1x' : `${String(scale).replace('.', ',')}x`, () => this.hooks.gm({ do: 'pace', scale }));
+      if (this.pace === scale) b.style.background = '#2f6b3a';
+      paces.append(b);
+    }
     const time = document.createElement('div');
     time.append(
       this.button('Dia', () => this.hooks.gm({ do: 'time', phase: 'dia' })),
@@ -394,7 +402,7 @@ export class DebugPanel {
     );
 
     this.body.replaceChildren(
-      this.section('Atalhos', powers, spawns, time),
+      this.section('Atalhos', powers, spawns, time, paces),
       this.section(
         'Jogador',
         ...this.rows('combate', 'jogador'),
@@ -443,6 +451,12 @@ export class DebugPanel {
     for (const change of changed) if (!(await this.post('/admin/api/padrao', change)).ok) failed += 1;
     this.say(failed ? `${failed} não voltaram ao padrão.` : `Tudo no padrão (${changed.length} ajustes desfeitos).`, failed > 0);
     await this.load();
+  }
+
+  /** O servidor mudou o ritmo do jogo (câmera lenta): o botão do ritmo de agora acende. */
+  setPace(scale: number): void {
+    this.pace = scale;
+    if (this.open) this.render();
   }
 
   /**

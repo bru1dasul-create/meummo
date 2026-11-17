@@ -796,7 +796,9 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   acerto e o clarão ao tomar dano (liga/desliga). O padrão é o jogo de antes (tudo em zero, clarão ligado)
 - [ ] **[arte]** (se o dono quiser) vestir as faíscas do acerto (hoje quadradinhos dourados, `CombatLayer.burst`) e o
   tremor/pausa com o desenho dela
-- [ ] **[estrutura]** Painel F1, etapa 4: câmera lenta (0,25x / 0,5x / 1x)
+- [x] **[estrutura]** Painel F1, etapa 4 (17/11): **câmera lenta** — botões 0,25x / 0,5x / 1x (em Atalhos): o servidor
+  inteiro e a tela de todo mundo andam nesse ritmo (passos, tiros, recargas, golpes dos bichos). Protocolo 45. O som,
+  o dia e noite e o contador de quadros continuam no relógio de verdade
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova
