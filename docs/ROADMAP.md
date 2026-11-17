@@ -590,6 +590,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (**na main em 15/11**, com a floresta maior): quati 4, tatu_bola 3, marimbondo 3 e filhote_boitata 1 no recanto do Véu
 - [x] **[mundo]** Mais bichos na mata do Capão (16/11, pedido do dono: "bastante mesmo"; na main): de 18 para 40 —
   sagui 8, jararaca 6, quati 10, tatu_bola 8, marimbondo 6, filhote_boitata 2 (o peso medido pela [estrutura] com `?fps`)
+- [ ] **[arte + mundo]** O chão, a luz e a água com mais qualidade (17/11, pedido do dono: "chão feio, água sem
+  movimentação, ambiente pífio"; direção aprovada: "é esse o caminho"). Alvo: `docs/referencias/chao-pintado-alvo.jpg`
+  (o antes: `chao-pintado-antes.jpg`). Três passos, cada um jogável, começando pela Clareira dos Despertos: (1) o chão
+  pintado (manchas claras e escuras na grama e na terra, sem bolinhas iguais; beiradas que se misturam, sem contorno
+  escuro; marcas de uso); (2) luz e sombra no chão (sombra comprida das árvores, manchas de sol); (3) água e vida
+  (ondinhas, reflexo, margem de lama; poeira de luz, borboletas, folhas caindo). A pintura é da [arte]; o [mundo]
+  marca no mapa o que ela pedir (beiradas, trilhas, detalhes)
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
