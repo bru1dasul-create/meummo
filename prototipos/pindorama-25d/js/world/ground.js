@@ -14,6 +14,8 @@
   const SETTLE_MS = 180;
   /** Quanto tempo (ms) um quadro pode gastar fazendo pedaços novos, com os velhos esticados por baixo. */
   const BUILD_MS = 6;
+  /** Quantos pedaços de um zoom ficam guardados quando o zoom muda (numa tela de 1 pixel por ponto; veja `_ensureKey`). */
+  const KEEP_CHUNKS = 24;
   // obriga o navegador a pintar os pixels do pedaço novo na hora (ele só pinta no primeiro drawImage dele): assim o
   // tempo de verdade de fazer o pedaço entra na conta do quadro
   const PROBE = typeof document !== 'undefined' ? document.createElement('canvas') : null;
@@ -52,6 +54,8 @@
       this.old = null;
       /** Os pedaços de agora cobrem a tela toda? (só então eles viram os "velhos" no próximo zoom) */
       this.complete = false;
+      /** Os pedaços guardados de outros zooms (chave do zoom → { cache, zoom }); veja `_ensureKey`. */
+      this.kept = new Map();
       this.changedAt = 0;
     }
 
@@ -71,9 +75,31 @@
       // mudou o zoom: os pedaços de agora, se cobriam a tela, viram os velhos (saem esticados até os novos ficarem
       // prontos). Se não cobriam (o zoom ainda estava mudando), os velhos continuam os de antes. Com outra inclinação
       // da câmera, esticar não serve
-      if (this.pitch !== cam.pitchDeg) this.old = null;
-      else if (this.cache.size && this.complete) this.old = { cache: this.cache, zoom: this.zoom };
-      this.cache = new Map();
+      if (this.pitch !== cam.pitchDeg) {
+        this.old = null;
+        this.kept.clear();
+      } else if (this.cache.size) {
+        // (os "velhos", que saem esticados, só trocam se os de agora cobriam a tela)
+        if (this.complete) this.old = { cache: this.cache, zoom: this.zoom };
+        // ... e ficam GUARDADOS (os de até dois zooms: o do jogador e o da conversa): a câmera da conversa aproxima e
+        // volta, e o chão daquele zoom já está pronto (antes era refeito inteiro na ida e na volta, toda vez). Só os
+        // pedaços usados por último, para a memória não crescer (menos ainda em tela de celular, que tem mais pixels)
+        // (nunca menos que os que cobrem a tela: são eles que saem esticados enquanto os novos não ficam prontos)
+        const onScreen = (Math.ceil(cam.viewW / CHUNK) + 1) * (Math.ceil(cam.viewH / CHUNK) + 1);
+        const keep = Math.max(onScreen, Math.round(KEEP_CHUNKS / (cam.dpr * cam.dpr)));
+        while (this.cache.size > keep) this.cache.delete(this.cache.keys().next().value);
+        this.kept.delete(this.key);
+        // (em celular e aparelho de pouca memória não guarda nada: World.keepLevels)
+        if (this.keepLevels === false) this.kept.clear();
+        else this.kept.set(this.key, { cache: this.cache, zoom: this.zoom });
+        while (this.kept.size > 2) this.kept.delete(this.kept.keys().next().value);
+      }
+      const back = this.kept.get(k);
+      if (back) {
+        // voltou para um zoom guardado: os pedaços dele valem de novo (o que faltar é feito aos poucos, como sempre)
+        this.kept.delete(k);
+        this.cache = back.cache;
+      } else this.cache = new Map();
       this.complete = false;
       this.key = k;
       this.zoom = cam.zoom;
@@ -92,14 +118,27 @@
       let missing = false;
       for (let cy = y0; cy <= y1 && !missing; cy++) for (let cx = x0; cx <= x1; cx++) if (!this.cache.has(cx + ',' + cy)) missing = true;
       // falta pedaço do zoom de agora: os velhos esticados por baixo (sem buraco no chão)
-      if (missing && this.old) this._drawOld(ctx);
+      if (missing && this.old) {
+        // AFASTANDO (a volta da câmera da conversa), os velhos só cobrem o meio da tela — eram do zoom de perto. Os
+        // guardados do zoom mais aberto vão por baixo deles e cobrem o resto: antes a borda da tela ficava sem chão até
+        // os pedaços novos saírem
+        if (cam.zoom < this.old.zoom) {
+          let under = null;
+          for (const level of this.kept.values()) if (level.zoom < this.old.zoom && (!under || level.zoom < under.zoom)) under = level;
+          if (under) this._drawLevel(ctx, under);
+        }
+        this._drawLevel(ctx, this.old);
+      }
       // com os velhos por baixo, só faz pedaço novo com o zoom parado, e pouco por quadro; sem eles (a primeira vez,
       // depois de um teletransporte), até 4 por quadro, como sempre
       const old = !!this.old;
-      const settling = old && now() - this.changedAt < SETTLE_MS;
+      // (`hold`: o mundo avisa que este quadro não é para fazer pedaço — é a vez das imagens dos objetos; `spent`:
+      // quanto este quadro gastou aqui, para a conta do mundo)
+      const settling = old && (now() - this.changedAt < SETTLE_MS || !!this.hold);
       let made = 0;
       let spent = 0;
       let skipped = false;
+      this.spent = 0;
       for (let cy = y0; cy <= y1; cy++) {
         for (let cx = x0; cx <= x1; cx++) {
           const key = cx + ',' + cy;
@@ -112,7 +151,10 @@
             }
             const t0 = now();
             c = this._render(cx, cy);
-            spent += now() - t0;
+            // (quanto custa um pedaço neste aparelho: o mundo usa para saber se dá para adiantar com o herói andando)
+            this.chunkMs = now() - t0;
+            spent += this.chunkMs;
+            this.spent = spent;
             this.cache.set(key, c);
             made++;
             if (this.cache.size > this.maxChunks) this.cache.delete(this.cache.keys().next().value);
@@ -130,10 +172,55 @@
       this.pending = skipped;
     }
 
-    /** Os pedaços do zoom anterior, esticados para o zoom de agora (a posição na tela é proporcional ao zoom). */
-    _drawOld(ctx) {
+    /**
+     * ADIANTA um pedaço do chão de outro zoom (o da conversa, antes de a câmera chegar lá: World.setAhead): `rect` é a
+     * tela de lá, em px do mundo naquele zoom. Faz um pedaço por chamada (o mais perto do meio que ainda falta) e guarda
+     * com os daquele zoom; quando a câmera chegar, eles já valem (`_ensureKey`). Devolve se fez algum.
+     */
+    buildAhead(zoom, rect) {
       const cam = this.cam;
-      const o = this.old;
+      const k = `${zoom.toFixed(4)}|${cam.dpr}|${cam.pitchDeg}`;
+      if (k === this.key || this.pitch !== cam.pitchDeg) return false;
+      let level = this.kept.get(k);
+      const x0 = Math.floor(rect.x0 / CHUNK), y0 = Math.floor(rect.y0 / CHUNK);
+      const x1 = Math.floor(rect.x1 / CHUNK), y1 = Math.floor(rect.y1 / CHUNK);
+      const mx = (rect.x0 + rect.x1) / 2 / CHUNK - 0.5, my = (rect.y0 + rect.y1) / 2 / CHUNK - 0.5;
+      let best = null;
+      for (let cy = y0; cy <= y1; cy++) {
+        for (let cx = x0; cx <= x1; cx++) {
+          if (level && level.cache.has(cx + ',' + cy)) continue;
+          const d = (cx - mx) * (cx - mx) + (cy - my) * (cy - my);
+          if (!best || d < best.d) best = { cx, cy, d };
+        }
+      }
+      if (!best) return false;
+      if (!level) {
+        level = { cache: new Map(), zoom };
+        this.kept.set(k, level);
+        while (this.kept.size > 2) this.kept.delete(this.kept.keys().next().value);
+      }
+      const z0 = cam.zoom;
+      const t0 = now();
+      cam.zoom = zoom;
+      try {
+        level.cache.set(best.cx + ',' + best.cy, this._render(best.cx, best.cy));
+      } finally {
+        cam.zoom = z0;
+      }
+      this.chunkMs = now() - t0;
+      this.spent = (this.spent || 0) + this.chunkMs;
+      return true;
+    }
+
+    /** Solta os pedaços guardados de outros zooms (venceram: `World._spriteCare`), menos os do zoom `keepZoom`. */
+    dropKept(keepZoom) {
+      for (const [k, level] of this.kept) if (!(keepZoom > 0 && Math.abs(level.zoom - keepZoom) < 1e-4)) this.kept.delete(k);
+    }
+
+    /** Os pedaços de outro zoom (`level`), esticados para o zoom de agora (a posição na tela é proporcional ao zoom). */
+    _drawLevel(ctx, level) {
+      const cam = this.cam;
+      const o = level;
       const S = CHUNK * (cam.zoom / o.zoom);
       const x0 = Math.floor(cam.viewX / S);
       const y0 = Math.floor(cam.viewY / S);

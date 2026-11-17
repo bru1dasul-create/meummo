@@ -328,6 +328,6 @@
   const fontsReady = document.fonts && document.fonts.load ? Promise.race([document.fonts.load('40px "Bangers"'), new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
   fontsReady.then(start, start);
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => world && world.invalidate());
+    document.fonts.ready.then(() => world && world.invalidate(true));
   }
 })(window.PD = window.PD || {});

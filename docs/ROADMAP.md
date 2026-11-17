@@ -761,8 +761,20 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   (ou emendando na corrida). Antes ele dobrava no lugar e girava como uma bola. Conferido no jogo (correndo para os
   quatro lados e parado) e nos testes do protótipo. Detalhes, medidas e receitas em docs/ARTE.md. A puxada do arco não
   tem referência na biblioteca (não há animação de arco nos pacotes gratuitos)
-- [ ] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
-  durante o zoom, o mais lento 117 ms). Esperando o dono pedir
+- [x] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
+  durante o zoom, o mais lento 117 ms) (17/11, escolha do dono; **no ramo da arte, esperando o "pode" dele para entrar
+  na main**). As causas, medidas no jogo de verdade: a ordem de desenho dos 2 mil objetos era refeita a cada passo do
+  zoom (~21 ms por quadro) e a caixa na tela de cada um também (13 a 20 ms); na chegada tudo era refeito de uma vez,
+  até copas inteiras que estavam fora da tela; e na volta tudo era refeito de novo, com a borda da tela sem chão.
+  Agora a ordem fica, a caixa estica, o jogo guarda as imagens e o chão de dois zooms (o da conversa é adiantado aos
+  poucos quando o herói chega a 4 m de um NPC) e refaz uma coisa por quadro, do meio da tela para fora. Medido no
+  Chromium sem placa de vídeo (parado, ~35 ms por quadro; média de 3 rodadas em 4 casos): a câmera se aproximando,
+  de 57–72 para 46–52 ms por quadro; logo depois de chegar, de 55–65 para 43–52 (quadros acima de 80 ms: de 5–9 para
+  0–1); voltando, de 68–73 para 54–58; depois da volta, de 51–67 para 34–38, sem refazer nenhuma imagem (eram 128 a
+  146). A roda do mouse e os Olhos de Gavião também ficaram mais leves, e voltar para um zoom recém-usado é quase na
+  hora; em troca, a primeira vez num zoom novo leva um pouco mais para ficar toda nítida (1,0 s contra 0,75 s na
+  roda). Em celular e tablet o jogo guarda um zoom só (memória). Detalhes, limites e as ferramentas de medir
+  (`prototipos/pindorama-25d/ferramentas/zoom-*.cjs`) em docs/ARTE.md
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

@@ -31,6 +31,13 @@
     return A.x0 + A.x1 + A.y0 + A.y1 < B.x0 + B.x1 + B.y0 + B.y1;
   }
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  /** Quanto tempo (ms) um quadro pode gastar refazendo imagens (objetos e chão) depois de o zoom mudar. */
+  const BUILD_BUDGET = 6;
+  /** Imagem "pesada" (ms estimados): só é adiantada com o herói parado (andando, o quadro comprido vira soluço). */
+  const AHEAD_HEAVY = 9;
+  /** Quanto tempo (ms) depois da última mudança de zoom as imagens guardadas de OUTRO zoom ainda ficam na memória. */
+  const ALT_KEEP_MS = 20000;
+  const K = PD.ISO_K;
   // móveis de dentro de casa (só aparecem com o herói lá dentro)
   const INSIDE_KINDS = new Set(['prateleira', 'geladeira', 'balcao', 'engradado',
     // a Budega maior (budega.js)
@@ -58,6 +65,9 @@
       this.petals = [];
       this.sparks = [];
       this.order = null;
+      // guardar as imagens de DOIS zooms (o do jogador e o da conversa: `invalidate`, `setAhead`). Gasta memória: a view
+      // desliga em tela de celular e em aparelho de pouca memória, e aí fica uma por vez, como sempre foi
+      this.keepLevels = true;
       // o vento (lote 2 da lista do dono, 14/11): a força (0 = parado, 1 = vento forte) vem da [estrutura] (setWind);
       // até lá, uma brisa. `angle`: para onde ele sopra, no chão (o padrão vai para a direita da tela)
       this.wind = { strength: 0.35, angle: -Math.PI / 4 };
@@ -220,12 +230,26 @@
       return out;
     }
 
-    /** Recalcula imagens prontas (mudou o zoom ou a tela). */
-    invalidate() {
-      this.order = null;
-      // as imagens ficam (velhas): enquanto não são refeitas, saem esticadas para o zoom novo
-      for (const p of this.props) p.spriteKey = '';
-      for (const f of this.flats || []) f.spriteKey = '';
+    /**
+     * Recalcula imagens prontas (mudou o zoom ou a tela). `repaint`: pinta tudo de novo mesmo no zoom de agora (as
+     * fontes das placas acabaram de chegar: a imagem guardada foi feita com a fonte de reserva).
+     */
+    invalidate(repaint = false) {
+      // A ORDEM de desenho fica: quem está atrás de quem não muda com o zoom (as caixas na tela só esticam todas
+      // juntas). Refazê-la a cada passo do zoom, com os 2 mil objetos do Capão, custava 21 ms por quadro: era metade do
+      // "tranco" enquanto a câmera chega na conversa (dono, 15/11).
+      // As imagens ficam (velhas): enquanto não são refeitas, saem esticadas para o zoom novo — menos a de quem tem
+      // guardada a imagem deste zoom (a conversa aproxima e volta: ela troca na hora, sem refazer nada)
+      const mark = (p) => {
+        if (repaint) {
+          if (p.sprite) p.sprite.key = '';
+          p.spriteAlt = null;
+        }
+        if (repaint || !p._swapSprite || !p._swapSprite()) p.spriteKey = '';
+      };
+      for (const p of this.props) mark(p);
+      for (const f of this.flats || []) mark(f);
+      this._stale = true;
       // o zoom acabou de mudar (e pode continuar mudando: a câmera da conversa, a roda do mouse)
       this._zoomAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
     }
@@ -241,11 +265,127 @@
     }
 
     /**
-     * O quadro já gastou o tempo de refazer imagens de objetos (~6 ms)? As que faltam ficam para os próximos quadros.
-     * Pelo menos 2 por quadro, para não parar de vez num aparelho lento.
+     * O quadro já gastou o tempo de refazer imagens (objetos e chão juntos, ~6 ms)? As que faltam ficam para os próximos
+     * quadros. Sai pelo menos UMA coisa por quadro (uma imagem ou um pedaço de chão), para não parar de vez num aparelho
+     * lento — e nunca duas pesadas no mesmo quadro: antes saíam pelo menos 2 imagens e mais um pedaço de chão por
+     * quadro, custassem o que custassem (a copa de uma árvore no zoom da conversa passa de 5 megapixels), e eram os
+     * quadros de mais de 100 ms logo depois de a câmera chegar na conversa.
      */
     buildBusy() {
-      return (this._built || 0) >= 2 && (this._buildMs || 0) > 6;
+      if ((this.ground.spent || 0) > 0) return true;
+      return (this._built || 0) >= 1 && (this._buildMs || 0) > BUILD_BUDGET;
+    }
+
+    /**
+     * Este objeto está no ESCURO? Com o herói dentro de uma casa, tudo o que não é dela fica debaixo de um escuro de
+     * 93%: ali a imagem velha esticada serve (ninguém vê a diferença) e não vale gastar quadro refazendo.
+     */
+    dimmed(p) {
+      const h = this._dimHome;
+      return !!h && p !== h && p.house !== h;
+    }
+
+    /**
+     * A view avisa para qual zoom a câmera vai e para que ponto do chão ela vai olhar (a conversa com um NPC):
+     * `{ zoom, x, y, still }` (o zoom da câmera, não o do jogador; x e y em cm; `still` = o herói está parado) ou
+     * `null`. As imagens dos objetos e o chão desse zoom são ADIANTADOS aos poucos, com o tempo que sobra do quadro, e
+     * quando a câmera chega já estão prontos: a aproximação não refaz nada.
+     */
+    setAhead(ahead) {
+      const a = ahead && ahead.zoom > 0 ? ahead : null;
+      const old = this.ahead;
+      if (a && old && Math.abs(a.zoom - old.zoom) < 1e-4 && Math.abs(a.x - old.x) < 30 && Math.abs(a.y - old.y) < 30) {
+        old.still = a.still;
+        return;
+      }
+      this.ahead = a;
+      this._aheadList = null;
+    }
+
+    /**
+     * Um passo de adiantar (veja `setAhead`), por último no quadro e só com o que SOBRA do orçamento dele. Os mais perto
+     * do meio da tela de lá primeiro; o chão e as imagens se revezam. Só o que é desenhado de verdade (`shown`, e fora
+     * do escuro). Coisa PESADA (imagem grande; pedaço de chão, num aparelho em que ele é pesado) só com o herói parado,
+     * num quadro que não fez mais nada, e quadro sim, quadro não: andando, um quadro comprido vira soluço no passo, e
+     * parado ninguém precisa de pressa (medido: sem essa dose, parado ao lado da Xiovanna os quadros acima de 60 ms iam
+     * de 4 para 14 nos primeiros segundos).
+     */
+    _buildAhead() {
+      const a = this.ahead;
+      const cam = this.cam;
+      if (!a || !this.keepLevels || this.zoomSettling() || Math.abs(a.zoom - cam.zoom) < 1e-4) return;
+      if (this.buildBusy()) return;
+      this._aheadTick = (this._aheadTick || 0) + 1;
+      const heavyOk = !!a.still && !this._built && this._aheadTick % 2 === 0;
+      // a tela de lá, em px do mundo no zoom de lá (a mesma conta de IsoCamera.follow)
+      const vx = (a.x - a.y) * K * a.zoom - cam.viewW / 2;
+      const vy = (a.x + a.y) * K * cam.sinP * a.zoom - cam.viewH * 0.56;
+      const rect = { x0: vx - 60, y0: vy - 60, x1: vx + cam.viewW + 60, y1: vy + cam.viewH + 60 };
+      if (!this._aheadList) {
+        // quem aparece na tela de lá: a caixa de agora esticada para o zoom de lá (a posição é proporcional ao zoom)
+        const r = a.zoom / cam.zoom;
+        const cx = vx + cam.viewW / 2, cy = vy + cam.viewH / 2;
+        const list = [];
+        const look = (p) => {
+          if (!p._ensureAlt) return;
+          const b = p.bounds;
+          const s = { x0: b.x0 * r, y0: b.y0 * r, x1: b.x1 * r, y1: b.y1 * r };
+          if (!overlap(s, rect)) return;
+          const dx = Math.max(s.x0 - cx, 0, cx - s.x1), dy = Math.max(s.y0 - cy, 0, cy - s.y1);
+          list.push({ p, d: dx * dx + dy * dy });
+        };
+        for (const p of this.props) look(p);
+        for (const f of this.flats || []) look(f);
+        list.sort((p, q) => p.d - q.d);
+        this._aheadList = list.map((it) => it.p);
+        this._aheadGroundDone = false;
+      }
+      // a vez do chão: um pedaço (quanto ele custa neste aparelho, o chão anota em `chunkMs` a cada pedaço que faz)
+      if (this._aheadGround && !this._aheadGroundDone && this.ground.buildAhead && ((this.ground.chunkMs || 0) < AHEAD_HEAVY || heavyOk)) {
+        this._aheadGround = false;
+        if (this.ground.buildAhead(a.zoom, rect)) return;
+        this._aheadGroundDone = true;
+      }
+      // a vez das imagens (a lista é percorrida do começo a cada quadro — as feitas saem dela —, então o que ficou para
+      // depois, por ser pesado ou por estar escondido, é tentado de novo mais tarde)
+      const list = this._aheadList;
+      for (let i = 0; i < list.length && !this.buildBusy(); i++) {
+        const p = list[i];
+        if (!p || !p.shown || this.dimmed(p)) continue;
+        if (p.costAt(a.zoom) > AHEAD_HEAVY && !(heavyOk && !this._built)) continue; // (uma pesada por quadro, sozinha)
+        p._ensureAlt(a.zoom);
+        list[i] = null;
+      }
+      this._aheadGround = true;
+    }
+
+    /**
+     * Depois de o zoom mudar: refaz primeiro as imagens de quem está mais perto do MEIO da tela (na conversa, o NPC e o
+     * que está em volta dele), dentro do orçamento do quadro. O resto continua esticado até chegar a vez.
+     */
+    _buildStale(view) {
+      if (this.zoomSettling() || this.buildBusy()) return;
+      const cam = this.cam;
+      const cx = cam.viewX + cam.viewW / 2, cy = cam.viewY + cam.viewH / 2;
+      const list = [];
+      const look = (p) => {
+        if (!p.sprite || p.spriteReady || !p._ensureSprite || !p.shown || this.dimmed(p)) return;
+        const b = p.bounds;
+        if (!overlap(b, view)) return;
+        const dx = Math.max(b.x0 - cx, 0, cx - b.x1), dy = Math.max(b.y0 - cy, 0, cy - b.y1);
+        list.push({ p, d: dx * dx + dy * dy });
+      };
+      for (const p of this.props) look(p);
+      for (const f of this.flats || []) look(f);
+      if (!list.length) {
+        this._stale = false;
+        return;
+      }
+      list.sort((a, b) => a.d - b.d);
+      for (const it of list) {
+        if (this.buildBusy()) break;
+        it.p._ensureSprite();
+      }
     }
 
     /** Algum trecho entre esses pontos (já na tela) aparece? (caixa dos pontos contra a tela, com folga) */
@@ -273,19 +413,33 @@
      * tamanho do mapa.
      */
     _spriteCare() {
+      // Na conversa a câmera fica PARADA no NPC, mais perto: nada de adiantar a imagem de quem está fora da tela (a
+      // câmera não vai até lá; medido: era aí que saíam as imagens mais pesadas, de copas inteiras fora da tela, logo
+      // depois de a câmera chegar) nem de soltar as de quem "ficou longe" (não ficou: a tela é que encolheu, e na volta
+      // seriam todas refeitas). O mesmo enquanto o zoom ainda está mudando.
+      if (this.camHeld || this.zoomSettling()) return;
       const cam = this.cam;
       const near = this._viewRect(cam.viewW * 0.5, cam.viewH * 0.5);
       const far = this._viewRect(cam.viewW, cam.viewH);
       this._careTick = (this._careTick || 0) + 1;
       const sweep = this._careTick % 30 === 0;
+      // As imagens GUARDADAS de outro zoom vencem: 20 s depois da última mudança de zoom, saem (o jogador rodou a roda
+      // e ficou no zoom novo; a conversa acabou e ele foi embora). Medido: sem isso, ir ao zoom máximo e voltar deixava
+      // ~100 MB a mais de imagens paradas na memória. Ficam as do zoom que está sendo adiantado (o herói ainda perto
+      // do NPC); e na conversa nada vence, porque este cuidado nem roda (`camHeld`).
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const expire = sweep && now - (this._zoomAt || 0) > ALT_KEEP_MS;
+      const aheadZoom = this.ahead ? this.ahead.zoom : 0;
       const care = (p) => {
         const b = p.bounds;
+        if (expire && p.dropAlt) p.dropAlt(aheadZoom);
         if (overlap(b, near)) {
-          if (!p.spriteReady && p._ensureSprite && !this.buildBusy() && !this.zoomSettling()) p._ensureSprite();
+          if (!p.spriteReady && p._ensureSprite && !this.buildBusy()) p._ensureSprite();
         } else if (sweep && p.sprite && p.dropSprite && !overlap(b, far)) p.dropSprite();
       };
       for (const p of this.props) care(p);
       for (const f of this.flats || []) care(f);
+      if (expire && this.ground.dropKept) this.ground.dropKept(aheadZoom);
     }
 
     update(dt, hero, others = []) {
@@ -435,11 +589,16 @@
         T[k] = T[k] * 0.95 + (t1 - t0) * 0.05;
         t0 = t1;
       };
-      // refazer imagens de objetos: ~6 ms por quadro (as que faltam saem esticadas); só o que aparece é desenhado
+      // refazer imagens (objetos e chão): ~6 ms por quadro (as que faltam saem esticadas); só o que aparece é desenhado
       this._buildMs = 0;
       this._built = 0;
       const view = this._viewRect(40);
+      // o chão e os objetos se revezam: num quadro o chão pode fazer um pedaço, no outro é a vez das imagens
+      this._groundTurn = !this._groundTurn;
+      this.ground.keepLevels = !!this.keepLevels;
+      this.ground.hold = !this._groundTurn && this._stale;
       this.ground.draw(ctx);
+      if (this._stale) this._buildStale(view);
       mark('chao');
       this._drawAwakening(ctx);
       for (const f of this.flats || []) if (overlap(f.bounds, view)) f.draw(ctx, t);
@@ -506,6 +665,11 @@
       const home = this.insideHouse || this.focusHouse || null;
       const focus = home && (home.cutK || 0) > 0.01 ? this._focusOf(home) : null;
       const own = (o) => o === home || o.house === home;
+      // (com o escuro de fora fechado, o que não é da casa pode ficar com a imagem velha esticada: `dimmed`; quando ele
+      // abre de novo, as imagens velhas voltam para a fila)
+      const dim = focus && focus.k >= 0.98 ? home : null;
+      if (this._dimHome && !dim) this._stale = true;
+      this._dimHome = dim;
       let actorMs = 0;
       for (const o of order) {
         if (o.actor) {
@@ -608,6 +772,7 @@
       // por cima de tudo: soco (o que não ficou atrás do personagem), riscos e faíscas
       for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
       this._spriteCare();
+      if (this.ahead) this._buildAhead();
       if (focus) {
         // fora da casa, escuro (com uma sombra mais forte rente ao contorno, como a beirada de um recorte). Entrando, o
         // escuro fecha como uma íris, de longe para perto da casa; saindo, abre de perto para longe

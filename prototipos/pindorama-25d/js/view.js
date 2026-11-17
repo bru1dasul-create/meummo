@@ -24,7 +24,11 @@
 
   // câmera: "médio" (padrão) = 1, "longe" = 0,7 (mínimo). Aproximar além do médio e o celular em pé ainda vão
   // ser combinados com o dono: por enquanto, até "perto" (1,4) e uns 9 m de largura com o celular em pé
-  const ZOOM = { min: 0.7, max: 1.4, portraitMeters: 9 };
+  // `talk`: até onde a câmera chega na conversa com um NPC. Quem manda nesse zoom é o motor (hoje 1,25); a view só
+  // precisa saber para ADIANTAR o desenho daquele zoom (World.setAhead) e aprende o valor de verdade na 1ª conversa
+  const ZOOM = { min: 0.7, max: 1.4, portraitMeters: 9, talk: 1.25 };
+  /** Até que distância de um NPC (cm) o desenho do zoom da conversa vai sendo adiantado. */
+  const AHEAD_REACH = 400;
 
   // cor do nome em cima da cabeça (as mesmas do jogo de hoje, src/client/style.css)
   const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', pet: '#8fe3c8', monster: '#f1e4c8' };
@@ -312,7 +316,49 @@
      * seguir o seu personagem. O zoom é do motor (setZoom).
      */
     focus(point) {
+      const had = !!this.focusPoint;
       this.focusPoint = point && Number.isFinite(point.x) && Number.isFinite(point.y) ? { x: point.x * 100, y: point.y * 100 } : null;
+      // (a conversa acabou agora: a câmera ainda vai voltar — veja `camHeld` no `frame`)
+      // (no relógio dos quadros: `last` é a hora do último `frame`)
+      if (had && !this.focusPoint) this._focusEndAt = this.last || 0;
+      // (o zoom com que a conversa começou: se o motor mexer nele, o de chegada é o "zoom da conversa" — veja `_ahead`)
+      this._focusZoom = this.focusPoint ? this.zoomUser : null;
+    }
+
+    /**
+     * Para qual zoom a câmera deve ir em seguida, e olhando para onde (World.setAhead)? Na conversa o motor aproxima a
+     * câmera em 0,45 s; quando ela chegava, o jogo refazia de uma vez as imagens de tudo o que aparece (e o chão) no
+     * zoom novo: o "tranco" do zoom da conversa (dono, 15/11). Agora, com o herói perto de um NPC (4 m), o desenho
+     * daquele zoom vai sendo adiantado aos poucos, com o tempo que sobra de cada quadro.
+     */
+    _ahead(hero) {
+      // aprende o zoom da conversa: o motor mexeu no zoom com a conversa aberta e ele já parou
+      if (this.focusPoint && this._focusZoom !== null && Math.abs(this.zoomUser - this._focusZoom) > 0.01 && !this.world.zoomSettling()) this._talkZoom = this.zoomUser;
+      const talk = this._talkZoom || ZOOM.talk;
+      // (com a conversa já aberta não adianta mais nada: a câmera está saindo, e o que faltar é feito na chegada, do
+      // meio da tela para fora — medido: adiantar aqui punha uma imagem pesada bem no quadro em que o zoom começa)
+      if (!this.world.keepLevels || !(talk > this.zoomUser + 0.01) || !hero || this.focusPoint) return null;
+      let point = null;
+      let best = AHEAD_REACH;
+      for (const a of this.actors.values()) {
+        if (a.kind !== 'npc') continue;
+        const pos = a.ch ? a.ch.pos : a.creature ? a.creature.pos : null;
+        if (!pos) continue;
+        const d = Math.hypot(pos.x - hero.ch.pos.x, pos.y - hero.ch.pos.y);
+        if (d < best) {
+          best = d;
+          point = pos;
+        }
+      }
+      if (!point) return null;
+      const cam = this.cam;
+      const zoom = this._baseZoom(cam.viewW, cam.viewH) * talk * (this.visionK || 1);
+      // o ponto do chão que a câmera mira na conversa (a mesma conta do `frame`, no zoom de lá)
+      const portrait = cam.viewH > cam.viewW * 1.15;
+      const d = (cam.viewH * (portrait ? 0.2 : 0.16)) / (2 * PD.ISO_K * cam.sinP * zoom);
+      // (`still`: o herói parado — só aí saem as imagens pesadas: World._buildAhead)
+      const still = Math.hypot(hero.ch.vel.x, hero.ch.vel.y) < 20;
+      return { zoom, x: point.x + d, y: point.y + d, still };
     }
 
     /** `id` fala por `ms` (WorldView.talk): a boca abre e fecha, a sobrancelha acompanha; sem balão. 0 para. */
@@ -463,6 +509,10 @@
       cam.viewW = w;
       cam.viewH = h;
       const z = this._baseZoom(w, h) * this.zoomUser * (this.visionK || 1);
+      // guardar o desenho de dois zooms (o do jogador e o da conversa) e adiantar o da conversa gasta memória (medido a
+      // 1600 × 900: uns 50 MB a mais ao lado de um NPC e na conversa). Em tela de 2 pixels por ponto (celular, tablet:
+      // as imagens já têm 4× os pixels) e em aparelho de até 4 GB fica como era, um zoom por vez
+      if (this.world) this.world.keepLevels = !(dpr >= 2 || (typeof navigator !== 'undefined' && navigator.deviceMemory && navigator.deviceMemory <= 4));
       if (Math.abs(z - cam.zoom) > 1e-4 || (this.world && this.world._dpr !== dpr)) {
         cam.zoom = z;
         if (this.world) {
@@ -574,6 +624,11 @@
         }
         this.camTarget = this.camTarget ? M.damp3(this.camTarget, goal, 5.5, dt) : goal;
         this.cam.follow(this.camTarget);
+        // (a câmera parada na conversa — e nos 0,7 s seguintes, enquanto o zoom volta: o mundo não adianta nem solta
+        // imagem de quem está fora da tela; medido: no quadro em que a conversa fechava, ainda no zoom de perto, ele
+        // fazia a imagem inteira de um prédio fora da tela)
+        this.world.camHeld = !!this.focusPoint || t - (this._focusEndAt || -1e9) < 700;
+        if (this.world.setAhead) this.world.setAhead(this._ahead(hero));
       } else {
         this.world.time += dt;
         this.cam.follow({ x: this.map.spawn.x, y: this.map.spawn.y, z: 0 });

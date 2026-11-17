@@ -53,26 +53,58 @@
      */
     get bounds() {
       const key = this._zoomKey();
-      if (!this._bb || this._bbKey !== key) {
+      if (!this._bb || this._bbKey !== key) this._setBox(key, false);
+      return this._bb;
+    }
+    /** A caixa EXATA no zoom de agora (a imagem é feita nela; veja `_setBox`). */
+    _exactBounds() {
+      const key = this._zoomKey();
+      if (!this._bb || this._bbKey !== key || this._bb.approx) this._setBox(key, true);
+      return this._bb;
+    }
+    /**
+     * Calcula a caixa para o zoom de agora. Com o zoom MUDANDO (a câmera da conversa, a roda do mouse), a caixa é a
+     * exata de antes esticada — a posição na tela é proporcional ao zoom —, com uma folga: recalcular a de verdade nos
+     * 2 mil objetos do Capão a cada passo do zoom custava de 13 a 20 ms por quadro (medido), e era o que mais pesava
+     * enquanto a câmera se aproxima. A exata volta quando a imagem do objeto é refeita (`_makeSprite`).
+     */
+    _setBox(key, exact) {
+      const zoom = this.cam.zoom;
+      const e = this._bbExact;
+      if (!exact && e && e.zoom !== zoom) {
+        const k = zoom / e.zoom;
+        // (a folga de 6 px da caixa encolhe junto quando o zoom diminui: devolve o que faltar, e mais 1 px)
+        const grow = 1 + (k < 1 ? 6 * (1 - k) : 0);
+        const x0 = Math.floor(e.x0 * k - grow), y0 = Math.floor(e.y0 * k - grow);
+        const x1 = Math.ceil(e.x1 * k + grow), y1 = Math.ceil(e.y1 * k + grow);
+        this._bb = { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0, approx: true };
+      } else {
         const b = this.screenBox();
         const pad = 6;
         const x0 = Math.floor(b.x0 - pad), y0 = Math.floor(b.y0 - pad);
         const w = Math.ceil(b.x1 - b.x0 + 2 * pad), h = Math.ceil(b.y1 - b.y0 + 2 * pad);
         this._bb = { x0, y0, x1: x0 + w, y1: y0 + h, w, h };
-        this._bbKey = key;
+        this._bbExact = { x0, y0, x1: x0 + w, y1: y0 + h, zoom };
       }
-      return this._bb;
+      this._bbKey = key;
+    }
+    /**
+     * Este objeto está sendo desenhado agora? O móvel de dentro de uma casa (e a parede do fundo dela) só aparece com
+     * o herói lá dentro: fora, não adianta refazer nem adiantar a imagem dele.
+     */
+    get shown() {
+      const h = this.house;
+      return !h || (h.cutK || 0) > 0;
     }
     /** A imagem já está feita para o zoom de agora? */
     get spriteReady() {
       return !!this.sprite && this.spriteKey === this._zoomKey();
     }
-    _ensureSprite() {
+    /** Faz a imagem para o zoom que a câmera tem agora (quem chama decide onde ela fica guardada). */
+    _makeSprite(key) {
       const cam = this.cam;
-      const key = this._zoomKey();
-      if (this.sprite && this.spriteKey === key) return;
       const t0 = performance.now();
-      const b = this.bounds;
+      const b = this._exactBounds();
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.ceil(b.w * cam.dpr));
       c.height = Math.max(1, Math.ceil(b.h * cam.dpr));
@@ -80,19 +112,85 @@
       ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -b.x0 * cam.dpr, -b.y0 * cam.dpr);
       this.paint(ctx);
       rasterNow(c);
-      this.sprite = { c, x: b.x0, y: b.y0, w: b.w, h: b.h, zoom: cam.zoom };
-      this.spriteKey = key;
       // o mundo conta quanto tempo do quadro foi gasto fazendo imagens (veja World.buildBusy)
+      const ms = performance.now() - t0;
       const w = this.world;
       if (w) {
-        w._buildMs = (w._buildMs || 0) + performance.now() - t0;
+        w._buildMs = (w._buildMs || 0) + ms;
         w._built = (w._built || 0) + 1;
       }
+      // (quanto custou e em que zoom: dá para estimar o custo em outro zoom — veja `costAt`)
+      this._cost = { ms, zoom: cam.zoom };
+      return { c, x: b.x0, y: b.y0, w: b.w, h: b.h, zoom: cam.zoom, key };
     }
-    /** Solta a imagem (o objeto ficou longe da tela); ela é refeita quando ele voltar. */
+    _ensureSprite() {
+      const key = this._zoomKey();
+      if (this.sprite && this.spriteKey === key) return;
+      // a imagem pronta de outro zoom fica guardada (uma só): a câmera da conversa aproxima e volta, e na volta — ou na
+      // conversa seguinte com o mesmo NPC — ela troca na hora (`_swapSprite`), sem refazer nada
+      // (em celular e aparelho de pouca memória, uma imagem por vez, como sempre foi: World.keepLevels)
+      const keep = this.world && this.world.keepLevels;
+      if (keep && this.sprite && this.sprite.key && this.sprite.key !== key) this.spriteAlt = this.sprite;
+      else if (!keep) this.spriteAlt = null;
+      this.sprite = this._makeSprite(key);
+      this.spriteKey = key;
+    }
+    /**
+     * ADIANTA a imagem para outro zoom (o da conversa, antes de a câmera chegar lá: World.setAhead). Ela fica guardada e
+     * entra no lugar quando o zoom chegar (`_swapSprite`). Devolve se fez alguma coisa.
+     */
+    _ensureAlt(zoom) {
+      const cam = this.cam;
+      const z0 = cam.zoom, bb = this._bb, bbKey = this._bbKey;
+      cam.zoom = zoom;
+      try {
+        const key = this._zoomKey();
+        if ((this.spriteAlt && this.spriteAlt.key === key) || (this.sprite && this.sprite.key === key)) return false;
+        this.spriteAlt = this._makeSprite(key);
+        return true;
+      } finally {
+        // (a caixa na tela e a chave voltam a ser as do zoom de agora)
+        cam.zoom = z0;
+        this._bb = bb;
+        this._bbKey = bbKey;
+      }
+    }
+    /** Quanto deve custar (ms) fazer a imagem deste objeto em outro zoom: o que custou da última vez, pela área. */
+    costAt(zoom) {
+      const c = this._cost;
+      return c ? c.ms * (zoom / c.zoom) * (zoom / c.zoom) : 0;
+    }
+    /**
+     * O zoom mudou: a imagem que este objeto tem serve para o zoom de agora? Serve se ela mesma foi feita neste zoom (a
+     * câmera foi e voltou sem dar tempo de refazê-la) ou se a guardada é deste zoom — aí as duas trocam de lugar.
+     * Devolve se ficou com uma imagem pronta.
+     */
+    _swapSprite() {
+      const key = this._zoomKey();
+      if (this.sprite && this.sprite.key === key) {
+        this.spriteKey = key;
+        return true;
+      }
+      const alt = this.spriteAlt;
+      if (!alt || alt.key !== key) return false;
+      this.spriteAlt = this.sprite && this.sprite.key ? this.sprite : null;
+      this.sprite = alt;
+      this.spriteKey = key;
+      return true;
+    }
+    /** Solta as imagens (o objeto ficou longe da tela); elas são refeitas quando ele voltar. */
     dropSprite() {
       this.sprite = null;
+      this.spriteAlt = null;
       this.spriteKey = '';
+    }
+    /**
+     * Solta só a imagem GUARDADA de outro zoom (venceu: veja `World._spriteCare`) — menos a do zoom `keepZoom`, que
+     * está sendo adiantada para a conversa.
+     */
+    dropAlt(keepZoom) {
+      const a = this.spriteAlt;
+      if (a && !(keepZoom > 0 && Math.abs(a.zoom - keepZoom) < 1e-4)) this.spriteAlt = null;
     }
     /**
      * A imagem para desenhar agora: a pronta; ou, logo depois de mudar o zoom, quando o quadro já gastou o tempo de
@@ -103,9 +201,14 @@
       const s = this.sprite;
       const w = this.world;
       // (e enquanto o zoom ainda está mudando: a imagem feita agora já estaria velha no quadro seguinte)
-      if (s && this.spriteKey !== this._zoomKey() && w && ((w.zoomSettling && w.zoomSettling()) || (w.buildBusy && w.buildBusy()))) {
-        const k = this.cam.zoom / s.zoom;
-        return { c: s.c, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k };
+      // (e o que está no escuro, do lado de fora da casa em que o herói entrou: ninguém vê a diferença — `World.dimmed`)
+      if (s && this.spriteKey !== this._zoomKey() && w && ((w.zoomSettling && w.zoomSettling()) || (w.buildBusy && w.buildBusy()) || (w.dimmed && w.dimmed(this)))) {
+        // (com duas guardadas, sai esticada a MENOR: copiar encolhendo uma imagem de 5 megapixels a cada quadro custa
+        // caro, e com a câmera andando ninguém vê a diferença)
+        const a = this.spriteAlt;
+        const from = a && a.zoom < s.zoom ? a : s;
+        const k = this.cam.zoom / from.zoom;
+        return { c: from.c, x: from.x * k, y: from.y * k, w: from.w * k, h: from.h * k };
       }
       this._ensureSprite();
       return this.sprite;
@@ -374,23 +477,42 @@
         ctx.globalAlpha = 1;
       }
     }
+    /** Com o herói dentro (cortada de vez), a imagem da casa inteira não é desenhada. */
+    get shown() {
+      return !this.b.interior || this.cutK < 1;
+    }
     dropSprite() {
       super.dropSprite();
       this._cut = null;
+      this._cutAlt = null;
+    }
+    dropAlt(keepZoom) {
+      super.dropAlt(keepZoom);
+      const a = this._cutAlt;
+      if (a && !(keepZoom > 0 && Math.abs(a.zoom - keepZoom) < 1e-4)) this._cutAlt = null;
     }
     /** A imagem da casa cortada (feita na hora em que precisar; a mesma caixa da casa inteira). */
     _cutSprite() {
       const cam = this.cam;
       const key = this._zoomKey();
       if (this._cut && this._cutKey === key) return this._cut;
+      // a cortada de outro zoom fica guardada, como a imagem inteira (a conversa aproxima e volta)
+      if (this._cutAlt && this._cutAlt.key === key) {
+        const alt = this._cutAlt;
+        this._cutAlt = this._cut ? Object.assign(this._cut, { key: this._cutKey }) : null;
+        this._cut = alt;
+        this._cutKey = key;
+        return alt;
+      }
       // zoom mudando: a de antes, esticada
       const w = this.world;
       if (this._cut && w && w.zoomSettling && w.zoomSettling()) {
-        const s = this._cut;
+        // (com duas guardadas, a menor: encolher a grande a cada quadro custa caro)
+        const s = this._cutAlt && this._cutAlt.zoom < this._cut.zoom ? this._cutAlt : this._cut;
         const k = cam.zoom / s.zoom;
         return { c: s.c, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k, zoom: s.zoom };
       }
-      const b = this.bounds;
+      const b = this._exactBounds();
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.ceil(b.w * cam.dpr));
       c.height = Math.max(1, Math.ceil(b.h * cam.dpr));
@@ -398,6 +520,9 @@
       ctx.setTransform(cam.dpr, 0, 0, cam.dpr, -b.x0 * cam.dpr, -b.y0 * cam.dpr);
       this.paintCut(ctx);
       rasterNow(c);
+      // (em celular e aparelho de pouca memória, uma por vez: World.keepLevels)
+      if (w && w.keepLevels && this._cut && this._cutKey && this._cutKey !== key) this._cutAlt = Object.assign(this._cut, { key: this._cutKey });
+      else if (!(w && w.keepLevels)) this._cutAlt = null;
       this._cut = { c, x: b.x0, y: b.y0, w: b.w, h: b.h, zoom: cam.zoom };
       this._cutKey = key;
       return this._cut;

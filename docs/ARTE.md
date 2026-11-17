@@ -1058,6 +1058,109 @@ mexer na esquiva depois de ele escolher. A referência é o `Roll_RM` da Univers
     `rolamento-correndo.cjs` (corre, esquiva e emenda, como a view) e `esquiva-jogo-final.cjs` (os quadros do jogo de
     verdade, com a hora da própria animação em cada um).
 
+### O tranco do zoom da conversa (17/11; o dono escolheu "Tranco do zoom" para eu fazer enquanto ele não podia testar)
+O que ele via (15/11): quando a câmera aproxima para conversar com um NPC, dá um tranco. O "Zoom sem travar" de 14/11
+já tinha tirado os quadros de 200 ms; a [estrutura] mediu de novo (quadro de 24 para 33 ms durante o zoom, o mais lento
+117 ms) e sobrou este. **Está no ramo `claude/blissful-meitner-hp1i5e`, esperando o "pode" do dono para entrar na
+main.** Tudo foi medido no jogo de verdade, no Chromium sem placa de vídeo (parado, 33 a 38 ms por quadro a
+1600 × 900): os números servem para comparar antes e depois, não são os do PC dele.
+- **As causas, medidas** (`zoom-perfil.cjs`), da mais pesada para a mais leve:
+  1. **A ordem de desenho era refeita a cada passo do zoom.** O `World.invalidate()` zerava a ordem (`_staticOrder`) e,
+     com os 2.029 objetos do Capão, refazê-la custava ~21 ms por quadro em todos os quadros da aproximação e da volta.
+  2. **A caixa na tela dos 2.029 objetos era recalculada a cada passo do zoom** (`Prop.bounds` → `screenBox()`):
+     13 a 20 ms por quadro.
+  3. **Na chegada, tudo era refeito de uma vez:** pelo menos 2 imagens e 1 pedaço de chão por quadro, custassem o que
+     custassem (65 imagens, ~370 ms, e 12 pedaços, ~210 ms, em poucos quadros de 120 a 150 ms). E as mais pesadas
+     (copas inteiras, 36 a 58 ms cada) eram de coisas FORA da tela: o `_spriteCare` adianta a imagem de quem está até
+     meia tela além da borda, e na conversa a câmera nem vai andar.
+  4. **Na volta, tudo era refeito de novo** (110 a 146 imagens e 10 a 15 pedaços de chão) e, enquanto isso, a borda da
+     tela ficava SEM CHÃO (retângulos escuros): os pedaços velhos eram os do zoom de perto, que só cobrem o meio.
+  5. Conversando de dentro da Budega, refazia a imagem da casa inteira (que nem é desenhada com o herói dentro) e as de
+     tudo o que fica debaixo do escuro de 93% do lado de fora.
+- **O que mudou** (`js/view.js`, `js/world/world.js`, `props.js`, `ground.js`):
+  - **A ordem fica.** `invalidate()` não zera mais `order`: quem está atrás de quem não depende do zoom. Conferido com
+    o `zoom-ordem.cjs`: de 9.377 pares de objetos que se cobrem na tela, 1 ou 2 saem em ordem diferente da recalculada
+    do zero em outro zoom, e são copas emboladas em que a ordem é um ciclo (nenhuma das duas é "a certa").
+  - **A caixa estica.** Com o zoom mudando, `bounds` é a caixa exata de antes esticada, com folga (`_setBox`); a exata
+    volta em `_exactBounds()`, que é a que o `_makeSprite` e a casa cortada usam. De 13–20 ms por passo para 0,2–0,5.
+  - **Dois zooms guardados.** Cada objeto guarda a imagem do zoom anterior (`spriteAlt`; quando o zoom volta, o
+    `_swapSprite` troca as duas na hora), a casa cortada também (`_cutAlt`) e o chão guarda até 2 níveis de 24 pedaços
+    (`Ground.kept`). A volta da conversa e a segunda conversa não refazem nada.
+  - **Adiantar.** A 4 m de um NPC (`AHEAD_REACH`), a view diz ao mundo para que zoom e para que ponto a câmera iria
+    (`View._ahead` → `World.setAhead`) e o mundo vai fazendo as imagens e o chão daquele zoom com o que sobra do
+    orçamento de cada quadro (`_buildAhead`, `Prop._ensureAlt`, `Ground.buildAhead`), do meio da tela de lá para fora.
+    O zoom da conversa é do motor (1,25): a view começa com esse valor (`ZOOM.talk`) e aprende o de verdade na primeira
+    conversa (`_talkZoom`); se a [estrutura] mudar o `CONVERSATION_ZOOM`, só a primeira conversa perde o adiantado.
+    Coisa PESADA (mais de 9 ms, estimados pelo que a imagem custou da última vez: `costAt`; e o pedaço de chão, num
+    aparelho em que ele passa disso: `Ground.chunkMs`) só com o herói parado, num quadro que não fez mais nada, quadro
+    sim, quadro não: andando, quadro comprido vira soluço no passo. Com a conversa já aberta não adianta mais nada.
+  - **O orçamento do quadro.** Uma coisa por quadro (`buildBusy`: um pedaço de chão OU imagens até 6 ms), o chão e as
+    imagens se revezam, e as imagens saem do meio da tela para fora (`_buildStale`): o NPC fica nítido primeiro.
+  - **Câmera parada, nada de fora da tela.** Na conversa — e nos 0,7 s seguintes, enquanto o zoom volta — o
+    `_spriteCare` não adianta nem solta imagem de quem está fora da tela (`World.camHeld`, que a view liga).
+  - **Só o que aparece.** `shown` (o móvel de casa fechada e a casa inteira com o herói dentro ficam de fora) e
+    `dimmed` (o que está no escuro do lado de fora fica com a imagem velha esticada; quando o escuro abre, volta para
+    a fila).
+  - **O chão na volta.** Os pedaços guardados do zoom mais aberto vão por baixo dos velhos (`_drawLevel`): não aparece
+    mais borda sem chão.
+  - **Memória.** As imagens guardadas de outro zoom vencem 20 s depois da última mudança de zoom (`ALT_KEEP_MS`),
+    menos as do zoom que está sendo adiantado; e nada vence durante a conversa. Medido (`zoom-memoria.cjs`, 1600 × 900,
+    imagens e chão): parado, 91 a 106 MB; ao lado de um NPC e na conversa com ele, uns 50 MB a mais (com o Curupira:
+    33 MB de imagens e 16 MB de chão do zoom de perto), que saem 20 s depois de o herói se afastar; no pior caso (a
+    roda até o zoom máximo e de volta) 174 a 181 MB por 20 s e depois volta ao normal (91 a 98 MB; a versão antiga
+    ficava em 94; sem o vencimento, ficava em 193). Em tela de 2 pixels por ponto (celular, tablet) e em aparelho de
+    até 4 GB (`navigator.deviceMemory`), o `keepLevels` fica desligado: um zoom por vez e sem adiantar, como era; lá só
+    entram a ordem, a caixa, o orçamento e o `camHeld`.
+  - `invalidate(true)` pinta tudo de novo no mesmo zoom (o protótipo solto chama quando as fontes das placas chegam;
+    sem isso a imagem "guardada" com a fonte de reserva voltava a valer).
+- **Medido, antes × depois** (`zoom-comparar.cjs`: as duas versões ligadas ao mesmo tempo, uma em cada porta,
+  revezando a cada rodada; média de 3 rodadas; ms por quadro, e entre parênteses o pior quadro das 3). Os casos: a
+  Xiovanna de dentro da Budega e o Curupira ao ar livre; "parado" = o herói ficou 3,5 s ao lado do NPC antes de
+  clicar; "andando" = veio de 6 m e clicou assim que chegou:
+
+  | Fase | Xiovanna, parado | Curupira, parado | Curupira, andando | Xiovanna, andando |
+  |---|---|---|---|---|
+  | a câmera se aproximando (0,45 s) | 72 (117) → 51 (61) | 57 (92) → 46 (68) | 70 (102) → 52 (62) | 70 (105) → 52 (66) |
+  | logo depois de chegar (2 s) | 65 (147) → 44 (63) | 55 (119) → 43 (67) | 57 (125) → 48 (90) | 61 (141) → 52 (91) |
+  | ... quadros acima de 80 ms | 9,0 → 0 | 5,0 → 0 | 6,3 → 0,3 | 7,7 → 1,0 |
+  | a câmera voltando (0,45 s) | 69 (97) → 56 (66) | 73 (121) → 56 (76) | 68 (82) → 54 (94) | 68 (87) → 58 (81) |
+  | depois da volta (2 s) | 65 (126) → 38 (63) | 51 (102) → 34 (62) | 52 (101) → 34 (51) | 67 (144) → 37 (67) |
+  | ... imagens refeitas na volta | 131 → 0 | 146 → 0 | 143 → 0 | 128 → 0 |
+  | antes de clicar, ao lado do NPC | 40 → 44 | 33 → 37 | 37 → 39 | 32 → 34 |
+
+  A última linha é o preço: parado ao lado de um NPC, o preparo adiantado deixa alguns quadros mais compridos nos
+  primeiros segundos (acima de 60 ms: de 2,3 para 5,0 ao lado da Xiovanna; de 0 para 1,7 ao lado do Curupira).
+  Andando, não muda. E no caso "andando" (clicou assim que chegou) o chão do zoom de perto ainda é feito na chegada
+  (11 pedaços, ~150–200 ms): nesta máquina o pedaço de chão conta como "pesado" e não é adiantado com o herói andando;
+  num PC em que ele custe menos de 9 ms, é adiantado e a chegada fica como a do "parado".
+- **A roda do mouse e os Olhos de Gavião** (`zoom-roda.cjs`, uma rodada de cada versão): enquanto o zoom muda, o
+  quadro foi de 57–66 ms para 43–50 (roda) e de 86 para 55 (Gavião). Voltar para um zoom que acabou de ser usado
+  ficou quase na hora: nítido em 40–240 ms contra 730–920 ms (roda) e 38 ms contra 827 ms (a volta do Gavião). **O que
+  ficou mais lento:** a PRIMEIRA vez num zoom novo leva mais para ficar toda nítida — 1,0 s contra 0,75 s na roda
+  aproximando e 1,75 s contra 1,2 s no Gavião —, com quadros mais leves no caminho (56 contra 68 ms; 63 contra 85).
+  É a troca de "uma coisa por quadro"; no Gavião a imagem está sendo encolhida, então não chega a borrar.
+- **Celular** (844 × 390 com 2 pixels por ponto; `TELA=844,390 DPR=2`, 2 rodadas): aproximando 59 → 48 e 75 → 57;
+  chegando 65 → 53 e 76 → 63 (acima de 80 ms: 10 → 5,5 e 11 → 7); voltando 70 → 48 e 75 → 53. Lá o que sobra é o
+  chão: cada pedaço tem 4× os pixels e custa de 60 a 85 ms aqui. Ideia para depois, se o dono reclamar do celular:
+  pedaços de chão menores em tela de 2 pixels por ponto (256 em vez de 512), para o custo vir em fatias.
+- **A imagem conferida** (`zoom-fotos.cjs` + `zoom-fotos-comparar.py`: cada parada comparada com a mesma cena refeita
+  do zero): na conversa com o Curupira e com a Xiovanna (de dentro da Budega), depois da volta, no celular e em quatro
+  paradas entrando e saindo da Budega com a roda mudando o zoom: a nitidez ficou entre 99,1% e 100,1% da referência e
+  menos de 0,7% dos pixels diferem (o que se mexe sozinho: o herói respirando, a fogueira, as bandeirinhas; na volta,
+  o balão de fala que ainda está na tela). Sem erro na página. O protótipo solto (`conferir.cjs`, `jogo.cjs`) e os
+  testes do protótipo (`testes.cjs` 40 de 40, `teste-acoes`, `teste-estilingue`) passam; `npm run check`: 505 testes.
+- **Para o dono conferir no PC dele** (aqui não há placa de vídeo): conversar com a Xiovanna e com o Curupira, a
+  primeira vez chegando correndo e a segunda logo em seguida, e ver se o tranco sumiu na ida e na volta; rodar a roda
+  do mouse; usar os Olhos de Gavião. Se a imagem demorar para ficar nítida depois de aproximar com a roda, o ajuste é
+  o `BUILD_BUDGET` (6 ms) do `world.js`.
+- **Receitas** (todas pedem o jogo ligado no mesmo computador, com `npm run build && npm start`; o personagem de
+  teste é criado sozinho — `NOME` e `SENHA` trocam; para os Olhos de Gavião precisa ser um Caçador com a habilidade):
+  `node zoom-perfil.cjs [url] [budega|curupira] [largura,altura] [espera em ms]` (`ANDAR=x,y PERTO=x,y` para vir
+  andando; `DPR=2` para celular); `node zoom-comparar.cjs <pasta> [repetições] [casos]` (antes × depois: a versão
+  antiga num `git worktree`, com `PORT=3001` e uma cópia do save); `node zoom-roda.cjs [url]`; `node zoom-fotos.cjs
+  conversa|casa [url] <pasta> ...` e `python3 zoom-fotos-comparar.py a.png a-ref.png`; `node zoom-ordem.cjs [url]`;
+  `node zoom-memoria.cjs [url]`.
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.
@@ -1207,6 +1310,11 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
+- **Esperando o dono (17/11; ele estava fora de casa, sem poder testar):** (1) o "pode" para juntar na main o tranco
+  do zoom (ramo `claude/blissful-meitner-hp1i5e`; a seção "O tranco do zoom da conversa" diz o que ele precisa
+  conferir no PC dele); (2) o teste dele do braço do arco e da esquiva B, que já estão na main (se a saída agachada
+  der sensação de "travar no fim", encurtar `ROLL_SHAPE.crouch`; "volta a esquiva" desfaz); (3) a escolha do que vem
+  depois (ofereci: os ícones de item que faltam em pintura, o Curupira no 2.5D).
 - **Biblioteca de animações do Quaternius como REFERÊNCIA de movimento** (16/11; o dono disse "sim" à sugestão da
   [estrutura]: abrir, ver onde ficam cotovelo, quadril e pés quadro a quadro, e acertar as nossas poses por elas — sem
   importar nada: o esqueleto delas não é o nosso). O dono deu o "pode ser" (16/11) para o primeiro passo: a comparação
@@ -1289,6 +1397,10 @@ confirmou.
    - as notas do canto são grandes (10x12 px do mapa); se o dono achar demais, desenhar menores.
 
 ## Como confiro (receitas)
+- **Zoom (conversa, roda, Olhos de Gavião) sem tranco e sem borrar:** as ferramentas `zoom-*.cjs` de
+  `prototipos/pindorama-25d/ferramentas/` (medem no jogo de verdade; a lista está na seção "O tranco do zoom da
+  conversa"). Mexeu em `world.js`, `props.js`, `ground.js` ou na câmera da `view.js`? Rode pelo menos o
+  `zoom-perfil.cjs` (curupira e budega) e o `zoom-fotos.cjs conversa` com o `zoom-fotos-comparar.py`.
 - **Prancha:** `npm run render:characters` (`-- --so Curupira --escala 4 --out arquivo.png` para um só). Os monstros
   pintados ficam embaixo.
 - **Criatura de bolas do 2.5D sem entrar no jogo:** `node prototipos/pindorama-25d/ferramentas/prancha-joaquim.cjs
