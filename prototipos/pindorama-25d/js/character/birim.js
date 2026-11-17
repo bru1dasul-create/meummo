@@ -106,6 +106,62 @@
     return [CAP.c[0] + rho * Math.sin(phi), CAP.c[1] + rho * Math.cos(phi), z];
   };
 
+  // ------------------------------------------------------------------ medidas da mão e do pé (os do herói são mais simples)
+  // A MÃO, escrita em centímetros de verdade. O motor mede a mão em "unidades" (× `size`, e o raio × 0,95 disso), então
+  // converto aqui. Palma chata (~4 cm de grossura, e não uma bola), dedos finos e compridos, polegar com a junta do meio.
+  const HAND_SIZE = 1.32;
+  const hu = (cm) => cm / HAND_SIZE; // comprimento em unidades de mão
+  const hru = (cm) => cm / (HAND_SIZE * 0.95); // raio em unidades de mão
+  /** Esfera da mão: a = cm a partir do punho, d = para as costas da mão (negativo = palma), s = para o lado do polegar. */
+  const hs3 = (a, d, s, r) => ({ a: hu(a), d: hu(d), s: hu(s), r: hru(r) });
+  const HAND = {
+    size: HAND_SIZE,
+    curl: [0.34, 0.24, 0.13, 0.02], // quanto cada dedo dobra a mais numa mão solta (mindinho → indicador)
+    palm: [
+      hs3(1.3, 0, -1.25, 2.05), hs3(1.3, 0, 1.15, 2.05), // perto do punho
+      hs3(4.9, 0.15, -2.35, 1.95), hs3(4.9, 0.15, 2.15, 2), // meio da palma
+      hs3(8.4, 0.3, -2.8, 1.6), hs3(8.8, 0.35, -0.95, 1.72), hs3(8.9, 0.35, 0.95, 1.72), hs3(8.6, 0.3, 2.75, 1.66), // os nós
+      hs3(3.5, -1, 2.45, 1.95), // a "almofada" do polegar, do lado da palma
+    ],
+    fingers: [
+      { s: hu(-2.85), base: hu(8.7), len: hu(5.7), r: hru(0.8) }, // mindinho
+      { s: hu(-0.97), base: hu(9.2), len: hu(7.1), r: hru(0.88) },
+      { s: hu(0.97), base: hu(9.3), len: hu(7.7), r: hru(0.92) },
+      { s: hu(2.8), base: hu(9), len: hu(6.9), r: hru(0.9) }, // indicador
+    ],
+    thumb: {
+      base: hs3(2.7, -0.9, 3, 1.55),
+      mid: { open: hs3(5.8, -1.3, 4.7, 1.22), fist: hs3(6.6, -2.5, 3.5, 1.28) },
+      open: hs3(8.6, -1.7, 5.6, 1.02),
+      fist: hs3(9.4, -3.6, 1.5, 1.12),
+    },
+  };
+  // O PÉ (cm a partir do tornozelo: s = para dentro, f = para a frente, u = para cima; o chão fica em u = −6,5): peito do
+  // pé mais baixo que o do herói, calcanhar, as duas "bolas" da frente e os ossinhos do tornozelo.
+  const FOOT = [
+    { s: 0, f: -3.6, u: -3.4, r: 3.1 }, // calcanhar
+    { s: 0.4, f: 4.2, u: -1.2, r: 3.3 }, // peito do pé
+    { s: 0.6, f: 7.6, u: -2.9, r: 2.9 },
+    { s: 2.5, f: 10.2, u: -4.1, r: 2.4 }, // bola de dentro (atrás do dedão)
+    { s: -2.5, f: 9.2, u: -4.3, r: 2.2 }, // bola de fora
+    { s: -3, f: 4.6, u: -4.6, r: 1.9 }, // beirada de fora
+    { s: 2.6, f: 0.2, u: 0.3, r: 1.7 }, // ossinho de dentro
+    { s: -2.7, f: -0.9, u: -0.5, r: 1.7 }, // ossinho de fora
+  ];
+  // OS CINCO DEDOS, separados (cm a partir da dobra dos dedos: s = para dentro, f = para a frente, u = acima do chão):
+  // do mindinho ao dedão, cada um com três esferas (base, meio, ponta)
+  const toe3 = (s, f, r, ds = 0.1) => [{ s, f: f[0], u: r, r }, { s: s + Math.sign(s) * ds, f: f[1], u: r * 0.9, r: r * 0.9 }, { s: s + Math.sign(s) * ds * 1.5, f: f[2], u: r * 0.8, r: r * 0.8 }];
+  const TOES = {
+    ...BASE.TOES,
+    each: [
+      toe3(-3.95, [-0.7, 1.1, 2.4], 1.08),
+      toe3(-2.62, [0, 2.1, 3.6], 1.14),
+      toe3(-1.2, [0.5, 2.8, 4.5], 1.22),
+      toe3(0.35, [0.9, 3.3, 5.2], 1.3),
+      toe3(2.75, [0.5, 3.1, 5.2], 1.8, 0.12), // dedão
+    ],
+  };
+
   // ------------------------------------------------------------------ o modelo (o que muda do herói)
   const MODEL = {
     ...BASE,
@@ -134,7 +190,11 @@
     ],
     PELVIS: BASE.PELVIS.map((s, k) => (k === 1 || k === 2 ? { p: [Math.sign(s.p[0]) * 8, 0.4, 0.8], r: 8 } : s)),
     UPPER_ARM: BASE.UPPER_ARM.map((s) => ({ ...s, r: s.r + (s.t === 1 ? 0.35 : s.part === 'deltoide' ? 0.8 : 1.15) })),
-    FOREARM: BASE.FOREARM.map((s, k) => ({ ...s, r: s.r + [0.35, 0.8, 0.5, 0.25][k] })),
+    FOREARM: BASE.FOREARM.map((s, k) => ({ ...s, r: s.r + [0.35, 0.8, 0.5, 0.1][k] })),
+    HAND,
+    FOOT,
+    TOES,
+    wristJoin: 1.5, // o punho sem emenda (veja o renderer): a ponta do antebraço não vira uma "bola" em cima da mão
     THIGH: BASE.THIGH.map((s, k) => ({ ...s, r: s.r + [0.3, 0.4, 0.4, 0.3, 0.1, 0.1][k] })),
     SHIN: BASE.SHIN.map((s, k) => ({ ...s, r: s.r + [0.2, 0.9, 0.7, 0.3, 0.1, 0.1][k] })),
     // nada disto é dele: cabelo comprido, tranças, faixa e penas; colar de garras; tanga; pinturas de jenipapo; brincos
@@ -771,135 +831,247 @@
     R.ctx.fill(path);
     return path;
   }
-  /** O raio da pele num ponto do osso (a esfera mais de fora naquela direção): para pintar rente à pele. */
-  function skinRadius(spheres, len, s, th) {
-    const c = Math.cos(th), sn = Math.sin(th);
-    let best = -1;
+  /**
+   * O raio da pele de um membro num ponto: `s` cm ao longo do osso, ângulo `th` em volta dele. O membro desenhado é o
+   * CASCO das esferas, então o raio é a borda de cima do casco das esferas vistas de perfil naquela direção (e não a
+   * esfera mais de fora: entre duas esferas — do bíceps ao cotovelo, por exemplo — a pele é a reta que liga uma na
+   * outra). Uma tabela por direção, calculada uma vez: a pele não muda com a pose.
+   */
+  const SKIN_STEP = 0.2, SKIN_PAD = 10, SKIN_BINS = 180;
+  const skinCache = new WeakMap();
+  function skinProfile(spheres, len, bin) {
+    let byBin = skinCache.get(spheres);
+    if (!byBin) skinCache.set(spheres, (byBin = new Map()));
+    let tab = byBin.get(bin);
+    if (tab) return tab;
+    const th = (bin / SKIN_BINS) * M.TAU;
+    const cs = Math.cos(th), sn = Math.sin(th);
+    const n = Math.round((len + 2 * SKIN_PAD) / SKIN_STEP) + 1;
+    const top = new Float64Array(n).fill(-Infinity);
     for (const sp of spheres) {
-      const b = sp.f * c + sp.o * sn;
-      const c0 = (s - sp.t * len) * (s - sp.t * len) + sp.f * sp.f + sp.o * sp.o - sp.r * sp.r;
-      const disc = b * b - c0;
-      if (disc >= 0) best = Math.max(best, b + Math.sqrt(disc));
+      const sc = sp.t * len, cc = (sp.f || 0) * cs + (sp.o || 0) * sn;
+      const i0 = Math.max(0, Math.ceil((sc - sp.r + SKIN_PAD) / SKIN_STEP)), i1 = Math.min(n - 1, Math.floor((sc + sp.r + SKIN_PAD) / SKIN_STEP));
+      for (let i = i0; i <= i1; i++) {
+        const d = i * SKIN_STEP - SKIN_PAD - sc;
+        const y = cc + Math.sqrt(Math.max(0, sp.r * sp.r - d * d));
+        if (y > top[i]) top[i] = y;
+      }
     }
-    return best;
+    // a borda de cima do casco (os pontos que ficam por baixo de uma reta entre dois vizinhos saem)
+    const hull = [];
+    for (let i = 0; i < n; i++) {
+      if (top[i] === -Infinity) continue;
+      while (hull.length >= 2) {
+        const a = hull[hull.length - 2], b = hull[hull.length - 1];
+        if ((top[b] - top[a]) * (i - a) <= (top[i] - top[a]) * (b - a)) hull.pop();
+        else break;
+      }
+      hull.push(i);
+    }
+    tab = new Float32Array(n).fill(-1);
+    for (let k = 0; k + 1 < hull.length; k++) {
+      const a = hull[k], b = hull[k + 1];
+      for (let i = a; i <= b; i++) tab[i] = top[a] + ((top[b] - top[a]) * (i - a)) / (b - a);
+    }
+    byBin.set(bin, tab);
+    return tab;
   }
   function skinAt(spheres, len, s, th) {
-    let r = skinRadius(spheres, len, s, th);
-    if (r > 0) return r;
-    // entre duas esferas o casco liga uma na outra: vai pela média das vizinhas
-    let a = -1, b = -1;
-    for (let d = 1; d < 14 && (a < 0 || b < 0); d++) {
-      if (a < 0) a = skinRadius(spheres, len, s - d, th);
-      if (b < 0) b = skinRadius(spheres, len, s + d, th);
-    }
-    return a > 0 && b > 0 ? (a + b) / 2 : Math.max(a, b, 3);
+    const x = ((((th / M.TAU) % 1) + 1) % 1) * SKIN_BINS;
+    const b0 = Math.floor(x) % SKIN_BINS, w = x - Math.floor(x);
+    const read = (bin) => {
+      const tab = skinProfile(spheres, len, bin);
+      const p = Math.max(0, Math.min(tab.length - 1.001, (s + SKIN_PAD) / SKIN_STEP));
+      const i = Math.floor(p), f = p - i;
+      const a = tab[i], b = tab[i + 1];
+      return a < 0 ? b : b < 0 ? a : a + (b - a) * f;
+    };
+    const r = read(b0) * (1 - w) + read((b0 + 1) % SKIN_BINS) * w;
+    return r > 0.5 ? r : 0.5;
   }
 
   // ------------------------------------------------------------------ tatuagem (braço esquerdo, do ombro ao punho)
-  // Desenho tribal: "lâminas" (riscos grossos que afinam nas pontas) e espirais, marcados na pele desenrolada do braço:
-  // cada ponto é [cm ao longo do osso, graus em volta dele] (0° = frente do braço, 90° = lado de fora, 180° = trás).
-  const spiral = (s, deg, r0, turns, dir, w, rMean, a0 = 0) => {
+  // Como na ficha: uma manga tribal de ESPIRAIS de linha grossa (~1,2 cm), uma encostada na outra, com ganchos pontudos
+  // nos vãos. O desenho é marcado na pele "desenrolada" do braço: cada ponto é [cm ao longo do osso, graus em volta
+  // dele] (0° = frente do braço, 90° = lado de fora, 180° = trás, 270° = lado de dentro, encostado no tronco).
+  const TATTOO_HW = 0.68; // meia largura da linha (cm): linha de ~1,4 cm, grossa como a da ficha
+  const TATTOO_PITCH = 2; // de uma volta da espiral à outra (cm): a linha e o vão de pele entre as voltas
+  /**
+   * Espiral: do rabo pontudo (por fora) até o miolo, onde termina numa bolinha. `a0` = o ângulo em que o rabo começa.
+   * O número de voltas sai do tamanho (o passo entre as voltas é sempre o mesmo: senão as pequenas viravam uma mancha).
+   */
+  function koru(spheres, len, s, deg, r0, _turns, dir, a0, hw = TATTOO_HW) {
+    const R0 = skinAt(spheres, len, s, deg * M.DEG);
+    const rIn = 0.95;
+    const turns = Math.max(0.75, (r0 - rIn) / TATTOO_PITCH);
+    const n = Math.round(34 * turns);
     const pts = [];
-    const n = Math.round(26 * turns);
     for (let k = 0; k <= n; k++) {
       const u = k / n;
       const ang = a0 + dir * turns * M.TAU * u;
-      const rad = r0 * (1 - 0.86 * u);
-      pts.push([s + rad * Math.cos(ang), deg + ((rad * Math.sin(ang)) / rMean) * (180 / Math.PI)]);
+      const rad = r0 - (r0 - rIn) * u;
+      pts.push([s + rad * Math.cos(ang), deg + (rad * Math.sin(ang)) / R0 / M.DEG]);
     }
-    return { pts, w, tail: 0.25 };
-  };
-  const TATTOO = {
-    braco: [
-      spiral(6.8, 96, 5.9, 1.6, 1, 2.1, 7, 2.6),
-      { pts: [[1.5, 36], [5.5, 18], [10.5, 30], [14, 58], [15.5, 84]], w: 2.1 },
-      spiral(18.6, 86, 4.8, 1.4, -1, 1.9, 6, 0.4),
-      { pts: [[2.5, 156], [7.5, 180], [12.5, 158], [16.5, 132], [18.5, 116]], w: 2 },
-      { pts: [[19.5, 22], [23, 44], [26.5, 58], [28.8, 50]], w: 1.7 },
-      { pts: [[21, 142], [24.5, 120], [28.4, 108]], w: 1.7 },
-      { pts: [[9.5, 244], [14, 280], [19, 262], [23.5, 238]], w: 1.5 },
-      { pts: [[11.5, 8], [15.5, -12], [20.5, -6], [24, 12]], w: 1.6 },
-      { pts: [[0.8, 96], [2, 132], [5, 152], [8.5, 138]], w: 1.6 },
-      { pts: [[24, 204], [27, 184], [29.2, 158]], w: 1.4 },
-      { pts: [[11.5, 196], [15, 214], [19.5, 204], [22.5, 180]], w: 1.5 },
-      { pts: [[1.2, 50], [3.2, 74], [2.6, 100]], w: 1.4 },
-    ],
-    antebraco: [
-      spiral(6.4, 88, 4, 1.45, 1, 1.7, 4.9, 1.2),
-      { pts: [[1.2, 24], [5.5, 0], [10.5, 20], [14.5, 56]], w: 1.6 },
-      { pts: [[11.5, 114], [15.5, 134], [19.5, 104], [21.4, 82]], w: 1.5 },
-      { pts: [[2.2, 170], [7.5, 194], [12.5, 166], [15, 146]], w: 1.5 },
-      { pts: [[14, 206], [17.5, 218], [20.8, 190]], w: 1.3 },
-      { pts: [[15.5, 10], [19, -12], [21.6, -2]], w: 1.3 },
-      { pts: [[2.6, 284], [8, 308], [13.5, 286], [17.5, 262]], w: 1.3 },
-      { pts: [[11, 58], [14.5, 78], [18.5, 60], [21, 36]], w: 1.2 },
-    ],
-  };
-  /** Chamas em hélice em volta do braço: riscos em S, inclinados, um depois do outro; `skip(s, graus)` deixa um vão. */
-  function flames(len, rows, step, w, skip) {
-    const out = [];
-    for (let k = 0; k < rows; k++) {
-      const base = (k * 360) / rows;
-      for (let j = 0, s = 1.6 + (k % 2) * (step / 2); s + step * 0.8 < len; j++, s += step) {
-        const d = base + j * 31;
-        const dir = (k + j) % 2 ? 1 : -1;
-        const pts = [[s, d], [s + step * 0.3, d + dir * 16], [s + step * 0.62, d + dir * 4], [s + step * 0.86, d - dir * 15]];
-        const mid = pts[1];
-        if (skip && skip(mid[0], ((mid[1] % 360) + 360) % 360)) continue;
-        out.push({ pts, w });
-      }
-    }
-    return out;
+    const width = (u) => hw * (u < 0.14 ? 0.1 + 0.9 * Math.sin(((u / 0.14) * Math.PI) / 2) : u > 0.93 ? 1 + 0.3 * ((u - 0.93) / 0.07) : 1);
+    return { pts, c: [s, deg], r0, R0, hw: width, bulb: hw * 1.42 };
   }
-  TATTOO.braco.push(...flames(30, 7, 7.4, 1.25, (s, d) => (s < 13.5 && d > 40 && d < 165) || (s > 12.5 && s < 24 && d > 40 && d < 130)));
-  TATTOO.antebraco.push(...flames(23, 6, 6.6, 1.05, (s, d) => s < 11 && d > 35 && d < 140));
+  /** Gancho: um risco curvo, grosso de um lado e pontudo do outro (uma "vírgula"), no vão entre as espirais. */
+  function hook(spheres, len, s, deg, L, rot, bend, hw = TATTOO_HW * 0.86) {
+    const R0 = skinAt(spheres, len, s, deg * M.DEG);
+    const c = Math.cos(rot), sn = Math.sin(rot);
+    const pts = [];
+    for (let k = 0; k <= 12; k++) {
+      const u = k / 12 - 0.5;
+      const x = u * L, y = bend * L * (0.25 - u * u) * 1.7;
+      pts.push([s + x * c - y * sn, deg + (x * sn + y * c) / R0 / M.DEG]);
+    }
+    return { pts, hw: (u) => hw * Math.pow(Math.sin(Math.PI * Math.min(1, 0.03 + u * 0.97)), 0.62) * (1.2 - 0.55 * u) };
+  }
+  /** A manga de um osso: as espirais dadas e os ganchos nos vãos (numa grade na pele desenrolada, longe das espirais). */
+  function sleeve(spheres, len, korus, s0, s1) {
+    const spirals = korus.map((k) => koru(spheres, len, ...k));
+    const list = spirals.slice();
+    // a espiral mais perto de um ponto (distância na pele, em cm) e a folga até a borda dela
+    const nearest = (s, deg) => {
+      let near = null, gap = 1e9, dd0 = 0;
+      for (const k of spirals) {
+        const dd = ((deg - k.c[1] + 540) % 360) - 180;
+        const g = Math.hypot(s - k.c[0], dd * M.DEG * k.R0) - k.r0;
+        if (g < gap) {
+          gap = g;
+          near = k;
+          dd0 = dd;
+        }
+      }
+      return { near, gap, dd: dd0 };
+    };
+    const grid = (step, arc, visit) => {
+      for (let row = 0, s = s0 + 1.5; s < s1 - 0.9; s += step, row++) {
+        const Rm = (skinAt(spheres, len, s, 0) + skinAt(spheres, len, s, Math.PI / 2) + skinAt(spheres, len, s, Math.PI) + skinAt(spheres, len, s, -Math.PI / 2)) / 4;
+        const n = Math.max(3, Math.round((M.TAU * Rm) / arc));
+        for (let j = 0; j < n; j++) visit(s, (j + (row % 2 ? 0.5 : 0)) * (360 / n), row, j);
+      }
+    };
+    // 1) nos vãos grandes cabe uma espiral pequena (e ela passa a contar para os vãos seguintes)
+    grid(2.6, 2.6, (s, deg, row, j) => {
+      const { gap } = nearest(s, deg);
+      const r = Math.min(2.8, gap - 0.35, s - s0 - 0.3, s1 - s - 0.3);
+      if (r < 1.85) return;
+      const small = koru(spheres, len, s, deg, r, 0.55 + r * 0.32, (j + row) % 2 ? 1 : -1, row * 1.7 + j * 2.3);
+      spirals.push(small);
+      list.push(small);
+    });
+    // 2) nos vãos que sobram, os ganchos: deitados em volta da espiral mais perto (acompanham o giro dela)
+    grid(3.1, 3.2, (s, deg, row, j) => {
+      const { near, gap, dd } = nearest(s, deg);
+      if (gap < 0.95) return; // em cima de uma espiral (ou colado nela)
+      const rot = Math.atan2(dd * M.DEG * near.R0, s - near.c[0]) + Math.PI / 2;
+      const L = Math.min(3.1, 1.5 + gap * 1.05, (s1 - s) * 1.6, (s - s0) * 1.6);
+      if (L < 1.5) return;
+      list.push(hook(spheres, len, s, deg, L, rot + ((j + row) % 2 ? Math.PI : 0), (j + row) % 2 ? 0.55 : -0.55));
+    });
+    return list;
+  }
+  // [cm ao longo, graus em volta, raio de fora, voltas, sentido, ângulo do rabo]
+  const TATTOO = {
+    braco: sleeve(MODEL.UPPER_ARM, PD.BODY.upperArm, [
+      [6.4, 96, 5.5, 2.05, 1, 2.5], // a grande, na capa do ombro
+      [15.6, 14, 4.9, 2, -1, 0.4], // bíceps
+      [18.8, 102, 4.6, 1.95, 1, -0.6], // lado de fora, embaixo
+      [13.2, 186, 5, 2, -1, 2.9], // tríceps
+      [5.2, 8, 3.5, 1.6, 1, 1.2], // frente do ombro
+      [4.8, 180, 3.4, 1.6, -1, -1.4], // trás do ombro
+      [25.2, 42, 3.2, 1.55, -1, 2.2], // perto do cotovelo, na frente
+      [24.6, 162, 3.3, 1.55, 1, 0.8], // perto do cotovelo, atrás
+      [12, 276, 4.1, 1.8, 1, 0.2], // lado de dentro
+      [22.4, 266, 3.3, 1.5, -1, 1.6],
+    ], -0.6, 29.6),
+    antebraco: sleeve(MODEL.FOREARM, PD.BODY.forearm, [
+      [5.9, 86, 4.2, 1.9, 1, 2.2], // a grande, no músculo de fora
+      [11.4, 6, 3.4, 1.7, -1, 0.5],
+      [9.8, 182, 3.6, 1.7, 1, -2.4],
+      [15.2, 100, 2.9, 1.6, -1, 1.4],
+      [8, 276, 3.3, 1.6, -1, 2.6],
+      [18.4, 28, 2.3, 1.4, 1, -0.8],
+      [18, 192, 2.4, 1.4, -1, 0.9],
+      [17.4, 280, 2.2, 1.4, 1, 2],
+    ], 0.4, 21.4), // (para antes do relógio)
+  };
 
+  /** As bordas de um risco na pele (fração do osso, ângulo, raio), calculadas uma vez: a pele não muda com a pose. */
+  function tattooEdges(spheres, len, bl) {
+    if (bl.edges) return bl.edges;
+    const mid = bl.pts;
+    const N = mid.length - 1;
+    const lift = 0.06;
+    const out = [];
+    for (let i = 0; i <= N; i++) {
+      const [s, deg] = mid[i];
+      const th = deg * M.DEG;
+      const rad = skinAt(spheres, len, s, th) + lift;
+      const a = mid[Math.max(0, i - 1)], b = mid[Math.min(N, i + 1)];
+      // direção da linha na pele desenrolada (cm ao longo, cm em volta)
+      let ds = b[0] - a[0], dv = (b[1] - a[1]) * M.DEG * rad;
+      const l = Math.hypot(ds, dv) || 1;
+      ds /= l;
+      dv /= l;
+      const hw = bl.hw(i / N);
+      const side = (k) => {
+        const s2 = s - dv * hw * k, th2 = th + (ds * hw * k) / rad;
+        return [s2 / len, th2, skinAt(spheres, len, s2, th2) + lift];
+      };
+      out.push({ l: side(1), r: side(-1), th });
+    }
+    if (bl.bulb) {
+      // a bolinha do miolo da espiral
+      const [s, deg] = mid[N];
+      const th = deg * M.DEG;
+      const rad = skinAt(spheres, len, s, th) + lift;
+      const ring = [];
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * M.TAU;
+        const s2 = s + Math.cos(a) * bl.bulb, th2 = th + (Math.sin(a) * bl.bulb) / rad;
+        ring.push([s2 / len, th2, skinAt(spheres, len, s2, th2) + lift]);
+      }
+      out.bulb = { ring, th };
+    }
+    return (bl.edges = out);
+  }
   function tattoo(R, lf, spheres, blades) {
     const ctx = R.ctx;
     const len = lf.len;
+    const tc = facingAngle(R, lf);
     const path = new Path2D();
+    const P = (q) => R.P(tubeAt(lf, q[0], q[1], q[2]));
+    // (todos os pedaços entram no mesmo sentido: um por cima do outro não abre buraco na tinta)
+    const addPoly = (pts) => {
+      let area = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        area += a.x * b.y - b.x * a.y;
+      }
+      if (area < 0) pts.reverse();
+      path.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x, pts[i].y);
+      path.closePath();
+    };
     for (const bl of blades) {
-      // a linha do meio amaciada (pontos a cada ~0,7 cm) e as duas bordas, mais largas no meio
-      const mid = [];
-      for (let i = 0; i + 1 < bl.pts.length; i++) {
-        const p0 = bl.pts[Math.max(0, i - 1)], p1 = bl.pts[i], p2 = bl.pts[i + 1], p3 = bl.pts[Math.min(bl.pts.length - 1, i + 2)];
-        const n = bl.tail ? 1 : 6;
-        for (let k = 0; k < n; k++) {
-          const t = k / n, t2 = t * t, t3 = t2 * t;
-          mid.push([0, 1].map((d) => 0.5 * (2 * p1[d] + (-p0[d] + p2[d]) * t + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * t2 + (-p0[d] + 3 * p1[d] - 3 * p2[d] + p3[d]) * t3)));
+      const E = tattooEdges(spheres, len, bl);
+      let run = [];
+      const flush = () => {
+        if (run.length > 1) {
+          const pts = run.map((e) => P(e.l));
+          for (let i = run.length - 1; i >= 0; i--) pts.push(P(run[i].r));
+          addPoly(pts);
         }
+        run = [];
+      };
+      for (const e of E) {
+        if (Math.cos(e.th - tc) < 0.04) flush(); // do lado de lá do braço
+        else run.push(e);
       }
-      mid.push(bl.pts[bl.pts.length - 1]);
-      const N = mid.length - 1;
-      const edge = [];
-      for (let i = 0; i <= N; i++) {
-        const [s, deg] = mid[i];
-        const th = deg * M.DEG;
-        const rad = skinAt(spheres, len, s, th) + 0.06;
-        const a = mid[Math.max(0, i - 1)], b = mid[Math.min(N, i + 1)];
-        // direção da linha na pele desenrolada (cm ao longo, cm em volta) e a largura (a espiral afina para o miolo)
-        let ds = b[0] - a[0], dv = (b[1] - a[1]) * M.DEG * rad;
-        const l = Math.hypot(ds, dv) || 1;
-        ds /= l;
-        dv /= l;
-        const u = i / N;
-        const hw = bl.w * (bl.tail ? Math.pow(Math.sin(Math.PI * Math.min(1, u * 2.4 + 0.02)), 0.6) * (1 - 0.72 * u) : Math.pow(Math.sin(Math.PI * u), 0.55));
-        const pt = (k) => {
-          const s2 = s - dv * hw * k, th2 = th + ((ds * hw * k) / rad);
-          return { p: R.P(tubeAt(lf, s2 / len, th2, skinAt(spheres, len, s2, th2) + 0.06)), th: th2 };
-        };
-        edge.push({ l: pt(1), r: pt(-1), th });
-      }
-      const tc = facingAngle(R, lf);
-      for (let i = 0; i < N; i++) {
-        if (Math.cos((edge[i].th + edge[i + 1].th) / 2 - tc) < 0.04) continue; // do lado de lá do braço
-        const A = edge[i], B = edge[i + 1];
-        path.moveTo(A.l.p.x, A.l.p.y);
-        path.lineTo(B.l.p.x, B.l.p.y);
-        path.lineTo(B.r.p.x, B.r.p.y);
-        path.lineTo(A.r.p.x, A.r.p.y);
-        path.closePath();
-      }
+      flush();
+      if (E.bulb && Math.cos(E.bulb.th - tc) >= 0.04) addPoly(E.bulb.ring.map(P));
     }
     ctx.fillStyle = R.pal.tattoo;
     ctx.fill(path);
@@ -1004,7 +1176,10 @@
     if (!off.relogio) {
       const fa = rig.forearm[0], hd = rig.hand[0];
       const rad = skinAt(MODEL.FOREARM, fa.len, fa.len * 0.9, Math.PI / 2);
-      const host = hostOf('antebraco', 'braco0');
+      // (com o punho sem emenda a mão fica por cima do antebraço: aí o relógio entra depois da mão, senão a base dela
+      // tapava a caixa do relógio)
+      const handHost = hostOf('mao', 'mao0');
+      const host = handHost && handHost.over ? handHost : hostOf('antebraco', 'braco0');
       const band = ringOn(R, fa, 0.84, rad + 0.1, 8, 0.55).concat(ringOn(R, fa, 0.955, rad - 0.15, 8, 0.55));
       const segs = [{ poly: R.hull(band), circles: R._last, mat: PAL.watch, k: 0.22 }];
       if (R.facing(hd.d) > -0.15) {
@@ -1217,20 +1392,235 @@
     const key = Math.min(leg ? leg.key : Infinity, foot ? foot.key : Infinity) - 0.03;
     return { name: 'sola', key, group: 'sola' + i, segs: [{ poly: R.hull(SOLE.map(([s, f]) => soleSphere(R, rig, i, s, f, u, 0.75))), circles: R._last, mat: R.pal.sandal, k: 0.2 }] };
   }
+  /** Tira chata: uma fita que vai de `w0` a `w1` cm de largura ao longo de pontos no espaço, com contorno de tinta. */
+  function ribbon(R, pts, w0, w1, color, ink = R.pal.ink) {
+    const ctx = R.ctx;
+    // curva suave pelos pontos, já na tela
+    const sm = [];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      for (let k = 0; k < 6; k++) {
+        const t = k / 6, t2 = t * t, t3 = t2 * t;
+        const cr = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        sm.push(R.P({ x: cr(p0.x, p1.x, p2.x, p3.x), y: cr(p0.y, p1.y, p2.y, p3.y), z: cr(p0.z, p1.z, p2.z, p3.z) }));
+      }
+    }
+    sm.push(R.P(pts[pts.length - 1]));
+    const N = sm.length - 1;
+    const left = [], right = [];
+    for (let i = 0; i <= N; i++) {
+      const a = sm[Math.max(0, i - 1)], b = sm[Math.min(N, i + 1)];
+      let nx = -(b.y - a.y), ny = b.x - a.x;
+      const l = Math.hypot(nx, ny) || 1;
+      nx /= l;
+      ny /= l;
+      const hw = ((w0 + (w1 - w0) * (i / N)) / 2) * R.zoom;
+      left.push({ x: sm[i].x + nx * hw, y: sm[i].y + ny * hw });
+      right.push({ x: sm[i].x - nx * hw, y: sm[i].y - ny * hw });
+    }
+    const path = new Path2D();
+    path.moveTo(left[0].x, left[0].y);
+    for (const q of left) path.lineTo(q.x, q.y);
+    for (let i = N; i >= 0; i--) path.lineTo(right[i].x, right[i].y);
+    path.closePath();
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = Math.max(1.1, R.inkIn * 1.5);
+    ctx.stroke(path);
+    ctx.fillStyle = color;
+    ctx.fill(path);
+  }
   function sandalStraps(R, rig, i) {
     const side = i === 0 ? -1 : 1;
     const B = PD.BODY;
     const ft = rig.foot[i];
     const toe = rig.toe[i];
     const fp = (s, f, u) => (f > B.ballFwd + 1 ? at(toe, -side * s, f - B.ballFwd, u + B.ankleHeight) : at(ft, -side * s, f, u));
-    // a tira em Y: sai do vão do dedão, sobe pelo peito do pé e desce para os dois lados da sola
-    const post = fp(1.35, 11.6, -3.4);
-    const topIn = fp(1.6, 8.4, -1.2), topOut = fp(-0.6, 8.2, -1.5);
+    // a tira em Y: o pino sai da sola entre o dedão e o segundo dedo e as duas tiras, largas, descem pelo peito do pé
+    // até as beiradas da sola
+    const post = fp(1.5, 12, -3.3);
     const cam = R.toCam;
     const sideVec = scale(ft.r, -side); // para o lado de dentro do pé
     const seeIn = dot(sideVec, cam) > -0.35, seeOut = dot(sideVec, cam) < 0.35;
-    if (seeIn) cord(R, [post, topIn, fp(3.6, 4.6, -1.9), fp(4.7, 1.4, -5)], 1.5, R.pal.sandal.base, R.pal.ink, 0.6);
-    if (seeOut) cord(R, [post, topOut, fp(-3.3, 4.4, -2.9), fp(-4.9, 1.6, -5.2)], 1.5, R.pal.sandal.base, R.pal.ink, 0.6);
+    const mat = R.pal.sandal;
+    cord(R, [fp(1.5, 12.1, -5.9), post], 0.75, mat.base, R.pal.ink, 0.6); // o pino
+    if (seeOut) ribbon(R, [post, fp(-0.4, 9.8, -1.35), fp(-2.7, 7, -2.1), fp(-4.3, 4.6, -3.8), fp(-5.1, 3.2, -5.7)], 0.85, 1.75, mat.base);
+    if (seeIn) ribbon(R, [post, fp(2.6, 9.9, -1.6), fp(4.2, 6.9, -2.6), fp(4.95, 4.2, -4.4), fp(5.15, 3, -5.7)], 0.85, 1.75, mat.base);
+  }
+
+  // ------------------------------------------------------------------ as linhas da mão e do pé dele
+  const bez = (f, t) => {
+    const u = 1 - t;
+    return { x: u * u * f.base.x + 2 * u * t * f.mid.x + t * t * f.tip.x, y: u * u * f.base.y + 2 * u * t * f.mid.y + t * t * f.tip.y, z: u * u * f.base.z + 2 * u * t * f.mid.z + t * t * f.tip.z };
+  };
+  /** Uma forma arredondada, quase quadrada, deitada no espaço (centro e dois meios-eixos): a unha. */
+  const pad3 = (R, c, ax, bx, n = 12) => {
+    const p = new Path2D();
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * M.TAU;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const q = R.P(add(c, add(scale(ax, Math.sign(ca) * Math.pow(Math.abs(ca), 0.6)), scale(bx, Math.sign(sa) * Math.pow(Math.abs(sa), 0.6)))));
+      if (k) p.lineTo(q.x, q.y);
+      else p.moveTo(q.x, q.y);
+    }
+    p.closePath();
+    return p;
+  };
+  const nailColor = (PAL) => M.mix(PAL.skin.light, '#ffe9d2', 0.5);
+  function paintNail(R, path, alpha) {
+    const ctx = R.ctx;
+    ctx.globalAlpha = 0.95 * alpha;
+    ctx.fillStyle = nailColor(R.pal);
+    ctx.fill(path);
+    ctx.globalAlpha = 0.5 * alpha;
+    ctx.strokeStyle = R.pal.inkSoft;
+    ctx.lineWidth = Math.max(0.4, 0.13 * R.zoom);
+    ctx.stroke(path);
+    ctx.globalAlpha = 1;
+  }
+  /** As linhas da mão: os vãos entre os dedos, os nós, as dobras, as unhas e, do lado da palma, as duas dobras dela. */
+  function handLines(R, rig, i, hd, fingers, HP, info) {
+    if (!R.fine) return;
+    const ctx = R.ctx;
+    const z = R.zoom;
+    const PAL = R.pal;
+    const back = R.facing(hd.d); // > 0: as costas da mão olham para a câmera
+    const up = back >= 0 ? 1 : -1;
+    const open = 1 - smoothstep(0.3, 0.62, info.fist); // (fechada, a ponta dos dedos vira para a palma: sem unha)
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // os vãos entre os dedos, do lado que aparece
+    ctx.strokeStyle = PAL.inkSoft;
+    ctx.lineWidth = Math.max(0.45, 0.22 * z);
+    ctx.globalAlpha = 0.8;
+    for (let k = 0; k + 1 < fingers.length; k++) {
+      const a = fingers[k], b = fingers[k + 1];
+      const pts = [0.06, 0.5, 0.94].map((t) => R.P(add(scale(add(bez(a, t), bez(b, t)), 0.5), scale(hd.d, up * (a.r + b.r) * 0.4))));
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      ctx.quadraticCurveTo(pts[1].x, pts[1].y, pts[2].x, pts[2].y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    if (back > 0.18) {
+      const al = smoothstep(0.18, 0.45, back);
+      ctx.strokeStyle = PAL.skin.shade;
+      ctx.lineWidth = Math.max(0.5, 0.28 * z);
+      for (const f of fingers) {
+        // o nó (um arquinho na base do dedo) e a dobra do meio
+        const dirF = norm(sub(bez(f, 0.2), f.base));
+        const c = add(f.base, scale(hd.d, f.r * 0.95));
+        const p0 = R.P(add(c, scale(hd.s, -f.r * 0.8))), p1 = R.P(add(c, scale(dirF, f.r * 0.8))), p2 = R.P(add(c, scale(hd.s, f.r * 0.8)));
+        ctx.globalAlpha = 0.85 * al;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
+        ctx.stroke();
+        if (open > 0.05) {
+          const m = add(bez(f, 0.52), scale(hd.d, f.r * 0.9));
+          const a0 = R.P(add(m, scale(hd.s, -f.r * 0.55))), a1 = R.P(add(m, scale(hd.s, f.r * 0.55)));
+          ctx.globalAlpha = 0.6 * al * open;
+          ctx.beginPath();
+          ctx.moveTo(a0.x, a0.y);
+          ctx.lineTo(a1.x, a1.y);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+      // (as unhas só com as costas da mão bem de frente: com a mão de lado, a de um dedo saía por cima do dedo vizinho)
+      const nailAl = smoothstep(0.42, 0.62, back) * open;
+      if (nailAl > 0.03) {
+        for (const f of fingers) {
+          const dirF = norm(sub(f.tip, bez(f, 0.75)));
+          const c = add(bez(f, 0.9), scale(hd.d, f.r * 0.66));
+          paintNail(R, pad3(R, c, scale(dirF, f.r * 0.62), scale(hd.s, f.r * 0.52)), nailAl);
+        }
+      }
+    } else if (back < -0.25 && open > 0.05) {
+      // a palma: as duas dobras (a de baixo dos dedos e a que contorna a almofada do polegar)
+      const al = smoothstep(0.25, 0.5, -back) * open;
+      const pp = (a, s) => R.P(HP(hu(a), hu(-2.05), hu(s)));
+      ctx.strokeStyle = PAL.skin.shade;
+      ctx.lineWidth = Math.max(0.5, 0.26 * z);
+      ctx.globalAlpha = 0.75 * al;
+      for (const [a, b, c] of [[[7.5, -2.7], [6.9, -0.2], [7.9, 2.2]], [[7.6, 2.3], [5.4, 0.5], [2, 0.5]]]) {
+        const p0 = pp(a[0], a[1]), p1 = pp(b[0], b[1]), p2 = pp(c[0], c[1]);
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // a unha do polegar (olha para o lado e um pouco para as costas da mão)
+    const T = info.thumb;
+    if (T && open > 0.05) {
+      const dirT = norm(sub(T.tip, T.mid || T.base));
+      let n = add(scale(hd.s, 0.75), scale(hd.d, 0.66));
+      n = norm(sub(n, scale(dirT, dot(n, dirT))));
+      const f = R.facing(n);
+      if (f > 0.2) paintNail(R, pad3(R, add(sub(T.tip, scale(dirT, T.r * 0.1)), scale(n, T.r * 0.66)), scale(dirT, T.r * 0.62), scale(norm(cross(n, dirT)), T.r * 0.55)), smoothstep(0.2, 0.45, f) * open);
+    }
+  }
+  /** As linhas do pé: os ossinhos do tornozelo e a unha de cada dedo (os vãos já aparecem: cada dedo é uma peça). */
+  function toeLines(R, rig, i, toe, side, ft) {
+    if (!R.fine) return;
+    const ctx = R.ctx;
+    const PAL = R.pal;
+    if (ft) {
+      for (const sgn of [-1, 1]) {
+        const sp = MODEL.FOOT.find((q) => Math.sign(q.s) === sgn && Math.abs(q.s) > 2 && Math.abs(q.f) < 1);
+        if (!sp) continue;
+        const nrm = scale(ft.r, -side * sgn);
+        const fc = R.facing(nrm);
+        if (fc < 0.25) continue;
+        const c = at(ft, -side * sp.s, sp.f, sp.u);
+        const pts = [-0.9, 0, 0.9].map((k) => R.P(add(add(c, scale(nrm, sp.r * 0.8)), add(scale(ft.f, sp.r * 0.75 * k), scale(ft.u, sp.r * 0.6 * (1 - Math.abs(k)))))));
+        ctx.strokeStyle = PAL.skin.shade;
+        ctx.globalAlpha = 0.8 * smoothstep(0.25, 0.55, fc);
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(0.5, 0.4 * R.zoom);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        ctx.quadraticCurveTo(pts[1].x, pts[1].y, pts[2].x, pts[2].y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // de costas os dedos ficam escondidos atrás do pé: nem vãos, nem unhas
+    const seen = smoothstep(-0.55, -0.2, R.facing(toe.f));
+    if (seen < 0.03) return;
+    const each = MODEL.TOES.each;
+    // os vãos entre os dedos: um risco por cima (da raiz até a ponta) que desce pela frente até o chão. (O pé e os
+    // dedos são pintados como um volume só, sem linha entre eles: sem estes riscos os cinco dedos viravam uma "língua")
+    ctx.strokeStyle = PAL.inkSoft;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(0.5, 0.2 * R.zoom);
+    ctx.globalAlpha = 0.85 * seen;
+    for (let k = 0; k + 1 < each.length; k++) {
+      const a = each[k], b = each[k + 1]; // (a = o de fora, b = o de dentro)
+      const gap = (j) => (a[j].s + a[j].r + (b[j].s - b[j].r)) / 2;
+      const topU = (j) => Math.min(a[j].u + a[j].r, b[j].u + b[j].r) * 0.92;
+      const fTip = Math.min(a[2].f + a[2].r, b[2].f + b[2].r);
+      const pts = [
+        at(toe, -side * gap(0), Math.max(a[0].f, b[0].f) - 0.4, topU(0)),
+        at(toe, -side * gap(1), (a[1].f + b[1].f) / 2, topU(1)),
+        at(toe, -side * gap(2), fTip - 0.55, topU(2) * 0.95),
+        at(toe, -side * gap(2), fTip, topU(2) * 0.45),
+        at(toe, -side * gap(2), fTip - 0.15, 0.2),
+      ].map((q) => R.P(q));
+      ctx.stroke(S.smoothLinePath(pts));
+    }
+    ctx.globalAlpha = 1;
+    const top = R.facing(toe.u);
+    if (top < 0.02) return; // de frente, com a câmera reta, a unha fica de quina: não aparece
+    const al = smoothstep(0.02, 0.26, top) * seen;
+    for (const t of each) {
+      const q = t[t.length - 1];
+      const c = at(toe, -side * q.s, q.f + q.r * 0.16, q.u + q.r * 0.88);
+      paintNail(R, pad3(R, c, scale(toe.f, q.r * 0.56), scale(toe.r, q.r * 0.64)), al);
+    }
   }
 
   /** O olho de perfil (o desenho do olho de frente some quando a cabeça está de lado): um triângulo com a íris na frente. */
@@ -1321,7 +1711,7 @@
     void skin;
   }
 
-  Object.assign(MODEL, { face, chestDetail, pelvisDetail, extras, limbDetail, wear });
+  Object.assign(MODEL, { face, chestDetail, pelvisDetail, extras, limbDetail, wear, handLines, toeLines });
 
   // ------------------------------------------------------------------ registro
   PD.models = PD.models || {};

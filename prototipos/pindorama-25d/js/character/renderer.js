@@ -385,10 +385,11 @@
         const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM.find((s) => s.t === 1).r * 2.2 * this.zoom };
         // o deltoide por cima do braço (a sombra dele marca a borda, sem risco de "manga")
         items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, solid: true, chain: true, clipOut: shoulderTop, segs: [armSeg, deltSeg] });
-        items.push({
+        const forearmItem = {
           name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, solid: true, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, clipOut: shoulderTop,
           segs: [{ poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { if (MOD.BODY_PAINT) this._band(null, fa, MOD.BODY_PAINT.forearmBand, 4.6); this._muscleLines(fa, MOD.MUSCLE_LINES.antebraco); more('antebraco'); } }],
-        });
+        };
+        items.push(forearmItem);
         const hd = rig.hand[i];
         const HM = MOD.HAND;
         const hk = HM.size || 1; // tamanho da mão (a forma é a mesma)
@@ -414,8 +415,26 @@
         for (const f of fingers) handSegs.push({ poly: this.hull([this.circle(f.base, f.r * 1.05), this.circle(f.mid, f.r), this.circle(f.tip, f.r * 0.86)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
         const T = HM.thumb;
         const thumbTip = M.lerp3(HP(T.open.a, T.open.d, T.open.s), HP(T.fist.a, T.fist.d, T.fist.s), fk);
-        handSegs.push({ poly: this.hull([this.circle(HP(T.base.a, T.base.d, T.base.s), T.base.r * hr), this.circle(thumbTip, lerp(T.open.r, T.fist.r, fk) * hr)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
-        items.push({ name: 'mao', key: this.keyOf(fistCenter) + 6, group: 'mao' + i, solid: true, chain: true, segs: handSegs, after: () => this._handLines(hd, fingers, HP) });
+        const thumbCircles = [this.circle(HP(T.base.a, T.base.d, T.base.s), T.base.r * hr)];
+        // (um modelo pode dar ao polegar a junta do meio: `thumb.mid` = { open, fist }, como a ponta)
+        const thumbMid = T.mid ? M.lerp3(HP(T.mid.open.a, T.mid.open.d, T.mid.open.s), HP(T.mid.fist.a, T.mid.fist.d, T.mid.fist.s), fk) : null;
+        if (thumbMid) thumbCircles.push(this.circle(thumbMid, lerp(T.mid.open.r, T.mid.fist.r, fk) * hr));
+        thumbCircles.push(this.circle(thumbTip, lerp(T.open.r, T.fist.r, fk) * hr));
+        handSegs.push({ poly: this.hull(thumbCircles), circles: this._last, mat: skin, k: 0.3, noInner: true });
+        // (as linhas da mão: as do motor, ou as do modelo — `handLines`, que recebe também o polegar e o quanto ela fecha)
+        const thumbInfo = MOD.handLines ? { base: HP(T.base.a, T.base.d, T.base.s), mid: thumbMid, tip: thumbTip, r: lerp(T.open.r, T.fist.r, fk) * hr } : null;
+        const handKey = this.keyOf(fistCenter) + 6;
+        const handItem = { name: 'mao', key: handKey, group: 'mao' + i, solid: true, chain: true, segs: handSegs, after: () => (MOD.handLines ? MOD.handLines(this, rig, i, hd, fingers, HP, { thumb: thumbInfo, fist: fk, hk, hr }) : this._handLines(hd, fingers, HP)) };
+        if (MOD.wristJoin) {
+          // (um modelo pode pedir o punho sem emenda — `wristJoin` = o tamanho do "furo", em raios do punho: nem a ponta
+          // do antebraço nem a base da mão riscam o contorno fino ali dentro, e a mão fica por cima do antebraço quando os
+          // dois estão quase à mesma distância. Sem isto a ponta do antebraço aparecia como uma bola em cima da mão)
+          const wrist = { pt: this.P(rig.wrist[i]), r: MOD.FOREARM[MOD.FOREARM.length - 1].r * MOD.wristJoin * this.zoom };
+          forearmItem.holes = [wrist];
+          handItem.holes = [wrist];
+          if (forearmItem.key - handKey < 6) handItem.over = forearmItem; // (uma regra fixa do _depthFix)
+        }
+        items.push(handItem);
 
         const th = rig.thigh[i];
         const sh = rig.shin[i];
@@ -432,11 +451,16 @@
         items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, solid: true, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { if (MOD.BODY_PAINT) this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); more('canela'); } }] });
         // a mesma forma em qualquer zoom (pé, dedinhos e dedão): de longe só os riscos entre os dedos somem
         const footSegs = [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3 }];
-        footSegs.push({ poly: this.hull(MOD.TOES.small.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
-        footSegs.push({ poly: this.hull(MOD.TOES.big.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        if (MOD.TOES.each) {
+          // (um modelo pode ter os cinco dedos separados: `TOES.each` = uma lista de esferas por dedo, do mindinho ao dedão)
+          for (const toeSpheres of MOD.TOES.each) footSegs.push({ poly: this.hull(toeSpheres.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        } else {
+          footSegs.push({ poly: this.hull(MOD.TOES.small.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+          footSegs.push({ poly: this.hull(MOD.TOES.big.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        }
         // (o que o modelo calça por baixo do pé — a sola do chinelo — entra antes do pé, na mesma peça: `footUnder`)
         const under = MOD.footUnder ? MOD.footUnder(this, rig, i, look) : null;
-        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, solid: true, joint: ankle, segs: under ? under.concat(footSegs) : footSegs, after: () => { this._toes(toeFrame, side, ft); if (MOD.footOver) MOD.footOver(this, rig, i, look); } });
+        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, solid: true, joint: ankle, segs: under ? under.concat(footSegs) : footSegs, after: () => { if (MOD.toeLines) MOD.toeLines(this, rig, i, toeFrame, side, ft, look); else this._toes(toeFrame, side, ft); if (MOD.footOver) MOD.footOver(this, rig, i, look); } });
       }
       // as peças próprias do modelo que têm lugar pela distância (barba, boné, óculos, cordão): entram na ordem com as outras
       if (MOD.extras) MOD.extras(this, rig, look, items, { head, hs, headKey, headItem, headPoly, headCircles, faceAway, chestKey: this.keyOf(rig.chest.o), pelvisKey: this.keyOf(rig.pelvis.o) + 1 });
@@ -584,6 +608,9 @@
         return;
       }
       const it = un.run[0];
+      // (além das juntas do membro, uma peça pode trazer "furos" próprios no contorno fino: `holes` — o punho de um modelo)
+      let holes = holesFor(un.run);
+      for (const part of un.run) if (part.holes) holes = (holes || []).concat(part.holes);
       if (it.hideInside) {
         // escondida atrás de outra parte (o alto da trança atrás da cabeça): nada dela aparece dentro do polígono
         const ctx = this.ctx;
@@ -592,9 +619,9 @@
         p.rect(-1e5, -1e5, 2e5, 2e5);
         S.polyPath(it.hideInside, 0, 0, p);
         ctx.clip(p, 'evenodd');
-        this._drawRun(un.run, holesFor(un.run));
+        this._drawRun(un.run, holes);
         ctx.restore();
-      } else this._drawRun(un.run, holesFor(un.run));
+      } else this._drawRun(un.run, holes);
       for (const d of un.deferred) d.draw();
     }
 
@@ -652,6 +679,11 @@
           const Bi = solids[b];
           if (A.group === Bi.group) continue; // dentro de um membro vale a ordem da corrente
           if (A.anchor && Bi.anchor) continue; // entre cabeça e tronco vale a ordem base (eles não mudam de lugar)
+          // (uma peça pode pedir para ficar por cima de outra: `over` — a mão por cima do antebraço, no punho sem emenda)
+          if (A.over === Bi || Bi.over === A) {
+            cons.push(A.over === Bi ? [Bi, A, Infinity] : [A, Bi, Infinity]);
+            continue;
+          }
           // regras fixas (não medidas): as coxas ficam embaixo da tanga (a pelve cobre o alto delas); o pescoço fica
           // atrás do peito e da cabeça. Tranças, colar e o resto do cabelo ficam com as regras deles (estão encostados
           // na pele: a superfície empata com a do corpo e a medida não decide)

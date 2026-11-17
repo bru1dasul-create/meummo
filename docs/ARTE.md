@@ -1237,9 +1237,32 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
   **sempre** (precisa de `@napi-rs/canvas`, que instalei numa pasta de rascunho com `NODE_PATH`; não é dependência
   do projeto); (5) uma peça de tronco precisa cobrir a "ponte" do ombro: agora a ponte pega a cor da peça.
 - **O que ainda não está bom (dito ao dono):** é um redesenho no traço do jogo, mais simples e menos musculoso que
-  a ilustração; a tatuagem é um tribal meu, mais simples; cabeça ~2 cm mais larga que a da ficha; perfil do rosto
-  simples; nas diagonais de costas só aparece a costeleta; mãos e pés pouco definidos; 1,74 m e não 1,80 m (o
-  esqueleto é o do herói). Não foi testado dentro do jogo, nem com arma na mão.
+  a ilustração; a tatuagem é parecida, não é a mesma (a da ficha é mais fechada); cabeça ~2 cm mais larga que a da
+  ficha; perfil do rosto simples; nas diagonais de costas só aparece a costeleta; a mão de lado, com os dedos uns
+  na frente dos outros, fica confusa; 1,74 m e não 1,80 m (o esqueleto é o do herói). Não foi testado dentro do
+  jogo, nem com arma na mão.
+- **Versão 2 (17/11; o dono viu a 1 e pediu: "melhora a tatuagem, as mãos e os pés"), também só no ramo:**
+  - *Tatuagem:* uma manga de **espirais de linha grossa** (`koru`, linha de ~1,4 cm, passo de 2 cm entre as voltas,
+    bolinha no miolo) com espirais pequenas e ganchos (`hook`) nos vãos, montada por `sleeve` na pele desenrolada
+    do braço ([cm ao longo do osso, graus em volta]); para antes do relógio. As bordas de cada risco são calculadas
+    uma vez (`tattooEdges`: a pele não muda com a pose) e todos os pedaços entram no mesmo sentido (um por cima do
+    outro não abre buraco na tinta).
+  - *Mãos:* `MODEL.HAND` próprio, escrito em centímetros (palma chata de ~4 cm de grossura, dedos de 5,7 a 7,7 cm
+    por 1,6 a 1,8, polegar com a junta do meio — `thumb.mid`) e `handLines` (vãos, nós, dobras, unhas, as duas
+    dobras da palma). O punho ficou sem a "bola": `wristJoin` (o `renderer` não risca o contorno fino dentro do
+    punho — `holes` — e põe a mão por cima do antebraço — `over`, uma regra fixa no `_depthFix`).
+  - *Pés:* `MODEL.FOOT` e `TOES.each` (os cinco dedos, cada um uma peça), `toeLines` (os vãos entre os dedos, as
+    unhas, os ossinhos do tornozelo) e a tira do chinelo como fita larga em Y (`ribbon`) saindo do vão do dedão.
+  - *Medidas:* mão 16,2 cm solta (~17 aberta), palma 8,8; pé 23,7 × 9,6.
+  - *Conferência:* herói idêntico ponto a ponto, os 7 testes do protótipo que desenham o personagem, `npm run
+    check` (510), animações do Birim sem erro, punho fechado conferido com `ficha.cjs --punho 1`.
+  - *Lições:* (6) o raio da pele para pintar em cima de um membro é o do **casco** das esferas (`skinAt`, uma
+    tabela por direção), não o da esfera mais de fora: entre o bíceps e o cotovelo a conta antiga dava números
+    soltos e a tatuagem fina virava borrão; (7) braço ou perna esticados são pintados como um volume só, **sem
+    linha entre as peças**: dedo do pé separado só aparece se eu riscar o vão; (8) quem decide a ordem de desenho
+    entre membros é o `_depthFix`, não a chave: mexer na `key` da mão não adiantou, precisou da regra `over`;
+    (9) para ver mão e pé de perto: `ficha.cjs <pasta> --modelo birim --escala 22 --tamanho 3000x4000 --ancora
+    0.97 --solto` e recortar — na ficha de 8 px/cm os defeitos não aparecem.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

@@ -37,6 +37,7 @@ function args(argv) {
     else if (a === '--sem') o.sem = next().split(',');
     else if (a === '--so') o.so = next().split(',');
     else if (a === '--torcao') o.torcao = parseFloat(next());
+    else if (a === '--punho') o.punho = parseFloat(next()); // 0 = mão aberta, 1 = punho fechado (para conferir a mão)
     else if (a === '--traco') o.traco = parseFloat(next());
     else if (a === '--solto') o.solto = true;
     else if (a === '--medidas') o.medidas = true;
@@ -74,7 +75,7 @@ function args(argv) {
       const c = document.createElement('canvas');
       c.width = W;
       c.height = H;
-      PD.ficha.desenhar(c, { modelo: o.modelo, graus: d.graus, inclinacao: o.inclinacao, pxPorCm: o.escala, fundo: o.fundo, pes: o.pes, braco: o.braco, torcao: o.torcao, traco: o.traco, sem: o.sem, so: o.so, equipado, ancora: { x: W / 2, y: H * (o.ancoraY || 0.94) } });
+      PD.ficha.desenhar(c, { modelo: o.modelo, graus: d.graus, inclinacao: o.inclinacao, pxPorCm: o.escala, fundo: o.fundo, pes: o.pes, braco: o.braco, torcao: o.torcao, punho: o.punho, traco: o.traco, sem: o.sem, so: o.so, equipado, ancora: { x: W / 2, y: H * (o.ancoraY || 0.94) } });
       frames.push({ arquivo: d.arquivo, nome: d.nome, canvas: c });
     }
     const res = { medidas: o.medidas ? PD.ficha.medidas({ inclinacao: o.inclinacao, pxPorCm: o.escala, pes: o.pes, braco: o.braco }) : null };
