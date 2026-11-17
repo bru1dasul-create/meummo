@@ -786,7 +786,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   no computador do servidor): sliders da arma, da puxada, da defesa, do bicho escolhido e do dia e noite, valendo na
   hora, com o ↺ de cada um; atalhos (modo deus, sem recarga, +1/+10/horda de 50, derrubar, dia/tarde/noite); FPS e
   bichos à vista; copiar valores e resetar tudo
-- [ ] **[estrutura]** Painel F1, etapa 2: hitboxes e raio de percepção dos bichos por cima do desenho
+- [x] **[estrutura]** Painel F1, etapa 2 (17/11): botão **Hitboxes** — por cima do desenho normal, o círculo em que o
+  tiro acerta cada bicho (vermelho), a caixa do pé de todo mundo (branco; a sua, verde), a área em que o bicho que
+  ataca sozinho percebe você (laranja tracejado, com a distância) e o que bloqueia perto (amarelo segura tiro, cinza
+  só o passo). Continua na tela com o painel fechado
 - [ ] **[estrutura + arte]** Painel F1, etapa 3: game feel (tremor de tela, pausa no impacto, partículas por acerto,
   flash ao tomar dano) e velocidade/vida do jogador como slider
 - [ ] **[estrutura]** Painel F1, etapa 4: câmera lenta (0,25x / 0,5x / 1x)

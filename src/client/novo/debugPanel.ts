@@ -41,6 +41,8 @@ export interface DebugHooks {
   monstersInView(): number;
   /** A arma equipada (a chave em data/items.json), ou null. */
   weapon(): string | null;
+  /** Ligou ou desligou as hitboxes (as linhas no chão). */
+  hitboxes(on: boolean): void;
 }
 
 const HEADERS = { 'content-type': 'application/json', 'x-meummo-admin': '1' };
@@ -68,6 +70,7 @@ export class DebugPanel {
   private data: Data | null = null;
   private open = false;
   private monster = '';
+  private showBoxes = false;
   private frames = 0;
   private fpsAt = 0;
   private fps = 0;
@@ -287,7 +290,12 @@ export class DebugPanel {
     // atalhos: os poderes do menu ADM e criar bichos
     this.powerButtons.length = 0;
     const power = (text: string, on: () => boolean, cmd: (next: boolean) => GmCommand) => {
-      const el = this.button(text, () => this.hooks.gm(cmd(!on())));
+      const el = this.button(text, () => {
+        const local = text === 'Hitboxes'; // só da tela: não é poder do servidor
+        const command = cmd(!on());
+        if (!local) this.hooks.gm(command);
+        this.paintPowers();
+      });
       this.powerButtons.push({ el, on, text });
       return el;
     };
@@ -297,6 +305,12 @@ export class DebugPanel {
       power('Sem recarga', () => this.hooks.powers().nocd, (on) => ({ do: 'nocd', on })),
       power('Voar', () => this.hooks.powers().fly, (on) => ({ do: 'fly', on })),
       this.button('Curar', () => this.hooks.gm({ do: 'heal' })),
+      power('Hitboxes', () => this.showBoxes, (on) => {
+        this.showBoxes = on;
+        this.hooks.hitboxes(on);
+        if (on) this.say('Vermelho: onde o tiro acerta · branco: a caixa do pé · laranja: onde o bicho percebe você · cinza/amarelo: o que bloqueia (amarelo segura tiro)');
+        return { do: 'heal' }; // (não manda nada de verdade: veja o gm abaixo)
+      }),
     );
     const pick = document.createElement('select');
     for (const m of monsters) pick.append(new Option(m.nome, m.id));
@@ -374,6 +388,17 @@ export class DebugPanel {
     for (const change of changed) if (!(await this.post('/admin/api/padrao', change)).ok) failed += 1;
     this.say(failed ? `${failed} não voltaram ao padrão.` : `Tudo no padrão (${changed.length} ajustes desfeitos).`, failed > 0);
     await this.load();
+  }
+
+  /**
+   * A que distância (em metros) este tipo de bicho percebe o jogador, ou 0 se não ataca sozinho. Dos números do painel
+   * (lidos ao abrir e a cada ajuste), então acompanha o slider na hora.
+   */
+  aggroOf(type: string): number {
+    const fields = this.entry('monstros', type)?.campos;
+    if (!fields || fields.find((f) => f.campo === 'agressivo')?.valor !== true) return 0;
+    const range = fields.find((f) => f.campo === 'alcanceAgressao')?.valor;
+    return typeof range === 'number' ? range : 0;
   }
 
   destroy(): void {

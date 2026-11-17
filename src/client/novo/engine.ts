@@ -13,6 +13,7 @@ import {
   JUMP_AIR_MS,
   JUMP_COOLDOWN_MS,
   MAX_PENDING_WALKS,
+  SHOT_HIT_RADIUS,
   SHOT_MOVING_MS,
   TRADE_RANGE,
   TRADE_SLACK,
@@ -20,8 +21,8 @@ import {
 } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
 import { pickQuickItem, type GearLook, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
-import { GameMap, type Tile, type TiledMap } from '../../shared/map';
-import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
+import { GameMap, type SolidRect, type Tile, type TiledMap } from '../../shared/map';
+import { BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
@@ -37,7 +38,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
-import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
+import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, type DebugShape } from './combat';
 import { GmPanel } from './gm';
 import { GuardButton } from './guard';
 import { Joystick } from './joystick';
@@ -426,6 +427,7 @@ class NewWorld implements NewWorldGame {
         const weapon = this.lastInv.equipped.weapon;
         return weapon && this.items.get(weapon)?.shot ? weapon : null;
       },
+      hitboxes: (on) => this.combat.setDebug(on ? () => this.debugShapes() : null),
     });
     this.quick = new QuickSlots((n) => this.useQuick(n, performance.now()));
     this.guardButton = new GuardButton(
@@ -839,6 +841,46 @@ class NewWorld implements NewWorldGame {
       this.armed = null;
       this.setArmed(this.armedSkillId(armed));
     }
+  }
+
+  /**
+   * As hitboxes do painel de ajustes (F1), como o servidor conta: o círculo em que um tiro acerta cada bicho, a caixa do
+   * pé de todo mundo, a área em que o bicho que ataca sozinho percebe você e o que bloqueia perto de você.
+   */
+  private debugShapes(): DebugShape[] {
+    const shapes: DebugShape[] = [];
+    const body = (x: number, y: number, color: string): DebugShape => {
+      const cx = x + 0.5;
+      const cy = y + 0.5 + BODY_OFFSET_Y;
+      return { rect: { x0: cx - BODY_HALF_W, y0: cy - BODY_HALF_H, x1: cx + BODY_HALF_W, y1: cy + BODY_HALF_H }, color };
+    };
+    for (const e of this.entities.values()) {
+      if (e.id === this.myId) continue;
+      // onde está desenhado agora (o desenho anda um pouco atrás do servidor): as linhas acompanham o bicho na tela
+      const feet = this.drawnFeet(e.id) ?? feetAt(e.x, e.y);
+      const corner = cornerAtFeet(feet.x, feet.y);
+      shapes.push(body(corner.x, corner.y, e.kind === 'monster' ? '#ffffff' : '#7fd4ff'));
+      if (e.kind !== 'monster') continue;
+      shapes.push({ circle: { x: corner.x + 0.5, y: corner.y + 0.5, r: SHOT_HIT_RADIUS }, color: '#ff5a4a' });
+      const aggro = this.debugPanel.aggroOf(e.type);
+      if (aggro > 0) {
+        shapes.push({ rect: { x0: corner.x - aggro, y0: corner.y - aggro, x1: corner.x + aggro + 1, y1: corner.y + aggro + 1 }, color: '#ffa63d', dash: true, label: `${e.name}: percebe a ${aggro} m` });
+      }
+    }
+    if (this.predicted) shapes.push(body(this.predicted.x, this.predicted.y, '#7dff9a'));
+    // o que bloqueia, perto de você (o mapa inteiro seria linha demais)
+    const me = this.myFeet();
+    const seen = new Set<SolidRect>();
+    for (let ty = Math.floor(me.y) - 12; ty <= Math.floor(me.y) + 12; ty++) {
+      for (let tx = Math.floor(me.x) - 12; tx <= Math.floor(me.x) + 12; tx++) {
+        for (const rect of this.map.solidsAt?.(tx, ty) ?? []) {
+          if (seen.has(rect)) continue;
+          seen.add(rect);
+          shapes.push({ rect, color: rect.shot ? '#f2d24b' : '#9aa0a6' });
+        }
+      }
+    }
+    return shapes;
   }
 
   /**

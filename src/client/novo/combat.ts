@@ -213,7 +213,54 @@ const FLASH_MS = 260;
 const MAX_LAYER_PIXELS = 1_300_000;
 const POOF_MS = 450;
 
+/**
+ * Uma forma do chão para o painel de ajustes (F1 › Hitboxes): círculo (o raio em que um tiro acerta) ou retângulo (a
+ * caixa do pé, o que bloqueia no mapa, a área em que o bicho percebe você), em metros.
+ */
+export type DebugShape =
+  | { circle: { x: number; y: number; r: number }; color: string; dash?: boolean; label?: string }
+  | { rect: { x0: number; y0: number; x1: number; y1: number }; color: string; dash?: boolean; label?: string };
+
 export class CombatLayer {
+  /** As formas de ajuste a desenhar a cada quadro (null = desligado: não custa nada). */
+  private debugShapes: (() => DebugShape[]) | null = null;
+
+  setDebug(shapes: (() => DebugShape[]) | null): void {
+    this.debugShapes = shapes;
+  }
+
+  /** As hitboxes do painel de ajustes: linhas no chão, por cima do desenho do mundo. */
+  private drawDebug(screen: (x: number, y: number, z?: number) => Point): void {
+    if (!this.debugShapes) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (const shape of this.debugShapes()) {
+      const points: Point[] = [];
+      if ('circle' in shape) {
+        const { x, y, r } = shape.circle;
+        for (let i = 0; i < 28; i++) points.push(screen(x + Math.cos((i / 28) * Math.PI * 2) * r, y + Math.sin((i / 28) * Math.PI * 2) * r));
+      } else {
+        const { x0, y0, x1, y1 } = shape.rect;
+        points.push(screen(x0, y0), screen(x1, y0), screen(x1, y1), screen(x0, y1));
+      }
+      ctx.strokeStyle = shape.color;
+      ctx.setLineDash(shape.dash ? [6, 5] : []);
+      ctx.beginPath();
+      points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.stroke();
+      if (shape.label) {
+        const top = points.reduce((a, b) => (b.y < a.y ? b : a));
+        ctx.fillStyle = shape.color;
+        ctx.fillText(shape.label, top.x, top.y - 4);
+      }
+    }
+    ctx.restore();
+  }
+
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private warnings: Warning[] = [];
@@ -663,6 +710,7 @@ export class CombatLayer {
     // quantos pixels tem 1 metro de altura aqui (para o tamanho das coisas acompanhar o zoom)
     const meter = (x: number, y: number) => Math.max(8, Math.abs(screen(x, y, 0).y - screen(x, y, 1).y));
 
+    this.drawDebug(screen);
     this.drawWarnings(now, screen);
     this.drawAim(now, screen, meter);
     this.drawRainGround(now, screen, meter);
@@ -685,7 +733,7 @@ export class CombatLayer {
 
   /** Tem algo para desenhar agora? (Sinal de missão só conta se o NPC estiver na tela.) */
   private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
-    if (bars || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
+    if (bars || this.debugShapes !== null || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
     if (this.rains.length > 0 || this.aim !== null || this.spiritEnds.length > 0 || this.marked.size > 0) return true;
     if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
