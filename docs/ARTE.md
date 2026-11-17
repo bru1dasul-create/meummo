@@ -1205,6 +1205,42 @@ e os matos da Clareira entraram no piloto; para o resto fiquei de mandar o "ante
   `node chao-foto.cjs <url> <saida.png> [x,y] [zoom] [largura,altura] [noite]` e `node chao-custo.cjs <url>
   [saida.json]` (no jogo ligado; `NOME` e `SENHA` do personagem de teste).
 
+### BIRIM, o personagem principal novo — FICHA ENTREGUE em 17/11, SÓ NO RAMO (falta o dono aprovar e decidir o passo 3)
+O dono pediu ("quero criar um personagem principal, na mesma pegada que é o que é hoje") e mandou a ficha dele (8
+ângulos ilustrados, uma foto e um modelo 3D de blocos) com um roteiro de 9 etapas. Escopo que ele aprovou ("Pode
+seguir"): **a ficha, sem mexer no jogo**. As referências dele **não entram no repositório** (a foto é de uma pessoa de
+verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D não foram executados.
+- **Como foi feito:** o Birim é um **segundo MODELO no mesmo esqueleto** do herói — `js/character/birim.js`
+  (`PD.models.birim`; `PD.models.appearance('birim')` devolve `{ paleta, modelo }`, que vai no lugar da aparência no
+  `renderer.draw`). Todas as animações e os encaixes de equipamento servem para ele sem mudar nada. Não é Blender nem
+  imagem de IA (custo zero). O `renderer.js` ganhou ganchos de modelo (`face`, `chestDetail`, `pelvisDetail`,
+  `limbDetail`, `extras`, `wear`, `headScale`, `headDrop`, `HEAD.eye.lid`, `eps` na touca) e **o herói continua
+  idêntico ponto a ponto** (prancha completa comparada antes × depois, e o `teste-render-morte` passando).
+- **Ainda NÃO está no jogo:** o `birim.js` não está no `view-scripts.json` nem no `arte.ts` de propósito (só as
+  ferramentas e a `prancha.html` carregam). Falta o dono decidir o passo 3 (ele substitui o herói de todo mundo ou
+  vira uma segunda opção na criação do personagem — recomendei a segunda) e a [estrutura] guardar a escolha.
+- **Ferramentas:** `node ferramentas/ficha.cjs saida.png --modelo birim [--graus 0,45] [--inclinacao 0|30]
+  [--vestir-teste cabeca,tronco,pernas,pes] [--sem bone,bermuda] [--so bermuda] [--medidas]` (uma direção ou a
+  prancha das oito) e `node ferramentas/ficha-exportar.cjs <pasta>` (o pacote: `TURNAROUND/` com a câmera reta,
+  `CAMERA_DO_JOGO/` a 30°, `MODELO_BASE/corpo_base` e `pecas/`, pranchas, teste de equipamento e `medidas.json`).
+  `node ferramentas/prancha.cjs '?zoom=1.6&modelo=birim' saida.png 1` = todas as animações com ele. A pose A e as
+  medidas ficam em `js/tools/ficha.js` (`PD.ficha`).
+- **Números do modelo (cm):** 172,5 de altura na pose A com o boné (~174 em pé), 7,0 cabeças, cabeça 24,8 × 19,8,
+  ombros 54,8, peito 40,4, cintura 31,2, braço 13,5, antebraço 12,4, panturrilha 14,4; pose A com o braço a 32°,
+  mão a 28,6 cm do quadril, 46 cm entre os tornozelos. Exportação: 2048×2048, 8 px/cm, pés em (1024, 1802).
+- **Lições:** (1) conferir contra a ficha **lado a lado** antes de entregar — a primeira versão tinha barba enorme,
+  sem pescoço, pálpebra grossa como sobrancelha e olhos altos demais, e eu só vi ao pôr as duas imagens juntas;
+  (2) a ficha técnica é com a **câmera reta (0°)**: com a câmera inclinada a cabeça cresce para cima e o pé de cá
+  desce, e as alturas deixam de bater entre as direções; (3) a linha da pálpebra do motor tem 1,15 cm fixo: numa
+  cabeça menor ela vira um borrão (`HEAD.eye.lid`); (4) a folga que pus na touca (`_capPoly`) mudou um quadro da
+  esquiva do herói a 45° — quem pegou foi o `teste-render-morte`, não a prancha: rodar os testes do protótipo
+  **sempre** (precisa de `@napi-rs/canvas`, que instalei numa pasta de rascunho com `NODE_PATH`; não é dependência
+  do projeto); (5) uma peça de tronco precisa cobrir a "ponte" do ombro: agora a ponte pega a cor da peça.
+- **O que ainda não está bom (dito ao dono):** é um redesenho no traço do jogo, mais simples e menos musculoso que
+  a ilustração; a tatuagem é um tribal meu, mais simples; cabeça ~2 cm mais larga que a da ficha; perfil do rosto
+  simples; nas diagonais de costas só aparece a costeleta; mãos e pés pouco definidos; 1,74 m e não 1,80 m (o
+  esqueleto é o do herói). Não foi testado dentro do jogo, nem com arma na mão.
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.

@@ -27,6 +27,7 @@
 <script src="js/character/renderer.js?v=guarda-impacto-r17"></script>
 <script src="js/character/equipment.js?v=guarda-impacto-r17"></script>
 <script src="js/character/classes.js?v=guarda-impacto-r17"></script>
+<script src="js/character/birim.js?v=guarda-impacto-r17"></script>
 <script src="js/guard.js?v=guarda-impacto-r17"></script>
 <script src="js/tools/sheet.js?v=guarda-impacto-r17"></script>
 <script>
@@ -36,6 +37,7 @@
     bones: document.getElementById('bones').checked || params.has('ossos'),
     zoom: parseFloat(params.get('zoom')) || undefined,
     only: params.get('linhas') ? params.get('linhas').split(',').map(Number) : undefined,
+    modelo: params.get('modelo') || undefined, // outro personagem no mesmo esqueleto (ex.: ?modelo=birim)
   });
   document.getElementById('bones').addEventListener('change', draw);
   try { draw(); window.__sheetReady = true; } catch (e) { window.__sheetError = String(e && e.stack || e); throw e; }
