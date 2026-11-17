@@ -176,7 +176,9 @@
       const faceAway = this.facing(rig.head.f) < 0;
 
       // ---- cabeça
-      const headCircles = MOD.HEAD.spheres.map((s) => this.circle(at(head, ...s.p), s.r * hs));
+      // (`apart`: uma esfera que o modelo desenha como peça à parte — o nariz do Birim — fica de fora do casco da cabeça,
+      // mas continua valendo para a superfície do rosto: os riscos assentam nela)
+      const headCircles = MOD.HEAD.spheres.filter((s) => !s.apart).map((s) => this.circle(at(head, ...s.p), s.r * hs));
       const headPoly = this.hull(headCircles);
       const headItem = { name: 'cabeca', key: headKey, group: 'cabeca', solid: true, anchor: true, segs: [{ poly: headPoly, circles: this._last, mat: PAL.skin, k: 0.24, decal: (seg) => (MOD.face ? MOD.face(this, rig, look, seg) : this._face(rig, look, seg)) }] };
       items.push(headItem);

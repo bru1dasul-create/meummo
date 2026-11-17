@@ -2,7 +2,8 @@
 // fundo transparente. Serve para conferir o desenho de perto e para exportar as 8 direções.
 // Uso: node ferramentas/ficha.cjs <saida.png | pasta> [opções]
 //   --modelo birim          o personagem (sem isto: o herói)
-//   --graus 0,45,90         as direções (0 = frente; 90 = lado direito dele); sem isto: as oito
+//   --graus 0,45,90         as direções (0 = frente; 90 = lado direito dele); sem isto: as oito. Vale qualquer ângulo
+//                           (ex.: 80,95,110, para conferir uma virada): os sem nome saem como g080, g095...
 //   --inclinacao 0          a câmera: 0 = reta, de frente (ficha clássica); 30 = a câmera do jogo
 //   --escala 4              pontos por centímetro (o personagem tem ~173 cm)
 //   --tamanho 1024x1280     o tamanho de cada quadro
@@ -63,7 +64,8 @@ function args(argv) {
   await page.goto('file://' + tmp);
   await page.waitForFunction(() => window.PD && window.PD.ficha, null, { timeout: 30000 });
   const out = await page.evaluate((o) => {
-    const dirs = PD.ficha.DIRECOES.filter((d) => !o.graus || o.graus.includes(d.graus));
+    // (qualquer ângulo vale, não só as oito direções com nome: serve para conferir o desenho no meio de uma virada)
+    const dirs = o.graus ? o.graus.map((g) => PD.ficha.DIRECOES.find((d) => d.graus === g) || { arquivo: 'g' + String(g).padStart(3, '0'), nome: g + ' graus', graus: g }) : PD.ficha.DIRECOES;
     const [W, H] = o.tamanho;
     const frames = [];
     let equipado;

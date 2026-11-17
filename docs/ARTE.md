@@ -1238,9 +1238,9 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
   do projeto); (5) uma peça de tronco precisa cobrir a "ponte" do ombro: agora a ponte pega a cor da peça.
 - **O que ainda não está bom (dito ao dono):** é um redesenho no traço do jogo, mais simples e menos musculoso que
   a ilustração; a tatuagem é parecida, não é a mesma (a da ficha é mais fechada); cabeça ~2 cm mais larga que a da
-  ficha; perfil do rosto simples; nas diagonais de costas só aparece a costeleta; a mão de lado, com os dedos uns
-  na frente dos outros, fica confusa; 1,74 m e não 1,80 m (o esqueleto é o do herói). Não foi testado dentro do
-  jogo, nem com arma na mão.
+  ficha; perfil do rosto simples e, nas diagonais de costas, só a costeleta (os dois refeitos na versão 3,
+  abaixo); a mão de lado, com os dedos uns na frente dos outros, fica confusa; 1,74 m e não 1,80 m (o esqueleto
+  é o do herói). Não foi testado dentro do jogo, nem com arma na mão.
 - **Versão 2 (17/11; o dono viu a 1 e pediu: "melhora a tatuagem, as mãos e os pés"), também só no ramo:**
   - *Tatuagem:* uma manga de **espirais de linha grossa** (`koru`, linha de ~1,4 cm, passo de 2 cm entre as voltas,
     bolinha no miolo) com espirais pequenas e ganchos (`hook`) nos vãos, montada por `sleeve` na pele desenrolada
@@ -1263,6 +1263,40 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
     entre membros é o `_depthFix`, não a chave: mexer na `key` da mão não adiantou, precisou da regra `over`;
     (9) para ver mão e pé de perto: `ficha.cjs <pasta> --modelo birim --escala 22 --tamanho 3000x4000 --ancora
     0.97 --solto` e recortar — na ficha de 8 px/cm os defeitos não aparecem.
+- **Versão 3 (17/11; o dono pediu: "melhora o perfil do rosto"), também só no ramo:**
+  - *O que estava errado:* a cabeça é um casco só, com o nariz dentro: de lado o perfil virava um polígono sem
+    nariz, a barba era uma tira no contorno do queixo e o olho de frente, visto de lado, virava um triângulo.
+  - *Nariz e lábio de baixo como peças:* as esferas do nariz têm `apart: true` em `HEAD.spheres` — ficam fora do
+    casco da cabeça (um filtro no `renderer.js`; o herói não tem nenhuma, continua idêntico) mas valem para o
+    `_faceAt`. Em `extras`, `narizBirim` e `labioBirim` são itens próprios: por cima da cabeça quando o rosto olha
+    para a câmera (o nariz por cima da barba também: vista de cima, a ponta passa na frente do bigode) e por trás
+    dela quando o rosto vira para lá (só aparece o que passa da silhueta). O risco do nariz de frente e de três
+    quartos é o `noseLine` (o lado de lá e a volta por baixo da ponta; visto de cima, só o lado); as narinas, o
+    `noseDetail`. Nariz reto: ~4 cm do olho à base, ponta ~1,2 cm à frente do bigode.
+  - *Sombra emendada (`faceShade`):* a peça por cima do rosto não tem sombra só dela — continua a meia-lua de
+    sombra da cabeça (a mesma conta do `paintConvex`, com o casco da cabeça deslocado para a luz) e ganha a
+    sombra fina do próprio lado conforme a cabeça vira.
+  - *Barba:* um pedaço novo na bochecha de baixo (da costeleta ao canto da boca), o queixo mais para a frente e
+    o bigode entre a base do nariz e o lábio. **A regra que tirava quase toda a barba assim que o rosto passava do
+    perfil saiu:** agora cada pedaço some quando o lado dele deixa de olhar para a câmera (bigode, queixo,
+    bochecha, mandíbula e, por último, a costeleta), e na diagonal de costas a barba desce pela mandíbula.
+  - *Olho de perfil (`sideEye`):* amêndoa com a ponta para a frente, íris estreita, pálpebra grossa e sobrancelha;
+    entra quando a cabeça vira mais de ~60° (`|turned| >= 0.86`). A boca ganhou o risco de perfil. A `glabela`
+    (esfera entre as sobrancelhas, dentro do casco) e a sobrancelha do lado de lá encurtando acabaram com a ponta
+    que "enrolava" vista de cima.
+  - *Ferramenta:* `ficha.cjs --graus` aceita **qualquer ângulo** (os sem nome saem como `g095.png`).
+  - *Conferência:* herói idêntico ponto a ponto, os 7 testes do protótipo, `npm run check`, o Birim em todas as
+    animações, e a cabeça olhada de perto nas duas câmeras em 0, 45, 70, 85, 90, 95, 105, 120, 135, 150, 180° e
+    no outro lado.
+  - *Lições:* (10) **medir a ficha com régua antes de corrigir no olho**: o nariz parecia de botão porque a ponta
+    estava ~1 cm alta; a primeira correção, no olho, virou um bico. Medido (olho → base do nariz): a ficha dá
+    3,5 cm de frente e 4,8 de perfil (as vistas dela não batem entre si) — fiquei no meio; (11) peça por cima de
+    outra da mesma cor, com sombra própria, parece **colada** do lado em que a de baixo está na sombra: a sombra
+    tem de continuar a da peça de baixo; e pintar só a sombra (a peça toda de sombra com o claro por cima deixa um
+    fio escuro na borda); (12) conferir **os ângulos do meio**, não só as oito direções: a regra da barba deixava
+    o queixo pelado a 95° e a prancha de oito nunca mostrou; (13) antes de esconder um desenho "estranho", olhar
+    a ficha do dono naquele ângulo: a barba pendurada na diagonal de costas, que eu tinha tirado na versão 1, é
+    o que a ficha mostra.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
