@@ -85,7 +85,12 @@ empurrão, Bicho (o escolhido), Dia e noite, Salvar (copiar valores = só o que 
 Contador de FPS e de bichos à vista (só aberto). `gmSpawn` procura chão livre mais longe (2, 4, 7 tiles) para a horda
 caber. Combinado com o dono: os ajustes valem para o servidor todo, e ele aceitou (só ele joga). **Etapa 2 feita (17/11):** `CombatLayer.setDebug` + `DebugShape` (círculo ou retângulo do chão), `debugShapes()` no
 motor (as contas do servidor: `SHOT_HIT_RADIUS` no meio do tile do bicho, a caixa do pé, o quadrado do `alcanceAgressao`
-— é distância de xadrez, por isso quadrado —, os `solidsAt` a até 12 m), `aggroOf` no painel. **Próximas etapas:** 3) game feel (tremor, pausa no impacto, partículas, flash: os
+— é distância de xadrez, por isso quadrado —, os `solidsAt` a até 12 m), `aggroOf` no painel. **Etapa 3 feita (17/11):** `CombatRules` ganhou `runSpeed`, `walkSpeed`, `playerHpFactor`, `playerDamageFactor`
+(`sliceDistance(..., speeds)`, `playerMaxHp(player, rules)`, `Player.damageFactor`; o `refreshCombat` acerta a vida e manda
+`stats` a quem joga); parte `jogador` nos números do combate (por último na lista, para não mudar a ordem das outras);
+protocolo **44**. Game feel em `feel.ts` (só da tela, `localStorage`): `startShake` + `CombatLayer.shake` (desloca o
+contêiner do jogo), `hitStopUntil` (o quadro não é redesenhado), `CombatLayer.burst` (faíscas), o clarão com liga/
+desliga; vale só para os SEUS acertos (`hit.by`). **Falta:** 3) game feel (tremor, pausa no impacto, partículas, flash: os
 números são do desenho, com a [arte]) e velocidade/vida do jogador; 4) câmera lenta.
 
 **16/11 — pedidos do dono:** poder de ADM "Sem recarga" (`gm` `nocd`, `Player.noCooldown`, `cooldownOf`: as habilidades

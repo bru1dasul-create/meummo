@@ -225,6 +225,46 @@ export class CombatLayer {
   /** As formas de ajuste a desenhar a cada quadro (null = desligado: não custa nada). */
   private debugShapes: (() => DebugShape[]) | null = null;
 
+  /** As faíscas de um acerto (game feel): saltam do bicho, caem e somem. */
+  private bursts: { x: number; y: number; start: number; n: number; seed: number }[] = [];
+
+  /** `n` faíscas saltando do ponto (x, y) do chão (o pé de quem levou o golpe). */
+  burst(x: number, y: number, n: number, now: number): void {
+    if (n > 0) this.bursts.push({ x, y, start: now, n: Math.min(60, Math.round(n)), seed: Math.floor(now) % 997 });
+  }
+
+  /** O tremor de tela (game feel): desloca o desenho do jogo (o cenário e esta camada); (0, 0) volta ao lugar. */
+  shake(x: number, y: number): void {
+    const box = this.canvas.parentElement;
+    if (!box) return;
+    const value = x === 0 && y === 0 ? '' : `translate(${x}px, ${y}px)`;
+    if (box.style.transform !== value) box.style.transform = value;
+  }
+
+  private drawBursts(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    if (this.bursts.length === 0) return;
+    const LIFE = 420;
+    this.bursts = this.bursts.filter((b) => now - b.start < LIFE);
+    const ctx = this.ctx;
+    for (const b of this.bursts) {
+      const t = (now - b.start) / LIFE;
+      const m = meter(b.x, b.y);
+      for (let i = 0; i < b.n; i++) {
+        // cada faísca tem o seu rumo e a sua força (sempre os mesmos enquanto ela vive)
+        const a = ((i * 137.5 + b.seed * 31) % 360) * (Math.PI / 180);
+        const reach = 0.35 + (((i * 53 + b.seed) % 100) / 100) * 0.75;
+        const up = 0.9 + (((i * 29 + b.seed) % 100) / 100) * 0.9;
+        const z = 0.8 + up * t - 2.6 * t * t; // sobe e cai
+        const p = screen(b.x + Math.cos(a) * reach * t, b.y + Math.sin(a) * reach * t, Math.max(0, z));
+        ctx.globalAlpha = 1 - t * t;
+        ctx.fillStyle = i % 3 === 0 ? '#fff6c8' : '#ffc94d';
+        const size = Math.max(1.5, m * 0.05 * (1 - t * 0.5));
+        ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
   setDebug(shapes: (() => DebugShape[]) | null): void {
     this.debugShapes = shapes;
   }
@@ -723,6 +763,7 @@ export class CombatLayer {
     this.drawPets(now, screen, meter);
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
+    this.drawBursts(now, screen, meter);
     this.drawShots(now, screen, meter);
     this.drawRainAir(now, screen, meter);
     this.drawSpirit(now, feetOf, screen, meter);
@@ -733,7 +774,7 @@ export class CombatLayer {
 
   /** Tem algo para desenhar agora? (Sinal de missão só conta se o NPC estiver na tela.) */
   private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
-    if (bars || this.debugShapes !== null || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
+    if (bars || this.debugShapes !== null || this.bursts.length > 0 || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
     if (this.rains.length > 0 || this.aim !== null || this.spiritEnds.length > 0 || this.marked.size > 0) return true;
     if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;

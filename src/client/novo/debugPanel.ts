@@ -6,6 +6,7 @@
 // Atenção: os ajustes valem para o servidor inteiro (todo mundo que estiver jogando), não só para quem mexe.
 
 import type { GmCommand } from '../../shared/protocol';
+import { changedFeel, DEFAULT_FEEL, FEEL_LIMITS, type Feel } from './feel';
 
 type FieldKind = 'inteiro' | 'numero' | 'faixa' | 'sim-nao' | 'texto' | 'texto-longo' | 'itens' | 'itens-qtd' | 'porcento';
 interface Field {
@@ -43,6 +44,9 @@ export interface DebugHooks {
   weapon(): string | null;
   /** Ligou ou desligou as hitboxes (as linhas no chão). */
   hitboxes(on: boolean): void;
+  /** O game feel desta tela (tremor, pausa no impacto, faíscas, clarão). */
+  feel(): Feel;
+  setFeel(feel: Feel): void;
 }
 
 const HEADERS = { 'content-type': 'application/json', 'x-meummo-admin': '1' };
@@ -267,6 +271,51 @@ export class DebugPanel {
     return row;
   }
 
+  /** Os sliders do game feel: não passam pelo servidor (valem só nesta tela, guardados no navegador), então é na hora. */
+  private feelRows(): HTMLElement[] {
+    const feel = this.hooks.feel();
+    const set = (change: Partial<Feel>) => {
+      this.hooks.setFeel({ ...this.hooks.feel(), ...change });
+      this.render();
+    };
+    const rows = (Object.keys(FEEL_LIMITS) as (keyof typeof FEEL_LIMITS)[]).map((key) => {
+      const limit = FEEL_LIMITS[key];
+      const row = document.createElement('div');
+      row.dataset.campo = `feel/${key}`;
+      Object.assign(row.style, { margin: '4px 0' });
+      const label = document.createElement('div');
+      const value = document.createElement('strong');
+      const changed = feel[key] !== DEFAULT_FEEL[key];
+      Object.assign(value.style, { color: changed ? '#ffb347' : '#f3e6cf', float: 'right' });
+      value.textContent = String(feel[key]);
+      label.append(limit.label, value);
+      const line = document.createElement('div');
+      Object.assign(line.style, { display: 'flex', alignItems: 'center', gap: '6px' });
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = '0';
+      input.max = String(limit.max);
+      input.step = String(limit.step);
+      input.value = String(feel[key]);
+      input.style.flex = '1';
+      input.addEventListener('input', () => {
+        value.textContent = input.value;
+        this.hooks.setFeel({ ...this.hooks.feel(), [key]: Number(input.value) }); // arrastando já vale (é só da tela)
+      });
+      input.addEventListener('change', () => this.render());
+      const reset = this.button('↺', () => set({ [key]: DEFAULT_FEEL[key] }));
+      reset.title = `Voltar ao padrão (${DEFAULT_FEEL[key]})`;
+      reset.disabled = !changed;
+      reset.style.opacity = changed ? '1' : '0.4';
+      line.append(input, reset);
+      row.append(label, line);
+      return row;
+    });
+    const flash = this.button(feel.hurtFlash ? 'Clarão ao tomar dano: ligado' : 'Clarão ao tomar dano: desligado', () => set({ hurtFlash: !feel.hurtFlash }));
+    flash.style.background = feel.hurtFlash ? '#2f6b3a' : '#3a2a18';
+    return [this.caption('Padrão = o jogo de hoje: sem tremor, sem pausa, sem faíscas.'), ...rows, flash];
+  }
+
   private rows(file: string, id: string): (HTMLElement | null)[] {
     const entry = this.entry(file, id);
     return entry ? entry.campos.map((f) => this.row(file, entry, f)) : [];
@@ -348,6 +397,7 @@ export class DebugPanel {
       this.section('Atalhos', powers, spawns, time),
       this.section(
         'Jogador',
+        ...this.rows('combate', 'jogador'),
         this.caption(weaponEntry ? `Arma na mão: ${weaponEntry.nome}` : 'Sem arma de tiro na mão: vale a pedra (abaixo)'),
         ...(weapon ? this.rows('itens', weapon) : []),
         this.caption('Puxada (pedra com carga) e atirar andando'),
@@ -356,6 +406,7 @@ export class DebugPanel {
       this.section('Defesa e empurrão', ...this.rows('combate', 'defesa'), ...this.rows('combate', 'recuo')),
       this.section(`Bicho: ${bicho?.nome ?? '—'}`, this.caption('Escolha o bicho em Atalhos. Vida nova vale para os que nascerem depois.'), ...this.rows('monstros', this.monster)),
       this.section('Dia e noite', ...this.rows('combate', 'noite')),
+      this.section('Game feel (só nesta tela)', ...this.feelRows()),
       this.section('Salvar', save),
     );
     this.paintPowers();
@@ -365,7 +416,9 @@ export class DebugPanel {
   private async copy(): Promise<void> {
     try {
       const res = await fetch('/admin/api/exportar', { cache: 'no-store' });
-      const text = JSON.stringify(await res.json(), null, 2);
+      const feel = changedFeel(this.hooks.feel());
+      const all = { ...((await res.json()) as Record<string, unknown>), ...(Object.keys(feel).length > 0 ? { gameFeel: feel } : {}) };
+      const text = JSON.stringify(all, null, 2);
       await navigator.clipboard.writeText(text);
       this.say('Copiado: é só colar no chat.');
     } catch (error) {
@@ -378,12 +431,14 @@ export class DebugPanel {
   private async resetAll(): Promise<void> {
     if (!this.data) return;
     const changed = this.data.grupos.flatMap((g) => g.lista.flatMap((e) => e.campos.filter((f) => f.ajustado).map((f) => ({ arquivo: g.arquivo, id: e.id, campo: f.campo }))));
-    if (changed.length === 0) return this.say('Nada foi mudado: já está tudo no padrão.');
+    const feelChanged = Object.keys(changedFeel(this.hooks.feel())).length > 0;
+    if (changed.length === 0 && !feelChanged) return this.say('Nada foi mudado: já está tudo no padrão.');
     if (performance.now() > this.confirmResetUntil) {
       this.confirmResetUntil = performance.now() + 4000;
-      return this.say(`São ${changed.length} ajustes (inclusive os feitos no painel). Clique de novo em "Resetar tudo" para confirmar.`, true);
+      return this.say(`São ${changed.length} ajustes (inclusive os feitos no painel)${feelChanged ? ' e o game feel' : ''}. Clique de novo em "Resetar tudo" para confirmar.`, true);
     }
     this.confirmResetUntil = 0;
+    this.hooks.setFeel({ ...DEFAULT_FEEL });
     let failed = 0;
     for (const change of changed) if (!(await this.post('/admin/api/padrao', change)).ok) failed += 1;
     this.say(failed ? `${failed} não voltaram ao padrão.` : `Tudo no padrão (${changed.length} ajustes desfeitos).`, failed > 0);

@@ -318,7 +318,7 @@ describe('números do combate pelo painel', () => {
     expect(tuning.combat).toEqual(DEFAULT_COMBAT_RULES); // de % e graus de volta aos números do jogo, sem perder nada
     const group = tuning.view().grupos.find((g) => g.arquivo === 'combate')!;
     expect(group.titulo).toBe('Combate');
-    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo', 'noite']);
+    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo', 'noite', 'jogador']);
     const value = (part: number, field: string) => group.lista[part]!.campos.find((c) => c.campo === field)!.valor;
     expect(group.lista[0]!.campos.map((c) => [c.campo, c.valor])).toEqual([
       ['tempoMs', 1100],
@@ -402,5 +402,47 @@ describe('números do combate pelo painel', () => {
     const hp = player.hp;
     (world as unknown as { damage(t: unknown, amount: number, by: number, now: number, travel?: number): void }).damage(player, 20, 0, clock.now(), Math.PI);
     expect(hp - player.hp).toBe(10);
+  });
+});
+
+describe('o jogador pelo painel de ajustes (17/11)', () => {
+  const empty = (): BaseData => ({ monstros: {}, itens: {}, npcs: {} });
+
+  it('velocidade, vida e dano mudam na hora para quem está jogando', () => {
+    const tuning = new Tuning(empty(), [], null);
+    const clock = new FakeClock();
+    const realm = new Realm([metricMap('praca')], { now: clock.now, random: () => 0, combat: tuning.combat });
+    tuning.onChange = (changed) => realm.tuningChanged(changed);
+    const conn = new FakeConn();
+    const joined = realm.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    const world = realm.worlds.get('praca')!;
+    const step = () => {
+      const before = player.fx;
+      world.requestWalk(player, player.lastSeq + 1, 0);
+      clock.advance(TICK_MS);
+      world.tick();
+      return player.fx - before;
+    };
+    expect(step()).toBeCloseTo(4.5 * 0.05, 9);
+    expect(tuning.set('combate', 'jogador', 'velocidadeCorrendo', 9)).toEqual({ ok: true });
+    expect(step()).toBeCloseTo(9 * 0.05, 9);
+    expect(conn.ofType('combat').at(-1)!.rules.runSpeed).toBe(9);
+    const hp = player.maxHp;
+    const damage = player.damage();
+    expect(tuning.set('combate', 'jogador', 'vidaJogadorPorcento', 200)).toEqual({ ok: true });
+    expect(tuning.set('combate', 'jogador', 'danoJogadorPorcento', 300)).toEqual({ ok: true });
+    expect(player.maxHp).toBe(hp * 2);
+    expect(player.damage()).toEqual([damage[0] * 3, damage[1] * 3]);
+    clock.advance(TICK_MS);
+    world.tick();
+    expect(conn.ofType('stats').at(-1)!.stats).toMatchObject({ maxHp: hp * 2, damage: [damage[0] * 3, damage[1] * 3] });
+    // de volta ao padrão: a vida que passou do máximo desce junto
+    player.hp = player.maxHp;
+    expect(tuning.reset('combate', 'jogador', 'vidaJogadorPorcento')).toEqual({ ok: true });
+    expect(player.maxHp).toBe(hp);
+    expect(player.hp).toBe(hp);
+    expect(tuning.set('combate', 'jogador', 'velocidadeCorrendo', 0.1).ok).toBe(false); // fora dos limites
   });
 });

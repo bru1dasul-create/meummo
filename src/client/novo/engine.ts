@@ -54,6 +54,7 @@ import { SkillsPanel } from './skillsPanel';
 import { skillIconUrl } from './skillIcons';
 import { dangerColor } from './danger';
 import { DebugPanel } from './debugPanel';
+import { loadFeel, saveFeel, shakeOffset, type Feel } from './feel';
 import { SkillTip, type SkillTipText } from './skillTip';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
@@ -198,6 +199,10 @@ class NewWorld implements NewWorldGame {
   /** O painel de ajustes dentro do jogo (F1; só administrador). */
   private debugPanel!: DebugPanel;
   private gmPowers = { god: false, nocd: false, fly: false };
+  /** O game feel (tremor, pausa no impacto, faíscas, clarão): só desta tela, guardado no navegador. */
+  private feel: Feel = loadFeel();
+  private shake = { start: 0, ms: 0, px: 0 };
+  private hitStopUntil = 0;
   /** O que estava equipado (para tocar o som de equipar quando muda). */
   private equippedBefore = '';
   /** Atalhos de comida (1) e remédio (2). */
@@ -428,6 +433,11 @@ class NewWorld implements NewWorldGame {
         return weapon && this.items.get(weapon)?.shot ? weapon : null;
       },
       hitboxes: (on) => this.combat.setDebug(on ? () => this.debugShapes() : null),
+      feel: () => this.feel,
+      setFeel: (feel) => {
+        this.feel = feel;
+        saveFeel(feel);
+      },
     });
     this.quick = new QuickSlots((n) => this.useQuick(n, performance.now()));
     this.guardButton = new GuardButton(
@@ -653,9 +663,17 @@ class NewWorld implements NewWorldGame {
     this.cuddleIfNear();
     this.checkNpcDistance();
     this.checkSafeArea();
-    this.view.frame(now);
-    this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
-    this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
+    // game feel: a pausa no impacto segura o desenho (o jogo continua; a imagem fica um instante) e o tremor desloca a tela
+    if (now >= this.hitStopUntil) {
+      this.view.frame(now);
+      this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
+      this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
+    }
+    if (this.shake.px > 0) {
+      const off = shakeOffset(now, this.shake.start, this.shake.ms, this.shake.px);
+      this.combat.shake(off.x, off.y);
+      if (now >= this.shake.start + this.shake.ms) this.shake.px = 0;
+    }
     this.actionBar.update(now);
     this.quick.update(now);
     this.fpsMeter?.tick(now, performance.now() - workStart);
@@ -695,9 +713,9 @@ class NewWorld implements NewWorldGame {
    * devagar × guardWalkFactor (o mesmo número do servidor).
    */
   private sliceOf(slow: boolean, guard = this.guardHeld, fly = this.gmFly): number {
-    if (fly) return sliceDistance(this.map.metric, false, this.stepMs) * GM_FLY_FACTOR;
-    if (guard) return sliceDistance(this.map.metric, true, this.stepMs) * this.rules.guardWalkFactor;
-    return sliceDistance(this.map.metric, slow, this.stepMs);
+    if (fly) return sliceDistance(this.map.metric, false, this.stepMs, this.rules) * GM_FLY_FACTOR;
+    if (guard) return sliceDistance(this.map.metric, true, this.stepMs, this.rules) * this.rules.guardWalkFactor;
+    return sliceDistance(this.map.metric, slow, this.stepMs, this.rules);
   }
 
   private readonly onKey = (event: KeyboardEvent) => {
@@ -2224,8 +2242,15 @@ class NewWorld implements NewWorldGame {
   }
 
   /** `blocked`: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou. */
-  private onHit(id: number, dmg: number, hp: number, blocked: 0 | 1 | 2 = 0): void {
+  private onHit(id: number, dmg: number, hp: number, blocked: 0 | 1 | 2 = 0, by = 0): void {
     const now = performance.now();
+    // game feel: o seu acerto num bicho treme a tela, segura o desenho um instante e solta faíscas (se ligados)
+    if (by === this.myId && id !== this.myId) {
+      this.startShake(this.feel.shakeHitPx, now);
+      if (this.feel.hitStopMs > 0) this.hitStopUntil = now + this.feel.hitStopMs;
+      const feet = this.feel.particles > 0 ? this.drawnFeet(id) : null;
+      if (feet) this.combat.burst(feet.x, feet.y, this.feel.particles, now);
+    }
     const e = this.entities.get(id);
     if (e) e.hp = hp;
     this.view?.action?.(id, blocked ? 'block' : 'hurt');
@@ -2246,13 +2271,22 @@ class NewWorld implements NewWorldGame {
         this.combat.floater(id, `-${dmg}`, BLOCKED_COLOR, now);
         return;
       }
-      this.feedback.hurtFlash();
+      if (this.feel.hurtFlash) this.feedback.hurtFlash();
+      this.startShake(this.feel.shakeHurtPx, now);
       this.sfx.play('hurt');
       this.combat.floater(id, `-${dmg}`, '#ff6b6b', now);
       return;
     }
     this.combat.floater(id, `-${dmg}`, blocked ? BLOCKED_COLOR : e?.kind === 'monster' ? '#ffe08a' : '#ffffff', now);
     if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : 'hit'); // a casca do tatu-bola soa como a defesa
+  }
+
+  /** Começa um tremor de tela (o mais forte ganha, se já tiver um). */
+  private startShake(px: number, now: number): void {
+    if (px <= 0 || this.feel.shakeMs <= 0) return;
+    const left = this.shake.px > 0 ? shakeOffset(now, this.shake.start, this.shake.ms, this.shake.px) : { x: 0, y: 0 };
+    if (Math.hypot(left.x, left.y) > px) return;
+    this.shake = { start: now, ms: this.feel.shakeMs, px };
   }
 
   private onDeath(id: number): void {
@@ -2664,7 +2698,7 @@ class NewWorld implements NewWorldGame {
         break;
       }
       case 'hit':
-        this.onHit(msg.id, msg.dmg, msg.hp, msg.blk ?? 0);
+        this.onHit(msg.id, msg.dmg, msg.hp, msg.blk ?? 0, msg.by);
         break;
       case 'energy': {
         const was = this.guardState;

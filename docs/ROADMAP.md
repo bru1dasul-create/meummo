@@ -790,8 +790,12 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   tiro acerta cada bicho (vermelho), a caixa do pé de todo mundo (branco; a sua, verde), a área em que o bicho que
   ataca sozinho percebe você (laranja tracejado, com a distância) e o que bloqueia perto (amarelo segura tiro, cinza
   só o passo). Continua na tela com o painel fechado
-- [ ] **[estrutura + arte]** Painel F1, etapa 3: game feel (tremor de tela, pausa no impacto, partículas por acerto,
-  flash ao tomar dano) e velocidade/vida do jogador como slider
+- [x] **[estrutura]** Painel F1, etapa 3 (17/11): **Jogador** — velocidade correndo e andando, vida máxima (%) e dano (%),
+  valendo na hora para quem está jogando (protocolo 44; também no painel, Combate › Jogador). **Game feel** (só da
+  tela, guardado no navegador): tremor ao acertar e ao tomar dano, duração do tremor, pausa no impacto, faíscas por
+  acerto e o clarão ao tomar dano (liga/desliga). O padrão é o jogo de antes (tudo em zero, clarão ligado)
+- [ ] **[arte]** (se o dono quiser) vestir as faíscas do acerto (hoje quadradinhos dourados, `CombatLayer.burst`) e o
+  tremor/pausa com o desenho dela
 - [ ] **[estrutura]** Painel F1, etapa 4: câmera lenta (0,25x / 0,5x / 1x)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje

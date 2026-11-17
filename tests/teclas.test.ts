@@ -153,3 +153,21 @@ describe('o painel de ajustes do jogo (F1): os sliders', () => {
     expect(sliderStep('numero', 5)).toBe(0.05);
   });
 });
+
+describe('game feel (o tremor, a pausa no impacto, as faíscas): só da tela', () => {
+  it('o padrão é o jogo de antes; o guardado é conferido; o tremor some aos poucos', async () => {
+    const { DEFAULT_FEEL, cleanFeel, changedFeel, shakeOffset } = await import('../src/client/novo/feel');
+    expect(DEFAULT_FEEL).toMatchObject({ shakeHitPx: 0, shakeHurtPx: 0, hitStopMs: 0, particles: 0, hurtFlash: true });
+    expect(cleanFeel(null)).toEqual(DEFAULT_FEEL);
+    expect(cleanFeel({ shakeHitPx: 999, hitStopMs: -5, particles: 'muitas', hurtFlash: false })).toMatchObject({ shakeHitPx: 20, hitStopMs: 0, particles: 0, hurtFlash: false });
+    expect(changedFeel({ ...DEFAULT_FEEL })).toEqual({});
+    expect(changedFeel({ ...DEFAULT_FEEL, shakeHitPx: 6 })).toEqual({ shakeHitPx: 6 });
+    // tremor de 10 px por 200 ms: no começo mexe até 10; no fim, parado
+    const far = (t: number) => Math.hypot(shakeOffset(t, 1000, 200, 10).x, shakeOffset(t, 1000, 200, 10).y);
+    expect(far(1010)).toBeGreaterThan(0);
+    expect(far(1010)).toBeLessThanOrEqual(15);
+    expect(far(1190)).toBeLessThan(far(1010) + 1);
+    expect(shakeOffset(1200, 1000, 200, 10)).toEqual({ x: 0, y: 0 });
+    expect(shakeOffset(1100, 1000, 200, 0)).toEqual({ x: 0, y: 0 });
+  });
+});
