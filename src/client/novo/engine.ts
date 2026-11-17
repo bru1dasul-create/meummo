@@ -52,6 +52,7 @@ import { KeysPanel } from './keysPanel';
 import { SkillsPanel } from './skillsPanel';
 import { skillIconUrl } from './skillIcons';
 import { dangerColor } from './danger';
+import { DebugPanel } from './debugPanel';
 import { SkillTip, type SkillTipText } from './skillTip';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
@@ -193,6 +194,9 @@ class NewWorld implements NewWorldGame {
   /** O seu dano de agora (menor e maior), para a dica das habilidades. */
   private myDamage: [number, number] = [0, 0];
   private skillTip!: SkillTip;
+  /** O painel de ajustes dentro do jogo (F1; só administrador). */
+  private debugPanel!: DebugPanel;
+  private gmPowers = { god: false, nocd: false, fly: false };
   /** O que estava equipado (para tocar o som de equipar quando muda). */
   private equippedBefore = '';
   /** Atalhos de comida (1) e remédio (2). */
@@ -407,6 +411,22 @@ class NewWorld implements NewWorldGame {
     this.skillsPanel.update(this.classes, this.hero, welcome.stats.level);
     this.skillsPanel.show();
     this.skillTip = new SkillTip((slot) => this.tipOf(slot as ActionSlot));
+    this.debugPanel = new DebugPanel({
+      isAdmin: () => this.gmPanel.admin,
+      gm: (cmd) => {
+        if (cmd.do === 'fly') {
+          this.gmFly = cmd.on; // como no menu ADM: os próximos passos já saem voando
+          this.clearRoute();
+        }
+        this.conn.send({ t: 'gm', cmd });
+      },
+      powers: () => this.gmPowers,
+      monstersInView: () => [...this.entities.values()].filter((e) => e.kind === 'monster').length,
+      weapon: () => {
+        const weapon = this.lastInv.equipped.weapon;
+        return weapon && this.items.get(weapon)?.shot ? weapon : null;
+      },
+    });
     this.quick = new QuickSlots((n) => this.useQuick(n, performance.now()));
     this.guardButton = new GuardButton(
       () => this.startGuard(performance.now()),
@@ -586,6 +606,7 @@ class NewWorld implements NewWorldGame {
     this.keysPanel.destroy();
     this.skillsPanel.destroy();
     this.skillTip.destroy();
+    this.debugPanel.destroy();
 
     this.mapWindow.destroy();
     this.minimap.destroy();
@@ -2618,6 +2639,7 @@ class NewWorld implements NewWorldGame {
       case 'gm':
         this.gmFly = msg.admin && msg.fly;
         this.gmNoCd = msg.admin && msg.nocd;
+        this.gmPowers = { god: msg.admin && msg.god, nocd: msg.admin && msg.nocd, fly: msg.admin && msg.fly };
         if (!msg.admin) this.gmTeleport = false;
         this.gmPanel.set(msg);
         break;

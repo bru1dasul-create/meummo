@@ -261,6 +261,15 @@ onde estava quando o servidor reinicia). Escurece devagar no fim do dia e clarei
 pela coruja. Os números mudam no painel (Combate → Dia e noite). Para testar sem esperar: menu ADM no jogo (tecla G)
 → **Virar dia** / **Virar tarde** (o começo do anoitecer: o pôr do sol em 1 minuto) / **Virar noite**.
 
+## Painel de ajustes no jogo (F1)
+
+Para acertar os números jogando, sem trocar de aba: com um personagem administrador, no computador onde o jogo está
+ligado, aperte **F1**. Abre um painel no canto com **sliders** (a arma na mão, a puxada, a defesa, o bicho escolhido,
+dia e noite): soltou o slider, já vale; o **↺** volta ao padrão. Tem também os atalhos (modo deus, sem recarga, criar
+1, 10 ou uma horda de 50 bichos, derrubar os de perto, virar dia/tarde/noite), o contador de FPS e de bichos à vista,
+**Copiar valores** (copia só o que você mudou, para colar no chat e virar o padrão) e **Resetar tudo**. É o mesmo
+lugar onde o painel (`/admin`) guarda: o que muda num aparece no outro. **Vale para o servidor todo**, não só para você.
+
 ## Mapa
 
 O mapa mostra só o que você já andou: cada pedaço do mapa (quadradinhos de 4 m) a até 12 m de onde você passa fica

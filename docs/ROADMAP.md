@@ -775,6 +775,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   hora; em troca, a primeira vez num zoom novo leva um pouco mais para ficar toda nítida (1,0 s contra 0,75 s na
   roda). Em celular e tablet o jogo guarda um zoom só (memória). Detalhes, limites e as ferramentas de medir
   (`prototipos/pindorama-25d/ferramentas/zoom-*.cjs`) em docs/ARTE.md
+- [x] **[estrutura]** Painel de ajustes dentro do jogo, etapa 1 (17/11, pedido do dono): tecla **F1** (só administrador,
+  no computador do servidor): sliders da arma, da puxada, da defesa, do bicho escolhido e do dia e noite, valendo na
+  hora, com o ↺ de cada um; atalhos (modo deus, sem recarga, +1/+10/horda de 50, derrubar, dia/tarde/noite); FPS e
+  bichos à vista; copiar valores e resetar tudo
+- [ ] **[estrutura]** Painel F1, etapa 2: hitboxes e raio de percepção dos bichos por cima do desenho
+- [ ] **[estrutura + arte]** Painel F1, etapa 3: game feel (tremor de tela, pausa no impacto, partículas por acerto,
+  flash ao tomar dano) e velocidade/vida do jogador como slider
+- [ ] **[estrutura]** Painel F1, etapa 4: câmera lenta (0,25x / 0,5x / 1x)
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

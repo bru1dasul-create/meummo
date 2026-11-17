@@ -75,6 +75,18 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**17/11 — painel de ajustes dentro do jogo, etapa 1 (pedido do dono: "painel de debug", adaptado; "pode seguir"):**
+`src/client/novo/debugPanel.ts`, tecla **F1**, só administrador, no canto direito. Não tem servidor novo: usa as portas
+do painel (`/admin/api/dados`, `/ajustar`, `/padrao`, `/exportar`), então só funciona no computador do servidor e tudo
+fica em `saves/ajustes.json` e nos registros. O `vite.config.ts` ganhou o repasse de `/admin` (o dono joga pelo `npm run
+dev`, porta 5173), sem trocar o "host": de outro aparelho da rede continua barrado. Seções: Atalhos (modo deus, sem
+recarga, voar, curar, criar +1/+10/horda 50, derrubar, dia/tarde/noite), Jogador (a arma na mão + a puxada), Defesa e
+empurrão, Bicho (o escolhido), Dia e noite, Salvar (copiar valores = só o que mudou; resetar tudo, com 2 cliques).
+Contador de FPS e de bichos à vista (só aberto). `gmSpawn` procura chão livre mais longe (2, 4, 7 tiles) para a horda
+caber. Combinado com o dono: os ajustes valem para o servidor todo, e ele aceitou (só ele joga). **Próximas etapas:**
+2) hitboxes e raio de percepção por cima do desenho; 3) game feel (tremor, pausa no impacto, partículas, flash: os
+números são do desenho, com a [arte]) e velocidade/vida do jogador; 4) câmera lenta.
+
 **16/11 — pedidos do dono:** poder de ADM "Sem recarga" (`gm` `nocd`, `Player.noCooldown`, `cooldownOf`: as habilidades
 da classe e o Fôlego; a esquiva e o tiro continuam com a recarga deles), protocolo **43** (`nocd` no estado `gm`). A dica
 das habilidades com cores (marcas `[d]` dano vermelho, `[t]` tempo azul, `[a]` área dourado, `[b]` bônus verde em

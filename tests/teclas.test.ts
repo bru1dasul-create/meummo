@@ -139,3 +139,17 @@ describe('os Olhos de Gavião: a cor do perigo de cada bicho', () => {
     expect(dangerColor(12, 14)).toBe('#7bd389');
   });
 });
+
+describe('o painel de ajustes do jogo (F1): os sliders', () => {
+  it('o slider vai até umas 4 vezes o maior entre o padrão e o valor, num número redondo', async () => {
+    const { sliderMax, sliderStep } = await import('../src/client/novo/debugPanel');
+    expect(sliderMax(30, 30)).toBe(200); // a vida do quati: até 200
+    expect(sliderMax(1100, 1100)).toBe(5000); // o tempo da puxada, em ms
+    expect(sliderMax(0, 0)).toBe(5);
+    expect(sliderMax(900, 30)).toBe(5000); // já ajustado para cima: o slider acompanha
+    expect(sliderStep('inteiro', 200)).toBe(1);
+    expect(sliderStep('inteiro', 5000)).toBe(10);
+    expect(sliderStep('numero', 50)).toBe(0.1);
+    expect(sliderStep('numero', 5)).toBe(0.05);
+  });
+});

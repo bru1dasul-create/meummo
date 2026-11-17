@@ -800,9 +800,13 @@ export class World {
     const made = [...this.monsters.values()].filter((m) => m.zone.temporary).length;
     const count = Math.min(n, GM_SPAWN_MAX, GM_SPAWN_MAP_MAX - made);
     if (count <= 0) return `já tem ${made} monstros criados neste mapa: derrube alguns antes.`;
-    const zone: ZoneState = { zone: { monster: def.id, x: player.x - 2, y: player.y - 2, w: 5, h: 5, count }, def, alive: new Set(), respawnAt: [], temporary: true };
+    // em volta do administrador; sem chão livre (a horda do painel de ajustes pede vários de uma vez), procura mais longe
     let spawned = 0;
-    for (let i = 0; i < count; i++) if (this.spawnMonster(zone)) spawned++;
+    for (const reach of [2, 4, 7]) {
+      const zone: ZoneState = { zone: { monster: def.id, x: player.x - reach, y: player.y - reach, w: reach * 2 + 1, h: reach * 2 + 1, count }, def, alive: new Set(), respawnAt: [], temporary: true };
+      for (let i = spawned; i < count; i++) if (this.spawnMonster(zone)) spawned++;
+      if (spawned >= count) break;
+    }
     return spawned > 0 ? `criei ${spawned} ${def.name} (não renascem).` : 'não achei chão livre aqui perto.';
   }
 

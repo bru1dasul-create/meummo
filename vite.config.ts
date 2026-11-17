@@ -27,6 +27,9 @@ export default defineConfig({
     open: process.env.ABRIR_NAVEGADOR === '1', // o jogar.bat liga isso para abrir o navegador sozinho
     proxy: {
       '/ws': { target: 'ws://localhost:3000', ws: true },
+      // o painel de ajustes dentro do jogo (F1) fala com o painel do servidor. Sem trocar o "host" do pedido: quem abrir
+      // o jogo de outro aparelho da rede continua barrado pelas travas do painel (só o próprio computador)
+      '/admin': { target: 'http://localhost:3000' },
     },
   },
 });
