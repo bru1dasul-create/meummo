@@ -10,6 +10,7 @@
 //   pés de quem ele acerta;
 // - mirar é sempre do seu pé até o pé do alvo (ou até o ponto do chão apontado).
 
+import { gameNow } from './gameClock';
 import type { CombatRules } from '../../shared/combatRules';
 import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
@@ -213,7 +214,94 @@ const FLASH_MS = 260;
 const MAX_LAYER_PIXELS = 1_300_000;
 const POOF_MS = 450;
 
+/**
+ * Uma forma do chão para o painel de ajustes (F1 › Hitboxes): círculo (o raio em que um tiro acerta) ou retângulo (a
+ * caixa do pé, o que bloqueia no mapa, a área em que o bicho percebe você), em metros.
+ */
+export type DebugShape =
+  | { circle: { x: number; y: number; r: number }; color: string; dash?: boolean; label?: string }
+  | { rect: { x0: number; y0: number; x1: number; y1: number }; color: string; dash?: boolean; label?: string };
+
 export class CombatLayer {
+  /** As formas de ajuste a desenhar a cada quadro (null = desligado: não custa nada). */
+  private debugShapes: (() => DebugShape[]) | null = null;
+
+  /** As faíscas de um acerto (game feel): saltam do bicho, caem e somem. */
+  private bursts: { x: number; y: number; start: number; n: number; seed: number }[] = [];
+
+  /** `n` faíscas saltando do ponto (x, y) do chão (o pé de quem levou o golpe). */
+  burst(x: number, y: number, n: number, now: number): void {
+    if (n > 0) this.bursts.push({ x, y, start: now, n: Math.min(60, Math.round(n)), seed: Math.floor(now) % 997 });
+  }
+
+  /** O tremor de tela (game feel): desloca o desenho do jogo (o cenário e esta camada); (0, 0) volta ao lugar. */
+  shake(x: number, y: number): void {
+    const box = this.canvas.parentElement;
+    if (!box) return;
+    const value = x === 0 && y === 0 ? '' : `translate(${x}px, ${y}px)`;
+    if (box.style.transform !== value) box.style.transform = value;
+  }
+
+  private drawBursts(now: number, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
+    if (this.bursts.length === 0) return;
+    const LIFE = 420;
+    this.bursts = this.bursts.filter((b) => now - b.start < LIFE);
+    const ctx = this.ctx;
+    for (const b of this.bursts) {
+      const t = (now - b.start) / LIFE;
+      const m = meter(b.x, b.y);
+      for (let i = 0; i < b.n; i++) {
+        // cada faísca tem o seu rumo e a sua força (sempre os mesmos enquanto ela vive)
+        const a = ((i * 137.5 + b.seed * 31) % 360) * (Math.PI / 180);
+        const reach = 0.35 + (((i * 53 + b.seed) % 100) / 100) * 0.75;
+        const up = 0.9 + (((i * 29 + b.seed) % 100) / 100) * 0.9;
+        const z = 0.8 + up * t - 2.6 * t * t; // sobe e cai
+        const p = screen(b.x + Math.cos(a) * reach * t, b.y + Math.sin(a) * reach * t, Math.max(0, z));
+        ctx.globalAlpha = 1 - t * t;
+        ctx.fillStyle = i % 3 === 0 ? '#fff6c8' : '#ffc94d';
+        const size = Math.max(1.5, m * 0.05 * (1 - t * 0.5));
+        ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  setDebug(shapes: (() => DebugShape[]) | null): void {
+    this.debugShapes = shapes;
+  }
+
+  /** As hitboxes do painel de ajustes: linhas no chão, por cima do desenho do mundo. */
+  private drawDebug(screen: (x: number, y: number, z?: number) => Point): void {
+    if (!this.debugShapes) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (const shape of this.debugShapes()) {
+      const points: Point[] = [];
+      if ('circle' in shape) {
+        const { x, y, r } = shape.circle;
+        for (let i = 0; i < 28; i++) points.push(screen(x + Math.cos((i / 28) * Math.PI * 2) * r, y + Math.sin((i / 28) * Math.PI * 2) * r));
+      } else {
+        const { x0, y0, x1, y1 } = shape.rect;
+        points.push(screen(x0, y0), screen(x1, y0), screen(x1, y1), screen(x0, y1));
+      }
+      ctx.strokeStyle = shape.color;
+      ctx.setLineDash(shape.dash ? [6, 5] : []);
+      ctx.beginPath();
+      points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.stroke();
+      if (shape.label) {
+        const top = points.reduce((a, b) => (b.y < a.y ? b : a));
+        ctx.fillStyle = shape.color;
+        ctx.fillText(shape.label, top.x, top.y - 4);
+      }
+    }
+    ctx.restore();
+  }
+
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private warnings: Warning[] = [];
@@ -486,7 +574,7 @@ export class CombatLayer {
       return; // o drawShots crava quando o desenho chegar lá
     }
     if (shot && hit === 0) {
-      const now = performance.now();
+      const now = gameNow();
       const traveled = Math.min(shot.range, (shot.speed * (now - shot.start)) / 1000);
       const feet = shotFeet(shot.x + shot.dx * traveled, shot.y + shot.dy * traveled);
       ended(shot.kind, feet.x, feet.y, Math.atan2(shot.dy, shot.dx), now);
@@ -565,7 +653,7 @@ export class CombatLayer {
   /** Ouro (ou item) no chão no tile (x, y), até `until`. */
   /** Ouro ou item no chão (x, y: o tile, como o servidor manda). De novo o mesmo (o resto que não coube): sem cair outra vez. */
   addDrop(id: number, x: number, y: number, gold: boolean, until: number, item?: DropItem): void {
-    const born = this.drops.get(id)?.born ?? performance.now();
+    const born = this.drops.get(id)?.born ?? gameNow();
     this.drops.set(id, { x, y, gold, until, born, ...(item ? { item } : {}) });
   }
 
@@ -663,6 +751,7 @@ export class CombatLayer {
     // quantos pixels tem 1 metro de altura aqui (para o tamanho das coisas acompanhar o zoom)
     const meter = (x: number, y: number) => Math.max(8, Math.abs(screen(x, y, 0).y - screen(x, y, 1).y));
 
+    this.drawDebug(screen);
     this.drawWarnings(now, screen);
     this.drawAim(now, screen, meter);
     this.drawRainGround(now, screen, meter);
@@ -675,6 +764,7 @@ export class CombatLayer {
     this.drawPets(now, screen, meter);
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
+    this.drawBursts(now, screen, meter);
     this.drawShots(now, screen, meter);
     this.drawRainAir(now, screen, meter);
     this.drawSpirit(now, feetOf, screen, meter);
@@ -685,13 +775,13 @@ export class CombatLayer {
 
   /** Tem algo para desenhar agora? (Sinal de missão só conta se o NPC estiver na tela.) */
   private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
-    if (bars || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
+    if (bars || this.debugShapes !== null || this.bursts.length > 0 || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
     if (this.rains.length > 0 || this.aim !== null || this.spiritEnds.length > 0 || this.marked.size > 0) return true;
     if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
     for (const pet of this.pets.values()) if (this.petVisible(pet)) return true;
-    if (landedBusy(performance.now())) return true; // flecha cravada no chão ainda à vista
+    if (landedBusy(gameNow())) return true; // flecha cravada no chão ainda à vista
     for (const id of this.marks.keys()) {
       const feet = feetOf(id);
       if (!feet) continue;

@@ -131,13 +131,16 @@ export function walkDistance(sliceMs: number, stepMs: number): number {
   return sliceMs / stepMs;
 }
 
+/** As velocidades de sempre (o painel de ajustes pode mudar: vêm dos números do combate). */
+const DEFAULT_SPEEDS = { runSpeed: RUN_SPEED, walkSpeed: WALK_SPEED };
+
 /**
  * Quanto um pedaço de caminhada anda. No mundo novo (`metric`), correndo (RUN_SPEED) ou, devagar, andando
  * (WALK_SPEED); no jogo de hoje, sempre no ritmo de `stepMs` por tile.
  */
-export function sliceDistance(metric: boolean, slow: boolean, stepMs: number): number {
+export function sliceDistance(metric: boolean, slow: boolean, stepMs: number, speeds: { runSpeed: number; walkSpeed: number } = DEFAULT_SPEEDS): number {
   if (!metric) return walkDistance(WALK_SLICE_MS, stepMs);
-  return ((slow ? WALK_SPEED : RUN_SPEED) * WALK_SLICE_MS) / 1000;
+  return ((slow ? speeds.walkSpeed : speeds.runSpeed) * WALK_SLICE_MS) / 1000;
 }
 
 /** O tile bloqueia o pé inteiro? (Mapa sem o movimento livre exato: o tile que não é andável.) */

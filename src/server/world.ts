@@ -137,6 +137,8 @@ export interface WorldLinks {
 export interface WorldOptions {
   /** Relógio em milissegundos (nos testes usamos um relógio falso). */
   now?: () => number;
+  /** Câmera lenta (painel de ajustes): o ritmo de agora e como mudar (o relógio é o do servidor inteiro). Sem isto, não tem. */
+  pace?: { get: () => number; set: (scale: number) => void };
   random?: () => number;
   log?: (message: string) => void;
   /** Tipos de monstro (de data/monsters.json). */
@@ -277,6 +279,7 @@ export class World {
   private readonly monsterAt = new Map<number, number>();
   private lastTickAt: number;
   private readonly now: () => number;
+  private readonly pace: { get: () => number; set: (scale: number) => void } | null;
   private readonly random: () => number;
   private readonly log: (message: string) => void;
   private readonly saver: CharacterSaver | null;
@@ -288,6 +291,7 @@ export class World {
     options: WorldOptions = {},
   ) {
     this.now = options.now ?? (() => performance.now());
+    this.pace = options.pace ?? null;
     this.random = options.random ?? Math.random;
     this.log = options.log ?? (() => {});
     this.saver = options.saver ?? null;
@@ -461,7 +465,8 @@ export class World {
     player.inventory = bag.inventory;
     if (bag.dropped.length > 0) this.log(`aviso: ${name} tinha itens que não existem mais em data/items.json: ${bag.dropped.join(', ')}`);
     player.bonus = player.inventory.bonus();
-    player.maxHp = playerMaxHp(player);
+    player.damageFactor = this.combat.playerDamageFactor;
+    player.maxHp = playerMaxHp(player, this.combat);
     player.hp = player.maxHp;
     if (saved) this.restore(player, saved, savedSpot !== null);
     player.admin = saved?.admin === true;
@@ -497,6 +502,7 @@ export class World {
       },
       { t: 'sys', text: `${greeting} Você está em: ${this.map.name}.` },
       ...(player.admin ? [this.gmState(player)] : []),
+      ...(this.pace && this.pace.get() !== 1 ? [{ t: 'pace' as const, scale: this.pace.get() }] : []),
     ]);
     this.links.announce({ t: 'sys', text: `${name} entrou no mundo.` }, player.id);
     this.links.announce({ t: 'online', n: this.links.online() });
@@ -534,6 +540,7 @@ export class World {
       player.lastDamagedAt = -Infinity;
       this.refillEnergy(player, now);
     }
+    player.damageFactor = this.combat.playerDamageFactor;
     this.dropGuard(player); // mapa novo: a defesa começa baixada (o navegador também solta)
     player.hawkUntil = 0; // e os Olhos de Gavião acabam (o mapa novo começa sem o destaque; a recarga continua)
     player.armed = null; // e a flecha especial sai do arco
@@ -562,6 +569,7 @@ export class World {
         ...this.exploredField(player),
       },
       ...(player.admin ? [this.gmState(player)] : []),
+      ...(this.pace && this.pace.get() !== 1 ? [{ t: 'pace' as const, scale: this.pace.get() }] : []),
     ]);
     this.saveCharacters([player]);
     this.log(`${player.name} foi para ${this.map.name}`);
@@ -602,7 +610,7 @@ export class World {
     }
     player.level = level;
     player.xp = level >= MAX_LEVEL ? 0 : xp;
-    player.maxHp = playerMaxHp(player);
+    player.maxHp = playerMaxHp(player, this.combat);
     // Volta com a vida que tinha (sair do jogo não cura); na vila (ou sem vida salva), vida cheia.
     player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
     if (samePlace) player.dir = saved.dir;
@@ -742,6 +750,15 @@ export class World {
         player.outbox.push(this.gmState(player));
         say(cmd.on ? 'voando (atravessa tudo).' : 'pousou.');
         return;
+      case 'pace': {
+        const pace = this.pace;
+        if (!pace) return say('câmera lenta não está ligada neste servidor.');
+        pace.set(cmd.scale);
+        this.links.announce({ t: 'pace', scale: cmd.scale }); // todos os mapas: o relógio é um só
+        say(cmd.scale === 1 ? 'ritmo normal.' : `câmera lenta: ${cmd.scale}x (o jogo inteiro, para todo mundo).`);
+        this.log(`ADM ${player.name}: ritmo ${cmd.scale}x`);
+        return;
+      }
       case 'nocd':
         player.noCooldown = cmd.on;
         if (cmd.on) {
@@ -1177,7 +1194,7 @@ export class World {
   /** Os equipamentos mudaram: recalcula vida máxima e dano e avisa quem precisa saber. */
   private gearChanged(player: Player): void {
     player.bonus = player.inventory.bonus();
-    const maxHp = playerMaxHp(player);
+    const maxHp = playerMaxHp(player, this.combat);
     if (maxHp !== player.maxHp) {
       player.maxHp = maxHp;
       player.hp = Math.min(player.hp, maxHp);
@@ -1317,7 +1334,7 @@ export class World {
   adminSetLevel(player: Player, level: number): void {
     player.level = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
     player.xp = 0;
-    player.maxHp = playerMaxHp(player);
+    player.maxHp = playerMaxHp(player, this.combat);
     if (!player.dead) player.hp = player.maxHp;
     player.statsDirty = true;
     // nível menor: os pontos que passaram do que o nível dá voltam para gastar de novo
@@ -1465,7 +1482,7 @@ export class World {
     const items = [...this.items.values()];
     for (const player of this.players.values()) {
       player.bonus = player.inventory.bonus();
-      const maxHp = playerMaxHp(player);
+      const maxHp = playerMaxHp(player, this.combat);
       if (maxHp !== player.maxHp) {
         player.maxHp = maxHp;
         player.hp = Math.min(player.hp, maxHp);
@@ -1506,7 +1523,18 @@ export class World {
   refreshCombat(): void {
     const rules = { ...this.combat };
     const at = Math.round(this.dayNight.position()); // o dia ou a noite pode ter mudado de tamanho
-    for (const player of this.players.values()) player.outbox.push({ t: 'combat', rules }, { t: 'time', at });
+    for (const player of this.players.values()) {
+      player.outbox.push({ t: 'combat', rules }, { t: 'time', at });
+      // a vida e o dano dos jogadores podem ter mudado (painel de ajustes): acerta quem está jogando, na hora
+      player.damageFactor = this.combat.playerDamageFactor;
+      const maxHp = playerMaxHp(player, this.combat);
+      if (maxHp !== player.maxHp) {
+        player.maxHp = maxHp;
+        player.hp = Math.min(player.hp, maxHp);
+        this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp });
+      }
+      player.outbox.push({ t: 'stats', stats: player.stats() });
+    }
     // talvez tenha virado (ou a força da noite mudou): os bichos acompanham
     const night = this.dayNight.isNight();
     if (night !== this.night) {
@@ -1922,9 +1950,9 @@ export class World {
 
   /** Quanto anda um pedaço da fila: correndo, devagar, ou devagar defendendo (× guardWalkFactor). */
   private walkDistance(input: { slow: boolean; guard: boolean; fly: boolean }): number {
-    if (input.fly) return sliceDistance(this.map.metric, false, STEP_MS) * GM_FLY_FACTOR;
-    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS) * this.combat.guardWalkFactor;
-    return sliceDistance(this.map.metric, input.slow, STEP_MS);
+    if (input.fly) return sliceDistance(this.map.metric, false, STEP_MS, this.combat) * GM_FLY_FACTOR;
+    if (input.guard) return sliceDistance(this.map.metric, true, STEP_MS, this.combat) * this.combat.guardWalkFactor;
+    return sliceDistance(this.map.metric, input.slow, STEP_MS, this.combat);
   }
 
   /**
@@ -2065,7 +2093,7 @@ export class World {
     }
     if (player.level >= MAX_LEVEL) player.xp = 0;
     if (leveled) {
-      player.maxHp = playerMaxHp(player);
+      player.maxHp = playerMaxHp(player, this.combat);
       player.hp = player.maxHp;
       player.heroDirty = true; // ganhou pontos de habilidade
       this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
@@ -2904,8 +2932,8 @@ export class World {
 }
 
 /** Vida máxima: a do nível mais a dos equipamentos. */
-function playerMaxHp(player: Player): number {
-  return maxHpFor(player.level) + player.bonus.hp;
+function playerMaxHp(player: Player, rules: Pick<CombatRules, 'playerHpFactor'>): number {
+  return Math.max(1, Math.round((maxHpFor(player.level) + player.bonus.hp) * rules.playerHpFactor));
 }
 
 /** O que fica salvo de um jogador. */

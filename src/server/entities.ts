@@ -123,6 +123,8 @@ export class Player {
   dashReadyAt = 0;
   jumpReadyAt = 0;
   /** Quando pulou e quando rolou pela última vez (um não sai no meio do outro). */
+  /** O dano dos jogadores × isto (número do combate; o mundo acerta ao entrar e quando o painel muda). */
+  damageFactor = 1;
   jumpAt = -Infinity;
   dashAt = -Infinity;
   readonly skillReadyAt: number[] = SKILLS.map(() => 0);
@@ -205,7 +207,8 @@ export class Player {
   /** Dano do estilingue (a Bordunada multiplica isto), já com os equipamentos. */
   damage(): [number, number] {
     const [min, max] = damageRange(this.level);
-    return [min + this.bonus.damage, max + this.bonus.damage];
+    const f = this.damageFactor;
+    return f === 1 ? [min + this.bonus.damage, max + this.bonus.damage] : [Math.max(1, Math.round((min + this.bonus.damage) * f)), Math.max(1, Math.round((max + this.bonus.damage) * f))];
   }
 
   stats(): PlayerStats {

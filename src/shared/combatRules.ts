@@ -22,7 +22,9 @@ import {
   GUARD_REGEN_DELAY_MS,
   GUARD_REGEN_PER_S,
   GUARD_WALK_FACTOR,
+  RUN_SPEED,
   SHOT_SPREAD_RUN_DEG,
+  WALK_SPEED,
   SHOT_SPREAD_WALK_DEG,
   NIGHT_DAMAGE_FACTOR,
   NIGHT_GOLD_FACTOR,
@@ -58,6 +60,11 @@ export interface CombatRules {
   guardRearmEnergy: number;
   /** Andando com a defesa: × o andar devagar. */
   guardWalkFactor: number;
+  /** O jogador (painel de ajustes): a velocidade correndo e andando devagar (m/s, no mundo novo) e a vida e o dano × estes. */
+  runSpeed: number;
+  walkSpeed: number;
+  playerHpFactor: number;
+  playerDamageFactor: number;
   /** Atirar andando: o tiro espalha até tantos graus para cada lado (correndo e andando devagar). */
   shotSpreadRunDeg: number;
   shotSpreadWalkDeg: number;
@@ -90,6 +97,10 @@ export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
   guardBreakMs: GUARD_BREAK_MS,
   guardRearmEnergy: GUARD_REARM_ENERGY,
   guardWalkFactor: GUARD_WALK_FACTOR,
+  runSpeed: RUN_SPEED,
+  walkSpeed: WALK_SPEED,
+  playerHpFactor: 1,
+  playerDamageFactor: 1,
   shotSpreadRunDeg: SHOT_SPREAD_RUN_DEG,
   shotSpreadWalkDeg: SHOT_SPREAD_WALK_DEG,
   guardPushFactor: GUARD_PUSH_FACTOR,

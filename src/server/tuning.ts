@@ -75,7 +75,7 @@ function parseAreas(json: Raw, maps: readonly GameMap[], monsters: ReadonlyMap<s
   return areas;
 }
 
-type CombatPartId = 'carga' | 'defesa' | 'recuo' | 'noite';
+type CombatPartId = 'jogador' | 'carga' | 'defesa' | 'recuo' | 'noite';
 
 /** Uma parte dos números do combate, como o painel mostra (em ms, %, graus e metros). */
 export interface CombatPart {
@@ -90,6 +90,7 @@ const COMBAT_PARTS: { id: CombatPartId; name: string; detail: string }[] = [
   { id: 'defesa', name: 'Defesa', detail: 'segura os golpes que vêm pela frente e gasta energia (de 0 a 100)' },
   { id: 'recuo', name: 'Empurrão (recuo)', detail: 'quanto cada monstro empurra fica na aba Monstros (Empurrão do golpe)' },
   { id: 'noite', name: 'Dia e noite', detail: 'quanto dura cada um (o mesmo relógio em todos os mapas) e o quanto os bichos mudam à noite' },
+  { id: 'jogador', name: 'Jogador', detail: 'a velocidade no mundo novo e a vida e o dano de todos os jogadores (100% = o de sempre)' },
 ];
 
 /** Um número do combate no painel: a parte, o nome no arquivo de ajustes, os limites e como ler dos números do jogo. */
@@ -105,6 +106,10 @@ interface CombatNumber {
 }
 
 const COMBAT_NUMBERS: CombatNumber[] = [
+  { parte: 'jogador', campo: 'velocidadeCorrendo', rotulo: 'Velocidade correndo (m/s)', tipo: 'numero', min: 0.5, max: 20, dica: 'no mundo novo', ler: (r) => r.runSpeed },
+  { parte: 'jogador', campo: 'velocidadeAndando', rotulo: 'Velocidade andando devagar (m/s)', tipo: 'numero', min: 0.5, max: 20, dica: 'puxando o tiro ou com o andar devagar', ler: (r) => r.walkSpeed },
+  { parte: 'jogador', campo: 'vidaJogadorPorcento', rotulo: 'Vida máxima (%)', tipo: 'inteiro', min: 10, max: 1000, dica: '100 = a do nível', ler: (r) => Math.round(r.playerHpFactor * 100) },
+  { parte: 'jogador', campo: 'danoJogadorPorcento', rotulo: 'Dano (%)', tipo: 'inteiro', min: 10, max: 1000, dica: '100 = o do nível e da arma', ler: (r) => Math.round(r.playerDamageFactor * 100) },
   { parte: 'carga', campo: 'tempoMs', rotulo: 'Tempo para carregar (ms)', tipo: 'inteiro', min: 100, max: 5000, dica: 'segurando o estilingue', ler: (r) => r.chargeFullMs },
   {
     parte: 'carga',
@@ -202,7 +207,7 @@ function baseCombat(): Raw {
 
 /** Confere os números do combate (cada um nos seus limites) e monta os números que o jogo usa. */
 function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: CombatRules } {
-  const values: Record<CombatPartId, Record<string, number>> = { carga: {}, defesa: {}, recuo: {}, noite: {} };
+  const values: Record<CombatPartId, Record<string, number>> = { jogador: {}, carga: {}, defesa: {}, recuo: {}, noite: {} };
   for (const n of COMBAT_NUMBERS) {
     const section = isObject(json[n.parte]) ? (json[n.parte] as Raw) : {};
     const value = section[n.campo] ?? n.ler(DEFAULT_COMBAT_RULES);
@@ -212,6 +217,7 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
     }
     values[n.parte][n.campo] = value;
   }
+  const j = values.jogador;
   const c = values.carga;
   const d = values.defesa;
   const r = values.recuo;
@@ -235,6 +241,10 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
     guardBreakMs: d.quebradaMs!,
     guardRearmEnergy: d.energiaParaLevantar!,
     guardWalkFactor: d.andarPorcento! / 100,
+    runSpeed: j.velocidadeCorrendo!,
+    walkSpeed: j.velocidadeAndando!,
+    playerHpFactor: j.vidaJogadorPorcento! / 100,
+    playerDamageFactor: j.danoJogadorPorcento! / 100,
     shotSpreadRunDeg: c.espalhaCorrendo!,
     shotSpreadWalkDeg: c.espalhaAndando!,
     guardPushFactor: 1 - r.defesaSeguraPorcento! / 100,

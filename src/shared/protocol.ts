@@ -113,6 +113,7 @@ export type GmCommand =
   | { do: 'clear' }
   | { do: 'fly'; on: boolean }
   | { do: 'god'; on: boolean }
+  | { do: 'pace'; scale: number } // câmera lenta: o ritmo do servidor inteiro (0.25, 0.5 ou 1)
   | { do: 'nocd'; on: boolean } // habilidades sem recarga (as da classe e o Fôlego), para testar
   | { do: 'tp'; x: number; y: number }
   | { do: 'heal' }
@@ -220,6 +221,7 @@ export type ServerMsg =
   | { t: 'cd'; n: number; ms: number } // habilidade n entrou em recarga (n = -1: esquiva)
   | { t: 'hero'; hero: HeroState } // a sua classe ou os pontos das habilidades mudaram (subiu de nível, escolheu...)
   | { t: 'scd'; s: string; ms: number } // a habilidade `s` da sua classe entrou em recarga
+  | { t: 'pace'; scale: number } // o ritmo do jogo mudou (câmera lenta do administrador): 1 = normal
   | { t: 'armed'; s: string | null } // a flecha especial carregada no seu arco (a habilidade `s`), ou null: saiu ou descarregou
   // alguém (`id`) usou a habilidade `s` da classe: cai em (x, y) (metros, no chão), num raio `r`, daqui a `ms`. n = quantas
   // flechas sobem; p = quantos pontos ela tem (o desenho muda com 3 e com 5); kind = o que chove ('flecha' ou 'pedra': o

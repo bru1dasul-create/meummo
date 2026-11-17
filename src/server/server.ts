@@ -1,5 +1,7 @@
 // Liga tudo: servidor HTTP (entrega o jogo pronto), WebSocket (tempo real) e o relógio do mundo.
 
+import { PacedClock } from '../shared/pace';
+import { DayNightClock } from './dayNight';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -96,6 +98,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   // as classes e as habilidades (data/classes.json); a missão que libera cada uma precisa existir
   const classes = loadClassDefs();
   checkClasses(classes, tuning.quests);
+  const clock = new PacedClock(() => performance.now());
   const realm = new Realm(maps, {
     log,
     monsters: tuning.monsters,
@@ -108,6 +111,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     combat: tuning.combat,
     saver: store,
     startMap: options.startMap,
+    // o relógio do jogo (o painel de ajustes põe em câmera lenta); o dia e noite continua no relógio de verdade
+    now: () => clock.now(),
+    dayNight: new DayNightClock(tuning.combat, Date.now),
+    pace: { get: () => clock.pace, set: (scale) => clock.setPace(scale) },
     // menu ADM "trazer para cá": vira um ajuste do painel (mapa, x e y juntos)
     setNpcSpot: (npc, map, x, y) => {
       const result = tuning.setMany('npcs', npc, { mapa: map, x, y });

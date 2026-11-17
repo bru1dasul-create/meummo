@@ -786,10 +786,19 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   no computador do servidor): sliders da arma, da puxada, da defesa, do bicho escolhido e do dia e noite, valendo na
   hora, com o ↺ de cada um; atalhos (modo deus, sem recarga, +1/+10/horda de 50, derrubar, dia/tarde/noite); FPS e
   bichos à vista; copiar valores e resetar tudo
-- [ ] **[estrutura]** Painel F1, etapa 2: hitboxes e raio de percepção dos bichos por cima do desenho
-- [ ] **[estrutura + arte]** Painel F1, etapa 3: game feel (tremor de tela, pausa no impacto, partículas por acerto,
-  flash ao tomar dano) e velocidade/vida do jogador como slider
-- [ ] **[estrutura]** Painel F1, etapa 4: câmera lenta (0,25x / 0,5x / 1x)
+- [x] **[estrutura]** Painel F1, etapa 2 (17/11): botão **Hitboxes** — por cima do desenho normal, o círculo em que o
+  tiro acerta cada bicho (vermelho), a caixa do pé de todo mundo (branco; a sua, verde), a área em que o bicho que
+  ataca sozinho percebe você (laranja tracejado, com a distância) e o que bloqueia perto (amarelo segura tiro, cinza
+  só o passo). Continua na tela com o painel fechado
+- [x] **[estrutura]** Painel F1, etapa 3 (17/11): **Jogador** — velocidade correndo e andando, vida máxima (%) e dano (%),
+  valendo na hora para quem está jogando (protocolo 44; também no painel, Combate › Jogador). **Game feel** (só da
+  tela, guardado no navegador): tremor ao acertar e ao tomar dano, duração do tremor, pausa no impacto, faíscas por
+  acerto e o clarão ao tomar dano (liga/desliga). O padrão é o jogo de antes (tudo em zero, clarão ligado)
+- [ ] **[arte]** (se o dono quiser) vestir as faíscas do acerto (hoje quadradinhos dourados, `CombatLayer.burst`) e o
+  tremor/pausa com o desenho dela
+- [x] **[estrutura]** Painel F1, etapa 4 (17/11): **câmera lenta** — botões 0,25x / 0,5x / 1x (em Atalhos): o servidor
+  inteiro e a tela de todo mundo andam nesse ritmo (passos, tiros, recargas, golpes dos bichos). Protocolo 45. O som,
+  o dia e noite e o contador de quadros continuam no relógio de verdade
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

@@ -13,6 +13,7 @@ import {
   JUMP_AIR_MS,
   JUMP_COOLDOWN_MS,
   MAX_PENDING_WALKS,
+  SHOT_HIT_RADIUS,
   SHOT_MOVING_MS,
   TRADE_RANGE,
   TRADE_SLACK,
@@ -20,8 +21,8 @@ import {
 } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
 import { pickQuickItem, type GearLook, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
-import { GameMap, type Tile, type TiledMap } from '../../shared/map';
-import { degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
+import { GameMap, type SolidRect, type Tile, type TiledMap } from '../../shared/map';
+import { BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
@@ -37,7 +38,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
-import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet } from './combat';
+import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, type DebugShape } from './combat';
 import { GmPanel } from './gm';
 import { GuardButton } from './guard';
 import { Joystick } from './joystick';
@@ -53,6 +54,8 @@ import { SkillsPanel } from './skillsPanel';
 import { skillIconUrl } from './skillIcons';
 import { dangerColor } from './danger';
 import { DebugPanel } from './debugPanel';
+import { gameClock, gameNow } from './gameClock';
+import { loadFeel, saveFeel, shakeOffset, type Feel } from './feel';
 import { SkillTip, type SkillTipText } from './skillTip';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
@@ -197,6 +200,10 @@ class NewWorld implements NewWorldGame {
   /** O painel de ajustes dentro do jogo (F1; só administrador). */
   private debugPanel!: DebugPanel;
   private gmPowers = { god: false, nocd: false, fly: false };
+  /** O game feel (tremor, pausa no impacto, faíscas, clarão): só desta tela, guardado no navegador. */
+  private feel: Feel = loadFeel();
+  private shake = { start: 0, ms: 0, px: 0 };
+  private hitStopUntil = 0;
   /** O que estava equipado (para tocar o som de equipar quando muda). */
   private equippedBefore = '';
   /** Atalhos de comida (1) e remédio (2). */
@@ -378,7 +385,7 @@ class NewWorld implements NewWorldGame {
       welcome.inv,
       {
         item: (act, i) => {
-          if (act === 'use') this.noteItemUse(this.lastInv.slots[i]?.item ?? null, performance.now());
+          if (act === 'use') this.noteItemUse(this.lastInv.slots[i]?.item ?? null, gameNow());
           this.conn.send({ t: 'item', act, i });
         },
         unequip: (part) => this.conn.send({ t: 'unequip', part }),
@@ -426,10 +433,16 @@ class NewWorld implements NewWorldGame {
         const weapon = this.lastInv.equipped.weapon;
         return weapon && this.items.get(weapon)?.shot ? weapon : null;
       },
+      hitboxes: (on) => this.combat.setDebug(on ? () => this.debugShapes() : null),
+      feel: () => this.feel,
+      setFeel: (feel) => {
+        this.feel = feel;
+        saveFeel(feel);
+      },
     });
-    this.quick = new QuickSlots((n) => this.useQuick(n, performance.now()));
+    this.quick = new QuickSlots((n) => this.useQuick(n, gameNow()));
     this.guardButton = new GuardButton(
-      () => this.startGuard(performance.now()),
+      () => this.startGuard(gameNow()),
       () => this.stopGuard(),
     );
     this.guardButton.setKey(this.keys.label('defesa'));
@@ -511,13 +524,13 @@ class NewWorld implements NewWorldGame {
       explored: () => game.mapPicture?.progress() ?? null,
       mapOpen: () => game.mapWindow.isOpen,
       // o vento de agora (força 0 a 1, ângulo em graus) e para onde ele está indo
-      wind: () => ({ ...game.windNow(performance.now()), to: { ...game.wind.to } }),
+      wind: () => ({ ...game.windNow(gameNow()), to: { ...game.wind.to } }),
       dead: () => game.dead,
       // a classe, os pontos de cada habilidade e quantos sobram; se a janela das Habilidades está aberta
       hero: () => ({ ...game.hero, skills: { ...game.hero.skills } }),
       skillsOpen: () => game.skillsPanel.isOpen,
       // os Olhos de Gavião: quantos ms ainda valem (0 = desligados)
-      hawk: () => Math.max(0, Math.round(game.hawkUntil - performance.now())),
+      hawk: () => Math.max(0, Math.round(game.hawkUntil - gameNow())),
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
     };
   }
@@ -633,7 +646,8 @@ class NewWorld implements NewWorldGame {
 
   // ======================= laço =======================
 
-  private readonly loop = (now: number) => {
+  private readonly loop = () => {
+    const now = gameNow(); // o relógio do jogo (em câmera lenta, anda mais devagar que o de verdade)
     if (this.destroyed || !this.view) return;
     const workStart = performance.now();
     this.handleMovement(now);
@@ -651,9 +665,17 @@ class NewWorld implements NewWorldGame {
     this.cuddleIfNear();
     this.checkNpcDistance();
     this.checkSafeArea();
-    this.view.frame(now);
-    this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
-    this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
+    // game feel: a pausa no impacto segura o desenho (o jogo continua; a imagem fica um instante) e o tremor desloca a tela
+    if (now >= this.hitStopUntil) {
+      this.view.frame(now);
+      this.combat.setViewer(this.predicted ? feetAt(this.predicted.x, this.predicted.y) : null);
+      this.combat.frame(now, this.view, (id) => this.drawnFeet(id), this.hurtBars());
+    }
+    if (this.shake.px > 0) {
+      const off = shakeOffset(now, this.shake.start, this.shake.ms, this.shake.px);
+      this.combat.shake(off.x, off.y);
+      if (now >= this.shake.start + this.shake.ms) this.shake.px = 0;
+    }
     this.actionBar.update(now);
     this.quick.update(now);
     this.fpsMeter?.tick(now, performance.now() - workStart);
@@ -693,23 +715,23 @@ class NewWorld implements NewWorldGame {
    * devagar × guardWalkFactor (o mesmo número do servidor).
    */
   private sliceOf(slow: boolean, guard = this.guardHeld, fly = this.gmFly): number {
-    if (fly) return sliceDistance(this.map.metric, false, this.stepMs) * GM_FLY_FACTOR;
-    if (guard) return sliceDistance(this.map.metric, true, this.stepMs) * this.rules.guardWalkFactor;
-    return sliceDistance(this.map.metric, slow, this.stepMs);
+    if (fly) return sliceDistance(this.map.metric, false, this.stepMs, this.rules) * GM_FLY_FACTOR;
+    if (guard) return sliceDistance(this.map.metric, true, this.stepMs, this.rules) * this.rules.guardWalkFactor;
+    return sliceDistance(this.map.metric, slow, this.stepMs, this.rules);
   }
 
   private readonly onKey = (event: KeyboardEvent) => {
     const action = this.keys.actionOf(event.code);
     // soltar: o tiro e a defesa são de segurar (segurar puxa a pedra ou levanta a defesa; soltar atira ou baixa)
     if (event.type === 'keyup') {
-      if (action === 'atirar' && this.charging?.aim.by === 'key') this.releaseCharge(performance.now());
+      if (action === 'atirar' && this.charging?.aim.by === 'key') this.releaseCharge(gameNow());
       if (action === 'defesa') this.stopGuard();
       // soltou a tecla da habilidade (ou o 1): usa onde a mira está
-      if ((action === 'hab1' || action === 'hab2' || event.code === 'Digit1') && this.aiming) this.releaseAim(performance.now());
+      if ((action === 'hab1' || action === 'hab2' || event.code === 'Digit1') && this.aiming) this.releaseAim(gameNow());
       return;
     }
     if (event.type !== 'keydown' || this.chat.isTyping() || this.keysPanel.listening) return;
-    const now = performance.now();
+    const now = gameNow();
     if (action) {
       event.preventDefault(); // o Espaço não rola a página e o Tab não pula de botão
       if (!event.repeat) this.keyAction(action, now);
@@ -839,6 +861,46 @@ class NewWorld implements NewWorldGame {
       this.armed = null;
       this.setArmed(this.armedSkillId(armed));
     }
+  }
+
+  /**
+   * As hitboxes do painel de ajustes (F1), como o servidor conta: o círculo em que um tiro acerta cada bicho, a caixa do
+   * pé de todo mundo, a área em que o bicho que ataca sozinho percebe você e o que bloqueia perto de você.
+   */
+  private debugShapes(): DebugShape[] {
+    const shapes: DebugShape[] = [];
+    const body = (x: number, y: number, color: string): DebugShape => {
+      const cx = x + 0.5;
+      const cy = y + 0.5 + BODY_OFFSET_Y;
+      return { rect: { x0: cx - BODY_HALF_W, y0: cy - BODY_HALF_H, x1: cx + BODY_HALF_W, y1: cy + BODY_HALF_H }, color };
+    };
+    for (const e of this.entities.values()) {
+      if (e.id === this.myId) continue;
+      // onde está desenhado agora (o desenho anda um pouco atrás do servidor): as linhas acompanham o bicho na tela
+      const feet = this.drawnFeet(e.id) ?? feetAt(e.x, e.y);
+      const corner = cornerAtFeet(feet.x, feet.y);
+      shapes.push(body(corner.x, corner.y, e.kind === 'monster' ? '#ffffff' : '#7fd4ff'));
+      if (e.kind !== 'monster') continue;
+      shapes.push({ circle: { x: corner.x + 0.5, y: corner.y + 0.5, r: SHOT_HIT_RADIUS }, color: '#ff5a4a' });
+      const aggro = this.debugPanel.aggroOf(e.type);
+      if (aggro > 0) {
+        shapes.push({ rect: { x0: corner.x - aggro, y0: corner.y - aggro, x1: corner.x + aggro + 1, y1: corner.y + aggro + 1 }, color: '#ffa63d', dash: true, label: `${e.name}: percebe a ${aggro} m` });
+      }
+    }
+    if (this.predicted) shapes.push(body(this.predicted.x, this.predicted.y, '#7dff9a'));
+    // o que bloqueia, perto de você (o mapa inteiro seria linha demais)
+    const me = this.myFeet();
+    const seen = new Set<SolidRect>();
+    for (let ty = Math.floor(me.y) - 12; ty <= Math.floor(me.y) + 12; ty++) {
+      for (let tx = Math.floor(me.x) - 12; tx <= Math.floor(me.x) + 12; tx++) {
+        for (const rect of this.map.solidsAt?.(tx, ty) ?? []) {
+          if (seen.has(rect)) continue;
+          seen.add(rect);
+          shapes.push({ rect, color: rect.shot ? '#f2d24b' : '#9aa0a6' });
+        }
+      }
+    }
+    return shapes;
   }
 
   /**
@@ -994,7 +1056,7 @@ class NewWorld implements NewWorldGame {
     this.conn.send(slow ? { t: 'walk', seq: this.seq, a: degrees, slow: true } : { t: 'walk', seq: this.seq, a: degrees });
     this.predicted = { x: result.x, y: result.y, dir: result.dir };
     this.lastWalkDegrees = degrees;
-    this.lastWalkAt = performance.now();
+    this.lastWalkAt = gameNow();
     this.lastWalkSlow = slow || this.guardHeld;
     // defendendo, o corpo fica virado para onde a defesa aponta; puxando (e logo depois do tiro), para a mira
     const aiming = this.aimFacing && this.lastWalkAt < this.aimFacing.until ? this.aimFacing.degrees : null;
@@ -1094,7 +1156,7 @@ class NewWorld implements NewWorldGame {
     this.usingTouch = event.pointerType !== 'mouse';
     if (event.pointerType === 'mouse') {
       this.mouse = { x: event.clientX, y: event.clientY };
-      const now = performance.now();
+      const now = gameNow();
       // segurar puxa o estilingue; soltar atira (pedra com carga)
       if (event.button === 2) {
         this.startCharge({ by: 'mouse' }, now);
@@ -1120,7 +1182,7 @@ class NewWorld implements NewWorldGame {
 
   private readonly onPointerUp = (event: PointerEvent) => {
     const aim = this.charging?.aim.by;
-    if (event.pointerType === 'mouse' && (aim === 'target' || aim === 'mouse')) this.releaseCharge(performance.now());
+    if (event.pointerType === 'mouse' && (aim === 'target' || aim === 'mouse')) this.releaseCharge(gameNow());
   };
 
   /** O botão direito é do jogo (atirar), não do menu do navegador. */
@@ -1154,7 +1216,7 @@ class NewWorld implements NewWorldGame {
     if (monster !== null) {
       // toque rápido no monstro: pedra fraca na hora (para puxar, segure o botão Estilingue)
       const target = this.entities.get(monster)!;
-      this.quickShot(aimAngle(this.myFeet(), feetAt(target.x, target.y)), performance.now());
+      this.quickShot(aimAngle(this.myFeet(), feetAt(target.x, target.y)), gameNow());
       return;
     }
     const npcId = this.actorAtScreen(clientX, clientY, 'npc');
@@ -1255,7 +1317,7 @@ class NewWorld implements NewWorldGame {
 
   /** O bicho miou, ronronou (carinho), acordou ou dormiu: o som e, no gatinho provisório, o desenho. */
   private onPetFx(id: number, kind: string, angle?: number): void {
-    const now = performance.now();
+    const now = gameNow();
     const provisional = this.combat.hasPet(id);
     if (kind === 'wake' || kind === 'sleep') {
       if (provisional) this.combat.petAsleep(id, kind === 'sleep');
@@ -1797,7 +1859,7 @@ class NewWorld implements NewWorldGame {
 
   /** Botões da tela (celular e PC). */
   private onAction(slot: ActionSlot, down: boolean): void {
-    const now = performance.now();
+    const now = gameNow();
     if (slot === 'shot') {
       // segurar o botão puxa; soltar atira no monstro mais perto
       if (down) this.startCharge({ by: 'button' }, now);
@@ -2176,14 +2238,21 @@ class NewWorld implements NewWorldGame {
       return;
     }
     const fromMonster = this.entities.get(msg.by)?.kind === 'monster';
-    this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, performance.now());
+    this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, gameNow());
     if (msg.kind === 'ancestral') this.sfx.play('spirit'); // outro jogador soltou a Flecha Ancestral
     this.view?.action?.(msg.by, 'shoot', toDegrees(msg.a));
   }
 
   /** `blocked`: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou. */
-  private onHit(id: number, dmg: number, hp: number, blocked: 0 | 1 | 2 = 0): void {
-    const now = performance.now();
+  private onHit(id: number, dmg: number, hp: number, blocked: 0 | 1 | 2 = 0, by = 0): void {
+    const now = gameNow();
+    // game feel: o seu acerto num bicho treme a tela, segura o desenho um instante e solta faíscas (se ligados)
+    if (by === this.myId && id !== this.myId) {
+      this.startShake(this.feel.shakeHitPx, now);
+      if (this.feel.hitStopMs > 0) this.hitStopUntil = now + this.feel.hitStopMs;
+      const feet = this.feel.particles > 0 ? this.drawnFeet(id) : null;
+      if (feet) this.combat.burst(feet.x, feet.y, this.feel.particles, now);
+    }
     const e = this.entities.get(id);
     if (e) e.hp = hp;
     this.view?.action?.(id, blocked ? 'block' : 'hurt');
@@ -2204,7 +2273,8 @@ class NewWorld implements NewWorldGame {
         this.combat.floater(id, `-${dmg}`, BLOCKED_COLOR, now);
         return;
       }
-      this.feedback.hurtFlash();
+      if (this.feel.hurtFlash) this.feedback.hurtFlash();
+      this.startShake(this.feel.shakeHurtPx, now);
       this.sfx.play('hurt');
       this.combat.floater(id, `-${dmg}`, '#ff6b6b', now);
       return;
@@ -2213,9 +2283,17 @@ class NewWorld implements NewWorldGame {
     if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : 'hit'); // a casca do tatu-bola soa como a defesa
   }
 
+  /** Começa um tremor de tela (o mais forte ganha, se já tiver um). */
+  private startShake(px: number, now: number): void {
+    if (px <= 0 || this.feel.shakeMs <= 0) return;
+    const left = this.shake.px > 0 ? shakeOffset(now, this.shake.start, this.shake.ms, this.shake.px) : { x: 0, y: 0 };
+    if (Math.hypot(left.x, left.y) > px) return;
+    this.shake = { start: now, ms: this.feel.shakeMs, px };
+  }
+
   private onDeath(id: number): void {
     this.combat.setGuard(id, null, 0); // quem desmaia baixa a defesa (o servidor não manda à parte)
-    const now = performance.now();
+    const now = gameNow();
     if (id === this.myId) {
       this.myHp = 0;
       this.hud.setHp(0, this.myMaxHp);
@@ -2326,7 +2404,7 @@ class NewWorld implements NewWorldGame {
     const me = { x: feet.x, y: feet.y, angle: this.myAngle };
     const markers: MapMarker[] = [...this.npcs].map(([id, n]) => ({ ...feetAt(n.e.x, n.e.y), mark: this.npcMarks.get(id) ?? '' }));
     // com os Olhos de Gavião, os bichos viram pontos na cor do perigo
-    if (performance.now() < this.hawkUntil) {
+    if (gameNow() < this.hawkUntil) {
       for (const e of this.entities.values()) {
         if (e.kind === 'monster') markers.push({ ...feetAt(e.x, e.y), monster: dangerColor(e.level, this.myLevel) });
       }
@@ -2454,7 +2532,7 @@ class NewWorld implements NewWorldGame {
       const was = before[quest.id];
       const now = log[quest.id];
       if (quest.goal.kind === 'kill' && was?.state === 'active' && now?.state === 'active' && now.count > was.count) {
-        this.combat.floater(this.myId, `${quest.goalName} ${now.count}/${quest.goal.count}`, '#9fd3ff', performance.now());
+        this.combat.floater(this.myId, `${quest.goalName} ${now.count}/${quest.goal.count}`, '#9fd3ff', gameNow());
         if (now.count === quest.goal.count) this.toast.show(`Missão pronta: ${quest.name}`, 2500);
       }
       if (was?.state === 'active' && now?.state === 'done') {
@@ -2473,7 +2551,7 @@ class NewWorld implements NewWorldGame {
       if (!def) return;
       if (def.rarity !== 'common') precious = true;
       const label = `+${stack.n > 1 ? `${stack.n} ` : ''}${def.name}`;
-      window.setTimeout(() => this.combat.floater(this.myId, label, def.rarity === 'common' ? '#f4ead2' : '#f2c14e', performance.now()), 300 + i * 200);
+      window.setTimeout(() => this.combat.floater(this.myId, label, def.rarity === 'common' ? '#f4ead2' : '#f2c14e', gameNow()), 300 + i * 200);
       if (def.rarity === 'legendary') this.toast.show(`Item lendário: ${def.name}!`, 3000);
     });
     this.sfx.play(precious ? 'rare' : 'loot');
@@ -2514,7 +2592,7 @@ class NewWorld implements NewWorldGame {
         const duration = e.kind === 'monster' ? (e.stepMs ?? 320) : 120;
         if (this.combat.hasPet(msg.id)) {
           // o gatinho provisório: anda (ou pula para o sofá, mais devagar) até o ponto novo
-          this.combat.movePet(msg.id, feet.x, feet.y, (angle * Math.PI) / 180, performance.now(), msg.dash ? 300 : duration);
+          this.combat.movePet(msg.id, feet.x, feet.y, (angle * Math.PI) / 180, gameNow(), msg.dash ? 300 : duration);
           break;
         }
         this.view?.moveActor(msg.id, feet.x, feet.y, angle, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
@@ -2566,7 +2644,7 @@ class NewWorld implements NewWorldGame {
         break;
       case 'warn': {
         // golpe vindo: quadrados vermelhos onde ele pega (golpe de perto) e o anel laranja em quem prepara
-        const now = performance.now();
+        const now = gameNow();
         if (msg.tiles.length > 0) this.combat.warn(msg.tiles, msg.ms, now);
         this.combat.windup(msg.id, msg.ms, now);
         this.view?.action?.(msg.id, 'windup');
@@ -2574,7 +2652,7 @@ class NewWorld implements NewWorldGame {
         break;
       }
       case 'fire':
-        this.combat.warn(msg.tiles, msg.ms, performance.now(), true);
+        this.combat.warn(msg.tiles, msg.ms, gameNow(), true);
         this.sfx.play('fire');
         break;
       case 'shot':
@@ -2605,24 +2683,24 @@ class NewWorld implements NewWorldGame {
         }
         if (msg.kind === 'mark') {
           // a Flecha Ancestral marcou o bicho: a runa em cima dele enquanto durar
-          this.combat.mark(msg.id, msg.ms ?? 0, performance.now());
+          this.combat.mark(msg.id, msg.ms ?? 0, gameNow());
           break;
         }
         if (msg.kind === 'dizzy' || msg.kind === 'dodge' || msg.kind === 'vanish') {
           // tonto (o tatu-bola depois da investida), o tiro que passou pelo enxame e o bicho que foi embora
           this.view?.action?.(msg.id, msg.kind);
-          if (msg.kind !== 'vanish') this.combat.floater(msg.id, msg.kind === 'dizzy' ? 'tonto!' : 'passou!', msg.kind === 'dizzy' ? '#ffe08a' : '#d6d6d6', performance.now());
+          if (msg.kind !== 'vanish') this.combat.floater(msg.id, msg.kind === 'dizzy' ? 'tonto!' : 'passou!', msg.kind === 'dizzy' ? '#ffe08a' : '#d6d6d6', gameNow());
           break;
         }
         const feet = this.drawnFeet(msg.id);
         const wide = msg.a === undefined || msg.kind === 'spin' || msg.kind === 'whirlwind';
-        if (feet && msg.kind !== 'song') this.combat.flash(feet.x, feet.y, msg.a ?? 0, msg.r ?? 1.4, wide, performance.now());
+        if (feet && msg.kind !== 'song') this.combat.flash(feet.x, feet.y, msg.a ?? 0, msg.r ?? 1.4, wide, gameNow());
         this.view?.action?.(msg.id, msg.kind, msg.a !== undefined ? toDegrees(msg.a) : undefined);
         if (msg.kind === 'charge') this.sfx.play('charge');
         break;
       }
       case 'hit':
-        this.onHit(msg.id, msg.dmg, msg.hp, msg.blk ?? 0);
+        this.onHit(msg.id, msg.dmg, msg.hp, msg.blk ?? 0, msg.by);
         break;
       case 'energy': {
         const was = this.guardState;
@@ -2630,7 +2708,7 @@ class NewWorld implements NewWorldGame {
         this.guardState = msg.g;
         if (msg.g === 'broken' && was !== 'broken') {
           // a energia acabou: a defesa cai (solte e espere a energia voltar para levantar de novo)
-          this.combat.note(this.myId, 'defesa quebrou!', '#f3a25b', performance.now());
+          this.combat.note(this.myId, 'defesa quebrou!', '#f3a25b', gameNow());
           this.view?.action?.(this.myId, 'guard-break');
           this.sfx.play('guard-break'); // quebrou num golpe ou segurando até acabar a energia: o mesmo som
         }
@@ -2644,13 +2722,13 @@ class NewWorld implements NewWorldGame {
         this.gmPanel.set(msg);
         break;
       case 'guard':
-        this.combat.setGuard(msg.id, msg.on ? msg.a : null, performance.now());
+        this.combat.setGuard(msg.id, msg.on ? msg.a : null, gameNow());
         this.view?.action?.(msg.id, msg.on ? 'guard' : 'guard-end', toDegrees(msg.a));
         break;
       case 'heal': {
         const e = this.entities.get(msg.id);
         if (e) e.hp = msg.hp;
-        this.combat.floater(msg.id, `+${msg.amount}`, '#7bd389', performance.now());
+        this.combat.floater(msg.id, `+${msg.amount}`, '#7bd389', gameNow());
         if (msg.id === this.myId) {
           this.myHp = msg.hp;
           this.hud.setHp(msg.hp, this.myMaxHp);
@@ -2665,14 +2743,14 @@ class NewWorld implements NewWorldGame {
         if (msg.id === this.myId) {
           this.myMaxHp = msg.maxHp;
           this.toast.show(`Você subiu para o nível ${msg.level}!`, 2500);
-          this.combat.floater(msg.id, `Nível ${msg.level}!`, '#f2c14e', performance.now());
+          this.combat.floater(msg.id, `Nível ${msg.level}!`, '#f2c14e', gameNow());
           this.sfx.play('levelup');
         } else {
           this.view?.say(msg.id, `Nível ${msg.level}!`);
         }
         break;
       case 'cd': {
-        const now = performance.now();
+        const now = gameNow();
         if (msg.n === DASH_SLOT) {
           this.dashReadyAt = now + msg.ms;
           this.actionBar.setCooldown('dash', this.dashReadyAt, msg.ms);
@@ -2684,12 +2762,16 @@ class NewWorld implements NewWorldGame {
       }
       case 'scd': {
         // a recarga da habilidade da classe (a conta do servidor vale)
-        const now = performance.now();
+        const now = gameNow();
         this.castReadyAt.set(msg.s, now + msg.ms);
         const slot = this.classSlotOf(msg.s);
         if (slot) this.actionBar.setCooldown(slot, now + msg.ms, msg.ms);
         break;
       }
+      case 'pace':
+        gameClock.setPace(msg.scale); // câmera lenta (ou de volta ao normal): o relógio daqui acompanha o do servidor
+        this.debugPanel.setPace(msg.scale);
+        break;
       case 'armed':
         this.setArmed(msg.s); // o servidor é quem sabe (recusou por recarga, desmaiou, tirou os pontos)
         break;
@@ -2717,7 +2799,7 @@ class NewWorld implements NewWorldGame {
         break;
       case 'cast': {
         // outro jogador usou a Chuva: sobe dele e cai no círculo (você vê e ouve)
-        const now = performance.now();
+        const now = gameNow();
         const from = this.drawnFeet(msg.id) ?? { x: msg.x, y: msg.y };
         this.combat.rain(from, msg.x, msg.y, msg.r, msg.n, msg.p, msg.ms, msg.kind, now);
         if (msg.x !== from.x || msg.y !== from.y) this.view?.action?.(msg.id, 'volley', toDegrees(aimAngle(from, msg)));
@@ -2741,14 +2823,14 @@ class NewWorld implements NewWorldGame {
         // ouro ou item no chão (só você vê os seus): o item com o desenho dele e o brilho da raridade
         const def = msg.item ? this.items.get(msg.item.item) : undefined;
         const item = def && msg.item ? { icon: def.icon, rarity: def.rarity, n: msg.item.n } : undefined;
-        this.combat.addDrop(msg.id, msg.x, msg.y, msg.gold !== undefined, performance.now() + msg.ms, item);
+        this.combat.addDrop(msg.id, msg.x, msg.y, msg.gold !== undefined, gameNow() + msg.ms, item);
         break;
       }
       case 'pickup':
         this.combat.removeDrop(msg.id);
         if (msg.gold) {
           this.sfx.play('coin');
-          this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', performance.now());
+          this.combat.floater(this.myId, `+${msg.gold} de ouro`, '#f2c14e', gameNow());
         }
         if (msg.item) this.onLoot([msg.item]); // "+Banana" em cima de você, o som e a mochila avisando
         break;
@@ -2793,7 +2875,7 @@ class NewWorld implements NewWorldGame {
         break;
       case 'wind': {
         // o vento muda devagar: daqui (onde está agora) até o novo, em msg.ms
-        const now = performance.now();
+        const now = gameNow();
         this.wind = { from: this.windNow(now), to: { strength: msg.strength, angle: msg.angle }, start: now, ms: msg.ms };
         break;
       }
