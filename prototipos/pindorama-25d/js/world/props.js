@@ -3900,26 +3900,90 @@
     const all = base.concat(top, [crown]).map((q) => cam.p(q));
     const hull = convexHull(all);
     poly(ctx, hull, ROCK_EDGE, INK, ink * 2.4);
+    // (os sorteios da pintura são outros: a FORMA de cada pedra continua a mesma de antes)
+    const art = M.rng(Math.round(d.x * 7 + d.y * 13) + 91);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     for (const f of shaded) {
       poly(ctx, f.pts, f.color);
+      // PINTURA (17/11, o dono pediu capricho também nas pedras): cada face clareia para cima e escurece para baixo,
+      // em vez de uma cor chapada, e ganha veios e pintas de pedra
+      const ys = f.pts.map((q) => q.y), xs = f.pts.map((q) => q.x);
+      const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs);
+      const wash = ctx.createLinearGradient(0, y0, 0, y1);
+      wash.addColorStop(0, 'rgba(255, 248, 228, 0.2)');
+      wash.addColorStop(0.5, 'rgba(255, 248, 228, 0)');
+      wash.addColorStop(1, 'rgba(34, 30, 46, 0.24)');
+      ctx.fillStyle = wash;
+      ctx.fill();
       ctx.strokeStyle = 'rgba(27, 16, 13, 0.28)';
       ctx.lineWidth = Math.max(0.6, ink * 0.7);
-      ctx.lineJoin = 'round';
       ctx.stroke();
+      if ((x1 - x0) * (y1 - y0) < 260 * zoom * zoom) continue;
+      ctx.save();
+      ctx.clip();
+      // veios: riscos curtos, quase deitados, mais escuros que a face
+      ctx.strokeStyle = 'rgba(40, 34, 30, 0.2)';
+      ctx.lineWidth = Math.max(0.7, 1.3 * zoom);
+      for (let k = 0; k < 2 + Math.floor(art() * 3); k++) {
+        const vx = x0 + art() * (x1 - x0), vy = y0 + art() * (y1 - y0), len = (6 + art() * 14) * zoom, tilt = (art() - 0.5) * 0.9;
+        ctx.beginPath();
+        ctx.moveTo(vx, vy);
+        ctx.quadraticCurveTo(vx + len * 0.5, vy + tilt * len * 0.5 + (art() - 0.5) * 3 * zoom, vx + len, vy + tilt * len);
+        ctx.stroke();
+      }
+      // pintas: claras nas faces de cima, escuras nas de lado
+      for (let k = 0; k < 4 + Math.floor(art() * 5); k++) {
+        ctx.fillStyle = f.up > 0.4 ? 'rgba(246, 240, 224, 0.3)' : 'rgba(36, 32, 30, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x0 + art() * (x1 - x0), y0 + art() * (y1 - y0), (0.9 + art() * 1.6) * zoom, (0.6 + art() * 1) * zoom, art() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+      // líquen: manchinhas claras, só de vez em quando
+      if (art() < 0.35) {
+        const lx = x0 + (0.2 + art() * 0.6) * (x1 - x0), ly = y0 + (0.2 + art() * 0.6) * (y1 - y0);
+        ctx.fillStyle = 'rgba(206, 204, 158, 0.5)';
+        for (let k = 0; k < 3 + Math.floor(art() * 3); k++) {
+          ctx.beginPath();
+          ctx.ellipse(lx + (art() - 0.5) * 9 * zoom, ly + (art() - 0.5) * 6 * zoom, (1.4 + art() * 2.2) * zoom, (1 + art() * 1.4) * zoom, art() * 3, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
     }
-    // musgo nas faces de cima, do lado da luz
+    // o pé da pedra, mais escuro e esverdeado (a umidade e o reflexo do capim): ela assenta no chão
+    const hy = hull.map((q) => q.y);
+    const top0 = Math.min(...hy), bot0 = Math.max(...hy);
+    ctx.save();
+    ctx.beginPath();
+    hull.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+    ctx.closePath();
+    ctx.clip();
+    const foot = ctx.createLinearGradient(0, top0 + (bot0 - top0) * 0.55, 0, bot0);
+    foot.addColorStop(0, 'rgba(38, 54, 32, 0)');
+    foot.addColorStop(1, 'rgba(30, 44, 28, 0.46)');
+    ctx.fillStyle = foot;
+    ctx.fillRect(Math.min(...hull.map((q) => q.x)) - 2, top0, Math.max(...hull.map((q) => q.x)) - Math.min(...hull.map((q) => q.x)) + 4, bot0 - top0 + 2);
+    ctx.restore();
+    // musgo nas faces de cima, do lado da luz: um punhado de pinceladas (escuras por baixo, claras por cima)
     const tops = shaded.filter((f) => f.up > 0.45 && f.lit > 0.55);
     for (let k = 0; k < Math.min(4, tops.length); k++) {
       const f = tops[Math.floor(rnd() * tops.length)];
       const c = f.pts.reduce((acc, q) => ({ x: acc.x + q.x / f.pts.length, y: acc.y + q.y / f.pts.length }), { x: 0, y: 0 });
-      ctx.fillStyle = ROCK.moss[k % ROCK.moss.length];
-      ctx.beginPath();
-      ctx.ellipse(c.x + (rnd() - 0.5) * R * 0.25 * zoom, c.y + (rnd() - 0.5) * R * 0.12 * zoom, R * (0.12 + rnd() * 0.1) * zoom, R * (0.07 + rnd() * 0.05) * zoom, 0, 0, M.TAU);
-      ctx.fill();
+      const mx = c.x + (rnd() - 0.5) * R * 0.25 * zoom, my = c.y + (rnd() - 0.5) * R * 0.12 * zoom;
+      const mr = R * (0.12 + rnd() * 0.1) * zoom;
+      for (const [color, n, spread, size, lift] of [['#3d6632', 3, 1, 0.75, 0.12], [ROCK.moss[k % ROCK.moss.length], 4, 0.85, 0.7, 0], ['#9bc468', 3, 0.6, 0.38, -0.2]]) {
+        ctx.fillStyle = color;
+        for (let q = 0; q < n; q++) {
+          ctx.beginPath();
+          ctx.ellipse(mx + (art() - 0.5) * mr * 1.5 * spread, my + (art() - 0.5) * mr * 0.8 * spread + mr * lift, mr * size * (0.6 + art() * 0.6), mr * size * 0.6 * (0.6 + art() * 0.6), art() * 3, 0, M.TAU);
+          ctx.fill();
+        }
+      }
     }
-    // fiapos de grama na base da frente (a pedra parece meio enterrada)
-    ctx.lineCap = 'round';
+    // capim na base da frente (a pedra parece meio enterrada): tufos com o traço escuro por baixo, como os do chão
     const depth0 = cam.depth({ x: d.x, y: d.y, z: z0 });
+    const BLADES = ['#5f9441', '#73a84c', '#8ab85a', '#4b7c3a'];
     for (let k = 0; k < N; k++) {
       const q = base[k];
       if (cam.depth(q) < depth0) continue;
@@ -3928,13 +3992,20 @@
         const u = rnd();
         const g = { x: q.x + (base[j].x - q.x) * u, y: q.y + (base[j].y - q.y) * u, z: z0 };
         const p0 = cam.p(g);
-        const hgt = (7 + rnd() * 9) * zoom;
-        ctx.strokeStyle = ROCK.grass[b % ROCK.grass.length];
-        ctx.lineWidth = Math.max(1, 2.4 * zoom);
-        ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y + 1);
-        ctx.quadraticCurveTo(p0.x + (rnd() - 0.5) * 4 * zoom, p0.y - hgt * 0.6, p0.x + (rnd() - 0.5) * 7 * zoom, p0.y - hgt);
-        ctx.stroke();
+        const blades = 2 + Math.floor(art() * 3);
+        for (let e = 0; e < blades; e++) {
+          const hgt = (7 + rnd() * 9 + art() * 5) * zoom;
+          const bx = p0.x + (art() - 0.5) * 7 * zoom;
+          ctx.beginPath();
+          ctx.moveTo(bx, p0.y + 1);
+          ctx.quadraticCurveTo(bx + (rnd() - 0.5) * 4 * zoom, p0.y - hgt * 0.6, bx + (rnd() - 0.5) * 8 * zoom, p0.y - hgt);
+          ctx.strokeStyle = 'rgba(20, 44, 22, 0.72)';
+          ctx.lineWidth = Math.max(1.6, 3.4 * zoom);
+          ctx.stroke();
+          ctx.strokeStyle = BLADES[(b + e) % BLADES.length];
+          ctx.lineWidth = Math.max(0.9, 1.9 * zoom);
+          ctx.stroke();
+        }
       }
     }
   };

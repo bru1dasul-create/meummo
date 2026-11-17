@@ -1161,6 +1161,50 @@ de casa e ainda vai testar no PC dele). Tudo foi medido no jogo de verdade, no C
   conversa|casa [url] <pasta> ...` e `python3 zoom-fotos-comparar.py a.png a-ref.png`; `node zoom-ordem.cjs [url]`;
   `node zoom-memoria.cjs [url]`.
 
+### O chão pintado, passo 1 — PILOTO EM ANDAMENTO, PAUSADO em 17/11 (o dono pediu a pausa para o personagem novo)
+Pedido do dono (17/11, pelo [mundo]): "chão feio, água sem movimentação, ambiente pífio"; direção aprovada ("é esse o
+caminho"): `docs/referencias/chao-pintado-alvo.jpg` (o antes: `chao-pintado-antes.jpg`). Combinado com ele em três
+passos (1: o chão pintado; 2: luz e sombra no chão; 3: água e vida), cada um com piloto na Clareira dos Despertos,
+antes × depois e desempenho medido, e só vai para o mapa todo e para a `main` com o "pode" dele. Ele disse "pode
+começar" (passo 1) e, no meio, pediu atenção também para "pedra, plantas, matos, cadeiras, casas, telhado": as pedras
+e os matos da Clareira entraram no piloto; para o resto fiquei de mandar o "antes" e uma proposta.
+**Está só no meu ramo (`claude/blissful-meitner-hp1i5e`), NÃO na `main`, e o dono ainda não viu.**
+- **O que há:** `js/world/chao.js` (novo; carregado depois do `street.js` no `view-scripts.json`, no `clareira.html` e
+  no `src/client/novo/arte.ts` — sem a linha no `arte.ts` o jogo mostra o chão antigo). (1) A TINTA de cada material
+  natural (grama, mata, terra, trilha, lama, areia): um ladrilho de 512 px feito uma vez (cor de base + uma demão
+  `wash` + borrões de aquarela claros, escuros e miúdos) e repetido como padrão — `PAINT` no alto do arquivo é onde
+  se mexe nas cores. (2) As MARCAS (`marks`): folhas, tufos de capim em pé, florzinhas, pedrinhas e trincas no lugar
+  das bolinhas iguais. (3) As ÁREAS (`area` + `edgeOver`): a beirada se desmancha — névoa de cor (borrões radiais),
+  aguada meio transparente e a tinta firme de beirada ondulada; encostada em calçada, pedra ou água a beirada fica
+  exata. (4) As TRILHAS (`trailsUnder` + `trail`): sem contorno; corpo de beirada ondulada, ponta solta arredondada,
+  pinceladas de uso (claras onde se pisa), beira úmida macia, capim e pedrinhas. (5) A EMENDA das calçadas e do asfalto
+  com a terra (`seam`). (6) As pedras (`Small.prototype._rock` no `props.js`): pintura por face, veios, musgo em tufos,
+  capim no pé. A água e as sombras chapadas do chão NÃO mudaram (passos 3 e 2).
+- **O que aprendi (para não repetir):** traço largo com o padrão e beirada "desfiada" dá degraus (as pinceladas são
+  cortadas pela faixa do traço); gomos de oval pela beirada parecem respingo; onda de seno na beirada parece renda
+  (use o ruído sorteado do `wave`); faixa meio transparente de borda dura em volta da trilha aparece como faixa reta;
+  risco de uso curto e largo vira losango; preencher com padrão custa ~50 vezes mais que cor lisa (a aguada usa a cor
+  média, `meanOf`); as medidas por função enganam (o desenho só é pintado de verdade no `rasterNow`): para saber o
+  custo de um pintor, desligue-o e meça o pedaço inteiro (`SEM=` na prancha).
+- **Medido até a pausa (sem placa de vídeo, fora do jogo, 4 pontos no zoom 1, mediana de 9 repinturas por pedaço):**
+  antes 10,1 ms por pedaço de chão (pior 18,9); depois 11,5 ms (pior 18,3), ou seja, ~14% mais caro. No jogo de
+  verdade o "antes" está medido (média 13,3 ms, pior 46,7 em 7 pontos × 3 zooms); o "depois" no jogo AINDA NÃO.
+- **Falta (na ordem):** (a) terminar a conferência das emendas entre pedaços (`EMENDA=3` na prancha: 3 × 3 pedaços
+  pintados um a um contra a mesma área pintada de uma vez; qualquer ponto vermelho é marca cortada ou pulada — a
+  folga do `box.sees` nas marcas subiu de 75 para 120 cm e não foi conferida); (b) `npm run build`, reiniciar o
+  servidor e conferir NO JOGO: foto no ponto do print do dono (herói em 32,47, zoom 1, 1600×900), noite, celular
+  (`DPR=2`), custo (`chao-custo.cjs`) e o zoom (`zoom-perfil.cjs`); (c) testes do protótipo (`testes.cjs`,
+  `teste-acoes`, `teste-estilingue`, `conferir.cjs`); (d) mostrar ao dono o antes × depois ao lado do alvo, as pedras,
+  os números e os limites, e pedir o "pode"; (e) a proposta para cadeiras, casas, telhados e plantas; (f) marcar no
+  roteiro. Defeito antigo que vi e é do passo 2: uma faixa mais clara dentro da sombra da árvore, junto do poste
+  (duas sombras no mesmo traçado se anulam; aparece também no print do dono).
+- **Receitas** (em `prototipos/pindorama-25d/ferramentas/`): `node chao-prancha.cjs <pasta> "nome:x,y,zoom;..."
+  [largura,altura]` (fora do jogo, rápido: carrega os scripts da view e o mapa do Capão; `RAIZ=` usa outra cópia dos
+  scripts — o "antes" é um `git worktree` da `main`; `DIRETO=9` mede o custo; `SEM=marks,area,trail,trailsUnder,
+  edgeOver,seam,tinta` desliga um pintor; `EMENDA=3` confere as emendas; `NOITE=1`, `SEM_HEROI=1`, `DPR=2`);
+  `node chao-foto.cjs <url> <saida.png> [x,y] [zoom] [largura,altura] [noite]` e `node chao-custo.cjs <url>
+  [saida.json]` (no jogo ligado; `NOME` e `SENHA` do personagem de teste).
+
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
 andando, (10) floresta dentro das casas.

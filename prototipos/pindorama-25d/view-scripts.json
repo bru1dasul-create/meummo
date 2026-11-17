@@ -15,6 +15,7 @@
     "js/world/tmj.js",
     "js/world/ground.js",
     "js/world/street.js",
+    "js/world/chao.js",
     "js/world/props.js",
     "js/world/flora.js",
     "js/world/city.js",

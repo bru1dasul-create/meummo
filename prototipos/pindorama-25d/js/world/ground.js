@@ -678,13 +678,30 @@
     };
     const cs = [inv(view.x, view.y), inv(view.x + view.w, view.y), inv(view.x, view.y + view.h), inv(view.x + view.w, view.y + view.h)];
     const box = { x0: Math.min(...cs.map((c) => c.x)) - 40, x1: Math.max(...cs.map((c) => c.x)) + 40, y0: Math.min(...cs.map((c) => c.y)) - 40, y1: Math.max(...cs.map((c) => c.y)) + 40 };
+    // o pedaço é um losango no chão, e a caixa dele tem o dobro da área: `sees` diz se um ponto do chão (com uma
+    // folga em cm) cai mesmo no pedaço — as marcas miúdas do chão pintado pulam o que não aparece
+    const kx = K * cam.zoom, ky = K * cam.sinP * cam.zoom;
+    box.sees = (x, y, pad) => {
+      const sx = (x - y) * kx, sy = (x + y) * ky;
+      const px = pad * kx * 1.5, py = pad * ky * 2;
+      return sx > view.x - px && sx < view.x + view.w + px && sy > view.y - py && sy < view.y + view.h + py;
+    };
     ctx.save();
     ctx.transform(...cam.groundMatrix());
-    // em volta de tudo, mata (a câmera vê além da borda do mapa)
-    ctx.fillStyle = MAT.mata.base;
-    ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
-    this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
+    // o chão pintado (chao.js): manchas de aquarela, beiradas que se misturam, trilhas sem contorno
+    const P = PD.chao;
+    // a última forma que tapa este pedaço inteiro (a mata, a terra da vila, o asfalto): o que vem antes dela não
+    // aparece e nem é pintado (era quase metade do custo de um pedaço no meio da mata: o fundo e a mata por cima dele)
+    let first = -1;
+    if (P) m.shapes.forEach((sh, n) => { if (P.covers(sh, box)) first = n; });
+    if (first < 0) {
+      // em volta de tudo, mata (a câmera vê além da borda do mapa)
+      ctx.fillStyle = P ? P.paintOf('mata') : MAT.mata.base;
+      ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
+      this._texture(ctx, { type: 'mata', kind: 'rect', x0: -1e6, x1: 1e6, y0: -1e6, y1: 1e6 }, box, 0);
+    }
     const env = { map: m, g: this, box };
+    let trailsUnder = false;
     // o pé das figueiras (a que rompeu a esquina: o chão quebrado; todas: as raízes) vai depois das superfícies e antes
     // dos detalhes (as raízes do mapa passam por cima dos pedaços soltos)
     let broke = false;
@@ -697,6 +714,7 @@
       }
     };
     m.shapes.forEach((sh, n) => {
+      if (n < first) return;
       const b = shapeBox(sh);
       if (b.x1 < box.x0 || b.x0 > box.x1 || b.y1 < box.y0 || b.y0 > box.y1) return;
       // detalhes da rua (meio-fio, faixa, remendo, bueiro, tampa, buraco, poça, rachadura, raiz, capim): street.js
@@ -708,6 +726,15 @@
       }
       if (sh.kind === 'point') return;
       const mat = matOf(sh.type);
+      const nat = P && P.natural(sh.type);
+      if (sh.kind === 'line' && nat) {
+        // a terra gasta em volta das trilhas vai por baixo de todas elas (uma vez, antes da primeira)
+        if (!trailsUnder) {
+          trailsUnder = true;
+          P.trailsUnder(ctx, env);
+        }
+        if (P.trail(ctx, sh, n, env)) return;
+      }
       if (sh.kind === 'line') {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -722,18 +749,26 @@
         ctx.lineWidth = sh.width;
         ctx.stroke();
       } else {
-        if (mat.edge) {
-          // borda um pouco mais escura (a grama "pisa" na mata, a pedra do círculo tem beirada)
+        if (mat.edge && !nat) {
+          // borda um pouco mais escura (a pedra do círculo tem beirada). Nos materiais naturais não há mais essa linha
+          // (ela recortava a clareira como um adesivo): a beirada se desmancha no que está em volta (PD.chao.area)
           shapePath(ctx, sh);
           ctx.strokeStyle = mat.edge;
           ctx.lineWidth = sh.type === 'circulo' ? 26 : 30;
           ctx.stroke();
         }
-        shapePath(ctx, sh);
-        ctx.fillStyle = sh.color || mat.base;
-        ctx.fill();
+        if (nat) {
+          // a tinta do material natural já vem com as manchas de aquarela, e a beirada se desmancha no que está em volta
+          P.area(ctx, sh, n, env);
+        } else {
+          shapePath(ctx, sh);
+          ctx.fillStyle = sh.color || mat.base;
+          ctx.fill();
+        }
       }
       this._texture(ctx, sh, box, n + 1);
+      if (nat && sh.kind !== 'line') P.edgeOver(ctx, sh, n, env);
+      else if (P) P.seam(ctx, sh, n, env);
       if (sh.type === 'circulo') this._circleStone(ctx, sh);
     });
     if (!broke) breaks();
@@ -774,6 +809,8 @@
       return;
     }
     if (sh.type === 'faixa') return this._crosswalk(ctx, sh);
+    // os materiais naturais (grama, mata, terra...): folhas, tufos, florzinhas e pedrinhas, no lugar das bolinhas iguais
+    if (PD.chao && PD.chao.marks(ctx, sh, box, seed, this)) return;
     const mat = matOf(sh.type);
     const b = shapeBox(sh);
     const i0 = Math.floor(Math.max(b.x0, box.x0) / 100), i1 = Math.floor(Math.min(b.x1, box.x1) / 100);
