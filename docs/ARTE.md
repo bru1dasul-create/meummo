@@ -1058,12 +1058,12 @@ mexer na esquiva depois de ele escolher. A referência é o `Roll_RM` da Univers
     `rolamento-correndo.cjs` (corre, esquiva e emenda, como a view) e `esquiva-jogo-final.cjs` (os quadros do jogo de
     verdade, com a hora da própria animação em cada um).
 
-### O tranco do zoom da conversa (17/11; o dono escolheu "Tranco do zoom" para eu fazer enquanto ele não podia testar)
+### O tranco do zoom da conversa (17/11; o dono escolheu "Tranco do zoom"; na main em 17/11, com o "pode sim" dele)
 O que ele via (15/11): quando a câmera aproxima para conversar com um NPC, dá um tranco. O "Zoom sem travar" de 14/11
 já tinha tirado os quadros de 200 ms; a [estrutura] mediu de novo (quadro de 24 para 33 ms durante o zoom, o mais lento
-117 ms) e sobrou este. **Está no ramo `claude/blissful-meitner-hp1i5e`, esperando o "pode" do dono para entrar na
-main.** Tudo foi medido no jogo de verdade, no Chromium sem placa de vídeo (parado, 33 a 38 ms por quadro a
-1600 × 900): os números servem para comparar antes e depois, não são os do PC dele.
+117 ms) e sobrou este. **Entrou na main em 17/11, com o "pode sim" do dono** (ele viu o antes e depois; estava fora
+de casa e ainda vai testar no PC dele). Tudo foi medido no jogo de verdade, no Chromium sem placa de vídeo (parado,
+33 a 38 ms por quadro a 1600 × 900): os números servem para comparar antes e depois, não são os do PC dele.
 - **As causas, medidas** (`zoom-perfil.cjs`), da mais pesada para a mais leve:
   1. **A ordem de desenho era refeita a cada passo do zoom.** O `World.invalidate()` zerava a ordem (`_staticOrder`) e,
      com os 2.029 objetos do Capão, refazê-la custava ~21 ms por quadro em todos os quadros da aproximação e da volta.
@@ -1310,11 +1310,12 @@ confirmou.
   para a [estrutura].
 
 ## Próximos passos possíveis (o dono escolhe a ordem)
-- **Esperando o dono (17/11; ele estava fora de casa, sem poder testar):** (1) o "pode" para juntar na main o tranco
-  do zoom (ramo `claude/blissful-meitner-hp1i5e`; a seção "O tranco do zoom da conversa" diz o que ele precisa
-  conferir no PC dele); (2) o teste dele do braço do arco e da esquiva B, que já estão na main (se a saída agachada
-  der sensação de "travar no fim", encurtar `ROLL_SHAPE.crouch`; "volta a esquiva" desfaz); (3) a escolha do que vem
-  depois (ofereci: os ícones de item que faltam em pintura, o Curupira no 2.5D).
+- **Esperando o dono (17/11; ele estava fora de casa, sem poder testar):** (1) o teste dele, no PC, do zoom da
+  conversa, que entrou na main em 17/11 (a seção "O tranco do zoom da conversa" diz o que conferir: conversar com a
+  Xiovanna e com o Curupira, a roda do mouse, os Olhos de Gavião; se algo piorar, desfazer é reverter o commit
+  6e690d6); (2) o teste dele do braço do arco e da esquiva B, que já estão na main (se a saída agachada der sensação
+  de "travar no fim", encurtar `ROLL_SHAPE.crouch`; "volta a esquiva" desfaz); (3) a escolha do que vem depois
+  (ofereci: os ícones de item que faltam em pintura, o Curupira no 2.5D).
 - **Biblioteca de animações do Quaternius como REFERÊNCIA de movimento** (16/11; o dono disse "sim" à sugestão da
   [estrutura]: abrir, ver onde ficam cotovelo, quadril e pés quadro a quadro, e acertar as nossas poses por elas — sem
   importar nada: o esqueleto delas não é o nosso). O dono deu o "pode ser" (16/11) para o primeiro passo: a comparação

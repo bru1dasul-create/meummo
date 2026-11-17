@@ -762,8 +762,8 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   quatro lados e parado) e nos testes do protótipo. Detalhes, medidas e receitas em docs/ARTE.md. A puxada do arco não
   tem referência na biblioteca (não há animação de arco nos pacotes gratuitos)
 - [x] **[arte]** Do mesmo teste: o zoom da conversa dá um tranco (medido pela [estrutura]: quadro de 24 para 33 ms
-  durante o zoom, o mais lento 117 ms) (17/11, escolha do dono; **no ramo da arte, esperando o "pode" dele para entrar
-  na main**). As causas, medidas no jogo de verdade: a ordem de desenho dos 2 mil objetos era refeita a cada passo do
+  durante o zoom, o mais lento 117 ms) (17/11, escolha do dono; **na main em 17/11, com o "pode sim" dele; falta ele
+  conferir no PC dele**). As causas, medidas no jogo de verdade: a ordem de desenho dos 2 mil objetos era refeita a cada passo do
   zoom (~21 ms por quadro) e a caixa na tela de cada um também (13 a 20 ms); na chegada tudo era refeito de uma vez,
   até copas inteiras que estavam fora da tela; e na volta tudo era refeito de novo, com a borda da tela sem chão.
   Agora a ordem fica, a caixa estica, o jogo guarda as imagens e o chão de dois zooms (o da conversa é adiantado aos
