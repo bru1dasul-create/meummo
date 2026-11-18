@@ -81,6 +81,25 @@ mid_ref = ((REF['olhoE'][0] + REF['olhoD'][0]) / 2, (REF['olhoE'][1] + REF['olho
 canvas = Image.new('RGBA', ref.size, GREY + (255,))
 canvas.alpha_composite(big, (round(mid_ref[0] - mid_ours[0]), round(mid_ref[1] - mid_ours[1])))
 ours_al = canvas.convert('RGB')
+# (com MEDIR_BARBA=1: a largura da barba linha por linha, na referência e no nosso — o escuro da barba; em px da referência)
+if os.environ.get('MEDIR_BARBA'):
+    def span(im, y, dark):
+        xs = [x for x in range(REF['caixa'][0], REF['caixa'][2]) if dark(im.getpixel((x, y)))]
+        return (min(xs), max(xs)) if xs else None
+    ref_dark = lambda p: sum(p) < 90
+    ours_dark = lambda p: sum(p) < 130 and p[0] >= p[2]
+    # o fim da barba embaixo, em três colunas (o meio e os lados): o último ponto escuro de cima para baixo
+    for cx in (1026, 840, 1210):
+        def bottom(im, dark):
+            last = None
+            for y in range(1300, min(im.size[1], 2040)):
+                if dark(im.getpixel((cx, y))):
+                    last = y
+            return last
+        print('fim da barba na coluna', cx, '| ref', bottom(ref, ref_dark), '| nosso', bottom(ours_al, ours_dark))
+    for y in range(int(os.environ.get('Y0', 1150)), int(os.environ.get('Y1', 1800)), 50):
+        a, b = span(ref, y, ref_dark), span(ours_al, y, ours_dark)
+        print(y, 'ref', a, 'nosso', b, '| largura', a and a[1] - a[0], b and b[1] - b[0])
 
 x0, y0, x1, y1 = REF['caixa']
 A = ref.crop((x0, y0, x1, y1))

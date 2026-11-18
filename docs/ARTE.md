@@ -1335,6 +1335,34 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
   - *Ainda diferente da referência:* o **boné** é uma touca redonda (na referência, boné de verdade: a parte de trás
     com a fivela, a abertura em cima da testa, copa alta) — é a próxima rodada; a barba da referência é mais cheia e
     larga embaixo; as orelhas dela são maiores; o rosto dela tem mais planos de sombra (maçã do rosto, olheira).
+- **Rodada 2 — a barba e o boné (18/11; o dono: "comparado com o que estava tá bom, o que incomoda é a barba e o
+  boné"), só no ramo:**
+  - *Referências das outras direções* (Nano Banana, mesma cabeça B girada, câmera reta, fundo verde): 45°, perfil (90°)
+    e costas (180°) — 3 imagens, ~US$ 0,15 (total do piloto: 9 imagens, ~US$ 0,42). O outro lado é espelho. Também
+    ficam fora do repositório.
+  - *Barba:* quase preta (`PALETTE.hair` também é a do cabelo), **quadrada embaixo** (os lados descem retos da
+    mandíbula: medido linha por linha com `MEDIR_BARBA=1` no crítico, a largura embaixo bate com a referência,
+    ~840 px), cobrindo **a mandíbula inteira de perfil** (pedaços novos no canto e embaixo da mandíbula; antes, de
+    perfil, era uma cunha pontuda) e com os **fios na borda** (`beardStrands`: pontinhas em 3D — uma esfera grossa
+    dentro da barba e uma fininha fora, deitada na pele — na linha da bochecha, na borda de baixo e por baixo da
+    mandíbula; por serem volume, aparecem certas em qualquer ângulo). Os pedaços do lado do rosto virado para lá vão
+    numa peça à parte (`barbaLonge`, logo depois da cabeça e antes da boca): de três quartos eles cobriam os lábios.
+  - *Boné:* virou um **elipsoide** (`CAP.a` = semieixos: mais comprido de frente para trás e mais alto que a cabeça)
+    cortado pelo plano da barra — a copa na tela sai de `capShell` (a parte de fora que olha para a câmera e fica acima
+    da barra; a conta é feita no "espaço da esfera", em que o elipsoide vira uma esfera). **A calota antiga era uma
+    esfera centrada atrás da cabeça que não chegava até a testa: a testa escapava para fora dela de perfil e vista de
+    cima** — o "boné fora da cabeça". Agora ele envolve a cabeça inteira acima da barra (conferido ponto a ponto contra
+    as esferas da cabeça). Também: a **abertura em meia-lua e a fivela de furinhos** em cima da testa (`capOpening`),
+    as costuras e a coroa recalculadas para o elipsoide, a **aba** maior, saindo da barra em gomos que acompanham a
+    curva (um casco só achatava a aba numa placa que cobria a coroa) com a borda clara (`brimEdge`), os **óculos**
+    maiores e mais baixos (logo acima da fivela, como na referência), e mais **cachos** na nuca, que agora ficam embaixo
+    do boné (antes eram desenhados por cima dele de costas). `ficha.js` lê o alto do boné de `CAP.top`.
+  - *Lições:* (18) um volume que deve **envolver** outro (boné na cabeça, roupa no corpo) precisa ser conferido ponto
+    a ponto contra as esferas de dentro — a calota parecia certa de frente e escapava de lado e de cima; (19) peça
+    única de barba desenhada depois da boca cobre a boca de três quartos: o lado de lá vai antes; (20) casco convexo
+    achata o que é curvo (a aba): use gomos.
+  - *Ainda diferente da referência:* a copa é mais redonda (a da referência é mais "quadrada", estruturada); o cabelo
+    de trás da referência é um volume cacheado maior; o pescoço de perfil é grosso (é da rodada do corpo).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

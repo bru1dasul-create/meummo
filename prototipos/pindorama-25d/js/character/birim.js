@@ -30,7 +30,7 @@
     skin: { base: '#e2732b', shade: '#a94e1b', light: '#f89248' },
     skinFar: { base: '#cb6424', shade: '#934216', light: '#e1803c' },
     lip: '#a04a26',
-    hair: { base: '#261713', shade: '#120a09', light: '#46312a' },
+    hair: { base: '#17110f', shade: '#0a0706', light: '#3b302c' }, // (cabelo e barba quase pretos, como na referência)
     iris: '#2a170d', // (íris quase preta e branco cor de creme, como na referência)
     eyeWhite: '#f3d8ae',
     // roupa e acessórios
@@ -94,32 +94,52 @@
     browBar: { x0: 1.5, x1: 8.9, tPeak: 0.7, zIn: 0.35, zPeak: 1.4, zOut: 0.15, w: 1.3 },
     mouth: { x: 3.8, z: -11.55 },
   };
-  // boné (para trás): uma casca um pouco maior que o crânio. `rim` = a altura da barra em volta da cabeça (mais alta
-  // na testa, mais baixa na nuca, onde fica a aba)
-  const CAP = { c: [0, -2.2, 2.0], r: 12.6, rimFront: 6.6, rimBack: -1.8, eps: 1e-6 }; // (`eps`: veja `_capPoly` no renderer)
+  // boné (para trás): um ELIPSOIDE — mais comprido de frente para trás e mais alto que a cabeça, a copa estruturada de
+  // um boné de verdade — cortado pelo plano da barra (alto na testa, baixo na nuca, onde fica a aba). Ele abraça a
+  // cabeça inteira acima da barra: a calota redonda de antes (uma esfera centrada atrás da cabeça) não chegava até a
+  // testa, e a testa escapava para fora dela de perfil e vista de cima — o "boné fora da cabeça" (rodada 2, 18/11).
+  // c = o centro, a = os semieixos (x para o lado, y para a frente, z para cima), rimFront/rimBack = a altura da barra na
+  // testa e na nuca
+  const CAP = { c: [0, -0.2, 3.0], a: [12.6, 15.4, 14.2], rimFront: 5.8, rimBack: -2.0, eps: 1e-6 };
   {
-    // o plano da barra (inclinado: alto na testa, baixo na nuca), para recortar a casca: normal e distância do centro
-    const zf = CAP.rimFront - CAP.c[2], zb = CAP.rimBack - CAP.c[2];
-    const yf = Math.sqrt(CAP.r * CAP.r - zf * zf), yb = -Math.sqrt(CAP.r * CAP.r - zb * zb);
-    const l = Math.hypot(zf - zb, yf - yb);
-    CAP.n = [0, -(zf - zb) / l, (yf - yb) / l];
-    CAP.d = yf * CAP.n[1] + zf * CAP.n[2];
+    // o plano da barra (inclinado: alto na testa, baixo na nuca): passa pela frente da casca na altura rimFront e pela
+    // parte de trás na altura rimBack. n·p = d (p nos eixos da cabeça); acima da barra: n·p > d
+    const [, cy, cz] = CAP.c, [, ay, az] = CAP.a;
+    const yf = cy + ay * Math.sqrt(1 - ((CAP.rimFront - cz) / az) ** 2);
+    const yb = cy - ay * Math.sqrt(1 - ((CAP.rimBack - cz) / az) ** 2);
+    const l = Math.hypot(yf - yb, CAP.rimFront - CAP.rimBack);
+    CAP.n = [0, -(CAP.rimFront - CAP.rimBack) / l, (yf - yb) / l];
+    CAP.d = yf * CAP.n[1] + CAP.rimFront * CAP.n[2];
+    CAP.top = cz + az; // (o alto da copa; o botão fica em cima)
   }
+  /** Ponto da casca do boné na direção `phi` (0 = testa, π = nuca) e na altura z (`grow`: um pouco para fora). */
+  const capPoint = (phi, z, grow = 0) => {
+    const [cx, cy, cz] = CAP.c, [ax, ay, az] = CAP.a;
+    const s = Math.sqrt(Math.max(0, 1 - ((z - cz) / az) ** 2));
+    return [cx + (ax + grow) * s * Math.sin(phi), cy + (ay + grow) * s * Math.cos(phi), z];
+  };
+  /** A normal da casca no ponto p (nos eixos da cabeça, sem normalizar). */
+  const capNormal = (p) => [(p[0] - CAP.c[0]) / CAP.a[0] ** 2, (p[1] - CAP.c[1]) / CAP.a[1] ** 2, (p[2] - CAP.c[2]) / CAP.a[2] ** 2];
   const capRimZ = (phi) => {
     // a altura da barra na direção phi: onde o plano inclinado corta a casca (resolvido por aproximações)
     let z = (CAP.rimFront + CAP.rimBack) / 2 + ((CAP.rimFront - CAP.rimBack) / 2) * Math.cos(phi);
-    for (let k = 0; k < 6; k++) {
-      const zz = z - CAP.c[2];
-      const rho = Math.sqrt(Math.max(0, CAP.r * CAP.r - zz * zz));
-      z = CAP.c[2] + (CAP.d - rho * Math.cos(phi) * CAP.n[1]) / CAP.n[2];
+    for (let k = 0; k < 8; k++) {
+      const p = capPoint(phi, z);
+      z = (CAP.d - CAP.n[1] * p[1]) / CAP.n[2];
     }
     return z;
   };
-  /** Ponto da casca do boné na direção `phi` (0 = testa, π = nuca) e na altura z. */
-  const capPoint = (phi, z, grow = 0) => {
-    const rho = Math.sqrt(Math.max(0, (CAP.r + grow) * (CAP.r + grow) - (z - CAP.c[2]) * (z - CAP.c[2])));
-    return [CAP.c[0] + rho * Math.sin(phi), CAP.c[1] + rho * Math.cos(phi), z];
-  };
+  // a aba: presa na barra, na nuca (de π − 1 a π + 1 em volta da cabeça), saindo para trás e um pouco para baixo; mais
+  // comprida no meio. Uma placa fina (esferas pequenas em volta da borda dela)
+  const BRIM = [];
+  for (let i = 0; i <= 8; i++) {
+    const phi = Math.PI - 1.05 + (2.1 * i) / 8;
+    const base = capPoint(phi, capRimZ(phi) + 0.3, 0.2);
+    const L = 8.8 * Math.cos((phi - Math.PI) * 1.2);
+    const dir = [Math.sin(phi) * 0.92, Math.cos(phi) * 0.92, -0.38];
+    BRIM.push(base, [base[0] + dir[0] * L, base[1] + dir[1] * L, base[2] + dir[2] * L]);
+  }
+  const BRIM_MID = [0, CAP.c[1] - CAP.a[1] - 3.2, CAP.rimBack - 1.6];
 
   // ------------------------------------------------------------------ medidas da mão e do pé (os do herói são mais simples)
   // A MÃO, escrita em centímetros de verdade. O motor mede a mão em "unidades" (× `size`, e o raio × 0,95 disso), então
@@ -652,10 +672,16 @@
       [[-7.7, -8.3, -6.4], 3.0], [[-4.1, -11.2, -8.3], 3.3], [[0, -12.3, -8.9], 3.4], [[4.1, -11.2, -8.3], 3.3], [[7.7, -8.3, -6.4], 3.0],
       [[-11.9, -4.4, -3.6], 3.0], [[11.9, -4.4, -3.6], 3.0], [[-11.4, -5.6, 0.8], 3.0], [[11.4, -5.6, 0.8], 3.0], [[-11.1, -3.8, -7.4], 2.6], [[11.1, -3.8, -7.4], 2.6],
       [[-6.2, -10.9, -2.6], 3.2], [[6.2, -10.9, -2.6], 3.2], [[0, -13.1, -3.6], 3.3],
+      // (a segunda fileira, mais baixa e mais larga: na referência o cabelo crespo cobre a nuca toda, de orelha a orelha,
+      // e aparece dos lados da mandíbula de frente e de perfil)
+      [[-9.4, -8.6, -9.8], 2.8], [[9.4, -8.6, -9.8], 2.8], [[-5.0, -11.4, -11.2], 3.0], [[5.0, -11.4, -11.2], 3.0], [[0, -12.3, -11.8], 3.1],
+      [[-10.8, -6.2, -6.0], 2.7], [[10.8, -6.2, -6.0], 2.7], [[-8.8, -10.6, -5.2], 2.9], [[8.8, -10.6, -5.2], 2.9],
     ];
     const curlSegs = CURLS.map(([p, r]) => ({ poly: R.hull([sphere(p, r), sphere([p[0] * 0.92, p[1] * 0.92, p[2] + 1.4], r * 0.8)]), circles: R._last, mat: PAL.hair, k: 0.3, noInner: true }));
     const curlKey = R.keyOf(hp([0, -10.5, -5]));
-    items.push({ name: 'cachos', key: curlKey < headKey ? Math.min(curlKey, headKey - 0.25) : curlKey, group: 'cachos', chain: true, segs: curlSegs });
+    // (de trás os cachos ficam por cima da cabeça mas EMBAIXO do boné: eles saem por baixo da barra; antes, com a chave
+    // da posição deles, cobriam a parte de baixo do boné e a coroa)
+    items.push({ name: 'cachos', key: curlKey < headKey ? Math.min(curlKey, headKey - 0.25) : Math.min(curlKey, headKey + 0.31), group: 'cachos', chain: true, segs: curlSegs });
 
     // ---- barba, bigode e costeletas: volumes rentes ao rosto (aparecem certo de frente, de lado e de três quartos).
     // Cada pedaço só entra se o lado dele olha para a câmera (o de lá fica escondido atrás do rosto): conforme a
@@ -664,15 +690,20 @@
     // (uma regra antiga tirava quase tudo de uma vez assim que o rosto passava do perfil: a 95° o queixo ficava pelado)
     {
       const segs = [];
-      const piece = (list, nLocal, minFacing, k = 0, curls = false) => {
+      // (os pedaços do lado do rosto que está virado para lá vão numa peça à parte, desenhada logo depois da cabeça e
+      // antes da boca: de três quartos eles ficam atrás dos lábios — numa peça só com o resto, cobriam a boca)
+      const segsFar = [];
+      const turned = R.facing(rig.head.r);
+      const piece = (list, nLocal, minFacing, k = 0, curls = false, side = 0) => {
         if (R.facing(norm(dirIn(rig.head, nLocal[0], nLocal[1], nLocal[2]))) < minFacing) return;
-        segs.push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
+        (side && side * turned < -0.12 ? segsFar : segs).push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
       };
       // queixo: três pedaços soltos (o casco de um pedaço só enchia a curva e tapava a pele embaixo do lábio)
       // (um casco só embaixo, para a borda de baixo ficar lisa, em U; o alto dele fica abaixo da pele do queixo)
       // (a esfera da frente abraça a frente do queixo: de perfil o queixo fica coberto de barba; de frente ela começa abaixo da
       // pele que fica embaixo do lábio)
-      piece([[[0, 10.0, -19.0], 2.7], [[-3.8, 9.0, -18.3], 2.6], [[3.8, 9.0, -18.3], 2.6], [[0, 12.0, -17.4], 2.9]], [0, 0.85, -0.5], -0.22, 0.24);
+      piece([[[0, 10.0, -19.2], 2.6], [[-3.8, 9.4, -19.4], 2.3], [[3.8, 9.4, -19.4], 2.3], [[0, 12.0, -17.4], 2.9]], [0, 0.85, -0.5], -0.22, 0.24);
+      for (const sx of [-1, 1]) piece([[[sx * 3.8, 9.4, -19.4], 2.3], [[sx * 6.6, 8.4, -19.8], 2.0], [[sx * 4.6, 10.4, -16.8], 2.2]], [sx * 0.3, 0.85, -0.45], -0.2); // (emenda o queixo com os cantos de baixo)
       for (const sx of [-1, 1]) piece([[[sx * 3.3, 10.4, -15.5], 1.35]], [sx * 0.3, 0.85, -0.4], -0.2); // (arredonda os cantos de baixo da pele do queixo)
       piece([[[0, 14.3, -14.4], 0.75], [[0, 13.6, -15.6], 1.0]], [0, 0.9, -0.3], -0.1); // a mosca, embaixo do lábio, descendo até a barba
       for (const sx of [-1, 1]) {
@@ -680,15 +711,21 @@
         // fica acima dela e a costeleta começa na altura do lóbulo)
         piece([[[sx * 10.6, 1.0, 3.4], 1.2], [[sx * 10.7, 0.6, 0.6], 1.15]], [sx, 0.2, 0], 0.02); // cabelo da têmpora, acima da orelha
         for (const [p, r] of [[[sx * 11.2, -0.6, 2.6], 1.45], [[sx * 11.7, -1.6, 0.9], 1.5], [[sx * 11.9, -2.9, -0.6], 1.35]]) piece([[p, r]], [sx, 0, 0.1], -0.05, 0, true); // os cachos dela
-        piece([[[sx * 10.0, 1.4, -6.8], 1.3], [[sx * 8.4, 3.4, -9.0], 1.7]], [sx, 0.25, -0.1], 0); // costeleta
-        piece([[[sx * 8.4, 3.4, -9.0], 1.7], [[sx * 6.2, 7.4, -13.2], 2.9]], [sx * 0.8, 0.5, -0.3], -0.12); // lado da mandíbula
-        piece([[[sx * 5.8, 7.6, -13.0], 3.0], [[sx * 5.6, 8.6, -16.6], 2.8]], [sx * 0.45, 0.8, -0.35], -0.18); // frente da mandíbula (por fora da pele do queixo: ela fica mais larga em cima, como um escudo)
+        piece([[[sx * 10.0, 1.4, -6.8], 1.3], [[sx * 8.4, 3.4, -9.0], 1.7]], [sx, 0.25, -0.1], 0, 0, false, sx); // costeleta
+        piece([[[sx * 8.4, 3.4, -9.0], 1.7], [[sx * 6.2, 7.4, -13.2], 2.9]], [sx * 0.8, 0.5, -0.3], -0.12, 0, false, sx); // lado da mandíbula
+        // o canto da mandíbula e a parte de baixo dela, até o pescoço: de perfil a barba cobre a mandíbula inteira, da
+        // costeleta ao queixo (sem estes pedaços ela virava uma cunha pontuda na frente do rosto)
+        piece([[[sx * 9.6, 1.6, -8.6], 1.4], [[sx * 8.7, 1.0, -12.4], 1.9], [[sx * 7.6, 2.6, -16.6], 2.2], [[sx * 8.4, 3.4, -9.0], 1.7]], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx);
+        piece([[[sx * 7.6, 2.6, -16.6], 2.2], [[sx * 5.6, 5.4, -19.4], 2.2], [[sx * 7.0, 7.6, -17.2], 2.6]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // (embaixo da mandíbula)
+        piece([[[sx * 6.2, 7.4, -13.0], 3.0], [[sx * 7.0, 7.6, -17.2], 2.6], [[sx * 6.6, 8.4, -19.8], 2.0]], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx); // frente da mandíbula: desce reta da mandíbula até o canto de baixo (a barba é quadrada embaixo, como na referência)
         piece([[[sx * 0.6, 15.35, -9.2], 1.1], [[sx * 2.4, 14.7, -9.6], 1.05], [[sx * 4.4, 12.8, -11.2], 0.9]], [sx * 0.3, 0.9, 0.1], 0.05); // bigode (da base do nariz até o canto da boca; o lábio de cima aparece embaixo dele)
-        piece([[[sx * 4.4, 12.8, -11.2], 0.9], [[sx * 5.4, 10.6, -13.8], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05); // do canto do bigode até a barba do queixo (por fora do canto da boca)
+        piece([[[sx * 4.4, 12.8, -11.2], 0.9], [[sx * 5.4, 10.6, -13.8], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx); // do canto do bigode até a barba do queixo (por fora do canto da boca)
         // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
         // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
-        piece([[[sx * 8.4, 3.4, -9.0], 1.7], [[sx * 6.6, 9.6, -10.2], 1.4], [[sx * 4.9, 12.3, -10.8], 1.1], [[sx * 6.2, 7.4, -13.2], 2.9], [[sx * 5.2, 10.8, -13.2], 1.4]], [sx * 0.75, 0.62, -0.1], -0.1);
+        piece([[[sx * 8.4, 3.4, -9.0], 1.7], [[sx * 6.6, 9.6, -10.2], 1.4], [[sx * 4.9, 12.3, -10.8], 1.1], [[sx * 6.2, 7.4, -13.2], 2.9], [[sx * 5.2, 10.8, -13.2], 1.4]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
       }
+      beardStrands(piece);
+      if (segsFar.length) items.push({ name: 'barbaLonge', key: headKey + 0.02, group: 'barbaLonge', chain: true, segs: segsFar });
       if (segs.length) items.push({ name: 'barba', key: headKey + 0.25, group: 'barba', chain: true, segs });
     }
 
@@ -789,14 +826,17 @@
     if (!gear.cabeca && !off.bone) {
       // a copa: a parte da casca acima da barra que a câmera vê (o mesmo recorte da touca de cabelo do herói; um casco
       // de esferas pintaria por cima do rosto a parte de trás do boné, que fica escondida atrás da cabeça)
-      const dome = R._capPoly(head, CAP);
+      const dome = capShell(R, head);
       if (dome) items.push({ name: 'bone', key: headKey + 0.34, group: 'bone', segs: [{ poly: dome.poly, path: dome.path, mat: PAL.cap, k: 0.26, concave: true, decal: () => capDetail(R, rig, head, hs) }] });
-      // a aba, na nuca, descendo para trás
-      const BRIM = [[-7.1, -12.8, -1.9], [-7.7, -17.8, -4.8], [-5.5, -22.4, -7.2], [0, -24.6, -7.6], [5.5, -22.4, -7.2], [7.7, -17.8, -4.8], [7.1, -12.8, -1.9], [0, -14.0, -0.2], [0, -18.8, -2.8]];
-      items.push({ name: 'aba', key: R.keyOf(hp([0, -17.9, -4])), group: 'aba', segs: [{ poly: R.hull(BRIM.map((p) => sphere(p, 0.95))), circles: R._last, mat: PAL.cap, k: 0.3 }] });
+      // a aba, na nuca, saindo da barra para trás e um pouco para baixo
+      // (em gomos: cada um liga dois pontos da barra às duas pontas da aba na frente deles — um casco só achatava a aba
+      // numa placa reta, que de trás cobria a parte de baixo do boné e a coroa)
+      const brimSegs = [];
+      for (let i = 0; i + 3 < BRIM.length; i += 2) brimSegs.push({ poly: R.hull([BRIM[i], BRIM[i + 1], BRIM[i + 2], BRIM[i + 3]].map((p) => sphere(p, 0.9))), circles: R._last, mat: PAL.cap, k: 0, noInner: true, noThin: true }); // (sem risco nem sombra por gomo: a aba é uma peça só)
+      items.push({ name: 'aba', key: R.keyOf(hp(BRIM_MID)), group: 'aba', chain: true, segs: brimSegs, after: () => brimEdge(R, hp) });
       // botão do alto
-      items.push({ name: 'botaoBone', key: headKey + 0.36, group: 'botaoBone', segs: [{ poly: R.hull([sphere([CAP.c[0], CAP.c[1] - 0.3, CAP.c[2] + CAP.r + 0.5], 1.25)]), circles: R._last, mat: PAL.cap, k: 0.3 }] });
-      items.push({ name: 'oculos', key: R.keyOf(hp([0, 12.0, 9.4])) + 0.2, draw: () => glasses(R, rig, head, hs) });
+      items.push({ name: 'botaoBone', key: headKey + 0.36, group: 'botaoBone', segs: [{ poly: R.hull([sphere([CAP.c[0], CAP.c[1], CAP.top + 0.4], 1.2)]), circles: R._last, mat: PAL.cap, k: 0.3 }] });
+      items.push({ name: 'oculos', key: R.keyOf(hp([0, 11.8, 10.6])) + 0.2, draw: () => glasses(R, rig, head, hs) });
     }
 
     // ---- cordão com a coroa
@@ -871,6 +911,72 @@
     }
   }
 
+  /** A superfície do rosto (y, para a frente) no ponto (x, z) da cabeça: a mais de fora entre as esferas do casco. */
+  function faceY(x, z) {
+    let best = -1e9;
+    for (const s of MODEL.HEAD.spheres) {
+      if (s.apart) continue;
+      const q = s.r * s.r - (x - s.p[0]) * (x - s.p[0]) - (z - s.p[2]) * (z - s.p[2]);
+      if (q > 0) best = Math.max(best, s.p[1] + Math.sqrt(q));
+    }
+    return best;
+  }
+  /** Um número entre 0 e 1 que depende só de i (o mesmo a cada quadro: os fios não tremem). */
+  const rnd = (i) => {
+    const v = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  /**
+   * Os fios da beirada da barba (na referência a beirada é cheia de pontinhas, não uma linha lisa). Cada fio é uma
+   * ponta em 3D: uma esfera grossa dentro da barba e uma fininha fora dela, deitada na pele — por ser volume, aparece
+   * certa em qualquer ângulo, e some junto com o pedaço de barba quando o lado dele vira para lá.
+   *  - na bochecha: ao longo dos altos das peças da bochecha (da costeleta ao canto do bigode), apontando para cima;
+   *  - embaixo: ao longo da borda de baixo (dos lados e do queixo), apontando para baixo.
+   */
+  function beardStrands(piece) {
+    const along = (pts, step, fn) => {
+      let i = 0;
+      for (let k = 0; k + 1 < pts.length; k++) {
+        const a = pts[k], b = pts[k + 1];
+        const n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[2] - a[2]) / step));
+        for (let j = 0; j < n; j++, i++) {
+          const t = j / n;
+          fn([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t], i);
+        }
+      }
+    };
+    // os altos das peças da bochecha (o centro x, y de cada uma e o alto dela em z) — a linha da barba na bochecha
+    const CHEEK = [[10.0, 1.4, -5.6], [8.4, 3.4, -7.4], [6.6, 9.6, -8.9], [4.9, 12.3, -9.8]];
+    // a borda de baixo, do lado da mandíbula até o meio do queixo (os baixos das peças de baixo)
+    const BOTTOM = [[9.4, 7.0, -15.6], [9.2, 7.4, -18.4], [7.6, 8.2, -21.2], [5.2, 9.3, -21.6], [2.4, 10.0, -21.75], [0, 10.0, -21.8]];
+    // por baixo da mandíbula, do canto dela (atrás) até o queixo: a borda de baixo que aparece de perfil
+    const UNDER = [[8.7, 0.6, -14.2], [7.6, 2.0, -18.7], [5.6, 4.6, -21.5], [3.6, 7.4, -21.8]];
+    for (const sx of [-1, 1]) {
+      along(CHEEK, 0.42, (p, i) => {
+        const len = 0.5 + 0.45 * rnd(i + 3);
+        const lean = (rnd(i + 11) - 0.5) * 0.6 - 0.15; // (um pouco para fora, como pelo penteado para trás)
+        const tx = p[0] + lean, tz = p[2] + len;
+        const base = [sx * p[0], p[1] + 0.35, p[2] - 0.4];
+        const tip = [sx * tx, Math.max(p[1], faceY(tx, tz)) + 0.12, tz];
+        piece([[base, 0.34], [tip, 0.07]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
+      });
+      along(UNDER, 0.55, (p, i) => {
+        const len = 0.4 + 0.4 * rnd(i + 61);
+        const lean = (rnd(i + 73) - 0.5) * 0.5;
+        piece([[[sx * p[0], p[1], p[2] + 0.4], 0.32], [[sx * (p[0] + lean * 0.3), p[1] - 0.2 + lean, p[2] - len], 0.07]], [sx * 0.6, 0.1, -0.8], 0.04, 0, false, sx);
+      });
+      along(BOTTOM, 0.55, (p, i) => {
+        if (sx > 0 && p[0] === 0) return; // (o fio do meio, uma vez só)
+        const len = 0.45 + 0.4 * rnd(i + 31);
+        const lean = (rnd(i + 47) - 0.5) * 0.5;
+        const side = p[0] > 8.5; // (nos lados, o fio aponta para fora; embaixo, para baixo)
+        const base = [sx * (p[0] - (side ? 0.4 : 0)), p[1], p[2] + (side ? 0 : 0.4)];
+        const tip = side ? [sx * (p[0] + len), p[1] - 0.2, p[2] + lean] : [sx * (p[0] + lean), p[1] - 0.15, p[2] - len];
+        piece([[base, 0.32], [tip, 0.07]], [sx * 0.35, 0.8, -0.45], -0.2);
+      });
+    }
+  }
+
   /**
    * Os fios de um cacho: dois arcos mais claros dentro de cada círculo do pedaço (sem eles, o cabelo crespo era uma
    * mancha escura lisa).
@@ -893,61 +999,139 @@
     ctx.globalAlpha = 1;
   }
 
-  /** Costuras do boné e a coroa bordada no painel que fica virado para trás. */
+  /**
+   * A copa do boné na tela: a parte de FORA da casca (o elipsoide de CAP) que olha para a câmera e fica acima da barra.
+   * O resto está atrás da cabeça (pintar o boné inteiro cobriria o rosto com a parte de trás dele).
+   * Conta no "espaço da esfera": o elipsoide é uma esfera esticada (p = c + A·u, com u de tamanho 1), então
+   *  - a parte que olha para a câmera é u·w > 0, com w = A⁻¹·v (v = a direção da câmera nos eixos da cabeça), e a
+   *    silhueta é o grande círculo u·w = 0;
+   *  - a barra é o círculo u·m = k (m = A·n normalizado), e acima dela fica u·m > k.
+   * O contorno é o trecho visível da barra seguido do trecho da silhueta que fica acima dela.
+   */
+  function capShell(R, head) {
+    const C = CAP.c, A = CAP.a, eps = CAP.eps;
+    const v = R.toCam;
+    const ex = norm(head.r), ey = norm(head.f), ez = norm(head.u);
+    const unit = (p) => {
+      const l = Math.hypot(p[0], p[1], p[2]) || 1;
+      return [p[0] / l, p[1] / l, p[2] / l];
+    };
+    const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const basis = (n) => {
+      const t = Math.abs(n[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+      const e1 = unit(cross3(n, t));
+      return [e1, cross3(n, e1)];
+    };
+    const w = unit([dot(v, ex) / A[0], dot(v, ey) / A[1], dot(v, ez) / A[2]]);
+    const mRaw = [CAP.n[0] * A[0], CAP.n[1] * A[1], CAP.n[2] * A[2]];
+    const mLen = Math.hypot(mRaw[0], mRaw[1], mRaw[2]);
+    const m = [mRaw[0] / mLen, mRaw[1] / mLen, mRaw[2] / mLen];
+    const k = (CAP.d - dot3(CAP.n, C)) / mLen;
+    const toScreen = (u) => R.P(at(head, C[0] + A[0] * u[0], C[1] + A[1] * u[1], C[2] + A[2] * u[2]));
+    const N = 72;
+    const rho = Math.sqrt(Math.max(0, 1 - k * k));
+    const [r1, r2] = basis(m);
+    const rim = [];
+    for (let i = 0; i < N; i++) {
+      const s = (i / N) * M.TAU;
+      const u = [0, 1, 2].map((j) => k * m[j] + rho * (Math.cos(s) * r1[j] + Math.sin(s) * r2[j]));
+      rim.push({ u, vis: dot3(u, w) > eps });
+    }
+    const [g1, g2] = basis(w);
+    const sil = [];
+    for (let i = 0; i < N; i++) {
+      const t = (i / N) * M.TAU;
+      const u = [0, 1, 2].map((j) => Math.cos(t) * g1[j] + Math.sin(t) * g2[j]);
+      sil.push({ u, inCap: dot3(u, m) > k + eps });
+    }
+    const nRim = rim.filter((r) => r.vis).length;
+    const nSil = sil.filter((r) => r.inCap).length;
+    // um trecho seguido (em volta do círculo) dos pontos que cumprem `ok`
+    const run = (list, ok) => {
+      const n = list.length;
+      const start = list.findIndex((r, i) => ok(r) && !ok(list[(i - 1 + n) % n]));
+      if (start < 0) return null;
+      const out = [];
+      for (let j = 0; j < n; j++) {
+        const r = list[(start + j) % n];
+        if (!ok(r)) break;
+        out.push(r.u);
+      }
+      return out;
+    };
+    let us;
+    if (nRim === N) us = nSil === 0 ? rim.map((r) => r.u) : sil.map((r) => r.u); // (a barra inteira à vista: de baixo)
+    else if (nRim === 0) {
+      if (nSil === 0) return null; // (de baixo, sem nada da copa à vista)
+      us = sil.map((r) => r.u); // (de cima: a copa inteira)
+    } else {
+      const a = run(rim, (r) => r.vis);
+      const b = run(sil, (r) => r.inCap);
+      if (!a || !b) return null;
+      const d2 = (p, q) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
+      const end = a[a.length - 1];
+      us = a.concat(d2(b[0], end) <= d2(b[b.length - 1], end) ? b : b.slice().reverse());
+    }
+    const poly = [];
+    for (const u of us) {
+      const q = toScreen(u);
+      poly.push(q.x, q.y);
+    }
+    if (poly.length < 6) return null;
+    return { poly, path: S.polyPath(poly) };
+  }
+
+  /** Costuras do boné, a fivela com a abertura em cima da testa e a coroa bordada no painel que fica virado para trás. */
   function capDetail(R, rig, head, hs) {
     const ctx = R.ctx;
     const PAL = R.pal;
     const z = R.zoom;
     const hp = (p) => at(head, p[0], p[1], p[2]);
     const nrm = (phi, zz) => {
-      const p = capPoint(phi, zz);
-      return norm(dirIn(rig.head, p[0] - CAP.c[0], p[1] - CAP.c[1], p[2] - CAP.c[2]));
+      const nl = capNormal(capPoint(phi, zz));
+      return norm(dirIn(rig.head, nl[0], nl[1], nl[2]));
     };
+    const top = CAP.top - 0.7;
     // costuras dos gomos, do botão até a barra
     if (R.fine) {
       ctx.lineCap = 'round';
       ctx.lineWidth = Math.max(0.5, 0.4 * z);
       for (let k = 0; k < 6; k++) {
         const phi = (k / 6) * M.TAU + M.TAU / 12;
-        if (R.facing(nrm(phi, 9)) < 0.1) continue;
         const pts = [];
-        for (let j = 0; j <= 6; j++) {
-          const zz = capRimZ(phi) + ((CAP.c[2] + CAP.r - 0.6 - capRimZ(phi)) * j) / 6;
-          pts.push(R.P(hp(capPoint(phi, zz, 0.15))));
+        for (let j = 0; j <= 8; j++) {
+          const zz = capRimZ(phi) + ((top - capRimZ(phi)) * j) / 8;
+          pts.push(R.facing(nrm(phi, zz)) > 0.06 ? R.P(hp(capPoint(phi, zz, 0.15))) : null);
         }
         ctx.strokeStyle = PAL.cap.shade;
         ctx.globalAlpha = 0.9;
-        ctx.stroke(S.smoothLinePath(pts));
+        strokeGaps(ctx, pts);
       }
       ctx.globalAlpha = 1;
     }
-    // a barra (um vinco claro logo acima da borda)
+    // a barra (um vinco claro logo acima da borda), menos na frente, onde fica a abertura
     {
       const pts = [];
-      for (let k = 0; k <= 28; k++) {
-        const phi = (k / 28) * M.TAU;
-        pts.push(R.facing(nrm(phi, capRimZ(phi) + 2)) > 0.05 ? R.P(hp(capPoint(phi, capRimZ(phi) + 2.3, 0.15))) : null);
+      for (let k = 0; k <= 40; k++) {
+        const phi = (k / 40) * M.TAU;
+        const open = Math.abs(Math.atan2(Math.sin(phi), Math.cos(phi))) < OPEN.half + 0.06;
+        pts.push(!open && R.facing(nrm(phi, capRimZ(phi) + 1.6)) > 0.05 ? R.P(hp(capPoint(phi, capRimZ(phi) + 1.7, 0.15))) : null);
       }
       ctx.strokeStyle = PAL.cap.light;
       ctx.lineWidth = Math.max(0.5, 0.42 * z);
       ctx.globalAlpha = 0.75;
-      let run = [];
-      const flush = () => {
-        if (run.length > 1) ctx.stroke(S.smoothLinePath(run));
-        run = [];
-      };
-      for (const q of pts) {
-        if (q) run.push(q);
-        else flush();
-      }
-      flush();
+      strokeGaps(ctx, pts);
       ctx.globalAlpha = 1;
     }
+    // a abertura em meia-lua em cima da testa e a fivela de furinhos (o fundo de um boné usado para trás)
+    capOpening(R, rig, head, hs, nrm);
     // a coroa: no painel da frente do boné, que com ele para trás fica na nuca
-    const n = nrm(Math.PI, 6.2);
+    const zc = capRimZ(Math.PI) + 5.2;
+    const n = nrm(Math.PI, zc);
     const f = R.facing(n);
     if (f > 0.15) {
-      const c = hp(capPoint(Math.PI, 6.4, 0.2));
+      const c = hp(capPoint(Math.PI, zc, 0.2));
       const right = norm(cross(rig.head.u, n));
       const up = norm(cross(n, right));
       const w = 3.5 * hs, h = 3 * hs;
@@ -960,6 +1144,110 @@
       ctx.stroke(flatPath(R, pts));
       ctx.globalAlpha = 1;
     }
+  }
+  /** A borda da aba: um risco claro na ponta dela (como o brilho da referência) e um escuro onde ela sai da barra. */
+  function brimEdge(R, hp) {
+    const ctx = R.ctx;
+    const tips = [], base = [];
+    for (let i = 0; i < BRIM.length; i += 2) {
+      base.push(R.P(hp(BRIM[i])));
+      tips.push(R.P(hp(BRIM[i + 1])));
+    }
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = R.pal.cap.light;
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = Math.max(0.6, 0.45 * R.zoom);
+    ctx.stroke(S.smoothLinePath(tips));
+    ctx.strokeStyle = R.pal.cap.shade;
+    ctx.lineWidth = Math.max(0.6, 0.35 * R.zoom);
+    ctx.stroke(S.smoothLinePath(base));
+    ctx.globalAlpha = 1;
+  }
+  /** Risca os trechos seguidos de uma lista de pontos (null = buraco). */
+  function strokeGaps(ctx, pts) {
+    let run = [];
+    const flush = () => {
+      if (run.length > 1) ctx.stroke(S.smoothLinePath(run));
+      run = [];
+    };
+    for (const q of pts) {
+      if (q) run.push(q);
+      else flush();
+    }
+    flush();
+  }
+  // a abertura de trás do boné (que fica em cima da testa): metade da largura em radianos em volta da cabeça e a altura
+  const OPEN = { half: 0.36, h: 3.4 };
+  /**
+   * A abertura e a fivela (snapback), como na referência: uma meia-lua escura acima da barra (dá para ver o cabelo por
+   * ela) e, atravessando a parte de baixo dela, a tira da fivela com a fileira de furinhos e o pino.
+   */
+  function capOpening(R, rig, head, hs, nrm) {
+    const f = R.facing(nrm(0, capRimZ(0) + 1.2));
+    if (f < 0.05) return;
+    const ctx = R.ctx;
+    const PAL = R.pal;
+    const z = R.zoom;
+    const hp = (p) => at(head, p[0], p[1], p[2]);
+    const on = (phi, dz, grow = 0.12) => R.P(hp(capPoint(phi, capRimZ(phi) + dz, grow)));
+    ctx.globalAlpha = smoothstep(0.05, 0.3, f);
+    // a meia-lua: sobe da barra até OPEN.h no meio
+    const arch = [];
+    const N = 14;
+    for (let i = 0; i <= N; i++) {
+      const t = -1 + (2 * i) / N;
+      arch.push(on(t * OPEN.half, OPEN.h * Math.sqrt(Math.max(0, 1 - t * t)) ** 0.9));
+    }
+    const hole = new Path2D();
+    hole.moveTo(arch[0].x, arch[0].y);
+    for (const q of arch) hole.lineTo(q.x, q.y);
+    for (let i = N; i >= 0; i--) {
+      const q = on(-OPEN.half + (2 * OPEN.half * i) / N, -0.05);
+      hole.lineTo(q.x, q.y);
+    }
+    hole.closePath();
+    ctx.fillStyle = PAL.hair.shade;
+    ctx.fill(hole);
+    ctx.strokeStyle = PAL.ink;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(0.6, 0.3 * z);
+    ctx.stroke(S.smoothLinePath(arch));
+    // a tira da fivela, atravessando a parte de baixo da abertura
+    const band = new Path2D();
+    const B0 = 0.25, B1 = 1.45, H = OPEN.half + 0.05;
+    const n2 = 12;
+    for (let i = 0; i <= n2; i++) {
+      const q = on(-H + (2 * H * i) / n2, B1);
+      if (i === 0) band.moveTo(q.x, q.y);
+      else band.lineTo(q.x, q.y);
+    }
+    for (let i = n2; i >= 0; i--) {
+      const q = on(-H + (2 * H * i) / n2, B0);
+      band.lineTo(q.x, q.y);
+    }
+    band.closePath();
+    ctx.fillStyle = PAL.cap.light;
+    ctx.fill(band);
+    ctx.lineWidth = Math.max(0.5, 0.24 * z);
+    ctx.stroke(band);
+    // os furinhos (e o pino, cheio, na ponta)
+    const holes = 6;
+    for (let i = 0; i < holes; i++) {
+      const phi = -H + 0.1 + ((2 * H - 0.2) * i) / (holes - 1);
+      const q = on(phi, (B0 + B1) / 2, 0.16);
+      const r = Math.max(0.5, 0.36 * hs * z);
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, r, 0, M.TAU);
+      if (i === 0) {
+        ctx.fillStyle = PAL.ink;
+        ctx.fill();
+      } else {
+        ctx.lineWidth = Math.max(0.5, 0.2 * z);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 
   /** Óculos de lente laranja, apoiados no boné em cima da testa: duas lentes, a ponte e as hastes. */
@@ -977,7 +1265,7 @@
       const ns = norm(dirIn(rig.head, sx, 0.25, 0.2));
       if (R.facing(ns) < -0.02) continue;
       // (de costas, a ponta da frente da haste fica escondida atrás do boné: sem isto ela sobrava como uma antena)
-      const path = [[sx * 8.4, 9.5, 9.5], [sx * 10.1, 4.2, 8.4], [sx * 11.9, -1.4, 7], [sx * 12.1, -5.2, 6.3]];
+      const path = [[sx * 10.2, 7.8, 10.2], [sx * 11.9, 2.2, 8.8], [sx * 12.6, -3.4, 7.2], [sx * 12.4, -8.4, 5.8]];
       cord(R, (lensFacing(sx) < 0.04 ? path.slice(2) : path).map(hp), 0.6 * hs, PAL.frame.base);
     }
     if (fl < -0.3) return; // de costas, as lentes ficam atrás do boné
@@ -986,14 +1274,14 @@
     const lenses = [];
     for (const sx of [-1, 1]) {
       // cada lente vira um pouco para o lado (os óculos abraçam a cabeça)
-      const c = hp([sx * 4.7, 12.2, 9.5]);
+      const c = hp([sx * 5.5, 11.7, 10.4]);
       const right = norm(add(scale(rig.head.r, 1), scale(rig.head.f, -WRAP * sx)));
-      const pts = LENS.map(([u, v]) => add(add(c, scale(right, sx * u * hs)), scale(up, v * hs)));
+      const pts = LENS.map(([u, v]) => add(add(c, scale(right, sx * u * 1.18 * hs)), scale(up, v * 1.18 * hs)));
       if (lensFacing(sx) >= 0.04) lenses.push({ sx, c, pts, path: flatPath(R, pts) });
     }
     if (!lenses.length) return;
     // ponte
-    if (fl > 0.02) cord(R, [hp([-1.2, 13.0, 11]), hp([0, 13.4, 10.5]), hp([1.2, 13.0, 11])], 0.9 * hs, PAL.frame.base);
+    if (fl > 0.02) cord(R, [hp([-1.2, 12.5, 11.9]), hp([0, 12.9, 11.5]), hp([1.2, 12.5, 11.9])], 0.9 * hs, PAL.frame.base);
     for (const L of lenses) {
       // armação (contorno de tinta, depois o metal claro) e a lente em degradê
       ctx.lineJoin = 'round';

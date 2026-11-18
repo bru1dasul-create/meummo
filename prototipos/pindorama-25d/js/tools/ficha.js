@@ -139,7 +139,7 @@
     const headC = rig.head.o.z - drop;
     const skullTop = Math.max(...MOD.HEAD.spheres.map((s) => s.p[2] + s.r));
     const chin = Math.min(...MOD.HEAD.spheres.map((s) => s.p[2] - s.r));
-    const capTop = modelo === 'birim' && PD.models.birim.CAP ? PD.models.birim.CAP.c[2] + PD.models.birim.CAP.r + 1.7 : skullTop;
+    const capTop = modelo === 'birim' && PD.models.birim.CAP ? PD.models.birim.CAP.top + 1.6 : skullTop; // (o alto da copa e o botão)
     const ear = MOD.HEAD.ear;
     const arm = (list) => Math.max(...list.map((s) => s.r));
     const r2 = (v) => Math.round(v * 10) / 10;
