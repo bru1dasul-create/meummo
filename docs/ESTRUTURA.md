@@ -75,6 +75,16 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**18/11 — decisão do dono: a região 2 fica PAUSADA; a prioridade é o personagem (com a [arte]).** Ele quer o nível
+visual do Dunloc Online (navegador, isométrico, estilo HQ) e chegou a pensar em Godot/3D. Descartado: o autor do Dunloc
+explica (vídeo "Meu MMORPG não usa imagens", canal RafaxLab; o dono colou a transcrição) que é a MESMA técnica nossa,
+Canvas 2D por código com esqueleto e IK. A diferença é o processo: imagem de referência (rosto em fundo verde, virado
+para o sul; as outras 7 direções pelo Nano Banana), rodadas focadas numa coisa só e um crítico comparando lado a lado
+com a referência. Custa caro em uso do Claude (ele relatou 2h28 e 44 milhões de tokens só para a cabeça no sul), por
+isso a [estrutura] fica só em correções pequenas enquanto a [arte] faz o herói. Orçamento do dono: R$ 50 por mês (nada
+de artista nem pacotes). Celular é obrigatório. Meu erro a não repetir: afirmei que desenho por código tinha teto e
+propus 3D e peças pintadas sem saber como a referência era feita; perguntar antes de recomendar troca de técnica.
+
 **17/11 — painel de ajustes dentro do jogo, etapa 1 (pedido do dono: "painel de debug", adaptado; "pode seguir"):**
 `src/client/novo/debugPanel.ts`, tecla **F1**, só administrador, no canto direito. Não tem servidor novo: usa as portas
 do painel (`/admin/api/dados`, `/ajustar`, `/padrao`, `/exportar`), então só funciona no computador do servidor e tudo
