@@ -1297,6 +1297,44 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
     o queixo pelado a 95° e a prancha de oito nunca mostrou; (13) antes de esconder um desenho "estranho", olhar
     a ficha do dono naquele ângulo: a barba pendurada na diagonal de costas, que eu tinha tirado na versão 1, é
     o que a ficha mostra.
+- **O dono achou a versão 3 "horrível" (18/11: "boné fora da cabeça, boneco todo torto... bem longe da minha
+  expectativa")** e, pela [estrutura], mandou o método do Dunloc Online (jogo de navegador desenhado por código, como o
+  nosso; o autor explica num vídeo do canal RafaxLab): **(1)** referência feita por IA de imagem, só cabeça, fundo
+  verde, virada para o sul; **(2)** as outras 7 direções pelo Nano Banana; **(3)** rodada focada numa coisa só ("só o
+  rosto, só o sul"); **(4)** um crítico comparando lado a lado, parte por parte, antes de entregar; **(5)** estilo
+  chapado (2 ou 3 tons) com contorno; **(6)** depois roupa, arma e movimentos, um de cada vez. O dono escolheu
+  **começar pelo Birim** e pagou o saldo do AI Studio (o Google tinha travado com "outstanding balance").
+- **Rodada 1 do rosto (18/11, só no ramo; esperando o dono ver):**
+  - *Referências do Nano Banana* (`gemini-nano-banana-2.1`, 2K; 3 imagens, ~US$ 0,15; total do piloto 6 imagens,
+    ~US$ 0,27): duas cabeças de frente em fundo verde (A, barba curta; **B, barba cheia — a usada**) e o corpo
+    inteiro a 45° na câmera do jogo. Prompt: a ficha do dono + o retrato dela, "flat cel shading, 2 or 3 tones, bold
+    ink outline". **Ficam fora do repositório** (derivam da ficha, que vem da foto de uma pessoa de verdade): só no
+    rascunho e no que for entregue ao dono.
+  - *O crítico:* `ferramentas/critico-rosto.py <referencia.png> <pontos.json> <nosso.png> <saida.png>` — a referência e
+    o nosso desenho na mesma escala, alinhados pelos olhos, lado a lado e um por cima do outro, com linhas nos pontos
+    medidos (os pontos vêm de uma grade desenhada por cima da referência). O nosso rosto de frente, grande:
+    `ficha.cjs <pasta> --modelo birim --graus 0 --inclinacao 0 --escala 30 --tamanho 1400x1400 --ancora 3.84 --solto`.
+    Foram 15 ciclos (c00 a c15), um defeito por vez.
+  - *O que mudou no `birim.js`:* cabeça ~12% mais estreita (o rosto tinha 2,6 vezes a distância entre os olhos; na
+    referência, 1,9) com a esfera `topo` devolvendo a altura; olhos mais afastados; boné, cachos, cabelo de cima, aba e
+    óculos acompanhando a cabeça nova; **olho novo** (`birimEye`: amêndoa baixa, íris grande quase preta passando das
+    pálpebras, brilho no alto, dobra da pálpebra, branco cor de creme) e **sobrancelha nova** (`browBar` virou uma
+    forma cheia: ponta de dentro reta, pico a 70% e ponta fina de fora); **orelha** maior e mais baixa, com a concha e a
+    dobra da borda (`earDetail`) e o contorno do rosto riscado por cima dela de frente; brinco pequeno na frente do
+    lóbulo (aparece de frente); **nariz de frente** (`noseFront`: as asas em "C" e a curva da ponta; narinas em
+    meia-lua; o risco de três quartos só aparece com a cabeça virada); **boca** mais baixa e larga, lábio de baixo
+    com a sombra embaixo e a **pele do queixo** à mostra entre o bigode e a barba, com a mosca; barba larga embaixo
+    (em U) e a esfera da frente do queixo abraçando o queixo (de perfil ele fica coberto); **cachos** na têmpora com o
+    desenho dos fios (`curlLines`); **planos de sombra** do rosto (`facePlane`: as laterais e o fundo dos olhos).
+  - *Lições:* (14) o crítico precisa achar os olhos pelos **pedaços** da cor (o brilho do brinco tem a mesma cor do
+    branco do olho e puxava a medida); (15) uma peça de barba em casco único **enche as curvas**: para abrir a pele
+    embaixo do lábio, o queixo virou peças separadas e uma esfera que começa mais baixo; (16) mudar o rosto de frente
+    mexe nos outros ângulos: conferir as 8 direções a cada mudança grande (a barba nova deixou a boca "aberta" de
+    perfil até eu pôr a esfera da frente do queixo); (17) a sombra própria de um pedaço (`faceShade` com `ownPoly`)
+    tem de ficar recortada dentro dele, senão escurece a peça inteira.
+  - *Ainda diferente da referência:* o **boné** é uma touca redonda (na referência, boné de verdade: a parte de trás
+    com a fivela, a abertura em cima da testa, copa alta) — é a próxima rodada; a barba da referência é mais cheia e
+    larga embaixo; as orelhas dela são maiores; o rosto dela tem mais planos de sombra (maçã do rosto, olheira).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

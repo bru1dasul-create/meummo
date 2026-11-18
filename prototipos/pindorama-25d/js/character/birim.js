@@ -31,8 +31,8 @@
     skinFar: { base: '#cb6424', shade: '#934216', light: '#e1803c' },
     lip: '#a04a26',
     hair: { base: '#261713', shade: '#120a09', light: '#46312a' },
-    iris: '#3b2214',
-    eyeWhite: '#f6ecdd',
+    iris: '#2a170d', // (íris quase preta e branco cor de creme, como na referência)
+    eyeWhite: '#f3d8ae',
     // roupa e acessórios
     cap: { base: '#241b1a', shade: '#100b0b', light: '#40332f' },
     capLogo: '#f1cfa6',
@@ -52,15 +52,18 @@
   // crânio mais estreito e rosto mais comprido que o do herói; a mandíbula e o queixo já têm a grossura da barba
   const HEAD = {
     spheres: [
-      { name: 'cranio', p: [0, -0.4, 1.8], r: 13 },
-      { name: 'cranioTras', p: [0, -3.8, 0.8], r: 12.6 },
+      // (rodada do rosto, 18/11: a cabeça ficou ~12% mais estreita e os olhos mais afastados — medido lado a lado com a
+      // referência, o rosto era largo demais para os olhos: 2,6 vezes a distância entre eles; na referência, 1,9)
+      { name: 'cranio', p: [0, -0.4, 1.8], r: 11.5 },
+      { name: 'topo', p: [0, -1.5, 4.5], r: 9.6 }, // (devolve a altura que o crânio mais estreito perdeu)
+      { name: 'cranioTras', p: [0, -3.8, 0.8], r: 11.2 },
       { name: 'testa', p: [0, 6.6, 4.6], r: 8 },
-      { name: 'macaE', p: [-6.8, 8.2, -2.6], r: 5.6 },
-      { name: 'macaD', p: [6.8, 8.2, -2.6], r: 5.6 },
-      { name: 'orbitaE', p: [-4.4, 9.2, -1.2], r: 4.3 }, // onde o olho assenta: olhando para a frente, um tiquinho para fora
-      { name: 'orbitaD', p: [4.4, 9.2, -1.2], r: 4.3 },
-      { name: 'mandibulaE', p: [-4.8, 5.4, -9.8], r: 4.9 },
-      { name: 'mandibulaD', p: [4.8, 5.4, -9.8], r: 4.9 },
+      { name: 'macaE', p: [-5.8, 8.2, -2.6], r: 5.4 },
+      { name: 'macaD', p: [5.8, 8.2, -2.6], r: 5.4 },
+      { name: 'orbitaE', p: [-5.1, 9.2, -1.2], r: 4.3 }, // onde o olho assenta: olhando para a frente, um tiquinho para fora
+      { name: 'orbitaD', p: [5.1, 9.2, -1.2], r: 4.3 },
+      { name: 'mandibulaE', p: [-4.4, 5.4, -9.8], r: 4.9 },
+      { name: 'mandibulaD', p: [4.4, 5.4, -9.8], r: 4.9 },
       { name: 'boca', p: [0, 10.6, -7.8], r: 5 },
       { name: 'queixo', p: [0, 10.4, -14.2], r: 5 },
       { name: 'queixoE', p: [-2.3, 9.8, -14.5], r: 4.3 },
@@ -74,23 +77,26 @@
       // ponta fica ~1,2 cm à frente do bigode. Mais curto, a ponta ficava quase na altura do olho, um nariz de botão;
       // mais saliente, virava um bico)
       { name: 'ponte', p: [0, 14.4, 0.3], r: 1, apart: true },
-      { name: 'dorso', p: [0, 15.75, -2.75], r: 1.12, apart: true },
-      { name: 'nariz', p: [0, 16.7, -5.5], r: 1.5, apart: true },
-      { name: 'asaE', p: [-1.5, 14.95, -6], r: 1.15, apart: true },
-      { name: 'asaD', p: [1.5, 14.95, -6], r: 1.15, apart: true },
-      { name: 'arcoE', p: [-4.7, 12.9, 3], r: 3.1 }, // (o arco fica acima do olho: mais baixo, o olho caía na parte de baixo dele e sumia)
-      { name: 'arcoD', p: [4.7, 12.9, 3], r: 3.1 },
+      { name: 'dorso', p: [0, 15.75, -3.4], r: 1.12, apart: true },
+      { name: 'nariz', p: [0, 16.7, -6.5], r: 1.5, apart: true },
+      { name: 'asaE', p: [-1.7, 14.95, -7.0], r: 1.15, apart: true },
+      { name: 'asaD', p: [1.7, 14.95, -7.0], r: 1.15, apart: true },
+      { name: 'arcoE', p: [-5.2, 12.6, 3], r: 3.1 }, // (o arco fica acima do olho: mais baixo, o olho caía na parte de baixo dele e sumia)
+      { name: 'arcoD', p: [5.2, 12.6, 3], r: 3.1 },
     ],
     neckBase: [0, -2.4, -13],
-    ear: { top: { p: [11.9, -2.2, -0.6], r: 2.2 }, mid: { p: [12.2, -1.5, -2.7], r: 2.35 }, lobe: { p: [11.8, -0.5, -5.1], r: 1.7 } },
-    eye: { x: 4.8, z: -1.3, w: 5.6, h: 2.5, iris: 1.45, lid: 0.5 }, // (`lid`: a grossura da linha da pálpebra, em cm)
+    // (a orelha é grande e fica do lado de fora, como na referência: do meio do olho até a base do nariz)
+    ear: { top: { p: [11.2, -2.2, -2.6], r: 2.4 }, mid: { p: [11.6, -1.5, -4.9], r: 2.5 }, lobe: { p: [11.1, -0.5, -7.4], r: 1.8 } },
+    eye: { x: 5.5, z: -1.3, w: 5.6, h: 2.0, iris: 1.3, lid: 0.3 }, // (`lid`: a grossura da linha da pálpebra, em cm; o olho é uma amêndoa baixa, a íris grande passa das pálpebras)
     brow: { inner: [1.3, 0.9], outer: [8.9, 0.9], thick: 0 }, // (a sobrancelha em gota do motor fica desligada: a dele é a barra de `browBar`)
-    browBar: { x0: 2.1, x1: 8.2, z0: 1.15, z1: 1.75, w: 1.75 }, // (até onde vai o osso da sobrancelha: mais para fora ela subia para a têmpora, vista de cima)
-    mouth: { x: 3.1, z: -9.9 },
+    // a sobrancelha (medida na referência): a ponta de dentro em x0, o pico em tPeak do caminho e a ponta fina em x1; zIn, zPeak e
+    // zOut = a altura da linha do meio em cada um; w = a grossura
+    browBar: { x0: 1.5, x1: 8.9, tPeak: 0.7, zIn: 0.35, zPeak: 1.4, zOut: 0.15, w: 1.3 },
+    mouth: { x: 3.8, z: -11.55 },
   };
   // boné (para trás): uma casca um pouco maior que o crânio. `rim` = a altura da barra em volta da cabeça (mais alta
   // na testa, mais baixa na nuca, onde fica a aba)
-  const CAP = { c: [0, -2.2, 1.5], r: 14, rimFront: 6.6, rimBack: -1.8, eps: 1e-6 }; // (`eps`: veja `_capPoly` no renderer)
+  const CAP = { c: [0, -2.2, 2.0], r: 12.6, rimFront: 6.6, rimBack: -1.8, eps: 1e-6 }; // (`eps`: veja `_capPoly` no renderer)
   {
     // o plano da barra (inclinado: alto na testa, baixo na nuca), para recortar a casca: normal e distância do centro
     const zf = CAP.rimFront - CAP.c[2], zb = CAP.rimBack - CAP.c[2];
@@ -267,16 +273,36 @@
     if (fFace < -0.55) return; // de costas: nada do rosto aparece
     // os lábios (a barba e o bigode são volumes, por cima do rosto: veja `extras`)
     const mo = MODEL.HEAD.mouth;
-    R._faceStrip(head, -3.5, 3.5, (x) => mo.z + 0.5 - 0.04 * x * x, (x) => mo.z - 1.9 + 0.12 * x * x, M.mix(PAL.lip, PAL.skin.base, 0.12), 12, 0.12);
+    R._faceStrip(head, -3.7, 3.7, (x) => mo.z + 1.25 - 0.05 * x * x, (x) => mo.z - 1.3 + 0.08 * x * x, M.mix(PAL.lip, PAL.skin.base, 0.12), 12, 0.12);
+    // a sombra embaixo do lábio de baixo (na referência, uma curva escura entre o lábio e a pele do queixo)
+    {
+      const q = [-2.6, -1.3, 0, 1.3, 2.6].map((x) => R._faceAt(head, x, mo.z - 1.45 + 0.07 * x * x, 0.1));
+      if (q.every(Boolean) && R.facing(q[2].n) > 0.15) {
+        ctx.strokeStyle = PAL.skin.shade;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(0.6, 0.32 * z);
+        ctx.globalAlpha = smoothstep(0.15, 0.45, R.facing(q[2].n));
+        ctx.stroke(S.smoothLinePath(q.map((p) => R.P(p.pt))));
+        ctx.globalAlpha = 1;
+      }
+    }
 
     // sombra do boné e dos óculos na testa (o sol vem do alto)
     R._faceStrip(head, -11.5, 11.5, () => 7.6, (x) => 5.2 - 0.012 * x * x, PAL.skin.shade, 20, 0.1);
+    // os planos de sombra da referência: as laterais do rosto (da têmpora até a barba) e o fundo dos olhos, entre a
+    // sobrancelha e a pálpebra (um tom só, sem degradê, como o resto do desenho)
+    const plane = 'rgba(150, 62, 18, 0.26)';
+    for (const sx of [-1, 1]) {
+      // (a lateral: da ponta de fora da sobrancelha, descendo pela maçã do rosto até a barba — um contorno curvo, não uma faixa)
+      facePlane(R, head, sx, [[7.9, 2.6], [9.2, 3.9], [10.5, 3.3], [10.6, -1.2], [10.2, -6.4], [8.7, -7.4], [7.7, -4.6], [7.3, -2.0], [7.5, 0.6]], plane);
+      R._faceStrip(head, sx > 0 ? 2.4 : -8.4, sx > 0 ? 8.4 : -2.4, (x) => 0.35 + 0.05 * (Math.abs(x) - 2.4), (x) => -0.25 - 0.04 * Math.abs(Math.abs(x) - 5.4), plane, 10, 0.1);
+    }
 
     // olhos e sobrancelhas (os mesmos do herói, com as medidas dele)
     const turned = R.facing(rig.head.r); // > 0: o lado direito dele olha para a câmera
     for (const sx of [-1, 1]) {
       if (-sx * turned < 0.8 && Math.abs(turned) < 0.86) {
-        R._eye(head, sx, look);
+        birimEye(R, head, sx, look);
         browBar(R, head, sx, look);
       } else if (sx * turned >= 0.86) sideEye(R, rig, head, sx, look); // de perfil: o olho do lado de cá, visto de lado
     }
@@ -325,31 +351,173 @@
     }
   }
 
-  /** A sobrancelha dele: uma barra grossa e quase reta, logo acima do olho, acompanhando a curva do rosto. */
+  /**
+   * Um plano de sombra na superfície do rosto: o contorno é dado em (x, z) do lado `sx` (o x vem positivo e é espelhado).
+   * Os pontos que caem fora do rosto ou viram para o outro lado ficam de fora.
+   */
+  function facePlane(R, head, sx, pts, color) {
+    const q = [];
+    for (const [x, z] of pts) {
+      const p = R._faceAt(head, sx * x, z, 0.06);
+      if (p && R.facing(p.n) > 0.02) q.push(R.P(p.pt));
+    }
+    if (q.length < 3) return;
+    R.ctx.fillStyle = color;
+    R.ctx.fill(S.smoothClosedPath(q));
+  }
+
+  /**
+   * A sobrancelha dele, como na referência: grossa, com a ponta de dentro reta e mais baixa, subindo até o pico (a uns
+   * 2/3 do caminho, por fora do olho) e caindo rápido até uma ponta fina do lado de fora. É uma forma cheia na superfície
+   * do rosto (antes era um traço reto de ponta redonda).
+   */
   function browBar(R, head, sx, look) {
     const B = MODEL.HEAD.browBar;
     const ctx = R.ctx;
     const raise = (look.browRaise || 0) * 0.8;
-    const pts = [];
-    let fMin = 1;
     // a sobrancelha do lado de lá encurta conforme a cabeça vira (ela foge da câmera: inteira, subia como um gancho)
     const away = Math.max(0, -sx * R.facing(norm(head.r))); // (`head` aqui é a cabeça já na escala dele: o eixo não é unitário)
     const x1 = B.x0 + (B.x1 - B.x0) * (1 - 0.72 * away);
-    for (let k = 0; k <= 6; k++) {
-      const t = k / 6;
-      const q = R._faceAt(head, sx * (B.x0 + (x1 - B.x0) * t), B.z0 + (B.z1 - B.z0) * Math.sin(t * Math.PI * 0.62) + raise * (0.6 + 0.4 * (1 - t)), 0.15);
-      if (!q) continue;
-      const f = R.facing(q.n);
-      if (f < 0.22) continue; // a ponta que já virou para o outro lado do rosto não aparece
-      fMin = Math.min(fMin, f);
-      pts.push(R.P(q.pt));
+    const N = 16;
+    const top = [];
+    const bot = [];
+    for (let k = 0; k <= N; k++) {
+      const t = k / N;
+      const x = B.x0 + (x1 - B.x0) * t;
+      const tp = B.tPeak;
+      // a linha do meio sobe de zIn até zPeak e cai até zOut; a grossura fica igual até o pico e afina até a ponta
+      const zc = t < tp ? B.zIn + (B.zPeak - B.zIn) * Math.sin(((t / tp) * Math.PI) / 2) : B.zPeak + (B.zOut - B.zPeak) * Math.pow((t - tp) / (1 - tp), 1.3);
+      const w = t < tp ? B.w : B.w * Math.max(0.06, 1 - Math.pow((t - tp) / (1 - tp), 1.15));
+      const lift = raise * (0.6 + 0.4 * (1 - t));
+      const a = R._faceAt(head, sx * x, zc + lift + w / 2, 0.15);
+      const b = R._faceAt(head, sx * x, zc + lift - w / 2, 0.15);
+      if (!a || !b || R.facing(a.n) < 0.22 || R.facing(b.n) < 0.22) continue; // (a ponta que já virou para o outro lado do rosto não aparece)
+      top.push(R.P(a.pt));
+      bot.push(R.P(b.pt));
     }
-    if (pts.length < 2) return;
+    if (top.length < 2) return;
+    const p = new Path2D();
+    p.moveTo(top[0].x, top[0].y);
+    for (const q of top) p.lineTo(q.x, q.y);
+    for (let k = bot.length - 1; k >= 0; k--) p.lineTo(bot[k].x, bot[k].y);
+    p.closePath();
+    ctx.fillStyle = '#1c1416';
+    ctx.fill(p);
     ctx.strokeStyle = '#1c1416';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(0.5, 0.1 * R.hs * R.zoom);
+    ctx.stroke(p);
+  }
+
+  /**
+   * O olho dele, como na referência: amêndoa mais baixa que a do herói, íris grande e escura (cortada em cima e embaixo
+   * pelas pálpebras), o brilho branco no alto, a pálpebra de cima grossa passando um pouco do canto de fora, a de baixo
+   * fina e a dobra da pálpebra por cima. Os pontos ficam na superfície do rosto (como a sobrancelha).
+   */
+  function birimEye(R, head, sx, look) {
+    const ctx = R.ctx;
+    const PAL = R.pal;
+    const E = MODEL.HEAD.eye;
+    const mid = R._faceAt(head, sx * E.x, E.z, 0.12);
+    if (!mid) return;
+    const f = R.facing(mid.n);
+    if (f < 0.12) return;
+    const blink = clamp01(look.blink || 0);
+    const w = E.w / 2;
+    const h = (E.h / 2) * (1 - blink * 0.92);
+    // u: -1 = canto de fora, +1 = canto de dentro; v: para cima (unidades da cabeça)
+    const at2 = (u, v, lift = 0.12) => {
+      const q = R._faceAt(head, sx * (E.x - u * w), E.z + v, lift);
+      return q ? R.P(q.pt) : null;
+    };
+    const topV = (u) => h * Math.pow(Math.max(0, 1 - u * u), 0.7) * (1 + 0.22 * u);
+    const botV = (u) => -h * 0.62 * Math.pow(Math.max(0, 1 - u * u), 0.85) * (1 - 0.2 * u);
+    const N = 12;
+    const top = [];
+    const bot = [];
+    for (let k = 0; k <= N; k++) {
+      const u = -1 + (2 * k) / N;
+      top.push(at2(u, topV(u)));
+      bot.push(at2(u, botV(u)));
+    }
+    if (top.some((q) => !q) || bot.some((q) => !q)) return;
+    ctx.globalAlpha = smoothstep(0.12, 0.38, f);
+    if (blink < 0.85) {
+      const eye = new Path2D();
+      eye.moveTo(top[0].x, top[0].y);
+      for (const q of top) eye.lineTo(q.x, q.y);
+      for (let k = bot.length - 1; k >= 0; k--) eye.lineTo(bot[k].x, bot[k].y);
+      eye.closePath();
+      ctx.fillStyle = PAL.eyeWhite;
+      ctx.fill(eye);
+      ctx.save();
+      ctx.clip(eye);
+      // íris: um pouco para dentro (o olhar para a frente) e para onde o personagem olha
+      const gx = (look.gazeX || 0) * 0.9;
+      const gy = (look.gazeY || 0) * 0.5;
+      const ic = R._faceAt(head, sx * (E.x - 0.15) + gx, E.z + 0.05 + gy, 0.14);
+      const ix = R._faceAt(head, sx * (E.x - 0.15) + gx + E.iris, E.z + 0.05 + gy, 0.14);
+      const iy = R._faceAt(head, sx * (E.x - 0.15) + gx, E.z + 0.05 + gy + E.iris, 0.14);
+      if (ic && ix && iy) {
+        const C = R.P(ic.pt), X = R.P(ix.pt), Y = R.P(iy.pt);
+        const rx = Math.max(0.5, Math.hypot(X.x - C.x, X.y - C.y));
+        const ry = Math.max(0.5, Math.hypot(Y.x - C.x, Y.y - C.y));
+        const rot = Math.atan2(X.y - C.y, X.x - C.x);
+        ctx.fillStyle = (look.eyeGlow || 0) > 0.3 ? '#e8a514' : PAL.iris;
+        ctx.beginPath();
+        ctx.ellipse(C.x, C.y, rx, ry, rot, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#0c0606';
+        ctx.beginPath();
+        ctx.ellipse(C.x, C.y, rx * 0.52, ry * 0.52, rot, 0, M.TAU);
+        ctx.fill();
+        // o brilho, no alto e para o lado de onde vem a luz (os dois olhos do mesmo lado, como na referência)
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(C.x - rx * 0.36, C.y - ry * 0.42, Math.max(0.6, rx * 0.24), 0, M.TAU);
+        ctx.fill();
+      }
+      // sombra da pálpebra no alto do branco
+      ctx.fillStyle = 'rgba(90, 40, 20, 0.3)';
+      const sh = new Path2D();
+      sh.moveTo(top[0].x, top[0].y);
+      for (const q of top) sh.lineTo(q.x, q.y);
+      for (let k = N; k >= 0; k--) {
+        const u = -1 + (2 * k) / N;
+        const q = at2(u, topV(u) - h * 0.45);
+        if (q) sh.lineTo(q.x, q.y);
+      }
+      sh.closePath();
+      ctx.fill(sh);
+      ctx.restore();
+    }
+    ctx.strokeStyle = PAL.ink;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(1.2, B.w * R.hs * R.zoom);
-    ctx.stroke(S.smoothLinePath(pts));
+    // a dobra da pálpebra, por cima (fina)
+    const crease = [];
+    for (let k = 1; k < N; k++) {
+      const u = -1 + (2 * k) / N;
+      if (u < -0.8 || u > 0.85) continue;
+      const q = at2(u, topV(u) + 0.55 + 0.1 * (1 - u * u));
+      if (q) crease.push(q);
+    }
+    if (crease.length > 1 && blink < 0.85) {
+      ctx.globalAlpha *= 0.7;
+      ctx.lineWidth = Math.max(0.5, 0.16 * R.zoom);
+      ctx.stroke(S.smoothLinePath(crease));
+      ctx.globalAlpha = smoothstep(0.12, 0.38, f);
+    }
+    // a pálpebra de cima: grossa, passando um pouco do canto de fora
+    const wing = at2(-1.16, 0.06);
+    ctx.lineWidth = Math.max(1, E.lid * R.zoom);
+    ctx.stroke(S.smoothLinePath((wing ? [wing] : []).concat(top)));
+    // a de baixo: fina, do canto de fora até perto do canto de dentro
+    if (blink < 0.85) {
+      ctx.lineWidth = Math.max(0.5, 0.2 * R.zoom);
+      ctx.stroke(S.smoothLinePath(bot.slice(0, Math.round(N * 0.85))));
+    }
+    ctx.globalAlpha = 1;
   }
 
   // ------------------------------------------------------------------ peito
@@ -478,12 +646,12 @@
     const off = look.semPecas || {};
 
     // ---- cabelo curto e crespo: a parte de trás da cabeça (uma touca rente) e os cachos da nuca e de trás das orelhas
-    const back = R._capPoly(head, { c: [0, -3.2, 1], r: 13.6, n: [0, -0.8, 0.6], d: 3, eps: 1e-6 });
+    const back = R._capPoly(head, { c: [0, -3.0, 1.4], r: 12.2, n: [0, -0.8, 0.6], d: 3, eps: 1e-6 });
     if (back) items.push({ name: 'cabeloCurto', key: headKey + 0.3, group: 'cabeloCurto', segs: [{ poly: back.poly, path: back.path, mat: PAL.hair, k: 0.2, isNape: true, concave: true }] });
     const CURLS = [
-      [[-8.6, -9, -6.4], 3.1], [[-4.5, -12.2, -8.3], 3.4], [[0, -13.4, -8.9], 3.5], [[4.5, -12.2, -8.3], 3.4], [[8.6, -9, -6.4], 3.1],
-      [[-12.3, -5.2, -3.4], 3.2], [[12.3, -5.2, -3.4], 3.2], [[-11.9, -6.6, 1.2], 3.2], [[11.9, -6.6, 1.2], 3.2], [[-11.6, -4.6, -7.2], 2.6], [[11.6, -4.6, -7.2], 2.6],
-      [[-6.9, -11.8, -2.6], 3.3], [[6.9, -11.8, -2.6], 3.3], [[0, -14.2, -3.6], 3.4],
+      [[-7.7, -8.3, -6.4], 3.0], [[-4.1, -11.2, -8.3], 3.3], [[0, -12.3, -8.9], 3.4], [[4.1, -11.2, -8.3], 3.3], [[7.7, -8.3, -6.4], 3.0],
+      [[-11.9, -4.4, -3.6], 3.0], [[11.9, -4.4, -3.6], 3.0], [[-11.4, -5.6, 0.8], 3.0], [[11.4, -5.6, 0.8], 3.0], [[-11.1, -3.8, -7.4], 2.6], [[11.1, -3.8, -7.4], 2.6],
+      [[-6.2, -10.9, -2.6], 3.2], [[6.2, -10.9, -2.6], 3.2], [[0, -13.1, -3.6], 3.3],
     ];
     const curlSegs = CURLS.map(([p, r]) => ({ poly: R.hull([sphere(p, r), sphere([p[0] * 0.92, p[1] * 0.92, p[2] + 1.4], r * 0.8)]), circles: R._last, mat: PAL.hair, k: 0.3, noInner: true }));
     const curlKey = R.keyOf(hp([0, -10.5, -5]));
@@ -496,30 +664,39 @@
     // (uma regra antiga tirava quase tudo de uma vez assim que o rosto passava do perfil: a 95° o queixo ficava pelado)
     {
       const segs = [];
-      const piece = (list, nLocal, minFacing, k = 0) => {
+      const piece = (list, nLocal, minFacing, k = 0, curls = false) => {
         if (R.facing(norm(dirIn(rig.head, nLocal[0], nLocal[1], nLocal[2]))) < minFacing) return;
-        segs.push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true });
+        segs.push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
       };
-      piece([[[0, 10.8, -15.6], 4.2], [[-2.3, 10, -15.5], 3.9], [[2.3, 10, -15.5], 3.9], [[0, 14.3, -13.6], 1.5]], [0, 0.85, -0.5], -0.22, 0.24); // queixo e a mosca (o alto fica abaixo do lábio)
+      // queixo: três pedaços soltos (o casco de um pedaço só enchia a curva e tapava a pele embaixo do lábio)
+      // (um casco só embaixo, para a borda de baixo ficar lisa, em U; o alto dele fica abaixo da pele do queixo)
+      // (a esfera da frente abraça a frente do queixo: de perfil o queixo fica coberto de barba; de frente ela começa abaixo da
+      // pele que fica embaixo do lábio)
+      piece([[[0, 10.0, -19.0], 2.7], [[-3.8, 9.0, -18.3], 2.6], [[3.8, 9.0, -18.3], 2.6], [[0, 12.0, -17.4], 2.9]], [0, 0.85, -0.5], -0.22, 0.24);
+      for (const sx of [-1, 1]) piece([[[sx * 3.3, 10.4, -15.5], 1.35]], [sx * 0.3, 0.85, -0.4], -0.2); // (arredonda os cantos de baixo da pele do queixo)
+      piece([[[0, 14.3, -14.4], 0.75], [[0, 13.6, -15.6], 1.0]], [0, 0.9, -0.3], -0.1); // a mosca, embaixo do lábio, descendo até a barba
       for (const sx of [-1, 1]) {
-        piece([[[sx * 11.9, 1, 3.6], 1.2], [[sx * 11.1, 0.7, -3.6], 1.15]], [sx, 0.2, 0], 0.02); // cabelo da têmpora, na frente da orelha
-        piece([[[sx * 11.1, 0.7, -3.6], 1.15], [[sx * 9.3, 3.4, -8.4], 1.7]], [sx, 0.25, -0.1], 0); // costeleta
-        piece([[[sx * 9.3, 3.4, -8.4], 1.7], [[sx * 5.9, 7.9, -12.4], 3.1]], [sx * 0.8, 0.5, -0.3], -0.12); // lado da mandíbula
-        piece([[[sx * 5.9, 7.9, -12.4], 3.1], [[sx * 2.3, 10, -15.3], 4]], [sx * 0.45, 0.8, -0.35], -0.18); // frente da mandíbula
-        piece([[[sx * 0.9, 15.4, -8.25], 1], [[sx * 3.9, 13.2, -9], 0.85]], [sx * 0.3, 0.9, 0.1], 0.05); // bigode (entre a base do nariz e o lábio)
-        piece([[[sx * 3.9, 13.2, -9], 0.85], [[sx * 4.9, 11.2, -12.3], 1.5]], [sx * 0.5, 0.85, -0.1], 0.05); // do canto do bigode até a barba do queixo
+        // (na referência não há faixa escura na frente da orelha: a pele do rosto vai até a orelha, o cabelo da têmpora
+        // fica acima dela e a costeleta começa na altura do lóbulo)
+        piece([[[sx * 10.6, 1.0, 3.4], 1.2], [[sx * 10.7, 0.6, 0.6], 1.15]], [sx, 0.2, 0], 0.02); // cabelo da têmpora, acima da orelha
+        for (const [p, r] of [[[sx * 11.2, -0.6, 2.6], 1.45], [[sx * 11.7, -1.6, 0.9], 1.5], [[sx * 11.9, -2.9, -0.6], 1.35]]) piece([[p, r]], [sx, 0, 0.1], -0.05, 0, true); // os cachos dela
+        piece([[[sx * 10.0, 1.4, -6.8], 1.3], [[sx * 8.4, 3.4, -9.0], 1.7]], [sx, 0.25, -0.1], 0); // costeleta
+        piece([[[sx * 8.4, 3.4, -9.0], 1.7], [[sx * 6.2, 7.4, -13.2], 2.9]], [sx * 0.8, 0.5, -0.3], -0.12); // lado da mandíbula
+        piece([[[sx * 5.8, 7.6, -13.0], 3.0], [[sx * 5.6, 8.6, -16.6], 2.8]], [sx * 0.45, 0.8, -0.35], -0.18); // frente da mandíbula (por fora da pele do queixo: ela fica mais larga em cima, como um escudo)
+        piece([[[sx * 0.6, 15.35, -9.2], 1.1], [[sx * 2.4, 14.7, -9.6], 1.05], [[sx * 4.4, 12.8, -11.2], 0.9]], [sx * 0.3, 0.9, 0.1], 0.05); // bigode (da base do nariz até o canto da boca; o lábio de cima aparece embaixo dele)
+        piece([[[sx * 4.4, 12.8, -11.2], 0.9], [[sx * 5.4, 10.6, -13.8], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05); // do canto do bigode até a barba do queixo (por fora do canto da boca)
         // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
         // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
-        piece([[[sx * 9.3, 3.4, -8.4], 1.7], [[sx * 7.2, 9.6, -9], 1.4], [[sx * 4.7, 12.5, -9.3], 1.1], [[sx * 5.9, 7.9, -12.4], 3.1], [[sx * 4.9, 11.2, -12.3], 1.5]], [sx * 0.75, 0.62, -0.1], -0.1);
+        piece([[[sx * 8.4, 3.4, -9.0], 1.7], [[sx * 6.6, 9.6, -10.2], 1.4], [[sx * 4.9, 12.3, -10.8], 1.1], [[sx * 6.2, 7.4, -13.2], 2.9], [[sx * 5.2, 10.8, -13.2], 1.4]], [sx * 0.75, 0.62, -0.1], -0.1);
       }
       if (segs.length) items.push({ name: 'barba', key: headKey + 0.25, group: 'barba', chain: true, segs });
     }
 
     // ---- sem o boné: o cabelo curto do alto da cabeça (com ele, fica escondido)
     if (off.bone && !gear.cabeca) {
-      const top = R._capPoly(head, { c: [0, -1.6, 1.4], r: 13.75, n: [0, -0.38, 0.925], d: 4.2, eps: 1e-6 });
+      const top = R._capPoly(head, { c: [0, -1.6, 1.9], r: 12.4, n: [0, -0.38, 0.925], d: 4.2, eps: 1e-6 });
       if (top) items.push({ name: 'cabeloTopo', key: headKey + 0.32, group: 'cabeloTopo', segs: [{ poly: top.poly, path: top.path, mat: PAL.hair, k: 0.2, isCap: true, concave: true }] });
-      const TOP = [[0, 3.5, 13.9], [-5.2, 2, 12.6], [5.2, 2, 12.6], [-3, -4, 14.4], [3, -4, 14.4], [0, -9.5, 12.4], [-7.6, -4.5, 10.4], [7.6, -4.5, 10.4], [0, -1, 15]];
+      const TOP = [[0, 3.5, 13.4], [-4.7, 2, 12.1], [4.7, 2, 12.1], [-2.7, -4, 13.9], [2.7, -4, 13.9], [0, -9.5, 11.9], [-6.8, -4.5, 9.9], [6.8, -4.5, 9.9], [0, -1, 14.5]];
       const segs = TOP.map((p) => ({ poly: R.hull([sphere(p, 3.1), sphere([p[0] * 0.9, p[1], p[2] - 1.2], 2.6)]), circles: R._last, mat: PAL.hair, k: 0, noInner: true }));
       items.push({ name: 'cachosTopo', key: headKey + 0.33, group: 'cachosTopo', chain: true, segs });
     }
@@ -536,26 +713,30 @@
       const front = R.facing(rig.head.f) > -0.05;
       const side = Math.abs(R.facing(rig.head.r));
       const NOSE = MODEL.HEAD.spheres.filter((s) => s.apart);
+      const tipPoly = R.hull(NOSE.filter((s) => s.name === 'nariz' || s.name.startsWith('asa')).map((s) => sphere(s.p, s.r)));
       const headSeg = env.headItem && env.headItem.segs[0];
       items.push({
         name: 'narizBirim', key: front ? headKey + 0.26 : headKey - 0.35, group: 'narizBirim',
         segs: [{
           poly: R.hull(NOSE.map((s) => sphere(s.p, s.r))), circles: R._last, mat: PAL.skin, k: 0, noThin: true, noInner: true,
           decal: (seg) => {
-            faceShade(R, seg, headSeg, R.pal.skin.shade, 0.26 * smoothstep(0.3, 0.75, side));
+            faceShade(R, seg, headSeg, R.pal.skin.shade, Math.max(0.16, 0.26 * smoothstep(0.3, 0.75, side)), side < 0.5 ? tipPoly : null); // (de frente, só a ponta e as asas têm sombra própria)
             noseDetail(R, rig, head, hs);
           },
         }],
-        after: () => noseLine(R, rig, head, hs),
+        after: () => {
+          noseLine(R, rig, head, hs);
+          noseFront(R, rig, head, hs);
+        },
       });
       const lipBase = M.mix(PAL.lip, PAL.skin.base, 0.3);
       const lipMat = { base: lipBase, shade: M.mix(PAL.lip, PAL.skin.shade, 0.4), light: M.mix(lipBase, PAL.skin.light, 0.4) };
       // (quando a boca abre no esforço, o lábio de baixo desce junto: senão ele tapava a boca aberta)
-      const lz = -11.1 - 1.7 * clamp01(look.mouthOpen || 0);
+      const lz = -12.25 - 1.7 * clamp01(look.mouthOpen || 0);
       items.push({
         name: 'labioBirim', key: front ? headKey + 0.03 : headKey - 0.36, group: 'labioBirim',
         segs: [{
-          poly: R.hull([sphere([-1.3, 14.9, lz], 0.92), sphere([0, 15.3, lz + 0.05], 1), sphere([1.3, 14.9, lz], 0.92)]), circles: R._last, mat: lipMat, k: 0, noThin: true, noInner: true,
+          poly: R.hull([sphere([-2.6, 14.2, lz + 0.2], 0.7), sphere([0, 15.2, lz], 0.9), sphere([2.6, 14.2, lz + 0.2], 0.7)]), circles: R._last, mat: lipMat, k: 0, noThin: true, noInner: true,
           decal: (seg) => faceShade(R, seg, headSeg, lipMat.shade, 0.22),
         }],
       });
@@ -569,10 +750,13 @@
       items.push({
         name: 'brincoBirim', key: ear.key + 0.2,
         draw: () => {
-          const n = scale(rig.head.r, side);
-          if (R.facing(n) < 0.08) return;
-          const q = R.P(add(hp([side * 12, -0.2, -5.7]), scale(n, 1.6 * hs)));
-          const r = Math.max(0.8, 0.95 * hs * R.zoom);
+          // (o brinco fica na frente do lóbulo, um pouco para fora: aparece de frente — como na referência — e de lado;
+          // de costas, o lóbulo esconde)
+          const n = norm(add(scale(rig.head.r, side * 0.6), scale(rig.head.f, 0.8)));
+          if (R.facing(n) < -0.1) return;
+          const L = MODEL.HEAD.ear.lobe;
+          const q = R.P(add(hp([side * L.p[0], L.p[1], L.p[2] - 0.4]), scale(n, L.r * 0.95 * hs)));
+          const r = Math.max(0.7, 0.62 * hs * R.zoom); // (um ponto pequeno, como na referência)
           const ctx = R.ctx;
           ctx.fillStyle = PAL.ink;
           ctx.beginPath();
@@ -590,6 +774,17 @@
       });
     }
 
+    // ---- a orelha por dentro: a dobra da borda e a concha mais escura (o motor desenha a orelha como um volume liso).
+    // Com a orelha atrás da cabeça (de frente), o contorno do rosto passando por cima dela também precisa ser riscado:
+    // a pintura da orelha cobre o contorno grosso da cabeça e a orelha se emendava na bochecha, sem linha
+    for (let i = 0; i < 2; i++) {
+      const ear = items.find((it) => it.name === 'orelha' && it.group === 'orelha' + i);
+      if (!ear || !ear.segs[0] || ear.segs[0].poly.length < 6) continue;
+      const side = i === 0 ? -1 : 1;
+      const behind = ear.key < headKey;
+      items.push({ name: 'orelhaDetalhe', key: behind ? headKey + 0.11 : ear.key + 0.05, draw: () => earDetail(R, rig, ear.segs[0].poly, behind ? env.headPoly : null, side) });
+    }
+
     // ---- boné para trás e os óculos em cima dele (saem se o encaixe da cabeça tiver um capacete)
     if (!gear.cabeca && !off.bone) {
       // a copa: a parte da casca acima da barra que a câmera vê (o mesmo recorte da touca de cabelo do herói; um casco
@@ -597,11 +792,11 @@
       const dome = R._capPoly(head, CAP);
       if (dome) items.push({ name: 'bone', key: headKey + 0.34, group: 'bone', segs: [{ poly: dome.poly, path: dome.path, mat: PAL.cap, k: 0.26, concave: true, decal: () => capDetail(R, rig, head, hs) }] });
       // a aba, na nuca, descendo para trás
-      const BRIM = [[-7.9, -14.4, -1.9], [-8.5, -19.4, -4.8], [-6.1, -24, -7.2], [0, -26.2, -7.6], [6.1, -24, -7.2], [8.5, -19.4, -4.8], [7.9, -14.4, -1.9], [0, -15.6, -0.2], [0, -20.4, -2.8]];
-      items.push({ name: 'aba', key: R.keyOf(hp([0, -19.5, -4])), group: 'aba', segs: [{ poly: R.hull(BRIM.map((p) => sphere(p, 0.95))), circles: R._last, mat: PAL.cap, k: 0.3 }] });
+      const BRIM = [[-7.1, -12.8, -1.9], [-7.7, -17.8, -4.8], [-5.5, -22.4, -7.2], [0, -24.6, -7.6], [5.5, -22.4, -7.2], [7.7, -17.8, -4.8], [7.1, -12.8, -1.9], [0, -14.0, -0.2], [0, -18.8, -2.8]];
+      items.push({ name: 'aba', key: R.keyOf(hp([0, -17.9, -4])), group: 'aba', segs: [{ poly: R.hull(BRIM.map((p) => sphere(p, 0.95))), circles: R._last, mat: PAL.cap, k: 0.3 }] });
       // botão do alto
       items.push({ name: 'botaoBone', key: headKey + 0.36, group: 'botaoBone', segs: [{ poly: R.hull([sphere([CAP.c[0], CAP.c[1] - 0.3, CAP.c[2] + CAP.r + 0.5], 1.25)]), circles: R._last, mat: PAL.cap, k: 0.3 }] });
-      items.push({ name: 'oculos', key: R.keyOf(hp([0, 13.4, 9.4])) + 0.2, draw: () => glasses(R, rig, head, hs) });
+      items.push({ name: 'oculos', key: R.keyOf(hp([0, 12.0, 9.4])) + 0.2, draw: () => glasses(R, rig, head, hs) });
     }
 
     // ---- cordão com a coroa
@@ -609,6 +804,93 @@
 
     // ---- as solas dos chinelos (saem se o encaixe dos pés tiver um calçado)
     if (!gear.pes && !off.chinelos) for (let i = 0; i < 2; i++) items.push(soleItem(R, rig, i, items));
+  }
+
+  /**
+   * O desenho de dentro da orelha, em cima do volume dela: a concha (mais escura) e a dobra da borda (um risco que
+   * acompanha o contorno por dentro), feitas encolhendo o próprio contorno da orelha em volta do meio dela. Com a orelha
+   * atrás da cabeça (`headPoly`), só a parte de fora da cabeça recebe o desenho, e o contorno do rosto é riscado por
+   * cima da orelha. De costas não aparece (lá se vê o lado de trás da orelha).
+   */
+  function earDetail(R, rig, earPoly, headPoly, side) {
+    const inside = norm(add(scale(rig.head.r, side), scale(rig.head.f, 0.55)));
+    const f = R.facing(inside);
+    if (f < -0.2) return;
+    const ctx = R.ctx;
+    const PAL = R.pal;
+    const z = R.zoom;
+    const n = earPoly.length / 2;
+    let cx = 0, cy = 0;
+    for (let k = 0; k < earPoly.length; k += 2) {
+      cx += earPoly[k];
+      cy += earPoly[k + 1];
+    }
+    cx /= n;
+    cy /= n;
+    const shrunk = (s, dx = 0, dy = 0) => {
+      const out = new Array(earPoly.length);
+      for (let k = 0; k < earPoly.length; k += 2) {
+        out[k] = cx + (earPoly[k] - cx) * s + dx;
+        out[k + 1] = cy + (earPoly[k + 1] - cy) * s + dy;
+      }
+      return out;
+    };
+    // (a concha fica um pouco para o lado do rosto: a borda de fora é a mais larga)
+    const toward = headPoly ? -side : 0;
+    const w = Math.max(1, Math.abs(earPoly[0] - cx) + Math.abs(earPoly[1] - cy));
+    ctx.save();
+    const clip = new Path2D();
+    clip.addPath(S.polyPath(earPoly));
+    ctx.clip(clip);
+    if (headPoly) {
+      // só a parte da orelha que fica fora da cabeça
+      const out = new Path2D();
+      out.rect(-1e5, -1e5, 2e5, 2e5);
+      S.polyPath(headPoly, 0, 0, out);
+      ctx.clip(out, 'evenodd');
+    }
+    const alpha = smoothstep(-0.2, 0.25, f);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = PAL.skin.shade;
+    ctx.fill(S.polyPath(shrunk(0.6, toward * w * 0.08, 0)));
+    ctx.strokeStyle = PAL.ink;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(0.5, 0.22 * z);
+    ctx.stroke(S.polyPath(shrunk(0.68, toward * w * 0.08, 0)));
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    if (headPoly) {
+      // o contorno do rosto por cima da orelha (só dentro dela)
+      ctx.save();
+      ctx.clip(S.polyPath(earPoly));
+      ctx.strokeStyle = PAL.ink;
+      ctx.lineWidth = Math.max(0.6, R.inkIn * 1.0);
+      ctx.lineJoin = 'round';
+      ctx.stroke(S.polyPath(headPoly));
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Os fios de um cacho: dois arcos mais claros dentro de cada círculo do pedaço (sem eles, o cabelo crespo era uma
+   * mancha escura lisa).
+   */
+  function curlLines(R, seg) {
+    if (!seg.circles || !R.fine) return;
+    const ctx = R.ctx;
+    ctx.strokeStyle = R.pal.hair.light;
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.85;
+    for (const c of seg.circles) {
+      ctx.lineWidth = Math.max(0.5, c.r * 0.12);
+      ctx.beginPath();
+      ctx.arc(c.x - c.r * 0.12, c.y + c.r * 0.05, c.r * 0.55, Math.PI * 0.95, Math.PI * 1.9);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(c.x + c.r * 0.2, c.y + c.r * 0.25, c.r * 0.32, Math.PI * 0.1, Math.PI * 0.9);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   /** Costuras do boné e a coroa bordada no painel que fica virado para trás. */
@@ -695,7 +977,7 @@
       const ns = norm(dirIn(rig.head, sx, 0.25, 0.2));
       if (R.facing(ns) < -0.02) continue;
       // (de costas, a ponta da frente da haste fica escondida atrás do boné: sem isto ela sobrava como uma antena)
-      const path = [[sx * 9.4, 10.8, 9.5], [sx * 11.3, 5.4, 8.4], [sx * 13.3, -0.8, 7], [sx * 13.5, -4.8, 6.3]];
+      const path = [[sx * 8.4, 9.5, 9.5], [sx * 10.1, 4.2, 8.4], [sx * 11.9, -1.4, 7], [sx * 12.1, -5.2, 6.3]];
       cord(R, (lensFacing(sx) < 0.04 ? path.slice(2) : path).map(hp), 0.6 * hs, PAL.frame.base);
     }
     if (fl < -0.3) return; // de costas, as lentes ficam atrás do boné
@@ -704,14 +986,14 @@
     const lenses = [];
     for (const sx of [-1, 1]) {
       // cada lente vira um pouco para o lado (os óculos abraçam a cabeça)
-      const c = hp([sx * 5.1, 13.6, 9.5]);
+      const c = hp([sx * 4.7, 12.2, 9.5]);
       const right = norm(add(scale(rig.head.r, 1), scale(rig.head.f, -WRAP * sx)));
       const pts = LENS.map(([u, v]) => add(add(c, scale(right, sx * u * hs)), scale(up, v * hs)));
       if (lensFacing(sx) >= 0.04) lenses.push({ sx, c, pts, path: flatPath(R, pts) });
     }
     if (!lenses.length) return;
     // ponte
-    if (fl > 0.02) cord(R, [hp([-1.3, 14.4, 11]), hp([0, 14.8, 10.5]), hp([1.3, 14.4, 11])], 0.9 * hs, PAL.frame.base);
+    if (fl > 0.02) cord(R, [hp([-1.2, 13.0, 11]), hp([0, 13.4, 10.5]), hp([1.2, 13.0, 11])], 0.9 * hs, PAL.frame.base);
     for (const L of lenses) {
       // armação (contorno de tinta, depois o metal claro) e a lente em degradê
       ctx.lineJoin = 'round';
@@ -1684,7 +1966,7 @@
    * (pinta só a sombra, por cima da cor base: a peça inteira de sombra e a parte clara por cima deixava um fio escuro
    * na borda dela, de frente)
    */
-  function faceShade(R, seg, headSeg, shade, kOwn) {
+  function faceShade(R, seg, headSeg, shade, kOwn, ownPoly = null) {
     const ctx = R.ctx;
     const outside = (poly, k) => {
       if (k <= 0.2) return;
@@ -1695,27 +1977,60 @@
     };
     ctx.fillStyle = shade;
     if (headSeg && headSeg.poly && headSeg.poly.length >= 6 && headSeg.k > 0) outside(headSeg.poly, S.polyRadius(headSeg.poly) * headSeg.k);
-    outside(seg.poly, S.polyRadius(seg.poly) * kOwn);
+    // (`ownPoly`: a sombra própria vem de um pedaço só da peça — no nariz, a ponta e as asas: com o nariz inteiro, a
+    // sombra do lado virava um risco comprido da sobrancelha até a asa)
+    if (!ownPoly) outside(seg.poly, S.polyRadius(seg.poly) * kOwn);
+    else {
+      ctx.save();
+      ctx.clip(S.polyPath(ownPoly));
+      outside(ownPoly, S.polyRadius(ownPoly) * kOwn);
+      ctx.restore();
+    }
   }
-  /** Os detalhes do nariz (pintados dentro da peça dele): as narinas, embaixo das asas, do lado que aparece. */
+  /**
+   * As narinas (pintadas dentro da peça do nariz): uma meia-lua escura embaixo de cada asa, do lado que aparece. Olham
+   * para baixo e um pouco para o lado: de cima (a câmera do jogo) quase não aparecem.
+   */
   function noseDetail(R, rig, head, hs) {
     const ctx = R.ctx;
     const hp = (p) => at(head, p[0], p[1], p[2]);
+    for (const sx of [-1, 1]) {
+      const f = R.facing(norm(dirIn(rig.head, sx * 0.45, 0.4, -0.8)));
+      if (f < 0.1) continue;
+      // a meia-lua: a borda de cima curva (a asa por cima dela) e a de baixo quase reta
+      const P = (x, y, z) => R.P(hp([sx * x, y, z]));
+      const pts = [P(0.55, 16.4, -7.7), P(1.05, 16.0, -7.5), P(1.55, 15.6, -7.6), P(1.55, 15.6, -7.8), P(1.05, 16.0, -7.85), P(0.6, 16.35, -7.85)];
+      ctx.fillStyle = '#2a120a';
+      ctx.globalAlpha = 0.95 * smoothstep(0.1, 0.35, f);
+      ctx.fill(S.smoothClosedPath(pts));
+    }
+    ctx.globalAlpha = 1;
+  }
+  /**
+   * O nariz visto de frente, como na referência: o contorno de cada asa (um "C" aberto para o meio, que desce até a
+   * narina) e a curva embaixo da ponta. Some conforme a cabeça vira (de três quartos fica o risco de `noseLine`; de perfil,
+   * a silhueta).
+   */
+  function noseFront(R, rig, head, hs) {
+    const fFace = R.facing(rig.head.f);
+    const t = Math.abs(R.facing(rig.head.r));
+    const alpha = smoothstep(0.3, 0.6, fFace) * (1 - smoothstep(0.3, 0.6, t));
+    if (alpha < 0.03) return;
+    const ctx = R.ctx;
+    const hp = (p) => at(head, p[0], p[1], p[2]);
+    ctx.strokeStyle = R.pal.ink;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = Math.max(0.6, 0.24 * R.zoom);
     for (const sx of [-1, 1]) {
-      // a narina olha para baixo e um pouco para o lado: de cima (a câmera do jogo) ela não aparece
-      const f = R.facing(norm(dirIn(rig.head, sx * 0.55, 0.45, -0.7)));
-      if (f < 0.12) continue;
-      const [a, b, c] = [[sx * 0.5, 16.3, -6.95], [sx * 1.3, 15.4, -7.05], [sx * 2.2, 14.85, -6.8]].map((p) => R.P(hp(p)));
-      ctx.strokeStyle = R.pal.ink;
-      ctx.globalAlpha = 0.85 * smoothstep(0.12, 0.4, f);
-      ctx.lineWidth = Math.max(0.6, 0.5 * hs * R.zoom);
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.quadraticCurveTo(b.x, b.y, c.x, c.y);
-      ctx.stroke();
+      // (do alto da asa, por fora, até a narina: os pontos ficam na superfície da esfera da asa)
+      const C = [[1.85, 15.45, -6.05], [2.6, 15.35, -6.6], [2.85, 15.05, -7.25], [2.45, 15.3, -7.85], [1.6, 15.75, -8.0]];
+      ctx.stroke(S.smoothLinePath(C.map(([x, y, z]) => R.P(hp([sx * x, y, z])))));
     }
+    // embaixo da ponta, entre as narinas
+    ctx.lineWidth = Math.max(0.5, 0.2 * R.zoom);
+    ctx.stroke(S.smoothLinePath([[-0.7, 16.5, -8.05], [0, 16.9, -8.2], [0.7, 16.5, -8.05]].map((p) => R.P(hp(p)))));
     ctx.globalAlpha = 1;
   }
   /**
@@ -1746,14 +2061,15 @@
       ctx.strokeStyle = R.pal.inkSoft;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.lineWidth = Math.max(0.6, 0.42 * R.zoom);
+      ctx.lineWidth = Math.max(0.6, 0.26 * R.zoom); // (fino: de três quartos ele só sugere o lado do nariz)
       ctx.globalAlpha = alpha;
       ctx.stroke(S.smoothLinePath(pts));
       ctx.globalAlpha = 1;
     };
     const frontal = smoothstep(0.1, 0.4, fFace);
-    draw(1, (1 - smoothstep(-0.05, 0.3, t)) * frontal);
-    draw(-1, smoothstep(0.05, 0.4, t) * frontal);
+    const turn = smoothstep(0.2, 0.5, Math.abs(t)); // (de frente, o nariz é desenhado por `noseFront`)
+    draw(1, (1 - smoothstep(-0.05, 0.3, t)) * frontal * turn);
+    draw(-1, smoothstep(0.05, 0.4, t) * frontal * turn);
   }
 
   /**
