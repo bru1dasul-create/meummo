@@ -608,7 +608,9 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   na main em 19/11** ("junta agora e segue", vendo o alvo, o antes e o depois no mesmo lugar): o chão pintado que a
   [arte] começou em 17/11 (`js/world/chao.js`: tinta de aquarela por material, folhas, tufos, florzinhas e pedrinhas no
   lugar das bolinhas, beiradas que se misturam, trilhas sem contorno e pedras repintadas; o mesmo peso do chão antigo).
-  Falta deixar mais perto do alvo: a grama menos amarela, mais escura e cheia de folhinhas, e marcas de pisada na trilha
+  Mais perto do alvo em 19/11 (na main, o dono escolheu "gráfico primeiro"): a grama oliva (sem o limão), com as pintas
+  redondas claras e escuras do alvo, e a trilha com os sulcos escuros compridos; medido contra o alvo (saturação dos
+  verdes 0,47 × 0,45, brilho 0,55 × 0,53). Falta o passo 2: as manchas de sol e as sombras compridas das árvores
 - [ ] **[dono + estrutura + mundo]** **Mundo aberto, sem tela de carregamento** (19/11, direção nova do dono: "vamos
   focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
   primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está

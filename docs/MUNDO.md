@@ -387,8 +387,11 @@ para seguir, decidimos juntos por qual lado ir primeiro.**
    (`PAINT` no alto é onde se mexe nas cores), `ground.js` chama os pintores, as pedras em `props.js` (`_rock`); as
    receitas e as lições estão na seção dela no `docs/ARTE.md` (ferramentas `chao-prancha.cjs`, `chao-foto.cjs` e
    `chao-custo.cjs`; o painel só aceita x e y inteiros no "levar"). Medido no jogo: 14,4 ms por pedaço de chão (antes
-   14,9; pior 44,9). Falta: a grama mais escura e cheia de folhinhas como no alvo (no meio da clareira ficou amarela
-   demais), marcas de pisada na trilha, conferir as emendas entre pedaços (`EMENDA=3`), depois a luz e a sombra no chão
+   14,9; pior 44,9). **Mais perto do alvo (19/11, na `main`):** a grama com a demão oliva (`wash`), o sol sem o limão, mais
+   grão, uma camada de pintas claras (`speck`) e as folhinhas redondas e mais numerosas (`round`, `n: 8`); a trilha com
+   dois sulcos escuros. Conferi pelos números contra o alvo (receita: a média e a saturação dos verdes e das terras e o
+   "detalhe fino", a diferença da imagem para ela borrada), na prancha (`chao-prancha.cjs`, rápido) e no jogo. A clareira
+   do Capão é `grama` (não existe `clareira` no mapa). Falta: conferir as emendas entre pedaços (`EMENDA=3`), a luz e a sombra no chão
    (passo 2: a sombra das casas e das árvores, também no deque) e a vida no ar (passo 3). **A referência do dono para o
    visual** (contada pela [estrutura]): o Dunloc Online — estilo de quadrinho (contorno escuro grosso, 2 ou 3 tons
    chapados, cores vivas), chão cheio de detalhe (pedrinhas soltas, flores de várias cores em manchas, tufos, trilha de

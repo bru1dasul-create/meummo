@@ -24,17 +24,22 @@
   // demão (wash): uma cor por cima da cor de base do mapa, para acertar o tom geral
   // sol / sombra / grão: as manchas (cor, o quanto aparecem, o tamanho de uma repetição em cm e o giro)
   // folhas: as marquinhas soltas; capim: os tufos (traço escuro por baixo, folhas por cima); flores e pedrinhas
+  // (19/11, conferido com o alvo: a grama saía limão e lisa demais — os verdes do alvo têm saturação 0,45 e as partes de
+  // sol não passam de 0,53 de brilho, e a grama dele tem ~45% mais detalhe miúdo: as pintas redondas claras e escuras)
   const GREEN = {
-    sun: { rgb: [204, 214, 92], a: 0.36, period: 2600, rot: 0.5, blobs: 17, size: [20, 66] },
-    shade: { rgb: [16, 54, 44], a: 0.32, period: 2100, rot: -0.9, blobs: 12, size: [20, 62] },
-    grain: { rgb: [26, 62, 30], a: 0.14, period: 640, rot: 0.25, blobs: 120, size: [3, 13] },
-    leaves: ['#4f8440', '#356330', '#63984a', '#2f5a2c', '#79a851'],
+    wash: { rgb: [118, 122, 70], a: 0.2 },
+    sun: { rgb: [162, 180, 94], a: 0.34, period: 2600, rot: 0.5, blobs: 17, size: [20, 66] },
+    shade: { rgb: [20, 50, 34], a: 0.34, period: 2100, rot: -0.9, blobs: 12, size: [20, 62] },
+    grain: { rgb: [26, 62, 30], a: 0.2, period: 640, rot: 0.25, blobs: 120, size: [3, 13] },
+    speck: { rgb: [138, 160, 90], a: 0.16, period: 520, rot: 0.6, blobs: 110, size: [3, 10] },
+    leaves: ['#5a8740', '#3a6131', '#6f994c', '#33572c', '#80a456', '#486f36'],
+    round: true,
     tuft: { ink: 'rgba(20, 44, 22, 0.72)', blades: ['#5f9441', '#73a84c', '#8ab85a', '#a8c062'] },
     flowers: ['#f0dc78', '#ecaed0', '#f6f2e6'],
   };
   const PAINT = {
-    grama: { ...GREEN, n: 2.5, tufts: 0.3, bloom: 0.07, rot: 0.5 },
-    clareira: { ...GREEN, n: 2.5, tufts: 0.3, bloom: 0.07, rot: 0.5 },
+    grama: { ...GREEN, n: 8, tufts: 0.4, bloom: 0.1, rot: 0.5 },
+    clareira: { ...GREEN, n: 8, tufts: 0.4, bloom: 0.1, rot: 0.5 },
     mata: {
       rot: -0.7,
       wash: { rgb: [66, 110, 58], a: 0.22 },
@@ -43,7 +48,7 @@
       grain: { rgb: [108, 80, 44], a: 0.16, period: 900, rot: 0.2, blobs: 70, size: [4, 16] },
       leaves: ['#27452b', '#152a1a', '#33532f', '#45392a', '#1d3824', '#3b5a30'],
       tuft: { ink: 'rgba(6, 18, 10, 0.75)', blades: ['#2f5a33', '#3d6b3a', '#4f7d42'] },
-      n: 2.3, tufts: 0.14, bloom: 0,
+      n: 4, tufts: 0.14, bloom: 0,
     },
     terra: {
       rot: 0.9,
@@ -52,7 +57,7 @@
       shade: { rgb: [50, 30, 16], a: 0.3, period: 1700, rot: -0.8, blobs: 14, size: [18, 58] },
       grain: { rgb: [58, 38, 22], a: 0.13, period: 560, rot: 0.3, blobs: 110, size: [3, 12] },
       leaves: ['#5a412b', '#7f6040', '#4d3824', '#8a6a48'],
-      pebbles: 0.45, n: 2.2, tufts: 0.03, bloom: 0, cracks: 0.07,
+      pebbles: 0.55, n: 3.5, tufts: 0.03, bloom: 0, cracks: 0.07,
       tuft: { ink: 'rgba(30, 40, 20, 0.7)', blades: ['#6f8a45', '#8a9a52', '#b7a564'] },
     },
   };
@@ -112,7 +117,7 @@
         x.fillRect(0, 0, TILE, TILE);
       }
       const cm = PERIOD / TILE; // cm por ponto do ladrilho
-      [P.shade, P.sun, P.grain].forEach((layer, li) => {
+      [P.shade, P.sun, P.grain, P.speck].forEach((layer, li) => {
         if (!layer) return;
         const r = M.rng(layer.rgb[0] * 131 + layer.rgb[1] * 31 + Math.round(layer.period) + li * 977 + 7);
         const [R, Gc, B] = layer.rgb;
@@ -371,8 +376,8 @@
         for (let k = 0; k < n; k++) {
           const x = (i + r()) * 100, y = (j + r()) * 100;
           const c = P.leaves[Math.floor(r() * P.leaves.length)];
-          const w = 5 + r() * 9;
-          const turn = r() * 3.14, thin = 0.34 + r() * 0.3;
+          const w = P.round ? 6 + r() * r() * 14 : 5 + r() * 9;
+          const turn = r() * 3.14, thin = P.round ? 0.5 + r() * 0.3 : 0.34 + r() * 0.3;
           if (inside(x, y)) B.oval(c, x, y, w, w * thin, turn);
         }
         if (P.pebbles && r() < P.pebbles * d * 0.6) {
@@ -774,7 +779,8 @@
     const bcaps = [ends[0].open ? cap(pts[iB0], -1, 'bl', 'br', tip + 16, seed + 21) : null, ends[1].open ? cap(pts[iB1], 1, 'bl', 'br', tip + 16, seed + 27) : null];
     const r = pointRng(7, n, 61);
     const streaks = [];
-    for (const lane of [{ off: -0.21, tone: 0.5, a: 0.34, lw: 0.27 }, { off: 0.2, tone: 0.5, a: 0.32, lw: 0.25 }, { off: 0, tone: -0.34, a: 0.2, lw: 0.15 }]) {
+    // (19/11: no alvo, a terra tem mais escuro que a nossa — brilho p10 0,25 contra 0,33 — nos sulcos compridos)
+    for (const lane of [{ off: -0.3, tone: 0.42, a: 0.3, lw: 0.2 }, { off: 0.3, tone: 0.42, a: 0.28, lw: 0.18 }, { off: -0.12, tone: -0.5, a: 0.46, lw: 0.13 }, { off: 0.13, tone: -0.5, a: 0.44, lw: 0.12 }, { off: 0, tone: 0.3, a: 0.16, lw: 0.16 }]) {
       for (let s = s0 + 10 + r() * 160; s < s1 - 130; ) {
         const L = 480 + r() * 700;
         const k = { s0: s, s1: Math.min(s1 - 10, s + L), off: lane.off * w + (r() - 0.5) * w * 0.08, tone: lane.tone, a: lane.a * (0.6 + r() * 0.55), lw: lane.lw * w * (0.75 + r() * 0.5), seed: r() * 40 };
