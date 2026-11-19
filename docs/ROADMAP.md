@@ -43,9 +43,11 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] **[dono → estrutura]** O Saci está forte demais para quem é nível 1? (ele é para nível 3+ ou para grupo)
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
 - [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
-- [ ] **[arte]** BIRIM, o personagem principal novo, no jogo (19/11: o modelo e as rodadas de rosto e corpo estão no
-  protótipo, na main; próximo: no jogo com a chave `?birim`, para o dono julgar no tamanho real — veja `docs/ARTE.md`,
-  "AGORA"; para ficar de vez, a [estrutura] salva qual boneco cada jogador usa)
+- [x] **[arte]** BIRIM, o personagem principal novo, no jogo para testar (19/11, na main): com `?birim` no endereço
+  (ex.: `http://localhost:5173/?birim`), o seu personagem e os outros jogadores na sua tela saem com o Birim; sem a
+  chave, nada muda. Veja `docs/ARTE.md`, "AGORA"
+- [ ] **[dono]** Jogar com `?birim` e dizer o que incomoda no tamanho real; depois escolher: (A) o Birim vira o herói de
+  todos ou (B) cada jogador escolhe (aí a [estrutura] salva o `model` de cada um)
 - [ ] **[arte]** Arte de verdade para personagens e monstros (piloto do estilo desenhado com o Nano Banana: chave
   pronta, esperando os exemplos de estilo do dono — veja `docs/ARTE.md`)
 - [x] **[arte]** Protótipo **Pindorama 2.5D** do protagonista, separado do jogo (`prototipos/pindorama-25d`): câmera

@@ -11,7 +11,13 @@
   um dia quiser voltar a ela (veja a seção dela, mais abaixo). O Birim **ainda não aparece no jogo**: só no protótipo
   (`prancha.html?modelo=birim`, `ferramentas/ficha.cjs --modelo birim`).
 - **O plano (proposto pela [estrutura], com o "pode" do dono):**
-  1. **Primeiro, o Birim no jogo como está**, para o dono jogar e julgar no tamanho real (no PC a cabeça do herói tem
+  1. **FEITO em 19/11 (na main): o Birim no jogo com `?birim`** (ex.: `http://localhost:5173/?birim` no PC do dono,
+     `http://localhost:3000/?birim` no servidor de produção). Com a chave, `appearanceOf` (`classes.js`) devolve o Birim para
+     os jogadores na tela de quem abriu (os NPCs continuam iguais) — também no retrato da barra e na mochila, que usam a
+     mesma função; sem a chave, nada muda (herói idêntico). O `birim.js` é carregado no jogo depois do `classes.js`
+     (`arte.ts` e `view-scripts.json`). Conferido no navegador (PC 1600×900 e Pixel 7 deitado), parado e andando para os
+     4 lados, sem erros. Esperando o dono jogar e dizer o que incomoda no tamanho real. (O texto do plano, de antes:)
+     **Primeiro, o Birim no jogo como está**, para o dono jogar e julgar no tamanho real (no PC a cabeça do herói tem
      ~25 px de altura; no celular, menos — fio de barba e detalhe fino somem nesse tamanho). Para testar, sem salvar nada:
      a chave `?birim` no endereço. Do meu lado: em `js/character/classes.js`, `appearanceOf` devolve
      `PD.models.appearance('birim')` para o jogador principal quando o endereço tem `?birim`; e o `birim.js` passa a ser
