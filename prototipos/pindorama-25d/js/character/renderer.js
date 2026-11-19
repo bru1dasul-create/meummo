@@ -13,7 +13,10 @@
   const S = PD.shapes;
   const { add, sub, scale, dot, norm, cross, at, dirIn, clamp, clamp01, smoothstep, mix, lerp } = M;
   const { limbAt } = PD.rig;
-  const MOD = PD.MODEL;
+  const BASE_MOD = PD.MODEL;
+  // o MODELO do desenho atual: o do herói ou o de outro personagem montado no mesmo esqueleto (ex.: o Birim, em
+  // js/character/birim.js). Como a paleta, é escolhido a cada desenho (`appearance.modelo`; veja prepare)
+  let MOD = BASE_MOD;
   const BASE_PAL = PD.PALETTE;
   let PAL = BASE_PAL; // a paleta do desenho atual (a da classe do personagem; veja draw)
   const K = PD.ISO_K;
@@ -105,6 +108,11 @@
       // espessuras de linha (px): silhueta e linhas de dentro
       this.inkOut = clamp(1.2 * this.zoom, 1.6, 3.6);
       this.inkIn = clamp(0.62 * this.zoom, 0.9, 2.2);
+      // (a ficha, em tamanho grande: o traço cresce junto com o desenho, como no jogo; sem isto ele ficava um fio)
+      if (this.inkFree) {
+        this.inkOut = Math.max(1.6, 1.2 * this.zoom * this.inkFree);
+        this.inkIn = Math.max(0.9, 0.62 * this.zoom * this.inkFree);
+      }
       this.density = (cam.dpr || 1) * 0.9;
       // nível de detalhe: riscos miúdos (dedos, artelhos, músculos, gomos da trança) só quando o personagem está
       // grande. 1,1 pega o zoom de começo de um monitor de PC comum (1920x1080 a 100% ou 125%); menor que isso (janela
@@ -154,10 +162,13 @@
     // ---------------------------------------------------------------- montagem das partes
     _items(rig, look) {
       const items = [];
-      const hs = PD.BODY.headScale;
-      const head = scaledFrame(rig.head, hs);
+      // (um modelo pode ter a cabeça de outro tamanho e mais baixa no pescoço: `headScale` e `headDrop`, em cm)
+      const hs = MOD.headScale || PD.BODY.headScale;
+      const headFrame = MOD.headDrop ? M.moved(rig.head, at(rig.head, 0, 0, -MOD.headDrop)) : rig.head;
+      const head = scaledFrame(headFrame, hs);
       this.H = head;
       this.hs = hs;
+      this.headFrame = headFrame;
       const headKey = this.keyOf(head.o);
       // a massa do cabelo fica sempre atrás da cabeça (se passasse para a frente inteira, cobria o rosto de uma vez
       // nas vistas de lado); a parte de trás que cobre a cabeça é a touca da nuca, desenhada na frente
@@ -165,9 +176,11 @@
       const faceAway = this.facing(rig.head.f) < 0;
 
       // ---- cabeça
-      const headCircles = MOD.HEAD.spheres.map((s) => this.circle(at(head, ...s.p), s.r * hs));
+      // (`apart`: uma esfera que o modelo desenha como peça à parte — o nariz do Birim — fica de fora do casco da cabeça,
+      // mas continua valendo para a superfície do rosto: os riscos assentam nela)
+      const headCircles = MOD.HEAD.spheres.filter((s) => !s.apart).map((s) => this.circle(at(head, ...s.p), s.r * hs));
       const headPoly = this.hull(headCircles);
-      const headItem = { name: 'cabeca', key: headKey, group: 'cabeca', solid: true, anchor: true, segs: [{ poly: headPoly, circles: this._last, mat: PAL.skin, k: 0.24, decal: (seg) => this._face(rig, look, seg) }] };
+      const headItem = { name: 'cabeca', key: headKey, group: 'cabeca', solid: true, anchor: true, segs: [{ poly: headPoly, circles: this._last, mat: PAL.skin, k: 0.24, decal: (seg) => (MOD.face ? MOD.face(this, rig, look, seg) : this._face(rig, look, seg)) }] };
       items.push(headItem);
 
       // ---- orelhas
@@ -192,9 +205,11 @@
           segs: [{ poly: this.hull([e.top, e.mid, e.lobe].map((q) => this.circle(ep(q), q.r * hs))), circles: this._last, mat: PAL.skin, k: 0.3, decal: () => this._ear(ep, n, rig.head) }],
         });
         earrings.push({ name: 'brinco', key: key + 0.2, draw: () => this._earring(rig, look, i) });
-        items.push(earrings[i]);
+        if (MOD.EARRINGS !== false) items.push(earrings[i]);
       }
 
+      // (o cabelo, a faixa, as tranças e as penas são do herói: um modelo sem `HAIR` / `FEATHERS` não tem)
+      if (MOD.HAIR) {
       // ---- cabelo: massa de trás (com as pontas) e a frente (touca, franja e costeletas)
       const wind = look.hairWind || { x: 0, y: 0, z: 0 };
       const massCircles = MOD.HAIR.mass.map((s) => this.circle(at(head, ...s.p), s.r * hs));
@@ -278,7 +293,9 @@
           this._hairSheen(rig, segs);
         },
       });
+      }
 
+      if (MOD.FEATHERS) {
       // ---- penas: coroa atrás da cabeça, presa na faixa (de frente ficam atrás da cabeça; de costas, na frente)
       const backKey = this.keyOf(at(head, 0, -11, 0));
       const nF = MOD.FEATHERS.list.length;
@@ -290,6 +307,7 @@
       }
       // amarração das penas na faixa: de costas, na frente das hastes; de frente, atrás (escondida pela cabeça)
       if (MOD.FEATHERS.tie) items.push({ name: 'amarracao', key: backKey + (backKey > headKey ? 0.06 : -0.06), group: 'amarracao', segs: this._featherTie(rig) });
+      }
 
       // ---- pescoço (sempre atrás do peito e da cabeça)
       const chestKey = this.keyOf(rig.chest.o);
@@ -309,7 +327,13 @@
       // peito e o braço). Fica com o tronco, e não com o braço, para a trança e o colar passarem por cima dela. Só de
       // frente: de costas o cabelo cobre o trapézio; conforme o peito vira, ela encolhe para dentro do deltoide
       const bridges = [];
-      const frontK = smoothstep(-0.3, 0.05, this.facing(rig.chest.f));
+      // (com uma peça de tronco vestida, a ponte é da cor dela: senão sobrava pele entre o corpo da peça e a manga)
+      const torsoGear = this.equipped && this.equipped.tronco && PD.equipment ? PD.equipment.catalog.get(this.equipped.tronco) : null;
+      const torsoPiece = torsoGear && torsoGear.pecas.find((pc) => pc.osso === 'peito');
+      const bridgeMat = torsoPiece ? torsoPiece.material || torsoGear.material : PAL.skin;
+      // (um modelo de cabelo curto — o Birim — mostra o trapézio de costas: `SHOULDER.back` deixa a ponte inteira de
+      // qualquer lado; sem ela, de costas o deltoide virava uma bola grudada num tronco de ombro quadrado)
+      const frontK = MOD.SHOULDER.back ? 1 : smoothstep(-0.3, 0.05, this.facing(rig.chest.f));
       for (let i = 0; i < 2; i++) {
         const side = i === 0 ? -1 : 1;
         const d0 = MOD.UPPER_ARM.find((sp) => sp.part === 'deltoide');
@@ -317,20 +341,20 @@
         const dc = limbAt(rig.upperArm[i], d0.t, d0.f, d0.o);
         const trapEnd = M.lerp3(dc, at(rig.chest, side * T.p[0], T.p[1], T.p[2]), frontK);
         // (noDepth: a ponte fica de fora da conta de quem está na frente — ela encosta no deltoide e empatava com o braço)
-        bridges.push({ poly: this.hull([this.circle(trapEnd, lerp(d0.r * 0.9, T.r, frontK)), this.circle(dc, d0.r * 0.92)]), circles: this._last, mat: PAL.skin, k: 0.26, noDepth: true });
+        bridges.push({ poly: this.hull([this.circle(trapEnd, lerp(d0.r * 0.9, T.r, frontK)), this.circle(dc, d0.r * 0.92)]), circles: this._last, mat: bridgeMat, k: 0.26, noDepth: true });
       }
-      const chestItem = { name: 'peito', key: chestKey, group: 'tronco', order: 1, solid: true, anchor: true, joint: waistJoint, clipOut: pelvisPoly, segs: bridges.concat([{ poly: chestPoly, circles: chestCircles, mat: PAL.skin, k: 0.26, decal: (seg) => this._chestDetail(seg, rig) }]) };
+      const chestItem = { name: 'peito', key: chestKey, group: 'tronco', order: 1, solid: true, anchor: true, joint: waistJoint, clipOut: pelvisPoly, segs: bridges.concat([{ poly: chestPoly, circles: chestCircles, mat: PAL.skin, k: 0.26, decal: (seg) => (MOD.chestDetail ? MOD.chestDetail(this, seg, rig, look) : this._chestDetail(seg, rig)) }]) };
       items.push(chestItem);
       const pelvisKey = this.keyOf(rig.pelvis.o) + 1;
-      items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, solid: true, anchor: true, clipOut: chestPoly, segs: [{ poly: pelvisPoly, circles: pelvisCircles, mat: PAL.skin, k: 0.26, decal: (seg) => this._loincloth(seg, rig, look) }] });
+      items.push({ name: 'pelve', key: pelvisKey, group: 'tronco', order: 0, solid: true, anchor: true, clipOut: chestPoly, segs: [{ poly: pelvisPoly, circles: pelvisCircles, mat: PAL.skin, k: 0.26, decal: (seg) => (MOD.LOINCLOTH ? this._loincloth(seg, rig, look) : MOD.pelvisDetail && MOD.pelvisDetail(this, seg, rig, look)) }] });
       // A pele recebe uma única iluminação, mesmo quando um braço separa peito e pelve
       // na ordem de desenho. Cada passagem continua recortada ao seu próprio volume.
       const torsoSegments = items.filter((it) => it.group === 'tronco').flatMap((it) => it.segs);
       for (const seg of torsoSegments) seg.shadePeers = torsoSegments;
-      items.push({ name: 'colar', key: chestKey + 0.5, draw: () => this._necklace(rig, look) });
+      if (MOD.NECKLACE) items.push({ name: 'colar', key: chestKey + 0.5, draw: () => this._necklace(rig, look) });
       // abas da tanga: a da frente fica na frente das coxas quando a frente do quadril olha para a câmera (e atrás das
       // pernas quando não olha); a de trás, o contrário
-      {
+      if (MOD.LOINCLOTH) {
         const fPv = this.facing(rig.pelvis.f);
         const legMin = Math.min(...[0, 1].map((i) => this.keyOf(limbAt(rig.thigh[i], 0.5, 0, 0))));
         for (const front of [true, false]) {
@@ -356,17 +380,20 @@
         const shoulderTop = this.hull(SH.clip.map((q) => this.circle(chestPt(q), q.r)));
         const armSph = (part) => MOD.UPPER_ARM.filter((s) => (s.part === 'deltoide') === (part === 'deltoide'));
         const deltCircles = armSph('deltoide').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
-        const deltSeg = { poly: this.hull(deltCircles), circles: this._last, mat: skin, k: 0.3, ownShade: true, decal: () => this._shoulderMark(rig, i) };
+        // (detalhes do modelo na pele de um membro — a tatuagem do Birim: `limbDetail(desenho, esqueleto, lado, parte)`)
+        const more = (part) => MOD.limbDetail && MOD.limbDetail(this, rig, i, part, look);
+        const deltSeg = { poly: this.hull(deltCircles), circles: this._last, mat: skin, k: 0.3, ownShade: true, decal: () => { this._shoulderMark(rig, i); more('deltoide'); } };
         const armCircles = armSph('braco').map((s) => this.circle(limbAt(ua, s.t, s.f, s.o), s.r));
-        const armSeg = { poly: this.hull(armCircles), circles: this._last, mat: skin, k: 0.3, noInner: true, decal: () => this._upperArmPaint(rig, i) };
+        const armSeg = { poly: this.hull(armCircles), circles: this._last, mat: skin, k: 0.3, noInner: true, decal: () => { this._upperArmPaint(rig, i); more('braco'); } };
         const faCircles = MOD.FOREARM.map((s) => this.circle(limbAt(fa, s.t, s.f, s.o), s.r));
         const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM.find((s) => s.t === 1).r * 2.2 * this.zoom };
         // o deltoide por cima do braço (a sombra dele marca a borda, sem risco de "manga")
         items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, solid: true, chain: true, clipOut: shoulderTop, segs: [armSeg, deltSeg] });
-        items.push({
+        const forearmItem = {
           name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, solid: true, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, clipOut: shoulderTop,
-          segs: [{ poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._band(null, fa, MOD.BODY_PAINT.forearmBand, 4.6); this._muscleLines(fa, MOD.MUSCLE_LINES.antebraco); } }],
-        });
+          segs: [{ poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { if (MOD.BODY_PAINT) this._band(null, fa, MOD.BODY_PAINT.forearmBand, 4.6); this._muscleLines(fa, MOD.MUSCLE_LINES.antebraco); more('antebraco'); } }],
+        };
+        items.push(forearmItem);
         const hd = rig.hand[i];
         const HM = MOD.HAND;
         const hk = HM.size || 1; // tamanho da mão (a forma é a mesma)
@@ -392,8 +419,26 @@
         for (const f of fingers) handSegs.push({ poly: this.hull([this.circle(f.base, f.r * 1.05), this.circle(f.mid, f.r), this.circle(f.tip, f.r * 0.86)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
         const T = HM.thumb;
         const thumbTip = M.lerp3(HP(T.open.a, T.open.d, T.open.s), HP(T.fist.a, T.fist.d, T.fist.s), fk);
-        handSegs.push({ poly: this.hull([this.circle(HP(T.base.a, T.base.d, T.base.s), T.base.r * hr), this.circle(thumbTip, lerp(T.open.r, T.fist.r, fk) * hr)]), circles: this._last, mat: skin, k: 0.3, noInner: true });
-        items.push({ name: 'mao', key: this.keyOf(fistCenter) + 6, group: 'mao' + i, solid: true, chain: true, segs: handSegs, after: () => this._handLines(hd, fingers, HP) });
+        const thumbCircles = [this.circle(HP(T.base.a, T.base.d, T.base.s), T.base.r * hr)];
+        // (um modelo pode dar ao polegar a junta do meio: `thumb.mid` = { open, fist }, como a ponta)
+        const thumbMid = T.mid ? M.lerp3(HP(T.mid.open.a, T.mid.open.d, T.mid.open.s), HP(T.mid.fist.a, T.mid.fist.d, T.mid.fist.s), fk) : null;
+        if (thumbMid) thumbCircles.push(this.circle(thumbMid, lerp(T.mid.open.r, T.mid.fist.r, fk) * hr));
+        thumbCircles.push(this.circle(thumbTip, lerp(T.open.r, T.fist.r, fk) * hr));
+        handSegs.push({ poly: this.hull(thumbCircles), circles: this._last, mat: skin, k: 0.3, noInner: true });
+        // (as linhas da mão: as do motor, ou as do modelo — `handLines`, que recebe também o polegar e o quanto ela fecha)
+        const thumbInfo = MOD.handLines ? { base: HP(T.base.a, T.base.d, T.base.s), mid: thumbMid, tip: thumbTip, r: lerp(T.open.r, T.fist.r, fk) * hr } : null;
+        const handKey = this.keyOf(fistCenter) + 6;
+        const handItem = { name: 'mao', key: handKey, group: 'mao' + i, solid: true, chain: true, segs: handSegs, after: () => (MOD.handLines ? MOD.handLines(this, rig, i, hd, fingers, HP, { thumb: thumbInfo, fist: fk, hk, hr }) : this._handLines(hd, fingers, HP)) };
+        if (MOD.wristJoin) {
+          // (um modelo pode pedir o punho sem emenda — `wristJoin` = o tamanho do "furo", em raios do punho: nem a ponta
+          // do antebraço nem a base da mão riscam o contorno fino ali dentro, e a mão fica por cima do antebraço quando os
+          // dois estão quase à mesma distância. Sem isto a ponta do antebraço aparecia como uma bola em cima da mão)
+          const wrist = { pt: this.P(rig.wrist[i]), r: MOD.FOREARM[MOD.FOREARM.length - 1].r * MOD.wristJoin * this.zoom };
+          forearmItem.holes = [wrist];
+          handItem.holes = [wrist];
+          if (forearmItem.key - handKey < 6) handItem.over = forearmItem; // (uma regra fixa do _depthFix)
+        }
+        items.push(handItem);
 
         const th = rig.thigh[i];
         const sh = rig.shin[i];
@@ -406,14 +451,34 @@
         const toeC = (t) => this.circle(at(toeFrame, -side * t.s, t.f, t.u), t.r);
         const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH.find((s) => s.t === 1).r * 2.2 * this.zoom };
         const ankle = { pt: this.P(rig.ankle[i]), r: MOD.SHIN.find((s) => s.t === 1).r * 1.5 * this.zoom };
-        items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, solid: true, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._castShadow(pelvisPoly, 3.2, 0.5); this._muscleLines(th, MOD.MUSCLE_LINES.coxa); } }] });
-        items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, solid: true, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); } }] });
+        items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, solid: true, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._castShadow(pelvisPoly, 3.2, 0.5); this._muscleLines(th, MOD.MUSCLE_LINES.coxa); more('coxa'); } }] });
+        const shinDecal = () => { if (MOD.BODY_PAINT) this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); more('canela'); };
+        let shinSegs;
+        if (MOD.SHIN_SPLIT) {
+          // (um modelo pode ter a canela em dois pedaços que se emendam na esfera de `t = SHIN_SPLIT` — a panturrilha e a
+          // canela de baixo: num casco só a perna vira um cone do joelho ao tornozelo, sem a barriga da panturrilha.
+          // Esticada, a perna é pintada como um volume só, então não aparece emenda)
+          const cs = (list) => list.map((s) => this.circle(limbAt(sh, s.t, s.f, s.o), s.r));
+          const upper = { poly: this.hull(cs(MOD.SHIN.filter((s) => s.t <= MOD.SHIN_SPLIT))), circles: this._last, mat: skin, k: 0.3, decal: shinDecal };
+          const lower = { poly: this.hull(cs(MOD.SHIN.filter((s) => s.t >= MOD.SHIN_SPLIT))), circles: this._last, mat: skin, k: 0.3, noInner: true };
+          shinSegs = [lower, upper];
+        } else shinSegs = [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: shinDecal }];
+        items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, solid: true, joint: knee, bent: dot(th.a, sh.a) < 0.45, chain: !!MOD.SHIN_SPLIT, segs: shinSegs });
         // a mesma forma em qualquer zoom (pé, dedinhos e dedão): de longe só os riscos entre os dedos somem
         const footSegs = [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3 }];
-        footSegs.push({ poly: this.hull(MOD.TOES.small.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
-        footSegs.push({ poly: this.hull(MOD.TOES.big.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
-        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, solid: true, joint: ankle, segs: footSegs, after: () => this._toes(toeFrame, side, ft) });
+        if (MOD.TOES.each) {
+          // (um modelo pode ter os cinco dedos separados: `TOES.each` = uma lista de esferas por dedo, do mindinho ao dedão)
+          for (const toeSpheres of MOD.TOES.each) footSegs.push({ poly: this.hull(toeSpheres.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        } else {
+          footSegs.push({ poly: this.hull(MOD.TOES.small.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+          footSegs.push({ poly: this.hull(MOD.TOES.big.map(toeC)), circles: this._last, mat: skin, k: 0.3 });
+        }
+        // (o que o modelo calça por baixo do pé — a sola do chinelo — entra antes do pé, na mesma peça: `footUnder`)
+        const under = MOD.footUnder ? MOD.footUnder(this, rig, i, look) : null;
+        items.push({ name: 'pe', key: this.keyOf(at(ft, 0, 6, -2)) + 0.6, group: 'perna' + i, order: 2, solid: true, joint: ankle, segs: under ? under.concat(footSegs) : footSegs, after: () => { if (MOD.toeLines) MOD.toeLines(this, rig, i, toeFrame, side, ft, look); else this._toes(toeFrame, side, ft); if (MOD.footOver) MOD.footOver(this, rig, i, look); } });
       }
+      // as peças próprias do modelo que têm lugar pela distância (barba, boné, óculos, cordão): entram na ordem com as outras
+      if (MOD.extras) MOD.extras(this, rig, look, items, { head, hs, headKey, headItem, headPoly, headCircles, faceAway, chestKey: this.keyOf(rig.chest.o), pelvisKey: this.keyOf(rig.pelvis.o) + 1 });
       return items;
     }
 
@@ -432,6 +497,8 @@
       let items;
       if (layer && layer.items) {
         PAL = (appearance && appearance.paleta) || BASE_PAL;
+        MOD = (appearance && appearance.modelo) || BASE_MOD;
+        this.pal = PAL;
         this._setup(ctx);
         items = layer.items;
       } else items = this.prepare(ctx, rig, look, equipped, appearance);
@@ -488,16 +555,22 @@
     prepare(ctx, rig, look, equipped, appearance) {
       // cores da classe (as da identidade — pele, olhos, cabelo — são sempre as do modelo; veja classes.js)
       PAL = (appearance && appearance.paleta) || BASE_PAL;
+      MOD = (appearance && appearance.modelo) || BASE_MOD;
+      this.pal = PAL; // (para os pintores de um modelo, que ficam em outro arquivo)
+      this.equipped = equipped || {};
       this._setup(ctx);
       let items = this._sorted(this._items(rig, look));
-      if (equipped && Object.keys(equipped).length && PD.equipment) {
+      const hasGear = equipped && Object.keys(equipped).length && PD.equipment;
+      if (hasGear || MOD.wear) {
         // cada peça entra logo depois da parte do corpo que ela veste
-        const eq = PD.equipment.drawItems(this, rig, equipped, items);
-        if (PD.slingshot && (equipped.maoE === 'estilingue' || equipped.maoE === 'arco')) {
+        const eq = hasGear ? PD.equipment.drawItems(this, rig, equipped, items) : { items: [], hides: new Set() };
+        if (hasGear && PD.slingshot && (equipped.maoE === 'estilingue' || equipped.maoE === 'arco')) {
           const weapon = equipped.maoE;
           eq.items = eq.items.filter(item => item.name !== 'equip:' + weapon);
           eq.items.push(...PD.slingshot.drawItems(this, rig, look, items.find(item => item.name === 'mao' && item.group === 'mao0'), weapon));
         }
+        // a roupa do próprio modelo (a bermuda do Birim): peças presas a uma parte do corpo, como o equipamento
+        if (MOD.wear) eq.items.push(...MOD.wear(this, rig, look, items, this.equipped));
         if (eq.hides.size) items = items.filter((it) => !eq.hides.has(it.name));
         for (const e of eq.items) {
           let idx = items.indexOf(e.host);
@@ -550,6 +623,9 @@
         return;
       }
       const it = un.run[0];
+      // (além das juntas do membro, uma peça pode trazer "furos" próprios no contorno fino: `holes` — o punho de um modelo)
+      let holes = holesFor(un.run);
+      for (const part of un.run) if (part.holes) holes = (holes || []).concat(part.holes);
       if (it.hideInside) {
         // escondida atrás de outra parte (o alto da trança atrás da cabeça): nada dela aparece dentro do polígono
         const ctx = this.ctx;
@@ -558,9 +634,9 @@
         p.rect(-1e5, -1e5, 2e5, 2e5);
         S.polyPath(it.hideInside, 0, 0, p);
         ctx.clip(p, 'evenodd');
-        this._drawRun(un.run, holesFor(un.run));
+        this._drawRun(un.run, holes);
         ctx.restore();
-      } else this._drawRun(un.run, holesFor(un.run));
+      } else this._drawRun(un.run, holes);
       for (const d of un.deferred) d.draw();
     }
 
@@ -618,6 +694,11 @@
           const Bi = solids[b];
           if (A.group === Bi.group) continue; // dentro de um membro vale a ordem da corrente
           if (A.anchor && Bi.anchor) continue; // entre cabeça e tronco vale a ordem base (eles não mudam de lugar)
+          // (uma peça pode pedir para ficar por cima de outra: `over` — a mão por cima do antebraço, no punho sem emenda)
+          if (A.over === Bi || Bi.over === A) {
+            cons.push(A.over === Bi ? [Bi, A, Infinity] : [A, Bi, Infinity]);
+            continue;
+          }
           // regras fixas (não medidas): as coxas ficam embaixo da tanga (a pelve cobre o alto delas); o pescoço fica
           // atrás do peito e da cabeça. Tranças, colar e o resto do cabelo ficam com as regras deles (estão encostados
           // na pele: a superfície empata com a do corpo e a medida não decide)
@@ -833,7 +914,9 @@
       }
       const thin = new Path2D();
       for (const s of segs) {
-        if (s.poly.length < 6) continue;
+        // (`noThin`: uma peça de roupa que emenda em outra da mesma cor — o alto da bermuda sobre as pernas dela — não
+        // risca a emenda; a linha de fora dela é a do contorno grosso)
+        if (s.poly.length < 6 || s.noThin) continue;
         if (s.circles) S.polyPath(this.outlinePoly(s, this.inkIn, false), 0, 0, thin);
         else S.inkOutline(ctx, s.poly, ink, this.inkIn, null);
       }
@@ -1220,7 +1303,7 @@
       ctx.strokeStyle = PAL.ink;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.lineWidth = Math.max(1, 1.15 * this.zoom);
+      ctx.lineWidth = Math.max(1, (E.lid || 1.15) * this.zoom); // (um modelo de cabeça menor pede a linha mais fina)
       const lid = new Path2D();
       const wing = pt(sx * (w + 0.9), tilt * sx * 1.6 + h * 0.25 + 0.15);
       if (sx > 0) {
@@ -1388,10 +1471,13 @@
       const e2 = cross(n, e1);
       const N = 48;
       const ring = [];
+      // `eps` (só quando a touca pede: `C.eps`): folga para a vista exatamente de frente com a câmera reta, em que os pontos
+      // do anel caem em cima da borda e o sinal vira ruído de conta. O herói não usa (o desenho dele não muda em nada)
+      const eps = (C.eps || 0) * R;
       for (let i = 0; i < N; i++) {
         const t = (i / N) * M.TAU;
         const p = add(m, add(scale(e1, rho * Math.cos(t)), scale(e2, rho * Math.sin(t))));
-        ring.push({ p, s: this.P(p), vis: dot(sub(p, c), v) > 0 });
+        ring.push({ p, s: this.P(p), vis: dot(sub(p, c), v) > eps });
       }
       const nv = dot(n, v);
       const visCount = ring.filter((r) => r.vis).length;
@@ -1400,7 +1486,7 @@
       const eR = norm({ x: K, y: -K, z: 0 });
       const eD = norm(cross(v, eR)); // para baixo na tela (lado de baixo da silhueta)
       const silPoint = (ang) => add(c, add(scale(eR, R * Math.cos(ang)), scale(eD, R * Math.sin(ang))));
-      const inCap = (p) => dot(sub(p, c), n) > d;
+      const inCap = (p) => dot(sub(p, c), n) > d + eps;
       const path = new Path2D();
       const poly = [];
       const pushPt = (q) => poly.push(q.x, q.y);
@@ -2049,13 +2135,13 @@
 
     _upperArmPaint(rig, i) {
       const ua = rig.upperArm[i];
-      this._band(null, ua, MOD.BODY_PAINT.upperArmBand, 5.8);
+      if (MOD.BODY_PAINT) this._band(null, ua, MOD.BODY_PAINT.upperArmBand, 5.8);
       this._muscleLines(ua, MOD.MUSCLE_LINES.braco);
     }
 
     /** Símbolo redondo de jenipapo no deltoide, do lado de fora. */
     _shoulderMark(rig, i) {
-      if (!MOD.BODY_PAINT.shoulderMark) return;
+      if (!MOD.BODY_PAINT || !MOD.BODY_PAINT.shoulderMark) return;
       const ua = rig.upperArm[i];
       const ctx = this.ctx;
       const side = i === 0 ? -1 : 1;
@@ -2484,8 +2570,9 @@
           add2(M.lerp3(a, b, t), r0 + (r1 - r0) * t);
         }
       };
-      add2(rig.head.o, 15.5 * PD.BODY.headScale);
-      add2(at(rig.head, 0, -6, 0), 15 * PD.BODY.headScale);
+      const hsS = MOD.headScale || PD.BODY.headScale;
+      add2(rig.head.o, 15.5 * hsS);
+      add2(at(rig.head, 0, -6, 0), 15 * hsS);
       seg(rig.neckBase, rig.head.o, 7, 8, 2);
       seg(at(rig.chest, 0, 0, 6), at(rig.pelvis, 0, 0, 2), 15, 13, 3);
       for (let i = 0; i < 2; i++) {

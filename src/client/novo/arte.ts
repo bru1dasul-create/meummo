@@ -10,6 +10,8 @@ import '../../../prototipos/pindorama-25d/js/character/animator.js';
 import '../../../prototipos/pindorama-25d/js/character/renderer.js';
 import '../../../prototipos/pindorama-25d/js/character/equipment.js';
 import '../../../prototipos/pindorama-25d/js/character/classes.js';
+// o Birim, o personagem principal novo (19/11): por enquanto só aparece com `?birim` no endereço (veja classes.js)
+import '../../../prototipos/pindorama-25d/js/character/birim.js';
 // o estilingue e a defesa da revisão 17 (o dono trouxe do ChatGPT): pose do corpo; a forquilha só aparece na hora do tiro
 import '../../../prototipos/pindorama-25d/js/slingshot.js';
 import '../../../prototipos/pindorama-25d/js/guard.js';

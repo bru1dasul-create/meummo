@@ -10,6 +10,7 @@
     "js/character/renderer.js",
     "js/character/equipment.js",
     "js/character/classes.js",
+    "js/character/birim.js",
     "js/slingshot.js",
     "js/guard.js",
     "js/world/tmj.js",

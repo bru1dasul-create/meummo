@@ -125,7 +125,8 @@
         ctx.fillRect(ch.pos.x - 60, ch.pos.y - 60, 120, 120);
         ctx.restore();
         renderer.drawShadow(ctx, rig, 0);
-        renderer.draw(ctx, rig, ch.look);
+        // (outro modelo no mesmo esqueleto, ex.: ?modelo=birim)
+        renderer.draw(ctx, rig, ch.look, null, opts.modelo && PD.models ? PD.models.appearance(opts.modelo) : undefined);
         ctx.restore();
         ctx.fillStyle = '#3b302a';
         ctx.font = '12px system-ui, sans-serif';

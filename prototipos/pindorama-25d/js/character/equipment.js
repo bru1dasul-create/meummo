@@ -147,11 +147,11 @@
   }
 
   /** Ponto de uma esfera da peça no mundo, preso ao osso certo do esqueleto. */
-  function spherePoint(rig, bone, i, s, hs) {
+  function spherePoint(rig, bone, i, s, hs, headFrame) {
     const side = i === 0 ? -1 : 1;
     switch (bone) {
       case 'cabeca': {
-        const h = rig.head;
+        const h = headFrame || rig.head;
         return { p: M.at({ o: h.o, r: M.scale(h.r, hs), f: M.scale(h.f, hs), u: M.scale(h.u, hs) }, s.p[0], s.p[1], s.p[2]), r: s.r * hs };
       }
       case 'peito':
@@ -193,7 +193,8 @@
   function drawItems(renderer, rig, equipped, bodyItems) {
     const out = [];
     const hides = new Set();
-    const hs = PD.BODY.headScale;
+    // (a cabeça do modelo em uso: outro modelo pode ter a cabeça de outro tamanho e em outra altura; veja renderer.js)
+    const hs = renderer.hs || PD.BODY.headScale;
     // cada item uma vez só (um item de duas mãos aparece nos dois encaixes)
     for (const id of new Set(Object.values(equipped || {}))) {
       const item = catalog.get(id);
@@ -203,7 +204,7 @@
         const sides = item.slot === 'maoE' || peca.lado === 'E' ? [0] : item.slot === 'maoD' || peca.lado === 'D' ? [1] : SINGLE.includes(peca.osso) ? [1] : [0, 1];
         for (const i of sides) {
           const circles = peca.esferas.map((s) => {
-            const q = spherePoint(rig, peca.osso, i, s, hs);
+            const q = spherePoint(rig, peca.osso, i, s, hs, renderer.headFrame);
             return renderer.circle(q.p, q.r);
           });
           const group = GROUP[peca.osso](i);

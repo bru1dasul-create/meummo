@@ -4,6 +4,41 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## AGORA (19/11, antes do `/clear`): o BIRIM vai para o jogo — LEIA PRIMEIRO
+- **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
+  cheia**, a da rodada 4b (o dono pediu de volta em 19/11, pela [estrutura]: "sem barba ficou pior"; os defeitos de ângulo
+  dela "podem esperar: julguem no jogo, no tamanho real"). A barba curta (pintada na pele) ficou no commit `e6c6d5d`, se
+  um dia quiser voltar a ela (veja a seção dela, mais abaixo). O Birim **ainda não aparece no jogo**: só no protótipo
+  (`prancha.html?modelo=birim`, `ferramentas/ficha.cjs --modelo birim`).
+- **O plano (proposto pela [estrutura], com o "pode" do dono):**
+  1. **FEITO em 19/11 (na main): o Birim no jogo com `?birim`** (ex.: `http://localhost:5173/?birim` no PC do dono,
+     `http://localhost:3000/?birim` no servidor de produção). Com a chave, `appearanceOf` (`classes.js`) devolve o Birim para
+     os jogadores na tela de quem abriu (os NPCs continuam iguais) — também no retrato da barra e na mochila, que usam a
+     mesma função; sem a chave, nada muda (herói idêntico). O `birim.js` é carregado no jogo depois do `classes.js`
+     (`arte.ts` e `view-scripts.json`). Conferido no navegador (PC 1600×900 e Pixel 7 deitado), parado e andando para os
+     4 lados, sem erros. Esperando o dono jogar e dizer o que incomoda no tamanho real. (O texto do plano, de antes:)
+     **Primeiro, o Birim no jogo como está**, para o dono jogar e julgar no tamanho real (no PC a cabeça do herói tem
+     ~25 px de altura; no celular, menos — fio de barba e detalhe fino somem nesse tamanho). Para testar, sem salvar nada:
+     a chave `?birim` no endereço. Do meu lado: em `js/character/classes.js`, `appearanceOf` devolve
+     `PD.models.appearance('birim')` para o jogador principal quando o endereço tem `?birim`; e o `birim.js` passa a ser
+     carregado no jogo (uma linha no `view-scripts.json` e no `src/client/novo/arte.ts`, depois dos outros scripts do
+     personagem). Conferir no navegador (PC e celular), no tamanho real, e mostrar ao dono. Tudo isso é do meu lado
+     (`classes.js`, `view-scripts.json` e `arte.ts`; a [estrutura] confirmou). Depois de ver no jogo, o dono escolhe:
+     **(A)** o Birim vira o herói de todos (não precisa salvar nada: é só a aparência padrão, do meu lado) ou **(B)** cada
+     jogador escolhe — aí a [estrutura] faz o passo 7 do `MIGRATIONS`, o protocolo 46 e o campo `model` ('heroi' |
+     'birim'; quem nunca escolheu = 'heroi') no `EntityState` e no `ActorInfo` que o motor passa no `addActor`; do meu
+     lado, ler `info.model` (sem o campo = 'heroi') e ligar à aparência (`PD.models.appearance`).
+  2. **Depois, só o que incomodar NO JOGO**, do mais visível para o menos: silhueta e proporção, cores, contorno, movimento;
+     o rosto por último. Uma coisa por vez, sempre com o resultado dentro do jogo.
+  3. **Em seguida, um teste barato do plano original** (peças pintadas pelo Nano Banana, montadas no esqueleto que já
+     existe): só imagens primeiro, umas 10 (menos de US$ 1) — o Caçador nas 8 direções a partir de uma referência. **Pedir o
+     "pode" do dono para o gasto antes.** Se as 8 vistas saírem coerentes entre si, montar só o andar virado para o sul e pôr
+     ao lado do Birim, no jogo; se não, o caminho morre ali. Riscos a olhar: consistência entre as vistas, cara de boneco de
+     papel (peça rígida girando) e destoar do mapa que o [mundo] pinta por código (mesma paleta e mesmo contorno).
+  4. **O dono decide olhando os dois NO JOGO**, não em prancha.
+- **Combinado novo (19/11):** julgar o personagem **no jogo, no tamanho real**. As pranchas de perto servem para achar
+  defeito, não para decidir.
+
 ## Quem sou
 O chat da frente **[arte]**: personagens (`src/client/game/doll/`, `characters.ts`, `animator.ts`), equipamento no
 corpo (`gearArt.ts`), monstros (`monsterArt.ts` e os pintados em `monsterPaint.ts`), ícones (`itemArt.ts`,
@@ -28,6 +63,11 @@ explicações simples, sem concordar só para agradar, e mando prints do navegad
   [estrutura] e do [mundo] para a [arte] ficam também no roteiro. Quando o dono pediu ("vê com o outro chat"), falei
   com o [mundo] por `send_message`.
 - **Sons e música são da [estrutura]** desde 14/11 (escolha do dono, no `CLAUDE.md`): não mexo no `sfx.ts`.
+- **O desenho do mapa no 2.5D é do [mundo]** desde 19/11 (escolha do dono, no `CLAUDE.md` da main: chão, água, plantas,
+  casas, objetos do cenário e luz do lugar, `prototipos/pindorama-25d/js/world/*.js`). Comigo: os personagens (no 2.5D,
+  `js/character/`), monstros, ícones, efeitos e telas (bichos, ícones, efeitos e telas o [mundo] ficou de confirmar com
+  o dono). O piloto do chão pintado (`eae883b`) passou para ele em 19/11 (mandei o resumo por `send_message`), e ele o
+  levou para a `main` (`3619bb2`) e continua o trabalho. Não mexo mais em `js/world/`, `ground.js` nem na `view.js`.
 - **Arma na mão:** o arco fica sempre na mão quando equipado ("o arco deve permanecer na mão, como um item / arma",
   13/11); o estilingue continua aparecendo só na hora do tiro. Fora isso, nada de armadura ou arma no personagem.
 - **Chave de API:** nunca pedir no chat.
@@ -1161,7 +1201,7 @@ de casa e ainda vai testar no PC dele). Tudo foi medido no jogo de verdade, no C
   conversa|casa [url] <pasta> ...` e `python3 zoom-fotos-comparar.py a.png a-ref.png`; `node zoom-ordem.cjs [url]`;
   `node zoom-memoria.cjs [url]`.
 
-### O chão pintado, passo 1 — PILOTO EM ANDAMENTO, PAUSADO em 17/11 (o dono pediu a pausa para o personagem novo)
+### O chão pintado, passo 1 — PILOTO PAUSADO em 17/11 e PASSADO AO [mundo] em 19/11 (o desenho do mapa agora é dele)
 > **19/11 (nota do [mundo]):** com a divisão nova, o desenho do mapa é do [mundo]. Este piloto foi para a `main` em 19/11,
 > com o "junta agora e segue" do dono, e quem continua é o [mundo] (`docs/MUNDO.md`). O texto abaixo é o de 17/11.
 Pedido do dono (17/11, pelo [mundo]): "chão feio, água sem movimentação, ambiente pífio"; direção aprovada ("é esse o
@@ -1206,6 +1246,331 @@ e os matos da Clareira entraram no piloto; para o resto fiquei de mandar o "ante
   edgeOver,seam,tinta` desliga um pintor; `EMENDA=3` confere as emendas; `NOITE=1`, `SEM_HEROI=1`, `DPR=2`);
   `node chao-foto.cjs <url> <saida.png> [x,y] [zoom] [largura,altura] [noite]` e `node chao-custo.cjs <url>
   [saida.json]` (no jogo ligado; `NOME` e `SENHA` do personagem de teste).
+
+### BIRIM, o personagem principal novo — NA MAIN em 19/11, só no protótipo (ainda não no jogo: veja "AGORA", no alto)
+O dono pediu ("quero criar um personagem principal, na mesma pegada que é o que é hoje") e mandou a ficha dele (8
+ângulos ilustrados, uma foto e um modelo 3D de blocos) com um roteiro de 9 etapas. Escopo que ele aprovou ("Pode
+seguir"): **a ficha, sem mexer no jogo**. As referências dele **não entram no repositório** (a foto é de uma pessoa de
+verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D não foram executados.
+- **Como foi feito:** o Birim é um **segundo MODELO no mesmo esqueleto** do herói — `js/character/birim.js`
+  (`PD.models.birim`; `PD.models.appearance('birim')` devolve `{ paleta, modelo }`, que vai no lugar da aparência no
+  `renderer.draw`). Todas as animações e os encaixes de equipamento servem para ele sem mudar nada. Não é Blender nem
+  imagem de IA (custo zero). O `renderer.js` ganhou ganchos de modelo (`face`, `chestDetail`, `pelvisDetail`,
+  `limbDetail`, `extras`, `wear`, `headScale`, `headDrop`, `HEAD.eye.lid`, `eps` na touca) e **o herói continua
+  idêntico ponto a ponto** (prancha completa comparada antes × depois, e o `teste-render-morte` passando).
+- **Ainda NÃO está no jogo:** o `birim.js` não está no `view-scripts.json` nem no `arte.ts` de propósito (só as
+  ferramentas e a `prancha.html` carregam). Falta o dono decidir o passo 3 (ele substitui o herói de todo mundo ou
+  vira uma segunda opção na criação do personagem — recomendei a segunda) e a [estrutura] guardar a escolha.
+- **Ferramentas:** `node ferramentas/ficha.cjs saida.png --modelo birim [--graus 0,45] [--inclinacao 0|30]
+  [--vestir-teste cabeca,tronco,pernas,pes] [--sem bone,bermuda] [--so bermuda] [--medidas]` (uma direção ou a
+  prancha das oito) e `node ferramentas/ficha-exportar.cjs <pasta>` (o pacote: `TURNAROUND/` com a câmera reta,
+  `CAMERA_DO_JOGO/` a 30°, `MODELO_BASE/corpo_base` e `pecas/`, pranchas, teste de equipamento e `medidas.json`).
+  `node ferramentas/prancha.cjs '?zoom=1.6&modelo=birim' saida.png 1` = todas as animações com ele. A pose A e as
+  medidas ficam em `js/tools/ficha.js` (`PD.ficha`).
+- **Números do modelo (cm):** 172,5 de altura na pose A com o boné (~174 em pé), 7,0 cabeças, cabeça 24,8 × 19,8,
+  ombros 54,8, peito 40,4, cintura 31,2, braço 13,5, antebraço 12,4, panturrilha 14,4; pose A com o braço a 32°,
+  mão a 28,6 cm do quadril, 46 cm entre os tornozelos. Exportação: 2048×2048, 8 px/cm, pés em (1024, 1802).
+- **Lições:** (1) conferir contra a ficha **lado a lado** antes de entregar — a primeira versão tinha barba enorme,
+  sem pescoço, pálpebra grossa como sobrancelha e olhos altos demais, e eu só vi ao pôr as duas imagens juntas;
+  (2) a ficha técnica é com a **câmera reta (0°)**: com a câmera inclinada a cabeça cresce para cima e o pé de cá
+  desce, e as alturas deixam de bater entre as direções; (3) a linha da pálpebra do motor tem 1,15 cm fixo: numa
+  cabeça menor ela vira um borrão (`HEAD.eye.lid`); (4) a folga que pus na touca (`_capPoly`) mudou um quadro da
+  esquiva do herói a 45° — quem pegou foi o `teste-render-morte`, não a prancha: rodar os testes do protótipo
+  **sempre** (precisa de `@napi-rs/canvas`, que instalei numa pasta de rascunho com `NODE_PATH`; não é dependência
+  do projeto); (5) uma peça de tronco precisa cobrir a "ponte" do ombro: agora a ponte pega a cor da peça.
+- **O que ainda não está bom (dito ao dono):** é um redesenho no traço do jogo, mais simples e menos musculoso que
+  a ilustração; a tatuagem é parecida, não é a mesma (a da ficha é mais fechada); cabeça ~2 cm mais larga que a da
+  ficha; perfil do rosto simples e, nas diagonais de costas, só a costeleta (os dois refeitos na versão 3,
+  abaixo); a mão de lado, com os dedos uns na frente dos outros, fica confusa; 1,74 m e não 1,80 m (o esqueleto
+  é o do herói). Não foi testado dentro do jogo, nem com arma na mão.
+- **Versão 2 (17/11; o dono viu a 1 e pediu: "melhora a tatuagem, as mãos e os pés"), também só no ramo:**
+  - *Tatuagem:* uma manga de **espirais de linha grossa** (`koru`, linha de ~1,4 cm, passo de 2 cm entre as voltas,
+    bolinha no miolo) com espirais pequenas e ganchos (`hook`) nos vãos, montada por `sleeve` na pele desenrolada
+    do braço ([cm ao longo do osso, graus em volta]); para antes do relógio. As bordas de cada risco são calculadas
+    uma vez (`tattooEdges`: a pele não muda com a pose) e todos os pedaços entram no mesmo sentido (um por cima do
+    outro não abre buraco na tinta).
+  - *Mãos:* `MODEL.HAND` próprio, escrito em centímetros (palma chata de ~4 cm de grossura, dedos de 5,7 a 7,7 cm
+    por 1,6 a 1,8, polegar com a junta do meio — `thumb.mid`) e `handLines` (vãos, nós, dobras, unhas, as duas
+    dobras da palma). O punho ficou sem a "bola": `wristJoin` (o `renderer` não risca o contorno fino dentro do
+    punho — `holes` — e põe a mão por cima do antebraço — `over`, uma regra fixa no `_depthFix`).
+  - *Pés:* `MODEL.FOOT` e `TOES.each` (os cinco dedos, cada um uma peça), `toeLines` (os vãos entre os dedos, as
+    unhas, os ossinhos do tornozelo) e a tira do chinelo como fita larga em Y (`ribbon`) saindo do vão do dedão.
+  - *Medidas:* mão 16,2 cm solta (~17 aberta), palma 8,8; pé 23,7 × 9,6.
+  - *Conferência:* herói idêntico ponto a ponto, os 7 testes do protótipo que desenham o personagem, `npm run
+    check` (510), animações do Birim sem erro, punho fechado conferido com `ficha.cjs --punho 1`.
+  - *Lições:* (6) o raio da pele para pintar em cima de um membro é o do **casco** das esferas (`skinAt`, uma
+    tabela por direção), não o da esfera mais de fora: entre o bíceps e o cotovelo a conta antiga dava números
+    soltos e a tatuagem fina virava borrão; (7) braço ou perna esticados são pintados como um volume só, **sem
+    linha entre as peças**: dedo do pé separado só aparece se eu riscar o vão; (8) quem decide a ordem de desenho
+    entre membros é o `_depthFix`, não a chave: mexer na `key` da mão não adiantou, precisou da regra `over`;
+    (9) para ver mão e pé de perto: `ficha.cjs <pasta> --modelo birim --escala 22 --tamanho 3000x4000 --ancora
+    0.97 --solto` e recortar — na ficha de 8 px/cm os defeitos não aparecem.
+- **Versão 3 (17/11; o dono pediu: "melhora o perfil do rosto"), também só no ramo:**
+  - *O que estava errado:* a cabeça é um casco só, com o nariz dentro: de lado o perfil virava um polígono sem
+    nariz, a barba era uma tira no contorno do queixo e o olho de frente, visto de lado, virava um triângulo.
+  - *Nariz e lábio de baixo como peças:* as esferas do nariz têm `apart: true` em `HEAD.spheres` — ficam fora do
+    casco da cabeça (um filtro no `renderer.js`; o herói não tem nenhuma, continua idêntico) mas valem para o
+    `_faceAt`. Em `extras`, `narizBirim` e `labioBirim` são itens próprios: por cima da cabeça quando o rosto olha
+    para a câmera (o nariz por cima da barba também: vista de cima, a ponta passa na frente do bigode) e por trás
+    dela quando o rosto vira para lá (só aparece o que passa da silhueta). O risco do nariz de frente e de três
+    quartos é o `noseLine` (o lado de lá e a volta por baixo da ponta; visto de cima, só o lado); as narinas, o
+    `noseDetail`. Nariz reto: ~4 cm do olho à base, ponta ~1,2 cm à frente do bigode.
+  - *Sombra emendada (`faceShade`):* a peça por cima do rosto não tem sombra só dela — continua a meia-lua de
+    sombra da cabeça (a mesma conta do `paintConvex`, com o casco da cabeça deslocado para a luz) e ganha a
+    sombra fina do próprio lado conforme a cabeça vira.
+  - *Barba:* um pedaço novo na bochecha de baixo (da costeleta ao canto da boca), o queixo mais para a frente e
+    o bigode entre a base do nariz e o lábio. **A regra que tirava quase toda a barba assim que o rosto passava do
+    perfil saiu:** agora cada pedaço some quando o lado dele deixa de olhar para a câmera (bigode, queixo,
+    bochecha, mandíbula e, por último, a costeleta), e na diagonal de costas a barba desce pela mandíbula.
+  - *Olho de perfil (`sideEye`):* amêndoa com a ponta para a frente, íris estreita, pálpebra grossa e sobrancelha;
+    entra quando a cabeça vira mais de ~60° (`|turned| >= 0.86`). A boca ganhou o risco de perfil. A `glabela`
+    (esfera entre as sobrancelhas, dentro do casco) e a sobrancelha do lado de lá encurtando acabaram com a ponta
+    que "enrolava" vista de cima.
+  - *Ferramenta:* `ficha.cjs --graus` aceita **qualquer ângulo** (os sem nome saem como `g095.png`).
+  - *Conferência:* herói idêntico ponto a ponto, os 7 testes do protótipo, `npm run check`, o Birim em todas as
+    animações, e a cabeça olhada de perto nas duas câmeras em 0, 45, 70, 85, 90, 95, 105, 120, 135, 150, 180° e
+    no outro lado.
+  - *Lições:* (10) **medir a ficha com régua antes de corrigir no olho**: o nariz parecia de botão porque a ponta
+    estava ~1 cm alta; a primeira correção, no olho, virou um bico. Medido (olho → base do nariz): a ficha dá
+    3,5 cm de frente e 4,8 de perfil (as vistas dela não batem entre si) — fiquei no meio; (11) peça por cima de
+    outra da mesma cor, com sombra própria, parece **colada** do lado em que a de baixo está na sombra: a sombra
+    tem de continuar a da peça de baixo; e pintar só a sombra (a peça toda de sombra com o claro por cima deixa um
+    fio escuro na borda); (12) conferir **os ângulos do meio**, não só as oito direções: a regra da barba deixava
+    o queixo pelado a 95° e a prancha de oito nunca mostrou; (13) antes de esconder um desenho "estranho", olhar
+    a ficha do dono naquele ângulo: a barba pendurada na diagonal de costas, que eu tinha tirado na versão 1, é
+    o que a ficha mostra.
+- **O dono achou a versão 3 "horrível" (18/11: "boné fora da cabeça, boneco todo torto... bem longe da minha
+  expectativa")** e, pela [estrutura], mandou o método do Dunloc Online (jogo de navegador desenhado por código, como o
+  nosso; o autor explica num vídeo do canal RafaxLab): **(1)** referência feita por IA de imagem, só cabeça, fundo
+  verde, virada para o sul; **(2)** as outras 7 direções pelo Nano Banana; **(3)** rodada focada numa coisa só ("só o
+  rosto, só o sul"); **(4)** um crítico comparando lado a lado, parte por parte, antes de entregar; **(5)** estilo
+  chapado (2 ou 3 tons) com contorno; **(6)** depois roupa, arma e movimentos, um de cada vez. O dono escolheu
+  **começar pelo Birim** e pagou o saldo do AI Studio (o Google tinha travado com "outstanding balance").
+- **Rodada 1 do rosto (18/11, só no ramo; esperando o dono ver):**
+  - *Referências do Nano Banana* (`gemini-nano-banana-2.1`, 2K; 3 imagens, ~US$ 0,15; total do piloto 6 imagens,
+    ~US$ 0,27): duas cabeças de frente em fundo verde (A, barba curta; **B, barba cheia — a usada**) e o corpo
+    inteiro a 45° na câmera do jogo. Prompt: a ficha do dono + o retrato dela, "flat cel shading, 2 or 3 tones, bold
+    ink outline". **Ficam fora do repositório** (derivam da ficha, que vem da foto de uma pessoa de verdade): só no
+    rascunho e no que for entregue ao dono.
+  - *O crítico:* `ferramentas/critico-rosto.py <referencia.png> <pontos.json> <nosso.png> <saida.png>` — a referência e
+    o nosso desenho na mesma escala, alinhados pelos olhos, lado a lado e um por cima do outro, com linhas nos pontos
+    medidos (os pontos vêm de uma grade desenhada por cima da referência). O nosso rosto de frente, grande:
+    `ficha.cjs <pasta> --modelo birim --graus 0 --inclinacao 0 --escala 30 --tamanho 1400x1400 --ancora 3.84 --solto`.
+    Foram 15 ciclos (c00 a c15), um defeito por vez.
+  - *O que mudou no `birim.js`:* cabeça ~12% mais estreita (o rosto tinha 2,6 vezes a distância entre os olhos; na
+    referência, 1,9) com a esfera `topo` devolvendo a altura; olhos mais afastados; boné, cachos, cabelo de cima, aba e
+    óculos acompanhando a cabeça nova; **olho novo** (`birimEye`: amêndoa baixa, íris grande quase preta passando das
+    pálpebras, brilho no alto, dobra da pálpebra, branco cor de creme) e **sobrancelha nova** (`browBar` virou uma
+    forma cheia: ponta de dentro reta, pico a 70% e ponta fina de fora); **orelha** maior e mais baixa, com a concha e a
+    dobra da borda (`earDetail`) e o contorno do rosto riscado por cima dela de frente; brinco pequeno na frente do
+    lóbulo (aparece de frente); **nariz de frente** (`noseFront`: as asas em "C" e a curva da ponta; narinas em
+    meia-lua; o risco de três quartos só aparece com a cabeça virada); **boca** mais baixa e larga, lábio de baixo
+    com a sombra embaixo e a **pele do queixo** à mostra entre o bigode e a barba, com a mosca; barba larga embaixo
+    (em U) e a esfera da frente do queixo abraçando o queixo (de perfil ele fica coberto); **cachos** na têmpora com o
+    desenho dos fios (`curlLines`); **planos de sombra** do rosto (`facePlane`: as laterais e o fundo dos olhos).
+  - *Lições:* (14) o crítico precisa achar os olhos pelos **pedaços** da cor (o brilho do brinco tem a mesma cor do
+    branco do olho e puxava a medida); (15) uma peça de barba em casco único **enche as curvas**: para abrir a pele
+    embaixo do lábio, o queixo virou peças separadas e uma esfera que começa mais baixo; (16) mudar o rosto de frente
+    mexe nos outros ângulos: conferir as 8 direções a cada mudança grande (a barba nova deixou a boca "aberta" de
+    perfil até eu pôr a esfera da frente do queixo); (17) a sombra própria de um pedaço (`faceShade` com `ownPoly`)
+    tem de ficar recortada dentro dele, senão escurece a peça inteira.
+  - *Ainda diferente da referência:* o **boné** é uma touca redonda (na referência, boné de verdade: a parte de trás
+    com a fivela, a abertura em cima da testa, copa alta) — é a próxima rodada; a barba da referência é mais cheia e
+    larga embaixo; as orelhas dela são maiores; o rosto dela tem mais planos de sombra (maçã do rosto, olheira).
+- **Rodada 2 — a barba e o boné (18/11; o dono: "comparado com o que estava tá bom, o que incomoda é a barba e o
+  boné"), só no ramo:**
+  - *Referências das outras direções* (Nano Banana, mesma cabeça B girada, câmera reta, fundo verde): 45°, perfil (90°)
+    e costas (180°) — 3 imagens, ~US$ 0,15 (total do piloto: 9 imagens, ~US$ 0,42). O outro lado é espelho. Também
+    ficam fora do repositório.
+  - *Barba:* quase preta (`PALETTE.hair` também é a do cabelo), **quadrada embaixo** (os lados descem retos da
+    mandíbula: medido linha por linha com `MEDIR_BARBA=1` no crítico, a largura embaixo bate com a referência,
+    ~840 px), cobrindo **a mandíbula inteira de perfil** (pedaços novos no canto e embaixo da mandíbula; antes, de
+    perfil, era uma cunha pontuda) e com os **fios na borda** (`beardStrands`: pontinhas em 3D — uma esfera grossa
+    dentro da barba e uma fininha fora, deitada na pele — na linha da bochecha, na borda de baixo e por baixo da
+    mandíbula; por serem volume, aparecem certas em qualquer ângulo). Os pedaços do lado do rosto virado para lá vão
+    numa peça à parte (`barbaLonge`, logo depois da cabeça e antes da boca): de três quartos eles cobriam os lábios.
+  - *Boné:* virou um **elipsoide** (`CAP.a` = semieixos: mais comprido de frente para trás e mais alto que a cabeça)
+    cortado pelo plano da barra — a copa na tela sai de `capShell` (a parte de fora que olha para a câmera e fica acima
+    da barra; a conta é feita no "espaço da esfera", em que o elipsoide vira uma esfera). **A calota antiga era uma
+    esfera centrada atrás da cabeça que não chegava até a testa: a testa escapava para fora dela de perfil e vista de
+    cima** — o "boné fora da cabeça". Agora ele envolve a cabeça inteira acima da barra (conferido ponto a ponto contra
+    as esferas da cabeça). Também: a **abertura em meia-lua e a fivela de furinhos** em cima da testa (`capOpening`),
+    as costuras e a coroa recalculadas para o elipsoide, a **aba** maior, saindo da barra em gomos que acompanham a
+    curva (um casco só achatava a aba numa placa que cobria a coroa) com a borda clara (`brimEdge`), os **óculos**
+    maiores e mais baixos (logo acima da fivela, como na referência), e mais **cachos** na nuca, que agora ficam embaixo
+    do boné (antes eram desenhados por cima dele de costas). `ficha.js` lê o alto do boné de `CAP.top`.
+  - *Lições:* (18) um volume que deve **envolver** outro (boné na cabeça, roupa no corpo) precisa ser conferido ponto
+    a ponto contra as esferas de dentro — a calota parecia certa de frente e escapava de lado e de cima; (19) peça
+    única de barba desenhada depois da boca cobre a boca de três quartos: o lado de lá vai antes; (20) casco convexo
+    achata o que é curvo (a aba): use gomos.
+  - *Ainda diferente da referência:* a copa é mais redonda (a da referência é mais "quadrada", estruturada); o cabelo
+    de trás da referência é um volume cacheado maior; o pescoço de perfil é grosso (é da rodada do corpo).
+- **Rodada 3 — o corpo e a postura (19/11; o dono: "pode começar pelo Birim", depois de eu propor o corpo e a postura),
+  só no ramo:**
+  - *Referência:* a própria ficha do dono (8 vistas da mesma renderização, na pose A — a mesma da nossa ficha), medida com
+    régua; para a câmera do jogo, o alvo do Nano Banana da rodada 1. **Nenhuma imagem nova** (custo zero).
+  - *O crítico do corpo* (`ferramentas/critico-corpo.py <ficha.png> <sola, px> <nosso.png> <saida.png>`): a ficha e o
+    nosso na mesma altura (do alto do boné à sola), alinhados pelo meio da cintura, os dois contornos um por cima do outro
+    e a tabela das bordas em cm em cada altura (a figura da ficha sai enchendo o fundo cinza a partir das bordas, mais os
+    buracos grandes e claros — entre as pernas). Foram 18 ciclos (k00 a k17), frente, perfil e costas.
+  - *O que mudou:*
+    - **Ombro de costas:** a ponte do ombro (do trapézio ao deltoide) só era desenhada de frente — de costas o deltoide
+      virava uma bola grudada num tronco de ombro quadrado (no herói, o cabelo comprido cobria). `SHOULDER.back` (gancho
+      novo do `renderer.js`; o herói não tem) deixa a ponte inteira de qualquer lado.
+    - **Tronco em V:** dorsais mais altas e para trás, oblíquos e cintura mais estreitos (~3 cm a menos de cada lado na
+      altura das costelas de baixo), o alto das costas mais cheio (de perfil as costas ficam mais cheias que o peito, como
+      na ficha), o peitoral um pouco mais baixo e recuado e duas esferas estreitas na frente e atrás da cintura (de perfil
+      ela desce cheia até a bermuda, sem fechar numa "bolsa" redonda). O deltoide ficou mais junto do corpo e o alto dele
+      um pouco mais alto (com o trapézio abaixo da barba, a linha do ombro tinha descido).
+    - **Pescoço:** a cabeça 3% menor (`headScale` 0,66: do alto do boné ao fim da barba são 15,0% da altura; na ficha,
+      14,8%; eram 16,1%) e 2 cm mais alta (`headDrop` −1,5); o trapézio logo abaixo da barba e uma rampa dele atrás (de
+      perfil a nuca descia reta, como uma coluna).
+    - **Bermuda:** justa na cintura e no quadril, abrindo em "sino" na coxa de baixo; a perna dela é **oval** (`kf`, `ko`)
+      e puxada para trás embaixo (`backKnee`, `backHem`), como o pano caído da ficha; com o joelho dobrado ela volta a ser
+      redonda (`legBend`) — funda, correndo, ficava pendurada atrás do joelho como uma aba. Costura, barra, bolso e coroa
+      usam a mesma conta (`legAt`).
+    - **Canela em dois pedaços** (`SHIN_SPLIT`, outro gancho do renderer; o herói não tem): a panturrilha cheia logo abaixo
+      do joelho e a canela de baixo fina — num casco só a perna virava um cone. Esticada, a perna é pintada como um volume
+      só, então não aparece emenda.
+    - Os riscos das costas (escápula, dorsal e coluna) agora acompanham a pele (`backPt`).
+  - *Medido (de frente, cm a partir do meio, contando 174 cm de altura; ficha × agora, entre parênteses o antes):*
+    costelas de baixo 14,3 × 15,8 (17,3); cós da bermuda 15,6 × 15,4 (19,7); quadril da bermuda 18,4 × 18,1 (21,5); coxa
+    da bermuda 26,0 × 26,0 (28,7); a 78%, o alto do ombro 25,6 × 25,3 (27,9). De perfil, as costas a 74%: −16,7 × −15,5
+    (−12,4); a bermuda atrás, a 30%: −16,1 × −14,6 (−10,0).
+  - *Lições:* (21) o casco é convexo: **o que é côncavo não sai de uma peça só** — a cintura que entra embaixo das costas
+    (vira um V reto), o pescoço entre os trapézios (o alto dos dois se liga numa reta na frente do pescoço: alto demais, ela
+    tapa o pescoço) e a panturrilha (vira cone). Quando a curva para dentro importa, dois pedaços (a canela); quando não,
+    a reta mais perto possível; (22) a régua mostra o que o olho não vê: a bermuda "larga" tinha cada perna da largura
+    certa — o que sobrava era o alto do tubo saindo para os lados no quadril; (23) subir a cabeça muda todas as alturas
+    em % (a altura total cresce): conferir de novo o que já batia; (24) forma boa em pé pode ficar ruim dobrada (a bermuda
+    funda virou aba na corrida): olhar as animações **de perto** (`prancha.cjs '?zoom=4&modelo=birim'`).
+  - *Ainda diferente da ficha:* de frente, na câmera do jogo, a barba cheia (a da referência aprovada) cobre o pescoço
+    quando a câmera vê de cima — só encurtando a barba (decisão do dono); os ombros da ficha são mais altos e cheios em cima
+    (a 80% da altura, ~3,5 cm a menos de cada lado: a linha do trapézio teve de ficar abaixo da barba para o pescoço
+    aparecer); a cintura da ficha entra numa curva (a
+    nossa é um V reto, ~1,5 cm mais larga nas costelas de baixo); na pose A o braço fica ~2,5 cm mais aberto em cima (é o
+    ângulo da pose, não o braço); de perfil, na ficha, as pernas ficam um pouco atrás do tronco (a postura é a do
+    esqueleto, a mesma do herói).
+  - *Conferência:* herói idêntico ponto a ponto, os testes do protótipo (os 40 e os 6 que desenham o personagem), `npm
+    run check` (510), o Birim em todas as animações (a corrida olhada de perto) e as 8 direções nas duas câmeras.
+- **Rodada 4 — a cabeça de lado (19/11; o dono: "Da uma atenção na lateral, está ruim a barba, orelha, nariz etc.."),
+  só no ramo:**
+  - *Referência:* o perfil (90°) e os três quartos (45°) do Nano Banana da rodada 2 (fora do repositório), virados para
+    o mesmo lado do nosso. **Nenhuma imagem nova** (custo zero).
+  - *O crítico do perfil* (`ferramentas/critico-perfil.py <referência.png> <olhoX,olhoY,altoY,barbaY> <nosso.png>
+    <saída.png>`): a referência e o nosso perfil na mesma escala, alinhados pelo **olho** e medidos **do olho ao fim da
+    barba** (o boné da referência é mais alto que o nosso: pela altura da cabeça toda, o rosto saía pequeno); três
+    quadros — a referência, o nosso e os dois um por cima do outro (nosso contorno em ciano, a borda do pelo em amarelo).
+    Foram 12 ciclos (p01 a p12).
+  - *O que mudou:*
+    - **Orelha:** mais para trás e maior (as três esferas de `HEAD.ear`); de lado ela ganhou desenho (`earProfile`): a
+      borda, a dobra de dentro com o garfo, a concha, o trago e a dobrinha do lóbulo. A concha desenhada de frente some aos
+      poucos quando a orelha vira de lado.
+    - **Costeleta e linha da barba:** a costeleta começa na altura do lóbulo, na frente da orelha, e uma tira fina sobe
+      até o cabelo da têmpora — com a normal um pouco para trás, então de frente ela não aparece (a frente aprovada
+      continua com a pele até a orelha). Os pedaços de trás da barba só andaram **para trás**: vistos de frente, têm a
+      mesma largura e altura. A linha da bochecha desce na diagonal, da costeleta ao canto do bigode, como na referência;
+      a barba cobre a mandíbula inteira e a borda de trás desce na diagonal até o fim dela.
+    - **Cachos:** os do lado foram para trás da orelha, mais seis embaixo e atrás do lóbulo (de frente, aparecem do lado
+      da mandíbula, como na referência), e todos ganharam os fios desenhados (`curlLines`).
+    - **Fios da barba:** a ponta dos fios da bochecha não anda mais que ~1 para a frente (a pele que `faceY` acha é a da
+      FRENTE do rosto: de perfil cada fio virava um risco comprido para a frente e, juntos, faziam uma borda reta, como uma
+      máscara); os de perto do bigode ficaram mais curtos; os do lado de lá do rosto só entram com ele quase de frente,
+      até ~13° (`farMin` em `piece`): de 15° a 45° eles se empilhavam numa coluna espetada do lado do nariz.
+    - **Nariz:** a asa (uma curva em "C") do lado virado para a câmera, de três quartos e de perfil (`noseSide`).
+    - **Queixo e bigode:** de perfil a barba cobre a frente do queixo logo abaixo do lábio (dois pedaços que só entram com
+      o lado bem virado para a câmera — de frente, a pele embaixo do lábio continua); o bigode foi um pouco para trás (de
+      perfil saía como um dedo).
+  - *Lições:* (25) alinhar pelo que bate nas duas imagens: o boné da referência é mais alto, então a escala sai do rosto
+    (do olho ao fim da barba), não da cabeça; (26) para uma peça aparecer **só de lado**, aponte a normal dela um pouco
+    para trás (`[sx, -0.3, 0]`): de frente ela some sozinha; (27) mexer numa peça que aparece de frente só no eixo que não
+    se vê de frente (aqui, para trás) preserva a vista aprovada; (28) um trecho de fios que aponta para a câmera vira uma
+    coluna (os fios caem no mesmo ponto da tela), e o que é desenhado por cima da cabeça não é escondido por ela: o lado de
+    lá precisa sair antes; (29) para achar um defeito, desligue uma parte de cada vez numa cópia de teste fora do
+    repositório (aqui, os fios de um lado e depois do outro) — é mais rápido que adivinhar pela conta.
+  - *Ainda diferente da referência:* o boné (a copa da referência é mais alta e estruturada); de perfil, o pescoço é mais
+    grosso que o da referência (é o da rodada 3, medido na ficha do corpo); o nariz é mais redondo na ponta; a sobrancelha
+    de perfil é uma barra grossa; de três quartos aparece um pedacinho de pele embaixo do lábio (é a pele da frente
+    aprovada, vista de lado); de frente, na câmera do jogo, as faixas da barba sobem até a orelha (já eram assim).
+  - *Conferência:* herói idêntico ponto a ponto, os testes do protótipo (os 40 e os 6 que desenham o personagem), `npm
+    run check` (510), o Birim em todas as animações, a cabeça em 10 ângulos (de 0° a 180°) na câmera reta, de 5° a 60° nas
+    duas câmeras e as 8 direções na câmera do jogo.
+- **Rodada 4b — a diagonal e a diagonal de costas (19/11; o dono, olhando o "de perto" da rodada 4: "de tres quartos
+  também está ruim o olho e sobrancelha, a barba também / o brinco do tres quarto de costas está errado, o olho e nariz
+  ficou feio"), só no ramo:**
+  - *Referência:* os três quartos do Nano Banana (45°) e a diagonal de costas da ficha do dono (135°). Nenhuma imagem nova.
+  - *O que mudou:*
+    - **Diagonal de costas:** o olho de perfil (`sideEye`) era desenhado inteiro até ~120°, como se o rosto ainda
+      estivesse de lado; agora, depois do perfil, ele fica cada vez mais estreito, encolhendo para a ponta da frente
+      (a do contorno), e some por volta de 105°; a sobrancelha, que ali é o próprio contorno, some um pouco depois. O
+      nariz recolhe para dentro do rosto (`tuck`) e some por volta de 115° (era uma bolinha saindo da beira). O brinco,
+      que fica na frente do lóbulo, saía em cima da barba: agora some depois de ~110°, quando a orelha é vista por trás.
+    - **Sobrancelhas na diagonal** (`browBar`): de três quartos a forma fica mais macia — as beiradas alisadas na tela
+      (a superfície tem os calombos das esferas, e a sobrancelha que a segue saía com um degrau), o pico arredondado e a
+      ponta de dentro arredondada em vez de cortada reta. A de lá vai até onde o rosto ainda olha para a câmera e afina
+      até a ponta ali (antes encurtava por uma conta fixa e virava uma cunha curta em cima do olho). A dobra da pálpebra
+      desce para perto do olho (encostada na sobrancelha parecia uma segunda sobrancelha). Tudo isso entra com a cabeça
+      virando (`soft`): **de frente nada muda** (conferido ponto a ponto).
+    - **Barba na diagonal:** (1) a bochecha de lá, que fica atrás do rosto, era desenhada por cima dele e virava uma bola
+      escura em cima do bigode, cobrindo o lábio de cima — agora o pedaço do lado de lá que já virou as costas para a
+      câmera vai **atrás da cabeça** (`segsBack`): só aparece o que passa do contorno; (2) a frente da mandíbula e o
+      canto da boca de lá, que são fundos, vão para trás da cabeça a partir de ~40° (`backMin` 0,35) — por cima, tapavam
+      a pele embaixo do lábio, que a referência mostra de três quartos; (3) a ponta do bigode de lá vai atrás dos lábios;
+      (4) um pedaço na superfície do queixo, do lado de cá, só a partir de ~12°, tapa o triângulo de pele que saía de
+      baixo da barba; (5) os dois pedaços que cobrem a frente do queixo de perfil entram a ~63° na câmera reta e a ~55° na
+      do jogo (entravam bem a 45°); a normal deles aponta um pouco para cima, por causa da câmera do jogo, que olha de cima.
+  - *Lições:* (30) para sumir com algo que vira para longe, **encolher na direção em que ele some** (aqui, para o
+    contorno do rosto) fica natural; apagar com transparência deixa um "fantasma", cortar deixa beirada reta e restos, e
+    encolher para o lado errado deixa uma mancha no meio da bochecha; (31) **o que fica atrás do rosto vai atrás da
+    cabeça**: desenhado por cima dela, um pedaço do lado de lá aparece no meio da cara (a bola do bigode, o tufo do lado
+    do nariz, a pele do queixo tapada) — atrás, a própria cabeça esconde o que não se vê e o contorno continua inteiro;
+    tirar bolas do pedaço (uma por uma) deixava bolas soltas na beira; (32) para achar qual peça faz o defeito, pinte cada
+    pedaço de uma cor e escreva o número dele na tela (uma cópia de teste, fora do repositório): os números vêm na mesma
+    ordem das chamadas no código.
+  - *Ainda diferente da referência:* o lábio de cima quase não aparece de três quartos (o bigode fica em cima dele); a
+    ponta do nariz é redonda; o boné; o pescoço de perfil.
+  - *Conferência:* a frente idêntica ponto a ponto (câmera reta e do jogo); o perfil igual na câmera reta (diferença de
+    no máximo 1 em 0–255) e, na do jogo, só um pedacinho de 22 × 13 px no queixo (numa imagem de 3000 × 4000); a cabeça de 0° a
+    180° na câmera reta e as 8 direções nas duas câmeras; e a bateria (herói idêntico, os 40 testes do protótipo e os 6
+    que desenham o personagem, `npm run check`, o Birim em todas as animações).
+- **(DESFEITA em 19/11, a pedido do dono: "sem barba ficou pior" — o Birim voltou para a barba cheia da 4b. O código desta
+  barba curta está no commit `e6c6d5d`.)**
+- **A barba curta, pintada na pele (19/11; o dono, depois da 4b: "está horrível, vamos fazer sem barba o que acha?" — mostrei
+  a prévia sem barba e recomendei a curta; ele escolheu "1", a curta), só no ramo:**
+  - *Por que a cheia não deu certo:* ela era ~40 volumes (cascos de esferas) em volta da mandíbula, mais ~150 fios; cada
+    ângulo mostrava pedaços diferentes, e cada rodada consertava um ângulo e estragava outro (a bola do bigode, o triângulo
+    de pele, o tufo do lado do nariz, a pele do queixo tapada). As sobrancelhas e os olhos nunca tiveram esse problema
+    porque são desenhados NA pele do rosto.
+  - *Como é agora* (`shortBeard`, chamada no começo do rosto, antes dos lábios, do nariz e das orelhas, que ficam por cima):
+    uma camada na pele, feita uma vez só (`beardGeom`: a cabeça não muda de forma; a cada quadro só se projeta) — uma grade
+    de pontos da pele entre duas beiradas (`HEAD.beard.top` e `.bottom`, a metade direita, de trás para o meio, com o mesmo
+    número de pontos), achados por raios saindo de um centro dentro da parte de baixo do rosto (`beardRay`: o ponto de fora
+    entre as esferas do casco, sem o nariz). A cada quadro, em cada coluna da grade, fica o trecho que olha para a câmera,
+    com as pontas no ponto exato onde ele deixa de aparecer (cortar quadradinho por quadradinho deixava escadinha); a boca e
+    a pele embaixo do lábio ficam de fora (`hole`); a mosca embaixo do lábio; pontinhas de pelo só na beirada de cima (a de
+    baixo é aparada — com pontinhas, de costas elas viravam raios embaixo da orelha), mais curtas no bigode; riscos curtos e
+    claros por dentro (só com o personagem grande, `R.fine`). A sombra é a mesma meia-lua da pele da cabeça (a peça da
+    cabeça passa a ir para o rosto: `face(R, rig, look, seg)`), então combina com a pele. De costas, o que fica embaixo da
+    mandíbula sai (olha para baixo), as faixas finas presas à beirada de baixo também, e o que o **pescoço tapa**: com o
+    rosto virado para lá, cada ponto testa se a linha até a câmera passa perto do eixo do pescoço (da base da cabeça,
+    `HEAD.neckBase`, até a base dele no peito; com 0,6 da grossura — com a grossura toda, a barba do lado ganhava um corte
+    reto). Sem isso, a parte de baixo do queixo, que vista por trás fica atrás do pescoço, saía em lasquinhas pretas em cima
+    dele (o pescoço é desenhado antes da cabeça).
+  - *Queixo:* subiu ~1,3 e ficou um pouco menor (`queixo` r 5 → 4,6; `queixoE/D` 4,3 → 4,1): ele tinha a grossura da barba
+    cheia, e sem ela o rosto ficava comprido embaixo. O cabelo da têmpora e os cachos dele (que estavam junto com a barba)
+    viraram a peça `cabeloTempora`.
+  - *Custo:* ~9,3 ms por quadro para desenhar o Birim (antes, com a cheia, ~10,2), nesta máquina, sem placa de vídeo
+    (`r6/bench.cjs` no rascunho; mediana de 5 × 40 quadros).
+  - *Lições:* (33) **o que fica no rosto deve ser desenhado NA pele do rosto** (barba curta, sobrancelha, pintura): segue a
+    superfície e fica certo em qualquer ângulo; volumes colados em volta da cabeça só valem para o que sai da silhueta (boné,
+    orelha, cachos); (34) uma camada na pele precisa sumir onde a pele vira para longe — por coluna, com a ponta no ponto
+    exato da virada, senão a beirada fica em escadinha; e o que só aparece de raspão (uma faixa fina) melhor sair.
+  - *Ainda diferente da referência:* a barba da referência é cheia (aqui é curta, por escolha do dono); o boné; o pescoço de
+    perfil.
+  - *Conferência (na versão final):* a cabeça de 15 em 15°, a volta inteira, na câmera reta; as 8 direções nas duas câmeras;
+    o Birim em todas as animações de perto; e a bateria (herói idêntico, os 40 testes do protótipo e os 6 que desenham o
+    personagem, `npm run check`). Para achar as lasquinhas: pintar as faixas de uma cor e as pontinhas de outra numa cópia de
+    teste, e listar os grupos de faixas desenhados em cada ângulo (o grupo pequeno e solto é o defeito).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
@@ -1420,8 +1785,9 @@ confirmou.
     "ao invés de setinha deveria ser um ponto": um ponto dourado com contorno branco, pulsando)
     (PC: 148 px embaixo da mochila; celular: 96 px embaixo do retrato), tudo por CSS de id; girar a imagem para bater
     com a câmera é pedido ao motor. Ganchos: `__mundoNovo.explored()` e `mapOpen()`.
-  - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
-    Capão vai a 96 × 180 m): só entra na main com o meu
+  - **Floresta maior do [mundo]** (PASSOU PARA O [mundo] em 19/11, com o desenho do mapa; fica a lista do que faltava
+    desenhar) (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
+    Capão vai a 96 × 180 m): só entra na main com o
     desenho: `arvore` `especie: 'paineira'` (tronco de garrafa com espinhos, copa de flor rosa `flores`, pétalas no
     chão); `parquinho` (`brinquedo` 'balanco' com `quebrado`, 'escorregador' com `olhando`, 'gira-gira' com `plantas`;
     `ferrugem`, `cipo`); `cachoeira` (pedras de onde o riacho cai: `altura`, `queda`, `musgo`); `pinguela` com `pedras`;

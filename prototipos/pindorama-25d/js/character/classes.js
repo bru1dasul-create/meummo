@@ -72,8 +72,24 @@
     return registry.get(id) || registry.get('semClasse');
   }
 
+  // (teste do dono, 19/11: com `?birim` no endereço, os jogadores saem com o Birim, o personagem principal novo
+  // (`birim.js`) — para ver no jogo, no tamanho real, antes de decidir se ele vira o herói de todos ou se cada jogador
+  // escolhe. Vale só para quem abriu com a chave, e só para os jogadores: os NPCs continuam iguais. Sem a chave, nada muda)
+  const TEST_MODEL = (() => {
+    try {
+      return typeof location !== 'undefined' && new URLSearchParams(location.search).has('birim') ? 'birim' : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  let testAppearance;
+
   /** Aparência para o desenho (o renderer usa a paleta da classe do personagem). */
   function appearanceOf(character) {
+    if (TEST_MODEL) {
+      if (testAppearance === undefined) testAppearance = (PD.models && PD.models.appearance && PD.models.appearance(TEST_MODEL)) || null;
+      if (testAppearance) return testAppearance;
+    }
     const c = get(character && character.classe);
     return c ? { paleta: c.paletaFinal, classe: c.id } : null;
   }
