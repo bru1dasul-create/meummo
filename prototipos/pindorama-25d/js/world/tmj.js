@@ -155,6 +155,9 @@
       } else if (k === 'semaforo') {
         // semáforo de rua (ponto): `altura`, `olhando` (graus, para onde as luzes dão; 0 = leste), `quebrado` e `faiscas`
         map.trafficLights.push({ x, y, h: (pr.altura || 4.6) * 100, facing: pr.olhando || 0, broken: !!pr.quebrado, sparks: !!pr.faiscas });
+      } else if ((k === 'poste' || k === 'poste-praca') && pr.estilo === 'lampiao') {
+        // o lampião de poste de madeira do Refúgio (refugio.js)
+        map.props.push({ kind: 'lampiao', x, y, r: 20, h: (pr.altura || 2.8) * 100, light: pr.luz || '#ffd36b' });
       } else if (k === 'poste' || k === 'poste-praca') {
         // `apagado` (vidro quebrado, sem luz), `torto` e `cipo` (os do parque antigo)
         map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6', off: !!pr.apagado, bent: !!pr.torto, vine: !!pr.cipo });
@@ -200,6 +203,9 @@
           frame: pr.moldura || null,
           led: !!pr.led,
           brokenWindow: !!pr.vitrineQuebrada,
+          // o Refúgio (refugio.js): a casa de tábua (`material: 'tabua'`) com o telhado de duas águas (`telhado: 'zinco'`)
+          material: pr.material || null,
+          roofKind: pr.telhado || null,
         });
       } else if (k === 'predio') {
         // prédio do conjunto habitacional (a frente é o sul): andares, varandas, caixa d'água, cipó e árvore na laje
@@ -351,6 +357,15 @@
       } else if (k === 'bomba') {
         // bomba de combustível velha, sem marca (sul.js): `olhando` (para onde o visor dá), `ferrugem`, `plantas`
         map.props.push({ kind: 'bomba', ...rect(o), h: (pr.altura || 1.6) * 100, angle: pr.olhando || 0, rust: !!pr.ferrugem, plants: !!pr.plantas });
+      } else if (k === 'barco') {
+        // o Refúgio (refugio.js): `tipo` ('canoa', 'voadeira'), `cor`, `olhando` (para onde a proa aponta), `afundado`
+        map.props.push({ kind: 'barco', ...rect(o), boat: pr.tipo || 'canoa', color: pr.cor || null, angle: pr.olhando || 0, sunk: !!pr.afundado });
+      } else if (k === 'banca-frutas') {
+        // a banca de frutas em U da quitanda (refugio.js): `frente` e `lados` (m) e `pano` (a cor do pano listrado)
+        map.props.push({ kind: k, ...rect(o), h: (pr.altura || 0.9) * 100, front: (pr.frente || 0.5) * 100, side: (pr.lados || 0.3) * 100, cloth: pr.pano ? [pr.pano, '#fff4dc'] : null });
+      } else if (k === 'barril' || k === 'rede' || k === 'varal' || k === 'ponto-onibus') {
+        // o barril (bombona, tambor ou de madeira, sorteado), a rede de pesca secando e o ponto de ônibus (`placa`)
+        map.props.push({ kind: k, ...rect(o), h: pr.altura != null ? pr.altura * 100 : null, color: pr.cor || null, sign: pr.placa || '' });
       } else if (k === 'pneus') {
         // pilha de pneus velhos (sul.js): `raio` e `pilha` (quantos)
         map.props.push({ kind: 'pneus', x, y, r: (pr.raio || 0.5) * 100, count: pr.pilha || 3 });

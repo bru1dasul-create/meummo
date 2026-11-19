@@ -593,13 +593,38 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (**na main em 15/11**, com a floresta maior): quati 4, tatu_bola 3, marimbondo 3 e filhote_boitata 1 no recanto do Véu
 - [x] **[mundo]** Mais bichos na mata do Capão (16/11, pedido do dono: "bastante mesmo"; na main): de 18 para 40 —
   sagui 8, jararaca 6, quati 10, tatu_bola 8, marimbondo 6, filhote_boitata 2 (o peso medido pela [estrutura] com `?fps`)
-- [ ] **[arte + mundo]** O chão, a luz e a água com mais qualidade (17/11, pedido do dono: "chão feio, água sem
+- [x] **[mundo]** Mapa 02 (Guarapiranga), pedaço (a), no jogo (19/11, pedido do dono: "desenhe o mapa e coloca no
+  jogo"; na main): a chegada pela Estrada do M'Boi Mirim (a estrada do sul do Capão vai até a beira do mapa, sem a
+  barreira) e o Refúgio na beira da represa, desenhados pelo [mundo]: casas de tábua com telhado de zinco enferrujado,
+  a quitanda com o toldo e a banca de frutas (a Dona Iracema fica atrás dela), canoas, voadeira e barco afundado,
+  barris, redes, varais, lampiões e janelas que acendem à
+  noite e a água mexendo (ondinhas com o vento, brilhos, espuma na margem). Mapa `guarapiranga` (120 × 100 m)
+- [x] **[estrutura]** (19/11, `iracema_guarapiranga` e `barqueiro` em data/npcs.json; conferido no PC e no celular) A Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em (57,5; 50,6) e (49,6; 62,4),
+  os dois olhando para o sul (combinado em 19/11: só esta parte pequena, a região 2 segue pausada)
+- [ ] **[mundo]** O chão, a luz e a água com mais qualidade (17/11, pedido do dono: "chão feio, água sem
   movimentação, ambiente pífio"; direção aprovada: "é esse o caminho"). Alvo: `docs/referencias/chao-pintado-alvo.jpg`
   (o antes: `chao-pintado-antes.jpg`). Três passos, cada um jogável, começando pela Clareira dos Despertos: (1) o chão
   pintado (manchas claras e escuras na grama e na terra, sem bolinhas iguais; beiradas que se misturam, sem contorno
   escuro; marcas de uso); (2) luz e sombra no chão (sombra comprida das árvores, manchas de sol); (3) água e vida
-  (ondinhas, reflexo, margem de lama; poeira de luz, borboletas, folhas caindo). A pintura é da [arte]; o [mundo]
-  marca no mapa o que ela pedir (beiradas, trilhas, detalhes)
+  (ondinhas, reflexo, margem de lama; poeira de luz, borboletas, folhas caindo). Era da [arte]; desde 19/11 o desenho
+  do mapa é todo do [mundo] (escolha do dono). Começado: a água mexendo (`js/world/agua.js`, no Mapa 02). **Passo 1
+  na main em 19/11** ("junta agora e segue", vendo o alvo, o antes e o depois no mesmo lugar): o chão pintado que a
+  [arte] começou em 17/11 (`js/world/chao.js`: tinta de aquarela por material, folhas, tufos, florzinhas e pedrinhas no
+  lugar das bolinhas, beiradas que se misturam, trilhas sem contorno e pedras repintadas; o mesmo peso do chão antigo).
+  Mais perto do alvo em 19/11 (na main, o dono escolheu "gráfico primeiro"): a grama oliva (sem o limão), com as pintas
+  redondas claras e escuras do alvo, e a trilha com os sulcos escuros compridos; medido contra o alvo (saturação dos
+  verdes 0,47 × 0,45, brilho 0,55 × 0,53). **Passo 2 na main em 19/11** ("pode seguir"): as sombras das árvores compridas
+  e macias (finas no pé e largas longe), a beirada esfumada e o escurecer que guarda a cor do chão (a grama na sombra
+  fica verde-escura, não roxa), e acabou a faixa clara onde duas sombras se cruzavam (junto do poste). Falta o passo 3:
+  água e vida (reflexo, margem de lama; poeira de luz, borboletas, folhas caindo)
+- [ ] **[dono + estrutura + mundo]** **Mundo aberto, sem tela de carregamento** (19/11, direção nova do dono: "vamos
+  focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
+  primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está
+  em `docs/MUNDO.md`, "Próximos passos"
+- [ ] **[mundo]** (PARADO em 19/11 pelo dono, que mandou o escopo novo acima) Os dois mapas maiores (19/11, pedido do dono: "deixa o mapa maior"; escolheu "os dois maiores"):
+  primeiro o Guarapiranga (de 120 × 100 para uns 200 × 160 m, com o parque, o brejo e a orla abertos), depois o Capão
+  (cresce para a direita, com mais rua, casas e mata). Crescer só para a direita e para baixo (a origem não muda: o mapa
+  explorado de quem já joga não desalinha) e avisar a [estrutura] antes de juntar se um NPC ou uma chegada mudar
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
@@ -802,6 +827,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
 - [x] **[estrutura]** Painel F1, etapa 4 (17/11): **câmera lenta** — botões 0,25x / 0,5x / 1x (em Atalhos): o servidor
   inteiro e a tela de todo mundo andam nesse ritmo (passos, tiros, recargas, golpes dos bichos). Protocolo 45. O som,
   o dia e noite e o contador de quadros continuam no relógio de verdade
+- [ ] **[arte]** **Prioridade do dono (18/11): o personagem no nível da referência dele** (Dunloc Online), pelo
+  processo do autor: imagem de referência do rosto → rodada focada (só o rosto, só o sul) com crítico lado a lado →
+  as outras direções → corpo, arma e movimentos. O dono escolhe a referência e aprova cada rodada
+- [ ] **[estrutura]** Região 2 (Santo Amaro ou Guarapiranga): **pausada pelo dono (18/11)** enquanto a [arte] faz o
+  personagem (para não estourar o uso do Claude). A [estrutura] fica só em correções pequenas
 - [ ] **[estrutura + arte]** Chamado Selvagem (nível 15: a onça ou a águia espiritual) e Fúria da Onça (nível 20:
   transformação, corpo a corpo). **Pausado pelo dono (15/11):** ninguém chega no nível 15–20 com o conteúdo de hoje
   (o bicho mais forte do jogo novo é nível 5; até o 15 são 12.799 XP, uns 700 bichos do Capão). Primeiro a região nova

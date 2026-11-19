@@ -57,9 +57,8 @@ explicações simples, sem concordar só para agradar, e mando prints do navegad
 - **O desenho do mapa no 2.5D é do [mundo]** desde 19/11 (escolha do dono, no `CLAUDE.md` da main: chão, água, plantas,
   casas, objetos do cenário e luz do lugar, `prototipos/pindorama-25d/js/world/*.js`). Comigo: os personagens (no 2.5D,
   `js/character/`), monstros, ícones, efeitos e telas (bichos, ícones, efeitos e telas o [mundo] ficou de confirmar com
-  o dono). O piloto do chão pintado (`eae883b`, só no meu ramo) passou para ele em 19/11, com o caderno dele (mandei o
-  resumo por `send_message`): ele não vai para a `main` pelo meu ramo. Não mexo mais em `js/world/`, `ground.js` nem
-  na `view.js`.
+  o dono). O piloto do chão pintado (`eae883b`) passou para ele em 19/11 (mandei o resumo por `send_message`), e ele o
+  levou para a `main` (`3619bb2`) e continua o trabalho. Não mexo mais em `js/world/`, `ground.js` nem na `view.js`.
 - **Arma na mão:** o arco fica sempre na mão quando equipado ("o arco deve permanecer na mão, como um item / arma",
   13/11); o estilingue continua aparecendo só na hora do tiro. Fora isso, nada de armadura ou arma no personagem.
 - **Chave de API:** nunca pedir no chat.
@@ -1194,6 +1193,8 @@ de casa e ainda vai testar no PC dele). Tudo foi medido no jogo de verdade, no C
   `node zoom-memoria.cjs [url]`.
 
 ### O chão pintado, passo 1 — PILOTO PAUSADO em 17/11 e PASSADO AO [mundo] em 19/11 (o desenho do mapa agora é dele)
+> **19/11 (nota do [mundo]):** com a divisão nova, o desenho do mapa é do [mundo]. Este piloto foi para a `main` em 19/11,
+> com o "junta agora e segue" do dono, e quem continua é o [mundo] (`docs/MUNDO.md`). O texto abaixo é o de 17/11.
 Pedido do dono (17/11, pelo [mundo]): "chão feio, água sem movimentação, ambiente pífio"; direção aprovada ("é esse o
 caminho"): `docs/referencias/chao-pintado-alvo.jpg` (o antes: `chao-pintado-antes.jpg`). Combinado com ele em três
 passos (1: o chão pintado; 2: luz e sombra no chão; 3: água e vida), cada um com piloto na Clareira dos Despertos,

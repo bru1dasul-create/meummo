@@ -8,7 +8,10 @@
 ## Quem sou
 O chat da frente **[mundo]**: mapas (`public/assets/maps/*.tmj`), tiles (`scripts/tileset.ts` → `public/assets/tiles.png`),
 geradores (`scripts/gen-*.ts`, `map-builder.ts`, `map-depth.ts`), `render-map.ts` e, no jogo, `src/client/game/mapDepth.ts`
-(copas por cima de quem passa, luzes, escuro, neblina, vaga-lumes e faíscas). O dono não programa: ele decide o jogo.
+(copas por cima de quem passa, luzes, escuro, neblina, vaga-lumes e faíscas). **Desde 19/11 (escolha do dono), também o
+desenho do mapa inteiro no jogo 2.5D**, não só a planta: chão, água, plantas, casas, objetos do cenário e a luz do lugar,
+em `prototipos/pindorama-25d/js/world/*.js` (os arquivos que a [arte] fez lá até 19/11 passaram para mim); a [arte]
+fica com o visual do personagem. O dono não programa: ele decide o jogo.
 Converso em português do Brasil, com explicações simples, e mando prints do navegador em cada entrega. Ele me chama de
 "meu xuxu".
 
@@ -31,6 +34,27 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (19/11): o Mapa 02, pedaço (a), está no jogo, desenhado por mim.** O dono: "quero que você desenhe o mapa e
+  coloca no jogo, o arte visual mexe apenas no visual do personagem, você visual do mapa completo não só escopo". O mapa
+  `guarapiranga` (120 × 100 m, `scripts/gen-guarapiranga.ts`, `npm run gen:guarapiranga -- --out ...`) é a chegada pela
+  **Estrada do M'Boi Mirim** (a rua tomada pela mata, com faixa apagada, rachaduras, buracos, capim e raízes, o ponto de
+  ônibus e os postes com cipó) e o **Refúgio** na beira da represa: 5 casas de tábua (`material: 'tabua'`) com telhado de
+  zinco enferrujado, a quitanda da Dona Iracema com o toldo, 7 barcos (canoa, voadeira, afundado), barris, redes de
+  pesca, varais, lampiões que acendem à noite, janelas que acendem à noite e a **água mexendo**. A barreira do sul do
+  Capão saiu: a estrada vai até a beira do mapa (saída `Estrada do M'Boi Mirim`, chega em (18,6; 4,8) aqui; a volta chega
+  em `chegada-guarapiranga`, (91; 176,5) no Capão). Os desenhos novos: `js/world/refugio.js` (casa de tábua, telhado,
+  janelas, toldo, `barco`, `barril`, `ponto-onibus`, `rede`, `lampiao`, `varal`) e `js/world/agua.js` (ondinhas que
+  andam com o vento, brilhos do sol, espuma da margem); os ganchos em `props.js` (casa de tábua), `tmj.js` (os tipos
+  novos e o poste `estilo: 'lampiao'`), `view.js` (luzes da noite e `world.daylight`) e `world.js` (a água por cima do
+  chão). **Regras novas:** cada janela de casa de tábua precisa de 1,8 m de parede (as folhas abertas ficam dos lados);
+  quem chega de outro mapa não pode ficar, na tela, atrás de poste, placa ou tronco (teste). **A banca de frutas (19/11,
+  na `main`):** no print, a [estrutura] viu a Dona Iracema em pé na frente da vitrine, parecendo freguesa; agora ela
+  fica atrás da `banca-frutas` (em U, colada na quitanda: `frente` 0,5 m e `lados` 0,3 m; caixotes de fruta, a balança e
+  o pano listrado com a cor do toldo). O miolo (2 × 0,75 m) é dela e fechado: o gerador e o teste dos vãos pulam o par
+  banca–parede, e um teste confere que ninguém entra ali e que dá para comprar de frente (a loja abre a menos de 3 m).
+  O tipo se chama `banca-frutas` porque `banca` já é a banca de jornal do protótipo antigo (props.js). Planta e conceito:
+  `docs/referencias/mapa-02-planta.jpg` e `mapa-02-refugio-conceito.jpg`. Os pedaços (b) parque e brejo e (c) orla,
+  clube, praça do Saci e barragem ficam para depois (a região 2 da [estrutura] está pausada pelo dono desde 18/11).
 - **Decisão do dono (13/11, noite): pausa para capricho.** Ele achou a arte "ruinzinha" (falta detalhe; a rua não
   parece rua, a calçada não parece calçada) e decidiu parar de avançar e melhorar os mapas, uma área por vez,
   começando pela rua e pela praça da Budega. Ideia dele, aprovada com as imagens de referência: **a floresta reinando
@@ -304,6 +328,9 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
+- **[estrutura] (feito em 19/11, 987be1e):** a Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`), com o pé em
+  (57,5; 50,35) e (49,6; 62,4). O pedaço (a) ainda não tem área de bichos. Os dois usam o boneco de reserva (o desenho
+  próprio é da [arte], depois do personagem).
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois
@@ -317,7 +344,66 @@ Feito pelo [mundo], tudo na `main`:
   `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
 
 ## Próximos passos possíveis (o dono escolhe)
-**Agora (mundo novo):**
+**PARADO PELO DONO (19/11, fim do dia; "não faça nada, meus tokens estão acabando, apenas salva"). Quando ele pedir
+para seguir, decidimos juntos por qual lado ir primeiro.**
+- **A direção nova dele: o mundo ABERTO, sem tela de carregamento** ("vamos focar para ter o mapa como se fosse aberto
+  sem carregamento"): andar do Capão até o Guarapiranga sem trocar de mapa. Hoje cada mapa é uma sala no servidor e a
+  troca é pela camada `saidas`; mudar isso é da [estrutura] (servidor, motor) e meu (mapas em setores que se emendam).
+  Ainda não falei com as outras frentes sobre isso (ele pediu para não gastar).
+- **O escopo melhorado que ele mandou** (texto dele): o mapa tem que funcionar como fase de MMORPG, não só ilustração;
+  dividir em setores reutilizáveis, com caminhos de verdade, colisões, entradas e saídas, áreas seguras, zonas de caça e
+  lugares de missão; validar a escala e as ligações antes do desenho final; separar o mapa do mundo (regiões e pontos
+  de interesse) dos mapas jogáveis; não pôr todos os bichos, missões e segredos no mesmo lugar (áreas vazias, descoberta
+  e motivos para voltar); Mapa 01 Capão (começo, primeiras missões, escolha de classe), Mapa 02 Guarapiranga
+  (exploração, navegação, caça, ruínas e mistérios), Mapa 03 Santo Amaro (cidade, comércio, conflitos); não fazer tudo
+  de uma vez: uma região pequena jogável, testar andar, combate, exploração e desempenho no PC e no celular, depois
+  crescer.
+- **A imagem dele (não ficou em arquivo; o que tem nela):** "Mapa 02 — Represa de Guarapiranga, versão expandida,
+  400 × 320 m (≈ 32 ha), uns 4× a de 200 × 160", 8 regiões, uns 12 a 16 telas de PC para atravessar. A vila do Capão
+  (urbana) no alto à esquerda, a estrada contornando a represa pelo leste até Santo Amaro, a represa no meio. Os 13
+  pontos: 1 Chegada (Estrada do M'Boi Mirim, do Capão); 2 Mirante (oeste; observação e missões); 3 O Refúgio (palafitas;
+  comércio, pesca, missões secundárias); 4 Brejo Maior (perto da vila; barracas, fogueira, artesãos, pescadores,
+  informantes); 5 Campinho (campo de terra; eventos e desafios); 6 Praça em Ruínas (nordeste, com uma cachoeira; relíquias
+  e segredos); 7 Clube Náutico em Ruínas (leste da represa; piscina vazia, píer quebrado, alto risco); 8 Ilha do Véu (ilha
+  grande no meio, com uma árvore enorme; rituais, visões, missões principais); 9 Barragem de 1909 (leste; passagens por
+  dentro e a saída para Santo Amaro); 10 Represa/Barragem (sul; a comporta, exploração por dentro, eventos); 11 Trilha da
+  Margem Sul (caça e coleta rara); 12 Caverna Sagrada (sudoeste; inscrições, energia ancestral, missões de classe); 13
+  Várzea de Caça (sul, embaixo da barragem; alagado com muitos bichos: capivaras, saguis, aves). Biomas: urbano
+  (comunidade), mata densa, margem e brejo, represa, ruínas. Conteúdo: caça, coleta (ervas, madeira, fibras, minérios),
+  pesca, exploração e eventos (invasões, rituais, aparições). Missões: os pescadores do Refúgio, o clube náutico, o
+  segredo da Ilha do Véu, ativar a barragem, o ritual de classe. Ligações: Capão (Mapa 01) e Santo Amaro (Mapa 03);
+  depois, Interlagos, Grajaú e Parelheiros.
+- **O que eu já tinha feito antes de parar:** a planta de 200 × 160 m (`docs/referencias/mapa-02-maior-planta.jpg`,
+  feita por cima do mapa de cima de hoje; o dono não chegou a aprovar e mandou o escopo novo no lugar) e as tarefas
+  "Guarapiranga maior" e "Capão maior" no roteiro, agora paradas. Nada foi construído nos mapas.
+**Agora (19/11):**
+1. **Os dois mapas maiores** (pedido do dono em 19/11, "deixa o mapa maior" → "os dois maiores"): primeiro o Guarapiranga
+   (uns 200 × 160 m: o parque, o brejo e a orla abertos), depois o Capão (para a direita). Só para a direita e para baixo
+   (pedido da [estrutura]: a origem não muda, senão o mapa explorado salvo desalinha) e, se a quitanda, o deque ou uma
+   chegada mudarem, mandar os pés novos para a [estrutura] antes de juntar. Limites que ela passou: o servidor aguenta até
+   uns 250 × 250 m (estimativa); o que pesa é o desenho (objetos à vista; ~0,3 ms por bicho na tela); até 50 bichos por área.
+2. **O chão, a luz e a água com mais qualidade** (roteiro; passou da [arte] para mim com a divisão nova). Alvo:
+   `docs/referencias/chao-pintado-alvo.jpg`. **O chão pintado da [arte] está na `main` (19/11)**: `js/world/chao.js`
+   (`PAINT` no alto é onde se mexe nas cores), `ground.js` chama os pintores, as pedras em `props.js` (`_rock`); as
+   receitas e as lições estão na seção dela no `docs/ARTE.md` (ferramentas `chao-prancha.cjs`, `chao-foto.cjs` e
+   `chao-custo.cjs`; o painel só aceita x e y inteiros no "levar"). Medido no jogo: 14,4 ms por pedaço de chão (antes
+   14,9; pior 44,9). **Mais perto do alvo (19/11, na `main`):** a grama com a demão oliva (`wash`), o sol sem o limão, mais
+   grão, uma camada de pintas claras (`speck`) e as folhinhas redondas e mais numerosas (`round`, `n: 8`); a trilha com
+   dois sulcos escuros. Conferi pelos números contra o alvo (receita: a média e a saturação dos verdes e das terras e o
+   "detalhe fino", a diferença da imagem para ela borrada), na prancha (`chao-prancha.cjs`, rápido) e no jogo. A clareira
+   do Capão é `grama` (não existe `clareira` no mapa). **Luz e sombra (passo 2, 19/11, na `main`):** as sombras do chão
+   vão para uma máscara de 1/4 do ponto da tela (`_softShadows` no `ground.js`) e voltam esticadas (beirada macia) e
+   multiplicando (`SHADE_RGB`); a árvore grande tem a sombra que afina (`taperShadow` no `props.js`); e todas as sombras
+   giram no mesmo sentido (a faixa do tronco e do poste girava ao contrário e apagava a da copa onde se cruzavam;
+   `quadShadow` acerta a volta de quatro pontos). Falta: conferir as emendas entre pedaços (`EMENDA=3`) e o passo 3
+   (passo 2: a sombra das casas e das árvores, também no deque) e a vida no ar (passo 3). **A referência do dono para o
+   visual** (contada pela [estrutura]): o Dunloc Online — estilo de quadrinho (contorno escuro grosso, 2 ou 3 tons
+   chapados, cores vivas), chão cheio de detalhe (pedrinhas soltas, flores de várias cores em manchas, tufos, trilha de
+   pedras, manchas de terra), sombra suave e luz quente no chão, e cada canto com algo para olhar. Não copiar a arte
+   dele: a nossa é São Paulo tomada pela floresta e o folclore. Método que deu certo no personagem: referência, antes e
+   agora lado a lado, na mesma câmera, uma coisa por vez.
+
+**Antes (mundo novo):**
 1. **Etapa 4b (portão e vila):** prévia primeiro, o "pode" do dono, depois o jogo.
 2. **Etapa 4c**, depois a 5 (atmosferas) e a 6 (minimapa no mapa novo: retomar o ramo `mundo/minimapa`; o terreno
    vai precisar ler `chao`/`cenario`).

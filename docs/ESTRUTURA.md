@@ -25,7 +25,35 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Testar sem caçar:** painel do administrador no servidor de teste — `/admin/api/jogador` (dar ouro e itens,
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
-## Onde estamos (10 de novembro de 2026)
+## Onde estamos (19 de novembro de 2026) — leia isto primeiro
+- **Prioridade do dono: o personagem**, com a [arte]. A **região 2 está pausada** (decisão de 18/11). Da Guarapiranga
+  só entrou a parte pequena (19/11): o mapa `guarapiranga` do [mundo] e, meus, a `iracema_guarapiranga` e o `barqueiro`
+  em `data/npcs.json`. Bichos novos, missões e equilíbrio da região: só quando o dono mandar. Fico em correções pequenas.
+- **Proposta mandada à [arte] (19/11, aprovada pelo dono):** o Birim entra no jogo primeiro (com a **barba cheia**,
+  pedido do dono: "sem barba ficou pior"); depois só o que incomodar no jogo; em seguida, um teste barato das peças
+  pintadas pelo Nano Banana montadas no esqueleto atual; o dono decide olhando no jogo. **Pode vir pedido para mim:**
+  guardar no personagem qual boneco/aparência o jogador escolheu (passo 7 de `MIGRATIONS`, protocolo e `validate.ts`).
+  Perguntar à [arte] exatamente o que precisa ficar salvo; para só testar, não precisa (chave de teste na view).
+- **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
+  viram padrão (`data/*.json`, as constantes, e o game feel em `DEFAULT_FEEL`, `src/client/novo/feel.ts`).
+- **Pendências pequenas minhas:**
+  1. O "levar" do painel recusa x/y com fração (`parseAdminAction` usa `whole`), e nos mapas novos o ponto é o pé em
+     metros. Aceitar fração e, no mapa métrico, o `freeSpot` usar `cornerAtFeet` + `bodyFits` (hoje usa
+     `isWalkable` de tile). Com teste. (Achado do [mundo], 19/11.)
+  2. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;
+     conferir com caminho livre).
+- **Para depois (anotado pelo [mundo], 18/11):** "mundo aberto, sem carregamento" (andar do Capão à Guarapiranga sem
+  trocar de mapa). Hoje cada mapa é uma sala no servidor (`World`); seria trabalho grande no `Realm`. PARADO até o
+  dono pedir; decidir com ele o caminho.
+- **Contexto do dono que pesa nas decisões:** orçamento de **R$ 50 por mês** (reais, nada de artista nem pacote);
+  **celular obrigatório**; referência visual o **Dunloc Online** (mesma técnica nossa, Canvas 2D por código; o que muda
+  é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
+  liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
+  "faço assim?".
+- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 523 testes.
+- **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
+
+## Diário (10/11 em diante; as entradas novas foram entrando por assunto)
 O dono jogou e achou o jogo "horrível": andar engessado, trava longe das coisas, ruim entre as árvores, monstros
 que só atacam se você ataca, animações feias; e pediu mapa e minimapa. Ele aprovou o plano ("pode sim"):
 - **Feito (na `main`, 4ec21c7):** todos os monstros atacam sozinhos e percebem de mais longe; 3 s de folga para quem
@@ -74,6 +102,24 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 **Achado importante:** com os monstros da etapa 4a (ramo `mundo/etapa-4a`), no `/?novo` os saguis atacam e o
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
+
+**19/11 — Guarapiranga, a parte pequena (combinado com o dono: o conteúdo grande segue pausado):** o [mundo] pôs o
+Mapa 02 (a) na main (`guarapiranga.tmj`, sem áreas de bichos, ligado ao Capão pelas `saidas`). Em data/npcs.json:
+`iracema_guarapiranga` (57.5, 50.35 — 25 cm acima do pé que o [mundo] mandou, como na Xiovanna; a loja da Iracema de
+sempre) e `barqueiro` (49.6, 62.4; só a fala, sem barco ainda). A `iracema` do mapa antigo `refugio` fica como estava.
+Conferido no navegador (PC e celular deitado): os dois aparecem, a loja abre. Os dois usam o boneco de reserva (igual
+ao herói): desenho próprio é da [arte], quando o dono liberar. Desde 19/11 o desenho do mapa todo é do [mundo]; a
+[arte] fica só com os personagens (decisão do dono, relatada pelo [mundo]).
+
+**18/11 — decisão do dono: a região 2 fica PAUSADA; a prioridade é o personagem (com a [arte]).** Ele quer o nível
+visual do Dunloc Online (navegador, isométrico, estilo HQ) e chegou a pensar em Godot/3D. Descartado: o autor do Dunloc
+explica (vídeo "Meu MMORPG não usa imagens", canal RafaxLab; o dono colou a transcrição) que é a MESMA técnica nossa,
+Canvas 2D por código com esqueleto e IK. A diferença é o processo: imagem de referência (rosto em fundo verde, virado
+para o sul; as outras 7 direções pelo Nano Banana), rodadas focadas numa coisa só e um crítico comparando lado a lado
+com a referência. Custa caro em uso do Claude (ele relatou 2h28 e 44 milhões de tokens só para a cabeça no sul), por
+isso a [estrutura] fica só em correções pequenas enquanto a [arte] faz o herói. Orçamento do dono: R$ 50 por mês (nada
+de artista nem pacotes). Celular é obrigatório. Meu erro a não repetir: afirmei que desenho por código tinha teto e
+propus 3D e peças pintadas sem saber como a referência era feita; perguntar antes de recomendar troca de técnica.
 
 **17/11 — painel de ajustes dentro do jogo, etapa 1 (pedido do dono: "painel de debug", adaptado; "pode seguir"):**
 `src/client/novo/debugPanel.ts`, tecla **F1**, só administrador, no canto direito. Não tem servidor novo: usa as portas

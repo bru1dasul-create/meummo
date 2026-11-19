@@ -122,7 +122,8 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
   it('tem 96 × 180 metros (o parque cresceu duas vezes para o sul), tile de 32 px e as camadas combinadas', () => {
     expect([map.width, map.height, map.tilewidth, map.tileheight]).toEqual([96, 180, 32, 32]);
     // a camada "monstros" só aparece quando as criaturas estão ligadas no gerador (CREATURES)
-    expect(map.layers.map((l) => l.name).filter((n) => n !== 'monstros')).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos']);
+    // (com o Mapa 02 no jogo, 19/11, a camada `saidas`: o fim da rua do sul leva para Guarapiranga)
+    expect(map.layers.map((l) => l.name).filter((n) => n !== 'monstros')).toEqual(['chao', 'cenario', 'colisao', 'seguro', 'areas', 'pontos', 'saidas']);
     expect(map.layers.every((l) => l.type === 'objectgroup')).toBe(true);
   });
 
@@ -770,13 +771,20 @@ describe('Mapa 01 (Capão), etapa 4c: campinho, viaduto e saídas', () => {
     expect(prop(cenario.find((o) => o.type === 'trem')!, 'cor')).toBe('#7d5ca8'); // lilás
   });
 
-  it('a rua para Guarapiranga atravessa a mata até a barreira com placa; a mata dos lados continua fechada; a rua leste termina no mato com a placa da estação', () => {
-    // (na floresta maior a rua desce até o fim novo do mapa, e a barreira foi junto)
-    const barrier = cenario.find((o) => o.type === 'barreira')!;
-    const by = barrier.y / M;
-    expect(by).toBeGreaterThan(170);
-    for (let y = 81; y <= by - 1; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
-    expect(reach(91, by + 1.5)).toBe(false); // depois da barreira (a saída abre quando o Mapa 02 existir)
+  it('a rua para Guarapiranga atravessa a mata até a beira do mapa, que é a saída para o Mapa 02; a mata dos lados continua fechada; a rua leste termina no mato com a placa da estação', () => {
+    // (com o Mapa 02 no jogo, 19/11, a barreira saiu: a placa ficou num poste na beira da rua)
+    expect(cenario.some((o) => o.type === 'barreira')).toBe(false);
+    for (let y = 81; y <= map.height - 1; y += 2) expect(reach(91, y), `rua em y = ${y}`).toBe(true);
+    const exits = map.layers.find((l) => l.name === 'saidas')!.objects;
+    expect(exits).toHaveLength(1);
+    const exit = exits[0]!;
+    expect([prop(exit, 'mapa'), prop(exit, 'chegada')]).toEqual(['guarapiranga', 'chegada-capao']);
+    expect((exit.y + exit.height) / M).toBeCloseTo(map.height);
+    const arrival = layer('pontos').find((o) => o.name === 'chegada-guarapiranga')!;
+    expect(reach(at(arrival).x, at(arrival).y)).toBe(true);
+    expect(at(arrival).y < exit.y / M - 2).toBe(true); // quem chega não cai de volta na saída
+    const placa = cenario.find((o) => o.type === 'placa' && prop(o, 'texto') === 'GUARAPIRANGA')!;
+    expect(prop(placa, 'poste')).toBe(true);
     const placas = cenario.filter((o) => o.type === 'placa').map((o) => prop(o, 'texto'));
     expect(placas).toEqual(expect.arrayContaining(['GUARAPIRANGA', 'ESTAÇÃO CAPÃO REDONDO']));
     expect(reach(95.25, 44)).toBe(false); // o fim da rua da vila (a estação fica para depois)
@@ -1063,8 +1071,8 @@ describe('Mapa 01 (Capão): a floresta maior (pedido do dono em 14/11, "aumentar
       const len = Math.hypot(bx - ax, by - ay);
       for (let d = 0; d <= len; d += 1) keys.push([ax + ((bx - ax) * d) / len, ay + ((by - ay) * d) / len]);
     }
-    const barrier = of('barreira')[0]!;
-    for (let x = 89; x <= 93; x += 1) for (let y = 80; y < barrier.y / M; y += 2) keys.push([x, y]);
+    // (a rua desce até a beira do mapa, a saída para o Mapa 02)
+    for (let x = 89; x <= 93; x += 1) for (let y = 80; y < map.height; y += 2) keys.push([x, y]);
     const posto = chao.find((o) => o.type === 'calcada' && prop(o, 'estado') === 'rachado')!;
     const shop = of('casa').find((o) => prop(o, 'posto') === true)!;
     for (let x = posto.x / M + 1; x < (posto.x + posto.width) / M; x += 2) for (let y = posto.y / M + 1; y < (posto.y + posto.height) / M; y += 2) if (!inRect(x, y, shop)) keys.push([x, y]);

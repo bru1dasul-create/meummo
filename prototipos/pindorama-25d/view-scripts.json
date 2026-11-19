@@ -24,6 +24,8 @@
     "js/world/casas.js",
     "js/world/sul.js",
     "js/world/budega.js",
+    "js/world/refugio.js",
+    "js/world/agua.js",
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",
