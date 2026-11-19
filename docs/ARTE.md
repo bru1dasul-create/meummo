@@ -1459,6 +1459,44 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
   - *Conferência:* herói idêntico ponto a ponto, os testes do protótipo (os 40 e os 6 que desenham o personagem), `npm
     run check` (510), o Birim em todas as animações, a cabeça em 10 ângulos (de 0° a 180°) na câmera reta, de 5° a 60° nas
     duas câmeras e as 8 direções na câmera do jogo.
+- **Rodada 4b — a diagonal e a diagonal de costas (19/11; o dono, olhando o "de perto" da rodada 4: "de tres quartos
+  também está ruim o olho e sobrancelha, a barba também / o brinco do tres quarto de costas está errado, o olho e nariz
+  ficou feio"), só no ramo:**
+  - *Referência:* os três quartos do Nano Banana (45°) e a diagonal de costas da ficha do dono (135°). Nenhuma imagem nova.
+  - *O que mudou:*
+    - **Diagonal de costas:** o olho de perfil (`sideEye`) era desenhado inteiro até ~120°, como se o rosto ainda
+      estivesse de lado; agora, depois do perfil, ele fica cada vez mais estreito, encolhendo para a ponta da frente
+      (a do contorno), e some por volta de 105°; a sobrancelha, que ali é o próprio contorno, some um pouco depois. O
+      nariz recolhe para dentro do rosto (`tuck`) e some por volta de 115° (era uma bolinha saindo da beira). O brinco,
+      que fica na frente do lóbulo, saía em cima da barba: agora some depois de ~110°, quando a orelha é vista por trás.
+    - **Sobrancelhas na diagonal** (`browBar`): de três quartos a forma fica mais macia — as beiradas alisadas na tela
+      (a superfície tem os calombos das esferas, e a sobrancelha que a segue saía com um degrau), o pico arredondado e a
+      ponta de dentro arredondada em vez de cortada reta. A de lá vai até onde o rosto ainda olha para a câmera e afina
+      até a ponta ali (antes encurtava por uma conta fixa e virava uma cunha curta em cima do olho). A dobra da pálpebra
+      desce para perto do olho (encostada na sobrancelha parecia uma segunda sobrancelha). Tudo isso entra com a cabeça
+      virando (`soft`): **de frente nada muda** (conferido ponto a ponto).
+    - **Barba na diagonal:** (1) a bochecha de lá, que fica atrás do rosto, era desenhada por cima dele e virava uma bola
+      escura em cima do bigode, cobrindo o lábio de cima — agora o pedaço do lado de lá que já virou as costas para a
+      câmera vai **atrás da cabeça** (`segsBack`): só aparece o que passa do contorno; (2) a frente da mandíbula e o
+      canto da boca de lá, que são fundos, vão para trás da cabeça a partir de ~40° (`backMin` 0,35) — por cima, tapavam
+      a pele embaixo do lábio, que a referência mostra de três quartos; (3) a ponta do bigode de lá vai atrás dos lábios;
+      (4) um pedaço na superfície do queixo, do lado de cá, só a partir de ~12°, tapa o triângulo de pele que saía de
+      baixo da barba; (5) os dois pedaços que cobrem a frente do queixo de perfil entram a ~63° na câmera reta e a ~55° na
+      do jogo (entravam bem a 45°); a normal deles aponta um pouco para cima, por causa da câmera do jogo, que olha de cima.
+  - *Lições:* (30) para sumir com algo que vira para longe, **encolher na direção em que ele some** (aqui, para o
+    contorno do rosto) fica natural; apagar com transparência deixa um "fantasma", cortar deixa beirada reta e restos, e
+    encolher para o lado errado deixa uma mancha no meio da bochecha; (31) **o que fica atrás do rosto vai atrás da
+    cabeça**: desenhado por cima dela, um pedaço do lado de lá aparece no meio da cara (a bola do bigode, o tufo do lado
+    do nariz, a pele do queixo tapada) — atrás, a própria cabeça esconde o que não se vê e o contorno continua inteiro;
+    tirar bolas do pedaço (uma por uma) deixava bolas soltas na beira; (32) para achar qual peça faz o defeito, pinte cada
+    pedaço de uma cor e escreva o número dele na tela (uma cópia de teste, fora do repositório): os números vêm na mesma
+    ordem das chamadas no código.
+  - *Ainda diferente da referência:* o lábio de cima quase não aparece de três quartos (o bigode fica em cima dele); a
+    ponta do nariz é redonda; o boné; o pescoço de perfil.
+  - *Conferência:* a frente idêntica ponto a ponto (câmera reta e do jogo); o perfil igual na câmera reta (diferença de
+    no máximo 1 em 0–255) e, na do jogo, só um pedacinho de 22 × 13 px no queixo (numa imagem de 3000 × 4000); a cabeça de 0° a
+    180° na câmera reta e as 8 direções nas duas câmeras; e a bateria (herói idêntico, os 40 testes do protótipo e os 6
+    que desenham o personagem, `npm run check`, o Birim em todas as animações).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras

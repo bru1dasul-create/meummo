@@ -430,9 +430,22 @@
     const B = MODEL.HEAD.browBar;
     const ctx = R.ctx;
     const raise = (look.browRaise || 0) * 0.8;
-    // a sobrancelha do lado de lá encurta conforme a cabeça vira (ela foge da câmera: inteira, subia como um gancho)
-    const away = Math.max(0, -sx * R.facing(norm(head.r))); // (`head` aqui é a cabeça já na escala dele: o eixo não é unitário)
-    const x1 = B.x0 + (B.x1 - B.x0) * (1 - 0.72 * away);
+    const turn = R.facing(norm(head.r)); // (`head` aqui é a cabeça já na escala dele: o eixo não é unitário)
+    // (de três quartos a forma fica mais macia, como na referência: o pico arredondado em vez de um bico e a ponta de
+    // dentro um pouco mais fina; de frente, a que o dono aprovou, ela não muda. Rodada 4b)
+    const soft = smoothstep(0.1, 0.45, Math.abs(turn));
+    // a sobrancelha do lado de lá vai só até onde o rosto ainda olha para a câmera, e afina até a ponta ali. (Antes ela
+    // encurtava por uma conta fixa: de três quartos virava uma cunha curta em cima do olho; inteira, subia como um gancho)
+    const away = Math.max(0, -sx * turn);
+    let x1 = B.x1;
+    if (away > 0.05) {
+      x1 = B.x0 + 1.5;
+      for (let x = B.x0 + 1.5; x <= B.x1 + 1e-6; x += 0.25) {
+        const q = R._faceAt(head, sx * x, B.zPeak, 0.15);
+        if (!q || R.facing(q.n) < 0.3) break;
+        x1 = x;
+      }
+    }
     const N = 16;
     const top = [];
     const bot = [];
@@ -440,9 +453,12 @@
       const t = k / N;
       const x = B.x0 + (x1 - B.x0) * t;
       const tp = B.tPeak;
+      const u = t < tp ? 0 : (t - tp) / (1 - tp);
       // a linha do meio sobe de zIn até zPeak e cai até zOut; a grossura fica igual até o pico e afina até a ponta
-      const zc = t < tp ? B.zIn + (B.zPeak - B.zIn) * Math.sin(((t / tp) * Math.PI) / 2) : B.zPeak + (B.zOut - B.zPeak) * Math.pow((t - tp) / (1 - tp), 1.3);
-      const w = t < tp ? B.w : B.w * Math.max(0.06, 1 - Math.pow((t - tp) / (1 - tp), 1.15));
+      const zc = t < tp ? B.zIn + (B.zPeak - B.zIn) * Math.sin(((t / tp) * Math.PI) / 2) : B.zPeak + (B.zOut - B.zPeak) * Math.pow(u, 1.3 + 0.3 * soft);
+      const wOut = t < tp ? 1 : M.lerp(Math.max(0.06, 1 - Math.pow(u, 1.15)), Math.max(0.06, Math.pow(1 - u * u, 0.75)), soft);
+      const wIn = 1 - 0.25 * soft * (1 - smoothstep(0, 0.16, t));
+      const w = B.w * wOut * wIn;
       const lift = raise * (0.6 + 0.4 * (1 - t));
       const a = R._faceAt(head, sx * x, zc + lift + w / 2, 0.15);
       const b = R._faceAt(head, sx * x, zc + lift - w / 2, 0.15);
@@ -451,10 +467,31 @@
       bot.push(R.P(b.pt));
     }
     if (top.length < 2) return;
+    // (de três quartos: a superfície do rosto tem os calombos das esferas — o arco da sobrancelha — e a sobrancelha, que a
+    // segue, saía torta, com um degrau em cima; as duas beiradas são alisadas na tela, e a ponta de dentro fica arredondada
+    // em vez de cortada reta. De frente, nada muda. Rodada 4b)
+    if (soft > 0 && top.length > 2) {
+      for (const L of [top, bot]) {
+        for (let pass = 0; pass < 3; pass++) {
+          const c = L.map((q) => ({ x: q.x, y: q.y }));
+          for (let i = 1; i < L.length - 1; i++) {
+            L[i] = { x: M.lerp(c[i].x, (c[i - 1].x + 2 * c[i].x + c[i + 1].x) / 4, soft), y: M.lerp(c[i].y, (c[i - 1].y + 2 * c[i].y + c[i + 1].y) / 4, soft) };
+          }
+        }
+      }
+    }
     const p = new Path2D();
     p.moveTo(top[0].x, top[0].y);
     for (const q of top) p.lineTo(q.x, q.y);
     for (let k = bot.length - 1; k >= 0; k--) p.lineTo(bot[k].x, bot[k].y);
+    if (soft > 0 && top.length > 1) {
+      // a ponta de dentro: um bico arredondado entre a beirada de cima e a de baixo, um pouco para dentro (para o nariz)
+      const ix = top[0].x - top[1].x + bot[0].x - bot[1].x, iy = top[0].y - top[1].y + bot[0].y - bot[1].y;
+      const il = Math.hypot(ix, iy) || 1;
+      const th = Math.hypot(top[0].x - bot[0].x, top[0].y - bot[0].y);
+      const k = 0.32 * th * soft;
+      p.quadraticCurveTo((top[0].x + bot[0].x) / 2 + (ix / il) * k, (top[0].y + bot[0].y) / 2 + (iy / il) * k, top[0].x, top[0].y);
+    }
     p.closePath();
     ctx.fillStyle = '#1c1416';
     ctx.fill(p);
@@ -549,16 +586,18 @@
     ctx.strokeStyle = PAL.ink;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // a dobra da pálpebra, por cima (fina)
+    // a dobra da pálpebra, por cima (fina). (De três quartos ela desce para perto da pálpebra e fica mais escura, como na
+    // referência: lá em cima, encostada na sobrancelha, parecia uma segunda sobrancelha. De frente não muda. Rodada 4b)
+    const soft = smoothstep(0.1, 0.45, Math.abs(R.facing(norm(head.r))));
     const crease = [];
     for (let k = 1; k < N; k++) {
       const u = -1 + (2 * k) / N;
       if (u < -0.8 || u > 0.85) continue;
-      const q = at2(u, topV(u) + 0.55 + 0.1 * (1 - u * u));
+      const q = at2(u, topV(u) + 0.55 - 0.17 * soft + 0.1 * (1 - u * u));
       if (q) crease.push(q);
     }
     if (crease.length > 1 && blink < 0.85) {
-      ctx.globalAlpha *= 0.7;
+      ctx.globalAlpha *= 0.7 + 0.2 * soft;
       ctx.lineWidth = Math.max(0.5, 0.16 * R.zoom);
       ctx.stroke(S.smoothLinePath(crease));
       ctx.globalAlpha = smoothstep(0.12, 0.38, f);
@@ -746,12 +785,19 @@
       // (os pedaços do lado do rosto que está virado para lá vão numa peça à parte, desenhada logo depois da cabeça e
       // antes da boca: de três quartos eles ficam atrás dos lábios — numa peça só com o resto, cobriam a boca)
       const segsFar = [];
+      // (e o pedaço do lado de lá que já virou as costas para a câmera vai atrás da cabeça: só aparece o que passa do
+      // contorno do rosto. Por cima dela, de três quartos, a bochecha de lá — que fica atrás do rosto — virava uma bola
+      // escura no meio da cara, em cima do bigode, cobrindo o lábio de cima. Rodada 4b)
+      const segsBack = [];
       const turned = R.facing(rig.head.r);
-      // (`farMin`: um mínimo mais alto só para quando o pedaço está do lado de lá do rosto)
-      const piece = (list, nLocal, minFacing, k = 0, curls = false, side = 0, farMin = minFacing) => {
+      // (`farMin`: um mínimo mais alto só para quando o pedaço está do lado de lá do rosto; `backMin`: do lado de lá, abaixo
+      // dele o pedaço vai atrás da cabeça — os pedaços fundos, como a frente da mandíbula, vão antes: de três quartos eles
+      // ficam atrás do queixo e, por cima, tapavam a pele embaixo do lábio)
+      const piece = (list, nLocal, minFacing, k = 0, curls = false, side = 0, farMin = minFacing, backMin = 0.05) => {
         const far = side && side * turned < -0.12;
-        if (R.facing(norm(dirIn(rig.head, nLocal[0], nLocal[1], nLocal[2]))) < (far ? farMin : minFacing)) return;
-        (far ? segsFar : segs).push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
+        const fa = R.facing(norm(dirIn(rig.head, nLocal[0], nLocal[1], nLocal[2])));
+        if (fa < (far ? farMin : minFacing)) return;
+        (far ? (fa < backMin ? segsBack : segsFar) : segs).push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
       };
       // queixo: três pedaços soltos (o casco de um pedaço só enchia a curva e tapava a pele embaixo do lábio)
       // (um casco só embaixo, para a borda de baixo ficar lisa, em U; o alto dele fica abaixo da pele do queixo)
@@ -763,7 +809,10 @@
       piece([[[0, 14.3, -14.4], 0.75], [[0, 13.6, -15.6], 1.0]], [0, 0.9, -0.3], -0.1); // a mosca, embaixo do lábio, descendo até a barba
       // (de perfil, na referência, a barba cobre a frente do queixo logo abaixo do lábio: estes dois só entram com o lado deles
       // bem virado para a câmera — de frente a pele embaixo do lábio continua aparecendo, como o dono aprovou. Rodada 4)
-      for (const sx of [-1, 1]) piece([[[sx * 1.6, 13.3, -13.7], 1.15], [[sx * 2.3, 12.7, -15.3], 1.5]], [sx, 0.12, 0], 0.78);
+      // (rodada 4b: com 0,78 eles entravam bem a 45° e tapavam a pele do queixo que a referência mostra de três quartos;
+      // agora entram a ~63° na câmera reta e a ~55° na do jogo — a normal um pouco para cima conta a câmera do jogo, que
+      // olha de cima: sem isso, de perfil nela, eles não entravam e a pele embaixo do lábio voltava a aparecer)
+      for (const sx of [-1, 1]) piece([[[sx * 1.6, 13.3, -13.7], 1.15], [[sx * 2.3, 12.7, -15.3], 1.5]], [sx, 0.12, 0.35], 0.88);
       for (const sx of [-1, 1]) {
         // (na referência não há faixa escura na frente da orelha: a pele do rosto vai até a orelha, o cabelo da têmpora
         // fica acima dela e a costeleta começa na altura do lóbulo)
@@ -783,14 +832,27 @@
         // barba, como na referência)
         piece([[[sx * 9.6, -1.0, -8.6], 1.4], [[sx * 8.7, -1.4, -12.4], 1.9], [[sx * 7.6, 1.8, -16.4], 2.2], [[sx * 8.4, 1.6, -9.2], 1.7]], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx);
         piece([[[sx * 7.6, 1.8, -16.4], 2.2], [[sx * 5.6, 5.4, -19.4], 2.2], [[sx * 7.0, 7.6, -17.2], 2.6]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // (embaixo da mandíbula)
-        piece([[[sx * 6.2, 7.4, -13.0], 3.0], [[sx * 7.0, 7.6, -17.2], 2.6], [[sx * 6.6, 8.4, -19.8], 2.0]], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx); // frente da mandíbula: desce reta da mandíbula até o canto de baixo (a barba é quadrada embaixo, como na referência)
-        piece([[[sx * 0.6, 15.0, -9.2], 1.1], [[sx * 2.4, 14.45, -9.6], 1.05], [[sx * 4.4, 12.8, -11.2], 0.9]], [sx * 0.3, 0.9, 0.1], 0.05); // bigode (rodada 4: um tiquinho para trás — de perfil saía como um dedo) (da base do nariz até o canto da boca; o lábio de cima aparece embaixo dele)
-        piece([[[sx * 4.4, 12.8, -11.2], 0.9], [[sx * 5.4, 10.6, -13.8], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx); // do canto do bigode até a barba do queixo (por fora do canto da boca)
+        piece([[[sx * 6.2, 7.4, -13.0], 3.0], [[sx * 7.0, 7.6, -17.2], 2.6], [[sx * 6.6, 8.4, -19.8], 2.0]], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx, -0.18, 0.35); // frente da mandíbula: desce reta da mandíbula até o canto de baixo (a barba é quadrada embaixo, como na referência)
+        // bigode (rodada 4: um tiquinho para trás — de perfil saía como um dedo) (da base do nariz até o canto da boca; o lábio
+        // de cima aparece embaixo dele)
+        const must = [[[sx * 0.6, 15.0, -9.2], 1.1], [[sx * 2.4, 14.45, -9.6], 1.05], [[sx * 4.4, 12.8, -11.2], 0.9]];
+        if (sx * turned < -0.12) {
+          // (do lado de lá, a ponta do bigode — no canto da boca, atrás dos lábios — vai na peça de lá, antes da boca; o resto
+          // fica por cima. Numa peça só, de três quartos o bigode de lá cobria os lábios e o bigode virava uma bola. Rodada 4b)
+          piece(must.slice(0, 2), [sx * 0.3, 0.9, 0.1], 0.05);
+          piece(must.slice(1), [sx * 0.3, 0.9, 0.1], 0.05, 0, false, sx);
+        } else piece(must, [sx * 0.3, 0.9, 0.1], 0.05);
+        // (de três quartos, do lado de cá, a pele do queixo — mais para a frente que os pedaços de barba em volta dela — saía
+        // de baixo da barba como um triângulo do lado do queixo; este pedaço, na superfície do rosto, só entra com o lado
+        // virado para a câmera, a partir de ~12°: de frente a pele embaixo do lábio continua a mesma. Rodada 4b)
+        piece([[[sx * 4.3, 13.0, -13.7], 1.0], [[sx * 4.0, 12.7, -15.1], 1.15], [[sx * 4.9, 12.0, -14.6], 1.1]], [sx, 0.3, 0], 0.48, 0, false, sx);
+        piece([[[sx * 4.4, 12.8, -11.2], 0.9], [[sx * 5.4, 10.6, -13.8], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35); // do canto do bigode até a barba do queixo (por fora do canto da boca)
         // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
         // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
         piece([[[sx * 8.4, 1.6, -9.2], 1.7], [[sx * 6.6, 9.6, -10.2], 1.4], [[sx * 4.9, 12.3, -10.8], 1.1], [[sx * 6.2, 7.4, -13.2], 2.9], [[sx * 5.2, 10.8, -13.2], 1.4]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
       }
       beardStrands(piece);
+      if (segsBack.length) items.push({ name: 'barbaAtras', key: headKey - 0.05, group: 'barbaAtras', chain: true, segs: segsBack });
       if (segsFar.length) items.push({ name: 'barbaLonge', key: headKey + 0.02, group: 'barbaLonge', chain: true, segs: segsFar });
       if (segs.length) items.push({ name: 'barba', key: headKey + 0.25, group: 'barba', chain: true, segs });
     }
@@ -815,7 +877,10 @@
     {
       const front = R.facing(rig.head.f) > -0.05;
       const side = Math.abs(R.facing(rig.head.r));
-      const NOSE = MODEL.HEAD.spheres.filter((s) => s.apart);
+      // (com o rosto virando para lá, depois do perfil, a ponta do nariz recolhe para dentro do rosto: na diagonal de
+      // costas ela era uma bolinha saindo da beira do rosto. Some de vez por volta de 115°. Rodada 4b)
+      const tuck = 3.4 * smoothstep(0.1, 0.42, -R.facing(rig.head.f));
+      const NOSE = MODEL.HEAD.spheres.filter((s) => s.apart).map((s) => (tuck ? { ...s, p: [s.p[0], s.p[1] - tuck, s.p[2]] } : s));
       const tipPoly = R.hull(NOSE.filter((s) => s.name === 'nariz' || s.name.startsWith('asa')).map((s) => sphere(s.p, s.r)));
       const headSeg = env.headItem && env.headItem.segs[0];
       items.push({
@@ -855,9 +920,10 @@
         name: 'brincoBirim', key: ear.key + 0.2,
         draw: () => {
           // (o brinco fica na frente do lóbulo, um pouco para fora: aparece de frente — como na referência — e de lado;
-          // de costas, o lóbulo esconde)
+          // de costas, o lóbulo esconde. Rodada 4b: o limite era -0,1 e, na diagonal de costas (~120°), o ponto, que fica na
+          // frente do lóbulo, saía em cima da barba; agora ele some depois de ~110°, quando a orelha já é vista por trás)
           const n = norm(add(scale(rig.head.r, side * 0.6), scale(rig.head.f, 0.8)));
-          if (R.facing(n) < -0.1) return;
+          if (R.facing(n) < 0.3) return;
           const L = MODEL.HEAD.ear.lobe;
           const q = R.P(add(hp([side * L.p[0], L.p[1], L.p[2] - 0.4]), scale(n, L.r * 0.95 * hs)));
           const r = Math.max(0.7, 0.62 * hs * R.zoom); // (um ponto pequeno, como na referência)
@@ -2539,15 +2605,28 @@
     const PAL = R.pal;
     const hs = R.hs;
     const E = MODEL.HEAD.eye;
+    // (depois do perfil, com o rosto virando para lá, o olho some atrás do contorno do rosto: ele fica cada vez mais
+    // estreito, encolhendo para a ponta da frente (a do lado do contorno), entre ~92° e ~105°, até sobrar só a ponta da
+    // pálpebra e sumir; a sobrancelha, que é o próprio contorno ali, encolhe do mesmo jeito um pouco depois. Rodada 4b: a
+    // 120° o olho inteiro aparecia na beira do rosto, como se ele ainda estivesse de perfil; apagar com transparência
+    // deixava um olho "fantasma", cortar deixava uma beirada reta e encolher para o canto de trás deixava uma mancha no
+    // meio da bochecha)
+    const away = -R.facing(rig.head.f);
+    const kE = 1 - smoothstep(0.04, 0.28, away);
+    const kB = 1 - smoothstep(0.1, 0.36, away);
+    if (kB < 0.04) return;
     const c = at(head, sx * 5.9, 10.7, E.z + 0.1); // (recuado: o olho fica atrás da raiz do nariz e da sobrancelha)
     const F = rig.head.f, U = rig.head.u;
     const blink = clamp01(look.blink || 0);
     const h = 1 - blink * 0.9;
-    const pt = (a, b) => R.P(add(add(c, scale(F, a * hs)), scale(U, b * h * hs)));
+    const pt0 = (a, b) => R.P(add(add(c, scale(F, a * hs)), scale(U, b * h * hs)));
+    const pt = (a, b) => pt0(2.8 - (2.8 - a) * kE, b); // (o olho, encolhendo para a ponta da frente)
+    const showEye = kE >= 0.08;
+    const eyeA = kE >= 0.22 ? 1 : 0; // (bem estreito, o branco e a íris saem: fica só a pálpebra)
     // (a = para a frente do rosto, b = para cima; o canto de fora do olho fica atrás)
     const top = [[-2.6, 0.5], [-1.3, 1.2], [0.4, 1.45], [1.9, 1], [2.8, 0.15]].map(([a, b]) => pt(a, b));
     const bot = [[2.8, 0.15], [1.8, -0.7], [0.3, -0.95], [-1.4, -0.7], [-2.6, 0.05]].map(([a, b]) => pt(a, b));
-    if (blink < 0.85) {
+    if (blink < 0.85 && eyeA > 0.01) {
       const eye = new Path2D();
       eye.moveTo(top[0].x, top[0].y);
       for (const q of top) eye.lineTo(q.x, q.y);
@@ -2591,21 +2670,24 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     // a pálpebra de cima: traço grosso, passando um pouco do canto de trás
-    ctx.strokeStyle = PAL.ink;
-    ctx.lineWidth = Math.max(1, E.lid * 1.25 * R.zoom);
-    ctx.stroke(S.smoothLinePath([pt(-3.4, 0.25)].concat(top)));
-    // a de baixo: fina
-    if (blink < 0.85) {
-      ctx.lineWidth = Math.max(0.5, 0.2 * R.zoom);
-      ctx.globalAlpha = 0.75;
-      ctx.stroke(S.smoothLinePath(bot));
-      ctx.globalAlpha = 1;
+    if (showEye) {
+      ctx.strokeStyle = PAL.ink;
+      ctx.lineWidth = Math.max(1, E.lid * 1.25 * R.zoom);
+      ctx.stroke(S.smoothLinePath([pt(-3.4, 0.25)].concat(top)));
+      // a de baixo: fina
+      if (blink < 0.85 && eyeA > 0.01) {
+        ctx.lineWidth = Math.max(0.5, 0.2 * R.zoom);
+        ctx.globalAlpha = 0.75;
+        ctx.stroke(S.smoothLinePath(bot));
+        ctx.globalAlpha = 1;
+      }
     }
-    // sobrancelha: grossa, descendo para o nariz
+    // sobrancelha: grossa, descendo para o nariz (encolhendo para a ponta de trás quando o rosto vira para lá)
     const raise = (look.browRaise || 0) * 0.8;
-    const b0 = pt(3.9, 2.35 + raise), b1 = pt(0.4, 3.75 + raise), b2 = pt(-3.4, 3.2 + raise);
+    const ptB = (a, b) => pt0(3.9 - (3.9 - a) * kB, b);
+    const b0 = ptB(3.9, 2.35 + raise), b1 = ptB(0.4, 3.75 + raise), b2 = ptB(-3.4, 3.2 + raise);
     ctx.strokeStyle = '#1c1416';
-    ctx.lineWidth = Math.max(1.4, 1.75 * hs * R.zoom);
+    ctx.lineWidth = Math.max(1.4, 1.75 * hs * R.zoom * (0.6 + 0.4 * kB));
     ctx.beginPath();
     ctx.moveTo(b0.x, b0.y);
     ctx.quadraticCurveTo(b1.x, b1.y, b2.x, b2.y);
