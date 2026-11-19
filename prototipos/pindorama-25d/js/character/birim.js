@@ -202,36 +202,66 @@
     ...BASE,
     id: 'birim',
     HEAD,
-    headScale: 0.68, // a cabeça dele é menor que a do herói (que é de "cabeça grande de herói"): ~7 cabeças de altura, como na ficha
-    headDrop: 0.5, // e fica um pouco mais baixa no pescoço (cm); mais que isto, a barba encosta no peito e o pescoço some
+    // a cabeça dele é menor que a do herói (que é de "cabeça grande de herói"); rodada 3: um tiquinho menor ainda (na ficha,
+    // do alto do boné ao fim da barba são 14,8% da altura; aqui eram 16,1%) e mais ALTA no pescoço (`headDrop` negativo =
+    // sobe, em cm): com a câmera do jogo, de cima, a barba encostava no peito e o pescoço sumia — no alvo ele aparece
+    headScale: 0.66,
+    headDrop: -1.5,
     NECK: { r0: 7.9, r1: 6.6 },
-    // corpo de quem treina, mas mais estreito que o do herói (na ficha: peito ~38 cm de largura, cintura ~30)
+    // corpo de quem treina, mais estreito que o do herói
+    // (rodada 3, medido contra a ficha com régua: o tronco abre em V — cintura ~26 cm de largura, peito largo em cima
+    // —, as costas são mais cheias que o peito de perfil e o alto do peito não passa da linha do peitoral)
     CHEST: [
-      { p: [0, 0.8, -19.5], r: 12.8 },
-      { p: [-7.9, 1, -15], r: 7.7 },
-      { p: [7.9, 1, -15], r: 7.7 },
-      { p: [0, 4, -10.5], r: 10.4 },
-      { p: [-7.9, 5.4, 1.8], r: 9.9 }, // peitorais
-      { p: [7.9, 5.4, 1.8], r: 9.9 },
-      { p: [-11, -2.8, -2.4], r: 9.2 }, // dorsais
-      { p: [11, -2.8, -2.4], r: 9.2 },
-      { p: [-6.6, -2.4, 12.3], r: 6.2 }, // trapézio
-      { p: [6.6, -2.4, 12.3], r: 6.2 },
-      { p: [-10.8, -2.4, 9.4], r: 6.9 },
-      { p: [10.8, -2.4, 9.4], r: 6.9 },
-      { p: [0, 1.5, 7.4], r: 8.8 },
-      { p: [-7, 0.9, -22.5], r: 7.4 }, // a cintura desce reta até o quadril
-      { p: [7, 0.9, -22.5], r: 7.4 },
+      { p: [0, 0.4, -20], r: 12 },
+      // (de perfil a cintura desce cheia até a bermuda, sem fechar numa "bolsa" redonda: uma esfera na frente e outra
+      // atrás, estreitas — de frente ficam dentro do V)
+      { p: [0, 3, -25.5], r: 8.6 },
+      { p: [0, -3.2, -25.5], r: 8.6 },
+      { p: [-6.2, 0.6, -15], r: 7.4 }, // oblíquos
+      { p: [6.2, 0.6, -15], r: 7.4 },
+      { p: [0, 3, -10.5], r: 10 },
+      { p: [-7.8, 3.4, 0.2], r: 9.6 }, // peitorais (o alto do peito mais chato: a massa do peitoral fica embaixo)
+      { p: [7.8, 3.4, 0.2], r: 9.6 },
+      { p: [-10.2, -5, -0.6], r: 9 }, // dorsais (mais altas: embaixo do peito o tronco afina logo)
+      { p: [10.2, -5, -0.6], r: 9 },
+      { p: [0, -6.3, 3.5], r: 9.6 }, // o alto das costas (de perfil, as costas mais cheias que o peito)
+      { p: [0, -6.5, 8.5], r: 7.5 }, // a rampa do trapézio atrás, da nuca até o ombro (de perfil a nuca descia reta como uma coluna)
+      // trapézio: o tronco é um casco só (convexo), então o alto dos dois trapézios se liga numa linha reta NA FRENTE do
+      // pescoço — alto demais, ela tapava o pescoço inteiro. Fica logo abaixo da barba, e a descida para o ombro é mais cheia
+      { p: [-6.6, -2.8, 11.5], r: 5.8 },
+      { p: [6.6, -2.8, 11.5], r: 5.8 },
+      { p: [-11.4, -3.2, 10], r: 6.9 },
+      { p: [11.4, -3.2, 10], r: 6.9 },
+      { p: [0, 0.6, 7.4], r: 8.8 },
+      { p: [-5.6, 0.4, -22.5], r: 7 }, // a cintura desce reta até o quadril
+      { p: [5.6, 0.4, -22.5], r: 7 },
     ],
     PELVIS: BASE.PELVIS.map((s, k) => (k === 1 || k === 2 ? { p: [Math.sign(s.p[0]) * 8, 0.4, 0.8], r: 8 } : s)),
-    UPPER_ARM: BASE.UPPER_ARM.map((s) => ({ ...s, r: s.r + (s.t === 1 ? 0.35 : s.part === 'deltoide' ? 0.8 : 1.15) })),
+    // (de cabelo curto, o trapézio aparece de costas: a ponte do ombro fica inteira de qualquer lado — rodada 3)
+    // (e a ponta da ponte no trapézio mais baixa, acompanhando o trapézio novo)
+    SHOULDER: { ...BASE.SHOULDER, trap: { p: [12.4, -2.8, 9.8], r: 6.6 }, back: true },
+    // (rodada 3: o deltoide mais junto do corpo — de frente e de costas o ombro passava ~2 cm da ficha para fora)
+    // e o alto dele um pouco mais alto: com o trapézio abaixo da barba, a linha do ombro tinha descido ~3 cm da ficha
+    UPPER_ARM: BASE.UPPER_ARM.map((s) => ({ ...s, t: s.part === 'deltoide' && s.t < 0.2 ? s.t - 0.06 : s.t, o: s.part === 'deltoide' ? s.o * 0.45 : s.o, r: s.r + (s.t === 1 ? 0.35 : s.part === 'deltoide' ? 0.45 : 1.15) })),
     FOREARM: BASE.FOREARM.map((s, k) => ({ ...s, r: s.r + [0.35, 0.8, 0.5, 0.1][k] })),
     HAND,
     FOOT,
     TOES,
     wristJoin: 1.5, // o punho sem emenda (veja o renderer): a ponta do antebraço não vira uma "bola" em cima da mão
     THIGH: BASE.THIGH.map((s, k) => ({ ...s, r: s.r + [0.3, 0.4, 0.4, 0.3, 0.1, 0.1][k] })),
-    SHIN: BASE.SHIN.map((s, k) => ({ ...s, r: s.r + [0.2, 0.9, 0.7, 0.3, 0.1, 0.1][k] })),
+    // canela (rodada 3, medida na ficha): a panturrilha cheia logo abaixo do joelho e a perna afinando até o tornozelo. Em
+    // dois pedaços que se emendam na esfera de t = SHIN_SPLIT (veja o renderer): num casco só ela virava um cone
+    SHIN_SPLIT: 0.5,
+    SHIN: [
+      { t: 0, f: 0.3, o: 0, r: 4.8 },
+      { t: 0.2, f: -2.9, o: 0, r: 6.8 }, // panturrilha
+      { t: 0.24, f: -2.3, o: -1.2, r: 5.6 }, // a outra cabeça da panturrilha (dentro)
+      { t: 0.5, f: -1.3, o: -0.2, r: 4.6 }, // a emenda: onde a panturrilha acaba (a quina entre os dois pedaços fica suave)
+      { t: 0.62, f: -0.9, o: 0, r: 4 },
+      { t: 0.74, f: -0.4, o: 0, r: 3.6 }, // a canela de baixo, fina
+      { t: 0.84, f: -1.6, o: 0, r: 2.9 }, // tendão de Aquiles
+      { t: 1, f: 0, o: 0, r: 3.2 },
+    ],
     // nada disto é dele: cabelo comprido, tranças, faixa e penas; colar de garras; tanga; pinturas de jenipapo; brincos
     HAIR: null,
     FEATHERS: null,
@@ -550,6 +580,17 @@
     }
     return best;
   }
+  /** A pele das COSTAS em (x, z): o ponto mais de trás das esferas do tronco (como `chestY`, do outro lado). */
+  function backY(x, z) {
+    let best = null;
+    for (const s of MODEL.CHEST) {
+      const q = s.r * s.r - (x - s.p[0]) * (x - s.p[0]) - (z - s.p[2]) * (z - s.p[2]);
+      if (q > 0) best = Math.min(best ?? 1e9, s.p[1] - Math.sqrt(q));
+    }
+    return best;
+  }
+  /** Ponto na pele das costas, já em 3D nos eixos do peito (para `line`): um tiquinho para fora. */
+  const backPt = (x, z) => [x, (backY(x, z) ?? -10) - 0.05, z];
   function chestDetail(R, seg, rig) {
     const ctx = R.ctx;
     const ch = rig.chest;
@@ -600,12 +641,13 @@
       for (const zz of [-5.6, -8.6, -11.4]) line([[sx * 11.6, zz + 0.9], [sx * 9.9, zz - 0.5]], [sx * 0.8, 0.6, 0], 0.4, 0.5);
       line([[sx * 8.6, -11.5], [sx * 8.9, -17], [sx * 8, -23]], [sx * 0.6, 0.8, 0], 0.42, 0.5);
       // escápula e dorsal (costas)
-      line([[sx * 3.8, -10.6, 6], [sx * 8.4, -10.2, 1], [sx * 7.6, -9.8, -4]], [sx * 0.2, -1, 0.1], 0.5, 0.6);
-      line([[sx * 9.6, -8.2, -3], [sx * 7.6, -9.6, -11], [sx * 4.4, -10.4, -18]], [sx * 0.4, -0.9, 0], 0.45, 0.5);
+      // (na pele das costas, `backPt`: com as costas mais cheias da rodada 3 as linhas fixas ficavam para dentro)
+      line([backPt(sx * 3.8, 6), backPt(sx * 8.4, 1), backPt(sx * 7.6, -4)], [sx * 0.2, -1, 0.1], 0.5, 0.6);
+      line([backPt(sx * 9.6, -3), backPt(sx * 7.6, -11), backPt(sx * 4.4, -18)], [sx * 0.4, -0.9, 0], 0.45, 0.5);
     }
     line([[0, 5.6], [0, -1.8]], [0, 1, 0], 0.5, 0.6); // esterno
     line([[0, -7.4], [0, -15], [0, -23.4]], [0, 1, 0], 0.5, 0.65); // linha do meio da barriga
-    line([[0, -11.4, 9], [0, -11.6, 0], [0, -11.2, -11], [0, -10.6, -20]], [0, -1, 0], 0.5, 0.6); // coluna
+    line([backPt(0, 9), backPt(0, 0), backPt(0, -11), backPt(0, -20)], [0, -1, 0], 0.5, 0.6); // coluna
     const f = facing([0, 1, 0.1]);
     if (f > 0.12) {
       ctx.globalAlpha = smoothstep(0.12, 0.4, f);
@@ -1410,7 +1452,7 @@
   /** Ponto na superfície de um tubo em volta do osso: fração t, ângulo th (0 = frente, π/2 = fora), raio. */
   const tubeAt = (lf, t, th, rad, off = 0) => limbAt(lf, t, Math.cos(th) * rad, Math.sin(th) * rad + off);
   /** Linha em volta do osso (de th0 a th1), só na metade que a câmera vê; devolve os trechos de pontos na tela. */
-  function arcRuns(R, lf, t, rad, th0, th1, off = 0, steps = 18) {
+  function arcRuns(R, lf, t, rad, th0, th1, off = 0, steps = 18, pointAt = null) {
     const tc = facingAngle(R, lf);
     const runs = [];
     let cur = null;
@@ -1421,7 +1463,8 @@
         continue;
       }
       if (!cur) runs.push((cur = []));
-      cur.push(R.P(tubeAt(lf, typeof t === 'function' ? t(th) : t, th, rad, off)));
+      // (`pointAt(th)`: um tubo que não é redondo — a perna da bermuda — dá o ponto dele)
+      cur.push(R.P(pointAt ? pointAt(th) : tubeAt(lf, typeof t === 'function' ? t(th) : t, th, rad, off)));
     }
     return runs.filter((r) => r.length > 1);
   }
@@ -1706,13 +1749,46 @@
 
   // ------------------------------------------------------------------ bermuda cargo e relógio (presos ao corpo)
   // a bermuda na pelve: a cintura baixa (um anel), o quadril largo e o fundo; e em cada perna um tubo que dobra no joelho
+  // (rodada 3, medido contra a ficha: a bermuda começa justa na cintura e no quadril e abre em "sino" na coxa de baixo;
+  // de perfil é mais funda e caída para trás — a perna dela é OVAL: `kf` estica de frente para trás, `ko` aperta dos
+  // lados e `back*` a puxa para trás; `kneeOff`/`hemOff` trazem o joelho e a barra para dentro, como na ficha)
   const SHORTS = {
-    waist: { z: 10.2, rx: 13, ry: 10.9, cy: 0.9 },
-    mid: { z: 3.5, rx: 16.6, ry: 13, cy: 0.2 },
-    hip: { z: -3, rx: 16.4, ry: 13.4, cy: -0.4 },
+    waist: { z: 10.2, rx: 12.6, ry: 10.9, cy: 0.9 },
+    mid: { z: 3.5, rx: 14.6, ry: 13, cy: 0.2 },
+    hip: { z: -3, rx: 15.2, ry: 13.4, cy: -0.4 },
     low: { z: -20, rx: 9, ry: 11.8, cy: -0.6 },
-    leg: { top: -0.16, topR: 10.4, off: 0.3, kneeR: 11.3, hem: 0.18, hemR: 11.4 }, // a barra fica ~7 cm abaixo do joelho (0,18 da canela)
+    // a barra fica ~7 cm abaixo do joelho (0,18 da canela)
+    // (`back*`: o quanto a perna da bermuda vai para trás — 0 no alto, onde a coxa gira, e mais embaixo, onde o pano cai)
+    leg: { top: -0.16, topR: 8.4, off: -0.5, kneeR: 11.8, kneeOff: -1.2, hem: 0.18, hemR: 10.6, hemOff: -1, kf: 1.25, ko: 0.95, backTop: 0, backKnee: -5, backHem: -4 },
     pocket: { c: 1.28, w: 0.56, t0: 0.6, t1: 1.02, out: 1.5 }, // bolso cargo: no lado de fora da coxa, um pouco para a frente
+  };
+  /** O raio e o deslocamento para fora da perna da bermuda em t (na coxa: do alto ao joelho; na canela: do joelho à barra). */
+  const legShape = (shin, t) => {
+    const L = SHORTS.leg;
+    if (shin) {
+      const u = clamp01(t / L.hem);
+      return { rad: L.kneeR + (L.hemR - L.kneeR) * u, off: L.kneeOff + (L.hemOff - L.kneeOff) * u, back: L.backKnee + (L.backHem - L.backKnee) * u };
+    }
+    const u = clamp01((t - L.top) / (1 - L.top));
+    return { rad: L.topR + (L.kneeR - L.topR) * u, off: L.off + (L.kneeOff - L.off) * u, back: L.backTop + (L.backKnee - L.backTop) * u * u };
+  };
+  /** O quanto o joelho dobra (0 = esticado, 1 = dobrado): com ele dobrado a perna da bermuda volta a ser redonda — funda
+   *  atrás, ela ficava pendurada atrás do joelho como uma aba (correndo, a perna de trás). */
+  const legBend = (rig, i) => clamp01((0.94 - dot(rig.thigh[i].a, rig.shin[i].a)) / 0.45);
+  /** Ponto na perna (oval) da bermuda: osso, se é a canela, fração t, ângulo th (0 = frente, π/2 = fora); `grow` afasta do
+   *  pano; `bend` = legBend (o oval e o recuo para trás somem com o joelho dobrado). */
+  const legAt = (lf, shin, t, th, grow = 0, bend = 0) => {
+    const L = SHORTS.leg;
+    const g = legShape(shin, t);
+    const r = g.rad + grow;
+    const kf = 1 + (L.kf - 1) * (1 - bend);
+    return limbAt(lf, t, Math.cos(th) * r * kf + g.back * (1 - bend), Math.sin(th) * r * L.ko + g.off);
+  };
+  /** Anel de esferinhas em volta da perna da bermuda (o casco de dois anéis é um pedaço da perna). */
+  const legRing = (R, lf, shin, t, bend, n = 10, r = 0.9) => {
+    const out = [];
+    for (let k = 0; k < n; k++) out.push(R.circle(legAt(lf, shin, t, (k / n) * M.TAU, 0, bend), r));
+    return out;
   };
   const pelvisRing = (pv, g, phi, grow = 0, dz = 0) => at(pv, (g.rx + grow) * Math.sin(phi), g.cy + (g.ry + grow) * Math.cos(phi), g.z + dz);
   /** O anel da bermuda numa altura z da pelve (entre a cintura, o quadril e o fundo). */
@@ -1762,9 +1838,10 @@
       for (let i = 0; i < 2; i++) {
         const th = rig.thigh[i], sh = rig.shin[i];
         const L = G.leg;
-        const top = ringOn(R, th, L.top, L.topR, 10, 0.9, L.off);
-        const knee = ringOn(R, th, 1, L.kneeR, 10, 0.9, 0.3);
-        const hem = ringOn(R, sh, L.hem, L.hemR, 10, 0.9, 0.3);
+        const bend = legBend(rig, i);
+        const top = legRing(R, th, false, L.top, bend);
+        const knee = legRing(R, th, false, 1, bend);
+        const hem = legRing(R, sh, true, L.hem, bend);
         const host = hostOf('coxa', 'perna' + i);
         let segs;
         if (dot(th.a, sh.a) > 0.94) {
@@ -1778,8 +1855,7 @@
         // o bolso cargo: uma caixa de pano por fora da coxa (aparece no contorno da perna), só do lado que a câmera vê
         const P = SHORTS.pocket;
         if (Math.cos(P.c - facingAngle(R, th)) > -0.25) {
-          const rr = (t) => L.topR + (L.kneeR - L.topR) * t + P.out;
-          const corner = (t, a) => R.circle(tubeAt(th, t, a, rr(t), L.off * (1 - t * 0.7)), 1.25);
+          const corner = (t, a) => R.circle(legAt(th, false, t, a, P.out, bend), 1.25);
           const cs = [corner(P.t0, P.c - P.w), corner(P.t0, P.c), corner(P.t0, P.c + P.w), corner(P.t1, P.c + P.w), corner(P.t1, P.c), corner(P.t1, P.c - P.w)];
           out.push({ name: 'bolsoCargo', key: keyAfter(host, i + 0.5), host, group: 'bolsoCargo' + i, segs: [{ poly: R.hull(cs), circles: R._last, mat: PAL.denim, k: 0.24, decal: () => cargoPocket(R, rig, i) }] });
         }
@@ -1852,12 +1928,12 @@
     const L = SHORTS.leg;
     const z = R.zoom;
     const seam = Math.PI / 2 - 0.62; // a costura do lado, puxada para a frente
+    const bend = legBend(rig, i);
     if (part === 'coxa') {
-      const rAt = (t) => L.topR + (L.kneeR - L.topR) * t + 0.15;
       const tc = facingAngle(R, th);
       if (Math.cos(seam - tc) > 0.05) {
         const pts = [];
-        for (let k = 0; k <= 8; k++) pts.push(R.P(tubeAt(th, L.top + (1 - L.top) * (k / 8), seam, rAt(k / 8), L.off)));
+        for (let k = 0; k <= 8; k++) pts.push(R.P(legAt(th, false, L.top + (1 - L.top) * (k / 8), seam, 0.15, bend)));
         strokeRuns(R, [pts], PAL.stitch, 0.24, 0.9);
       }
       // a coroa estampada na perna direita, na frente, na parte de baixo da coxa
@@ -1866,7 +1942,7 @@
         if (Math.cos(c - tc) > 0.12) {
           const path = new Path2D();
           CROWN.forEach(([u, v], k) => {
-            const q = R.P(tubeAt(th, tcen - v * h, c + u * w, rAt(tcen) + 0.1, L.off * 0.4));
+            const q = R.P(legAt(th, false, tcen - v * h, c + u * w, 0.25, bend));
             if (k) path.lineTo(q.x, q.y);
             else path.moveTo(q.x, q.y);
           });
@@ -1883,11 +1959,9 @@
       return;
     }
     // a parte de baixo: a costura continua até a barra, e dois pespontos laranja em volta dela
-    const hemR = L.hemR + 0.2;
     const tc = facingAngle(R, sh);
-    if (Math.cos(seam - tc) > 0.05) strokeRuns(R, [[R.P(tubeAt(sh, 0, seam, L.kneeR + 0.15, 0.3)), R.P(tubeAt(sh, L.hem, seam, hemR, 0.3))]], PAL.stitch, 0.24, 0.9);
-    strokeRuns(R, arcRuns(R, sh, L.hem - 0.04, hemR, 0, M.TAU, 0.3, 30), PAL.stitch, 0.22, 0.95);
-    strokeRuns(R, arcRuns(R, sh, L.hem - 0.075, hemR, 0, M.TAU, 0.3, 30), PAL.stitch, 0.22, 0.95);
+    if (Math.cos(seam - tc) > 0.05) strokeRuns(R, [[R.P(legAt(sh, true, 0, seam, 0.15, bend)), R.P(legAt(sh, true, L.hem, seam, 0.2, bend))]], PAL.stitch, 0.24, 0.9);
+    for (const dt of [0.04, 0.075]) strokeRuns(R, arcRuns(R, sh, L.hem - dt, 0, 0, M.TAU, 0, 30, (a) => legAt(sh, true, L.hem - dt, a, 0.2, bend)), PAL.stitch, 0.22, 0.95);
   }
 
   /** O bolso cargo (em cima da caixa dele): a aba com a linha, o pesponto laranja e os dois rebites. */
@@ -1895,10 +1969,10 @@
     const ctx = R.ctx;
     const PAL = R.pal;
     const th = rig.thigh[i];
-    const L = SHORTS.leg, P = SHORTS.pocket;
+    const P = SHORTS.pocket;
     const z = R.zoom;
-    const rr = (t) => L.topR + (L.kneeR - L.topR) * t + P.out + 1.3;
-    const pt = (t, a) => R.P(tubeAt(th, t, a, rr(t), L.off * (1 - t * 0.7)));
+    const bend = legBend(rig, i);
+    const pt = (t, a) => R.P(legAt(th, false, t, a, P.out + 1.3, bend));
     const row = (t, inset = 0, n = 6) => { const q = []; for (let k = 0; k <= n; k++) q.push(pt(t, P.c - P.w + inset + ((P.w - inset) * 2 * k) / n)); return q; };
     const flap = P.t0 + (P.t1 - P.t0) * 0.34;
     // a aba: mais clara, com a linha escura embaixo

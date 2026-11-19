@@ -331,7 +331,9 @@
       const torsoGear = this.equipped && this.equipped.tronco && PD.equipment ? PD.equipment.catalog.get(this.equipped.tronco) : null;
       const torsoPiece = torsoGear && torsoGear.pecas.find((pc) => pc.osso === 'peito');
       const bridgeMat = torsoPiece ? torsoPiece.material || torsoGear.material : PAL.skin;
-      const frontK = smoothstep(-0.3, 0.05, this.facing(rig.chest.f));
+      // (um modelo de cabelo curto — o Birim — mostra o trapézio de costas: `SHOULDER.back` deixa a ponte inteira de
+      // qualquer lado; sem ela, de costas o deltoide virava uma bola grudada num tronco de ombro quadrado)
+      const frontK = MOD.SHOULDER.back ? 1 : smoothstep(-0.3, 0.05, this.facing(rig.chest.f));
       for (let i = 0; i < 2; i++) {
         const side = i === 0 ? -1 : 1;
         const d0 = MOD.UPPER_ARM.find((sp) => sp.part === 'deltoide');
@@ -450,7 +452,18 @@
         const knee = { pt: this.P(rig.knee[i]), r: MOD.THIGH.find((s) => s.t === 1).r * 2.2 * this.zoom };
         const ankle = { pt: this.P(rig.ankle[i]), r: MOD.SHIN.find((s) => s.t === 1).r * 1.5 * this.zoom };
         items.push({ name: 'coxa', key: thighKeyOf(i), group: 'perna' + i, order: 0, solid: true, segs: [{ poly: this.hull(thCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { this._castShadow(pelvisPoly, 3.2, 0.5); this._muscleLines(th, MOD.MUSCLE_LINES.coxa); more('coxa'); } }] });
-        items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, solid: true, joint: knee, bent: dot(th.a, sh.a) < 0.45, segs: [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { if (MOD.BODY_PAINT) this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); more('canela'); } }] });
+        const shinDecal = () => { if (MOD.BODY_PAINT) this._band(null, sh, MOD.BODY_PAINT.calfBand, 5.5); this._muscleLines(sh, MOD.MUSCLE_LINES.canela); more('canela'); };
+        let shinSegs;
+        if (MOD.SHIN_SPLIT) {
+          // (um modelo pode ter a canela em dois pedaços que se emendam na esfera de `t = SHIN_SPLIT` — a panturrilha e a
+          // canela de baixo: num casco só a perna vira um cone do joelho ao tornozelo, sem a barriga da panturrilha.
+          // Esticada, a perna é pintada como um volume só, então não aparece emenda)
+          const cs = (list) => list.map((s) => this.circle(limbAt(sh, s.t, s.f, s.o), s.r));
+          const upper = { poly: this.hull(cs(MOD.SHIN.filter((s) => s.t <= MOD.SHIN_SPLIT))), circles: this._last, mat: skin, k: 0.3, decal: shinDecal };
+          const lower = { poly: this.hull(cs(MOD.SHIN.filter((s) => s.t >= MOD.SHIN_SPLIT))), circles: this._last, mat: skin, k: 0.3, noInner: true };
+          shinSegs = [lower, upper];
+        } else shinSegs = [{ poly: this.hull(shCircles), circles: this._last, mat: skin, k: 0.3, decal: shinDecal }];
+        items.push({ name: 'canela', key: this.keyOf(limbAt(sh, 0.5, 0, 0)) + 0.3, group: 'perna' + i, order: 1, solid: true, joint: knee, bent: dot(th.a, sh.a) < 0.45, chain: !!MOD.SHIN_SPLIT, segs: shinSegs });
         // a mesma forma em qualquer zoom (pé, dedinhos e dedão): de longe só os riscos entre os dedos somem
         const footSegs = [{ poly: this.hull(ftCircles), circles: this._last, mat: skin, k: 0.3 }];
         if (MOD.TOES.each) {

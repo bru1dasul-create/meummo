@@ -1363,6 +1363,54 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
     achata o que é curvo (a aba): use gomos.
   - *Ainda diferente da referência:* a copa é mais redonda (a da referência é mais "quadrada", estruturada); o cabelo
     de trás da referência é um volume cacheado maior; o pescoço de perfil é grosso (é da rodada do corpo).
+- **Rodada 3 — o corpo e a postura (19/11; o dono: "pode começar pelo Birim", depois de eu propor o corpo e a postura),
+  só no ramo:**
+  - *Referência:* a própria ficha do dono (8 vistas da mesma renderização, na pose A — a mesma da nossa ficha), medida com
+    régua; para a câmera do jogo, o alvo do Nano Banana da rodada 1. **Nenhuma imagem nova** (custo zero).
+  - *O crítico do corpo* (`ferramentas/critico-corpo.py <ficha.png> <sola, px> <nosso.png> <saida.png>`): a ficha e o
+    nosso na mesma altura (do alto do boné à sola), alinhados pelo meio da cintura, os dois contornos um por cima do outro
+    e a tabela das bordas em cm em cada altura (a figura da ficha sai enchendo o fundo cinza a partir das bordas, mais os
+    buracos grandes e claros — entre as pernas). Foram 18 ciclos (k00 a k17), frente, perfil e costas.
+  - *O que mudou:*
+    - **Ombro de costas:** a ponte do ombro (do trapézio ao deltoide) só era desenhada de frente — de costas o deltoide
+      virava uma bola grudada num tronco de ombro quadrado (no herói, o cabelo comprido cobria). `SHOULDER.back` (gancho
+      novo do `renderer.js`; o herói não tem) deixa a ponte inteira de qualquer lado.
+    - **Tronco em V:** dorsais mais altas e para trás, oblíquos e cintura mais estreitos (~3 cm a menos de cada lado na
+      altura das costelas de baixo), o alto das costas mais cheio (de perfil as costas ficam mais cheias que o peito, como
+      na ficha), o peitoral um pouco mais baixo e recuado e duas esferas estreitas na frente e atrás da cintura (de perfil
+      ela desce cheia até a bermuda, sem fechar numa "bolsa" redonda). O deltoide ficou mais junto do corpo e o alto dele
+      um pouco mais alto (com o trapézio abaixo da barba, a linha do ombro tinha descido).
+    - **Pescoço:** a cabeça 3% menor (`headScale` 0,66: do alto do boné ao fim da barba são 15,0% da altura; na ficha,
+      14,8%; eram 16,1%) e 2 cm mais alta (`headDrop` −1,5); o trapézio logo abaixo da barba e uma rampa dele atrás (de
+      perfil a nuca descia reta, como uma coluna).
+    - **Bermuda:** justa na cintura e no quadril, abrindo em "sino" na coxa de baixo; a perna dela é **oval** (`kf`, `ko`)
+      e puxada para trás embaixo (`backKnee`, `backHem`), como o pano caído da ficha; com o joelho dobrado ela volta a ser
+      redonda (`legBend`) — funda, correndo, ficava pendurada atrás do joelho como uma aba. Costura, barra, bolso e coroa
+      usam a mesma conta (`legAt`).
+    - **Canela em dois pedaços** (`SHIN_SPLIT`, outro gancho do renderer; o herói não tem): a panturrilha cheia logo abaixo
+      do joelho e a canela de baixo fina — num casco só a perna virava um cone. Esticada, a perna é pintada como um volume
+      só, então não aparece emenda.
+    - Os riscos das costas (escápula, dorsal e coluna) agora acompanham a pele (`backPt`).
+  - *Medido (de frente, cm a partir do meio, contando 174 cm de altura; ficha × agora, entre parênteses o antes):*
+    costelas de baixo 14,3 × 15,8 (17,3); cós da bermuda 15,6 × 15,4 (19,7); quadril da bermuda 18,4 × 18,1 (21,5); coxa
+    da bermuda 26,0 × 26,0 (28,7); a 78%, o alto do ombro 25,6 × 25,3 (27,9). De perfil, as costas a 74%: −16,7 × −15,5
+    (−12,4); a bermuda atrás, a 30%: −16,1 × −14,6 (−10,0).
+  - *Lições:* (21) o casco é convexo: **o que é côncavo não sai de uma peça só** — a cintura que entra embaixo das costas
+    (vira um V reto), o pescoço entre os trapézios (o alto dos dois se liga numa reta na frente do pescoço: alto demais, ela
+    tapa o pescoço) e a panturrilha (vira cone). Quando a curva para dentro importa, dois pedaços (a canela); quando não,
+    a reta mais perto possível; (22) a régua mostra o que o olho não vê: a bermuda "larga" tinha cada perna da largura
+    certa — o que sobrava era o alto do tubo saindo para os lados no quadril; (23) subir a cabeça muda todas as alturas
+    em % (a altura total cresce): conferir de novo o que já batia; (24) forma boa em pé pode ficar ruim dobrada (a bermuda
+    funda virou aba na corrida): olhar as animações **de perto** (`prancha.cjs '?zoom=4&modelo=birim'`).
+  - *Ainda diferente da ficha:* de frente, na câmera do jogo, a barba cheia (a da referência aprovada) cobre o pescoço
+    quando a câmera vê de cima — só encurtando a barba (decisão do dono); os ombros da ficha são mais altos e cheios em cima
+    (a 80% da altura, ~3,5 cm a menos de cada lado: a linha do trapézio teve de ficar abaixo da barba para o pescoço
+    aparecer); a cintura da ficha entra numa curva (a
+    nossa é um V reto, ~1,5 cm mais larga nas costelas de baixo); na pose A o braço fica ~2,5 cm mais aberto em cima (é o
+    ângulo da pose, não o braço); de perfil, na ficha, as pernas ficam um pouco atrás do tronco (a postura é a do
+    esqueleto, a mesma do herói).
+  - *Conferência:* herói idêntico ponto a ponto, os testes do protótipo (os 40 e os 6 que desenham o personagem), `npm
+    run check` (510), o Birim em todas as animações (a corrida olhada de perto) e as 8 direções nas duas câmeras.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
