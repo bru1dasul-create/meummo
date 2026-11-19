@@ -28,6 +28,12 @@ explicações simples, sem concordar só para agradar, e mando prints do navegad
   [estrutura] e do [mundo] para a [arte] ficam também no roteiro. Quando o dono pediu ("vê com o outro chat"), falei
   com o [mundo] por `send_message`.
 - **Sons e música são da [estrutura]** desde 14/11 (escolha do dono, no `CLAUDE.md`): não mexo no `sfx.ts`.
+- **O desenho do mapa no 2.5D é do [mundo]** desde 19/11 (escolha do dono, no `CLAUDE.md` da main: chão, água, plantas,
+  casas, objetos do cenário e luz do lugar, `prototipos/pindorama-25d/js/world/*.js`). Comigo: os personagens (no 2.5D,
+  `js/character/`), monstros, ícones, efeitos e telas (bichos, ícones, efeitos e telas o [mundo] ficou de confirmar com
+  o dono). O piloto do chão pintado (`eae883b`, só no meu ramo) passou para ele em 19/11, com o caderno dele (mandei o
+  resumo por `send_message`): ele não vai para a `main` pelo meu ramo. Não mexo mais em `js/world/`, `ground.js` nem
+  na `view.js`.
 - **Arma na mão:** o arco fica sempre na mão quando equipado ("o arco deve permanecer na mão, como um item / arma",
   13/11); o estilingue continua aparecendo só na hora do tiro. Fora isso, nada de armadura ou arma no personagem.
 - **Chave de API:** nunca pedir no chat.
@@ -1161,7 +1167,7 @@ de casa e ainda vai testar no PC dele). Tudo foi medido no jogo de verdade, no C
   conversa|casa [url] <pasta> ...` e `python3 zoom-fotos-comparar.py a.png a-ref.png`; `node zoom-ordem.cjs [url]`;
   `node zoom-memoria.cjs [url]`.
 
-### O chão pintado, passo 1 — PILOTO EM ANDAMENTO, PAUSADO em 17/11 (o dono pediu a pausa para o personagem novo)
+### O chão pintado, passo 1 — PILOTO PAUSADO em 17/11 e PASSADO AO [mundo] em 19/11 (o desenho do mapa agora é dele)
 Pedido do dono (17/11, pelo [mundo]): "chão feio, água sem movimentação, ambiente pífio"; direção aprovada ("é esse o
 caminho"): `docs/referencias/chao-pintado-alvo.jpg` (o antes: `chao-pintado-antes.jpg`). Combinado com ele em três
 passos (1: o chão pintado; 2: luz e sombra no chão; 3: água e vida), cada um com piloto na Clareira dos Despertos,
@@ -1667,8 +1673,9 @@ confirmou.
     "ao invés de setinha deveria ser um ponto": um ponto dourado com contorno branco, pulsando)
     (PC: 148 px embaixo da mochila; celular: 96 px embaixo do retrato), tudo por CSS de id; girar a imagem para bater
     com a câmera é pedido ao motor. Ganchos: `__mundoNovo.explored()` e `mapOpen()`.
-  - **Floresta maior do [mundo]** (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
-    Capão vai a 96 × 180 m): só entra na main com o meu
+  - **Floresta maior do [mundo]** (PASSOU PARA O [mundo] em 19/11, com o desenho do mapa; fica a lista do que faltava
+    desenhar) (`mundo/floresta-maior`, a ponta mais nova: 2646760, com as áreas dos bichos novos; o
+    Capão vai a 96 × 180 m): só entra na main com o
     desenho: `arvore` `especie: 'paineira'` (tronco de garrafa com espinhos, copa de flor rosa `flores`, pétalas no
     chão); `parquinho` (`brinquedo` 'balanco' com `quebrado`, 'escorregador' com `olhando`, 'gira-gira' com `plantas`;
     `ferrugem`, `cipo`); `cachoeira` (pedras de onde o riacho cai: `altura`, `queda`, `musgo`); `pinguela` com `pedras`;
