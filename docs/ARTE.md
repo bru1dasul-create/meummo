@@ -1497,6 +1497,42 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
     no máximo 1 em 0–255) e, na do jogo, só um pedacinho de 22 × 13 px no queixo (numa imagem de 3000 × 4000); a cabeça de 0° a
     180° na câmera reta e as 8 direções nas duas câmeras; e a bateria (herói idêntico, os 40 testes do protótipo e os 6
     que desenham o personagem, `npm run check`, o Birim em todas as animações).
+- **A barba curta, pintada na pele (19/11; o dono, depois da 4b: "está horrível, vamos fazer sem barba o que acha?" — mostrei
+  a prévia sem barba e recomendei a curta; ele escolheu "1", a curta), só no ramo:**
+  - *Por que a cheia não deu certo:* ela era ~40 volumes (cascos de esferas) em volta da mandíbula, mais ~150 fios; cada
+    ângulo mostrava pedaços diferentes, e cada rodada consertava um ângulo e estragava outro (a bola do bigode, o triângulo
+    de pele, o tufo do lado do nariz, a pele do queixo tapada). As sobrancelhas e os olhos nunca tiveram esse problema
+    porque são desenhados NA pele do rosto.
+  - *Como é agora* (`shortBeard`, chamada no começo do rosto, antes dos lábios, do nariz e das orelhas, que ficam por cima):
+    uma camada na pele, feita uma vez só (`beardGeom`: a cabeça não muda de forma; a cada quadro só se projeta) — uma grade
+    de pontos da pele entre duas beiradas (`HEAD.beard.top` e `.bottom`, a metade direita, de trás para o meio, com o mesmo
+    número de pontos), achados por raios saindo de um centro dentro da parte de baixo do rosto (`beardRay`: o ponto de fora
+    entre as esferas do casco, sem o nariz). A cada quadro, em cada coluna da grade, fica o trecho que olha para a câmera,
+    com as pontas no ponto exato onde ele deixa de aparecer (cortar quadradinho por quadradinho deixava escadinha); a boca e
+    a pele embaixo do lábio ficam de fora (`hole`); a mosca embaixo do lábio; pontinhas de pelo só na beirada de cima (a de
+    baixo é aparada — com pontinhas, de costas elas viravam raios embaixo da orelha), mais curtas no bigode; riscos curtos e
+    claros por dentro (só com o personagem grande, `R.fine`). A sombra é a mesma meia-lua da pele da cabeça (a peça da
+    cabeça passa a ir para o rosto: `face(R, rig, look, seg)`), então combina com a pele. De costas, o que fica embaixo da
+    mandíbula sai (olha para baixo), as faixas finas presas à beirada de baixo também, e o que o **pescoço tapa**: com o
+    rosto virado para lá, cada ponto testa se a linha até a câmera passa perto do eixo do pescoço (da base da cabeça,
+    `HEAD.neckBase`, até a base dele no peito; com 0,6 da grossura — com a grossura toda, a barba do lado ganhava um corte
+    reto). Sem isso, a parte de baixo do queixo, que vista por trás fica atrás do pescoço, saía em lasquinhas pretas em cima
+    dele (o pescoço é desenhado antes da cabeça).
+  - *Queixo:* subiu ~1,3 e ficou um pouco menor (`queixo` r 5 → 4,6; `queixoE/D` 4,3 → 4,1): ele tinha a grossura da barba
+    cheia, e sem ela o rosto ficava comprido embaixo. O cabelo da têmpora e os cachos dele (que estavam junto com a barba)
+    viraram a peça `cabeloTempora`.
+  - *Custo:* ~9,3 ms por quadro para desenhar o Birim (antes, com a cheia, ~10,2), nesta máquina, sem placa de vídeo
+    (`r6/bench.cjs` no rascunho; mediana de 5 × 40 quadros).
+  - *Lições:* (33) **o que fica no rosto deve ser desenhado NA pele do rosto** (barba curta, sobrancelha, pintura): segue a
+    superfície e fica certo em qualquer ângulo; volumes colados em volta da cabeça só valem para o que sai da silhueta (boné,
+    orelha, cachos); (34) uma camada na pele precisa sumir onde a pele vira para longe — por coluna, com a ponta no ponto
+    exato da virada, senão a beirada fica em escadinha; e o que só aparece de raspão (uma faixa fina) melhor sair.
+  - *Ainda diferente da referência:* a barba da referência é cheia (aqui é curta, por escolha do dono); o boné; o pescoço de
+    perfil.
+  - *Conferência (na versão final):* a cabeça de 15 em 15°, a volta inteira, na câmera reta; as 8 direções nas duas câmeras;
+    o Birim em todas as animações de perto; e a bateria (herói idêntico, os 40 testes do protótipo e os 6 que desenham o
+    personagem, `npm run check`). Para achar as lasquinhas: pintar as faixas de uma cor e as pontinhas de outra numa cópia de
+    teste, e listar os grupos de faixas desenhados em cada ângulo (o grupo pequeno e solto é o defeito).
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
