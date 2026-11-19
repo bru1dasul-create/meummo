@@ -272,8 +272,7 @@ export class Realm {
           nome: p.name,
           mapa: world.map.id,
           mapaNome: world.map.name,
-          x: p.x,
-          y: p.y,
+          ...world.shownSpot(p.fx, p.fy),
           nivel: p.level,
           vida: p.hp,
           vidaMax: p.maxHp,
@@ -335,7 +334,10 @@ export class Realm {
     return { ok: true, texto: `${found.player.name} está com a vida cheia.` };
   }
 
-  /** Leva o jogador para um mapa (no ponto de nascimento, ou em (x, y) — ou o chão livre mais perto). */
+  /**
+   * Leva o jogador para um mapa (no ponto de nascimento, ou em (x, y) — ou o chão livre mais perto). Nos mapas do
+   * formato novo, (x, y) é o pé em metros, com fração; nos de sempre, o tile.
+   */
   adminMove(id: number, mapId: string, x?: number, y?: number): AdminResult {
     const found = this.findOnline(id);
     if (!found) return { ok: false, erro: 'Esse jogador não está mais online.' };
@@ -356,7 +358,8 @@ export class Realm {
       target.adopt(player, spot);
       this.where.set(player.id, target);
     }
-    return { ok: true, texto: `${player.name} agora está em ${target.map.name} (${spot.x}, ${spot.y}).` };
+    const shown = target.shownSpot(spot.x, spot.y);
+    return { ok: true, texto: `${player.name} agora está em ${target.map.name} (${shown.x}, ${shown.y}).` };
   }
 
   /** Aviso do administrador para todo mundo online (aparece grande na tela). */

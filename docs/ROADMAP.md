@@ -935,6 +935,9 @@ Em etapas pequenas, cada uma jogável. Arte ainda provisória, feita por código
 - [x] **[estrutura]** Passo 2 — **ferramentas de jogadores** (aba Jogadores): quem está online (atualiza sozinho),
   dar ouro e itens (testar a loja sem caçar), curar, levar para outro mapa ou posição, aviso para todos e expulsar;
   quem recebe fica sabendo pelo chat; tudo registrado na janela do servidor
+- [x] **[estrutura]** O "levar" nos mapas novos (achado do [mundo], 19/11): x e y são o pé em metros, com fração
+  (vírgula ou ponto); vale onde o corpo cabe, até num vão estreito ou atrás de um balcão; dentro de algo, vai para o
+  chão livre mais perto. O cartão do jogador mostra a posição do mesmo jeito (dá para copiar de um e colar no outro)
 - [ ] **[estrutura]** No M5 (internet): senha e conexão criptografada para o painel, banir, registro do que o
   administrador fez
 

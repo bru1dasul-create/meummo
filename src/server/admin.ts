@@ -59,6 +59,11 @@ function whole(value: unknown, min: number, max: number): value is number {
   return Number.isInteger(value) && (value as number) >= min && (value as number) <= max;
 }
 
+/** Número de verdade (pode ter fração) entre min e max. */
+function between(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
+}
+
 /** Confere o pedido de ação num jogador (null = pedido estranho). */
 function parsePlayerAction(body: unknown): PlayerAction | null {
   if (typeof body !== 'object' || body === null) return null;
@@ -85,7 +90,8 @@ function parsePlayerAction(body: unknown): PlayerAction | null {
       const hasX = b.x !== undefined && b.x !== null;
       const hasY = b.y !== undefined && b.y !== null;
       if (hasX !== hasY) return null; // as duas coordenadas, ou nenhuma
-      if (hasX && (!whole(b.x, 0, 9999) || !whole(b.y, 0, 9999))) return null;
+      // nos mapas do formato novo, o pé em metros (com fração, ex.: 57.5 e 50.35); nos de sempre, o tile
+      if (hasX && (!between(b.x, 0, 9999) || !between(b.y, 0, 9999))) return null;
       return hasX ? { acao: 'levar', id, mapa: b.mapa, x: b.x as number, y: b.y as number } : { acao: 'levar', id, mapa: b.mapa };
     }
     default:

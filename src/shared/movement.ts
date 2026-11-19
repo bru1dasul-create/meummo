@@ -285,6 +285,31 @@ export function bodyFits(map: Walkable, x: number, y: number): boolean {
   return !boxBlocked(map, x + TO_CENTER_X, y + TO_CENTER_Y);
 }
 
+/** De quanto em quanto o `nearestBodySpot` abre os anéis (metros) e até onde procura. */
+const SPOT_SEARCH_STEP = 0.25;
+const SPOT_SEARCH_RADIUS = 12;
+
+/**
+ * O lugar mais perto do ponto do pé (x, y), em metros, onde a caixa do pé cabe parada: o próprio ponto, se der, ou em
+ * anéis cada vez maiores em volta dele (de 0,25 em 0,25 m, até `maxRadius`). Devolve a posição "de canto" (ou null).
+ * Confere o corpo de verdade, então acha os vãos estreitos entre troncos que a grade dos monstros dá por fechados.
+ */
+export function nearestBodySpot(map: Walkable, x: number, y: number, maxRadius = SPOT_SEARCH_RADIUS): { x: number; y: number } | null {
+  const here = cornerAtFeet(x, y);
+  if (bodyFits(map, here.x, here.y)) return here;
+  for (let ring = 1; ring * SPOT_SEARCH_STEP <= maxRadius + 1e-9; ring++) {
+    const radius = ring * SPOT_SEARCH_STEP;
+    // pontos a no máximo um passo um do outro, pelo anel
+    const samples = Math.max(8, Math.ceil((2 * Math.PI * radius) / SPOT_SEARCH_STEP));
+    for (let i = 0; i < samples; i++) {
+      const angle = (i / samples) * Math.PI * 2;
+      const corner = cornerAtFeet(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+      if (bodyFits(map, corner.x, corner.y)) return corner;
+    }
+  }
+  return null;
+}
+
 /** Posição "de canto" de quem está com o pé exatamente no ponto (x, y) (em tiles = metros). */
 export function cornerAtFeet(x: number, y: number): { x: number; y: number } {
   return { x: x - TO_CENTER_X, y: y - (TO_CENTER_Y + BODY_HALF_H) };

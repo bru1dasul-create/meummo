@@ -9,7 +9,8 @@ import { Realm } from '../src/server/realm';
 import { startServer, type RunningServer } from '../src/server/server';
 import { Tuning, type BaseData, type TuningFile } from '../src/server/tuning';
 import { TICK_MS } from '../src/shared/constants';
-import { GameMap } from '../src/shared/map';
+import { GameMap, type TiledObject } from '../src/shared/map';
+import { bodyFits, feetAt } from '../src/shared/movement';
 import { FAST_HASH, FakeClock, FakeConn, tiledFromAscii } from './helpers';
 
 const BASE: BaseData = {
@@ -306,6 +307,60 @@ describe('ferramentas de jogadores', () => {
     expect(realm.playersOnline()[0]!.mapa).toBe('mata');
   });
 
+  it('nos mapas novos, leva o pé ao ponto exato em metros (com fração): atrás de uma parede, num vão estreito ou do lado', () => {
+    const PX = 32;
+    const rect = (id: number, x: number, y: number, w: number, h: number): TiledObject => ({ id, x: x * PX, y: y * PX, width: w * PX, height: h * PX });
+    const praca = GameMap.fromTiled(
+      {
+        width: 30,
+        height: 12,
+        tilewidth: PX,
+        tileheight: PX,
+        orientation: 'orthogonal',
+        properties: [{ name: 'nome', type: 'string', value: 'Praça' }],
+        tilesets: [],
+        layers: [
+          // uma parede de ponta a ponta (x de 12 a 13: o lado leste não tem caminho a pé) e dois troncos com 0,8 m entre eles
+          { type: 'objectgroup', name: 'colisao', objects: [rect(1, 12, 0, 1, 12), rect(2, 4, 8, 0.6, 1), rect(3, 5.4, 8, 0.6, 1)] },
+          { type: 'objectgroup', name: 'pontos', objects: [{ id: 4, name: 'spawn', x: 8 * PX, y: 5 * PX, point: true }] },
+        ],
+      },
+      'praca',
+    );
+    const clock = new FakeClock();
+    const t = tuning();
+    const realm = new Realm([vila, praca], { now: clock.now, random: () => 0, items: t.items, monsters: t.monsters });
+    const conn = new FakeConn();
+    const joined = realm.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const ana = joined.player;
+    const feet = () => feetAt(ana.fx, ana.fy);
+    const tick = () => {
+      clock.advance(TICK_MS);
+      realm.tick();
+    };
+
+    // atrás da parede (pela grade dos monstros, não dá para chegar a pé): vai, com o pé no ponto exato
+    expect(realm.adminMove(ana.id, 'praca', 20.5, 6.35)).toEqual({ ok: true, texto: 'Ana agora está em Praça (20.5, 6.35).' });
+    expect(feet().x).toBeCloseTo(20.5);
+    expect(feet().y).toBeCloseTo(6.35);
+    // o painel mostra o lugar como o "levar" recebe (o pé em metros)
+    expect(realm.playersOnline()[0]).toMatchObject({ mapa: 'praca', x: 20.5, y: 6.35 });
+    realm.worldOf(ana)!.loaded(ana);
+
+    // no vão entre os troncos (os dois tiles estão fechados na grade dos monstros, mas o corpo cabe)
+    expect(realm.adminMove(ana.id, 'praca', 5, 8.6)).toEqual({ ok: true, texto: 'Ana agora está em Praça (5, 8.6).' });
+    expect(feet().x).toBeCloseTo(5);
+    expect(feet().y).toBeCloseTo(8.6);
+    tick();
+    expect(conn.ofType('sys').at(-1)).toMatchObject({ text: 'O administrador te levou para (5, 8.6).' });
+
+    // dentro da parede: o chão livre mais perto, encostado nela (e não um tile inteiro para o lado)
+    expect(realm.adminMove(ana.id, 'praca', 12.5, 6).ok).toBe(true);
+    expect(bodyFits(praca, ana.fx, ana.fy)).toBe(true);
+    expect(Math.hypot(feet().x - 12.5, feet().y - 6)).toBeLessThanOrEqual(1.05);
+  });
+
   it('aviso para todos chega em todo mundo, em qualquer mapa', () => {
     const { realm, join, tick } = setup();
     const ana = join('Ana');
@@ -335,7 +390,7 @@ describe('ferramentas de jogadores', () => {
 
       const base = `http://127.0.0.1:${server.port}`;
       const headers = { 'content-type': 'application/json', 'x-meummo-admin': '1' };
-      const list = (await (await fetch(`${base}/admin/api/jogadores`)).json()) as { jogadores: { id: number; nome: string }[]; mapas: { id: string }[] };
+      const list = (await (await fetch(`${base}/admin/api/jogadores`)).json()) as { jogadores: { id: number; nome: string; mapa: string; x: number; y: number }[]; mapas: { id: string }[] };
       expect(list.jogadores.map((p) => p.nome)).toEqual(['Ana']);
       expect(list.mapas.length).toBeGreaterThan(1);
       const id = list.jogadores[0]!.id;
@@ -343,6 +398,13 @@ describe('ferramentas de jogadores', () => {
       const gold = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'ouro', id, quantidade: 250 }) });
       expect(await gold.json()).toEqual({ ok: true, texto: 'Ana recebeu 250 de ouro.' });
       await vi.waitFor(() => expect(received.some((m) => m.t === 'inv' && (m.inv as { gold: number }).gold === 250)).toBe(true), { timeout: 3000 });
+
+      // o "levar" aceita posição com fração (nos mapas de sempre, vale o tile onde ela cai)
+      const { mapa, x, y } = list.jogadores[0]!;
+      const move = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'levar', id, mapa, x: x + 0.4, y: y + 0.4 }) });
+      expect(await move.json()).toMatchObject({ ok: true, texto: expect.stringContaining(`(${x}, ${y})`) });
+      const notNumber = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'levar', id, mapa, x: '5', y: 2 }) });
+      expect(notNumber.status).toBe(400);
 
       const bad = await fetch(`${base}/admin/api/jogador`, { method: 'POST', headers, body: JSON.stringify({ acao: 'ouro', id, quantidade: -5 }) });
       expect(bad.status).toBe(400);

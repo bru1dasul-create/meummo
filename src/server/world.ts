@@ -69,7 +69,7 @@ import {
 import { defaultCombatRules, type CombatRules } from '../shared/combatRules';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
 import type { GameMap, MonsterZone, Tile } from '../shared/map';
-import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
+import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, footTile, nearestBodySpot, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
@@ -783,7 +783,7 @@ export class World {
         if (player.dead) return;
         const corner = cornerAtFeet(cmd.x, cmd.y);
         const fits = this.map.metric && bodyFits(this.map, corner.x, corner.y);
-        const spot = fits ? corner : player.fly && this.inMap(corner) ? corner : this.freeSpot(Math.floor(cmd.x), Math.floor(cmd.y));
+        const spot = fits ? corner : player.fly && this.inMap(corner) ? corner : this.freeSpot(cmd.x, cmd.y);
         if (!spot) return say('não achei chão livre ali.');
         this.placePlayer(player, spot.x, spot.y);
         return;
@@ -845,7 +845,8 @@ export class World {
   /** Parou de voar dentro de algo (parede, árvore): vai para o chão livre mais perto. */
   private unstick(player: Player): void {
     if (bodyFits(this.map, player.fx, player.fy)) return;
-    const spot = this.freeSpot(player.x, player.y) ?? this.pickSpawnTile();
+    const at = this.map.metric ? feetAt(player.fx, player.fy) : { x: player.x, y: player.y };
+    const spot = this.freeSpot(at.x, at.y) ?? this.pickSpawnTile();
     this.placePlayer(player, spot.x, spot.y);
   }
 
@@ -1372,15 +1373,33 @@ export class World {
     player.walkBudget = 0;
     player.changed = true;
     player.outbox.push({ t: 'teleport', x: player.fx, y: player.fy, dir: player.dir });
-    player.outbox.push({ t: 'sys', text: `O administrador te levou para (${spot.x}, ${spot.y}).` });
+    const shown = this.shownSpot(spot.x, spot.y);
+    player.outbox.push({ t: 'sys', text: `O administrador te levou para (${shown.x}, ${shown.y}).` });
   }
 
-  /** Um lugar livre neste mapa: (x, y) se der para ficar lá (ou o mais perto), ou o nascimento se não vier posição. */
+  /**
+   * Um lugar livre neste mapa: o ponto (x, y) se der para ficar lá (ou o mais perto), ou o nascimento se não vier
+   * posição. Nos mapas do formato novo, (x, y) é o pé, em metros e com fração, e vale onde o corpo cabe (como o "ir até
+   * um ponto" do menu ADM: atrás de um balcão também). Nos de sempre, o tile, onde dá para chegar a pé do nascimento.
+   */
   freeSpot(x?: number, y?: number): Tile | null {
     if (x === undefined || y === undefined) return this.arrivalSpot('spawn');
-    if (this.map.isWalkable(x, y) && this.map.isReachable(x, y)) return { x, y };
-    const near = this.map.nearestWalkable(x, y);
+    if (this.map.metric) return nearestBodySpot(this.map, x, y);
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+    if (this.map.isWalkable(tx, ty) && this.map.isReachable(tx, ty)) return { x: tx, y: ty };
+    const near = this.map.nearestWalkable(tx, ty);
     return near && this.map.isReachable(near.x, near.y) ? near : null;
+  }
+
+  /**
+   * Como o painel e os avisos mostram a posição "de canto" (x, y): nos mapas do formato novo, o pé em metros (2 casas,
+   * o mesmo que o "levar" do painel recebe); nos de sempre, o tile.
+   */
+  shownSpot(x: number, y: number): Tile {
+    if (!this.map.metric) return footTile(x, y);
+    const feet = feetAt(x, y);
+    return { x: Math.round(feet.x * 100) / 100, y: Math.round(feet.y * 100) / 100 };
   }
 
   // ======================= ajustes do administrador =======================

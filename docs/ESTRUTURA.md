@@ -40,12 +40,8 @@ alternativas quando vejo — sem concordar só para agradar.
   (inglês, regra 8). O teste do Nano Banana (~US$ 1) ela só faz com o "pode" do dono.
 - **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
   viram padrão (`data/*.json`, as constantes, e o game feel em `DEFAULT_FEEL`, `src/client/novo/feel.ts`).
-- **Pendências pequenas minhas:**
-  1. O "levar" do painel recusa x/y com fração (`parseAdminAction` usa `whole`), e nos mapas novos o ponto é o pé em
-     metros. Aceitar fração e, no mapa métrico, o `freeSpot` usar `cornerAtFeet` + `bodyFits` (hoje usa
-     `isWalkable` de tile). Com teste. (Achado do [mundo], 19/11.)
-  2. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;
-     conferir com caminho livre).
+- **Pendência pequena minha:** a velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático
+  confirma o servidor; conferir com caminho livre). O "levar" do painel com fração ficou pronto (19/11, diário).
 - **Para depois (anotado pelo [mundo], 18/11):** "mundo aberto, sem carregamento" (andar do Capão à Guarapiranga sem
   trocar de mapa). Hoje cada mapa é uma sala no servidor (`World`); seria trabalho grande no `Realm`. PARADO até o
   dono pedir; decidir com ele o caminho.
@@ -54,7 +50,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 524 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 525 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)
@@ -106,6 +102,16 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 **Achado importante:** com os monstros da etapa 4a (ramo `mundo/etapa-4a`), no `/?novo` os saguis atacam e o
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
+
+**19/11 — o "levar" do painel nos mapas novos (achado do [mundo]; o "pode" do dono):** o painel aceita x e y com
+fração (`between` em `admin.ts`). Nos mapas do formato novo, o ponto é o pé em metros e vale onde o corpo cabe:
+`World.freeSpot` → `nearestBodySpot` (`movement.ts`: o ponto exato ou anéis de 0,25 m até 12 m), sem conferir o caminho
+a pé, como o "ir até" do menu ADM (atrás de um balcão também vai). Nos mapas de sempre continua o tile (a fração cai no
+tile). O "ir até" do menu ADM e o pouso do voo (`unstick`) usam a mesma procura. O cartão do jogador e os avisos
+mostram o pé em metros, 2 casas (`World.shownSpot`). Na página, x e y viraram campos de texto (vírgula ou ponto): no
+campo de número, o navegador de teste jogava a vírgula fora ("5,5" ia como 55, sem aviso). Teste em
+`tests/admin.test.ts` (falha com o código antigo). Conferido no navegador: Capão e Guarapiranga (trocando de mapa), PC
+e celular deitado, sem erros.
 
 **19/11 — Guarapiranga, a parte pequena (combinado com o dono: o conteúdo grande segue pausado):** o [mundo] pôs o
 Mapa 02 (a) na main (`guarapiranga.tmj`, sem áreas de bichos, ligado ao Capão pelas `saidas`). Em data/npcs.json:

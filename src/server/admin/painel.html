@@ -333,7 +333,8 @@
         color: var(--text);
         font: inherit;
       }
-      .row input[type='number'] {
+      .row input[type='number'],
+      .row input.coord {
         width: 80px;
       }
       .stats {
@@ -735,20 +736,31 @@
         const map = el('select');
         for (const m of state.players.mapas) map.append(el('option', { value: m.id, text: m.nome }));
         map.value = p.mapa;
-        const x = el('input', { type: 'number', min: '0', step: '1', placeholder: 'x' });
-        const y = el('input', { type: 'number', min: '0', step: '1', placeholder: 'y' });
+        // nos mapas novos, o pé em metros, com fração. Campo de texto, com vírgula ou ponto: no campo de número, o
+        // navegador jogava a vírgula fora ("5,5" ia como 55, e a pessoa parava no lugar errado sem aviso)
+        const x = el('input', { type: 'text', inputmode: 'decimal', class: 'coord', placeholder: 'x' });
+        const y = el('input', { type: 'text', inputmode: 'decimal', class: 'coord', placeholder: 'y' });
+        const coord = (input) => {
+          const text = input.value.trim().replace(',', '.');
+          return /^\d+(\.\d+)?$/.test(text) ? Number(text) : null;
+        };
         const go = () => {
           const body = { acao: 'levar', id: p.id, mapa: map.value };
-          if (x.value !== '' || y.value !== '') {
-            if (x.value === '' || y.value === '') return toast('Preencha x e y (ou deixe os dois vazios para ir ao ponto de nascimento).', true);
-            body.x = Number(x.value);
-            body.y = Number(y.value);
+          const hasX = x.value.trim() !== '';
+          const hasY = y.value.trim() !== '';
+          if (hasX || hasY) {
+            if (!hasX || !hasY) return toast('Preencha x e y (ou deixe os dois vazios para ir ao ponto de nascimento).', true);
+            const cx = coord(x);
+            const cy = coord(y);
+            if (cx === null || cy === null) return toast('x e y precisam ser números, como 57,5 ou 57.5.', true);
+            body.x = cx;
+            body.y = cy;
           }
           playerAction(body);
         };
         card.append(
           el('div', { class: 'row' }, el('span', { text: 'Levar para' }), map, x, y, el('button', { class: 'act', type: 'button', text: 'Levar', onclick: go })),
-          el('div', { class: 'stats', text: 'x e y vazios = ponto de nascimento do mapa. A posição é a mesma que o Tiled mostra.' }),
+          el('div', { class: 'stats', text: 'x e y vazios = ponto de nascimento do mapa. Nos mapas novos, o pé em metros, com fração (ex.: 57,5 e 50,35); nos de sempre, o tile, como o Tiled mostra.' }),
         );
 
         card.append(
