@@ -43,8 +43,9 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Pendências pequenas minhas** (esperando o "pode" do dono; no roteiro, seção Sensação de jogo):
   1. ~~Voltar perto de onde saiu~~ feito em 19/11 (`savedSpot` cai para `nearestBodySpot` do meio do tile, até
      `RESTORE_REACH` = 1,5 m; teste em `tests/mapa-novo.test.ts`; o que é salvo não mudou).
-  2. "Andar até" um ponto bloqueado: `findRoute` troca o destino pela célula livre mais perto em linha reta, mesmo do
-     outro lado de uma cerca de moitas (deu 33 m de volta no Capão, x 86, y 80,7). Preferir o lado de quem anda.
+  2. ~~"Andar até" um ponto bloqueado~~ feito em 19/11: `findRoute`, sem lugar no destino, liga à busca todas as
+     células livres até `NEAR_GOAL` (3 m), cada uma custando `NEAR_PENALTY` (4) × a distância até o toque; a busca
+     escolhe a soma menor (para do lado de quem anda). Teste em `tests/rota.test.ts`.
   3. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;
      conferir com caminho livre). O "levar" do painel com fração ficou pronto (19/11, diário).
 - **Trava invisível nas moitas (print do dono, 19/11): resolvida pelo [mundo] (main 9aac53d)**, conferida por mim

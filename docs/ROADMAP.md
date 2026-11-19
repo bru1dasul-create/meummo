@@ -107,9 +107,9 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
 - [x] **[estrutura]** Voltar onde saiu (o "pode" do dono em 19/11): quem saía do jogo encostado numa moita, árvore ou
   parede voltava na Clareira (o servidor guarda o tile do pé e só procurava lugar dentro dele; ~1% dos lugares do
   Capão). Agora procura o lugar livre mais perto do meio do tile, até 1,5 m: no canto da calçada, voltou a 0,43 m
-- [ ] **[estrutura]** "Andar até" um ponto dentro de uma moita ou árvore: hoje vai até o lugar livre mais perto em
-  linha reta, mesmo que fique do outro lado de uma cerca de moitas (no teste, deu uma volta de 33 m). Preferir o lugar
-  do lado de quem anda
+- [x] **[estrutura]** "Andar até" um ponto dentro de uma moita ou árvore (o "pode" do dono em 19/11): ia até o lugar
+  livre mais perto em linha reta, mesmo do outro lado de uma cerca de moitas (no Capão, uma volta de 33 m). Agora cada
+  metro mais longe do toque vale 4 m de caminho: para do lado de quem anda, encostado (no Capão, a 1,4 m do toque)
 - [ ] **[estrutura + arte]** Movimento livre, passo 3: joystick na tela do celular (a [estrutura] faz funcionar, a
   [arte] deixa bonito)
 - [ ] **[mundo]** Mapa e minimapa: minimapa no canto (terreno, você, monstros perto, NPCs e saídas) e o mapa grande na

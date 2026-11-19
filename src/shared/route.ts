@@ -20,6 +20,11 @@ export const PATH_CELL = 0.2;
 export const ROUTE_MARGIN = 0.08;
 /** Destino onde o pé não cabe (tocou numa árvore, numa casa): procura lugar livre até esta distância. */
 const NEAR_GOAL = 3;
+/**
+ * Nesse caso, cada metro a mais longe do toque vale estes metros de caminho: para do lado de quem anda, e não dá a volta
+ * numa cerca de moitas só para chegar uns centímetros mais perto do outro lado (no Capão, a volta era de 33 m).
+ */
+const NEAR_PENALTY = 4;
 const DIAGONAL = PATH_CELL * Math.SQRT2;
 const NO_RECTS: readonly SolidRect[] = [];
 
@@ -149,7 +154,8 @@ export interface Route {
 
 /**
  * Caminho de `from` até `to` (posições "de canto") por onde o pé passa, ou null se não há (lugar fechado, longe
- * demais para a busca). Se o pé não cabe no destino, vai até o lugar livre mais perto dele (até NEAR_GOAL metros).
+ * demais para a busca). Se o pé não cabe no destino, vai até um lugar livre perto dele (até NEAR_GOAL metros): o mais
+ * perto, a não ser que fique do outro lado de algo e custe uma volta grande (NEAR_PENALTY).
  */
 export function findRoute(map: Walkable, from: Point, to: Point, maxNodes = 150_000): Route | null {
   const grid = gridOf(map);
@@ -170,17 +176,24 @@ export function findRoute(map: Walkable, from: Point, to: Point, maxNodes = 150_
   };
   let goalLinks = exact ? linksTo(2) : new Map<number, number>();
   if (goalLinks.size === 0) {
-    // o pé não cabe no destino (ou cabe só num aperto sem ligação): o lugar livre mais perto, até NEAR_GOAL
-    const reach = Math.ceil(NEAR_GOAL / PATH_CELL);
-    const near = cellsAround(goal.x, goal.y, reach).find(([i, j]) => cellFree(map, grid, i, j) && Math.hypot(i * PATH_CELL - goal.x, j * PATH_CELL - goal.y) <= NEAR_GOAL);
-    if (!near) return null;
+    // o pé não cabe no destino (ou cabe só num aperto sem ligação): vale qualquer lugar livre até NEAR_GOAL dele, e a
+    // busca escolhe o que soma menos caminho + NEAR_PENALTY × a distância até o toque
     exact = false;
-    goal = { x: near[0] * PATH_CELL, y: near[1] * PATH_CELL };
-    goalPos = cellPos(near[0], near[1]);
-    goalLinks = new Map([[near[1] * w + near[0], 0]]);
+    const reach = Math.ceil(NEAR_GOAL / PATH_CELL);
+    let nearest: [number, number] | null = null;
+    for (const [i, j] of cellsAround(goal.x, goal.y, reach)) {
+      const d = Math.hypot(i * PATH_CELL - goal.x, j * PATH_CELL - goal.y);
+      if (d > NEAR_GOAL || !cellFree(map, grid, i, j)) continue;
+      nearest ??= [i, j];
+      goalLinks.set(j * w + i, d * NEAR_PENALTY);
+    }
+    if (!nearest) return null;
+    // o mais perto do toque está em linha reta (com folga): vai direto
+    const [ni, nj] = nearest;
+    if (!sweepBlocked(map, start.x, start.y, ni * PATH_CELL, nj * PATH_CELL, ROUTE_MARGIN)) return { points: [cellPos(ni, nj)], exact };
   }
   // 1. reta livre (com folga): vai direto
-  if (!sweepBlocked(map, start.x, start.y, goal.x, goal.y, ROUTE_MARGIN)) return { points: [goalPos], exact };
+  if (exact && !sweepBlocked(map, start.x, start.y, goal.x, goal.y, ROUTE_MARGIN)) return { points: [goalPos], exact };
 
   // 2. A* na grade fina
   grid.search += 1;
@@ -243,9 +256,16 @@ export function findRoute(map: Walkable, from: Point, to: Point, maxNodes = 150_
     }
   }
   if (goalFrom < 0) return null;
+  if (!exact) {
+    // o lugar livre que a busca escolheu é o destino
+    const i = goalFrom % w;
+    const j = (goalFrom - i) / w;
+    goal = { x: i * PATH_CELL, y: j * PATH_CELL };
+    goalPos = cellPos(i, j);
+  }
 
-  // os pontos da grade, do começo ao destino (centros do pé)
-  const centers: Point[] = [goal];
+  // os pontos da grade, do começo ao destino (centros do pé; sem ponto exato, o destino já é o último da grade)
+  const centers: Point[] = exact ? [goal] : [];
   for (let k = goalFrom; k !== SEED; k = cameFrom[k]!) {
     const i = k % w;
     centers.push({ x: i * PATH_CELL, y: ((k - i) / w) * PATH_CELL });
