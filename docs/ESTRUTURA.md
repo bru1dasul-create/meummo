@@ -31,9 +31,13 @@ alternativas quando vejo — sem concordar só para agradar.
   em `data/npcs.json`. Bichos novos, missões e equilíbrio da região: só quando o dono mandar. Fico em correções pequenas.
 - **Proposta mandada à [arte] (19/11, aprovada pelo dono):** o Birim entra no jogo primeiro (com a **barba cheia**,
   pedido do dono: "sem barba ficou pior"); depois só o que incomodar no jogo; em seguida, um teste barato das peças
-  pintadas pelo Nano Banana montadas no esqueleto atual; o dono decide olhando no jogo. **Pode vir pedido para mim:**
-  guardar no personagem qual boneco/aparência o jogador escolheu (passo 7 de `MIGRATIONS`, protocolo e `validate.ts`).
-  Perguntar à [arte] exatamente o que precisa ficar salvo; para só testar, não precisa (chave de teste na view).
+  pintadas pelo Nano Banana montadas no esqueleto atual; o dono decide olhando no jogo. **Resposta da [arte] (19/11,
+  à noite):** para testar, a chave `?birim` é toda dela (`classes.js`, `view-scripts.json`, `arte.ts`), nada meu. Para
+  ficar de vez, só salvar QUAL boneco. Falta o dono escolher, depois de ver o Birim no jogo: **(A)** o Birim vira o herói
+  de todos (nada meu: é a aparência padrão da [arte]) ou **(B)** cada jogador escolhe — aí é meu: passo 7 de
+  `MIGRATIONS`, protocolo 46 e `model` ('heroi' | 'birim'; sem escolha = 'heroi') no `EntityState` e no `ActorInfo`
+  (`addActor`), com teste; onde o jogador escolhe (na criação ou depois) o dono decide. Combinei com ela o nome `model`
+  (inglês, regra 8). O teste do Nano Banana (~US$ 1) ela só faz com o "pode" do dono.
 - **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
   viram padrão (`data/*.json`, as constantes, e o game feel em `DEFAULT_FEEL`, `src/client/novo/feel.ts`).
 - **Pendências pequenas minhas:**
@@ -50,7 +54,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 523 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 524 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)
