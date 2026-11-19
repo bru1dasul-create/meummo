@@ -47,7 +47,12 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   andam com o vento, brilhos do sol, espuma da margem); os ganchos em `props.js` (casa de tábua), `tmj.js` (os tipos
   novos e o poste `estilo: 'lampiao'`), `view.js` (luzes da noite e `world.daylight`) e `world.js` (a água por cima do
   chão). **Regras novas:** cada janela de casa de tábua precisa de 1,8 m de parede (as folhas abertas ficam dos lados);
-  quem chega de outro mapa não pode ficar, na tela, atrás de poste, placa ou tronco (teste). Planta e conceito:
+  quem chega de outro mapa não pode ficar, na tela, atrás de poste, placa ou tronco (teste). **A banca de frutas (19/11,
+  na `main`):** no print, a [estrutura] viu a Dona Iracema em pé na frente da vitrine, parecendo freguesa; agora ela
+  fica atrás da `banca-frutas` (em U, colada na quitanda: `frente` 0,5 m e `lados` 0,3 m; caixotes de fruta, a balança e
+  o pano listrado com a cor do toldo). O miolo (2 × 0,75 m) é dela e fechado: o gerador e o teste dos vãos pulam o par
+  banca–parede, e um teste confere que ninguém entra ali e que dá para comprar de frente (a loja abre a menos de 3 m).
+  O tipo se chama `banca-frutas` porque `banca` já é a banca de jornal do protótipo antigo (props.js). Planta e conceito:
   `docs/referencias/mapa-02-planta.jpg` e `mapa-02-refugio-conceito.jpg`. Os pedaços (b) parque e brejo e (c) orla,
   clube, praça do Saci e barragem ficam para depois (a região 2 da [estrutura] está pausada pelo dono desde 18/11).
 - **Decisão do dono (13/11, noite): pausa para capricho.** Ele achou a arte "ruinzinha" (falta detalhe; a rua não
@@ -323,9 +328,9 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
-- **[estrutura] (combinado em 19/11, a parte pequena):** a Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em
-  (57,5; 50,6) e (49,6; 62,4), os dois olhando para o sul (90); conferi que o corpo cabe e que dá para chegar a 3 m. O
-  pedaço (a) ainda não tem área de bichos.
+- **[estrutura] (feito em 19/11, 987be1e):** a Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`), com o pé em
+  (57,5; 50,35) e (49,6; 62,4). O pedaço (a) ainda não tem área de bichos. Os dois usam o boneco de reserva (o desenho
+  próprio é da [arte], depois do personagem).
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois

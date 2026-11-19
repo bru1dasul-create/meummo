@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { GameMap, type TiledMap } from '../src/shared/map';
+import { TRADE_RANGE } from '../src/shared/constants';
 import { bodyFits, cornerAtFeet } from '../src/shared/movement';
 
 interface TiledObject {
@@ -171,7 +172,7 @@ describe('Mapa 02 (a): a chegada e o Refúgio', () => {
     for (const [x, y, what] of [
       [43.5, 56, 'píer'],
       [57, 52, 'praça (entre a quitanda e a fogueira)'],
-      [57.5, 50.6, 'balcão da quitanda'],
+      [57.5, 51.35, 'frente da banca da quitanda'],
       [49.6, 62.4, 'atracadouro'],
       [66.5, 58.5, 'frente da casa amarela'],
       [62, 65.2, 'frente da casa rosa'],
@@ -230,6 +231,26 @@ describe('Mapa 02 (a): a chegada e o Refúgio', () => {
     expect(prop(shop, 'toldo')).toBeTypeOf('string');
   });
 
+  it('a Dona Iracema fica atrás da banca de frutas (em U, colada na quitanda): ninguém entra lá, o corpo dela cabe e dá para comprar de frente', () => {
+    // (19/11: no print, a [estrutura] viu a Dona Iracema em pé na frente da vitrine, parecendo freguesa)
+    const npcs = JSON.parse(readFileSync('data/npcs.json', 'utf8')) as Record<string, { nome: string; mapa: string; x: number; y: number }>;
+    const iracema = Object.values(npcs).find((n) => n.mapa === 'guarapiranga' && n.nome === 'Dona Iracema')!;
+    const banca = layer('cenario').find((o) => o.type === 'banca-frutas')!;
+    const b = rectOf(banca);
+    const [f, l] = [Number(prop(banca, 'frente')), Number(prop(banca, 'lados'))];
+    expect(b.y0).toBeCloseTo(rectOf(named('cenario', 'Quitanda da Dona Iracema')).y1, 6);
+    // o pé dela no miolo, entre os dois lados e atrás da frente (o corpo tem 0,6 × 0,4)
+    expect(iracema.x - 0.3 >= b.x0 + l && iracema.x + 0.3 <= b.x1 - l && iracema.y <= b.y1 - f && iracema.y - 0.4 >= b.y0).toBe(true);
+    const corner = cornerAtFeet(iracema.x, iracema.y);
+    expect(bodyFits(GameMap.fromTiled(map as unknown as TiledMap, 'guarapiranga'), corner.x, corner.y)).toBe(true);
+    // a frente e os dois lados seguram o pé, e o miolo é fechado: ninguém chega lá (por isso não tem como entalar)
+    for (const [x, y] of [[iracema.x, b.y1 - f / 2], [b.x0 + l / 2, b.y0 + 0.3], [b.x1 - l / 2, b.y0 + 0.3]] as const) expect(footFree(x, y), `banca em (${x}, ${y})`).toBe(false);
+    for (let x = b.x0 + l + 0.35; x <= b.x1 - l - 0.35; x += 0.25) expect(reach(x, b.y0 + 0.35), `miolo em x = ${x}`).toBe(false);
+    // quem vai comprar para na frente da banca, a pouco mais de 1 m dela (o jogo leva o herói para o lugar livre mais perto)
+    expect(reachNear(iracema.x, b.y1 + 0.25, 0.25)).toBe(true);
+    expect(b.y1 + 0.45 - iracema.y).toBeLessThan(TRADE_RANGE);
+  });
+
   it('a chegada e o Refúgio são zonas seguras, e quem desmaia aqui acorda no Refúgio', () => {
     const game = GameMap.fromTiled(map as unknown as TiledMap, 'guarapiranga');
     const safe = (x: number, y: number) => game.safeAreas.some((s) => x >= s.x0 && x <= s.x1 && y >= s.y0 && y <= s.y1);
@@ -274,6 +295,9 @@ describe('Mapa 02 (a): a chegada e o Refúgio', () => {
       for (let j = i + 1; j < list.length; j++) {
         const [a, b] = [list[i]!, list[j]!];
         if ((a.type === 'mata-fechada' || a.type === 'agua') && (b.type === 'mata-fechada' || b.type === 'agua')) continue;
+        // o miolo da banca da Dona Iracema, entre a frente dela e a parede da quitanda, é fechado pelos lados: ninguém
+        // entra (o teste da banca confere), então não entala
+        if ([a.type, b.type].includes('banca') && [a.type, b.type].includes('casa')) continue;
         const dx = Math.max(0, b.x0 - a.x1, a.x0 - b.x1);
         const dy = Math.max(0, b.y0 - a.y1, a.y0 - b.y1);
         if ((dx > 0 && dy > 0) || dx + dy <= 0.3 || dx + dy >= 1.2) continue;

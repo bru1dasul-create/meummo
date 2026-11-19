@@ -8,12 +8,13 @@
 //  - os barcos (`barco`: `tipo` 'canoa' ou 'voadeira', `cor`, `olhando` = para onde a proa aponta, `afundado`);
 //  - os barris (`barril`: bombona azul, tambor de lata ou barril de madeira, sorteado), o ponto de ônibus da
 //    chegada (`ponto-onibus`, com `placa`), as redes de pesca secando (`rede`) e o lampião de poste de madeira
-//    (`poste-praca` com `estilo: 'lampiao'`, que vira o tipo `lampiao`).
+//    (`poste-praca` com `estilo: 'lampiao'`, que vira o tipo `lampiao`);
+//  - a banca de frutas da Dona Iracema (`banca-frutas`, em U, com ela no miolo): caixotes de fruta e a balança.
 //   PD.refugio.front(ctx, b, W, H, r)       a frente (+y) da casa de tábua (props.js, House)
 //   PD.refugio.side(ctx, b, D, H, r)        o lado (+x)
 //   PD.refugio.roof(ctx, cam, b, z0, ink)   o telhado de zinco (por cima da caixa da casa)
 //   PD.refugio.windows(b)                   onde ficam as janelas da frente (para a luz de dentro, de noite: view.js)
-//   PD.city.small[tipo]                     barco, barril, ponto-onibus, rede, lampiao
+//   PD.city.small[tipo]                     barco, barril, ponto-onibus, rede, lampiao, varal, banca-frutas
 (function (PD) {
   'use strict';
   const M = PD.math;
@@ -1230,6 +1231,262 @@
         });
         t += wt + 0.03 + rnd() * 0.05;
       }
+    },
+  };
+
+  // ------------------------------------------------------------------ a banca de frutas da Dona Iracema
+  // (19/11: no print, a Dona Iracema parecia freguesa, em pé na frente da vitrine; com a banca na frente, ela fica atrás
+  // do balcão e o freguês compra do outro lado)
+  const FRUIT = {
+    laranja: { color: '#f08a24', R: 4.6 },
+    tomate: { color: '#c9392b', R: 4.2 },
+    limao: { color: '#7fae3a', R: 3.6 },
+    maracuja: { color: '#d9b23a', R: 4.8 },
+    abacate: { color: '#5f7f2f', R: 5.2 },
+  };
+  /** Uma fruta redonda com contorno e brilho; (x, y, z) é onde ela encosta embaixo, em cm do mundo. */
+  function fruitBall(ctx, cam, x, y, z, R, color, ink) {
+    const q = cam.p({ x, y, z: z + R });
+    const r = R * cam.zoom;
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, r + ink * 0.9, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, r, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath();
+    ctx.arc(q.x - r * 0.35, q.y - r * 0.35, r * 0.35, 0, M.TAU);
+    ctx.fill();
+  }
+  /** O caixote de feira (`w` × `dp` cm, centro em cx, cy) em cima da banca, cheio de `kind`. */
+  function crate(ctx, cam, cx, cy, z, w, dp, kind, rnd, ink) {
+    const P = (x, y, zz) => cam.p({ x, y, z: zz });
+    const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - dp / 2, y1 = cy + dp / 2;
+    const hc = 14;
+    H.box(ctx, cam, x0, x1, y0, y1, z, z + hc, { front: '#c99a62', side: '#a87c4a', top: '#4a3626' }, ink);
+    // a fresta entre as duas tábuas da frente e do lado
+    ctx.strokeStyle = 'rgba(60, 36, 14, 0.55)';
+    ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+    const a = P(x0, y1, z + hc * 0.5), b = P(x1, y1, z + hc * 0.5), c = P(x1, y0, z + hc * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.stroke();
+    const top = z + hc;
+    if (kind === 'banana') {
+      // as pencas deitadas: as bananas lado a lado (meias-luas amarelas com a pontinha escura)
+      ctx.lineCap = 'round';
+      const R = 8.5 * cam.zoom;
+      for (let k = 0; k < 2; k++) {
+        const q = P(x0 + w * (0.28 + k * 0.44), cy + (rnd() - 0.5) * dp * 0.2, top + 2);
+        for (let j = 0; j < 4; j++) {
+          const bx = q.x + (j - 1.5) * 4.6 * cam.zoom, by = q.y + Math.abs(j - 1.5) * 1.2 * cam.zoom + R * 0.5;
+          const a0 = -2.3 + (j - 1.5) * 0.14 + k * 0.15, a1 = a0 + 1.2;
+          ctx.beginPath();
+          ctx.arc(bx, by, R, a0, a1);
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 4.2 * cam.zoom + ink * 1.6;
+          ctx.stroke();
+          ctx.strokeStyle = j % 2 ? '#e8c23a' : '#f2d553';
+          ctx.lineWidth = 4.2 * cam.zoom;
+          ctx.stroke();
+          ctx.fillStyle = '#4a3a1e';
+          for (const a of [a0, a1]) {
+            ctx.beginPath();
+            ctx.arc(bx + Math.cos(a) * R, by + Math.sin(a) * R, 1.3 * cam.zoom, 0, M.TAU);
+            ctx.fill();
+          }
+        }
+      }
+      return;
+    }
+    if (kind === 'abacaxi') {
+      // dois abacaxis em pé, com a coroa
+      for (const fx of [0.3, 0.7]) {
+        const q = P(x0 + w * fx, cy, top + 7);
+        const rx = 5.6 * cam.zoom, ry = 8.5 * cam.zoom;
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx + ink, ry + ink, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#d8a23a';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx, ry, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(120, 80, 20, 0.6)';
+        ctx.lineWidth = Math.max(1, 1.1 * cam.zoom);
+        for (let j = -2; j <= 2; j++) {
+          ctx.beginPath();
+          ctx.moveTo(q.x - rx * 0.9, q.y + j * ry * 0.32);
+          ctx.lineTo(q.x + rx * 0.9, q.y + j * ry * 0.32 - ry * 0.3);
+          ctx.stroke();
+        }
+        for (let j = 0; j < 5; j++) {
+          const ang = -Math.PI / 2 + (j - 2) * 0.42;
+          const s = 5.5 * cam.zoom;
+          leaf(ctx, q.x + Math.cos(ang) * s, q.y - ry * 0.85 + Math.sin(ang) * s, s, ang, j % 2 ? '#4f8f3a' : '#3f7a30');
+        }
+      }
+      return;
+    }
+    if (kind === 'mamao') {
+      // os mamões deitados, amarelo puxando para o verde
+      for (const fx of [0.22, 0.5, 0.78]) {
+        const q = P(x0 + w * fx, cy + (rnd() - 0.5) * 4, top + 4);
+        const rx = 4.6 * cam.zoom, ry = 8.5 * cam.zoom;
+        ctx.save();
+        ctx.translate(q.x, q.y);
+        ctx.rotate(0.5);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx + ink, ry + ink, 0, 0, M.TAU);
+        ctx.fill();
+        const g = ctx.createLinearGradient(0, -ry, 0, ry);
+        g.addColorStop(0, '#9fb04a');
+        g.addColorStop(0.45, '#f2b45a');
+        g.addColorStop(1, '#e8963a');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(-rx * 0.35, -ry * 0.2, rx * 0.25, ry * 0.45, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+      return;
+    }
+    // as frutas redondas: uma camada que enche o caixote e um montinho no meio
+    const F = FRUIT[kind] || FRUIT.laranja;
+    const R = F.R;
+    const nx = Math.max(2, Math.floor((w - 4) / (R * 2.1)));
+    const ny = Math.max(2, Math.floor((dp - 4) / (R * 2.1)));
+    const pts = [];
+    for (let i = 0; i < nx; i++) {
+      for (let j = 0; j < ny; j++) pts.push([x0 + 2 + (i + 0.5) * ((w - 4) / nx) + (rnd() - 0.5) * 1.5, y0 + 2 + (j + 0.5) * ((dp - 4) / ny) + (rnd() - 0.5) * 1.5, top - R * 0.6]);
+    }
+    for (let k = 0; k < Math.max(2, Math.floor(nx * ny * 0.3)); k++) pts.push([cx + (rnd() - 0.5) * w * 0.45, cy + (rnd() - 0.5) * dp * 0.35, top + R * 0.5]);
+    pts.sort((p, q) => p[0] + p[1] + p[2] * 0.7 - (q[0] + q[1] + q[2] * 0.7));
+    for (const [x, y, zz] of pts) fruitBall(ctx, cam, x, y, zz, R, M.shade(F.color, (rnd() - 0.5) * 0.16), ink);
+  }
+  /** A balança de feira: a caixa vermelha com o mostrador virado para o freguês e o prato de alumínio em cima. */
+  function scale(ctx, cam, cx, cy, z, ink) {
+    H.box(ctx, cam, cx - 11, cx + 11, cy - 9, cy + 9, z, z + 18, { front: '#c0392b', side: '#9a2e22', top: '#d9584a' }, ink);
+    H.onWall(ctx, cam, { x: cx - 11, y: cy + 9, z: z + 18 }, { x: 1, y: 0 }, () => {
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(11, 8, 6.8, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#f4f1e6';
+      ctx.beginPath();
+      ctx.arc(11, 8, 5.6, 0, M.TAU);
+      ctx.fill();
+      ctx.strokeStyle = '#c0392b';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(11, 8);
+      ctx.lineTo(14, 4.5);
+      ctx.stroke();
+    });
+    const P = (x, y, zz) => cam.p({ x, y, z: zz });
+    const t = P(cx, cy, z + 25);
+    inkLine(ctx, [P(cx, cy, z + 18), t], '#9aa0a3', 2.6 * cam.zoom, ink);
+    const rx = 13 * cam.zoom, ry = 13 * cam.zoom * cam.sinP;
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, rx + ink, ry + ink, 0, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = '#c3c9cc';
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, rx, ry, 0, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(t.x - rx * 0.3, t.y - ry * 0.25, rx * 0.35, ry * 0.3, 0, 0, M.TAU);
+    ctx.fill();
+  }
+  /** O pano listrado pregado na beirada do tampo (as cores do toldo), com a barra em ondas. Na parede da frente, em cm. */
+  function skirt(ctx, L, colors) {
+    const drop = 40;
+    const path = new Path2D();
+    path.moveTo(0, 0);
+    path.lineTo(L, 0);
+    path.lineTo(L, drop);
+    for (let x = L; x > 0.1; x -= 20) path.quadraticCurveTo(x - 10, drop + 8, Math.max(0, x - 20), drop);
+    path.closePath();
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 4;
+    ctx.stroke(path);
+    ctx.save();
+    ctx.clip(path);
+    for (let x = 0, k = 0; x < L; x += 15, k++) {
+      ctx.fillStyle = colors[k % 2];
+      ctx.fillRect(x, 0, 15, drop + 10);
+    }
+    // as dobras, a sombra do tampo em cima e a barra encardida
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    for (let x = 7; x < L; x += 30) ctx.fillRect(x, 0, 6, drop + 10);
+    const g = ctx.createLinearGradient(0, 0, 0, 14);
+    g.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, L, 14);
+    ctx.fillStyle = 'rgba(90, 70, 40, 0.18)';
+    ctx.fillRect(0, drop - 8, L, 18);
+    ctx.restore();
+  }
+  /**
+   * A banca (`banca-frutas`), em U: a frente para o freguês e os dois lados até a parede da quitanda; quem vende fica no
+   * miolo. `front` e `side`: a fundura da frente e a largura dos lados (cm); `cloth`: as cores do pano da frente.
+   */
+  small['banca-frutas'] = {
+    height: (d) => (d.h || 90) + 30,
+    blocks: 0,
+    shadow: (p, cam, d) => {
+      const f = d.front || 50, s = d.side || 30, yb = d.y1 - f, h = (d.h || 90) * 0.8;
+      H.boxShadow(p, cam, d.x0, d.x1, yb, d.y1, h);
+      H.boxShadow(p, cam, d.x0, d.x0 + s, d.y0, yb, h);
+      H.boxShadow(p, cam, d.x1 - s, d.x1, d.y0, yb, h);
+    },
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + 20, d.y0 - 20, d.y1 + 20, z0, z0 + (d.h || 90) + 50, 14),
+    paint(ctx, cam, d, z0, ink) {
+      const rnd = seeded(d.x0, d.y0, 7121);
+      const h = d.h || 90, f = d.front || 50, s = d.side || 30;
+      const yb = d.y1 - f;
+      const zt = z0 + h;
+      const WOOD = { front: '#9c7045', side: '#7c5634', top: '#bf9360' };
+      const SLAB = { front: '#b98a58', side: '#9a7046', top: '#c89c68' };
+      // um pedaço: o corpo de tábuas (as faces que a câmera vê) e o tampo com a beirada para fora (menos do lado da parede)
+      const piece = (x0, x1, y0, y1, faceY) => {
+        H.box(ctx, cam, x0, x1, y0, y1, z0, zt - 6, WOOD, ink);
+        if (faceY) {
+          H.onWall(ctx, cam, { x: x0, y: y1, z: zt - 6 }, { x: 1, y: 0 }, () => {
+            planks(ctx, x1 - x0, h - 6, '#a57b4c', rnd);
+            if (d.cloth) skirt(ctx, x1 - x0, d.cloth);
+          });
+        }
+        H.onWall(ctx, cam, { x: x1, y: y1, z: zt - 6 }, { x: 0, y: -1 }, () => planks(ctx, y1 - y0, h - 6, '#8a6440', rnd));
+        H.box(ctx, cam, x0 - 3, x1 + 3, y0 <= d.y0 ? y0 : y0 - 3, y1 + 3, zt - 6, zt, SLAB, ink);
+      };
+      // (a câmera olha do sudeste: o lado de lá, o de cá e, por último, a frente)
+      const back = yb - d.y0;
+      piece(d.x0, d.x0 + s, d.y0, yb, false);
+      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, 'limao', rnd, ink);
+      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, 'maracuja', rnd, ink);
+      piece(d.x1 - s, d.x1, d.y0, yb, false);
+      crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, 'tomate', rnd, ink);
+      scale(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.74, zt, ink);
+      piece(d.x0, d.x1, yb, d.y1, true);
+      const kinds = ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'];
+      const n = Math.max(2, Math.min(5, Math.floor((d.x1 - d.x0 - 20) / 56)));
+      const cw = 46, gap = (d.x1 - d.x0 - n * cw) / (n + 1);
+      for (let k = 0; k < n; k++) crate(ctx, cam, d.x0 + gap + cw / 2 + k * (cw + gap), yb + f / 2, zt, cw, Math.min(36, f - 10), kinds[k % kinds.length], rnd, ink);
     },
   };
 

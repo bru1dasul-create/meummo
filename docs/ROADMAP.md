@@ -593,7 +593,8 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
 - [x] **[mundo]** Mapa 02 (Guarapiranga), pedaço (a), no jogo (19/11, pedido do dono: "desenhe o mapa e coloca no
   jogo"; na main): a chegada pela Estrada do M'Boi Mirim (a estrada do sul do Capão vai até a beira do mapa, sem a
   barreira) e o Refúgio na beira da represa, desenhados pelo [mundo]: casas de tábua com telhado de zinco enferrujado,
-  a quitanda com o toldo, canoas, voadeira e barco afundado, barris, redes, varais, lampiões e janelas que acendem à
+  a quitanda com o toldo e a banca de frutas (a Dona Iracema fica atrás dela), canoas, voadeira e barco afundado,
+  barris, redes, varais, lampiões e janelas que acendem à
   noite e a água mexendo (ondinhas com o vento, brilhos, espuma na margem). Mapa `guarapiranga` (120 × 100 m)
 - [x] **[estrutura]** (19/11, `iracema_guarapiranga` e `barqueiro` em data/npcs.json; conferido no PC e no celular) A Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em (57,5; 50,6) e (49,6; 62,4),
   os dois olhando para o sul (combinado em 19/11: só esta parte pequena, a região 2 segue pausada)

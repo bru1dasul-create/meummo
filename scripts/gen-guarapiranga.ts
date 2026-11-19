@@ -113,8 +113,14 @@ const HOUSES: House[] = [
 /** Altura das casas até o beiral, e a do telhado de zinco por cima (para a conta da câmera). */
 const HOUSE_H = 3;
 const ROOF_H = 1.3;
-/** Onde fica a Dona Iracema: no balcão da quitanda, do lado da praça (o NPC é da [estrutura], em data/npcs.json). */
-const IRACEMA = { x: 57.5, y: 50.6 };
+/** Onde fica a Dona Iracema: atrás da banca de frutas, na frente da quitanda (o pé dela no data/npcs.json da [estrutura]). */
+const IRACEMA = { x: 57.5, y: 50.35 };
+/**
+ * A banca de frutas dela, em U, encostada na parede da quitanda (19/11: no print, a [estrutura] viu a Dona Iracema em pé
+ * na frente da vitrine, parecendo freguesa): a frente de 0,5 m para quem compra e os dois lados de 0,3 m até a parede.
+ * O miolo (2 × 0,75 m) é dela: fechado, ninguém entra. Da frente até o banco da fogueira ficam 1,4 m livres.
+ */
+const BANCA = { x0: 56.2, x1: 58.8, y0: 49.8, y1: 51.05, frente: 0.5, lados: 0.3 };
 /** O Barqueiro, no atracadouro, do lado do barco dele. */
 const BARQUEIRO = { x: 49.6, y: 62.4 };
 /** A fogueira da praça, com bancos em volta. */
@@ -372,6 +378,15 @@ const CARGO: [string, number, number, number, number][] = [
   ['barril', 68.4, 69, 57, 57.6], // na frente da casa amarela, colado nela e na beira leste
 ];
 for (const [type, x0, x1, y0, y1] of CARGO) cenario.push(rect(type, x0, x1, y0, y1, { altura: type === 'barril' ? 0.9 : 0.7 }));
+// a banca de frutas da Dona Iracema, colada na parede da quitanda, com ela no miolo (o corpo dela, 0,6 × 0,4, cabe lá)
+{
+  const shop = HOUSES.find((h) => h.extra && h.extra.comercio === 'quitanda')!;
+  const [ix0, ix1] = [BANCA.x0 + BANCA.lados, BANCA.x1 - BANCA.lados];
+  if (Math.abs(BANCA.y0 - shop.y1) > 1e-9 || BANCA.x0 < shop.x0 || BANCA.x1 > shop.x1) throw new Error('A banca da Dona Iracema tem que ficar colada na frente da quitanda.');
+  if (IRACEMA.x - 0.3 < ix0 || IRACEMA.x + 0.3 > ix1 || IRACEMA.y - 0.4 < BANCA.y0 || IRACEMA.y > BANCA.y1 - BANCA.frente) throw new Error('A Dona Iracema não cabe no miolo da banca.');
+  // (sem nome: o nome vira rótulo na janela do M, e lá já tem o da quitanda)
+  cenario.push(box('banca-frutas', BANCA, { altura: 0.9, frente: BANCA.frente, lados: BANCA.lados, pano: '#e2552f' }));
+}
 // os barcos atracados (o do Barqueiro é a voadeira), e uns afundados na represa
 const BOATS: [number, number, number, number, Record<string, string | number | boolean>][] = [
   [47.6, 52.2, 63.8, 65.3, { tipo: 'voadeira', cor: '#d9d2c3', olhando: 0 }],
@@ -474,6 +489,14 @@ for (const s of cenario) {
   else if (s.type === 'placa' && p.poste) colisao.push(block('placa', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.2 }));
   else if (s.type === 'barril' || s.type === 'caixote') colisao.push(box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'rede' || s.type === 'varal') colisao.push(box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'banca-frutas') {
+    // em U: a frente e os dois lados (o miolo, onde fica a Dona Iracema, é chão livre e fechado)
+    const [f, l, alto] = [Number(p.frente), Number(p.lados), { bloqueiaTiro: false, altura: Number(p.altura) }];
+    const yb = round(r.y1 - f);
+    colisao.push(box('banca', { x0: r.x0, x1: r.x1, y0: yb, y1: r.y1 }, alto));
+    colisao.push(box('banca', { x0: r.x0, x1: round(r.x0 + l), y0: r.y0, y1: yb }, alto));
+    colisao.push(box('banca', { x0: round(r.x1 - l), x1: r.x1, y0: r.y0, y1: yb }, alto));
+  }
 }
 // a água: faixas que o pé não atravessa (o deque e o píer ficam de fora)
 colisao.push(...waterStrips(isWater, 0, W, 0, H));
@@ -493,7 +516,11 @@ colisao.push(...waterStrips(isWater, 0, W, 0, H));
   checkWedges(
     colisao.filter(playable),
     MIN_GAP,
-    (a, b) => (a.type === 'mata-fechada' || a.type === 'agua') && (b.type === 'mata-fechada' || b.type === 'agua'),
+    (a, b) =>
+      ((a.type === 'mata-fechada' || a.type === 'agua') && (b.type === 'mata-fechada' || b.type === 'agua')) ||
+      // o miolo da banca da Dona Iracema, entre a frente dela e a parede da quitanda: os lados fecham, ninguém entra
+      // (o teste confere), então não tem como entalar
+      ([a.type, b.type].includes('banca') && [a.type, b.type].includes('casa')),
   );
 }
 

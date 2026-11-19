@@ -360,6 +360,9 @@
       } else if (k === 'barco') {
         // o Refúgio (refugio.js): `tipo` ('canoa', 'voadeira'), `cor`, `olhando` (para onde a proa aponta), `afundado`
         map.props.push({ kind: 'barco', ...rect(o), boat: pr.tipo || 'canoa', color: pr.cor || null, angle: pr.olhando || 0, sunk: !!pr.afundado });
+      } else if (k === 'banca-frutas') {
+        // a banca de frutas em U da quitanda (refugio.js): `frente` e `lados` (m) e `pano` (a cor do pano listrado)
+        map.props.push({ kind: k, ...rect(o), h: (pr.altura || 0.9) * 100, front: (pr.frente || 0.5) * 100, side: (pr.lados || 0.3) * 100, cloth: pr.pano ? [pr.pano, '#fff4dc'] : null });
       } else if (k === 'barril' || k === 'rede' || k === 'varal' || k === 'ponto-onibus') {
         // o barril (bombona, tambor ou de madeira, sorteado), a rede de pesca secando e o ponto de ônibus (`placa`)
         map.props.push({ kind: k, ...rect(o), h: pr.altura != null ? pr.altura * 100 : null, color: pr.cor || null, sign: pr.placa || '' });
