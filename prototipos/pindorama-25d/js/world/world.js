@@ -605,6 +605,7 @@
       if (this._stale) this._buildStale(view);
       mark('chao');
       // a água mexendo por cima do chão pintado (agua.js), antes do deque e de quem fica em pé
+      if (PD.agua && PD.agua.reflect) PD.agua.reflect(ctx, this, t);
       if (PD.agua) PD.agua.live(ctx, this, t);
       if (PD.vida) PD.vida.ground(ctx, this, t);
       this._drawAwakening(ctx);

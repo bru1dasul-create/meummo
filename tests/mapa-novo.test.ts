@@ -13,7 +13,7 @@ import { advanceShot, makeShot } from '../src/shared/combat';
 import { NPC_BUSY_MS, NPC_PAUSE_MIN_MS, TICK_MS } from '../src/shared/constants';
 import { DX, DY, RIGHT } from '../src/shared/dir';
 import { GameMap, type TiledMap, type TiledObject } from '../src/shared/map';
-import { BODY_HALF_W, bodyFits, bodySpotIn, bodyWalkable, degreesOfDir, feetAt, footTile, steerDegrees, walkSlice } from '../src/shared/movement';
+import { BODY_HALF_W, bodyFits, bodySpotIn, bodyWalkable, cornerAtFeet, degreesOfDir, feetAt, footTile, steerDegrees, walkSlice } from '../src/shared/movement';
 import { findPath } from '../src/shared/pathfind';
 import { FakeClock, FakeConn, tiledFromAscii } from './helpers';
 
@@ -333,6 +333,36 @@ describe('mapa do formato novo: o mundo', () => {
     expect(join('capao', false)).toBe('refugio');
     expect(join('capao', true)).toBe('capao');
     expect(join('refugio', false)).toBe('refugio');
+  });
+});
+
+describe('mapa do formato novo: voltar onde saiu', () => {
+  // uma moita (a caixa dela) encostada no lugar onde Ana saiu do jogo, e um bloco grande do outro lado do mapa
+  const map = GameMap.fromTiled(metricMap({ solids: [rect(9.36, 5.66, 1.89, 1.89), rect(13, 0, 7, 12)] }), 'teste');
+  const join = (x: number, y: number) => {
+    const world = new World(map, { now: new FakeClock().now, random: () => 0 });
+    const character = { id: 1, name: 'Ana', level: 1, xp: 0, hp: null, zone: 'teste', x, y, dir: 2 as const, look: 1, inventory: null };
+    const joined = world.join('Ana', new FakeConn(), { character: character as never, created: false });
+    if (!joined.ok) throw new Error(joined.reason);
+    return joined.player;
+  };
+
+  it('encostado numa moita (nenhum lugar fixo do tile cabe): volta do lado dela, não no nascimento', () => {
+    // Ana estava com o pé em (10,6; 5,2), colada na moita: o servidor guardou o tile (10, 5)
+    const stood = cornerAtFeet(10.6, 5.2);
+    expect(bodyFits(map, stood.x, stood.y)).toBe(true);
+    expect(footTile(stood.x, stood.y)).toEqual({ x: 10, y: 5 });
+    expect(bodySpotIn(map, 10, 5)).toBeNull(); // antes, isto mandava para o nascimento (3, 6)
+    const ana = join(10, 5);
+    const feet = feetAt(ana.fx, ana.fy);
+    expect(bodyFits(map, ana.fx, ana.fy)).toBe(true);
+    expect(Math.hypot(feet.x - 10.6, feet.y - 5.2)).toBeLessThan(0.75);
+  });
+
+  it('se o lugar sumiu (virou parede no mapa novo), volta no nascimento', () => {
+    const ana = join(16, 5); // dentro do bloco grande: nada livre a menos de 1,5 m
+    const feet = feetAt(ana.fx, ana.fy);
+    expect(Math.hypot(feet.x - 3, feet.y - 6)).toBeLessThan(1);
   });
 });
 
