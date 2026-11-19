@@ -118,6 +118,22 @@ describe('rota do "andar até" pelo tamanho do pé', () => {
     expect(c.y).toBeGreaterThan(9.5);
   });
 
+  it('tocou dentro de uma cerca de moitas: para do lado de quem anda, sem dar a volta nela', () => {
+    // a cerca: 2 m de grossura, de y 0 a 16 (a passagem para o outro lado é lá embaixo). O toque cai a 0,4 m do lado
+    // de lá e a 1,6 m do lado de cá: antes, ia até o lado de lá, contornando a cerca inteira
+    const map = mapWith([solid(10, 0, 2, 16)]);
+    const { pose, stuck, exact, slices } = walk(map, at(15, 5), at(10.4, 5));
+    expect(exact).toBe(false);
+    expect(stuck).toBe(0);
+    const c = footCenter(pose.x, pose.y);
+    expect(c.x).toBeGreaterThan(12); // do lado de cá, encostado na cerca
+    expect(c.x).toBeLessThan(12.6);
+    expect(slices).toBeLessThan(30); // ~3 m, e não a volta de ~30 m
+    // quem está do lado de lá continua indo para o lado de lá
+    const other = walk(map, at(5, 5), at(11.6, 5));
+    expect(footCenter(other.pose.x, other.pose.y).x).toBeLessThan(10);
+  });
+
   it('lugar fechado: diz que não dá, sem demorar', () => {
     const map = mapWith([solid(12, 6, 6, 0.5), solid(12, 11.5, 6, 0.5), solid(12, 6, 0.5, 6), solid(17.5, 6, 0.5, 6)]);
     const t0 = performance.now();

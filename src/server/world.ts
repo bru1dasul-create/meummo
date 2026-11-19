@@ -187,6 +187,8 @@ const ITEM_TOLERANCE_MS = 100;
 const ARRIVAL_PROTECTION_MS = 2000;
 /** Quem acabou de entrar, chegar de outro mapa (depois de carregar) ou acordar: tempo até os monstros notarem. */
 const NOTICE_GRACE_MS = 3000;
+/** Mapa do formato novo: até onde procurar lugar livre para quem volta ao jogo (metros, a partir do meio do tile salvo). */
+const RESTORE_REACH = 1.5;
 /** Rastro de fogo: a primeira queimada demora um pouquinho (dá para sair), depois queima a cada FIRE_PULSE_MS. */
 const FIRE_FIRST_PULSE_MS = 350;
 const FIRE_PULSE_MS = 500;
@@ -643,7 +645,9 @@ export class World {
     // A zona é guardada pelo id do mapa (saves antigos guardavam o nome, que também vale).
     if ((saved.zone !== this.map.id && saved.zone !== this.map.name) || x === null || y === null) return null;
     // Formato novo: volta no lugar do tile onde o pé cabe (pode ser colado num tronco, que a grade dos monstros fecha).
-    if (this.map.metric) return bodySpotIn(this.map, x, y);
+    // Encostado numa moita, árvore ou parede, nenhum lugar fixo do tile cabe: o lugar livre mais perto do meio dele
+    // (onde o pé estava, a menos de 0,75 m), em vez de mandar para o nascimento.
+    if (this.map.metric) return bodySpotIn(this.map, x, y) ?? nearestBodySpot(this.map, x + 0.5, y + 0.7, RESTORE_REACH);
     return this.map.isWalkable(x, y) && this.map.isReachable(x, y) ? { x, y } : null;
   }
 
