@@ -386,7 +386,7 @@ para seguir, decidimos juntos por qual lado ir primeiro.**
    `docs/referencias/chao-pintado-alvo.jpg`. **O chão pintado da [arte] está na `main` (19/11)**: `js/world/chao.js`
    (`PAINT` no alto é onde se mexe nas cores), `ground.js` chama os pintores, as pedras em `props.js` (`_rock`); as
    receitas e as lições estão na seção dela no `docs/ARTE.md` (ferramentas `chao-prancha.cjs`, `chao-foto.cjs` e
-   `chao-custo.cjs`; o painel só aceita x e y inteiros no "levar"). Medido no jogo: 14,4 ms por pedaço de chão (antes
+   `chao-custo.cjs`; no "levar" do painel, x e y são o pé em metros, com fração: corrigido pela [estrutura] em 19/11, 6227e40). Medido no jogo: 14,4 ms por pedaço de chão (antes
    14,9; pior 44,9). **Mais perto do alvo (19/11, na `main`):** a grama com a demão oliva (`wash`), o sol sem o limão, mais
    grão, uma camada de pintas claras (`speck`) e as folhinhas redondas e mais numerosas (`round`, `n: 8`); a trilha com
    dois sulcos escuros. Conferi pelos números contra o alvo (receita: a média e a saturação dos verdes e das terras e o
