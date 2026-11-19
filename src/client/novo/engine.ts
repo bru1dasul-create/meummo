@@ -2165,6 +2165,8 @@ class NewWorld implements NewWorldGame {
     const old = this.armed ? this.classSlotOf(this.armed) : null;
     this.armed = id;
     if (!id) this.combat.setAim(null);
+    // a view desenha o brilho na flecha da mão (o mesmo tiro que voa depois: a Flecha Ancestral é 'ancestral')
+    this.view?.armed?.(this.myId, id ? 'ancestral' : null);
     const slot = id ? this.classSlotOf(id) : null;
     for (const el of document.querySelectorAll<HTMLElement>('#actions .action')) {
       // o anel verde pulsando é da [arte] (style.css, pelo `data-armed`)
