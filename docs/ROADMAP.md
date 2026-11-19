@@ -99,6 +99,17 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   avisa e larga a rota (o toque seguinte funciona). No celular, um toque rápido na área do joystick também anda
 - [ ] **[mundo]** Movimento livre, passo 2: colisão do tamanho de cada objeto (tronco, poste, cesto, caixote), dita
   no tileset; a [estrutura] lê e usa
+- [ ] **[mundo]** Trava invisível nas moitas (print do dono, 19/11): a caixa `mata-fechada` é um quadrado de 1,8 × o
+  raio da moita, e as pontas passam ~30 cm das folhas. No fim da calçada oeste da rua leste do Capão (x 87–88, y ≈ 80),
+  a ponta da moita 2522 cobre o fim da calçada e o meio-fio: o personagem para a ~0,5 m das folhas. Proposta da
+  [estrutura], testada só no computador de teste: quadrado de 1,45 × o raio (as pontas na beirada das folhas; a cerca
+  de moitas continua fechada). Em `gen-capao.ts` e `gen-guarapiranga.ts` (pedido mandado ao [mundo])
+- [ ] **[estrutura]** Voltar perto de onde saiu: quem sai do jogo encostado numa moita, árvore ou parede volta na
+  Clareira (o servidor guarda o tile do pé e só procura lugar dentro dele; ~1% dos lugares do Capão, achado em 19/11).
+  Procurar o lugar livre mais perto, até ~1,5 m
+- [ ] **[estrutura]** "Andar até" um ponto dentro de uma moita ou árvore: hoje vai até o lugar livre mais perto em
+  linha reta, mesmo que fique do outro lado de uma cerca de moitas (no teste, deu uma volta de 33 m). Preferir o lugar
+  do lado de quem anda
 - [ ] **[estrutura + arte]** Movimento livre, passo 3: joystick na tela do celular (a [estrutura] faz funcionar, a
   [arte] deixa bonito)
 - [ ] **[mundo]** Mapa e minimapa: minimapa no canto (terreno, você, monstros perto, NPCs e saídas) e o mapa grande na

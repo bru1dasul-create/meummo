@@ -40,8 +40,18 @@ alternativas quando vejo — sem concordar só para agradar.
   (inglês, regra 8). O teste do Nano Banana (~US$ 1) ela só faz com o "pode" do dono.
 - **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
   viram padrão (`data/*.json`, as constantes, e o game feel em `DEFAULT_FEEL`, `src/client/novo/feel.ts`).
-- **Pendência pequena minha:** a velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático
-  confirma o servidor; conferir com caminho livre). O "levar" do painel com fração ficou pronto (19/11, diário).
+- **Pendências pequenas minhas** (esperando o "pode" do dono; no roteiro, seção Sensação de jogo):
+  1. Voltar perto de onde saiu: `savedSpot` usa `bodySpotIn` do tile salvo e, encostado numa moita/árvore/parede,
+     nenhum dos 6 lugares do tile cabe: volta na Clareira (~1% dos lugares do Capão; medido em 19/11). Cair para
+     `nearestBodySpot(map, x + 0.5, y + 1, 1.5)` (o pé de sempre do tile), sem mudar o que é salvo. Com teste.
+  2. "Andar até" um ponto bloqueado: `findRoute` troca o destino pela célula livre mais perto em linha reta, mesmo do
+     outro lado de uma cerca de moitas (deu 33 m de volta no Capão, x 86, y 80,7). Preferir o lado de quem anda.
+  3. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;
+     conferir com caminho livre). O "levar" do painel com fração ficou pronto (19/11, diário).
+- **Trava invisível nas moitas (print do dono, 19/11): é do [mundo]**, pedido mandado (e no roteiro). A caixa
+  `mata-fechada` (1,8 × raio) passa ~30 cm das folhas nas pontas; no fim da calçada oeste da rua leste do Capão, a
+  ponta da moita 2522 cobre o fim da calçada. Proposta: 1,45 × raio (testada só no computador de teste, desfeita).
+  Quando ele juntar, conferir no navegador (painel F1 → Hitboxes mostra as caixas por cima do desenho).
 - **Para depois (anotado pelo [mundo], 18/11):** "mundo aberto, sem carregamento" (andar do Capão à Guarapiranga sem
   trocar de mapa). Hoje cada mapa é uma sala no servidor (`World`); seria trabalho grande no `Realm`. PARADO até o
   dono pedir; decidir com ele o caminho.
