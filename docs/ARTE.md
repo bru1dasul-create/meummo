@@ -1411,6 +1411,48 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
     esqueleto, a mesma do herói).
   - *Conferência:* herói idêntico ponto a ponto, os testes do protótipo (os 40 e os 6 que desenham o personagem), `npm
     run check` (510), o Birim em todas as animações (a corrida olhada de perto) e as 8 direções nas duas câmeras.
+- **Rodada 4 — a cabeça de lado (19/11; o dono: "Da uma atenção na lateral, está ruim a barba, orelha, nariz etc.."),
+  só no ramo:**
+  - *Referência:* o perfil (90°) e os três quartos (45°) do Nano Banana da rodada 2 (fora do repositório), virados para
+    o mesmo lado do nosso. **Nenhuma imagem nova** (custo zero).
+  - *O crítico do perfil* (`ferramentas/critico-perfil.py <referência.png> <olhoX,olhoY,altoY,barbaY> <nosso.png>
+    <saída.png>`): a referência e o nosso perfil na mesma escala, alinhados pelo **olho** e medidos **do olho ao fim da
+    barba** (o boné da referência é mais alto que o nosso: pela altura da cabeça toda, o rosto saía pequeno); três
+    quadros — a referência, o nosso e os dois um por cima do outro (nosso contorno em ciano, a borda do pelo em amarelo).
+    Foram 12 ciclos (p01 a p12).
+  - *O que mudou:*
+    - **Orelha:** mais para trás e maior (as três esferas de `HEAD.ear`); de lado ela ganhou desenho (`earProfile`): a
+      borda, a dobra de dentro com o garfo, a concha, o trago e a dobrinha do lóbulo. A concha desenhada de frente some aos
+      poucos quando a orelha vira de lado.
+    - **Costeleta e linha da barba:** a costeleta começa na altura do lóbulo, na frente da orelha, e uma tira fina sobe
+      até o cabelo da têmpora — com a normal um pouco para trás, então de frente ela não aparece (a frente aprovada
+      continua com a pele até a orelha). Os pedaços de trás da barba só andaram **para trás**: vistos de frente, têm a
+      mesma largura e altura. A linha da bochecha desce na diagonal, da costeleta ao canto do bigode, como na referência;
+      a barba cobre a mandíbula inteira e a borda de trás desce na diagonal até o fim dela.
+    - **Cachos:** os do lado foram para trás da orelha, mais seis embaixo e atrás do lóbulo (de frente, aparecem do lado
+      da mandíbula, como na referência), e todos ganharam os fios desenhados (`curlLines`).
+    - **Fios da barba:** a ponta dos fios da bochecha não anda mais que ~1 para a frente (a pele que `faceY` acha é a da
+      FRENTE do rosto: de perfil cada fio virava um risco comprido para a frente e, juntos, faziam uma borda reta, como uma
+      máscara); os de perto do bigode ficaram mais curtos; os do lado de lá do rosto só entram com ele quase de frente,
+      até ~13° (`farMin` em `piece`): de 15° a 45° eles se empilhavam numa coluna espetada do lado do nariz.
+    - **Nariz:** a asa (uma curva em "C") do lado virado para a câmera, de três quartos e de perfil (`noseSide`).
+    - **Queixo e bigode:** de perfil a barba cobre a frente do queixo logo abaixo do lábio (dois pedaços que só entram com
+      o lado bem virado para a câmera — de frente, a pele embaixo do lábio continua); o bigode foi um pouco para trás (de
+      perfil saía como um dedo).
+  - *Lições:* (25) alinhar pelo que bate nas duas imagens: o boné da referência é mais alto, então a escala sai do rosto
+    (do olho ao fim da barba), não da cabeça; (26) para uma peça aparecer **só de lado**, aponte a normal dela um pouco
+    para trás (`[sx, -0.3, 0]`): de frente ela some sozinha; (27) mexer numa peça que aparece de frente só no eixo que não
+    se vê de frente (aqui, para trás) preserva a vista aprovada; (28) um trecho de fios que aponta para a câmera vira uma
+    coluna (os fios caem no mesmo ponto da tela), e o que é desenhado por cima da cabeça não é escondido por ela: o lado de
+    lá precisa sair antes; (29) para achar um defeito, desligue uma parte de cada vez numa cópia de teste fora do
+    repositório (aqui, os fios de um lado e depois do outro) — é mais rápido que adivinhar pela conta.
+  - *Ainda diferente da referência:* o boné (a copa da referência é mais alta e estruturada); de perfil, o pescoço é mais
+    grosso que o da referência (é o da rodada 3, medido na ficha do corpo); o nariz é mais redondo na ponta; a sobrancelha
+    de perfil é uma barra grossa; de três quartos aparece um pedacinho de pele embaixo do lábio (é a pele da frente
+    aprovada, vista de lado); de frente, na câmera do jogo, as faixas da barba sobem até a orelha (já eram assim).
+  - *Conferência:* herói idêntico ponto a ponto, os testes do protótipo (os 40 e os 6 que desenham o personagem), `npm
+    run check` (510), o Birim em todas as animações, a cabeça em 10 ângulos (de 0° a 180°) na câmera reta, de 5° a 60° nas
+    duas câmeras e as 8 direções na câmera do jogo.
 
 ### Lote 2 da lista do dono de 14/11 (na main em 14/11, com o "pode" do dono; junto, o `mundo/lote2-floresta-dentro`)
 O lote 2: (6) tirar o J da barra, (7) árvores no vento, (8) flecha presa no tronco (feita antes), (9) capivaras
