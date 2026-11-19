@@ -33,6 +33,7 @@ import '../../../prototipos/pindorama-25d/js/world/budega.js';
 import '../../../prototipos/pindorama-25d/js/world/refugio.js';
 // a água mexendo: ondinhas com o vento, brilhos do sol e a espuma da margem
 import '../../../prototipos/pindorama-25d/js/world/agua.js';
+import '../../../prototipos/pindorama-25d/js/world/vida.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';

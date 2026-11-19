@@ -931,6 +931,8 @@
         const lit = a.creature._lit ? a.creature._lit() : 1;
         if (lit > 0.05) list.push({ x: a.creature.pos.x, y: a.creature.pos.y, z: 0, r: 240, color: '#ff9a3a', k: 0.85 * lit, flicker: true });
       }
+      // os vaga-lumes acesos (vida.js)
+      if (PD.vida) for (const g of PD.vida.glows(this.world)) list.push(g);
       if (!list.length) return;
       const sprites = this._glowSprites || (this._glowSprites = new Map());
       const sprite = (color) => {

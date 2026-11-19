@@ -395,7 +395,13 @@ para seguir, decidimos juntos por qual lado ir primeiro.**
    vão para uma máscara de 1/4 do ponto da tela (`_softShadows` no `ground.js`) e voltam esticadas (beirada macia) e
    multiplicando (`SHADE_RGB`); a árvore grande tem a sombra que afina (`taperShadow` no `props.js`); e todas as sombras
    giram no mesmo sentido (a faixa do tronco e do poste girava ao contrário e apagava a da copa onde se cruzavam;
-   `quadShadow` acerta a volta de quatro pontos). Falta: conferir as emendas entre pedaços (`EMENDA=3`) e o passo 3
+   `quadShadow` acerta a volta de quatro pontos). **Água e vida (passo 3, 19/11, na `main`):** `js/world/vida.js`
+   (`update` no World.update; `ground` logo depois da água: o peixe pulando e as folhas no chão e boiando; `live` por
+   cima de tudo: o que voa; `glows`: as luzinhas dos vaga-lumes no escuro da noite, em `_drawNightLights` do view.js).
+   Só perto da tela, quantos de cada (`flyWant`, `moteWant`, `bugWant`...); borboleta e libélula maiores que as de
+   verdade, senão nem aparecem. Medido: 0,34 ms por quadro de dia e 0,21 de noite. Falta: as emendas entre pedaços
+   do chão (`EMENDA=3`) e o reflexo na água (a base das casas é diagonal na tela: espelhar a imagem reta descola nas
+   pontas; pensar com calma)
    (passo 2: a sombra das casas e das árvores, também no deque) e a vida no ar (passo 3). **A referência do dono para o
    visual** (contada pela [estrutura]): o Dunloc Online — estilo de quadrinho (contorno escuro grosso, 2 ou 3 tons
    chapados, cores vivas), chão cheio de detalhe (pedrinhas soltas, flores de várias cores em manchas, tufos, trilha de

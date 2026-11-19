@@ -514,6 +514,8 @@
         p.spin += dt * (3 + this.wind.strength * 4);
       }
       this.petals = this.petals.filter((p) => p.z > 14);
+      // as folhas caindo, as borboletas, a poeira de luz e os vaga-lumes (vida.js)
+      if (PD.vida) PD.vida.update(this, dt, t);
       // faíscas do círculo do despertar
       const aw = this.map.awakening;
       if (aw && Math.random() < dt * 9 && this.sparks.length < 60) {
@@ -604,6 +606,7 @@
       mark('chao');
       // a água mexendo por cima do chão pintado (agua.js), antes do deque e de quem fica em pé
       if (PD.agua) PD.agua.live(ctx, this, t);
+      if (PD.vida) PD.vida.ground(ctx, this, t);
       this._drawAwakening(ctx);
       for (const f of this.flats || []) if (overlap(f.bounds, view)) f.draw(ctx, t);
       for (const a of actors) a.drawShadow(ctx);
@@ -772,6 +775,7 @@
       }
       if (PD.city) for (const b of this.map.bunting || []) if (this._onScreen(b.pts.map((p) => this.cam.p({ x: p.x, y: p.y, z: b.h })))) PD.city.bunting(ctx, this.cam, b, this.time);
       this._drawPetals(ctx);
+      if (PD.vida) PD.vida.live(ctx, this, this.time);
       if (focus) ctx.restore();
       // por cima de tudo: soco (o que não ficou atrás do personagem), riscos e faíscas
       for (const p of this.particles) if (p.kind !== 'poeira' && !p.behind) this._drawParticle(ctx, p);
