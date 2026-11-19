@@ -1162,6 +1162,8 @@ de casa e ainda vai testar no PC dele). Tudo foi medido no jogo de verdade, no C
   `node zoom-memoria.cjs [url]`.
 
 ### O chão pintado, passo 1 — PILOTO EM ANDAMENTO, PAUSADO em 17/11 (o dono pediu a pausa para o personagem novo)
+> **19/11 (nota do [mundo]):** com a divisão nova, o desenho do mapa é do [mundo]. Este piloto foi para a `main` em 19/11,
+> com o "junta agora e segue" do dono, e quem continua é o [mundo] (`docs/MUNDO.md`). O texto abaixo é o de 17/11.
 Pedido do dono (17/11, pelo [mundo]): "chão feio, água sem movimentação, ambiente pífio"; direção aprovada ("é esse o
 caminho"): `docs/referencias/chao-pintado-alvo.jpg` (o antes: `chao-pintado-antes.jpg`). Combinado com ele em três
 passos (1: o chão pintado; 2: luz e sombra no chão; 3: água e vida), cada um com piloto na Clareira dos Despertos,

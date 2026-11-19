@@ -604,7 +604,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   pintado (manchas claras e escuras na grama e na terra, sem bolinhas iguais; beiradas que se misturam, sem contorno
   escuro; marcas de uso); (2) luz e sombra no chão (sombra comprida das árvores, manchas de sol); (3) água e vida
   (ondinhas, reflexo, margem de lama; poeira de luz, borboletas, folhas caindo). Era da [arte]; desde 19/11 o desenho
-  do mapa é todo do [mundo] (escolha do dono). Começado: a água mexendo (`js/world/agua.js`, no Mapa 02)
+  do mapa é todo do [mundo] (escolha do dono). Começado: a água mexendo (`js/world/agua.js`, no Mapa 02). **Passo 1
+  na main em 19/11** ("junta agora e segue", vendo o alvo, o antes e o depois no mesmo lugar): o chão pintado que a
+  [arte] começou em 17/11 (`js/world/chao.js`: tinta de aquarela por material, folhas, tufos, florzinhas e pedrinhas no
+  lugar das bolinhas, beiradas que se misturam, trilhas sem contorno e pedras repintadas; o mesmo peso do chão antigo).
+  Falta deixar mais perto do alvo: a grama menos amarela, mais escura e cheia de folhinhas, e marcas de pisada na trilha
+- [ ] **[mundo]** Os dois mapas maiores (19/11, pedido do dono: "deixa o mapa maior"; escolheu "os dois maiores"):
+  primeiro o Guarapiranga (de 120 × 100 para uns 200 × 160 m, com o parque, o brejo e a orla abertos), depois o Capão
+  (cresce para a direita, com mais rua, casas e mata). Crescer só para a direita e para baixo (a origem não muda: o mapa
+  explorado de quem já joga não desalinha) e avisar a [estrutura] antes de juntar se um NPC ou uma chegada mudar
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha

@@ -345,10 +345,24 @@ Feito pelo [mundo], tudo na `main`:
 
 ## Próximos passos possíveis (o dono escolhe)
 **Agora (19/11):**
-1. **O chão, a luz e a água com mais qualidade** (roteiro; passou da [arte] para mim com a divisão nova). Alvo:
-   `docs/referencias/chao-pintado-alvo.jpg`. A água mexendo já começou (`agua.js`); falta o chão pintado (manchas, beiradas
-   que se misturam), a sombra das casas e das árvores no chão e no deque, e a vida no ar (folhas, borboletas, poeira de luz).
-2. **Mapa 02 (b) e (c)** quando o dono soltar a região 2.
+1. **Os dois mapas maiores** (pedido do dono em 19/11, "deixa o mapa maior" → "os dois maiores"): primeiro o Guarapiranga
+   (uns 200 × 160 m: o parque, o brejo e a orla abertos), depois o Capão (para a direita). Só para a direita e para baixo
+   (pedido da [estrutura]: a origem não muda, senão o mapa explorado salvo desalinha) e, se a quitanda, o deque ou uma
+   chegada mudarem, mandar os pés novos para a [estrutura] antes de juntar. Limites que ela passou: o servidor aguenta até
+   uns 250 × 250 m (estimativa); o que pesa é o desenho (objetos à vista; ~0,3 ms por bicho na tela); até 50 bichos por área.
+2. **O chão, a luz e a água com mais qualidade** (roteiro; passou da [arte] para mim com a divisão nova). Alvo:
+   `docs/referencias/chao-pintado-alvo.jpg`. **O chão pintado da [arte] está na `main` (19/11)**: `js/world/chao.js`
+   (`PAINT` no alto é onde se mexe nas cores), `ground.js` chama os pintores, as pedras em `props.js` (`_rock`); as
+   receitas e as lições estão na seção dela no `docs/ARTE.md` (ferramentas `chao-prancha.cjs`, `chao-foto.cjs` e
+   `chao-custo.cjs`; o painel só aceita x e y inteiros no "levar"). Medido no jogo: 14,4 ms por pedaço de chão (antes
+   14,9; pior 44,9). Falta: a grama mais escura e cheia de folhinhas como no alvo (no meio da clareira ficou amarela
+   demais), marcas de pisada na trilha, conferir as emendas entre pedaços (`EMENDA=3`), depois a luz e a sombra no chão
+   (passo 2: a sombra das casas e das árvores, também no deque) e a vida no ar (passo 3). **A referência do dono para o
+   visual** (contada pela [estrutura]): o Dunloc Online — estilo de quadrinho (contorno escuro grosso, 2 ou 3 tons
+   chapados, cores vivas), chão cheio de detalhe (pedrinhas soltas, flores de várias cores em manchas, tufos, trilha de
+   pedras, manchas de terra), sombra suave e luz quente no chão, e cada canto com algo para olhar. Não copiar a arte
+   dele: a nossa é São Paulo tomada pela floresta e o folclore. Método que deu certo no personagem: referência, antes e
+   agora lado a lado, na mesma câmera, uma coisa por vez.
 
 **Antes (mundo novo):**
 1. **Etapa 4b (portão e vila):** prévia primeiro, o "pode" do dono, depois o jogo.
