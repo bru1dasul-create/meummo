@@ -631,7 +631,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   fica verde-escura, não roxa), e acabou a faixa clara onde duas sombras se cruzavam (junto do poste). **Passo 3 na
   main em 19/11** ("pode seguir"): a vida no ar e na água (`js/world/vida.js`): folhas secas caindo das árvores de copa
   (e boiando quando caem na água), borboletas de dia na grama, a poeira de luz, libélulas e peixe pulando na água, e
-  vaga-lumes de noite que acendem o escuro em volta (0,3 ms por quadro). Fica para depois: o reflexo na água
+  vaga-lumes de noite que acendem o escuro em volta (0,3 ms por quadro). **O reflexo na água na main em 20/11** ("pode
+  seguir com o reflexo na água"): de dia, o que fica perto da água (as casas e os postes do Refúgio, os barcos, as
+  árvores da margem) aparece de ponta-cabeça na água, mais fraco e com as ondinhas por cima; de noite, cada lampião e
+  janela acesa deixa a faixa de luz tremida na água (só onde é água: o deque, as casas e os barcos na frente tampam)
 - [ ] **[dono + estrutura + mundo]** **Mundo aberto, sem tela de carregamento** (19/11, direção nova do dono: "vamos
   focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
   primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está

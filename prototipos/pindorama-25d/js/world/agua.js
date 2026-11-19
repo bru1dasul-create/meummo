@@ -5,8 +5,15 @@
 //  - a espuma da margem respirando: a beira clara indo e voltando devagar.
 // Os pontos são sorteados uma vez, numa grade dentro de cada água do mapa (`agua` no chão: polígono, retângulo,
 // elipse ou linha com largura), e só os que estão na tela são desenhados.
+// E o REFLEXO (pedido do dono, 20/11: "pode seguir com o reflexo na água"): o que fica perto da água (as árvores da
+// margem, as casas, os postes e os lampiões do Refúgio, os barcos) aparece virado de ponta-cabeça na água, mais fraco,
+// só onde é água, e as ondinhas passam por cima. É a imagem pronta de cada objeto, virada: a árvore vira no pé do tronco,
+// o barco na linha d'água dele e o que é largo (a casa) vira em duas metades, cada uma em torno da sua beira da base
+// (a base da casa é diagonal na tela: virada reta de uma vez só, o reflexo descolava nas pontas).
 //   PD.agua.prepare(world)          monta os pontos (World, ao ler o mapa)
+//   PD.agua.reflect(ctx, world, t)  o reflexo (World.draw, logo depois do chão, antes das ondinhas)
 //   PD.agua.live(ctx, world, t)     desenha (World.draw, logo depois do chão e antes do deque)
+//   PD.agua.screenWater(world, toScreen, Q)  a água na tela (o reflexo das luzes de noite, em view.js)
 (function (PD) {
   'use strict';
   const M = PD.math;
@@ -161,5 +168,156 @@
     ctx.restore();
   }
 
-  PD.agua = { prepare, live };
+  // ------------------------------------------------------------------ o reflexo
+  /** A água do mapa em polígonos (cm do chão), para recortar o reflexo: a elipse em 40 pontos e a linha com a largura. */
+  function waterPolys(map) {
+    const out = [];
+    for (const sh of (map.shapes || []).filter((x) => x.type === 'agua')) {
+      if (sh.kind === 'poly') out.push(sh.pts);
+      else if (sh.kind === 'rect') out.push([{ x: sh.x0, y: sh.y0 }, { x: sh.x1, y: sh.y0 }, { x: sh.x1, y: sh.y1 }, { x: sh.x0, y: sh.y1 }]);
+      else if (sh.kind === 'ellipse') out.push(Array.from({ length: 40 }, (_, i) => ({ x: sh.cx + Math.cos((i / 40) * M.TAU) * sh.rx, y: sh.cy + Math.sin((i / 40) * M.TAU) * sh.ry })));
+      else if (sh.kind === 'line' && sh.pts.length > 1) {
+        // a faixa da linha: os dois lados, cada ponto empurrado meia largura para fora (pela média das duas pontas vizinhas)
+        const hw = (sh.width || 200) / 2;
+        const L = [], R = [];
+        sh.pts.forEach((q, i) => {
+          const a = sh.pts[Math.max(0, i - 1)], b = sh.pts[Math.min(sh.pts.length - 1, i + 1)];
+          const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1;
+          L.push({ x: q.x - (dy / l) * hw, y: q.y + (dx / l) * hw });
+          R.push({ x: q.x + (dy / l) * hw, y: q.y - (dx / l) * hw });
+        });
+        out.push(L.concat(R.reverse()));
+      }
+    }
+    return out;
+  }
+  /**
+   * Quem reflete: o que tem água logo à frente do pé (para o lado da câmera, até ~4 m) ou embaixo dele. Os móveis de
+   * dentro de casa não. Feito uma vez por mapa.
+   */
+  function reflectables(world) {
+    if (world._refl) return world._refl;
+    const map = world.map || {};
+    const R = (world._refl = { props: [], polys: waterPolys(map) });
+    if (!R.polys.length || !PD.chao || !PD.chao.under) return R;
+    const wet = (x, y) => PD.chao.under(map, x, y, Infinity) === 'agua';
+    for (const o of world.props || []) {
+      // (o aguapé boia: o reflexo dele cairia como uma cópia fantasma logo embaixo)
+      if (o.house || !o.fp || (o.d && o.d.kind === 'aguape')) continue;
+      const t = o.t;
+      const f = o.fp;
+      const bases = t ? [[t.x, t.y]] : [[f.x1, f.y1], [f.x0, f.y1], [f.x1, f.y0], [(f.x0 + f.x1) / 2, (f.y0 + f.y1) / 2]];
+      let near = false;
+      for (const [bx, by] of bases) {
+        for (const d of [0, 60, 140, 240, 380]) {
+          if (wet(bx + d * 0.7, by + d * 0.7) || wet(bx + d, by) || wet(bx, by + d)) {
+            near = true;
+            break;
+          }
+        }
+        if (near) break;
+      }
+      if (near) R.props.push(o);
+    }
+    return R;
+  }
+  /** A parte da imagem acima da linha `yb` (y da tela), virada para baixo dela. Fatia `[i0, i1)` da largura (0 a 1). */
+  function flipSlice(ctx, s, yb, f0, f1) {
+    const hp = (yb - s.y) / s.h;
+    if (hp <= 0.01) return;
+    const k = Math.min(1, hp);
+    const sw = s.c.width, sh = s.c.height;
+    ctx.save();
+    ctx.translate(0, 2 * yb);
+    ctx.scale(1, -1);
+    ctx.drawImage(s.c, sw * f0, 0, sw * (f1 - f0), sh * k, s.x + s.w * f0, s.y, s.w * (f1 - f0) + 0.6, s.h * k);
+    ctx.restore();
+  }
+  /**
+   * A parte `[f0, f1)` da largura da imagem, virada em torno da RETA da tela que passa por P com inclinação `m` (y = P.y
+   * + m·(x − P.x)): cada ponto vai para y' = 2·(P.y + m·(x − P.x)) − y. É uma conta só para a fatia inteira (uma
+   * transformação do canvas), então a beira da base, que é diagonal, sai certinha, sem degrau.
+   */
+  function flipAlong(ctx, s, P, m, f0, f1, hk) {
+    const sw = s.c.width, sh = s.c.height;
+    ctx.save();
+    ctx.transform(1, 2 * m, 0, -1, 0, 2 * (P.y - m * P.x));
+    ctx.drawImage(s.c, sw * f0, 0, sw * (f1 - f0), sh * hk, s.x + s.w * f0, s.y, s.w * (f1 - f0), s.h * hk);
+    ctx.restore();
+  }
+  function reflectOne(ctx, cam, o) {
+    // (só imagem pronta: o reflexo não manda refazer nenhuma)
+    const s = o.sprite;
+    if (!s || !s.c || o.spriteKey !== o._zoomKey()) return;
+    if (o.t) {
+      flipSlice(ctx, s, cam.p({ x: o.t.x, y: o.t.y, z: 0 }).y, 0, 1);
+      return;
+    }
+    const f = o.fp;
+    const wz = o.d && o.d.kind === 'barco' ? -24 : o.z0 || 0;
+    const C = cam.p({ x: f.x1, y: f.y1, z: wz }), B = cam.p({ x: f.x1, y: f.y0, z: wz }), D = cam.p({ x: f.x0, y: f.y1, z: wz });
+    // (o que é rente à água — o aguapé, a folha — não tem reflexo que apareça: ele cairia em cima de si mesmo)
+    if (C.y - s.y < 26 * cam.zoom) return;
+    if (B.x - D.x < 60 * cam.zoom) {
+      flipSlice(ctx, s, C.y, 0, 1);
+      return;
+    }
+    // largo (a casa, o barco, o muro): a metade da esquerda vira na beira D→C da base e a da direita na beira C→B
+    const hk = Math.min(1, (C.y - s.y) / s.h);
+    const fc = M.clamp((C.x - s.x) / s.w, 0, 1);
+    if (fc > 0) flipAlong(ctx, s, C, (C.y - D.y) / Math.max(1, C.x - D.x), 0, fc, hk);
+    if (fc < 1) flipAlong(ctx, s, C, (B.y - C.y) / Math.max(1, B.x - C.x), fc, 1, hk);
+  }
+  function reflect(ctx, world, t) {
+    const R = reflectables(world);
+    if (!R.props.length) return;
+    const cam = world.cam;
+    const view = world._viewRect(60);
+    // quem tem o reflexo na tela (o reflexo ocupa da base para baixo o tanto que o objeto sobe)
+    const list = [];
+    for (const o of R.props) {
+      const b = o.bounds;
+      if (!b || b.x1 < view.x0 || b.x0 > view.x1) continue;
+      const base = o.t ? cam.p({ x: o.t.x, y: o.t.y, z: 0 }).y : cam.p({ x: o.fp.x1, y: o.fp.y1, z: 0 }).y;
+      if (base > view.y1 || base + (base - b.y0) < view.y0) continue;
+      list.push(o);
+    }
+    if (!list.length) return;
+    const clip = new Path2D();
+    for (const poly of R.polys) {
+      poly.forEach((q, i) => {
+        const p = cam.p({ x: q.x, y: q.y, z: 0 });
+        if (i) clip.lineTo(p.x, p.y);
+        else clip.moveTo(p.x, p.y);
+      });
+      clip.closePath();
+    }
+    const day = world.daylight == null ? 1 : world.daylight;
+    ctx.save();
+    ctx.clip(clip);
+    ctx.globalAlpha = 0.24 + 0.08 * day;
+    for (const o of list) reflectOne(ctx, cam, o);
+    ctx.restore();
+  }
+
+  /**
+   * A água do mapa como um caminho na tela, já dividido por `Q` (a camada do escuro da noite é menor que a tela: view.js).
+   * `toScreen(x, y)`: cm do chão → px da tela. Sem água no mapa, null.
+   */
+  function screenWater(world, toScreen, Q) {
+    const polys = (world._refl && world._refl.polys) || waterPolys(world.map || {});
+    if (!polys.length) return null;
+    const path = new Path2D();
+    for (const poly of polys) {
+      poly.forEach((q, i) => {
+        const p = toScreen(q.x, q.y);
+        if (i) path.lineTo(p.x / Q, p.y / Q);
+        else path.moveTo(p.x / Q, p.y / Q);
+      });
+      path.closePath();
+    }
+    return path;
+  }
+
+  PD.agua = { prepare, live, reflect, screenWater };
 })(window.PD = window.PD || {});

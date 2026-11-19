@@ -974,7 +974,83 @@
         // o halo da lâmpada lá em cima
         if (L.head) put(L.x, L.y, L.head, 70, '#fff3c8', 0.9 * k);
       }
+      // o reflexo das luzes na água (agua.js): a faixa comprida e tremida embaixo de cada luz alta, só onde é água
+      if (PD.agua && PD.agua.screenWater) this._drawLightReflections(fl, Q, W, H, pxm, k, list, sprite, t);
       fl.globalCompositeOperation = 'source-over';
+      fl.globalAlpha = 1;
+    }
+
+    /**
+     * O reflexo das luzes da noite na água: cada luz alta (lampião, poste, janela) deixa uma faixa comprida e tremida
+     * no ponto espelhado dela (a mesma posição com a altura para baixo). As faixas são montadas numa tela à parte,
+     * recortadas na água, e o que fica na frente da água na tela (o deque, as casas, os barcos, as árvores) apaga a
+     * faixa com a própria imagem: a camada da noite fica por cima de tudo e, sem isso, a luz passava por cima do deque.
+     */
+    _drawLightReflections(fl, Q, W, H, pxm, k, list, sprite, t) {
+      // as faixas (na tela, px): só as das luzes altas cujo ponto espelhado cai na tela
+      const boxes = [];
+      for (const L of list) {
+        const zh = L.head || L.z;
+        if (!(zh > 60)) continue;
+        const p = this.toScreen(L.x / 100, L.y / 100, -zh / 100);
+        const rx = 0.32 * pxm * (0.9 + 0.1 * Math.sin(t * 2.3 + L.x * 0.03)) * (1 + 0.12 * Math.sin(t * 3.1 + L.y * 0.05));
+        const ry = 0.32 * pxm * 3.2;
+        if (p.x < -rx || p.x > W + rx || p.y < -ry || p.y > H + ry) continue;
+        boxes.push({ x0: p.x - rx, x1: p.x + rx, y0: p.y - ry, y1: p.y + ry, L });
+      }
+      if (!boxes.length) return;
+      const water = PD.agua.screenWater(this.world, (x, y) => this.toScreen(x / 100, y / 100, 0), Q);
+      if (!water) return;
+      const lw = fl.canvas.width, lh = fl.canvas.height;
+      let rc = this._reflLayer;
+      if (!rc || rc.width !== lw || rc.height !== lh) {
+        rc = this._reflLayer = document.createElement('canvas');
+        rc.width = lw;
+        rc.height = lh;
+      }
+      // tudo acontece só no retângulo que junta as faixas (na camada, que é Q vezes menor que a tela)
+      const U = {
+        x0: Math.max(0, Math.floor(Math.min(...boxes.map((b) => b.x0)) / Q) - 1), y0: Math.max(0, Math.floor(Math.min(...boxes.map((b) => b.y0)) / Q) - 1),
+        x1: Math.min(lw, Math.ceil(Math.max(...boxes.map((b) => b.x1)) / Q) + 1), y1: Math.min(lh, Math.ceil(Math.max(...boxes.map((b) => b.y1)) / Q) + 1),
+      };
+      if (U.x1 <= U.x0 || U.y1 <= U.y0) return;
+      const uw = U.x1 - U.x0, uh = U.y1 - U.y0;
+      const r = rc.getContext('2d');
+      r.setTransform(1, 0, 0, 1, 0, 0);
+      r.globalCompositeOperation = 'source-over';
+      r.globalAlpha = 1;
+      r.clearRect(U.x0, U.y0, uw, uh);
+      r.save();
+      r.clip(water);
+      for (const b of boxes) {
+        r.globalAlpha = Math.min(1, (b.L.k || 0.6) * 1.1);
+        r.drawImage(sprite(b.L.color || '#ffd36b'), b.x0 / Q, b.y0 / Q, (b.x1 - b.x0) / Q, (b.y1 - b.y0) / Q);
+      }
+      r.restore();
+      // o que está na frente da água apaga a faixa: de cada imagem pronta, só o pedaço que cai em cima de uma faixa
+      r.globalCompositeOperation = 'destination-out';
+      r.globalAlpha = 1;
+      const vx = this.cam.viewX, vy = this.cam.viewY;
+      const occluders = this.world.flats ? this.world.flats.concat(this.world.props || []) : this.world.props || [];
+      for (const o of occluders) {
+        const sp = o.sprite;
+        if (o.house || !sp || !sp.c || !o._zoomKey || o.spriteKey !== o._zoomKey()) continue;
+        const ox0 = sp.x - vx, oy0 = sp.y - vy, ox1 = ox0 + sp.w, oy1 = oy0 + sp.h;
+        const fx = sp.c.width / sp.w, fy = sp.c.height / sp.h;
+        for (const b of boxes) {
+          const ix0 = Math.max(ox0, b.x0), iy0 = Math.max(oy0, b.y0), ix1 = Math.min(ox1, b.x1), iy1 = Math.min(oy1, b.y1);
+          if (ix1 <= ix0 || iy1 <= iy0) continue;
+          r.drawImage(sp.c, (ix0 - ox0) * fx, (iy0 - oy0) * fy, (ix1 - ix0) * fx, (iy1 - iy0) * fy, ix0 / Q, iy0 / Q, (ix1 - ix0) / Q, (iy1 - iy0) / Q);
+        }
+      }
+      r.globalCompositeOperation = 'source-over';
+      // abre o escuro onde a faixa ficou e tinge com a cor da luz
+      fl.globalCompositeOperation = 'destination-out';
+      fl.globalAlpha = Math.min(0.85, 0.75 * k);
+      fl.drawImage(rc, U.x0, U.y0, uw, uh, U.x0, U.y0, uw, uh);
+      fl.globalCompositeOperation = 'source-over';
+      fl.globalAlpha = Math.min(1, 0.7 * k);
+      fl.drawImage(rc, U.x0, U.y0, uw, uh, U.x0, U.y0, uw, uh);
       fl.globalAlpha = 1;
     }
 

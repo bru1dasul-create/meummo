@@ -404,9 +404,15 @@ para seguir, decidimos juntos por qual lado ir primeiro.**
    (`update` no World.update; `ground` logo depois da água: o peixe pulando e as folhas no chão e boiando; `live` por
    cima de tudo: o que voa; `glows`: as luzinhas dos vaga-lumes no escuro da noite, em `_drawNightLights` do view.js).
    Só perto da tela, quantos de cada (`flyWant`, `moteWant`, `bugWant`...); borboleta e libélula maiores que as de
-   verdade, senão nem aparecem. Medido: 0,34 ms por quadro de dia e 0,21 de noite. Falta: as emendas entre pedaços
-   do chão (`EMENDA=3`) e o reflexo na água (a base das casas é diagonal na tela: espelhar a imagem reta descola nas
-   pontas; pensar com calma)
+   verdade, senão nem aparecem. Medido: 0,34 ms por quadro de dia e 0,21 de noite. **O reflexo (20/11, na `main`):**
+   `PD.agua.reflect` (World.draw, logo depois do chão) vira a imagem PRONTA de quem está perto da água (escolhidos uma
+   vez por mapa, `reflectables`; o aguapé e os móveis de dentro não): a árvore no pé do tronco, o barco na linha d'água
+   e o que é largo (casa, barco comprido) em duas metades, cada uma virada em torno da sua beira da base (`flipAlong`:
+   uma transformação do canvas, sem degrau), recortado na água (`waterPolys`). De noite, `_drawLightReflections` (view.js)
+   põe a faixa tremida de cada luz alta no ponto espelhado (a mesma posição com a altura negativa), numa tela à parte
+   recortada na água; as imagens prontas que passam por cima da faixa (deque, casa, barco) apagam o pedaço delas (sem
+   isso, a luz aparecia por cima do deque: a camada da noite fica por cima de tudo). Medido no Refúgio: 0,2 ms (dia) e
+   0,36 ms (luzes de noite) por quadro. Falta: as emendas entre pedaços do chão (`EMENDA=3`)
    (passo 2: a sombra das casas e das árvores, também no deque) e a vida no ar (passo 3). **A referência do dono para o
    visual** (contada pela [estrutura]): o Dunloc Online — estilo de quadrinho (contorno escuro grosso, 2 ou 3 tons
    chapados, cores vivas), chão cheio de detalhe (pedrinhas soltas, flores de várias cores em manchas, tufos, trilha de
