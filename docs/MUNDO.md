@@ -391,7 +391,11 @@ para seguir, decidimos juntos por qual lado ir primeiro.**
    grão, uma camada de pintas claras (`speck`) e as folhinhas redondas e mais numerosas (`round`, `n: 8`); a trilha com
    dois sulcos escuros. Conferi pelos números contra o alvo (receita: a média e a saturação dos verdes e das terras e o
    "detalhe fino", a diferença da imagem para ela borrada), na prancha (`chao-prancha.cjs`, rápido) e no jogo. A clareira
-   do Capão é `grama` (não existe `clareira` no mapa). Falta: conferir as emendas entre pedaços (`EMENDA=3`), a luz e a sombra no chão
+   do Capão é `grama` (não existe `clareira` no mapa). **Luz e sombra (passo 2, 19/11, na `main`):** as sombras do chão
+   vão para uma máscara de 1/4 do ponto da tela (`_softShadows` no `ground.js`) e voltam esticadas (beirada macia) e
+   multiplicando (`SHADE_RGB`); a árvore grande tem a sombra que afina (`taperShadow` no `props.js`); e todas as sombras
+   giram no mesmo sentido (a faixa do tronco e do poste girava ao contrário e apagava a da copa onde se cruzavam;
+   `quadShadow` acerta a volta de quatro pontos). Falta: conferir as emendas entre pedaços (`EMENDA=3`) e o passo 3
    (passo 2: a sombra das casas e das árvores, também no deque) e a vida no ar (passo 3). **A referência do dono para o
    visual** (contada pela [estrutura]): o Dunloc Online — estilo de quadrinho (contorno escuro grosso, 2 ou 3 tons
    chapados, cores vivas), chão cheio de detalhe (pedrinhas soltas, flores de várias cores em manchas, tufos, trilha de

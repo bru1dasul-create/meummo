@@ -304,10 +304,40 @@
     const l = Math.hypot(nx, ny) || 1;
     const ox = (nx / l) * w;
     const oy = (ny / l) * w;
+    // (19/11: na ordem de antes ela girava ao contrário da elipse da copa e da envoltória das casas, e onde as duas se
+    // cruzavam a sombra sumia — a faixa clara junto do poste que a [arte] viu no print do dono)
     path.moveTo(x + ox, y + oy);
-    path.lineTo(ex + ox * 0.6, ey + oy * 0.6);
-    path.lineTo(ex - ox * 0.6, ey - oy * 0.6);
     path.lineTo(x - ox, y - oy);
+    path.lineTo(ex - ox * 0.6, ey - oy * 0.6);
+    path.lineTo(ex + ox * 0.6, ey + oy * 0.6);
+    path.closePath();
+  }
+  /**
+   * A sombra comprida que afina: a envoltória de dois círculos no chão, um pequeno perto do pé (a sombra da altura `h0`)
+   * e um grande lá longe (a da altura `h1`), na direção da luz.
+   */
+  function taperShadow(path, cam, x, y, r0, h0, r1, h1) {
+    const L = cam.light;
+    const pts = [];
+    for (const [r, h] of [[r0, h0], [r1, h1]]) {
+      const cx = x - (L.x / L.z) * h, cy = y - (L.y / L.z) * h;
+      for (let k = 0; k < 18; k++) {
+        const a = (k / 18) * M.TAU;
+        pts.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.9);
+      }
+    }
+    S.polyPath(S.convexHull(pts), 0, 0, path);
+  }
+  /** Quatro pontos [x, y] na volta de sempre (a mesma das outras sombras), seja qual for a ordem em que vieram. */
+  function quadShadow(path, q) {
+    let area = 0;
+    for (let i = 0; i < q.length; i++) {
+      const a = q[i], b = q[(i + 1) % q.length];
+      area += a[0] * b[1] - b[0] * a[1];
+    }
+    const pts = area < 0 ? q.slice().reverse() : q;
+    path.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) path.lineTo(pts[i][0], pts[i][1]);
     path.closePath();
   }
 
@@ -2395,7 +2425,9 @@
     shadow(path) {
       const t = this.t;
       lineShadow(path, this.cam, t.x, t.y, t.h * 0.6, t.kind === 'figueira' ? (t.trunk || 60) * 1.6 : 16);
-      circleShadow(path, this.cam, t.x, t.y, t.r * 0.95, t.h * 0.72);
+      // (19/11, o alvo do dono: a sombra da árvore é comprida e sai do pé dela, fina perto do tronco e larga longe dele)
+      if (t.r > 60) taperShadow(path, this.cam, t.x, t.y, t.r * 0.32, t.h * 0.16, t.r * 1.02, t.h * 0.78);
+      else circleShadow(path, this.cam, t.x, t.y, t.r * 0.95, t.h * 0.72);
     }
     paint(ctx) {
       const cam = this.cam;
@@ -5286,11 +5318,7 @@
       const L = this.cam.light;
       const h = this.f.h * 0.35;
       const dx = (-L.x / L.z) * h, dy = (-L.y / L.z) * h;
-      path.moveTo(a.x, a.y);
-      path.lineTo(b.x, b.y);
-      path.lineTo(b.x + dx, b.y + dy);
-      path.lineTo(a.x + dx, a.y + dy);
-      path.closePath();
+      quadShadow(path, [[a.x, a.y], [b.x, b.y], [b.x + dx, b.y + dy], [a.x + dx, a.y + dy]]);
     }
     paint(ctx) {
       const [a, b] = this._ends();
@@ -5440,6 +5468,6 @@
   PD.props = {
     Prop, Building, House, HouseBack, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly,
     // para as plantas da mata (flora.js) e as coisas da cidade (city.js) desenharem com o mesmo traço
-    help: { INK, CANOPY_INK, BARK, CANOPY, FONT_SIGN, tuftPath, limbPoly, circleShadow, lineShadow, boxShadow, box, onWall, pixo, crownPaint, roofTree },
+    help: { INK, CANOPY_INK, BARK, CANOPY, FONT_SIGN, tuftPath, limbPoly, circleShadow, lineShadow, quadShadow, taperShadow, boxShadow, box, onWall, pixo, crownPaint, roofTree },
   };
 })(window.PD = window.PD || {});

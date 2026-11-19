@@ -785,16 +785,60 @@
       });
     }
     // sombras do que fica em pé (fixas), só das coisas perto deste pedaço
-    ctx.fillStyle = C.shadow;
     const shade = new Path2D();
     const reach = 1200; // a sombra de uma árvore alta cai longe
+    let any = false;
     for (const p of this.props) {
       const f = p.fp;
       if (!p.shadow || f.x1 < box.x0 - reach || f.x0 > box.x1 + reach || f.y1 < box.y0 - reach || f.y0 > box.y1 + reach) continue;
       p.shadow(shade);
+      any = true;
     }
-    ctx.fill(shade);
+    if (any && !this._softShadows(ctx, shade)) {
+      ctx.fillStyle = C.shadow;
+      ctx.fill(shade);
+    }
     ctx.restore();
+  };
+
+  /**
+   * As sombras macias (passo 2 do chão, 19/11; o alvo do dono tem a sombra das árvores comprida e de beirada macia): pinta
+   * todas numa máscara de 1/4 do pedaço e estica de volta (a beirada sai esfumada, de graça) e escurece multiplicando,
+   * que guarda a cor do chão de baixo (a grama na sombra fica verde-escura, não roxa). Devolve se deu (sem tela de
+   * verdade, não dá: o chamador pinta a sombra lisa de sempre).
+   */
+  const SOFT = 4;
+  const SHADE_RGB = 'rgb(150, 162, 188)';
+  Ground.prototype._softShadows = function (ctx, shade) {
+    if (typeof document === 'undefined' || !ctx.getTransform) return false;
+    const T = ctx.getTransform();
+    // (1/4 do ponto da tela de verdade: no celular, com mais pixels por ponto, a beirada sai tão macia quanto no PC)
+    const q = SOFT * Math.max(1, this.cam.dpr || 1);
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const pad = 3; // pontos da máscara de folga em volta (o esticado lê a beirada de fora)
+    const mw = Math.ceil(W / q) + pad * 2, mh = Math.ceil(H / q) + pad * 2;
+    let m = this._shadeMask;
+    if (!m || m.width !== mw || m.height !== mh) {
+      m = this._shadeMask = document.createElement('canvas');
+      m.width = mw;
+      m.height = mh;
+    }
+    const mc = m.getContext('2d');
+    mc.setTransform(1, 0, 0, 1, 0, 0);
+    mc.globalCompositeOperation = 'source-over';
+    mc.fillStyle = '#fff';
+    mc.fillRect(0, 0, mw, mh);
+    mc.setTransform(T.a / q, T.b / q, T.c / q, T.d / q, T.e / q + pad, T.f / q + pad);
+    mc.fillStyle = SHADE_RGB;
+    mc.fill(shade);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(m, -pad * q, -pad * q, mw * q, mh * q);
+    ctx.restore();
+    return true;
   };
 
   /** Pontinhos de textura da forma, só dentro dela e dentro do pedaço. */

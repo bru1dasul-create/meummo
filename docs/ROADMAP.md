@@ -610,7 +610,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   lugar das bolinhas, beiradas que se misturam, trilhas sem contorno e pedras repintadas; o mesmo peso do chão antigo).
   Mais perto do alvo em 19/11 (na main, o dono escolheu "gráfico primeiro"): a grama oliva (sem o limão), com as pintas
   redondas claras e escuras do alvo, e a trilha com os sulcos escuros compridos; medido contra o alvo (saturação dos
-  verdes 0,47 × 0,45, brilho 0,55 × 0,53). Falta o passo 2: as manchas de sol e as sombras compridas das árvores
+  verdes 0,47 × 0,45, brilho 0,55 × 0,53). **Passo 2 na main em 19/11** ("pode seguir"): as sombras das árvores compridas
+  e macias (finas no pé e largas longe), a beirada esfumada e o escurecer que guarda a cor do chão (a grama na sombra
+  fica verde-escura, não roxa), e acabou a faixa clara onde duas sombras se cruzavam (junto do poste). Falta o passo 3:
+  água e vida (reflexo, margem de lama; poeira de luz, borboletas, folhas caindo)
 - [ ] **[dono + estrutura + mundo]** **Mundo aberto, sem tela de carregamento** (19/11, direção nova do dono: "vamos
   focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
   primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está
