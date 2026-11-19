@@ -237,6 +237,11 @@
       { p: [0, 0.6, 7.4], r: 8.8 },
       { p: [-5.6, 0.4, -22.5], r: 7 }, // a cintura desce reta até o quadril
       { p: [5.6, 0.4, -22.5], r: 7 },
+      // (19/11, o dono: "o V do tronco tá ruim". A cintura fechava numa ponta DENTRO da bermuda: no cós o tronco tinha
+      // ~17 cm de largura e a bermuda 27, e o fim do casco aparecia como uma cunha em "U" entre os dois lados do cós.
+      // Agora ela desce na largura do cós e continua por dentro da bermuda: o cós fecha o tronco numa linha reta)
+      { p: [-6.4, 0.3, -29.5], r: 6.6 },
+      { p: [6.4, 0.3, -29.5], r: 6.6 },
     ],
     PELVIS: BASE.PELVIS.map((s, k) => (k === 1 || k === 2 ? { p: [Math.sign(s.p[0]) * 8, 0.4, 0.8], r: 8 } : s)),
     // (de cabelo curto, o trapézio aparece de costas: a ponte do ombro fica inteira de qualquer lado — rodada 3)
@@ -659,39 +664,75 @@
       ctx.stroke(S.smoothLinePath(q));
       ctx.globalAlpha = 1;
     };
-    const shadeBlob = (pts, n, alpha) => {
+    const shadeBlob = (pts, n, alpha, color = PAL.skin.shade) => {
       const f = facing(n);
       if (f < 0.12) return;
       const q = pts.map((p) => fp(p[0], p[1])).filter(Boolean);
       if (q.length < 3) return;
       ctx.globalAlpha = alpha * smoothstep(0.12, 0.42, f);
-      ctx.fillStyle = PAL.skin.shade;
+      ctx.fillStyle = color;
       ctx.fill(S.smoothClosedPath(q));
       ctx.globalAlpha = 1;
     };
+    /** O mesmo borrão na pele das COSTAS (pontos [x, z]). */
+    const backBlob = (pts, n, alpha, color = PAL.skin.shade) => {
+      const f = facing(n);
+      if (f < 0.12) return;
+      const q = pts.map(([x, zz]) => R.P(at(ch, ...backPt(x, zz))));
+      ctx.globalAlpha = alpha * smoothstep(0.12, 0.42, f);
+      ctx.fillStyle = color;
+      ctx.fill(S.smoothClosedPath(q));
+      ctx.globalAlpha = 1;
+    };
+    /** Sombra comprida nas costas: um traço largo e claro na cor da sombra (lê como volume, não como risco). */
+    const backShade = (pts, n, width, alpha) => {
+      const f = facing(n);
+      if (f < 0.12) return;
+      ctx.globalAlpha = alpha * smoothstep(0.12, 0.42, f);
+      ctx.strokeStyle = PAL.skin.shade;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(0.8, width * z);
+      ctx.stroke(S.smoothLinePath(pts.map(([x, zz]) => R.P(at(ch, ...backPt(x, zz))))));
+      ctx.globalAlpha = 1;
+    };
+    // (19/11, o dono: os riscos escuros da barriga viravam uma GRADE e os das costas um "V" — "redesenhe melhor isso".
+    // Como na ficha, os músculos agora são de sombra e luz macias, na cor da pele: os riscos de tinta ficaram só no
+    // peitoral, que é a forma mais forte)
+    const SH = PAL.skin.shade;
     for (const sx of [-1, 1]) {
       // peitoral: a sombra embaixo dele e a linha
       shadeBlob([[sx * 0.9, -2], [sx * 5.4, -4.9], [sx * 10.6, -4.2], [sx * 14, 0.2], [sx * 13.4, -1.9], [sx * 10.2, -6.5], [sx * 5.2, -7.1], [sx * 1.1, -4.2]], [sx * 0.35, 1, -0.2], 0.42);
-      line([[sx * 0.9, -2], [sx * 5.4, -4.9], [sx * 10.6, -4.2], [sx * 14, 0.2]], [sx * 0.35, 1, -0.2], 0.62, 0.85);
+      line([[sx * 0.9, -2], [sx * 5.4, -4.9], [sx * 10.6, -4.2], [sx * 14, 0.2]], [sx * 0.35, 1, -0.2], 0.62, 0.75);
+      // a luz em cima do peitoral
+      shadeBlob([[sx * 2.4, 4.4], [sx * 7.6, 5.6], [sx * 11.6, 3.6], [sx * 10.4, 0.6], [sx * 6.4, -0.4], [sx * 2.8, 0.8]], [sx * 0.3, 1, 0.2], 0.2, PAL.skin.light);
       // clavícula
-      line([[sx * 2.4, 9.4, 11.2], [sx * 7.2, 8, 12.6], [sx * 12, 4.4, 12.2]], [sx * 0.2, 0.8, 0.6], 0.45, 0.55);
-      // gomos da barriga: três de cada lado, cada um com a sombra na beirada de baixo
+      line([[sx * 2.4, 9.4, 11.2], [sx * 7.2, 8, 12.6], [sx * 12, 4.4, 12.2]], [sx * 0.2, 0.8, 0.6], 0.45, 0.45, SH);
+      // gomos da barriga: três de cada lado — a sombra embaixo de cada um (a dobra, curta e curva, sem os "trilhos" dos
+      // lados) e uma luz no meio dele, que dá o volume
       for (const [z0, z1] of [[-8.2, -12.2], [-13, -17.2], [-18, -22.4]]) {
-        shadeBlob([[sx * 0.9, z1 + 1.1], [sx * 3.2, z1 + 0.5], [sx * 5.6, z1 + 1.5], [sx * 5.9, z1 + 0.5], [sx * 3.2, z1 - 0.5], [sx * 0.8, z1 + 0.1]], [sx * 0.2, 1, -0.1], 0.5);
-        line([[sx * 0.8, z1 + 0.3], [sx * 3.3, z1 - 0.1], [sx * 5.7, z1 + 1]], [sx * 0.2, 1, 0], 0.5, 0.7);
-        line([[sx * 6, z0 - 0.2], [sx * 6.4, (z0 + z1) / 2], [sx * 5.9, z1 + 0.6]], [sx * 0.5, 0.9, 0], 0.42, 0.55);
+        shadeBlob([[sx * 0.9, z1 + 1.1], [sx * 3.2, z1 + 0.5], [sx * 5.6, z1 + 1.5], [sx * 5.9, z1 + 0.5], [sx * 3.2, z1 - 0.5], [sx * 0.8, z1 + 0.1]], [sx * 0.2, 1, -0.1], 0.4);
+        shadeBlob([[sx * 1.5, z0 - 0.7], [sx * 3.4, z0 - 0.5], [sx * 4.9, z0 - 1.2], [sx * 4.7, (z0 + z1) / 2 - 0.2], [sx * 3.2, (z0 + z1) / 2 + 0.2], [sx * 1.6, (z0 + z1) / 2]], [sx * 0.2, 1, 0], 0.2, PAL.skin.light);
+        line([[sx * 1.3, z1 + 0.3], [sx * 3.3, z1 - 0.1], [sx * 5.1, z1 + 0.8]], [sx * 0.2, 1, 0], 0.4, 0.45, SH);
       }
-      // costelas (serrátil) e o lado da barriga
-      for (const zz of [-5.6, -8.6, -11.4]) line([[sx * 11.6, zz + 0.9], [sx * 9.9, zz - 0.5]], [sx * 0.8, 0.6, 0], 0.4, 0.5);
-      line([[sx * 8.6, -11.5], [sx * 8.9, -17], [sx * 8, -23]], [sx * 0.6, 0.8, 0], 0.42, 0.5);
-      // escápula e dorsal (costas)
-      // (na pele das costas, `backPt`: com as costas mais cheias da rodada 3 as linhas fixas ficavam para dentro)
-      line([backPt(sx * 3.8, 6), backPt(sx * 8.4, 1), backPt(sx * 7.6, -4)], [sx * 0.2, -1, 0.1], 0.5, 0.6);
-      line([backPt(sx * 9.6, -3), backPt(sx * 7.6, -11), backPt(sx * 4.4, -18)], [sx * 0.4, -0.9, 0], 0.45, 0.5);
+      // costelas (serrátil) e o lado da barriga (o oblíquo: uma sombra comprida, sem risco)
+      for (const zz of [-5.6, -8.6, -11.4]) line([[sx * 11.6, zz + 0.9], [sx * 9.9, zz - 0.5]], [sx * 0.8, 0.6, 0], 0.4, 0.4, SH);
+      shadeBlob([[sx * 8.2, -10.5], [sx * 9.6, -15], [sx * 9.4, -21], [sx * 8.4, -24.5], [sx * 7.6, -21], [sx * 7.8, -15]], [sx * 0.6, 0.8, 0], 0.26);
+      // costas: a sombra embaixo da omoplata e a luz em cima dela, e as duas lombares (a luz de cada lado do sulco da
+      // coluna, embaixo). Nada desce da omoplata até a coluna: era isso que fazia o "V"
+      // (a sombra da omoplata é uma meia-lua que segue a beirada de dentro e a ponta de baixo dela; num borrão
+      // fechado ela virava uma mancha redonda)
+      backShade([[sx * 3.9, 7], [sx * 4.7, 2.4], [sx * 6.6, -1.4], [sx * 9.2, -2.2], [sx * 11.2, 0]], [sx * 0.25, -1, 0.1], 1.5, 0.3);
+      backBlob([[sx * 5.2, 8.6], [sx * 9.6, 7.4], [sx * 11.6, 4.4], [sx * 9.8, 3.4], [sx * 6.8, 4.6], [sx * 5.2, 6.8]], [sx * 0.25, -1, 0.3], 0.15, PAL.skin.light);
+      // a dorsal: uma sombra larga e clara na beirada de fora, embaixo do braço (o volume do V, sem risco no meio)
+      backShade([[sx * 12, -3], [sx * 11.2, -9], [sx * 9.8, -15]], [sx * 0.6, -0.8, 0], 2.2, 0.16);
+      backBlob([[sx * 1.5, -9.5], [sx * 3.3, -11.5], [sx * 3.8, -19.5], [sx * 3, -25.5], [sx * 1.7, -25.5], [sx * 1.3, -18]], [sx * 0.15, -1, 0], 0.18, PAL.skin.light);
     }
-    line([[0, 5.6], [0, -1.8]], [0, 1, 0], 0.5, 0.6); // esterno
-    line([[0, -7.4], [0, -15], [0, -23.4]], [0, 1, 0], 0.5, 0.65); // linha do meio da barriga
-    line([backPt(0, 9), backPt(0, 0), backPt(0, -11), backPt(0, -20)], [0, -1, 0], 0.5, 0.6); // coluna
+    line([[0, 5.6], [0, -1.8]], [0, 1, 0], 0.45, 0.45, SH); // esterno
+    line([[0, -7.4], [0, -15], [0, -23.4]], [0, 1, 0], 0.45, 0.55, SH); // linha do meio da barriga
+    // o sulco da coluna: uma sombra fina e comprida, mais larga embaixo (entre as lombares), e a linha só no meio dela
+    backBlob([[-0.5, 7], [-0.8, -2], [-1.3, -14], [-1.2, -24], [0, -26.5], [1.2, -24], [1.3, -14], [0.8, -2], [0.5, 7], [0, 8.5]], [0, -1, 0], 0.3);
+    line([backPt(0, 4), backPt(0, -6), backPt(0, -16), backPt(0, -24)], [0, -1, 0], 0.35, 0.45, SH); // coluna
     const f = facing([0, 1, 0.1]);
     if (f > 0.12) {
       ctx.globalAlpha = smoothstep(0.12, 0.4, f);
@@ -2053,9 +2094,14 @@
     }
 
     // ---- as tiras dos chinelos, por cima de cada pé
+    // (19/11, o dono: "essa linha preta no calcanhar tem que tirar, ele tá de chinelo". A tira em Y fica no peito do pé
+    // e era desenhada por cima dele de qualquer lado: de costas ela aparecia em cima do calcanhar, como uma tira de
+    // sandália. Com o pé de costas para a câmera ela entra logo depois da sola, ANTES do pé: o calcanhar e o tornozelo
+    // tampam, como no chinelo de verdade)
     if (!gear.pes && !off.chinelos) {
       for (let i = 0; i < 2; i++) {
-        const host = hostOf('pe', 'perna' + i);
+        const behind = dot(rig.foot[i].f, R.toCam) < -0.3;
+        const host = (behind && hostOf('sola', 'sola' + i)) || hostOf('pe', 'perna' + i);
         out.push({ name: 'tiraChinelo', key: keyAfter(host, 8 + i), host, draw: () => sandalStraps(R, rig, i) });
       }
     }

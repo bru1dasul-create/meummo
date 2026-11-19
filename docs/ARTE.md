@@ -41,6 +41,31 @@
   4. **O dono decide olhando os dois NO JOGO**, não em prancha.
 - **Combinado novo (19/11):** julgar o personagem **no jogo, no tamanho real**. As pranchas de perto servem para achar
   defeito, não para decidir.
+- **A LISTA DO DONO, depois de jogar com o Birim (19/11, com prints do jogo)** — o escopo aprovado ("pode, aprovo, segue
+  a ordem"), uma etapa por vez, cada uma com antes × depois no tamanho do jogo, conferida com `?birim` e na main:
+  - **Antes de tudo (pedido dele no meio): FEITO em 19/11.** (a) O "V" do tronco: a cintura fechava numa ponta DENTRO da
+    bermuda (no cós o tronco tinha ~17 cm e a bermuda 27: o fim do casco aparecia como uma cunha em "U"); duas esferas
+    novas (`CHEST`, z −29,5) levam a cintura na largura do cós até dentro da bermuda. (b) Os riscos de tinta da barriga
+    (uma grade) e das costas (as dorsais descendo até a coluna faziam um "V") viraram sombra e luz macias na cor da pele,
+    como na ficha: gomos com a dobra curta embaixo e luz no meio; nas costas, a meia-lua embaixo da omoplata (traço largo e
+    claro: num borrão fechado ela virava mancha redonda), a luz em cima dela, a sombra da beirada da dorsal, o sulco da
+    coluna e as lombares. (c) A "linha preta no calcanhar" era a tira em Y do chinelo desenhada por cima do pé de qualquer
+    lado: com o pé de costas para a câmera ela entra logo depois da sola, antes do pé (o calcanhar tampa).
+  - **Etapa 1 (só o Birim):** trapézio menor (sobe quase até a orelha), ombros emendados no peito e no trapézio (hoje
+    uma bola do lado), o colar por cima do trapézio (hoje passa por dentro e só aparece o "V" no peito) e a barba de
+    frente (boné + óculos + barba viram uma máscara preta: afinar nas bochechas, mostrar boca e bigode, queixo mais
+    curto, sem perder a barba cheia).
+  - **Etapa 2 (só o Birim):** a bermuda acompanhando a coxa (a perna larga vira uma bola quando sobe e o bolso pula), o
+    tronco que "some" na corrida para a câmera (a coxa com a bermuda larga tampa a barriga; conferir se não some de verdade
+    em algum quadro) e os pés de costas (calcanhar redondo, a sola como rosquinha com o pé no ar).
+  - **Etapa 3 (muda o herói e os NPCs também — o dono aprovou):** os braços da corrida soltos (hoje o cotovelo fica em
+    90° o tempo todo e os braços abrem para fora, como pistão).
+  - **Etapa 4 (muda o herói também — aprovado):** mirar para trás com o arco — hoje só o tronco gira (até 70°, `twist`
+    em `slingshot.js`) e as pernas seguem o passo; o animador não sabe andar de lado nem de costas olhando para outro
+    lugar. Ensinar o "andar mirando" (corpo para a mira, pernas para onde anda). Junto: mirando para a direita, a mão da
+    corda aparece em cima do boné.
+  - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
+    o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
 
 ## Quem sou
 O chat da frente **[arte]**: personagens (`src/client/game/doll/`, `characters.ts`, `animator.ts`), equipamento no

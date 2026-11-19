@@ -46,8 +46,12 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** BIRIM, o personagem principal novo, no jogo para testar (19/11, na main): com `?birim` no endereço
   (ex.: `http://localhost:5173/?birim`), o seu personagem e os outros jogadores na sua tela saem com o Birim; o navegador
   guarda a escolha até abrir com `?heroi`; sem a chave, nada muda. Veja `docs/ARTE.md`, "AGORA"
-- [ ] **[dono]** Jogar com `?birim` e dizer o que incomoda no tamanho real; depois escolher: (A) o Birim vira o herói de
-  todos ou (B) cada jogador escolhe (aí a [estrutura] salva o `model` de cada um)
+- [ ] **[dono]** Jogar com `?birim` e dizer o que incomoda no tamanho real (FEITO em 19/11: a lista está no
+  `docs/ARTE.md`, "AGORA"); depois escolher: (A) o Birim vira o herói de todos ou (B) cada jogador escolhe (aí a
+  [estrutura] salva o `model` de cada um)
+- [ ] **[arte]** A lista do dono do Birim no jogo (19/11), em etapas: o "V" do tronco e a linha do calcanhar (FEITO em
+  19/11); 1) trapézio, ombros, colar e barba de frente; 2) bermuda, tronco na corrida e pés; 3) braços da corrida (muda
+  o herói também); 4) mirar para trás com o arco (muda o herói também)
 - [ ] **[arte]** Arte de verdade para personagens e monstros (piloto do estilo desenhado com o Nano Banana: chave
   pronta, esperando os exemplos de estilo do dono — veja `docs/ARTE.md`)
 - [x] **[arte]** Protótipo **Pindorama 2.5D** do protagonista, separado do jogo (`prototipos/pindorama-25d`): câmera
