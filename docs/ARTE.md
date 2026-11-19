@@ -4,6 +4,32 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## AGORA (19/11, antes do `/clear`): o BIRIM vai para o jogo — LEIA PRIMEIRO
+- **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
+  cheia**, a da rodada 4b (o dono pediu de volta em 19/11, pela [estrutura]: "sem barba ficou pior"; os defeitos de ângulo
+  dela "podem esperar: julguem no jogo, no tamanho real"). A barba curta (pintada na pele) ficou no commit `e6c6d5d`, se
+  um dia quiser voltar a ela (veja a seção dela, mais abaixo). O Birim **ainda não aparece no jogo**: só no protótipo
+  (`prancha.html?modelo=birim`, `ferramentas/ficha.cjs --modelo birim`).
+- **O plano (proposto pela [estrutura], com o "pode" do dono):**
+  1. **Primeiro, o Birim no jogo como está**, para o dono jogar e julgar no tamanho real (no PC a cabeça do herói tem
+     ~25 px de altura; no celular, menos — fio de barba e detalhe fino somem nesse tamanho). Para testar, sem salvar nada:
+     a chave `?birim` no endereço. Do meu lado: em `js/character/classes.js`, `appearanceOf` devolve
+     `PD.models.appearance('birim')` para o jogador principal quando o endereço tem `?birim`; e o `birim.js` passa a ser
+     carregado no jogo (uma linha no `view-scripts.json` e no `src/client/novo/arte.ts`, depois dos outros scripts do
+     personagem). Conferir no navegador (PC e celular), no tamanho real, e mostrar ao dono. Para ficar de vez (cada
+     jogador escolhe): só precisa ficar salvo QUAL boneco (`modelo: 'heroi' | 'birim'`), indo também no que o servidor manda
+     de cada jogador — isso é da [estrutura] (`MIGRATIONS` e protocolo; já combinei com ela).
+  2. **Depois, só o que incomodar NO JOGO**, do mais visível para o menos: silhueta e proporção, cores, contorno, movimento;
+     o rosto por último. Uma coisa por vez, sempre com o resultado dentro do jogo.
+  3. **Em seguida, um teste barato do plano original** (peças pintadas pelo Nano Banana, montadas no esqueleto que já
+     existe): só imagens primeiro, umas 10 (menos de US$ 1) — o Caçador nas 8 direções a partir de uma referência. **Pedir o
+     "pode" do dono para o gasto antes.** Se as 8 vistas saírem coerentes entre si, montar só o andar virado para o sul e pôr
+     ao lado do Birim, no jogo; se não, o caminho morre ali. Riscos a olhar: consistência entre as vistas, cara de boneco de
+     papel (peça rígida girando) e destoar do mapa que o [mundo] pinta por código (mesma paleta e mesmo contorno).
+  4. **O dono decide olhando os dois NO JOGO**, não em prancha.
+- **Combinado novo (19/11):** julgar o personagem **no jogo, no tamanho real**. As pranchas de perto servem para achar
+  defeito, não para decidir.
+
 ## Quem sou
 O chat da frente **[arte]**: personagens (`src/client/game/doll/`, `characters.ts`, `animator.ts`), equipamento no
 corpo (`gearArt.ts`), monstros (`monsterArt.ts` e os pintados em `monsterPaint.ts`), ícones (`itemArt.ts`,
@@ -1211,7 +1237,7 @@ e os matos da Clareira entraram no piloto; para o resto fiquei de mandar o "ante
   `node chao-foto.cjs <url> <saida.png> [x,y] [zoom] [largura,altura] [noite]` e `node chao-custo.cjs <url>
   [saida.json]` (no jogo ligado; `NOME` e `SENHA` do personagem de teste).
 
-### BIRIM, o personagem principal novo — FICHA ENTREGUE em 17/11, SÓ NO RAMO (falta o dono aprovar e decidir o passo 3)
+### BIRIM, o personagem principal novo — NA MAIN em 19/11, só no protótipo (ainda não no jogo: veja "AGORA", no alto)
 O dono pediu ("quero criar um personagem principal, na mesma pegada que é o que é hoje") e mandou a ficha dele (8
 ângulos ilustrados, uma foto e um modelo 3D de blocos) com um roteiro de 9 etapas. Escopo que ele aprovou ("Pode
 seguir"): **a ficha, sem mexer no jogo**. As referências dele **não entram no repositório** (a foto é de uma pessoa de
@@ -1497,6 +1523,8 @@ verdade): só vão no ZIP entregue a ele. Os dois `.py` que vieram no pacote 3D 
     no máximo 1 em 0–255) e, na do jogo, só um pedacinho de 22 × 13 px no queixo (numa imagem de 3000 × 4000); a cabeça de 0° a
     180° na câmera reta e as 8 direções nas duas câmeras; e a bateria (herói idêntico, os 40 testes do protótipo e os 6
     que desenham o personagem, `npm run check`, o Birim em todas as animações).
+- **(DESFEITA em 19/11, a pedido do dono: "sem barba ficou pior" — o Birim voltou para a barba cheia da 4b. O código desta
+  barba curta está no commit `e6c6d5d`.)**
 - **A barba curta, pintada na pele (19/11; o dono, depois da 4b: "está horrível, vamos fazer sem barba o que acha?" — mostrei
   a prévia sem barba e recomendei a curta; ele escolheu "1", a curta), só no ramo:**
   - *Por que a cheia não deu certo:* ela era ~40 volumes (cascos de esferas) em volta da mandíbula, mais ~150 fios; cada
