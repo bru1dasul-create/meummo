@@ -303,6 +303,11 @@ Feito pelo [mundo], tudo na `main`:
   luzes e a imagem dos tiles).
 
 ## Como confiro (receitas)
+- **Moita fechada (19/11):** a colisão é `bushBoxes` (no `iso-map.ts` e uma cópia no `gen-capao.ts`): três caixas em
+  octógono (a cruz a 0,9 × o raio e o quadrado do meio de 1,4 × o raio). No Capão, a moita cuja cruz abre um vão de
+  entalar com o que está colado nela (casa, tronco) volta ao quadrado de 1,8 × o raio (regra da vila: vão de 0,3 a
+  MIN_GAP que nada fecha; no resto: se cabe o pé). Para ver onde o pé para em linha reta, sem o navegador: `bodyFits`
+  com `cornerAtFeet` (src/shared/movement) passo a passo sobre o `GameMap.fromTiled` do mapa.
 - **Comparar um mapa gerado com o atual** (`node compara.cjs atual.tmj novo.tmj`):
   ```js
   const fs = require('fs');

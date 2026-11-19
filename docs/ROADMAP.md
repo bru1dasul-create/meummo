@@ -99,7 +99,7 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   avisa e larga a rota (o toque seguinte funciona). No celular, um toque rápido na área do joystick também anda
 - [ ] **[mundo]** Movimento livre, passo 2: colisão do tamanho de cada objeto (tronco, poste, cesto, caixote), dita
   no tileset; a [estrutura] lê e usa
-- [ ] **[mundo]** Trava invisível nas moitas (print do dono, 19/11): a caixa `mata-fechada` é um quadrado de 1,8 × o
+- [x] **[mundo]** Trava invisível nas moitas (print do dono, 19/11; feito em 19/11, na main: a moita virou um octógono de três caixas — a mesma largura para os quatro lados e as quinas na beira das folhas; as 54 do Capão que abririam um vão de entalar com o que está colado nelas ficam com o quadrado de antes. Na calçada da rua leste, o pé agora para encostado nas folhas): a caixa `mata-fechada` é um quadrado de 1,8 × o
   raio da moita, e as pontas passam ~30 cm das folhas. No fim da calçada oeste da rua leste do Capão (x 87–88, y ≈ 80),
   a ponta da moita 2522 cobre o fim da calçada e o meio-fio: o personagem para a ~0,5 m das folhas. Proposta da
   [estrutura], testada só no computador de teste: quadrado de 1,45 × o raio (as pontas na beirada das folhas; a cerca

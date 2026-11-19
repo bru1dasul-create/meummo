@@ -51,6 +51,20 @@ export const line = (type: string, pts: Pt[], props?: Props, name?: string): Sha
 export const area = (type: string, pts: Pt[], props?: Props, name?: string): Shape => ({ type, name, x: 0, y: 0, polygon: pts.map(([x, y]) => [round(x), round(y)]), props });
 /** Quadrado de colisão centrado em (x, y). */
 export const block = (type: string, x: number, y: number, side: number, props?: Props): Shape => rect(type, x - side / 2, x + side / 2, y - side / 2, y + side / 2, props);
+/**
+ * A colisão da moita fechada (redonda, de raio `r`): um octógono de três caixas — a cruz, que vai a 0,9 × r para os quatro
+ * lados (como o quadrado de antes), e o quadrado do meio, de 1,4 × r (as quinas na beira das folhas). As pontas do
+ * quadrado de antes passavam ~30 cm das folhas e travavam o pé no nada.
+ */
+export const bushBoxes = (x: number, y: number, r: number): Shape[] => {
+  const [a, b] = [round(r * 0.9), round(r * 0.5)];
+  const c = round(r * 0.7);
+  return [
+    rect('mata-fechada', round(x - a), round(x + a), round(y - b), round(y + b)),
+    rect('mata-fechada', round(x - b), round(x + b), round(y - a), round(y + a)),
+    rect('mata-fechada', round(x - c), round(x + c), round(y - c), round(y + c)),
+  ];
+};
 export const rectOf = (s: Shape): Rect => ({ x0: s.x, x1: s.x + (s.w ?? 0), y0: s.y, y1: s.y + (s.h ?? 0) });
 
 // ---------------- geometria ----------------

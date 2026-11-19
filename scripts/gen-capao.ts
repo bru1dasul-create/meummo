@@ -298,6 +298,22 @@ const ellipse = (type: string, cx: number, cy: number, r: number, props?: Props)
 const point = (type: string, x: number, y: number, props?: Props, name?: string): Shape => ({ type, name, x, y, point: true, props });
 /** Quadrado de colisão centrado em (x, y). */
 const block = (type: string, x: number, y: number, side: number, props?: Props): Shape => rect(type, x - side / 2, x + side / 2, y - side / 2, y + side / 2, props);
+/**
+ * A colisão da moita fechada (redonda, de raio `r`): um octógono de três caixas — a cruz, que vai a 0,9 × r para os quatro
+ * lados (como o quadrado de antes), e o quadrado do meio, de 1,4 × r (as quinas na beira das folhas). As pontas do
+ * quadrado de antes passavam ~30 cm das folhas e travavam o pé no nada.
+ */
+/** De qual moita é cada caixa (o octógono pode voltar a ser o quadrado: veja a conferência dos vãos da vila). */
+const BUSH_OF = new Map<Shape, { x: number; y: number; r: number; boxes: Shape[] }>();
+const bushBoxes = (x: number, y: number, r: number): Shape[] => {
+  const [a, b] = [round(r * 0.9), round(r * 0.5)];
+  const c = round(r * 0.7);
+  return [
+    rect('mata-fechada', round(x - a), round(x + a), round(y - b), round(y + b)),
+    rect('mata-fechada', round(x - b), round(x + b), round(y - a), round(y + a)),
+    rect('mata-fechada', round(x - c), round(x + c), round(y - c), round(y + c)),
+  ];
+};
 
 const round = (v: number) => Math.round(v * 100) / 100;
 /** Contorno irregular (sem sorteio: o mesmo sempre) em volta de (cx, cy). */
@@ -1921,7 +1937,14 @@ for (const s of cenario) {
   if (s.type === 'arvore') colisao.push(block('tronco', s.x, s.y, Number(p.tronco)));
   else if (s.type === 'poste') colisao.push(block('poste', s.x, s.y, 0.3));
   else if (s.type === 'pedra') colisao.push(block('pedra', s.x, s.y, round(Number(p.raio) * 1.5)));
-  else if (s.type === 'arbusto' && p.fechado) colisao.push(block('mata-fechada', s.x, s.y, round(Number(p.raio) * 1.8)));
+  // (a moita é redonda: o quadrado de 1,8 × o raio passava ~30 cm das folhas nas pontas e travava o pé no nada — o fim
+  // da calçada da rua leste do Capão, print do dono em 19/11, pela [estrutura]. Agora é um octógono de três caixas:
+  // a mesma largura de antes para os quatro lados e as quinas na beira das folhas)
+  else if (s.type === 'arbusto' && p.fechado) {
+    const bush = { x: s.x, y: s.y, r: Number(p.raio), boxes: bushBoxes(s.x, s.y, Number(p.raio)) };
+    for (const c of bush.boxes) BUSH_OF.set(c, bush);
+    colisao.push(...bush.boxes);
+  }
   else if (s.type === 'bambu') colisao.push(block('bambu', s.x, s.y, round(Number(p.raio) * 1.6)));
   else if (s.type === 'gradil' || (s.type === 'portao' && !p.aberto)) colisao.push({ ...rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!), props: { bloqueiaTiro: false } });
   else if (s.type === 'pilar' || s.type === 'tronco-caido') colisao.push(rect(s.type, s.x, s.x + s.w!, s.y, s.y + s.h!));
@@ -2006,6 +2029,58 @@ function blockedBetween(a: Shape, b: Shape, all: Shape[]): boolean {
     const [cx1, cy1] = [c.x + c.w!, c.y + c.h!];
     return inX ? c.x < gx1 && cx1 > gx0 && c.y <= gy0 + e && cy1 >= gy1 - e : c.y < gy1 && cy1 > gy0 && c.x <= gx0 + e && cx1 >= gx1 - e;
   });
+}
+// a moita em octógono que abre, com o que está encostado nela, um vão de entalar (a quina do quadrado de antes fechava o
+// vão): volta a ser o quadrado de 1,8 × o raio, só ela (são poucas; o resto fica sem a ponta que travava o pé no nada).
+// Vale a regra de cada lugar: na vila, qualquer vão de 0,3 a MIN_GAP que nada fecha; no resto, se cabe o pé lá dentro
+{
+  const inVillage = (c: Shape) => reached('4b') && c.x + c.w! > PARK_X + 0.5 && c.y < VILLAGE_S;
+  const boxOf = (c: Shape): Box => ({ x0: c.x, x1: c.x + c.w!, y0: c.y, y1: c.y + c.h! });
+  const CELL = 2;
+  for (let pass = 0; pass < 12; pass++) {
+    const list = colisao.filter((c) => c.type !== 'agua');
+    const boxes = list.map(boxOf);
+    const village = list.filter(inVillage);
+    const grid = new Map<string, number[]>();
+    boxes.forEach((b, i) => {
+      for (let gx = Math.floor(b.x0 / CELL); gx <= Math.floor(b.x1 / CELL); gx++) {
+        for (let gy = Math.floor(b.y0 / CELL); gy <= Math.floor(b.y1 / CELL); gy++) {
+          const k = gx + ',' + gy;
+          if (!grid.has(k)) grid.set(k, []);
+          grid.get(k)!.push(i);
+        }
+      }
+    });
+    const back = new Set<{ x: number; y: number; r: number; boxes: Shape[] }>();
+    list.forEach((a, i) => {
+      const bushA = BUSH_OF.get(a);
+      const A = boxes[i]!;
+      const near = new Set<number>();
+      for (let gx = Math.floor((A.x0 - MIN_GAP) / CELL); gx <= Math.floor((A.x1 + MIN_GAP) / CELL); gx++) {
+        for (let gy = Math.floor((A.y0 - MIN_GAP) / CELL); gy <= Math.floor((A.y1 + MIN_GAP) / CELL); gy++) for (const j of grid.get(gx + ',' + gy) || []) if (j > i) near.add(j);
+      }
+      for (const j of near) {
+        const b = list[j]!;
+        const bush = bushA || BUSH_OF.get(b);
+        if (!bush || back.has(bush) || (a.type === 'mata-fechada' && b.type === 'mata-fechada')) continue;
+        const B = boxes[j]!;
+        const [dx, dy] = [Math.max(0, B.x0 - A.x1, A.x0 - B.x1), Math.max(0, B.y0 - A.y1, A.y0 - B.y1)];
+        if (dx > 0 && dy > 0) continue;
+        const gap = dx + dy;
+        if (gap <= 0.3 || gap >= MIN_GAP) continue;
+        const bad = inVillage(a) && inVillage(b) ? !blockedBetween(a, b, village) : pocketOpen(A, B, boxes);
+        if (bad) back.add(bush);
+      }
+    });
+    if (!back.size) break;
+    for (const bush of back) {
+      for (const c of bush.boxes) colisao.splice(colisao.indexOf(c), 1);
+      const square = block('mata-fechada', bush.x, bush.y, round(bush.r * 1.8));
+      bush.boxes = [square];
+      BUSH_OF.set(square, bush);
+      colisao.push(square);
+    }
+  }
 }
 // na vila, nenhum vão estreito entre duas coisas sólidas de frente uma para a outra: abaixo de 0,3 m o pé nem entra; de
 // 0,3 a MIN_GAP ele entra de lado e entala. (Na diagonal, canto com canto, sempre há por onde sair.)
