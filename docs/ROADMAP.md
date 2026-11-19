@@ -44,8 +44,8 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] Sons sintetizados (estilingue, acerto, aviso embaixo de você, esquiva, nível, desmaio) — tecla M desliga
 - [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [x] **[arte]** BIRIM, o personagem principal novo, no jogo para testar (19/11, na main): com `?birim` no endereço
-  (ex.: `http://localhost:5173/?birim`), o seu personagem e os outros jogadores na sua tela saem com o Birim; sem a
-  chave, nada muda. Veja `docs/ARTE.md`, "AGORA"
+  (ex.: `http://localhost:5173/?birim`), o seu personagem e os outros jogadores na sua tela saem com o Birim; o navegador
+  guarda a escolha até abrir com `?heroi`; sem a chave, nada muda. Veja `docs/ARTE.md`, "AGORA"
 - [ ] **[dono]** Jogar com `?birim` e dizer o que incomoda no tamanho real; depois escolher: (A) o Birim vira o herói de
   todos ou (B) cada jogador escolhe (aí a [estrutura] salva o `model` de cada um)
 - [ ] **[arte]** Arte de verdade para personagens e monstros (piloto do estilo desenhado com o Nano Banana: chave

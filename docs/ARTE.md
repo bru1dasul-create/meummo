@@ -16,7 +16,10 @@
      os jogadores na tela de quem abriu (os NPCs continuam iguais) — também no retrato da barra e na mochila, que usam a
      mesma função; sem a chave, nada muda (herói idêntico). O `birim.js` é carregado no jogo depois do `classes.js`
      (`arte.ts` e `view-scripts.json`). Conferido no navegador (PC 1600×900 e Pixel 7 deitado), parado e andando para os
-     4 lados, sem erros. Esperando o dono jogar e dizer o que incomoda no tamanho real. (O texto do plano, de antes:)
+     4 lados, sem erros. No PC do dono não pegou de primeira (o mais provável: clicar na barra seleciona o endereço
+     inteiro, e o `?birim` digitado o substituiu): a chave passou a valer em maiúscula ou minúscula, depois de `?` ou de
+     `#`, e fica guardada no navegador (`localStorage`, `meummo.testeModelo`) até abrir com `?heroi`. Esperando o dono jogar e
+     dizer o que incomoda no tamanho real. (O texto do plano, de antes:)
      **Primeiro, o Birim no jogo como está**, para o dono jogar e julgar no tamanho real (no PC a cabeça do herói tem
      ~25 px de altura; no celular, menos — fio de barba e detalhe fino somem nesse tamanho). Para testar, sem salvar nada:
      a chave `?birim` no endereço. Do meu lado: em `js/character/classes.js`, `appearanceOf` devolve

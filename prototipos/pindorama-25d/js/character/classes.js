@@ -74,10 +74,46 @@
 
   // (teste do dono, 19/11: com `?birim` no endereço, os jogadores saem com o Birim, o personagem principal novo
   // (`birim.js`) — para ver no jogo, no tamanho real, antes de decidir se ele vira o herói de todos ou se cada jogador
-  // escolhe. Vale só para quem abriu com a chave, e só para os jogadores: os NPCs continuam iguais. Sem a chave, nada muda)
+  // escolhe. Vale só para quem abriu com a chave, e só para os jogadores: os NPCs continuam iguais. Sem a chave, nada muda.
+  // A chave vale em maiúscula ou minúscula, depois de `?` ou de `#`, e fica guardada NESTE navegador: depois de abrir uma
+  // vez com ela, o jogo continua com o Birim mesmo aberto sem a chave (pelo jogar.bat), até abrir com `?heroi`. No PC do
+  // dono, digitar no endereço falhou — clicar na barra seleciona tudo, e o que se digita troca o endereço inteiro)
+  const TEST_KEY = 'meummo.testeModelo';
   const TEST_MODEL = (() => {
     try {
-      return typeof location !== 'undefined' && new URLSearchParams(location.search).has('birim') ? 'birim' : null;
+      if (typeof location === 'undefined') return null;
+      const where = (location.search + '&' + location.hash.replace(/^#/, '')).toLowerCase();
+      const has = (k) => new RegExp('(^|[?&])' + k + '(=|&|$)').test(where);
+      let store = null;
+      try {
+        store = window.localStorage;
+      } catch (e) {
+        store = null;
+      }
+      const save = (v) => {
+        try {
+          if (!store) return;
+          if (v) store.setItem(TEST_KEY, v);
+          else store.removeItem(TEST_KEY);
+        } catch (e) {
+          // (sem onde guardar: vale só nesta página)
+        }
+      };
+      if (has('heroi')) {
+        save(null);
+        return null;
+      }
+      if (has('birim')) {
+        save('birim');
+        return 'birim';
+      }
+      let saved = null;
+      try {
+        saved = store && store.getItem(TEST_KEY);
+      } catch (e) {
+        saved = null;
+      }
+      return saved === 'birim' ? 'birim' : null;
     } catch (e) {
       return null;
     }
