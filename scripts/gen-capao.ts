@@ -1002,6 +1002,9 @@ if (reached('4c')) {
   for (const [cx, cy, rx, ry] of [[90, 95, 1.6, 4], [92.6, 106, 1.3, 3], [89.6, 86, 1.2, 2.5]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.2) });
   cenario.push(rect('barreira', ROAD_GUARA.x0, ROAD_GUARA.x1, SOUTH_BARRIER_Y, SOUTH_BARRIER_Y + 0.5, { altura: 1.1 }));
   cenario.push(point('placa', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 0.3, { texto: 'GUARAPIRANGA', seta: 'sul' }));
+  // (o ponto onde chega quem vier do Mapa 02, Guarapiranga: o servidor confere que ele existe. A barreira só sai, e a
+  // beira vira saída, quando o Mapa 02 entrar na main)
+  pontos.push(point('ponto', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 3, undefined, 'chegada-guarapiranga'));
   // paredes de mata dos dois lados da rua: a mata ao sul da vila continua só de enfeite
   // (na floresta maior as paredes descem até o fim novo do mapa, e a do oeste abre na frente do posto abandonado; o
   // tamanho de cada arbusto é sorteado sempre, na mesma ordem)
