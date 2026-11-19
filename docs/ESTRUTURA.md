@@ -48,10 +48,11 @@ alternativas quando vejo — sem concordar só para agradar.
      outro lado de uma cerca de moitas (deu 33 m de volta no Capão, x 86, y 80,7). Preferir o lado de quem anda.
   3. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;
      conferir com caminho livre). O "levar" do painel com fração ficou pronto (19/11, diário).
-- **Trava invisível nas moitas (print do dono, 19/11): é do [mundo]**, pedido mandado (e no roteiro). A caixa
-  `mata-fechada` (1,8 × raio) passa ~30 cm das folhas nas pontas; no fim da calçada oeste da rua leste do Capão, a
-  ponta da moita 2522 cobre o fim da calçada. Proposta: 1,45 × raio (testada só no computador de teste, desfeita).
-  Quando ele juntar, conferir no navegador (painel F1 → Hitboxes mostra as caixas por cima do desenho).
+- **Trava invisível nas moitas (print do dono, 19/11): resolvida pelo [mundo] (main 9aac53d)**, conferida por mim
+  (medida com `sweepBody` e no navegador, F1 → Hitboxes). A caixa `mata-fechada` (quadrado de 1,8 × raio) passava ~30
+  cm das folhas nas pontas; agora é um octógono de três caixas (cruz a 0,9 × raio + quadrado do meio de 1,4 × raio;
+  54 moitas do Capão ficaram com o quadrado, para não abrir vão de entalar). No fim da calçada oeste da rua leste do
+  Capão, o pé desce colado no meio-fio e contorna a moita (antes parava em y 79,65).
 - **Para depois (anotado pelo [mundo], 18/11):** "mundo aberto, sem carregamento" (andar do Capão à Guarapiranga sem
   trocar de mapa). Hoje cada mapa é uma sala no servidor (`World`); seria trabalho grande no `Realm`. PARADO até o
   dono pedir; decidir com ele o caminho.
