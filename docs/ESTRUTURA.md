@@ -41,9 +41,8 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
   viram padrão (`data/*.json`, as constantes, e o game feel em `DEFAULT_FEEL`, `src/client/novo/feel.ts`).
 - **Pendências pequenas minhas** (esperando o "pode" do dono; no roteiro, seção Sensação de jogo):
-  1. Voltar perto de onde saiu: `savedSpot` usa `bodySpotIn` do tile salvo e, encostado numa moita/árvore/parede,
-     nenhum dos 6 lugares do tile cabe: volta na Clareira (~1% dos lugares do Capão; medido em 19/11). Cair para
-     `nearestBodySpot(map, x + 0.5, y + 1, 1.5)` (o pé de sempre do tile), sem mudar o que é salvo. Com teste.
+  1. ~~Voltar perto de onde saiu~~ feito em 19/11 (`savedSpot` cai para `nearestBodySpot` do meio do tile, até
+     `RESTORE_REACH` = 1,5 m; teste em `tests/mapa-novo.test.ts`; o que é salvo não mudou).
   2. "Andar até" um ponto bloqueado: `findRoute` troca o destino pela célula livre mais perto em linha reta, mesmo do
      outro lado de uma cerca de moitas (deu 33 m de volta no Capão, x 86, y 80,7). Preferir o lado de quem anda.
   3. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;

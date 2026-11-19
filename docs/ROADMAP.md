@@ -104,9 +104,9 @@ mas o tronco tem 6 px). A correção é o **movimento livre**, em entregas jogá
   a ponta da moita 2522 cobre o fim da calçada e o meio-fio: o personagem para a ~0,5 m das folhas. Proposta da
   [estrutura], testada só no computador de teste: quadrado de 1,45 × o raio (as pontas na beirada das folhas; a cerca
   de moitas continua fechada). Em `gen-capao.ts` e `gen-guarapiranga.ts` (pedido mandado ao [mundo])
-- [ ] **[estrutura]** Voltar perto de onde saiu: quem sai do jogo encostado numa moita, árvore ou parede volta na
-  Clareira (o servidor guarda o tile do pé e só procura lugar dentro dele; ~1% dos lugares do Capão, achado em 19/11).
-  Procurar o lugar livre mais perto, até ~1,5 m
+- [x] **[estrutura]** Voltar onde saiu (o "pode" do dono em 19/11): quem saía do jogo encostado numa moita, árvore ou
+  parede voltava na Clareira (o servidor guarda o tile do pé e só procurava lugar dentro dele; ~1% dos lugares do
+  Capão). Agora procura o lugar livre mais perto do meio do tile, até 1,5 m: no canto da calçada, voltou a 0,43 m
 - [ ] **[estrutura]** "Andar até" um ponto dentro de uma moita ou árvore: hoje vai até o lugar livre mais perto em
   linha reta, mesmo que fique do outro lado de uma cerca de moitas (no teste, deu uma volta de 33 m). Preferir o lugar
   do lado de quem anda
