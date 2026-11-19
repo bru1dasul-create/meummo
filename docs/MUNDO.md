@@ -344,6 +344,38 @@ Feito pelo [mundo], tudo na `main`:
   `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
 
 ## Próximos passos possíveis (o dono escolhe)
+**PARADO PELO DONO (19/11, fim do dia; "não faça nada, meus tokens estão acabando, apenas salva"). Quando ele pedir
+para seguir, decidimos juntos por qual lado ir primeiro.**
+- **A direção nova dele: o mundo ABERTO, sem tela de carregamento** ("vamos focar para ter o mapa como se fosse aberto
+  sem carregamento"): andar do Capão até o Guarapiranga sem trocar de mapa. Hoje cada mapa é uma sala no servidor e a
+  troca é pela camada `saidas`; mudar isso é da [estrutura] (servidor, motor) e meu (mapas em setores que se emendam).
+  Ainda não falei com as outras frentes sobre isso (ele pediu para não gastar).
+- **O escopo melhorado que ele mandou** (texto dele): o mapa tem que funcionar como fase de MMORPG, não só ilustração;
+  dividir em setores reutilizáveis, com caminhos de verdade, colisões, entradas e saídas, áreas seguras, zonas de caça e
+  lugares de missão; validar a escala e as ligações antes do desenho final; separar o mapa do mundo (regiões e pontos
+  de interesse) dos mapas jogáveis; não pôr todos os bichos, missões e segredos no mesmo lugar (áreas vazias, descoberta
+  e motivos para voltar); Mapa 01 Capão (começo, primeiras missões, escolha de classe), Mapa 02 Guarapiranga
+  (exploração, navegação, caça, ruínas e mistérios), Mapa 03 Santo Amaro (cidade, comércio, conflitos); não fazer tudo
+  de uma vez: uma região pequena jogável, testar andar, combate, exploração e desempenho no PC e no celular, depois
+  crescer.
+- **A imagem dele (não ficou em arquivo; o que tem nela):** "Mapa 02 — Represa de Guarapiranga, versão expandida,
+  400 × 320 m (≈ 32 ha), uns 4× a de 200 × 160", 8 regiões, uns 12 a 16 telas de PC para atravessar. A vila do Capão
+  (urbana) no alto à esquerda, a estrada contornando a represa pelo leste até Santo Amaro, a represa no meio. Os 13
+  pontos: 1 Chegada (Estrada do M'Boi Mirim, do Capão); 2 Mirante (oeste; observação e missões); 3 O Refúgio (palafitas;
+  comércio, pesca, missões secundárias); 4 Brejo Maior (perto da vila; barracas, fogueira, artesãos, pescadores,
+  informantes); 5 Campinho (campo de terra; eventos e desafios); 6 Praça em Ruínas (nordeste, com uma cachoeira; relíquias
+  e segredos); 7 Clube Náutico em Ruínas (leste da represa; piscina vazia, píer quebrado, alto risco); 8 Ilha do Véu (ilha
+  grande no meio, com uma árvore enorme; rituais, visões, missões principais); 9 Barragem de 1909 (leste; passagens por
+  dentro e a saída para Santo Amaro); 10 Represa/Barragem (sul; a comporta, exploração por dentro, eventos); 11 Trilha da
+  Margem Sul (caça e coleta rara); 12 Caverna Sagrada (sudoeste; inscrições, energia ancestral, missões de classe); 13
+  Várzea de Caça (sul, embaixo da barragem; alagado com muitos bichos: capivaras, saguis, aves). Biomas: urbano
+  (comunidade), mata densa, margem e brejo, represa, ruínas. Conteúdo: caça, coleta (ervas, madeira, fibras, minérios),
+  pesca, exploração e eventos (invasões, rituais, aparições). Missões: os pescadores do Refúgio, o clube náutico, o
+  segredo da Ilha do Véu, ativar a barragem, o ritual de classe. Ligações: Capão (Mapa 01) e Santo Amaro (Mapa 03);
+  depois, Interlagos, Grajaú e Parelheiros.
+- **O que eu já tinha feito antes de parar:** a planta de 200 × 160 m (`docs/referencias/mapa-02-maior-planta.jpg`,
+  feita por cima do mapa de cima de hoje; o dono não chegou a aprovar e mandou o escopo novo no lugar) e as tarefas
+  "Guarapiranga maior" e "Capão maior" no roteiro, agora paradas. Nada foi construído nos mapas.
 **Agora (19/11):**
 1. **Os dois mapas maiores** (pedido do dono em 19/11, "deixa o mapa maior" → "os dois maiores"): primeiro o Guarapiranga
    (uns 200 × 160 m: o parque, o brejo e a orla abertos), depois o Capão (para a direita). Só para a direita e para baixo

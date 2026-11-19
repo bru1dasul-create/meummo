@@ -609,7 +609,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   [arte] começou em 17/11 (`js/world/chao.js`: tinta de aquarela por material, folhas, tufos, florzinhas e pedrinhas no
   lugar das bolinhas, beiradas que se misturam, trilhas sem contorno e pedras repintadas; o mesmo peso do chão antigo).
   Falta deixar mais perto do alvo: a grama menos amarela, mais escura e cheia de folhinhas, e marcas de pisada na trilha
-- [ ] **[mundo]** Os dois mapas maiores (19/11, pedido do dono: "deixa o mapa maior"; escolheu "os dois maiores"):
+- [ ] **[dono + estrutura + mundo]** **Mundo aberto, sem tela de carregamento** (19/11, direção nova do dono: "vamos
+  focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
+  primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está
+  em `docs/MUNDO.md`, "Próximos passos"
+- [ ] **[mundo]** (PARADO em 19/11 pelo dono, que mandou o escopo novo acima) Os dois mapas maiores (19/11, pedido do dono: "deixa o mapa maior"; escolheu "os dois maiores"):
   primeiro o Guarapiranga (de 120 × 100 para uns 200 × 160 m, com o parque, o brejo e a orla abertos), depois o Capão
   (cresce para a direita, com mais rua, casas e mata). Crescer só para a direita e para baixo (a origem não muda: o mapa
   explorado de quem já joga não desalinha) e avisar a [estrutura] antes de juntar se um NPC ou uma chegada mudar
