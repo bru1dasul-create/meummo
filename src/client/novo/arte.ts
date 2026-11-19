@@ -27,6 +27,11 @@ import '../../../prototipos/pindorama-25d/js/world/casas.js';
 import '../../../prototipos/pindorama-25d/js/world/sul.js';
 // a Budega maior: a fachada preta, a vitrine, os móveis novos, o porcelanato e a calçada
 import '../../../prototipos/pindorama-25d/js/world/budega.js';
+// o Refúgio de Guarapiranga (Mapa 02): as casas de tábua, o telhado de zinco, os barcos, os barris, o ponto de ônibus,
+// as redes e o lampião
+import '../../../prototipos/pindorama-25d/js/world/refugio.js';
+// a água mexendo: ondinhas com o vento, brilhos do sol e a espuma da margem
+import '../../../prototipos/pindorama-25d/js/world/agua.js';
 import '../../../prototipos/pindorama-25d/js/world/world.js';
 import '../../../prototipos/pindorama-25d/js/creatures/creature.js';
 import '../../../prototipos/pindorama-25d/js/creatures/sagui.js';

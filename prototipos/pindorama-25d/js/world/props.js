@@ -561,7 +561,21 @@
         }
       }
     }
+    /** A casa de tábua do Refúgio (Mapa 02): as paredes e o telhado de zinco saem do refugio.js. */
+    _paintWood(ctx) {
+      const cam = this.cam;
+      const b = this.b;
+      const z0 = this.z0;
+      const ink = this.ink;
+      const W = b.x1 - b.x0, D = b.y1 - b.y0, Hh = b.h;
+      box(ctx, cam, b.x0, b.x1, b.y0, b.y1, z0, z0 + Hh, { front: b.wall, side: M.shade(b.wall, -0.26), top: '#8f9699' }, ink);
+      onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + Hh }, { x: 1, y: 0 }, () => PD.refugio.front(ctx, b, W, Hh, M.rng(Math.round(b.x0 * 3 + 11))));
+      onWall(ctx, cam, { x: b.x1, y: b.y1, z: z0 + Hh }, { x: 0, y: -1 }, () => PD.refugio.side(ctx, b, D, Hh, M.rng(Math.round(b.y0 * 5 + 3))));
+      PD.refugio.roof(ctx, cam, b, z0, ink);
+      if (b.shop && b.shop.awning) (PD.refugio.awning || houseAwning)(ctx, cam, b, z0, ink);
+    }
     paint(ctx) {
+      if (this.b.material === 'tabua' && PD.refugio) return this._paintWood(ctx);
       const cam = this.cam;
       const b = this.b;
       const z0 = this.z0;

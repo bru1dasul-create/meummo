@@ -540,6 +540,8 @@
     setTimeOfDay(time) {
       this.daylight = M.clamp(time && typeof time.light === 'number' ? time.light : 1, 0, 1);
       this.isNight = !!(time && time.night);
+      // (a água usa a luz do dia para os brilhos do sol: agua.js)
+      if (this.world) this.world.daylight = this.daylight;
       if (PD.creatures && PD.creatures.eyes) PD.creatures.eyes.night = this.isNight;
     }
 
@@ -893,11 +895,15 @@
       for (const p of map.props || []) {
         if (p.kind === 'poste-praca' && !p.off) out.push({ x: p.x, y: p.y, z: 0, r: 220, color: p.light || '#ffe9a6', k: 0.7, head: p.h });
         if (p.kind === 'fogueira') out.push({ x: p.x, y: p.y, z: 0, r: 240, color: p.light || '#ffb347', k: 0.9, flicker: true });
+        // o lampião do Refúgio (a lanterna fica na ponta do braço, 38 cm para o leste)
+        if (p.kind === 'lampiao') out.push({ x: p.x + 38, y: p.y, z: 0, r: 200, color: p.light || '#ffd36b', k: 0.7, head: (p.h || 280) - 40, flicker: true });
       }
       for (const b of map.houses || []) {
         if (!(b.resident || b.shop || b.interior) || b.abandoned) continue;
         const dx = b.door ? (b.door.from + b.door.to) / 2 : (b.x0 + b.x1) / 2;
         out.push({ x: dx, y: b.y1 + 50, z: 0, r: 150, color: '#ffd58a', k: 0.45 });
+        // as casas de tábua do Refúgio: a luz de dentro saindo pelas janelas abertas
+        if (b.material === 'tabua' && PD.refugio) for (const w of PD.refugio.windows(b)) out.push({ x: b.x0 + w.x + w.w / 2, y: b.y1 + 8, z: (w.z0 + w.z1) / 2, r: 80, color: '#ffcf7a', k: 0.55 });
         // a Budega maior: o LED branco contornando a frente (luzinhas na beirada de cima) e a vitrine amarela acesa
         if (b.led) {
           for (let x = b.x0 + 40; x <= b.x1 - 40; x += 110) {

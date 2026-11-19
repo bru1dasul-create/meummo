@@ -152,6 +152,20 @@ describe('Mapa 02 (Guarapiranga): formato do mapa novo', () => {
 });
 
 describe('Mapa 02 (a): a chegada e o Refúgio', () => {
+  it('quem chega do Capão não fica, na tela, atrás de poste, placa ou tronco (a câmera olha do sudeste)', () => {
+    // (19/11: a placa GUARAPIRANGA ficava bem na frente de quem chegava)
+    const sx = (x: number, y: number) => (x - y) * Math.SQRT1_2;
+    const tall = layer('cenario').filter((o) => ['poste', 'poste-praca', 'arvore'].includes(o.type) || (o.type === 'placa' && prop(o, 'poste') === true));
+    for (const o of tall) {
+      const { x, y } = at(o);
+      const ahead = x + y - (ARRIVAL.x + ARRIVAL.y);
+      const h = Number(prop(o, 'altura') ?? 2.4);
+      const sameColumn = Math.abs(sx(x, y) - sx(ARRIVAL.x, ARRIVAL.y)) < 0.9;
+      // na frente (mais perto da câmera) e alto o bastante para passar por cima do pé de quem chega, na tela
+      expect(ahead > 0 && sameColumn && ahead * Math.SQRT1_2 * 0.5 < h * 0.866, `${o.type} em (${x}, ${y}) na frente da chegada`).toBe(false);
+    }
+  });
+
   it('quem chega do Capão desce a estrada e o caminho até o Refúgio: o píer, a praça, a fogueira, a quitanda e o atracadouro', () => {
     expect(reachNear(SPAWN.x, SPAWN.y, 0.3)).toBe(true);
     for (const [x, y, what] of [

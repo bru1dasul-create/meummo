@@ -8,7 +8,10 @@
 ## Quem sou
 O chat da frente **[mundo]**: mapas (`public/assets/maps/*.tmj`), tiles (`scripts/tileset.ts` → `public/assets/tiles.png`),
 geradores (`scripts/gen-*.ts`, `map-builder.ts`, `map-depth.ts`), `render-map.ts` e, no jogo, `src/client/game/mapDepth.ts`
-(copas por cima de quem passa, luzes, escuro, neblina, vaga-lumes e faíscas). O dono não programa: ele decide o jogo.
+(copas por cima de quem passa, luzes, escuro, neblina, vaga-lumes e faíscas). **Desde 19/11 (escolha do dono), também o
+desenho do mapa inteiro no jogo 2.5D**, não só a planta: chão, água, plantas, casas, objetos do cenário e a luz do lugar,
+em `prototipos/pindorama-25d/js/world/*.js` (os arquivos que a [arte] fez lá até 19/11 passaram para mim); a [arte]
+fica com o visual do personagem. O dono não programa: ele decide o jogo.
 Converso em português do Brasil, com explicações simples, e mando prints do navegador em cada entrega. Ele me chama de
 "meu xuxu".
 
@@ -31,6 +34,22 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (19/11): o Mapa 02, pedaço (a), está no jogo, desenhado por mim.** O dono: "quero que você desenhe o mapa e
+  coloca no jogo, o arte visual mexe apenas no visual do personagem, você visual do mapa completo não só escopo". O mapa
+  `guarapiranga` (120 × 100 m, `scripts/gen-guarapiranga.ts`, `npm run gen:guarapiranga -- --out ...`) é a chegada pela
+  **Estrada do M'Boi Mirim** (a rua tomada pela mata, com faixa apagada, rachaduras, buracos, capim e raízes, o ponto de
+  ônibus e os postes com cipó) e o **Refúgio** na beira da represa: 5 casas de tábua (`material: 'tabua'`) com telhado de
+  zinco enferrujado, a quitanda da Dona Iracema com o toldo, 7 barcos (canoa, voadeira, afundado), barris, redes de
+  pesca, varais, lampiões que acendem à noite, janelas que acendem à noite e a **água mexendo**. A barreira do sul do
+  Capão saiu: a estrada vai até a beira do mapa (saída `Estrada do M'Boi Mirim`, chega em (18,6; 4,8) aqui; a volta chega
+  em `chegada-guarapiranga`, (91; 176,5) no Capão). Os desenhos novos: `js/world/refugio.js` (casa de tábua, telhado,
+  janelas, toldo, `barco`, `barril`, `ponto-onibus`, `rede`, `lampiao`, `varal`) e `js/world/agua.js` (ondinhas que
+  andam com o vento, brilhos do sol, espuma da margem); os ganchos em `props.js` (casa de tábua), `tmj.js` (os tipos
+  novos e o poste `estilo: 'lampiao'`), `view.js` (luzes da noite e `world.daylight`) e `world.js` (a água por cima do
+  chão). **Regras novas:** cada janela de casa de tábua precisa de 1,8 m de parede (as folhas abertas ficam dos lados);
+  quem chega de outro mapa não pode ficar, na tela, atrás de poste, placa ou tronco (teste). Planta e conceito:
+  `docs/referencias/mapa-02-planta.jpg` e `mapa-02-refugio-conceito.jpg`. Os pedaços (b) parque e brejo e (c) orla,
+  clube, praça do Saci e barragem ficam para depois (a região 2 da [estrutura] está pausada pelo dono desde 18/11).
 - **Decisão do dono (13/11, noite): pausa para capricho.** Ele achou a arte "ruinzinha" (falta detalhe; a rua não
   parece rua, a calçada não parece calçada) e decidiu parar de avançar e melhorar os mapas, uma área por vez,
   começando pela rua e pela praça da Budega. Ideia dele, aprovada com as imagens de referência: **a floresta reinando
@@ -304,6 +323,9 @@ Feito pelo [mundo], tudo na `main`:
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
 
 ## Esperando outras frentes
+- **[estrutura] (combinado em 19/11, a parte pequena):** a Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em
+  (57,5; 50,6) e (49,6; 62,4), os dois olhando para o sul (90); conferi que o corpo cabe e que dá para chegar a 3 m. O
+  pedaço (a) ainda não tem área de bichos.
 - **[estrutura]:** o combate no jogo novo, passo 1 (ver golpe, dano, desmaio e atirar com o estilingue). Quando
   chegar, religo as criaturas da 4a. O formato novo do mapa já é lido (pasta `maps-iso/`, `colisao`, `seguro`).
   Resolvido em 13/11 (e13888e, conferido por mim no mapa da 4b): o "andar até" enroscava em poste e banco e depois
@@ -317,7 +339,13 @@ Feito pelo [mundo], tudo na `main`:
   `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
 
 ## Próximos passos possíveis (o dono escolhe)
-**Agora (mundo novo):**
+**Agora (19/11):**
+1. **O chão, a luz e a água com mais qualidade** (roteiro; passou da [arte] para mim com a divisão nova). Alvo:
+   `docs/referencias/chao-pintado-alvo.jpg`. A água mexendo já começou (`agua.js`); falta o chão pintado (manchas, beiradas
+   que se misturam), a sombra das casas e das árvores no chão e no deque, e a vida no ar (folhas, borboletas, poeira de luz).
+2. **Mapa 02 (b) e (c)** quando o dono soltar a região 2.
+
+**Antes (mundo novo):**
 1. **Etapa 4b (portão e vila):** prévia primeiro, o "pode" do dono, depois o jogo.
 2. **Etapa 4c**, depois a 5 (atmosferas) e a 6 (minimapa no mapa novo: retomar o ramo `mundo/minimapa`; o terreno
    vai precisar ler `chao`/`cenario`).

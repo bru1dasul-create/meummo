@@ -10,6 +10,7 @@
 // Uso: npm run gen:guarapiranga (não sobrescreve o mapa existente sem --force; para comparar, use --out outro.tmj)
 
 import { mulberry32 } from './pixels';
+import { writeMapImage } from './mapa-de-cima';
 import {
   area,
   block,
@@ -121,7 +122,8 @@ const FIRE = { x: 57, y: 55.3 };
 
 // ----- a chegada -----
 /** Onde aparece quem chega do Capão, e a saída de volta (a beira de cima, na estrada). */
-const ARRIVAL = { x: 19.9, y: 4 };
+// (um pouco a oeste do meio da estrada: os postes da beira leste não ficam, na tela, na frente de quem chega)
+const ARRIVAL = { x: 18.6, y: 4.8 };
 const EXIT_NORTH: Rect = { x0: 14.5, x1: 25, y0: 0, y1: 0.6 };
 /** O ponto de ônibus (o último ponto da linha), do lado oeste da estrada, virado para ela. */
 const BUS_STOP: Rect = { x0: 13.2, x1: 14.6, y0: 5, y1: 8.4 };
@@ -159,6 +161,46 @@ chao.push(area('grama', ISLAND, undefined, 'Ilha do Véu'));
 chao.push(line('calcada', ROAD, { largura: ROAD_W + 2 * SIDEWALK }));
 chao.push(line('asfalto', ROAD, { largura: ROAD_W, estado: 'rachado', nome: "Estrada do M'Boi Mirim" }));
 chao.push(line('trilha', PATH, { largura: PATH_W, nome: 'Caminho da Represa' }));
+{
+  const srng = mulberry32(SEED + 9);
+  const onAsphalt = (x: number, y: number) => distToPath(x, y, ROAD_OPEN) < ROAD_W / 2 - 0.3;
+  // a faixa amarela do meio, tracejada e quase apagada
+  chao.push(line('faixa-rua', ROAD_OPEN, { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true }));
+  // rachaduras (umas com mato saindo)
+  for (let i = 0, n = 0; i < 600 && n < 16; i++) {
+    const k = Math.floor(srng() * (ROAD_OPEN.length - 1));
+    const [ax, ay] = ROAD_OPEN[k]!;
+    let [x, y] = [ax + (srng() - 0.5) * ROAD_W, ay + (srng() - 0.5) * ROAD_W];
+    if (!onAsphalt(x, y)) continue;
+    const pts: Pt[] = [[x, y]];
+    let a = srng() * Math.PI * 2;
+    for (let j = 0; j < 3 + Math.floor(srng() * 4); j++) {
+      a += (srng() - 0.5) * 1.6;
+      const l = 0.5 + srng() * 1;
+      const [nx, ny] = [x + Math.cos(a) * l, y + Math.sin(a) * l];
+      if (!onAsphalt(nx, ny)) break;
+      [x, y] = [nx, ny];
+      pts.push([x, y]);
+    }
+    if (pts.length < 3) continue;
+    chao.push(line('rachadura', pts, { largura: 0.06, cor: '#1e2022', mato: srng() < 0.7 }));
+    n++;
+  }
+  // os buracos com água de chuva e o capim nas frestas e na beira do asfalto
+  for (const [x, y, raio] of [[21.2, 10.6, 0.5], [31.8, 20.6, 0.42], [41.6, 24.4, 0.55]] as const) chao.push(point('buraco', x, y, { raio, agua: true }));
+  for (let i = 0, n = 0; i < 400 && n < 40; i++) {
+    const k = Math.floor(srng() * (ROAD_OPEN.length - 1));
+    const [ax, ay] = ROAD_OPEN[k]!;
+    const [x, y] = [ax + (srng() - 0.5) * (ROAD_W + 1.6), ay + (srng() - 0.5) * (ROAD_W + 1.6)];
+    if (distToPath(x, y, ROAD_OPEN) > ROAD_HALF - 0.2) continue;
+    chao.push(point('planta', x, y, { tipo: 'capim', raio: round(0.18 + srng() * 0.18) }));
+    n++;
+  }
+  // as raízes das árvores da beira entrando no asfalto (baixas: o pé passa por cima)
+  for (const [x0, y0, x1, y1] of [[17.6, 6.2, 19.4, 7.4], [24.6, 15.2, 26.4, 14.2], [36.2, 25.6, 37.6, 24.2], [44.4, 22.2, 45.6, 23.8]] as const) {
+    chao.push(line('raiz', [[x0, y0], [(x0 + x1) / 2 + 0.2, (y0 + y1) / 2 - 0.15], [x1, y1]], { largura: 0.22, altura: 0.12, cor: '#6b4a2e' }));
+  }
+}
 
 // ---------------- a vista da câmera ----------------
 /**
@@ -231,7 +273,8 @@ function roadside(x: number, y: number, offset: number): Pt {
 cenario.push(box('ponto-onibus', BUS_STOP, { altura: 2.6, olhando: 0, placa: "M'BOI MIRIM" }, 'Ponto final'));
 trunks.push({ x: (BUS_STOP.x0 + BUS_STOP.x1) / 2, y: (BUS_STOP.y0 + BUS_STOP.y1) / 2, r: 0.7 });
 // as placas ficam na beira da calçada, coladas na mata (sem vão de entalar)
-for (const [tx, ty, texto] of [[25.4, 9.6, 'GUARAPIRANGA'], [34.6, 28.4, 'REFÚGIO']] as const) {
+// (a do GUARAPIRANGA fica mais para o sul: perto da chegada, na tela ela ficava na frente de quem chega do Capão)
+for (const [tx, ty, texto] of [[23.6, 16.4, 'GUARAPIRANGA'], [34.6, 28.4, 'REFÚGIO']] as const) {
   const [x, y] = roadside(tx, ty, ROAD_HALF + 0.12);
   cenario.push(point('placa', x, y, { texto, seta: 'sul', poste: true }));
   trunks.push({ x, y, r: 0.1 });
@@ -239,10 +282,10 @@ for (const [tx, ty, texto] of [[25.4, 9.6, 'GUARAPIRANGA'], [34.6, 28.4, 'REFÚG
 /** Postes de concreto na beira norte da estrada (a luz já não acende: só os do Refúgio têm luz). */
 const POSTS: Pt[] = [[24.6, 4.2], [26.4, 13.4], [33.6, 18.6], [43.2, 21]].map(([x, y]) => roadside(x!, y!, ROAD_HALF + 0.17));
 for (const [x, y] of POSTS) {
-  cenario.push(point('poste', x, y, { altura: 7, apagado: true }));
+  cenario.push(point('poste', x, y, { altura: 7, apagado: true, cipo: true }));
   trunks.push({ x, y, r: 0.15 });
 }
-cenario.push(line('fiacao', POSTS, { altura: 6.6 }));
+cenario.push(line('fiacao', POSTS, { altura: 6.6, cipo: true }));
 
 // ----- a mata fechada: as paredes dos dois lados da estrada (até a árvore caída) e do lado oeste do caminho -----
 const erng = mulberry32(SEED + 6);
@@ -292,8 +335,18 @@ trunks.push({ x: ROAD_BLOCK_X, y: (FALLEN.y0 + FALLEN.y1) / 2, r: 0.5 });
 const vrng = mulberry32(SEED + 5);
 for (const [r, name] of DECKS) cenario.push(box('deque', r, { altura: 0.6, palafitas: true }, name));
 for (const h of HOUSES) {
-  cenario.push(box('casa', h, { altura: HOUSE_H, andares: 1, cor: h.cor, material: 'tabua', telhado: 'zinco', palafita: true, ...h.extra }, h.name));
+  // (com gente morando: de noite a luz sai pela porta e pelas janelas abertas; o cipó sobe pelas quinas)
+  const gente: Record<string, string> = h.extra && h.extra.comercio ? {} : { morador: 'familia' };
+  cenario.push(box('casa', h, { altura: HOUSE_H, andares: 1, cor: h.cor, material: 'tabua', telhado: 'zinco', palafita: true, cipo: 0.3, ...gente, ...h.extra }, h.name));
 }
+// as redes de pesca secando e os varais de roupa, na beirada do deque (de costas para a água, sem fechar caminho)
+const LINES: [string, number, number, number, number][] = [
+  ['rede', 52.2, 54.3, 45.0, 45.25], // no beco entre a casa azul e a quitanda, encostada na beirada do fundo
+  ['rede', 60.3, 63.2, 65.6, 65.85], // na beirada sul do deque sudeste, do lado da casa rosa
+  ['varal', 47.3, 50.4, 59.6, 59.85], // na beirada sul da praça, entre o píer e o atracadouro
+  ['varal', 60.0, 60.25, 61.2, 64.3], // na beirada oeste do deque sudeste, de frente para a casa rosa
+];
+for (const [type, x0, x1, y0, y1] of LINES) cenario.push(rect(type, x0, x1, y0, y1, { altura: type === 'rede' ? 1.8 : 1.9 }));
 // a fogueira da praça, com os bancos em volta virados para o fogo
 cenario.push(point('fogueira', FIRE.x, FIRE.y, { raio: 0.6, luz: '#ffb347' }));
 const BENCHES: [number, number, number, number, number][] = [
@@ -420,6 +473,7 @@ for (const s of cenario) {
   else if (s.type === 'poste-praca') colisao.push(block('poste-praca', s.x, s.y, 0.25, { altura: Number(p.altura) }));
   else if (s.type === 'placa' && p.poste) colisao.push(block('placa', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.2 }));
   else if (s.type === 'barril' || s.type === 'caixote') colisao.push(box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'rede' || s.type === 'varal') colisao.push(box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) }));
 }
 // a água: faixas que o pé não atravessa (o deque e o píer ficam de fora)
 colisao.push(...waterStrips(isWater, 0, W, 0, H));
@@ -474,3 +528,6 @@ writeTmj(
 );
 const count = (type: string) => cenario.filter((s) => s.type === type).length;
 console.log(`Mapa gerado em ${OUT}: ${W}x${H} m, etapa ${STAGE}, ${count('arvore')} árvores, ${count('casa')} casas, ${colisao.length} retângulos de colisão.`);
+// a imagem vista de cima (a tecla M e o mini mapa), ao lado do mapa
+const mapImage = writeMapImage(OUT);
+console.log(`Mapa visto de cima (tecla M): ${mapImage.png} e ${mapImage.json.split('/').pop()}.`);

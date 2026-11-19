@@ -251,6 +251,11 @@ const ROAD_GUARA = { x0: ROAD_S.x0, x1: ROAD_S.x1, y0: VILLAGE_S, y1: H };
 /** A barreira com a placa: na floresta maior ela desceu para o fim novo da rua (antes ficava em SOUTH_BARRIER_Y0). */
 const SOUTH_BARRIER_Y0 = 114.5;
 /** (na mesma linha de um arbusto das paredes da rua, que vão de 1,1 em 1,1 m: assim a barreira encosta nos dois lados) */
+/**
+ * O Mapa 02 (Guarapiranga) está no jogo (19/11): a barreira sai, a placa vai para um poste na beira oeste da rua e a
+ * beira do mapa, no fim da rua, vira a saída para lá; quem volta de lá aparece na rua, 3,5 m antes da beira.
+ */
+const GUARA_LINK = true;
 const SOUTH_BARRIER_Y = FLORESTA_MAIOR ? Math.round((VILLAGE_S + 0.6 + 1.1 * Math.round((H - 5.5 - VILLAGE_S - 0.6) / 1.1) - 0.25) * 100) / 100 : SOUTH_BARRIER_Y0;
 
 /**
@@ -285,6 +290,8 @@ const colisao: Shape[] = [];
 const seguro: Shape[] = [];
 const areas: Shape[] = [];
 const pontos: Shape[] = [];
+/** Saídas para outros mapas (camada "saidas"): `mapa` é o arquivo de lá e `chegada` o ponto onde se aparece. */
+const saidas: Shape[] = [];
 
 const rect = (type: string, x0: number, x1: number, y0: number, y1: number, props?: Props, name?: string): Shape => ({ type, name, x: x0, y: y0, w: x1 - x0, h: y1 - y0, props });
 const ellipse = (type: string, cx: number, cy: number, r: number, props?: Props): Shape => ({ type, x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, ellipse: true, props });
@@ -1000,11 +1007,17 @@ if (reached('4c')) {
   // a rua para Guarapiranga pela mata (rachada, com mato), fechada por uma barreira com placa perto do fim
   chao.push(rect('asfalto', ROAD_GUARA.x0, ROAD_GUARA.x1, ROAD_GUARA.y0, ROAD_GUARA.y1, { estado: 'rachado' }));
   for (const [cx, cy, rx, ry] of [[90, 95, 1.6, 4], [92.6, 106, 1.3, 3], [89.6, 86, 1.2, 2.5]] as const) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.2) });
-  cenario.push(rect('barreira', ROAD_GUARA.x0, ROAD_GUARA.x1, SOUTH_BARRIER_Y, SOUTH_BARRIER_Y + 0.5, { altura: 1.1 }));
-  cenario.push(point('placa', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 0.3, { texto: 'GUARAPIRANGA', seta: 'sul' }));
-  // (o ponto onde chega quem vier do Mapa 02, Guarapiranga: o servidor confere que ele existe. A barreira só sai, e a
-  // beira vira saída, quando o Mapa 02 entrar na main)
-  pontos.push(point('ponto', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 3, undefined, 'chegada-guarapiranga'));
+  if (GUARA_LINK) {
+    // a rua segue até a beira do mapa (a saída para o Mapa 02); a placa fica num poste na beira oeste, colada na mata
+    cenario.push(point('placa', ROAD_GUARA.x0 + 0.35, SOUTH_BARRIER_Y - 4.5, { texto: 'GUARAPIRANGA', seta: 'sul', poste: true }));
+    pontos.push(point('ponto', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, H - 3.5, undefined, 'chegada-guarapiranga'));
+    saidas.push(rect('saida', ROAD_GUARA.x0, ROAD_GUARA.x1, H - 0.6, H, { mapa: 'guarapiranga', chegada: 'chegada-capao' }, "Estrada do M'Boi Mirim"));
+  } else {
+    cenario.push(rect('barreira', ROAD_GUARA.x0, ROAD_GUARA.x1, SOUTH_BARRIER_Y, SOUTH_BARRIER_Y + 0.5, { altura: 1.1 }));
+    cenario.push(point('placa', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 0.3, { texto: 'GUARAPIRANGA', seta: 'sul' }));
+    // (o ponto onde chega quem vier do Mapa 02: o servidor confere que ele existe)
+    pontos.push(point('ponto', (ROAD_GUARA.x0 + ROAD_GUARA.x1) / 2, SOUTH_BARRIER_Y - 3, undefined, 'chegada-guarapiranga'));
+  }
   // paredes de mata dos dois lados da rua: a mata ao sul da vila continua só de enfeite
   // (na floresta maior as paredes descem até o fim novo do mapa, e a do oeste abre na frente do posto abandonado; o
   // tamanho de cada arbusto é sorteado sempre, na mesma ordem)
@@ -1015,7 +1028,7 @@ if (reached('4c')) {
       if (!postoOpen) cenario.push(point('arbusto', round(x), round(y), { raio, fechado: true }));
     }
   }
-  for (let x = ROAD_GUARA.x0 + 1; x <= ROAD_GUARA.x1 - 1; x += 1) for (let y = VILLAGE_S; y < SOUTH_BARRIER_Y; y += 2) VILLAGE_KEYS.push([x, y, 0]);
+  for (let x = ROAD_GUARA.x0 + 1; x <= ROAD_GUARA.x1 - 1; x += 1) for (let y = VILLAGE_S; y < (GUARA_LINK ? H : SOUTH_BARRIER_Y); y += 2) VILLAGE_KEYS.push([x, y, 0]);
   // a saída leste (Estação Capão Redondo) fica para depois: a rua da vila termina no mato, com uma placa num poste na
   // beira norte da rua (longe o bastante do mato e da casa para não ficar vão de entalar)
   cenario.push(point('placa', 92.9, STREET.y0 + 0.3, { texto: 'ESTAÇÃO CAPÃO REDONDO', seta: 'leste', poste: true }));
@@ -2117,6 +2130,7 @@ const LAYERS: [string, Shape[]][] = [
   ['seguro', seguro],
   ['areas', areas],
   ['pontos', pontos],
+  ...(saidas.length > 0 ? ([['saidas', saidas]] as [string, Shape[]][]) : []),
   ...(monstros.length > 0 ? ([['monstros', monstros]] as [string, Shape[]][]) : []),
 ];
 const layers = LAYERS.map(([name, shapes], i) => ({

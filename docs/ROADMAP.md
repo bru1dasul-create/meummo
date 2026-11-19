@@ -590,13 +590,20 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (**na main em 15/11**, com a floresta maior): quati 4, tatu_bola 3, marimbondo 3 e filhote_boitata 1 no recanto do Véu
 - [x] **[mundo]** Mais bichos na mata do Capão (16/11, pedido do dono: "bastante mesmo"; na main): de 18 para 40 —
   sagui 8, jararaca 6, quati 10, tatu_bola 8, marimbondo 6, filhote_boitata 2 (o peso medido pela [estrutura] com `?fps`)
-- [ ] **[arte + mundo]** O chão, a luz e a água com mais qualidade (17/11, pedido do dono: "chão feio, água sem
+- [x] **[mundo]** Mapa 02 (Guarapiranga), pedaço (a), no jogo (19/11, pedido do dono: "desenhe o mapa e coloca no
+  jogo"; na main): a chegada pela Estrada do M'Boi Mirim (a estrada do sul do Capão vai até a beira do mapa, sem a
+  barreira) e o Refúgio na beira da represa, desenhados pelo [mundo]: casas de tábua com telhado de zinco enferrujado,
+  a quitanda com o toldo, canoas, voadeira e barco afundado, barris, redes, varais, lampiões e janelas que acendem à
+  noite e a água mexendo (ondinhas com o vento, brilhos, espuma na margem). Mapa `guarapiranga` (120 × 100 m)
+- [ ] **[estrutura]** A Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em (57,5; 50,6) e (49,6; 62,4),
+  os dois olhando para o sul (combinado em 19/11: só esta parte pequena, a região 2 segue pausada)
+- [ ] **[mundo]** O chão, a luz e a água com mais qualidade (17/11, pedido do dono: "chão feio, água sem
   movimentação, ambiente pífio"; direção aprovada: "é esse o caminho"). Alvo: `docs/referencias/chao-pintado-alvo.jpg`
   (o antes: `chao-pintado-antes.jpg`). Três passos, cada um jogável, começando pela Clareira dos Despertos: (1) o chão
   pintado (manchas claras e escuras na grama e na terra, sem bolinhas iguais; beiradas que se misturam, sem contorno
   escuro; marcas de uso); (2) luz e sombra no chão (sombra comprida das árvores, manchas de sol); (3) água e vida
-  (ondinhas, reflexo, margem de lama; poeira de luz, borboletas, folhas caindo). A pintura é da [arte]; o [mundo]
-  marca no mapa o que ela pedir (beiradas, trilhas, detalhes)
+  (ondinhas, reflexo, margem de lama; poeira de luz, borboletas, folhas caindo). Era da [arte]; desde 19/11 o desenho
+  do mapa é todo do [mundo] (escolha do dono). Começado: a água mexendo (`js/world/agua.js`, no Mapa 02)
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha

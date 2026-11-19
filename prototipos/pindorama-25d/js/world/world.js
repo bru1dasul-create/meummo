@@ -149,6 +149,8 @@
       }
       // deque e pinguela: rentes ao chão, fora da ordem de quem fica em pé (desenhados logo depois do chão)
       this.flats = (m.flats || []).map((d) => new P.Small(this, d));
+      // a água mexendo (agua.js): os pontos das ondinhas, dos brilhos e da espuma da margem
+      if (PD.agua) PD.agua.prepare(this);
       for (const f of m.fences || []) for (const part of P.Fence.split(f)) add(new P.Fence(this, part));
       for (const b of m.pillars || []) add(new P.Pillar(this, b));
       // no mundo novo, a colisão é a do próprio mapa (as mesmas caixas que o servidor usa)
@@ -600,6 +602,8 @@
       this.ground.draw(ctx);
       if (this._stale) this._buildStale(view);
       mark('chao');
+      // a água mexendo por cima do chão pintado (agua.js), antes do deque e de quem fica em pé
+      if (PD.agua) PD.agua.live(ctx, this, t);
       this._drawAwakening(ctx);
       for (const f of this.flats || []) if (overlap(f.bounds, view)) f.draw(ctx, t);
       for (const a of actors) a.drawShadow(ctx);
