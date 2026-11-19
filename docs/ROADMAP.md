@@ -595,7 +595,7 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   barreira) e o Refúgio na beira da represa, desenhados pelo [mundo]: casas de tábua com telhado de zinco enferrujado,
   a quitanda com o toldo, canoas, voadeira e barco afundado, barris, redes, varais, lampiões e janelas que acendem à
   noite e a água mexendo (ondinhas com o vento, brilhos, espuma na margem). Mapa `guarapiranga` (120 × 100 m)
-- [ ] **[estrutura]** A Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em (57,5; 50,6) e (49,6; 62,4),
+- [x] **[estrutura]** (19/11, `iracema_guarapiranga` e `barqueiro` em data/npcs.json; conferido no PC e no celular) A Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`): pés em (57,5; 50,6) e (49,6; 62,4),
   os dois olhando para o sul (combinado em 19/11: só esta parte pequena, a região 2 segue pausada)
 - [ ] **[mundo]** O chão, a luz e a água com mais qualidade (17/11, pedido do dono: "chão feio, água sem
   movimentação, ambiente pífio"; direção aprovada: "é esse o caminho"). Alvo: `docs/referencias/chao-pintado-alvo.jpg`

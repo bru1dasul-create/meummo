@@ -75,6 +75,14 @@ chão, e a água da colisão fica baixa e azul; polígono na `colisao` ou no `se
 jogador não vê o golpe, a vida na tela não baixa e ele desmaia sem saber por quê. Próximo meu: o combate no jogo
 novo, passo 1 (roteiro). Avisei o [mundo].
 
+**19/11 — Guarapiranga, a parte pequena (combinado com o dono: o conteúdo grande segue pausado):** o [mundo] pôs o
+Mapa 02 (a) na main (`guarapiranga.tmj`, sem áreas de bichos, ligado ao Capão pelas `saidas`). Em data/npcs.json:
+`iracema_guarapiranga` (57.5, 50.35 — 25 cm acima do pé que o [mundo] mandou, como na Xiovanna; a loja da Iracema de
+sempre) e `barqueiro` (49.6, 62.4; só a fala, sem barco ainda). A `iracema` do mapa antigo `refugio` fica como estava.
+Conferido no navegador (PC e celular deitado): os dois aparecem, a loja abre. Os dois usam o boneco de reserva (igual
+ao herói): desenho próprio é da [arte], quando o dono liberar. Desde 19/11 o desenho do mapa todo é do [mundo]; a
+[arte] fica só com os personagens (decisão do dono, relatada pelo [mundo]).
+
 **18/11 — decisão do dono: a região 2 fica PAUSADA; a prioridade é o personagem (com a [arte]).** Ele quer o nível
 visual do Dunloc Online (navegador, isométrico, estilo HQ) e chegou a pensar em Godot/3D. Descartado: o autor do Dunloc
 explica (vídeo "Meu MMORPG não usa imagens", canal RafaxLab; o dono colou a transcrição) que é a MESMA técnica nossa,
