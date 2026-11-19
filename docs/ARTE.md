@@ -16,9 +16,12 @@
      a chave `?birim` no endereço. Do meu lado: em `js/character/classes.js`, `appearanceOf` devolve
      `PD.models.appearance('birim')` para o jogador principal quando o endereço tem `?birim`; e o `birim.js` passa a ser
      carregado no jogo (uma linha no `view-scripts.json` e no `src/client/novo/arte.ts`, depois dos outros scripts do
-     personagem). Conferir no navegador (PC e celular), no tamanho real, e mostrar ao dono. Para ficar de vez (cada
-     jogador escolhe): só precisa ficar salvo QUAL boneco (`modelo: 'heroi' | 'birim'`), indo também no que o servidor manda
-     de cada jogador — isso é da [estrutura] (`MIGRATIONS` e protocolo; já combinei com ela).
+     personagem). Conferir no navegador (PC e celular), no tamanho real, e mostrar ao dono. Tudo isso é do meu lado
+     (`classes.js`, `view-scripts.json` e `arte.ts`; a [estrutura] confirmou). Depois de ver no jogo, o dono escolhe:
+     **(A)** o Birim vira o herói de todos (não precisa salvar nada: é só a aparência padrão, do meu lado) ou **(B)** cada
+     jogador escolhe — aí a [estrutura] faz o passo 7 do `MIGRATIONS`, o protocolo 46 e o campo `model` ('heroi' |
+     'birim'; quem nunca escolheu = 'heroi') no `EntityState` e no `ActorInfo` que o motor passa no `addActor`; do meu
+     lado, ler `info.model` (sem o campo = 'heroi') e ligar à aparência (`PD.models.appearance`).
   2. **Depois, só o que incomodar NO JOGO**, do mais visível para o menos: silhueta e proporção, cores, contorno, movimento;
      o rosto por último. Uma coisa por vez, sempre com o resultado dentro do jogo.
   3. **Em seguida, um teste barato do plano original** (peças pintadas pelo Nano Banana, montadas no esqueleto que já
