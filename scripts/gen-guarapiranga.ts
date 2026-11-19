@@ -14,6 +14,7 @@ import { writeMapImage } from './mapa-de-cima';
 import {
   area,
   block,
+  bushBoxes,
   blob,
   box,
   boxCovers,
@@ -479,7 +480,10 @@ for (const s of cenario) {
   if (s.type === 'arvore') colisao.push(block('tronco', s.x, s.y, Number(p.tronco)));
   else if (s.type === 'poste') colisao.push(block('poste', s.x, s.y, 0.3, { altura: Number(p.altura) }));
   else if (s.type === 'pedra') colisao.push(block('pedra', s.x, s.y, round(Number(p.raio) * 1.5)));
-  else if (s.type === 'arbusto' && p.fechado) colisao.push(block('mata-fechada', s.x, s.y, round(Number(p.raio) * 1.8)));
+  // (a moita é redonda: o quadrado de 1,8 × o raio passava ~30 cm das folhas nas pontas e travava o pé no nada — o fim
+  // da calçada da rua leste do Capão, print do dono em 19/11, pela [estrutura]. Agora é um octógono de três caixas:
+  // a mesma largura de antes para os quatro lados e as quinas na beira das folhas)
+  else if (s.type === 'arbusto' && p.fechado) colisao.push(...bushBoxes(s.x, s.y, Number(p.raio)));
   else if (s.type === 'tronco-caido') colisao.push(box('tronco-caido', r, { altura: Number(p.altura) }));
   else if (s.type === 'casa') colisao.push(box('casa', r, { altura: HOUSE_H }));
   else if (s.type === 'ponto-onibus') colisao.push(box('ponto-onibus', r, { altura: Number(p.altura) }));
