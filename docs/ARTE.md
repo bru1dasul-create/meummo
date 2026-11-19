@@ -51,10 +51,24 @@
     claro: num borrão fechado ela virava mancha redonda), a luz em cima dela, a sombra da beirada da dorsal, o sulco da
     coluna e as lombares. (c) A "linha preta no calcanhar" era a tira em Y do chinelo desenhada por cima do pé de qualquer
     lado: com o pé de costas para a câmera ela entra logo depois da sola, antes do pé (o calcanhar tampa).
-  - **Etapa 1 (só o Birim):** trapézio menor (sobe quase até a orelha), ombros emendados no peito e no trapézio (hoje
-    uma bola do lado), o colar por cima do trapézio (hoje passa por dentro e só aparece o "V" no peito) e a barba de
-    frente (boné + óculos + barba viram uma máscara preta: afinar nas bochechas, mostrar boca e bigode, queixo mais
-    curto, sem perder a barba cheia).
+  - **Etapa 1 (só o Birim): FEITA em 19/11** (o dono, vendo o antes × depois do tronco: "a barba continua ruim pegando o
+    rosto todo, os ombros estão desconectados do corpo e com traços estranhos"). O que mudou, e por quê:
+    - **A barba vista de cima** (a lição principal): a câmera do jogo olha 30° de cima, então o que fica mais para TRÁS
+      no rosto aparece mais ALTO na tela — ~0,5 cm de subida para cada 1 cm para trás. A costeleta e a lateral da barba
+      (perto da orelha, ~16 cm atrás do nariz) apareciam na altura do olho: a barba emoldurava a cara inteira, uma
+      máscara. Achado pintando cada peça de uma cor numa cópia de teste. Agora a costeleta é fina e mais para trás, a
+      bochecha de baixo e a mandíbula começam na linha do canto da boca (a barba fica na mandíbula e no queixo, como no
+      alvo do Nano Banana na câmera do jogo), o queixo ~1 cm mais curto e o bigode mais fino e recuado (saliente, visto de
+      cima ele tapava os lábios). Os fios (`CHEEK`, `BOTTOM`, `UNDER` do `beardStrands`) acompanham as bordas novas.
+    - **Trapézio e pescoço:** o trapézio de dentro (perto do pescoço) ~3 cm mais baixo e mais fino, a linha descendo em
+      rampa até o ombro; a cabeça 1,5 cm mais alta (`headDrop` −3): o pescoço aparece de lado e de costas.
+    - **Ombros:** o contorno do braço riscava a emenda do deltoide com o peitoral e com as costas (o arco escuro da "bola
+      grudada"): `SHOULDER.clip` ganhou a frente e as costas do ombro (o contorno some ali). Os riscos do braço
+      (`MUSCLE_LINES.braco`, entre o bíceps e o tríceps e em cima do cotovelo) saíram no Birim.
+    - **Colar:** os pontos da volta no pescoço eram fixos e ficavam DENTRO do trapézio, e a normal deles olhava para o
+      lado: de costas só aparecia um arquinho na nuca. Agora a volta é um anel em torno do pescoço levado para a pele
+      (`onSkin`: um raio de dentro do tronco até a casca das esferas), aparece pela normal da pele e some só onde o pescoço
+      tampa (`NECK_RING.hide`). De costas ele dá a volta de ombro a ombro; de frente sobe pelo trapézio.
   - **Etapa 2 (só o Birim):** a bermuda acompanhando a coxa (a perna larga vira uma bola quando sobe e o bolso pula), o
     tronco que "some" na corrida para a câmera (a coxa com a bermuda larga tampa a barriga; conferir se não some de verdade
     em algum quadro) e os pés de costas (calcanhar redondo, a sola como rosquinha com o pé no ar).

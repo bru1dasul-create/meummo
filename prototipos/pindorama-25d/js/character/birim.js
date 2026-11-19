@@ -207,8 +207,9 @@
     // a cabeça dele é menor que a do herói (que é de "cabeça grande de herói"); rodada 3: um tiquinho menor ainda (na ficha,
     // do alto do boné ao fim da barba são 14,8% da altura; aqui eram 16,1%) e mais ALTA no pescoço (`headDrop` negativo =
     // sobe, em cm): com a câmera do jogo, de cima, a barba encostava no peito e o pescoço sumia — no alvo ele aparece
+    // (19/11, lista do dono no jogo: mais 1,5 cm, com o trapézio de dentro mais baixo — era −1,5)
     headScale: 0.66,
-    headDrop: -1.5,
+    headDrop: -3,
     NECK: { r0: 7.9, r1: 6.6 },
     // corpo de quem treina, mais estreito que o do herói
     // (rodada 3, medido contra a ficha com régua: o tronco abre em V — cintura ~26 cm de largura, peito largo em cima
@@ -227,14 +228,17 @@
       { p: [-10.2, -5, -0.6], r: 9 }, // dorsais (mais altas: embaixo do peito o tronco afina logo)
       { p: [10.2, -5, -0.6], r: 9 },
       { p: [0, -6.3, 3.5], r: 9.6 }, // o alto das costas (de perfil, as costas mais cheias que o peito)
-      { p: [0, -6.5, 8.5], r: 7.5 }, // a rampa do trapézio atrás, da nuca até o ombro (de perfil a nuca descia reta como uma coluna)
+      { p: [0, -6.4, 7.6], r: 7.2 }, // a rampa do trapézio atrás, da nuca até o ombro (de perfil a nuca descia reta como uma coluna)
       // trapézio: o tronco é um casco só (convexo), então o alto dos dois trapézios se liga numa linha reta NA FRENTE do
       // pescoço — alto demais, ela tapava o pescoço inteiro. Fica logo abaixo da barba, e a descida para o ombro é mais cheia
-      { p: [-6.6, -2.8, 11.5], r: 5.8 },
-      { p: [6.6, -2.8, 11.5], r: 5.8 },
-      { p: [-11.4, -3.2, 10], r: 6.9 },
-      { p: [11.4, -3.2, 10], r: 6.9 },
-      { p: [0, 0.6, 7.4], r: 8.8 },
+      // (19/11, o dono: "o trapézio tem que diminuir, tá muito grande": o de dentro subia quase até a orelha — 3 cm mais
+      // baixo e mais fino, e a linha desce em rampa leve do pescoço até o ombro — no mesmo nível ela ficava quadrada. O
+      // pescoço volta a aparecer)
+      { p: [-6.4, -2.6, 10.4], r: 5.2 },
+      { p: [6.4, -2.6, 10.4], r: 5.2 },
+      { p: [-11.6, -3.0, 8.8], r: 6.2 },
+      { p: [11.6, -3.0, 8.8], r: 6.2 },
+      { p: [0, 0.8, 6.8], r: 8.4 },
       { p: [-5.6, 0.4, -22.5], r: 7 }, // a cintura desce reta até o quadril
       { p: [5.6, 0.4, -22.5], r: 7 },
       // (19/11, o dono: "o V do tronco tá ruim". A cintura fechava numa ponta DENTRO da bermuda: no cós o tronco tinha
@@ -246,7 +250,15 @@
     PELVIS: BASE.PELVIS.map((s, k) => (k === 1 || k === 2 ? { p: [Math.sign(s.p[0]) * 8, 0.4, 0.8], r: 8 } : s)),
     // (de cabelo curto, o trapézio aparece de costas: a ponte do ombro fica inteira de qualquer lado — rodada 3)
     // (e a ponta da ponte no trapézio mais baixa, acompanhando o trapézio novo)
-    SHOULDER: { ...BASE.SHOULDER, trap: { p: [12.4, -2.8, 9.8], r: 6.6 }, back: true },
+    SHOULDER: {
+      ...BASE.SHOULDER,
+      trap: { p: [12.4, -2.8, 9.8], r: 6.6 },
+      back: true,
+      // (19/11, o dono: "os ombros estão desconectados do corpo e com traços estranhos": o contorno do braço riscava a
+      // emenda do deltoide com o peitoral e com as costas — um arco escuro que fazia do ombro uma bola grudada. Em `clip`
+      // o contorno some; a frente e as costas do ombro entram nele)
+      clip: [...BASE.SHOULDER.clip, { p: [15, 4.6, 2.8], r: 5.6 }, { p: [15, -5.4, 2.8], r: 5.6 }],
+    },
     // (rodada 3: o deltoide mais junto do corpo — de frente e de costas o ombro passava ~2 cm da ficha para fora)
     // e o alto dele um pouco mais alto: com o trapézio abaixo da barba, a linha do ombro tinha descido ~3 cm da ficha
     UPPER_ARM: BASE.UPPER_ARM.map((s) => ({ ...s, t: s.part === 'deltoide' && s.t < 0.2 ? s.t - 0.06 : s.t, o: s.part === 'deltoide' ? s.o * 0.45 : s.o, r: s.r + (s.t === 1 ? 0.35 : s.part === 'deltoide' ? 0.45 : 1.15) })),
@@ -270,6 +282,9 @@
       { t: 1, f: 0, o: 0, r: 3.2 },
     ],
     // nada disto é dele: cabelo comprido, tranças, faixa e penas; colar de garras; tanga; pinturas de jenipapo; brincos
+    // (os riscos do braço — entre o bíceps e o tríceps e em cima do cotovelo — no Birim, de braço grosso e sem pintura,
+    // eram os "traços estranhos" do ombro que o dono apontou em 19/11)
+    MUSCLE_LINES: { ...BASE.MUSCLE_LINES, braco: [] },
     HAIR: null,
     FEATHERS: null,
     NECKLACE: null,
@@ -844,8 +859,8 @@
       // (um casco só embaixo, para a borda de baixo ficar lisa, em U; o alto dele fica abaixo da pele do queixo)
       // (a esfera da frente abraça a frente do queixo: de perfil o queixo fica coberto de barba; de frente ela começa abaixo da
       // pele que fica embaixo do lábio)
-      piece([[[0, 10.0, -19.2], 2.6], [[-3.8, 9.4, -19.4], 2.3], [[3.8, 9.4, -19.4], 2.3], [[0, 12.0, -17.4], 2.9]], [0, 0.85, -0.5], -0.22, 0.24);
-      for (const sx of [-1, 1]) piece([[[sx * 3.8, 9.4, -19.4], 2.3], [[sx * 6.6, 8.4, -19.8], 2.0], [[sx * 4.6, 10.4, -16.8], 2.2]], [sx * 0.3, 0.85, -0.45], -0.2); // (emenda o queixo com os cantos de baixo)
+      piece([[[0, 10.0, -18.4], 2.5], [[-3.8, 9.4, -18.6], 2.2], [[3.8, 9.4, -18.6], 2.2], [[0, 12.0, -17.0], 2.7]], [0, 0.85, -0.5], -0.22, 0.24);
+      for (const sx of [-1, 1]) piece([[[sx * 3.8, 9.4, -18.6], 2.2], [[sx * 6.4, 8.4, -19.0], 1.9], [[sx * 4.6, 10.4, -16.6], 2.1]], [sx * 0.3, 0.85, -0.45], -0.2); // (emenda o queixo com os cantos de baixo)
       for (const sx of [-1, 1]) piece([[[sx * 3.3, 10.4, -15.5], 1.35]], [sx * 0.3, 0.85, -0.4], -0.2); // (arredonda os cantos de baixo da pele do queixo)
       piece([[[0, 14.3, -14.4], 0.75], [[0, 13.6, -15.6], 1.0]], [0, 0.9, -0.3], -0.1); // a mosca, embaixo do lábio, descendo até a barba
       // (de perfil, na referência, a barba cobre a frente do queixo logo abaixo do lábio: estes dois só entram com o lado deles
@@ -857,26 +872,26 @@
       for (const sx of [-1, 1]) {
         // (na referência não há faixa escura na frente da orelha: a pele do rosto vai até a orelha, o cabelo da têmpora
         // fica acima dela e a costeleta começa na altura do lóbulo)
-        piece([[[sx * 10.6, -1.6, 3.2], 1.2], [[sx * 10.8, -2.4, 0.4], 1.15]], [sx, 0.2, 0], 0.02); // cabelo da têmpora, acima e na frente da orelha
-        for (const [p, r] of [[[sx * 11.2, -1.4, 2.8], 1.45], [[sx * 11.6, -2.8, 1.5], 1.4], [[sx * 11.6, -3.6, -0.6], 1.15]]) piece([[p, r]], [sx, 0, 0.1], -0.05, 0, true); // os cachos dela
+        piece([[[sx * 10.7, -2.0, 3.0], 0.9], [[sx * 10.9, -2.6, 0.6], 0.85]], [sx, 0.2, 0], 0.02); // cabelo da têmpora, acima e na frente da orelha
+        for (const [p, r] of [[[sx * 11.2, -1.8, 2.8], 1.1], [[sx * 11.6, -3.0, 1.5], 1.05], [[sx * 11.6, -3.8, -0.6], 0.9]]) piece([[p, r]], [sx, 0, 0.1], -0.05, 0, true); // os cachos dela
         // (rodada 4: as peças de trás da barba só andaram para TRÁS — a largura e a altura delas vistas de frente são as
         // mesmas, para o rosto de frente, que o dono aprovou, não mudar; a costeleta começa na altura do lóbulo)
-        piece([[[sx * 10.0, -1.4, -6.6], 1.3], [[sx * 8.4, 1.6, -9.2], 1.7]], [sx, 0.25, -0.1], 0, 0, false, sx); // costeleta (na frente da orelha)
+        piece([[[sx * 10.2, -2.4, -8.6], 0.8], [[sx * 9.4, -0.6, -11.8], 1.15]], [sx, 0.25, -0.1], 0, 0, false, sx); // costeleta (na frente da orelha)
         // a tira fina da costeleta subindo na frente da orelha até o cabelo da têmpora (no perfil da referência ela emenda o
         // cabelo na barba); a normal dela aponta um pouco para trás, então de frente ela não aparece — na referência de
         // frente a pele vai até a orelha
-        piece([[[sx * 10.9, -2.2, -0.8], 0.8], [[sx * 10.6, -1.8, -3.6], 0.9], [[sx * 10.2, -1.2, -6.0], 1.1]], [sx, -0.3, 0], 0.05, 0, false, sx);
-        piece([[[sx * 8.4, 1.6, -9.2], 1.7], [[sx * 6.2, 7.4, -13.2], 2.9], [[sx * 8.0, 4.2, -14.2], 2.0]], [sx * 0.8, 0.5, -0.3], -0.12, 0, false, sx); // lado da mandíbula (a última esfera tapa um furinho de perfil entre as peças)
+        piece([[[sx * 10.9, -2.2, -0.8], 0.62], [[sx * 10.6, -1.8, -3.6], 0.7], [[sx * 10.2, -1.2, -6.2], 0.85]], [sx, -0.3, 0], 0.05, 0, false, sx);
+        piece([[[sx * 8.6, 1.2, -12.2], 1.2], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 8.0, 4.4, -15.0], 1.75]], [sx * 0.8, 0.5, -0.3], -0.12, 0, false, sx); // lado da mandíbula (a última esfera tapa um furinho de perfil entre as peças)
         // o canto da mandíbula e a parte de baixo dela, até o pescoço: de perfil a barba cobre a mandíbula inteira, da
         // costeleta ao queixo (sem estes pedaços ela virava uma cunha pontuda na frente do rosto)
         // (rodada 4: com a orelha mais para trás, o canto começa embaixo dela e a borda de trás desce na diagonal até o fim da
         // barba, como na referência)
-        piece([[[sx * 9.6, -1.0, -8.6], 1.4], [[sx * 8.7, -1.4, -12.4], 1.9], [[sx * 7.6, 1.8, -16.4], 2.2], [[sx * 8.4, 1.6, -9.2], 1.7]], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx);
-        piece([[[sx * 7.6, 1.8, -16.4], 2.2], [[sx * 5.6, 5.4, -19.4], 2.2], [[sx * 7.0, 7.6, -17.2], 2.6]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // (embaixo da mandíbula)
-        piece([[[sx * 6.2, 7.4, -13.0], 3.0], [[sx * 7.0, 7.6, -17.2], 2.6], [[sx * 6.6, 8.4, -19.8], 2.0]], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx, -0.18, 0.35); // frente da mandíbula: desce reta da mandíbula até o canto de baixo (a barba é quadrada embaixo, como na referência)
+        piece([[[sx * 9.6, -1.6, -11.0], 1.0], [[sx * 8.8, -1.0, -13.2], 1.6], [[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 8.6, 1.2, -12.2], 1.2]], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx);
+        piece([[[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 5.6, 5.4, -18.6], 2.0], [[sx * 7.0, 7.6, -16.9], 2.2]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // (embaixo da mandíbula)
+        piece([[[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 7.0, 7.6, -16.9], 2.2], [[sx * 6.4, 8.4, -19.0], 1.9]], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx, -0.18, 0.35); // frente da mandíbula: desce reta da mandíbula até o canto de baixo (a barba é quadrada embaixo, como na referência)
         // bigode (rodada 4: um tiquinho para trás — de perfil saía como um dedo) (da base do nariz até o canto da boca; o lábio
         // de cima aparece embaixo dele)
-        const must = [[[sx * 0.6, 15.0, -9.2], 1.1], [[sx * 2.4, 14.45, -9.6], 1.05], [[sx * 4.4, 12.8, -11.2], 0.9]];
+        const must = [[[sx * 0.6, 14.6, -9.0], 0.9], [[sx * 2.4, 14.05, -9.4], 0.85], [[sx * 4.2, 12.6, -10.9], 0.75]];
         if (sx * turned < -0.12) {
           // (do lado de lá, a ponta do bigode — no canto da boca, atrás dos lábios — vai na peça de lá, antes da boca; o resto
           // fica por cima. Numa peça só, de três quartos o bigode de lá cobria os lábios e o bigode virava uma bola. Rodada 4b)
@@ -887,10 +902,10 @@
         // de baixo da barba como um triângulo do lado do queixo; este pedaço, na superfície do rosto, só entra com o lado
         // virado para a câmera, a partir de ~12°: de frente a pele embaixo do lábio continua a mesma. Rodada 4b)
         piece([[[sx * 4.3, 13.0, -13.7], 1.0], [[sx * 4.0, 12.7, -15.1], 1.15], [[sx * 4.9, 12.0, -14.6], 1.1]], [sx, 0.3, 0], 0.48, 0, false, sx);
-        piece([[[sx * 4.4, 12.8, -11.2], 0.9], [[sx * 5.4, 10.6, -13.8], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35); // do canto do bigode até a barba do queixo (por fora do canto da boca)
+        piece([[[sx * 4.2, 12.6, -10.9], 0.75], [[sx * 5.3, 10.7, -13.8], 1.2]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35); // do canto do bigode até a barba do queixo (por fora do canto da boca)
         // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
         // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
-        piece([[[sx * 8.4, 1.6, -9.2], 1.7], [[sx * 6.6, 9.6, -10.2], 1.4], [[sx * 4.9, 12.3, -10.8], 1.1], [[sx * 6.2, 7.4, -13.2], 2.9], [[sx * 5.2, 10.8, -13.2], 1.4]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
+        piece([[[sx * 8.6, 1.2, -12.2], 1.2], [[sx * 7.0, 7.0, -13.6], 1.5], [[sx * 5.6, 10.6, -13.2], 1.0], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 5.2, 10.8, -13.8], 1.25]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
       }
       beardStrands(piece);
       if (segsBack.length) items.push({ name: 'barbaAtras', key: headKey - 0.05, group: 'barbaAtras', chain: true, segs: segsBack });
@@ -1161,11 +1176,11 @@
     };
     // os altos das peças da bochecha (o centro x, y de cada uma e o alto dela em z) — a linha da barba na bochecha
     // (rodada 4: começa na costeleta nova, na frente da orelha que foi para trás)
-    const CHEEK = [[10.0, -1.4, -5.3], [8.4, 1.6, -7.5], [6.6, 9.6, -8.9], [4.9, 12.3, -9.8]];
+    const CHEEK = [[10.2, -2.4, -7.8], [9.4, -0.6, -10.65], [8.6, 1.2, -11.0], [7.0, 7.0, -12.1], [5.6, 10.6, -12.2]];
     // a borda de baixo, do lado da mandíbula até o meio do queixo (os baixos das peças de baixo)
-    const BOTTOM = [[9.4, 7.0, -15.6], [9.2, 7.4, -18.4], [7.6, 8.2, -21.2], [5.2, 9.3, -21.6], [2.4, 10.0, -21.75], [0, 10.0, -21.8]];
+    const BOTTOM = [[9.4, 7.0, -15.6], [9.2, 7.4, -18.0], [7.6, 8.2, -20.4], [5.2, 9.3, -20.8], [2.4, 10.0, -20.9], [0, 10.0, -20.95]];
     // por baixo da mandíbula, do canto dela (atrás) até o queixo: a borda de baixo que aparece de perfil
-    const UNDER = [[8.7, -1.4, -14.3], [7.6, 1.8, -18.4], [5.6, 4.6, -21.5], [3.6, 7.4, -21.8]];
+    const UNDER = [[8.7, -1.4, -14.3], [7.6, 1.8, -18.0], [5.6, 4.6, -20.8], [3.6, 7.4, -21.0]];
     for (const sx of [-1, 1]) {
       along(CHEEK, 0.42, (p, i) => {
         // (mais curtos perto do bigode: ali a barba emenda limpa nele; compridos, de três quartos espetavam ao lado do nariz)
@@ -1540,20 +1555,66 @@
   }
 
   /** Cordão de elos prateados em volta do pescoço, descendo em V até o meio do peito, com a coroa pendurada. */
+  // a volta do cordão no pescoço: um anel de raio r em torno do pescoço (o meio dele fica em y, nos eixos do peito), na
+  // altura z — é só a guia: `onSkin` leva cada ponto para a pele; `hide` = até onde, de lado, o pescoço tampa o que fica
+  // atrás dele (um pouco menos que o raio do pescoço na base: o que passa rente à beirada continua aparecendo)
+  const NECK_RING = { r: 8.9, y: -0.5, z: 13.5, hide: 7.6 };
+  const SKIN_IN = [0, -1, 8.5]; // um ponto de dentro do alto do tronco: os raios de `onSkin` saem dele
+  /** Leva o ponto `g` (eixos do peito) para a pele do tronco pelo raio que sai de SKIN_IN; devolve o ponto (0,45 para
+   *  fora da pele) e a normal da pele ali. */
+  function onSkin(g) {
+    const dx = g[0] - SKIN_IN[0], dy = g[1] - SKIN_IN[1], dz = g[2] - SKIN_IN[2];
+    const L = Math.hypot(dx, dy, dz) || 1;
+    const d = [dx / L, dy / L, dz / L];
+    let best = -1, hit = null, n = [0, 0, 1];
+    for (const s of MODEL.CHEST) {
+      const ox = SKIN_IN[0] - s.p[0], oy = SKIN_IN[1] - s.p[1], oz = SKIN_IN[2] - s.p[2];
+      const b = ox * d[0] + oy * d[1] + oz * d[2];
+      const disc = b * b - (ox * ox + oy * oy + oz * oz - s.r * s.r);
+      if (disc < 0) continue;
+      const t = -b + Math.sqrt(disc);
+      if (t > best) {
+        best = t;
+        hit = [SKIN_IN[0] + t * d[0], SKIN_IN[1] + t * d[1], SKIN_IN[2] + t * d[2]];
+        n = [(hit[0] - s.p[0]) / s.r, (hit[1] - s.p[1]) / s.r, (hit[2] - s.p[2]) / s.r];
+      }
+    }
+    if (!hit) return { p: g, n };
+    return { p: [hit[0] + d[0] * 0.45, hit[1] + d[1] * 0.45, hit[2] + d[2] * 0.45], n };
+  }
   function chain(R, rig, look) {
     const ctx = R.ctx;
     const PAL = R.pal;
     const z = R.zoom;
     const ch = rig.chest;
     const sw = look.pendantSwing || { x: 0, y: 0, z: 0 };
-    // o caminho de um lado (o outro é o espelho): nuca → trapézio → clavícula → peito → pingente
-    const HALF = [[0, -8.2, 15.4], [4.4, -6.4, 15.6], [7, -1.8, 15.2], [6.9, 4.2, 13.2], [5.2, 9.6, 9.8], [3, 12.9, 5.6], [1.1, 14.6, 1.6]];
+    // o caminho de um lado (o outro é o espelho): a volta no pescoço (nuca → trapézio → clavícula) e a descida pelo peito
+    // até o pingente
+    // (19/11, o dono: "o colar está sumindo no trapézio". Os pontos da volta eram fixos e ficavam DENTRO do trapézio — e
+    // a normal deles, que dizia se apareciam, olhava para o lado: de costas só sobrava um arquinho na nuca. Agora a volta é
+    // um anel em torno do pescoço, levado para a pele por um raio que sai de dentro do tronco (`onSkin`): ele deita no
+    // trapézio qualquer que seja o tamanho dele, aparece pela normal da pele e some só onde o pescoço tampa)
+    const RING = [0, 28, 56, 84, 108, 128].map((deg) => [NECK_RING.r * Math.sin(deg * M.DEG), NECK_RING.y - NECK_RING.r * Math.cos(deg * M.DEG), NECK_RING.z]);
+    const DOWN = [[5.2, 9.6, 9.8], [3, 12.9, 5.6], [1.1, 14.6, 1.6]];
     const pend = add(at(ch, 0, 15.1, 0.2), scale(sw, 1.6));
+    // o pescoço tampa o que fica atrás dele (ele é desenhado antes do peito, e o cordão depois)
+    const cam = { x: dot(R.toCam, ch.r), y: dot(R.toCam, ch.f) };
+    const cl = Math.hypot(cam.x, cam.y) || 1;
+    const behindNeck = (p) => {
+      const vx = p[0], vy = p[1] - NECK_RING.y;
+      return (vx * cam.x + vy * cam.y) / cl < 0 && Math.abs(vx * cam.y - vy * cam.x) / cl < NECK_RING.hide;
+    };
+    const total = RING.length + DOWN.length - 1;
     const sideRun = (sx) => {
       const out = [];
-      HALF.forEach((p, k) => {
+      RING.forEach((g, k) => {
+        const s = onSkin([sx * g[0], g[1], g[2]]);
+        const q = add(at(ch, s.p[0], s.p[1], s.p[2]), scale(sw, (k / total) * 1.2));
+        out.push({ q, vis: R.facing(norm(dirIn(ch, s.n[0], s.n[1], s.n[2]))) > -0.06 && !behindNeck(s.p) });
+      });
+      DOWN.forEach((p, k) => {
         const n = norm(dirIn(ch, sx * p[0], p[1], 0.35));
-        const q = add(at(ch, sx * p[0], p[1], p[2]), scale(sw, (k / (HALF.length - 1)) * 1.2));
+        const q = add(at(ch, sx * p[0], p[1], p[2]), scale(sw, ((RING.length + k) / total) * 1.2));
         out.push({ q, vis: R.facing(n) > -0.06 });
       });
       out.push({ q: pend, vis: R.facing(norm(dirIn(ch, 0, 1, 0.2))) > -0.06 });
