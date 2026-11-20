@@ -213,6 +213,7 @@
       this.stepCooldown = 0;
       this.hipDrop = 0; // quanto a pelve desce para a perna de apoio alcançar o pé
       this.airArm = 0; // braços no jeito do pulo (0..1)
+      this._bowCarry = 0; // o braço do arco no jeito de carregar o arco (0..1)
       this.armFirm = 0; // firmeza da mola dos braços (0 no chão, 1 no pulo)
       // molas do movimento secundário (cabelo, penas, colar, cordão, brinco)
       const z0 = { x: 0, y: 0, z: 0 };
@@ -1685,6 +1686,7 @@
       const shoulderFwd = [0, 0];
       const runPole = smoothstep(0.15, 0.65, run * g);
       this.airArm = damp(this.airArm, J.state === 'ar' ? 1 : 0, 14, dt);
+      this._bowCarry = damp(this._bowCarry, this.equipped && this.equipped.maoE === 'arco' ? 1 : 0, 8, dt);
       for (let i = 0; i < 2; i++) {
         // cada braço balança um pouco diferente do outro e varia devagar de um passo para o outro (gente não é
         // simétrica nem repete o mesmo movimento): ±7% de amplitude e um tiquinho de atraso. Antes os dois braços eram
@@ -1707,6 +1709,15 @@
         const runArm = armFK((4 + w * (w > 0 ? 36 : 27)) * DEG, (85 + 23 * we) * DEG, lerp(3.4, 1.2, fw));
         let a = mixV(walkArm, runArm, run);
         a = mixV(idleArm, a, g);
+        if (i === 0 && this._bowCarry > 1e-3) {
+          // segurando o arco (mão esquerda): o cotovelo dobra mais e o braço balança menos. O arco passa pelo vão do
+          // punho, então ele segue o antebraço: com o cotovelo dobrado sai inclinado para a frente (parado e andando) e
+          // quase em pé correndo, sem ir batendo como um porrete (com o braço solto ele ficava deitado, como uma lança)
+          const idleBow = armFK((5 + breath * 0.4) * DEG, (46 + M.noise1(t * 0.3 + 5) * 2) * DEG, 6.5, 6 * DEG);
+          const walkBow = armFK((5 + w * swing * 0.45) * DEG, (44 + 6 * Math.max(0, w)) * DEG, 6, 5 * DEG);
+          const runBow = armFK((8 + w * (w > 0 ? 18 : 12)) * DEG, (74 + 10 * we) * DEG, 5, 5 * DEG);
+          a = mixV(a, mixV(idleBow, mixV(walkBow, runBow, run), g), this._bowCarry);
+        }
         // agachado: mãos para a frente, perto dos joelhos
         a = mixV(a, { x: 3, y: 25, z: -41 }, crouch * 0.9);
         let fist = lerp(lerp(0.15, 0.25, g), 0.55, run * g); // (correndo, a mão meio fechada e solta; 0,7 era um soco)
@@ -1745,7 +1756,15 @@
         const flexWant = (0.16 + M.noise1(t * 0.21 + i * 3) * 0.05) * (1 - 0.6 * run * g) - clamp(vy * 0.0016, -0.32, 0.32) * (1 - 0.6 * run * g);
         if (!this._flex) this._flex = [flexWant, flexWant];
         this._flex[i] = damp(this._flex[i], flexWant, 12, dt);
-        hands.push({ local: a, twist: lerp(0, -0.35, run * g), poleLocal, fist, flex: this._flex[i] });
+        const hand = { local: a, twist: lerp(0, -0.35, run * g), poleLocal, fist, flex: this._flex[i] };
+        if (i === 0 && this._bowCarry > 1e-3) {
+          // o vão do punho (o lado do polegar) para a frente e para cima, no plano do corpo: o arco fica de pé ao lado
+          // dele em qualquer ponto do balanço (sem isto ele atravessava na frente da coxa); correndo, mais em pé
+          const up = lerp(50, 68, run * g) * DEG;
+          hand.thumb = { x: 0, y: Math.cos(up), z: Math.sin(up) };
+          hand.thumbK = this._bowCarry;
+        }
+        hands.push(hand);
         shoulderFwd[i] = lerp(1.2, 2.4, run) * w * g; // o ombro acompanha o braço
       }
 

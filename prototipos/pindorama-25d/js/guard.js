@@ -70,11 +70,19 @@
     const from=g.active && g.from ? g.from : parts;
     parts.spine.yaw=M.lerp(from.spine.yaw,g.poseAim,k);
     parts.spine.pitch=M.lerp(from.spine.pitch,(3-4*kick)*M.DEG,k);
+    // com o arco na mão, a esquerda bloqueia com ele: o arco em pé na frente do corpo, preso no punho (o vão do punho para
+    // cima); a direita fecha a guarda. Sem isto o punho erguido deitava o arco atravessado na frente do rosto
+    const bow=c.equipped&&c.equipped.maoE==='arco';
     for(let i=0;i<2;i++) {
-      const target={x:i?-9:-11,y:(i?24:27)-3*kick,z:(i?10:6)+kick};
+      const bowHand=bow&&i===0;
+      const target=bowHand?{x:-7,y:33-3*kick,z:-15+kick}:{x:i?-9:-11,y:(i?24:27)-3*kick,z:(i?10:6)+kick};
       const h=parts.hands[i],old=from.hands[i];
       h.local=M.lerp3(old.local,target,k);h.poleLocal=old.poleLocal.map((v,j)=>M.lerp(v,[-0.5,0.65,-0.85][j],k));
-      h.fist=M.lerp(old.fist||0,0.97,k);h.flex=M.lerp(old.flex||0,0.04,k);h.twist=M.lerp(old.twist||0,i?-0.35:0.15,k);
+      h.fist=M.lerp(old.fist||0,bowHand?0.88:0.97,k);h.flex=M.lerp(old.flex||0,0.04,k);h.twist=M.lerp(old.twist||0,i?-0.35:0.15,k);
+      if(bowHand) {
+        const up={x:0,y:0.2,z:1},was=old.thumb&&(old.thumbK||0)>0?M.scale(old.thumb,old.thumbK):null;
+        h.thumb=was?M.lerp3(was,up,k):up;h.thumbK=M.lerp(old.thumbK||0,1,k);h.thumbBend=M.lerp(old.thumbBend||0,1,k);
+      }
       parts.shoulderFwd[i]+=2*k;
     }
     return k;

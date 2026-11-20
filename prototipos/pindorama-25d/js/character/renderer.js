@@ -499,6 +499,7 @@
         PAL = (appearance && appearance.paleta) || BASE_PAL;
         MOD = (appearance && appearance.modelo) || BASE_MOD;
         this.pal = PAL;
+        this.model = MOD;
         this._setup(ctx);
         items = layer.items;
       } else items = this.prepare(ctx, rig, look, equipped, appearance);
@@ -557,6 +558,7 @@
       PAL = (appearance && appearance.paleta) || BASE_PAL;
       MOD = (appearance && appearance.modelo) || BASE_MOD;
       this.pal = PAL; // (para os pintores de um modelo, que ficam em outro arquivo)
+      this.model = MOD; // (e a forma do modelo: o arco lê o vão do punho na mão dele)
       this.equipped = equipped || {};
       this._setup(ctx);
       let items = this._sorted(this._items(rig, look));
@@ -576,6 +578,13 @@
           let idx = items.indexOf(e.host);
           if (idx < 0) {
             items.push(e);
+            continue;
+          }
+          if (e.under) {
+            // (uma peça pode ir logo ANTES da parte que a segura: o cabo do arco dentro do punho — os dedos ficam por
+            // cima dele. Várias seguidas ficam na ordem em que vieram)
+            while (idx > 0 && e.host.group && items[idx - 1].group === e.host.group) idx--;
+            items.splice(idx, 0, e);
             continue;
           }
           while (idx + 1 < items.length && e.host.group && items[idx + 1].group === e.host.group) idx++;

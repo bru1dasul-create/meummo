@@ -45,7 +45,8 @@
     twist: 70 * M.DEG, // o máximo que o peito torce em relação ao quadril
     side: 15.5, // a linha da flecha: à direita do meio do peito (cm)...
     up: 21, // ... e acima dele (a altura da mandíbula)
-    reach: 61, // do ombro do arco à empunhadura (cm): o braço quase esticado
+    reach: 66, // do ombro do arco à empunhadura (cm): o braço quase esticado (o cabo passa no vão do punho, ~11 cm depois
+    // do punho; eram 61 com o cabo a 6 cm, e o punho fica no mesmo lugar)
     ahead: 10, // carga cheia: os dedos da corda ficam isto à frente do ombro direito...
     jaw: 3, // ... e nunca passam da mandíbula (cm à frente do meio do peito)
     arrow: 82, // o comprimento da flecha (a puxada cheia não passa dele menos 5)
@@ -154,6 +155,23 @@
     return { grip, neck, center, tips, pouch, pulled };
   }
 
+  /**
+   * O vão do punho fechado, onde passa o cabo do arco: o meio do laço que os dedos fazem (as mesmas contas dos dedos
+   * em renderer.js), em cm na base da mão — `a` ao longo da mão e `d` para as costas dela (negativo = para a palma).
+   * `HM` = a mão do modelo (MODEL.HAND), `fist` = quanto ela fecha.
+   */
+  function fistHole(HM, fist) {
+    const hk = HM.size || 1;
+    let sa = 0, sd = 0;
+    HM.fingers.forEach((fg, j) => {
+      const c = M.clamp01(fist + (HM.curl ? HM.curl[j] : 0) * (1 - fist) * 0.7);
+      sa += fg.base + M.lerp(fg.base + fg.len * 0.55, fg.base + 1.6, c) + M.lerp(fg.base + fg.len, fg.base - 0.2, c);
+      sd += 0.3 + M.lerp(-0.3, -1.9, c) + M.lerp(-1.15, -3, c);
+    });
+    const n = HM.fingers.length * 3;
+    return { a: (sa / n) * hk, d: (sd / n) * hk };
+  }
+
   /** O eixo do arco puxado: quase em pé, um pouco deitado para longe do rosto (mais na linha da câmera: `cant`). */
   function bowAxis(u, shot, cant) {
     return M.norm(M.add(M.scale(u, 0.97), M.scale(M.norm(M.cross(u, shot)), 0.16 + 0.6 * M.clamp01(cant || 0))));
@@ -191,21 +209,28 @@
     // uns 60 cm à frente da outra: descer `away` cm lá é inclinar a flecha away/60)
     const dir = M.norm({ x: av.x, y: av.y, z: 1.1 * up - (P.away * away) / 60 });
     character.look.bowDir = dir;
-    // a empunhadura: na linha, ao alcance do braço do arco (a flecha passa 2,5 cm acima dela, no eixo do arco: `rest`)
+    // a empunhadura: na linha, ao alcance do braço do arco (a flecha passa por cima do punho, no eixo do arco: `rest`)
     const axis = bowAxis(chest.u, dir, character.look.bowCant);
-    const q = M.sub(M.sub(anchor, M.scale(axis, 2.5)), L);
+    const q = M.sub(M.sub(anchor, M.scale(axis, BOW.rest)), L);
     const qd = M.dot(q, dir);
     const toRest = -qd + Math.sqrt(Math.max(0, qd * qd - M.dot(q, q) + P.reach * P.reach));
     const rest = M.add(anchor, M.scale(dir, toRest));
-    const grip = M.sub(rest, M.scale(axis, 2.5));
+    const grip = M.sub(rest, M.scale(axis, BOW.rest));
     // a puxada cheia: do arco até a âncora (sem passar do comprimento da flecha: a ponta não entra no arco)
     const full = Math.min(toRest, P.arrow - 5);
-    // o punho do arco: 6 cm antes da empunhadura, na direção do antebraço (duas voltas bastam)
+    // o punho do arco: o vão do punho fica na empunhadura, com as costas da mão para fora da linha da flecha (antes: o
+    // punho 6 cm antes dela, e o cabo passava torto, colado por fora dos dedos). Duas voltas bastam
+    const hole = fistHole(PD.MODEL.HAND, 0.88);
+    // (o punho dobra de lado até a mão ficar reta no eixo: a mão segue a direção do antebraço sem o que ela tem do eixo)
+    const wristOf = (a) => {
+      const along = M.norm(M.sub(a, M.scale(axis, M.dot(a, axis))));
+      return M.sub(M.sub(grip, M.scale(along, hole.a)), M.scale(M.norm(M.cross(a, axis)), hole.d));
+    };
     const poleL = M.add(M.scale(M.UP, -0.8), M.scale(rv, -0.6));
-    let wristL = M.sub(grip, M.scale(M.norm(M.sub(grip, L)), 6));
+    let wristL = wristOf(M.norm(M.sub(grip, L)));
     for (let i = 0; i < 2; i++) {
       const arm = PD.rig.solveTwoBone(L, wristL, B.upperArm, B.forearm, poleL);
-      wristL = M.sub(grip, M.scale(M.norm(M.sub(arm.end, arm.mid)), 6));
+      wristL = wristOf(M.norm(M.sub(arm.end, arm.mid)));
     }
     const dL = M.sub(wristL, L);
     const left = parts.hands[0], right = parts.hands[1];
@@ -214,7 +239,11 @@
     left.poleLocal = left.poleLocal.map((v, j) => M.lerp(v, poleLocalL[j], blend));
     left.fist = M.lerp(left.fist, 0.88, blend);
     left.flex = M.lerp(left.flex || 0, 0, blend);
-    left.twist = M.lerp(left.twist || 0, 0.25, blend);
+    // a mão gira até o vão do punho ficar no eixo do arco (era um giro fixo: o arco passava até 64° torto pelo punho)
+    const thumbL = { x: -M.dot(axis, chest.r), y: M.dot(axis, chest.f), z: M.dot(axis, chest.u) };
+    left.thumb = left.thumb && left.thumbK > 0 ? M.lerp3(M.scale(left.thumb, left.thumbK), thumbL, blend) : thumbL;
+    left.thumbK = M.lerp(left.thumbK || 0, 1, blend);
+    left.thumbBend = M.lerp(left.thumbBend || 0, 1, blend);
     right.fist = M.lerp(right.fist, charging ? 0.88 : 0.18, blend);
     right.flex = M.lerp(right.flex || 0, 0, blend);
     right.twist = M.lerp(right.twist || 0, -0.5, blend);
@@ -309,18 +338,25 @@
    * baixo atrás e longe do chão) e quase em pé puxando (um pouco deitado para fora, como o arqueiro segura). Os braços
    * curvam para o lado da corda e curvam mais com a puxada; a corda vai das pontas ao ponto pinçado (`nock`).
    */
-  const BOW = { limb: 56, grip: 10 };
-  function bowGeometry(rig, look = {}) {
-    const grip = M.add(rig.hand[0].o, M.scale(rig.hand[0].a, 6));
-    const f = rig.chest.f, u = rig.chest.u, r = rig.chest.r;
+  // (rest = onde a flecha passa, no eixo do arco a partir do meio do cabo: por cima do punho, do lado do polegar)
+  const BOW = { limb: 56, grip: 10, rest: 4.2 };
+  function bowGeometry(rig, look = {}, HM) {
+    const h = rig.hand[0];
+    // o cabo passa pelo vão do punho fechado (antes ficava 6 cm à frente do punho, no meio da mão: o couro aparecia
+    // colado por cima dos dedos e, correndo, por fora do punho)
+    const hole = fistHole(HM || PD.MODEL.HAND, h.fist);
+    const grip = M.add(h.o, M.add(M.scale(h.a, hole.a), M.scale(h.d, hole.d)));
+    const f = rig.chest.f, u = rig.chest.u;
     const aimK = M.clamp01(look.bowAim || 0);
-    const restAxis = M.norm(M.add(M.scale(f, 0.6), M.scale(u, 0.8)));
-    // puxando, o arco fica quase em pé, um pouco deitado para longe do rosto (a direção da flecha vem da pose)
+    // puxando, o arco fica quase em pé, um pouco deitado para longe do rosto (a direção da flecha vem da pose). Solto na
+    // mão, ele segue o punho: o eixo é o do vão (a ponta de cima para o lado do polegar), como um cabo segurado de verdade
     const shot = look.bowDir && aimK > 0 ? M.norm(M.lerp3(f, look.bowDir, aimK)) : f;
     const drawAxis = bowAxis(u, shot, look.bowCant);
-    const axis = M.norm(M.lerp3(restAxis, drawAxis, aimK));
-    // a barriga do arco olha para onde a flecha vai (sem o que o eixo já tem dela)
-    const front = M.norm(M.sub(shot, M.scale(axis, M.dot(shot, axis))));
+    const axis = M.norm(M.lerp3(h.s, drawAxis, aimK));
+    // a barriga do arco olha para onde a flecha vai (sem o que o eixo já tem dela); solto, para as costas da mão — a
+    // corda fica do lado da palma, e não atravessando os dedos
+    const towards = M.lerp3(h.d, shot, aimK);
+    const front = M.norm(M.sub(towards, M.scale(axis, M.dot(towards, axis))));
     const back = M.scale(front, -1);
     const draw = M.clamp01(look.slingDraw || 0) * aimK;
     const bend = 7 + 12 * draw;
@@ -336,7 +372,7 @@
     };
     const lower = limb(-1), upper = limb(1);
     const tips = [lower[6], upper[6]];
-    const rest = M.add(grip, M.scale(axis, 2.5));
+    const rest = M.add(grip, M.scale(axis, BOW.rest));
     const slack = M.lerp3(tips[0], tips[1], 0.5);
     const pulled = M.add(rig.hand[1].o, M.scale(rig.hand[1].a, 7));
     const nock = M.lerp3(slack, pulled, M.clamp01(look.slingBand || 0) * aimK);
@@ -345,26 +381,32 @@
   }
 
   function drawBow(renderer, rig, look, host) {
-    const g = bowGeometry(rig, look), items = [];
+    const g = bowGeometry(rig, look, renderer.model && renderer.model.HAND), items = [];
     const key = (host ? host.key : renderer.keyOf(g.grip)) + 0.08;
-    const segment = (a, b, ra, rb, material, name, k = 0.28) => {
+    // o que fica atrás do punho (visto da câmera) vai por baixo da mão; o resto, por cima dela
+    const toCam = renderer.toCam;
+    const behind = (p) => !!toCam && M.dot(M.sub(p, g.grip), toCam) < 0;
+    const segment = (a, b, ra, rb, material, name, k = 0.28, under = false) => {
       const circles = [renderer.circle(a, ra), renderer.circle(b, rb)];
-      items.push({ name: 'arco:' + name, key, host, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
+      items.push({ name: 'arco:' + name, key, host, under, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
     };
     // a corda primeiro (fininha, atrás dos braços), depois os dois braços de bambu afinando para a ponta, com os nós
-    segment(g.tips[0], g.nock, 0.42, 0.42, cord, 'corda0', 0.2);
-    segment(g.nock, g.tips[1], 0.42, 0.42, cord, 'corda1', 0.2);
+    const cordUnder = behind(g.nock);
+    segment(g.tips[0], g.nock, 0.42, 0.42, cord, 'corda0', 0.2, cordUnder);
+    segment(g.nock, g.tips[1], 0.42, 0.42, cord, 'corda1', 0.2, cordUnder);
     for (const [pts, side] of [[g.lower, 'baixo'], [g.upper, 'cima']]) {
+      const under = behind(pts[0]);
       for (let i = 0; i < pts.length - 1; i++) {
         const ra = M.lerp(2.1, 0.9, i / 6), rb = M.lerp(2.1, 0.9, (i + 1) / 6);
-        segment(pts[i], pts[i + 1], ra, rb, bamboo, side + i);
-        if (i === 2 || i === 4) segment(pts[i], pts[i], ra + 0.35, ra + 0.35, { ...bamboo, base: bamboo.shade }, 'no-' + side + i, 0.2);
+        segment(pts[i], pts[i + 1], ra, rb, bamboo, side + i, 0.28, under);
+        if (i === 2 || i === 4) segment(pts[i], pts[i], ra + 0.35, ra + 0.35, { ...bamboo, base: bamboo.shade }, 'no-' + side + i, 0.2, under);
       }
       // a ponta com o entalhe da corda (escura, de amarração)
-      segment(pts[6], pts[6], 1.15, 1.15, leather, 'ponta-' + side);
+      segment(pts[6], pts[6], 1.15, 1.15, leather, 'ponta-' + side, 0.28, under);
     }
-    // a empunhadura de couro com a amarração
-    segment(M.add(g.grip, M.scale(g.axis, -BOW.grip / 2 - 1)), M.add(g.grip, M.scale(g.axis, BOW.grip / 2 + 1)), 2.5, 2.5, leather, 'empunhadura');
+    // a empunhadura de couro com a amarração: dentro do punho, os dedos fecham por cima dela (aparecem só as pontas,
+    // acima e abaixo da mão)
+    segment(M.add(g.grip, M.scale(g.axis, -BOW.grip / 2 - 1)), M.add(g.grip, M.scale(g.axis, BOW.grip / 2 + 1)), 1.9, 1.9, leather, 'empunhadura', 0.28, true);
     if (look.slingLoaded && (look.bowAim || 0) > 0.2) {
       // a flecha encaixada: do entalhe da corda para a frente, passando rente à empunhadura
       const dir = M.norm(M.sub(g.rest, g.nock));

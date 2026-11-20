@@ -116,14 +116,37 @@
       // lado da palma): a mão não fica mais travada reta no antebraço
       const ref = fa.out;
       let dorsal = M.rotate(ref, fa.a, side * (hd.twist || 0));
-      const thumb = scale(norm(cross(fa.a, dorsal)), side);
       let along = fa.a;
+      let thumb = null;
+      if (hd.thumbK > 0 && hd.thumb) {
+        // (a pose pode pedir o lado do polegar numa direção — `thumb`, no espaço do peito como `local`, com o peso
+        // `thumbK`: o vão do punho no eixo do arco). A mão gira em volta do antebraço até chegar o mais perto dela
+        const want = norm(dirIn(chest, side * hd.thumb.x, hd.thumb.y, hd.thumb.z));
+        const t = sub(want, scale(fa.a, dot(want, fa.a)));
+        if (len(t) > 1e-3) {
+          const back = scale(cross(fa.a, norm(t)), -side);
+          const turn = Math.atan2(dot(cross(dorsal, back), fa.a), dot(dorsal, back));
+          dorsal = M.rotate(dorsal, fa.a, turn * Math.min(1, hd.thumbK));
+          if (hd.thumbBend > 0) {
+            // ... e, com `thumbBend`, o punho dobra para o lado (do polegar ou do mindinho, até 25°) até o polegar
+            // chegar nela: a mão do arco reta no eixo dele, com o antebraço vindo de lado
+            thumb = scale(norm(cross(fa.a, dorsal)), side);
+            const dev = clamp(Math.atan2(dot(want, fa.a), dot(want, thumb)), -0.44, 0.44) * Math.min(1, hd.thumbBend);
+            const c = Math.cos(dev);
+            const sn = Math.sin(dev);
+            along = norm(sub(scale(fa.a, c), scale(thumb, sn)));
+            thumb = norm(add(scale(thumb, c), scale(fa.a, sn)));
+          }
+        }
+      }
+      if (!thumb) thumb = scale(norm(cross(fa.a, dorsal)), side);
       const fl = hd.flex || 0;
       if (fl) {
         const c = Math.cos(fl);
         const sn = Math.sin(fl);
-        along = norm(add(scale(fa.a, c), scale(dorsal, -sn)));
-        dorsal = norm(add(scale(dorsal, c), scale(fa.a, sn)));
+        const a0 = along;
+        along = norm(add(scale(a0, c), scale(dorsal, -sn)));
+        dorsal = norm(add(scale(dorsal, c), scale(a0, sn)));
       }
       rig.hand.push({ o: arm.end, a: along, d: dorsal, s: thumb, fist: hd.fist ?? 1, flex: fl });
     }
