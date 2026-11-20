@@ -4,7 +4,9 @@
 //   paintSpiritAim(ctx, mira, agora, tela, pxPorMetro)     a mira (segurando o R): a faixa dourada do chão, do pé até o
 //                                        fim do alcance, com as setas andando para a frente e o fio verde no meio
 //   paintSpiritEnd(ctx, fim, agora, tela, pxPorMetro)      onde ela parou: o espírito se desfaz em luzinhas subindo; com
-//                                        5 pontos (`r` > 0), explode: o clarão, a onda no chão até o raio e os raios
+//                                        5 pontos (`r` > 0), explode: o clarão, a onda no chão até o raio, os raios, o
+//                                        segundo pulso e os fios do espírito subindo. Nos dois casos fica a marca do
+//                                        espírito no chão (o anel com a espiral), que apaga devagar
 //   paintSpiritMark(ctx, pé, até, agora, tela, pxPorMetro) a runa do espírito em cima do bicho marcado (3 pontos ou
 //                                        mais) e o anel no pé dele; pisca no último segundo
 //   SPIRIT_END_MS                        quanto o fim fica na tela (o combate guarda até lá)
@@ -33,9 +35,15 @@ export interface SpiritEndLook {
   start: number;
 }
 
-/** Quanto o fim fica na tela: a explosão (o desfazer sem explosão acaba antes, em FADE_MS). */
-export const SPIRIT_END_MS = 720;
-const FADE_MS = 560;
+/**
+ * Quanto o fim fica na tela: a explosão (BURST_MS) ou o desfazer (FADE_MS) e depois a marca no chão, apagando devagar
+ * (o combate guarda o fim até aqui). A explosão era de 720 ms; o dono pediu mais demorada (19/11).
+ */
+export const SPIRIT_END_MS = 3400;
+const BURST_MS = 1300;
+const FADE_MS = 640;
+/** A marca no chão: acende quando o efeito do fim vai apagando e some nos últimos MARK_OUT_MS. */
+const MARK_OUT_MS = 1500;
 /** A altura do voo (m): a mesma do combate (SHOT_DRAW_Z), onde o espírito se desfaz. */
 const FLIGHT_Z = 0.9;
 /** A altura da runa (m): logo acima da barra de vida (BODY_HEIGHT + 0,42). */
@@ -408,46 +416,69 @@ function dissolve(ctx: CanvasRenderingContext2D, end: SpiritEndLook, k: number, 
   }
 }
 
-/** Com 5 pontos: a explosão — o clarão, a onda que corre no chão até o raio, os raios, a coluna de luz e as luzinhas. */
-function burst(ctx: CanvasRenderingContext2D, end: SpiritEndLook, k: number, screen: Screen, m: number): void {
+/**
+ * Com 5 pontos: a explosão (`age` em ms, dura BURST_MS). A onda corre até o raio em ~0,3 s (o golpe continua seco) e
+ * o resto demora: o clarão, a coluna de luz, o segundo pulso (o espírito "respira" de novo), os fios do espírito
+ * subindo em espiral do meio e as luzinhas — o chão aceso dentro do raio apaga devagar, junto com tudo.
+ */
+function burst(ctx: CanvasRenderingContext2D, end: SpiritEndLook, age: number, screen: Screen, m: number): void {
+  const k = clamp01(age / BURST_MS);
+  const fade = 1 - k;
   const c = screen(end.x, end.y, FLIGHT_Z);
   const g = screen(end.x, end.y, 0);
-  const grow = easeOut(Math.min(1, k * 2.4));
+  const grow = easeOut(clamp01(age / 320));
   const R = end.r * grow;
   // o chão aceso dentro do raio
   groundPath(ctx, end.x, end.y, R, screen);
-  ctx.fillStyle = rgba(MINT, 0.24 * (1 - k));
+  ctx.fillStyle = rgba(MINT, 0.26 * fade ** 0.8);
   ctx.fill();
-  // os raios no chão, do meio para fora
+  // os raios no chão, do meio para fora (apagam na primeira metade)
+  const rays = 1 - clamp01(age / 700);
   ctx.lineCap = 'round';
-  for (let i = 0; i < 12; i++) {
-    const ang = (i / 12) * TAU + hash(i) * 0.3;
-    const reach = R * (0.55 + 0.45 * hash(i + 5));
-    const p0 = screen(end.x + Math.cos(ang) * reach * 0.2, end.y + Math.sin(ang) * reach * 0.2);
-    const p1 = screen(end.x + Math.cos(ang) * reach, end.y + Math.sin(ang) * reach);
-    ctx.strokeStyle = rgba(PALE, 0.7 * (1 - k));
-    ctx.lineWidth = Math.max(1.2, m * 0.035 * (1 - k));
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
+  if (rays > 0) {
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * TAU + hash(i) * 0.3;
+      const reach = R * (0.55 + 0.45 * hash(i + 5));
+      const p0 = screen(end.x + Math.cos(ang) * reach * 0.2, end.y + Math.sin(ang) * reach * 0.2);
+      const p1 = screen(end.x + Math.cos(ang) * reach, end.y + Math.sin(ang) * reach);
+      ctx.strokeStyle = rgba(PALE, 0.7 * rays);
+      ctx.lineWidth = Math.max(1.2, m * 0.035 * rays);
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+    }
+  }
+  // a onda: o anel que corre até o raio e fica lá apagando, e um segundo, menor, logo atrás
+  const wave = 1 - clamp01((age - 120) / 950);
+  if (wave > 0) {
+    groundPath(ctx, end.x, end.y, R, screen);
+    ctx.strokeStyle = rgba(PALE, 0.95 * wave);
+    ctx.lineWidth = Math.max(2, m * 0.09 * (0.3 + 0.7 * wave));
     ctx.stroke();
   }
-  // a onda: o anel que corre até o raio, e um segundo, menor, logo atrás
-  groundPath(ctx, end.x, end.y, R, screen);
-  ctx.strokeStyle = rgba(PALE, 0.95 * (1 - k));
-  ctx.lineWidth = Math.max(2, m * 0.09 * (1 - k * 0.7));
-  ctx.stroke();
-  const k2 = clamp01((k - 0.14) / 0.86);
-  if (k2 > 0) {
-    groundPath(ctx, end.x, end.y, end.r * 0.72 * easeOut(Math.min(1, k2 * 2.2)), screen);
-    ctx.strokeStyle = rgba(MINT, 0.7 * (1 - k2));
+  const a2 = age - 140;
+  if (a2 > 0 && a2 < 760) {
+    const u = a2 / 760;
+    groundPath(ctx, end.x, end.y, end.r * 0.72 * easeOut(Math.min(1, a2 / 360)), screen);
+    ctx.strokeStyle = rgba(MINT, 0.7 * (1 - u));
     ctx.lineWidth = Math.max(1.5, m * 0.05);
     ctx.stroke();
   }
-  // a coluna de luz subindo do meio (curta, some logo)
-  const col = clamp01(1 - k * 1.8);
+  // o segundo pulso: de dentro para fora de novo, mais fraco (o espírito respira)
+  const a3 = age - 470;
+  if (a3 > 0 && a3 < 560) {
+    const u = a3 / 560;
+    groundPath(ctx, end.x, end.y, end.r * (0.5 + 0.58 * easeOut(u)), screen);
+    ctx.strokeStyle = rgba(PALE, 0.6 * (1 - u));
+    ctx.lineWidth = Math.max(1.5, m * 0.06 * (1 - u * 0.6));
+    ctx.stroke();
+    glowGround(ctx, g, m * (0.5 + end.r * 0.5), MINT, 0.22 * Math.sin(Math.PI * u));
+  }
+  // a coluna de luz subindo do meio (sobe rápido e fica um pouco)
+  const col = Math.min(1, age / 180) * (1 - clamp01((age - 320) / 560));
   if (col > 0) {
-    const top = { x: g.x, y: g.y - m * 2.6 };
+    const top = { x: g.x, y: g.y - m * 2.6 * Math.min(1, 0.4 + age / 300) };
     const width = m * 0.34 * (0.6 + 0.4 * col);
     const cg = ctx.createLinearGradient(g.x, g.y, top.x, top.y);
     cg.addColorStop(0, rgba(PALE, 0.75 * col));
@@ -461,17 +492,118 @@ function burst(ctx: CanvasRenderingContext2D, end: SpiritEndLook, k: number, scr
     ctx.closePath();
     ctx.fill();
   }
-  // o clarão do meio
-  glowCircle(ctx, c, m * (0.5 + 0.9 * k), PALE, (1 - k) ** 1.3);
-  glowGround(ctx, g, m * (0.6 + end.r * 0.6), MINT, 0.45 * (1 - k));
+  // os fios do espírito: três espirais subindo do meio e se desfazendo no alto
+  const a4 = age - 220;
+  if (a4 > 0) {
+    const u = clamp01(a4 / (BURST_MS - 220));
+    for (let strand = 0; strand < 3; strand++) {
+      let prev: Point | null = null;
+      for (let i = 0; i <= 16; i++) {
+        const v = i / 16;
+        const h = (0.2 + v * 2.3) * easeOut(Math.min(1, u * 1.6));
+        const ang = strand * (TAU / 3) + v * 5.2 + u * 4;
+        const rad = end.r * (0.18 + 0.32 * v) * (0.5 + 0.5 * u);
+        const p = screen(end.x + Math.cos(ang) * rad, end.y + Math.sin(ang) * rad, h);
+        if (prev) {
+          ctx.strokeStyle = rgba(v < 0.5 ? PALE : MINT, (1 - u) * (1 - v * 0.7) * 0.8);
+          ctx.lineWidth = Math.max(1, m * 0.035 * (1 - v * 0.6));
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        }
+        prev = p;
+      }
+    }
+  }
+  // o clarão do meio: forte no começo, depois a luz que fica e apaga devagar
+  const flash = Math.min(1, age / 90) * (1 - clamp01((age - 90) / 430));
+  glowCircle(ctx, c, m * (0.5 + 0.9 * Math.min(1, age / 520)), PALE, flash);
+  glowCircle(ctx, c, m * (0.9 + 0.3 * k), MINT, 0.32 * fade ** 1.5);
+  glowGround(ctx, g, m * (0.6 + end.r * 0.6), MINT, 0.45 * fade);
   // as luzinhas subindo de dentro do raio
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 18; i++) {
     const ang = hash(i * 1.7 + 2) * TAU;
     const rr = end.r * Math.sqrt(hash(i + 31)) * grow;
-    const rise = k * (0.6 + hash(i + 13) * 1.4);
+    const rise = k * (0.6 + hash(i + 13) * 1.6);
     const p = screen(end.x + Math.cos(ang) * rr, end.y + Math.sin(ang) * rr, 0.1 + rise);
-    ctx.fillStyle = rgba(PALE, (1 - k) * 0.95);
+    ctx.fillStyle = rgba(PALE, fade * 0.95);
     star(ctx, p, Math.max(1.5, m * 0.055 * (1 - k * 0.5)), i);
+  }
+}
+
+/**
+ * A marca do espírito no chão, onde a Flecha Ancestral parou ou explodiu (pedido do dono, 19/11: "um efeito no chão"):
+ * o anel de luz com as pontinhas de runa, o anel de dentro girando devagar e a espiral no meio (o desenho da runa da
+ * marca, deitado no chão); umas luzinhas soltando. Acende quando o efeito do fim vai apagando e some devagar até
+ * SPIRIT_END_MS. Só luz somada (passa por cima de quem estiver em cima dela sem pintar ninguém).
+ */
+function groundMark(ctx: CanvasRenderingContext2D, end: SpiritEndLook, age: number, now: number, screen: Screen, m: number): void {
+  const boom = end.r > 0;
+  const from = boom ? BURST_MS * 0.35 : FADE_MS * 0.3;
+  const on = clamp01((age - from) / 320) * clamp01((SPIRIT_END_MS - age) / MARK_OUT_MS);
+  if (on <= 0.004) return;
+  const a = on * (0.86 + 0.14 * Math.sin(now / 260));
+  const R = boom ? end.r : 0.42;
+  const g = screen(end.x, end.y, 0);
+  glowGround(ctx, g, m * R * 1.25, MINT, 0.16 * a);
+  ctx.lineCap = 'round';
+  // o anel de fora
+  groundPath(ctx, end.x, end.y, R * 0.92, screen, 48);
+  ctx.strokeStyle = rgba(MINT, 0.6 * a);
+  ctx.lineWidth = Math.max(1.2, m * 0.028);
+  ctx.stroke();
+  // o anel de dentro, tracejado e girando devagar
+  ctx.setLineDash([Math.max(2, m * 0.07), Math.max(2, m * 0.05)]);
+  ctx.lineDashOffset = -now / 70;
+  groundPath(ctx, end.x, end.y, R * 0.7, screen, 40);
+  ctx.strokeStyle = rgba(PALE, 0.42 * a);
+  ctx.lineWidth = Math.max(1, m * 0.018);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // as pontinhas de runa entre os dois anéis (compridas e curtas, alternando)
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * TAU + 0.2;
+    const r0 = R * 0.75;
+    const r1 = R * (i % 2 ? 0.83 : 0.89);
+    const p0 = screen(end.x + Math.cos(ang) * r0, end.y + Math.sin(ang) * r0);
+    const p1 = screen(end.x + Math.cos(ang) * r1, end.y + Math.sin(ang) * r1);
+    ctx.strokeStyle = rgba(PALE, 0.62 * a);
+    ctx.lineWidth = Math.max(1.1, m * 0.026);
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+  }
+  // a espiral no meio, deitada no chão (do tamanho da do selo pequeno; no círculo grande, com um anel em volta)
+  const sr = boom ? Math.min(0.5, R * 0.2) : R * 0.5;
+  if (boom) {
+    groundPath(ctx, end.x, end.y, sr * 1.45, screen, 28);
+    ctx.strokeStyle = rgba(MINT, 0.5 * a);
+    ctx.lineWidth = Math.max(1, m * 0.02);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  for (let i = 0; i <= 30; i++) {
+    const u = i / 30;
+    const ang = u * TAU * 1.75 + now / 1400;
+    const p = screen(end.x + Math.cos(ang) * sr * u, end.y + Math.sin(ang) * sr * u);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.strokeStyle = rgba(PALE, 0.75 * a);
+  ctx.lineWidth = Math.max(1.3, m * 0.032);
+  ctx.stroke();
+  // as luzinhas soltando da marca (sobem um pouco e apagam)
+  for (let j = 0; j < 5; j++) {
+    const cycle = now / 1100 + j / 5;
+    const u = cycle % 1;
+    const seed = Math.floor(cycle) * 5 + j + end.x * 7.3;
+    const ang = hash(seed) * TAU;
+    const rr = R * (0.3 + 0.6 * hash(seed + 2));
+    const p = screen(end.x + Math.cos(ang) * rr, end.y + Math.sin(ang) * rr, u * 0.7);
+    ctx.fillStyle = rgba(PALE, (1 - u) * 0.8 * a);
+    star(ctx, p, Math.max(1.3, m * 0.04 * (1 - u * 0.5)), hash(seed + 3) * 1.5);
   }
 }
 
@@ -482,8 +614,10 @@ export function paintSpiritEnd(ctx: CanvasRenderingContext2D, end: SpiritEndLook
   const m = meter(end.x, end.y);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
+  // a marca no chão primeiro (o efeito do fim passa por cima dela)
+  groundMark(ctx, end, age, now, screen, m);
   if (end.r > 0) {
-    if (age < SPIRIT_END_MS) burst(ctx, end, age / SPIRIT_END_MS, screen, m);
+    if (age < BURST_MS) burst(ctx, end, age, screen, m);
   } else if (age < FADE_MS) dissolve(ctx, end, age / FADE_MS, screen, m);
   ctx.restore();
 }

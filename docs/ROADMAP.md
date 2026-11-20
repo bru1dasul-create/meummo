@@ -797,9 +797,18 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   primeiros 3 m até a altura de sempre do voo (0,9 m, onde acerta e crava); vale para a Flecha Ancestral e o
   estilingue. Atrás de quem atirou (mais longe da câmera), a silhueta dele cobre a flecha. E o motor avisa a view quando
   a flecha especial entra no arco (`armed(id, 'ancestral')`, o tipo do tiro que vai voar)
-- [ ] **[arte]** Da mesma lista: o brilho da Flecha Ancestral **na flecha da mão** enquanto ela está armada (o motor
+- [x] **[arte]** Da mesma lista: o brilho da Flecha Ancestral **na flecha da mão** enquanto ela está armada (o motor
   chama `view.armed(id, tipo)`), continuando no voo; um **efeito no chão** onde ela para/explode; e **a explosão mais
-  demorada** (hoje `SPIRIT_END_MS` = 720 ms, em `spiritArt.ts`). Pedido mandado à [arte]
+  demorada** (hoje `SPIRIT_END_MS` = 720 ms, em `spiritArt.ts`). FEITO em 20/11: o arco armado brilha verde e a flecha da
+  puxada é a de luz; a explosão dura 1,3 s (segundo pulso e fios do espírito subindo) e deixa a marca do espírito no chão
+  (o anel de runas com a espiral), que apaga até 3,4 s (`SPIRIT_END_MS`; sem explosão, um selo pequeno)
+- [x] **[arte]** O arco encaixa na mão (pedido do dono, 20/11: "o arco encaixa certo na mão do personagem e foca também pra
+  resolver a pegada correndo"): o cabo passa pelo vão do punho com os dedos por cima; a mão gira (e o punho dobra de lado)
+  para o arco ficar reto no punho, solto e mirando; com o arco, o braço esquerdo dobra mais e balança menos (o arco de pé
+  ao lado do corpo; correndo, quase em pé); na defesa, ele bloqueia com o arco em pé. FEITO em 20/11 (veja `docs/ARTE.md`)
+- [ ] **[estrutura]** Achado da [arte] (20/11): no tiro do próprio jogador, a Flecha Ancestral que para perto (3–4 m) não
+  mostra a explosão — o desenho chega ao fim do alcance antes do `shot_end` do servidor e o `combat.ts` termina sem o
+  `burst` (pode vir do número da habilidade na hora do tiro, ou esperar o aviso um pouco mais)
 - [ ] **[estrutura]** Da mesma lista: o `Q` passa a armar a Chuva de Flechas como o `R` arma a Flecha Ancestral, e ela
   sai com o botão direito, segurando para sair mais forte ("mesma mecânica"); assim as flechas sobem quando ele solta (hoje
   sobem antes). Esperando o dono: o que fica mais forte com a carga e o que é "colocar nível nessas"

@@ -117,6 +117,49 @@
       `shooting_while_changing_sides` pegou os pés cruzando). Precisaria de um passo próprio ("passo e junta").
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
+- **O ARCO NA MÃO E A FLECHA ANCESTRAL (20/11, pedido do dono: "o arco encaixa certo na mão do personagem e foca também
+  pra resolver a pegada correndo"; os efeitos são os da lista de 19/11 que a [estrutura] repassou)** — no ramo, esperando o
+  "pode" para a main:
+  - **O defeito, medido:** o cabo ficava 6 cm à frente do punho, no meio da mão, e o couro era desenhado POR CIMA dos dedos;
+    o eixo do arco era fixo no peito (para a frente e para cima), 38° torto em relação ao vão do punho parado, até 73°
+    correndo e 32–64° mirando. Por isso o arco parecia colado por fora da mão.
+  - **O cabo no vão do punho** (`slingshot.js`: `fistHole`, as mesmas contas dos dedos do `renderer.js`, com a mão de cada
+    modelo — o renderer guarda `this.model`): ~10–11 cm do punho, 1,9 cm para o lado da palma. O couro (mais fino: raio
+    1,9) vai POR BAIXO da mão (`under: true` no equipamento: entra logo antes da peça que o segura); o resto do arco que
+    fica atrás do punho, visto da câmera, também vai por baixo, e o da frente por cima. A flecha passa por cima do punho
+    (`BOW.rest` = 4,2 cm no eixo).
+  - **O arco segue o punho:** solto, o eixo do arco é o do vão (`hand.s`, o lado do polegar) e a barriga dele olha para as
+    costas da mão (a corda fica do lado da palma, sem atravessar os dedos). Para isso a mão gira sozinha: `rig.js` aceita
+    na pose da mão `thumb` (uma direção no espaço do peito, como `local`) e `thumbK` (o peso) — a mão gira em volta do
+    antebraço até o polegar chegar o mais perto dela; e `thumbBend` dobra o punho de lado (até 25°) para chegar exato.
+    Sem esses campos nada muda (herói sem arco idêntico ponto a ponto).
+  - **Carregando o arco** (`animator.js`, `_bowCarry`): com o arco equipado, o braço esquerdo dobra mais (cotovelo ~45°
+    parado e andando, ~74° correndo) e balança menos; o vão do punho aponta para a frente e para cima (50° parado, 68°
+    correndo), no plano do corpo: o arco fica de pé ao lado dele, inclinado para a frente, e correndo quase em pé (antes,
+    correndo, ele ficava deitado como um pau atravessado). A mão nunca cruza o corpo (26–28 cm à esquerda do peito; o
+    arco do lado direito em 2 quadros de costas é só a câmera).
+  - **Mirando** (`bowArms`): o punho é posto a partir do vão (o alcance passou de 61 para 66 cm: o punho fica onde
+    estava), a mão gira e dobra para o vão ficar no eixo do arco (0° na carga cheia; a Chuva fica a 14°, no limite dos 25°).
+  - **Na defesa** (`guard.js`): com o arco, o arqueiro bloqueia com o arco em pé na frente do corpo, preso no punho; a
+    outra mão fecha a guarda (sem isso o punho erguido deitava o arco atravessado no rosto).
+  - **O brilho da Flecha Ancestral armada:** a view (`js/view.js`) atende o `armed(id, tipo)` do motor e põe
+    `look.arrowKind` (quando sai, segura 250 ms, até o tiro deixar o arco). O arco solto brilha verde (bambu e corda acesos,
+    poça de luz no punho, luzinhas subindo; reforçado depois de ver no jogo: fraco demais) e a flecha da puxada é a de luz
+    (haste verde-clara, penas verdes, ponta de cristal, clarão e estrelinha na ponta) — a mesma que voa depois
+    (`spiritArt.ts`).
+  - **A explosão mais demorada e a marca no chão** (`spiritArt.ts`): a explosão foi de 720 ms para 1,3 s (`BURST_MS`) — a
+    onda chega ao raio em ~0,3 s (o golpe continua seco), depois o clarão que fica, o segundo pulso, a coluna de luz e três
+    fios do espírito subindo em espiral. Nos dois casos (explodindo ou só se desfazendo) fica a marca do espírito no chão:
+    o anel com as pontinhas de runa, o anel de dentro tracejado girando e a espiral no meio (no tamanho do raio; 0,42 m
+    sem explosão), só luz somada (passa por cima de quem pisar sem pintar ninguém), apagando até `SPIRIT_END_MS` = 3,4 s.
+  - **Conferido no jogo** (Caçador nível 20 com 5 pontos na Ancestral, montado num banco de teste): o arco armado, a flecha
+    da puxada, a explosão e a marca, no PC e no celular deitado, sem erros. **Achado (pedido à [estrutura]):** no tiro do
+    próprio jogador, se a flecha para perto (uns 3–4 m), o desenho chega ao fim antes do aviso do servidor e a explosão
+    não aparece (só o desfazer e a marca pequena) — o `combat.ts` termina o tiro no alcance sem saber do `burst`.
+  - **Ferramentas** (na pasta de rascunho desta conversa): `lista/mao-arco.cjs` (a mão de perto), `lista/mao-mira-perto.cjs`,
+    `lista/transicao.cjs` (puxar e soltar, a Chuva), `lista/armada.cjs` (o brilho), `espirito/fim.cjs` (a explosão e a marca
+    quadro a quadro, com o `spiritArt.ts` compilado pelo esbuild) e `arco-jogo/jogo-arco7.cjs` (no jogo; o "levar" do painel
+    precisa do cabeçalho `x-meummo-admin: 1`).
 
 ## Quem sou
 O chat da frente **[arte]**: personagens (`src/client/game/doll/`, `characters.ts`, `animator.ts`), equipamento no

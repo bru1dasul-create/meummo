@@ -202,6 +202,21 @@
       ch._pose = null;
     }
 
+    /**
+     * A flecha especial entrou no arco do jogador (ou saiu: null) — 'ancestral' = a Flecha Ancestral. O arco brilha com o
+     * espírito e a flecha da puxada sai verde-clara, a mesma que voa depois (pedido do dono, 19/11: "o efeito pegando na
+     * flecha do arco e ela acompanhando"). Quando ela sai (null), a flecha da mão segura o brilho um instante, até o tiro
+     * deixar o arco (slingshot.js desenha).
+     */
+    armed(id, kind) {
+      const a = this.actors.get(id);
+      if (!a || !a.ch || a.creature) return;
+      if (kind) {
+        a.ch.look.arrowKind = kind;
+        a.armedOff = 0;
+      } else if (a.ch.look.arrowKind) a.armedOff = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 250;
+    }
+
     _personAction(a, kind, yaw) {
       const ch = a.ch;
       const S = PD.slingshot;
@@ -597,6 +612,10 @@
         }
         if (a.id === this.followId && this.visionWant > 0) glow = Math.max(glow, 0.45);
         a.eyeGlow = glow;
+        if (a.armedOff && t >= a.armedOff) {
+          a.armedOff = 0;
+          if (a.ch) a.ch.look.arrowKind = null;
+        }
       }
       // quem a câmera segue é sempre gente (a PD.World lê o passo e o pulo dele)
       let hero = this.actors.get(this.followId);

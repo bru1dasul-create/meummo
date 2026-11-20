@@ -21,6 +21,11 @@
   const feather = { base: '#c0392b', shade: '#7e2219', light: '#ee8a7a' };
   const featherW = { base: '#efe9dc', shade: '#a49d8c', light: '#ffffff' };
   const point = { base: '#5b605e', shade: '#2c302f', light: '#a6aaa6' };
+  // a Flecha Ancestral na mão (armada com o R): a mesma flecha de luz que voa depois (spiritArt.ts, no jogo)
+  const spiritShaft = { base: '#d4ffe9', shade: '#62c493', light: '#ffffff' };
+  const spiritFeather = { base: '#8cffbe', shade: '#2f8f5f', light: '#e8fff4' };
+  const spiritPoint = { base: '#f4fff9', shade: '#7fd9aa', light: '#ffffff' };
+  const MINT = '140, 255, 190', PALE = '228, 255, 240';
   PD.equipment.define({ id: 'arco', nome: 'Arco de Bambu', slot: 'maoE', ocupa: ['maoE', 'maoD'], material: bamboo,
     pecas: [{ osso: 'mao', lado: 'E', esferas: [{ a: 6, d: 0, s: 0, r: 1.6 }] }] });
   const BOW_RULES = Object.freeze({ ...RULES, maxCharge: 1.5, minDraw: 0.3, snap: 0.06, recover: 0.42 });
@@ -407,21 +412,104 @@
     // a empunhadura de couro com a amarração: dentro do punho, os dedos fecham por cima dela (aparecem só as pontas,
     // acima e abaixo da mão)
     segment(M.add(g.grip, M.scale(g.axis, -BOW.grip / 2 - 1)), M.add(g.grip, M.scale(g.axis, BOW.grip / 2 + 1)), 1.9, 1.9, leather, 'empunhadura', 0.28, true);
+    const spirit = look.arrowKind === 'ancestral';
     if (look.slingLoaded && (look.bowAim || 0) > 0.2) {
       // a flecha encaixada: do entalhe da corda para a frente, passando rente à empunhadura
       const dir = M.norm(M.sub(g.rest, g.nock));
       const len = BOW_POSE.arrow;
       const tip = M.add(g.nock, M.scale(dir, len));
-      segment(g.nock, tip, 0.65, 0.65, shaft, 'flecha');
+      segment(g.nock, tip, 0.65, 0.65, spirit ? spiritShaft : shaft, 'flecha');
       const side = M.norm(M.cross ? M.cross(dir, g.axis) : g.axis);
       for (const [o, mat] of [[1, feather], [-1, featherW]]) {
         const a0 = M.add(g.nock, M.scale(dir, 3));
         const a1 = M.add(g.nock, M.scale(dir, 13));
-        segment(M.add(a0, M.scale(side, o * 1.6)), M.add(a1, M.scale(side, o * 2.4)), 0.5, 1.4, mat, 'pena' + o, 0.22);
+        segment(M.add(a0, M.scale(side, o * 1.6)), M.add(a1, M.scale(side, o * 2.4)), 0.5, 1.4, spirit ? spiritFeather : mat, 'pena' + o, 0.22);
       }
-      segment(tip, M.add(tip, M.scale(dir, 5)), 1.5, 0.25, point, 'ponta-flecha');
-    }
+      const point0 = M.add(tip, M.scale(dir, 5));
+      segment(tip, point0, 1.5, 0.25, spirit ? spiritPoint : point, 'ponta-flecha');
+      if (spirit) items.push({ name: 'arco:espirito', key, host, draw: () => spiritArrowGlow(renderer, g.nock, point0, look) });
+    } else if (spirit) items.push({ name: 'arco:espirito', key, host, draw: () => spiritBowGlow(renderer, g) });
     return items;
+  }
+
+  /** Um número "sorteado" fixo para cada `i` (as luzinhas não tremem de um quadro para o outro). */
+  const hash = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+  const clock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  /** Estrelinha de 4 pontas (as luzinhas do espírito, as mesmas do spiritArt.ts). */
+  function star(ctx, x, y, size, rot) {
+    const t = size * 0.26;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.beginPath(); ctx.moveTo(0, -size);
+    ctx.quadraticCurveTo(t, -t, size, 0); ctx.quadraticCurveTo(t, t, 0, size);
+    ctx.quadraticCurveTo(-t, t, -size, 0); ctx.quadraticCurveTo(-t, -t, 0, -size);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function glowDot(ctx, x, y, r, rgb, alpha) {
+    if (r <= 0.5 || alpha <= 0.003) return;
+    const gr = ctx.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, `rgba(${rgb}, ${alpha})`); gr.addColorStop(0.4, `rgba(${rgb}, ${alpha * 0.45})`); gr.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /**
+   * A Flecha Ancestral na puxada (luz somada por cima da flecha verde-clara): a luz em volta da haste, o clarão na ponta
+   * com a estrelinha girando e as luzinhas que sobem dela — cresce com a puxada, como a que sai voando.
+   */
+  function spiritArrowGlow(renderer, tail3, tip3, look) {
+    const ctx = renderer.ctx, z = renderer.zoom, now = clock();
+    const tail = renderer.P(tail3), tip = renderer.P(tip3);
+    const k = 0.6 + 0.4 * M.clamp01(look.slingDraw || 0);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (const [w, rgb, alpha] of [[7.5, MINT, 0.22], [3.2, MINT, 0.45], [1.3, PALE, 0.8]]) {
+      ctx.strokeStyle = `rgba(${rgb}, ${alpha * k})`; ctx.lineWidth = Math.max(1, w * z);
+      ctx.beginPath(); ctx.moveTo(tail.x, tail.y); ctx.lineTo(tip.x, tip.y); ctx.stroke();
+    }
+    const pulse = 1 + 0.15 * Math.sin(now / 120);
+    glowDot(ctx, tip.x, tip.y, 11 * z * pulse * k, PALE, 0.75);
+    glowDot(ctx, tail.x, tail.y, 6 * z * k, MINT, 0.45);
+    // as luzinhas: nascem ao longo da haste, sobem um pouco e apagam
+    for (let j = 0; j < 7; j++) {
+      const cycle = now / 760 + j / 7, u = cycle % 1, seed = Math.floor(cycle) * 7 + j;
+      const f = hash(seed), x = tail.x + (tip.x - tail.x) * f, y = tail.y + (tip.y - tail.y) * f;
+      ctx.fillStyle = `rgba(${PALE}, ${((1 - u) * 0.9 * k).toFixed(3)})`;
+      star(ctx, x + (hash(seed + 5) - 0.5) * 6 * z, y - u * 16 * z, Math.max(1.4, 2.4 * z * (1 - u * 0.5)), hash(seed + 3) * 1.5);
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    star(ctx, tip.x, tip.y, Math.max(3, 5.5 * z * k), now / 260);
+    ctx.restore();
+  }
+
+  /**
+   * Com a Flecha Ancestral armada e o arco solto na mão: o bambu e a corda acesos de verde, o punho com uma poça de luz
+   * e luzinhas subindo do arco (no tamanho do jogo tem de dar para ver que a próxima flecha é a especial).
+   */
+  function spiritBowGlow(renderer, g) {
+    const ctx = renderer.ctx, z = renderer.zoom, now = clock();
+    const P = (p) => renderer.P(p);
+    const grip = P(g.grip), nk = P(g.nock);
+    const bow = [...g.lower].reverse().concat(g.upper).map(P);
+    const breathe = 0.78 + 0.22 * Math.sin(now / 320);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const path = (pts) => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y))); ctx.stroke(); };
+    for (const [w, rgb, alpha] of [[7, MINT, 0.2], [2.6, MINT, 0.42], [1, PALE, 0.55]]) {
+      ctx.strokeStyle = `rgba(${rgb}, ${(alpha * breathe).toFixed(3)})`; ctx.lineWidth = Math.max(1, w * z);
+      path(bow);
+    }
+    ctx.strokeStyle = `rgba(${MINT}, ${(0.45 * breathe).toFixed(3)})`; ctx.lineWidth = Math.max(1, 2.2 * z);
+    path([bow[0], nk, bow[bow.length - 1]]);
+    glowDot(ctx, grip.x, grip.y, 16 * z, MINT, 0.55 * breathe);
+    for (let j = 0; j < 9; j++) {
+      const cycle = now / 900 + j / 9, u = cycle % 1, seed = Math.floor(cycle) * 9 + j;
+      const q = bow[Math.min(bow.length - 1, Math.floor(hash(seed) * bow.length))];
+      ctx.fillStyle = `rgba(${PALE}, ${((1 - u) * 0.9).toFixed(3)})`;
+      star(ctx, q.x + (hash(seed + 5) - 0.5) * 5 * z, q.y - u * 16 * z, Math.max(1.4, 2.3 * z * (1 - u * 0.5)), hash(seed + 3) * 1.5);
+    }
+    ctx.restore();
   }
 
   function drawItems(renderer, rig, look, host, weapon) {
