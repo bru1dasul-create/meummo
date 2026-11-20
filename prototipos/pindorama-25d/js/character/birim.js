@@ -2003,7 +2003,7 @@
     low: { z: -20, rx: 9, ry: 11.8, cy: -0.6 },
     // a barra fica ~7 cm abaixo do joelho (0,18 da canela)
     // (`back*`: o quanto a perna da bermuda vai para trás — 0 no alto, onde a coxa gira, e mais embaixo, onde o pano cai)
-    leg: { top: -0.16, topR: 8.4, off: -0.5, kneeR: 11.8, kneeOff: -1.2, hem: 0.18, hemR: 10.6, hemOff: -1, kf: 1.25, ko: 0.95, backTop: 0, backKnee: -5, backHem: -4 },
+    leg: { top: -0.16, topR: 8.4, off: -0.5, kneeR: 11.8, kneeOff: -1.2, hem: 0.18, hemR: 10.6, hemOff: -1, kf: 1.25, ko: 0.95, backTop: 0, backKnee: -5, backHem: -4, bendShrink: 0.3 },
     pocket: { c: 1.28, w: 0.56, t0: 0.6, t1: 1.02, out: 1.5 }, // bolso cargo: no lado de fora da coxa, um pouco para a frente
   };
   /** O raio e o deslocamento para fora da perna da bermuda em t (na coxa: do alto ao joelho; na canela: do joelho à barra). */
@@ -2021,10 +2021,13 @@
   const legBend = (rig, i) => clamp01((0.94 - dot(rig.thigh[i].a, rig.shin[i].a)) / 0.45);
   /** Ponto na perna (oval) da bermuda: osso, se é a canela, fração t, ângulo th (0 = frente, π/2 = fora); `grow` afasta do
    *  pano; `bend` = legBend (o oval e o recuo para trás somem com o joelho dobrado). */
+  // (19/11, o dono: "o shorts quando anda parece bugado". Na corrida a coxa sobe e a perna da bermuda, larga no joelho,
+  // fica de ponta para a câmera: o anel do joelho virava uma BOLA do tamanho da cintura. Com o joelho dobrado o pano cai:
+  // o joelho e a barra encolhem até `bendShrink`; o alto, preso no quadril, não muda)
   const legAt = (lf, shin, t, th, grow = 0, bend = 0) => {
     const L = SHORTS.leg;
     const g = legShape(shin, t);
-    const r = g.rad + grow;
+    const r = g.rad * (1 - L.bendShrink * bend * (shin ? 1 : clamp01((t - L.top) / (1 - L.top)))) + grow;
     const kf = 1 + (L.kf - 1) * (1 - bend);
     return limbAt(lf, t, Math.cos(th) * r * kf + g.back * (1 - bend), Math.sin(th) * r * L.ko + g.off);
   };
@@ -2087,22 +2090,22 @@
         const knee = legRing(R, th, false, 1, bend);
         const hem = legRing(R, sh, true, L.hem, bend);
         const host = hostOf('coxa', 'perna' + i);
+        // o bolso cargo: uma caixa de pano por fora da coxa. Era uma peça à parte, desenhada só do lado que a câmera via —
+        // com a perna girando ela aparecia e sumia de uma vez (o "pulo" do bolso). Agora os cantos dela entram no casco da
+        // perna (o volume dela está sempre no contorno) e a aba e as costuras são pintadas na perna, sumindo aos poucos
+        // quando o lado dela vira para longe (`cargoPocket`)
+        const P = SHORTS.pocket;
+        const corner = (t, a) => R.circle(legAt(th, false, t, a, P.out, bend), 1.25);
+        const pocket = [corner(P.t0, P.c - P.w), corner(P.t0, P.c), corner(P.t0, P.c + P.w), corner(P.t1, P.c + P.w), corner(P.t1, P.c), corner(P.t1, P.c - P.w)];
         let segs;
         if (dot(th.a, sh.a) > 0.94) {
-          segs = [{ poly: R.hull(top.concat(knee, hem)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); shortsLeg(R, rig, i, 'barra'); } }];
+          segs = [{ poly: R.hull(top.concat(knee, hem, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); shortsLeg(R, rig, i, 'barra'); } }];
         } else {
-          const upper = { poly: R.hull(top.concat(knee)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => shortsLeg(R, rig, i, 'coxa') };
+          const upper = { poly: R.hull(top.concat(knee, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); } };
           const lower = { poly: R.hull(knee.concat(hem)), circles: R._last, mat: PAL.denim, k: 0.26, noInner: true, decal: () => shortsLeg(R, rig, i, 'barra') };
           segs = [upper, lower];
         }
         out.push({ name: 'bermudaPerna', key: keyAfter(host, i), host, group: 'bermudaPerna' + i, chain: true, segs });
-        // o bolso cargo: uma caixa de pano por fora da coxa (aparece no contorno da perna), só do lado que a câmera vê
-        const P = SHORTS.pocket;
-        if (Math.cos(P.c - facingAngle(R, th)) > -0.25) {
-          const corner = (t, a) => R.circle(legAt(th, false, t, a, P.out, bend), 1.25);
-          const cs = [corner(P.t0, P.c - P.w), corner(P.t0, P.c), corner(P.t0, P.c + P.w), corner(P.t1, P.c + P.w), corner(P.t1, P.c), corner(P.t1, P.c - P.w)];
-          out.push({ name: 'bolsoCargo', key: keyAfter(host, i + 0.5), host, group: 'bolsoCargo' + i, segs: [{ poly: R.hull(cs), circles: R._last, mat: PAL.denim, k: 0.24, decal: () => cargoPocket(R, rig, i) }] });
-        }
       }
       // ---- a parte da pelve (por cima das pernas da bermuda e da barriga de baixo)
       const ring = (g, n) => {
@@ -2221,6 +2224,8 @@
     const P = SHORTS.pocket;
     const z = R.zoom;
     const bend = legBend(rig, i);
+    const vis = smoothstep(-0.25, 0.2, Math.cos(P.c - facingAngle(R, th)));
+    if (vis <= 0.01) return;
     const pt = (t, a) => R.P(legAt(th, false, t, a, P.out + 1.3, bend));
     const row = (t, inset = 0, n = 6) => { const q = []; for (let k = 0; k <= n; k++) q.push(pt(t, P.c - P.w + inset + ((P.w - inset) * 2 * k) / n)); return q; };
     const flap = P.t0 + (P.t1 - P.t0) * 0.34;
@@ -2232,12 +2237,15 @@
     for (let k = mid.length - 1; k >= 0; k--) fl.lineTo(mid[k].x, mid[k].y);
     fl.closePath();
     ctx.fillStyle = M.mix(PAL.denim.base, PAL.denim.light, 0.75);
+    ctx.globalAlpha = vis;
     ctx.fill(fl);
-    strokeRuns(R, [mid], PAL.denim.shade, 0.4, 1);
+    ctx.globalAlpha = 1;
+    strokeRuns(R, [mid], PAL.denim.shade, 0.4, vis);
     // pesponto laranja: embaixo da aba e em volta do bolso
-    strokeRuns(R, [row(flap - 0.035, 0.07)], PAL.stitch, 0.2, 0.95);
-    strokeRuns(R, [[pt(flap + 0.03, P.c - P.w + 0.08), pt(P.t1 - 0.035, P.c - P.w + 0.08)].concat(row(P.t1 - 0.035, 0.08), [pt(flap + 0.03, P.c + P.w - 0.08)])], PAL.stitch, 0.2, 0.9);
+    strokeRuns(R, [row(flap - 0.035, 0.07)], PAL.stitch, 0.2, 0.95 * vis);
+    strokeRuns(R, [[pt(flap + 0.03, P.c - P.w + 0.08), pt(P.t1 - 0.035, P.c - P.w + 0.08)].concat(row(P.t1 - 0.035, 0.08), [pt(flap + 0.03, P.c + P.w - 0.08)])], PAL.stitch, 0.2, 0.9 * vis);
     // rebites nos cantos da aba
+    ctx.globalAlpha = vis;
     ctx.fillStyle = PAL.rivet;
     for (const a of [P.c - P.w + 0.13, P.c + P.w - 0.13]) {
       const q = pt(flap - 0.075, a);
@@ -2245,6 +2253,7 @@
       ctx.arc(q.x, q.y, Math.max(0.8, 0.5 * z), 0, M.TAU);
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
   }
 
   /** Detalhes da bermuda na pelve: cós com passantes e botão, braguilha, bocas dos bolsos e os bolsos de trás. */

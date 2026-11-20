@@ -69,9 +69,16 @@
       lado: de costas só aparecia um arquinho na nuca. Agora a volta é um anel em torno do pescoço levado para a pele
       (`onSkin`: um raio de dentro do tronco até a casca das esferas), aparece pela normal da pele e some só onde o pescoço
       tampa (`NECK_RING.hide`). De costas ele dá a volta de ombro a ombro; de frente sobe pelo trapézio.
-  - **Etapa 2 (só o Birim):** a bermuda acompanhando a coxa (a perna larga vira uma bola quando sobe e o bolso pula), o
-    tronco que "some" na corrida para a câmera (a coxa com a bermuda larga tampa a barriga; conferir se não some de verdade
-    em algum quadro) e os pés de costas (calcanhar redondo, a sola como rosquinha com o pé no ar).
+  - **Etapa 2 (só o Birim): FEITA em 20/11.** No jogo o padrão é CORRER (4,5 m/s; andar é com Shift): o dono vê a
+    corrida quase o tempo todo. (a) A perna da bermuda é larga no joelho (`kneeR` 11,8); com a coxa subindo ela fica de
+    ponta para a câmera e o anel do joelho virava uma bola do tamanho da cintura. Agora, com o joelho dobrado, o joelho e
+    a barra encolhem até 30% (`leg.bendShrink`, pelo `legBend`); o alto, preso no quadril, não muda — em pé, nada muda.
+    (b) O bolso cargo era uma peça à parte desenhada só do lado que a câmera via: girando a perna, aparecia e sumia de uma
+    vez. Agora os cantos dele entram no casco da perna e a aba e as costuras são pintadas na perna, sumindo aos poucos
+    (`cargoPocket`, `vis`). (c) O tronco "sumindo" na corrida: no jogo daqui não achei quadro em que ele some de verdade
+    (conferi 16 quadros seguidos, de frente e de costas); o que tampa a barriga é a coxa levantada com a bermuda (menor
+    agora) e os braços cruzando na frente — isso é da Etapa 3. (d) Os pés de costas: a "linha preta" era a tira do
+    chinelo (feita antes da Etapa 1).
   - **Etapa 3 (muda o herói e os NPCs também — o dono aprovou):** os braços da corrida soltos (hoje o cotovelo fica em
     90° o tempo todo e os braços abrem para fora, como pistão).
   - **Etapa 4 (muda o herói também — aprovado):** mirar para trás com o arco — hoje só o tronco gira (até 70°, `twist`
