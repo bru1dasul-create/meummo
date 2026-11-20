@@ -99,10 +99,22 @@
     corrida nova saiu "idêntica" à velha. Consertado (a diferença é medida em cada canal) e reconferido: o herói da main
     de 20/11 antes da Etapa 3 é idêntico à referência de 17/11 — as entregas do Birim não tinham mexido nele. A
     referência da bateria agora é o herói com a corrida nova (a de 17/11 ficou guardada ao lado).
-  - **Etapa 4 (muda o herói também — aprovado):** mirar para trás com o arco — hoje só o tronco gira (até 70°, `twist`
-    em `slingshot.js`) e as pernas seguem o passo; o animador não sabe andar de lado nem de costas olhando para outro
-    lugar. Ensinar o "andar mirando" (corpo para a mira, pernas para onde anda). Junto: mirando para a direita, a mão da
-    corda aparece em cima do boné.
+  - **Etapa 4 (muda o herói também — aprovado): FEITA em 20/11** (`animator.js`; vale para o arco e o estilingue, para
+    todos os personagens):
+    - **Mirando para trás de onde anda** (mais de 110°; volta abaixo de 95°): o corpo inteiro vira para a mira (até 35° de
+      folga, o resto é o giro do tronco) e ele ANDA DE COSTAS: a passada vai para onde ele anda (`_strideK`,
+      `_strideRel`), o afastamento dos pés é de lado em relação à passada (`0,5·asin(sen 2r)`: igual à passada de frente
+      ou de costas, sem salto), o giro do pé inverte (pisa com a ponta) e um pé nunca passa para o lado do outro. Ele não
+      para para girar (`turnInPlace`) e a direção não fica presa a 45° da frente dele.
+    - **Mirando de lado ou para a frente, andando:** as pernas seguem para onde ele anda, como antes, mas o corpo vira até
+      35° para a mira (some correndo: a passada longa cruzava os pés). Isso tirou a "barbatana": o cotovelo da corda
+      subindo por cima do boné quando o tronco (até 70°) não chegava na pose de arqueiro. A 60–80° ainda sobra um pouco
+      de cotovelo atrás da cabeça.
+    - **No tiro**, a mira e o "de costas" são os de quando ele puxava (`_aimHold`): recalcular pelo corpo, ainda virando,
+      trocava de modo no meio do tiro.
+    - **O que não deu:** andar DE LADO de frente para a mira (pés lado a lado, passos de lado). O motor de passos é de
+      andar para a frente: o pé plantado fica para trás enquanto o corpo desliza de lado e passa o outro (o teste
+      `shooting_while_changing_sides` pegou os pés cruzando). Precisaria de um passo próprio ("passo e junta").
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
 

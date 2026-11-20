@@ -184,6 +184,11 @@
       this.runBlend = 0;
       this._runRequest = false;
       this._strideTransitionUntil = 0;
+      // mirando para trás andando (arco ou estilingue): a passada vai para onde ele anda e o corpo fica para a mira (veja `update`)
+      this._strideK = 0; // 0 = a passada é para a frente do corpo (o normal); 1 = para onde ele anda
+      this._strideRel = 0; // para onde ele anda, em relação à frente do corpo (rad)
+      this._aimBack = false; // mirando para trás de onde anda: anda de costas (veja `update`)
+      this._aimHold = null; // a mira de quando ele puxava (vale no tiro)
       this.dodge = null;
       this.death = null;
       this.hurt = null;
@@ -325,7 +330,26 @@
       // pediu para ir muito para o lado ou para trás de onde está virado: anda no máximo a 45° da própria frente, e
       // mais devagar, enquanto vira (faz a curva em vez de andar de lado com as pernas cruzando)
       let moveDir = mag > 0.02 ? this.faceYaw : null;
-      if (moveDir !== null && this.jump.state === 'chao') {
+      // mirando com o arco ou o estilingue PARA TRÁS de onde anda (mais de 110°; volta abaixo de 95°, sem ficar trocando
+      // no limite), o corpo inteiro vira para a mira e ele anda DE COSTAS (20/11, o dono: "quando mira pra trás de arco o
+      // tronco vira e o resto do corpo fica pra frente"). Então ele não para para girar e não prende a direção a 45° da
+      // frente dele. Mirando para o lado ou para a frente fica como era: as pernas vão para onde ele anda e o tronco gira
+      // até a mira (andar de lado de frente para a mira cruzava as pernas: o pé plantado ficava para trás e passava o outro)
+      // (no tiro, a mira e o "de costas" ficam os de quando ele puxava: recalcular pelo corpo, que ainda está virando, dava
+      // uma mira que mudava sozinha e trocava de modo no meio do tiro)
+      const A1 = this.attack && this.attack.kind === 'slingshot' ? this.attack : null;
+      if (A1 && A1.stage === 'charging') this._aimHold = A1.aimYaw;
+      const aimYawNow = A1 ? (A1.stage === 'charging' || this._aimHold == null ? A1.aimYaw : this._aimHold) : null;
+      if (!A1) this._aimHold = null;
+      if (aimYawNow !== null && mag > 0.02) {
+        if (A1.stage === 'charging') {
+          const off = Math.abs(angleDiff(this.faceYaw, aimYawNow));
+          this._aimBack = this._aimBack ? off > 95 * DEG : off > 110 * DEG;
+        }
+      } else this._aimBack = false;
+      const aimLock = this._aimBack;
+      if (aimLock) this.turnInPlace = false;
+      if (moveDir !== null && this.jump.state === 'chao' && !aimLock) {
         const angle = Math.abs(angleDiff(this.yaw, moveDir));
         if (angle > 100 * DEG && (!ag || this.speed < ag.pivotSpeed)) this.turnInPlace = true;
         if (angle < (ag ? ag.release : PIVOT.release) * DEG && this.turnInPlace) {
@@ -334,7 +358,7 @@
           this.phase = 0;
         }
       } else if (this.jump.state !== 'chao') this.turnInPlace = false;
-      if (moveDir !== null) {
+      if (moveDir !== null && !aimLock) {
         const off = angleDiff(this.yaw, moveDir);
         if (Math.abs(off) > 45 * DEG) {
           moveDir = this.yaw + Math.sign(off) * 45 * DEG;
@@ -436,7 +460,23 @@
       // virar para onde anda (no soco, para onde bate): suave e com velocidade máxima (nada de pular de pose)
       const prevYaw = this.yaw;
       let wantYaw = null;
+      const velYaw = this.speed > 20 ? Math.atan2(this.vel.y - pushY / dt, this.vel.x - pushX / dt) : null;
       if (this.turnInPlace && this.faceYaw !== null) wantYaw = this.faceYaw;
+      else if (aimLock) {
+        // de costas: as costas para onde ele anda, virado o mais perto da mira com a passada a no máximo 35° de trás das
+        // pernas (o resto é o giro do tronco, `slingshot.js`)
+        const base = Math.atan2(mv.y, mv.x) + Math.PI;
+        wantYaw = base + clamp(angleDiff(base, aimYawNow), -35 * DEG, 35 * DEG);
+      } else if (aimYawNow !== null && mag > 0.02) {
+        // mirando de lado ou para a frente, andando: o corpo vira até 35° para a mira (anda meio de lado). Com as pernas
+        // retas para onde ele anda, o tronco (até 70°) não chegava na pose de arqueiro e o cotovelo da corda subia por cima
+        // do boné. Trocando de lado, o giro grande continua sendo o pivô com passinhos (`turnInPlace`, acima)
+        // (correndo, não: a passada da corrida, longa, cruzava os pés com o corpo meio de lado. No jogo, puxando o arco ele
+        // anda devagar — o servidor freia)
+        const base = this.speed > 60 ? Math.atan2(this.vel.y - pushY / dt, this.vel.x - pushX / dt) : this.faceYaw;
+        const bias = 35 * DEG * (1 - smoothstep(SPEED.walk * 1.2, SPEED.run * 0.7, this.speed));
+        wantYaw = base + clamp(angleDiff(base, aimYawNow), -bias, bias);
+      }
       else if (this.speed > 60 && mag > 0.02) wantYaw = Math.atan2(this.vel.y - pushY / dt, this.vel.x - pushX / dt);
       else if (mag > 0.02) wantYaw = this.faceYaw;
       else if (this.attack) wantYaw = this.attack.dir;
@@ -508,6 +548,16 @@
       const aim = this.attack ? this.attack.dir : mag > 0.02 ? Math.atan2(mv.y, mv.x) : this.yaw;
       this.turnLead = damp(this.turnLead, clamp(angleDiff(this.yaw, aim) * 0.6, -0.45, 0.45), 10, dt);
 
+      // mirando, a passada segue para onde ele anda; depois do tiro ela só volta para a frente do corpo quando o corpo já
+      // virou de novo para onde ele anda (senão os pés escorregariam para o lado)
+      {
+        const rel = velYaw !== null ? angleDiff(this.yaw, velYaw) : 0;
+        // (só de costas: meio de lado, até 45° da frente, a passada de sempre já anda certo — ela foi feita para as viradas)
+        const wantK = aimLock && velYaw !== null ? 1 : this._strideK > 0 && velYaw !== null && Math.abs(rel) > 20 * DEG ? 1 : 0;
+        this._strideK = damp(this._strideK, wantK, 8, dt);
+        if (this._strideK < 0.002 && wantK === 0) this._strideK = 0;
+        if (velYaw !== null) this._strideRel = rel;
+      }
       // passada: avança pela distância (o pé no chão não escorrega)
       const step = this._stepLength(this.speed);
       if (onGround) this.phase = (this.phase + moved / (2 * step)) % 1;
@@ -1218,7 +1268,32 @@
         const free = i === 0 ? Math.max(0, weight) : Math.max(0, -weight);
         y += free * 4;
         const xSide = side * (lerp(B.footSide - 1.4, B.footSide - 3.2, run) * g + B.footSide * idle + 6 * crouch + 2.5 * J.crouch + this.stanceLead * 2 * (1 - g));
-        const ref = M.at(body, xSide, y, B.ankleHeight + up); // "pé chato": o tornozelo sai daqui, rolando o pé
+        let ref = M.at(body, xSide, y, B.ankleHeight + up); // "pé chato": o tornozelo sai daqui, rolando o pé
+        if (this._strideK > 0 && !inAir) {
+          // mirando e andando: o avanço da passada (`y`) vai para onde ele anda (de lado, de costas), e o lado de cada pé
+          // continua o do corpo. De costas o pé pisa com a ponta e sai pelo calcanhar (o giro do pé inverte); de lado, chato.
+          // E um pé nunca passa para o lado do outro (andando de lado as pernas cruzavam)
+          const rel = this._strideRel * this._strideK;
+          const sx = Math.cos(this.yaw + rel), sy = Math.sin(this.yaw + rel);
+          // o afastamento dos pés é de lado em relação a ONDE ELE ANDA (com o lado de cada pé o do corpo: de costas o
+          // "direito" da passada fica do lado direito dele). Medido de lado do corpo, numa passada torta os pés abriam até
+          // 60 cm — um espacate
+          // (o giro do afastamento: igual à passada de frente ou de costas e voltando a zero andando de lado — aí os pés
+          // ficam lado a lado e a passada vai de lado; `0,5·asin(sen 2r)` faz isso sem salto)
+          const relL = 0.5 * Math.asin(Math.sin(2 * rel));
+          const cr = Math.cos(relL), sr = Math.sin(relL);
+          const rx = body.r.x * cr - body.r.y * sr, ry = body.r.x * sr + body.r.y * cr;
+          const z0 = this.groundZ + B.ankleHeight + up;
+          ref = { x: body.o.x + rx * xSide + sx * y, y: body.o.y + ry * xSide + sy * y, z: z0 };
+          const lat = (ref.x - body.o.x) * body.r.x + (ref.y - body.o.y) * body.r.y;
+          const minLat = 4.5;
+          const fix = side < 0 ? Math.min(0, -minLat - lat) : Math.max(0, minLat - lat);
+          ref.x += body.r.x * fix;
+          ref.y += body.r.y * fix;
+          const c = Math.cos(rel);
+          pitch *= c;
+          bend *= Math.max(0, c);
+        }
         let yawAbs = this.yaw + pelvis.yaw * 0.3 + side * B.toeOut * DEG + this.stanceLead * (i === lead ? -0.15 : 0.35) * side;
         let pos;
         const wasPitch = st.outPitch || 0;
