@@ -2,7 +2,7 @@
 // (src/client/novo/combat.ts desenha; src/shared/combat.ts e o servidor decidem.)
 
 import { describe, expect, it } from 'vitest';
-import { aimAngle, distanceToSegment, shotFeet, shotOriginOfFeet, tileFeetSquare } from '../src/client/novo/combat';
+import { aimAngle, distanceToSegment, SHOT_DRAW_Z, shotFeet, shotOriginOfFeet, shotZ, tileFeetSquare } from '../src/client/novo/combat';
 import { angleBetween, makeShot, shotTouches } from '../src/shared/combat';
 import { feetAt, footTile } from '../src/shared/movement';
 
@@ -60,5 +60,16 @@ describe('combate do jogo novo: desenho igual à regra', () => {
     expect(distanceToSegment({ x: 110, y: 150 }, foot, head)).toBeCloseTo(10);
     expect(distanceToSegment({ x: 100, y: 230 }, foot, head)).toBeCloseTo(30); // abaixo do pé
     expect(distanceToSegment({ x: 100, y: 80 }, foot, head)).toBeCloseTo(20); // acima da cabeça
+  });
+
+  it('a flecha de jogador sai do arco (na altura do ombro) e desce até a altura do voo; a do bicho não muda', () => {
+    expect(shotZ(false, 0)).toBeCloseTo(1.35); // na mão do arco
+    expect(shotZ(false, 0.55)).toBeCloseTo(1.35);
+    const middle = shotZ(false, 2);
+    expect(middle).toBeLessThan(1.35);
+    expect(middle).toBeGreaterThan(SHOT_DRAW_Z);
+    expect(shotZ(false, 3.55)).toBeCloseTo(SHOT_DRAW_Z); // depois de 3 m, voa onde acerta os bichos e crava
+    expect(shotZ(false, 12)).toBeCloseTo(SHOT_DRAW_Z);
+    expect(shotZ(true, 0)).toBe(SHOT_DRAW_Z);
   });
 });

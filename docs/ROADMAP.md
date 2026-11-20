@@ -791,6 +791,17 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   flecha **caem onde foi mirado** (mais puxada = mais longe); o `R` **carrega a Flecha Ancestral no arco** (o próximo
   tiro é ela, com a puxada; atravessa e cai onde mirou; a explosão continua só com 5 pontos, decisão do dono); os Olhos duram menos (5 a
   10 s) e recarregam em 20 s; **dica** com o mouse em cima das habilidades da barra. Protocolo 41
+- [x] **[estrutura]** O arco, a lista do dono de 19/11 ("a flecha não sai do arco, sai de baixo"; "o corpo fica
+  invisível a ela"): o tiro de jogador aparece no arco (0,55 m à frente do pé, na altura do ombro, 1,35 m) e desce nos
+  primeiros 3 m até a altura de sempre do voo (0,9 m, onde acerta e crava); vale para a Flecha Ancestral e o
+  estilingue. Atrás de quem atirou (mais longe da câmera), a silhueta dele cobre a flecha. E o motor avisa a view quando
+  a flecha especial entra no arco (`armed(id, 'ancestral')`, o tipo do tiro que vai voar)
+- [ ] **[arte]** Da mesma lista: o brilho da Flecha Ancestral **na flecha da mão** enquanto ela está armada (o motor
+  chama `view.armed(id, tipo)`), continuando no voo; um **efeito no chão** onde ela para/explode; e **a explosão mais
+  demorada** (hoje `SPIRIT_END_MS` = 720 ms, em `spiritArt.ts`). Pedido mandado à [arte]
+- [ ] **[estrutura]** Da mesma lista: o `Q` passa a armar a Chuva de Flechas como o `R` arma a Flecha Ancestral, e ela
+  sai com o botão direito, segurando para sair mais forte ("mesma mecânica"); assim as flechas sobem quando ele solta (hoje
+  sobem antes). Esperando o dono: o que fica mais forte com a carga e o que é "colocar nível nessas"
 - [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
   anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
   com ele. Protocolo 42 (`npc_walk`, `talk`). **Desligado de novo na Xiovanna a pedido do dono ("por enquanto deixa ela parada")**; funcionou ligado (15/11, com o passo de andar

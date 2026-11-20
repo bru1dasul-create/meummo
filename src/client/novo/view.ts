@@ -65,6 +65,12 @@ export interface WorldView {
    */
   gear?(id: number, gear: GearLook): void;
   /**
+   * A flecha especial entrou no arco (ou saiu: null) do seu personagem: o tipo do tiro que vai sair, o mesmo que voa
+   * depois ('ancestral' = a Flecha Ancestral). Para a view desenhar o brilho na flecha da mão (pedido do dono, 19/11:
+   * "o efeito pegando na flecha do arco e ela acompanhando").
+   */
+  armed?(id: number, kind: string | null): void;
+  /**
    * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
    * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',
    * 'wake', 'sleep' e 'dash' (o pulo para o sofá e de volta).

@@ -40,6 +40,13 @@ alternativas quando vejo — sem concordar só para agradar.
   (inglês, regra 8). O teste do Nano Banana (~US$ 1) ela só faz com o "pode" do dono.
 - **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
   viram padrão (`data/*.json`, as constantes, e o game feel em `DEFAULT_FEEL`, `src/client/novo/feel.ts`).
+- **O arco (lista do dono de 19/11; no roteiro, nos ajustes do arco):** feito o meu lado (main ff9d20a): o tiro de
+  jogador sai do arco (0,55 m à frente, 1,35 m de altura, descendo em 3 m até 0,9) e some atrás de quem atirou
+  (`shotZ`, `behindShooter` em `combat.ts`); gancho `view.armed(id, 'ancestral' | null)`. Pedido à [arte]: o brilho na
+  flecha armada, o efeito no chão e a explosão mais longa (`SPIRIT_END_MS`). **Falta, esperando o dono:** o `Q` armar a
+  Chuva como o `R` (sai com o botão direito, segurando = mais forte; as flechas sobem só quando ele solta). Perguntei:
+  (1) o que fica mais forte com a carga (recomendei alcance + dano, como o tiro) e (2) o que é "colocar nível nessas"
+  (níveis de carga fraco/médio/forte, ou os pontos da habilidade).
 - **Pendências pequenas minhas** (esperando o "pode" do dono; no roteiro, seção Sensação de jogo):
   1. ~~Voltar perto de onde saiu~~ feito em 19/11 (`savedSpot` cai para `nearestBodySpot` do meio do tile, até
      `RESTORE_REACH` = 1,5 m; teste em `tests/mapa-novo.test.ts`; o que é salvo não mudou).
@@ -61,7 +68,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 525 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 45; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 529 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

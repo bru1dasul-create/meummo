@@ -27,6 +27,28 @@ import { paintSpiritAim, paintSpiritEnd, paintSpiritMark, SPIRIT_END_MS } from '
 export const SHOT_DRAW_Z = 0.9;
 
 /**
+ * O tiro de jogador sai do arco (ou do estilingue), e não do pé: à frente do corpo, na altura do ombro do herói (~77% de
+ * 1,76 m), onde a mão do arco fica na hora do tiro (pedido do dono, 19/11: "a flecha não sai do arco, sai de baixo").
+ * Depois desce, nos primeiros metros, até a altura de sempre do voo (SHOT_DRAW_Z), onde acerta os bichos e crava.
+ */
+const LAUNCH_AHEAD = 0.55;
+const LAUNCH_Z = 1.35;
+const LAUNCH_DESCENT = 3;
+/**
+ * Enquanto voa atrás de quem atirou (mais longe da câmera), a flecha passa por trás do corpo: este pedaço da tela (a
+ * silhueta do herói, em metros) não mostra a flecha ("o corpo fica invisível a ela").
+ */
+const SHOOTER_HALF_W = 0.3;
+const SHOOTER_TOP_Z = 1.9;
+
+/** A altura do desenho do tiro depois de voar `traveled` metros (o de jogador começa no arco e desce até o voo). */
+export function shotZ(fromMonster: boolean, traveled: number): number {
+  if (fromMonster) return SHOT_DRAW_Z;
+  const t = Math.min(1, Math.max(0, (traveled - LAUNCH_AHEAD) / LAUNCH_DESCENT));
+  return LAUNCH_Z + (SHOT_DRAW_Z - LAUNCH_Z) * t * t * (3 - 2 * t);
+}
+
+/**
  * O projétil parou porque bateu em algo (o servidor diz no quê): `on` = o tipo do que segurou ('tronco', 'parede',
  * 'pedra'...; 'borda' = fim do mapa) e `z` = a altura do voo (metros). A flecha crava ali, nessa altura.
  */
@@ -1172,20 +1194,35 @@ export class CombatLayer {
           const on = shot.stop?.on;
           // a Flecha Ancestral não crava: o espírito brilha (e explode, com 5 pontos) onde ela parou
           if (shot.kind === 'ancestral') this.spiritEnds.push({ x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now });
-          else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: SHOT_DRAW_Z } : undefined);
+          else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt) } : undefined);
           shots.delete(key);
           if (shots === this.shots) this.shotOfServer.delete(key);
           else for (const [id, cid] of this.shotOfServer) if (cid === key) this.shotOfServer.delete(id);
           continue;
         }
-        const ground = shotFeet(shot.x + shot.dx * Math.min(traveled, shot.range), shot.y + shot.dy * Math.min(traveled, shot.range));
+        // o de jogador aparece já no arco, à frente do corpo (os primeiros centímetros são dentro da mão)
+        const along = Math.min(shot.fromMonster ? traveled : Math.max(traveled, LAUNCH_AHEAD), shot.range);
+        const ground = shotFeet(shot.x + shot.dx * along, shot.y + shot.dy * along);
         const m = meter(ground.x, ground.y);
         const shadow = screen(ground.x, ground.y, 0);
-        const p = screen(ground.x, ground.y, SHOT_DRAW_Z);
+        const p = screen(ground.x, ground.y, shotZ(shot.fromMonster, along));
         const ctx = this.ctx;
+        const hidden = shot.fromMonster ? null : this.behindShooter(shot, shadow, screen, meter);
+        if (hidden) {
+          // atrás de quem atirou: a silhueta dele cobre a flecha (recorte: tudo menos o retângulo do corpo)
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-1e5, -1e5, 2e5, 2e5);
+          ctx.rect(hidden.x, hidden.y, hidden.w, hidden.h);
+          ctx.clip('evenodd');
+        }
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
-        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, SHOT_DRAW_Z);
-        if (drawProjectile(ctx, shot.kind, p, shadow, ahead, m)) continue; // a flecha, a pedra e a Flecha Ancestral
+        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, shotZ(shot.fromMonster, along + 0.3));
+        const drawn = drawProjectile(ctx, shot.kind, p, shadow, ahead, m); // a flecha, a pedra e a Flecha Ancestral
+        if (drawn) {
+          if (hidden) ctx.restore();
+          continue;
+        }
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
         ctx.ellipse(shadow.x, shadow.y, m * 0.1, m * 0.045, 0, 0, Math.PI * 2);
@@ -1197,11 +1234,25 @@ export class CombatLayer {
         ctx.ellipse(p.x, p.y, Math.max(3, m * 0.08), Math.max(3, m * 0.08), 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        if (hidden) ctx.restore();
       }
     };
     draw(this.shots);
     draw(this.myShots);
     drawLanded(this.ctx, screen, meter, now); // as flechas cravadas no chão
+  }
+
+  /**
+   * O tiro de jogador está atrás de quem atirou (o chão embaixo dele, mais longe da câmera que o pé de quem atirou)?
+   * Então o retângulo da tela coberto pelo corpo dele (null: está na frente, aparece inteiro).
+   */
+  private behindShooter(shot: Flying, shadow: Point, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): { x: number; y: number; w: number; h: number } | null {
+    const feet = shotFeet(shot.x, shot.y);
+    const base = screen(feet.x, feet.y, 0);
+    if (shadow.y >= base.y) return null;
+    const top = screen(feet.x, feet.y, SHOOTER_TOP_Z);
+    const half = meter(feet.x, feet.y) * SHOOTER_HALF_W;
+    return { x: base.x - half, y: top.y, w: half * 2, h: base.y - top.y };
   }
 
   private drawBars(
