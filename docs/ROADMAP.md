@@ -51,7 +51,7 @@ Tudo isto se ajusta mexendo em números, sem programar:
   [estrutura] salva o `model` de cada um)
 - [ ] **[arte]** A lista do dono do Birim no jogo (19/11), em etapas: o "V" do tronco e a linha do calcanhar (FEITO em
   19/11); 1) trapézio, ombros, colar e barba de frente (FEITO em 19/11); 2) bermuda, tronco na corrida e pés (FEITO em 20/11); 3) braços
-  da corrida (muda o herói também); 4) mirar para trás com o arco (muda o herói também)
+  da corrida (muda o herói também; FEITO em 20/11); 4) mirar para trás com o arco (muda o herói também)
 - [ ] **[arte]** Arte de verdade para personagens e monstros (piloto do estilo desenhado com o Nano Banana: chave
   pronta, esperando os exemplos de estilo do dono — veja `docs/ARTE.md`)
 - [x] **[arte]** Protótipo **Pindorama 2.5D** do protagonista, separado do jogo (`prototipos/pindorama-25d`): câmera

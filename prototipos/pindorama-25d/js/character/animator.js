@@ -58,7 +58,7 @@
   // para onde o cotovelo aponta (frente, fora, cima, no espaço do peito)
   const POLE = {
     solto: [-0.95, 0.32, -0.15],
-    correndo: [-0.5, 0.6, -0.6],
+    correndo: [-0.82, 0.34, -0.46], // (20/11: para trás e para baixo, junto do corpo — com 0,6 para fora era a "asa")
     ar: [-0.85, 0.35, -0.4],
     golpe: [-0.35, 0.75, -0.6],
     armado: [-0.55, 0.22, -0.85], // armando: cotovelo para baixo e para trás, junto ao corpo (nada de "asa")
@@ -1624,13 +1624,17 @@
         // andando: pêndulo a partir do ombro; na frente o cotovelo dobra mais e a mão passa um pouco para dentro
         const swing = lerp(9, 18, speedK);
         const walkArm = armFK((2 + w * swing) * DEG, (17 + 12 * Math.pow(Math.max(0, w), 1.3) + 3 * (1 - Math.abs(w))) * DEG, lerp(4.4, 2.2, fw), 3 * DEG);
-        // correndo: cotovelo perto de 90°, o punho sobe na frente; atrás o cotovelo não abre ("asa de galinha")
-        const runArm = armFK((3 + w * 36) * DEG, (80 + 20 * Math.max(0, w)) * DEG, lerp(3, -0.5, fw));
+        // correndo: o cotovelo ABRE atrás (~62°) e FECHA na frente (~108°), um tiquinho atrasado em relação ao ombro (o
+        // antebraço vai junto, não preso); o braço vai mais para a frente que para trás; a mão sobe até o peito na frente,
+        // perto do corpo, sem cruzar o meio. (20/11, o dono: "braços correndo dele parece robotizado" — o cotovelo ficava
+        // entre 80° e 100° o ciclo inteiro: um "L" duro balançando no ombro, como pistão, e com o cotovelo para fora)
+        const we = (i === 1 ? Math.cos(TAU * (ph - armLag - 0.035)) : -Math.cos(TAU * (ph - armLag - 0.035))) * armVar;
+        const runArm = armFK((4 + w * (w > 0 ? 36 : 27)) * DEG, (85 + 23 * we) * DEG, lerp(3.4, 1.2, fw));
         let a = mixV(walkArm, runArm, run);
         a = mixV(idleArm, a, g);
         // agachado: mãos para a frente, perto dos joelhos
         a = mixV(a, { x: 3, y: 25, z: -41 }, crouch * 0.9);
-        let fist = lerp(lerp(0.15, 0.25, g), 0.7, run * g);
+        let fist = lerp(lerp(0.15, 0.25, g), 0.55, run * g); // (correndo, a mão meio fechada e solta; 0,7 era um soco)
         fist = lerp(fist, 0.3, crouch);
         // pulo: braços para trás no preparo, sobem no impulso (acima da cabeça), abrem para equilibrar
         if (J.state === 'preparo') a = mixV(a, JUMP_HANDS.tras, smoothstep(0, 0.12, J.t));

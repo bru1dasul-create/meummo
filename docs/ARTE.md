@@ -79,8 +79,18 @@
     (conferi 16 quadros seguidos, de frente e de costas); o que tampa a barriga é a coxa levantada com a bermuda (menor
     agora) e os braços cruzando na frente — isso é da Etapa 3. (d) Os pés de costas: a "linha preta" era a tira do
     chinelo (feita antes da Etapa 1).
-  - **Etapa 3 (muda o herói e os NPCs também — o dono aprovou):** os braços da corrida soltos (hoje o cotovelo fica em
-    90° o tempo todo e os braços abrem para fora, como pistão).
+  - **Etapa 3 (muda o herói e os NPCs também — o dono aprovou): FEITA em 20/11.** No `animator.js` (o mesmo para todos):
+    o cotovelo da corrida ficava entre 80° e 100° o ciclo inteiro (um "L" duro balançando no ombro) e apontava para fora
+    (`POLE.correndo` com 0,6 para fora: a "asa"). Agora ele abre atrás (~62°) e fecha na frente (~108°), um tiquinho
+    atrasado em relação ao ombro; o braço vai mais para a frente (36°) que para trás (27°); a mão fica perto do corpo
+    sem cruzar o meio; o cotovelo aponta para trás e para baixo; a mão meio fechada (0,55; 0,7 era um soco). No herói,
+    só as duas linhas de corrida da prancha mudaram (a corrida e a corrida → esquiva → corrida); parado, andar, pulo,
+    soco, esquiva, morte e defesa ficaram idênticos.
+  - **Lição (20/11) — o comparador mentia:** o `comparar.py` da bateria usava `getbbox()` numa imagem RGBA; no Pillow
+    novo ele só olha a TRANSPARÊNCIA, e duas imagens opacas de cores diferentes davam "idênticas". Descoberto porque a
+    corrida nova saiu "idêntica" à velha. Consertado (a diferença é medida em cada canal) e reconferido: o herói da main
+    de 20/11 antes da Etapa 3 é idêntico à referência de 17/11 — as entregas do Birim não tinham mexido nele. A
+    referência da bateria agora é o herói com a corrida nova (a de 17/11 ficou guardada ao lado).
   - **Etapa 4 (muda o herói também — aprovado):** mirar para trás com o arco — hoje só o tronco gira (até 70°, `twist`
     em `slingshot.js`) e as pernas seguem o passo; o animador não sabe andar de lado nem de costas olhando para outro
     lugar. Ensinar o "andar mirando" (corpo para a mira, pernas para onde anda). Junto: mirando para a direita, a mão da
