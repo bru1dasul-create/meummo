@@ -86,6 +86,14 @@
     sem cruzar o meio; o cotovelo aponta para trás e para baixo; a mão meio fechada (0,55; 0,7 era um soco). No herói,
     só as duas linhas de corrida da prancha mudaram (a corrida e a corrida → esquiva → corrida); parado, andar, pulo,
     soco, esquiva, morte e defesa ficaram idênticos.
+  - **"O tronco parece que fica invisível, aparece a calça" (20/11, com print do jogo): FEITO.** De costas e nas
+    diagonais de costas (150° a 300°), correndo ou parado: a peça de cima da bermuda é um casco convexo dos anéis
+    (cintura, meio, quadril, fundo), e o casco enchia a BOCA da bermuda — a câmera, de cima, vê o anel da cintura como uma
+    elipse, e a metade de lá (atrás do tronco) subia ~11 cm na tela por cima das costas, com a linha do cós atravessando.
+    Agora os anéis de cima só entram com os pontos virados para a câmera (`ring(..., near)`): o cós fica na cintura. Com
+    A+S (diagonal para baixo e à esquerda, ~72°) o corpo passa pelos ângulos de costas na virada — o mesmo defeito. Medido
+    numa varredura de 24 direções × 12 momentos da corrida: só os quadros de costas mudam; de frente, nada.
+    (Uma tentativa no caminho, desfeita: diminuir a torção do tronco na corrida — mudava o herói e não era a causa.)
   - **Lição (20/11) — o comparador mentia:** o `comparar.py` da bateria usava `getbbox()` numa imagem RGBA; no Pillow
     novo ele só olha a TRANSPARÊNCIA, e duas imagens opacas de cores diferentes davam "idênticas". Descoberto porque a
     corrida nova saiu "idêntica" à velha. Consertado (a diferença é medida em cada canal) e reconferido: o herói da main

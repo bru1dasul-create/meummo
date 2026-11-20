@@ -2108,13 +2108,22 @@
         out.push({ name: 'bermudaPerna', key: keyAfter(host, i), host, group: 'bermudaPerna' + i, chain: true, segs });
       }
       // ---- a parte da pelve (por cima das pernas da bermuda e da barriga de baixo)
-      const ring = (g, n) => {
+      // (20/11, o dono: "o tronco parece que fica invisível, aparece a calça". A peça é um casco convexo dos anéis, e o
+      // casco enche a BOCA da bermuda: correndo, com o tronco inclinado, a câmera vê o anel da cintura de cima e o pano
+      // tampava as costas inteiras até o outro lado do cós. A metade do anel que fica atrás do tronco não entra mais no
+      // casco: em cima fica a beirada do cós virada para a câmera, e o tronco aparece acima dela. `near`: só os pontos
+      // do anel virados para a câmera (os do lado, de perfil, ainda entram)
+      const ring = (g, n, near = false) => {
         const cs = [];
-        for (let k = 0; k < n; k++) cs.push(R.circle(pelvisRing(pv, g, (k / n) * M.TAU), 1));
+        for (let k = 0; k < n; k++) {
+          const phi = (k / n) * M.TAU;
+          if (near && R.facing(shortsNormal(pv, phi, g.z)) < -0.12) continue;
+          cs.push(R.circle(pelvisRing(pv, g, phi), 1));
+        }
         return cs;
       };
       const host = hostOf('pelve', 'tronco');
-      out.push({ name: 'bermuda', key: keyAfter(host, 3), host, group: 'bermuda', segs: [{ poly: R.hull(ring(G.waist, 12).concat(ring(G.mid, 12), ring(G.hip, 12), ring(G.low, 10))), circles: R._last, mat: PAL.denim, k: 0, noThin: true, decal: () => shortsTop(R, rig) }] });
+      out.push({ name: 'bermuda', key: keyAfter(host, 3), host, group: 'bermuda', segs: [{ poly: R.hull(ring(G.waist, 16, true).concat(ring(G.mid, 16, true), ring(G.hip, 12, true), ring(G.low, 10))), circles: R._last, mat: PAL.denim, k: 0, noThin: true, decal: () => shortsTop(R, rig) }] });
     }
 
     // ---- relógio no punho esquerdo: a pulseira (um anel em volta do punho) e a caixa, do lado das costas da mão
