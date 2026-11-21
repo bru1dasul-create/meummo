@@ -118,8 +118,8 @@
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
 - **O ARCO NA MÃO E A FLECHA ANCESTRAL (20/11, pedido do dono: "o arco encaixa certo na mão do personagem e foca também
-  pra resolver a pegada correndo"; os efeitos são os da lista de 19/11 que a [estrutura] repassou)** — no ramo, esperando o
-  "pode" para a main:
+  pra resolver a pegada correndo"; os efeitos são os da lista de 19/11 que a [estrutura] repassou)** — na main em 21/11,
+  com o "pode" do dono:
   - **O defeito, medido:** o cabo ficava 6 cm à frente do punho, no meio da mão, e o couro era desenhado POR CIMA dos dedos;
     o eixo do arco era fixo no peito (para a frente e para cima), 38° torto em relação ao vão do punho parado, até 73°
     correndo e 32–64° mirando. Por isso o arco parecia colado por fora da mão.
