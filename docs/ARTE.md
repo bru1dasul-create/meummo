@@ -118,7 +118,7 @@
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
 - **A ALJAVA E A FLECHA TIRADA DAS COSTAS (21/11, pedido do dono: "coloca a flecha nas costas e ele puxando as flechas
-  das costas"; escopo aprovado: "pode, sem alça")** — no ramo, esperando o "pode" para a main.
+  das costas"; escopo aprovado: "pode, sem alça")** — na main em 21/11, com o "pode" do dono.
   - **A aljava** (`slingshot.js`, `QUIVER`, `quiverPose`, `quiverItems`): um tubo de taquara (mais escuro que o arco, com
     dois nós, a boca de couro e uma amarração de couro no fundo — a de fibra clara virava uma bola branca de costas)
     atravessado ao contrário do arco: a boca atrás do ombro DIREITO, o fundo perto do quadril esquerdo (66° do chão, 44 cm),
