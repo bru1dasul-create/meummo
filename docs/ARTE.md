@@ -118,7 +118,7 @@
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
 - **O ARCO NAS COSTAS (21/11, pedido do dono: "coloca animação puxando o arco das costas, é difícil fazer isso"; o "pode"
-  dele veio com o escopo)** — no ramo, esperando o "pode" para a main. Muda o combinado de 13/11 ("o arco fica sempre na
+  dele veio com o escopo)** — na main em 21/11, com o "pode" do dono. Muda o combinado de 13/11 ("o arco fica sempre na
   mão"): agora ele fica nas costas e vai para a mão para atirar.
   - **Nas costas** (`slingshot.js`, `backPose`): atravessado na diagonal — a ponta de cima atrás do ombro esquerdo, a de
     baixo atrás da nádega direita (65° do chão), a corda para fora, 3,5 cm por fora da pele das costas (medida em cada
@@ -145,7 +145,7 @@
     `costas/rapido.cjs` (toque rápido, outro jogador, Flecha armada), `costas/pega.cjs` (onde o punho cai no instante de
     pegar) e `arco-jogo/costas-lento.cjs` (no jogo, em câmera lenta).
 - **A BOCA DA BERMUDA, de novo (21/11, o dono: "o bug do tronco que era a boca da bermuda — mirando de arco e apertando
-  S+D e A+S, mirando pra cima e indo de costas; quando pula também; na esquiva também")** — no ramo, esperando o "pode":
+  S+D e A+S, mirando pra cima e indo de costas; quando pula também; na esquiva também")** — na main em 21/11, com o "pode":
   - **A causa, medida:** na ordem de desenho o PESCOÇO quase sempre fica entre a pelve e o peito (a chave dele é
     "a menor das duas, menos 2"). A bermuda, presa na pelve, entrava logo depois dela — antes do peito — e a parte de baixo
     do peito, que continua por dentro da bermuda, era pintada POR CIMA do cós. Parado de frente não se via; de costas,
