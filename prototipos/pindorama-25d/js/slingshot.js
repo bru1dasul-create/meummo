@@ -148,6 +148,12 @@
     }
     // guardando e atirou de novo: a mão já está no ombro — volta puxando de lá
     if ((shooting || armed) && S.state === 'guardando') { S.state = 'sacando'; S.t = STOW.reach; S.from = null; }
+    // a flecha da aljava (o relógio dela anda com a puxada e acelera se o tiro já saiu; o tiro que começa no ponto de
+    // soltar — o de toque e o dos outros jogadores — já vem com a flecha na corda)
+    if (a) {
+      if (a.qt === undefined) a.qt = a.age >= rulesOf(c).minDraw - 1e-6 ? NOCK.nock : 0;
+      a.qt += dt * (a.releaseRequested || a.stage === 'release' ? STOW.rush : 1);
+    }
     if (S.state === 'sacando') {
       S.t += dt * (a && (a.releaseRequested || a.stage === 'release') ? STOW.rush : 1);
       if (S.t >= STOW.pull) { S.state = 'mao'; S.idle = 0; }
@@ -367,6 +373,36 @@
     }
   }
 
+  // ---- A ALJAVA (21/11, pedido do dono: "coloca a flecha nas costas e ele puxando as flechas das costas"; sem alça,
+  // escolha dele, como o arco): um tubo de taquara com as amarrações de fibra, atravessado ao contrário do arco — a boca,
+  // com as penas das flechas, atrás do ombro DIREITO e o fundo perto do quadril esquerdo. A cada tiro a mão direita tira
+  // uma flecha dela por cima do ombro e leva até a corda, dentro da puxada mínima (o tiro não fica mais lento).
+  // `top` = a boca (x, z no espaço do peito: x = direita, z = cima), `lean` = a inclinação (do chão), `len` = o tubo,
+  // `r` = o raio, `gap` = a folga das costas, `out` = quanto as flechas saem da boca, `n` = quantas aparecem (não acabam:
+  // o jogo não conta flecha)
+  const QUIVER = { top: [11, 13], lean: 66 * M.DEG, len: 44, r: 4, gap: 0.8, out: 22, n: 5 };
+  // os tempos da flecha (s, no relógio `a.qt`): `grab` = a mão direita pega a flecha; `nock` = ela chega na corda
+  const NOCK = { grab: 0.11, nock: 0.26 };
+  // o caminho da mão direita (alvo do punho a partir do ombro direito, no espaço do peito: x = para fora, y = frente,
+  // z = cima): por cima do ombro, na boca da aljava (pega pelas penas), puxa para cima e volta pela frente até a corda
+  // (`grab` medido: com ele o punho cai a menos de 1 cm das flechas, no herói e no Birim, em qualquer direção)
+  const QREACH = { over: { x: 6, y: 10, z: 22 }, grab: { x: 6.1, y: -11.2, z: 20.7 }, lift: { x: 5, y: -5, z: 28 }, front: { x: 4, y: 12, z: 20 }, poleUp: [0.3, 0.6, 0.75] };
+  /** A mão direita tirando a flecha da aljava e levando até a corda (por cima da pose da puxada, até a flecha encaixar). */
+  function quiverHand(character, parts, a, base) {
+    if (a.qt === undefined || a.qt >= NOCK.nock) return;
+    const h = parts.hands[1];
+    const end = { ...h.local }, endPole = h.poleLocal.slice();
+    const from = a.rFrom || (a.rFrom = { ...base });
+    const qt = Math.max(0, a.qt);
+    // (0 → `grab`: até a aljava; `grab` → `nock`: com a flecha, de volta pela frente até a corda)
+    const u = qt < NOCK.grab ? 0.4 * smoother(qt / NOCK.grab) : 0.4 + 0.6 * smoother((qt - NOCK.grab) / (NOCK.nock - NOCK.grab));
+    h.local = spline([from, QREACH.over, QREACH.grab, QREACH.lift, QREACH.front, end], u);
+    const up = Math.sin(Math.PI * Math.min(1, u * 1.1));
+    h.poleLocal = endPole.map((v, j) => M.lerp(v, QREACH.poleUp[j], up));
+    h.fist = qt < NOCK.grab * 0.8 ? 0.3 : 0.88;
+    h.flex = M.lerp(h.flex || 0, 0.35, up);
+  }
+
   function applyPose(character, parts) {
     if (!isEquipped(character)) return 0;
     const bow = isBow(character);
@@ -379,6 +415,9 @@
     }
     if (bow && character._bowStow && character._bowStow.state !== 'guardando') character._bowStow.carry = null;
     const a = character.attack;
+    character.look.arrowHeld = -1;
+    character.look.quiverGrab = false;
+    character.look.nockK = 1;
     if (!a || a.kind !== 'slingshot') {
       if (bow) character.look.bowAim = 0;
       character.look.bowCant = 0;
@@ -446,11 +485,19 @@
     parts.hands[1].poleLocal = [M.dot(pole, rig.chest.f), M.dot(pole, rig.chest.r), M.dot(pole, rig.chest.u)];
     character.look.slingDraw = draw * blend;
     character.look.slingBand = blend * (charging ? 1 : 1 - smoother(a.t / RULES.snap));
-    // (a flecha só aparece com o arco na mão: saindo das costas, ainda não)
-    character.look.slingLoaded = !a.hit && a.age > 0.06 && !(bow && (character.look.bowStow || 0) > 0.15);
+    // (a flecha só aparece com o arco na mão — saindo das costas, ainda não — e, no arco, depois que a mão direita a trouxe
+    // da aljava até a corda)
+    const qt = bow && a.qt !== undefined ? a.qt : NOCK.nock;
+    character.look.slingLoaded = !a.hit && a.age > 0.06 && !(bow && (character.look.bowStow || 0) > 0.15) && (!bow || qt >= NOCK.nock);
     if (bow) {
       character.look.bowAim = blend;
       stowHands(character, parts);
+      quiverHand(character, parts, a, baseRight);
+      // a flecha na mão (de 0 a 1, da aljava até a corda), a mão na aljava (para a ordem do desenho) e a corda, que só
+      // segue a mão depois de a flecha encaixar
+      character.look.arrowHeld = !a.hit && qt >= NOCK.grab && qt < NOCK.nock ? (qt - NOCK.grab) / (NOCK.nock - NOCK.grab) : -1;
+      character.look.quiverGrab = qt < NOCK.grab + 0.06;
+      character.look.nockK = M.smoothstep(NOCK.nock - 0.02, NOCK.nock + 0.04, qt);
     }
     return blend;
   }
@@ -488,6 +535,29 @@
     const axis = M.norm(M.add(M.scale(c.r, -Math.cos(BACK.lean)), M.scale(c.u, Math.sin(BACK.lean))));
     return { grip, axis, front: c.f };
   }
+  /** A pele das costas atrás do ponto (x, z) do peito (cm atrás do meio do peito), pelas esferas do peito do modelo. */
+  function backAt(MOD, x, z) {
+    let best = -Infinity;
+    for (const sp of (MOD && MOD.CHEST) || []) {
+      const q = sp.r * sp.r - (x - sp.p[0]) ** 2 - (z - sp.p[2]) ** 2;
+      if (q > 0) best = Math.max(best, -sp.p[1] + Math.sqrt(q));
+    }
+    return best > -Infinity ? best : 6;
+  }
+  /** A aljava nas costas: a boca (`top`), o fundo (`bottom`) e o eixo (do fundo para a boca), encostada na pele. */
+  function quiverPose(rig, MOD) {
+    const c = rig.chest, Q = QUIVER;
+    const top = Q.top, bot = [top[0] - Math.cos(Q.lean) * Q.len, top[1] - Math.sin(Q.lean) * Q.len];
+    // a linha do meio do tubo a `r + gap` da pele em toda a altura (as costas são curvas: confere no meio também)
+    const need = (t) => backAt(MOD, M.lerp(top[0], bot[0], t), M.lerp(top[1], bot[1], t)) + Q.r + Q.gap;
+    let dTop = need(0), dBot = need(1), push = 0;
+    for (const t of [0.25, 0.5, 0.75]) push = Math.max(push, need(t) - M.lerp(dTop, dBot, t));
+    dTop += push;
+    dBot += push;
+    const T = M.at(c, top[0], -dTop, top[1]), B = M.at(c, bot[0], -dBot, bot[1]);
+    return { top: T, bottom: B, axis: M.norm(M.sub(T, B)) };
+  }
+
   function bowGeometry(rig, look = {}, MOD) {
     const HM = (MOD && MOD.HAND) || PD.MODEL.HAND;
     const h = rig.hand[0];
@@ -538,9 +608,108 @@
     const rest = M.add(grip, M.scale(axis, BOW.rest));
     const slack = M.lerp3(tips[0], tips[1], 0.5);
     const pulled = M.add(rig.hand[1].o, M.scale(rig.hand[1].a, 7));
-    const nock = M.lerp3(slack, pulled, M.clamp01(look.slingBand || 0) * aimK * (1 - stow));
+    const nock = M.lerp3(slack, pulled, M.clamp01(look.slingBand || 0) * aimK * (1 - stow) * (look.nockK ?? 1));
     if (look.restGround !== undefined) for (const p of [...lower, ...upper, rest, nock]) p.z = Math.max(look.restGround + 2.2, p.z);
     return { grip, axis, front, lower, upper, tips, rest, nock, stow };
+  }
+
+  const quiverWood = { base: '#9a7535', shade: '#563f19', light: '#c9a862' };
+  const quiverDark = { base: '#2a1d12', shade: '#120c07', light: '#4a3522' };
+  /** Uma flecha solta (na aljava ou na mão): a haste, as penas perto do entalhe, o entalhe e a ponta. */
+  function arrowSegments(segment, nockP, dir, len, side, spirit, name, withPoint) {
+    const tip = M.add(nockP, M.scale(dir, len));
+    segment(nockP, tip, 0.6, 0.6, spirit ? spiritShaft : shaft, name + 'haste');
+    for (const [o, mat] of [[1, feather], [-1, featherW]]) {
+      const a0 = M.add(nockP, M.scale(dir, 2.5)), a1 = M.add(nockP, M.scale(dir, 11));
+      segment(M.add(a0, M.scale(side, o * 1.4)), M.add(a1, M.scale(side, o * 2.2)), 0.5, 1.3, spirit ? spiritFeather : mat, name + 'pena' + o, 0.22);
+    }
+    segment(nockP, nockP, 0.75, 0.75, spirit ? spiritPoint : leather, name + 'entalhe', 0.2);
+    if (withPoint) segment(tip, M.add(tip, M.scale(dir, 5)), 1.5, 0.25, spirit ? spiritPoint : point, name + 'ponta');
+    return tip;
+  }
+  /**
+   * A aljava nas costas (veja QUIVER): o tubo de taquara com os nós, as amarrações (couro na boca, fibra no fundo), o
+   * escuro da boca e as flechas com as penas para fora. A ordem com o corpo é a do arco nas costas: de frente atrás de
+   * tudo; de costas por cima de tudo — menos quando a mão direita vai pegar a flecha (ela passa por cima da aljava); de
+   * lado, antes do braço de perto.
+   */
+  function quiverItems(renderer, rig, look, all, MOD) {
+    const q = quiverPose(rig, MOD || PD.MODEL), Q = QUIVER, items = [];
+    const toCam = renderer.toCam;
+    let host = null, under = false;
+    if (toCam && Array.isArray(all) && all.length) {
+      const facing = M.dot(rig.chest.f, toCam);
+      const arm = (i) => all.find((it) => it.group === 'braco' + i) || all.find((it) => it.group === 'mao' + i) || null;
+      if (facing > 0.2) { host = all[0]; under = true; }
+      else if (facing < -0.2) { if (look.quiverGrab && arm(1)) { host = arm(1); under = true; } }
+      else {
+        const near = M.dot(rig.shoulder[0], toCam) > M.dot(rig.shoulder[1], toCam) ? 0 : 1;
+        host = arm(near);
+        under = !!host;
+      }
+    }
+    const key = (host ? host.key : renderer.keyOf(q.top)) + 0.07;
+    // (caído no chão, nada passa para baixo dele — como o arco)
+    const floor = look.restGround !== undefined ? (p) => (p.z < look.restGround + 2.2 ? { ...p, z: look.restGround + 2.2 } : p) : (p) => p;
+    const segment = (a, b, ra, rb, material, name, k = 0.28) => {
+      const circles = [renderer.circle(floor(a), ra), renderer.circle(floor(b), rb)];
+      items.push({ name: 'aljava:' + name, key, host, under, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
+    };
+    const ax = q.axis, at = (t) => M.lerp3(q.bottom, q.top, t);
+    // as costas, para o lado de fora (e1), e o lado (e2), em volta do eixo: o leque das flechas
+    const e1 = M.norm(M.sub(M.scale(rig.chest.f, -1), M.scale(ax, M.dot(M.scale(rig.chest.f, -1), ax))));
+    const e2 = M.norm(M.cross(ax, e1));
+    // o tubo (um pouco mais largo na boca), os nós escuros e as amarrações
+    segment(q.bottom, q.top, Q.r * 0.96, Q.r * 1.04, quiverWood, 'tubo', 0.3);
+    for (const t of [0.34, 0.66]) segment(at(t - 0.012), at(t + 0.012), Q.r + 0.32, Q.r + 0.32, { ...quiverWood, base: quiverWood.shade }, 'no' + t, 0.2);
+    segment(at(0.9), at(0.97), Q.r + 0.45, Q.r + 0.5, leather, 'boca-couro', 0.25);
+    segment(at(0.05), at(0.09), Q.r + 0.3, Q.r + 0.3, leather, 'fundo-couro', 0.25);
+    // o escuro de dentro, na boca
+    const mouth = M.sub(q.top, M.scale(ax, 0.6));
+    segment(mouth, mouth, Q.r * 0.8, Q.r * 0.8, quiverDark, 'dentro', 0.1);
+    // as flechas: as penas para fora, em leque (a que a mão está tirando não aparece aqui: ela vai na mão)
+    for (let i = 0; i < Q.n; i++) {
+      const ang = (i / Q.n) * M.TAU + 0.5;
+      const off = M.add(M.scale(e1, Math.cos(ang)), M.scale(e2, Math.sin(ang)));
+      const inner = M.add(M.sub(q.top, M.scale(ax, 2)), M.scale(off, Q.r * 0.45));
+      const outer = M.add(M.add(q.top, M.scale(ax, Q.out)), M.scale(off, Q.r * 0.9 + 1.2));
+      const dir = M.norm(M.sub(inner, outer));
+      // (o entalhe para fora, a flecha entrando no tubo: a ponta fica lá dentro)
+      arrowSegments(segment, outer, dir, M.len(M.sub(inner, outer)), M.norm(M.cross(dir, off)), false, 'flecha' + i + ':', false);
+    }
+    return items;
+  }
+  /** A flecha na mão direita, da aljava até a corda (`look.arrowHeld` de 0 a 1): sai apontando para dentro da aljava,
+   * cresce enquanto é puxada para fora e gira até a linha do tiro (aí vira a flecha encaixada). */
+  function heldArrowItems(renderer, rig, look, all, MOD) {
+    const k = look.arrowHeld;
+    if (!(k >= 0)) return [];
+    const items = [];
+    const h = rig.hand[1];
+    const nockP = M.add(h.o, M.scale(h.a, 7));
+    const q = quiverPose(rig, MOD || PD.MODEL);
+    const shotDir = look.bowDir || rig.chest.f;
+    const dir = M.norm(blendDirection(M.scale(q.axis, -1), shotDir, smoother(Math.min(1, k * 1.15))));
+    // (curta enquanto ainda aponta para baixo, para dentro da aljava — a ponta atrás das costas —, e cresce virando para a
+    // frente: antes ela atravessava o peito, em pé, no meio do giro)
+    const len = M.lerp(QUIVER.out + 6, BOW_POSE.arrow, smoother((k - 0.42) / 0.5));
+    const hand = (Array.isArray(all) && all.find((it) => it.name === 'mao' && it.group === 'mao1')) || null;
+    // atrás do corpo (o meio dela mais longe da câmera que o meio do peito): por baixo de tudo; senão, com a mão
+    const toCam = renderer.toCam;
+    const mid = M.add(nockP, M.scale(dir, len / 2));
+    const behind = !!toCam && Array.isArray(all) && all.length > 0 && M.dot(M.sub(mid, rig.chest.o), toCam) < -3;
+    const host = behind ? all[0] : hand;
+    const key = (host ? host.key : renderer.keyOf(nockP)) + 0.06;
+    const segment = (a, b, ra, rb, material, name, kk = 0.28) => {
+      const circles = [renderer.circle(a, ra), renderer.circle(b, rb)];
+      items.push({ name: 'flechaMao:' + name, key, host, under: behind, segs: [{ poly: renderer.hull(circles), circles, mat: material, k: kk }] });
+    };
+    let side = M.cross(dir, rig.chest.u);
+    side = M.len(side) > 0.2 ? M.norm(side) : rig.chest.r;
+    const spirit = look.arrowKind === 'ancestral';
+    const tip = arrowSegments(segment, nockP, dir, len, side, spirit, '', true);
+    if (spirit) items.push({ name: 'flechaMao:espirito', key, host, draw: () => spiritArrowGlow(renderer, nockP, M.add(tip, M.scale(dir, 5)), look) });
+    return items;
   }
 
   function drawBow(renderer, rig, look, handHost, all) {
@@ -607,8 +776,13 @@
       const point0 = M.add(tip, M.scale(dir, 5));
       segment(tip, point0, 1.5, 0.25, spirit ? spiritPoint : point, 'ponta-flecha');
       if (spirit) items.push({ name: 'arco:espirito', key, host, draw: () => spiritArrowGlow(renderer, g.nock, point0, look) });
-    } else if (spirit) items.push({ name: 'arco:espirito', key, host, draw: () => spiritBowGlow(renderer, g) });
-    return items;
+    } else if (spirit && !(look.arrowHeld >= 0)) items.push({ name: 'arco:espirito', key, host, draw: () => spiritBowGlow(renderer, g) });
+    // a aljava (sempre nas costas) e a flecha na mão direita. De frente, o arco nas costas fica mais longe que a aljava:
+    // ela vem depois dele; nos outros casos o arco fica por cima dela
+    const quiver = quiverItems(renderer, rig, look, all, renderer.model);
+    const held = heldArrowItems(renderer, rig, look, all, renderer.model);
+    const frontView = !!toCam && M.dot(rig.chest.f, toCam) > 0.2;
+    return (frontView ? items.concat(quiver) : quiver.concat(items)).concat(held);
   }
 
   /** Um número "sorteado" fixo para cada `i` (as luzinhas não tremem de um quadro para o outro). */
@@ -791,5 +965,5 @@
     };
   }
 
-  PD.slingshot = { RULES, BOW_RULES, BOW_POSE, STOW, poseAimOf, rulesOf, isBow, isEquipped, bowInHand, stowUpdate, powerOf, strength, start, update, cancel, geometry, bowGeometry, applyPose, drawItems, drawCharge, drawImpact, actor };
+  PD.slingshot = { RULES, BOW_RULES, BOW_POSE, STOW, QUIVER, NOCK, QREACH, quiverPose, fistHole, poseAimOf, rulesOf, isBow, isEquipped, bowInHand, stowUpdate, powerOf, strength, start, update, cancel, geometry, bowGeometry, applyPose, drawItems, drawCharge, drawImpact, actor };
 })(window.PD = window.PD || {});

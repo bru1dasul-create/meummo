@@ -117,6 +117,30 @@
       `shooting_while_changing_sides` pegou os pés cruzando). Precisaria de um passo próprio ("passo e junta").
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
+- **A ALJAVA E A FLECHA TIRADA DAS COSTAS (21/11, pedido do dono: "coloca a flecha nas costas e ele puxando as flechas
+  das costas"; escopo aprovado: "pode, sem alça")** — no ramo, esperando o "pode" para a main.
+  - **A aljava** (`slingshot.js`, `QUIVER`, `quiverPose`, `quiverItems`): um tubo de taquara (mais escuro que o arco, com
+    dois nós, a boca de couro e uma amarração de couro no fundo — a de fibra clara virava uma bola branca de costas)
+    atravessado ao contrário do arco: a boca atrás do ombro DIREITO, o fundo perto do quadril esquerdo (66° do chão, 44 cm),
+    com 5 flechas de penas vermelhas e brancas em leque para fora (não acabam). Encosta na pele: a linha do meio fica a
+    `r + gap` das costas em toda a altura, medida pelas esferas do peito de cada modelo (`backAt`). Sem alça. Ordem com o
+    corpo como a do arco nas costas: de frente atrás de tudo, de costas por cima de tudo (menos enquanto a mão direita
+    pega a flecha: aí ela vai antes do braço direito, que passa por cima), de lado antes do braço de perto. O arco fica por
+    cima dela (de frente, ao contrário: o arco nas costas é o mais longe da câmera). Aparece sempre que o arco está
+    equipado (também na mochila e no retrato).
+  - **A flecha** (`quiverHand`, relógio `a.qt` da puxada): a cada tiro a mão direita sobe por cima do ombro direito
+    (`QREACH`), pega a flecha pelas penas aos 0,11 s — o alvo do punho foi medido: ele cai a menos de 1 cm das flechas, no
+    herói e no Birim, em qualquer direção —, puxa para cima e volta pela frente até a corda aos 0,26 s. Com o arco nas
+    costas, as duas mãos vão juntas (a esquerda no arco, a direita na flecha). A flecha na mão sai apontando para dentro
+    da aljava, curta (a ponta ainda atrás das costas), e cresce girando até a linha do tiro (`heldArrowItems`); atrás do
+    corpo, vista da câmera, vai por baixo de tudo. A corda só acompanha a mão depois de a flecha encaixar (`look.nockK`), e
+    a flecha encaixada só aparece aí.
+  - **Os atalhos:** o tiro de toque e o de outro jogador já vêm com a flecha na corda; soltando cedo, o relógio acelera 4×
+    (num toque de 0,05 s ela encaixa aos 0,12 s). Com a Flecha Ancestral armada, a flecha que sai da aljava já sai brilhando.
+  - **Conferido:** a bateria inteira (herói sem arco idêntico, 40 testes, estilingue, regressão, 529); quadro a quadro em 3
+    direções (pegar a flecha e guardar), correndo nas 8, pulando e na esquiva, herói e Birim; e no jogo de verdade em câmera
+    lenta (F1, 0,25x), sem erros. Ferramentas no rascunho: `aljava/sacar.cjs`, `aljava/perto.cjs`, `aljava/pega.cjs` (o alvo
+    da mão, por iteração) e `aljava/toque.cjs`.
 - **O ARCO NAS COSTAS (21/11, pedido do dono: "coloca animação puxando o arco das costas, é difícil fazer isso"; o "pode"
   dele veio com o escopo)** — na main em 21/11, com o "pode" do dono. Muda o combinado de 13/11 ("o arco fica sempre na
   mão"): agora ele fica nas costas e vai para a mão para atirar.
