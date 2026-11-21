@@ -56,6 +56,10 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** A boca da bermuda de novo (21/11, o dono: mirando andando S+D/A+S e de costas, no pulo e na esquiva):
   a parte de baixo do peito era pintada por cima do cós (o pescoço separava a pelve do peito na ordem de desenho). A
   bermuda vai depois da última parte do tronco e não pinta a boca dela. FEITO em 21/11 (veja `docs/ARTE.md`)
+- [x] **[arte]** O arco nas costas (21/11, pedido do dono: "coloca animação puxando o arco das costas"): parado, o arco
+  fica atravessado nas costas; no tiro, a mão esquerda busca por cima do ombro e traz para a mira (dentro da puxada mínima,
+  0,3 s); 4 s depois do último tiro ele guarda. Tiro de toque e de outro jogador: direto na mão; Flecha Ancestral armada:
+  saca e segura. FEITO em 21/11 (veja `docs/ARTE.md`)
 - [ ] **[arte]** Arte de verdade para personagens e monstros (piloto do estilo desenhado com o Nano Banana: chave
   pronta, esperando os exemplos de estilo do dono — veja `docs/ARTE.md`)
 - [x] **[arte]** Protótipo **Pindorama 2.5D** do protagonista, separado do jogo (`prototipos/pindorama-25d`): câmera

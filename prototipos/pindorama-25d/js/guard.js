@@ -71,8 +71,9 @@
     parts.spine.yaw=M.lerp(from.spine.yaw,g.poseAim,k);
     parts.spine.pitch=M.lerp(from.spine.pitch,(3-4*kick)*M.DEG,k);
     // com o arco na mão, a esquerda bloqueia com ele: o arco em pé na frente do corpo, preso no punho (o vão do punho para
-    // cima); a direita fecha a guarda. Sem isto o punho erguido deitava o arco atravessado na frente do rosto
-    const bow=c.equipped&&c.equipped.maoE==='arco';
+    // cima); a direita fecha a guarda. Sem isto o punho erguido deitava o arco atravessado na frente do rosto (com o arco
+    // nas costas, a guarda é a de punhos)
+    const bow=PD.slingshot&&PD.slingshot.bowInHand?PD.slingshot.bowInHand(c):(c.equipped&&c.equipped.maoE==='arco');
     for(let i=0;i<2;i++) {
       const bowHand=bow&&i===0;
       const target=bowHand?{x:-7,y:33-3*kick,z:-15+kick}:{x:i?-9:-11,y:(i?24:27)-3*kick,z:(i?10:6)+kick};

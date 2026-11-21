@@ -117,6 +117,33 @@
       `shooting_while_changing_sides` pegou os pés cruzando). Precisaria de um passo próprio ("passo e junta").
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
+- **O ARCO NAS COSTAS (21/11, pedido do dono: "coloca animação puxando o arco das costas, é difícil fazer isso"; o "pode"
+  dele veio com o escopo)** — no ramo, esperando o "pode" para a main. Muda o combinado de 13/11 ("o arco fica sempre na
+  mão"): agora ele fica nas costas e vai para a mão para atirar.
+  - **Nas costas** (`slingshot.js`, `backPose`): atravessado na diagonal — a ponta de cima atrás do ombro esquerdo, a de
+    baixo atrás da nádega direita (65° do chão), a corda para fora, 3,5 cm por fora da pele das costas (medida em cada
+    modelo pelas esferas do peito: `backDepth`). Ordem com o corpo: de frente, atrás de tudo (só as pontas aparecem); de
+    costas, por cima de tudo; de lado, antes do braço de perto (ele passa na frente do arco). O braço esquerdo, sem o arco,
+    balança solto como o direito.
+  - **Sacar** (`stowUpdate`, estado em `character._bowStow`: `costas` → `sacando` → `mao` → `guardando`): no tiro, a mão
+    esquerda sobe por cima do ombro, pega o arco a 15 cm do meio do cabo (0,12 s), puxa pela frente (até 0,3 s, a puxada
+    mínima) e emenda na mira; a mão abre para pegar e fecha no cabo, o cotovelo sobe. O caminho é uma curva (Catmull-Rom)
+    pelos pontos `REACH` (no espaço do peito, a partir do ombro) até a pose da mira. A flecha só aparece com o arco na mão.
+  - **Guardar**: depois de 4 s sem atirar, sem defender e sem a Flecha Ancestral armada, o caminho de volta (0,5 s): a mão
+    leva o arco por cima do ombro, solta nas costas e o braço volta a balançar.
+  - **Os atalhos**: o tiro de toque e o tiro dos outros jogadores começam já no ponto de soltar (a pose pula para a puxada
+    cheia): aí o arco vai direto para a mão, sem a mão passar pelo ombro. Se o jogador solta o botão antes de o arco
+    chegar (no jogo a flecha sai na hora), o saque acelera 4× (`rush`): num toque de 0,05 s o arco está na mão aos 0,12 s.
+    Com a Flecha Ancestral armada (R), ele saca e segura o arco brilhando até ela sair. Com o arco nas costas, a defesa é a
+    de punhos; com ele na mão, o arco em pé.
+  - **Conferido:** a bateria inteira (herói sem arco idêntico, 40 testes, estilingue, regressão, 529); quadro a quadro no
+    protótipo em 4 direções (sacar e guardar), correndo, pulando e na esquiva com o arco nas costas, herói e Birim; e no
+    jogo de verdade, com a câmera lenta do F1 (0,25x, menu do administrador), sem erros. (No Chromium daqui o jogo roda a
+    ~16 quadros por segundo e cada foto demora ~0,5 s: sem a câmera lenta as fotos pegavam o saque já terminado. O
+    registro quadro a quadro mostrou o saque levando os 0,3 s certos.)
+  - **Ferramentas** (rascunho): `costas/sacar.cjs` (prancha de sacar e guardar), `costas/sacar-perto.cjs`,
+    `costas/rapido.cjs` (toque rápido, outro jogador, Flecha armada), `costas/pega.cjs` (onde o punho cai no instante de
+    pegar) e `arco-jogo/costas-lento.cjs` (no jogo, em câmera lenta).
 - **A BOCA DA BERMUDA, de novo (21/11, o dono: "o bug do tronco que era a boca da bermuda — mirando de arco e apertando
   S+D e A+S, mirando pra cima e indo de costas; quando pula também; na esquiva também")** — no ramo, esperando o "pode":
   - **A causa, medida:** na ordem de desenho o PESCOÇO quase sempre fica entre a pelve e o peito (a chave dele é

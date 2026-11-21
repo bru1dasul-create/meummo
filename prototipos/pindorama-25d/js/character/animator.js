@@ -627,6 +627,8 @@
 
       // soco (no "armar", se o corpo ainda não virou para o alvo, o golpe espera um pouco)
       this._attackRate = 1;
+      // o arco nas costas: saca no tiro e guarda depois de um tempo sem atirar (a cada quadro, atirando ou não)
+      if (PD.slingshot && PD.slingshot.stowUpdate) PD.slingshot.stowUpdate(this, dt);
       if (this.attack && this.attack.kind === 'slingshot') {
         PD.slingshot.update(this, dt, input);
       } else if (this.attack) {
@@ -1686,7 +1688,8 @@
       const shoulderFwd = [0, 0];
       const runPole = smoothstep(0.15, 0.65, run * g);
       this.airArm = damp(this.airArm, J.state === 'ar' ? 1 : 0, 14, dt);
-      this._bowCarry = damp(this._bowCarry, this.equipped && this.equipped.maoE === 'arco' ? 1 : 0, 8, dt);
+      // (com o arco nas costas, o braço esquerdo balança solto: slingshot.js, `bowInHand`)
+      this._bowCarry = damp(this._bowCarry, PD.slingshot && PD.slingshot.bowInHand ? (PD.slingshot.bowInHand(this) ? 1 : 0) : this.equipped && this.equipped.maoE === 'arco' ? 1 : 0, 8, dt);
       for (let i = 0; i < 2; i++) {
         // cada braço balança um pouco diferente do outro e varia devagar de um passo para o outro (gente não é
         // simétrica nem repete o mesmo movimento): ±7% de amplitude e um tiquinho de atraso. Antes os dois braços eram

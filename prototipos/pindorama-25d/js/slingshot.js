@@ -14,7 +14,8 @@
     pecas: [{ osso: 'mao', lado: 'E', esferas: [{ a: 6, d: 0, s: 0, r: 1.6 }] }] });
   // O Arco de Bambu (pedido do dono, 13/11: "o arco deve permanecer na mão, como um item / arma"): o mesmo puxar e
   // soltar do estilingue, com a carga do arco (1,5 s, a do servidor) e o desenho dele — bambu curvado no fogo, corda de
-  // fibra de tucum, a flecha encaixada com as penas. Fica na mão o tempo todo (view.js liga pelo `gear` do jogador).
+  // fibra de tucum, a flecha encaixada com as penas. Fica com o jogador o tempo todo (view.js liga pelo `gear` dele):
+  // desde 21/11 nas costas, e na mão quando ele atira (veja "O ARCO NAS COSTAS", mais abaixo).
   const bamboo = { base: '#c9a24e', shade: '#7f5f22', light: '#ecd38a' };
   const cord = { base: '#e6dabd', shade: '#a39373', light: '#fff7e2' };
   const shaft = { base: '#d6b678', shade: '#8f7040', light: '#f0dcae' };
@@ -114,6 +115,57 @@
     character._pose = null;
     character.look.slingBand = 0; character.look.slingLoaded = false;
     return true;
+  }
+
+  // ---- O ARCO NAS COSTAS (21/11, pedido do dono: "coloca animação puxando o arco das costas"; muda o combinado de 13/11,
+  // "o arco fica sempre na mão"). Sem atirar, o arco fica atravessado nas costas (a ponta de cima atrás do ombro esquerdo,
+  // a corda para fora) e o braço esquerdo balança solto. No tiro, a mão esquerda busca o arco por cima do ombro e emenda
+  // na puxada — tudo dentro da puxada mínima (0,3 s). Depois de 4 s sem atirar, defender nem estar com a Flecha Ancestral
+  // armada, ele guarda o arco de volta. (Só o desenho: o servidor não sabe onde o arco está.)
+  // Tempos (s): `reach` = a mão chega no arco; `pull` = o arco chega na mão (= a puxada mínima); `idle` = espera para
+  // guardar; `away` = guardar inteiro, com o arco chegando nas costas em `stowAt` dele; `rush` = quantas vezes mais rápido
+  // ele saca quando o tiro já saiu (no jogo a flecha sai na hora em que o botão é solto, mesmo num toque rápido)
+  const STOW = { reach: 0.12, pull: 0.3, idle: 4, away: 0.5, stowAt: 0.5, rush: 4 };
+  /** O arco já saiu das costas (ou está saindo): a defesa e a pose de carregar o arco valem. */
+  const bowInHand = (c) => isBow(c) && (!c._bowStow || c._bowStow.state === 'mao' || c._bowStow.state === 'sacando');
+  function stowUpdate(c, dt) {
+    if (!isBow(c)) {
+      c._bowStow = null;
+      c.look.bowStow = 0;
+      return;
+    }
+    const S = c._bowStow || (c._bowStow = { state: 'costas', t: 0, idle: 0 });
+    const a = c.attack && c.attack.kind === 'slingshot' ? c.attack : null;
+    const shooting = !!a;
+    const guarding = !!(c.guard && c.guard.active);
+    // com a Flecha Ancestral armada (o R), o arco sai das costas e fica na mão, brilhando, até ela sair
+    const armed = !!c.look.arrowKind;
+    if ((shooting || armed) && S.state === 'costas') {
+      // o tiro rápido (toque no bicho) e o tiro dos outros jogadores começam já no ponto de soltar (a pose pula para a
+      // puxada cheia): o arco vai junto para a mão, sem a mão passar pelo ombro
+      if (a && a.age >= rulesOf(c).minDraw - 1e-6) { S.state = 'mao'; S.idle = 0; }
+      else { S.state = 'sacando'; S.t = 0; S.from = null; }
+    }
+    // guardando e atirou de novo: a mão já está no ombro — volta puxando de lá
+    if ((shooting || armed) && S.state === 'guardando') { S.state = 'sacando'; S.t = STOW.reach; S.from = null; }
+    if (S.state === 'sacando') {
+      S.t += dt * (a && (a.releaseRequested || a.stage === 'release') ? STOW.rush : 1);
+      if (S.t >= STOW.pull) { S.state = 'mao'; S.idle = 0; }
+    } else if (S.state === 'mao') {
+      S.idle = shooting || guarding || armed || c.death ? 0 : S.idle + dt;
+      if (S.idle >= STOW.idle && !c.dodge) { S.state = 'guardando'; S.t = 0; }
+    } else if (S.state === 'guardando') {
+      S.t += dt;
+      if (S.t >= STOW.away) S.state = 'costas';
+    }
+    c.look.bowStow = stowAmount(S);
+  }
+  /** Quanto o arco está nas costas (1) ou na mão (0) agora. */
+  function stowAmount(S) {
+    if (S.state === 'costas') return 1;
+    if (S.state === 'mao') return 0;
+    if (S.state === 'sacando') return S.t < STOW.reach ? 1 : 1 - smoother((S.t - STOW.reach) / (STOW.pull - STOW.reach));
+    return smoother(S.t / (STOW.away * STOW.stowAt));
   }
 
   function update(character, dt, input) {
@@ -260,18 +312,79 @@
     return { rig, pinch, elbowGuide };
   }
 
+  /** Um ponto numa curva Catmull-Rom pelos pontos `pts` ({x, y, z}), com `u` de 0 a 1 passando por todos. */
+  function spline(pts, u) {
+    const n = pts.length - 1, f = M.clamp01(u) * n, i = Math.min(n - 1, Math.floor(f)), t = f - i;
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n, i + 2)];
+    const t2 = t * t, t3 = t2 * t;
+    const c = (a, b, c2, d) => 0.5 * (2 * b + (-a + c2) * t + (2 * a - 5 * b + 4 * c2 - d) * t2 + (-a + 3 * b - 3 * c2 + d) * t3);
+    return { x: c(p0.x, p1.x, p2.x, p3.x), y: c(p0.y, p1.y, p2.y, p3.y), z: c(p0.z, p1.z, p2.z, p3.z) };
+  }
+  // o caminho da mão esquerda (alvo do punho a partir do ombro, no espaço do peito: x = para fora, y = frente, z = cima):
+  // `over` = por cima do ombro, na frente; `grab` = atrás do ombro, no arco (a 15 cm do meio do cabo, para a ponta de cima)
+  const REACH = {
+    over: { x: 5, y: 13, z: 20 }, overOut: { x: 7, y: 19, z: 15 },
+    // (medido: com este alvo o punho cai a ~2 cm do ponto do arco, no herói e no Birim)
+    grab: { x: -2.8, y: -16.1, z: 19 },
+    poleUp: [0.35, 0.55, 0.75],
+  };
+  /**
+   * Sacar e guardar o arco: a mão esquerda segue a curva por cima do ombro (do lugar dela até o arco nas costas e de lá
+   * até onde ela vai ficar — a mira ou o jeito de carregar), o cotovelo para cima; ela abre para pegar e fecha no cabo.
+   */
+  function stowHands(character, parts) {
+    const S = character._bowStow;
+    character.look.bowHeld = !S || S.state === 'mao';
+    if (!S || S.state === 'mao' || S.state === 'costas') return;
+    const h = parts.hands[0];
+    const end = { ...h.local };
+    const endPole = h.poleLocal.slice();
+    const mixPole = (a, b, k) => a.map((v, j) => M.lerp(v, b[j], k));
+    if (S.state === 'sacando') {
+      const from = S.from || (S.from = { ...end });
+      const pts = [from, REACH.over, REACH.grab, REACH.overOut, end];
+      // (0 → 0,12 s: até o arco; 0,12 → 0,3 s: de volta pela frente, com o arco)
+      const u = S.t < STOW.reach ? 0.5 * smoother(S.t / STOW.reach) : 0.5 + 0.5 * smoother((S.t - STOW.reach) / (STOW.pull - STOW.reach));
+      h.local = spline(pts, u);
+      const up = Math.sin(Math.PI * Math.min(1, u * 1.15));
+      h.poleLocal = mixPole(endPole, REACH.poleUp, up);
+      h.fist = S.t < STOW.reach * 0.8 ? 0.25 : M.lerp(0.25, 0.85, smoother((S.t - STOW.reach * 0.8) / (STOW.reach * 0.4)));
+      character.look.bowHeld = S.t >= STOW.reach;
+      h.thumbK = (h.thumbK || 0) * smoother((u - 0.5) * 2);
+      h.flex = M.lerp(h.flex || 0, 0.5, up);
+    } else {
+      S.from = null;
+      const k = M.clamp01(S.t / STOW.away);
+      const pts = [S.carry || (S.carry = { ...end }), REACH.overOut, REACH.grab, REACH.over, end];
+      h.local = spline(pts, smoother(k));
+      const up = Math.sin(Math.PI * smoother(k));
+      h.poleLocal = mixPole(endPole, REACH.poleUp, up);
+      const let_go = M.clamp01((k - STOW.stowAt) / 0.15);
+      character.look.bowHeld = k < STOW.stowAt;
+      h.fist = M.lerp(0.85, h.fist ?? 0.3, let_go);
+      h.thumbK = (h.thumbK || 0) * (1 - up);
+      h.flex = M.lerp(h.flex || 0, 0.5, up);
+    }
+  }
+
   function applyPose(character, parts) {
     if (!isEquipped(character)) return 0;
     const bow = isBow(character);
     const RULES = rulesOf(character);
-    parts.hands[0].fist = 0.85;
-    parts.hands[0].flex *= 0.3;
+    // a mão do arco fechada no cabo (com o arco nas costas, a mão fica solta)
+    const inHand = !bow || bowInHand(character);
+    if (inHand) {
+      parts.hands[0].fist = 0.85;
+      parts.hands[0].flex *= 0.3;
+    }
+    if (bow && character._bowStow && character._bowStow.state !== 'guardando') character._bowStow.carry = null;
     const a = character.attack;
     if (!a || a.kind !== 'slingshot') {
       if (bow) character.look.bowAim = 0;
       character.look.bowCant = 0;
       character.look.bowHead = null;
       character.look.bowDir = null;
+      if (bow) stowHands(character, parts);
       return 0;
     }
     const charging = a.stage === 'charging';
@@ -333,8 +446,12 @@
     parts.hands[1].poleLocal = [M.dot(pole, rig.chest.f), M.dot(pole, rig.chest.r), M.dot(pole, rig.chest.u)];
     character.look.slingDraw = draw * blend;
     character.look.slingBand = blend * (charging ? 1 : 1 - smoother(a.t / RULES.snap));
-    character.look.slingLoaded = !a.hit && a.age > 0.06;
-    if (bow) character.look.bowAim = blend;
+    // (a flecha só aparece com o arco na mão: saindo das costas, ainda não)
+    character.look.slingLoaded = !a.hit && a.age > 0.06 && !(bow && (character.look.bowStow || 0) > 0.15);
+    if (bow) {
+      character.look.bowAim = blend;
+      stowHands(character, parts);
+    }
     return blend;
   }
 
@@ -344,26 +461,67 @@
    * curvam para o lado da corda e curvam mais com a puxada; a corda vai das pontas ao ponto pinçado (`nock`).
    */
   // (rest = onde a flecha passa, no eixo do arco a partir do meio do cabo: por cima do punho, do lado do polegar)
-  const BOW = { limb: 56, grip: 10, rest: 4.2 };
-  function bowGeometry(rig, look = {}, HM) {
+  const BOW = { limb: 56, grip: 10, rest: 4.2, grab: 15 };
+  // o arco nas costas, no espaço do peito (x = direita, z = cima): o meio do cabo um pouco à esquerda e acima do meio do
+  // peito, `gap` cm por fora da pele das costas, inclinado `lean` (a ponta de cima atrás do ombro esquerdo, a de baixo
+  // atrás da nádega direita), a corda para fora
+  const BACK = { x: -3, z: 3, lean: 65 * M.DEG, gap: 3.5 };
+  const depthOf = new WeakMap();
+  /** Quanto as costas do modelo ficam atrás do meio do peito (cm), na altura em que o arco encosta. */
+  function backDepth(MOD) {
+    if (!MOD || !MOD.CHEST) return 12;
+    if (depthOf.has(MOD)) return depthOf.get(MOD);
+    let best = 8;
+    for (let x = -10; x <= 10; x += 5) for (let z = -5; z <= 12; z += 3) {
+      for (const sp of MOD.CHEST) {
+        const q = sp.r * sp.r - (x - sp.p[0]) ** 2 - (z - sp.p[2]) ** 2;
+        if (q > 0) best = Math.max(best, -sp.p[1] + Math.sqrt(q));
+      }
+    }
+    depthOf.set(MOD, best);
+    return best;
+  }
+  /** O arco nas costas: o meio do cabo, o eixo (para a ponta de cima) e a frente (para as costas: a corda fica por fora). */
+  function backPose(rig, MOD) {
+    const c = rig.chest;
+    const grip = M.at(c, BACK.x, -(backDepth(MOD) + BACK.gap), BACK.z);
+    const axis = M.norm(M.add(M.scale(c.r, -Math.cos(BACK.lean)), M.scale(c.u, Math.sin(BACK.lean))));
+    return { grip, axis, front: c.f };
+  }
+  function bowGeometry(rig, look = {}, MOD) {
+    const HM = (MOD && MOD.HAND) || PD.MODEL.HAND;
     const h = rig.hand[0];
     // o cabo passa pelo vão do punho fechado (antes ficava 6 cm à frente do punho, no meio da mão: o couro aparecia
     // colado por cima dos dedos e, correndo, por fora do punho)
-    const hole = fistHole(HM || PD.MODEL.HAND, h.fist);
-    const grip = M.add(h.o, M.add(M.scale(h.a, hole.a), M.scale(h.d, hole.d)));
+    const hole = fistHole(HM, h.fist);
+    let grip = M.add(h.o, M.add(M.scale(h.a, hole.a), M.scale(h.d, hole.d)));
     const f = rig.chest.f, u = rig.chest.u;
     const aimK = M.clamp01(look.bowAim || 0);
     // puxando, o arco fica quase em pé, um pouco deitado para longe do rosto (a direção da flecha vem da pose). Solto na
     // mão, ele segue o punho: o eixo é o do vão (a ponta de cima para o lado do polegar), como um cabo segurado de verdade
     const shot = look.bowDir && aimK > 0 ? M.norm(M.lerp3(f, look.bowDir, aimK)) : f;
     const drawAxis = bowAxis(u, shot, look.bowCant);
-    const axis = M.norm(M.lerp3(h.s, drawAxis, aimK));
+    let axis = M.norm(M.lerp3(h.s, drawAxis, aimK));
     // a barriga do arco olha para onde a flecha vai (sem o que o eixo já tem dela); solto, para as costas da mão — a
     // corda fica do lado da palma, e não atravessando os dedos
-    const towards = M.lerp3(h.d, shot, aimK);
+    let towards = M.lerp3(h.d, shot, aimK);
+    // nas costas (ou indo e voltando delas: `bowStow`, de 0 = na mão a 1 = nas costas)
+    const stow = M.clamp01(look.bowStow || 0);
+    if (stow > 0) {
+      const B = backPose(rig, MOD);
+      axis = M.norm(blendDirection(axis, B.axis, stow));
+      if (look.bowHeld) {
+        // na mão (sacando, depois de pegar; guardando, até soltar): o arco vai com o punho, pego a BOW.grab cm do meio do
+        // cabo (para a ponta de cima), deslizando para o meio enquanto chega na frente; no instante de pegar ou de soltar
+        // ele parte exatamente da pose das costas (sem pulo)
+        const held = M.sub(grip, M.scale(axis, BOW.grab * stow));
+        grip = M.lerp3(held, B.grip, M.smoothstep(0.86, 1, stow));
+      } else grip = M.lerp3(grip, B.grip, stow);
+      towards = M.lerp3(towards, B.front, stow);
+    }
     const front = M.norm(M.sub(towards, M.scale(axis, M.dot(towards, axis))));
     const back = M.scale(front, -1);
-    const draw = M.clamp01(look.slingDraw || 0) * aimK;
+    const draw = M.clamp01(look.slingDraw || 0) * aimK * (1 - stow);
     const bend = 7 + 12 * draw;
     const limb = (s) => {
       const pts = [];
@@ -380,25 +538,45 @@
     const rest = M.add(grip, M.scale(axis, BOW.rest));
     const slack = M.lerp3(tips[0], tips[1], 0.5);
     const pulled = M.add(rig.hand[1].o, M.scale(rig.hand[1].a, 7));
-    const nock = M.lerp3(slack, pulled, M.clamp01(look.slingBand || 0) * aimK);
+    const nock = M.lerp3(slack, pulled, M.clamp01(look.slingBand || 0) * aimK * (1 - stow));
     if (look.restGround !== undefined) for (const p of [...lower, ...upper, rest, nock]) p.z = Math.max(look.restGround + 2.2, p.z);
-    return { grip, axis, front, lower, upper, tips, rest, nock };
+    return { grip, axis, front, lower, upper, tips, rest, nock, stow };
   }
 
-  function drawBow(renderer, rig, look, host) {
-    const g = bowGeometry(rig, look, renderer.model && renderer.model.HAND), items = [];
+  function drawBow(renderer, rig, look, handHost, all) {
+    const g = bowGeometry(rig, look, renderer.model), items = [];
+    const toCam = renderer.toCam;
+    // nas costas (mais da metade do caminho): de frente o arco fica atrás de tudo; de costas, por cima de tudo; de lado,
+    // antes do braço de perto (ele passa na frente do arco)
+    // (na mão, sacando ou guardando, ele vai junto com a mão, como solto na mão)
+    const onBack = g.stow > 0.5 && !look.bowHeld && !!toCam && Array.isArray(all) && all.length > 0;
+    let host = handHost, backUnder = false;
+    if (onBack) {
+      const facing = M.dot(rig.chest.f, toCam);
+      if (facing > 0.2) { host = all[0]; backUnder = true; }
+      else if (facing < -0.2) host = null;
+      else {
+        const near = M.dot(rig.shoulder[0], toCam) > M.dot(rig.shoulder[1], toCam) ? 0 : 1;
+        host = all.find((it) => it.group === 'braco' + near || it.group === 'mao' + near) || null;
+        backUnder = !!host;
+      }
+    }
     const key = (host ? host.key : renderer.keyOf(g.grip)) + 0.08;
     // o que fica atrás do punho (visto da câmera) vai por baixo da mão; o resto, por cima dela
-    const toCam = renderer.toCam;
-    const behind = (p) => !!toCam && M.dot(M.sub(p, g.grip), toCam) < 0;
+    const behind = (p) => !onBack && !!toCam && M.dot(M.sub(p, g.grip), toCam) < 0;
     const segment = (a, b, ra, rb, material, name, k = 0.28, under = false) => {
       const circles = [renderer.circle(a, ra), renderer.circle(b, rb)];
-      items.push({ name: 'arco:' + name, key, host, under, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
+      items.push({ name: 'arco:' + name, key, host, under: onBack ? backUnder : under, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
     };
-    // a corda primeiro (fininha, atrás dos braços), depois os dois braços de bambu afinando para a ponta, com os nós
+    // a corda primeiro (fininha, atrás dos braços), depois os dois braços de bambu afinando para a ponta, com os nós (nas
+    // costas, vista de trás, a corda fica por fora: vai por último)
     const cordUnder = behind(g.nock);
-    segment(g.tips[0], g.nock, 0.42, 0.42, cord, 'corda0', 0.2, cordUnder);
-    segment(g.nock, g.tips[1], 0.42, 0.42, cord, 'corda1', 0.2, cordUnder);
+    const cordLast = onBack && M.dot(g.front, toCam) < 0;
+    const cordItems = () => {
+      segment(g.tips[0], g.nock, 0.42, 0.42, cord, 'corda0', 0.2, cordUnder);
+      segment(g.nock, g.tips[1], 0.42, 0.42, cord, 'corda1', 0.2, cordUnder);
+    };
+    if (!cordLast) cordItems();
     for (const [pts, side] of [[g.lower, 'baixo'], [g.upper, 'cima']]) {
       const under = behind(pts[0]);
       for (let i = 0; i < pts.length - 1; i++) {
@@ -412,6 +590,7 @@
     // a empunhadura de couro com a amarração: dentro do punho, os dedos fecham por cima dela (aparecem só as pontas,
     // acima e abaixo da mão)
     segment(M.add(g.grip, M.scale(g.axis, -BOW.grip / 2 - 1)), M.add(g.grip, M.scale(g.axis, BOW.grip / 2 + 1)), 1.9, 1.9, leather, 'empunhadura', 0.28, true);
+    if (cordLast) cordItems();
     const spirit = look.arrowKind === 'ancestral';
     if (look.slingLoaded && (look.bowAim || 0) > 0.2) {
       // a flecha encaixada: do entalhe da corda para a frente, passando rente à empunhadura
@@ -512,8 +691,8 @@
     ctx.restore();
   }
 
-  function drawItems(renderer, rig, look, host, weapon) {
-    if (weapon === 'arco') return drawBow(renderer, rig, look, host);
+  function drawItems(renderer, rig, look, host, weapon, all) {
+    if (weapon === 'arco') return drawBow(renderer, rig, look, host, all);
     const p = geometry(rig, look), items = [];
     const segment = (a, b, radius, material, name) => {
       const circles = [renderer.circle(a, radius), renderer.circle(b, radius)];
@@ -612,5 +791,5 @@
     };
   }
 
-  PD.slingshot = { RULES, BOW_RULES, BOW_POSE, poseAimOf, rulesOf, isBow, isEquipped, powerOf, strength, start, update, cancel, geometry, bowGeometry, applyPose, drawItems, drawCharge, drawImpact, actor };
+  PD.slingshot = { RULES, BOW_RULES, BOW_POSE, STOW, poseAimOf, rulesOf, isBow, isEquipped, bowInHand, stowUpdate, powerOf, strength, start, update, cancel, geometry, bowGeometry, applyPose, drawItems, drawCharge, drawImpact, actor };
 })(window.PD = window.PD || {});

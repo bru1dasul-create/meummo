@@ -6,7 +6,8 @@
 //     mode 'full': o corpo inteiro com a sombra no chão, fundo transparente (a mochila)
 //     yaw: para onde olha, em graus no chão (45 = de frente para a câmera; menos que isso vira para a direita da tela)
 //     dpr: px de verdade em 1 px de tela (o canvas já vem no tamanho de verdade); muda só a espessura das linhas
-//     weapon: o ícone da arma equipada; 'arco' = o Arco de Bambu na mão (o único que aparece no corpo, pedido do dono)
+//     weapon: o ícone da arma equipada; 'arco' = o Arco de Bambu (o único que aparece no corpo, pedido do dono): parado,
+//       ele fica nas costas, como no jogo (21/11)
 //
 // O herói sai sem armadura (pedido do dono): o corpo, o cabelo, as penas, a tanga da classe e, se equipado, o arco.
 (function () {

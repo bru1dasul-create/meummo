@@ -569,7 +569,7 @@
         if (hasGear && PD.slingshot && (equipped.maoE === 'estilingue' || equipped.maoE === 'arco')) {
           const weapon = equipped.maoE;
           eq.items = eq.items.filter(item => item.name !== 'equip:' + weapon);
-          eq.items.push(...PD.slingshot.drawItems(this, rig, look, items.find(item => item.name === 'mao' && item.group === 'mao0'), weapon));
+          eq.items.push(...PD.slingshot.drawItems(this, rig, look, items.find(item => item.name === 'mao' && item.group === 'mao0'), weapon, items));
         }
         // a roupa do próprio modelo (a bermuda do Birim): peças presas a uma parte do corpo, como o equipamento
         if (MOD.wear) eq.items.push(...MOD.wear(this, rig, look, items, this.equipped));

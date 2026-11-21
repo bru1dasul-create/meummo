@@ -187,8 +187,9 @@
      * livres — a regra "sem arma no personagem").
      */
     /**
-     * O que o jogador tem equipado (o motor manda o `gear` dele: o ícone de cada parte). O Arco de Bambu fica sempre na
-     * mão (pedido do dono, 13/11: "o arco deve permanecer na mão, como um item / arma"); o resto não aparece no corpo.
+     * O que o jogador tem equipado (o motor manda o `gear` dele: o ícone de cada parte). O Arco de Bambu fica sempre com
+     * ele (pedido do dono, 13/11: "o arco deve permanecer na mão, como um item / arma"; desde 21/11 nas costas, e na mão
+     * para atirar: slingshot.js); o resto não aparece no corpo.
      */
     gear(id, gear) {
       const a = this.actors.get(id);
