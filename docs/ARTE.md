@@ -117,6 +117,18 @@
       `shooting_while_changing_sides` pegou os pés cruzando). Precisaria de um passo próprio ("passo e junta").
   - **O lag** que ele sentiu ("loguei com personagem antigo e estava lagado") foi do PC: medido aqui, a main de 19/11 custa
     o mesmo que a de 17/11 com o herói (29–33 quadros por segundo no Chromium daqui); ele cancelou ("tá tudo certo").
+- **A BOCA DA BERMUDA, de novo (21/11, o dono: "o bug do tronco que era a boca da bermuda — mirando de arco e apertando
+  S+D e A+S, mirando pra cima e indo de costas; quando pula também; na esquiva também")** — no ramo, esperando o "pode":
+  - **A causa, medida:** na ordem de desenho o PESCOÇO quase sempre fica entre a pelve e o peito (a chave dele é
+    "a menor das duas, menos 2"). A bermuda, presa na pelve, entrava logo depois dela — antes do peito — e a parte de baixo
+    do peito, que continua por dentro da bermuda, era pintada POR CIMA do cós. Parado de frente não se via; de costas,
+    com o tronco torcido (mirando para trás), pulando ou na esquiva, as costas desciam como um "U" por cima da bermuda.
+    Uma varredura de 56 casos (mira andando em 8 direções × 4 alvos, pulo, esquiva, corrida e andar em 6 direções) achou
+    o defeito em 55; depois da correção, em nenhum.
+  - **A correção** (`birim.js`, `wear`): a bermuda vai depois da ÚLTIMA parte do tronco, seja qual for; e, como agora ela
+    vem por cima do peito, a BOCA dela (o anel do cós visto por cima, quando ele olha para a câmera) não é pintada
+    (`hideInside` da peça: ali aparece o tronco). Sem isso o casco convexo tampava a barriga até a linha dos lados do cós.
+    (O `hideInside` é uma lista corrida de números — x, y, x, y… — como os cascos; com pontos {x, y} o corte não pega.)
 - **O ARCO NA MÃO E A FLECHA ANCESTRAL (20/11, pedido do dono: "o arco encaixa certo na mão do personagem e foca também
   pra resolver a pegada correndo"; os efeitos são os da lista de 19/11 que a [estrutura] repassou)** — na main em 21/11,
   com o "pode" do dono:

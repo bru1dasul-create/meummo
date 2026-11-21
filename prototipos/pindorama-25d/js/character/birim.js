@@ -2122,8 +2122,23 @@
         }
         return cs;
       };
-      const host = hostOf('pelve', 'tronco');
-      out.push({ name: 'bermuda', key: keyAfter(host, 3), host, group: 'bermuda', segs: [{ poly: R.hull(ring(G.waist, 16, true).concat(ring(G.mid, 16, true), ring(G.hip, 12, true), ring(G.low, 10))), circles: R._last, mat: PAL.denim, k: 0, noThin: true, decal: () => shortsTop(R, rig) }] });
+      // (21/11, o dono: "o bug do tronco que era a boca da bermuda" — mirando andando para trás, no pulo e na esquiva. Na
+      // ordem de desenho o pescoço quase sempre fica entre a pelve e o peito, e a bermuda presa na pelve saía ANTES do
+      // peito: a parte de baixo do peito, que continua por dentro da bermuda, aparecia por cima do cós quando o tronco
+      // torcia ou dobrava. Ela vai depois da última parte do tronco, seja qual for)
+      const torso = items.filter((b) => b.group === 'tronco');
+      const host = torso.length ? torso[torso.length - 1] : hostOf('pelve', 'tronco');
+      // e a BOCA da bermuda não é pano: com a câmera vendo o anel do cós por cima, nada dela é pintado dentro dele (ali
+      // aparece o tronco). Sem isto, por cima do tronco, o casco tampava a barriga até a linha dos lados do cós
+      let mouth = null;
+      if (dot(pv.u, R.toCam) > 0.02) {
+        mouth = [];
+        for (let k = 0; k < 36; k++) {
+          const q = R.P(pelvisRing(pv, G.waist, (k / 36) * M.TAU));
+          mouth.push(q.x, q.y);
+        }
+      }
+      out.push({ name: 'bermuda', key: keyAfter(host, 3), host, group: 'bermuda', hideInside: mouth, segs: [{ poly: R.hull(ring(G.waist, 16, true).concat(ring(G.mid, 16, true), ring(G.hip, 12, true), ring(G.low, 10))), circles: R._last, mat: PAL.denim, k: 0, noThin: true, decal: () => shortsTop(R, rig) }] });
     }
 
     // ---- relógio no punho esquerdo: a pulseira (um anel em volta do punho) e a caixa, do lado das costas da mão
