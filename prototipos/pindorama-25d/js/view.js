@@ -277,6 +277,20 @@
           const dir = yaw ?? ch.yaw;
           if (ch.guard && ch.guard.active) G.release(ch, true);
           arm();
+          if (slinging() && ch.attack.stage === 'charging') {
+            // (22/11: a Chuva agora vai no arco, como a Flecha Ancestral — o motor manda a puxada de sempre e o 'volley'
+            // na hora de soltar. Antes a puxada recomeçava aqui e ele soltava 0,32 s depois das flechas subirem: agora
+            // solta já, mirando para o alto)
+            const at = ch.attack;
+            at.volley = true;
+            at.dir = dir;
+            at.aimYaw = dir;
+            at.poseAim = S.poseAimOf(ch, M.angleDiff(ch.yaw, dir));
+            at.releaseRequested = true;
+            ch.faceYaw = dir;
+            ch._pose = null;
+            return;
+          }
           S.start(ch, dir, { attackHeld: true });
           ch.attack.volley = true; // (solta sozinha depois de 0,32 s: slingshot.js)
           ch.faceYaw = dir;

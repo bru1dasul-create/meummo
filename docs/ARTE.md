@@ -31,6 +31,12 @@
     verdade), um pilar ou uma planta do cenário. Pedi um print ao dono se ele vir de novo.
 - **Tiro no fim da esquiva (22/11, o dono):** é do motor (o `startCharge` não olha a rolada; o servidor só recusa o pulo
   rolando). Pedido feito à [estrutura] (veja o `ROADMAP.md`). O desenho da rolada acaba em 0,62 s, antes dos 700 ms.
+- **A Chuva no arco (22/11, da [estrutura]: o Q põe a Chuva no arco como o R põe a Flecha Ancestral):** o motor manda a
+  puxada de sempre (`'sling-pull'`) e o `'volley'` só na hora de soltar. A view recomeçava a puxada no `'volley'` (soltava
+  0,32 s depois das flechas subirem, pegando outra flecha da aljava): agora, puxando, o `'volley'` solta na hora, mirando
+  para o alto (`view.js`). Sem puxada (outro jogador, jeito antigo), continua como era. Fica para a tarefa nova da
+  [arte] (pedido da [estrutura], no `ROADMAP.md`): o visual a cada ponto e a cada degrau da carga, e mirar para o alto já
+  na puxada da Chuva. **Mandar o escopo ao dono antes.**
 - **Próximo da [arte] (o dono escolheu "Passo e junta"):** mirando de lado andando, o corpo vira para a mira e as pernas
   andam de lado, passo e junta, sem cruzar. **Mandar o escopo ao dono antes de começar.**
 
