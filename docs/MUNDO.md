@@ -34,6 +34,36 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (22/11): o Guarapiranga grande, 400 × 320 m, o mapa inteiro aberto (na `main`).** O dono: "pode seguir com o
+  Guarapiranga maior" e escolheu "mapa inteiro primeiro" (abrir tudo de uma vez, com o chão, a água e a mata bonitos,
+  para ele andar e conferir o tamanho e os caminhos; os prédios especiais começam simples; depois vestir região por
+  região). A planta: `docs/referencias/mapa-02-400-planta.jpg`. O que tem (`scripts/gen-guarapiranga.ts`): a represa no
+  meio com a **Ilha do Véu** (a figueira "Árvore do Véu", o véu e a pedra ancestral; só de barco, depois) e a ilhota; a
+  **estrada** contorna pelo norte e pelo leste: a **Comunidade da Represa** (zona segura: casas, a praça do Brejo Maior com
+  a fogueira, os bancos e 3 bancas de fruta), o **campinho**, a **praça em ruínas** com o **coreto** (por ora, a cobertura de
+  pilares), a **Trilha da Cachoeira** até o poço e o **riacho** (passa por baixo da estrada), o **clube náutico em ruínas**
+  (2 prédios, a piscina verde e o píer quebrado), o prédio da **Barragem de 1909** e a **saída para Santo Amaro**, fechada
+  por uma `barreira` (a chegada `chegada-santo-amaro`, (380; 230), já está no mapa). Pelo oeste: o **mirante** (deque com
+  lampiões), o **brejo do sul** (poças), a **Trilha da Margem Sul** e a **Caverna Sagrada** (12 pedras em arco). O **muro
+  da barragem** (caminho de pedra com parapeito) fecha a volta; as duas **comportas** jogam água nos canais da **várzea
+  de caça** (lama, lagoas, jerivás, taboas). Tudo o que existia ficou no mesmo lugar (o mapa só cresceu para a direita e
+  para baixo): a chegada, o Refúgio, a Dona Iracema e o Barqueiro. Saíram só as moitas que fechavam o parque e a árvore
+  caída que trancava a estrada. **9 áreas de caça** (45 bichos, os que já existem: sagui, jararaca, quati, tatu-bola,
+  marimbondo, filhote de boitatá) e o lugar das capivaras da várzea (`capivaras-varzea` + `-descanso`). Os testes
+  (`tests/guarapiranga.test.ts`) conferem que dá para ir a pé a cada lugar, que a trilha do oeste e a estrada do leste
+  chegam cada uma sozinha ao muro (a volta na represa), que a ilha e a água não, as zonas seguras e as áreas de caça.
+  **Regras novas no gerador:** a queda d'água (cachoeira, comporta) cai num poço com a beira de cima reta e na linha das
+  faixas de água (0,5 em 0,5 m), senão sobra fresta de entalar; as pedras da caverna num arco regular, quase do mesmo
+  tamanho (cada uma tapa a fresta das vizinhas); árvore posta à mão também confere a vista (`plantHere`). As contas de
+  água e de distância usam faixas e grades (`fastInside`, `fastDist`): o gerador roda em ~6 s.
+  **O motor do mapa para mapa grande (22/11):** a grade de procura no `world.js` (`_propGrid`, `_propsIn`): as caixas
+  na tela divididas pelo zoom, em casas de 512 px; cada quadro desenha, encaixa os personagens e cuida das imagens só
+  do que está perto da tela (antes, as 4.500 coisas do mapa a cada quadro), e a ordem de desenho é feita pelos pares
+  vizinhos da grade (a mesma ordem de antes, conferida nos dois mapas; 60 → 15 ms ao entrar no mapa). Na água
+  (`agua.js`): o reflexo e o escuro da noite recortam só o pedaço da represa que aparece (`visiblePolys`), as ondinhas
+  só as da tela, e o que está no meio do deque não reflete (o deque tampava). Medido nesta nuvem (sem placa de vídeo):
+  comunidade 10 a 12 ms por quadro, estrada 11, barragem 11, mata do leste ~27 (a mata do Capão: 25 a 31); o Refúgio
+  ~37 a 40, o mais pesado, como já era no mapa pequeno (o reflexo das casas e os personagens).
 - **Agora (19/11): o Mapa 02, pedaço (a), está no jogo, desenhado por mim.** O dono: "quero que você desenhe o mapa e
   coloca no jogo, o arte visual mexe apenas no visual do personagem, você visual do mapa completo não só escopo". O mapa
   `guarapiranga` (120 × 100 m, `scripts/gen-guarapiranga.ts`, `npm run gen:guarapiranga -- --out ...`) é a chegada pela
@@ -331,8 +361,16 @@ Feito pelo [mundo], tudo na `main`:
 - **Luz:** muitas luzes juntas somam e estouram em branco (aconteceu no sol do átrio do shopping). Use raio pequeno
   (~20) e poucas.
 - **Terminal:** `rm` com variável sem aspas é bloqueado. Use `"${PASTA:?}"/arquivo`.
+- **Medir o desenho (22/11):** no jogo compilado, `PD.view.world.forceFlush = true` termina o desenho a cada etapa, e
+  `PD.view.world.timing` dá a média de cada uma (`chao`, `sombra` — a água, o reflexo e a vida no chão —, `objetos`,
+  `personagem`, `cima`) em ms. `?fps` mostra o quadro inteiro. Para saber se a culpa é do MAPA, meça o mesmo lugar com o
+  mapa de antes (`git show HEAD:public/assets/maps-iso/<id>.tmj`, compilar e religar o servidor) e com o novo. O
+  `levar` do painel pede o `id` da entrada atual (muda a cada vez que entra: pegue de `__mundoNovo.me.id`).
 
 ## Esperando outras frentes
+- **[estrutura] (pedido em 22/11):** o bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em
+  (300; 300)) em `data/bichos.json`; quando o mapa de Santo Amaro novo existir, a saída do leste (a barreira sai e a
+  chegada `chegada-santo-amaro` já está lá); NPCs para os lugares novos, quando houver missões.
 - **[estrutura] (feito em 19/11, 987be1e):** a Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`), com o pé em
   (57,5; 50,35) e (49,6; 62,4). O pedaço (a) ainda não tem área de bichos. Os dois usam o boneco de reserva (o desenho
   próprio é da [arte], depois do personagem).
@@ -349,8 +387,10 @@ Feito pelo [mundo], tudo na `main`:
   `mapDepth.ts` (o ponto de cada personagem é `sprite.y - 12`, em `WorldScene.updateDepth`).
 
 ## Próximos passos possíveis (o dono escolhe)
-**PARADO PELO DONO (19/11, fim do dia; "não faça nada, meus tokens estão acabando, apenas salva"). Quando ele pedir
-para seguir, decidimos juntos por qual lado ir primeiro.**
+**22/11: o Guarapiranga grande (etapa 1, o mapa inteiro aberto) está na `main`.** Próximo, quando o dono andar e
+aprovar o tamanho e os caminhos: **vestir região por região** (o clube, a barragem de 1909, o coreto, a caverna e o
+mirante com desenho próprio; a comunidade com cara de comunidade). Depois, o **Capão maior** (para a direita). O
+**mundo aberto** continua parado até ele pedir (precisa da [estrutura]).
 - **A direção nova dele: o mundo ABERTO, sem tela de carregamento** ("vamos focar para ter o mapa como se fosse aberto
   sem carregamento"): andar do Capão até o Guarapiranga sem trocar de mapa. Hoje cada mapa é uma sala no servidor e a
   troca é pela camada `saidas`; mudar isso é da [estrutura] (servidor, motor) e meu (mapas em setores que se emendam).

@@ -674,10 +674,25 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
   primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está
   em `docs/MUNDO.md`, "Próximos passos"
-- [ ] **[mundo]** (PARADO em 19/11 pelo dono, que mandou o escopo novo acima) Os dois mapas maiores (19/11, pedido do dono: "deixa o mapa maior"; escolheu "os dois maiores"):
-  primeiro o Guarapiranga (de 120 × 100 para uns 200 × 160 m, com o parque, o brejo e a orla abertos), depois o Capão
-  (cresce para a direita, com mais rua, casas e mata). Crescer só para a direita e para baixo (a origem não muda: o mapa
-  explorado de quem já joga não desalinha) e avisar a [estrutura] antes de juntar se um NPC ou uma chegada mudar
+- [x] **[mundo]** O Guarapiranga grande, **400 × 320 m, o mapa inteiro aberto** (22/11, pedido do dono: "pode seguir com
+  o Guarapiranga maior"; escolheu "mapa inteiro primeiro"; a planta: `docs/referencias/mapa-02-400-planta.jpg`; na main):
+  a represa no meio com a Ilha do Véu (só de barco, depois); a estrada contorna pelo norte e pelo leste — a Comunidade da
+  Represa (zona segura, com a praça do Brejo Maior, a fogueira e as bancas), o campinho, a praça em ruínas com o coreto,
+  a trilha até a cachoeira e o riacho, o clube náutico em ruínas (o píer quebrado) e o prédio da Barragem de 1909 — até a
+  saída para Santo Amaro (fechada por uma barreira até o mapa de lá ficar pronto; a chegada `chegada-santo-amaro` já
+  está no mapa); pelo oeste, o mirante, o brejo do sul, a trilha da margem sul e a Caverna Sagrada; o muro da barragem
+  fecha a volta (as duas comportas jogam água na várzea de caça, ao sul). O Refúgio, a chegada, a Dona Iracema e o
+  Barqueiro no mesmo lugar (o mapa só cresceu para a direita e para baixo). 9 áreas de caça (45 bichos, os que já
+  existem) e o lugar das capivaras da várzea. Os prédios especiais começam simples. O motor do mapa ganhou a grade de
+  procura (cada quadro olha só o que está perto da tela: o mapa grande ficou tão leve quanto o Capão) e a água recorta
+  só o pedaço da tela
+- [ ] **[mundo]** Vestir cada região do Guarapiranga grande, depois de o dono andar e aprovar o tamanho e os caminhos:
+  o clube, a barragem de 1909, o coreto, a caverna e o mirante com desenho próprio; a comunidade com cara de comunidade
+- [ ] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em
+  data/bichos.json (pedido do [mundo] em 22/11)
+- [ ] **[mundo]** O Capão maior (19/11, "os dois maiores": cresce para a direita, com mais rua, casas e mata). Crescer
+  só para a direita e para baixo (a origem não muda: o mapa explorado de quem já joga não desalinha) e avisar a
+  [estrutura] antes de juntar se um NPC ou uma chegada mudar
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha

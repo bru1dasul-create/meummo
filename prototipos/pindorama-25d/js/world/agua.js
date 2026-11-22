@@ -43,6 +43,69 @@
     }
     return false;
   }
+  /**
+   * O retângulo do chão (cm) que aparece na tela, com `pad` cm de folga: as quatro quinas da tela (z = 0) desprojetadas.
+   * (Num mapa grande — a represa de 400 × 320 m —, só o que está aqui entra nas contas de cada quadro.)
+   */
+  function groundView(world, pad) {
+    const cam = world.cam;
+    const v = world._viewRect(0);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [wx, wy] of [[v.x0, v.y0], [v.x1, v.y0], [v.x0, v.y1], [v.x1, v.y1]]) {
+      const g = cam.groundAt(wx, wy);
+      x0 = Math.min(x0, g.x);
+      y0 = Math.min(y0, g.y);
+      x1 = Math.max(x1, g.x);
+      y1 = Math.max(y1, g.y);
+    }
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  }
+  /** O polígono `pts` cortado pelo retângulo `r` (Sutherland–Hodgman: serve para polígono côncavo também, no recorte). */
+  function clipToRect(pts, r) {
+    let out = pts;
+    const edges = [
+      [(q) => q.x >= r.x0, (a, b) => ({ x: r.x0, y: a.y + ((b.y - a.y) * (r.x0 - a.x)) / (b.x - a.x) })],
+      [(q) => q.x <= r.x1, (a, b) => ({ x: r.x1, y: a.y + ((b.y - a.y) * (r.x1 - a.x)) / (b.x - a.x) })],
+      [(q) => q.y >= r.y0, (a, b) => ({ x: a.x + ((b.x - a.x) * (r.y0 - a.y)) / (b.y - a.y), y: r.y0 })],
+      [(q) => q.y <= r.y1, (a, b) => ({ x: a.x + ((b.x - a.x) * (r.y1 - a.y)) / (b.y - a.y), y: r.y1 })],
+    ];
+    for (const [inside, cross] of edges) {
+      if (!out.length) break;
+      const src = out;
+      out = [];
+      for (let i = 0; i < src.length; i++) {
+        const a = src[(i + src.length - 1) % src.length], b = src[i];
+        const ia = inside(a), ib = inside(b);
+        if (ib) {
+          if (!ia) out.push(cross(a, b));
+          out.push(b);
+        } else if (ia) out.push(cross(a, b));
+      }
+    }
+    return out;
+  }
+  /**
+   * A água que aparece na tela, em polígonos do chão (cm): os de fora ficam de fora e os grandes saem cortados no
+   * pedaço da tela (o recorte com a represa inteira, de ~1.000 pontos, custava 10 ms por quadro). Guardado enquanto a
+   * câmera não mexe.
+   */
+  function visiblePolys(world, R) {
+    const cam = world.cam;
+    const key = cam.viewX + '|' + cam.viewY + '|' + cam.zoom + '|' + cam.viewW + '|' + cam.viewH;
+    if (R._visKey === key) return R._vis;
+    const g = groundView(world, 200);
+    const out = [];
+    R.polys.forEach((pts, i) => {
+      const b = R.boxes[i];
+      if (b.x1 < g.x0 || b.x0 > g.x1 || b.y1 < g.y0 || b.y0 > g.y1) return;
+      const inside = b.x0 >= g.x0 && b.x1 <= g.x1 && b.y0 >= g.y0 && b.y1 <= g.y1;
+      const c = inside ? pts : clipToRect(pts, g);
+      if (c.length > 2) out.push(c);
+    });
+    R._visKey = key;
+    R._vis = out;
+    return out;
+  }
   function boxOf(sh) {
     if (sh.kind === 'rect') return { x0: sh.x0, y0: sh.y0, x1: sh.x1, y1: sh.y1 };
     if (sh.kind === 'ellipse') return { x0: sh.cx - sh.rx, y0: sh.cy - sh.ry, x1: sh.cx + sh.rx, y1: sh.cy + sh.ry };
@@ -125,10 +188,12 @@
     const face = Math.atan2(ws.y, ws.x);
     const z = cam.zoom;
     const push = 30 + 40 * Math.min(1.2, wind.strength);
+    const g = groundView(world, 200);
     ctx.save();
     ctx.lineCap = 'round';
     // as ondinhas
     for (const s of W.seeds) {
+      if (s.x < g.x0 || s.x > g.x1 || s.y < g.y0 || s.y > g.y1) continue;
       const ph = (t / s.per + s.ph) % 1;
       const d = (ph - 0.5) * push;
       const q = cam.p({ x: s.x + wx * d, y: s.y + wy * d, z: 0 });
@@ -152,6 +217,7 @@
     }
     // a espuma da margem indo e voltando
     for (const s of W.shore) {
+      if (s.x < g.x0 || s.x > g.x1 || s.y < g.y0 || s.y > g.y1) continue;
       const ph = (t / s.per + s.ph) % 1;
       const out = Math.sin(M.TAU * ph);
       const q = cam.p({ x: s.x + s.nx * (6 + 10 * out), y: s.y + s.ny * (6 + 10 * out), z: 0 });
@@ -193,14 +259,18 @@
   }
   /**
    * Quem reflete: o que tem água logo à frente do pé (para o lado da câmera, até ~4 m) ou embaixo dele. Os móveis de
-   * dentro de casa não. Feito uma vez por mapa.
+   * dentro de casa não. Água embaixo do deque não conta: o deque é desenhado por cima do reflexo, então o banco, a
+   * fogueira e o caixote do meio do deque não refletem (o reflexo deles ia todo para baixo das tábuas); o lampião da
+   * beirada reflete na água da frente. Feito uma vez por mapa.
    */
   function reflectables(world) {
     if (world._refl) return world._refl;
     const map = world.map || {};
-    const R = (world._refl = { props: [], polys: waterPolys(map) });
+    const polys = waterPolys(map);
+    const R = (world._refl = { props: [], polys, boxes: polys.map((pts) => boxOf({ kind: 'poly', pts })) });
     if (!R.polys.length || !PD.chao || !PD.chao.under) return R;
-    const wet = (x, y) => PD.chao.under(map, x, y, Infinity) === 'agua';
+    const decks = (map.flats || []).filter((f) => f.kind === 'deque');
+    const wet = (x, y) => !decks.some((d) => x > d.x0 && x < d.x1 && y > d.y0 && y < d.y1) && PD.chao.under(map, x, y, Infinity) === 'agua';
     for (const o of world.props || []) {
       // (o aguapé boia: o reflexo dele cairia como uma cópia fantasma logo embaixo)
       if (o.house || !o.fp || (o.d && o.d.kind === 'aguape')) continue;
@@ -284,7 +354,7 @@
     }
     if (!list.length) return;
     const clip = new Path2D();
-    for (const poly of R.polys) {
+    for (const poly of visiblePolys(world, R)) {
       poly.forEach((q, i) => {
         const p = cam.p({ x: q.x, y: q.y, z: 0 });
         if (i) clip.lineTo(p.x, p.y);
@@ -305,7 +375,9 @@
    * `toScreen(x, y)`: cm do chão → px da tela. Sem água no mapa, null.
    */
   function screenWater(world, toScreen, Q) {
-    const polys = (world._refl && world._refl.polys) || waterPolys(world.map || {});
+    const R = reflectables(world);
+    if (!R.polys.length) return null;
+    const polys = visiblePolys(world, R);
     if (!polys.length) return null;
     const path = new Path2D();
     for (const poly of polys) {

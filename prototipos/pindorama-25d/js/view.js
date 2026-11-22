@@ -1078,7 +1078,9 @@
       r.globalCompositeOperation = 'destination-out';
       r.globalAlpha = 1;
       const vx = this.cam.viewX, vy = this.cam.viewY;
-      const occluders = this.world.flats ? this.world.flats.concat(this.world.props || []) : this.world.props || [];
+      // (as coisas que podem aparecer na tela, que o mundo separou neste quadro; sem elas, todas)
+      const seen = this.world.visible || this.world.props || [];
+      const occluders = this.world.flats ? this.world.flats.concat(seen) : seen;
       for (const o of occluders) {
         const sp = o.sprite;
         if (o.house || !sp || !sp.c || !o._zoomKey || o.spriteKey !== o._zoomKey()) continue;
