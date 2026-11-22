@@ -850,7 +850,15 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
 - [ ] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
-  dados chegam pelo motor (veja o item acima). Pedido mandado à [arte]
+  dados chegam pelo motor (veja o item acima). Pedido mandado à [arte]. Escopo aprovado pelo dono em 22/11 ("pode, coloca
+  sensação de impactos também por nível"), em 3 etapas: **1) os degraus da carga — FEITA em 22/11** (o anel com as
+  marcas dos degraus, a cor de cada um e o pulso quando sobe; a flecha no arco com o brilho por degrau e o clarão; o tiro
+  e o impacto menores no fraco e completos no forte, com a pancada no forte; a Chuva já mira para o alto na puxada);
+  2) a Chuva com cara própria em cada ponto; 3) a Ancestral com cara própria em cada ponto (veja `docs/ARTE.md`)
+- [ ] **[estrutura]** Pedido da [arte] (22/11, junto com o "sensação de impactos também por nível" do dono): o tremor de
+  tela, a pausa no impacto e o som crescendo com os pontos e o degrau nas habilidades — a Chuva caindo e a Flecha
+  Ancestral parando/explodindo (hoje o tremor e a pausa só valem no acerto comum e vêm desligados no padrão). O desenho
+  do impacto (clarão, onda de choque, terra espirrando) já cresce com o degrau, do lado da [arte]
 - [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
   anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
   com ele. Protocolo 42 (`npc_walk`, `talk`). **Desligado de novo na Xiovanna a pedido do dono ("por enquanto deixa ela parada")**; funcionou ligado (15/11, com o passo de andar

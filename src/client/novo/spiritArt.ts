@@ -33,6 +33,21 @@ export interface SpiritEndLook {
   y: number;
   r: number;
   start: number;
+  /** Os pontos de quem atirou e o degrau da puxada (1 fraco, 2 médio, 3 forte): o fim cresce com eles. */
+  rank?: number;
+  level?: number;
+}
+
+/**
+ * O quanto o degrau da puxada acende o efeito (22/11, o dono: "um brilho em cada degrau" e "sensação de impactos também
+ * por nível"): fraco ~0,6, médio ~0,8, forte 1. Sem degrau (outro jogador, jeito antigo), o completo.
+ */
+export function levelPower(level: number | undefined): number {
+  return level === 1 ? 0.62 : level === 2 ? 0.82 : 1;
+}
+/** O mesmo degrau de 0 (fraco) a 1 (forte; ou sem degrau): para o que tem de mudar bem à vista entre um e outro. */
+function levelStep(level: number | undefined): number {
+  return level === 1 ? 0 : level === 2 ? 0.5 : 1;
 }
 
 /**
@@ -205,7 +220,10 @@ function spiritBody(ctx: CanvasRenderingContext2D, tail: Point, tip: Point, m: n
  * ponto 0,3 m à frente na direção do voo (dá a direção e quantos px tem cada metro do caminho) e `m` quantos px tem um
  * metro de altura ali.
  */
-export function drawSpiritArrow(ctx: CanvasRenderingContext2D, at: Point, shadow: Point, ahead: Point, m: number, now: number): void {
+export function drawSpiritArrow(ctx: CanvasRenderingContext2D, at: Point, shadow: Point, ahead: Point, m: number, now: number, look?: { rank?: number; level?: number }): void {
+  // o degrau da puxada: no fraco a flecha sai menor, com o rastro curto e apagado; no forte, completa
+  const lk = levelPower(look?.level);
+  const lt = levelStep(look?.level);
   const dx = ahead.x - at.x;
   const dy = ahead.y - at.y;
   const d = Math.hypot(dx, dy);
@@ -215,22 +233,23 @@ export function drawSpiritArrow(ctx: CanvasRenderingContext2D, at: Point, shadow
   const ny = ux;
   // px por metro do caminho (voando para a câmera, o caminho encurta na tela)
   const per = d > 0.01 ? d / 0.3 : m;
-  const L = Math.max(22, m * 1.08);
+  const L = Math.max(22, m * 1.08) * (0.86 + 0.14 * lk);
   const tip = { x: at.x + ux * L * 0.5, y: at.y + uy * L * 0.5 };
   const tail = { x: at.x - ux * L * 0.5, y: at.y - uy * L * 0.5 };
-  const w = Math.max(3.5, m * 0.13);
+  const w = Math.max(3.5, m * 0.13) * (0.62 + 0.38 * lt);
   const a = Math.atan2(uy, ux);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   // 1) a luz que ela joga no chão, embaixo
-  glowGround(ctx, shadow, m * 0.8, MINT, 0.26);
-  // 2) o rastro: a fita de luz que afina para trás (uns 2,4 m), com o miolo mais claro
-  const back = Math.min(per * 2.4, m * 4.2);
+  glowGround(ctx, shadow, m * 0.8, MINT, 0.26 * lk);
+  // 2) o rastro: a fita de luz que afina para trás (uns 2,4 m no forte), com o miolo mais claro
+  const back = Math.min(per * 2.4, m * 4.2) * (0.32 + 0.68 * lt);
   const end = { x: at.x - ux * back, y: at.y - uy * back };
-  for (const [width, c, alpha] of [
+  for (const [width, c, alpha0] of [
     [w, MINT, 0.5],
     [w * 0.42, PALE, 0.75],
   ] as const) {
+    const alpha = alpha0 * (0.42 + 0.58 * lt);
     const g = ctx.createLinearGradient(end.x, end.y, at.x, at.y);
     g.addColorStop(0, rgba(c, 0));
     g.addColorStop(0.65, rgba(c, alpha * 0.45));
@@ -244,7 +263,7 @@ export function drawSpiritArrow(ctx: CanvasRenderingContext2D, at: Point, shadow
     ctx.fill();
   }
   // 3) a espiral do espírito: dois fios enrolando no rastro, girando (o que passa na frente brilha mais)
-  const spiralLen = Math.min(per * 1.8, m * 3.2);
+  const spiralLen = Math.min(per * 1.8, m * 3.2) * (0.35 + 0.65 * lt);
   ctx.lineCap = 'round';
   for (let strand = 0; strand < 2; strand++) {
     let prev: Point | null = null;
@@ -267,11 +286,12 @@ export function drawSpiritArrow(ctx: CanvasRenderingContext2D, at: Point, shadow
     }
   }
   // 4) as luzinhas que ela vai largando para trás (sobem um pouco e apagam)
-  const shed = Math.min(per * 2.2, m * 3.8);
-  for (let j = 0; j < 8; j++) {
-    const cycle = now / 460 + j / 8;
+  const shed = Math.min(per * 2.2, m * 3.8) * (0.4 + 0.6 * lt);
+  const motes = Math.round(2 + 6 * lt);
+  for (let j = 0; j < motes; j++) {
+    const cycle = now / 460 + j / motes;
     const k = cycle % 1;
-    const seed = Math.floor(cycle) * 8 + j;
+    const seed = Math.floor(cycle) * motes + j;
     const side = (hash(seed) - 0.5) * 2 * w * (0.6 + k * 1.4);
     const p = { x: at.x - ux * k * shed + nx * side, y: at.y - uy * k * shed + ny * side - k * m * 0.18 };
     ctx.fillStyle = rgba(PALE, (1 - k) * 0.9);
@@ -285,9 +305,9 @@ export function drawSpiritArrow(ctx: CanvasRenderingContext2D, at: Point, shadow
   ctx.shadowBlur = 0;
   // 6) o clarão na ponta, com a estrelinha girando
   ctx.globalCompositeOperation = 'lighter';
-  glowCircle(ctx, tip, m * 0.3, PALE, 0.7);
+  glowCircle(ctx, tip, m * 0.3 * (0.7 + 0.3 * lk), PALE, 0.7 * (0.6 + 0.4 * lk));
   ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-  star(ctx, tip, Math.max(4, m * 0.15), now / 260);
+  star(ctx, tip, Math.max(4, m * 0.15 * (0.75 + 0.25 * lk)), now / 260);
   ctx.restore();
 }
 
@@ -612,14 +632,62 @@ export function paintSpiritEnd(ctx: CanvasRenderingContext2D, end: SpiritEndLook
   const age = now - end.start;
   if (age < 0) return;
   const m = meter(end.x, end.y);
+  const lk = levelPower(end.level);
+  const lt = levelStep(end.level);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   // a marca no chão primeiro (o efeito do fim passa por cima dela)
   groundMark(ctx, end, age, now, screen, m);
+  ctx.globalAlpha = 0.42 + 0.58 * lt;
   if (end.r > 0) {
     if (age < BURST_MS) burst(ctx, end, age, screen, m);
   } else if (age < FADE_MS) dissolve(ctx, end, age / FADE_MS, screen, m);
+  ctx.globalAlpha = 1;
+  impactHit(ctx, end, age, screen, m, lk);
   ctx.restore();
+}
+
+/**
+ * A pancada de onde ela parou (22/11, o dono: "sensação de impactos também por nível"): nos primeiros instantes, um
+ * clarão no meio e uma onda de choque rente ao chão, rápida — maiores e mais fortes quanto maior o degrau (no forte, uma
+ * segunda onda e a terra que espirra).
+ */
+function impactHit(ctx: CanvasRenderingContext2D, end: SpiritEndLook, age: number, screen: Screen, m: number, lk: number): void {
+  const HIT_MS = 260 + 160 * lk;
+  if (age >= HIT_MS) return;
+  const k = age / HIT_MS;
+  const c = screen(end.x, end.y, FLIGHT_Z * (1 - k));
+  // o clarão no meio (só no começo)
+  const flash = 1 - clamp01(age / (90 + 70 * lk));
+  if (flash > 0) glowCircle(ctx, c, m * (0.35 + 0.55 * lk) * (0.7 + 0.5 * (1 - flash)), PALE, 0.9 * flash * lk);
+  // a onda de choque no chão (abre rápido e apaga)
+  const reach = (0.7 + 1.1 * lk) * easeOut(k);
+  groundPath(ctx, end.x, end.y, reach, screen, 32);
+  ctx.strokeStyle = rgba(PALE, 0.85 * (1 - k) * lk);
+  ctx.lineWidth = Math.max(1.5, m * 0.07 * (1 - k) * (0.6 + 0.4 * lk));
+  ctx.stroke();
+  if (lk >= 1) {
+    // forte: a segunda onda, logo atrás, e a terra que espirra para os lados
+    const k2 = clamp01((age - 70) / (HIT_MS - 70));
+    if (k2 > 0 && k2 < 1) {
+      groundPath(ctx, end.x, end.y, 1.5 * reach * easeOut(k2), screen, 32);
+      ctx.strokeStyle = rgba(MINT, 0.6 * (1 - k2));
+      ctx.lineWidth = Math.max(1.2, m * 0.04 * (1 - k2));
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 9; i++) {
+      const ang = (i / 9) * TAU + hash(i + 11) * 0.6;
+      const d = (0.25 + 0.9 * hash(i + 3)) * easeOut(k);
+      const h = Math.sin(Math.PI * clamp01(k * 1.2)) * (0.12 + 0.25 * hash(i + 7));
+      const p = screen(end.x + Math.cos(ang) * d, end.y + Math.sin(ang) * d, h);
+      ctx.fillStyle = `rgba(92, 70, 44, ${(0.8 * (1 - k)).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1.2, m * 0.028 * (1 - k * 0.5)), 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'lighter';
+  }
 }
 
 // ------------------------------------------------------------------------------------------------ a marca

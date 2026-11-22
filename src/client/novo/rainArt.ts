@@ -31,6 +31,8 @@ export interface RainLook {
   y: number;
   r: number;
   rank: number;
+  /** O degrau da puxada (1 fraco, 2 médio, 3 forte): o rastro e o impacto crescem com ele. Sem ele, o completo. */
+  level?: number;
   kind: string;
   start: number;
   land: number;
@@ -110,6 +112,11 @@ const SPIRIT: Tier = {
 };
 /** O dourado da HUD (a mira é igual para todo mundo). */
 const HUD: RGB = [255, 210, 62];
+
+/** O quanto o degrau da puxada acende a chuva (fraco ~0,6, médio ~0,8, forte 1; sem degrau, o completo). */
+function levelPower(level: number | undefined): number {
+  return level === 1 ? 0.62 : level === 2 ? 0.82 : 1;
+}
 
 /** A fase pelos pontos da habilidade. */
 export function rainTier(rank: number): 'madeira' | 'ouro' | 'espirito' {
@@ -392,12 +399,14 @@ export function drawRainGround(ctx: CanvasRenderingContext2D, rain: RainLook, no
       }
     }
   }
-  // o impacto
+  // o impacto (22/11, o dono: "sensação de impactos também por nível" — no fraco ele é menor e mais apagado, no forte
+  // vem a pancada: o clarão no meio, a onda de choque rápida e a terra espirrando)
   const since = now - rain.land;
+  const lk = levelPower(rain.level);
   if (since >= 0 && since < IMPACT_MS) {
     const k = since / IMPACT_MS;
-    const out = 1 - k;
-    const grow = rain.rank >= 5 ? 0.42 : rain.rank >= 3 ? 0.3 : 0.22;
+    const out = (1 - k) * (0.45 + 0.55 * (lk - 0.62) / 0.38);
+    const grow = (rain.rank >= 5 ? 0.42 : rain.rank >= 3 ? 0.3 : 0.22) * (0.7 + 0.3 * lk);
     // mais ênfase (pedido do dono, 15/11): o clarão no chão em todas as fases (mais forte no espírito), os riscos da
     // pancada saindo do meio e uma segunda onda, mais larga, logo atrás da primeira
     groundPath(ctx, rain.x, rain.y, rain.r * (1 + k * grow), screen);
@@ -405,8 +414,9 @@ export function drawRainGround(ctx: CanvasRenderingContext2D, rain: RainLook, no
     ctx.fill();
     ctx.lineCap = 'round';
     ctx.lineWidth = Math.max(1.5, m * 0.035);
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * Math.PI * 2 + i * 0.37;
+    const rays = Math.round(8 + 6 * lk);
+    for (let i = 0; i < rays; i++) {
+      const a = (i / rays) * Math.PI * 2 + i * 0.37;
       const r0 = rain.r * (0.25 + 0.75 * k);
       const r1 = rain.r * (0.5 + 0.8 * k);
       const p0 = screen(rain.x + Math.cos(a) * r0, rain.y + Math.sin(a) * r0);
@@ -417,7 +427,7 @@ export function drawRainGround(ctx: CanvasRenderingContext2D, rain: RainLook, no
       ctx.lineTo(p1.x, p1.y);
       ctx.stroke();
     }
-    if (k > 0.12) {
+    if (k > 0.12 && lk > 0.7) {
       const k2 = (k - 0.12) / 0.88;
       groundPath(ctx, rain.x, rain.y, rain.r * (1 + k2 * grow * 2.1), screen);
       ctx.lineWidth = 2;
@@ -433,6 +443,7 @@ export function drawRainGround(ctx: CanvasRenderingContext2D, rain: RainLook, no
     ctx.strokeStyle = rgba(tier.ring, 0.85 * out);
     ctx.stroke();
     ctx.shadowBlur = 0;
+    if (lk >= 1) slam(ctx, rain, since, tier, screen, m);
     const shown = Math.min(rain.spots.length, 14);
     for (let i = 0; i < shown; i++) {
       const spot = rain.spots[i]!;
@@ -472,9 +483,45 @@ export function drawRainGround(ctx: CanvasRenderingContext2D, rain: RainLook, no
   ctx.restore();
 }
 
+/** A pancada da chuva no degrau forte: o clarão no meio, uma onda de choque rápida além do círculo e terra espirrando. */
+function slam(ctx: CanvasRenderingContext2D, rain: RainLook, since: number, tier: Tier, screen: Screen, m: number): void {
+  const HIT_MS = 380;
+  if (since >= HIT_MS) return;
+  const k = since / HIT_MS;
+  const c = screen(rain.x, rain.y, 0.3 * (1 - k));
+  const flash = 1 - clamp01(since / 150);
+  if (flash > 0) {
+    const r = m * (0.6 + rain.r * 0.45) * (0.8 + 0.4 * (1 - flash));
+    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+    g.addColorStop(0, `rgba(255, 252, 238, ${(0.85 * flash).toFixed(3)})`);
+    g.addColorStop(0.45, rgba(tier.ring, 0.45 * flash));
+    g.addColorStop(1, rgba(tier.ring, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const ease = 1 - Math.pow(1 - k, 3);
+  groundPath(ctx, rain.x, rain.y, rain.r * (1 + 0.9 * ease), screen);
+  ctx.strokeStyle = `rgba(255, 250, 230, ${(0.75 * (1 - k)).toFixed(3)})`;
+  ctx.lineWidth = Math.max(1.5, m * 0.06 * (1 - k));
+  ctx.stroke();
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + i * 0.61;
+    const d = rain.r * (0.55 + 0.7 * (((i * 7919) % 13) / 13)) * ease;
+    const h = Math.sin(Math.PI * clamp01(k * 1.15)) * (0.12 + 0.03 * (i % 4));
+    const p = screen(rain.x + Math.cos(a) * d, rain.y + Math.sin(a) * d, h);
+    ctx.fillStyle = `rgba(96, 72, 44, ${(0.8 * (1 - k)).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(1.2, m * 0.026 * (1 - k * 0.5)), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 /** No ar: subindo de quem atirou, caindo no círculo (com a sombra crescendo no chão) e cravadas no chão. */
 export function drawRainAir(ctx: CanvasRenderingContext2D, rain: RainLook, now: number, screen: Screen, meter: Meter): void {
   const tier = tierOf(rain.rank);
+  const lk = levelPower(rain.level);
   const total = Math.max(1, rain.land - rain.start);
   const rise = Math.max(160, total * 0.5);
   const isStone = rain.kind === 'pedra';
@@ -494,7 +541,7 @@ export function drawRainAir(ctx: CanvasRenderingContext2D, rain: RainLook, now: 
         streak(ctx, screen(sx, sy, z - 1.2), screen(sx, sy, z), tier, stoneSize * 1.3, 1);
         stone(ctx, screen(sx, sy, z), stoneSize, tier);
       } else {
-        trail(ctx, screen(sx, sy, z - 1.4), screen(sx, sy, z), tier, width, 1);
+        trail(ctx, screen(sx, sy, z - 1.4), screen(sx, sy, z), tier, width, lk);
         arrow(ctx, screen(sx, sy, z), screen(sx, sy, z + 0.8), tier, width);
       }
       ctx.globalAlpha = 1;
@@ -517,7 +564,7 @@ export function drawRainAir(ctx: CanvasRenderingContext2D, rain: RainLook, now: 
         streak(ctx, screen(gx + spot.lean * 0.2, gy, z + 1.5), screen(gx, gy, z), tier, stoneSize * 1.3, 0.6 + 0.4 * fall);
         stone(ctx, screen(gx, gy, z), stoneSize, tier);
       } else {
-        trail(ctx, screen(tailX + spot.lean * 0.3, gy, z + 0.85 + 1.6), screen(tailX, gy, z + 0.85), tier, width, fall);
+        trail(ctx, screen(tailX + spot.lean * 0.3, gy, z + 0.85 + 1.6), screen(tailX, gy, z + 0.85), tier, width, fall * lk);
         arrow(ctx, screen(tailX, gy, z + 0.85), screen(gx, gy, z), tier, width);
       }
     } else if (now >= landAt && now < landAt + RAIN_LINGER_MS) {

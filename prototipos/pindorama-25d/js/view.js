@@ -209,13 +209,21 @@
      * flecha do arco e ela acompanhando"). Quando ela sai (null), a flecha da mão segura o brilho um instante, até o tiro
      * deixar o arco (slingshot.js desenha).
      */
-    armed(id, kind) {
+    armed(id, kind, rank, level) {
       const a = this.actors.get(id);
       if (!a || !a.ch || a.creature) return;
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const look = a.ch.look;
       if (kind) {
-        a.ch.look.arrowKind = kind;
+        // (22/11: 'ancestral' ou 'chuva', os pontos da habilidade e, puxando, o degrau — 1 fraco, 2 médio, 3 forte. O
+        // brilho da flecha cresce a cada degrau e dá um clarão quando ele sobe: slingshot.js lê `arrowLevel`/`arrowLevelAt`)
+        look.arrowKind = kind;
+        if (rank >= 1) look.arrowRank = rank;
+        const lv = level >= 1 ? Math.min(3, Math.round(level)) : 0;
+        if (lv > (look.arrowLevel || 0)) look.arrowLevelAt = now;
+        look.arrowLevel = lv;
         a.armedOff = 0;
-      } else if (a.ch.look.arrowKind) a.armedOff = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 250;
+      } else if (look.arrowKind) a.armedOff = now + 250;
     }
 
     _personAction(a, kind, yaw) {
@@ -249,6 +257,8 @@
           if (ch.guard && ch.guard.active) G.release(ch, true);
           arm();
           S.start(ch, yaw ?? ch.yaw, { attackHeld: true });
+          // com a Chuva no arco, a puxada já mira para o alto (22/11; antes só virava na hora de soltar)
+          if (ch.look.arrowKind === 'chuva') ch.attack.volleyAim = true;
           if (yaw !== undefined) ch.faceYaw = yaw;
           ch._pose = null;
           return;
@@ -629,7 +639,10 @@
         a.eyeGlow = glow;
         if (a.armedOff && t >= a.armedOff) {
           a.armedOff = 0;
-          if (a.ch) a.ch.look.arrowKind = null;
+          if (a.ch) {
+            a.ch.look.arrowKind = null;
+            a.ch.look.arrowLevel = 0;
+          }
         }
       }
       // quem a câmera segue é sempre gente (a PD.World lê o passo e o pulo dele)

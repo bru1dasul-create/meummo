@@ -50,6 +50,23 @@
   quadros para 0%; no jogo, o modo fica estável do começo da puxada ao fim do tiro. Vale para todos (Birim, herói, outros
   jogadores na tela).
 
+- **Os níveis da Chuva e da Ancestral (22/11, escopo aprovado: "pode, coloca sensação de impactos também por nível"), em
+  3 etapas. Etapa 1, os degraus da carga (1 fraco, 2 médio, 3 forte; o motor manda `armed(id, tipo, pontos, degrau)`,
+  `paintChargeRing(..., degrau)`, o `look` no `drawProjectile` e `level` na chuva e no fim da Ancestral):**
+  - o anel (`chargeArt.ts`): com a habilidade no arco, as marcas dos degraus na metade e no cheio, o arco na cor do degrau
+    (branco, dourado, verde do espírito) e um pulso de luz quando ele sobe; sem habilidade, o de sempre. (O degrau vem
+    como argumento a mais — `...extra` —, para casar com o tipo do `combat.ts` sem mexer nele; o mesmo no `drawProjectile`)
+  - a flecha no arco (`slingshot.js`, `specialOf`/`specialArrowGlow`/`specialBowGlow`): a cor pela habilidade e pelos
+    pontos (a Ancestral e a Chuva com 5 = espírito; a Chuva com 3 e 4 = dourada, flecha dourada; com 1 e 2 = madeira, um
+    brilho morno fraco), mais forte a cada degrau e um clarão com anel quando ele sobe (`look.arrowLevelAt`, da view)
+  - o tiro e o impacto (`spiritArt.ts`, `rainArt.ts`): no fraco a Ancestral sai com o rastro curto e apagado, no forte
+    completa; o fim e o impacto da Chuva crescem com o degrau, e no forte vem a pancada (clarão no meio, onda de choque e
+    terra espirrando — `impactHit`, `slam`). O tremor de tela e a pausa no impacto são do motor: pedido à [estrutura]
+  - a Chuva no arco já mira para o alto na puxada (`attack.volleyAim`, da view; a pose usa `volley || volleyAim`)
+  - conferido: a prancha (pasta de rascunho `niveis/`: `prancha.ts` com o esbuild, `arco.cjs`) e no jogo, com a Chuva
+    em 3 pontos (dados pela janela K) e a Ancestral em 5 (`jogo-niveis.cjs`)
+  - **próximo: etapa 2** (a Chuva com cara própria em cada ponto, 1 a 5) e **etapa 3** (a Ancestral), uma de cada vez
+
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
   cheia**, a da rodada 4b (o dono pediu de volta em 19/11, pela [estrutura]: "sem barba ficou pior"; os defeitos de ângulo

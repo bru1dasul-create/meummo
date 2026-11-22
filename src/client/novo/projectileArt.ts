@@ -102,9 +102,11 @@ function arrow(ctx: CanvasRenderingContext2D, tail: Point, tip: Point, px: numbe
  * Um tiro voando. `at` é o ponto do tiro na tela (na altura do voo), `shadow` o pé dele no chão, `ahead` um ponto um
  * pouco à frente na direção do voo (para virar a flecha) e `m` quantos px tem um metro ali.
  */
-export function drawProjectile(ctx: CanvasRenderingContext2D, kind: string, at: Point, shadow: Point, ahead: Point, m: number): boolean {
+// (o combate passa, depois dos de sempre, o `look` da habilidade: { rank, level } — os pontos e o degrau da puxada)
+export function drawProjectile(ctx: CanvasRenderingContext2D, kind: string, at: Point, shadow: Point, ahead: Point, m: number, ...extra: unknown[]): boolean {
   if (kind === 'ancestral') {
-    drawSpiritArrow(ctx, at, shadow, ahead, m, performance.now());
+    const look = extra[0] as { rank?: number; level?: number } | undefined;
+    drawSpiritArrow(ctx, at, shadow, ahead, m, performance.now(), look);
     return true;
   }
   if (kind !== 'flecha') return false;

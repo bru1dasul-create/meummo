@@ -26,6 +26,12 @@
   const spiritShaft = { base: '#d4ffe9', shade: '#62c493', light: '#ffffff' };
   const spiritFeather = { base: '#8cffbe', shade: '#2f8f5f', light: '#e8fff4' };
   const spiritPoint = { base: '#f4fff9', shade: '#7fd9aa', light: '#ffffff' };
+  // a flecha da Chuva com 3 e 4 pontos (dourada, como as que caem — rainArt.ts)
+  const goldShaft = { base: '#e8b84e', shade: '#8f6420', light: '#fff2b0' };
+  const goldFeather = { base: '#ffd23e', shade: '#a77a12', light: '#fff8dc' };
+  const goldPoint = { base: '#fff2b0', shade: '#c79a3a', light: '#ffffff' };
+  const SPIRIT_MATS = { shaft: spiritShaft, feather: spiritFeather, point: spiritPoint, nock: spiritPoint };
+  const GOLD_MATS = { shaft: goldShaft, feather: goldFeather, point: goldPoint, nock: goldShaft };
   const MINT = '140, 255, 190', PALE = '228, 255, 240';
   PD.equipment.define({ id: 'arco', nome: 'Arco de Bambu', slot: 'maoE', ocupa: ['maoE', 'maoD'], material: bamboo,
     pecas: [{ osso: 'mao', lado: 'E', esferas: [{ a: 6, d: 0, s: 0, r: 1.6 }] }] });
@@ -428,9 +434,10 @@
     }
     const charging = a.stage === 'charging';
     const blend = smoother(a.age / RULES.minDraw) * (charging ? 1 : 1 - smoother((a.t - 0.11) / (RULES.recover - 0.11)));
-    const up = a.volley ? 1 : 0;
-    // (a Chuva de Flechas solta em 0,32 s: a pose dela já é a da puxada cheia, mirando para o alto)
-    const draw = up && bow ? 1 : M.lerp(0.45, 1, a.power || 0);
+    const up = a.volley || a.volleyAim ? 1 : 0;
+    // (a Chuva de Flechas do jeito antigo solta em 0,32 s: a pose dela já é a da puxada cheia, mirando para o alto. Com a
+    // Chuva no arco — `volleyAim`, da view — a puxada é a de sempre, só que para o alto)
+    const draw = a.volley && bow ? 1 : M.lerp(0.45, 1, a.power || 0);
     const aim = a.poseAim;
     const baseRight = { ...parts.hands[1].local };
     const basePole = parts.hands[1].poleLocal.slice();
@@ -616,15 +623,17 @@
   const quiverWood = { base: '#9a7535', shade: '#563f19', light: '#c9a862' };
   const quiverDark = { base: '#2a1d12', shade: '#120c07', light: '#4a3522' };
   /** Uma flecha solta (na aljava ou na mão): a haste, as penas perto do entalhe, o entalhe e a ponta. */
-  function arrowSegments(segment, nockP, dir, len, side, spirit, name, withPoint) {
+  /** `mats`: os materiais da flecha especial (SPIRIT_MATS, GOLD_MATS; `true` = o espírito) ou nada (a flecha comum). */
+  function arrowSegments(segment, nockP, dir, len, side, mats, name, withPoint) {
+    const ms = mats === true ? SPIRIT_MATS : mats || null;
     const tip = M.add(nockP, M.scale(dir, len));
-    segment(nockP, tip, 0.6, 0.6, spirit ? spiritShaft : shaft, name + 'haste');
+    segment(nockP, tip, 0.6, 0.6, ms ? ms.shaft : shaft, name + 'haste');
     for (const [o, mat] of [[1, feather], [-1, featherW]]) {
       const a0 = M.add(nockP, M.scale(dir, 2.5)), a1 = M.add(nockP, M.scale(dir, 11));
-      segment(M.add(a0, M.scale(side, o * 1.4)), M.add(a1, M.scale(side, o * 2.2)), 0.5, 1.3, spirit ? spiritFeather : mat, name + 'pena' + o, 0.22);
+      segment(M.add(a0, M.scale(side, o * 1.4)), M.add(a1, M.scale(side, o * 2.2)), 0.5, 1.3, ms ? ms.feather : mat, name + 'pena' + o, 0.22);
     }
-    segment(nockP, nockP, 0.75, 0.75, spirit ? spiritPoint : leather, name + 'entalhe', 0.2);
-    if (withPoint) segment(tip, M.add(tip, M.scale(dir, 5)), 1.5, 0.25, spirit ? spiritPoint : point, name + 'ponta');
+    segment(nockP, nockP, 0.75, 0.75, ms ? ms.nock : leather, name + 'entalhe', 0.2);
+    if (withPoint) segment(tip, M.add(tip, M.scale(dir, 5)), 1.5, 0.25, ms ? ms.point : point, name + 'ponta');
     return tip;
   }
   /**
@@ -744,9 +753,9 @@
     };
     let side = M.cross(dir, rig.chest.u);
     side = M.len(side) > 0.2 ? M.norm(side) : rig.chest.r;
-    const spirit = look.arrowKind === 'ancestral';
-    const tip = arrowSegments(segment, nockP, dir, len, side, spirit, '', true);
-    if (spirit) items.push({ name: 'flechaMao:espirito', key, host, draw: () => spiritArrowGlow(renderer, nockP, M.add(tip, M.scale(dir, 5)), look) });
+    const sp = specialOf(look);
+    const tip = arrowSegments(segment, nockP, dir, len, side, sp && sp.mats, '', true);
+    if (sp) items.push({ name: 'flechaMao:espirito', key, host, draw: () => specialArrowGlow(renderer, nockP, M.add(tip, M.scale(dir, 5)), look, sp) });
     return items;
   }
 
@@ -793,23 +802,24 @@
     // acima e abaixo da mão)
     segment(M.add(g.grip, M.scale(g.axis, -BOW.grip / 2 - 1)), M.add(g.grip, M.scale(g.axis, BOW.grip / 2 + 1)), 1.9, 1.9, leather, 'empunhadura', 0.28, true);
     if (cordLast) cordItems();
-    const spirit = look.arrowKind === 'ancestral';
+    const sp = specialOf(look);
+    const ms = sp && sp.mats;
     if (look.slingLoaded && (look.bowAim || 0) > 0.2) {
       // a flecha encaixada: do entalhe da corda para a frente, passando rente à empunhadura
       const dir = M.norm(M.sub(g.rest, g.nock));
       const len = BOW_POSE.arrow;
       const tip = M.add(g.nock, M.scale(dir, len));
-      segment(g.nock, tip, 0.65, 0.65, spirit ? spiritShaft : shaft, 'flecha');
+      segment(g.nock, tip, 0.65, 0.65, ms ? ms.shaft : shaft, 'flecha');
       const side = M.norm(M.cross ? M.cross(dir, g.axis) : g.axis);
       for (const [o, mat] of [[1, feather], [-1, featherW]]) {
         const a0 = M.add(g.nock, M.scale(dir, 3));
         const a1 = M.add(g.nock, M.scale(dir, 13));
-        segment(M.add(a0, M.scale(side, o * 1.6)), M.add(a1, M.scale(side, o * 2.4)), 0.5, 1.4, spirit ? spiritFeather : mat, 'pena' + o, 0.22);
+        segment(M.add(a0, M.scale(side, o * 1.6)), M.add(a1, M.scale(side, o * 2.4)), 0.5, 1.4, ms ? ms.feather : mat, 'pena' + o, 0.22);
       }
       const point0 = M.add(tip, M.scale(dir, 5));
-      segment(tip, point0, 1.5, 0.25, spirit ? spiritPoint : point, 'ponta-flecha');
-      if (spirit) items.push({ name: 'arco:espirito', key, host, draw: () => spiritArrowGlow(renderer, g.nock, point0, look) });
-    } else if (spirit && !(look.arrowHeld >= 0)) items.push({ name: 'arco:espirito', key, host, draw: () => spiritBowGlow(renderer, g) });
+      segment(tip, point0, 1.5, 0.25, ms ? ms.point : point, 'ponta-flecha');
+      if (sp) items.push({ name: 'arco:espirito', key, host, draw: () => specialArrowGlow(renderer, g.nock, point0, look, sp) });
+    } else if (sp && !(look.arrowHeld >= 0)) items.push({ name: 'arco:espirito', key, host, draw: () => specialBowGlow(renderer, g, sp) });
     // a aljava (sempre nas costas) e a flecha na mão direita. De frente, o arco nas costas fica mais longe que a aljava:
     // ela vem depois dele; nos outros casos o arco fica por cima dela
     const quiver = quiverItems(renderer, rig, look, all, renderer.model);
@@ -841,29 +851,68 @@
    * A Flecha Ancestral na puxada (luz somada por cima da flecha verde-clara): a luz em volta da haste, o clarão na ponta
    * com a estrelinha girando e as luzinhas que sobem dela — cresce com a puxada, como a que sai voando.
    */
-  function spiritArrowGlow(renderer, tail3, tip3, look) {
+  // a habilidade no arco (22/11): as cores do brilho pela habilidade e pelos pontos (a Ancestral e a Chuva com 5 pontos
+  // são o espírito; a Chuva com 3 e 4, dourada; com 1 e 2, madeira — um brilho morno e fraco) e o quanto acende: o
+  // degrau da puxada (1 fraco, 2 médio, 3 forte; sem puxar, o brilho de "armada") e o clarão de quando o degrau sobe
+  const GOLD_RGB = '255, 196, 70', GOLD_PALE = '255, 243, 196', WOOD_RGB = '255, 222, 160', WOOD_PALE = '255, 246, 224';
+  const LEVEL_FLASH_MS = 320;
+  function specialOf(look) {
+    const kind = look.arrowKind;
+    if (kind !== 'ancestral' && kind !== 'chuva') return null;
+    const rank = look.arrowRank || 1;
+    const spirit = kind === 'ancestral' || rank >= 5;
+    const gold = !spirit && rank >= 3;
+    const lv = look.arrowLevel || 0;
+    const since = clock() - (look.arrowLevelAt ?? -1e9);
+    return {
+      kind, rank, lv,
+      rgb: spirit ? MINT : gold ? GOLD_RGB : WOOD_RGB,
+      pale: spirit ? PALE : gold ? GOLD_PALE : WOOD_PALE,
+      mats: spirit ? SPIRIT_MATS : gold ? GOLD_MATS : null,
+      // a madeira brilha pouco (é a "fraca"); o degrau multiplica
+      level: (spirit ? 1 : gold ? 0.85 : 0.36) * (lv ? [0, 0.55, 0.85, 1.2][lv] : 0.75),
+      flash: lv && since >= 0 && since < LEVEL_FLASH_MS ? 1 - since / LEVEL_FLASH_MS : 0,
+    };
+  }
+
+  /**
+   * A flecha especial na puxada (luz somada por cima da flecha): a luz em volta da haste, o clarão na ponta com a
+   * estrelinha girando e as luzinhas que sobem dela — cresce com a puxada e com o degrau; quando o degrau sobe, um clarão
+   * maior na ponta e um anel de luz abrindo (22/11, o dono: "um brilho em cada degrau").
+   */
+  function specialArrowGlow(renderer, tail3, tip3, look, sp) {
     const ctx = renderer.ctx, z = renderer.zoom, now = clock();
     const tail = renderer.P(tail3), tip = renderer.P(tip3);
-    const k = 0.6 + 0.4 * M.clamp01(look.slingDraw || 0);
+    const k = (0.6 + 0.4 * M.clamp01(look.slingDraw || 0)) * sp.level;
+    const RGB = sp.rgb, LIGHT = sp.pale, fl = sp.flash;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
-    for (const [w, rgb, alpha] of [[7.5, MINT, 0.22], [3.2, MINT, 0.45], [1.3, PALE, 0.8]]) {
-      ctx.strokeStyle = `rgba(${rgb}, ${alpha * k})`; ctx.lineWidth = Math.max(1, w * z);
+    for (const [w, rgb, alpha] of [[7.5, RGB, 0.22], [3.2, RGB, 0.45], [1.3, LIGHT, 0.8]]) {
+      ctx.strokeStyle = `rgba(${rgb}, ${Math.min(1, alpha * k + 0.3 * fl).toFixed(3)})`; ctx.lineWidth = Math.max(1, w * z * (1 + 0.5 * fl));
       ctx.beginPath(); ctx.moveTo(tail.x, tail.y); ctx.lineTo(tip.x, tip.y); ctx.stroke();
     }
     const pulse = 1 + 0.15 * Math.sin(now / 120);
-    glowDot(ctx, tip.x, tip.y, 11 * z * pulse * k, PALE, 0.75);
-    glowDot(ctx, tail.x, tail.y, 6 * z * k, MINT, 0.45);
-    // as luzinhas: nascem ao longo da haste, sobem um pouco e apagam
-    for (let j = 0; j < 7; j++) {
-      const cycle = now / 760 + j / 7, u = cycle % 1, seed = Math.floor(cycle) * 7 + j;
+    glowDot(ctx, tip.x, tip.y, 11 * z * pulse * k, LIGHT, 0.75);
+    glowDot(ctx, tail.x, tail.y, 6 * z * k, RGB, 0.45);
+    if (fl > 0) {
+      // o degrau subiu: o clarão na ponta e um anel de luz abrindo em volta dela (maior quanto maior o degrau)
+      const t = 1 - fl;
+      glowDot(ctx, tip.x, tip.y, (14 + 7 * sp.lv) * z * (0.6 + 0.6 * t), LIGHT, 0.9 * fl);
+      ctx.strokeStyle = `rgba(${RGB}, ${(0.85 * fl).toFixed(3)})`;
+      ctx.lineWidth = Math.max(1, 2.2 * z * fl);
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, (6 + (10 + 5 * sp.lv) * t) * z, 0, Math.PI * 2); ctx.stroke();
+    }
+    // as luzinhas: nascem ao longo da haste, sobem um pouco e apagam (mais com o degrau maior)
+    const motes = Math.round(4 + 3 * Math.min(1.2, sp.level));
+    for (let j = 0; j < motes; j++) {
+      const cycle = now / 760 + j / motes, u = cycle % 1, seed = Math.floor(cycle) * 7 + j;
       const f = hash(seed), x = tail.x + (tip.x - tail.x) * f, y = tail.y + (tip.y - tail.y) * f;
-      ctx.fillStyle = `rgba(${PALE}, ${((1 - u) * 0.9 * k).toFixed(3)})`;
+      ctx.fillStyle = `rgba(${LIGHT}, ${Math.min(1, (1 - u) * 0.9 * k).toFixed(3)})`;
       star(ctx, x + (hash(seed + 5) - 0.5) * 6 * z, y - u * 16 * z, Math.max(1.4, 2.4 * z * (1 - u * 0.5)), hash(seed + 3) * 1.5);
     }
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    star(ctx, tip.x, tip.y, Math.max(3, 5.5 * z * k), now / 260);
+    ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, 0.85 * Math.min(1, k + 0.2) + 0.15 * fl).toFixed(3)})`;
+    star(ctx, tip.x, tip.y, Math.max(3, 5.5 * z * k * (1 + 0.6 * fl)), now / 260);
     ctx.restore();
   }
 
@@ -871,12 +920,14 @@
    * Com a Flecha Ancestral armada e o arco solto na mão: o bambu e a corda acesos de verde, o punho com uma poça de luz
    * e luzinhas subindo do arco (no tamanho do jogo tem de dar para ver que a próxima flecha é a especial).
    */
-  function spiritBowGlow(renderer, g) {
+  function specialBowGlow(renderer, g, sp) {
+    // (as cores da habilidade; a madeira, a mais fraca, acende menos)
+    const MINT = sp.rgb, PALE = sp.pale, dim = Math.min(1, sp.level / 0.75);
     const ctx = renderer.ctx, z = renderer.zoom, now = clock();
     const P = (p) => renderer.P(p);
     const grip = P(g.grip), nk = P(g.nock);
     const bow = [...g.lower].reverse().concat(g.upper).map(P);
-    const breathe = 0.78 + 0.22 * Math.sin(now / 320);
+    const breathe = (0.78 + 0.22 * Math.sin(now / 320)) * dim;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
