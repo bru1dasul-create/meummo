@@ -188,6 +188,10 @@
       this._strideK = 0; // 0 = a passada é para a frente do corpo (o normal); 1 = para onde ele anda
       this._strideRel = 0; // para onde ele anda, em relação à frente do corpo (rad)
       this._aimBack = false; // mirando para trás de onde anda: anda de costas (veja `update`)
+      this._aimMode = null; // mirando e andando: 'frente', 'lado' (passo e junta) ou 'costas' (veja `update`)
+      this._shuffleK = 0; // 0..1: o quanto a passada é o passo e junta (de lado, sem cruzar)
+      this._sideWalk = true; // devagar o bastante para o passo e junta (veja `update`)
+      this._wantSpeed = null; // a velocidade pedida, amaciada (veja `update`)
       this._aimHold = null; // a mira de quando ele puxava (vale no tiro)
       this.dodge = null;
       this.death = null;
@@ -342,15 +346,36 @@
       if (A1 && A1.stage === 'charging') this._aimHold = A1.aimYaw;
       const aimYawNow = A1 ? (A1.stage === 'charging' || this._aimHold == null ? A1.aimYaw : this._aimHold) : null;
       if (!A1) this._aimHold = null;
+      // (22/11, o dono: "passo e junta" — mirando para o LADO de onde anda, entre ~55° e ~130°, o quadril fica atravessado
+      // no caminho, virado para o lado da mira, e as pernas andam de lado sem cruzar: o pé do lado para onde ele vai abre e
+      // o outro vem juntar. De ~130° para lá, de costas, como antes; até ~50°, de frente, como antes. Cada troca tem folga.
+      // Correndo, não: o passo e junta é curto e rápido, só andando — no jogo, puxando, ele anda)
       if (aimYawNow !== null && mag > 0.02) {
         if (A1.stage === 'charging') {
           const off = Math.abs(angleDiff(this.faceYaw, aimYawNow));
-          this._aimBack = this._aimBack ? off > 95 * DEG : off > 110 * DEG;
+          const was = this._aimMode || 'frente';
+          let mode;
+          if (was === 'costas') mode = off > 122 * DEG ? 'costas' : off > 48 * DEG ? 'lado' : 'frente';
+          else if (was === 'lado') mode = off > 138 * DEG ? 'costas' : off > 45 * DEG ? 'lado' : 'frente';
+          else mode = off > 132 * DEG ? 'costas' : off > 55 * DEG ? 'lado' : 'frente';
+          this._aimMode = mode;
         }
-      } else this._aimBack = false;
+      } else this._aimMode = null;
+      this._aimBack = this._aimMode === 'costas';
       const aimLock = this._aimBack;
-      if (aimLock) this.turnInPlace = false;
-      if (moveDir !== null && this.jump.state === 'chao' && !aimLock) {
+      // o passo e junta só andando, conferido a cada quadro (o tiro pode começar parado e ele sair correndo): correndo,
+      // fica o jeito de frente (com folga na troca, para não ficar indo e voltando no limite). Vale a velocidade pedida,
+      // não só a de agora: correndo de um lado para o outro, na virada ele passa devagar, mas não vai andar de lado ali.
+      // (no jogo, puxando o arco, ele anda a ~2 m/s: a view pede "correr" com o controle pela metade — dá ~200 cm/s, com
+      // picos de um quadro quando chega a posição do servidor; por isso a velocidade pedida é amaciada antes, e sair do
+      // passo e junta pede mais folga que entrar)
+      const wantSpeed = mag * maxSpeed;
+      this._wantSpeed = this._wantSpeed == null ? wantSpeed : damp(this._wantSpeed, wantSpeed, 6, dt);
+      const sideSpeed = Math.max(this.speed, this._wantSpeed);
+      this._sideWalk = this._sideWalk ? sideSpeed < SPEED.walk * 1.75 : sideSpeed < SPEED.walk * 1.4;
+      const sideLock = this._aimMode === 'lado' && this._sideWalk;
+      if (aimLock || sideLock) this.turnInPlace = false;
+      if (moveDir !== null && this.jump.state === 'chao' && !aimLock && !sideLock) {
         const angle = Math.abs(angleDiff(this.yaw, moveDir));
         if (angle > 100 * DEG && (!ag || this.speed < ag.pivotSpeed)) this.turnInPlace = true;
         if (angle < (ag ? ag.release : PIVOT.release) * DEG && this.turnInPlace) {
@@ -359,7 +384,7 @@
           this.phase = 0;
         }
       } else if (this.jump.state !== 'chao') this.turnInPlace = false;
-      if (moveDir !== null && !aimLock) {
+      if (moveDir !== null && !aimLock && !sideLock) {
         const off = angleDiff(this.yaw, moveDir);
         if (Math.abs(off) > 45 * DEG) {
           moveDir = this.yaw + Math.sign(off) * 45 * DEG;
@@ -468,6 +493,10 @@
         // pernas (o resto é o giro do tronco, `slingshot.js`)
         const base = Math.atan2(mv.y, mv.x) + Math.PI;
         wantYaw = base + clamp(angleDiff(base, aimYawNow), -35 * DEG, 35 * DEG);
+      } else if (sideLock) {
+        // de lado (passo e junta): o quadril a 90° de onde ele anda, virado para o lado da mira (o tronco gira o resto)
+        const base = Math.atan2(mv.y, mv.x);
+        wantYaw = base + (angleDiff(base, aimYawNow) >= 0 ? 1 : -1) * 90 * DEG;
       } else if (aimYawNow !== null && mag > 0.02) {
         // mirando de lado ou para a frente, andando: o corpo vira até 35° para a mira (anda meio de lado). Com as pernas
         // retas para onde ele anda, o tronco (até 70°) não chegava na pose de arqueiro e o cotovelo da corda subia por cima
@@ -554,10 +583,13 @@
       {
         const rel = velYaw !== null ? angleDiff(this.yaw, velYaw) : 0;
         // (só de costas: meio de lado, até 45° da frente, a passada de sempre já anda certo — ela foi feita para as viradas)
-        const wantK = aimLock && velYaw !== null ? 1 : this._strideK > 0 && velYaw !== null && Math.abs(rel) > 20 * DEG ? 1 : 0;
+        const wantK = (aimLock || sideLock) && velYaw !== null ? 1 : this._strideK > 0 && velYaw !== null && Math.abs(rel) > 20 * DEG ? 1 : 0;
         this._strideK = damp(this._strideK, wantK, 8, dt);
         if (this._strideK < 0.002 && wantK === 0) this._strideK = 0;
         if (velYaw !== null) this._strideRel = rel;
+        const wantShuffle = sideLock && velYaw !== null ? 1 : 0;
+        this._shuffleK = damp(this._shuffleK, wantShuffle, 8, dt);
+        if (this._shuffleK < 0.002 && !wantShuffle) this._shuffleK = 0;
       }
       // passada: avança pela distância (o pé no chão não escorrega)
       const step = this._stepLength(this.speed);
@@ -1153,7 +1185,20 @@
       const run = (0.2 * speed + 32) * k; // 440 cm/s → passo de ~125 cm
       const crouch = (0.25 * speed + 14) * k;
       const s = lerp(walk, run, this.runBlend);
-      return lerp(s, crouch, this.crouch);
+      const base = lerp(s, crouch, this.crouch);
+      const sh = this._shuffleAmount();
+      if (sh <= 0) return base;
+      // passo e junta: a cada ciclo o corpo anda D (o pé de fora abre D e o outro junta D); D cresce com a velocidade
+      // (~3,2 passos por segundo de cada pé) — o afastamento vai de ~14 cm (juntos) a ~14 + D. Mais curto que isso, o pé
+      // não acompanha; mais longo, as pernas abrem demais (a 2 m/s, a velocidade do jogo puxando o arco, chegava a 90 cm)
+      const D = clamp(0.27 * speed + 6, 38, 58) * k;
+      return lerp(base, D / 2, sh);
+    }
+
+    /** O quanto a passada é o passo e junta agora (0..1): só com ela de lado em relação ao corpo. */
+    _shuffleAmount() {
+      if (!(this._shuffleK > 0) || !(this._strideK > 0)) return 0;
+      return this._shuffleK * this._strideK * smoothstep(0.55, 0.9, Math.abs(Math.sin(this._strideRel)));
     }
 
     _label() {
@@ -1197,11 +1242,15 @@
       const t = this.time, dt = this._dt, J = this.jump, ph = this.phase, A = this.attack;
       const speedK = clamp01(this.speed / SPEED.walk);
       const ankleFloor = this.groundZ + B.ankleHeight;
-      const S = lerp(0.6, 0.3, run);
+      const shuffleNow = this._shuffleAmount();
+      // (no passo e junta cada pé fica menos tempo no chão: o de trás vem juntar mais cedo e as pernas abrem menos)
+      const S = lerp(lerp(0.6, 0.3, run), 0.5, shuffleNow);
       const step = this._stepLength(this.speed);
       const sweep = S * 2 * step * g;
       const front = lerp(0.4, 0.42, run);
-      const lift = lerp(lerp(4.5, 6.8, speedK), 23, run) * (1 - 0.45 * crouch) * B.legScale;
+      const shuffle = shuffleNow;
+      // (no passo e junta o pé vai mais baixo: é um passo de lado, quase arrastado)
+      const lift = lerp(lerp(4.5, 6.8, speedK), 23, run) * (1 - 0.45 * crouch) * (1 - 0.3 * shuffle) * B.legScale;
       const heelStrike = lerp(13, 6, run) * (1 - 0.5 * crouch);
       const toeOff = lerp(44, 42, run) * (1 - 0.4 * crouch);
       const heelFrom = lerp(0.55, 0.4, run);
@@ -1288,6 +1337,16 @@
           const rx = body.r.x * cr - body.r.y * sr, ry = body.r.x * sr + body.r.y * cr;
           const z0 = this.groundZ + B.ankleHeight + up;
           ref = { x: body.o.x + rx * xSide + sx * y, y: body.o.y + ry * xSide + sy * y, z: z0 };
+          if (shuffle > 0) {
+            // passo e junta (22/11, o dono): o pé do lado para onde ele anda fica sempre na frente e o outro atrás — eles
+            // não passam um pelo outro. Cada um se afasta do meio o bastante para, na hora de juntar, sobrarem ~14 cm
+            // entre eles (a passada de cada pé vai e volta ±0,42·sweep em relação ao outro)
+            const along = body.r.x * sx + body.r.y * sy;
+            const leadSign = Math.sign(side * along) || side;
+            const c = Math.max(0, (14 + 0.85 * sweep) / 2 - Math.abs(xSide * along));
+            ref.x += sx * leadSign * c * shuffle;
+            ref.y += sy * leadSign * c * shuffle;
+          }
           const lat = (ref.x - body.o.x) * body.r.x + (ref.y - body.o.y) * body.r.y;
           const minLat = 4.5;
           const fix = side < 0 ? Math.min(0, -minLat - lat) : Math.max(0, minLat - lat);
@@ -1653,7 +1712,7 @@
       const speedK = clamp01(this.speed / SPEED.walk); // 0 parado, 1 andando no normal (ou mais rápido)
 
       // ---- parâmetros da passada (andar ↔ correr)
-      const S = lerp(0.6, 0.3, run); // parte do ciclo com o pé no chão
+      const S = lerp(lerp(0.6, 0.3, run), 0.5, this._shuffleAmount()); // parte do ciclo com o pé no chão (veja `_feet`)
 
       // ---- pelve: alta no meio do apoio (perna quase esticada), baixa quando os dois pés estão no chão
       const mid = Math.cos(4 * Math.PI * (ph - S / 2)); // +1 no meio do apoio, -1 no apoio duplo (ou no voo)

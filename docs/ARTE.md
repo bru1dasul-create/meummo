@@ -37,8 +37,18 @@
   para o alto (`view.js`). Sem puxada (outro jogador, jeito antigo), continua como era. Fica para a tarefa nova da
   [arte] (pedido da [estrutura], no `ROADMAP.md`): o visual a cada ponto e a cada degrau da carga, e mirar para o alto já
   na puxada da Chuva. **Mandar o escopo ao dono antes.**
-- **Próximo da [arte] (o dono escolheu "Passo e junta"):** mirando de lado andando, o corpo vira para a mira e as pernas
-  andam de lado, passo e junta, sem cruzar. **Mandar o escopo ao dono antes de começar.**
+- **Passo e junta (22/11, escopo aprovado pelo dono: "pode"):** mirando (arco ou estilingue) para o LADO de onde anda,
+  entre ~55° e ~130°, o quadril fica atravessado no caminho, virado para o lado da mira (o tronco gira o resto, até ±35°),
+  e as pernas andam de lado sem cruzar: o pé do lado para onde ele vai fica sempre na frente e o outro vem juntar
+  (`animator.js`: `_aimMode` 'frente' | 'lado' | 'costas', `_shuffleK`, `_shuffleAmount()`, o passo curto no
+  `_stepLength` e o afastamento de cada pé no `_feet`). De ~130° para lá continua de costas; até ~50°, de frente — cada
+  troca com folga. Passos curtos e rápidos (o corpo anda `D` = 38 a 58 cm por ciclo, ~3 passos por segundo de cada pé),
+  cada pé menos tempo no chão (0,5 do ciclo) e mais baixo: os pés vão de ~13 cm (juntos) a ~60 cm (abertos), sem
+  escorregar (0 cm no chão, medido). Só andando: a velocidade pedida, amaciada, decide a cada quadro (no jogo, puxando o
+  arco, ele anda a ~2 m/s com picos de um quadro; correndo, fica o jeito de frente). Medido antes × depois (pasta de
+  rascunho `passo/`: `medir.cjs`, `transicao.cjs`, `fita.cjs`, `jogo-lado.cjs`): pernas cruzadas mirando de lado de 7% dos
+  quadros para 0%; no jogo, o modo fica estável do começo da puxada ao fim do tiro. Vale para todos (Birim, herói, outros
+  jogadores na tela).
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
