@@ -888,10 +888,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   de dentro do corpo, retas para cima; agora saem da ponta da flecha, a 50°, para o lado do alvo, e a mira começa ali);
   **3) a Ancestral com cara própria em cada ponto — FEITA em 22/11** (1 luz fraca e rastro curto, 2 mais luz, 3 a espiral,
   4 a espiral dupla com o anel de luz no chão, 5 e a explosão; a pancada crescendo com os pontos; veja `docs/ARTE.md`)
-- [ ] **[estrutura]** Pedido da [arte] (22/11, junto com o "sensação de impactos também por nível" do dono): o tremor de
+- [x] **[estrutura]** Pedido da [arte] (22/11, junto com o "sensação de impactos também por nível" do dono): o tremor de
   tela, a pausa no impacto e o som crescendo com os pontos e o degrau nas habilidades — a Chuva caindo e a Flecha
-  Ancestral parando/explodindo (hoje o tremor e a pausa só valem no acerto comum e vêm desligados no padrão). O desenho
-  do impacto (clarão, onda de choque, terra espirrando) já cresce com o degrau, do lado da [arte]
+  Ancestral parando/explodindo. FEITO em 22/11: a força vai de 0 (1 ponto, fraco) a 1 (5 pontos, forte;
+  `skillImpactPower`, os pontos pesam um pouco mais); o tremor vai de 1/4 ao máximo e dura até o dobro, a pausa de nada
+  ao máximo, e o som ganha um baque mais fundo (`sfx.impact`, e o chão da Chuva no `volley`). Ligado no padrão só nas
+  habilidades (o tiro comum continua sem tremor): no F1, "Tremor das habilidades" (10 px) e "Pausa das habilidades"
+  (60 ms). Tremor e pausa só nas suas; o som, nas de todos. O estouro da Flecha Ancestral toca quando o desenho chega lá
 - [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
   anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
   com ele. Protocolo 42 (`npc_walk`, `talk`). **Desligado de novo na Xiovanna a pedido do dono ("por enquanto deixa ela parada")**; funcionou ligado (15/11, com o passo de andar

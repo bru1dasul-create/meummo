@@ -155,6 +155,19 @@ describe('o painel de ajustes do jogo (F1): os sliders', () => {
 });
 
 describe('game feel (o tremor, a pausa no impacto, as faíscas): só da tela', () => {
+  it('o impacto das habilidades cresce com os pontos e o degrau (pedido do dono: "sensação de impactos também por nível")', async () => {
+    const { DEFAULT_FEEL, skillImpactPower, skillImpactFeel } = await import('../src/client/novo/feel');
+    expect(skillImpactPower(1, 1)).toBe(0); // 1 ponto, puxada fraca: o mais fraco
+    expect(skillImpactPower(5, 3)).toBe(1); // 5 pontos, puxada forte: o mais forte
+    expect(skillImpactPower(3, 2)).toBeCloseTo(0.5);
+    expect(skillImpactPower(5, 1)).toBeGreaterThan(skillImpactPower(1, 3)); // os pontos pesam um pouco mais
+    // ligado no padrão (o tiro comum continua sem tremor): fraco = um tremorzinho sem pausa; forte = o máximo
+    expect(skillImpactFeel(DEFAULT_FEEL, 0)).toEqual({ shakePx: 3, shakeMs: 150, stopMs: 0 });
+    expect(skillImpactFeel(DEFAULT_FEEL, 1)).toEqual({ shakePx: 10, shakeMs: 300, stopMs: 60 });
+    // desligado no F1 (0): nada
+    expect(skillImpactFeel({ ...DEFAULT_FEEL, shakeSkillPx: 0, hitStopSkillMs: 0 }, 1)).toMatchObject({ shakePx: 0, stopMs: 0 });
+  });
+
   it('o padrão é o jogo de antes; o guardado é conferido; o tremor some aos poucos', async () => {
     const { DEFAULT_FEEL, cleanFeel, changedFeel, shakeOffset } = await import('../src/client/novo/feel');
     expect(DEFAULT_FEEL).toMatchObject({ shakeHitPx: 0, shakeHurtPx: 0, hitStopMs: 0, particles: 0, hurtFlash: true });
