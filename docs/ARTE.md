@@ -65,7 +65,7 @@
   - a Chuva no arco já mira para o alto na puxada (`attack.volleyAim`, da view; a pose usa `volley || volleyAim`)
   - conferido: a prancha (pasta de rascunho `niveis/`: `prancha.ts` com o esbuild, `arco.cjs`) e no jogo, com a Chuva
     em 3 pontos (dados pela janela K) e a Ancestral em 5 (`jogo-niveis.cjs`)
-- **Etapa 2, a Chuva com cara própria em cada ponto (22/11, no ramo; falta o "pode" do dono para a main):** em
+- **Etapa 2, a Chuva com cara própria em cada ponto (22/11, na main com o "pode, junta na main e segue" do dono):** em
   `rainArt.ts` cada ponto é uma "fase" (`Tier`: cor, `power` de 0 a 1, o que sobe de cada flecha — `hit` — e a grossura
   da borda — `edge`); `rainTier(pontos)` diz o nome:
   - 1 = **crua** (galho cinza-marrom, ponta de pedra bruta, penas sem cor; uma nuvenzinha de poeira e o impacto pequeno)
