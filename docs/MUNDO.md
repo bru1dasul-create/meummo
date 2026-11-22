@@ -368,9 +368,10 @@ Feito pelo [mundo], tudo na `main`:
   `levar` do painel pede o `id` da entrada atual (muda a cada vez que entra: pegue de `__mundoNovo.me.id`).
 
 ## Esperando outras frentes
-- **[estrutura] (pedido em 22/11):** o bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em
-  (300; 300)) em `data/bichos.json`; quando o mapa de Santo Amaro novo existir, a saída do leste (a barreira sai e a
-  chegada `chegada-santo-amaro` já está lá); NPCs para os lugares novos, quando houver missões.
+- **[estrutura] (feito em 22/11, 02855f2):** o bando de capivaras da várzea do Guarapiranga (`capivaras_varzea`, 3
+  capivaras, nos meus pontos `capivaras-varzea` e `-descanso`). **Ainda a combinar:** quando o mapa de Santo Amaro novo
+  existir, a saída do leste (a barreira sai e a chegada `chegada-santo-amaro` já está lá); NPCs para os lugares novos,
+  quando houver missões.
 - **[estrutura] (feito em 19/11, 987be1e):** a Dona Iracema e o Barqueiro no Mapa 02 (`guarapiranga`), com o pé em
   (57,5; 50,35) e (49,6; 62,4). O pedaço (a) ainda não tem área de bichos. Os dois usam o boneco de reserva (o desenho
   próprio é da [arte], depois do personagem).
