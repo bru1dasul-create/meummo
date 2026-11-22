@@ -87,7 +87,19 @@
   (`slingshot.js`, `bowArms` com `up`), medir de novo (rascunho `chuva-saida/medir.cjs`) e acertar o `LAUNCH`
   - conferido no protótipo (o Birim soltando + as flechas na mesma câmera, 5 direções, arco e estilingue) e no jogo
     (3 direções, com 4 pontos)
-  - **próximo: etapa 3** (a Ancestral com cara própria em cada ponto)
+- **Etapa 3, a Flecha Ancestral com cara própria em cada ponto (22/11, no ramo; falta o "pode" do dono para a main):**
+  em `spiritArt.ts`, `SPIRIT_LOOKS` (um por ponto: a luz, o rastro, os fios da espiral, o tamanho, as luzinhas, se ficam
+  no caminho, a força da pancada, as luzinhas do fim, o anel no chão e o tamanho da marca) e `spiritLook(pontos)`; sem
+  os pontos, a de 3 (a de antes) e, no fim que explode, a de 5:
+  - 1 = a luz fraca, o rastro curto, sem espiral e poucas luzinhas (no fim também; a marca no chão pequena)
+  - 2 = mais luz e o rastro maior · 3 = a espiral do espírito (a de antes); a runa no bicho é do servidor (marca com 3+)
+  - 4 = a espiral dupla (mais dois fios por fora, girando ao contrário), a flecha maior, as luzinhas ficando no caminho
+    e o anel de luz abrindo no chão onde ela para (`lightRing`) · 5 = tudo isso e a explosão (o servidor manda o raio)
+  - a pancada (`impactHit`) cresce com os pontos (`power`) e com o degrau; a flecha na mão acende mais a cada ponto
+    (`ANCESTRAL_GLOW` no `slingshot.js`)
+  - conferido: prancha dos 5 pontos × 7 momentos (rascunho `niveis3/`), o herói puxando com 1 a 5 (`niveis3/arco.cjs`) e
+    no jogo com 1 e 4 pontos (`niveis3/jogo-ancestral.cjs`: recomeça os pontos na janela K e põe N na Ancestral)
+  - com isso as 3 etapas dos níveis estão feitas
 - **Relógios da `view.js` (22/11, defeito achado pelo dono e medido pela [estrutura]):** o `frame(t)` recebe o relógio
   do jogo (`gameNow()`), que fica para trás depois da câmera lenta do F1. Tudo que o `frame` compara com `t` tem de ser
   marcado no mesmo relógio (`this.last`, o `t` do último quadro): o fim do brilho da flecha armada (`armedOff`) e o

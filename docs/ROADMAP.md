@@ -859,7 +859,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   defeito) agora usam o relógio dos quadros; o clarão do degrau (`arrowLevelAt`) ficou no relógio da página, porque o
   `slingshot.js` lê com ele. Conferido no jogo depois de 4 s em 0,25x (3,3 s de atraso): antes, 2 s depois do tiro ainda
   'ancestral' e o tiro comum puxava a flecha brilhante; agora apaga em ~250 ms e o tiro comum vem com a flecha normal
-- [ ] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
+- [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
   dados chegam pelo motor (veja o item acima). Pedido mandado à [arte]. Escopo aprovado pelo dono em 22/11 ("pode, coloca
@@ -869,7 +869,8 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   **2) a Chuva com cara própria em cada ponto — FEITA em 22/11** (crua, madeira, ouro, brasa e espírito; o impacto
   crescendo com os pontos; a flecha na mão igual) e, junto, **as flechas da Chuva saindo do arco** (print do dono: saíam
   de dentro do corpo, retas para cima; agora saem da ponta da flecha, a 50°, para o lado do alvo, e a mira começa ali);
-  3) a Ancestral com cara própria em cada ponto (veja `docs/ARTE.md`)
+  **3) a Ancestral com cara própria em cada ponto — FEITA em 22/11** (1 luz fraca e rastro curto, 2 mais luz, 3 a espiral,
+  4 a espiral dupla com o anel de luz no chão, 5 e a explosão; a pancada crescendo com os pontos; veja `docs/ARTE.md`)
 - [ ] **[estrutura]** Pedido da [arte] (22/11, junto com o "sensação de impactos também por nível" do dono): o tremor de
   tela, a pausa no impacto e o som crescendo com os pontos e o degrau nas habilidades — a Chuva caindo e a Flecha
   Ancestral parando/explodindo (hoje o tremor e a pausa só valem no acerto comum e vêm desligados no padrão). O desenho

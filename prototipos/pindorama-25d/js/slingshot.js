@@ -871,6 +871,8 @@
     madeira: { rgb: '255, 222, 160', pale: '255, 246, 224', mats: null, glow: 0.36 },
     crua: { rgb: '226, 210, 178', pale: '246, 238, 220', mats: RAW_MATS, glow: 0.24 },
   };
+  // a Ancestral acende mais a cada ponto (22/11, etapa 3: com 1 ponto, a luz fraca; com 5, a mais forte)
+  const ANCESTRAL_GLOW = [0.45, 0.65, 0.85, 1, 1.1];
   const LEVEL_FLASH_MS = 320;
   function specialOf(look) {
     const kind = look.arrowKind;
@@ -887,7 +889,7 @@
       mats: T.mats,
       embers: !!T.embers,
       // as fracas brilham pouco; o degrau multiplica
-      level: T.glow * (lv ? [0, 0.55, 0.85, 1.2][lv] : 0.75),
+      level: (kind === 'ancestral' ? ANCESTRAL_GLOW[Math.min(5, Math.max(1, Math.round(rank))) - 1] : T.glow) * (lv ? [0, 0.55, 0.85, 1.2][lv] : 0.75),
       flash: lv && since >= 0 && since < LEVEL_FLASH_MS ? 1 - since / LEVEL_FLASH_MS : 0,
     };
   }
