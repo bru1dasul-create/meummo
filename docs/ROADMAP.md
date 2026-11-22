@@ -690,8 +690,7 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   só o pedaço da tela
 - [ ] **[mundo]** Vestir cada região do Guarapiranga grande, depois de o dono andar e aprovar o tamanho e os caminhos:
   o clube, a barragem de 1909, o coreto, a caverna e o mirante com desenho próprio; a comunidade com cara de comunidade
-- [ ] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em
-  data/bichos.json (pedido do [mundo] em 22/11)
+- [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [ ] **[mundo]** O Capão maior (19/11, "os dois maiores": cresce para a direita, com mais rua, casas e mata). Crescer
   só para a direita e para baixo (a origem não muda: o mapa explorado de quem já joga não desalinha) e avisar a
   [estrutura] antes de juntar se um NPC ou uma chegada mudar
