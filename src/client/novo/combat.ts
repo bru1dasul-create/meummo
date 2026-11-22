@@ -56,12 +56,30 @@ const LAUNCH_DESCENT = 3;
  */
 const SHOOTER_HALF_W = 0.3;
 const SHOOTER_TOP_Z = 1.9;
+/**
+ * O fim do voo: sem acertar nada, o tiro cai no ponto mirado (o fim do alcance). Nos últimos metros (no máximo 30% do
+ * voo) ele desce em curva até o chão, cada vez mais rápido e de ponta para baixo, e chega lá como a [arte] desenha a
+ * flecha cravada (a ponta no chão, a cauda uns 30° para cima). Antes voava reto a 0,9 m e aparecia cravada no chão de
+ * uma vez (pedido do dono, 22/11: "a animação da flecha caindo não existe, ela simplesmente despenca").
+ */
+const LAND_DESCENT = 2.5;
 
-/** A altura do desenho do tiro depois de voar `traveled` metros (o de jogador começa no arco e desce até o voo). */
-export function shotZ(fromMonster: boolean, traveled: number): number {
-  if (fromMonster) return SHOT_DRAW_Z;
-  const t = Math.min(1, Math.max(0, (traveled - LAUNCH_AHEAD) / LAUNCH_DESCENT));
-  return LAUNCH_Z + (SHOT_DRAW_Z - LAUNCH_Z) * t * t * (3 - 2 * t);
+/**
+ * A altura do desenho do tiro depois de voar `traveled` metros de um voo de `range` metros: o de jogador começa no arco
+ * e desce até a altura do voo; no fim do alcance, todos caem até o chão.
+ */
+export function shotZ(fromMonster: boolean, traveled: number, range = Infinity): number {
+  let z = SHOT_DRAW_Z;
+  if (!fromMonster) {
+    const t = Math.min(1, Math.max(0, (traveled - LAUNCH_AHEAD) / LAUNCH_DESCENT));
+    z = LAUNCH_Z + (SHOT_DRAW_Z - LAUNCH_Z) * t * t * (3 - 2 * t);
+  }
+  const fall = Math.min(LAND_DESCENT, range * 0.3);
+  if (fall > 0 && traveled > range - fall) {
+    const s = Math.min(1, (traveled - (range - fall)) / fall);
+    z *= 1 - s * s; // como uma pedra jogada: devagar no começo, ligeiro no fim
+  }
+  return z;
 }
 
 /**
@@ -1222,7 +1240,7 @@ export class CombatLayer {
           const on = shot.stop?.on;
           // a Flecha Ancestral não crava: o espírito brilha (e explode, com 5 pontos) onde ela parou
           if (shot.kind === 'ancestral') this.spiritEnds.push({ x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now, ...(shot.look ? { rank: shot.look.rank, level: shot.look.level } : {}) });
-          else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt) } : undefined);
+          else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt, shot.range) } : undefined);
           shots.delete(key);
           if (shots === this.shots) this.shotOfServer.delete(key);
           else for (const [id, cid] of this.shotOfServer) if (cid === key) this.shotOfServer.delete(id);
@@ -1233,7 +1251,7 @@ export class CombatLayer {
         const ground = shotFeet(shot.x + shot.dx * along, shot.y + shot.dy * along);
         const m = meter(ground.x, ground.y);
         const shadow = screen(ground.x, ground.y, 0);
-        const p = screen(ground.x, ground.y, shotZ(shot.fromMonster, along));
+        const p = screen(ground.x, ground.y, shotZ(shot.fromMonster, along, shot.range));
         const ctx = this.ctx;
         const hidden = shot.fromMonster ? null : this.behindShooter(shot, shadow, screen, meter);
         if (hidden) {
@@ -1245,7 +1263,8 @@ export class CombatLayer {
           ctx.clip('evenodd');
         }
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
-        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, shotZ(shot.fromMonster, along + 0.3));
+        // a ponta aponta para onde ele vai (no fim, para baixo: o `ahead` já está mais perto do chão)
+        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, shotZ(shot.fromMonster, along + 0.3, shot.range));
         const drawn = drawShot(ctx, shot.kind, p, shadow, ahead, m, shot.look); // a flecha, a pedra e a Flecha Ancestral
         if (drawn) {
           if (hidden) ctx.restore();
