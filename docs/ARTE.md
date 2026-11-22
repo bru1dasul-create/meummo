@@ -29,8 +29,16 @@
     calcanhar continua sem a linha.
   - **A bermuda** não sumiu em ~2.300 quadros: o que a cobre às vezes é o braço balançando ou a outra perna na frente (de
     verdade), um pilar ou uma planta do cenário. Pedi um print ao dono se ele vir de novo.
-- **Tiro no fim da esquiva (22/11, o dono):** é do motor (o `startCharge` não olha a rolada; o servidor só recusa o pulo
-  rolando). Pedido feito à [estrutura] (veja o `ROADMAP.md`). O desenho da rolada acaba em 0,62 s, antes dos 700 ms.
+- **Tiro no fim da esquiva (22/11, o dono):** era do motor; a [estrutura] fez (main f90102d): rolando, o servidor recusa
+  puxar e atirar, e o tiro apertado na rolada espera ela acabar (com o botão ainda apertado, a puxada começa nessa hora).
+  Conferido no jogo (rascunho `esquiva-tiro/gravar.cjs`): ele termina a rolada, levanta e faz a puxada inteira (mão na
+  aljava, encaixa, puxa), com o anel da carga começando ali. O desenho da rolada acaba em 0,62 s, antes dos 700 ms.
+- **O impacto por nível no motor (22/11, a [estrutura], main 79503f4):** o tremor de tela, a pausa e o baque crescendo
+  com os pontos e o degrau (`skillImpactPower` em `feel.ts`; no F1, "Tremor das habilidades" e "Pausa das
+  habilidades"). O som de estouro da Ancestral toca no mesmo quadro em que o fim chega ao `paintSpiritEnd` (junto com o
+  clarão daqui).
+- **Pedidos às outras frentes:** além do `PEDIDO PARA [frente]` no fim da resposta (o dono repassa), mandar também pelo
+  `send_message` para a sessão da frente — a [estrutura] pediu (22/11): só pelo roteiro ela não vê.
 - **A Chuva no arco (22/11, da [estrutura]: o Q põe a Chuva no arco como o R põe a Flecha Ancestral):** o motor manda a
   puxada de sempre (`'sling-pull'`) e o `'volley'` só na hora de soltar. A view recomeçava a puxada no `'volley'` (soltava
   0,32 s depois das flechas subirem, pegando outra flecha da aljava): agora, puxando, o `'volley'` solta na hora, mirando
