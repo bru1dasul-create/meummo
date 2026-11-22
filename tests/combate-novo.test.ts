@@ -72,4 +72,23 @@ describe('combate do jogo novo: desenho igual à regra', () => {
     expect(shotZ(false, 12)).toBeCloseTo(SHOT_DRAW_Z);
     expect(shotZ(true, 0)).toBe(SHOT_DRAW_Z);
   });
+
+  it('no fim do alcance o tiro cai em curva até o chão (e não despenca de uma vez)', () => {
+    // voo de 10 m: reto até 7,5 m, depois desce cada vez mais rápido até o chão no ponto mirado
+    expect(shotZ(false, 7.5, 10)).toBeCloseTo(SHOT_DRAW_Z);
+    expect(shotZ(false, 8.75, 10)).toBeCloseTo(SHOT_DRAW_Z * 0.75);
+    expect(shotZ(false, 10, 10)).toBeCloseTo(0);
+    expect(shotZ(false, 10.3, 10)).toBeCloseTo(0); // (o `ahead` passa do fim: a ponta aponta para baixo)
+    expect(shotZ(true, 10, 10)).toBeCloseTo(0); // o dos bichos também cai
+    // voo curto (3 m): a queda é só nos últimos 30% (0,9 m), saindo ainda da altura do arco
+    expect(shotZ(false, 2.1, 3)).toBeCloseTo(shotZ(false, 2.1));
+    expect(shotZ(false, 3, 3)).toBeCloseTo(0);
+    // descendo sempre, sem degrau
+    let last = Infinity;
+    for (let d = 7.5; d <= 10; d += 0.1) {
+      const z = shotZ(false, d, 10);
+      expect(z).toBeLessThanOrEqual(last + 1e-9);
+      last = z;
+    }
+  });
 });
