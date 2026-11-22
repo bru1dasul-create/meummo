@@ -60,7 +60,7 @@ Tudo isto se ajusta mexendo em números, sem programar:
   braço ou a outra perna na frente, ou um pilar do cenário): **[dono]** mandar um print se vir de novo
 - [x] **[arte]** Passo e junta (22/11, escopo aprovado pelo dono): mirando para o lado de onde anda (~55° a ~130°), o
   quadril fica de lado para o caminho e as pernas andam de lado sem cruzar (o pé de fora abre, o outro junta); de frente
-  e de costas como antes. Vale para todos, arco e estilingue, só andando. FEITO em 22/11 (veja `docs/ARTE.md`)
+  e de costas como antes. Vale para todos, arco e estilingue, só andando. FEITO em 22/11, na main (veja `docs/ARTE.md`)
 - [ ] **[estrutura]** Tiro no fim da esquiva (22/11, o dono: "no final da esquiva é possível dar um tiro de flecha;
   arrumar para só poder quando ele voltar da esquiva e fazer a animação"): o motor deixa começar a puxada durante a
   rolada (`startCharge`/`tryShoot` não olham o `dashedAt`; o pulo já olha, com `DASH_ROLL_MS`) e o servidor só recusa o

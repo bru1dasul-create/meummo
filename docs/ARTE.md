@@ -37,7 +37,7 @@
   para o alto (`view.js`). Sem puxada (outro jogador, jeito antigo), continua como era. Fica para a tarefa nova da
   [arte] (pedido da [estrutura], no `ROADMAP.md`): o visual a cada ponto e a cada degrau da carga, e mirar para o alto já
   na puxada da Chuva. **Mandar o escopo ao dono antes.**
-- **Passo e junta (22/11, escopo aprovado pelo dono: "pode"):** mirando (arco ou estilingue) para o LADO de onde anda,
+- **Passo e junta (22/11, escopo aprovado pelo dono: "pode"; na main em 22/11, com o "pode seguir" dele):** mirando (arco ou estilingue) para o LADO de onde anda,
   entre ~55° e ~130°, o quadril fica atravessado no caminho, virado para o lado da mira (o tronco gira o resto, até ±35°),
   e as pernas andam de lado sem cruzar: o pé do lado para onde ele vai fica sempre na frente e o outro vem juntar
   (`animator.js`: `_aimMode` 'frente' | 'lado' | 'costas', `_shuffleK`, `_shuffleAmount()`, o passo curto no
