@@ -16,12 +16,28 @@ import type { MapRegion } from '../../shared/map';
 import { GUARD_MAX_ENERGY, SHOT_FEET_DY } from '../../shared/constants';
 import type { Rarity } from '../../shared/items';
 import type { GuardState } from '../../shared/protocol';
+import type { ChargeLevel } from '../../shared/classes';
 import { coinUrl } from '../coinArt';
 import { itemIconUrl } from '../itemArt';
 import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
 import { drawRainAim as paintRainAim, drawRainAir as paintRainAir, drawRainGround as paintRainGround, RAIN_LINGER_MS } from './rainArt';
 import { paintChargeRing } from './chargeArt';
 import { paintSpiritAim, paintSpiritEnd, paintSpiritMark, SPIRIT_END_MS } from './spiritArt';
+
+/**
+ * A habilidade que saiu pelo arco (a Flecha Ancestral; na Chuva, vai no RainFx): os pontos dela de quem atirou (`rank`,
+ * 1 a 5) e o nível da puxada (`level`: 1 fraco, 2 médio, 3 forte). O dono quer o desenho mudando com os dois (19/11):
+ * "nível 1 é feio e fraco, nível 2 melhora, nível 3 muda e por aí vai".
+ */
+export interface ShotLook {
+  rank: number;
+  level: ChargeLevel;
+}
+
+// A [arte] recebe o `look` (e o nível no anel da carga) como o último parâmetro, quando quiser usar: até lá, a função
+// dela tem um parâmetro a menos e ignora o que sobra (uma função com menos parâmetros cabe no tipo com mais).
+const drawShot: (...args: [...Parameters<typeof drawProjectile>, ShotLook | undefined]) => boolean = drawProjectile;
+const paintRing: (...args: [...Parameters<typeof paintChargeRing>, ChargeLevel | undefined]) => void = paintChargeRing;
 
 /** A altura (metros) em que os projéteis voam no desenho. */
 export const SHOT_DRAW_Z = 0.9;
@@ -120,6 +136,8 @@ interface Flying {
   start: number;
   kind: string;
   fromMonster: boolean;
+  /** A Flecha Ancestral: os pontos e o nível da puxada (o desenho muda com eles). */
+  look?: ShotLook;
   /**
    * O servidor já disse onde ele para (a distância do começo e, se bateu em algo, no quê): o desenho voa até lá.
    * `burst`: a Flecha Ancestral explode lá, neste raio (metros).
@@ -185,8 +203,10 @@ interface RainFx {
   x: number;
   y: number;
   r: number;
-  /** Quantos pontos a habilidade tem (o desenho muda com 3 e com 5). */
+  /** Quantos pontos a habilidade tem (o desenho muda com eles). */
   rank: number;
+  /** O nível da puxada: 1 fraco, 2 médio, 3 forte (o desenho pode mudar com ele também). */
+  level: ChargeLevel;
   /** O que chove: 'flecha' (arco) ou 'pedra' (estilingue). */
   kind: string;
   start: number;
@@ -213,6 +233,9 @@ interface SpiritEnd {
   y: number;
   r: number;
   start: number;
+  /** Os pontos de quem atirou e o nível da puxada (o desenho pode mudar com eles). */
+  rank?: number;
+  level?: ChargeLevel;
 }
 
 /** A queda do item: do alto do monstro até o chão, com um quique, nesse tempo (o servidor espera 0,4 s para deixar pegar). */
@@ -336,7 +359,7 @@ export class CombatLayer {
   private flashes: Flash[] = [];
   private poofs: { x: number; y: number; start: number }[] = [];
   /** Puxando o estilingue (ou o arco): de quem, desde quando e em quanto tempo enche (o anel em volta do pé). */
-  private chargeRing: { id: number; since: number; fullMs: number } | null = null;
+  private chargeRing: { id: number; since: number; fullMs: number; level?: ChargeLevel } | null = null;
   /** Aviso curto embaixo do pé ("carga perdida", "defesa quebrou!"). */
   private footNote: { id: number; text: string; color: string; start: number } | null = null;
   /** Defesas levantadas: de quem, para onde (radianos) e desde quando (protege depois de guardReadyMs). */
@@ -561,13 +584,13 @@ export class CombatLayer {
   }
 
   /** Um projétil que o servidor mandou (de monstro ou de outro jogador). */
-  shot(id: number, x: number, y: number, angle: number, speed: number, range: number, kind: string, fromMonster: boolean, now: number): void {
-    this.shots.set(id, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster });
+  shot(id: number, x: number, y: number, angle: number, speed: number, range: number, kind: string, fromMonster: boolean, now: number, look?: ShotLook): void {
+    this.shots.set(id, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster, ...(look ? { look } : {}) });
   }
 
   /** O seu tiro, desenhado na hora (o servidor confirma depois com o mesmo `cid`). */
-  myShot(cid: number, x: number, y: number, angle: number, speed: number, range: number, now: number, kind = 'pedra'): void {
-    this.myShots.set(cid, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster: false });
+  myShot(cid: number, x: number, y: number, angle: number, speed: number, range: number, now: number, kind = 'pedra', look?: ShotLook): void {
+    this.myShots.set(cid, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster: false, ...(look ? { look } : {}) });
   }
 
   /** O servidor confirmou o seu tiro `cid` com o número `id`. */
@@ -627,6 +650,11 @@ export class CombatLayer {
   setCharge(id: number, since: number | null, fullMs = this.rules.chargeFullMs): void {
     this.chargeRing = since === null ? null : { id, since, fullMs };
     if (since !== null && this.footNote?.id === id) this.footNote = null;
+  }
+
+  /** Puxando com a Chuva ou a Flecha Ancestral no arco: o nível da carga agora (o anel pode mostrar o degrau). */
+  setChargeLevel(id: number, level: ChargeLevel): void {
+    if (this.chargeRing?.id === id) this.chargeRing.level = level;
   }
 
   /** Um golpe soltou a pedra que `id` puxava: some o anel e aparece "carga perdida" no lugar. */
@@ -690,16 +718,16 @@ export class CombatLayer {
 
   /**
    * Alguém usou a Chuva de Flechas: as flechas (ou pedras) sobem de `from` (o pé de quem atirou) e caem espalhadas no
-   * círculo (x, y, r) daqui a `ms`. `rank` = pontos da habilidade (o desenho muda com 3 e com 5).
+   * círculo (x, y, r) daqui a `ms`. `rank` = pontos da habilidade e `level` = o nível da puxada (o desenho muda com eles).
    */
-  rain(from: Point, x: number, y: number, r: number, arrows: number, rank: number, ms: number, kind: string, now: number): void {
+  rain(from: Point, x: number, y: number, r: number, arrows: number, rank: number, ms: number, kind: string, now: number, level: ChargeLevel = 3): void {
     const spots: RainFx['spots'] = [];
     for (let i = 0; i < Math.max(1, Math.min(40, arrows)); i++) {
       const a = Math.random() * Math.PI * 2;
       const d = Math.sqrt(Math.random()) * r * 0.9; // espalhadas por igual pelo círculo
       spots.push({ dx: Math.cos(a) * d, dy: Math.sin(a) * d, delay: (Math.random() - 0.6) * 160, lean: Math.random() - 0.5 });
     }
-    this.rains.push({ from: { x: from.x, y: from.y }, x, y, r, rank, kind, start: now, land: now + Math.max(0, ms), spots });
+    this.rains.push({ from: { x: from.x, y: from.y }, x, y, r, rank, level, kind, start: now, land: now + Math.max(0, ms), spots });
   }
 
   /** A mira da Chuva: o círculo onde ela vai cair (segurando a tecla), ou null. */
@@ -932,7 +960,7 @@ export class CombatLayer {
     if (!ring || !feet) return;
     const progress = ring.fullMs > 0 ? Math.min(1, (now - ring.since) / ring.fullMs) : 1;
     const meter = (x: number, y: number) => Math.max(8, Math.abs(screen(x, y, 0).y - screen(x, y, 1).y));
-    paintChargeRing(this.ctx, feet, progress, now, screen, meter);
+    paintRing(this.ctx, feet, progress, now, screen, meter, ring.level);
   }
 
   /** O ponto mais baixo, na tela, de um círculo de `radius` metros no chão em volta de `feet`. */
@@ -1193,7 +1221,7 @@ export class CombatLayer {
           const end = shotFeet(shot.x + shot.dx * stopAt, shot.y + shot.dy * stopAt);
           const on = shot.stop?.on;
           // a Flecha Ancestral não crava: o espírito brilha (e explode, com 5 pontos) onde ela parou
-          if (shot.kind === 'ancestral') this.spiritEnds.push({ x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now });
+          if (shot.kind === 'ancestral') this.spiritEnds.push({ x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now, ...(shot.look ? { rank: shot.look.rank, level: shot.look.level } : {}) });
           else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt) } : undefined);
           shots.delete(key);
           if (shots === this.shots) this.shotOfServer.delete(key);
@@ -1218,7 +1246,7 @@ export class CombatLayer {
         }
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
         const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, shotZ(shot.fromMonster, along + 0.3));
-        const drawn = drawProjectile(ctx, shot.kind, p, shadow, ahead, m); // a flecha, a pedra e a Flecha Ancestral
+        const drawn = drawShot(ctx, shot.kind, p, shadow, ahead, m, shot.look); // a flecha, a pedra e a Flecha Ancestral
         if (drawn) {
           if (hidden) ctx.restore();
           continue;

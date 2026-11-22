@@ -8,7 +8,7 @@ import type { Dir } from './dir';
 import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
 import type { CombatRules } from './combatRules';
-import type { ClassInfo, HeroState } from './classes';
+import type { ChargeLevel, ClassInfo, HeroState } from './classes';
 
 /** 'pet': bicho de estimação (o Joaquim, o gato da vó): anda sozinho, mia e ronrona; nunca é alvo. */
 export type EntityKind = 'player' | 'monster' | 'npc' | 'pet';
@@ -197,7 +197,9 @@ export type ServerMsg =
   | { t: 'ack'; seq: number; x: number; y: number; dir: Dir } // sua posição oficial após o pedido `seq`
   | { t: 'teleport'; x: number; y: number; dir: Dir } // você foi levado para outro lugar (ex.: voltou para a vila)
   | { t: 'stats'; stats: PlayerStats }
-  | { t: 'shot'; id: number; by: number; x: number; y: number; a: number; speed: number; range: number; kind: string; cid?: number }
+  // a Flecha Ancestral (kind 'ancestral') leva rk = os pontos dela de quem atirou e lv = o nível da puxada (1 fraco,
+  // 2 médio, 3 forte): o desenho muda com eles
+  | { t: 'shot'; id: number; by: number; x: number; y: number; a: number; speed: number; range: number; kind: string; cid?: number; rk?: number; lv?: ChargeLevel }
   // projétil acabou (hit = id de quem levou, ou 0). Sem acertar ninguém: onde parou (x, y, como no `shot`) e, se bateu
   // em algo, `on` = o tipo do que segurou (ex.: 'tronco', 'parede', 'pedra'; 'borda' = fim do mapa). No fim do alcance:
   // `on: 'agua'` se caiu na água; sem `on`, caiu no chão
@@ -224,9 +226,9 @@ export type ServerMsg =
   | { t: 'pace'; scale: number } // o ritmo do jogo mudou (câmera lenta do administrador): 1 = normal
   | { t: 'armed'; s: string | null } // a flecha especial carregada no seu arco (a habilidade `s`), ou null: saiu ou descarregou
   // alguém (`id`) usou a habilidade `s` da classe: cai em (x, y) (metros, no chão), num raio `r`, daqui a `ms`. n = quantas
-  // flechas sobem; p = quantos pontos ela tem (o desenho muda com 3 e com 5); kind = o que chove ('flecha' ou 'pedra': o
-  // tiro da arma de quem usou). Quem usou não recebe: já desenhou na hora
-  | { t: 'cast'; id: number; s: string; x: number; y: number; r: number; n: number; p: number; ms: number; kind: string }
+  // flechas sobem; p = quantos pontos ela tem (o desenho muda com eles); kind = o que chove ('flecha' ou 'pedra': o
+  // tiro da arma de quem usou); lv = o nível da puxada (1 fraco, 2 médio, 3 forte). Quem usou não recebe: já desenhou
+  | { t: 'cast'; id: number; s: string; x: number; y: number; r: number; n: number; p: number; ms: number; kind: string; lv?: ChargeLevel }
   | { t: 'fail'; reason: FailReason; item?: true } // pedido recusado (item: era um pedido da mochila ou da loja)
   | { t: 'inv'; inv: InventoryState } // sua mochila mudou
   // estes itens do monstro que caiu em (x, y) foram para a sua mochila. Desde 14/11 o servidor não manda mais: os itens

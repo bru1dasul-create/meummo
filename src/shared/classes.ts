@@ -4,6 +4,7 @@
 // próximo na mesma habilidade é preciso subir alguns níveis (assim ninguém põe tudo numa só logo no começo).
 // Os números ficam em data/classes.json; as regras (iguais no servidor e no navegador) ficam aqui.
 
+import type { ShotProfile } from './combat';
 import type { QuestLog } from './quests';
 
 /**
@@ -148,4 +149,34 @@ export function castPoint(from: { x: number; y: number }, to: { x: number; y: nu
   const distance = Math.hypot(dx, dy);
   if (distance <= range || distance === 0) return { x: to.x, y: to.y };
   return { x: from.x + (dx / distance) * range, y: from.y + (dy / distance) * range };
+}
+
+// ---- a habilidade que sai pelo arco (a Chuva de Flechas e a Flecha Ancestral): níveis de carga ----
+
+/**
+ * Fraco (1), médio (2) ou forte (3): enquanto puxa o arco com a habilidade armada, a carga passa por estes níveis
+ * (pedido do dono, 19/11: "níveis de carga só na Chuva e na Ancestral"; o alcance e o dano sobem com eles).
+ */
+export type ChargeLevel = 1 | 2 | 3;
+/** A carga (0 a 1) em que cada nível começa; o nível vale como esta carga (sobe em degraus, não aos pouquinhos). */
+export const CHARGE_LEVEL_AT: readonly [number, number, number] = [0, 0.5, 1];
+
+/** O nível da carga (0 a 1, a do tiro de sempre: chargeFraction). */
+export function chargeLevel(charge: number): ChargeLevel {
+  return charge >= CHARGE_LEVEL_AT[2] ? 3 : charge >= CHARGE_LEVEL_AT[1] ? 2 : 1;
+}
+
+/** Até onde a habilidade armada vai neste nível: do alcance sem carga da arma (fraco) ao da habilidade (forte). */
+export function armedReach(level: ChargeLevel, shot: Pick<ShotProfile, 'rangeMin'>, skill: Pick<ClassSkillInfo, 'range'>): number {
+  const reach = Math.max(shot.rangeMin, skill.range);
+  return shot.rangeMin + (reach - shot.rangeMin) * CHARGE_LEVEL_AT[level - 1];
+}
+
+/**
+ * O dano da habilidade armada neste nível, em fração do dano com o nível forte. O forte é o dano de sempre da
+ * habilidade (a carga cheia não dobra, como no tiro comum: quase todo mundo puxa até o fim); o fraco e o médio, menos
+ * (com o bônus de carga de sempre, 1: metade e três quartos).
+ */
+export function armedPower(level: ChargeLevel, shot: Pick<ShotProfile, 'damageBonus'>): number {
+  return (1 + shot.damageBonus * CHARGE_LEVEL_AT[level - 1]) / (1 + shot.damageBonus);
 }
