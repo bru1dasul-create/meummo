@@ -854,7 +854,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   sensação de impactos também por nível"), em 3 etapas: **1) os degraus da carga — FEITA em 22/11, na main** (o anel com as
   marcas dos degraus, a cor de cada um e o pulso quando sobe; a flecha no arco com o brilho por degrau e o clarão; o tiro
   e o impacto menores no fraco e completos no forte, com a pancada no forte; a Chuva já mira para o alto na puxada);
-  2) a Chuva com cara própria em cada ponto; 3) a Ancestral com cara própria em cada ponto (veja `docs/ARTE.md`)
+  **2) a Chuva com cara própria em cada ponto — FEITA em 22/11** (crua, madeira, ouro, brasa e espírito; o impacto
+  crescendo com os pontos; a flecha na mão igual) e, junto, **as flechas da Chuva saindo do arco** (print do dono: saíam
+  de dentro do corpo, retas para cima; agora saem da ponta da flecha, a 50°, para o lado do alvo, e a mira começa ali);
+  3) a Ancestral com cara própria em cada ponto (veja `docs/ARTE.md`)
 - [ ] **[estrutura]** Pedido da [arte] (22/11, junto com o "sensação de impactos também por nível" do dono): o tremor de
   tela, a pausa no impacto e o som crescendo com os pontos e o degrau nas habilidades — a Chuva caindo e a Flecha
   Ancestral parando/explodindo (hoje o tremor e a pausa só valem no acerto comum e vêm desligados no padrão). O desenho

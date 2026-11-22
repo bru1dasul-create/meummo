@@ -65,7 +65,29 @@
   - a Chuva no arco já mira para o alto na puxada (`attack.volleyAim`, da view; a pose usa `volley || volleyAim`)
   - conferido: a prancha (pasta de rascunho `niveis/`: `prancha.ts` com o esbuild, `arco.cjs`) e no jogo, com a Chuva
     em 3 pontos (dados pela janela K) e a Ancestral em 5 (`jogo-niveis.cjs`)
-  - **próximo: etapa 2** (a Chuva com cara própria em cada ponto, 1 a 5) e **etapa 3** (a Ancestral), uma de cada vez
+- **Etapa 2, a Chuva com cara própria em cada ponto (22/11, no ramo; falta o "pode" do dono para a main):** em
+  `rainArt.ts` cada ponto é uma "fase" (`Tier`: cor, `power` de 0 a 1, o que sobe de cada flecha — `hit` — e a grossura
+  da borda — `edge`); `rainTier(pontos)` diz o nome:
+  - 1 = **crua** (galho cinza-marrom, ponta de pedra bruta, penas sem cor; uma nuvenzinha de poeira e o impacto pequeno)
+  - 2 = **madeira** (a flecha comum, penas brancas com a ponta vermelha; duas nuvens de poeira e as lascas voando)
+  - 3 = **ouro** (dourada com rastro; faíscas) · 4 = **brasa** (laranja em brasa: o círculo com pontinhos de fogo, o
+    rastro soltando brasas, uma chaminha onde cada uma crava, o anel de chamas baixas e o chão queimado no impacto, a
+    brasa na base das cravadas) · 5 = **espírito** (como antes)
+  - o impacto cresce com os pontos (`power`: o tamanho da onda, o clarão, os riscos, a terra da pancada) e com o degrau
+  - a flecha na mão (`slingshot.js`, `TIER_LOOK`/`specialOf`) tem a mesma cara: crua (`RAW_MATS`), comum, dourada,
+    brasa (`EMBER_MATS`, e as luzinhas viram brasas) e espírito
+  - conferido: prancha dos 5 pontos × 7 momentos, grande e no tamanho do jogo (rascunho `niveis2/`), o herói puxando
+    com 1 a 5 (`niveis2/arco.cjs`) e no jogo com 4 pontos
+- **As flechas da Chuva saem do arco (22/11, print do dono: "acaba saindo as flechas da cabeça do personagem; acerta
+  para sair do arco"):** antes subiam retas de dentro do corpo (de 1,1 m de altura, no pé de quem atirou). Agora saem da
+  ponta da flecha no arco e sobem na direção em que ele aponta: medido na pose da Chuva no protótipo
+  (`bowGeometry`, puxada cheia): a ponta fica 0,49 m à frente e 2,19 m de altura, apontando 50° para o alto, para o alvo
+  (`LAUNCH`/`LAUNCH_PITCH` no `rainArt.ts`; a pedra sai do garfo do estilingue, 2 m de altura). Abrem um pouco em leque,
+  cada uma num ritmo. O pontilhado da mira também começa ali (antes saía da barriga). Se a pose da Chuva mudar
+  (`slingshot.js`, `bowArms` com `up`), medir de novo (rascunho `chuva-saida/medir.cjs`) e acertar o `LAUNCH`
+  - conferido no protótipo (o Birim soltando + as flechas na mesma câmera, 5 direções, arco e estilingue) e no jogo
+    (3 direções, com 4 pontos)
+  - **próximo: etapa 3** (a Ancestral com cara própria em cada ponto)
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
