@@ -399,6 +399,11 @@ export class CombatLayer {
   private aim: RainAim | null = null;
   /** O fim das Flechas Ancestrais (o brilho e a explosão) e os bichos marcados por elas (até quando). */
   private spiritEnds: SpiritEnd[] = [];
+  /**
+   * A Flecha Ancestral parou (ou explodiu, com `r` > 0) agora, no desenho: o motor treme a tela, pausa e toca o baque,
+   * crescendo com os pontos e o degrau (`mine` = foi a sua).
+   */
+  onSpiritEnd: ((end: SpiritEnd & { mine: boolean }) => void) | null = null;
   private readonly marked = new Map<number, number>();
   /** O seu pé (para saber se você está dentro da casa do bicho). */
   private viewer: Point | null = null;
@@ -1239,7 +1244,11 @@ export class CombatLayer {
           const end = shotFeet(shot.x + shot.dx * stopAt, shot.y + shot.dy * stopAt);
           const on = shot.stop?.on;
           // a Flecha Ancestral não crava: o espírito brilha (e explode, com 5 pontos) onde ela parou
-          if (shot.kind === 'ancestral') this.spiritEnds.push({ x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now, ...(shot.look ? { rank: shot.look.rank, level: shot.look.level } : {}) });
+          if (shot.kind === 'ancestral') {
+            const spirit: SpiritEnd = { x: end.x, y: end.y, r: shot.stop?.burst ?? 0, start: now, ...(shot.look ? { rank: shot.look.rank, level: shot.look.level } : {}) };
+            this.spiritEnds.push(spirit);
+            this.onSpiritEnd?.({ ...spirit, mine: shots === this.myShots });
+          }
           else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt, shot.range) } : undefined);
           shots.delete(key);
           if (shots === this.shots) this.shotOfServer.delete(key);

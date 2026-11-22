@@ -55,7 +55,7 @@ import { skillIconUrl } from './skillIcons';
 import { dangerColor } from './danger';
 import { DebugPanel } from './debugPanel';
 import { gameClock, gameNow } from './gameClock';
-import { loadFeel, saveFeel, shakeOffset, type Feel } from './feel';
+import { loadFeel, saveFeel, shakeOffset, skillImpactFeel, skillImpactPower, type Feel } from './feel';
 import { SkillTip, type SkillTipText } from './skillTip';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
@@ -262,6 +262,8 @@ class NewWorld implements NewWorldGame {
    * dono, 22/11: "só poder quando ele voltar da esquiva e fazer a animação"; o servidor também recusa rolando).
    */
   private chargeAfterRoll: Aim | null = null;
+  /** As suas Chuvas no ar: quando cada uma chega ao chão (relógio do jogo) e com que força (o tremor e a pausa). */
+  private landings: { at: number; power: number }[] = [];
   private jumpedAt = -Infinity;
   private jumpReadyAt = 0;
   /** Dia e noite: o instante (performance.now) em que o ciclo começou, pelo relógio do servidor. */
@@ -364,6 +366,8 @@ class NewWorld implements NewWorldGame {
     // os números do combate: o mesmo objeto aqui e no desenho do combate (o servidor manda os novos, se mudarem)
     this.rules = { ...defaultCombatRules(), ...deps.welcome.combat };
     this.combat = new CombatLayer(this.container, this.rules);
+    // a Flecha Ancestral batendo ou explodindo (no desenho): o baque para todos, o tremor e a pausa só na sua
+    this.combat.onSpiritEnd = (end) => this.skillLanded(skillImpactPower(end.rank ?? 1, end.level ?? 3), end.mine, end.r > 0, gameNow());
     this.classes = deps.welcome.classes ?? [];
     if (deps.welcome.hero) this.hero = deps.welcome.hero;
     this.actionBar = this.makeActionBar();
@@ -559,6 +563,7 @@ class NewWorld implements NewWorldGame {
     this.conversationNpc = null;
     this.combat.clear();
     this.combat.raise(); // por cima do desenho novo
+    this.landings = []; // a Chuva que estava no ar ficou no outro mapa
     this.entities.clear();
     this.facing.clear();
     this.npcs.clear();
@@ -659,6 +664,10 @@ class NewWorld implements NewWorldGame {
     this.handleMovement(now);
     this.handlePendingShot(now);
     if (this.chargeAfterRoll && !this.rolling(now)) this.startCharge(this.chargeAfterRoll, now);
+    if (this.landings.length > 0 && this.landings.some((l) => now >= l.at)) {
+      for (const l of this.landings.filter((x) => now >= x.at)) this.skillFeel(l.power, now);
+      this.landings = this.landings.filter((l) => now < l.at);
+    }
     this.updateCharge(now);
     this.updateAim();
     this.updateHawk(now);
@@ -1913,7 +1922,9 @@ class NewWorld implements NewWorldGame {
         const range = this.armedRange(special, charge, d);
         const spot = { x: Math.max(0, Math.min(this.map.width, feet.x + Math.cos(sent) * range)), y: Math.max(0, Math.min(this.map.height, feet.y + Math.sin(sent) * range)) };
         this.combat.rain(feet, spot.x, spot.y, numbers.radius, numbers.arrows, rank, special.delayMs, shot.kind, now, level);
-        this.sfx.volley(special.delayMs, numbers.arrows, shot.kind === 'pedra');
+        const power = skillImpactPower(rank, level);
+        this.sfx.volley(special.delayMs, numbers.arrows, shot.kind === 'pedra', power);
+        this.landings.push({ at: now + special.delayMs, power }); // o tremor e a pausa quando ela chegar ao chão
         pose = 'volley'; // atira para o alto (a pose é da [arte])
       } else {
         this.combat.myShot(cid, origin.x, origin.y, flight, special.speed, this.armedRange(special, charge, d), now, 'ancestral', { rank, level });
@@ -2385,12 +2396,28 @@ class NewWorld implements NewWorldGame {
     if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : 'hit'); // a casca do tatu-bola soa como a defesa
   }
 
-  /** Começa um tremor de tela (o mais forte ganha, se já tiver um). */
-  private startShake(px: number, now: number): void {
-    if (px <= 0 || this.feel.shakeMs <= 0) return;
+  /** Começa um tremor de tela (o mais forte ganha, se já tiver um). `ms`: quanto dura (sem ele, o do game feel). */
+  private startShake(px: number, now: number, ms = this.feel.shakeMs): void {
+    if (px <= 0 || ms <= 0) return;
     const left = this.shake.px > 0 ? shakeOffset(now, this.shake.start, this.shake.ms, this.shake.px) : { x: 0, y: 0 };
     if (Math.hypot(left.x, left.y) > px) return;
-    this.shake = { start: now, ms: this.feel.shakeMs, px };
+    this.shake = { start: now, ms, px };
+  }
+
+  /**
+   * Uma habilidade chegou (a Flecha Ancestral batendo ou explodindo): o baque no som, para todos; o tremor e a pausa, só
+   * na sua. `power` de 0 a 1 (os pontos e o degrau: skillImpactPower).
+   */
+  private skillLanded(power: number, mine: boolean, burst: boolean, now: number): void {
+    this.sfx.impact(power, burst);
+    if (mine) this.skillFeel(power, now);
+  }
+
+  /** O tremor e a pausa de uma habilidade sua (pedido do dono, 22/11: "sensação de impactos também por nível"). */
+  private skillFeel(power: number, now: number): void {
+    const feel = skillImpactFeel(this.feel, power);
+    this.startShake(feel.shakePx, now, feel.shakeMs);
+    if (feel.stopMs > 0) this.hitStopUntil = Math.max(this.hitStopUntil, now + feel.stopMs);
   }
 
   private onDeath(id: number): void {
@@ -2767,7 +2794,7 @@ class NewWorld implements NewWorldGame {
           msg.hit,
           msg.x !== undefined && msg.y !== undefined ? { x: msg.x, y: msg.y, ...(msg.on ? { on: msg.on } : {}), ...(msg.burst ? { burst: msg.burst } : {}) } : undefined,
         );
-        if (msg.burst) this.sfx.play('burst'); // a Flecha Ancestral explodiu no fim
+        // (o estouro da Flecha Ancestral toca quando o desenho chega lá: veja onSpiritEnd)
         break;
       case 'fx': {
         if (this.entities.get(msg.id)?.kind === 'pet') {
@@ -2905,7 +2932,7 @@ class NewWorld implements NewWorldGame {
         const from = this.drawnFeet(msg.id) ?? { x: msg.x, y: msg.y };
         this.combat.rain(from, msg.x, msg.y, msg.r, msg.n, msg.p, msg.ms, msg.kind, now, msg.lv ?? 3);
         if (msg.x !== from.x || msg.y !== from.y) this.view?.action?.(msg.id, 'volley', toDegrees(aimAngle(from, msg)));
-        this.sfx.volley(msg.ms, msg.n, msg.kind === 'pedra');
+        this.sfx.volley(msg.ms, msg.n, msg.kind === 'pedra', skillImpactPower(msg.p, msg.lv ?? 3));
         break;
       }
       case 'fail':

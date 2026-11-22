@@ -356,7 +356,7 @@ export class Sfx {
    * A Chuva de Flechas: as cordas do arco soltando uma atrás da outra (com o estilingue, o elástico), o assobio subindo
    * e, quando elas chegam (daqui a `delayMs`), a chuvarada de "tucs" no chão. Tudo marcado no relógio do som.
    */
-  volley(delayMs: number, count: number, stone: boolean): void {
+  volley(delayMs: number, count: number, stone: boolean, power = 0): void {
     const ctx = this.ctx;
     if (this.muted || !ctx || ctx.state !== 'running') return;
     const t = ctx.currentTime;
@@ -373,6 +373,27 @@ export class Sfx {
       this.noise(at, 0.04, 'lowpass', stone ? 1600 : 900, 300, 0.16);
       this.tone('sine', stone ? 300 : 180, 90, at, 0.05, 0.08);
     }
+    // o chão retumbando quando ela chega: mais fundo e mais forte com os pontos e o degrau (pedido do dono, 22/11)
+    if (power > 0.05) this.thud(land, power);
+  }
+
+  /**
+   * Um impacto de habilidade (a Flecha Ancestral batendo ou explodindo), crescendo com a força (0 a 1: os pontos e o
+   * degrau da carga). `burst` = explodiu (o estouro de sempre, por cima do baque).
+   */
+  impact(power: number, burst = false): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    if (burst) this.play('burst');
+    this.thud(ctx.currentTime, power);
+  }
+
+  /** O baque de um impacto: um grave que desce e a terra; com mais força, mais fundo, mais longo e com um brilho no fim. */
+  private thud(at: number, power: number): void {
+    const p = Math.min(1, Math.max(0, power));
+    this.tone('sine', 140 - 50 * p, 38, at, 0.22 + 0.28 * p, 0.1 + 0.22 * p);
+    this.noise(at, 0.1 + 0.2 * p, 'lowpass', 900 + 900 * p, 160, 0.06 + 0.16 * p);
+    if (p > 0.45) this.tone('sine', 520 + 400 * p, 1100 + 600 * p, at + 0.04, 0.22 + 0.2 * p, 0.025 + 0.05 * p);
   }
 
   /**
