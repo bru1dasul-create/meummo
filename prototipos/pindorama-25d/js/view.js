@@ -1353,7 +1353,7 @@
       const alpha = this._conversationAlpha(a);
       const paint = (c) => {
         if (ch.look) ch.look.eyeGlow = a.eyeGlow || 0;
-        painter.draw(c, rig, ch.look, ch.equipped, a.appearance || PD.classes.appearanceOf(ch));
+        painter.draw(c, rig, ch.look, ch.equipped, a.appearance || (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch));
       };
       return {
         entity: ch,

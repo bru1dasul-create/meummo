@@ -636,24 +636,23 @@
   function quiverItems(renderer, rig, look, all, MOD) {
     const q = quiverPose(rig, MOD || PD.MODEL), Q = QUIVER, items = [];
     const toCam = renderer.toCam;
-    let host = null, under = false;
+    let host = null, under = false, hole = null;
     if (toCam && Array.isArray(all) && all.length) {
-      const facing = M.dot(rig.chest.f, toCam);
       const arm = (i) => all.find((it) => it.group === 'braco' + i) || all.find((it) => it.group === 'mao' + i) || null;
-      if (facing > 0.2) { host = all[0]; under = true; }
-      else if (facing < -0.2) { if (look.quiverGrab && arm(1)) { host = arm(1); under = true; } }
-      else {
-        const near = M.dot(rig.shoulder[0], toCam) > M.dot(rig.shoulder[1], toCam) ? 0 : 1;
-        host = arm(near);
-        under = !!host;
-      }
+      const L = backLayer(renderer, rig, look, all, arm, 'aljava');
+      host = L.host;
+      under = L.under;
+      // de costas ela vai por cima de tudo (no fim). Pegando a flecha, a mão direita fica por cima dela: nada da aljava é
+      // pintado dentro da mão (22/11, o dono: "as flechas atrás das costas somem quando o Birim pega a flecha". Ela ia
+      // logo antes do braço direito, e com o braço atrás do tronco na ordem o tronco tampava a aljava inteira)
+      if (L.mode === 'costas' && look.quiverGrab) hole = handHole(renderer, all, 1);
     }
     const key = (host ? host.key : renderer.keyOf(q.top)) + 0.07;
     // (caído no chão, nada passa para baixo dele — como o arco)
     const floor = look.restGround !== undefined ? (p) => (p.z < look.restGround + 2.2 ? { ...p, z: look.restGround + 2.2 } : p) : (p) => p;
     const segment = (a, b, ra, rb, material, name, k = 0.28) => {
       const circles = [renderer.circle(floor(a), ra), renderer.circle(floor(b), rb)];
-      items.push({ name: 'aljava:' + name, key, host, under, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
+      items.push({ name: 'aljava:' + name, key, host, under, hideInside: hole, segs: [{ poly: renderer.hull(circles), circles, mat: material, k }] });
     };
     const ax = q.axis, at = (t) => M.lerp3(q.bottom, q.top, t);
     // as costas, para o lado de fora (e1), e o lado (e2), em volta do eixo: o leque das flechas
@@ -678,6 +677,45 @@
       arrowSegments(segment, outer, dir, M.len(M.sub(inner, outer)), M.norm(M.cross(dir, off)), false, 'flecha' + i + ':', false);
     }
     return items;
+  }
+  /**
+   * Onde entra o que vai nas costas (o arco guardado e a aljava) na ordem do corpo: de frente, atrás de tudo; de costas,
+   * por cima de tudo; de lado, logo antes do braço de perto (ele passa por cima). `arm(i)` acha o braço. A troca entre os
+   * três tem folga, guardada por personagem: com o peito girando um tiquinho no começo do tiro ela piscava num quadro entre
+   * "por cima do tronco" e "atrás de tudo" (o tubo sumia de lado e de frente). E de lado nunca vai para trás do tronco:
+   * com o braço de perto atrás dele na ordem, entra logo depois do tronco.
+   */
+  function backLayer(renderer, rig, look, all, arm, what) {
+    const toCam = renderer.toCam;
+    const facing = M.dot(rig.chest.f, toCam);
+    const memo = renderer._backModes || (renderer._backModes = new WeakMap());
+    const keyed = !!look && typeof look === 'object';
+    const mine = (keyed && memo.get(look)) || {};
+    const prev = mine[what];
+    let mode;
+    if (prev === 'frente') mode = facing > 0.12 ? 'frente' : facing < -0.2 ? 'costas' : 'lado';
+    else if (prev === 'costas') mode = facing < -0.12 ? 'costas' : facing > 0.2 ? 'frente' : 'lado';
+    else mode = facing > 0.2 ? 'frente' : facing < -0.2 ? 'costas' : 'lado';
+    mine[what] = mode;
+    if (keyed) memo.set(look, mine);
+    if (mode === 'frente') return { mode, host: all[0], under: true };
+    if (mode === 'costas') return { mode, host: null, under: false };
+    const near = M.dot(rig.shoulder[0], toCam) > M.dot(rig.shoulder[1], toCam) ? 0 : 1;
+    const a = arm(near);
+    let torsoEnd = -1;
+    for (let k = 0; k < all.length; k++) if (all[k].group === 'tronco') torsoEnd = k;
+    if (a && all.indexOf(a) > torsoEnd) return { mode, host: a, under: true };
+    const after = torsoEnd >= 0 ? all[torsoEnd + 1] || null : a;
+    return { mode, host: after, under: !!after };
+  }
+  /** O contorno da mão `i` na tela (o casco dos pedaços dela, um pouco maior): o buraco da aljava quando a mão está por cima. */
+  function handHole(renderer, all, i) {
+    const hand = all.find((it) => it.name === 'mao' && it.group === 'mao' + i);
+    if (!hand || !hand.segs) return null;
+    const pts = [];
+    for (const sg of hand.segs) if (sg.poly && sg.poly.length >= 6) for (let k = 0; k < sg.poly.length; k++) pts.push(sg.poly[k]);
+    if (pts.length < 6) return null;
+    return PD.shapes.offsetConvex(PD.shapes.convexHull(pts), 0.4 * (renderer.zoom || 1));
   }
   /** A flecha na mão direita, da aljava até a corda (`look.arrowHeld` de 0 a 1): sai apontando para dentro da aljava,
    * cresce enquanto é puxada para fora e gira até a linha do tiro (aí vira a flecha encaixada). */
@@ -721,14 +759,9 @@
     const onBack = g.stow > 0.5 && !look.bowHeld && !!toCam && Array.isArray(all) && all.length > 0;
     let host = handHost, backUnder = false;
     if (onBack) {
-      const facing = M.dot(rig.chest.f, toCam);
-      if (facing > 0.2) { host = all[0]; backUnder = true; }
-      else if (facing < -0.2) host = null;
-      else {
-        const near = M.dot(rig.shoulder[0], toCam) > M.dot(rig.shoulder[1], toCam) ? 0 : 1;
-        host = all.find((it) => it.group === 'braco' + near || it.group === 'mao' + near) || null;
-        backUnder = !!host;
-      }
+      const L = backLayer(renderer, rig, look, all, (near) => all.find((it) => it.group === 'braco' + near || it.group === 'mao' + near) || null, 'arco');
+      host = L.host;
+      backUnder = L.under;
     }
     const key = (host ? host.key : renderer.keyOf(g.grip)) + 0.08;
     // o que fica atrás do punho (visto da câmera) vai por baixo da mão; o resto, por cima dela

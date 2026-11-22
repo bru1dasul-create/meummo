@@ -45,10 +45,26 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [ ] **[arte]** Música da vila e sons de verdade (gravados ou de banco gratuito)
 - [x] **[arte]** BIRIM, o personagem principal novo, no jogo para testar (19/11, na main): com `?birim` no endereço
   (ex.: `http://localhost:5173/?birim`), o seu personagem e os outros jogadores na sua tela saem com o Birim; o navegador
-  guarda a escolha até abrir com `?heroi`; sem a chave, nada muda. Veja `docs/ARTE.md`, "AGORA"
-- [ ] **[dono]** Jogar com `?birim` e dizer o que incomoda no tamanho real (FEITO em 19/11: a lista está no
-  `docs/ARTE.md`, "AGORA"); depois escolher: (A) o Birim vira o herói de todos ou (B) cada jogador escolhe (aí a
-  [estrutura] salva o `model` de cada um)
+  guarda a escolha até abrir com `?heroi`. Veja `docs/ARTE.md`, "AGORA"
+- [x] **[dono]** Jogar com `?birim` e dizer o que incomoda no tamanho real (FEITO em 19/11: a lista está no
+  `docs/ARTE.md`) e escolher: (A) o Birim vira o herói de todos ou (B) cada jogador escolhe. ESCOLHIDA a (A) em 22/11
+- [x] **[arte]** Birim para todos (22/11, escolha A do dono): sem nada no endereço, todo jogador sai com o Birim (no
+  mundo, no retrato da barra e na mochila; os NPCs não mudam). `?heroi` volta ao herói antigo e o navegador guarda a
+  escolha; `?birim` volta ao Birim. Não salva nada no servidor. FEITO em 22/11 (veja `docs/ARTE.md`)
+- [x] **[arte]** Peças sumindo no jogo (22/11, o dono: "o shorts some correndo, mirando ou não; o chinelo acontece o
+  mesmo; as flechas atrás das costas somem quando o Birim pega a flecha"). Gravado quadro a quadro no jogo: (a) a aljava
+  de costas ia para trás do tronco na hora de pegar a flecha — agora fica por cima, com um buraco no formato da mão, e a
+  troca de frente/lado/costas tem folga (não pisca); (b) o chinelo de costas e na diagonal de costas não aparecia (no
+  tamanho do jogo a beirada da sola virava a linha do contorno e a tira ficava atrás do pé) — sola mais grossa e a tira do
+  lado que a câmera vê por cima do pé. FEITO em 22/11. A bermuda não sumiu em ~2.300 quadros gravados (o que cobre é o
+  braço ou a outra perna na frente, ou um pilar do cenário): **[dono]** mandar um print se vir de novo
+- [ ] **[estrutura]** Tiro no fim da esquiva (22/11, o dono: "no final da esquiva é possível dar um tiro de flecha;
+  arrumar para só poder quando ele voltar da esquiva e fazer a animação"): o motor deixa começar a puxada durante a
+  rolada (`startCharge`/`tryShoot` não olham o `dashedAt`; o pulo já olha, com `DASH_ROLL_MS`) e o servidor só recusa o
+  pulo rolando. Pedido da [arte]: recusar puxar/atirar rolando (cliente e servidor, como o pulo) e, se o botão continuar
+  apertado quando a rolada acabar, começar a puxada nessa hora (a animação toda aparece e a flecha só sai depois da
+  puxada mínima). O desenho da rolada acaba em 0,62 s, antes dos 700 ms do `DASH_ROLL_MS`: do lado da [arte] não precisa
+  mudar nada
 - [x] **[arte]** A lista do dono do Birim no jogo (19/11), em etapas: o "V" do tronco e a linha do calcanhar (FEITO em
   19/11); 1) trapézio, ombros, colar e barba de frente (FEITO em 19/11); 2) bermuda, tronco na corrida e pés (FEITO em 20/11); 3) braços
   da corrida (muda o herói também; FEITO em 20/11); 4) mirar para trás com o arco (muda o herói também; FEITO em 20/11:

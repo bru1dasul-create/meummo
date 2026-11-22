@@ -83,7 +83,7 @@
       ctx.ellipse(ground.x, ground.y, r, r * 0.42, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    painter.draw(ctx, rig, ch.look, ch.equipped, PD.classes ? PD.classes.appearanceOf(ch) : undefined);
+    painter.draw(ctx, rig, ch.look, ch.equipped, PD.classes ? (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch) : undefined);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     return true;
   }

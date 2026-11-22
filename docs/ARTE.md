@@ -4,7 +4,37 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
-## AGORA (19/11, antes do `/clear`): o BIRIM vai para o jogo — LEIA PRIMEIRO
+## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO
+- **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
+  todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
+  `?heroi` volta ao herói antigo e fica guardado (`localStorage`, `meummo.testeModelo`); `?birim` volta. As ferramentas
+  (`testes.cjs`, `export.js`, `ficha.js`, `game.js` do protótipo) continuam com `appearanceOf`, que só dá o Birim com
+  `?birim`: o herói das pranchas e dos testes não mudou. Conferido no jogo: sem nada = Birim, `?heroi` = herói (e continua
+  herói ao abrir de novo sem nada), `?birim` = Birim.
+- **Peças sumindo (22/11, o dono):** gravei o jogo quadro a quadro (`jogo.cjs` na pasta de rascunho: o jogo de verdade,
+  correndo nas 8 direções, mirando andando e atirando; cada quadro é redesenhado fora da tela com e sem cada peça, e os
+  pixels que mudam são o que aparece dela). O que era defeito:
+  - **A aljava de costas** ia logo antes do braço direito na hora de pegar a flecha; com o braço atrás do tronco na ordem,
+    o tronco tampava a aljava inteira (tubo com 0 px). Agora, de costas, ela fica por cima de tudo, como sem pegar, e não
+    pinta dentro da mão direita (`handHole`: o casco da mão na tela, um pouco maior). A escolha frente/lado/costas
+    (`backLayer`, a mesma do arco guardado) tem folga por personagem (troca em 0,2 e só volta em 0,12) e, de lado, nunca
+    vai para trás do tronco. Correndo e atirando nas 12 direções: quedas fortes da aljava de 22 cenas para 5 (as 5 são de
+    frente, onde ela fica atrás do corpo, e já existiam antes; numa delas o peito vira de uma vez no começo de um tiro
+    emendado no outro).
+  - **O chinelo de costas e na diagonal de costas:** no tamanho do jogo (~1 px por cm) a beirada de 1,5 cm da sola virava
+    a linha do contorno e a tira em Y ficava atrás do pé (de propósito, por causa da "linha preta no calcanhar"): não se
+    via chinelo nenhum, só o calcanhar; quando o pé levantava, a sola preta aparecia — piscava a cada passo. A sola ficou
+    com 2,1 cm (`SOLE_R`) e passa ~1 cm do calcanhar; e, de costas, a metade de baixo da perna da tira do lado que a
+    câmera vê (a que desce pela beirada do pé até a sola) vai por cima do pé. De costas mesmo nenhum lado aparece: o
+    calcanhar continua sem a linha.
+  - **A bermuda** não sumiu em ~2.300 quadros: o que a cobre às vezes é o braço balançando ou a outra perna na frente (de
+    verdade), um pilar ou uma planta do cenário. Pedi um print ao dono se ele vir de novo.
+- **Tiro no fim da esquiva (22/11, o dono):** é do motor (o `startCharge` não olha a rolada; o servidor só recusa o pulo
+  rolando). Pedido feito à [estrutura] (veja o `ROADMAP.md`). O desenho da rolada acaba em 0,62 s, antes dos 700 ms.
+- **Próximo da [arte] (o dono escolheu "Passo e junta"):** mirando de lado andando, o corpo vira para a mira e as pernas
+  andam de lado, passo e junta, sem cruzar. **Mandar o escopo ao dono antes de começar.**
+
+## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
   cheia**, a da rodada 4b (o dono pediu de volta em 19/11, pela [estrutura]: "sem barba ficou pior"; os defeitos de ângulo
   dela "podem esperar: julguem no jogo, no tamanho real"). A barba curta (pintada na pele) ficou no commit `e6c6d5d`, se

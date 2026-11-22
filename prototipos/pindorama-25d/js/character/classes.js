@@ -72,14 +72,14 @@
     return registry.get(id) || registry.get('semClasse');
   }
 
-  // (teste do dono, 19/11: com `?birim` no endereço, os jogadores saem com o Birim, o personagem principal novo
-  // (`birim.js`) — para ver no jogo, no tamanho real, antes de decidir se ele vira o herói de todos ou se cada jogador
-  // escolhe. Vale só para quem abriu com a chave, e só para os jogadores: os NPCs continuam iguais. Sem a chave, nada muda.
-  // A chave vale em maiúscula ou minúscula, depois de `?` ou de `#`, e fica guardada NESTE navegador: depois de abrir uma
-  // vez com ela, o jogo continua com o Birim mesmo aberto sem a chave (pelo jogar.bat), até abrir com `?heroi`. No PC do
-  // dono, digitar no endereço falhou — clicar na barra seleciona tudo, e o que se digita troca o endereço inteiro)
-  const TEST_KEY = 'meummo.testeModelo';
-  const TEST_MODEL = (() => {
+  // O BIRIM É O HERÓI DE TODOS NO JOGO (21/11, escolha do dono: "A: Birim para todos"; de 19 a 21/11 ele só aparecia com
+  // `?birim` no endereço). No jogo, os jogadores saem com o Birim (`birim.js`) — no mundo, no retrato da barra e na
+  // mochila (`playerAppearance`); os NPCs continuam com a aparência deles. Para ver o herói antigo NESTE navegador: abrir
+  // uma vez com `?heroi` (fica guardado até abrir com `?birim`). A chave vale em maiúscula ou minúscula, depois de `?` ou
+  // de `#` (no PC do dono, digitar no endereço falhou: clicar na barra seleciona tudo). As ferramentas e as pranchas do
+  // protótipo continuam com o herói (`appearanceOf`), menos depois de um `?birim` (o teste de antes).
+  const CHOICE_KEY = 'meummo.testeModelo';
+  const CHOICE = (() => {
     try {
       if (typeof location === 'undefined') return null;
       const where = (location.search + '&' + location.hash.replace(/^#/, '')).toLowerCase();
@@ -92,16 +92,14 @@
       }
       const save = (v) => {
         try {
-          if (!store) return;
-          if (v) store.setItem(TEST_KEY, v);
-          else store.removeItem(TEST_KEY);
+          if (store) store.setItem(CHOICE_KEY, v);
         } catch (e) {
           // (sem onde guardar: vale só nesta página)
         }
       };
       if (has('heroi')) {
-        save(null);
-        return null;
+        save('heroi');
+        return 'heroi';
       }
       if (has('birim')) {
         save('birim');
@@ -109,23 +107,31 @@
       }
       let saved = null;
       try {
-        saved = store && store.getItem(TEST_KEY);
+        saved = store && store.getItem(CHOICE_KEY);
       } catch (e) {
         saved = null;
       }
-      return saved === 'birim' ? 'birim' : null;
+      return saved === 'heroi' || saved === 'birim' ? saved : null;
     } catch (e) {
       return null;
     }
   })();
-  let testAppearance;
+  let birimLook;
+  const birim = () => {
+    if (birimLook === undefined) birimLook = (PD.models && PD.models.appearance && PD.models.appearance('birim')) || null;
+    return birimLook;
+  };
 
-  /** Aparência para o desenho (o renderer usa a paleta da classe do personagem). */
+  /** Aparência para o desenho (o renderer usa a paleta da classe do personagem): a das ferramentas e pranchas. */
   function appearanceOf(character) {
-    if (TEST_MODEL) {
-      if (testAppearance === undefined) testAppearance = (PD.models && PD.models.appearance && PD.models.appearance(TEST_MODEL)) || null;
-      if (testAppearance) return testAppearance;
-    }
+    if (CHOICE === 'birim' && birim()) return birim();
+    const c = get(character && character.classe);
+    return c ? { paleta: c.paletaFinal, classe: c.id } : null;
+  }
+
+  /** A aparência dos jogadores no jogo: o Birim (escolha do dono), menos neste navegador depois de um `?heroi`. */
+  function playerAppearance(character) {
+    if (CHOICE !== 'heroi' && birim()) return birim();
     const c = get(character && character.classe);
     return c ? { paleta: c.paletaFinal, classe: c.id } : null;
   }
@@ -133,5 +139,5 @@
   // a classe de hoje: sem classe, sem equipamento (o personagem base)
   define({ id: 'semClasse', nome: 'Sem classe' });
 
-  PD.classes = { define, validate, get, appearanceOf, list: () => [...registry.values()], GOLPES, IDENTITY };
+  PD.classes = { define, validate, get, appearanceOf, playerAppearance, list: () => [...registry.values()], GOLPES, IDENTITY };
 })(window.PD = window.PD || {});

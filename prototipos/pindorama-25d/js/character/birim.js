@@ -2191,6 +2191,13 @@
         const behind = dot(rig.foot[i].f, R.toCam) < -0.3;
         const host = (behind && hostOf('sola', 'sola' + i)) || hostOf('pe', 'perna' + i);
         out.push({ name: 'tiraChinelo', key: keyAfter(host, 8 + i), host, draw: () => sandalStraps(R, rig, i) });
+        // (22/11, o dono: "o chinelo some" correndo. Na diagonal de costas a câmera vê a beirada do pé, e a perna da tira
+        // daquele lado desce por ela até a sola: essa parte vai por cima do pé. De costas mesmo, nenhum lado aparece e
+        // nada muda — o calcanhar continua sem a linha preta)
+        if (behind) {
+          const foot = hostOf('pe', 'perna' + i);
+          if (foot) out.push({ name: 'tiraChinelo', key: keyAfter(foot, 10 + i), host: foot, draw: () => sandalStraps(R, rig, i, true) });
+        }
       }
     }
     return out;
@@ -2353,7 +2360,11 @@
 
   // ------------------------------------------------------------------ chinelos
   // a sola: um pouco maior que o pé, rente ao chão (o pé é pintado por cima; sobra a beirada dela em volta)
-  const SOLE = [[0, -7.4], [3.6, -5.6], [4.9, -1], [5.3, 5], [5.6, 10.6], [4.6, 15.6], [1.6, 18.2], [-2.4, 17.4], [-5.2, 13.6], [-5.9, 8], [-5.3, 2], [-4.2, -4.6]];
+  // (22/11, o dono: "o chinelo some" correndo. No tamanho do jogo, ~1 px por cm, a beirada de 1,5 cm virava a linha do
+  // contorno: de costas e na diagonal de costas não se via chinelo nenhum, só o calcanhar. A sola ficou mais grossa,
+  // 2,1 cm, e passa um pouco mais do calcanhar: de costas sobra uma faixa preta embaixo dele)
+  const SOLE = [[0, -8.3], [3.8, -6.3], [4.9, -1], [5.3, 5], [5.6, 10.6], [4.6, 15.6], [1.6, 18.2], [-2.4, 17.4], [-5.2, 13.6], [-5.9, 8], [-5.3, 2], [-4.4, -5.4]];
+  const SOLE_R = 1.05; // meia grossura da sola
   const soleSphere = (R, rig, i, s, f, u, r) => {
     const side = i === 0 ? -1 : 1;
     const B = PD.BODY;
@@ -2364,11 +2375,11 @@
   };
   /** A sola de um pé, como peça própria: entra na ordem logo antes da perna (o pé cobre o miolo; sobra a beirada). */
   function soleItem(R, rig, i, items) {
-    const u = -PD.BODY.ankleHeight + 0.75;
+    const u = -PD.BODY.ankleHeight + SOLE_R;
     const leg = items.find((it) => it.name === 'coxa' && it.group === 'perna' + i);
     const foot = items.find((it) => it.name === 'pe' && it.group === 'perna' + i);
     const key = Math.min(leg ? leg.key : Infinity, foot ? foot.key : Infinity) - 0.03;
-    return { name: 'sola', key, group: 'sola' + i, segs: [{ poly: R.hull(SOLE.map(([s, f]) => soleSphere(R, rig, i, s, f, u, 0.75))), circles: R._last, mat: R.pal.sandal, k: 0.2 }] };
+    return { name: 'sola', key, group: 'sola' + i, segs: [{ poly: R.hull(SOLE.map(([s, f]) => soleSphere(R, rig, i, s, f, u, SOLE_R))), circles: R._last, mat: R.pal.sandal, k: 0.2 }] };
   }
   /** Tira chata: uma fita que vai de `w0` a `w1` cm de largura ao longo de pontos no espaço, com contorno de tinta. */
   function ribbon(R, pts, w0, w1, color, ink = R.pal.ink) {
@@ -2408,7 +2419,7 @@
     ctx.fillStyle = color;
     ctx.fill(path);
   }
-  function sandalStraps(R, rig, i) {
+  function sandalStraps(R, rig, i, sideOnly = false) {
     const side = i === 0 ? -1 : 1;
     const B = PD.BODY;
     const ft = rig.foot[i];
@@ -2421,6 +2432,13 @@
     const sideVec = scale(ft.r, -side); // para o lado de dentro do pé
     const seeIn = dot(sideVec, cam) > -0.35, seeOut = dot(sideVec, cam) < 0.35;
     const mat = R.pal.sandal;
+    if (sideOnly) {
+      // de costas: só a metade de baixo da perna da tira do lado que a câmera vê (a que desce pela beirada do pé)
+      const k = dot(sideVec, cam);
+      if (k < -0.42) ribbon(R, [fp(-2.7, 7, -2.1), fp(-4.3, 4.6, -3.8), fp(-5.1, 3.2, -5.7)], 1.3, 1.75, mat.base);
+      if (k > 0.42) ribbon(R, [fp(4.2, 6.9, -2.6), fp(4.95, 4.2, -4.4), fp(5.15, 3, -5.7)], 1.3, 1.75, mat.base);
+      return;
+    }
     cord(R, [fp(1.5, 12.1, -5.9), post], 0.75, mat.base, R.pal.ink, 0.6); // o pino
     if (seeOut) ribbon(R, [post, fp(-0.4, 9.8, -1.35), fp(-2.7, 7, -2.1), fp(-4.3, 4.6, -3.8), fp(-5.1, 3.2, -5.7)], 0.85, 1.75, mat.base);
     if (seeIn) ribbon(R, [post, fp(2.6, 9.9, -1.6), fp(4.2, 6.9, -2.6), fp(4.95, 4.2, -4.4), fp(5.15, 3, -5.7)], 0.85, 1.75, mat.base);
