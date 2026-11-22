@@ -88,6 +88,11 @@
   - conferido no protótipo (o Birim soltando + as flechas na mesma câmera, 5 direções, arco e estilingue) e no jogo
     (3 direções, com 4 pontos)
   - **próximo: etapa 3** (a Ancestral com cara própria em cada ponto)
+- **Relógios da `view.js` (22/11, defeito achado pelo dono e medido pela [estrutura]):** o `frame(t)` recebe o relógio
+  do jogo (`gameNow()`), que fica para trás depois da câmera lenta do F1. Tudo que o `frame` compara com `t` tem de ser
+  marcado no mesmo relógio (`this.last`, o `t` do último quadro): o fim do brilho da flecha armada (`armedOff`) e o
+  brilho dos olhos do Gavião (`hawkAt`). O que é lido com `performance.now()` fica com ele: o clarão do degrau
+  (`arrowLevelAt`, lido no `slingshot.js`), a fala (`talkUntil`, `speechUntil`). Teste: rascunho `relogio/relogio.cjs`
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba

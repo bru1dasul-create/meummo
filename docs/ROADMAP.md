@@ -851,10 +851,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   simplesmente despenca"): a flecha voava reta a 0,9 m e aparecia cravada no chão de uma vez. Agora, nos últimos metros
   do voo (até 2,5 m, no máximo 30% dele), desce em curva até o chão, de ponta para baixo, e chega como a [arte] desenha a
   flecha cravada (`shotZ` com o alcance, em `combat.ts`). Vale para a pedra e os tiros dos bichos também
-- [ ] **[arte]** Defeito achado pelo dono (22/11): depois da Flecha Ancestral, o brilho fica no arco e o tiro comum
+- [x] **[arte]** Defeito achado pelo dono (22/11): depois da Flecha Ancestral, o brilho fica no arco e o tiro comum
   seguinte puxa a flecha brilhante. Só acontece depois de usar a câmera lenta do F1: o `armed()` da `view.js` marca o
   fim do brilho com `performance.now()`, e o `frame` confere com o relógio do jogo, que fica para trás. Conserto: usar o
-  relógio dos quadros (`this.last`) no `armed()`. Reproduzido e medido pela [estrutura]; pedido mandado à [arte]
+  relógio dos quadros (`this.last`) no `armed()`. Reproduzido e medido pela [estrutura]; pedido mandado à [arte].
+  **FEITO (22/11, [arte]):** o fim do brilho (`armedOff`) e o brilho dos olhos dos Olhos de Gavião (`hawkAt`, o mesmo
+  defeito) agora usam o relógio dos quadros; o clarão do degrau (`arrowLevelAt`) ficou no relógio da página, porque o
+  `slingshot.js` lê com ele. Conferido no jogo depois de 4 s em 0,25x (3,3 s de atraso): antes, 2 s depois do tiro ainda
+  'ancestral' e o tiro comum puxava a flecha brilhante; agora apaga em ~250 ms e o tiro comum vem com a flecha normal
 - [ ] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
