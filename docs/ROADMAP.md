@@ -847,6 +847,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   cheia não dobra, como no tiro comum, para não ficarem fortes demais). Protocolo 46: o `shot` da Flecha Ancestral leva
   `rk` (pontos) e `lv` (nível), o `cast` da Chuva leva `lv`; o motor passa os dois ao desenho (`armed(id, tipo, pontos,
   nível)`, `drawProjectile(..., look)`, `paintChargeRing(..., nível)`, `rain.level`, `end.rank`/`end.level`)
+- [ ] **[arte]** Defeito achado pelo dono (22/11): depois da Flecha Ancestral, o brilho fica no arco e o tiro comum
+  seguinte puxa a flecha brilhante. Só acontece depois de usar a câmera lenta do F1: o `armed()` da `view.js` marca o
+  fim do brilho com `performance.now()`, e o `frame` confere com o relógio do jogo, que fica para trás. Conserto: usar o
+  relógio dos quadros (`this.last`) no `armed()`. Reproduzido e medido pela [estrutura]; pedido mandado à [arte]
 - [ ] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
