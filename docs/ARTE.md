@@ -87,7 +87,7 @@
   (`slingshot.js`, `bowArms` com `up`), medir de novo (rascunho `chuva-saida/medir.cjs`) e acertar o `LAUNCH`
   - conferido no protótipo (o Birim soltando + as flechas na mesma câmera, 5 direções, arco e estilingue) e no jogo
     (3 direções, com 4 pontos)
-- **Etapa 3, a Flecha Ancestral com cara própria em cada ponto (22/11, no ramo; falta o "pode" do dono para a main):**
+- **Etapa 3, a Flecha Ancestral com cara própria em cada ponto (22/11, na main com o "pode, junta na main" do dono):**
   em `spiritArt.ts`, `SPIRIT_LOOKS` (um por ponto: a luz, o rastro, os fios da espiral, o tamanho, as luzinhas, se ficam
   no caminho, a força da pancada, as luzinhas do fim, o anel no chão e o tamanho da marca) e `spiritLook(pontos)`; sem
   os pontos, a de 3 (a de antes) e, no fim que explode, a de 5:
