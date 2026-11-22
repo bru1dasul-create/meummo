@@ -50,13 +50,13 @@ Tudo isto se ajusta mexendo em números, sem programar:
   `docs/ARTE.md`) e escolher: (A) o Birim vira o herói de todos ou (B) cada jogador escolhe. ESCOLHIDA a (A) em 22/11
 - [x] **[arte]** Birim para todos (22/11, escolha A do dono): sem nada no endereço, todo jogador sai com o Birim (no
   mundo, no retrato da barra e na mochila; os NPCs não mudam). `?heroi` volta ao herói antigo e o navegador guarda a
-  escolha; `?birim` volta ao Birim. Não salva nada no servidor. FEITO em 22/11 (veja `docs/ARTE.md`)
+  escolha; `?birim` volta ao Birim. Não salva nada no servidor. FEITO em 22/11, na main (veja `docs/ARTE.md`)
 - [x] **[arte]** Peças sumindo no jogo (22/11, o dono: "o shorts some correndo, mirando ou não; o chinelo acontece o
   mesmo; as flechas atrás das costas somem quando o Birim pega a flecha"). Gravado quadro a quadro no jogo: (a) a aljava
   de costas ia para trás do tronco na hora de pegar a flecha — agora fica por cima, com um buraco no formato da mão, e a
   troca de frente/lado/costas tem folga (não pisca); (b) o chinelo de costas e na diagonal de costas não aparecia (no
   tamanho do jogo a beirada da sola virava a linha do contorno e a tira ficava atrás do pé) — sola mais grossa e a tira do
-  lado que a câmera vê por cima do pé. FEITO em 22/11. A bermuda não sumiu em ~2.300 quadros gravados (o que cobre é o
+  lado que a câmera vê por cima do pé. FEITO em 22/11, na main. A bermuda não sumiu em ~2.300 quadros gravados (o que cobre é o
   braço ou a outra perna na frente, ou um pilar do cenário): **[dono]** mandar um print se vir de novo
 - [ ] **[estrutura]** Tiro no fim da esquiva (22/11, o dono: "no final da esquiva é possível dar um tiro de flecha;
   arrumar para só poder quando ele voltar da esquiva e fazer a animação"): o motor deixa começar a puxada durante a
