@@ -99,6 +99,25 @@ describe('pulo', () => {
     expect(jumpsSeen()).toBe(before + 1);
   });
 
+  it('rolando, também não puxa nem atira; acabou a rolada, atira (pedido do dono: "só quando ele voltar da esquiva")', () => {
+    const { world, ana, beto, run } = setup();
+    const shots = () => beto.conn.ofType('shot').filter((m) => m.by === ana.player.id).length;
+    world.requestWalk(ana.player, 1, 0, true); // rola
+    run(TICK_MS);
+    expect(ana.player.dashAt).toBeGreaterThan(-Infinity);
+    world.charge(ana.player);
+    expect(ana.player.chargeStart).toBeNull(); // rolando: não começa a puxar
+    world.shoot(ana.player, 1, 0);
+    run(TICK_MS);
+    expect(shots()).toBe(0); // nem atira
+    run(DASH_ROLL_MS);
+    world.charge(ana.player);
+    expect(ana.player.chargeStart).not.toBeNull();
+    world.shoot(ana.player, 2, 0);
+    run(TICK_MS);
+    expect(shots()).toBe(1);
+  });
+
   it('não pula desmaiado, defendendo nem puxando o tiro', () => {
     const { world, ana, run, jumpsSeen } = setup();
     ana.player.deadUntil = 1; // desmaiada

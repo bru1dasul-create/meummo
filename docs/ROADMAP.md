@@ -61,10 +61,12 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** Passo e junta (22/11, escopo aprovado pelo dono): mirando para o lado de onde anda (~55° a ~130°), o
   quadril fica de lado para o caminho e as pernas andam de lado sem cruzar (o pé de fora abre, o outro junta); de frente
   e de costas como antes. Vale para todos, arco e estilingue, só andando. FEITO em 22/11, na main (veja `docs/ARTE.md`)
-- [ ] **[estrutura]** Tiro no fim da esquiva (22/11, o dono: "no final da esquiva é possível dar um tiro de flecha;
-  arrumar para só poder quando ele voltar da esquiva e fazer a animação"): o motor deixa começar a puxada durante a
-  rolada (`startCharge`/`tryShoot` não olham o `dashedAt`; o pulo já olha, com `DASH_ROLL_MS`) e o servidor só recusa o
-  pulo rolando. Pedido da [arte]: recusar puxar/atirar rolando (cliente e servidor, como o pulo) e, se o botão continuar
+- [x] **[estrutura]** Tiro no fim da esquiva (22/11, o dono: "no final da esquiva é possível dar um tiro de flecha;
+  arrumar para só poder quando ele voltar da esquiva e fazer a animação"). FEITO em 22/11: rolando (`DASH_ROLL_MS`), o
+  servidor recusa puxar e atirar, como o pulo; no navegador, apertar o tiro rolando espera a rolada acabar e, com o botão
+  ainda apertado, a puxada começa nessa hora (soltou antes: nada); quem já puxava e rolou volta a puxar depois. Antes: o
+  motor deixava começar a puxada durante a rolada (`startCharge`/`tryShoot` não olhavam o `dashedAt`) e o servidor só
+  recusava o pulo rolando. Pedido da [arte]: recusar puxar/atirar rolando (cliente e servidor, como o pulo) e, se o botão continuar
   apertado quando a rolada acabar, começar a puxada nessa hora (a animação toda aparece e a flecha só sai depois da
   puxada mínima). O desenho da rolada acaba em 0,62 s, antes dos 700 ms do `DASH_ROLL_MS`: do lado da [arte] não precisa
   mudar nada
@@ -862,18 +864,30 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   cheia não dobra, como no tiro comum, para não ficarem fortes demais). Protocolo 46: o `shot` da Flecha Ancestral leva
   `rk` (pontos) e `lv` (nível), o `cast` da Chuva leva `lv`; o motor passa os dois ao desenho (`armed(id, tipo, pontos,
   nível)`, `drawProjectile(..., look)`, `paintChargeRing(..., nível)`, `rain.level`, `end.rank`/`end.level`)
-- [ ] **[arte]** Defeito achado pelo dono (22/11): depois da Flecha Ancestral, o brilho fica no arco e o tiro comum
+- [x] **[estrutura]** A queda no fim do alcance (pedido do dono, 22/11: "a animação da flecha caindo não existe, ela
+  simplesmente despenca"): a flecha voava reta a 0,9 m e aparecia cravada no chão de uma vez. Agora, nos últimos metros
+  do voo (até 2,5 m, no máximo 30% dele), desce em curva até o chão, de ponta para baixo, e chega como a [arte] desenha a
+  flecha cravada (`shotZ` com o alcance, em `combat.ts`). Vale para a pedra e os tiros dos bichos também
+- [x] **[arte]** Defeito achado pelo dono (22/11): depois da Flecha Ancestral, o brilho fica no arco e o tiro comum
   seguinte puxa a flecha brilhante. Só acontece depois de usar a câmera lenta do F1: o `armed()` da `view.js` marca o
   fim do brilho com `performance.now()`, e o `frame` confere com o relógio do jogo, que fica para trás. Conserto: usar o
-  relógio dos quadros (`this.last`) no `armed()`. Reproduzido e medido pela [estrutura]; pedido mandado à [arte]
-- [ ] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
+  relógio dos quadros (`this.last`) no `armed()`. Reproduzido e medido pela [estrutura]; pedido mandado à [arte].
+  **FEITO (22/11, [arte]):** o fim do brilho (`armedOff`) e o brilho dos olhos dos Olhos de Gavião (`hawkAt`, o mesmo
+  defeito) agora usam o relógio dos quadros; o clarão do degrau (`arrowLevelAt`) ficou no relógio da página, porque o
+  `slingshot.js` lê com ele. Conferido no jogo depois de 4 s em 0,25x (3,3 s de atraso): antes, 2 s depois do tiro ainda
+  'ancestral' e o tiro comum puxava a flecha brilhante; agora apaga em ~250 ms e o tiro comum vem com a flecha normal
+- [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
   dados chegam pelo motor (veja o item acima). Pedido mandado à [arte]. Escopo aprovado pelo dono em 22/11 ("pode, coloca
   sensação de impactos também por nível"), em 3 etapas: **1) os degraus da carga — FEITA em 22/11, na main** (o anel com as
   marcas dos degraus, a cor de cada um e o pulso quando sobe; a flecha no arco com o brilho por degrau e o clarão; o tiro
   e o impacto menores no fraco e completos no forte, com a pancada no forte; a Chuva já mira para o alto na puxada);
-  2) a Chuva com cara própria em cada ponto; 3) a Ancestral com cara própria em cada ponto (veja `docs/ARTE.md`)
+  **2) a Chuva com cara própria em cada ponto — FEITA em 22/11** (crua, madeira, ouro, brasa e espírito; o impacto
+  crescendo com os pontos; a flecha na mão igual) e, junto, **as flechas da Chuva saindo do arco** (print do dono: saíam
+  de dentro do corpo, retas para cima; agora saem da ponta da flecha, a 50°, para o lado do alvo, e a mira começa ali);
+  **3) a Ancestral com cara própria em cada ponto — FEITA em 22/11** (1 luz fraca e rastro curto, 2 mais luz, 3 a espiral,
+  4 a espiral dupla com o anel de luz no chão, 5 e a explosão; a pancada crescendo com os pontos; veja `docs/ARTE.md`)
 - [ ] **[estrutura]** Pedido da [arte] (22/11, junto com o "sensação de impactos também por nível" do dono): o tremor de
   tela, a pausa no impacto e o som crescendo com os pontos e o degrau nas habilidades — a Chuva caindo e a Flecha
   Ancestral parando/explodindo (hoje o tremor e a pausa só valem no acerto comum e vêm desligados no padrão). O desenho

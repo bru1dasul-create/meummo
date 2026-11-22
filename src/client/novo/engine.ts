@@ -257,6 +257,11 @@ class NewWorld implements NewWorldGame {
   private dashReadyAt = 0;
   /** Quando rolou e quando pulou pela última vez: um não sai no meio do outro. */
   private dashedAt = -Infinity;
+  /**
+   * Apertou o tiro rolando a esquiva: a puxada começa quando a rolada acabar, se o botão continuar apertado (pedido do
+   * dono, 22/11: "só poder quando ele voltar da esquiva e fazer a animação"; o servidor também recusa rolando).
+   */
+  private chargeAfterRoll: Aim | null = null;
   private jumpedAt = -Infinity;
   private jumpReadyAt = 0;
   /** Dia e noite: o instante (performance.now) em que o ciclo começou, pelo relógio do servidor. */
@@ -653,6 +658,7 @@ class NewWorld implements NewWorldGame {
     const workStart = performance.now();
     this.handleMovement(now);
     this.handlePendingShot(now);
+    if (this.chargeAfterRoll && !this.rolling(now)) this.startCharge(this.chargeAfterRoll, now);
     this.updateCharge(now);
     this.updateAim();
     this.updateHawk(now);
@@ -726,6 +732,7 @@ class NewWorld implements NewWorldGame {
     // soltar: o tiro e a defesa são de segurar (segurar puxa a pedra ou levanta a defesa; soltar atira ou baixa)
     if (event.type === 'keyup') {
       if (action === 'atirar' && this.charging?.aim.by === 'key') this.releaseCharge(gameNow());
+      if (action === 'atirar') this.dropChargeAfterRoll('key');
       if (action === 'defesa') this.stopGuard();
       // soltou a tecla da habilidade (ou o 1): usa onde a mira está
       if ((action === 'hab1' || action === 'hab2' || event.code === 'Digit1') && this.aiming) this.releaseAim(gameNow());
@@ -1186,7 +1193,18 @@ class NewWorld implements NewWorldGame {
   private readonly onPointerUp = (event: PointerEvent) => {
     const aim = this.charging?.aim.by;
     if (event.pointerType === 'mouse' && (aim === 'target' || aim === 'mouse')) this.releaseCharge(gameNow());
+    if (event.pointerType === 'mouse') this.dropChargeAfterRoll('mouse', 'target');
   };
+
+  /** Soltou o botão do tiro ainda rolando: a puxada que esperava a rolada não começa mais. */
+  private dropChargeAfterRoll(...by: Aim['by'][]): void {
+    if (this.chargeAfterRoll && by.includes(this.chargeAfterRoll.by)) this.chargeAfterRoll = null;
+  }
+
+  /** Ainda rolando a esquiva? Rolando, não pula, não puxa e não atira (o servidor também recusa). */
+  private rolling(now: number): boolean {
+    return now - this.dashedAt < DASH_ROLL_MS;
+  }
 
   /** O botão direito é do jogo (atirar), não do menu do navegador. */
   private readonly onContextMenu = (event: Event) => event.preventDefault();
@@ -1474,6 +1492,11 @@ class NewWorld implements NewWorldGame {
   /** Começa a puxar o estilingue: o servidor conta a carga pelo relógio dele, até o tiro. */
   private startCharge(aim: Aim, now: number): void {
     if (this.dead || this.charging || this.guardHeld) return; // defendendo, as mãos estão ocupadas
+    if (this.rolling(now)) {
+      this.chargeAfterRoll = aim; // rolando: puxa quando a rolada acabar (se o botão continuar apertado)
+      return;
+    }
+    this.chargeAfterRoll = null;
     if (this.refuseInSafeArea(now)) return;
     this.pendingShot = null;
     const angle = this.aimFor(aim, 0);
@@ -1591,6 +1614,7 @@ class NewWorld implements NewWorldGame {
 
   /** Solta a pedra sem atirar (esquiva, golpe recebido, desmaio, troca de mapa, janela sem foco). */
   private cancelCharge(): void {
+    this.chargeAfterRoll = null;
     const pulling = this.charging !== null || this.pendingShot !== null;
     if (pulling) {
       this.aimFacing = null;
@@ -1654,7 +1678,7 @@ class NewWorld implements NewWorldGame {
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
   private quickShot(angle: number, now: number): void {
-    if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt) return;
+    if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt || this.rolling(now)) return;
     this.conn.send({ t: 'charge' }); // zera a carga no servidor: o toque rápido é uma pedra sem carga
     this.tryShoot(angle, now, 0, undefined);
   }
@@ -1862,7 +1886,7 @@ class NewWorld implements NewWorldGame {
 
   /** Atira na direção `angle` (radianos), com a carga (0 a 1): a pedra ou a flecha aparece na hora; o servidor decide. */
   private tryShoot(angle: number, now: number, charge: number, aimed: number | undefined): boolean {
-    if (this.dead || this.guardHeld || now < this.nextShotAt) return false;
+    if (this.dead || this.guardHeld || now < this.nextShotAt || this.rolling(now)) return false;
     if (this.refuseInSafeArea(now)) return false;
     const shot = this.shot();
     // um pouco mais que a recarga do servidor, para a variação da rede não fazer um tiro ser recusado
@@ -1919,6 +1943,7 @@ class NewWorld implements NewWorldGame {
       // segurar o botão puxa; soltar atira no monstro mais perto
       if (down) this.startCharge({ by: 'button' }, now);
       else if (this.charging?.aim.by === 'button') this.releaseCharge(now);
+      else this.dropChargeAfterRoll('button');
       return;
     }
     if (!down) return;
@@ -1978,7 +2003,11 @@ class NewWorld implements NewWorldGame {
       this.toast.show('Sem espaço para rolar aí');
       return;
     }
-    this.cancelCharge(); // a esquiva solta a pedra que estava puxando (o servidor faz o mesmo)
+    // a esquiva solta a pedra que estava puxando (o servidor faz o mesmo); com o botão ainda apertado, volta a puxar
+    // quando a rolada acabar
+    const held = this.charging?.aim ?? null;
+    this.cancelCharge();
+    this.chargeAfterRoll = held;
     this.seq += 1;
     this.pending.push({ seq: this.seq, a: degrees, dash: true, slow: false, guard: this.guardHeld, fly: this.gmFly });
     this.conn.send({ t: 'walk', seq: this.seq, a: degrees, dash: true });
@@ -2000,7 +2029,7 @@ class NewWorld implements NewWorldGame {
    */
   private tryJump(now: number): void {
     if (this.dead || this.guardHeld || this.charging || now < this.jumpReadyAt) return;
-    if (now - this.dashedAt < DASH_ROLL_MS) return; // rolando, não pula (o servidor também recusa)
+    if (this.rolling(now)) return; // rolando, não pula (o servidor também recusa)
     this.jumpedAt = now;
     this.jumpReadyAt = now + JUMP_COOLDOWN_MS + 40;
     this.conn.send({ t: 'jump' });

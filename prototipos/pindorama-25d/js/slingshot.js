@@ -26,12 +26,21 @@
   const spiritShaft = { base: '#d4ffe9', shade: '#62c493', light: '#ffffff' };
   const spiritFeather = { base: '#8cffbe', shade: '#2f8f5f', light: '#e8fff4' };
   const spiritPoint = { base: '#f4fff9', shade: '#7fd9aa', light: '#ffffff' };
-  // a flecha da Chuva com 3 e 4 pontos (dourada, como as que caem — rainArt.ts)
+  // a flecha da Chuva na mão, com a cara das que caem (rainArt.ts): com 1 ponto crua (galho, pedra bruta, penas sem cor),
+  // com 2 a comum, com 3 dourada, com 4 em brasa e com 5 o espírito
   const goldShaft = { base: '#e8b84e', shade: '#8f6420', light: '#fff2b0' };
   const goldFeather = { base: '#ffd23e', shade: '#a77a12', light: '#fff8dc' };
   const goldPoint = { base: '#fff2b0', shade: '#c79a3a', light: '#ffffff' };
+  const emberShaft = { base: '#f2a444', shade: '#9a4a12', light: '#ffe0a0' };
+  const emberFeather = { base: '#ff7426', shade: '#a8340c', light: '#ffd08a' };
+  const emberPoint = { base: '#fff1c4', shade: '#e08a3a', light: '#ffffff' };
+  const rawShaft = { base: '#97805f', shade: '#5c4a32', light: '#b9a37f' };
+  const rawFeather = { base: '#a89a84', shade: '#6e6352', light: '#cbbfa9' };
+  const rawPoint = { base: '#6e6a63', shade: '#3b3834', light: '#9a958b' };
   const SPIRIT_MATS = { shaft: spiritShaft, feather: spiritFeather, point: spiritPoint, nock: spiritPoint };
   const GOLD_MATS = { shaft: goldShaft, feather: goldFeather, point: goldPoint, nock: goldShaft };
+  const EMBER_MATS = { shaft: emberShaft, feather: emberFeather, point: emberPoint, nock: emberShaft };
+  const RAW_MATS = { shaft: rawShaft, feather: rawFeather, point: rawPoint, nock: rawShaft };
   const MINT = '140, 255, 190', PALE = '228, 255, 240';
   PD.equipment.define({ id: 'arco', nome: 'Arco de Bambu', slot: 'maoE', ocupa: ['maoE', 'maoD'], material: bamboo,
     pecas: [{ osso: 'mao', lado: 'E', esferas: [{ a: 6, d: 0, s: 0, r: 1.6 }] }] });
@@ -852,27 +861,42 @@
    * com a estrelinha girando e as luzinhas que sobem dela — cresce com a puxada, como a que sai voando.
    */
   // a habilidade no arco (22/11): as cores do brilho pela habilidade e pelos pontos (a Ancestral e a Chuva com 5 pontos
-  // são o espírito; a Chuva com 3 e 4, dourada; com 1 e 2, madeira — um brilho morno e fraco) e o quanto acende: o
-  // degrau da puxada (1 fraco, 2 médio, 3 forte; sem puxar, o brilho de "armada") e o clarão de quando o degrau sobe
-  const GOLD_RGB = '255, 196, 70', GOLD_PALE = '255, 243, 196', WOOD_RGB = '255, 222, 160', WOOD_PALE = '255, 246, 224';
+  // são o espírito; a Chuva com 4, brasa; com 3, dourada; com 2, madeira e com 1, crua — um brilho morno e fraco, cada
+  // vez menor) e o quanto acende: o degrau da puxada (1 fraco, 2 médio, 3 forte; sem puxar, o brilho de "armada") e o
+  // clarão de quando o degrau sobe
+  const TIER_LOOK = {
+    espirito: { rgb: MINT, pale: PALE, mats: SPIRIT_MATS, glow: 1 },
+    brasa: { rgb: '255, 136, 44', pale: '255, 224, 168', mats: EMBER_MATS, glow: 0.95, embers: true },
+    ouro: { rgb: '255, 196, 70', pale: '255, 243, 196', mats: GOLD_MATS, glow: 0.85 },
+    madeira: { rgb: '255, 222, 160', pale: '255, 246, 224', mats: null, glow: 0.36 },
+    crua: { rgb: '226, 210, 178', pale: '246, 238, 220', mats: RAW_MATS, glow: 0.24 },
+  };
+  // a Ancestral acende mais a cada ponto (22/11, etapa 3: com 1 ponto, a luz fraca; com 5, a mais forte)
+  const ANCESTRAL_GLOW = [0.45, 0.65, 0.85, 1, 1.1];
   const LEVEL_FLASH_MS = 320;
   function specialOf(look) {
     const kind = look.arrowKind;
     if (kind !== 'ancestral' && kind !== 'chuva') return null;
     const rank = look.arrowRank || 1;
-    const spirit = kind === 'ancestral' || rank >= 5;
-    const gold = !spirit && rank >= 3;
+    const tier = kind === 'ancestral' || rank >= 5 ? 'espirito' : rank >= 4 ? 'brasa' : rank >= 3 ? 'ouro' : rank >= 2 ? 'madeira' : 'crua';
+    const T = TIER_LOOK[tier];
     const lv = look.arrowLevel || 0;
     const since = clock() - (look.arrowLevelAt ?? -1e9);
     return {
-      kind, rank, lv,
-      rgb: spirit ? MINT : gold ? GOLD_RGB : WOOD_RGB,
-      pale: spirit ? PALE : gold ? GOLD_PALE : WOOD_PALE,
-      mats: spirit ? SPIRIT_MATS : gold ? GOLD_MATS : null,
-      // a madeira brilha pouco (é a "fraca"); o degrau multiplica
-      level: (spirit ? 1 : gold ? 0.85 : 0.36) * (lv ? [0, 0.55, 0.85, 1.2][lv] : 0.75),
+      kind, rank, lv, tier,
+      rgb: T.rgb,
+      pale: T.pale,
+      mats: T.mats,
+      embers: !!T.embers,
+      // as fracas brilham pouco; o degrau multiplica
+      level: (kind === 'ancestral' ? ANCESTRAL_GLOW[Math.min(5, Math.max(1, Math.round(rank))) - 1] : T.glow) * (lv ? [0, 0.55, 0.85, 1.2][lv] : 0.75),
       flash: lv && since >= 0 && since < LEVEL_FLASH_MS ? 1 - since / LEVEL_FLASH_MS : 0,
     };
+  }
+  /** Uma brasa subindo (as luzinhas da Chuva com 4 pontos são brasas, laranja, piscando). */
+  function ember(ctx, x, y, r, u, alpha) {
+    const flick = 0.65 + 0.35 * Math.sin(clock() / 45 + x * 0.7);
+    glowDot(ctx, x, y, r * 2.4, `255, ${Math.round(150 + 80 * (1 - u))}, 50`, Math.min(1, alpha * flick));
   }
 
   /**
@@ -908,6 +932,7 @@
     for (let j = 0; j < motes; j++) {
       const cycle = now / 760 + j / motes, u = cycle % 1, seed = Math.floor(cycle) * 7 + j;
       const f = hash(seed), x = tail.x + (tip.x - tail.x) * f, y = tail.y + (tip.y - tail.y) * f;
+      if (sp.embers) { ember(ctx, x + (hash(seed + 5) - 0.5) * 6 * z, y - u * 18 * z, Math.max(1.2, 1.6 * z * (1 - u * 0.4)), u, (1 - u) * 0.95 * Math.min(1, k + 0.2)); continue; }
       ctx.fillStyle = `rgba(${LIGHT}, ${Math.min(1, (1 - u) * 0.9 * k).toFixed(3)})`;
       star(ctx, x + (hash(seed + 5) - 0.5) * 6 * z, y - u * 16 * z, Math.max(1.4, 2.4 * z * (1 - u * 0.5)), hash(seed + 3) * 1.5);
     }
@@ -943,7 +968,8 @@
     for (let j = 0; j < 9; j++) {
       const cycle = now / 900 + j / 9, u = cycle % 1, seed = Math.floor(cycle) * 9 + j;
       const q = bow[Math.min(bow.length - 1, Math.floor(hash(seed) * bow.length))];
-      ctx.fillStyle = `rgba(${PALE}, ${((1 - u) * 0.9).toFixed(3)})`;
+      if (sp.embers) { ember(ctx, q.x + (hash(seed + 5) - 0.5) * 5 * z, q.y - u * 18 * z, Math.max(1.2, 1.5 * z * (1 - u * 0.4)), u, (1 - u) * 0.9 * dim); continue; }
+      ctx.fillStyle = `rgba(${PALE}, ${((1 - u) * 0.9 * Math.min(1, dim + 0.25)).toFixed(3)})`;
       star(ctx, q.x + (hash(seed + 5) - 0.5) * 5 * z, q.y - u * 16 * z, Math.max(1.4, 2.3 * z * (1 - u * 0.5)), hash(seed + 3) * 1.5);
     }
     ctx.restore();

@@ -879,7 +879,17 @@ export class World {
   /** Começou a puxar o estilingue: a carga conta pelo relógio do servidor, até o tiro (veja shoot). */
   charge(player: Player): void {
     if (player.loading || player.dead || player.guardWanted) return; // defendendo, as mãos estão ocupadas
-    player.chargeStart = this.now();
+    const now = this.now();
+    if (this.rolling(player, now)) return; // rolando, não puxa (o navegador espera a rolada acabar)
+    player.chargeStart = now;
+  }
+
+  /**
+   * Ainda rolando a esquiva (DASH_ROLL_MS depois dela)? Rolando, não pula, não puxa e não atira (pedido do dono, 22/11:
+   * "só poder quando ele voltar da esquiva e fazer a animação"). A folga é só a da rede.
+   */
+  private rolling(player: Player, now: number): boolean {
+    return now - player.dashAt < DASH_ROLL_MS - SKILL_TOLERANCE_MS;
   }
 
   /**
@@ -908,7 +918,7 @@ export class World {
     const now = this.now();
     if (player.loading || player.dead || player.guardWanted || player.chargeStart !== null) return;
     if (now < player.jumpReadyAt - SKILL_TOLERANCE_MS) return;
-    if (now - player.dashAt < DASH_ROLL_MS - SKILL_TOLERANCE_MS) return; // rolando, não pula
+    if (this.rolling(player, now)) return; // rolando, não pula
     player.jumpAt = now;
     player.jumpReadyAt = Math.max(now, player.jumpReadyAt) + JUMP_COOLDOWN_MS;
     this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'jump' }, player.id);
@@ -924,6 +934,10 @@ export class World {
     const now = this.now();
     if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
     if (player.guardWanted) return; // defendendo, não atira (o navegador nem pede)
+    if (this.rolling(player, now)) {
+      player.chargeStart = null; // rolando, não atira (o navegador espera a rolada acabar para puxar)
+      return;
+    }
     // da área segura ninguém ataca: o monstro não entra nem acerta lá, então não teria como revidar
     if (this.inSafeArea(player)) {
       player.chargeStart = null;

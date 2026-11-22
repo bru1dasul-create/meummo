@@ -149,7 +149,8 @@
       if (!a) return;
       if (kind === 'hawk') {
         // os Olhos de Gavião (o seu ou o de outro jogador): os olhos acendem dourados por um instante
-        if (!a.creature) a.hawkAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        // (no relógio dos quadros, o mesmo com que o `frame` mede o brilho)
+        if (!a.creature) a.hawkAt = this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now());
         return;
       }
       const yaw = Number.isFinite(angle) ? rad(angle) : undefined;
@@ -223,7 +224,10 @@
         if (lv > (look.arrowLevel || 0)) look.arrowLevelAt = now;
         look.arrowLevel = lv;
         a.armedOff = 0;
-      } else if (look.arrowKind) a.armedOff = now + 250;
+        // (o fim do brilho é conferido no `frame` com o relógio do jogo, que fica para trás depois da câmera lenta do F1:
+        // marcar com o mesmo relógio — 22/11, o dono: "depois de usar o R, o arco fica com o efeito do R". O clarão do
+        // degrau, `arrowLevelAt`, fica no relógio da página: o slingshot.js lê com ele)
+      } else if (look.arrowKind) a.armedOff = (this.last || now) + 250;
     }
 
     _personAction(a, kind, yaw) {
