@@ -4,6 +4,7 @@
 //
 // Tudo em METROS, no chão: x para o leste, y para o sul (como o servidor). As posições são do PÉ do personagem.
 
+import type { ChargeLevel } from '../../shared/classes';
 import type { GearLook } from '../../shared/items';
 import type { TiledMap, TiledObject } from '../../shared/map';
 
@@ -65,11 +66,13 @@ export interface WorldView {
    */
   gear?(id: number, gear: GearLook): void;
   /**
-   * A flecha especial entrou no arco (ou saiu: null) do seu personagem: o tipo do tiro que vai sair, o mesmo que voa
-   * depois ('ancestral' = a Flecha Ancestral). Para a view desenhar o brilho na flecha da mão (pedido do dono, 19/11:
-   * "o efeito pegando na flecha do arco e ela acompanhando").
+   * O que está no arco do seu personagem (null: nada): 'ancestral' (a Flecha Ancestral, o mesmo tipo do tiro que voa
+   * depois) ou 'chuva' (a Chuva de Flechas), com `rank` = os pontos da habilidade (1 a 5) e, puxando, `level` = o nível
+   * da carga (1 fraco, 2 médio, 3 forte; vem de novo a cada degrau). Para a view desenhar o brilho na flecha da mão
+   * (pedidos do dono, 19/11: "o efeito pegando na flecha do arco"; "um brilho em cada degrau"; "nível 1 é feio e fraco,
+   * nível 2 melhora...").
    */
-  armed?(id: number, kind: string | null): void;
+  armed?(id: number, kind: string | null, rank?: number, level?: ChargeLevel): void;
   /**
    * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
    * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',

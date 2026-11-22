@@ -375,6 +375,23 @@ export class Sfx {
     }
   }
 
+  /**
+   * Puxando com a Chuva ou a Flecha Ancestral no arco, a carga subiu de degrau (2 médio, 3 forte): um sininho do
+   * espírito, mais agudo e mais cheio no forte (pedido do dono, 19/11: "um brilho e um som em cada degrau").
+   */
+  chargeLevel(level: number): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    if (level >= 3) {
+      this.bell(1320, t, 0.5, 0.1);
+      this.bell(1980, t + 0.06, 0.45, 0.07);
+      this.noise(t, 0.22, 'bandpass', 2400, 5200, 0.05);
+    } else {
+      this.bell(990, t, 0.4, 0.09);
+    }
+  }
+
   /** Som de metal (moeda, sino): a nota e dois harmônicos "tortos", como num sino de verdade, morrendo rápido. */
   private bell(freq: number, start: number, duration: number, volume: number): void {
     for (const [ratio, gain] of [

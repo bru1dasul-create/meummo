@@ -836,9 +836,18 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
 - [ ] **[estrutura]** Achado da [arte] (20/11): no tiro do próprio jogador, a Flecha Ancestral que para perto (3–4 m) não
   mostra a explosão — o desenho chega ao fim do alcance antes do `shot_end` do servidor e o `combat.ts` termina sem o
   `burst` (pode vir do número da habilidade na hora do tiro, ou esperar o aviso um pouco mais)
-- [ ] **[estrutura]** Da mesma lista: o `Q` passa a armar a Chuva de Flechas como o `R` arma a Flecha Ancestral, e ela
-  sai com o botão direito, segurando para sair mais forte ("mesma mecânica"); assim as flechas sobem quando ele solta (hoje
-  sobem antes). Esperando o dono: o que fica mais forte com a carga e o que é "colocar nível nessas"
+- [x] **[estrutura]** Da mesma lista (respostas do dono em 22/11: "alcance e dano, níveis de carga só na chuva e
+  ancestral"): o `Q` põe a Chuva de Flechas no arco como o `R` põe a Flecha Ancestral, e ela sai no próximo tiro (botão
+  direito, J ou o botão do tiro no celular), onde ele mirou; as flechas sobem quando ele solta. As duas têm **níveis de
+  carga**: fraco, médio e forte (na metade e na carga cheia da arma), com um sininho a cada degrau; o nível dá o alcance
+  (do alcance sem carga da arma ao da habilidade) e o dano (forte = o dano de sempre; médio, 3/4; fraco, metade — a carga
+  cheia não dobra, como no tiro comum, para não ficarem fortes demais). Protocolo 46: o `shot` da Flecha Ancestral leva
+  `rk` (pontos) e `lv` (nível), o `cast` da Chuva leva `lv`; o motor passa os dois ao desenho (`armed(id, tipo, pontos,
+  nível)`, `drawProjectile(..., look)`, `paintChargeRing(..., nível)`, `rain.level`, `end.rank`/`end.level`)
+- [ ] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
+  nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
+  arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
+  dados chegam pelo motor (veja o item acima). Pedido mandado à [arte]
 - [x] **[estrutura]** Parte 2 (15/11): NPC que passeia — `"passeio": [[x, y], ...]` em data/npcs.json (o pé, em metros):
   anda de ponto em ponto (1,2 m/s, 4 a 10 s parado em cada um) e espera parado 15 s depois que alguém fala ou negocia
   com ele. Protocolo 42 (`npc_walk`, `talk`). **Desligado de novo na Xiovanna a pedido do dono ("por enquanto deixa ela parada")**; funcionou ligado (15/11, com o passo de andar

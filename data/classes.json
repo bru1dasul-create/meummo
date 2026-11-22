@@ -7,7 +7,7 @@
     "habilidades": {
       "chuva_de_flechas": {
         "nome": "Chuva de Flechas",
-        "descricao": "Atira várias flechas para o alto; elas caem na área que você escolher e acertam todos os bichos dentro. Boa contra bandos. Com o estilingue, chovem pedras.",
+        "descricao": "Põe no arco uma chuva de flechas: o próximo tiro é ela. Puxe e solte onde quer que chova (fraco, médio ou forte: quanto mais puxar, mais longe e mais dano). As flechas sobem e caem na área, acertando todos os bichos dentro. Boa contra bandos. Com o estilingue, chovem pedras.",
         "nivel": 3,
         "tipo": "chuva",
         "recargaSegundos": 10,
@@ -23,7 +23,7 @@
       },
       "flecha_ancestral": {
         "nome": "Flecha Ancestral",
-        "descricao": "Carrega no arco uma flecha de energia espiritual: o próximo tiro é ela. Puxe e solte como sempre (quanto mais puxar, mais longe): ela atravessa todos os bichos do caminho, nem a casca do tatu nem o enxame seguram, e cai onde você mirou. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, ela explode onde você mirou.",
+        "descricao": "Carrega no arco uma flecha de energia espiritual: o próximo tiro é ela. Puxe e solte como sempre (fraco, médio ou forte: quanto mais puxar, mais longe e mais dano): ela atravessa todos os bichos do caminho, nem a casca do tatu nem o enxame seguram, e cai onde você mirou. Com 3 pontos, quem ela atravessa fica marcado e leva mais dano de todo mundo; com 5, ela explode onde você mirou.",
         "nivel": 6,
         "tipo": "flecha",
         "recargaSegundos": 8,

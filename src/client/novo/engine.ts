@@ -27,7 +27,7 @@ import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
 import { SKILLS } from '../../shared/skills';
-import { castPoint, skillPoint, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
+import { armedReach, castPoint, chargeLevel, skillPoint, type ChargeLevel, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
 import { Bag } from '../bag';
 import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
@@ -290,7 +290,8 @@ class NewWorld implements NewWorldGame {
   private hawkShown = false;
   /** Puxando o estilingue (pedra com carga): desde quando e para onde vai a pedra ao soltar. */
   /** Puxando o estilingue: desde quando, a mira (alvo, mouse ou a automática) e o último ângulo mandado à view. */
-  private charging: { since: number; aim: Aim; sentAngle: number } | null = null;
+  /** Puxando: desde quando, para onde mira e, com a Chuva ou a Flecha Ancestral no arco, o nível da carga agora. */
+  private charging: { since: number; aim: Aim; sentAngle: number; level?: ChargeLevel } | null = null;
   /** Soltou durante a recarga do estilingue: a pedra sai assim que der. */
   private pendingShot: { at: number; aim: Aim; since: number } | null = null;
   /** Defesa (passo 2b): segurando F ou o botão? Virada para onde (radianos)? O que já foi mandado ao servidor. */
@@ -946,18 +947,20 @@ class NewWorld implements NewWorldGame {
     if (!skill || !numbers) return null;
     const lines: string[] = [];
     if (skill.kind === 'chuva') {
-      lines.push('Segure para mirar o círculo e solte: chovem flechas em todos os bichos da área.');
-      lines.push(`Dano em cada bicho: ${hit(numbers.damagePct)}`);
+      lines.push(`Põe a Chuva no arco: o próximo tiro (${key('atirar')} ou o botão direito) é ela. Puxe e solte onde quer que chova.`);
+      lines.push('Puxando: [b]fraco, médio e forte[/b] (mais longe e mais dano a cada degrau).');
+      lines.push(`Dano em cada bicho, no forte: ${hit(numbers.damagePct)}`);
       lines.push(`Área: ${meters(numbers.radius)} de raio · ${numbers.arrows} flechas`);
-      lines.push(`Alcance da mira: ${meters(skill.range)}`);
+      lines.push(`Alcance no forte: ${meters(skill.range)}`);
       lines.push('[b]Nem a casca do tatu segura.[/b]');
     } else if (skill.kind === 'flecha') {
       lines.push('Carrega a flecha do espírito no arco: o próximo tiro é ela. Puxe e solte como sempre.');
+      lines.push('Puxando: [b]fraco, médio e forte[/b] (mais longe e mais dano a cada degrau).');
       lines.push(`Atravessa os bichos do caminho: ${hit(numbers.damagePct)} em cada um`);
       if (numbers.burstRadius > 0) lines.push(`Explode onde você mirou: ${hit(numbers.burstPct)} em ${meters(numbers.burstRadius)}`);
       else lines.push('Cai onde você mirou (com 5 pontos, explode lá).');
       if (numbers.markPct > 0) lines.push(`Marca quem atravessa: [b]+${numbers.markPct}% de dano de todo mundo[/b] por ${secs(numbers.markMs)}`);
-      lines.push(`Alcance com a puxada cheia: ${meters(skill.range)}`);
+      lines.push(`Alcance no forte: ${meters(skill.range)}`);
     } else if (skill.kind === 'olhos') {
       lines.push('Todo bicho aparece destacado, com o nível e a cor do perigo, mesmo atrás das árvores e no escuro.');
       lines.push(`Duração: ${secs(numbers.durationMs)}`);
@@ -1500,16 +1503,50 @@ class NewWorld implements NewWorldGame {
     this.aimFacing = { degrees: toDegrees(angle), until: Infinity };
     this.faceStill(angle, now);
     this.showArmedAim(charging.aim, charge);
+    // com a Chuva ou a Flecha Ancestral no arco, a carga sobe em degraus: fraco, médio, forte (um som em cada degrau)
+    if (this.armedSkill()) {
+      const level = chargeLevel(charge);
+      if (level !== charging.level) {
+        if (charging.level !== undefined && level > charging.level) this.sfx.chargeLevel(level);
+        charging.level = level;
+        this.combat.setChargeLevel(this.myId, level);
+        this.tellArmed(level);
+      }
+    }
   }
 
-  /** Com a flecha especial no arco, puxando: a faixa no chão mostra até onde ela vai e onde explode. */
+  /**
+   * Com a Chuva ou a Flecha Ancestral no arco, puxando: no chão, o círculo onde a Chuva cai (ou a faixa até onde a
+   * flecha vai e explode), no alcance do nível da carga.
+   */
   private showArmedAim(aim: Aim, charge: number): void {
     const skill = this.armedSkill();
     if (!skill) return;
-    const spot = this.aimSpotFor(aim, charge);
+    const spot = this.armedSpotFor(skill, aim, charge);
     const feet = this.myFeet();
     const range = this.armedRange(skill, charge, spot.d);
-    this.combat.setAim({ from: feet, x: feet.x + Math.cos(spot.angle) * range, y: feet.y + Math.sin(spot.angle) * range, r: skill.width, line: true });
+    const x = feet.x + Math.cos(spot.angle) * range;
+    const y = feet.y + Math.sin(spot.angle) * range;
+    if (skill.kind === 'chuva') {
+      const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
+      this.combat.setAim({ from: feet, x, y, r: numbers?.radius ?? 2, line: false });
+      return;
+    }
+    this.combat.setAim({ from: feet, x, y, r: skill.width, line: true });
+  }
+
+  /**
+   * Para onde a habilidade do arco vai: a mira de sempre; com a Chuva e o botão (celular), o lugar que pega mais bichos
+   * no alcance do nível da carga (sem bicho, a mira de sempre).
+   */
+  private armedSpotFor(skill: ClassSkillInfo, aim: Aim, charge: number): { angle: number; d: number | undefined } {
+    if (skill.kind === 'chuva' && aim.by === 'button') {
+      const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
+      const best = numbers ? this.bestRainSpot(armedReach(chargeLevel(charge), this.shot(), skill), numbers.radius) : null;
+      const feet = this.myFeet();
+      if (best) return { angle: aimAngle(feet, best), d: Math.hypot(best.x - feet.x, best.y - feet.y) };
+    }
+    return this.aimSpotFor(aim, charge);
   }
 
   /** Esta habilidade ainda tem ponto (tirou os pontos com a flecha no arco: ela sai)? */
@@ -1525,11 +1562,9 @@ class NewWorld implements NewWorldGame {
     return skill && (this.hero.skills[skill.id] ?? 0) > 0 ? skill : null;
   }
 
-  /** Até onde a flecha especial vai com esta carga, mirando a `aimed` metros (a mesma conta do servidor). */
+  /** Até onde a habilidade do arco vai com esta carga (pelo nível), mirando a `aimed` metros (a mesma conta do servidor). */
   private armedRange(skill: ClassSkillInfo, charge: number, aimed: number | undefined): number {
-    const shot = this.shot();
-    const reach = Math.max(shot.rangeMin, skill.range);
-    return aimedRange(shot.rangeMin + (reach - shot.rangeMin) * charge, aimed);
+    return aimedRange(armedReach(chargeLevel(charge), this.shot(), skill), aimed);
   }
 
   /** Parado, o corpo vira para `angle` (andando, o andar cuida de para onde ele olha). */
@@ -1545,7 +1580,10 @@ class NewWorld implements NewWorldGame {
     this.charging = null;
     this.sfx.stopCharge();
     this.combat.setCharge(this.myId, null);
-    if (this.armed) this.combat.setAim(null);
+    if (this.armed) {
+      this.combat.setAim(null);
+      this.tellArmed(null); // não está mais puxando (se sair, o setArmed avisa que saiu)
+    }
     // durante a recarga, sai assim que der, com a carga contada até lá (o servidor conta igual, até o tiro chegar)
     if (now < this.nextShotAt) this.pendingShot = { at: this.nextShotAt, aim: charging.aim, since: charging.since };
     else if (!this.fireAim(charging.aim, chargeFraction(now - charging.since, this.shot()), now)) this.view?.action?.(this.myId, 'sling-cancel');
@@ -1556,7 +1594,10 @@ class NewWorld implements NewWorldGame {
     const pulling = this.charging !== null || this.pendingShot !== null;
     if (pulling) {
       this.aimFacing = null;
-      if (this.armed) this.combat.setAim(null);
+      if (this.armed) {
+        this.combat.setAim(null);
+        this.tellArmed(null); // continua no arco, mas sem puxar
+      }
     }
     this.charging = null;
     this.pendingShot = null;
@@ -1836,10 +1877,24 @@ class NewWorld implements NewWorldGame {
     const stance: ShotStance = now - this.lastWalkAt > SHOT_MOVING_MS ? 'still' : this.lastWalkSlow ? 'walk' : 'run';
     const flight = sent + shotSpread(cid, stance, this.rules);
     const special = this.armedSkill();
+    let pose = 'shoot';
     if (special && now >= (this.castReadyAt.get(special.id) ?? 0)) {
-      // a flecha especial que estava no arco (a Flecha Ancestral): é ela que sai, e a recarga dela começa agora
-      this.combat.myShot(cid, origin.x, origin.y, flight, special.speed, this.armedRange(special, charge, d), now, 'ancestral');
-      this.sfx.play('spirit');
+      // a habilidade que estava no arco: é ela que sai, no nível da puxada, e a recarga dela começa agora
+      const rank = this.hero.skills[special.id] ?? 0;
+      const level = chargeLevel(charge);
+      const numbers = skillPoint(special, rank);
+      if (special.kind === 'chuva' && numbers) {
+        // a Chuva: as flechas (ou pedras) sobem agora, quando ele solta, e caem onde mirou (sem o espalhado de quem
+        // corre, como no servidor)
+        const range = this.armedRange(special, charge, d);
+        const spot = { x: Math.max(0, Math.min(this.map.width, feet.x + Math.cos(sent) * range)), y: Math.max(0, Math.min(this.map.height, feet.y + Math.sin(sent) * range)) };
+        this.combat.rain(feet, spot.x, spot.y, numbers.radius, numbers.arrows, rank, special.delayMs, shot.kind, now, level);
+        this.sfx.volley(special.delayMs, numbers.arrows, shot.kind === 'pedra');
+        pose = 'volley'; // atira para o alto (a pose é da [arte])
+      } else {
+        this.combat.myShot(cid, origin.x, origin.y, flight, special.speed, this.armedRange(special, charge, d), now, 'ancestral', { rank, level });
+        this.sfx.play('spirit');
+      }
       this.setArmed(null);
       const wait = this.gmNoCd ? 0 : special.cooldownMs;
       const readyAt = now + wait;
@@ -1852,7 +1907,7 @@ class NewWorld implements NewWorldGame {
     }
     this.aimFacing = { degrees: toDegrees(angle), until: now + SHOT_FACING_MS }; // fica um instante virado para o tiro
     this.faceAngle(toDegrees(angle));
-    this.view?.action?.(this.myId, 'shoot', toDegrees(angle));
+    this.view?.action?.(this.myId, pose, toDegrees(angle));
     this.actionBar.setCooldown('shot', this.nextShotAt, shot.cooldownMs);
     return true;
   }
@@ -2061,8 +2116,9 @@ class NewWorld implements NewWorldGame {
       this.toast.show(!this.hero.class ? 'Escolha a sua classe nas Habilidades (K)' : name ? `Ponha um ponto em ${name}: abra as Habilidades (K)` : 'Esta tecla ainda não tem habilidade');
       return;
     }
-    if (skill.kind === 'flecha') {
-      this.toggleArmed(skill, now); // a Flecha Ancestral não mira aqui: carrega no arco e sai no próximo tiro
+    if (skill.kind === 'flecha' || skill.kind === 'chuva') {
+      // a Chuva e a Flecha Ancestral não miram aqui: entram no arco e saem no próximo tiro, puxando (o botão direito)
+      this.toggleArmed(skill, now);
       return;
     }
     if (this.aiming || !this.castable(skill, now)) return;
@@ -2124,8 +2180,8 @@ class NewWorld implements NewWorldGame {
   /** Usa mirando sozinha (botão da barra, celular): onde pega mais bichos. Sem bicho ao alcance, avisa. */
   private castAuto(skill: ClassSkillInfo, now: number): void {
     const numbers = skillPoint(skill, this.hero.skills[skill.id] ?? 0);
-    if (skill.kind === 'flecha') {
-      if (numbers) this.toggleArmed(skill, now);
+    if (skill.kind === 'flecha' || skill.kind === 'chuva') {
+      if (numbers) this.toggleArmed(skill, now); // no arco: sai com o botão do tiro (que mira sozinho)
       return;
     }
     if (!numbers || !this.castable(skill, now)) return;
@@ -2166,13 +2222,27 @@ class NewWorld implements NewWorldGame {
     this.armed = id;
     if (!id) this.combat.setAim(null);
     // a view desenha o brilho na flecha da mão (o mesmo tiro que voa depois: a Flecha Ancestral é 'ancestral')
-    this.view?.armed?.(this.myId, id ? 'ancestral' : null);
+    this.tellArmed(null);
     const slot = id ? this.classSlotOf(id) : null;
     for (const el of document.querySelectorAll<HTMLElement>('#actions .action')) {
       // o anel verde pulsando é da [arte] (style.css, pelo `data-armed`)
       if (old && el.dataset.slot === old) delete el.dataset.armed;
       if (slot && el.dataset.slot === slot) el.dataset.armed = '1';
     }
+  }
+
+  /**
+   * Conta à view o que está no arco (o brilho na flecha da mão): 'ancestral' (a Flecha Ancestral) ou 'chuva', com os
+   * pontos da habilidade e, puxando, o nível da carga (null: nada no arco). O desenho muda com os dois.
+   */
+  private tellArmed(level: ChargeLevel | null): void {
+    const skill = this.armedSkill();
+    if (!skill) {
+      this.view?.armed?.(this.myId, null);
+      return;
+    }
+    const kind = skill.kind === 'flecha' ? 'ancestral' : skill.kind ?? 'ancestral';
+    this.view?.armed?.(this.myId, kind, this.hero.skills[skill.id] ?? 0, level ?? undefined);
   }
 
   /** O pé do monstro onde um círculo deste raio pega mais monstros, até `range` metros de você (empate: o mais perto). */
@@ -2240,7 +2310,8 @@ class NewWorld implements NewWorldGame {
       return;
     }
     const fromMonster = this.entities.get(msg.by)?.kind === 'monster';
-    this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, gameNow());
+    const look = msg.rk !== undefined && msg.lv !== undefined ? { rank: msg.rk, level: msg.lv } : undefined;
+    this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, gameNow(), look);
     if (msg.kind === 'ancestral') this.sfx.play('spirit'); // outro jogador soltou a Flecha Ancestral
     this.view?.action?.(msg.by, 'shoot', toDegrees(msg.a));
   }
@@ -2803,7 +2874,7 @@ class NewWorld implements NewWorldGame {
         // outro jogador usou a Chuva: sobe dele e cai no círculo (você vê e ouve)
         const now = gameNow();
         const from = this.drawnFeet(msg.id) ?? { x: msg.x, y: msg.y };
-        this.combat.rain(from, msg.x, msg.y, msg.r, msg.n, msg.p, msg.ms, msg.kind, now);
+        this.combat.rain(from, msg.x, msg.y, msg.r, msg.n, msg.p, msg.ms, msg.kind, now, msg.lv ?? 3);
         if (msg.x !== from.x || msg.y !== from.y) this.view?.action?.(msg.id, 'volley', toDegrees(aimAngle(from, msg)));
         this.sfx.volley(msg.ms, msg.n, msg.kind === 'pedra');
         break;

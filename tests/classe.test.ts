@@ -355,80 +355,128 @@ describe('a classe no jogo', () => {
 });
 
 describe('a Chuva de Flechas', () => {
-  it('sem ponto nela, nada; com ponto, quem está perto vê e quem usou recebe a recarga', () => {
-    const { world, conn, player, run, at } = hunter(3);
+  /**
+   * O jeito de usar desde 19/11 (pedido do dono: o Q "carregar igual o R"): o Q põe a Chuva no arco, puxa (`holdMs`) e
+   * o tiro solta, mirando no ponto (x, y) do chão.
+   */
+  const rainAt = (game: ReturnType<typeof hunter>, x: number, y: number, holdMs = CHARGE_FULL_MS + TICK_MS, cid = 1) => {
+    const { world, player, run } = game;
+    world.castSkill(player, 'chuva', 0, 0);
+    world.charge(player);
+    run(holdMs);
+    const feet = feetAt(player.fx, player.fy);
+    world.shoot(player, cid, Math.atan2(y - feet.y, x - feet.x), Math.hypot(x - feet.x, y - feet.y));
+  };
+
+  it('sem ponto nela, nada; com ponto, o Q põe no arco e o tiro solta: quem está perto vê e quem usou recebe a recarga', () => {
+    const game = hunter(3);
+    const { world, conn, player, run, at } = game;
     const other = new FakeConn();
     const beto = world.join('Beto', other);
     if (!beto.ok) throw new Error(beto.reason);
     Object.assign(beto.player, { x: 3, y: 6 });
     run(TICK_MS);
-    world.castSkill(player, 'chuva', 8.5, 5);
+    world.castSkill(player, 'chuva', 0, 0);
     run(TICK_MS);
-    expect(other.ofType('cast')).toHaveLength(0);
+    expect(player.armed).toBeNull();
     world.learnSkill(player, 'chuva');
-    world.castSkill(player, 'chuva', 8.5, 5);
+    world.castSkill(player, 'chuva', 0, 0);
     run(TICK_MS);
-    expect(other.ofType('cast')).toEqual([{ t: 'cast', id: player.id, s: 'chuva', x: 8.5, y: 5, r: 2, n: 6, p: 1, ms: 600, kind: 'pedra' }]);
+    expect(conn.ofType('armed').at(-1)).toEqual({ t: 'armed', s: 'chuva' });
+    expect(other.ofType('cast')).toHaveLength(0); // no arco, ainda não chove
+    expect(conn.ofType('scd')).toHaveLength(0); // nem a recarga começou
+    world.charge(player);
+    run(CHARGE_FULL_MS + TICK_MS);
+    world.shoot(player, 1, 0, 6); // para o leste, mirando a 6 m do pé (2,5; 5)
+    run(TICK_MS);
+    expect(other.ofType('cast')).toEqual([{ t: 'cast', id: player.id, s: 'chuva', x: 8.5, y: 5, r: 2, n: 6, p: 1, ms: 600, kind: 'pedra', lv: 3 }]);
     expect(conn.ofType('cast')).toHaveLength(0); // quem usou já desenhou
     expect(conn.ofType('scd')).toEqual([{ t: 'scd', s: 'chuva', ms: 10_000 }]);
+    expect(conn.ofType('armed').at(-1)).toEqual({ t: 'armed', s: null });
+    expect(conn.ofType('shot')).toHaveLength(0); // a Chuva não é um tiro que voa
     expect(at(8, 4).hp).toBe(100); // ainda no ar
   });
 
   it('cai depois da demora em todos os bichos do círculo (e só neles), uma vez; depois, a recarga', () => {
-    const { world, conn, player, run, at } = hunter(3);
+    const game = hunter(3);
+    const { world, conn, player, run, at } = game;
     const [a, b, far] = [at(8, 4), at(9, 5), at(15, 4)]; // (acertados, eles dão um passo na direção de quem atirou)
     world.learnSkill(player, 'chuva');
     const center = feetAt(a.x, a.y);
-    world.castSkill(player, 'chuva', center.x, center.y);
+    rainAt(game, center.x, center.y);
     run(500);
     expect(a.hp).toBe(100);
     run(200);
-    // nível 3, sorteio no mínimo: 5 de dano × 100%
+    // nível 3, sorteio no mínimo, puxada cheia (forte): 5 de dano × 100%
     expect(a.hp).toBe(95);
     expect(b.hp).toBe(95); // o pé dele está a 1,4 m do centro
     expect(far.hp).toBe(100); // longe
     run(2000);
     expect(a.hp).toBe(95); // uma vez só
     expect(a.targetId).toBe(player.id); // e ele sabe quem foi
-    world.castSkill(player, 'chuva', center.x, center.y);
+    world.castSkill(player, 'chuva', 0, 0);
     run(TICK_MS);
     expect(conn.ofType('fail').at(-1)).toEqual({ t: 'fail', reason: 'cooldown' });
     run(8000);
     const moved = feetAt(a.x, a.y);
-    world.castSkill(player, 'chuva', moved.x, moved.y);
+    rainAt(game, moved.x, moved.y, CHARGE_FULL_MS + TICK_MS, 2);
     run(1000);
     expect(a.hp).toBe(90);
   });
 
+  it('a puxada dá o nível: fraco, médio e forte — mais longe e mais dano (o forte é o dano de sempre)', () => {
+    for (const [holdMs, level, hp, reach] of [
+      [0, 1, 97, 6.5], // fraco: o alcance sem carga e metade do dano (2,5 → 3)
+      [600, 2, 96, 8.25], // médio: no meio do caminho e três quartos (3,75 → 4)
+      [CHARGE_FULL_MS + TICK_MS, 3, 95, 10], // forte: o alcance da Chuva e o dano todo
+    ] as const) {
+      const game = hunter(3);
+      const other = new FakeConn();
+      game.world.join('Beto', other);
+      game.run(TICK_MS);
+      game.world.learnSkill(game.player, 'chuva');
+      const a = game.at(8, 4);
+      rainAt(game, feetAt(a.x, a.y).x, feetAt(a.x, a.y).y, holdMs);
+      game.run(700);
+      expect(a.hp).toBe(hp);
+      expect(other.ofType('cast')[0]).toMatchObject({ lv: level });
+      // mirando longe (40 m), cai no alcance do nível
+      game.run(10_000);
+      rainAt(game, 40, 5, holdMs, 2);
+      game.run(TICK_MS);
+      expect(other.ofType('cast')[1]).toMatchObject({ x: 2.5 + reach, y: 5, lv: level });
+    }
+  });
+
   it('com mais pontos, a área e o dano crescem', () => {
-    const { world, player, run, at } = hunter(5);
-    const a = at(8, 4);
-    world.learnSkill(player, 'chuva');
-    world.learnSkill(player, 'chuva');
-    world.castSkill(player, 'chuva', feetAt(a.x, a.y).x, feetAt(a.x, a.y).y);
-    run(700);
+    const game = hunter(5);
+    const a = game.at(8, 4);
+    game.world.learnSkill(game.player, 'chuva');
+    game.world.learnSkill(game.player, 'chuva');
+    rainAt(game, feetAt(a.x, a.y).x, feetAt(a.x, a.y).y);
+    game.run(700);
     // nível 5: 7 de dano × 200%
     expect(a.hp).toBe(86);
   });
 
   it('vem de cima: a casca do tatu-bola não segura (a pedra de frente, sim)', () => {
-    const { world, player, run, at } = hunter(3);
-    world.learnSkill(player, 'chuva');
-    const tatu = at(8, 1);
+    const game = hunter(3);
+    game.world.learnSkill(game.player, 'chuva');
+    const tatu = game.at(8, 1);
     tatu.dir = LEFT;
-    world.castSkill(player, 'chuva', feetAt(tatu.x, tatu.y).x, feetAt(tatu.x, tatu.y).y);
-    run(700);
+    rainAt(game, feetAt(tatu.x, tatu.y).x, feetAt(tatu.x, tatu.y).y);
+    game.run(700);
     expect(tatu.hp).toBe(95);
   });
 
-  it('longe demais, cai no alcance; da área segura, não chove', () => {
+  it('longe demais, cai no alcance; da área segura, não chove (e ela continua no arco)', () => {
     const far = hunter(3);
     const other = new FakeConn();
     far.world.join('Beto', other); // nasce perto da Ana: vê a chuva
     far.run(TICK_MS);
     const [a, c] = [far.at(8, 4), far.at(15, 4)];
     far.world.learnSkill(far.player, 'chuva');
-    far.world.castSkill(far.player, 'chuva', 40, 5); // a 37,5 m do pé (2,5; 5): cai a 10 m, em (12,5; 5)
+    rainAt(far, 40, 5); // a 37,5 m do pé (2,5; 5): cai a 10 m, em (12,5; 5)
     far.run(700);
     expect(other.ofType('cast')[0]).toMatchObject({ x: 12.5, y: 5 });
     expect(c.hp).toBe(100); // o pé dele fica a 3 m do centro
@@ -436,10 +484,26 @@ describe('a Chuva de Flechas', () => {
 
     const safe = hunter(3, { safe: true });
     safe.world.learnSkill(safe.player, 'chuva');
-    safe.world.castSkill(safe.player, 'chuva', 8.5, 5);
+    rainAt(safe, 8.5, 5);
     safe.run(700);
     expect(safe.at(8, 4).hp).toBe(100);
     expect(safe.conn.ofType('scd')).toHaveLength(0);
+    expect(safe.player.armed).toBe('chuva');
+  });
+
+  it('Q e R trocam o que está no arco; Q de novo descarrega', () => {
+    const { world, conn, player, run } = hunter(6);
+    world.learnSkill(player, 'chuva');
+    world.learnSkill(player, 'flecha');
+    world.castSkill(player, 'chuva', 0, 0);
+    world.castSkill(player, 'flecha', 0, 0);
+    run(TICK_MS);
+    expect(player.armed).toBe('flecha');
+    world.castSkill(player, 'chuva', 0, 0);
+    world.castSkill(player, 'chuva', 0, 0);
+    run(TICK_MS);
+    expect(player.armed).toBeNull();
+    expect(conn.ofType('armed').map((m) => m.s)).toEqual(['chuva', 'flecha', 'chuva', null]);
   });
 });
 
@@ -569,6 +633,33 @@ describe('a Flecha Ancestral', () => {
     far.fire();
     far.run(1500);
     expect(far.row[0]!.hp).toBe(100);
+  });
+
+  it('a puxada dá o nível (fraco, médio, forte): mais longe e mais dano; o tiro leva os pontos e o nível para o desenho', () => {
+    const weak = line(2, 1);
+    weak.world.castSkill(weak.player, 'flecha', 0, 0);
+    weak.world.shoot(weak.player, 1, 0, 30); // sem puxar: fraco
+    weak.run(1500);
+    expect(weak.conn.ofType('shot').at(-1)).toMatchObject({ kind: 'ancestral', range: 6.5, rk: 1, lv: 1 });
+    expect(weak.row.slice(0, 3).map((m) => m.hp)).toEqual([98, 98, 100]); // metade do dano (4 → 2); não chega no tatu
+    const mid = line(2, 1);
+    mid.world.castSkill(mid.player, 'flecha', 0, 0);
+    mid.world.charge(mid.player);
+    mid.run(600);
+    mid.world.shoot(mid.player, 1, 0, 30);
+    mid.run(1500);
+    expect(mid.conn.ofType('shot').at(-1)).toMatchObject({ range: 13.25, lv: 2 });
+    expect(mid.row.slice(0, 5).map((m) => m.hp)).toEqual([97, 97, 97, 97, 100]); // três quartos (3), até 13,25 m
+    const strong = line(2, 1);
+    strong.fire();
+    strong.run(1500);
+    expect(strong.conn.ofType('shot').at(-1)).toMatchObject({ range: 20, lv: 3 });
+    expect(strong.row[0]!.hp).toBe(96); // o dano de sempre
+    // o tiro de sempre não leva nível
+    strong.run(10_000);
+    strong.world.shoot(strong.player, 2, 0);
+    strong.run(TICK_MS);
+    expect(strong.conn.ofType('shot').at(-1)).not.toHaveProperty('lv');
   });
 
   it('recarga: de novo antes da hora, não carrega (e o tiro que sai é a pedra de sempre)', () => {
