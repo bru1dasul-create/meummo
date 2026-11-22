@@ -51,7 +51,7 @@
   jogadores na tela).
 
 - **Os níveis da Chuva e da Ancestral (22/11, escopo aprovado: "pode, coloca sensação de impactos também por nível"), em
-  3 etapas. Etapa 1, os degraus da carga (1 fraco, 2 médio, 3 forte; o motor manda `armed(id, tipo, pontos, degrau)`,
+  3 etapas. Etapa 1, os degraus da carga — na main em 22/11 (1 fraco, 2 médio, 3 forte; o motor manda `armed(id, tipo, pontos, degrau)`,
   `paintChargeRing(..., degrau)`, o `look` no `drawProjectile` e `level` na chuva e no fim da Ancestral):**
   - o anel (`chargeArt.ts`): com a habilidade no arco, as marcas dos degraus na metade e no cheio, o arco na cor do degrau
     (branco, dourado, verde do espírito) e um pulso de luz quando ele sobe; sem habilidade, o de sempre. (O degrau vem

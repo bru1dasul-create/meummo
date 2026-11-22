@@ -851,7 +851,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
   dados chegam pelo motor (veja o item acima). Pedido mandado à [arte]. Escopo aprovado pelo dono em 22/11 ("pode, coloca
-  sensação de impactos também por nível"), em 3 etapas: **1) os degraus da carga — FEITA em 22/11** (o anel com as
+  sensação de impactos também por nível"), em 3 etapas: **1) os degraus da carga — FEITA em 22/11, na main** (o anel com as
   marcas dos degraus, a cor de cada um e o pulso quando sobe; a flecha no arco com o brilho por degrau e o clarão; o tiro
   e o impacto menores no fraco e completos no forte, com a pancada no forte; a Chuva já mira para o alto na puxada);
   2) a Chuva com cara própria em cada ponto; 3) a Ancestral com cara própria em cada ponto (veja `docs/ARTE.md`)
