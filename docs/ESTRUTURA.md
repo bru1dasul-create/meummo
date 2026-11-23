@@ -25,10 +25,17 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Testar sem caçar:** painel do administrador no servidor de teste — `/admin/api/jogador` (dar ouro e itens,
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
-## Onde estamos (19 de novembro de 2026) — leia isto primeiro
-- **Prioridade do dono: o personagem**, com a [arte]. A **região 2 está pausada** (decisão de 18/11). Da Guarapiranga
-  só entrou a parte pequena (19/11): o mapa `guarapiranga` do [mundo] e, meus, a `iracema_guarapiranga` e o `barqueiro`
-  em `data/npcs.json`. Bichos novos, missões e equilíbrio da região: só quando o dono mandar. Fico em correções pequenas.
+## Onde estamos (22 de novembro de 2026) — leia isto primeiro
+- **Feito em 22/11 (tudo na main, conferido no navegador):** o Q põe a Chuva no arco como o R (sai no tiro); níveis de
+  carga (fraco/médio/forte) só na Chuva e na Ancestral; a flecha sai do arco e some atrás de quem atirou; cai em curva
+  no fim do alcance; rolando não puxa nem atira (puxa quando a rolada acaba); impacto das habilidades crescendo por
+  nível (tremor, pausa e baque; F1 → "Tremor/Pausa das habilidades"); voltar onde saiu (encostado em moita);
+  "andar até" dentro de moita para do lado de quem anda; o "levar" do painel com fração; as capivaras da várzea. Juntei
+  também o ramo da [arte] com o "pode" do dono (o brilho do R que ficava no arco depois da câmera lenta era o relógio
+  da view: consertado por ela).
+- **Prioridade do dono: o personagem e as habilidades**, com a [arte]. A Guarapiranga grande (400 × 320 m) entrou pelo
+  [mundo] em 22/11 com 45 bichos do Capão (níveis 1 a 5): bichos mais fortes, missões e equilíbrio da região só quando
+  o dono mandar. Pendências da [arte] no roteiro (visual por ponto/degrau já entrou nas etapas 1 a 3 dela).
 - **Proposta mandada à [arte] (19/11, aprovada pelo dono):** o Birim entra no jogo primeiro (com a **barba cheia**,
   pedido do dono: "sem barba ficou pior"); depois só o que incomodar no jogo; em seguida, um teste barato das peças
   pintadas pelo Nano Banana montadas no esqueleto atual; o dono decide olhando no jogo. **Resposta da [arte] (19/11,
@@ -54,8 +61,9 @@ alternativas quando vejo — sem concordar só para agradar.
   2. ~~"Andar até" um ponto bloqueado~~ feito em 19/11: `findRoute`, sem lugar no destino, liga à busca todas as
      células livres até `NEAR_GOAL` (3 m), cada uma custando `NEAR_PENALTY` (4) × a distância até o toque; a busca
      escolhe a soma menor (para do lado de quem anda). Teste em `tests/rota.test.ts`.
-  3. A velocidade medida no navegador com o slider em 9 m/s deu 5,0 (o teste automático confirma o servidor;
-     conferir com caminho livre). O "levar" do painel com fração ficou pronto (19/11, diário).
+  3. ~~A velocidade~~ conferida em 22/11 (o "pode" do dono): sem defeito. Na várzea da Guarapiranga (caminho livre),
+     com 9 m/s a corrida dá 8,6 a 9,0 m/s no navegador e ~9 no servidor (o padrão, 4,5), também mudando o ajuste com o
+     jogo aberto e no "andar até" (8,8). Os 5 m/s de antes eram do caminho (raspando em árvore, o pé escorrega de lado).
 - **Trava invisível nas moitas (print do dono, 19/11): resolvida pelo [mundo] (main 9aac53d)**, conferida por mim
   (medida com `sweepBody` e no navegador, F1 → Hitboxes). A caixa `mata-fechada` (quadrado de 1,8 × raio) passava ~30
   cm das folhas nas pontas; agora é um octógono de três caixas (cruz a 0,9 × raio + quadrado do meio de 1,4 × raio;
@@ -69,7 +77,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 46; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 532 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 47; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 542 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

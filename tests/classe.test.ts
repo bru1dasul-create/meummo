@@ -351,6 +351,31 @@ describe('a classe no jogo', () => {
     run(TICK_MS);
     expect(player.skillPoints).toEqual({ chuva: 1 });
     expect(heroOf(conn)).toMatchObject({ skills: { chuva: 1 }, points: 1 });
+    // baixando, não é "subiu de nível" (nem o efeito): a vida nova chega pelo `hp`
+    expect(conn.ofType('levelup')).toHaveLength(0);
+    expect(conn.ofType('hp').at(-1)).toMatchObject({ id: player.id, maxHp: player.maxHp });
+    world.adminSetLevel(player, 6);
+    run(TICK_MS);
+    expect(conn.ofType('levelup')).toEqual([{ t: 'levelup', id: player.id, level: 6, maxHp: player.maxHp }]);
+  });
+
+  it('pôr um ponto numa habilidade: o efeito subindo do chão, para quem pôs e para quem está perto', () => {
+    const { world, conn, player, run } = hunter(5);
+    const other = new FakeConn();
+    const beto = world.join('Beto', other);
+    if (!beto.ok) throw new Error(beto.reason);
+    Object.assign(beto.player, { x: 3, y: 6 });
+    run(TICK_MS);
+    world.learnSkill(player, 'chuva');
+    run(TICK_MS);
+    const fx = { t: 'fx', id: player.id, kind: 'skillup', s: 'chuva' };
+    expect(conn.ofType('fx').filter((m) => m.kind === 'skillup')).toEqual([fx]);
+    expect(other.ofType('fx').filter((m) => m.kind === 'skillup')).toEqual([fx]);
+    // sem ponto para pôr (ou no máximo): nada
+    world.learnSkill(player, 'chuva');
+    world.learnSkill(player, 'chuva'); // o 3º ponto só no nível 7
+    run(TICK_MS);
+    expect(conn.ofType('fx').filter((m) => m.kind === 'skillup')).toHaveLength(2);
   });
 });
 
