@@ -68,6 +68,50 @@
   [criaturas]` (o peso; `custo-modos.cjs` desliga cada efeito), `outros.cjs` (os outros bichos, antes × depois),
   `jogo.cjs <pasta>` (no jogo) e `antes/` (a cópia das criaturas de antes do redesenho).
 
+### O Sagui no galho (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3")
+- **A ideia:** calmo, o sagui fica pendurado pelo rabo num galho baixo e joga a fruta lá de cima (a emboscada); quando
+  o herói chega perto ou acerta nele, pula para o chão e luta normal; depois de um tempo calmo, sobe de novo. O
+  comportamento é da [estrutura] e as árvores (o ponto embaixo do galho, a altura, a direção e o galho baixo desenhado)
+  são do [mundo]: os dois pedidos foram mandados em 23/11. **Até eles entregarem, no jogo nada muda** (sem `galho`, o
+  sagui fica no chão como hoje).
+- **O gancho (`view.js`):** `view.perch(id, galho)`, com `galho = { altura (cm), direcao (graus, do tronco para a ponta,
+  como o angle) }` ou `null` (no chão); no `addActor`, o `galho` faz o sagui já aparecer pendurado, sem animar (como o
+  `asleep` do Joaquim). A criatura recebe `setPerch({ z, yaw }, instant)`.
+- **O desenho (`sagui.js`):** dois esqueletos, o do chão (`_groundRig`) e o pendurado (`_hangRig`), e uma pintura só
+  (`_build`):
+  - **pendurado:** de cabeça para baixo, uns 35 cm abaixo do galho. É o corpo do chão rolado meia volta em volta da
+    frente, então continua olhando para o mesmo lado. O rabo sobe das costas até o galho e dá uma volta nele (a parte de
+    trás da volta não é desenhada: ali aparece o galho do [mundo]); a ponta fica pendurada do outro lado. As pernas
+    ficam soltas dos lados e os braços balançam. O corpo balança como um pêndulo, numa mola (`swing`);
+  - **no golpe:** no aviso, balança para trás com a fruta; no arremesso, vem para a frente jogando. O tranco empurra o
+    balanço para longe de quem bateu. Desmaiado, cai lá de cima (`fallFrom`) e termina caído no chão;
+  - **a subida (0,72 s):** pula numa parábola, de uma casa ao lado até embaixo do galho, e chega lá em cima esticado, com
+    os braços e o rabo para cima. Aí dá uma **cambalhota de lado** (`_flipRig`): o corpo pendurado gira meia volta em
+    volta da frente, com a cabeça passando pelo lado de fora do galho, longe do tronco; passa um pouco do ponto e volta.
+    O rabo já está preso no galho, saindo do quadril. Antes ele virava de cabeça para baixo de uma vez (uns 85 cm num
+    quadro só);
+  - **a descida (0,56 s):** a mesma cambalhota ao contrário, soltando o rabo. Ela acontece no galho de onde ele saiu,
+    porque o servidor pode já ter posto o pé em outra casa (o `at`); depois cai de pé onde o pé estiver;
+  - `_turnRig` (gira o esqueleto inteiro) e `_mixRig` (mistura dois esqueletos do mesmo jeito) servem para os próximos
+    bichos;
+  - **o rabo pulava de lado no vaivém**, porque o lado do galho vinha do quadril de agora. Agora o rabo vem de trás do
+    corpo, calculado pela frente sem o balanço, com folga e guardado em `tailSide`.
+- **Conferido:**
+  - no chão, o sagui continua idêntico ao aprovado, pixel a pixel na prancha de 4 lados × 10 momentos;
+  - pendurado, o peso é o mesmo do chão: ~2,0 ms no PC e ~1,4 ms no celular (`custo-galho.cjs`);
+  - medi a subida e a descida quadro a quadro: o maior salto é de ~19 cm, na saída do pulo (antes, 85 cm);
+  - o filme com a árvore de mentira (`sagui-no-galho.gif`).
+  
+  **Falta conferir no jogo**, com o servidor e as árvores.
+- **Teste:** `tests/sagui-art.test.ts`: pendurado em 8 lados e 4 momentos, o vaivém sem o rabo pular, a subida e a
+  descida sem saltos e o desmaio caindo do galho.
+- **Rascunho `sagui2/`:**
+  - `galho.cjs <saída> [zoom]`: a prancha pendurado (`PERTO=1` de perto, `GALHO=90` a direção);
+  - `cambalhota.cjs <saída> [zoom]`: quadro a quadro (`MODO=subir|descer`, `DE`, `ATE`, `CADA`);
+  - `saltos.cjs [lado] [galho]`: o maior salto de um quadro para o outro;
+  - `anim-galho.cjs <pasta> [zoom]`: o filme;
+  - `custo-galho.cjs`: o peso (`GALHO=1` pendurado).
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
@@ -2209,6 +2253,11 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
+- **[estrutura] e [mundo], o Sagui no galho (pedidos de 23/11; veja "O Sagui no galho", no alto).** A [estrutura]:
+  o comportamento no servidor, o `galho` no estado do monstro chamando o `view.perch`, a fruta saindo lá de cima
+  (`combat.ts`) e a mira com o mouse na altura do galho (`actorAtScreen`). O [mundo]: as árvores de sagui no Capão e o
+  galho baixo desenhado. Quando entregarem, conferir no jogo: a subida, o arremesso de cima, o tiro pendurado, a
+  descida e o desmaio caindo do galho, no PC e no celular.
 - **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
   no `makeActionBar` e o `tryJump` no `onAction`). Ela liga assim que o meu ramo (o `ActionSlot` 'jump' do `ui.ts`)
   entrar na main (antes disso a main não compila): **avisar a [estrutura] quando entrar**. Já feitos por ela (main

@@ -71,6 +71,17 @@
    */
   const small = (z) => z < 0.85;
 
+  /**
+   * O galho: subindo, ele pula (a primeira parte, até lá em cima esticado, com a ponta do rabo chegando no galho) e dá
+   * uma cambalhota de lado até ficar de cabeça para baixo; descendo, desvira (soltando o rabo) e cai de pé. Em segundos
+   * e na parte de cada pedaço.
+   */
+  const UP_DUR = 0.72;
+  const UP_LEAP = 0.4;
+  const DOWN_DUR = 0.56;
+  const DOWN_FLIP = 0.42;
+  const WORLD_UP = Object.freeze({ x: 0, y: 0, z: 1 });
+
   /** Estrelinha de 4 pontas (o encanto), em px de tela. */
   function star(ctx, x, y, s) {
     ctx.beginPath();
@@ -101,9 +112,56 @@
       this.ownDeath = true;
       /** Para onde vai o tranco do golpe levado (no chão, unitário): para longe do herói, ou para trás. */
       this.recoilDir = { x: -Math.cos(yaw), y: -Math.sin(yaw) };
+      /** No galho, pendurado pelo rabo: { z: a altura (cm), yaw: para onde o galho aponta } ou null (veja `setPerch`). */
+      this.perch = null;
+      /** A passagem entre o chão e o galho: { kind: 'subir' | 'descer', t, dur, x, y, z, yaw } (de onde saiu). */
+      this.trans = null;
+      /** O balanço pendurado (rad; + = a cabeça para a frente) e a velocidade dele. */
+      this.swing = 0;
+      this.swingV = 0;
+      /** Desmaiou no galho: de que altura cai (cm). */
+      this.fallFrom = 0;
+      /** Pendurado: de que lado do galho o rabo vem (+1 / -1; 0 = ainda não escolhido; veja `_hangRig`). */
+      this.tailSide = 0;
+    }
+
+    /**
+     * No galho (pendurado pelo rabo): `perch` = { z: a altura do galho (cm), yaw: para onde o galho aponta (rad) } ou
+     * null (no chão). Quem manda é o servidor (pela view: `view.perch`); `instant` (o bicho que já aparece no galho)
+     * pula a animação. Do chão para o galho (0,72 s), ele pula, agarra o galho com o rabo e dá uma cambalhota de lado
+     * até ficar de cabeça para baixo ('subir'); do galho para o chão (0,56 s), desvira soltando o rabo e cai de pé
+     * ('descer').
+     */
+    setPerch(perch, instant) {
+      if (this.dying !== null) return;
+      const next = perch && Number.isFinite(perch.z) && perch.z > 30 ? { z: perch.z, yaw: Number.isFinite(perch.yaw) ? perch.yaw : this.yaw + Math.PI / 2 } : null;
+      if (instant) {
+        this.perch = next;
+        this.trans = null;
+        this.swing = 0;
+        this.swingV = 0;
+        return;
+      }
+      if (next && !this.perch) this.trans = { kind: 'subir', t: 0, dur: UP_DUR, x: this.pos.x, y: this.pos.y, z: next.z, yaw: next.yaw };
+      else if (!next && this.perch) this.trans = { kind: 'descer', t: 0, dur: DOWN_DUR, x: this.pos.x, y: this.pos.y, z: this.perch.z, yaw: this.perch.yaw };
+      this.perch = next;
+    }
+
+    /** A altura do galho agora (cm; 0 = no chão), contando a subida e a descida. */
+    perchHeight() {
+      const tr = this.trans;
+      if (tr && tr.kind === 'descer') return tr.z * (1 - M.clamp01(tr.t / tr.dur));
+      if (tr && tr.kind === 'subir') return tr.z * M.clamp01(tr.t / tr.dur);
+      return this.perch ? this.perch.z : 0;
     }
 
     action(kind, yaw) {
+      if (kind === 'die' && this.dying === null) {
+        // desmaiou no galho (ou descendo): cai lá de cima
+        this.fallFrom = this.perchHeight();
+        this.perch = null;
+        this.trans = null;
+      }
       if (kind === 'hurt' && this.dying === null) {
         // o golpe quase sempre vem do herói (o servidor não diz de onde): o tranco vai para longe dele
         let dx = -Math.cos(this.yaw), dy = -Math.sin(this.yaw);
@@ -117,6 +175,8 @@
           }
         }
         this.recoilDir = { x: dx, y: dy };
+        // pendurado, o golpe empurra o balanço (para longe de quem bateu)
+        if (this.perch) this.swingV += 6 * (dx * Math.cos(this.yaw) + dy * Math.sin(this.yaw));
       }
       super.action(kind, yaw);
     }
@@ -135,6 +195,24 @@
     }
 
     animate(dt) {
+      const tr = this.trans;
+      if (tr) {
+        tr.t += dt;
+        if (tr.t >= tr.dur) this.trans = null;
+      }
+      // o balanço pendurado (+ = a cabeça para a frente): uma mola em volta do alvo — parado, um vaivém preguiçoso; no
+      // preparo, bem para trás (o aviso); no arremesso, para a frente
+      if (this.perch && this.dying === null) {
+        const act = this.act;
+        let target = Math.sin(this.time * 1.7 + this.seed * 5) * 0.12;
+        if (act && act.kind === 'windup') target = -0.6 - 0.18 * M.clamp01((act.t - act.dur) / Math.max(0.01, act.hold));
+        else if (act && act.kind === 'shoot') target = act.t < act.dur ? 0.55 : 0.1;
+        this.swingV += (-(this.swing - target) * 32 - this.swingV * 3.4) * dt;
+        this.swing += this.swingV * dt;
+      } else if (!this.trans) {
+        this.swing = 0;
+        this.swingV = 0;
+      }
       if (this.dying !== null) {
         this.run = 0;
         this.up = M.damp(this.up, 0, 12, dt);
@@ -142,7 +220,7 @@
         this.label = 'caído';
         return;
       }
-      this.run = M.smoothstep(30, 150, this.speed);
+      this.run = this.perch ? 0 : M.smoothstep(30, 150, this.speed);
       const act = this.act;
       const busy = act && (act.kind === 'windup' || act.kind === 'shoot');
       this.up = M.damp(this.up, busy ? 1 : 1 - this.run, busy ? 14 : 7, dt);
@@ -156,49 +234,95 @@
       } else this.armK = M.damp(this.armK, 0, 7, dt); // volta ao repouso de onde estiver
       // passada de quatro aos saltos: uns 70 cm por ciclo
       this.phase = (this.phase + (this.speed * dt) / (70 * S)) % 1;
-      this.label = busy ? 'jogando' : this.run > 0.5 ? 'correndo' : 'parado';
+      this.label = this.perch ? (busy ? 'jogando do galho' : 'no galho') : busy ? 'jogando' : this.run > 0.5 ? 'correndo' : 'parado';
+    }
+
+    /** O momento (o golpe, o tranco, o desmaio...): os mesmos números para o chão e para o galho. */
+    _moment() {
+      const act = this.act;
+      const throwing = this.armMode === 'throw';
+      const armK = this.armK;
+      const dying = this.dying;
+      const rd = this.recoilDir;
+      return {
+        t: this.time,
+        act,
+        armK,
+        throwing,
+        wind: throwing ? 0 : armK, // preparo (para o outro braço, a cabeça e o rabo)
+        // segurando o preparo (0..1): o corpo vai mais para trás, a fruta brilha e treme no fim
+        hold: act && act.kind === 'windup' && act.hold > 0 ? M.clamp01((act.t - act.dur) / act.hold) : 0,
+        thr: this.thr,
+        rec: this.recoil(),
+        hop: this.hurtT < 0.3 ? Math.sin((this.hurtT / 0.3) * Math.PI) : 0,
+        dying,
+        // desmaio: despenca de bruços em 0,26 s, quica de leve no chão, braços para a frente e o rabo largado
+        slump: dying === null ? 0 : M.easeIn(M.clamp01(dying / 0.26)),
+        land: dying === null ? 0 : Math.max(0, Math.sin(M.clamp01((dying - 0.26) / 0.16) * Math.PI)) * 2.5,
+        // o tranco empurra para o lado do `recoilDir`: de frente para quem bateu, o corpo verga para trás
+        push: rd.x * Math.cos(this.yaw) + rd.y * Math.sin(this.yaw),
+      };
     }
 
     /** A pose (pontos 3D) e as partes pintadas, cada uma com a bola da sombra e o seu desenho. */
     parts(cam) {
-      const t = this.time;
-      const up = M.smoothstep(0, 1, this.up);
-      const run = this.run;
+      const st = this._moment();
+      const tr = this.trans;
+      const k = tr ? M.clamp01(tr.t / tr.dur) : 1;
+      let rig;
+      if (tr && tr.kind === 'subir' && this.perch) {
+        // o pulo, e depois a cambalhota até ficar pendurado
+        rig = k < UP_LEAP ? this._groundRig(st) : this._flipRig(st, this.perch.z, this.perch.yaw, (k - UP_LEAP) / (1 - UP_LEAP), 0, null);
+      } else if (tr && tr.kind === 'descer' && k < DOWN_FLIP) {
+        // desvira soltando o rabo, lá no galho de onde saiu (o pé de agora pode já estar em outra casa)
+        rig = this._flipRig(st, tr.z, tr.yaw, 1 - k / DOWN_FLIP, k / DOWN_FLIP, tr, 0.45);
+      } else if (this.perch) rig = this._hangRig(st, this.perch.z, this.perch.yaw);
+      else rig = this._groundRig(st);
+      return this._build(cam, rig, st);
+    }
+
+    /**
+     * O corpo no chão: sentado, correndo de quatro, no golpe, no tranco e desmaiado. No ar (subindo para o galho,
+     * descendo dele ou caindo desmaiado lá de cima), o mesmo corpo levantado do chão.
+     */
+    _groundRig(st) {
+      const { t, act, armK, throwing, wind, hold, thr, rec, hop, slump, land, push } = st;
+      // no ar: de onde saiu (o galho ou o chão) até o pé de agora, num arco
+      let airX = 0, airY = 0, airZ = 0, leap = 0;
+      const tr = this.trans;
+      if (tr && tr.kind === 'subir') {
+        // chega lá em cima esticado, de braços e rabo para cima (é aí que a cambalhota emenda)
+        const u = M.clamp01(tr.t / tr.dur / UP_LEAP);
+        leap = Math.sin((u * Math.PI) / 2);
+        airZ = (tr.z - 62 * S) * u * (2 - u); // a parábola do pulo (sai rápido e para lá em cima)
+        airX = (tr.x - this.pos.x) * (1 - u);
+        airY = (tr.y - this.pos.y) * (1 - u);
+      } else if (tr && tr.kind === 'descer') {
+        const u = M.clamp01((tr.t / tr.dur - DOWN_FLIP) / (1 - DOWN_FLIP));
+        leap = 1 - u;
+        airZ = Math.max(0, tr.z - 62 * S) * (1 - u * u);
+        airX = (tr.x - this.pos.x) * (1 - u);
+        airY = (tr.y - this.pos.y) * (1 - u);
+      } else if (this.fallFrom > 0 && st.dying !== null) {
+        const u = M.clamp01(st.dying / 0.24);
+        airZ = Math.max(0, this.fallFrom - 62 * S) * (1 - u * u);
+      }
+      const up = M.lerp(M.smoothstep(0, 1, this.up), 0.55, leap);
+      const run = this.run * (1 - leap);
       const ph = this.phase * M.TAU;
-      const act = this.act;
-      const armK = this.armK;
-      const throwing = this.armMode === 'throw';
-      const wind = throwing ? 0 : armK; // preparo (para o outro braço, a cabeça e o rabo)
-      // segurando o preparo (0..1): o corpo vai mais para trás, a fruta brilha e treme no fim
-      const hold = act && act.kind === 'windup' && act.hold > 0 ? M.clamp01((act.t - act.dur) / act.hold) : 0;
-      const thr = this.thr;
-      const rec = this.recoil();
-      const hop = this.hurtT < 0.3 ? Math.sin((this.hurtT / 0.3) * Math.PI) : 0;
-      const dying = this.dying;
-      // desmaio: despenca de bruços em 0,26 s, quica de leve no chão, braços para a frente e o rabo largado
-      const slump = dying === null ? 0 : M.easeIn(M.clamp01(dying / 0.26));
-      const land = dying === null ? 0 : Math.max(0, Math.sin(M.clamp01((dying - 0.26) / 0.16) * Math.PI)) * 2.5;
       const D = (v, lying) => M.lerp(v, lying, slump);
       const L = (a, b) => M.lerp(a, b, up); // de quatro → sentado
       const bounce = 5 * Math.max(0, Math.sin(ph)) * run * (1 - up);
-      // o tranco empurra para o lado do `recoilDir`: de frente para quem bateu, o corpo verga para trás; batido por
-      // trás, para a frente
-      const rd = this.recoilDir;
-      const push = rd.x * Math.cos(this.yaw) + rd.y * Math.sin(this.yaw);
-      // para trás no preparo; para a frente no arremesso
       const lean = 9 * rec * push + (throwing ? (act ? 9 * Math.sin(thr * Math.PI) : 0) : -6 * wind - 3 * hold);
-      const rise = 5 * wind + 2 * hold; // no preparo, estica o corpo para cima
+      const rise = 5 * wind + 2 * hold + 6 * leap; // no preparo e no pulo, estica o corpo para cima
       const shake = hold > 0.72 ? Math.sin(t * 70) * 0.8 * (hold - 0.72) / 0.28 : 0; // a tremidinha antes de jogar
       const breath = Math.sin(t * 2.4 + this.seed * 6) * 0.6 * (1 - run);
-      const offX = rd.x * 10 * S * rec, offY = rd.y * 10 * S * rec, offZ = 3 * S * hop;
+      const rd = this.recoilDir;
+      const offX = rd.x * 10 * S * rec + airX, offY = rd.y * 10 * S * rec + airY, offZ = 3 * S * hop + airZ;
       const at = (a, s, z) => {
         const p = this.at(a * S, (s + shake) * S, z * S);
         return { x: p.x + offX, y: p.y + offY, z: p.z + offZ };
       };
-      const z = cam.zoom;
-      const ink = Math.max(1, 1.1 * z);
-      const toCamH = M.norm({ x: cam.toCamera.x, y: cam.toCamera.y, z: 0 });
-      const near = (p) => p.x * toCamH.x + p.y * toCamH.y;
       const fwd = this._fwd();
       const side = this._side();
 
@@ -211,51 +335,17 @@
       const chestF = M.add(mid, M.scale(M.sub(chest, mid), flex));
 
       // cabeça: olha em volta quando está sentado e parado; no tranco e no preparo, um pouco para cima
-      const look = (M.noise1(t * 0.35 + this.seed * 20) - 0.5) * 1.3 * up * (1 - wind) * (1 - run) * (1 - rec);
+      const look = (M.noise1(t * 0.35 + this.seed * 20) - 0.5) * 1.3 * up * (1 - wind) * (1 - run) * (1 - rec) * (1 - leap);
       const hy = this.yaw + look;
       const headC = at(D(L(17, 3) + lean * 1.25, 19), 0, D(L(27, 45) + rise * 1.25 + bounce + breath * 1.4 - rec * 3, 10 + land));
       const rh = 11.6 * S;
       const flat = { x: Math.cos(hy), y: Math.sin(hy), z: 0 };
-      const hf = M.norm(M.add(flat, { x: 0, y: 0, z: 0.3 * rec + 0.14 * wind - 0.45 * slump }));
+      const hf = M.norm(M.add(flat, { x: 0, y: 0, z: 0.3 * rec + 0.14 * wind + 0.25 * leap - 0.45 * slump }));
       const hs = { x: -flat.y, y: flat.x, z: 0 };
       const hu = M.norm(M.cross(hf, hs));
-      const head = { c: headC, f: hf, s: hs, u: hu, r: rh };
-      const H = (f, s, u) => M.add(headC, M.add(M.scale(hf, f * rh), M.add(M.scale(hs, s * rh), M.scale(hu, u * rh))));
 
-      const groups = [];
-      const self = this;
-
-      // ---- o corpo: o casco das bolas do tronco com a beirada de pelo, a barriga e as faixas do lombo
-      const torso = [];
-      tube(hipF, chestF, 11 * S, 9.6 * S, null, torso);
-      torso.push({ c: M.lerp3(hipF, chestF, 0.45), r: 11.6 * S });
-      torso.push({ c: M.lerp3(chestF, headC, 0.32), r: 7.4 * S });
-      groups.push({
-        balls: torso,
-        ref: M.lerp3(hipF, chestF, 0.5),
-        body: true,
-        paint(ctx, flash) {
-          const disks = torso.map((b) => {
-            const q = cam.p(b.c);
-            return { x: q.x, y: q.y, r: b.r * z };
-          });
-          const hull = SH.circleHull(disks, 0.5);
-          // o pelo penteado do peito para o quadril
-          const fl = cam.pDir(M.sub(hipF, chestF));
-          const fk = Math.hypot(fl.x, fl.y) || 1;
-          const fur = P.furOutline(hull, small(z) ? 20 : 30, 4.2 * z, self.seed * 7, 0.5, { x: fl.x / fk, y: fl.y / fk });
-          if (!fur) return;
-          const smooth = padHull(disks, 6.8 * z);
-          P.paintLit(ctx, cam, (dx, dy, p) => P.furTrace(fur, dx, dy, p), LOOK.fur, 5.5 * z, ink, flash, {
-            inside: (c) => self._bodyMarks(c, cam, hipF, chestF, up, flash),
-            light: (dx, dy, p) => SH.fillPath(smooth, dx, dy, p),
-            lightPad: 6.8 * z,
-          });
-        },
-      });
-
-      // ---- o rabo de anéis: deitado atrás correndo; sentado, desce até o chão e enrola do lado; no preparo, sobe
-      // em S atrás do corpo; no tranco, arrepia
+      // o rabo de anéis: deitado atrás correndo; sentado, desce até o chão e enrola do lado; no preparo, sobe em S
+      // atrás do corpo; no tranco, arrepia
       const tail = [];
       const n = 18;
       const sway = Math.sin(t * 1.4 + this.seed * 9);
@@ -272,44 +362,30 @@
         const upA = -10 - 12 * u + 10 * u * u;
         const upZ = 12 + 46 * u - 10 * u * u;
         const upS = 8 * Math.sin(u * 3.4) + 3 * Math.sin(t * 9) * u * hold;
-        const raise = M.smoothstep(0, 1, wind) * 0.85 * (1 - slump);
+        const raise = Math.max(M.smoothstep(0, 1, wind) * 0.85, leap * 0.7) * (1 - slump);
         let a = L(runA, sitA), s = L(wave, sitS), zz = L(runZ, sitZ);
         a = M.lerp(a, upA, raise);
         s = M.lerp(s, upS, raise);
         zz = M.lerp(zz, upZ, raise);
         tail.push({ c: at(a, s, Math.max(2.6, zz)), r: (4.5 - 1.5 * u - (u > 0.9 ? (u - 0.9) * 14 : 0)) * S * puff });
       }
-      groups.push({
-        balls: tail,
-        ref: tail[Math.floor(n * 0.45)].c,
-        bias: -1,
-        paint(ctx, flash) {
-          self._paintTail(ctx, cam, tail, ink, flash);
-        },
-      });
 
-      // ---- pernas de trás: coxa grossa, joelho para a frente; sentado, os joelhos ficam erguidos na frente
+      // pernas de trás: coxa grossa, joelho para a frente; sentado, os joelhos ficam erguidos na frente
+      const legs = [];
       for (const sg of [-1, 1]) {
         const pf = ph + Math.PI + (sg > 0 ? 0.35 : 0);
         const footRun = [D(-12 - 8 * Math.cos(pf) * run, -18), D(6.5, 9) * sg, D(Math.max(0, Math.sin(pf)) * 7 * run, 1)];
-        const footSit = [10 - 2 * rec, 7 * sg, 1 + 2 * rec];
+        const footSit = [10 - 2 * rec - 14 * leap, 7 * sg, 1 + 2 * rec + 4 * leap];
         const hipJ = M.add(hipF, M.scale(side, 6 * S * sg));
         const foot = at(L(footRun[0], footSit[0]), L(footRun[1], footSit[1]), L(footRun[2], footSit[2]));
         const bone = M.lerp(11, 8.5, up) * S;
         const knee = bend(hipJ, foot, bone, bone, M.add(fwd, { x: 0, y: 0, z: 0.5 }));
         const toe = M.add(foot, M.add(M.scale(fwd, 3.6 * S), { x: 0, y: 0, z: -0.6 * S }));
-        const pts = [hipJ, M.lerp3(hipJ, knee, 0.5), knee, M.lerp3(knee, foot, 0.55), foot];
-        const rads = [5.6, 5.4, 3.6, 2.6, 2.2].map((r) => r * S);
-        groups.push({
-          balls: [{ c: knee, r: 4.4 * S }, { c: foot, r: 3 * S }, { c: toe, r: 2.6 * S }],
-          ref: knee,
-          paint(ctx, flash) {
-            self._paintLimb(ctx, cam, pts, rads, [foot, toe], 2.5 * S, ink, flash);
-          },
-        });
+        legs.push({ pts: [hipJ, M.lerp3(hipJ, knee, 0.5), knee, M.lerp3(knee, foot, 0.55), foot], knee, foot, toe });
       }
 
-      // ---- braços: de quatro, as mãos no chão; sentado, na frente da barriga; no golpe, o direito ergue a fruta
+      // braços: de quatro, as mãos no chão; sentado, na frente da barriga; no golpe, o direito ergue a fruta
+      const arms = [];
       let fruitAt = null;
       for (const sg of [-1, 1]) {
         const pf = ph + (sg > 0 ? 0.3 : 0);
@@ -337,20 +413,308 @@
           handSit = [handSit[0] + 11 * wind, -5 - 1 * wind, handSit[2] + 13 * wind];
         }
         if (rec > 0) handSit = [handSit[0] - 3 * rec, handSit[1] + 2 * sg * rec, handSit[2] + 9 * rec]; // as mãos sobem no susto
+        if (leap > 0) handSit = [handSit[0] + 6 * leap, handSit[1] + 3 * sg * leap, handSit[2] + 26 * leap]; // no pulo, as mãos para cima
         const sh = M.add(chestF, M.add(M.scale(side, 5.5 * S * sg), { x: 0, y: 0, z: -1.5 * S }));
         const hand = at(L(handRun[0], handSit[0]) + lean * up, L(handRun[1], handSit[1]), L(handRun[2], handSit[2]) - rec * 0.5);
         const elbow = bend(sh, hand, 8.6 * S, 8.6 * S, M.add(M.scale(fwd, -1), M.add(M.scale(side, 0.7 * sg), { x: 0, y: 0, z: -0.4 })));
-        const pts = [sh, M.lerp3(sh, elbow, 0.5), elbow, M.lerp3(elbow, hand, 0.5), hand];
-        const rads = [3.4, 3.0, 2.5, 2.2, 2.0].map((r) => r * S);
+        arms.push({ sg, pts: [sh, M.lerp3(sh, elbow, 0.5), elbow, M.lerp3(elbow, hand, 0.5), hand], elbow, hand });
+        if (thrower && act && (act.kind === 'windup' || (act.kind === 'shoot' && act.t < 0.07))) fruitAt = hand;
+      }
+      return { hipF, chestF, headC, rh, hf, hs, hu, tail, tailHidden: null, legs, arms, fruitAt, fwd, side, upV: WORLD_UP, belly: up, puff, branch: null };
+    }
+
+    /**
+     * Pendurado no galho, de cabeça para baixo: o rabo dá uma volta no galho (a parte de trás do galho não é
+     * desenhada — o galho do [mundo] aparece ali), as pernas ficam soltas dos lados, o corpo balança como um pêndulo e
+     * a cabeça, embaixo, olha para quem ela vê. No preparo, balança para trás com a fruta; no arremesso, vem para a
+     * frente jogando. `release` (0..1): soltando o rabo para descer; `at` ({x, y}): o pé embaixo do galho, quando não é
+     * o de agora (descendo, o servidor já pode ter posto o pé em outra casa).
+     */
+    _hangRig(st, h, byaw, release = 0, at = null) {
+      const { t, act, armK, throwing, wind, hold, thr, rec } = st;
+      const fwd = this._fwd();
+      const side = this._side();
+      // + = a cabeça para a frente (o `M.rotate` em volta do lado gira para trás com o ângulo positivo)
+      const sw = this.swing + M.easeIn(release) * 0.9;
+      const rot = (v) => M.rotate(v, side, -sw);
+      const dn = rot({ x: 0, y: 0, z: -1 });
+      const fw = rot(fwd);
+      // de cabeça para baixo o corpo rolou meia volta em volta da frente: a direita dele fica do outro lado
+      const sd = M.scale(side, -1);
+      const shake = hold > 0.72 ? Math.sin(t * 70) * 0.8 * (hold - 0.72) / 0.28 : 0;
+      const G = { x: at ? at.x : this.pos.x, y: at ? at.y : this.pos.y, z: this.groundZ + h };
+      const P = (a, s, d) => M.add(G, M.add(M.scale(fw, a * S), M.add(M.scale(sd, (s + shake) * S), M.scale(dn, d * S))));
+      const breath = Math.sin(t * 2.4 + this.seed * 6) * 0.6;
+      // o corpo fica uns 35 cm abaixo do galho: o rabo aparece subindo até ele e dando a volta
+      const hipF = P(-1.5, 0, 22);
+      const chestF = P(1, 0, 39 + breath * 0.5);
+      const headC = P(4 + 3 * rec, 0, 54 + breath * 0.7);
+      const rh = 11.6 * S;
+      // a cabeça olha para a frente e um pouco para o chão (para quem está embaixo), virando de leve
+      const look = (M.noise1(t * 0.35 + this.seed * 20) - 0.5) * 1.0 * (1 - wind) * (1 - rec);
+      const flatF = rot({ x: Math.cos(this.yaw + look), y: Math.sin(this.yaw + look), z: 0 });
+      const hf = M.norm(M.add(flatF, M.scale(dn, 0.35 - 0.25 * rec)));
+      const hu = M.norm(M.sub(dn, M.scale(hf, M.dot(dn, hf))));
+      const hs = M.cross(hu, hf);
+
+      // o rabo: sobe do quadril até o galho, dá uma volta nele e a ponta fica pendurada do outro lado
+      const bd = { x: Math.cos(byaw), y: Math.sin(byaw), z: 0 };
+      // o lado do galho de onde o rabo vem: o de trás do corpo (o rabo sai das costas). Pela frente de verdade (sem o
+      // balanço) e com folga, guardada: pelo quadril de agora, o vaivém fazia a volta do rabo pular de lado no galho
+      const perp = { x: -bd.y, y: bd.x, z: 0 };
+      const behind = -M.dot(perp, fwd);
+      if (behind > 0.25 || (!this.tailSide && behind >= 0)) this.tailSide = 1;
+      else if (behind < -0.25 || !this.tailSide) this.tailSide = -1;
+      const across = M.scale(perp, this.tailSide);
+      const R = 9; // cm: o raio da volta (o galho, uns 5 cm, mais a grossura do rabo)
+      const puff = 1 + 0.22 * rec + 0.12 * wind;
+      const tail = [];
+      const hidden = [];
+      const base = P(-4, 0, 17);
+      const n = 18;
+      const unravel = M.easeIn(release); // soltando: a volta abre
+      for (let k = 0; k <= n; k++) {
+        const u = k / n;
+        let c;
+        if (k <= 4) {
+          // do quadril até a beira do galho (do lado do corpo, embaixo)
+          const g0 = M.add(G, M.add(M.scale(across, R * 0.7), { x: 0, y: 0, z: -R * 0.7 }));
+          c = M.lerp3(base, g0, k / 4);
+        } else if (k <= 13) {
+          // a volta no galho: por baixo, pelo lado de lá, por cima e de volta para cá, andando um pouco no galho
+          const v = (k - 4) / 9;
+          const a = -Math.PI * 0.75 + v * M.TAU * (1 - 0.7 * unravel);
+          const r = R * (1 + 1.5 * unravel * v);
+          c = M.add(G, M.add(M.scale(across, Math.cos(a) * r), M.add({ x: 0, y: 0, z: Math.sin(a) * r }, M.scale(bd, (v - 0.5) * 12))));
+        } else {
+          // a ponta: pendura do galho e enrola
+          const v = (k - 13) / 5;
+          const swayT = Math.sin(t * 1.6 + this.seed * 4) * 3;
+          c = M.add(G, M.add(M.scale(across, -R * 0.8 + swayT * v), M.add({ x: 0, y: 0, z: -R * 0.4 - 26 * v + 10 * v * v }, M.scale(bd, 6 + 4 * v))));
+        }
+        tail.push({ c, r: (4.2 - 1.2 * u - (u > 0.9 ? (u - 0.9) * 14 : 0)) * S * 0.86 * puff });
+        hidden.push(k > 4 && k <= 13 ? 'loop' : null);
+      }
+
+      // as pernas: soltas dos lados do corpo, dobradas (quem segura é o rabo), mexendo um pouco no balanço
+      const legs = [];
+      for (const sg of [-1, 1]) {
+        const hipJ = M.add(hipF, M.scale(sd, 6 * S * sg));
+        const kick = Math.sin(t * 2.1 + sg + this.seed * 3) * 1.5;
+        const foot = P(2 + kick, (12 + 4 * rec) * sg, 33 - 2 * release);
+        const bone = 8.5 * S;
+        const knee = bend(hipJ, foot, bone, bone, M.add(M.scale(sd, 0.8 * sg), M.add(M.scale(fw, 0.4), M.scale(dn, -0.5))));
+        const toe = M.add(foot, M.scale(dn, 3 * S));
+        legs.push({ pts: [hipJ, M.lerp3(hipJ, knee, 0.5), knee, M.lerp3(knee, foot, 0.55), foot], knee, foot, toe });
+      }
+
+      // os braços: soltos para baixo, balançando; no preparo, o da fruta vai para trás e o outro aponta; no
+      // arremesso, o da fruta vem por baixo e solta na frente; no susto, abrem
+      const arms = [];
+      let fruitAt = null;
+      for (const sg of [-1, 1]) {
+        const thrower = sg > 0;
+        const dangle = Math.sin(t * 1.7 + this.seed * 5 + sg) * 2;
+        let p = [3 + dangle - 6 * this.swing, 11 * sg, 64];
+        if (thrower && armK > 0.001) {
+          // preparo: a fruta para o lado e para trás (de frente, ela aparece do lado do corpo); arremesso: passa por
+          // baixo e solta na frente, junto com o balanço
+          const back = [-7, 18, 52];
+          const low = [3, 10, 70];
+          const front = [22, 4, 60];
+          let q = [back[0] - 3 * hold, back[1], back[2] - 2 * hold];
+          if (throwing) {
+            const k = M.easeOut(thr);
+            const a = k < 0.5 ? back : low;
+            const b = k < 0.5 ? low : front;
+            const kk = k < 0.5 ? k * 2 : (k - 0.5) * 2;
+            q = [a[0] + (b[0] - a[0]) * kk, a[1] + (b[1] - a[1]) * kk, a[2] + (b[2] - a[2]) * kk];
+          }
+          p = p.map((v, i) => v + (q[i] - v) * armK);
+        } else if (!thrower && wind > 0) {
+          p = [p[0] + 12 * wind, p[1] - 2 * wind, p[2] - 5 * wind]; // aponta para a frente, de mira
+        }
+        if (rec > 0) p = [p[0] - 4 * rec, p[1] + 7 * sg * rec, p[2] - 14 * rec]; // abre os braços no susto
+        if (release > 0) p = [p[0] + 6 * release, p[1] + 4 * sg * release, p[2] - 8 * release];
+        const sh = M.add(chestF, M.add(M.scale(sd, 5.5 * S * sg), M.scale(dn, 1.5 * S)));
+        const hand = P(p[0], p[1], p[2]);
+        const elbow = bend(sh, hand, 8.6 * S, 8.6 * S, M.add(M.scale(fw, -1), M.scale(sd, 0.7 * sg)));
+        arms.push({ sg, pts: [sh, M.lerp3(sh, elbow, 0.5), elbow, M.lerp3(elbow, hand, 0.5), hand], elbow, hand });
+        if (thrower && act && (act.kind === 'windup' || (act.kind === 'shoot' && act.t < 0.07))) fruitAt = hand;
+      }
+      // (`upV`: o "para cima" do corpo — o do chão, que rolou meia volta)
+      return { hipF, chestF, headC, rh, hf, hs, hu, tail, tailHidden: hidden, legs, arms, fruitAt, fwd: fw, side: sd, upV: dn, belly: 1, puff, branch: { G, bd, across, R } };
+    }
+
+    /**
+     * A cambalhota entre o pulo e o galho (`v`: 0 = de pé, lá no alto do pulo; 1 = pendurado de cabeça para baixo). O
+     * corpo pendurado gira meia volta de lado, em volta da frente (continua olhando para o mesmo lado), com a cabeça
+     * passando pelo lado de fora do galho (longe do tronco), um pouco além do ponto e voltando (o peso). No começo, ele
+     * se mistura com a pose do fim do pulo (até `v` = `blend`); o rabo já está preso no galho, saindo do quadril.
+     * Subindo, `v` vai de 0 a 1; descendo, de 1 a 0 (mais depressa: a mistura fica mais longa), com `release` soltando
+     * o rabo.
+     */
+    _flipRig(st, h, byaw, v, release, at, blend = 0.3) {
+      const H = this._hangRig(st, h, byaw, release, at);
+      const A = this._groundRig(st);
+      const axis = this._fwd();
+      const way = M.dot(this._side(), H.branch.bd) >= 0 ? -1 : 1;
+      const c = M.lerp3(H.hipF, H.chestF, 0.5);
+      // de pé, o corpo fica um pouco mais baixo (a cabeça embaixo do galho, não atravessando ele)
+      const drop = { x: 0, y: 0, z: -9 * S };
+      const B = this._turnRig(H, axis, c, Math.PI, drop);
+      const w = M.smoothstep(0, blend, v);
+      const U = this._mixRig(A, B, w);
+      const s = v < 0.75 ? 1.1 * M.easeInOut(v / 0.75) : 1.1 - 0.1 * M.easeInOut((v - 0.75) / 0.25);
+      const pivot = M.add(c, drop);
+      const ang = way * s * Math.PI;
+      const lift = M.scale(drop, -Math.min(1, s));
+      const R = this._turnRig(U, axis, pivot, ang, lift);
+      // o rabo: do pulo (erguido atrás do corpo, girando junto) para o preso no galho (do quadril até a volta)
+      const turn = (p) => M.add(M.add(pivot, M.rotate(M.sub(p, pivot), axis, ang)), lift);
+      const base = R.tail[0].c;
+      const g0 = H.tail[4].c;
+      R.tail = H.tail.map((b, k) => {
+        const held = k <= 4 ? M.lerp3(base, g0, k / 4) : b.c;
+        return { c: M.lerp3(turn(A.tail[k].c), held, w), r: M.lerp(A.tail[k].r, b.r, w) };
+      });
+      R.tailHidden = w > 0.85 ? H.tailHidden : null;
+      R.branch = H.branch;
+      return R;
+    }
+
+    /** O esqueleto inteiro (pontos e direções) girado em volta de `axis` passando por `pivot`, e depois arrastado. */
+    _turnRig(rig, axis, pivot, a, move) {
+      const D = (d) => M.rotate(d, axis, a);
+      const Q = (p) => M.add(M.add(pivot, D(M.sub(p, pivot))), move);
+      return {
+        ...rig,
+        hipF: Q(rig.hipF),
+        chestF: Q(rig.chestF),
+        headC: Q(rig.headC),
+        hf: D(rig.hf),
+        hs: D(rig.hs),
+        hu: D(rig.hu),
+        fwd: D(rig.fwd),
+        side: D(rig.side),
+        upV: D(rig.upV),
+        tail: rig.tail.map((b) => ({ c: Q(b.c), r: b.r })),
+        legs: rig.legs.map((l) => ({ pts: l.pts.map(Q), knee: Q(l.knee), foot: Q(l.foot), toe: Q(l.toe) })),
+        arms: rig.arms.map((l) => ({ sg: l.sg, pts: l.pts.map(Q), elbow: Q(l.elbow), hand: Q(l.hand) })),
+        fruitAt: rig.fruitAt ? Q(rig.fruitAt) : null,
+      };
+    }
+
+    /** A mistura de dois esqueletos do mesmo jeito (`w` 0 = o primeiro, 1 = o segundo), as direções renormalizadas. */
+    _mixRig(a, b, w) {
+      if (w <= 0) return a;
+      if (w >= 1) return b;
+      const L = (p, q) => M.lerp3(p, q, w);
+      const N = (p, q) => M.norm(L(p, q), q);
+      const pts = (pa, pb) => pa.map((p, i) => L(p, pb[i]));
+      return {
+        ...b,
+        hipF: L(a.hipF, b.hipF),
+        chestF: L(a.chestF, b.chestF),
+        headC: L(a.headC, b.headC),
+        rh: M.lerp(a.rh, b.rh, w),
+        hf: N(a.hf, b.hf),
+        hs: N(a.hs, b.hs),
+        hu: N(a.hu, b.hu),
+        fwd: N(a.fwd, b.fwd),
+        side: N(a.side, b.side),
+        upV: N(a.upV, b.upV),
+        tail: a.tail.map((t, i) => ({ c: L(t.c, b.tail[i].c), r: M.lerp(t.r, b.tail[i].r, w) })),
+        legs: a.legs.map((l, j) => {
+          const m = b.legs[j];
+          return { pts: pts(l.pts, m.pts), knee: L(l.knee, m.knee), foot: L(l.foot, m.foot), toe: L(l.toe, m.toe) };
+        }),
+        arms: a.arms.map((l, j) => {
+          const m = b.arms[j];
+          return { sg: l.sg, pts: pts(l.pts, m.pts), elbow: L(l.elbow, m.elbow), hand: L(l.hand, m.hand) };
+        }),
+        fruitAt: a.fruitAt && b.fruitAt ? L(a.fruitAt, b.fruitAt) : w < 0.5 ? a.fruitAt : b.fruitAt,
+        belly: M.lerp(a.belly, b.belly, w),
+        puff: M.lerp(a.puff, b.puff, w),
+      };
+    }
+
+    /** As partes pintadas de um esqueleto (do chão ou do galho), cada uma com as bolas da sombra e o seu desenho. */
+    _build(cam, rig, st) {
+      const { t, wind, hold, rec, slump, throwing, thr, dying } = st;
+      const { hipF, chestF, headC, rh, hf, hs, hu } = rig;
+      const z = cam.zoom;
+      const ink = Math.max(1, 1.1 * z);
+      const toCamH = M.norm({ x: cam.toCamera.x, y: cam.toCamera.y, z: 0 });
+      const head = { c: headC, f: hf, s: hs, u: hu, r: rh };
+      const H = (f, s, u) => M.add(headC, M.add(M.scale(hf, f * rh), M.add(M.scale(hs, s * rh), M.scale(hu, u * rh))));
+      const groups = [];
+      const self = this;
+
+      // ---- o corpo: o casco das bolas do tronco com a beirada de pelo, a barriga e as faixas do lombo
+      const torso = [];
+      tube(hipF, chestF, 11 * S, 9.6 * S, null, torso);
+      torso.push({ c: M.lerp3(hipF, chestF, 0.45), r: 11.6 * S });
+      torso.push({ c: M.lerp3(chestF, headC, 0.32), r: 7.4 * S });
+      groups.push({
+        balls: torso,
+        ref: M.lerp3(hipF, chestF, 0.5),
+        body: true,
+        paint(ctx, flash) {
+          const disks = torso.map((b) => {
+            const q = cam.p(b.c);
+            return { x: q.x, y: q.y, r: b.r * z };
+          });
+          const hull = SH.circleHull(disks, 0.5);
+          // o pelo penteado do peito para o quadril
+          const fl = cam.pDir(M.sub(hipF, chestF));
+          const fk = Math.hypot(fl.x, fl.y) || 1;
+          const fur = P.furOutline(hull, small(z) ? 20 : 30, 4.2 * z, self.seed * 7, 0.5, { x: fl.x / fk, y: fl.y / fk });
+          if (!fur) return;
+          const smooth = padHull(disks, 6.8 * z);
+          P.paintLit(ctx, cam, (dx, dy, p) => P.furTrace(fur, dx, dy, p), LOOK.fur, 5.5 * z, ink, flash, {
+            inside: (c) => self._bodyMarks(c, cam, hipF, chestF, rig.belly, rig.fwd, rig.side, rig.upV, flash),
+            light: (dx, dy, p) => SH.fillPath(smooth, dx, dy, p),
+            lightPad: 6.8 * z,
+          });
+        },
+      });
+
+      // ---- o rabo de anéis
+      const n = rig.tail.length - 1;
+      groups.push({
+        balls: rig.tail,
+        ref: rig.branch ? rig.tail[4].c : rig.tail[Math.floor(n * 0.45)].c,
+        bias: -1,
+        paint(ctx, flash) {
+          self._paintTail(ctx, cam, rig.tail, ink, flash, rig.tailHidden && rig.branch ? self._tailBehind(cam, rig) : null);
+        },
+      });
+
+      // ---- as pernas de trás
+      for (const L of rig.legs) {
+        const rads = [5.6, 5.4, 3.6, 2.6, 2.2].map((r) => r * S);
         groups.push({
-          balls: [{ c: elbow, r: 3.3 * S }, { c: hand, r: 2.7 * S }],
-          ref: M.lerp3(elbow, hand, 0.6),
-          bias: sg === this._nearSide(cam) ? 1.5 : 0,
+          balls: [{ c: L.knee, r: 4.4 * S }, { c: L.foot, r: 3 * S }, { c: L.toe, r: 2.6 * S }],
+          ref: L.knee,
           paint(ctx, flash) {
-            self._paintLimb(ctx, cam, pts, rads, [hand], 2.3 * S, ink, flash);
+            self._paintLimb(ctx, cam, L.pts, rads, [L.foot, L.toe], 2.5 * S, ink, flash);
           },
         });
-        if (thrower && act && (act.kind === 'windup' || (act.kind === 'shoot' && act.t < 0.07))) fruitAt = hand;
+      }
+
+      // ---- os braços (o do lado da câmera, por cima)
+      const nearSide = M.dot(rig.side, cam.toCamera) >= 0 ? 1 : -1;
+      for (const A of rig.arms) {
+        const rads = [3.4, 3.0, 2.5, 2.2, 2.0].map((r) => r * S);
+        groups.push({
+          balls: [{ c: A.elbow, r: 3.3 * S }, { c: A.hand, r: 2.7 * S }],
+          ref: M.lerp3(A.elbow, A.hand, 0.6),
+          bias: A.sg === nearSide ? 1.5 : 0,
+          paint(ctx, flash) {
+            self._paintLimb(ctx, cam, A.pts, rads, [A.hand], 2.3 * S, ink, flash);
+          },
+        });
       }
 
       // ---- a cabeça (com o rosto) e os tufos brancos dos lados: o de lá atrás dela; o de cá, de perfil, na frente
@@ -367,9 +731,8 @@
           },
         });
       }
-      const headBalls = [{ c: headC, r: rh }, { c: H(0.6, 0, -0.34), r: 0.42 * rh }];
       groups.push({
-        balls: headBalls,
+        balls: [{ c: headC, r: rh }, { c: H(0.6, 0, -0.34), r: 0.42 * rh }],
         ref: headC,
         bias: 0.8,
         body: true,
@@ -379,8 +742,9 @@
       });
 
       // ---- a fruta verde (a mesma cor da fruta que voa), brilhando cada vez mais enquanto ele segura
-      if (fruitAt) {
-        const fz = M.add(fruitAt, { x: 0, y: 0, z: 3.2 * S });
+      if (rig.fruitAt) {
+        // (de cabeça para baixo, ela fica embaixo da mão)
+        const fz = M.add(rig.fruitAt, { x: 0, y: 0, z: (rig.branch ? -3.2 : 3.2) * S });
         groups.push({
           balls: [{ c: fz, r: 3.8 * S }],
           ref: fz,
@@ -398,13 +762,28 @@
         if (dying === null) this._motes(ctx, cam, headC);
         else this._release(ctx, cam, heart, dying);
       };
-      this.top = headC.z - this.groundZ + rh + 8 * S;
+      // o nome: em cima da cabeça (no chão) ou do galho (pendurado)
+      this.top = rig.branch ? rig.branch.G.z - this.groundZ + 14 * S : headC.z - this.groundZ + rh + 8 * S;
       const paint = (ctx, flash) => {
         ctx.save();
         for (const g of C.byDepth(cam, groups)) if (g.paint) g.paint(ctx, flash);
         ctx.restore();
       };
       return { groups, after, paint };
+    }
+
+    /** Pendurado: os pontos do rabo que ficam atrás do galho (para quem olha) não são desenhados (o galho aparece). */
+    _tailBehind(cam, rig) {
+      const { G, bd } = rig.branch;
+      const tc = cam.toCamera;
+      return rig.tail.map((b, i) => {
+        if (rig.tailHidden[i] !== 'loop') return false;
+        // a distância até o eixo do galho, do lado de lá (contra a câmera)
+        const d = M.sub(b.c, G);
+        const onAxis = M.scale(bd, M.dot(d, bd));
+        const radial = M.sub(d, onAxis);
+        return M.dot(radial, tc) < -2;
+      });
     }
 
     _fwd() {
@@ -419,17 +798,18 @@
       return s.x * cam.toCamera.x + s.y * cam.toCamera.y >= 0 ? 1 : -1;
     }
 
-    /** No corpo: a barriga cor de palha (sentado, de frente) e as faixas escuras atravessando o lombo. */
-    _bodyMarks(ctx, cam, hip, chest, up, flash) {
-      const f = this._fwd();
-      const s = this._side();
+    /**
+     * No corpo: a barriga cor de palha (sentado ou pendurado, de frente) e as faixas escuras atravessando o lombo.
+     * `f`, `s` e `u`: a frente, o lado e o "para cima" do corpo (pendurado ou na cambalhota, eles giram junto).
+     */
+    _bodyMarks(ctx, cam, hip, chest, up, f, s, u, flash) {
       const d = M.norm(M.sub(chest, hip));
       if (up > 0.35) {
         const bc = M.add(M.lerp3(hip, chest, 0.42), M.scale(f, 9.8 * S));
         P.decal(ctx, cam, { c: bc, n: f, u: s, v: d, ru: 7.2 * S, rv: 10.5 * S, color: BELLY, minFacing: -0.05 }, flash);
       }
       // o lombo olha para cima de quatro e para trás sentado
-      const n = M.norm({ x: -f.x * up, y: -f.y * up, z: 1 - up });
+      const n = M.norm(M.add(M.scale(f, -up), M.scale(u, 1 - up)), M.scale(f, -1));
       for (let k = 0; k < 5; k++) {
         const c0 = M.lerp3(hip, chest, 0.08 + k * 0.15);
         const c = M.add(c0, M.scale(n, 10.6 * S));
@@ -485,53 +865,84 @@
     }
 
     /** O rabo: comprido, peludo, de anéis claros e escuros, afinando numa ponta de pincel. */
-    _paintTail(ctx, cam, tail, ink, flash) {
+    _paintTail(ctx, cam, tail, ink, flash, behind = null) {
       const z = cam.zoom;
-      const shape = P.limbShape(tail.map((b) => cam.p(b.c)), tail.map((b) => b.r * z));
-      // penteado da base para a ponta
-      const e0 = shape.pts[0], e1 = shape.pts[shape.pts.length - 1];
-      const fl = Math.hypot(e1.x - e0.x, e1.y - e0.y) || 1;
-      const fur = P.furOutline(shape.poly, small(z) ? 22 : 32, 3.4 * z, this.seed * 3 + 1, 0.55, { x: (e1.x - e0.x) / fl, y: (e1.y - e0.y) / fl }, 0.45);
-      if (!fur) return;
-      const smooth = P.limbShape(shape.pts, shape.rads.map((r) => r + 5.8 * z)).poly;
-      const pts = shape.pts;
-      // o comprimento ao longo do rabo, para os anéis
-      const acc = [0];
-      for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-      const total = acc[acc.length - 1] || 1;
-      const RINGS = 13;
-      const rings = (c) => {
-        // cada anel escuro é um risco grosso atravessando o rabo, da largura do anel
-        c.strokeStyle = C.tint(RING, flash);
-        c.lineCap = 'butt';
-        c.lineWidth = total / RINGS + 0.6;
-        c.beginPath();
-        for (let k = 1; k < RINGS; k += 2) {
-          const s = ((k + 0.5) / RINGS) * total;
-          let i = 1;
-          while (i < pts.length - 1 && acc[i] < s) i++;
-          const a = pts[i - 1], b = pts[i];
-          const f = (s - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]);
-          const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f;
-          const dl = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-          const nx = -(b.y - a.y) / dl, ny = (b.x - a.x) / dl;
-          const w = (shape.rads[i] + 4 * z) * 1.4;
-          c.moveTo(x - nx * w, y - ny * w);
-          c.lineTo(x + nx * w, y + ny * w);
+      const all = tail.map((b) => cam.p(b.c));
+      // o comprimento ao longo do rabo inteiro (na tela), para os anéis ficarem no mesmo lugar em cada pedaço
+      const accAll = [0];
+      for (let i = 1; i < all.length; i++) accAll.push(accAll[i - 1] + Math.hypot(all[i].x - all[i - 1].x, all[i].y - all[i - 1].y));
+      const totalAll = accAll[accAll.length - 1] || 1;
+      // pendurado: os pedaços do rabo que passam atrás do galho não são desenhados (o galho aparece ali)
+      const runs = [];
+      if (!behind) runs.push([0, tail.length - 1]);
+      else {
+        let i0 = -1;
+        for (let i = 0; i <= tail.length; i++) {
+          const vis = i < tail.length && !behind[i];
+          if (vis && i0 < 0) i0 = i;
+          if (!vis && i0 >= 0) {
+            if (i - 1 > i0) runs.push([i0, i - 1]);
+            i0 = -1;
+          }
         }
-        c.stroke();
-        // a ponta escura
-        const e = pts[pts.length - 1];
-        c.fillStyle = C.tint(RING, flash);
-        c.beginPath();
-        c.arc(e.x, e.y, shape.rads[shape.rads.length - 1] + 3 * z, 0, M.TAU);
-        c.fill();
-      };
-      P.paintLit(ctx, cam, (dx, dy, p) => P.furTrace(fur, dx, dy, p), LOOK.tail, tail[3].r * z * 0.5, ink, flash, {
-        inside: rings,
-        light: (dx, dy, p) => SH.fillPath(smooth, dx, dy, p),
-        lightPad: 5.8 * z,
-      });
+      }
+      for (const [i0, i1] of runs) {
+        const piece = tail.slice(i0, i1 + 1);
+        const tip = i1 === tail.length - 1; // a ponta de verdade é redonda; o corte no galho, não
+        const shape = P.limbShape(piece.map((b, k) => all[i0 + k]), piece.map((b) => b.r * z), tip);
+        // penteado da base para a ponta
+        const e0 = shape.pts[0], e1 = shape.pts[shape.pts.length - 1];
+        const fl = Math.hypot(e1.x - e0.x, e1.y - e0.y) || 1;
+        const share = (accAll[i1] - accAll[i0]) / totalAll; // as mechas, na proporção do pedaço
+        const count = Math.max(6, Math.round((small(z) ? 22 : 32) * (runs.length > 1 ? share : 1)));
+        const fur = P.furOutline(shape.poly, count, 3.4 * z, this.seed * 3 + 1 + i0, 0.55, { x: (e1.x - e0.x) / fl, y: (e1.y - e0.y) / fl }, 0.45);
+        if (!fur) continue;
+        const smooth = P.limbShape(shape.pts, shape.rads.map((r) => r + 5.8 * z), tip).poly;
+        // os anéis, contados no pedaço (os pontos dele na tela); com o rabo em pedaços, a partir do começo do rabo
+        // inteiro, para cada anel ficar no mesmo lugar
+        const pts = shape.pts;
+        const acc = [0];
+        for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+        const local = acc[acc.length - 1] || 1;
+        const total = runs.length === 1 ? local : totalAll;
+        const from = runs.length === 1 ? 0 : accAll[i0];
+        const RINGS = 13;
+        const rings = (c) => {
+          // cada anel escuro é um risco grosso atravessando o rabo, da largura do anel
+          c.strokeStyle = C.tint(RING, flash);
+          c.lineCap = 'butt';
+          c.lineWidth = total / RINGS + 0.6;
+          c.beginPath();
+          for (let k = 1; k < RINGS; k += 2) {
+            const sAt = ((k + 0.5) / RINGS) * total - from;
+            if (sAt < -total / RINGS || sAt > local + total / RINGS) continue;
+            let i = 1;
+            while (i < pts.length - 1 && acc[i] < sAt) i++;
+            const a = pts[i - 1], b = pts[i];
+            const f = (sAt - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]);
+            const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f;
+            const dl = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+            const nx = -(b.y - a.y) / dl, ny = (b.x - a.x) / dl;
+            const w = (shape.rads[i] + 4 * z) * 1.4;
+            c.moveTo(x - nx * w, y - ny * w);
+            c.lineTo(x + nx * w, y + ny * w);
+          }
+          c.stroke();
+          if (tip) {
+            // a ponta escura
+            const e = pts[pts.length - 1];
+            c.fillStyle = C.tint(RING, flash);
+            c.beginPath();
+            c.arc(e.x, e.y, shape.rads[shape.rads.length - 1] + 3 * z, 0, M.TAU);
+            c.fill();
+          }
+        };
+        P.paintLit(ctx, cam, (dx, dy, p) => P.furTrace(fur, dx, dy, p), LOOK.tail, tail[3].r * z * 0.5, ink, flash, {
+          inside: rings,
+          light: (dx, dy, p) => SH.fillPath(smooth, dx, dy, p),
+          lightPad: 5.8 * z,
+        });
+      }
     }
 
     /**

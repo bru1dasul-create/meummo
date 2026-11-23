@@ -16,6 +16,9 @@
 //   levelUp(id, o que, hab.)  subiu de nível ('level') ou ganhou ponto numa habilidade ('skill'): anéis de luz subindo
 //   consume(id, item)         bebeu ou comeu (a chave do item): a garrafada estourando em folhas, o benzimento da
 //                             arruda ou as faíscas da comida (js/consume.js)
+//   perch(id, galho)          o bicho no galho (o Sagui pendurado pelo rabo): galho = { altura (cm), direcao (graus,
+//                             do tronco para a ponta do galho) } ou null (no chão); a view anima a subida e a descida.
+//                             No `addActor`, `galho` = já aparece pendurado (sem animar)
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -24,6 +27,12 @@
 (function (PD) {
   'use strict';
   const M = PD.math;
+
+  /** O galho que o motor manda ({ altura: cm, direcao: graus }) → o da criatura ({ z: cm, yaw: rad }); null = no chão. */
+  function perchOf(galho) {
+    if (!galho || !Number.isFinite(galho.altura) || galho.altura <= 0) return null;
+    return { z: galho.altura, yaw: Number.isFinite(galho.direcao) ? (galho.direcao * Math.PI) / 180 : undefined };
+  }
 
   // câmera: "médio" (padrão) = 1, "longe" = 0,7 (mínimo). Aproximar além do médio e o celular em pé ainda vão
   // ser combinados com o dono: por enquanto, até "perto" (1,4) e uns 9 m de largura com o celular em pé
@@ -88,8 +97,9 @@
       const own = (a.kind === 'monster' || a.kind === 'npc' || a.kind === 'pet') && PD.creatures && PD.creatures.has(a.type);
       const creature = own ? PD.creatures.create(a.type, a.x * 100, a.y * 100, yaw) : null;
       if (creature) {
-        // o bicho que já aparece dormindo (o Joaquim no sofá)
+        // o bicho que já aparece dormindo (o Joaquim no sofá) ou pendurado no galho (o Sagui)
         if (a.asleep && creature.setAsleep) creature.setAsleep(true);
+        if (a.galho && creature.setPerch) creature.setPerch(perchOf(a.galho), true);
         const actor = { id, kind: a.kind, type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
         this.actors.set(id, actor);
         if (this.followId === null && a.me) this.follow(id);
@@ -144,6 +154,18 @@
     removeActor(id) {
       this.actors.delete(id);
       if (this.followId === id) this.followId = null;
+    }
+
+    /**
+     * O bicho no galho (o Sagui pendurado pelo rabo; opção 3 do dono, 23/11): `galho` = { altura: cm, direcao: graus
+     * (para onde o galho aponta, do tronco para a ponta, como o `angle`) } ou null (no chão). Quem decide é o servidor;
+     * a view anima a subida (pula, agarra o galho com o rabo e dá uma cambalhota de lado, 0,72 s) e a descida (desvira
+     * soltando o rabo e cai de pé, 0,56 s).
+     */
+    perch(id, galho) {
+      const a = this.actors.get(id);
+      if (!a || !a.creature || !a.creature.setPerch) return;
+      a.creature.setPerch(perchOf(galho), false);
     }
 
     /** Golpe ou reação (veja WorldView.action): as criaturas animam; o corpo de gente ainda não. */

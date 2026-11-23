@@ -2,6 +2,8 @@
 // por etapa): pintado como o Birim, sem as bolinhas (o pelo na beirada, a luz e a sombra), o tranco para longe de quem
 // bateu, a fruta do aviso visível de frente e o desmaio com as faíscas roxas. E as ferramentas de pintar que os
 // próximos bichos vão usar (PD.creatures.paint): o pelo que não pula de lugar e o brilho que o clarão não estraga.
+// No galho (a opção 3 do dono, 23/11): pendurado pelo rabo, de cabeça para baixo, a subida e a descida sem saltos (a
+// cambalhota) e o desmaio caindo lá de cima.
 
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -22,11 +24,17 @@ type Sagui = {
   recoilDir: { x: number; y: number };
   update: (dt: number, near: { hero: { x: number; y: number } } | null) => void;
   action: (kind: string, yaw?: number) => void;
-  moveTo: (x: number, y: number, yaw: number, ms: number) => void;
+  moveTo: (x: number, y: number, yaw: number, ms: number, dash?: boolean) => void;
   parts: (cam: unknown) => Parts;
   drawable: (cam: unknown, primary: boolean) => { draw: (ctx: unknown) => void; drawShadow: (ctx: unknown) => void };
   recoil: () => number;
   flash: () => number;
+  label: string;
+  perch: { z: number; yaw: number } | null;
+  trans: { kind: string } | null;
+  fallFrom: number;
+  setPerch: (perch: { z: number; yaw?: number } | null, instant?: boolean) => void;
+  perchHeight: () => number;
 };
 type Fur = { V: { x: number; y: number }[]; T: { x: number; y: number; sharp: boolean }[]; n: number };
 type Paint = {
@@ -94,6 +102,37 @@ const HERO_FAR = { hero: { x: 5000, y: 5000 } };
 function step(s: Sagui, secs: number, near: { hero: { x: number; y: number } } | null = HERO_FAR): void {
   for (let t = 0; t < secs - 1e-9; t += 1 / 60) s.update(1 / 60, near);
 }
+
+/** Os centros de todas as bolas do desenho (a sombra e a caixa), na ordem de sempre. */
+function ballCenters(s: Sagui, cam: unknown): Vec[] {
+  return s.parts(cam).groups.flatMap((g) => g.balls.map((b) => b.c));
+}
+
+/** A bola da cabeça (a maior das duas do grupo da cabeça: 11,6 cm × 1,6) e o meio do tronco. */
+function headAndBody(s: Sagui, cam: unknown): { head: Vec; body: Vec } {
+  const groups = s.parts(cam).groups;
+  const head = groups.find((g) => g.balls.length === 2 && Math.abs(g.balls[0].r - 11.6 * 1.6) < 0.01);
+  return { head: head!.balls[0].c, body: groups[0].ref as Vec };
+}
+
+/**
+ * Anda `secs` segundos a 60 quadros por segundo e devolve o maior salto de um quadro para o outro: o quanto a bola que
+ * mais andou se mexeu (cm). Um "pulo" de pose aparece aí (a virada de cabeça para baixo de uma vez dava uns 90 cm).
+ */
+function worstJump(s: Sagui, cam: unknown, secs: number, near = HERO_FAR): number {
+  let prev = ballCenters(s, cam);
+  let worst = 0;
+  for (let t = 0; t < secs - 1e-9; t += 1 / 60) {
+    s.update(1 / 60, near);
+    const cur = ballCenters(s, cam);
+    expect(cur.length).toBe(prev.length);
+    for (let i = 0; i < cur.length; i++) worst = Math.max(worst, Math.hypot(cur[i].x - prev[i].x, cur[i].y - prev[i].y, cur[i].z - prev[i].z));
+    prev = cur;
+  }
+  return worst;
+}
+
+const BRANCH = 220; // cm: a altura do galho (o [mundo] desenha entre 2,0 e 2,4 m)
 
 describe('o Sagui redesenhado', () => {
   const { create, cam, paint } = loadPD();
@@ -200,5 +239,92 @@ describe('o Sagui redesenhado', () => {
     expect(open.V.length).toBe(11); // do primeiro ponto ao último, sem a aresta que fecha
     expect(open.V[0].x).toBeCloseTo(0, 6);
     expect(open.V[0].y).toBeCloseTo(0, 6);
+  });
+
+  it('no galho: pendurado de cabeça para baixo em todos os lados e momentos, pintado, e o nome em cima do galho', () => {
+    for (const yaw of [0, 45, 90, 135, 180, 225, 270, 315]) {
+      const moments: [string, (s: Sagui) => void][] = [
+        ['parado', (s) => step(s, 1)],
+        ['aviso', (s) => { s.action('windup', s.yaw); step(s, 0.6); }],
+        ['arremesso', (s) => { s.action('windup', s.yaw); step(s, 0.7); s.action('shoot', s.yaw); step(s, 0.12); }],
+        ['apanhou', (s) => { s.action('hurt'); step(s, 0.05); }],
+      ];
+      for (const [name, set] of moments) {
+        const s = create(yaw * DEG);
+        s.setPerch({ z: BRANCH, yaw: 0 }, true);
+        set(s);
+        expect(s.label, name).toMatch(/galho/);
+        const { head, body } = headAndBody(s, cam);
+        expect(head.z, `${name} ${yaw}°: a cabeça embaixo do corpo`).toBeLessThan(body.z - 20);
+        expect(head.z, `${name} ${yaw}°: no alto, longe do chão`).toBeGreaterThan(BRANCH - 140);
+        const { ctx, fills, colors } = fakeCtx();
+        const d = s.drawable(cam, false);
+        d.drawShadow(ctx);
+        d.draw(ctx);
+        expect(fills(), `${name} ${yaw}°`).toBeGreaterThan(10);
+        expect(colors.filter((c) => /NaN|undefined/.test(c)), `${name} ${yaw}°`).toEqual([]);
+        // o nome vai em cima do galho, não da cabeça (que fica embaixo)
+        expect(s.top).toBeCloseTo(BRANCH + 14 * 1.6, 5);
+      }
+    }
+  });
+
+  it('parado no galho, o vaivém é suave (a volta do rabo não pula de um lado do galho para o outro)', () => {
+    for (const yaw of [0, 40, 90, 130, 220, 310]) {
+      for (const branch of [0, 45, 90]) {
+        const s = create(yaw * DEG);
+        s.setPerch({ z: BRANCH, yaw: branch * DEG }, true);
+        expect(worstJump(s, cam, 3), `${yaw}° galho ${branch}°`).toBeLessThan(2);
+      }
+    }
+  });
+
+  it('subindo e descendo: pulo, cambalhota e queda sem saltos de um quadro para o outro', () => {
+    for (const yaw of [0, 90, 180, 270]) {
+      for (const branch of [0, 90]) {
+        const tag = `${yaw}° galho ${branch}°`;
+        const s = create(yaw * DEG);
+        step(s, 0.5);
+        // sobe: o servidor põe o galho e o pé embaixo dele (de uma casa ao lado)
+        s.moveTo(-60 * Math.cos(yaw * DEG), -60 * Math.sin(yaw * DEG), yaw * DEG, 0, true);
+        step(s, 0.3);
+        s.setPerch({ z: BRANCH, yaw: branch * DEG });
+        s.moveTo(0, 0, yaw * DEG, 0, true);
+        expect(s.trans?.kind).toBe('subir');
+        expect(worstJump(s, cam, 1), `subindo ${tag}`).toBeLessThan(30);
+        expect(s.trans).toBeNull();
+        let hb = headAndBody(s, cam);
+        expect(hb.head.z, `pendurado ${tag}`).toBeLessThan(hb.body.z - 20);
+        // desce: o pé vai para a casa da frente
+        s.setPerch(null);
+        s.moveTo(70 * Math.cos(yaw * DEG), 70 * Math.sin(yaw * DEG), yaw * DEG, 0, true);
+        expect(s.trans?.kind).toBe('descer');
+        expect(worstJump(s, cam, 1), `descendo ${tag}`).toBeLessThan(30);
+        expect(s.trans).toBeNull();
+        hb = headAndBody(s, cam);
+        expect(hb.head.z, `no chão ${tag}`).toBeGreaterThan(hb.body.z);
+        // de pé no chão, no pé novo
+        const lowest = Math.min(...ballCenters(s, cam).map((c) => c.z));
+        expect(lowest, `no chão ${tag}`).toBeLessThan(8);
+        expect(hb.body.x).toBeCloseTo(70 * Math.cos(yaw * DEG), -1);
+      }
+    }
+  });
+
+  it('desmaiado no galho, cai lá de cima e fica caído no chão', () => {
+    const s = create(0);
+    s.setPerch({ z: BRANCH, yaw: 0 }, true);
+    step(s, 0.5);
+    expect(s.perchHeight()).toBe(BRANCH);
+    s.action('die');
+    expect(s.perch).toBeNull();
+    expect(s.fallFrom).toBe(BRANCH);
+    step(s, 0.05);
+    expect(Math.min(...ballCenters(s, cam).map((c) => c.z))).toBeGreaterThan(40); // ainda caindo
+    step(s, 0.5);
+    expect(Math.min(...ballCenters(s, cam).map((c) => c.z))).toBeLessThan(8); // no chão
+    const { ctx, colors } = fakeCtx();
+    s.drawable(cam, false).draw(ctx);
+    expect(colors.filter((c) => /NaN|undefined/.test(c))).toEqual([]);
   });
 });

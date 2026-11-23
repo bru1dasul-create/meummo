@@ -1023,6 +1023,21 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     lado da cabeça (de frente, aparece); o tranco vai para longe do herói. As ferramentas de pintar ficaram em
     `PD.creatures.paint` (`creature.js`) para os próximos
   - [ ] Quati · [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
+- [ ] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
+  pendurado pelo rabo num galho baixo e joga a fruta lá de cima; quando o herói chega perto ou acerta, pula para o chão
+  e luta; depois de um tempo calmo, sobe de novo
+  - [x] **[arte]** o desenho (23/11):
+    - pendurado de cabeça para baixo, balançando;
+    - o aviso e o arremesso, o tranco no galho e o desmaio caindo;
+    - a subida (o pulo e uma cambalhota de lado, 0,72 s) e a descida (desvira e cai de pé, 0,56 s);
+    - o `view.perch(id, galho)` e o `galho` no `addActor` (veja `docs/ARTE.md`).
+  - [ ] **[estrutura]**:
+    - o comportamento no servidor;
+    - o `galho` (`{ altura, direcao }`) no estado do monstro;
+    - a fruta saindo lá de cima;
+    - a mira com o mouse na altura do galho.
+  - [ ] **[mundo]**: as árvores de sagui no Capão (o ponto embaixo do galho, a altura e a direção) e o galho baixo
+    desenhado
 - [x] **[arte]** A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da
   poção/banana utilizada"): no efeito valendo e nos frascos de comida e remédio, no lugar da dica do navegador, o
   painel da dica das habilidades — o nome na cor da raridade, o que faz em verde ("Cura 60% da vida", "+5 de Destreza
