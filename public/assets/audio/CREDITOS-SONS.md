@@ -12,7 +12,7 @@ licença livre mais parecidos com eles). Os sons feitos por código continuam em
 | `efeitos/arco-soltar.mp3` | a corda do arco soltando | Battle Sound Effects, "Bow" | Ogrebane | CC0 (o pacote tem várias licenças; usamos a CC0) | https://opengameart.org/content/battle-sound-effects |
 | `efeitos/flecha-vibra-1.mp3`, `-2` | a sua flecha cravando numa árvore | Wood Wobbling & Rattling | qubodup | CC0 | https://opengameart.org/content/wood-wobbling-rattling |
 | `efeitos/passo-terra-1.mp3` a `-3` | passos na grama, na trilha, na terra | Footsteps (01, 03 e 05) | GboxMikeFozzy | CC0 | https://opengameart.org/content/footsteps-0 |
-| `efeitos/passo-pedra-1.mp3` a `-6` | passos na calçada, no asfalto, no piso (e no píer) | Fantozzi's Footsteps, Stone L1–L3 e R1–R3 | qubodup (Fantozzi) | CC0 | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone |
+| `efeitos/passo-pedra-1.mp3` a `-6` | passos na calçada, no asfalto, no piso, na faixa, na escada e no entulho (e no píer) | Fantozzi's Footsteps, Stone L1–L3 e R1–R3 | qubodup (Fantozzi) | CC0 | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone |
 | `efeitos/passo-areia-1.mp3` a `-6` | passos na lama e nas poças | Fantozzi's Footsteps, Sand L1–L3 e R1–R3 | qubodup (Fantozzi) | CC0 | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone |
 
 **Como foram preparados** (com o ffmpeg e um script curto): mono, 44,1 kHz, MP3. A floresta virou loop sem emenda (o fim

@@ -111,7 +111,10 @@ describe('os passos (pedido do dono, 23/11: "passos do boneco correndo")', () =>
     expect(ground.typeAt(17, 2.6)).toBe('grama'); // fora dela
     expect([ground.stepAt(2, 2), ground.stepAt(11, 5), ground.stepAt(2, 7)]).toEqual(['terra', 'pedra', 'areia']);
     expect(stepGroundOf('asfalto')).toBe('pedra');
+    // a faixa de pedestre, a escada e o entulho do Capão maior: duros
+    expect(['faixa', 'degrau', 'entulho'].map(stepGroundOf)).toEqual(['pedra', 'pedra', 'pedra']);
     expect(stepGroundOf('mata-profunda')).toBe('terra');
+    expect(stepGroundOf('campinho')).toBe('terra');
     expect(stepGroundOf(null)).toBe('terra');
   });
 
