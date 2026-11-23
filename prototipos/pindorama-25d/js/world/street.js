@@ -1512,6 +1512,40 @@
     if (sh.kind !== 'rect' && sh.kind !== 'poly') return false;
     const b = clipBox(G.shapeBox(sh), box);
     if (!b) return true;
+    if (sh.pattern === 'azulejo') {
+      // o azulejo da beira da piscina do clube: quadradinhos de 15 cm, brancos e azul-claros, o rejunte encardido, uns
+      // trincados e uns que caíram (o buraco escuro do cimento)
+      ctx.save();
+      G.shapePath(ctx, sh);
+      ctx.clip();
+      const S = 15;
+      for (let i = Math.floor(b.x0 / S); i * S < b.x1; i++) {
+        for (let j = Math.floor(b.y0 / S); j * S < b.y1; j++) {
+          const r = G.cellRng(i, j, 1307);
+          const k = r();
+          ctx.fillStyle = k < 0.06 ? '#5f5a50' : k < 0.5 ? '#dfe9ea' : k < 0.85 ? '#b9d6dc' : '#9fc6cf';
+          ctx.fillRect(i * S, j * S, S, S);
+          if (k >= 0.06 && r() < 0.25) {
+            ctx.fillStyle = 'rgba(80, 90, 70, 0.18)';
+            ctx.fillRect(i * S, j * S, S, S);
+          }
+        }
+      }
+      ctx.strokeStyle = 'rgba(120, 124, 112, 0.75)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let x = Math.floor(b.x0 / S) * S; x <= b.x1; x += S) {
+        ctx.moveTo(x, b.y0);
+        ctx.lineTo(x, b.y1);
+      }
+      for (let y = Math.floor(b.y0 / S) * S; y <= b.y1; y += S) {
+        ctx.moveTo(b.x0, y);
+        ctx.lineTo(b.x1, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      return true;
+    }
     ctx.save();
     G.shapePath(ctx, sh);
     ctx.clip();

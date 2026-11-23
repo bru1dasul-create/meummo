@@ -238,6 +238,18 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Garagem dos barcos",
+      "x": 290,
+      "y": 88,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Veleiro afundado",
+      "x": 307,
+      "y": 107.8,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Árvore do Véu",
       "x": 194,
       "y": 145.5,

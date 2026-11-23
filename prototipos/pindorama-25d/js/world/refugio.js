@@ -658,10 +658,10 @@
   }
   const WATER_Z = -24;
   small.barco = {
-    height: (d) => (d.sunk ? 30 : 60),
+    height: (d) => (d.boat === 'veleiro' ? 560 : d.sunk ? 30 : 60),
     blocks: 0,
     shadow: null,
-    box: (cam, d, z0) => volBox(cam, d.x0 - 40, d.x1 + 40, d.y0 - 40, d.y1 + 40, z0 + WATER_Z - 20, z0 + 80, 20),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 40, d.x1 + 40, d.y0 - 40, d.y1 + 40, z0 + WATER_Z - 20, z0 + (d.boat === 'veleiro' ? 620 : 80), 20),
     paint(ctx, cam, d, z0, ink) {
       const rnd = seeded(d.x0, d.y0, 4111);
       const P = (x, y, z) => cam.p({ x, y, z });
@@ -703,6 +703,67 @@
       // a sombra do barco na água
       ctx.fillStyle = 'rgba(8, 28, 30, 0.35)';
       ctx.fill(pathOf(outline(1.15, wz - 2)));
+      if (tipo === 'veleiro') {
+        // o veleiro do clube, afundado: o casco escuro embaixo d'água, só o teto da cabine para fora (com limo) e o
+        // mastro torto saindo da água, com a retranca caída, a vela rasgada pendurada e os cabos até a água
+        ctx.fillStyle = 'rgba(14, 36, 36, 0.55)';
+        ctx.fill(pathOf(outline(0.95, wz - 10)));
+        const cab = [at(-0.25, 0.42, wz + 4), at(0.25, 0.42, wz + 6), at(0.25, -0.42, wz + 6), at(-0.25, -0.42, wz + 4)];
+        inkFill(ctx, pathOf(cab), '#cfcabd', ink, 2);
+        ctx.fillStyle = 'rgba(70, 104, 60, 0.6)';
+        for (let k = 0; k < 4; k++) {
+          const q = at(-0.2 + rnd() * 0.4, (rnd() - 0.5) * 0.7, wz + 6);
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y, (5 + rnd() * 6) * cam.zoom, (2 + rnd() * 2) * cam.zoom, 0, 0, M.TAU);
+          ctx.fill();
+        }
+        const lean = { x: side.x * 0.26 - fwd.x * 0.08, y: side.y * 0.26 - fwd.y * 0.08 };
+        const foot = { x: cx + fwd.x * L * 0.1, y: cy + fwd.y * L * 0.1, z: wz };
+        const topM = { x: foot.x + lean.x * 500, y: foot.y + lean.y * 500, z: wz + 520 };
+        const mp = (k) => P(foot.x + (topM.x - foot.x) * k, foot.y + (topM.y - foot.y) * k, foot.z + (topM.z - foot.z) * k);
+        // os cabos (estais) do alto do mastro até a proa e a popa, na água
+        ctx.strokeStyle = 'rgba(200, 196, 180, 0.7)';
+        ctx.lineWidth = Math.max(1, 1 * cam.zoom);
+        for (const u of [1, -1]) {
+          const e = at(u * 0.95, 0, wz);
+          const t0 = mp(0.95);
+          ctx.beginPath();
+          ctx.moveTo(t0.x, t0.y);
+          ctx.lineTo(e.x, e.y);
+          ctx.stroke();
+        }
+        // a vela rasgada, pendurada no mastro (de 0,25 até 0,9 dele), e a retranca caída na água
+        const s0 = mp(0.25), s1 = mp(0.9);
+        const boomEnd = P(foot.x - fwd.x * L * 0.8 + lean.x * 60, foot.y - fwd.y * L * 0.8 + lean.y * 60, wz + 8);
+        const sail = [s1, s0, P(foot.x - fwd.x * L * 0.55 + lean.x * 90, foot.y - fwd.y * L * 0.55 + lean.y * 90, wz + 110), P(foot.x - fwd.x * L * 0.35 + lean.x * 200, foot.y - fwd.y * L * 0.35 + lean.y * 200, wz + 260)];
+        ctx.globalAlpha = 0.85;
+        inkFill(ctx, pathOf(sail), '#e6dfcc', ink, 1.6);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(30, 50, 50, 0.55)';
+        for (let k = 0; k < 3; k++) {
+          const a = 0.25 + rnd() * 0.5;
+          const q = { x: s0.x + (sail[2].x - s0.x) * a + (s1.x - s0.x) * a * 0.5, y: s0.y + (sail[2].y - s0.y) * a + (s1.y - s0.y) * a * 0.5 };
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y, (6 + rnd() * 8) * cam.zoom, (3 + rnd() * 6) * cam.zoom, rnd() * 3, 0, M.TAU);
+          ctx.fill();
+        }
+        inkLine(ctx, [s0, boomEnd], '#8a8478', 5 * cam.zoom, ink * 0.6);
+        // o mastro (alumínio) e o topo com a luz quebrada
+        inkLine(ctx, [mp(0), mp(1)], '#b9bcbd', 7 * cam.zoom, ink * 0.7);
+        const tq = mp(1);
+        ctx.fillStyle = '#8a8f90';
+        ctx.beginPath();
+        ctx.arc(tq.x, tq.y, 4 * cam.zoom, 0, M.TAU);
+        ctx.fill();
+        ripple(L * 0.5, L * 0.22, 0.3);
+        const mq = P(foot.x, foot.y, wz);
+        ctx.strokeStyle = 'rgba(215, 238, 232, 0.35)';
+        ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);
+        ctx.beginPath();
+        ctx.ellipse(mq.x, mq.y, 22 * cam.zoom, 9 * cam.zoom, 0, 0, M.TAU);
+        ctx.stroke();
+        return;
+      }
       if (d.sunk) {
         // afundado: só a proa e a beirada saindo da água, com limo; o resto é escuro por baixo d'água
         ctx.fillStyle = 'rgba(16, 40, 38, 0.55)';
@@ -1185,6 +1246,133 @@
         const q = P(d.x0 - 8 + rnd() * (d.x1 - d.x0 + 16), rnd() < 0.5 ? d.y0 - 10 : d.y1 + 10, z0);
         for (let j = 0; j < 3; j++) leaf(ctx, q.x + (rnd() - 0.5) * 8 * cam.zoom, q.y - j * 3 * cam.zoom, (5 + rnd() * 4) * cam.zoom, -Math.PI / 2 + (rnd() - 0.5) * 1.2, '#5a8a3c');
       }
+    },
+  };
+
+  // ------------------------------------------------------------------ o clube náutico (24/11, "vestir o clube")
+  // O trampolim da piscina: a base de cimento na beira e a prancha de fibra azul, descascada, avançando por cima da água.
+  small.trampolim = {
+    height: () => 90,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, 45),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + 20, d.y0 - 20, d.y1 + 20, z0, z0 + 120, 14),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const west = (d.side || 'oeste') === 'oeste';
+      const cy = (d.y0 + d.y1) / 2, w = (d.y1 - d.y0) / 2;
+      const bx0 = west ? d.x1 - 70 : d.x0, bx1 = west ? d.x1 : d.x0 + 70;
+      H.box(ctx, cam, bx0, bx1, cy - w * 0.95, cy + w * 0.95, z0, z0 + 46, { front: '#b8b2a4', side: '#9a9486', top: '#cfc9ba' }, ink);
+      const root = west ? bx1 - 15 : bx0 + 15, tip = west ? d.x0 : d.x1;
+      // o suporte de ferro embaixo da prancha
+      inkLine(ctx, [P(west ? bx0 : bx1, cy, z0 + 46), P(west ? bx0 - 30 : bx1 + 30, cy, z0 + 54)], '#6f7275', 4 * cam.zoom, ink * 0.5);
+      const edge = pathOf([P(root, cy + w, z0 + 50), P(tip, cy + w, z0 + 60), P(tip, cy + w, z0 + 54), P(root, cy + w, z0 + 44)]);
+      inkFill(ctx, edge, '#2f5f86', ink, 1.8);
+      const plank = pathOf([P(root, cy - w, z0 + 50), P(tip, cy - w, z0 + 60), P(tip, cy + w, z0 + 60), P(root, cy + w, z0 + 50)]);
+      inkFill(ctx, plank, '#3f7fb0', ink, 2.2);
+      // a fibra descascada (o branco aparecendo) e as listras antiderrapantes
+      ctx.save();
+      ctx.clip(plank);
+      ctx.fillStyle = 'rgba(232, 236, 230, 0.55)';
+      const r = seeded(d.x0, d.y0, 9101);
+      for (let k = 0; k < 4; k++) {
+        const u = 0.2 + r() * 0.7;
+        const q = P(root + (tip - root) * u, cy + (r() - 0.5) * w * 1.4, z0 + 50 + 10 * u);
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, (8 + r() * 10) * cam.zoom, (3 + r() * 3) * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    },
+  };
+  // A escadinha de inox da piscina: os dois corrimãos em arco descendo para dentro da água e os degraus.
+  small['escada-piscina'] = {
+    height: () => 100,
+    blocks: 0,
+    shadow: null,
+    box: (cam, d, z0) => volBox(cam, d.x - 70, d.x + 70, d.y - 70, d.y + 90, z0 - 60, z0 + 110, 14),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const a = ((d.angle ?? 90) * Math.PI) / 180;
+      const f = { x: Math.cos(a), y: Math.sin(a) }, s = { x: -f.y, y: f.x };
+      const at = (u, v, z) => P(d.x + f.x * u + s.x * v, d.y + f.y * u + s.y * v, z0 + z);
+      // os degraus (dentro da água: só a beirada aparece)
+      for (const [u, z] of [[30, -18], [36, -42]]) inkLine(ctx, [at(u, -26, z), at(u, 26, z)], '#9aa3a6', 4 * cam.zoom, ink * 0.4);
+      for (const v of [-26, 26]) {
+        const rail = [at(-22, v, 0), at(-22, v, 62), at(-12, v, 84), at(6, v, 88), at(20, v, 76), at(26, v, 40), at(30, v, -50)];
+        inkLine(ctx, rail, '#d4dcdf', 4.5 * cam.zoom, ink * 0.6);
+      }
+    },
+  };
+  // O mastro do clube: o poste com a bola no alto, a corda e a bandeira rasgada e desbotada (azul, com a âncora).
+  small.mastro = {
+    height: (d) => d.h || 760,
+    blocks: 0,
+    shadow: (p, cam, d) => H.lineShadow && H.lineShadow(p, cam, d.x, d.y, (d.h || 760) * 0.6, 10),
+    box: (cam, d, z0) => volBox(cam, d.x - 30, d.x + 200, d.y - 30, d.y + 30, z0, z0 + (d.h || 760) + 30, 14),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const h = d.h || 760;
+      const r = seeded(d.x, d.y, 9203);
+      H.box(ctx, cam, d.x - 16, d.x + 16, d.y - 16, d.y + 16, z0, z0 + 22, { front: '#b8b2a4', side: '#9a9486', top: '#cfc9ba' }, ink);
+      inkLine(ctx, [P(d.x, d.y, z0 + 22), P(d.x, d.y, z0 + h)], '#c9cdcf', 6 * cam.zoom, ink);
+      const top = P(d.x, d.y, z0 + h + 6);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(top.x, top.y, 6 * cam.zoom + ink, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#d8b13c';
+      ctx.beginPath();
+      ctx.arc(top.x, top.y, 6 * cam.zoom, 0, M.TAU);
+      ctx.fill();
+      // a corda (a adriça) descendo pelo mastro, solta
+      ctx.strokeStyle = 'rgba(220, 214, 196, 0.8)';
+      ctx.lineWidth = Math.max(1, 1 * cam.zoom);
+      const c0 = P(d.x + 6, d.y, z0 + h - 10), c1 = P(d.x + 14, d.y, z0 + 60);
+      ctx.beginPath();
+      ctx.moveTo(c0.x, c0.y);
+      ctx.quadraticCurveTo(c0.x + 8 * cam.zoom, (c0.y + c1.y) / 2, c1.x, c1.y);
+      ctx.stroke();
+      // a bandeira: um retângulo de 1,5 × 1 m preso no mastro, desbotado e rasgado na ponta que voa
+      H.onWall(ctx, cam, { x: d.x + 4, y: d.y, z: z0 + h - 14 }, { x: 1, y: 0 }, () => {
+        const W = 150, Hh = 96;
+        const flag = new Path2D();
+        flag.moveTo(0, 0);
+        flag.lineTo(W * 0.78, 8);
+        // a ponta rasgada: tiras de tamanhos diferentes
+        for (let k = 0; k <= 6; k++) {
+          const yy = 8 + (k / 6) * (Hh - 8);
+          flag.lineTo(W * (0.62 + r() * 0.38), yy - 4);
+          flag.lineTo(W * (0.55 + r() * 0.2), yy);
+        }
+        flag.lineTo(0, Hh);
+        flag.closePath();
+        ctx.fillStyle = INK;
+        ctx.save();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = INK;
+        ctx.stroke(flag);
+        ctx.restore();
+        ctx.fillStyle = d.color || '#3f6fa8';
+        ctx.fill(flag);
+        ctx.save();
+        ctx.clip(flag);
+        ctx.fillStyle = '#efe9da';
+        ctx.fillRect(0, Hh * 0.36, W, Hh * 0.28);
+        // a âncora no meio
+        ctx.strokeStyle = '#efe9da';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(40, 14);
+        ctx.lineTo(40, 80);
+        ctx.moveTo(26, 26);
+        ctx.lineTo(54, 26);
+        ctx.moveTo(20, 66);
+        ctx.quadraticCurveTo(40, 92, 60, 66);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 252, 240, 0.28)';
+        ctx.fillRect(0, 0, W, Hh);
+        ctx.restore();
+      });
     },
   };
 

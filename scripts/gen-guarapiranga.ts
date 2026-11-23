@@ -394,6 +394,8 @@ for (const p of PONDS) chao.push(area('agua', p, { cor: '#35706a' }));
 for (const p of BREJO_POOLS) chao.push(area('agua', p, { cor: '#3a6a58' }));
 chao.push(area('agua', FALL_POOL, { cor: '#2f6f6a' }));
 for (const p of GATE_POOLS) chao.push(area('agua', p, { cor: '#2f6f6a' }));
+// (a beira de azulejo da piscina do clube vem antes da água: a água fica por cima dela)
+chao.push(rect('piso', POOL.x0 - 0.6, POOL.x1 + 0.6, POOL.y0 - 0.6, POOL.y1 + 0.6, { desenho: 'azulejo' }));
 chao.push(area('agua', POOL_PTS, { cor: '#4f7f5a' }));
 // o caminho de pedra em cima da barragem
 chao.push(rect('calcada', DAM_WALK.x0, DAM_WALK.x1, DAM_WALK.y0, DAM_WALK.y1, { estado: 'rachado', musgo: true }, 'A Barragem'));
@@ -872,14 +874,49 @@ for (const [x0, x1, y0, y1, olhando] of [[311, 312.6, 30, 30.5, 0], [342, 343.6,
 }
 cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 'Cachoeira'));
 
-// ----- 7 · o clube náutico em ruínas -----
+// ----- 7 · o clube náutico em ruínas (24/11, o dono: "pode seguir vestindo o clube náutico") -----
+// A sede de dois andares com o letreiro pintado e a árvore crescendo na laje, a varanda na frente, o vestiário; a
+// garagem dos barcos na beira da água, com as canoas amarradas; a piscina verde com a beira de azulejo, o trampolim, a
+// escadinha e as cadeiras; a arquibancada de cimento virada para a represa (as regatas); o mastro com a bandeira
+// rasgada; o píer quebrado e, perto dele, um veleiro afundado com o mastro fora d'água. O mato tomando o pátio.
 {
+  const crng = mulberry32(SEED + 27);
+  const dry = (r: Rect, what: string) => {
+    for (const [x, y] of [[r.x0, r.y0], [r.x1, r.y0], [r.x0, r.y1], [r.x1, r.y1], [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2]] as const) {
+      if (isWater(x, y)) throw new Error(`${what} caiu na água em (${x}, ${y}).`);
+    }
+  };
   const B1: Rect = { x0: 276, x1: 291, y0: 74, y1: 83 };
   const B2: Rect = { x0: 293, x1: 302, y0: 74, y1: 81 };
-  cenario.push(box('casa', B1, { altura: 5.8, andares: 2, cor: '#e4dccb', abandonada: true, caixaDagua: false, cipo: 0.7 }, 'Clube Náutico'));
-  cenario.push(box('casa', B2, { altura: 3.2, andares: 1, cor: '#cfc7b5', abandonada: true, caixaDagua: false, cipo: 0.6 }, 'Vestiário'));
+  cenario.push(box('casa', B1, { altura: 5.8, andares: 2, cor: '#e8e2d2', abandonada: true, caixaDagua: false, cipo: 0.65, pixo: true, arvoreNaLaje: true, pintura: 'CLUBE NÁUTICO' }, 'Clube Náutico'));
+  cenario.push(box('casa', B2, { altura: 3.2, andares: 1, cor: '#d6cfbd', abandonada: true, caixaDagua: false, cipo: 0.5, pixo: true, pintura: 'VESTIÁRIO' }, 'Vestiário'));
+  // a varanda coberta na frente da sede (os pilares de trás encostam na parede) e a garagem dos barcos na beira
+  const VERANDA: Rect = { x0: 276, x1: 285, y0: 82.65, y1: 86.8 };
+  const BOATHOUSE: Rect = { x0: 286, x1: 294, y0: 85.5, y1: 90.5 };
+  dry(VERANDA, 'A varanda');
+  dry(BOATHOUSE, 'A garagem dos barcos');
+  cenario.push(box('cobertura', VERANDA, { altura: 2.9, pilares: 0.45, mato: true, cipo: 0.5, faixa: '#3f6fa8' }));
+  cenario.push(box('cobertura', BOATHOUSE, { altura: 3.4, pilares: 0.45, mato: true, cipo: 0.35, faixa: '#3f6fa8' }, 'Garagem dos barcos'));
+  for (const [x0, y0, cor] of [[285.8, 93, '#3f7fbf'], [289.8, 94.6, '#c9774a']] as const) cenario.push(rect('barco', x0, round(x0 + 3.6), y0, y0 + 1, { tipo: 'canoa', cor, olhando: 180 }));
+  // o píer quebrado (os dois pedaços) e o veleiro afundado ao lado dele
   for (const [r, name] of DECKS.slice(4)) cenario.push(box('deque', r, { altura: 0.6, palafitas: true }, name));
-  cenario.push(rect('banco', 306, 307.6, 89, 89.5, { olhando: 270 }));
+  cenario.push(rect('barco', 304.5, 309.5, 107, 108.6, { tipo: 'veleiro', afundado: true, olhando: 0 }, 'Veleiro afundado'));
+  // a piscina: a beira de azulejo, o trampolim (a base encosta na água), a escadinha e as cadeiras de plástico
+  cenario.push(rect('trampolim', POOL.x1 - 1.8, POOL.x1 + 0.7, 81.1, 81.9, { lado: 'oeste' }));
+  cenario.push(point('escada-piscina', 310, POOL.y0, { olhando: 90 }));
+  for (const x of [306.5, 309, 311.5]) cenario.push(point('cadeira', x, 88.6, { olhando: 270, cor: crng() < 0.5 ? '#f2f2ee' : '#e9d9a8' }));
+  // a arquibancada de cimento, três degraus virados para a represa
+  for (const [y0, altura] of [[90.5, 1.35], [91.3, 0.9], [92.1, 0.45]] as const) cenario.push(rect('muro', 304.5, 316, y0, round(y0 + 0.8), { altura, cor: '#bdb7a8', musgo: true, cipo: 0.1 }));
+  // o mastro com a bandeira, encostado no vestiário
+  cenario.push(point('mastro', round(B2.x1 + 0.25), 79, { altura: 7.6, cor: '#3f6fa8' }));
+  // o mato tomando o pátio: manchas de grama, capim nas rachaduras e umas moitas
+  for (const [x, y, rx, ry] of [[297.5, 86.5, 2.6, 1.6], [312, 74, 3.2, 1.2], [279.5, 87.8, 2.2, 1.0], [317, 90.5, 1.4, 2.4]] as const) chao.push(area('grama', blob(x, y, rx, ry, 0.2)));
+  for (let i = 0, n = 0; i < 400 && n < 26; i++) {
+    const [x, y] = [CLUB.x0 + crng() * (CLUB.x1 - CLUB.x0), CLUB.y0 + crng() * (CLUB.y1 - CLUB.y0)];
+    if (isWater(x, y) || inRect(x, y, B1, 0.3) || inRect(x, y, B2, 0.3) || inRect(x, y, POOL, 0.8) || inRect(x, y, { x0: 304.5, x1: 316, y0: 88.2, y1: 92.9 }, 0.3)) continue;
+    chao.push(point('planta', round(x), round(y), { tipo: crng() < 0.7 ? 'capim' : 'samambaia', raio: round(0.25 + crng() * 0.25) }));
+    n++;
+  }
 }
 
 // ----- 8 · a Ilha do Véu: a árvore enorme, o Véu e a pedra antiga; e a ilhota de antes, com as árvores dela -----
@@ -1004,6 +1041,10 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'placa' && p.poste) return [block('placa', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.2 })];
   if (s.type === 'barril' || s.type === 'caixote') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'mesa') return [block('mesa', s.x, s.y, 0.8, { bloqueiaTiro: false, altura: 0.75 })];
+  if (s.type === 'cadeira') return [block('cadeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 })];
+  if (s.type === 'mastro') return [block('mastro', s.x, s.y, 0.3, { altura: Number(p.altura) })];
+  // (o trampolim: só a base de cimento, na beira da piscina; a prancha fica por cima da água)
+  if (s.type === 'trampolim') return [box('trampolim', { x0: round(r.x1 - 0.7), x1: r.x1, y0: r.y0, y1: r.y1 }, { bloqueiaTiro: false, altura: 0.5 })];
   if (s.type === 'vaso' || s.type === 'lixeira') return [block(s.type, s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 })];
   if (s.type === 'moto') return [box('moto', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'pneus') return [block('pneus', s.x, s.y, round(Number(p.raio) * 1.8), { bloqueiaTiro: false, altura: 0.9 })];

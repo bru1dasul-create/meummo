@@ -34,6 +34,17 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (24/11): o clube náutico vestido (na `main`).** O dono: "pode seguir vestindo o clube náutico". No gerador
+  (bloco "7 · o clube náutico"; `dry` confere que nada caiu na água): a sede (2 andares, abandonada, `pintura: 'CLUBE
+  NÁUTICO'` — o letreiro pintado na parede, desbotado, novo no props.js —, `arvoreNaLaje`, pixo) e a varanda
+  (`cobertura` com os pilares de trás encostados na parede), o vestiário (`pintura: 'VESTIÁRIO'`), a garagem dos barcos
+  (`cobertura`) com 2 canoas amarradas na água da frente, a piscina com a beira de azulejo (`piso` com `desenho:
+  'azulejo'`, novo no street.js; vem ANTES da água no chão), o `trampolim` (a base de cimento encosta na água; só ela
+  bate), a `escada-piscina`, 3 cadeiras (2 m entre elas: menos que isso entala), a arquibancada (3 `muro` em degraus), o
+  `mastro` (encostado no vestiário) com a bandeira azul rasgada e a âncora, e o veleiro afundado (`barco` com `tipo:
+  'veleiro'`, `afundado`) ao lado do píer quebrado: o casco escuro embaixo d'água, o teto da cabine, o mastro torto, a
+  retranca e a vela rasgada. As coberturas ganharam `faixa` (a cor da barra de baixo dos pilares; sem ela, o vermelho do
+  posto). O mato: manchas de grama e capim no pátio.
 - **Agora (23/11): o polimento da lista do dono (na `main`).** Com 5 prints, ele pediu: ponto de ônibus, árvores que
   "parecem cortadas", sombras das árvores "todas balão", calçada, rachaduras e rua feias, barcos feios, o reflexo da água,
   peixes pulando e as casas com mais qualidade. O que mudou (js/world): **árvores** — o tronco das árvores de copa sobe um

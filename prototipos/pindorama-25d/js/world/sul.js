@@ -827,8 +827,8 @@
       const zt = z0 + d.h - 38;
       const P = (x, y, z) => cam.p({ x, y, z });
       H.box(ctx, cam, d.x0, d.x1, d.y0, d.y1, z0, zt, { front: '#ddd7c9', side: '#b9b2a2', top: '#e6e1d4' }, ink);
-      quad(ctx, [P(d.x0, d.y1, z0), P(d.x1, d.y1, z0), P(d.x1, d.y1, z0 + 70), P(d.x0, d.y1, z0 + 70)], '#a9473a');
-      quad(ctx, [P(d.x1, d.y1, z0), P(d.x1, d.y0, z0), P(d.x1, d.y0, z0 + 70), P(d.x1, d.y1, z0 + 70)], '#8a382e');
+      quad(ctx, [P(d.x0, d.y1, z0), P(d.x1, d.y1, z0), P(d.x1, d.y1, z0 + 70), P(d.x0, d.y1, z0 + 70)], d.band || '#a9473a');
+      quad(ctx, [P(d.x1, d.y1, z0), P(d.x1, d.y0, z0), P(d.x1, d.y0, z0 + 70), P(d.x1, d.y1, z0 + 70)], d.band ? M.shade(d.band, -0.2) : '#8a382e');
       // a tinta descascando e a ferrugem escorrendo do alto
       for (let k = 0; k < 6; k++) {
         const front = rnd() < 0.6;

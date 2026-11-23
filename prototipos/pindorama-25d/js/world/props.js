@@ -642,6 +642,7 @@
           ctx.fillRect(bx - 5, 12, 10, 8);
         }
         if (b.pixo) pixo(ctx, W, H - 150, M.rng(b.x0 + 9), 0.9);
+        if (b.paint) paintedSign(ctx, W, fh, b.paint, M.rng(b.x0 * 7 + 1));
         for (let f = 0; f < floors; f++) {
           const yTop = H - (f + 1) * fh; // topo deste andar (y desce a partir da laje)
           if (f === 0 && b.facade === 'preta' && PD.budega) {
@@ -927,6 +928,32 @@
     ctx.fillStyle = 'rgba(168, 158, 142, 0.55)';
     for (let k = 0; k < len / 50; k++) ctx.fillRect(r() * len, 20 + Math.floor((r() * (top - 30)) / 20) * 20, 6 + r() * 12, 3);
     return top;
+  }
+  /**
+   * O letreiro pintado direto na parede, no alto do andar de cima (o clube náutico): letras grandes, azuis, desbotadas e
+   * descascadas — umas mais fracas, umas quase sumidas — e a tinta escorrida embaixo de algumas.
+   */
+  function paintedSign(ctx, W, fh, text, r) {
+    const size = Math.min(64, fh * 0.26, (W * 0.9) / Math.max(4, text.length * 0.62));
+    ctx.save();
+    ctx.font = `${Math.round(size)}px ${FONT_SIGN}`;
+    ctx.textBaseline = 'middle';
+    const total = ctx.measureText(text).width;
+    let x = (W - total) / 2;
+    const y = 28 + size * 0.7;
+    for (const ch of text) {
+      const w = ctx.measureText(ch).width;
+      const fade = r();
+      ctx.globalAlpha = fade < 0.15 ? 0.18 : fade < 0.4 ? 0.45 : 0.72;
+      ctx.fillStyle = '#2f5f9a';
+      ctx.fillText(ch, x, y);
+      if (ch !== ' ' && r() < 0.3) {
+        ctx.globalAlpha = 0.25;
+        ctx.fillRect(x + w * 0.3, y + size * 0.4, 3, 10 + r() * 30);
+      }
+      x += w;
+    }
+    ctx.restore();
   }
   /** Parede: bloco aparente (fiadas com a massa entre os blocos) ou reboco pintado com manchas de chuva. */
   function wallTexture(ctx, b, len, H, r, sideFace) {

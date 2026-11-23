@@ -694,7 +694,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   de tijolo baiano à mostra, rebocadas e pintadas ou só com o puxadinho no tijolo, laje com caixa d'água, ferro espetado,
   varal e plantas; ruelas de cimento; na praça do Brejo Maior, o Lemos Bar (com as mesas), a Peixaria, o Salão da
   Neide e o Mercadinho, as bancas de frutas, de peixe e de artesanato, o muro grafitado "BREJO", os postes com a fiação
-  cheia de pipas enroscadas e as bandeirinhas; de noite, parte das janelas acesas
+  cheia de pipas enroscadas e as bandeirinhas; de noite, parte das janelas acesas. **O clube náutico na main em 24/11**
+  ("pode seguir vestindo o clube náutico"): a sede com o letreiro pintado "CLUBE NÁUTICO", a árvore na laje e a varanda,
+  o vestiário, a garagem dos barcos com as canoas amarradas, a piscina verde com a beira de azulejo, o trampolim, a
+  escadinha de inox e as cadeiras, a arquibancada de cimento virada para a represa, o mastro com a bandeira rasgada e,
+  perto do píer quebrado, um veleiro afundado com o mastro e a vela para fora d'água
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

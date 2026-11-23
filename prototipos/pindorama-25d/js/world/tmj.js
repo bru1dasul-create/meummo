@@ -176,6 +176,8 @@
           // cima (o térreo rebocado e pintado); `vergalhao`: os ferros espetados na laje, esperando o próximo andar
           brick: pr.tijolo === 'cima' ? 'top' : pr.tijolo ? 'all' : null,
           rebar: !!pr.vergalhao,
+          // o letreiro pintado na parede, desbotado (o clube náutico: `pintura: 'CLUBE NÁUTICO'`)
+          paint: pr.pintura || null,
           tank: !!pr.caixaDagua,
           pixo: !!pr.pixo,
           abandoned: !!pr.abandonada,
@@ -356,7 +358,8 @@
         const ix = Math.min(60, (r0.x1 - r0.x0) * 0.2), iy = Math.min(60, (r0.y1 - r0.y0) * 0.2);
         for (const px of [r0.x0 + ix, r0.x1 - ix]) {
           for (const py of [r0.y0 + iy, r0.y1 - iy]) {
-            map.props.push({ kind: 'pilar-cobertura', x0: px - pw / 2, x1: px + pw / 2, y0: py - pw / 2, y1: py + pw / 2, x: px, y: py, h, vine });
+            // (`faixa`: a cor da barra de baixo dos pilares; sem ela, o vermelho do posto. O clube náutico usa o azul)
+            map.props.push({ kind: 'pilar-cobertura', x0: px - pw / 2, x1: px + pw / 2, y0: py - pw / 2, y1: py + pw / 2, x: px, y: py, h, vine, band: pr.faixa || null });
           }
         }
       } else if (k === 'bomba') {
@@ -375,6 +378,12 @@
       } else if (k === 'pneus') {
         // pilha de pneus velhos (sul.js): `raio` e `pilha` (quantos)
         map.props.push({ kind: 'pneus', x, y, r: (pr.raio || 0.5) * 100, count: pr.pilha || 3 });
+      } else if (k === 'trampolim') {
+        // o clube náutico (refugio.js): o trampolim da piscina; `lado` = para onde a prancha avança (por cima da água)
+        map.props.push({ kind: k, ...rect(o), side: pr.lado || 'oeste' });
+      } else if (k === 'escada-piscina' || k === 'mastro') {
+        // a escadinha de inox da piscina (`olhando`: para onde ela desce) e o mastro com a bandeira rasgada (`altura`, `cor`)
+        map.props.push({ kind: k, x, y, r: 25, h: pr.altura != null ? pr.altura * 100 : null, color: pr.cor || null, angle: pr.olhando ?? 90 });
       }
     }
     // etapa 4c: a mureta da frente de cada pedaço do viaduto (outro objeto, desenhado depois do trem), o pedaço onde o
