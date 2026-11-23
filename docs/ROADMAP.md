@@ -1006,6 +1006,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   — o coco com canudinho na boca, sorvendo até 0,95 s. A boca abre na mordida e no gole; não entra no meio do tiro, da
   esquiva nem desmaiado. Os sons, nos mesmos tempos, são da [estrutura] (o item do som, acima). `consume.js`
   (`applyPose`) e o gancho no `animator.js`
+- [ ] **[arte]** Inimigos redesenhados no 2.5D, um por etapa (escopo aprovado pelo dono em 23/11, "desenha direto"):
+  pintados como o Birim (sem as bolinhas), com o aviso do golpe exagerado, o tranco ao apanhar e o desmaio com o encanto
+  saindo em faíscas roxas; tamanho, vida, dano e regras não mudam
+  - [x] **Sagui** (23/11): corpo com a beirada de pelo, a cabeça maior com o rosto escuro, a mancha branca da testa e os
+    olhos acesos, os tufos brancos em leque, o rabo peludo de anéis; no aviso, ele se estica e ergue a fruta brilhando do
+    lado da cabeça (de frente, aparece); o tranco vai para longe do herói. As ferramentas de pintar ficaram em
+    `PD.creatures.paint` (`creature.js`) para os próximos
+  - [ ] Quati · [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
 - [x] **[arte]** A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da
   poção/banana utilizada"): no efeito valendo e nos frascos de comida e remédio, no lugar da dica do navegador, o
   painel da dica das habilidades — o nome na cor da raridade, o que faz em verde ("Cura 60% da vida", "+5 de Destreza

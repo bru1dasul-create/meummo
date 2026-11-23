@@ -4,6 +4,70 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Inimigos redesenhados (23/11): etapa 1, o Sagui
+- **O escopo aprovado (23/11, "desenha direto", sem Nano Banana):** um bicho por etapa, cada uma com antes e depois
+  para o dono aprovar — 1) Sagui, 2) Quati, 3) Tatu-bola, 4) Jararaca, 5) Marimbondos, 6) Filhote de Boitatá. Em todas:
+  a luz e a sombra do Birim, o aviso do golpe com a pose exagerada, o tranco ao levar dano (no lugar de só piscar) e o
+  desmaio (o encanto sai do corpo em faíscas roxas). Tamanho, vida, dano e regras não mudam (são da [estrutura]).
+- **Como os bichos novos são pintados (`creature.js`, `PD.creatures.paint`, para as próximas etapas):** a peça que tem
+  `paint` no lugar das bolas (`parts()` devolve `{ groups, after, paint }`; as bolas ficam só para a sombra no chão, a
+  caixa do desenho e a silhueta dos Olhos de Gavião), na ordem do `byDepth` (a mesma de antes: chão e um pouco a altura).
+  - `furOutline(poly, mechas, comprimento, sorteio, penteado, flow, pontudas, aberto)` + `furTrace`: a beirada de pelo
+    num polígono de tela. O número de mechas é fixo (vem do tamanho de verdade, não do que aparece) e a primeira fica no
+    ponto mais baixo: as mechas não pulam de lugar de um quadro para o outro, só esticam. A maioria é ondinha curta (o
+    pelo macio); umas poucas, pontudas e compridas (os tufos), penteadas para o lado do `flow` (da cabeça para o rabo).
+    `aberto`: o membro, com pelo do primeiro ao último ponto e sem risco na emenda com o corpo.
+  - `limbShape` / `limbPath`: o membro que afina (o polígono para o pelo e a forma lisa).
+  - `paintLit(ctx, cam, traçar, cores, sombra, tinta, clarão, opções)`: o contorno de tinta por fora (mais grosso do lado
+    da sombra; `heavy: false` nas peças finas), a cor, os detalhes (`inside`, recortados), a meia-lua de sombra e a faixa
+    de brilho (transparentes: escurecem e clareiam os detalhes juntos) e `after` (por cima da luz: os olhos). A sombra e o
+    brilho saem de uma forma **lisa** (`light` + `lightPad`), maior que o pelo inteiro: pintar o contorno de pelo mais
+    quatro vezes era o que pesava. A folga tem que cobrir a mecha inteira (comprimento × ~1,5, por causa do penteado):
+    ponta de mecha para fora dela, do lado da luz, sai escura. O sagui faz a forma lisa com o casco dos mesmos círculos,
+    com o raio maior (`padHull`); o `grow` engorda um casco pronto, mas quebra nas pontas finas.
+  - `onSurface(ctx, cam, cabeça, f, s, u, espelho, desenhar)`: o rosto pintado no plano que encosta na cabeça (como no
+    Joaquim), sem `save/restore`.
+  - **Cuidados que custaram horas:** (1) **nada de `save/restore` dentro de um recorte** (`clip`): cada `restore` ali faz
+    o navegador desenhar a fila na hora (~75× mais caro) — o `decal` e o `onSurface` guardam só a posição
+    (`getTransform`/`setTransform`); (2) **o `tint` (o clarão do golpe) só entende cor `#rrggbb`**: numa cor `rgba` sai
+    "#NaN", o navegador ignora e fica a cor anterior (o brilho saía da cor da sombra); (3) o `offsetConvex` com número
+    positivo **encolhe** o casco de círculos (o sentido dos pontos); (4) a outra metade dos bichos não mudou nada
+    (conferido pixel a pixel com o sorteio fixo, `outros.cjs`).
+- **O Sagui novo (`sagui.js`):**
+  - o corpo é o casco das bolas do tronco com a beirada de pelo; a barriga cor de palha (sentado, de frente) e cinco faixas
+    escuras atravessando o lombo; braços e pernas peludos da cor do corpo (sem risco na emenda), mãos e pés escuros (o pé
+    é um oval do calcanhar aos dedos);
+  - a cabeça é maior (11,6 cm × 1,6): o crânio, as bochechas e o focinho curto num contorno só, de pelo curto; o rosto
+    escuro (uma máscara em volta de cada olho, a ponte e o focinho um tom acima), a mancha branca da testa logo acima dos
+    olhos, os olhos amarelos acesos (o encanto; de noite, vermelhos) redondos com a **pupila redonda** (a fenda lembrava
+    gato) e o pontinho de luz; a boca muda: o sorriso de canto parado, o sorrisão com os dentinhos no preparo, o "ui!"
+    redondo no tranco e a boquinha mole desmaiado; as narinas só de perto;
+  - os **tufos brancos** saem da orelha em cone, para fora e para trás (para a frente, nunca: o rosto), num contorno de
+    mechas pontudas com fios cinza (de perto): de frente, emolduram o rosto; de lado, ficam atrás do olho (o de cá vai por
+    cima da cabeça quando ela está de perfil); arrepiam no tranco e caem no desmaio;
+  - o rabo comprido e peludo, com 13 anéis (um risco grosso atravessando o rabo para cada anel escuro) e a ponta escura;
+  - **o aviso do golpe**, exagerado: ele se estica, verga para trás, ergue a fruta bem alto **do lado da cabeça, por cima
+    do ombro** (atrás da cabeça ela sumia justo de frente, que é como o jogador vê) — a fruta brilha pulsando cada vez mais
+    e, no fim, o corpo treme; o outro braço aponta, o rabo sobe em S, o olhar fica travesso (pálpebra descendo e
+    sobrancelha de quem apronta) e ele sorri; no arremesso, o braço passa por cima e o corpo vai junto;
+  - **o tranco** (no lugar de só piscar): ~16 cm para longe do herói (o servidor não diz de onde veio o golpe; o
+    `near.hero` que a view passa a cada quadro diz; sem herói perto, para trás), com um pulinho, o corpo vergando para o
+    lado do empurrão, as mãos subindo, os olhos apertados (">" "<") e os tufos arrepiados; vai em 0,06 s e volta até
+    0,42 s. O clarão branco ficou fraquinho (0,3);
+  - **o desmaio**: despenca de bruços em 0,26 s e quica, os olhos fecham, o encanto sai do corpo — um clarão lilás no peito
+    e 14 faíscas roxas que se espalham e sobem — e ele apaga de 0,4 a 0,7 s (o motor tira o desenho aos 700 ms,
+    `DIE_MS` do `engine.ts`). Em câmera lenta (F1) esse tempo é de relógio de verdade: o desenho sai antes do fim;
+  - **o peso:** medido no navegador de teste sem placa de vídeo (8 saguis, 300 quadros, `custo.cjs`): o antigo
+    ~1,3 ms por sagui; o novo ~2,4 ms no PC (zoom 1) e ~1,6 ms no celular (zoom 0,7: menos mechas e braços, pernas e
+    tufos sem sombra pintada, `small`). Começou em 3,1 ms; o que mais aliviou foi a sombra pela forma lisa.
+- **Conferido:** as pranchas (4 lados × parado, olhando, correndo, aviso, arremesso, apanhou, caindo, caído e o tamanho
+  do jogo ao lado do Birim), o GIF de antes e depois e o jogo de verdade (de dia, de noite com os olhos vermelhos, o tiro
+  com o desmaio, o celular deitado com os saguis segurando a fruta do aviso), sem erros. Teste: `tests/sagui-art.test.ts`.
+- **Rascunho `sagui2/`:** `prancha.cjs <saída> [pasta das criaturas] [zoom]` (`DIRS=40,130 ONLY=0,4` para ver de perto),
+  `anim.cjs <pasta> [criaturas] [zoom]` (o filme: parado, corre, aviso, arremesso, tranco, desmaio), `custo.cjs
+  [criaturas]` (o peso; `custo-modos.cjs` desliga cada efeito), `outros.cjs` (os outros bichos, antes × depois),
+  `jogo.cjs <pasta>` (no jogo) e `antes/` (a cópia das criaturas de antes do redesenho).
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
