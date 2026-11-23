@@ -1460,14 +1460,698 @@ function paintKnifeItem(ctx: CanvasRenderingContext2D): void {
   ctx.restore();
 }
 
+// ------------------------------------------------------------------ as garrafadas da Dona Iracema e os ingredientes
+// (poções, etapa 3, 23/11): a Garrafada Pequena (o vidrinho de chá verde-dourado), a Grande (o garrafão empalhado com o
+// selo de cera vermelha), o Frasco Vazio (o mesmo vidrinho, limpo, com a rolha deitada do lado), a Água da Mina (a
+// moringa de barro suando), a Folha de Babosa (a folha grossa com espinhos e o gel no corte) e a Raiz de Jurubeba (a
+// raiz torta com os frutinhos). A Média é a `garrafada` de sempre (âmbar): cada tamanho tem a sua cor de chá.
+
+/** O vidrinho (Garrafada Pequena e Frasco Vazio): corpo redondo e gargalo curto. */
+function vialPath(): Path2D {
+  const p = new Path2D();
+  p.moveTo(57, 36);
+  p.lineTo(57, 58);
+  p.bezierCurveTo(42, 63, 38, 80, 41, 93);
+  p.bezierCurveTo(44, 107, 54, 113, 64, 113);
+  p.bezierCurveTo(74, 113, 84, 107, 87, 93);
+  p.bezierCurveTo(90, 80, 86, 63, 71, 58);
+  p.lineTo(71, 36);
+  p.closePath();
+  return p;
+}
+
+/** O vidro por trás do líquido: o contorno escuro e o vidro claro. */
+function glassBack(ctx: CanvasRenderingContext2D, glass: Path2D, tint = 'rgba(190, 230, 210, 0.35)'): void {
+  ctx.save();
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#1a1208';
+  ctx.stroke(glass);
+  ctx.fillStyle = tint;
+  ctx.fill(glass);
+  ctx.restore();
+}
+
+/** O líquido dentro do vidro, até a altura `level` (a superfície um pouco curva). */
+function glassLiquid(ctx: CanvasRenderingContext2D, glass: Path2D, level: number, colors: [string, string, string], box: Box): void {
+  const g = ctx.createLinearGradient(box[0], box[1], box[2], box[3]);
+  g.addColorStop(0, colors[0]);
+  g.addColorStop(0.5, colors[1]);
+  g.addColorStop(1, colors[2]);
+  ctx.save();
+  ctx.clip(glass);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(0, level + 2);
+  ctx.quadraticCurveTo(64, level - 4, 128, level + 3);
+  ctx.lineTo(128, 128);
+  ctx.lineTo(0, 128);
+  ctx.closePath();
+  ctx.fill();
+  // a linha clara da superfície
+  ctx.strokeStyle = 'rgba(255, 248, 210, 0.55)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(0, level + 2);
+  ctx.quadraticCurveTo(64, level - 4, 128, level + 3);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Bolhinhas no líquido (dentro do vidro). */
+function bubbles(ctx: CanvasRenderingContext2D, glass: Path2D, color: string, list: readonly (readonly [number, number, number])[]): void {
+  ctx.save();
+  ctx.clip(glass);
+  ctx.fillStyle = color;
+  for (const [x, y, r] of list) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Rolha de cortiça, com os furinhos. */
+function corkTop(ctx: CanvasRenderingContext2D, x0: number, x1: number, top: number, bottom: number): void {
+  const c = new Path2D();
+  c.moveTo(x0, top);
+  c.lineTo(x1, top);
+  c.lineTo(x1 - 2, bottom);
+  c.lineTo(x0 + 2, bottom);
+  c.closePath();
+  body(ctx, c, '#e0b884', '#b0804a', '#6e4a22', [x0, top, x1, bottom], '#24150a', 2.2);
+  const r = rng(x0 * 7 + top);
+  ctx.save();
+  ctx.fillStyle = 'rgba(86, 54, 22, 0.55)';
+  for (let i = 0; i < 6; i++) {
+    ctx.beginPath();
+    ctx.arc(x0 + 4 + r() * (x1 - x0 - 8), top + 3 + r() * (bottom - top - 6), 0.8 + r() * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** O cordão amarrado no gargalo, com a ponta caindo. */
+function neckString(ctx: CanvasRenderingContext2D, x0: number, x1: number, y: number, color = '#c9a060'): void {
+  ctx.save();
+  ctx.lineCap = 'round';
+  const line = new Path2D();
+  line.moveTo(x0, y);
+  line.lineTo(x1, y);
+  line.moveTo(x1 - 2, y);
+  line.quadraticCurveTo(x1 + 9, y + 6, x1 + 7, y + 17);
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 5;
+  ctx.stroke(line);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.stroke(line);
+  ctx.restore();
+}
+
+/** Uma gota (a ponta para cima). */
+function dropPath(cx: number, cy: number, r: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(cx, cy - r * 1.9);
+  p.bezierCurveTo(cx + r * 0.45, cy - r * 1.1, cx + r, cy - r * 0.45, cx + r, cy);
+  p.arc(cx, cy, r, 0, Math.PI);
+  p.bezierCurveTo(cx - r, cy - r * 0.45, cx - r * 0.45, cy - r * 1.1, cx, cy - r * 1.9);
+  p.closePath();
+  return p;
+}
+
+/** Um brilhinho de quatro pontas (vidro limpo, coisa rara). */
+function twinkle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, glow = 'rgba(200, 240, 255, 0.9)'): void {
+  const p = new Path2D();
+  p.moveTo(x, y - r);
+  p.quadraticCurveTo(x, y, x + r, y);
+  p.quadraticCurveTo(x, y, x, y + r);
+  p.quadraticCurveTo(x, y, x - r, y);
+  p.quadraticCurveTo(x, y, x, y - r);
+  p.closePath();
+  ctx.save();
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fill(p);
+  ctx.restore();
+}
+
+/** Garrafada Pequena: o vidrinho com o chá verde-dourado e um raminho dentro. */
+function paintSmallBottle(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 64, 113, 28);
+  const glass = vialPath();
+  glassBack(ctx, glass);
+  glassLiquid(ctx, glass, 74, ['#f6f09a', '#b6bc3c', '#55621a'], [40, 72, 88, 113]);
+  ctx.save();
+  ctx.clip(glass);
+  ctx.strokeStyle = 'rgba(48, 80, 22, 0.9)';
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(58, 108);
+  ctx.quadraticCurveTo(67, 96, 64, 82);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(62, 104, 28, 0.92)';
+  for (const [x, y, rot] of [
+    [60, 97, -0.8],
+    [67, 91, 0.8],
+    [62, 85, -0.6],
+  ] as const) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, 2.3, 4.8, rot, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  bubbles(ctx, glass, 'rgba(255, 252, 210, 0.7)', [
+    [75, 94, 2.6],
+    [51, 89, 1.8],
+    [71, 104, 1.6],
+  ]);
+  const s = new Path2D();
+  s.moveTo(48, 86);
+  s.bezierCurveTo(46, 76, 50, 68, 56, 65);
+  s.bezierCurveTo(52, 72, 51, 80, 51, 91);
+  s.closePath();
+  shine(ctx, s, 0.7);
+  corkTop(ctx, 54, 74, 22, 38);
+  neckString(ctx, 56, 72, 47);
+}
+
+/** Frasco Vazio: o mesmo vidrinho, limpo e oco, com a rolha deitada do lado e um brilhinho. */
+function paintEmptyVial(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 62, 113, 34);
+  ctx.save();
+  ctx.translate(-9, 0);
+  const glass = vialPath();
+  // vidro limpo: claro e azulado (no fundo escuro da mochila, vidro transparente vira cinza)
+  glassBack(ctx, glass, 'rgba(176, 222, 240, 0.5)');
+  ctx.save();
+  ctx.clip(glass);
+  // o vidro por dentro: mais claro no meio e o fundo visto de dentro (é oco)
+  const inner = ctx.createRadialGradient(70, 90, 2, 64, 88, 32);
+  inner.addColorStop(0, 'rgba(245, 253, 255, 0.55)');
+  inner.addColorStop(1, 'rgba(150, 205, 230, 0.12)');
+  ctx.fillStyle = inner;
+  ctx.fill(glass);
+  // a luz na beirada do vidro (por dentro do contorno)
+  ctx.strokeStyle = 'rgba(228, 250, 255, 0.75)';
+  ctx.lineWidth = 6;
+  ctx.stroke(glass);
+  ctx.strokeStyle = 'rgba(235, 250, 255, 0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(64, 104, 17, 5, 0, Math.PI * 1.08, Math.PI * 1.92);
+  ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.lineWidth = 3.4;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#1a1208';
+  ctx.stroke(glass);
+  ctx.restore();
+  const s = new Path2D();
+  s.moveTo(48, 86);
+  s.bezierCurveTo(46, 76, 50, 68, 56, 65);
+  s.bezierCurveTo(52, 72, 51, 80, 51, 91);
+  s.closePath();
+  shine(ctx, s, 0.75);
+  const s2 = new Path2D();
+  s2.ellipse(79, 80, 2.2, 7, 0.25, 0, Math.PI * 2);
+  shine(ctx, s2, 0.5);
+  // a boca aberta: o anel do gargalo
+  ctx.save();
+  ctx.strokeStyle = '#1a1208';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(64, 36, 8.5, 3, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(225, 246, 255, 0.9)';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+  // a rolha deitada do lado
+  ctx.save();
+  ctx.translate(97, 104);
+  ctx.rotate(-0.28);
+  const cork = new Path2D();
+  cork.moveTo(-11, -6);
+  cork.lineTo(9, -8);
+  cork.lineTo(9, 8);
+  cork.lineTo(-11, 6);
+  cork.closePath();
+  body(ctx, cork, '#e0b884', '#b0804a', '#6e4a22', [-11, -8, 9, 8], '#24150a', 2);
+  const face = new Path2D();
+  face.ellipse(9, 0, 3.4, 8, 0, 0, Math.PI * 2);
+  body(ctx, face, '#f2d6a8', '#c89458', '#8a5e2e', [6, -8, 12, 8], '#24150a', 1.6);
+  ctx.restore();
+  twinkle(ctx, 80, 50, 7.5);
+}
+
+/** Garrafada Grande: o garrafão de remédio forte (vermelho-escuro, com raízes), empalhado e lacrado com cera. */
+function paintBigBottle(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 64, 117, 46);
+  const glass = new Path2D();
+  glass.moveTo(55, 28);
+  glass.lineTo(55, 46);
+  glass.bezierCurveTo(30, 50, 21, 68, 23, 86);
+  glass.bezierCurveTo(25, 108, 45, 117, 64, 117);
+  glass.bezierCurveTo(83, 117, 103, 108, 105, 86);
+  glass.bezierCurveTo(107, 68, 98, 50, 73, 46);
+  glass.lineTo(73, 28);
+  glass.closePath();
+  glassBack(ctx, glass);
+  glassLiquid(ctx, glass, 60, ['#f6955a', '#a8321a', '#3e0c06'], [24, 56, 104, 117]);
+  // raízes dentro
+  ctx.save();
+  ctx.clip(glass);
+  ctx.strokeStyle = 'rgba(54, 20, 6, 0.75)';
+  ctx.lineWidth = 3.4;
+  ctx.lineCap = 'round';
+  for (const [x0, y0, x1, y1, b] of [
+    [40, 92, 60, 66, 9],
+    [88, 94, 70, 64, -9],
+    [56, 102, 76, 72, 7],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo((x0 + x1) / 2 + b, (y0 + y1) / 2, x1, y1);
+    ctx.stroke();
+  }
+  ctx.restore();
+  bubbles(ctx, glass, 'rgba(255, 210, 170, 0.6)', [
+    [80, 70, 2.8],
+    [46, 74, 2],
+    [66, 68, 1.7],
+  ]);
+  // o empalhado: a palha trançada cobrindo a metade de baixo
+  const sleeveTop = 84;
+  ctx.save();
+  ctx.clip(glass);
+  const straw = ctx.createLinearGradient(24, sleeveTop, 104, 118);
+  straw.addColorStop(0, '#f4d98e');
+  straw.addColorStop(0.5, '#c4963f');
+  straw.addColorStop(1, '#6a4416');
+  ctx.fillStyle = straw;
+  ctx.fillRect(0, sleeveTop, 128, 44);
+  ctx.lineWidth = 1.7;
+  ctx.strokeStyle = 'rgba(78, 48, 14, 0.8)';
+  for (let x = -40; x < 140; x += 7) {
+    ctx.beginPath();
+    ctx.moveTo(x, sleeveTop);
+    ctx.lineTo(x + 34, sleeveTop + 34);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255, 240, 190, 0.4)';
+  for (let x = -40; x < 140; x += 7) {
+    ctx.beginPath();
+    ctx.moveTo(x + 34, sleeveTop);
+    ctx.lineTo(x, sleeveTop + 34);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // a beirada do empalhado: um cordão grosso
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(24, sleeveTop);
+  ctx.quadraticCurveTo(64, sleeveTop + 7, 104, sleeveTop);
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 7.5;
+  ctx.stroke();
+  ctx.strokeStyle = '#dcb466';
+  ctx.lineWidth = 3.8;
+  ctx.stroke();
+  ctx.restore();
+  // o vidro de cima brilhando
+  const s = new Path2D();
+  s.moveTo(34, 78);
+  s.bezierCurveTo(33, 66, 40, 56, 50, 53);
+  s.bezierCurveTo(44, 60, 40, 68, 39, 79);
+  s.closePath();
+  shine(ctx, s, 0.65);
+  // rolha lacrada com cera vermelha escorrendo e o cordão dourado
+  corkTop(ctx, 52, 76, 14, 30);
+  // o lacre: baixo, cobrindo a boca da rolha e escorrendo um pouco (alto, parecia um chapéu)
+  const wax = new Path2D();
+  wax.moveTo(49, 17);
+  wax.quadraticCurveTo(64, 9.5, 79, 17);
+  wax.lineTo(79, 21);
+  wax.quadraticCurveTo(77.5, 28, 75, 21.5);
+  wax.quadraticCurveTo(71, 25.5, 67.5, 21.5);
+  wax.quadraticCurveTo(64.5, 31, 60.5, 21.5);
+  wax.quadraticCurveTo(56.5, 25, 53.5, 21.5);
+  wax.quadraticCurveTo(51, 27, 49, 21);
+  wax.closePath();
+  body(ctx, wax, '#ff9478', '#d8402e', '#741206', [49, 9, 79, 31], '#2a0a04', 2);
+  const ws = new Path2D();
+  ws.ellipse(58, 14.5, 4.5, 1.6, -0.2, 0, Math.PI * 2);
+  shine(ctx, ws, 0.55);
+  neckString(ctx, 54, 74, 39, '#e8c45a');
+  twinkle(ctx, 98, 46, 6.5, 'rgba(255, 220, 140, 0.9)');
+}
+
+/** Água da Mina: a moringa de barro com a água na boca, suando, e uma gota pulando. */
+function paintSpringWater(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 64, 116, 38);
+  const pot = new Path2D();
+  pot.moveTo(55, 36);
+  pot.lineTo(56, 46);
+  pot.bezierCurveTo(34, 52, 27, 70, 29, 86);
+  pot.bezierCurveTo(31, 106, 47, 116, 64, 116);
+  pot.bezierCurveTo(81, 116, 97, 106, 99, 86);
+  pot.bezierCurveTo(101, 70, 94, 52, 72, 46);
+  pot.lineTo(73, 36);
+  pot.closePath();
+  body(ctx, pot, '#f8b484', '#c4683c', '#682a10', [30, 40, 100, 116], '#2a1206', 2.6);
+  // a pintura branca de moringa: a onda, o filete e os pontinhos
+  ctx.save();
+  ctx.clip(pot);
+  ctx.strokeStyle = 'rgba(252, 236, 208, 0.9)';
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let x = 24; x <= 104; x += 2) {
+    const y = 70 + Math.sin(x / 4.2) * 2.8 + (x - 64) * (x - 64) * 0.0018;
+    if (x === 24) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.lineWidth = 1.7;
+  ctx.beginPath();
+  ctx.moveTo(26, 79);
+  ctx.quadraticCurveTo(64, 84, 102, 79);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(252, 236, 208, 0.85)';
+  for (let x = 36; x <= 92; x += 8) {
+    ctx.beginPath();
+    ctx.arc(x, 86 + (x - 64) * (x - 64) * 0.0016, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  // o lábio virado e a água lá dentro
+  const lip = new Path2D();
+  lip.ellipse(64, 34, 15, 6, 0, 0, Math.PI * 2);
+  body(ctx, lip, '#fac49c', '#cc7448', '#7a3416', [49, 28, 79, 40], '#2a1206', 2.2);
+  const mouth = new Path2D();
+  mouth.ellipse(64, 33.5, 10.5, 3.6, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#3a1a0a';
+  ctx.fill(mouth);
+  const water = new Path2D();
+  water.ellipse(64, 34.3, 9, 2.7, 0, 0, Math.PI * 2);
+  const wg = ctx.createLinearGradient(55, 32, 73, 37);
+  wg.addColorStop(0, '#d8f8ff');
+  wg.addColorStop(1, '#3aa8e8');
+  ctx.fillStyle = wg;
+  ctx.fill(water);
+  // o barro suando (a moringa fresquinha)
+  for (const [x, y, r] of [
+    [86, 64, 2.6],
+    [92, 82, 3],
+    [80, 98, 2.4],
+    [40, 92, 2],
+  ] as const) {
+    const d = dropPath(x, y, r);
+    body(ctx, d, '#f2fcff', '#9edcff', '#3a8ac8', [x - r, y - 2 * r, x + r, y + r], '#0e3050', 1.2);
+  }
+  // uma gota pulando da boca
+  const jump = dropPath(86, 18, 6);
+  body(ctx, jump, '#eefbff', '#6cc4f4', '#1a6aa8', [80, 6, 92, 24], '#0a2a44', 1.8);
+  const js = new Path2D();
+  js.ellipse(84, 16, 1.6, 3, 0.3, 0, Math.PI * 2);
+  shine(ctx, js, 0.85);
+  const s = new Path2D();
+  s.ellipse(44, 66, 6.5, 12, 0.5, 0, Math.PI * 2);
+  shine(ctx, s, 0.32);
+}
+
+/** Uma folha de babosa: grossa, afinando até a ponta, com os espinhos da beirada e as pintinhas claras. */
+function aloeLeaf(
+  ctx: CanvasRenderingContext2D,
+  base: readonly [number, number],
+  tip: readonly [number, number],
+  width: number,
+  bend: number,
+  colors: readonly [string, string, string],
+  seed: number,
+): { nx: number; ny: number; ux: number; uy: number } {
+  const [bx, by] = base;
+  const dx = tip[0] - bx;
+  const dy = tip[1] - by;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy;
+  const ny = ux;
+  const N = 30;
+  const left: [number, number][] = [];
+  const right: [number, number][] = [];
+  const mid: [number, number][] = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N;
+    const half = width * Math.pow(1 - u, 0.8) * (0.86 + 0.14 * Math.sin(Math.PI * Math.min(1, u * 1.7)));
+    const b = Math.sin(Math.PI * u) * bend;
+    const cx = bx + dx * u + nx * b;
+    const cy = by + dy * u + ny * b;
+    mid.push([cx, cy]);
+    left.push([cx + nx * half, cy + ny * half]);
+    right.push([cx - nx * half, cy - ny * half]);
+  }
+  const p = new Path2D();
+  p.moveTo(right[0]![0], right[0]![1]);
+  p.lineTo(left[0]![0], left[0]![1]);
+  for (let i = 1; i <= N; i++) {
+    const [x, y] = left[i]!;
+    if (i % 3 === 0 && i < N - 3) {
+      const [px, py] = left[i - 1]!;
+      p.lineTo(px + (x - px) * 0.4 + nx * 3.4 + ux * 2.4, py + (y - py) * 0.4 + ny * 3.4 + uy * 2.4);
+    }
+    p.lineTo(x, y);
+  }
+  for (let i = N - 1; i >= 0; i--) {
+    const [x, y] = right[i]!;
+    if (i % 3 === 0 && i > 1 && i < N - 3) {
+      const [px, py] = right[i + 1]!;
+      p.lineTo(px + (x - px) * 0.6 - nx * 3.4 + ux * 2.4, py + (y - py) * 0.6 - ny * 3.4 + uy * 2.4);
+    }
+    p.lineTo(x, y);
+  }
+  p.closePath();
+  const xs = [...left, ...right].map((q) => q[0]);
+  const ys = [...left, ...right].map((q) => q[1]);
+  body(ctx, p, colors[0], colors[1], colors[2], [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], '#0e2618', 2.4);
+  ctx.save();
+  ctx.clip(p);
+  // o meio da folha, mais claro
+  ctx.strokeStyle = 'rgba(235, 255, 235, 0.32)';
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 2; i < N * 0.82; i++) {
+    const [x, y] = mid[i]!;
+    if (i === 2) ctx.moveTo(x + nx * 2, y + ny * 2);
+    else ctx.lineTo(x + nx * 2, y + ny * 2);
+  }
+  ctx.stroke();
+  // as pintinhas claras
+  const r = rng(seed);
+  ctx.fillStyle = 'rgba(228, 250, 232, 0.6)';
+  const angle = Math.atan2(uy, ux);
+  for (let k = 0; k < 12; k++) {
+    const i = Math.floor(2 + r() * N * 0.7);
+    const [x, y] = mid[i]!;
+    const off = (r() - 0.5) * width * 1.1 * (1 - i / N);
+    ctx.beginPath();
+    ctx.ellipse(x + nx * off, y + ny * off, 2.3, 1.1, angle, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  return { nx, ny, ux, uy };
+}
+
+/** Folha de Babosa: a folha cortada, com o gel aparecendo no corte e uma gota de gel escorrendo. */
+function paintAloe(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 66, 112, 46);
+  // uma folha menor atrás, no mesmo rumo (duas folhas em "V" pareciam o ✓ de confirmar)
+  aloeLeaf(ctx, [50, 106], [112, 52], 10, 4, ['#8cc8a0', '#3e8460', '#17442e'], 5);
+  // a folha da frente, grossa
+  const { nx, ny } = aloeLeaf(ctx, [30, 102], [108, 16], 17, 9, ['#b4e4bc', '#55a07c', '#1d5a42'], 11);
+  // o corte: o gel transparente
+  const cut = new Path2D();
+  cut.ellipse(30, 102, 17, 7, Math.atan2(ny, nx), 0, Math.PI * 2);
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#0e2618';
+  ctx.stroke(cut);
+  const gel = ctx.createRadialGradient(28, 100, 1, 30, 102, 17);
+  gel.addColorStop(0, '#fbfff2');
+  gel.addColorStop(0.6, '#d4f2c0');
+  gel.addColorStop(1, '#6fb27e');
+  ctx.fillStyle = gel;
+  ctx.fill(cut);
+  // a casca em volta do gel
+  ctx.strokeStyle = 'rgba(52, 120, 80, 0.9)';
+  ctx.lineWidth = 2.2;
+  ctx.stroke(cut);
+  ctx.restore();
+  // a gota de gel escorrendo do corte
+  const d = dropPath(24, 117, 3.8);
+  ctx.save();
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = 'rgba(14, 38, 24, 0.9)';
+  ctx.stroke(d);
+  ctx.fillStyle = 'rgba(226, 250, 214, 0.95)';
+  ctx.fill(d);
+  ctx.restore();
+  const ds = new Path2D();
+  ds.ellipse(23, 116, 1, 1.8, 0.3, 0, Math.PI * 2);
+  shine(ctx, ds, 0.9);
+}
+
+/** Raiz de Jurubeba: a raiz torta (casca com anéis e as raizinhas) e o raminho com os frutinhos verde-amarelos. */
+function paintJurubeba(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 60, 112, 44);
+  // as raizinhas (atrás da raiz)
+  ctx.save();
+  ctx.lineCap = 'round';
+  const hairs = new Path2D();
+  for (const [x0, y0, x1, y1, b] of [
+    [22, 102, 10, 112, -3],
+    [36, 96, 30, 112, 4],
+    [52, 88, 50, 106, -5],
+    [70, 80, 76, 98, 5],
+    [30, 99, 16, 96, 3],
+  ] as const) {
+    hairs.moveTo(x0, y0);
+    hairs.quadraticCurveTo((x0 + x1) / 2 + b, (y0 + y1) / 2, x1, y1);
+  }
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 4;
+  ctx.stroke(hairs);
+  ctx.strokeStyle = '#b88a52';
+  ctx.lineWidth = 1.8;
+  ctx.stroke(hairs);
+  ctx.restore();
+  // o raminho com as folhas, atrás dos frutinhos
+  ctx.save();
+  ctx.lineCap = 'round';
+  const stem = new Path2D();
+  stem.moveTo(90, 60);
+  stem.bezierCurveTo(90, 46, 86, 36, 80, 26);
+  stem.moveTo(88, 46);
+  stem.quadraticCurveTo(98, 40, 106, 32);
+  ctx.strokeStyle = '#1a2a0c';
+  ctx.lineWidth = 6;
+  ctx.stroke(stem);
+  ctx.strokeStyle = '#5a8a2c';
+  ctx.lineWidth = 3;
+  ctx.stroke(stem);
+  ctx.restore();
+  for (const [x, y, rx, ry, rot] of [
+    [70, 30, 13, 6.5, -0.5],
+    [108, 46, 12, 6, 0.9],
+  ] as const) {
+    const leaf = new Path2D();
+    leaf.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+    body(ctx, leaf, '#c4ec8a', '#6eaa38', '#2e5a14', [x - rx, y - rx, x + rx, y + rx], '#14240a', 1.8);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(230, 255, 200, 0.55)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(x - Math.cos(rot) * rx * 0.8, y - Math.sin(rot) * rx * 0.8);
+    ctx.lineTo(x + Math.cos(rot) * rx * 0.8, y + Math.sin(rot) * rx * 0.8);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // um galho da raiz, saindo de baixo (a raiz reta parecia cenoura)
+  ctx.save();
+  ctx.lineCap = 'round';
+  const fork = new Path2D();
+  fork.moveTo(56, 86);
+  fork.bezierCurveTo(50, 94, 46, 100, 36, 110);
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 10;
+  ctx.stroke(fork);
+  ctx.strokeStyle = '#9a6634';
+  ctx.lineWidth = 5.4;
+  ctx.stroke(fork);
+  ctx.restore();
+  // a raiz: grossa, torta, com nós
+  const root = new Path2D();
+  root.moveTo(14, 101);
+  root.bezierCurveTo(22, 100, 30, 101, 38, 96);
+  root.bezierCurveTo(44, 92, 48, 95, 54, 90);
+  root.bezierCurveTo(60, 85, 63, 81, 72, 80);
+  root.bezierCurveTo(82, 79, 91, 82, 98, 72);
+  root.bezierCurveTo(105, 62, 99, 49, 88, 51);
+  root.bezierCurveTo(80, 53, 77, 60, 68, 62);
+  root.bezierCurveTo(61, 64, 58, 71, 50, 76);
+  root.bezierCurveTo(42, 81, 34, 86, 26, 93);
+  root.bezierCurveTo(22, 96, 17, 99, 14, 101);
+  root.closePath();
+  body(ctx, root, '#f2d09c', '#b07a40', '#5a3214', [20, 50, 104, 104], '#24150a', 2.6);
+  ctx.save();
+  ctx.clip(root);
+  ctx.strokeStyle = 'rgba(72, 40, 12, 0.6)';
+  ctx.lineWidth = 1.7;
+  for (const [x, y, rot, h] of [
+    [32, 94, 0.6, 7],
+    [45, 88, 0.7, 9],
+    [60, 76, 0.8, 10],
+    [76, 70, 0.6, 11],
+    [90, 63, 0.4, 12],
+  ] as const) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, 3, h, rot, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+  }
+  const s = new Path2D();
+  s.moveTo(60, 70);
+  s.quadraticCurveTo(76, 58, 92, 55);
+  s.lineTo(93, 58);
+  s.quadraticCurveTo(77, 62, 62, 73);
+  s.closePath();
+  shine(ctx, s, 0.35);
+  ctx.restore();
+  // os nós da casca
+  for (const [x, y, r] of [
+    [52, 82, 3.4],
+    [83, 74, 3.8],
+  ] as const) {
+    const knot = new Path2D();
+    knot.ellipse(x, y, r * 1.2, r, -0.5, 0, Math.PI * 2);
+    body(ctx, knot, '#d8ae76', '#8a5a2a', '#4a2a10', [x - r, y - r, x + r, y + r], '#24150a', 1.4);
+  }
+  // os frutinhos da jurubeba, em cacho
+  for (const [x, y, r] of [
+    [86, 22, 6.8],
+    [97, 27, 6.2],
+    [90, 34, 6.4],
+  ] as const) {
+    const berry = new Path2D();
+    berry.arc(x, y, r, 0, Math.PI * 2);
+    body(ctx, berry, '#f6f8a0', '#b8cc3e', '#56701a', [x - r, y - r, x + r, y + r], '#1e2808', 1.8);
+    const bs = new Path2D();
+    bs.arc(x - r * 0.35, y - r * 0.38, r * 0.28, 0, Math.PI * 2);
+    shine(ctx, bs, 0.8);
+  }
+}
+
 const ITEM_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
   arco: paintBowItem,
   banana: paintBanana,
   agua_coco: paintCoconut,
+  agua_mina: paintSpringWater,
+  babosa: paintAloe,
   erva: paintRue,
   estilingue: paintSlingshotItem,
   faca: paintKnifeItem,
+  frasco: paintEmptyVial,
   garrafada: paintBottle,
+  garrafada_grande: paintBigBottle,
+  garrafada_pequena: paintSmallBottle,
+  jurubeba: paintJurubeba,
   mochila: paintBag,
 };
 
