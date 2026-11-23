@@ -349,8 +349,18 @@
         const shape = toy === 'gira-gira' ? { x, y, r: (pr.raio || 0.8) * 100 } : rect(o);
         map.props.push({ kind: 'parquinho', toy, ...shape, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, broken: !!pr.quebrado, plants: !!pr.plantas, angle: pr.olhando ?? 90 });
       } else if (k === 'cachoeira') {
-        // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` ('sul', 'norte', 'leste', 'oeste')
-        map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo });
+        // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` (por enquanto só 'sul');
+        // `estilo` 'comporta' (a barragem): o muro de pedra com a boca em arco e o tanque de `tanque` m
+        map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo, style: pr.estilo || null, basin: (pr.tanque || 3) * 100 });
+      } else if (k === 'coreto') {
+        // o coreto da praça em ruínas (sul.js): a base octogonal de `raio` m no meio da caixa, a `altura` da base, a
+        // escada do lado sul (`escada: false`, sem), `ruina` (o reboco caído, a pichação, o gradil arrancado, o buraco
+        // no telhado) e `cipo` (0 a 1). A caixa do desenho é a da base com a escada (a colisão vem do mapa)
+        const r0 = rect(o);
+        const cx = (r0.x0 + r0.x1) / 2, cy = (r0.y0 + r0.y1) / 2;
+        const R = (pr.raio || 4.4) * 100, Rf = R * Math.cos(Math.PI / 8);
+        const stairs = pr.escada !== false;
+        map.props.push({ kind: 'coreto', x: cx, y: cy, r: R, x0: cx - Rf, x1: cx + Rf, y0: cy - Rf, y1: cy + Rf + (stairs ? 128 : 0), h: (pr.altura || 0.95) * 100, stairs, ruin: !!pr.ruina, vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0 });
       } else if (k === 'cobertura') {
         // a cobertura do posto abandonado (sul.js): a laje no alto (por cima de quem está embaixo, fica transparente com
         // o herói embaixo ou atrás) e os 4 pilares (objetos à parte, para cada um ficar na frente ou atrás do herói)

@@ -120,7 +120,7 @@ const TRAIL_SOUTH = smooth([[39.4, 56.6], [34, 64], [28, 76], [23, 90], [21, 105
 const TRAIL_CAVE = smooth([[27.5, 142], [21, 168], [18, 198], [19, 228], [21, 252], [25, 266], [30, 273.5]], 1);
 const TRAIL_FIELD = smooth([[233, 38.5], [233.5, 48], [234, 56.5]], 1);
 const TRAIL_SQUARE = smooth([[327, 46.5], [327.5, 56], [328.5, 70]], 1);
-const TRAIL_DAM_EAST = smooth([[340, 251.5], [352, 245], [362, 237], [370, 231]], 1);
+const TRAIL_DAM_EAST = smooth([[338.5, 251.7], [352, 245], [362, 237], [370, 231]], 1);
 /** Da praça em ruínas até a beira do poço da cachoeira (o riacho fica ao sul dela). */
 const TRAIL_FALL = smooth([[346.5, 27], [358, 26.2], [370, 24.8], [383.6, 23.2]], 1);
 const TRAILS: [Pt[], number, string][] = [
@@ -236,11 +236,17 @@ const DAM_TOWER: Rect = { x0: 344, x1: 347.6, y0: 233, y1: 236.6 };
 const DAM_PLAZA: Rect = { x0: 327, x1: 345, y0: 242, y1: 250 };
 const DAM_WALK: Rect = { x0: 146, x1: 340, y0: DAM.y, y1: DAM.y + 3.4 };
 const GATES = [218, 242];
-/** A comporta: a queda d'água que sai do muro (6 m de largura, 2,4 m de fundo) e o poço onde ela cai (encosta na queda inteira). */
+/**
+ * A comporta (23/11, o dono achou a queda feia): o muro de pedra de 6 m com a boca em arco (60 cm de fundo, encostado
+ * na barragem), o jato saindo dela e o tanque de pedra (3 m) onde a água ferve antes de seguir pelo canal; as alas de
+ * pedra dos dois lados do tanque também seguram o jogador.
+ */
 const GATE_W = 3;
-// (a beira de baixo cai na linha das faixas de água, de 0,5 em 0,5 m: o poço encosta na queda sem sobra)
-const GATE_Y1 = Math.ceil((DAM_WALK.y1 + 2.4) * 2) / 2;
-const GATE_POOLS: Pt[][] = GATES.map((gx) => [[gx - GATE_W, GATE_Y1], [gx + GATE_W, GATE_Y1], [gx + 3.4, GATE_Y1 + 1.2], [gx + 2.6, GATE_Y1 + 2.4], [gx + 0.8, GATE_Y1 + 3], [gx - 1, GATE_Y1 + 2.9], [gx - 2.7, GATE_Y1 + 2.2], [gx - 3.3, GATE_Y1 + 1.1]]);
+const GATE_BASIN = 3;
+const GATE_WING = 0.26;
+// (a beira de cima do tanque cai na linha das faixas de água, de 0,5 em 0,5 m: o tanque encosta no muro sem sobra)
+const GATE_Y1 = Math.ceil((DAM_WALK.y1 + 0.5) * 2) / 2;
+const GATE_POOLS: Pt[][] = GATES.map((gx) => [[gx - GATE_W, GATE_Y1], [gx + GATE_W, GATE_Y1], [gx + GATE_W, GATE_Y1 + GATE_BASIN], [gx - GATE_W, GATE_Y1 + GATE_BASIN]]);
 /** 12 · A Caverna Sagrada (a boca, no meio das pedras). */
 const CAVE = { x: 34, y: 269 };
 /** 13 · A várzea (o alagado embaixo da barragem). */
@@ -400,13 +406,14 @@ for (const p of GATE_POOLS) chao.push(area('agua', p, { cor: '#2f6f6a' }));
 // (a beira de azulejo da piscina do clube vem antes da água: a água fica por cima dela)
 chao.push(rect('piso', POOL.x0 - 0.6, POOL.x1 + 0.6, POOL.y0 - 0.6, POOL.y1 + 0.6, { desenho: 'azulejo' }));
 chao.push(area('agua', POOL_PTS, { cor: '#4f7f5a' }));
-// o caminho de pedra em cima da barragem
-chao.push(rect('calcada', DAM_WALK.x0, DAM_WALK.x1, DAM_WALK.y0, DAM_WALK.y1, { estado: 'rachado', musgo: true }, 'A Barragem'));
 // a estrada (asfalto rachado, com a calçada tomada pelo mato), o caminho de terra até o píer e as trilhas novas
 chao.push(line('calcada', ROAD, { largura: ROAD_W + 2 * SIDEWALK }));
 chao.push(line('asfalto', ROAD, { largura: ROAD_W, estado: 'rachado', nome: "Estrada do M'Boi Mirim" }));
 chao.push(line('trilha', PATH, { largura: PATH_W, nome: 'Caminho da Represa' }));
 for (const [t, w, nome] of TRAILS) chao.push(line('trilha', t, { largura: w, ...(nome ? { nome } : {}) }));
+// o caminho de pedra em cima da barragem: lajes de pedra (depois das trilhas: a ponta delas fica embaixo das lajes, em
+// vez da língua de terra por cima do caminho que o dono achou feia em 23/11)
+chao.push(rect('calcada', DAM_WALK.x0, DAM_WALK.x1, DAM_WALK.y0, DAM_WALK.y1, { estado: 'rachado', musgo: true, desenho: 'placas' }, 'A Barragem'));
 // a boca da caverna: o chão escuro entre as pedras
 chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' }));
 {
@@ -864,8 +871,28 @@ addTrunk({ x: LOOKOUT.x1 + 0.6, y: LOOKOUT.y0 + 0.6, r: 0.1 });
   for (const x0 of [220, 236]) cenario.push(rect('banco', x0, x0 + 1.6, FIELD.y1 + 1.2, FIELD.y1 + 1.7, { olhando: 270 }));
 }
 
-// ----- 6 · a praça em ruínas: o coreto (por ora, a cobertura de pilares), os bancos, a cachoeira e o riacho -----
-cenario.push(box('cobertura', CORETO, { altura: 3.6, pilares: 0.45, mato: true, cipo: 0.7 }, 'Coreto'));
+// ----- 6 · a praça em ruínas: o coreto, os postes antigos, os bancos, a cachoeira e o riacho -----
+// (24/11, o dono: "pode seguir vestindo o coreto") O coreto octogonal de ferro, com a base de alvenaria e a escada do
+// lado sul (não dá para subir: a base inteira segura); os quatro postes de ferro em volta (um apagado, um torto) e as
+// moitas e samambaias tomando o pé da base.
+const CORETO_R = 4.4;
+cenario.push(box('coreto', CORETO, { altura: 0.95, raio: CORETO_R, ruina: true, cipo: 0.6 }, 'Coreto'));
+{
+  const cx = (CORETO.x0 + CORETO.x1) / 2, cy = (CORETO.y0 + CORETO.y1) / 2;
+  const D = 5.1;
+  for (const [sx, sy, extra] of [[-1, -1, {}], [1, -1, { apagado: true }], [-1, 1, { cipo: true }], [1, 1, { torto: true, cipo: true }]] as const) {
+    cenario.push(point('poste-praca', round(cx + sx * D), round(cy + sy * D), { altura: 3.6, luz: '#ffe9a6', ...extra }));
+  }
+  // as moitas no pé dos lados de 45° (enfeite: não seguram) e as samambaias nas quinas
+  for (const [a, raio] of [[45, 0.75], [135, 0.6], [225, 0.7], [315, 0.55]] as const) {
+    const t = (a * Math.PI) / 180;
+    cenario.push(point('arbusto', round(cx + Math.cos(t) * 4.7), round(cy + Math.sin(t) * 4.7), { raio }));
+  }
+  for (const a of [0, 90, 180, 270]) {
+    const t = ((a + 22.5) * Math.PI) / 180;
+    cenario.push(point('planta', round(cx + Math.cos(t) * 4.75), round(cy + Math.sin(t) * 4.75), { tipo: 'samambaia', raio: 0.45 }));
+  }
+}
 for (const [x0, x1, y0, y1, olhando] of [[311, 312.6, 30, 30.5, 0], [342, 343.6, 30, 30.5, 180], [326, 327.6, 17, 17.5, 90], [326, 327.6, 42.5, 43, 270]] as const) {
   cenario.push(rect('banco', x0, x1, y0, y1, { olhando }));
 }
@@ -967,7 +994,7 @@ cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 
   }
   for (const x of [160, 184, 204, 230, 256, 280, 300]) cenario.push(point('poste-praca', x, round(DAM.y + 0.55), { altura: 3.8, luz: '#ffe9a6', torto: x === 256 }));
   for (const gx of GATES) cenario.push(rect('guincho-comporta', gx - 2.6, gx + 2.6, DAM.y + 0.35, round(DAM.y + 0.85), { altura: 3.2 }));
-  for (const gx of GATES) cenario.push(rect('cachoeira', gx - GATE_W, gx + GATE_W, DAM_WALK.y1, GATE_Y1, { altura: 1.6, queda: 'sul', musgo: true }, 'Comporta'));
+  for (const gx of GATES) cenario.push(rect('cachoeira', gx - GATE_W, gx + GATE_W, DAM_WALK.y1, GATE_Y1, { altura: 1.5, queda: 'sul', musgo: true, estilo: 'comporta', tanque: GATE_BASIN }, 'Comporta'));
 }
 
 // ----- 12 · a Caverna Sagrada: as pedras grandes em arco em volta da boca -----
@@ -1077,7 +1104,28 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'rede' || s.type === 'varal') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'muro') return [box('muro', r, { altura: Number(p.altura) })];
   if (s.type === 'barreira') return [box('barreira', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
-  if (s.type === 'cachoeira') return [box('cachoeira', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'coreto') {
+    // a base octogonal (seis caixas por dentro do octógono, escalonadas nos lados de 45°) e a escada do lado sul
+    const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
+    const R = Number(p.raio), f = R * Math.cos(Math.PI / 8), v = R * Math.sin(Math.PI / 8);
+    const out: Shape[] = [];
+    for (let i = 0; i <= 5; i++) {
+      const hx = f + ((v - f) * i) / 5, hy = v + ((f - v) * i) / 5;
+      out.push(box('coreto', { x0: round(cx - hx), x1: round(cx + hx), y0: round(cy - hy), y1: round(cy + hy) }, { altura: 1.05 }));
+    }
+    out.push(box('coreto', { x0: round(cx - 1.3), x1: round(cx + 1.3), y0: round(cy + f - 0.1), y1: round(cy + f + 1.28) }, { bloqueiaTiro: false, altura: 1 }));
+    return out;
+  }
+  if (s.type === 'cachoeira') {
+    const out = [box('cachoeira', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+    // (a comporta: as alas de pedra dos dois lados do tanque)
+    if (p.estilo === 'comporta') {
+      const y1 = r.y1 + Number(p.tanque);
+      out.push(box('muro', { x0: round(r.x0 - GATE_WING), x1: r.x0, y0: r.y1, y1 }, { bloqueiaTiro: false, altura: 0.6 }));
+      out.push(box('muro', { x0: r.x1, x1: round(r.x1 + GATE_WING), y0: r.y1, y1 }, { bloqueiaTiro: false, altura: 0.6 }));
+    }
+    return out;
+  }
   if (s.type === 'trave') return [s.y, s.y + s.h!].map((y) => block('trave', s.x + s.w! / 2, y, 0.2, { bloqueiaTiro: false, altura: 2 }));
   if (s.type === 'cobertura') {
     // (só os quatro pilares seguram, a 0,6 m das beiradas)

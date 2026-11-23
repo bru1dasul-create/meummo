@@ -34,7 +34,24 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a Barragem de 1909 vestida (na `main`).** O dono: "pode seguir vestindo a barragem de 1909". O prédio
+- **Agora (24/11): o coreto vestido e os consertos do dono (na `main`).** O dono: "pode seguir vestindo o coreto /
+  porém arruma issos / efeito da agua descendo está feio / chão tbm ta feio". (1) A água que desce (`small.cachoeira`,
+  sul.js, reescrita): a lâmina sai da beirada já andando para a frente e cai em curva, verde-água em cima e branca
+  embaixo, com fios descendo cada vez mais depressa; no pé, a espuma (mancha de beira mexendo + bolhas), respingos,
+  névoa (imagem pronta), ondinhas e espuma indo embora. As pedras viraram `facetRock` (três voltas e a coroa: redondas,
+  com lados, molhadas perto da água, musgo em tufinhos). As partes paradas viram imagem por zoom (`baked`). A comporta
+  ganhou `estilo: 'comporta'` e `tanque` (m): o muro de pedra de 60 cm com a boca em arco (fiadas, pedras em cunha,
+  limo, cipó), a água correndo no túnel, o jato, a água escorrendo pelo muro e o tanque retangular de 3 m com as alas
+  de pedra (que também seguram: `GATE_WING`); o poço octogonal virou o tanque (`GATE_POOLS`, 254..257). (2) O chão: o
+  `paralelepipedo` do street.js agora tem pedras de 30 × 19 cm de quina redonda, a beira clara do lado do sol e a
+  escura do outro, tons variados, capim nas juntas (mais perto da beira) e a guia de granito em volta; o caminho da
+  barragem virou `desenho: 'placas'` e é desenhado DEPOIS das trilhas (a ponta da trilha leste fica embaixo das lajes).
+  (3) O coreto (`coreto`, sul.js; tmj: `raio`, `altura`, `ruina`, `cipo`, `escada`): base octogonal de 4,4 m com a
+  escada de 4 degraus ao sul, piso de ladrilho com a sombra do telhado, gradil, 8 colunas com mãos-francesas,
+  lambrequim, telhado em sino com costuras, ferrugem e buraco, lanterninha e pináculo. Não dá para subir: a colisão é a
+  base inteira (seis caixas por dentro do octógono) mais a escada. Em volta, quatro `poste-praca` (um apagado, um
+  torto), moitas e samambaias. O teste do Guarapiranga confere a base, a escada e que fora dela é livre.
+- **Antes (24/11): a Barragem de 1909 vestida (na `main`).** O dono: "pode seguir vestindo a barragem de 1909". O prédio
   ficou menor e mais alto (`DAM_HOUSE` 328..344 × 231..242, 7,4 m) e ganhou o estilo novo `estilo: 'historico'` no
   props.js (`historicFacade`, `historicFloor`, `archWindow`, `archDoor`, `pediment`, `clockFace`): o tijolo antigo
   (`OLD_BRICK`), a base de pedra, as pilastras nas quinas, a faixa entre os andares, a cornija com os dentículos, as

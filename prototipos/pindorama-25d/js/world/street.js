@@ -1508,34 +1508,91 @@
   // ------------------------------------------------------------------ piso de dentro (a Budega): ladrilho hidráulico
   // Ladrilhos de 25 cm, creme, com quartos de círculo terracota nos cantos (quatro ladrilhos fazem uma flor) e um
   // losango verde no meio; o rejunte claro e, aqui e ali, um ladrilho mais gasto ou trincado (perto da porta, mais).
-  texture.piso = (ctx, sh, box) => {
+  texture.piso = (ctx, sh, box, seed, g) => {
     if (sh.kind !== 'rect' && sh.kind !== 'poly') return false;
     const b = clipBox(G.shapeBox(sh), box);
     if (!b) return true;
     if (sh.pattern === 'paralelepipedo') {
-      // o calçamento de paralelepípedo (a praça da barragem de 1909): pedras de granito de 18 × 12 cm em fiadas
-      // desencontradas, cada uma de um tom, as juntas escuras, o capim nascendo nelas e umas pedras afundadas
+      // o calçamento de paralelepípedo (a praça da barragem de 1909). (23/11, o dono achou o chão feio: as pedrinhas de
+      // 18 cm viravam um chiado cinza) Pedras de granito de ~30 × 19 cm em fiadas desencontradas, de quinas
+      // arredondadas, cada uma com a beira clara do lado do sol (oeste e sul) e a sombra do outro — parecem abauladas
+      // —, de vários tons (cinza, bege, umas azuladas, umas afundadas e escuras); as juntas de areia escura, o capim
+      // nascendo nelas (mais perto da beira, onde ninguém pisa) e a guia de granito em volta
       ctx.save();
       G.shapePath(ctx, sh);
       ctx.clip();
-      ctx.fillStyle = '#4f4b45';
+      const sb = G.shapeBox(sh);
+      ctx.fillStyle = '#4f483d';
       ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
-      const SW = 18, SH = 12;
-      const TONES = ['#8f8b84', '#7f7b74', '#9b978f', '#6f6b65', '#87837b'];
-      for (let j = Math.floor(b.y0 / SH); j * SH < b.y1; j++) {
-        const off = (j % 2) * (SW / 2);
-        for (let i = Math.floor((b.x0 - off) / SW); i * SW + off < b.x1; i++) {
-          const r = G.cellRng(i, j, 1311);
-          ctx.fillStyle = TONES[Math.floor(r() * TONES.length)];
+      const SW = 30, SH = 19, J = 3;
+      const TONES = ['#8e877b', '#9a9386', '#837c70', '#a39b8d', '#8a877d', '#968c7c', '#7f7f7b', '#8d8372', '#9d9890'];
+      const near = (x, y) => Math.min(x - sb.x0, sb.x1 - x, y - sb.y0, sb.y1 - y);
+      const weeds = [];
+      for (let j = Math.floor(b.y0 / SH) - 1; j * SH < b.y1 + SH; j++) {
+        const off = (((j % 3) + 3) % 3) * (SW / 3);
+        for (let i = Math.floor((b.x0 - off) / SW) - 1; i * SW + off < b.x1 + SW; i++) {
+          const r = G.cellRng(i, j, 1313);
           const x = i * SW + off, y = j * SH;
-          ctx.fillRect(x + 1.5, y + 1.5, SW - 3, SH - 3);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-          ctx.fillRect(x + 1.5, y + 1.5, SW - 3, 2.5);
-          if (r() < 0.08) {
-            ctx.fillStyle = 'rgba(78, 110, 54, 0.75)';
-            ctx.fillRect(x - 1, y + SH - 3, 6 + r() * 6, 3);
+          const sunk = r() < 0.06;
+          const tone = sunk ? '#6a655c' : TONES[Math.floor(r() * TONES.length)];
+          const x0 = x + J / 2 + (r() - 0.5) * 1.6, x1 = x + SW - J / 2 + (r() - 0.5) * 1.6;
+          const y0 = y + J / 2 + (r() - 0.5) * 1.2, y1 = y + SH - J / 2 + (r() - 0.5) * 1.2;
+          const rr = 4;
+          ctx.fillStyle = tone;
+          ctx.beginPath();
+          ctx.moveTo(x0 + rr, y0);
+          ctx.arcTo(x1, y0, x1, y1, rr);
+          ctx.arcTo(x1, y1, x0, y1, rr);
+          ctx.arcTo(x0, y1, x0, y0, rr);
+          ctx.arcTo(x0, y0, x1, y0, rr);
+          ctx.closePath();
+          ctx.fill();
+          // a beira do lado do sol (oeste e sul) clara, a do outro lado escura
+          ctx.fillStyle = 'rgba(255, 249, 232, 0.24)';
+          ctx.fillRect(x0 + 2, y1 - 3.6, x1 - x0 - 4, 2.6);
+          ctx.fillRect(x0 + 0.8, y0 + 2, 2.6, y1 - y0 - 4);
+          ctx.fillStyle = 'rgba(28, 24, 18, 0.3)';
+          ctx.fillRect(x1 - 3.4, y0 + 2, 2.6, y1 - y0 - 4);
+          ctx.fillRect(x0 + 2, y0 + 0.8, x1 - x0 - 4, 2.4);
+          // o grão do granito (pintinhas claras e escuras) e, numa ou noutra, uma mancha de líquen
+          for (let q = 0; q < 3; q++) {
+            ctx.fillStyle = r() < 0.5 ? 'rgba(245, 240, 228, 0.35)' : 'rgba(40, 36, 30, 0.3)';
+            ctx.fillRect(x0 + 3 + r() * (x1 - x0 - 6), y0 + 3 + r() * (y1 - y0 - 6), 1.4, 1.4);
           }
+          if (r() < 0.07) {
+            ctx.fillStyle = 'rgba(196, 196, 150, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(x0 + 6 + r() * (x1 - x0 - 12), y0 + 5 + r() * (y1 - y0 - 10), 3 + r() * 3, 2 + r() * 2, r() * 3, 0, M.TAU);
+            ctx.fill();
+          }
+          // o capim nas juntas: mais perto da beira da praça
+          const e = near(x + SW / 2, y + SH / 2);
+          const pm = e < 60 ? 0.55 : e < 160 ? 0.18 : 0.05;
+          if (r() < pm) {
+            ctx.fillStyle = r() < 0.5 ? 'rgba(74, 112, 50, 0.85)' : 'rgba(96, 134, 60, 0.8)';
+            if (r() < 0.5) ctx.fillRect(x - 1, y + 2 + r() * (SH - 8), 4, 4 + r() * 6);
+            else ctx.fillRect(x + 2 + r() * (SW - 12), y - 1.5, 6 + r() * 10, 3.5);
+          }
+          if (g && r() < (e < 60 ? 0.07 : 0.012)) weeds.push([x + (r() < 0.5 ? 0 : SW), y, 9 + r() * 9, r]);
         }
+      }
+      for (const [x, y, size, r] of weeds) tuft(ctx, x, y, size, r, g.cam, r() < 0.3);
+      // a guia de granito em volta (blocos compridos, a beira de dentro com sombra)
+      if (sh.kind === 'rect') {
+        const GW = 16;
+        const bands = [[sb.x0, sb.y0, sb.x1 - sb.x0, GW, true], [sb.x0, sb.y1 - GW, sb.x1 - sb.x0, GW, true], [sb.x0, sb.y0, GW, sb.y1 - sb.y0, false], [sb.x1 - GW, sb.y0, GW, sb.y1 - sb.y0, false]];
+        for (const [x, y, w, h, horiz] of bands) {
+          ctx.fillStyle = '#b1ab9e';
+          ctx.fillRect(x, y, w, h);
+          ctx.fillStyle = 'rgba(255, 250, 236, 0.22)';
+          ctx.fillRect(x, horiz ? y + h - 3 : y, horiz ? w : 3, horiz ? 3 : h);
+          ctx.fillStyle = 'rgba(38, 34, 28, 0.55)';
+          const len = horiz ? w : h;
+          for (let a = 70 + (x % 40); a < len; a += 90 + ((a * 7) % 30)) ctx.fillRect(horiz ? x + a : x, horiz ? y : y + a, horiz ? 2 : w, horiz ? h : 2);
+        }
+        ctx.strokeStyle = 'rgba(30, 26, 20, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sb.x0 + GW, sb.y0 + GW, sb.x1 - sb.x0 - 2 * GW, sb.y1 - sb.y0 - 2 * GW);
       }
       ctx.restore();
       return true;

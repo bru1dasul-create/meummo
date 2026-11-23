@@ -702,7 +702,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   24/11** ("pode seguir vestindo a barragem de 1909"): o prédio de comando de tijolo antigo, com as janelas altas em arco
   e moldura de pedra, a porta grande em arco, a cornija, o frontão com o ano 1909 e a árvore na laje; a torre do relógio
   parado; a praça de paralelepípedo com a grade de ferro, o portão de pilares, a placa, os postes antigos e a engrenagem
-  enferrujada largada; e, no muro da barragem, os postes de ferro e o guincho em cima de cada comporta
+  enferrujada largada; e, no muro da barragem, os postes de ferro e o guincho em cima de cada comporta. **O coreto na
+  main em 24/11** ("pode seguir vestindo o coreto / porém arruma issos"): o coreto octogonal de ferro na Praça em Ruínas
+  (base de alvenaria com reboco caído e pichação, escada com o portãozinho caído, piso de ladrilho, gradil com um pedaço
+  arrancado, colunas verdes com as mãos-francesas, lambrequim, telhado de zinco com ferrugem e um buraco, lanterninha),
+  os quatro postes antigos e as moitas no pé; não dá para subir. E o que o dono achou feio: a água que desce (comportas
+  e cachoeira) refeita — nas comportas, o muro de pedra com a boca em arco, o jato e o tanque de pedra; na cachoeira, as
+  pedras com lados no lugar das bolas —, o paralelepípedo maior e com volume (e a guia de granito), o caminho da barragem
+  em lajes e a ponta da trilha de terra escondida embaixo das lajes
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

@@ -591,149 +591,1317 @@
     ctx.fill();
   }
 
-  // ------------------------------------------------------------------ cachoeirinha
-  // Pedras grandes com musgo em cima, um vão no meio por onde a água passa e cai para o lado `queda` (o sul, no
-  // mapa), espuma e ondinhas no poço. A água mexe: desenhada a cada quadro (`live`), só ela na tela.
-  const ROCK = { base: '#8c8a80', shade: '#6a685f', light: '#aeaca0' };
-  function boulder(ctx, cam, x, y, z0, r, h, rnd, ink, moss) {
-    const qb = cam.p({ x, y, z: z0 });
-    const qt = cam.p({ x, y, z: z0 + h });
-    const cx = (qb.x + qt.x) / 2, cy = (qb.y + qt.y) / 2 + r * cam.sinP * cam.zoom * 0.25;
-    const rx = r * cam.zoom, ry = (qb.y - qt.y) / 2 + r * cam.sinP * cam.zoom * 0.55;
-    const pts = [];
-    const ph = rnd() * M.TAU;
-    for (let i = 0; i < 16; i++) {
-      const t = (i / 16) * M.TAU;
-      const wob = 1 + 0.07 * Math.sin(t * 3 + ph) + 0.04 * Math.sin(t * 5 + ph * 2);
-      pts.push({ x: cx + Math.cos(t) * rx * wob, y: cy + Math.sin(t) * ry * wob * (Math.sin(t) > 0 ? 0.92 : 1) });
+  // ------------------------------------------------------------------ cachoeirinha e comporta
+  // (23/11, o dono: "efeito da água descendo está feio") A água sai da beirada já andando para a frente e cai como quem
+  // foi jogado — a lâmina quase deitada no alto e em pé embaixo —, lisa e verde-água em cima e branca de espuma
+  // embaixo, com os fios descendo cada vez mais depressa; no pé, a espuma fervendo, os respingos, a névoa, as ondinhas e
+  // a espuma indo embora com a correnteza. As pedras têm lados (eram bolas), ficam escuras de molhadas perto da água e
+  // têm musgo em cima. `estilo` 'comporta' (a barragem de 1909): o muro de pedra com a boca em arco, a água correndo
+  // lá dentro e saindo num jato, escorrendo pelo muro, e o tanque com as alas de pedra (`tanque`, o comprimento), onde
+  // a água ferve. As partes paradas (pedras e muro) viram imagem uma vez por zoom (`baked`); só a água é desenhada a
+  // cada quadro.
+  const poly = PD.props.poly;
+  const BAKED = new WeakMap();
+  function baked(ctx, cam, d, name, bounds, draw) {
+    let store = BAKED.get(d);
+    if (!store) BAKED.set(d, (store = {}));
+    const key = `${cam.zoom.toFixed(4)}|${cam.dpr}`;
+    let s = store[name];
+    const now = performance.now();
+    // (com o zoom mudando, a imagem de antes esticada: refeita no máximo a cada 1/4 de segundo)
+    if (!s || (s.key !== key && now - s.at > 250)) {
+      const b = bounds();
+      const x0 = Math.floor(b.x0), y0 = Math.floor(b.y0);
+      const w = Math.max(1, Math.ceil(b.x1 - x0)), h = Math.max(1, Math.ceil(b.y1 - y0));
+      const c = document.createElement('canvas');
+      c.width = Math.ceil(w * cam.dpr);
+      c.height = Math.ceil(h * cam.dpr);
+      const g = c.getContext('2d');
+      g.setTransform(cam.dpr, 0, 0, cam.dpr, -x0 * cam.dpr, -y0 * cam.dpr);
+      draw(g);
+      s = store[name] = { c, x: x0, y: y0, w, h, zoom: cam.zoom, key, at: now };
     }
-    const path = pathOf(pts);
-    inkFill(ctx, path, ROCK.base, ink, 2.4);
+    const k = cam.zoom / s.zoom;
+    ctx.drawImage(s.c, s.x * k, s.y * k, s.w * k, s.h * k);
+  }
+  function unionBox(boxes) {
+    return {
+      x0: Math.min(...boxes.map((b) => b.x0)), y0: Math.min(...boxes.map((b) => b.y0)),
+      x1: Math.max(...boxes.map((b) => b.x1)), y1: Math.max(...boxes.map((b) => b.y1)),
+    };
+  }
+  function hullOf(pts) {
+    const p = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+    const cr = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const lo = [], up = [];
+    for (const q of p) {
+      while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
+      lo.push(q);
+    }
+    for (let i = p.length - 1; i >= 0; i--) {
+      const q = p[i];
+      while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
+      up.push(q);
+    }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+  const line2 = (ctx, a, b) => {
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  };
+
+  // pedra de rio: cinza frio; escurece e esverdeia onde a água molha
+  const RIVER = { dark: [48, 54, 54], light: [184, 182, 170] };
+  const MOSS = ['#365c2e', '#4f7d38', '#6e9c47', '#9cc464'];
+  /**
+   * Pedra de lados: a base irregular no chão, o topo menor (`flat`: quase do tamanho da base e reto — a laje por onde a
+   * água passa) e as faces pintadas pela luz do dia. `o`: x, y, z0, rx, ry, h (cm), seed; `wet` (até que altura, a
+   * partir do pé, ela está molhada), `moss` (musgo em cima).
+   */
+  function facetRock(ctx, cam, o, ink) {
+    const rnd = M.rng(o.seed);
+    const N = 8;
+    const rot = rnd() * M.TAU;
+    // três voltas (o pé, a barriga e o ombro) e a coroa: a pedra fica arredondada, mais larga que alta
+    const RINGS = o.flat ? [[-4, 1], [0.72, 0.99], [1, 0.9]] : [[-4, 1], [0.5, 0.97], [0.84, 0.68]];
+    const jit = [];
+    for (let k = 0; k < N; k++) jit.push([(rnd() - 0.5) * 0.45, 0.86 + rnd() * 0.2]);
+    const rings = RINGS.map(([zk, rk], ri) => jit.map(([da, f], k) => {
+      const a = rot + (k / N) * M.TAU + da + ri * 0.07;
+      const rr = f * rk * (ri ? 0.94 + rnd() * 0.1 : 1);
+      const z = zk < 0 ? o.z0 + zk : o.z0 + o.h * zk * (ri === RINGS.length - 1 && !o.flat ? 0.92 + rnd() * 0.12 : 1);
+      return { x: o.x + Math.cos(a) * o.rx * rr, y: o.y + Math.sin(a) * o.ry * rr, z };
+    }));
+    const base = rings[0], top = rings[rings.length - 1];
+    const crown = { x: o.x + (rnd() - 0.5) * o.rx * 0.25, y: o.y + (rnd() - 0.5) * o.ry * 0.25, z: o.z0 + o.h };
+    const faces = [];
+    for (let ri = 0; ri < rings.length - 1; ri++) {
+      for (let k = 0; k < N; k++) {
+        const j = (k + 1) % N;
+        faces.push([rings[ri][k], rings[ri][j], rings[ri + 1][j], rings[ri + 1][k]]);
+      }
+    }
+    for (let k = 0; k < N; k++) faces.push([top[k], top[(k + 1) % N], crown]);
+    const center = { x: o.x, y: o.y, z: o.z0 + o.h * 0.35 };
+    const shown = [];
+    for (const f of faces) {
+      const c = { x: 0, y: 0, z: 0 };
+      for (const q of f) {
+        c.x += q.x / f.length;
+        c.y += q.y / f.length;
+        c.z += q.z / f.length;
+      }
+      let n = M.cross(M.sub(f[1], f[0]), M.sub(f[2], f[0]));
+      if (M.dot(n, M.sub(c, center)) < 0) n = { x: -n.x, y: -n.y, z: -n.z };
+      const l = Math.hypot(n.x, n.y, n.z) || 1;
+      n = { x: n.x / l, y: n.y / l, z: n.z / l };
+      if (M.dot(n, cam.toCamera) <= 0) continue; // de costas para a câmera
+      shown.push({ pts: f.map((q) => cam.p(q)), lit: M.clamp01(0.42 + 0.62 * M.dot(n, cam.light)), up: n.z, depth: cam.depth(c) });
+    }
+    shown.sort((a, b) => a.depth - b.depth);
+    const hull = hullOf([].concat(...rings, [crown]).map((q) => cam.p(q)));
+    const hp = pathOf(hull);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = ink * 2.3;
+    ctx.stroke(hp);
+    const art = M.rng(o.seed + 17);
+    for (const f of shown) {
+      const tone = RIVER.dark.map((v, i) => Math.round(v + (RIVER.light[i] - v) * f.lit));
+      const p = pathOf(f.pts);
+      ctx.fillStyle = `rgb(${tone.join(',')})`;
+      ctx.fill(p);
+      // cada face clareia para cima e escurece para baixo, com pintas de pedra
+      const ys = f.pts.map((q) => q.y), xs = f.pts.map((q) => q.x);
+      const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs);
+      const wash = ctx.createLinearGradient(0, y0, 0, y1);
+      wash.addColorStop(0, 'rgba(255, 250, 232, 0.16)');
+      wash.addColorStop(1, 'rgba(24, 30, 40, 0.2)');
+      ctx.fillStyle = wash;
+      ctx.fill(p);
+      ctx.strokeStyle = 'rgba(24, 22, 20, 0.32)';
+      ctx.lineWidth = Math.max(0.6, ink * 0.7);
+      ctx.stroke(p);
+      if ((x1 - x0) * (y1 - y0) > 300 * cam.zoom * cam.zoom) {
+        ctx.save();
+        ctx.clip(p);
+        for (let k = 0; k < 5; k++) {
+          ctx.fillStyle = f.up > 0.4 ? 'rgba(244, 240, 226, 0.26)' : 'rgba(30, 30, 30, 0.18)';
+          ctx.beginPath();
+          ctx.ellipse(x0 + art() * (x1 - x0), y0 + art() * (y1 - y0), (1 + art() * 1.8) * cam.zoom, (0.7 + art()) * cam.zoom, art() * 3, 0, M.TAU);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+    // a beirada clara do topo do lado da luz
+    ctx.strokeStyle = 'rgba(246, 242, 226, 0.5)';
+    ctx.lineWidth = Math.max(0.8, 1.3 * cam.zoom);
+    ctx.lineCap = 'round';
+    for (let k = 0; k < N; k++) {
+      const j = (k + 1) % N;
+      const mx = (top[k].x + top[j].x) / 2 - o.x, my = (top[k].y + top[j].y) / 2 - o.y;
+      if (mx * cam.light.x + my * cam.light.y > 0) line2(ctx, cam.p(top[k]), cam.p(top[j]));
+    }
     ctx.save();
-    ctx.clip(path);
-    ctx.fillStyle = ROCK.shade;
-    ctx.beginPath();
-    ctx.ellipse(cx + rx * 0.45, cy + ry * 0.4, rx * 0.85, ry * 0.8, 0, 0, M.TAU);
-    ctx.fill();
-    ctx.fillStyle = ROCK.light;
-    ctx.beginPath();
-    ctx.ellipse(cx - rx * 0.35, cy - ry * 0.45, rx * 0.5, ry * 0.32, -0.2, 0, M.TAU);
-    ctx.fill();
-    if (moss) {
-      // o musgo cobrindo o alto
-      ctx.fillStyle = '#5c8a3e';
-      ctx.beginPath();
-      ctx.ellipse(cx - rx * 0.05, cy - ry * 0.72, rx * 0.8, ry * 0.42, 0, 0, M.TAU);
-      ctx.fill();
-      ctx.fillStyle = '#7aa752';
-      ctx.beginPath();
-      ctx.ellipse(cx - rx * 0.25, cy - ry * 0.82, rx * 0.42, ry * 0.2, 0, 0, M.TAU);
-      ctx.fill();
+    ctx.clip(hp);
+    const hy = hull.map((q) => q.y), hx = hull.map((q) => q.x);
+    const bot = Math.max(...hy), topY = Math.min(...hy), left = Math.min(...hx), right = Math.max(...hx);
+    // molhada perto da água: escura, fria, com o brilho da água escorrendo
+    if (o.wet) {
+      const wl = cam.p({ x: o.x, y: o.y + o.ry * 0.6, z: o.z0 + o.wet }).y;
+      const g = ctx.createLinearGradient(0, wl - 6 * cam.zoom, 0, bot);
+      g.addColorStop(0, 'rgba(16, 34, 38, 0)');
+      g.addColorStop(0.35, 'rgba(16, 34, 38, 0.38)');
+      g.addColorStop(1, 'rgba(10, 26, 30, 0.6)');
+      ctx.fillStyle = g;
+      ctx.fillRect(left - 2, wl - 6 * cam.zoom, right - left + 4, bot - wl + 8 * cam.zoom);
+      ctx.strokeStyle = 'rgba(214, 238, 240, 0.32)';
+      ctx.lineWidth = Math.max(0.8, 1.2 * cam.zoom);
+      for (let k = 0; k < 3; k++) {
+        const sx = left + (0.2 + art() * 0.6) * (right - left), sy = wl + (0.15 + art() * 0.5) * (bot - wl);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(sx + 2 * cam.zoom, sy + 5 * cam.zoom, sx + (art() - 0.5) * 3 * cam.zoom, sy + (6 + art() * 8) * cam.zoom);
+        ctx.stroke();
+      }
+    } else {
+      // o pé assentado no chão: mais escuro e esverdeado
+      const g = ctx.createLinearGradient(0, topY + (bot - topY) * 0.6, 0, bot);
+      g.addColorStop(0, 'rgba(30, 44, 28, 0)');
+      g.addColorStop(1, 'rgba(30, 44, 28, 0.42)');
+      ctx.fillStyle = g;
+      ctx.fillRect(left - 2, topY, right - left + 4, bot - topY + 2);
+    }
+    // musgo nas faces de cima: tufos irregulares (escuros embaixo, claros em cima), uns escorrendo pela beirada
+    if (o.moss) {
+      const tops = shown.filter((f) => f.up > 0.62 && f.lit > 0.45);
+      for (const f of tops) {
+        if (art() < 0.35) continue;
+        const c = f.pts.reduce((acc, q) => ({ x: acc.x + q.x / f.pts.length, y: acc.y + q.y / f.pts.length }), { x: 0, y: 0 });
+        const r = Math.max(1.5, Math.min(o.rx, o.ry) * 0.09 * cam.zoom);
+        for (let layer = 0; layer < 3; layer++) {
+          ctx.fillStyle = MOSS[layer + (art() < 0.5 ? 0 : 1)];
+          for (let q = 0; q < 5; q++) {
+            ctx.beginPath();
+            ctx.ellipse(c.x + (art() - 0.5) * r * 3.2, c.y + (art() - 0.5) * r * 1.6 - layer * r * 0.25, r * (0.6 + art() * 0.6) * (1 - layer * 0.25), r * (0.4 + art() * 0.35) * (1 - layer * 0.25), art() * 3, 0, M.TAU);
+            ctx.fill();
+          }
+        }
+      }
     }
     ctx.restore();
+    return hull;
   }
+
+  /**
+   * A lâmina d'água caindo. `o`: x, y, z da beirada (o meio), half (meia largura), drop (quanto cai), reach (quanto anda
+   * para a frente até chegar lá embaixo), spread (quanto abre embaixo), seed. A água vai para +y (o sul do mapa).
+   */
+  function fallSheet(ctx, cam, o, time) {
+    const N = 12;
+    const at = (t, s) => {
+      const w = o.half * (1 + o.spread * t);
+      const wob = Math.sin(time * 5.2 + t * 7 + s * 2) * 2.4 * t;
+      return cam.p({ x: o.x + s * w + wob, y: o.y + o.reach * t, z: o.z - o.drop * t * t });
+    };
+    const L = [], R = [];
+    for (let i = 0; i <= N; i++) {
+      L.push(at(i / N, -1));
+      R.push(at(i / N, 1));
+    }
+    const sheet = pathOf(L.concat(R.slice().reverse()));
+    const a0 = at(0, 0), a1 = at(1, 0);
+    // o corpo: verde-água e transparente no alto, branco de espuma embaixo
+    const g = ctx.createLinearGradient(a0.x, a0.y, a1.x, a1.y);
+    g.addColorStop(0, 'rgba(62, 136, 146, 0.86)');
+    g.addColorStop(0.25, 'rgba(96, 168, 178, 0.86)');
+    g.addColorStop(0.62, 'rgba(176, 220, 226, 0.92)');
+    g.addColorStop(1, 'rgba(240, 250, 250, 0.97)');
+    ctx.fillStyle = g;
+    ctx.fill(sheet);
+    // os fios: cada um desce no seu ritmo (mais depressa embaixo: a água acelera); claros e grossos embaixo, uns
+    // escuros no alto (o liso da água)
+    const K = Math.max(6, Math.round((o.half * 2) / 11));
+    const rnd = M.rng(o.seed);
+    ctx.lineCap = 'round';
+    for (let k = 0; k < K; k++) {
+      const s = 0.92 * (-1 + (2 * (k + 0.2 + rnd() * 0.6)) / K);
+      const speed = 0.75 + rnd() * 0.5;
+      const ph = rnd();
+      const wid = 0.8 + rnd() * 0.9;
+      for (let j = 0; j < 3; j++) {
+        const u0 = (ph + time * speed + j / 3) % 1;
+        const u1 = Math.min(1, u0 + 0.1 + 0.2 * u0);
+        const dark = (k + j) % 3 === 0 && u0 < 0.5;
+        ctx.strokeStyle = dark ? `rgba(30, 90, 102, ${(0.5 * (1 - u0)).toFixed(3)})` : `rgba(255, 255, 255, ${(0.28 + 0.62 * u0).toFixed(3)})`;
+        ctx.lineWidth = Math.max(1, (wid + 1.7 * u0) * cam.zoom);
+        line2(ctx, at(u0, s), at(u1, s));
+      }
+    }
+    // a beirada brilhando (a água dobrando por cima da pedra) e a franja branca dos lados
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(238, 252, 252, 0.9)';
+    ctx.lineWidth = Math.max(1.2, 2.4 * cam.zoom);
+    ctx.beginPath();
+    for (let i = 0; i <= 8; i++) {
+      const q = at(0.03, -1 + i / 4);
+      if (i) ctx.lineTo(q.x, q.y);
+      else ctx.moveTo(q.x, q.y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(246, 252, 252, 0.75)';
+    ctx.lineWidth = Math.max(1, 1.5 * cam.zoom);
+    for (const side of [L, R]) {
+      ctx.beginPath();
+      side.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.stroke();
+    }
+  }
+
+  /**
+   * O pé da queda, na superfície da água. `o`: x, y, z, half (meia largura da espuma), seed, big (a comporta: mais
+   * espuma e mais longe). Em duas vezes: `under` (as ondinhas e a espuma indo embora, por baixo da queda) e `over`
+   * (a espuma fervendo, os respingos e a névoa).
+   */
+  function footUnder(ctx, cam, o, time) {
+    const zm = cam.zoom;
+    const rnd = M.rng(o.seed + 3);
+    const P = (dx, dy, dz = 0) => cam.p({ x: o.x + dx, y: o.y + dy, z: o.z + dz });
+    // as ondinhas abrindo em roda
+    ctx.lineWidth = Math.max(1, 1.5 * zm);
+    for (let k = 0; k < 3; k++) {
+      const ph = (time * 0.5 + k / 3) % 1;
+      const r = o.half * (1.05 + ph * (o.big ? 1.1 : 1.6));
+      ctx.strokeStyle = `rgba(226, 244, 246, ${(0.5 * (1 - ph)).toFixed(3)})`;
+      ctx.beginPath();
+      for (let i = 0; i <= 24; i++) {
+        const a = (i / 24) * M.TAU;
+        const q = P(Math.cos(a) * r, Math.sin(a) * r * 0.75 + r * 0.25);
+        if (i) ctx.lineTo(q.x, q.y);
+        else ctx.moveTo(q.x, q.y);
+      }
+      ctx.stroke();
+    }
+    // a espuma indo embora com a correnteza (para +y): fiapos brancos que se desfazem
+    ctx.lineCap = 'round';
+    const far = o.big ? 2.2 : 3;
+    for (let k = 0; k < (o.big ? 16 : 10); k++) {
+      const ph = (time * (0.22 + rnd() * 0.12) + rnd()) % 1;
+      const side = (rnd() - 0.5) * o.half * (o.big ? 2.2 : 1.7);
+      const dist = o.half * 0.5 + ph * o.half * far;
+      const len = 12 + rnd() * 22;
+      ctx.strokeStyle = `rgba(242, 250, 250, ${(0.7 * (1 - ph) * Math.min(1, ph * 6)).toFixed(3)})`;
+      ctx.lineWidth = Math.max(1, (1.6 + rnd() * 1.4) * zm);
+      line2(ctx, P(side, dist), P(side + (rnd() - 0.5) * 8, dist + len));
+    }
+  }
+  let MIST = null;
+  /** A névoa: um círculo branco que some para a beira (64 px, feito uma vez). */
+  function mistSprite() {
+    if (MIST) return MIST;
+    MIST = document.createElement('canvas');
+    MIST.width = MIST.height = 64;
+    const g = MIST.getContext('2d');
+    const rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    rg.addColorStop(0, 'rgba(240, 250, 252, 1)');
+    rg.addColorStop(0.5, 'rgba(240, 250, 252, 0.45)');
+    rg.addColorStop(1, 'rgba(240, 250, 252, 0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 64, 64);
+    return MIST;
+  }
+  /** Uma mancha de espuma no chão d'água: a beira ondulando com o tempo (`rx`, `ry` em cm). */
+  function foamPatch(cam, o, rx, ry, time, ph, dy = 0) {
+    const pts = [];
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * M.TAU;
+      const k = 1 + 0.13 * Math.sin(a * 3 + time * 2.1 + ph) + 0.08 * Math.sin(a * 7 - time * 3.3 + ph * 2) + 0.05 * Math.sin(a * 11 + time * 5 + ph);
+      pts.push(cam.p({ x: o.x + Math.cos(a) * rx * k, y: o.y + dy + Math.sin(a) * ry * k, z: o.z + 1 }));
+    }
+    return pathOf(pts);
+  }
+  function footOver(ctx, cam, o, time) {
+    const zm = cam.zoom;
+    const rnd = M.rng(o.seed + 7);
+    const P = (dx, dy, dz = 0) => cam.p({ x: o.x + dx, y: o.y + dy, z: o.z + dz });
+    // a espuma: a mancha branca de beira mexendo (com a sombra azulada embaixo) e, em cima, as bolhas fervendo
+    const rx = o.half * (o.big ? 1.25 : 1.15), ry = o.half * (o.big ? 0.85 : 0.5);
+    ctx.fillStyle = 'rgba(176, 214, 220, 0.7)';
+    ctx.fill(foamPatch(cam, o, rx * 1.12, ry * 1.18, time, 1.3, ry * 0.12));
+    ctx.fillStyle = 'rgba(244, 251, 251, 0.82)';
+    ctx.fill(foamPatch(cam, o, rx, ry, time, 0));
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.fill(foamPatch(cam, o, rx * 0.62, ry * 0.6, time * 1.4, 2.6, -ry * 0.1));
+    const B = [];
+    const n = o.big ? 16 : 12;
+    for (let k = 0; k < n; k++) {
+      const a = rnd() * M.TAU, dist = Math.sqrt(rnd()) * 0.85;
+      const bx = Math.cos(a) * rx * dist, by = Math.sin(a) * ry * dist;
+      const speed = 1.1 + rnd() * 0.9;
+      const ph = (time * speed + rnd()) % 1;
+      const r = (3.5 + rnd() * 5) * (o.big ? 1.25 : 1) * (0.4 + 0.6 * Math.sin(ph * Math.PI));
+      B.push({ bx, by, r });
+    }
+    B.sort((a, b) => a.bx + a.by - (b.bx + b.by));
+    for (const b of B) {
+      const q = P(b.bx, b.by, b.r * 0.3);
+      ctx.fillStyle = 'rgba(160, 200, 208, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(q.x + 0.8 * zm, q.y + 1.2 * zm, b.r * zm, b.r * zm * 0.7, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y, b.r * zm * 0.85, b.r * zm * 0.6, 0, 0, M.TAU);
+      ctx.fill();
+    }
+    // os respingos: gotinhas pulando em arco e caindo de volta
+    for (let k = 0; k < (o.big ? 14 : 10); k++) {
+      const ph = (time * (0.9 + rnd() * 0.6) + rnd()) % 1;
+      const ang = rnd() * M.TAU;
+      const sp = o.half * (0.4 + rnd() * 0.9);
+      const hgt = (o.big ? 40 : 30) + rnd() * 40;
+      const q = P(Math.cos(ang) * sp * ph, Math.sin(ang) * sp * ph * 0.7, hgt * 4 * ph * (1 - ph));
+      ctx.fillStyle = `rgba(250, 254, 254, ${(0.9 * (1 - ph)).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, Math.max(0.8, (1.1 + rnd() * 1.5) * zm), 0, M.TAU);
+      ctx.fill();
+    }
+    // a névoa da queda, respirando devagar (o degradê é uma imagem pronta: pintar o degradê a cada quadro pesava)
+    const A = ctx.globalAlpha;
+    for (const [dx, dz, k] of [[0, 40, 1], [o.half * 0.6, 70, 0.7]]) {
+      const m = P(dx, 0, dz);
+      const mr = o.half * (o.big ? 1.5 : 1.8) * k * zm;
+      ctx.globalAlpha = A * (0.2 + 0.07 * Math.sin(time * 1.3 + dx)) * k;
+      ctx.drawImage(mistSprite(), m.x - mr, m.y - mr, mr * 2, mr * 2);
+    }
+    ctx.globalAlpha = A;
+  }
+
+  // ---- a cachoeirinha (pedras)
+  function naturalFall(ctx, cam, d, z0, time) {
+    const ink = Math.max(1, 1.05 * cam.zoom);
+    const W = d.x1 - d.x0, D = d.y1 - d.y0, hh = d.h;
+    const xm = d.x0 + W / 2;
+    const half = Math.min(75, W * 0.1);
+    const seed = Math.round(d.x0 * 7 + d.y0 * 13);
+    // a laje do meio, por onde a água passa, e a beirada dela
+    const ledge = { x: xm, y: d.y0 + D * 0.52, rx: half + 36, ry: D * 0.34, h: hh * 0.8 };
+    const lip = { x: xm, y: ledge.y + ledge.ry * 0.86, z: z0 + ledge.h };
+    const reach = 80;
+    const foot = { x: xm, y: lip.y + reach, z: z0, half: half * 1.1, seed, big: false };
+    // [x, y, rx, ry, altura (do d.h)]: o paredão do fundo, os dois lados do vão e as da beira do poço (os tamanhos
+    // são os da cachoeira de 8 m do Guarapiranga; numa menor, como a da mata do Capão, as pedras encolhem junto)
+    const ks = M.clamp(W / 800, 0.5, 1), kr = M.clamp(W / 800, 0.72, 1);
+    const SPOTS = [
+      [d.x0 + W * 0.1, d.y0 + D * 0.32, 120, 96, 1.04], [d.x0 + W * 0.31, d.y0 + D * 0.2, 112, 92, 1.24],
+      [d.x0 + W * 0.69, d.y0 + D * 0.22, 116, 94, 1.18], [d.x0 + W * 0.9, d.y0 + D * 0.34, 118, 96, 1.0],
+      [xm - half - 92 * ks, d.y0 + D * 0.64, 84, 78, 0.98], [xm + half + 98 * ks, d.y0 + D * 0.6, 90, 84, 0.92],
+      [xm - half - 72 * ks, d.y1 + 6, 56, 46, 0.42], [xm + half + 84 * ks, d.y1 + 16, 62, 50, 0.36],
+      [d.x0 + W * 0.05, d.y1 - 8, 40, 34, 0.24], [d.x0 + W * 0.96, d.y1 - 14, 42, 36, 0.26],
+    ];
+    const rocks = SPOTS.map(([x, y, rx, ry, k], i) => ({ x, y, z0, rx: rx * kr, ry: ry * kr, h: hh * k, seed: seed + i * 31, moss: d.moss, wet: y > d.y1 - 40 ? 26 : y > d.y0 + D * 0.55 ? 40 : 0 }));
+    const sheetDepth = cam.depth({ x: xm, y: lip.y + reach * 0.5, z: z0 });
+    const depthOf = (r) => cam.depth({ x: r.x, y: r.y, z: z0 });
+    const back = rocks.filter((r) => depthOf(r) < sheetDepth), front = rocks.filter((r) => depthOf(r) >= sheetDepth);
+    const boxOf = (list) => () => unionBox(list.map((r) => volBox(cam, r.x - r.rx, r.x + r.rx, r.y - r.ry, r.y + r.ry, z0 - 8, z0 + r.h + 8, 14)));
+    const ledgeRock = { ...ledge, z0, seed: seed + 7, flat: true, wet: ledge.h, moss: false };
+    baked(ctx, cam, d, 'fundo', boxOf(back.concat([ledgeRock])), (g) => {
+      for (const r of back) facetRock(g, cam, r, ink);
+      facetRock(g, cam, ledgeRock, ink);
+    });
+    // a água chegando pela laje, entre as pedras do fundo
+    const P = (x, y, z) => cam.p({ x, y, z });
+    const yb = ledge.y - ledge.ry * 0.55;
+    const run = pathOf([P(xm - half * 0.62, yb, lip.z + 1), P(xm + half * 0.62, yb, lip.z + 1), P(xm + half, lip.y, lip.z + 1), P(xm - half, lip.y, lip.z + 1)]);
+    ctx.fillStyle = 'rgba(56, 124, 132, 0.92)';
+    ctx.fill(run);
+    ctx.save();
+    ctx.clip(run);
+    const rr = M.rng(seed + 9);
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 7; k++) {
+      const s = -0.85 + (1.7 * (k + 0.5)) / 7;
+      const ph = rr();
+      for (let j = 0; j < 2; j++) {
+        const u = (ph + time * 0.55 + j / 2) % 1;
+        const w0 = half * (0.62 + 0.38 * u), w1 = half * (0.62 + 0.38 * Math.min(1, u + 0.22));
+        const a = P(xm + s * w0, yb + (lip.y - yb) * u, lip.z + 1), b = P(xm + s * w1, yb + (lip.y - yb) * Math.min(1, u + 0.22), lip.z + 1);
+        ctx.strokeStyle = `rgba(214, 240, 242, ${(0.55 * Math.sin(u * Math.PI)).toFixed(3)})`;
+        ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);
+        line2(ctx, a, b);
+      }
+    }
+    ctx.restore();
+    footUnder(ctx, cam, foot, time);
+    fallSheet(ctx, cam, { x: xm, y: lip.y, z: lip.z, half, drop: lip.z - z0 + 4, reach, spread: 0.18, seed: seed + 5 }, time);
+    footOver(ctx, cam, foot, time);
+    baked(ctx, cam, d, 'frente', boxOf(front), (g) => {
+      for (const r of front) facetRock(g, cam, r, ink);
+    });
+  }
+
+  // ---- a comporta da barragem (muro de pedra com a boca em arco)
+  const STONE = { face: '#a39e90', side: '#868276', top: '#bdb8a9', capF: '#b8b3a4', capS: '#9a968a', capT: '#cfcabb' };
+  /** A boca no muro (pontos no mundo): o peitoril, os lados retos e o arco. */
+  function gateMouth(d, z0) {
+    const xm = (d.x0 + d.x1) / 2;
+    const op = { half: Math.min(96, (d.x1 - d.x0) * 0.16), zs: 38, zt: 92, rise: 26 };
+    const pts = [{ x: xm - op.half, y: d.y1, z: z0 + op.zs }, { x: xm + op.half, y: d.y1, z: z0 + op.zs }];
+    for (let i = 0; i <= 12; i++) {
+      const ang = (i / 12) * Math.PI;
+      pts.push({ x: xm + Math.cos(ang) * op.half, y: d.y1, z: z0 + op.zt + Math.sin(ang) * op.rise });
+    }
+    return { op, pts, xm, zw: z0 + op.zs + 30 };
+  }
+  /** As fiadas de pedra numa parede (em cm na parede: `a` ao longo, `b` para baixo a partir do alto). */
+  function courses(g, W, Hh, rnd, row = 30) {
+    g.strokeStyle = 'rgba(50, 46, 40, 0.42)';
+    g.lineWidth = 1.6;
+    for (let b = row; b < Hh; b += row) {
+      g.beginPath();
+      g.moveTo(0, b);
+      g.lineTo(W, b);
+      g.stroke();
+    }
+    for (let b = 0, r = 0; b < Hh; b += row, r++) {
+      let a = r % 2 ? -20 - rnd() * 20 : -rnd() * 30;
+      while (a < W) {
+        a += 45 + rnd() * 35;
+        if (a > 2 && a < W - 2) {
+          g.beginPath();
+          g.moveTo(a, b);
+          g.lineTo(a, Math.min(Hh, b + row));
+          g.stroke();
+        }
+      }
+    }
+    // pedras de outro tom, aqui e ali
+    for (let k = 0; k < Math.round((W * Hh) / 9000); k++) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(255, 250, 236, 0.12)' : 'rgba(40, 38, 34, 0.1)';
+      g.fillRect(rnd() * W, Math.floor((rnd() * Hh) / row) * row + 1, 40 + rnd() * 30, row - 2);
+    }
+  }
+  /** A ala de pedra do tanque: corre para +y, mais alta junto do muro; a face +x e a ponta aparecem. */
+  function wing(g, cam, xa, xb, ya, yb, z0, ink, inner) {
+    const ha = 64, hb = 34;
+    const P = (x, y, z) => cam.p({ x, y, z });
+    const side = [P(xb, ya, z0), P(xb, yb, z0), P(xb, yb, z0 + hb), P(xb, ya, z0 + ha)];
+    const end = [P(xa, yb, z0), P(xb, yb, z0), P(xb, yb, z0 + hb), P(xa, yb, z0 + hb)];
+    const top = [P(xa, ya, z0 + ha), P(xb, ya, z0 + ha), P(xb, yb, z0 + hb), P(xa, yb, z0 + hb)];
+    poly(g, hullOf(side.concat(end, top)), null, INK, ink * 2.3);
+    poly(g, side, STONE.side);
+    poly(g, end, STONE.face);
+    poly(g, top, STONE.top);
+    const rnd = M.rng(Math.round(xa * 3 + ya));
+    g.save();
+    g.clip(pathOf(side));
+    H.onWall(g, cam, { x: xb, y: ya, z: z0 + ha }, { x: 0, y: 1 }, () => courses(g, yb - ya, ha, rnd, 22));
+    // o pé: molhado e com limo do lado da água, com capim do lado de fora
+    const bot = Math.max(...side.map((q) => q.y));
+    const gr = g.createLinearGradient(0, bot - 26 * cam.zoom, 0, bot);
+    gr.addColorStop(0, inner ? 'rgba(30, 56, 40, 0)' : 'rgba(46, 70, 34, 0)');
+    gr.addColorStop(1, inner ? 'rgba(24, 50, 40, 0.65)' : 'rgba(46, 70, 34, 0.5)');
+    g.fillStyle = gr;
+    g.fill(pathOf(side));
+    g.restore();
+    g.strokeStyle = 'rgba(24, 22, 20, 0.4)';
+    g.lineWidth = ink * 0.8;
+    g.stroke(pathOf(top));
+  }
+  function gateWall(g, cam, d, z0, ink) {
+    const { x0, x1, y0, y1 } = d;
+    const W = x1 - x0, hh = d.h, zt = z0 + hh;
+    const B = d.basin || 300;
+    const m = gateMouth(d, z0);
+    const P = (x, y, z) => cam.p({ x, y, z });
+    // a ala do lado de lá (oeste): a face de dentro, virada para o tanque
+    wing(g, cam, x0 - 26, x0, y1, y1 + B, z0, ink, true);
+    const face = [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, zt), P(x0, y1, zt)];
+    const side = [P(x1, y1, z0), P(x1, y0, z0), P(x1, y0, zt), P(x1, y1, zt)];
+    const mouth = m.pts.map((q) => cam.p(q));
+    poly(g, hullOf(face.concat(side, [P(x0, y0, zt)])), null, INK, ink * 2.4);
+    const fp = new Path2D();
+    fp.addPath(pathOf(face));
+    fp.addPath(pathOf(mouth.slice().reverse()));
+    g.fillStyle = STONE.face;
+    g.fill(fp, 'evenodd');
+    poly(g, side, STONE.side);
+    const rnd = M.rng(Math.round(x0 * 11 + y0 * 3));
+    // as fiadas, as manchas de água escorrida e o limo no pé (recortados fora da boca)
+    g.save();
+    g.clip(fp, 'evenodd');
+    H.onWall(g, cam, { x: x0, y: y1, z: zt }, { x: 1, y: 0 }, () => {
+      courses(g, W, hh, rnd);
+      for (let k = 0; k < 9; k++) {
+        const a = rnd() * W, w = 6 + rnd() * 16, l = 30 + rnd() * 80;
+        const gr = g.createLinearGradient(0, 0, 0, l);
+        gr.addColorStop(0, 'rgba(46, 50, 40, 0.3)');
+        gr.addColorStop(1, 'rgba(46, 50, 40, 0)');
+        g.fillStyle = gr;
+        g.beginPath();
+        g.moveTo(a, 0);
+        g.lineTo(a + w, 0);
+        g.lineTo(a + w * 0.6, l);
+        g.lineTo(a + w * 0.3, l);
+        g.closePath();
+        g.fill();
+      }
+      // embaixo da boca: o muro escuro de molhado, com limo
+      const am = W / 2;
+      const wet = g.createLinearGradient(0, hh - m.op.zs, 0, hh);
+      wet.addColorStop(0, 'rgba(22, 40, 36, 0.55)');
+      wet.addColorStop(1, 'rgba(30, 58, 36, 0.75)');
+      g.fillStyle = wet;
+      g.fillRect(am - m.op.half - 10, hh - m.op.zs, m.op.half * 2 + 20, m.op.zs);
+      const foot = g.createLinearGradient(0, hh - 30, 0, hh);
+      foot.addColorStop(0, 'rgba(40, 70, 36, 0)');
+      foot.addColorStop(1, 'rgba(36, 66, 34, 0.6)');
+      g.fillStyle = foot;
+      g.fillRect(0, hh - 30, W, 30);
+      // o arco: as pedras em cunha em volta da boca e a pedra de fecho no alto
+      const cb = hh - m.op.zt;
+      g.strokeStyle = 'rgba(50, 46, 40, 0.55)';
+      g.lineWidth = 1.8;
+      g.beginPath();
+      g.ellipse(am, cb, m.op.half + 22, m.op.rise + 22, 0, Math.PI, M.TAU);
+      g.stroke();
+      for (let i = 1; i < 9; i++) {
+        const ang = Math.PI + (i / 9) * Math.PI;
+        g.beginPath();
+        g.moveTo(am + Math.cos(ang) * m.op.half, cb + Math.sin(ang) * m.op.rise);
+        g.lineTo(am + Math.cos(ang) * (m.op.half + 22), cb + Math.sin(ang) * (m.op.rise + 22));
+        g.stroke();
+      }
+      g.fillStyle = '#b9b4a5';
+      g.fillRect(am - 11, cb - m.op.rise - 26, 22, 28);
+      g.strokeRect(am - 11, cb - m.op.rise - 26, 22, 28);
+    });
+    g.restore();
+    // dentro da boca: o escuro do túnel e a parede de lá (oeste), que aparece
+    g.save();
+    g.clip(pathOf(mouth));
+    const mt = Math.min(...mouth.map((q) => q.y)), mb = Math.max(...mouth.map((q) => q.y));
+    const dk = g.createLinearGradient(0, mt, 0, mb);
+    dk.addColorStop(0, '#0d1315');
+    dk.addColorStop(1, '#1a2828');
+    g.fillStyle = dk;
+    g.fillRect(Math.min(...mouth.map((q) => q.x)) - 2, mt - 2, Math.max(...mouth.map((q) => q.x)) - Math.min(...mouth.map((q) => q.x)) + 4, mb - mt + 4);
+    const wx = m.xm - m.op.half;
+    const inner = [P(wx, y1, z0 + m.op.zs), P(wx, y1 - 180, z0 + m.op.zs), P(wx, y1 - 180, z0 + m.op.zt + m.op.rise), P(wx, y1, z0 + m.op.zt + m.op.rise)];
+    const ig = g.createLinearGradient(inner[0].x, 0, inner[1].x, 0);
+    ig.addColorStop(0, 'rgba(92, 92, 84, 0.95)');
+    ig.addColorStop(1, 'rgba(20, 26, 26, 0)');
+    g.fillStyle = ig;
+    g.fill(pathOf(inner));
+    g.restore();
+    g.strokeStyle = INK;
+    g.lineWidth = ink * 1.6;
+    g.stroke(pathOf(mouth));
+    // a laje do alto, com musgo e o cipó descendo pelo muro
+    H.box(g, cam, x0 - 8, x1 + 8, y0 - 6, y1 + 8, zt, zt + 14, { front: STONE.capF, side: STONE.capS, top: STONE.capT }, ink);
+    if (d.moss) {
+      for (const [u, v, n] of [[0.04, 0.2, 9], [0.22, 0.1, 6], [0.5, 0.05, 5], [0.78, 0.15, 8], [0.97, 0.5, 9], [0.4, 0.95, 4]]) {
+        const cx = x0 + W * u, cy = y0 - 6 + (y1 - y0 + 14) * v;
+        for (let l = 0; l < 3; l++) {
+          g.fillStyle = MOSS[l + (l === 2 ? 1 : 0)];
+          for (let k = 0; k < n; k++) {
+            const q = P(cx + (rnd() - 0.5) * 60, cy + (rnd() - 0.5) * 20, zt + 14);
+            const r = (3 + rnd() * 5) * cam.zoom * (1 - l * 0.25);
+            g.beginPath();
+            g.ellipse(q.x, q.y - l * 1.2 * cam.zoom, r, r * 0.6, 0, 0, M.TAU);
+            g.fill();
+          }
+        }
+      }
+      for (const u of [0.12, 0.3, 0.83]) {
+        const a = P(x0 + W * u, y1 + 8, zt + 6);
+        const len = (50 + rnd() * 60) * cam.zoom;
+        g.strokeStyle = '#3e6a30';
+        g.lineWidth = Math.max(1, 1.6 * cam.zoom);
+        g.beginPath();
+        g.moveTo(a.x, a.y);
+        g.bezierCurveTo(a.x + 6 * cam.zoom, a.y + len * 0.3, a.x - 6 * cam.zoom, a.y + len * 0.6, a.x + 3 * cam.zoom, a.y + len);
+        g.stroke();
+        for (let k = 0; k < 7; k++) {
+          const t = k / 7;
+          g.fillStyle = MOSS[1 + (k % 3)];
+          g.beginPath();
+          g.ellipse(a.x + Math.sin(t * 6) * 5 * cam.zoom, a.y + len * t, 4 * cam.zoom, 2.6 * cam.zoom, t * 3, 0, M.TAU);
+          g.fill();
+        }
+      }
+    }
+  }
+  function gateFall(ctx, cam, d, z0, time) {
+    const ink = Math.max(1, 1.05 * cam.zoom);
+    const B = d.basin || 300;
+    const m = gateMouth(d, z0);
+    const seed = Math.round(d.x0 * 7 + d.y0 * 13);
+    const P = (x, y, z) => cam.p({ x, y, z });
+    baked(ctx, cam, d, 'muro', () => volBox(cam, d.x0 - 34, d.x1 + 12, d.y0 - 10, d.y1 + B + 6, z0 - 8, z0 + d.h + 26, 16), (g) => gateWall(g, cam, d, z0, ink));
+    // a água correndo dentro do túnel, até a boca
+    const mouth = pathOf(m.pts.map((q) => cam.p(q)));
+    const hw = m.op.half - 6;
+    ctx.save();
+    ctx.clip(mouth);
+    const ry0 = d.y1 - 200;
+    const plane = pathOf([P(m.xm - hw, ry0, m.zw), P(m.xm + hw, ry0, m.zw), P(m.xm + hw, d.y1, m.zw), P(m.xm - hw, d.y1, m.zw)]);
+    const pa = P(m.xm, ry0, m.zw), pb = P(m.xm, d.y1, m.zw);
+    const wg = ctx.createLinearGradient(pa.x, pa.y, pb.x, pb.y);
+    wg.addColorStop(0, 'rgba(16, 40, 42, 0.95)');
+    wg.addColorStop(1, 'rgba(58, 128, 136, 0.95)');
+    ctx.fillStyle = wg;
+    ctx.fill(plane);
+    const rr = M.rng(seed + 11);
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 9; k++) {
+      const s = -0.9 + (1.8 * (k + 0.5)) / 9;
+      const ph = rr();
+      for (let j = 0; j < 2; j++) {
+        const u = (ph + time * 0.8 + j / 2) % 1;
+        const y = ry0 + 200 * u;
+        ctx.strokeStyle = `rgba(210, 238, 240, ${(0.6 * u).toFixed(3)})`;
+        ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);
+        line2(ctx, P(m.xm + s * hw, y, m.zw), P(m.xm + s * hw, Math.min(d.y1, y + 50), m.zw));
+      }
+    }
+    ctx.restore();
+    // a água escorrendo pelo muro, embaixo da boca (os fiozinhos descendo)
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 10; k++) {
+      const x = m.xm - m.op.half + 8 + rr() * (m.op.half * 2 - 16);
+      const ph = (time * (0.9 + rr() * 0.5) + rr()) % 1;
+      const zA = z0 + m.op.zs * (1 - ph), zB = Math.max(z0, zA - 12);
+      ctx.strokeStyle = `rgba(200, 232, 236, ${(0.55 * (1 - ph * 0.5)).toFixed(3)})`;
+      ctx.lineWidth = Math.max(0.8, 1.1 * cam.zoom);
+      line2(ctx, P(x, d.y1 + 1, zA), P(x, d.y1 + 1, zB));
+    }
+    const reach = 125;
+    const foot = { x: m.xm, y: d.y1 + reach, z: z0, half: m.op.half * 1.05, seed, big: true };
+    footUnder(ctx, cam, foot, time);
+    fallSheet(ctx, cam, { x: m.xm, y: d.y1, z: m.zw, half: hw, drop: m.zw - z0 + 4, reach, spread: 0.12, seed: seed + 5 }, time);
+    footOver(ctx, cam, foot, time);
+    // a ala da frente (leste), por cima da espuma
+    baked(ctx, cam, d, 'ala', () => volBox(cam, d.x1 - 2, d.x1 + 30, d.y1, d.y1 + B + 4, z0 - 8, z0 + 72, 14), (g) => wing(g, cam, d.x1, d.x1 + 26, d.y1, d.y1 + B, z0, ink, false));
+  }
+
   small.cachoeira = {
     fades: true,
     height: (d) => d.h + 40,
     blocks: 0,
-    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0 + 30, d.x1 - 30, d.y0 + 10, d.y1 - 30, d.h * 0.6),
-    box: (cam, d, z0) => volBox(cam, d.x0 - 70, d.x1 + 70, d.y0 - 70, d.y1 + 160, z0 - 30, z0 + d.h + 60, 24),
-    paint() {}, // (tudo no `live`: a água mexe)
+    shadow: (p, cam, d) => (d.style === 'comporta'
+      ? H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, d.h)
+      : H.boxShadow(p, cam, d.x0 + 30, d.x1 - 30, d.y0 + 10, d.y1 - 30, d.h * 0.6)),
+    box: (cam, d, z0) => (d.style === 'comporta'
+      ? volBox(cam, d.x0 - 60, d.x1 + 60, d.y0 - 20, d.y1 + (d.basin || 300) + 60, z0 - 20, z0 + d.h + 60, 24)
+      : volBox(cam, d.x0 - 90, d.x1 + 90, d.y0 - 60, d.y1 + 220, z0 - 30, z0 + d.h * 1.3 + 60, 24)),
+    paint() {}, // (tudo no `live`: a água mexe; as pedras e o muro viram imagem uma vez por zoom)
+    // (só a queda para o sul, por enquanto: a água cai para +y, o lado que a câmera vê)
     live(ctx, cam, d, z0, time) {
-      const ink = Math.max(1, 1.05 * cam.zoom);
-      const W = d.x1 - d.x0, D = d.y1 - d.y0;
-      const xm = d.x0 + W / 2;
-      const h = d.h;
-      // (só o lado sul, por enquanto: a água cai para +y, que é o lado que a câmera vê)
-      const rnd = seeded(d.x0, d.y0, 3301);
-      const lip = { z: z0 + h * 0.78, y: d.y1 - 18 };
-      const pool = { z: z0 - 6, y: d.y1 + 46 };
-      const half = Math.min(48, W * 0.15);
-      // as pedras de trás (as maiores), da esquerda para a direita
-      const back = [[0.1, 0.42, 70, 0.92], [0.3, 0.3, 82, 1], [0.7, 0.32, 80, 1.02], [0.9, 0.45, 66, 0.86]];
-      for (const [u, v, r, k] of back) boulder(ctx, cam, d.x0 + W * u, d.y0 + D * v, z0, r, h * k, rnd, ink, d.moss);
-      // o fundo do vão (pedra escura e molhada) por onde a água desce
-      boulder(ctx, cam, xm, d.y0 + D * 0.45, z0, half + 18, h * 0.74, rnd, ink, false);
-      // a água: uma faixa do alto do vão até o poço, com os riscos descendo
-      const N = 8;
-      const L = [], R = [];
-      for (let i = 0; i <= N; i++) {
-        const u = i / N;
-        const y = lip.y + (pool.y - lip.y) * Math.pow(u, 1.6);
-        const z = lip.z + (pool.z - lip.z) * u;
-        const w = half * (1 + u * 0.35);
-        L.push(cam.p({ x: xm - w, y, z }));
-        R.push(cam.p({ x: xm + w, y, z }));
+      if (d.style === 'comporta') gateFall(ctx, cam, d, z0, time);
+      else naturalFall(ctx, cam, d, z0, time);
+    },
+  };
+
+  // ------------------------------------------------------------------ coreto
+  // (24/11, o dono: "pode seguir vestindo o coreto") O coreto octogonal das praças antigas de São Paulo, na Praça em
+  // Ruínas do Guarapiranga: a base de alvenaria (reboco creme descascando e mostrando o tijolo, os painéis em relevo, o
+  // limo no pé e uma pichação), a escada de quatro degraus do lado sul com o portãozinho de ferro caído, o piso de
+  // ladrilho sujo de folhas, o gradil de ferro com os arabescos (um pedaço arrancado), as oito colunas de ferro fundido
+  // verdes com as mãos-francesas, o lambrequim de madeira em volta do beiral, o telhado de zinco em sino com as
+  // costuras, a ferrugem escorrendo e um buraco, e a lanterninha com o pináculo no alto; o cipó sobe pelas colunas e
+  // desce do beiral. Não dá para subir: a base inteira segura o jogador (as caixas de colisão vêm do mapa).
+  const COR = {
+    plaster: '#e4d6b2', plinth: '#a39b8b', cornice: '#d8d0bd', brick: '#9c5a3e', iron: '#2c3c33', ironHi: '#6d9a7e',
+    zinc: '#8e9b95', lamb: '#ebe2cb', tileA: '#c9b996', tileB: '#97604a',
+    step: { front: '#bcb4a2', side: '#9f9789', top: '#cdc6b4' },
+  };
+  const oct = (cx, cy, r, z) => Array.from({ length: 8 }, (_, k) => {
+    const a = ((k + 0.5) * Math.PI) / 4;
+    return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, z };
+  });
+  /** A normal de fora do lado k do octógono (o lado entre o vértice k e o k + 1); o lado 1 olha para o sul (+y). */
+  const sideNormal = (k) => ({ x: Math.cos(((k + 1) * Math.PI) / 4), y: Math.sin(((k + 1) * Math.PI) / 4), z: 0 });
+  const facing = (cam, n) => M.dot(n, cam.toCamera) > 0.02;
+  const litOf = (cam, n) => M.clamp01(0.45 + 0.6 * M.dot(n, cam.light));
+  function coretoGeom(d, z0) {
+    const R = d.r;
+    const zf = z0 + d.h + 10; // o piso (a base e a cornija)
+    const zc = zf + 300; // o alto das colunas
+    const Re = R + 52; // o beiral
+    const ze = zc + 12;
+    return { R, zf, Rc: R - 20, zc, Re, ze, Rm: Re * 0.5, zm: ze + 125, Rt: 44, zt: ze + 300, stairW: 130, tread: 32 };
+  }
+  /** Desenha numa face vertical (de `a` até `b`, no alto `top`) em cm: u ao longo, v para baixo. */
+  function onFace(ctx, cam, a, b, top, fn) {
+    const pa = cam.p({ x: a.x, y: a.y, z: top }), pb = cam.p({ x: b.x, y: b.y, z: top });
+    const [A, B] = pa.x <= pb.x ? [a, b] : [b, a];
+    const L = Math.hypot(B.x - A.x, B.y - A.y);
+    H.onWall(ctx, cam, { x: A.x, y: A.y, z: top }, { x: (B.x - A.x) / L, y: (B.y - A.y) / L }, () => fn(L));
+  }
+  /** Um remendo de reboco caído (o tijolo aparecendo), em cm na parede. */
+  function brickPatch(ctx, x, y, w, h, rnd) {
+    const pts = [];
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * M.TAU;
+      const k = 0.75 + rnd() * 0.35;
+      pts.push({ x: x + w / 2 + Math.cos(a) * (w / 2) * k, y: y + h / 2 + Math.sin(a) * (h / 2) * k });
+    }
+    const p = pathOf(pts);
+    ctx.save();
+    ctx.clip(p);
+    ctx.fillStyle = COR.brick;
+    ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+    ctx.strokeStyle = 'rgba(214, 200, 176, 0.75)';
+    ctx.lineWidth = 1.4;
+    for (let r = 0, yy = y - 4; yy < y + h + 4; yy += 7, r++) {
+      ctx.beginPath();
+      ctx.moveTo(x - 4, yy);
+      ctx.lineTo(x + w + 4, yy);
+      for (let xx = x - 4 + (r % 2) * 10; xx < x + w + 4; xx += 21) {
+        ctx.moveTo(xx, yy);
+        ctx.lineTo(xx, yy + 7);
       }
-      const sheet = pathOf(L.concat(R.slice().reverse()));
-      const top = cam.p({ x: xm, y: lip.y, z: lip.z }), bottom = cam.p({ x: xm, y: pool.y, z: pool.z });
-      const g = ctx.createLinearGradient(top.x, top.y, bottom.x, bottom.y);
-      g.addColorStop(0, 'rgba(150, 205, 220, 0.95)');
-      g.addColorStop(1, 'rgba(225, 245, 248, 0.95)');
-      ctx.strokeStyle = 'rgba(20, 50, 60, 0.55)';
-      ctx.lineWidth = ink * 1.6;
-      ctx.stroke(sheet);
-      ctx.fillStyle = g;
-      ctx.fill(sheet);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // a beira do reboco: a espessura (sombra) e a quina clara
+    ctx.strokeStyle = 'rgba(84, 70, 50, 0.7)';
+    ctx.lineWidth = 2.4;
+    ctx.stroke(p);
+    ctx.save();
+    ctx.translate(-1.5, -1.5);
+    ctx.strokeStyle = 'rgba(255, 250, 236, 0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke(p);
+    ctx.restore();
+  }
+  function coretoBase(ctx, cam, d, g, z0, rnd, ink) {
+    const cx = d.x, cy = d.y;
+    const B0 = oct(cx, cy, g.R, z0 - 2), B1 = oct(cx, cy, g.R, g.zf - 10);
+    const C0 = oct(cx, cy, g.R + 12, g.zf - 10), C1 = oct(cx, cy, g.R + 12, g.zf);
+    const P = (q) => cam.p(q);
+    poly(ctx, hullOf(B0.concat(C1).map(P)), null, INK, ink * 2.4);
+    const sides = [];
+    for (let k = 0; k < 8; k++) {
+      const n = sideNormal(k);
+      if (facing(cam, n)) sides.push({ k, n, lit: litOf(cam, n), depth: cam.depth({ x: cx + n.x * g.R, y: cy + n.y * g.R, z: z0 }) });
+    }
+    sides.sort((a, b) => a.depth - b.depth);
+    const Hh = g.zf - 10 - (z0 - 2);
+    for (const s of sides) {
+      const j = (s.k + 1) % 8;
+      const face = [B0[s.k], B0[j], B1[j], B1[s.k]].map(P);
+      quad(ctx, face, M.shade(COR.plaster, (s.lit - 0.55) * 0.55));
       ctx.save();
-      ctx.clip(sheet);
-      ctx.lineCap = 'round';
-      for (let k = 0; k < 9; k++) {
-        const s = (k + 0.5) / 9;
-        const off = (time * 1.4 + rnd() * 3) % 1;
-        for (let j = 0; j < 3; j++) {
-          const u0 = (off + j / 3) % 1;
-          const u1 = Math.min(1, u0 + 0.16);
-          const at = (u) => {
-            const i = Math.min(N - 1, Math.floor(u * N));
-            const f = u * N - i;
-            const l = { x: L[i].x + (L[i + 1].x - L[i].x) * f, y: L[i].y + (L[i + 1].y - L[i].y) * f };
-            const r2 = { x: R[i].x + (R[i + 1].x - R[i].x) * f, y: R[i].y + (R[i + 1].y - R[i].y) * f };
-            return { x: l.x + (r2.x - l.x) * s, y: l.y + (r2.y - l.y) * s };
-          };
-          const a = at(u0), b = at(u1);
-          ctx.strokeStyle = j % 2 ? 'rgba(255, 255, 255, 0.75)' : 'rgba(110, 170, 190, 0.6)';
-          ctx.lineWidth = Math.max(1, 2.2 * cam.zoom);
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
+      ctx.clip(pathOf(face));
+      onFace(ctx, cam, B1[s.k], B1[j], g.zf - 10, (L) => {
+        // o rodapé de pedra
+        ctx.fillStyle = M.shade(COR.plinth, (s.lit - 0.55) * 0.5);
+        ctx.fillRect(0, Hh - 22, L, 22);
+        ctx.fillStyle = 'rgba(40, 34, 26, 0.4)';
+        ctx.fillRect(0, Hh - 23.5, L, 2);
+        // o painel em relevo, com o losango no meio
+        const x0 = 28, x1 = L - 28, y0 = 14, y1 = Hh - 36;
+        ctx.strokeStyle = 'rgba(80, 64, 42, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+        ctx.strokeStyle = 'rgba(255, 250, 236, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x0 + 3, y0 + 3, x1 - x0 - 6, y1 - y0 - 6);
+        const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, rw = Math.min(46, (x1 - x0) * 0.22), rh = (y1 - y0) * 0.32;
+        ctx.beginPath();
+        ctx.moveTo(mx, my - rh);
+        ctx.lineTo(mx + rw, my);
+        ctx.lineTo(mx, my + rh);
+        ctx.lineTo(mx - rw, my);
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(80, 64, 42, 0.45)';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+        if (d.ruin) {
+          // o reboco caído mostrando o tijolo
+          for (let q = 0; q < 2; q++) {
+            if (rnd() < 0.3) continue;
+            const w = 34 + rnd() * 46, h = 18 + rnd() * 22;
+            brickPatch(ctx, 8 + rnd() * (L - w - 16), 6 + rnd() * (Hh - h - 30), w, h, rnd);
+          }
+          // a pichação (no lado sudeste: o do sul fica atrás da escada)
+          if (s.k === 0) {
+            ctx.save();
+            ctx.translate(0, 16);
+            ctx.scale(0.42, 0.42);
+            H.pixo(ctx, L / 0.42, 0, rnd, 0.75);
+            ctx.restore();
+          }
+        }
+        // a água da chuva escorrendo da cornija e o limo no pé
+        for (let q = 0; q < 5; q++) {
+          const x = rnd() * L, w = 5 + rnd() * 12, l = 24 + rnd() * 46;
+          const gr = ctx.createLinearGradient(0, 0, 0, l);
+          gr.addColorStop(0, 'rgba(70, 64, 48, 0.32)');
+          gr.addColorStop(1, 'rgba(70, 64, 48, 0)');
+          ctx.fillStyle = gr;
+          ctx.fillRect(x, 0, w, l);
+        }
+        const moss = ctx.createLinearGradient(0, Hh - 34, 0, Hh);
+        moss.addColorStop(0, 'rgba(58, 86, 40, 0)');
+        moss.addColorStop(1, 'rgba(52, 80, 36, 0.55)');
+        ctx.fillStyle = moss;
+        ctx.fillRect(0, Hh - 34, L, 34);
+      });
+      ctx.restore();
+      // a quina (a linha da aresta)
+      ctx.strokeStyle = 'rgba(40, 32, 22, 0.45)';
+      ctx.lineWidth = ink * 0.9;
+      line2(ctx, P(B0[j]), P(B1[j]));
+    }
+    // a cornija (a laje do piso, um pouco mais larga) e o piso de ladrilho
+    for (const s of sides) {
+      const j = (s.k + 1) % 8;
+      quad(ctx, [C0[s.k], C0[j], C1[j], C1[s.k]].map(P), M.shade(COR.cornice, (s.lit - 0.55) * 0.5));
+    }
+    const floor = pathOf(C1.map(P));
+    ctx.fillStyle = COR.tileA;
+    ctx.fill(floor);
+    ctx.save();
+    ctx.clip(floor);
+    const S = 30;
+    const R = g.R + 12;
+    for (let i = -Math.ceil(R / S); i < Math.ceil(R / S); i++) {
+      for (let j = -Math.ceil(R / S); j < Math.ceil(R / S); j++) {
+        const x = cx + i * S, y = cy + j * S;
+        const r = seeded(x, y, 3511);
+        const dark = (i + j) % 2 !== 0;
+        let col = dark ? COR.tileB : COR.tileA;
+        if (r() < 0.12) col = M.shade(col, -0.18);
+        quad(ctx, [P({ x, y, z: g.zf }), P({ x: x + S, y, z: g.zf }), P({ x: x + S, y: y + S, z: g.zf }), P({ x, y: y + S, z: g.zf })], col);
+      }
+    }
+    // a sombra do telhado no piso (a luz vem do oeste e do sul: o lado leste fica no escuro)
+    {
+      const Lt = cam.light, dz = g.ze - g.zf;
+      const sx = (-Lt.x / Lt.z) * dz, sy = (-Lt.y / Lt.z) * dz;
+      ctx.fillStyle = 'rgba(34, 30, 44, 0.42)';
+      ctx.fill(pathOf(oct(cx + sx, cy + sy, g.Re, g.zf).map(P)));
+      const C = P({ x: cx, y: cy, z: g.zf });
+      const rg = ctx.createRadialGradient(C.x, C.y, R * 0.55 * cam.zoom, C.x, C.y, R * 1.05 * cam.zoom);
+      rg.addColorStop(0, 'rgba(70, 58, 40, 0)');
+      rg.addColorStop(1, 'rgba(70, 58, 40, 0.35)');
+      ctx.fillStyle = rg;
+      ctx.fill(floor);
+    }
+    // a sujeira, as folhas secas e o musgo nos cantos
+    for (let k = 0; k < 30; k++) {
+      const a = rnd() * M.TAU, rr = Math.sqrt(rnd()) * R * 0.95;
+      const q = P({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr, z: g.zf });
+      ctx.fillStyle = k % 3 === 0 ? 'rgba(84, 110, 52, 0.55)' : k % 3 === 1 ? 'rgba(150, 96, 44, 0.75)' : 'rgba(96, 76, 50, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y, (6 + rnd() * 14) * cam.zoom, (3 + rnd() * 6) * cam.zoom, rnd() * 3, 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(40, 32, 22, 0.5)';
+    ctx.lineWidth = ink * 1.2;
+    ctx.stroke(floor);
+  }
+  /** A escada do lado sul: quatro degraus de pedra gasta e o portãozinho de ferro caído em cima deles. */
+  function coretoStairs(ctx, cam, d, g, z0, rnd, ink) {
+    const cx = d.x;
+    const yS = d.y + g.R * Math.cos(Math.PI / 8);
+    const N = 4, hs = (g.zf - z0) / N;
+    for (let k = 0; k < N; k++) {
+      const y1 = yS + (N - k) * g.tread;
+      const za = z0 + k * hs, zb = za + hs;
+      H.box(ctx, cam, cx - g.stairW, cx + g.stairW, yS - 4, y1, za, zb, COR.step, ink);
+      // a quina gasta e o limo na junta
+      const a = cam.p({ x: cx - g.stairW, y: y1, z: zb }), b = cam.p({ x: cx + g.stairW, y: y1, z: zb });
+      ctx.strokeStyle = 'rgba(255, 250, 236, 0.4)';
+      ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+      line2(ctx, a, b);
+      ctx.strokeStyle = 'rgba(70, 96, 48, 0.55)';
+      ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
+      const c = cam.p({ x: cx - g.stairW, y: y1, z: za + 1 }), e = cam.p({ x: cx + g.stairW, y: y1, z: za + 1 });
+      line2(ctx, c, e);
+      // folhas secas nos degraus
+      for (let q = 0; q < 4; q++) {
+        const p = cam.p({ x: cx - g.stairW + rnd() * g.stairW * 2, y: y1 - rnd() * g.tread, z: zb });
+        ctx.fillStyle = q % 2 ? '#a8632e' : '#8a5a2a';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, 4 * cam.zoom, 2 * cam.zoom, rnd() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+    }
+    if (d.ruin) {
+      // o portãozinho caído: deitado torto sobre os degraus de baixo
+      const x0 = cx - g.stairW * 0.7, x1 = cx + g.stairW * 0.35;
+      const top = { y: yS + 2.2 * g.tread, z: z0 + hs * 2 + 2 }, bot = { y: yS + 4.4 * g.tread, z: z0 + 1 };
+      const corners = [{ x: x0, ...top }, { x: x1, ...top }, { x: x1 + 18, ...bot }, { x: x0 + 18, ...bot }];
+      pipe(ctx, cam, [corners[0], corners[1], corners[2], corners[3], corners[0]], 2.2, ink, COR.iron);
+      for (let t = 0.12; t < 1; t += 0.14) {
+        const a = { x: x0 + (x1 - x0) * t, ...top }, b = { x: x0 + 18 + (x1 - x0) * t, ...bot };
+        pipe(ctx, cam, [a, b], 1.2, ink * 0.6, COR.iron);
+      }
+    }
+  }
+  /** O gradil de um lado (entre as colunas `a` e `b`): corrimão, barras, a faixa de argolas e a barra de baixo. */
+  function coretoRail(ctx, cam, d, g, it, rnd, ink) {
+    const { a, b, k } = it;
+    const H0 = 92;
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    const ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
+    const at = (u, z) => ({ x: a.x + ux * u, y: a.y + uy * u, z: g.zf + z });
+    // (o lado da escada: só os dois toquinhos perto das colunas; um lado tem um pedaço arrancado)
+    const spans = [];
+    if (k === 1 && d.stairs) {
+      const gap0 = L / 2 - g.stairW - 6, gap1 = L / 2 + g.stairW + 6;
+      if (gap0 > 14) spans.push([0, gap0]);
+      if (L - gap1 > 14) spans.push([gap1, L]);
+    } else if (d.ruin && k === 7) {
+      spans.push([0, L * 0.34], [L * 0.62, L]);
+    } else spans.push([0, L]);
+    for (const [u0, u1] of spans) {
+      pipe(ctx, cam, [at(u0, 10), at(u1, 10)], 2.2, ink, COR.iron);
+      for (let u = u0 + 11; u < u1 - 4; u += 12) pipe(ctx, cam, [at(u, 10), at(u, H0)], 0.9, ink * 0.5, COR.iron);
+      // a faixa de argolas no meio
+      ctx.strokeStyle = COR.iron;
+      ctx.lineWidth = Math.max(0.8, 1.6 * cam.zoom);
+      for (let u = u0 + 12; u < u1 - 10; u += 24) {
+        const c = cam.p(at(u + 6, 52));
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, 5.5 * cam.zoom, 6 * cam.zoom * cam.cosP, 0, 0, M.TAU);
+        ctx.stroke();
+      }
+      pipe(ctx, cam, [at(u0, H0), at(u1, H0)], 2.8, ink, COR.iron);
+      // a ferrugem
+      for (let q = 0; q < 3; q++) {
+        const c = cam.p(at(u0 + rnd() * (u1 - u0), H0 - rnd() * 60));
+        ctx.fillStyle = 'rgba(150, 82, 40, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, (2 + rnd() * 3) * cam.zoom, (1.5 + rnd() * 2) * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+    }
+    if (d.ruin && k === 7) {
+      // as pontas tortas do pedaço arrancado
+      pipe(ctx, cam, [at(L * 0.34, H0), at(L * 0.4, H0 - 24), at(L * 0.43, H0 - 46)], 2.4, ink, COR.iron);
+      pipe(ctx, cam, [at(L * 0.62, 10), at(L * 0.57, 4)], 2, ink, COR.iron);
+    }
+  }
+  /** Uma coluna de ferro fundido: o pé, o fuste com a luz de um lado, o capitel e as duas mãos-francesas. */
+  function coretoColumn(ctx, cam, d, g, it, rnd, ink) {
+    const c = it.c;
+    const p0 = cam.p({ x: c.x, y: c.y, z: g.zf }), p1 = cam.p({ x: c.x, y: c.y, z: g.zc });
+    const r = 7.5 * cam.zoom;
+    // o pé
+    const fb = cam.p({ x: c.x, y: c.y, z: g.zf + 20 });
+    ctx.fillStyle = INK;
+    ctx.fillRect(p0.x - r * 2 - ink, fb.y - ink, r * 4 + 2 * ink, p0.y - fb.y + 2 * ink);
+    const gb = ctx.createLinearGradient(p0.x - r * 2, 0, p0.x + r * 2, 0);
+    gb.addColorStop(0, COR.ironHi);
+    gb.addColorStop(0.45, COR.iron);
+    gb.addColorStop(1, '#16201b');
+    ctx.fillStyle = gb;
+    ctx.fillRect(p0.x - r * 2, fb.y, r * 4, p0.y - fb.y);
+    // o fuste
+    ctx.fillStyle = INK;
+    ctx.fillRect(p0.x - r - ink, p1.y, 2 * (r + ink), fb.y - p1.y);
+    const gs = ctx.createLinearGradient(p0.x - r, 0, p0.x + r, 0);
+    gs.addColorStop(0, COR.ironHi);
+    gs.addColorStop(0.4, '#3f5f4d');
+    gs.addColorStop(1, '#17231d');
+    ctx.fillStyle = gs;
+    ctx.fillRect(p0.x - r, p1.y, 2 * r, fb.y - p1.y);
+    // os anéis do fuste e o capitel
+    ctx.fillStyle = INK;
+    for (const z of [g.zf + 60, g.zc - 60]) {
+      const q = cam.p({ x: c.x, y: c.y, z });
+      ctx.fillRect(q.x - r * 1.35, q.y - 2 * cam.zoom, r * 2.7, 4 * cam.zoom);
+    }
+    const cap = cam.p({ x: c.x, y: c.y, z: g.zc - 18 });
+    ctx.beginPath();
+    ctx.moveTo(cap.x - r, cap.y);
+    ctx.lineTo(cap.x + r, cap.y);
+    ctx.lineTo(p1.x + r * 2.2, p1.y);
+    ctx.lineTo(p1.x - r * 2.2, p1.y);
+    ctx.closePath();
+    ctx.fillStyle = COR.iron;
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = ink;
+    ctx.stroke();
+    // a ferrugem descendo
+    ctx.fillStyle = 'rgba(146, 80, 40, 0.5)';
+    ctx.fillRect(p0.x + r * 0.1, p1.y + (fb.y - p1.y) * (0.2 + rnd() * 0.4), r * 0.5, (fb.y - p1.y) * 0.2);
+    // as mãos-francesas: um quarto de círculo da coluna até o beiral, para os dois lados
+    const k = it.k;
+    for (const nb of [(k + 1) % 8, (k + 7) % 8]) {
+      const o = oct(d.x, d.y, g.Rc, 0)[nb];
+      const L = Math.hypot(o.x - c.x, o.y - c.y);
+      const ux = (o.x - c.x) / L, uy = (o.y - c.y) / L;
+      const pts = [];
+      for (let i = 0; i <= 8; i++) {
+        const ph = (i / 8) * (Math.PI / 2);
+        const u = 58 - 58 * Math.cos(ph), z = g.zc - 58 + 58 * Math.sin(ph);
+        pts.push({ x: c.x + ux * u, y: c.y + uy * u, z });
+      }
+      pipe(ctx, cam, pts, 1.4, ink * 0.6, COR.iron);
+      // o caracol de dentro
+      const sp = [];
+      for (let i = 0; i <= 10; i++) {
+        const ph = (i / 10) * M.TAU * 0.8;
+        const rr = 14 * (1 - i / 14);
+        sp.push({ x: c.x + ux * (20 + Math.cos(ph) * rr * 0.6), y: c.y + uy * (20 + Math.cos(ph) * rr * 0.6), z: g.zc - 22 + Math.sin(ph) * rr * 0.6 });
+      }
+      pipe(ctx, cam, sp, 0.9, ink * 0.4, COR.iron);
+    }
+  }
+  /** O telhado de zinco em sino (dois anéis de chapas), o lambrequim do beiral e a lanterninha com o pináculo. */
+  function coretoRoof(ctx, cam, d, g, rnd, ink) {
+    const cx = d.x, cy = d.y;
+    const P = (q) => cam.p(q);
+    const E = oct(cx, cy, g.Re, g.ze), Mi = oct(cx, cy, g.Rm, g.zm), T = oct(cx, cy, g.Rt, g.zt);
+    const F = oct(cx, cy, g.Re, g.ze - 7);
+    const center = { x: cx, y: cy, z: g.ze };
+    const facets = [];
+    for (let k = 0; k < 8; k++) {
+      const j = (k + 1) % 8;
+      for (const [ring0, ring1, band] of [[E, Mi, 0], [Mi, T, 1]]) {
+        const f = [ring0[k], ring0[j], ring1[j], ring1[k]];
+        let n = M.cross(M.sub(f[1], f[0]), M.sub(f[3], f[0]));
+        const mid = { x: (f[0].x + f[2].x) / 2, y: (f[0].y + f[2].y) / 2, z: (f[0].z + f[2].z) / 2 };
+        if (M.dot(n, M.sub(mid, center)) < 0) n = { x: -n.x, y: -n.y, z: -n.z };
+        const l = Math.hypot(n.x, n.y, n.z) || 1;
+        n = { x: n.x / l, y: n.y / l, z: n.z / l };
+        if (M.dot(n, cam.toCamera) <= 0) continue;
+        facets.push({ f, k, band, lit: litOf(cam, n), depth: cam.depth(mid) });
+      }
+    }
+    facets.sort((a, b) => a.depth - b.depth);
+    // o contorno de tudo e a beirada (a tábua do beiral)
+    poly(ctx, hullOf(E.concat(F, T).map(P)), null, INK, ink * 2.6);
+    for (let k = 0; k < 8; k++) {
+      const n = sideNormal(k);
+      if (!facing(cam, n)) continue;
+      const j = (k + 1) % 8;
+      quad(ctx, [F[k], F[j], E[j], E[k]].map(P), M.shade('#d7cfbb', (litOf(cam, n) - 0.55) * 0.5));
+    }
+    for (const fc of facets) {
+      const pts = fc.f.map(P);
+      const path = pathOf(pts);
+      ctx.fillStyle = M.shade(COR.zinc, (fc.lit - 0.55) * 0.7);
+      ctx.fill(path);
+      ctx.save();
+      ctx.clip(path);
+      // as costuras das chapas (de baixo até em cima) e a ferrugem escorrendo delas
+      const [a0, a1, b1, b0] = fc.f;
+      for (let t = 0.125; t < 1; t += 0.125) {
+        const lo = { x: a0.x + (a1.x - a0.x) * t, y: a0.y + (a1.y - a0.y) * t, z: a0.z };
+        const hi = { x: b0.x + (b1.x - b0.x) * t, y: b0.y + (b1.y - b0.y) * t, z: b0.z };
+        ctx.strokeStyle = 'rgba(40, 48, 46, 0.35)';
+        ctx.lineWidth = Math.max(0.8, 1.4 * cam.zoom);
+        line2(ctx, P(lo), P(hi));
+        if (d.ruin && rnd() < 0.3) {
+          const s = 0.15 + rnd() * 0.4;
+          const m = { x: hi.x + (lo.x - hi.x) * s, y: hi.y + (lo.y - hi.y) * s, z: hi.z + (lo.z - hi.z) * s };
+          ctx.strokeStyle = 'rgba(150, 78, 36, 0.55)';
+          ctx.lineWidth = Math.max(1, (2 + rnd() * 3) * cam.zoom);
+          line2(ctx, P(m), P(lo));
+        }
+      }
+      // o musgo na beirada de baixo
+      if (fc.band === 0 && d.ruin) {
+        for (let q = 0; q < 2; q++) {
+          const t = 0.15 + rnd() * 0.7, s = rnd() * 0.2;
+          const lo = { x: a0.x + (a1.x - a0.x) * t, y: a0.y + (a1.y - a0.y) * t, z: a0.z };
+          const hi = { x: b0.x + (b1.x - b0.x) * t, y: b0.y + (b1.y - b0.y) * t, z: b0.z };
+          const q3 = P({ x: lo.x + (hi.x - lo.x) * s, y: lo.y + (hi.y - lo.y) * s, z: lo.z + (hi.z - lo.z) * s });
+          for (let l = 0; l < 3; l++) {
+            ctx.fillStyle = MOSS[l];
+            for (let e = 0; e < 4; e++) {
+              ctx.beginPath();
+              ctx.ellipse(q3.x + (rnd() - 0.5) * 22 * cam.zoom, q3.y + (rnd() - 0.5) * 8 * cam.zoom - l * 1.5 * cam.zoom, (3 + rnd() * 5) * cam.zoom * (1 - l * 0.25), (2 + rnd() * 2.5) * cam.zoom * (1 - l * 0.25), 0, 0, M.TAU);
+              ctx.fill();
+            }
+          }
         }
       }
       ctx.restore();
-      // a espuma no pé (as bolhas pulsando) e as ondinhas abrindo no poço
-      const foot = cam.p({ x: xm, y: pool.y, z: pool.z + 4 });
-      for (let k = 0; k < 3; k++) {
-        const ph = (time * 0.7 + k / 3) % 1;
-        ctx.strokeStyle = `rgba(235, 248, 250, ${(0.6 * (1 - ph)).toFixed(3)})`;
+      ctx.strokeStyle = 'rgba(30, 36, 34, 0.55)';
+      ctx.lineWidth = Math.max(0.8, ink * 0.9);
+      ctx.stroke(path);
+    }
+    // o buraco no telhado (numa chapa de baixo, do lado da câmera): o escuro e os caibros aparecendo
+    if (d.ruin) {
+      const fc = facets.filter((f) => f.band === 0).sort((a, b) => b.lit - a.lit)[1];
+      if (fc) {
+        const [a0, a1, b1, b0] = fc.f;
+        const at = (t, s) => {
+          const lo = { x: a0.x + (a1.x - a0.x) * t, y: a0.y + (a1.y - a0.y) * t, z: a0.z };
+          const hi = { x: b0.x + (b1.x - b0.x) * t, y: b0.y + (b1.y - b0.y) * t, z: b0.z };
+          return P({ x: lo.x + (hi.x - lo.x) * s, y: lo.y + (hi.y - lo.y) * s, z: lo.z + (hi.z - lo.z) * s });
+        };
+        const hole = [];
+        for (let i = 0; i < 10; i++) {
+          const ang = (i / 10) * M.TAU;
+          const rr = 0.75 + rnd() * 0.45;
+          hole.push(at(0.55 + Math.cos(ang) * 0.17 * rr, 0.42 + Math.sin(ang) * 0.24 * rr));
+        }
+        const hp = pathOf(hole);
+        ctx.fillStyle = '#1c1915';
+        ctx.fill(hp);
+        ctx.save();
+        ctx.clip(hp);
+        ctx.strokeStyle = '#6a4a30';
+        ctx.lineWidth = Math.max(1.5, 4 * cam.zoom);
+        for (const t of [0.48, 0.62]) line2(ctx, at(t, 0.1), at(t, 0.8));
+        ctx.restore();
+        ctx.strokeStyle = '#b7c2bd';
         ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
-        ctx.beginPath();
-        ctx.ellipse(foot.x, foot.y + 6 * cam.zoom, (half * 1.2 + ph * 90) * cam.zoom, (half * 1.2 + ph * 90) * cam.zoom * cam.sinP, 0, 0, M.TAU);
-        ctx.stroke();
+        ctx.stroke(hp);
       }
-      for (let k = 0; k < 9; k++) {
-        const t = time * 3 + k * 1.7;
-        const ox = Math.sin(t * 1.3 + k) * half * 1.1 * cam.zoom;
-        const oy = Math.cos(t + k * 2) * 6 * cam.zoom;
-        const s = (6 + 4 * Math.sin(t * 2 + k)) * cam.zoom;
-        ctx.fillStyle = 'rgba(245, 252, 253, 0.85)';
+    }
+    // o lambrequim: a franja de madeira recortada pendurada na beirada (os lados que olham para a câmera)
+    for (let k = 0; k < 8; k++) {
+      const n = sideNormal(k);
+      if (!facing(cam, n)) continue;
+      const j = (k + 1) % 8;
+      const lit = litOf(cam, n);
+      const a = F[k], b = F[j];
+      const top = g.ze - 7;
+      ctx.save();
+      onFace(ctx, cam, a, b, top, (L) => {
+        const W = 16, Hb = 12;
         ctx.beginPath();
-        ctx.ellipse(foot.x + ox, foot.y + oy, s, s * 0.55, 0, 0, M.TAU);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(L, 0);
+        ctx.lineTo(L, Hb);
+        const n = Math.max(1, Math.round(L / W));
+        const w = L / n;
+        for (let i = n - 1; i >= 0; i--) {
+          const missing = d.ruin && rnd() < 0.08;
+          const x = i * w;
+          if (missing) ctx.lineTo(x, Hb);
+          else ctx.arc(x + w / 2, Hb, w / 2, 0, Math.PI, false);
+        }
+        ctx.closePath();
+        ctx.fillStyle = M.shade(COR.lamb, (lit - 0.55) * 0.45);
         ctx.fill();
+        ctx.strokeStyle = 'rgba(40, 32, 24, 0.7)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        // os furinhos recortados e a tinta descascada
+        ctx.fillStyle = 'rgba(40, 32, 24, 0.55)';
+        for (let i = 0; i < n; i++) {
+          ctx.beginPath();
+          ctx.arc(i * w + w / 2, Hb * 0.55, 2.2, 0, M.TAU);
+          ctx.fill();
+        }
+        if (d.ruin) {
+          ctx.fillStyle = 'rgba(120, 100, 76, 0.5)';
+          for (let q = 0; q < 4; q++) ctx.fillRect(rnd() * L, rnd() * Hb, 6 + rnd() * 14, 3 + rnd() * 4);
+        }
+      });
+      ctx.restore();
+    }
+    // a lanterninha: o prisma com as janelinhas, o chapeuzinho e o pináculo com a bola
+    const L0 = oct(cx, cy, g.Rt, g.zt), L1 = oct(cx, cy, g.Rt, g.zt + 46);
+    poly(ctx, hullOf(L0.concat(L1).map(P)), null, INK, ink * 2.2);
+    for (let k = 0; k < 8; k++) {
+      const n = sideNormal(k);
+      if (!facing(cam, n)) continue;
+      const j = (k + 1) % 8;
+      quad(ctx, [L0[k], L0[j], L1[j], L1[k]].map(P), M.shade('#d9d0b8', (litOf(cam, n) - 0.55) * 0.5));
+      const w0 = { x: L0[k].x + (L0[j].x - L0[k].x) * 0.25, y: L0[k].y + (L0[j].y - L0[k].y) * 0.25 };
+      const w1 = { x: L0[k].x + (L0[j].x - L0[k].x) * 0.75, y: L0[k].y + (L0[j].y - L0[k].y) * 0.75 };
+      quad(ctx, [{ ...w0, z: g.zt + 10 }, { ...w1, z: g.zt + 10 }, { ...w1, z: g.zt + 36 }, { ...w0, z: g.zt + 36 }].map(P), '#2a2e2c');
+    }
+    const Cap = oct(cx, cy, g.Rt + 12, g.zt + 46);
+    const apex = { x: cx, y: cy, z: g.zt + 104 };
+    poly(ctx, hullOf(Cap.concat([apex]).map(P)), null, INK, ink * 2.2);
+    for (let k = 0; k < 8; k++) {
+      const j = (k + 1) % 8;
+      const mid = { x: (Cap[k].x + Cap[j].x) / 2 - cx, y: (Cap[k].y + Cap[j].y) / 2 - cy, z: 0 };
+      const l = Math.hypot(mid.x, mid.y) || 1;
+      const n = { x: (mid.x / l) * 0.8, y: (mid.y / l) * 0.8, z: 0.6 };
+      if (M.dot(n, cam.toCamera) <= 0) continue;
+      quad(ctx, [Cap[k], Cap[j], apex, apex].map(P), M.shade(COR.zinc, (litOf(cam, n) - 0.55) * 0.7));
+    }
+    pipe(ctx, cam, [apex, { x: cx, y: cy, z: apex.z + 54 }], 1.6, ink, '#5a5f5c');
+    const ball = P({ x: cx, y: cy, z: apex.z + 30 });
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 6.5 * cam.zoom + ink, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = '#8a7a52';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 6.5 * cam.zoom, 0, M.TAU);
+    ctx.fill();
+  }
+  small.coreto = {
+    fades: true,
+    height: (d) => coretoGeom(d, 0).zt + 160,
+    blocks: 0,
+    shadow(p, cam, d) {
+      // a base (com a sombra da altura dela) e o telhado, empurrados pela luz
+      const g = coretoGeom(d, 0);
+      const L = cam.light;
+      const sh = (q) => ({ x: q.x - (L.x / L.z) * q.z, y: q.y - (L.y / L.z) * q.z });
+      for (const pts of [oct(d.x, d.y, g.R, 0).concat(oct(d.x, d.y, g.R + 12, g.zf).map(sh)), oct(d.x, d.y, g.Re, g.ze).map(sh).concat([sh({ x: d.x, y: d.y, z: g.zt + 100 })])]) {
+        const hull = hullOf(pts);
+        hull.forEach((q, i) => (i ? p.lineTo(q.x, q.y) : p.moveTo(q.x, q.y)));
+        p.closePath();
       }
-      // a névoa da queda
-      const mist = ctx.createRadialGradient(foot.x, foot.y - 10 * cam.zoom, 0, foot.x, foot.y - 10 * cam.zoom, 90 * cam.zoom);
-      mist.addColorStop(0, 'rgba(240, 250, 252, 0.35)');
-      mist.addColorStop(1, 'rgba(240, 250, 252, 0)');
-      ctx.fillStyle = mist;
-      ctx.beginPath();
-      ctx.arc(foot.x, foot.y - 10 * cam.zoom, 90 * cam.zoom, 0, M.TAU);
-      ctx.fill();
-      // as pedras da frente, dos dois lados da queda
-      boulder(ctx, cam, xm - half - 52, d.y1 - 8, z0, 54, h * 0.52, rnd, ink, d.moss);
-      boulder(ctx, cam, xm + half + 56, d.y1 - 4, z0, 58, h * 0.46, rnd, ink, d.moss);
-      boulder(ctx, cam, d.x1 - 26, d.y1 + 8, z0, 34, h * 0.24, rnd, ink, d.moss);
-      boulder(ctx, cam, d.x0 + 22, d.y1 + 4, z0, 30, h * 0.2, rnd, ink, d.moss);
+    },
+    box: (cam, d, z0) => {
+      const g = coretoGeom(d, z0);
+      return volBox(cam, d.x - g.Re - 30, d.x + g.Re + 30, d.y - g.Re - 30, d.y + g.Re + 4 * g.tread + 40, z0 - 10, g.zt + 170, 24);
+    },
+    paint(ctx, cam, d, z0, ink) {
+      const g = coretoGeom(d, z0);
+      const rnd = seeded(d.x, d.y, 3501);
+      coretoBase(ctx, cam, d, g, z0, rnd, ink);
+      if (d.stairs) coretoStairs(ctx, cam, d, g, z0, rnd, ink);
+      // o gradil e as colunas, do fundo para a frente; o cipó subindo por duas colunas da frente
+      const Cc = oct(d.x, d.y, g.Rc, g.zf);
+      const items = [];
+      for (let k = 0; k < 8; k++) {
+        const a = Cc[k], b = Cc[(k + 1) % 8];
+        items.push({ rail: true, k, a, b, depth: cam.depth({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: g.zf }) });
+        items.push({ rail: false, k, c: a, depth: cam.depth(a) + 1 });
+      }
+      items.sort((a, b) => a.depth - b.depth);
+      for (const it of items) {
+        if (it.rail) coretoRail(ctx, cam, d, g, it, rnd, ink);
+        else {
+          coretoColumn(ctx, cam, d, g, it, rnd, ink);
+          if (d.vine > 0 && (it.k === 0 || it.k === 2) && rnd() < 0.5 + d.vine) {
+            const pts = [];
+            for (let i = 0; i <= 10; i++) pts.push({ x: it.c.x + Math.sin(i * 1.7) * 9, y: it.c.y + Math.cos(i * 1.7) * 9, z: g.zf + (i / 10) * (g.zc - g.zf) });
+            vine3d(ctx, cam, pts, rnd, ink);
+          }
+        }
+      }
+      coretoRoof(ctx, cam, d, g, rnd, ink);
+      // o cipó pendurado do beiral, do lado da câmera
+      if (d.vine > 0) {
+        const F = oct(d.x, d.y, g.Re, g.ze - 30);
+        for (const k of [7, 0, 1]) {
+          const j = (k + 1) % 8;
+          for (let q = 0; q < 2; q++) {
+            if (rnd() > d.vine) continue;
+            const t = 0.2 + rnd() * 0.6;
+            const x = F[k].x + (F[j].x - F[k].x) * t, y = F[k].y + (F[j].y - F[k].y) * t;
+            const len = 60 + rnd() * 120;
+            const pts = [];
+            for (let i = 0; i <= 6; i++) pts.push({ x: x + Math.sin(i) * 4, y, z: g.ze - 30 - (i / 6) * len });
+            vine3d(ctx, cam, pts, rnd, ink);
+          }
+        }
+      }
     },
   };
 
