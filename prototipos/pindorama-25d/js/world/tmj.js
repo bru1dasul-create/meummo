@@ -298,6 +298,11 @@
         // (o lado da ponta quebrada), `mato`, `cipo` (0 a 1) e `arvoresNoTopo`
         const whole = rect(o);
         for (const part of pieces(whole, 400)) map.props.push({ kind: 'viaduto', ...part, whole, z: (pr.altura || 8) * 100, thick: (pr.espessura || 1.4) * 100, broken: pr.quebrado || null, weeds: !!pr.mato, vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0, trees: !!pr.arvoresNoTopo });
+      } else if (k === 'estacao') {
+        // a Estação Capão Redondo (Capão maior; fundo.js): o prédio de baixo do viaduto. `altura` = o chão da plataforma
+        // (a do viaduto), `frente` = a altura do bloco da entrada, `plataforma` = a fundura do bloco de trás (m), `linha`
+        // (a cor da faixa), `letreiro`, `cipo` (0 a 1), `musgo` e `pixo`
+        map.props.push({ kind: 'estacao', ...rect(o), h: (pr.altura || 8) * 100, hf: (pr.frente || 6.5) * 100, back: (pr.plataforma || 3.6) * 100, line: pr.linha || '#8a63b8', sign: pr.letreiro || '', vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0, moss: !!pr.musgo, pixo: !!pr.pixo, name: o.name || '' });
       } else if (k === 'pilar-viaduto') {
         map.props.push({ kind: 'pilar-viaduto', ...rect(o), h: (pr.altura || 8) * 100, pixo: !!pr.pixo, moss: !!pr.musgo, vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0 });
       } else if (k === 'trem') {
@@ -443,11 +448,14 @@
     // trem está (lá não nasce árvore) e a figueira que abraça o viaduto (as raízes vão no pedaço mais perto dela)
     const deck = map.props.filter((p) => p.kind === 'viaduto');
     const cars = map.props.filter((p) => p.kind === 'vagao');
+    // (na estação, a plataforma encosta nos trilhos: lá o tabuleiro fica sem a mureta da frente e sem árvore no leito)
+    const stations = map.props.filter((p) => p.kind === 'estacao');
     for (const p of deck) {
       p.train = cars.some((c) => c.x0 < p.x1 && c.x1 > p.x0 && c.y0 < p.y1 && c.y1 > p.y0);
+      p.station = stations.some((s) => p.x1 > s.x0 + 50 && p.x0 < s.x1 - 50 && s.y0 - p.y1 < 150);
       // na beira do mapa (leste) o tabuleiro segue mata adentro no desenho, em vez de terminar no ar
       if (p.piece === p.pieces - 1 && p.x1 >= map.w - 50) p.extend = 900;
-      map.props.push({ ...p, kind: 'viaduto-mureta', y0: p.y1 - 18 });
+      if (!p.station) map.props.push({ ...p, kind: 'viaduto-mureta', y0: p.y1 - 18 });
     }
     for (const t of map.trees) {
       if (t.hugs !== 'viaduto' || !deck.length) continue;

@@ -300,6 +300,9 @@ sem repetir); o servidor anota com o nome de quem joga (até 5 de uma vez, depoi
 - **Golpes telegrafados:** quando um monstro vai atacar, o servidor manda `warn` com os quadrados que
   serão atingidos e o tempo até o golpe. Na hora, só leva dano quem ainda estiver ali (e não estiver
   invencível pela esquiva). Por isso a rede não atrapalha: o aviso dura mais que o atraso da internet.
+  No jogo 2.5D, o motor manda as casas (e as do `fire`) para o `view.warn` da [arte], que pinta no chão, por baixo dos
+  bichos (pedido do dono, 23/11: o quadrado vermelho por cima do quati era "muito feio"); sem ele, o `combat.ts` pinta
+  os quadrados de sempre (`warnGround` no `engine.ts`). O anel laranja de quem prepara continua no `combat.ts`.
 - **Investida** (Mula sem Cabeça): o aviso é a linha inteira; na hora, quem estiver nela é atropelado e o monstro
   corre até o fim (para antes de parede, de outro monstro e de cima de alguém). Os viewers recebem `fx`
   (`charge`), o `move` com `dash` (corrida rápida) e `fire` com os tiles do caminho, que queimam quem fica em cima

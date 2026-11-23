@@ -132,7 +132,7 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
 
   it('cada coisa sólida do cenário tem a sua colisão (tronco, poste, pedra, gradil, pilar, mata fechada, casa, banco...)', () => {
     const covered = (x: number, y: number) => boxes.some((b) => x >= b.x0 - 1e-6 && x <= b.x1 + 1e-6 && y >= b.y0 - 1e-6 && y <= b.y1 + 1e-6);
-    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo', 'semaforo', 'prateleira', 'geladeira', 'balcao', 'engradado', 'vitrine', 'balcao-vidro', 'freezer', 'caixote', 'lousa'];
+    const SOLID = ['arvore', 'bambu', 'poste', 'pedra', 'gradil', 'pilar', 'tronco-caido', 'casa', 'estacao', 'carro', 'banco', 'mesa', 'fogueira', 'lixeira', 'orelhao', 'poste-praca', 'predio', 'moto', 'placa-rua', 'cadeira', 'vaso', 'lixo', 'semaforo', 'prateleira', 'geladeira', 'balcao', 'engradado', 'vitrine', 'balcao-vidro', 'freezer', 'caixote', 'lousa'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
       // (a casa com interior, a Budega, tem só as paredes: o meio dela é o chão de dentro)
@@ -1257,7 +1257,11 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
 
   it('a Estação Capão Redondo fica fechada (a barreira na porta e a placa), com o largo e a pracinha na frente', () => {
     const estacao = named('Estação Capão Redondo');
-    expect(prop(estacao, 'pintura')).toBe('ESTAÇÃO CAPÃO REDONDO');
+    // (vestida em 23/11: o prédio de baixo do viaduto, com a plataforma na altura dele, encostada nos trilhos)
+    expect([estacao.type, prop(estacao, 'letreiro'), prop(estacao, 'altura')]).toEqual(['estacao', 'ESTAÇÃO CAPÃO REDONDO', 8]);
+    const deck = cenario.find((o) => o.type === 'viaduto')!;
+    expect(Math.abs(estacao.y / M - (deck.y + deck.height) / M)).toBeLessThan(0.1);
+    expect(boxes.some((b) => b.type === 'estacao' && inRect((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, estacao))).toBe(true);
     expect(reach(at(estacao).x, at(estacao).y)).toBe(false);
     const barrier = cenario.find((o) => o.type === 'barreira' && isNew(o) && o.y / M < 20)!;
     expect(at(barrier).x).toBeGreaterThan(estacao.x / M);
