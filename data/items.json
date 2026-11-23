@@ -109,7 +109,7 @@
     "tipo": "material",
     "pilha": 20,
     "descricao": "Vidrinho limpo para guardar remédio. A Dona Iracema enche de garrafada.",
-    "icone": "garrafada"
+    "icone": "frasco"
   },
   "agua_mina": {
     "nome": "Água da Mina",
@@ -117,7 +117,7 @@
     "tipo": "material",
     "pilha": 20,
     "descricao": "Água limpa de nascente, para as receitas da benzedeira.",
-    "icone": "agua_coco"
+    "icone": "agua_mina"
   },
   "babosa": {
     "nome": "Folha de Babosa",
@@ -125,7 +125,7 @@
     "tipo": "material",
     "pilha": 20,
     "descricao": "A gosma que fecha machucado. Vai na Garrafada Média.",
-    "icone": "erva"
+    "icone": "babosa"
   },
   "jurubeba": {
     "nome": "Raiz de Jurubeba",
@@ -134,7 +134,7 @@
     "pilha": 20,
     "raridade": "raro",
     "descricao": "Raiz amarga e forte, das matas fundas e das lendas. Vai na Garrafada Grande.",
-    "icone": "erva"
+    "icone": "jurubeba"
   },
   "garrafada_pequena": {
     "nome": "Garrafada Pequena",
@@ -145,7 +145,7 @@
     "recargaMs": 10000,
     "pilha": 10,
     "descricao": "Um vidrinho de ervas da benzedeira. Cura um quarto da vida.",
-    "icone": "garrafada",
+    "icone": "garrafada_pequena",
     "atalho": 2
   },
   "garrafada": {
@@ -170,7 +170,7 @@
     "pilha": 10,
     "raridade": "raro",
     "descricao": "A garrafada forte, que só as lendas guardam. Cura mais da metade da vida.",
-    "icone": "garrafada",
+    "icone": "garrafada_grande",
     "atalho": 2
   },
   "sucata": {
