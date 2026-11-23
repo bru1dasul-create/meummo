@@ -40,6 +40,8 @@ describe('as receitas (data/receitas.json)', () => {
     expect(drops('tatu_bola')).toEqual(expect.arrayContaining(['garrafada_pequena', 'babosa']));
     expect(drops('capelobo')).toEqual(expect.arrayContaining(['garrafada', 'babosa', 'jurubeba']));
     expect(drops('mula_sem_cabeca')).toEqual(expect.arrayContaining(['garrafada_grande', 'jurubeba']));
+    // no jogo novo, a Jurubeba só cai do Filhote de Boitatá (os chefes ainda não estão lá): 25% (pedido do dono, 23/11)
+    expect(monsters.get('filhote_boitata')!.drops.find((d) => d.item === 'jurubeba')!.chance).toBe(25);
   });
 
   it('o arquivo é conferido (e explica em português)', () => {

@@ -335,7 +335,7 @@
       { "item": "arco_bambu", "chance": 4 },
       { "item": "ferradura_brasa", "chance": 2 },
       { "item": "garrafada", "chance": 5 },
-      { "item": "jurubeba", "chance": 10 }
+      { "item": "jurubeba", "chance": 25 }
     ]
   }
 }

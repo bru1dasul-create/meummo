@@ -970,7 +970,8 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   no Refúgio e na Guarapiranga): Pequena = Arruda + Frasco Vazio + Água da Mina; Média = + Folha de Babosa; Grande = 2
   Babosas + Raiz de Jurubeba + Frasco + Água. As lojas vendem só os ingredientes (Frasco 4, Água 2, Arruda); as
   garrafadas também caem dos bichos (Pequena 4–6% nos de nível 1 a 3, Média 5% nos de 4 a 6, Grande 40% nos chefes), e
-  as plantas novas também (Babosa 15–20% nos de nível 3 a 6, Jurubeba 10% nos de 5 e 6 e 60% nos chefes). Receitas em
+  as plantas novas também (Babosa 15–20% nos de nível 3 a 6, Jurubeba 10% nos de 5 e 6 e 60% nos chefes; no Filhote de
+  Boitatá, 25% desde 23/11, pedido do dono: no jogo novo, ainda sem os chefes, é o único que deixa). Receitas em
   `data/receitas.json` (a chave é o item que sai; "precisa" diz os ingredientes) e quem prepara no campo "receitas" de
   `data/npcs.json`. Mensagens `craft` e `crafted`; `NpcInfo.recipes`. Protocolo 51
 - [x] **[estrutura]** Os efeitos com tempo continuam depois de sair do jogo (pedido do dono, 23/11: "faz os efeitos
