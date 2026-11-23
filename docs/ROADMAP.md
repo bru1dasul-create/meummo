@@ -875,6 +875,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   defeito) agora usam o relógio dos quadros; o clarão do degrau (`arrowLevelAt`) ficou no relógio da página, porque o
   `slingshot.js` lê com ele. Conferido no jogo depois de 4 s em 0,25x (3,3 s de atraso): antes, 2 s depois do tiro ainda
   'ancestral' e o tiro comum puxava a flecha brilhante; agora apaga em ~250 ms e o tiro comum vem com a flecha normal
+- [x] **[estrutura]** Efeito subindo do chão ao subir de nível e ao pôr ponto numa habilidade (pedido do dono, 23/11:
+  "cada nível que o personagem upar quero um efeito no personagem vindo do chão, mesma coisa quando upar uma
+  habilidade"): o `levelup` só vai quando o nível sobe (o painel baixando não manda mais); `fx` `'skillup'` com `s` =
+  a habilidade, para quem pôs o ponto e quem está perto (protocolo 47). O motor chama `view.levelUp(id, 'level' |
+  'skill', tipo)`; sem ele, um efeito provisório no `combat.ts` (anel no chão e faíscas subindo; dourado no nível,
+  na cor da habilidade no ponto). Som novo `skillup`
+- [ ] **[arte]** O desenho de verdade do efeito de subir de nível e de pôr ponto numa habilidade (`levelUp` na view:
+  quando existir, o provisório some sozinho). Pedido mandado à [arte]
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
