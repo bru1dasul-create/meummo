@@ -190,6 +190,24 @@
   `bubbles`, `corkTop`, `neckString`, `dropPath`, `twinkle` e `aloeLeaf`. Entram no jogo quando a [estrutura] trocar o
   "icone" em `data/items.json` (pedido mandado). Prévia (rascunho `icones-pocoes/`): `entrada.ts` (esbuild) e
   `folha.cjs <icones.js> <saida.png>` (grande, mochila, loja e a plaquinha das receitas)
+- **O efeito de usar um consumível (23/11; o dono viu as duas ideias prontas e escolheu "a sua sugestão"):**
+  `js/consume.js` (`PD.consumeFx`), carregado antes do `view.js` (`arte.ts` e `view-scripts.json`). A view ganhou o
+  `consume(id, item)` que o motor já chamava (mensagem `consume`, que vai para todo mundo que vê quem bebeu)
+  - **estouro, nas garrafadas:** a garrafadinha, na cor do líquido, sobe girando do peito até 2,72 m (acima do nome;
+    em 2,5 m o anel caía em cima das letras), estoura (clarão, anel e cacos de luz) e solta folhas de mato e gotas que
+    descem em espiral em volta do corpo; a luz no corpo e faíscas de cura subindo. Pequena verde, Média âmbar, Grande
+    vermelha (com mais folhas). 1,35 s
+  - **benzimento, no Ramo de Arruda:** o círculo de luz abre nos pés, duas fitas de luz e as folhas de arruda sobem em
+    hélice por fora dos braços (56 cm, fechando na cabeça) e no alto viram faíscas. 1,45 s. Só na arruda porque sobe
+    em volta do corpo como o subir de nível: na garrafada, que se usa toda hora na luta, ia confundir
+  - **comida (Banana, Água de Coco):** o brilho no peito e faíscas na cor dela subindo. 0,9 s
+  - três passadas, como o subir de nível: `_withFx` (no lugar do `_withLevelFx`) desenha os dois efeitos juntos, se
+    vierem juntos. Luz na noite pelo `light` e `hex`
+  - teste: `tests/consume-art.test.ts`. Rascunho `pocao/`: `gif.cjs <pasta>` (a prévia dos dois estilos, forçando o
+    estilo com `look(item, estilo)`) e `jogo.cjs <pasta> [so-arruda]` (no jogo, em câmera lenta). Cuidado: no 0,25x o
+    relógio do servidor também anda devagar, e a recarga de 10 s da garrafada não passa: volte ao 1x entre um item e
+    outro. A arruda só cura, então o servidor recusa com a vida cheia: leve um golpe dos saguis e use ali mesmo, porque
+    voltando para a vila a vida enche
 - **As correções das poções (23/11; na main com o "pode" do dono; o DOM e os ganchos são da [estrutura]):**
   - **a barra sem o Fôlego:** no PC voltou a moldura de 6 quadrados (`habilidades-moldura.webp`, 887 × 234; a de 7 saiu
     do repositório e está no commit `4380f90`, se um dia voltar a ter 7): Q, R, T, esquiva (`--i: 3`), defesa (o

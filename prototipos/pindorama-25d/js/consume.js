@@ -1,6 +1,8 @@
 // O efeito de usar um consumível (pedido do dono, 23/11: "o efeito de quando usar a poção na mesma pegada do Priston
-// Tale"; ele não achou referência — lembra da poção jogada para cima, estourando — e pediu para ver duas ideias prontas
-// antes de escolher). Dois estilos, na cor do líquido de cada garrafada (Pequena verde, Média âmbar, Grande vermelha):
+// Tale"; ele não achou referência — lembra da poção jogada para cima, estourando —, viu as duas ideias prontas e
+// escolheu a sugestão da [arte]: "pode fazer a sua sugestão" = o estouro nas garrafadas e o benzimento no Ramo de
+// Arruda, a erva da benzedeira). Dois estilos, na cor do líquido de cada garrafada (Pequena verde, Média âmbar,
+// Grande vermelha):
 //   'estouro'    — a garrafada sobe girando da mão, estoura em cima da cabeça e solta folhas e gotas que descem em
 //                  espiral em volta do corpo; uma luz sobe do chão e faíscas de cura sobem pelo corpo;
 //   'benzimento' — um círculo de luz abre no chão e um redemoinho de folhas de arruda sobe em volta do corpo, como a
@@ -28,21 +30,22 @@
 
   // As cores: `rgb` = o líquido (a luz do efeito), `pale` = o brilho, `hex` = a luz que acende na noite (view.js).
   // `kind`: 'pocao' (garrafada e erva: o efeito inteiro) ou 'comida' (o pequeno). `big`: a Grande, com mais folhas.
+  // `style`: o estouro nas garrafadas, o benzimento na arruda (a escolha do dono).
   const LOOKS = {
-    garrafada_pequena: { kind: 'pocao', rgb: [196, 232, 86], pale: [240, 255, 205], hex: '#cde85a' },
-    garrafada: { kind: 'pocao', rgb: [255, 172, 64], pale: [255, 236, 190], hex: '#ffb44a' },
-    garrafada_grande: { kind: 'pocao', big: true, rgb: [255, 96, 64], pale: [255, 214, 196], hex: '#ff7a52' },
-    erva_arruda: { kind: 'pocao', rgb: [120, 222, 150], pale: [218, 255, 228], hex: '#86e0a0' },
-    banana: { kind: 'comida', rgb: [255, 216, 72], pale: [255, 248, 200], hex: '#ffd84a' },
-    agua_coco: { kind: 'comida', rgb: [128, 208, 255], pale: [222, 245, 255], hex: '#8ed0ff' },
-    // um consumível que ainda não tem cor própria: o verde da cura
-    outro: { kind: 'pocao', rgb: [120, 230, 120], pale: [220, 255, 220], hex: '#80e080' },
+    garrafada_pequena: { kind: 'pocao', style: 'estouro', rgb: [196, 232, 86], pale: [240, 255, 205], hex: '#cde85a' },
+    garrafada: { kind: 'pocao', style: 'estouro', rgb: [255, 172, 64], pale: [255, 236, 190], hex: '#ffb44a' },
+    garrafada_grande: { kind: 'pocao', style: 'estouro', big: true, rgb: [255, 96, 64], pale: [255, 214, 196], hex: '#ff7a52' },
+    erva_arruda: { kind: 'pocao', style: 'benzimento', rgb: [120, 222, 150], pale: [218, 255, 228], hex: '#86e0a0' },
+    banana: { kind: 'comida', style: 'estouro', rgb: [255, 216, 72], pale: [255, 248, 200], hex: '#ffd84a' },
+    agua_coco: { kind: 'comida', style: 'estouro', rgb: [128, 208, 255], pale: [222, 245, 255], hex: '#8ed0ff' },
+    // um consumível que ainda não tem cor própria: o verde da cura, no estouro
+    outro: { kind: 'pocao', style: 'estouro', rgb: [120, 230, 120], pale: [220, 255, 220], hex: '#80e080' },
   };
   const STYLES = ['estouro', 'benzimento'];
-  /** A aparência do efeito de um item (`style`: 'estouro' ou 'benzimento'; sem ele, o padrão do jogo). */
+  /** A aparência do efeito de um item (`style`, só para as pranchas: força 'estouro' ou 'benzimento'). */
   function look(item, style) {
     const base = LOOKS[item] || LOOKS.outro;
-    return Object.assign({ style: STYLES.includes(style) ? style : PD.consumeFx.style }, base);
+    return STYLES.includes(style) ? Object.assign({}, base, { style }) : base;
   }
   /** Quanto dura (s). */
   function duration(o) {
@@ -66,8 +69,11 @@
     const k = clamp01((h - SHOULDER) / (HEAD_TOP - SHOULDER));
     return R_BODY + (R_HEAD - R_BODY) * k * k * (3 - 2 * k);
   };
-  /** A altura do estouro da garrafada: acima da cabeça e do nome (que fica a ~2,07 m). */
-  const BURST_H = 250;
+  /**
+   * A altura do estouro da garrafada: acima da cabeça e do nome (que fica a ~2,07 m). Em 2,5 m o anel do estouro caía
+   * em cima das letras do nome, no jogo.
+   */
+  const BURST_H = 272;
 
   function glow(ctx, x, y, r, c, a) {
     if (r <= 0.5 || a <= 0.003) return;
@@ -513,5 +519,5 @@
     ctx.restore();
   }
 
-  PD.consumeFx = { draw, look, duration, light, styles: STYLES, style: 'estouro', R_BODY };
+  PD.consumeFx = { draw, look, duration, light, styles: STYLES, R_BODY };
 })(window.PD || (window.PD = {}));

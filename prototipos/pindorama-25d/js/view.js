@@ -14,6 +14,8 @@
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
 //   talk(id, ms)              quem fala mexe a boca (e a sobrancelha) por `ms`, sem balão; 0 para
 //   levelUp(id, o que, hab.)  subiu de nível ('level') ou ganhou ponto numa habilidade ('skill'): anéis de luz subindo
+//   consume(id, item)         bebeu ou comeu (a chave do item): a garrafada estourando em folhas, o benzimento da
+//                             arruda ou as faíscas da comida (js/consume.js)
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -168,6 +170,17 @@
       const a = this.actors.get(id);
       if (!a || a.creature || !PD.levelUpFx) return;
       a.levelFx = { at: this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now()), look: PD.levelUpFx.look(what, skill) };
+    }
+
+    /**
+     * Alguém usou um consumível (`item`: a chave em data/items.json): nas garrafadas, ela sobe girando, estoura em cima
+     * da cabeça e as folhas descem em espiral; no Ramo de Arruda, o benzimento (o redemoinho de folhas subindo); na
+     * comida, faíscas na cor dela (js/consume.js). Você ou outro jogador perto. Beber de novo recomeça o efeito.
+     */
+    consume(id, item) {
+      const a = this.actors.get(id);
+      if (!a || a.creature || !PD.consumeFx) return;
+      a.consumeFx = { at: this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now()), look: PD.consumeFx.look(item) };
     }
 
     /**
@@ -653,8 +666,9 @@
         }
         if (a.id === this.followId && this.visionWant > 0) glow = Math.max(glow, 0.45);
         a.eyeGlow = glow;
-        // o efeito de subir de nível acabou
+        // o efeito de subir de nível (ou o de beber) acabou
         if (a.levelFx && (t - a.levelFx.at) / 1000 > PD.levelUpFx.duration(a.levelFx.look)) a.levelFx = null;
+        if (a.consumeFx && (t - a.consumeFx.at) / 1000 > PD.consumeFx.duration(a.consumeFx.look)) a.consumeFx = null;
         if (a.armedOff && t >= a.armedOff) {
           a.armedOff = 0;
           if (a.ch) {
@@ -717,7 +731,7 @@
       const seen = this._onScreen();
       const actors = [...this.actors.values()].map((a) => {
         const d = this._actorDrawable(a);
-        if (d && a.levelFx) this._withLevelFx(d, a);
+        if (d && (a.levelFx || a.consumeFx)) this._withFx(d, a);
         else if (d && d.bounds && !seen(d.bounds)) {
           d.draw = () => {};
           d.drawShadow = () => {};
@@ -1060,14 +1074,20 @@
         const lit = a.creature._lit ? a.creature._lit() : 1;
         if (lit > 0.05) list.push({ x: a.creature.pos.x, y: a.creature.pos.y, z: 0, r: 240, color: '#ff9a3a', k: 0.85 * lit, flicker: true });
       }
-      // quem está subindo de nível: a luz do efeito abre o escuro em volta dele, no chão e no corpo (js/levelup.js)
+      // quem está subindo de nível ou bebendo: a luz do efeito abre o escuro em volta dele, no chão e no corpo
+      // (js/levelup.js, js/consume.js)
       for (const a of this.actors.values()) {
-        const fx = a.levelFx;
-        if (!fx || !PD.levelUpFx || !a.ch) continue;
-        const lit = PD.levelUpFx.light(fx.look, (this.last - fx.at) / 1000);
-        if (lit < 0.02) continue;
-        list.push({ x: a.ch.pos.x, y: a.ch.pos.y, z: 0, r: 230, color: fx.look.hex, k: 0.8 * lit });
-        list.push({ x: a.ch.pos.x, y: a.ch.pos.y, z: 120, r: 150, color: fx.look.hex, k: 0.7 * lit });
+        if (!a.ch) continue;
+        for (const [fx, lib] of [
+          [a.levelFx, PD.levelUpFx],
+          [a.consumeFx, PD.consumeFx],
+        ]) {
+          if (!fx || !lib) continue;
+          const lit = lib.light(fx.look, (this.last - fx.at) / 1000);
+          if (lit < 0.02) continue;
+          list.push({ x: a.ch.pos.x, y: a.ch.pos.y, z: 0, r: 230, color: fx.look.hex, k: 0.8 * lit });
+          list.push({ x: a.ch.pos.x, y: a.ch.pos.y, z: 120, r: 150, color: fx.look.hex, k: 0.7 * lit });
+        }
       }
       // os vaga-lumes acesos (vida.js)
       if (PD.vida) for (const g of PD.vida.glows(this.world)) list.push(g);
@@ -1485,26 +1505,31 @@
     }
 
     /**
-     * O efeito de subir de nível em volta de quem desenha `d`: o círculo do chão junto com as sombras (embaixo de tudo),
-     * a metade de trás dos anéis antes do corpo e a da frente depois (js/levelup.js). Fica fora da imagem guardada do
-     * personagem (drawCached): é desenhado à parte, então quem está parado continua leve.
+     * Os efeitos em volta de quem desenha `d` (o de subir de nível, js/levelup.js, e o de beber ou comer,
+     * js/consume.js; os dois juntos, se for o caso): a parte do chão junto com as sombras (embaixo de tudo), a de trás
+     * antes do corpo e a da frente depois. Ficam fora da imagem guardada do personagem (drawCached): são desenhados à
+     * parte, então quem está parado continua leve.
      */
-    _withLevelFx(d, a) {
-      const fx = a.levelFx;
+    _withFx(d, a) {
       const ch = a.ch;
       const cam = this.cam;
-      const s = (this.last - fx.at) / 1000;
       const foot = { x: ch.pos.x, y: ch.pos.y, z: ch.groundZ || 0 };
+      const list = [];
+      if (a.levelFx && PD.levelUpFx) list.push([PD.levelUpFx, a.levelFx]);
+      if (a.consumeFx && PD.consumeFx) list.push([PD.consumeFx, a.consumeFx]);
+      const pass = (c, name) => {
+        for (const [lib, fx] of list) lib.draw(c, cam, foot, (this.last - fx.at) / 1000, fx.look, name);
+      };
       const draw = d.draw;
       const shadow = d.drawShadow;
       d.drawShadow = (c) => {
         shadow(c);
-        PD.levelUpFx.draw(c, cam, foot, s, fx.look, 'chao');
+        pass(c, 'chao');
       };
       d.draw = (c) => {
-        PD.levelUpFx.draw(c, cam, foot, s, fx.look, 'tras');
+        pass(c, 'tras');
         draw(c);
-        PD.levelUpFx.draw(c, cam, foot, s, fx.look, 'frente');
+        pass(c, 'frente');
       };
     }
 

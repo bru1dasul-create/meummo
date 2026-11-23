@@ -41,6 +41,7 @@
     "js/creatures/marimbondo.js",
     "js/creatures/boitata.js",
     "js/levelup.js",
+    "js/consume.js",
     "js/view.js",
     "js/portrait.js"
   ]

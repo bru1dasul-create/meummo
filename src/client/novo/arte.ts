@@ -53,6 +53,8 @@ import '../../../prototipos/pindorama-25d/js/creatures/marimbondo.js';
 import '../../../prototipos/pindorama-25d/js/creatures/boitata.js';
 // o efeito de subir de nível (e de ganhar ponto numa habilidade): o círculo no chão e os anéis de luz subindo
 import '../../../prototipos/pindorama-25d/js/levelup.js';
+// o efeito de usar um consumível: o estouro das garrafadas, o benzimento da arruda e o da comida
+import '../../../prototipos/pindorama-25d/js/consume.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
 import { installAttributeIcons } from '../paintedIcons';

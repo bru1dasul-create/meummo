@@ -965,9 +965,12 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   empalhado com lacre de cera), Frasco Vazio, Água da Mina (a moringa de barro), Folha de Babosa e Raiz de Jurubeba —
   aprovados pelo dono (23/11) e na main (`paintedIcons.ts`, com as mesmas chaves dos itens). Falta a [estrutura] trocar
   o "icone" de cada um em `data/items.json` (pedido mandado)
-- [ ] **[arte]** Das poções (etapa 1): o efeito de usar a poção "na mesma pegada do Priston Tale" (pedido do dono, 23/11)
-  pelo gancho `view.consume(id, item)`. O dono não achou referência (lembra da poção jogada para cima, estourando) e
-  pediu para ver as duas ideias da [arte] prontas antes de escolher: a garrafada que estoura em folhas e o benzimento
+- [x] **[arte]** Das poções (etapa 1): o efeito de usar a poção "na mesma pegada do Priston Tale" (pedido do dono, 23/11)
+  pelo gancho `view.consume(id, item)`. O dono não achou referência (lembra da poção jogada para cima, estourando), viu
+  as duas ideias da [arte] prontas e escolheu "a sua sugestão": **nas garrafadas, a garrafa sobe girando, estoura em
+  cima da cabeça e as folhas e gotas descem em espiral** (na cor de cada uma: Pequena verde, Média âmbar, Grande
+  vermelha); **no Ramo de Arruda, o benzimento** (o círculo de luz nos pés e o redemoinho de folhas subindo); **na
+  comida, um brilho pequeno** na cor dela. `js/consume.js`; conferido no jogo, também no meio da luta
 - [x] **[arte]** Das poções, as correções rápidas (na main em 23/11, com o "pode" do dono): **a barra sem o
   Fôlego** (no PC, a moldura de 6 quadrados de novo: Q, R, T, esquiva, defesa e pulo; no celular, a defesa entrou no
   buraco ao lado da Chuva); **a mochila diz o que o consumível faz** ("Recupera 25% da vida", "+5 de Destreza por
