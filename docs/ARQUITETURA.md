@@ -130,6 +130,14 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   sozinhos onde pega mais bichos) e `combat.ts` (o círculo, as flechas subindo e caindo e as cravadas, provisório). A
   Bordunada saiu do jogo novo (o 1º quadrado da barra, o `skill0`, é o da 1ª habilidade da classe); o jogo antigo
   continua com ela.
+- **Atributos** (protocolo 48, aprovado pelo dono em 23/11): Força, Destreza, Espírito e Vitalidade, 3 pontos por nível
+  a partir do 2. As regras em `src/shared/attributes.ts` (`attributePointsLeft`; `cleanAttributes` confere os salvos e
+  zera tudo se passarem do nível; `strengthFactor` no dano do tiro de sempre, `dexterityShot` na puxada e no intervalo,
+  `spiritDamageFactor` e `spiritCooldownFactor` nas habilidades da classe, `vitalityHp` na vida máxima) e quanto vale
+  cada ponto nas regras do combate (`CombatRules`, painel: Combate › Atributos). O `Player` guarda `attributes` (salvos
+  em `CharacterData.attributes`, passo 7 de `MIGRATIONS`); o `stats` leva `attrs` e `attrPoints`. Pedidos: `attr` (um
+  ponto) e `attrReset` (recomeçar). O navegador usa as mesmas contas para prever a puxada, o intervalo e a recarga
+  (`engine.ts`: `shot()` e `classCooldownMs`); a janela é a aba Atributos do `skillsPanel.ts`.
 - **Tiro que cai onde mira, espalha andando e a flecha carregada** (protocolo 41, pedidos do dono de 15/11): o `shoot`
   leva `d` (a distância até o ponto mirado): o tiro para lá (`aimedRange`: nunca além do alcance da carga, nem mais
   perto que `SHOT_MIN_RANGE`). Quem atirou andando há menos de `SHOT_MOVING_MS` erra um pouco (`shotSpread(cid, ...)`:

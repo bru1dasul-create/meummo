@@ -901,6 +901,16 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   com um estilo provisório (`#skill-bar-provisorio`)
 - [ ] **[arte]** Vestir o "+" e as bolinhas do nível na barra no style.css (e apagar o estilo provisório do
   `skillBar.ts`). Pedido mandado à [arte]
+- [x] **[estrutura]** Atributos (pedido do dono, 23/11: "vamos fazer sistema de pontos de força, destreza, inteligencia,
+  vida etc.."; aprovado: "pode fazer assim, 3 pontos por nível, espírito"): **Força** (dano do tiro de sempre, arco e
+  estilingue), **Destreza** (puxada e intervalo do tiro menores), **Espírito** (dano e recarga das habilidades da
+  classe) e **Vitalidade** (vida). 3 pontos por nível, a partir do 2 (quem já tem nível ganha os dele: no nível 10, 27);
+  recomeçar é de graça, por enquanto; nada de sorteio. Quanto vale cada ponto: painel do administrador (Combate ›
+  Atributos; padrão 2%, 1,5% e 1%, 2% e 1%, 5 de vida; a Destreza e o Espírito tiram no máximo 40% de cada tempo).
+  Janela K com duas abas, Habilidades e Atributos ("+" em cada um; o número no botão soma os pontos das duas). Regras em
+  `src/shared/attributes.ts`; protocolo 48; passo 7 do arquivo de personagens
+- [ ] **[arte]** Vestir a aba dos Atributos da janela K (as abas, as linhas e um ícone para cada atributo no lugar da
+  letra; o topo preso precisa de fundo opaco) e, se quiser, mostrar os atributos na mochila. Pedido mandado à [arte]
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
