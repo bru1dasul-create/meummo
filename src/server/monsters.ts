@@ -53,6 +53,12 @@ export interface MonsterDef {
   shotDodge: number;
   /** Só aparece de noite (o filhote de boitatá, "soNoite"): de dia a área fica vazia e ele vai embora ao amanhecer. */
   nightOnly: boolean;
+  /**
+   * Sobe em galho (o sagui, campo "galho"; Sagui no galho, 23/11): calmo, vai até um galho livre da área dele (os pontos
+   * `galho-sagui` do mapa), sobe e fica pendurado, jogando o golpe lá de cima. Desce quando alguém chega a `descendRange`
+   * metros ou acerta nele, e sobe de novo depois de `climbAfterMs` calmo. Mapa sem galho: fica no chão, como sempre.
+   */
+  branch: MonsterBranch | null;
   /** O que ele pode deixar para quem ajudou a derrubá-lo. */
   drops: MonsterDrop[];
   /** Ouro que cada um que ajudou ganha: sorteado entre [mínimo, máximo] ([0, 0] = nenhum). */
@@ -73,6 +79,14 @@ export interface MonsterSong {
   pullEveryMs: number;
   /** O que ela diz ao cantar (um balão, sorteado). */
   lines: string[];
+}
+
+/** O galho (campo "galho" em data/monsters.json): "desceA" (metros) e "sobeDepoisMs". */
+export interface MonsterBranch {
+  /** Alguém chegou a esta distância (metros, do pé dele até o chão embaixo do galho): pula para o chão e luta. */
+  descendRange: number;
+  /** Calmo (sem alvo e sem levar golpe) por este tempo, volta para um galho. */
+  climbAfterMs: number;
 }
 
 /** Um item que o monstro pode deixar: `chance` em % (0 a 100), quantidade entre min e max. */
@@ -159,6 +173,15 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       if (angle > 360) throw new Error(`Erro em ${FILE} (casca do monstro "${rawId}"): "angulo" é de 10 a 360 (graus).`);
       shell = { block: block / 100, halfArc: ((angle / 2) * Math.PI) / 180, dizzyMs: c.number('tontoMs', { min: 0, fallback: 2000 }) };
     }
+    const branchData = r.object('galho', true);
+    let branch: MonsterBranch | null = null;
+    if (branchData) {
+      const g = new Reader(branchData, FILE, `galho do monstro "${rawId}"`);
+      branch = { descendRange: g.number('desceA', { min: 0, fallback: 3 }), climbAfterMs: g.number('sobeDepoisMs', { min: 0, fallback: 8000 }) };
+      if (kind !== 'projectile') {
+        throw new Error(`Erro em ${FILE} (monstro "${rawId}"): só quem joga de longe ("tipo": "projetil") sobe no galho.`);
+      }
+    }
     const dodge = r.number('desvioTiro', { min: 0, fallback: 0 });
     if (dodge > 90) throw new Error(`Erro em ${FILE} (monstro "${rawId}"): "desvioTiro" é em %, de 0 a 90.`);
     defs.set(id, {
@@ -189,6 +212,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       shell,
       shotDodge: dodge / 100,
       nightOnly: r.bool('soNoite', false),
+      branch,
       drops: parseDrops(r.list('itens'), rawId),
       gold: r.wholeRange('ouro'),
     });

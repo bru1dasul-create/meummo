@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 52;
+export const PROTOCOL_VERSION = 53;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -137,6 +137,13 @@ export const JUMP_COOLDOWN_MS = 800;
  */
 export const JUMP_AIR_MS = 650;
 export const DASH_ROLL_MS = 700;
+
+/**
+ * O Sagui no galho (23/11): quanto dura subir (o pulo e a cambalhota de lado) e descer (desvira e cai de pé). São os
+ * tempos do desenho da [arte] (`sagui.js`: UP_DUR 0,72 s e DOWN_DUR 0,56 s); nesse tempo o bicho não faz mais nada.
+ */
+export const PERCH_CLIMB_MS = 720;
+export const PERCH_DESCEND_MS = 560;
 
 /**
  * Dia e noite (decisão do dono, 14/11): 30 minutos de dia e 10 de noite, de verdade (o relógio é o mesmo em todos os

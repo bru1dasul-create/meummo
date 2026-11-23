@@ -321,6 +321,19 @@ export class Monster {
   /** Marcado pela Flecha Ancestral até aqui: leva `markPct`% a mais de dano de todo mundo. */
   markedUntil = 0;
   markPct = 0;
+  /**
+   * Pendurado num galho (o Sagui no galho): qual galho do mapa (`map.branches`), a altura e a direção. Lá em cima, `x` e
+   * `y` são os do chão embaixo do galho, exatos (com fração): ele não ocupa tile nem anda. null = no chão.
+   */
+  perch: { branch: number; height: number; angle: number } | null = null;
+  /** O galho para onde está indo, já guardado para ele (dois não vão para o mesmo). */
+  branchGoal: number | null = null;
+  /** Subindo ou descendo do galho até aqui: não faz mais nada (é o tempo do desenho). */
+  perchBusyUntil = 0;
+  /** Acertaram nele no meio da subida: pula para o chão assim que chegar lá em cima. */
+  perchHit = false;
+  /** A última vez que teve alvo: calmo por um tempo (`def.branch.climbAfterMs`), volta para um galho. */
+  lastFightAt = -Infinity;
   /** Jogadores que bateram neste monstro (todos ganham XP quando ele cai). */
   readonly contributors = new Set<number>();
 
@@ -352,6 +365,7 @@ export class Monster {
       hp: this.hp,
       maxHp: this.maxHp,
       stepMs: this.def.stepMs,
+      ...(this.perch ? { perch: { h: this.perch.height, a: this.perch.angle } } : {}),
     };
   }
 }

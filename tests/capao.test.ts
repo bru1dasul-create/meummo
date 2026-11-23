@@ -182,6 +182,31 @@ describe('Mapa 01 (Capão): formato do mapa novo', () => {
   });
 });
 
+describe('Mapa 01 (Capão): os galhos dos saguis (pedido da [arte] com o ok do dono, 23/11)', () => {
+  it('de 4 a 6 galhos na área dos saguis, com altura e direção; o chão embaixo é andável e longe do tronco', () => {
+    const area = layer('monstros').find((o) => o.name === 'sagui')!;
+    const [ax0, ay0] = [area.x / M, area.y / M];
+    const [ax1, ay1] = [ax0 + area.width / M, ay0 + area.height / M];
+    const perches = layer('pontos').filter((o) => o.type === 'galho-sagui');
+    expect(perches.length).toBeGreaterThanOrEqual(4);
+    expect(perches.length).toBeLessThanOrEqual(6);
+    const trunks = layer('cenario').filter((o) => o.type === 'arvore').map((o) => ({ ...at(o), r: Number(prop(o, 'tronco')) / 2 }));
+    const boxes = layer('colisao').map((o) => ({ x0: o.x / M, y0: o.y / M, x1: (o.x + o.width) / M, y1: (o.y + o.height) / M }));
+    for (const o of perches) {
+      const { x, y } = at(o);
+      expect(x >= ax0 && x <= ax1 && y >= ay0 && y <= ay1, `galho em (${x}, ${y}) fora da área`).toBe(true);
+      const h = Number(prop(o, 'altura')), dir = Number(prop(o, 'direcao'));
+      expect(h).toBeGreaterThanOrEqual(2);
+      expect(h).toBeLessThanOrEqual(2.4);
+      expect(Number.isFinite(dir)).toBe(true);
+      const near = Math.min(...trunks.map((t) => Math.hypot(t.x - x, t.y - y) - t.r));
+      expect(near, `galho em (${x}, ${y}) colado no tronco`).toBeGreaterThanOrEqual(0.7);
+      const hit = boxes.find((b) => x + 0.35 > b.x0 && x - 0.35 < b.x1 && y + 0.35 > b.y0 && y - 0.35 < b.y1);
+      expect(hit, `o chão embaixo do galho em (${x}, ${y}) não é andável`).toBeUndefined();
+    }
+  });
+});
+
 describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
   const cenario = layer('cenario');
   const inPark = (o: TiledObject) => o.x / M < 48;

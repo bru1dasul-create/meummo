@@ -39,7 +39,7 @@ import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pr
 import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
 import { ATTRIBUTE_IDS, dexterityShot, noAttributes, spiritCooldownFactor, spiritDamageFactor, strengthFactor, type Attributes } from '../../shared/attributes';
-import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, type DebugShape } from './combat';
+import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, throwZ, type DebugShape } from './combat';
 import { GmPanel } from './gm';
 import { GuardButton } from './guard';
 import { Joystick } from './joystick';
@@ -105,6 +105,8 @@ const GUARD_RESEND_MS = 120;
 const PET_REACH = 1.5;
 /** A altura do bicho na tela, para tocar nele (metros). */
 const PET_HEIGHT = 0.45;
+/** Pendurado num galho, o corpo vai do galho até uns 95 cm abaixo dele (o rabo no galho e a cabeça embaixo). */
+const PERCH_BODY = 0.95;
 /** Puxando o estilingue: a mira nova vai para a view quando muda mais que isto (o corpo e os braços acompanham). */
 const PULL_AIM_RESEND = (5 * Math.PI) / 180;
 /** A barra de energia anda até o valor do servidor nesta velocidade (pontos por segundo). */
@@ -540,7 +542,7 @@ class NewWorld implements NewWorldGame {
       entities: () =>
         [...game.entities.values()].map((e) => {
           const feet = feetAt(e.x, e.y);
-          return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp };
+          return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp, ...(e.perch ? { perch: { ...e.perch } } : {}) };
         }),
       hp: () => ({ hp: game.myHp, maxHp: game.myMaxHp }),
       // sinais de missão em cima dos NPCs ('!' nova, '?' para concluir)
@@ -582,7 +584,8 @@ class NewWorld implements NewWorldGame {
       skillsTab: () => game.skillsPanel.currentTab,
       // os Olhos de Gavião: quantos ms ainda valem (0 = desligados)
       hawk: () => Math.max(0, Math.round(game.hawkUntil - gameNow())),
-      screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
+      // z: a altura (metros) acima do pé (o corpo do sagui pendurado no galho, por exemplo)
+      screenOf: (x: number, y: number, z = 0) => game.view?.toScreen(x, y, z),
     };
   }
 
@@ -755,7 +758,10 @@ class NewWorld implements NewWorldGame {
       this.combat.setPet(e.id, e.name, feet.x, feet.y, (degreesOfDir(e.dir) * Math.PI) / 180, e.asleep === true, home, e.type === 'capivara');
       return;
     }
-    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}) });
+    // pendurado num galho (o Sagui no galho): já aparece lá em cima, sem animar
+    const galho = e.perch ? { galho: { altura: e.perch.h, direcao: e.perch.a } } : {};
+    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}), ...galho });
+    this.combat.setPerch(e.id, e.perch ? e.perch.h : null);
     if (e.kind === 'player') this.view?.gear?.(e.id, e.gear ?? {}); // o que ele tem na mão (o arco fica sempre à vista)
   }
 
@@ -1332,10 +1338,13 @@ class NewWorld implements NewWorldGame {
     let bestScore = Infinity;
     for (const e of this.entities.values()) {
       if (e.kind !== kind) continue;
+      // pendurado num galho (o Sagui no galho): o corpo está lá em cima, de cabeça para baixo, logo abaixo do galho
+      const bottom = e.perch ? Math.max(0, e.perch.h - PERCH_BODY) : 0;
+      const top = e.perch ? e.perch.h + 0.1 : kind === 'pet' ? PET_HEIGHT : BODY_HEIGHT;
       for (const feet of [this.drawnFeet(e.id), feetAt(e.x, e.y)]) {
         if (!feet) continue;
-        const foot = this.view.toScreen(feet.x, feet.y, 0);
-        const head = this.view.toScreen(feet.x, feet.y, kind === 'pet' ? PET_HEIGHT : BODY_HEIGHT);
+        const foot = this.view.toScreen(feet.x, feet.y, bottom);
+        const head = this.view.toScreen(feet.x, feet.y, top);
         const height = Math.hypot(head.x - foot.x, head.y - foot.y);
         const reach = this.usingTouch ? Math.max(32, height * 0.6) : Math.max(18, height * 0.4);
         const score = distanceToSegment(point, foot, head) / reach;
@@ -2426,9 +2435,12 @@ class NewWorld implements NewWorldGame {
       this.combat.linkMyShot(msg.cid, msg.id, msg.range); // o seu tiro já está voando desde o clique
       return;
     }
-    const fromMonster = this.entities.get(msg.by)?.kind === 'monster';
+    const shooter = this.entities.get(msg.by);
+    const fromMonster = shooter?.kind === 'monster';
     const look = msg.rk !== undefined && msg.lv !== undefined ? { rank: msg.rk, level: msg.lv } : undefined;
-    this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, gameNow(), look);
+    // jogada lá do galho (o Sagui no galho): sai da mão dele, lá em cima, e cai até a altura do voo
+    const fromZ = fromMonster && shooter.perch ? throwZ(shooter.perch.h) : undefined;
+    this.combat.shot(msg.id, msg.x, msg.y, msg.a, msg.speed, msg.range, msg.kind, fromMonster, gameNow(), look, fromZ);
     if (msg.kind === 'ancestral') this.sfx.play('spirit'); // outro jogador soltou a Flecha Ancestral
     this.view?.action?.(msg.by, 'shoot', toDegrees(msg.a));
   }
@@ -2528,6 +2540,7 @@ class NewWorld implements NewWorldGame {
     }
     const e = this.entities.get(id);
     if (e?.kind === 'monster') {
+      this.combat.setPerch(id, null); // caiu do galho: a view anima a queda lá de cima
       // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão). A view que anima
       // ('die') ganha um instante para mostrar a queda antes de o desenho sair.
       const feet = this.drawnFeet(id);
@@ -2809,6 +2822,7 @@ class NewWorld implements NewWorldGame {
         this.entities.delete(msg.id);
         this.facing.delete(msg.id);
         this.combat.setGuard(msg.id, null, 0);
+        this.combat.setPerch(msg.id, null);
         this.combat.removePet(msg.id);
         if (this.goingToPet === msg.id) this.goingToPet = null;
         this.view?.removeActor(msg.id);
@@ -2829,6 +2843,16 @@ class NewWorld implements NewWorldGame {
         }
         this.view?.moveActor(msg.id, feet.x, feet.y, angle, { durationMs: msg.dash ? 140 : duration, dash: msg.dash === true });
         if (msg.dash) this.view?.action?.(msg.id, 'dash', angle);
+        break;
+      }
+      case 'perch': {
+        // o Sagui no galho: subiu (o pé vai para o chão embaixo do galho, no `move` que vem junto) ou pulou para o chão
+        const e = this.entities.get(msg.id);
+        if (!e) break;
+        if (msg.p) e.perch = msg.p;
+        else delete e.perch;
+        this.combat.setPerch(msg.id, msg.p ? msg.p.h : null);
+        this.view?.perch?.(msg.id, msg.p ? { altura: msg.p.h, direcao: msg.p.a } : null);
         break;
       }
       case 'ack':

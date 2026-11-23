@@ -17,6 +17,8 @@ import {
   ITEM_DROP_MS,
   MAX_PLAYERS,
   MAX_QUEUED_WALKS,
+  PERCH_CLIMB_MS,
+  PERCH_DESCEND_MS,
   PICKUP_RANGE,
   REGEN_EVERY_MS,
   SHOT_HIT_RADIUS,
@@ -297,8 +299,10 @@ export class World {
   private readonly zoneByArea = new Map<string, ZoneState>();
   /** Chão pegando fogo agora (rastros de investida). */
   private hazards: Hazard[] = [];
-  /** Tile → id do monstro que está nele (monstros não se empilham). */
+  /** Tile → id do monstro que está nele (monstros não se empilham). Quem está num galho não ocupa tile. */
   private readonly monsterAt = new Map<number, number>();
+  /** Galho do mapa (o índice em `map.branches`) → o monstro pendurado nele ou indo para ele (um por galho). */
+  private readonly branchTaken = new Map<number, number>();
   private lastTickAt: number;
   private readonly now: () => number;
   private readonly pace: { get: () => number; set: (scale: number) => void } | null;
@@ -421,7 +425,7 @@ export class World {
   /** Tira um monstro do mapa sem ninguém ganhar nada (o painel mudou a área dele). */
   private removeMonster(monster: Monster): void {
     this.monsters.delete(monster.id);
-    this.monsterAt.delete(this.tileKey(monster.x, monster.y));
+    this.leaveTile(monster);
     monster.zone.alive.delete(monster.id);
     for (const player of this.players.values()) {
       if (player.known.delete(monster.id)) player.outbox.push({ t: 'despawn', id: monster.id });
@@ -1365,10 +1369,12 @@ export class World {
       if (!this.items.has(drop.item)) continue;
       items.push({ item: drop.item, n: this.rollRange(drop.min, drop.max) });
     }
-    // um lugar livre para cada coisa: o ouro no meio, os itens nos lugares em volta
-    const spots = this.map.walkableAround(monster.x, monster.y, 1);
+    // um lugar livre para cada coisa: o ouro no meio, os itens nos lugares em volta (de quem caiu do galho, no chão
+    // embaixo dele)
+    const ground = this.groundTileOf(monster);
+    const spots = this.map.walkableAround(ground.x, ground.y, 1);
     let next = 0;
-    const spot = (): Tile => spots[Math.min(next++, spots.length - 1)] ?? { x: monster.x, y: monster.y };
+    const spot = (): Tile => spots[Math.min(next++, spots.length - 1)] ?? ground;
     if (gold > 0) this.dropOnGround(player, spot(), gold, null, now, GOLD_DROP_MS);
     for (const stack of items) this.dropOnGround(player, spot(), 0, stack, now, ITEM_DROP_MS);
   }
@@ -2512,6 +2518,7 @@ export class World {
         }
       }
       if (target.hp === 0) this.killMonster(target, now);
+      else if (target.perch) this.knockOffBranch(target, now); // acertaram nele lá em cima: pula para o chão
     } else if (target.hp === 0) {
       this.killPlayer(target, now);
     }
@@ -2554,7 +2561,7 @@ export class World {
 
   private killMonster(monster: Monster, now: number): void {
     this.monsters.delete(monster.id);
-    this.monsterAt.delete(this.tileKey(monster.x, monster.y));
+    this.leaveTile(monster);
     monster.zone.alive.delete(monster.id);
     monster.zone.respawnAt.push(now + monster.def.respawnMs);
     for (const player of this.players.values()) {
@@ -2585,6 +2592,7 @@ export class World {
       if (now >= monster.singing.resolveAt) this.resolveSong(monster, now);
       return; // parada enquanto canta
     }
+    if (now < monster.perchBusyUntil) return; // subindo ou descendo do galho (o tempo do desenho)
     const def = monster.def;
     let target = monster.targetId !== null ? this.players.get(monster.targetId) : undefined;
     if (
@@ -2600,7 +2608,9 @@ export class World {
     }
 
     if (!target && def.aggressive && monster.mode !== 'return' && now >= monster.retargetAt) {
-      const found = this.nearestPlayer(monster, def.aggroRange, now);
+      // lá de cima do galho ele vê mais longe: percebe quem chega até o alcance do golpe
+      const notice = monster.perch ? Math.max(def.aggroRange, def.attack.range) : def.aggroRange;
+      const found = this.nearestPlayer(monster, notice, now);
       if (found) {
         monster.targetId = found.id;
         monster.mode = 'chase';
@@ -2610,10 +2620,186 @@ export class World {
       }
     }
 
+    if (target) monster.lastFightAt = now;
+    if (monster.perch) return this.updatePerched(monster, target, now);
+    if (target || monster.mode === 'return') this.releaseBranchGoal(monster);
     if (target) return this.fight(monster, target, now);
     if (monster.mode === 'return') return this.walkHome(monster, now);
+    if (this.goToBranch(monster, now)) return;
     this.wander(monster, now);
     this.regenMonster(monster, now);
+  }
+
+  // ---------- o Sagui no galho (opção 3 do dono, 23/11) ----------
+
+  /**
+   * No galho: joga o golpe lá de cima em quem está ao alcance (com o aviso de sempre) e pula para o chão quando alguém
+   * chega perto (`galho.desceA`). Sem alvo, fica quieto lá em cima (e se recupera, como quem voltou para casa).
+   */
+  private updatePerched(monster: Monster, target: Player | undefined, now: number): void {
+    const rule = monster.def.branch;
+    if (!rule || monster.perchHit) return this.leaveBranch(monster, now); // acertaram nele subindo (ou perdeu o galho no painel)
+    if (monster.mode === 'return') this.settleHome(monster); // perdeu o alvo: lá em cima já está em casa
+    if (!target) return this.regenMonster(monster, now);
+    const feet = feetAt(monster.x, monster.y);
+    const them = feetAt(target.fx, target.fy);
+    if (Math.hypot(them.x - feet.x, them.y - feet.y) <= rule.descendRange) return this.leaveBranch(monster, now);
+    const attack = monster.def.attack;
+    if (chebyshev(monster, target) > attack.range || !this.hasLineOfShot(monster, target)) return; // espera lá em cima
+    this.face(monster, dirTowards(monster, target));
+    if (now >= monster.nextAttackAt) this.startWindup(monster, attack, [], angleBetween(monster, spotOf(target)), now);
+  }
+
+  /**
+   * Calmo há um tempo (`galho.sobeDepoisMs`), quem sobe em galho vai até um galho livre da área dele e sobe (do tile
+   * embaixo do galho ou de um do lado: o desenho pula até lá). Devolve true enquanto está cuidando disso.
+   */
+  private goToBranch(monster: Monster, now: number): boolean {
+    const rule = monster.def.branch;
+    if (!rule || this.map.branches.length === 0 || monster.mode !== 'idle') return false;
+    if (now - Math.max(monster.lastFightAt, monster.lastDamagedAt) < rule.climbAfterMs) return false;
+    if (monster.branchGoal === null) {
+      if (now < monster.nextWanderAt) return false;
+      const goal = this.freeBranchFor(monster);
+      if (goal === null) return false; // todos ocupados (ou nenhum perto da área dele): passeia no chão
+      monster.branchGoal = goal;
+      this.branchTaken.set(goal, monster.id);
+    }
+    const goal = monster.branchGoal;
+    const foot = this.branchFoot(goal);
+    if (!foot) {
+      this.releaseBranchGoal(monster);
+      return false;
+    }
+    if (chebyshev(monster, foot) <= 1) {
+      this.climbBranch(monster, goal, now);
+      return true;
+    }
+    if (now < monster.nextStepAt) return true;
+    const path = findPath(this.map, monster.x, monster.y, foot.x, foot.y, 600);
+    const dir = path?.[0];
+    if (dir !== undefined && this.tryMoveMonster(monster, dir, now)) return true;
+    // sem caminho, ou alguém no caminho: desiste deste galho por agora (passeia e tenta de novo daqui a pouco)
+    this.releaseBranchGoal(monster);
+    monster.nextWanderAt = now + 2000 + this.random() * 2000;
+    return false;
+  }
+
+  /** O galho livre mais perto do bicho, perto da área dele (até 1 tile fora), ou null. */
+  private freeBranchFor(monster: Monster): number | null {
+    let best: number | null = null;
+    let bestDistance = Infinity;
+    for (let i = 0; i < this.map.branches.length; i++) {
+      const foot = this.branchFoot(i);
+      if (!foot || this.branchTaken.has(i) || this.zoneDistance(foot, monster.zone) > 1) continue;
+      const distance = Math.hypot(foot.x - monster.x, foot.y - monster.y);
+      if (distance < bestDistance) {
+        best = i;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /** De que tile se sobe no galho `i` (veja `GameMap.branchTile`), ou null (não dá para subir nele). */
+  private branchFoot(i: number): Tile | null {
+    return this.map.branchTile(i);
+  }
+
+  /** Sobe no galho `i`: o pé vai para o chão embaixo dele (exato) e, até o fim da subida, não faz mais nada. */
+  private climbBranch(monster: Monster, i: number, now: number): void {
+    const branch = this.map.branches[i]!;
+    this.vacateTile(monster);
+    const under = cornerAtFeet(branch.x, branch.y);
+    monster.x = under.x;
+    monster.y = under.y;
+    monster.perch = { branch: i, height: branch.height, angle: branch.angle };
+    monster.branchGoal = null;
+    monster.perchHit = false;
+    this.branchTaken.set(i, monster.id);
+    monster.perchBusyUntil = now + PERCH_CLIMB_MS;
+    monster.nextAttackAt = Math.max(monster.nextAttackAt, monster.perchBusyUntil);
+    monster.changed = true;
+    this.emitToViewers(monster, { t: 'perch', id: monster.id, p: { h: branch.height, a: branch.angle } });
+  }
+
+  /** Acertaram nele no galho: pula para o chão agora (subindo, assim que chegar lá em cima). */
+  private knockOffBranch(monster: Monster, now: number): void {
+    if (now < monster.perchBusyUntil) monster.perchHit = true;
+    else this.leaveBranch(monster, now);
+  }
+
+  /**
+   * Pula do galho para o chão, no tile livre mais perto embaixo dele: o golpe que estava preparando fica para depois e,
+   * até o fim da descida, não faz mais nada. Sem chão livre por perto (cheio de gente e de bicho), fica lá em cima.
+   */
+  private leaveBranch(monster: Monster, now: number): void {
+    const perch = monster.perch;
+    if (!perch) return;
+    const tile = this.landingTile(monster);
+    if (!tile) return;
+    if (this.branchTaken.get(perch.branch) === monster.id) this.branchTaken.delete(perch.branch);
+    monster.perch = null;
+    monster.perchHit = false;
+    monster.windup = null;
+    monster.x = tile.x;
+    monster.y = tile.y;
+    this.monsterAt.set(this.tileKey(tile.x, tile.y), monster.id);
+    monster.perchBusyUntil = now + PERCH_DESCEND_MS;
+    monster.nextAttackAt = Math.max(monster.nextAttackAt, monster.perchBusyUntil);
+    monster.nextStepAt = Math.max(monster.nextStepAt, monster.perchBusyUntil);
+    monster.changed = true;
+    this.emitToViewers(monster, { t: 'perch', id: monster.id, p: null });
+  }
+
+  /** Onde cai quem desce do galho: o tile livre mais perto do chão embaixo dele (até 3 tiles), ou null. */
+  private landingTile(monster: Monster): Tile | null {
+    const foot = monster.perch ? this.branchFoot(monster.perch.branch) : null;
+    const under = foot ?? { x: Math.round(monster.x), y: Math.round(monster.y) };
+    // primeiro um tile sem ninguém; depois, sem outro bicho (pode cair do lado de quem chegou)
+    for (const free of [(x: number, y: number) => this.canMonsterEnter(x, y), (x: number, y: number) => this.map.isWalkable(x, y) && !this.monsterAt.has(this.tileKey(x, y))]) {
+      let best: Tile | null = null;
+      let bestDistance = Infinity;
+      for (let dy = -3; dy <= 3; dy++) {
+        for (let dx = -3; dx <= 3; dx++) {
+          const tile = { x: under.x + dx, y: under.y + dy };
+          if (!free(tile.x, tile.y) || !this.map.isReachable(tile.x, tile.y)) continue;
+          const distance = Math.hypot(tile.x - monster.x, tile.y - monster.y);
+          if (distance < bestDistance) {
+            best = tile;
+            bestDistance = distance;
+          }
+        }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+
+  /** O tile do chão onde o monstro está: pendurado num galho, o de embaixo do galho. */
+  private groundTileOf(monster: Monster): Tile {
+    if (!monster.perch) return { x: monster.x, y: monster.y };
+    return this.branchFoot(monster.perch.branch) ?? { x: Math.round(monster.x), y: Math.round(monster.y) };
+  }
+
+  /** Desiste do galho para onde estava indo (outro pode ir). */
+  private releaseBranchGoal(monster: Monster): void {
+    if (monster.branchGoal === null) return;
+    if (this.branchTaken.get(monster.branchGoal) === monster.id) this.branchTaken.delete(monster.branchGoal);
+    monster.branchGoal = null;
+  }
+
+  /** O monstro saiu do mapa (caiu ou foi tirado): o tile dele e o galho dele ficam livres. */
+  private leaveTile(monster: Monster): void {
+    this.vacateTile(monster);
+    if (monster.perch && this.branchTaken.get(monster.perch.branch) === monster.id) this.branchTaken.delete(monster.perch.branch);
+    this.releaseBranchGoal(monster);
+  }
+
+  /** Solta o tile que o monstro ocupava (se era dele mesmo: pendurado no galho, ele não ocupa nenhum). */
+  private vacateTile(monster: Monster): void {
+    const key = this.tileKey(monster.x, monster.y);
+    if (this.monsterAt.get(key) === monster.id) this.monsterAt.delete(key);
   }
 
   private fight(monster: Monster, target: Player, now: number): void {
@@ -2829,15 +3015,7 @@ export class World {
   }
 
   private walkHome(monster: Monster, now: number): void {
-    if (this.zoneDistance(monster) === 0) {
-      monster.mode = 'idle';
-      monster.contributors.clear();
-      if (monster.hp < monster.maxHp) {
-        monster.hp = monster.maxHp;
-        this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
-      }
-      return;
-    }
+    if (this.zoneDistance(monster) === 0) return this.settleHome(monster);
     if (now < monster.nextStepAt) return;
     const zone = monster.zone.zone;
     const home = { x: zone.x + (zone.w >> 1), y: zone.y + (zone.h >> 1) };
@@ -2848,6 +3026,16 @@ export class World {
       const tile = this.freeTileInZone(monster.zone);
       if (tile && !path) this.teleportMonster(monster, tile);
       monster.nextStepAt = now + monster.def.stepMs;
+    }
+  }
+
+  /** Chegou em casa (a área dele, ou o galho): fica calmo, esquece quem bateu e volta com a vida cheia. */
+  private settleHome(monster: Monster): void {
+    monster.mode = 'idle';
+    monster.contributors.clear();
+    if (monster.hp < monster.maxHp) {
+      monster.hp = monster.maxHp;
+      this.emitToViewers(monster, { t: 'hp', id: monster.id, hp: monster.hp, maxHp: monster.maxHp });
     }
   }
 

@@ -322,6 +322,9 @@ const MONSTER_FIELDS: FieldSpec<MonsterDef>[] = [
   { campo: 'canto.preparoMs', rotulo: 'Aviso do canto (ms)', tipo: 'inteiro', dica: 'maior = mais tempo para sair da área', ler: (d) => d.song?.windupMs, vale: (d) => d.song !== null },
   { campo: 'canto.duracaoMs', rotulo: 'Encanto dura (ms)', tipo: 'inteiro', dica: 'a esquiva solta antes', ler: (d) => d.song?.durationMs, vale: (d) => d.song !== null },
   { campo: 'canto.puxaACadaMs', rotulo: 'Puxa um passo a cada (ms)', tipo: 'inteiro', dica: 'menor = puxa mais forte', ler: (d) => d.song?.pullEveryMs, vale: (d) => d.song !== null },
+  // o galho (só o sagui, por enquanto): pendurado, joga a fruta lá de cima
+  { campo: 'galho.desceA', rotulo: 'No galho: pula para o chão a (metros)', tipo: 'numero', dica: 'quem chega mais perto faz ele descer e lutar', ler: (d) => d.branch?.descendRange, vale: (d) => d.branch !== null },
+  { campo: 'galho.sobeDepoisMs', rotulo: 'Sobe no galho de novo depois de (ms) calmo', tipo: 'inteiro', ler: (d) => d.branch?.climbAfterMs, vale: (d) => d.branch !== null },
 ];
 
 const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [

@@ -19,7 +19,10 @@
 //   erro. Para os monstros e a busca de caminho, o tile que um retângulo toca fica bloqueado inteiro (monstro
 //   nunca atravessa árvore);
 // - camada de objetos `seguro`: retângulos de área segura (monstro não entra, não nota e não acerta quem está lá);
-// - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai).
+// - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai);
+// - camada `pontos`: ponto do tipo `galho-sagui` é um galho baixo onde o sagui se pendura (Sagui no galho, 23/11). O
+//   ponto fica no chão, embaixo do meio do galho (onde o pé dele fica), com `altura` (metros, de 1 a 4) e `direcao`
+//   (graus, do tronco para a ponta do galho: 0 = leste, 90 = sul).
 
 import { SHOT_FEET_DY, TILE_SIZE } from './constants';
 import { DX, DY } from './dir';
@@ -146,6 +149,25 @@ export interface MapPlace extends MapRegion {
   sound: string | null;
 }
 
+/**
+ * Um galho baixo onde o sagui se pendura (camada `pontos`, ponto do tipo `galho-sagui`): `x, y` = o chão embaixo do meio
+ * do galho (o pé dele, em metros), `height` = a altura do galho (m) e `angle` = para onde o galho aponta, do tronco para
+ * a ponta (graus: 0 = leste, 90 = sul).
+ */
+export interface MapBranch {
+  x: number;
+  y: number;
+  height: number;
+  angle: number;
+}
+
+/** O tipo do ponto do galho do sagui no Tiled. */
+export const BRANCH_TYPE = 'galho-sagui';
+/** A altura do galho sem a propriedade `altura` (m) e a faixa aceita (fora dela é erro: 220 seria em centímetros). */
+const BRANCH_HEIGHT = 2.2;
+const BRANCH_HEIGHT_MIN = 1;
+const BRANCH_HEIGHT_MAX = 4;
+
 /** Informações do mapa que vêm das propriedades e objetos do Tiled. */
 export interface MapInfo {
   id?: string;
@@ -167,6 +189,8 @@ export interface MapInfo {
   solids?: SolidRect[];
   /** Áreas seguras (camada `seguro`). */
   safeAreas?: SafeArea[];
+  /** Os galhos do sagui (camada `pontos`, tipo `galho-sagui`). */
+  branches?: readonly MapBranch[];
 }
 
 /** Área (em tiles) onde nascem monstros de um tipo. */
@@ -185,6 +209,21 @@ const NO_SOLIDS: readonly SolidRect[] = [];
 
 function boolProp(props: TiledProperty[] | undefined, ...names: string[]): boolean {
   return props?.some((p) => names.includes(p.name) && p.value === true) ?? false;
+}
+
+/** Um ponto `galho-sagui` do Tiled → o galho, conferido (a altura fora da faixa dá erro, em português). */
+function branchOf(obj: TiledObject, mapId: string, tw: number, th: number): MapBranch {
+  const prop = (name: string) => obj.properties?.find((p) => p.name === name)?.value;
+  const where = `O galho do sagui (objeto ${obj.id}) do mapa "${mapId}"`;
+  const height = prop('altura') ?? BRANCH_HEIGHT;
+  if (typeof height !== 'number' || !Number.isFinite(height) || height < BRANCH_HEIGHT_MIN || height > BRANCH_HEIGHT_MAX) {
+    throw new Error(`${where}: a propriedade "altura" é em metros, de ${BRANCH_HEIGHT_MIN} a ${BRANCH_HEIGHT_MAX} (ex.: 2.2).`);
+  }
+  const angle = prop('direcao') ?? 90;
+  if (typeof angle !== 'number' || !Number.isFinite(angle)) {
+    throw new Error(`${where}: a propriedade "direcao" é em graus (0 = leste, 90 = sul), do tronco para a ponta do galho.`);
+  }
+  return { x: obj.x / tw, y: obj.y / th, height, angle: ((angle % 360) + 360) % 360 };
 }
 
 export class GameMap implements Walkable {
@@ -217,6 +256,8 @@ export class GameMap implements Walkable {
   readonly metric: boolean;
   /** Áreas seguras (camada `seguro`). */
   readonly safeAreas: readonly SafeArea[];
+  /** Os galhos baixos onde o sagui se pendura (camada `pontos`, tipo `galho-sagui`). */
+  readonly branches: readonly MapBranch[];
   /** Tiles bloqueados para quem anda de tile em tile: os de `colide` e os que algum retângulo de `colisao` toca. */
   private readonly blocked: Uint8Array;
   /** Tiles bloqueados inteiros para o pé (só os de `colide`). */
@@ -228,6 +269,8 @@ export class GameMap implements Walkable {
   private readonly tileCover: Uint8Array;
   /** Tiles alcançáveis a pé a partir do ponto de nascimento (calculado na primeira consulta). */
   private reachable: Uint8Array | null = null;
+  /** O tile de onde se sobe em cada galho (veja `branchTile`), calculado na primeira consulta. */
+  private branchTiles: (Tile | null)[] | null = null;
 
   constructor(
     width: number,
@@ -250,6 +293,7 @@ export class GameMap implements Walkable {
     this.places = info.places ?? [];
     this.metric = info.metric ?? false;
     this.safeAreas = info.safeAreas ?? [];
+    this.branches = info.branches ?? [];
     this.width = width;
     this.height = height;
     this.solidTiles = blocked;
@@ -314,6 +358,7 @@ export class GameMap implements Walkable {
     const places: MapPlace[] = [];
     const solids: SolidRect[] = [];
     const safeAreas: SafeArea[] = [];
+    const branches: MapBranch[] = [];
     const tw = json.tilewidth;
     const th = json.tileheight;
     /** O retângulo do objeto, em tiles (elipse: o retângulo em volta dela). */
@@ -348,6 +393,10 @@ export class GameMap implements Walkable {
         const isPlacesLayer = layerName === 'areas' || layerName === 'áreas';
         for (const obj of layer.objects ?? []) {
           const objName = obj.name?.trim().toLowerCase();
+          if (isPointsLayer && obj.point && (obj.type ?? obj.class ?? '').trim().toLowerCase() === BRANCH_TYPE) {
+            branches.push(branchOf(obj, id, tw, th));
+            continue;
+          }
           if (isPlacesLayer && !obj.point && obj.name?.trim() && !obj.polygon && !obj.polyline) {
             const rect = rectOf(obj);
             const sound = obj.properties?.find((p) => p.name === 'som')?.value;
@@ -435,6 +484,7 @@ export class GameMap implements Walkable {
       metric,
       solids,
       safeAreas,
+      branches,
     });
   }
 
@@ -483,6 +533,32 @@ export class GameMap implements Walkable {
   }
 
   /** Dá para chegar a pé até aqui saindo do ponto de nascimento? (Evita monstros presos em bolsões.) */
+  /**
+   * De que tile um bicho (que anda de tile em tile) sobe no galho `i`: o andável e alcançável mais perto do chão embaixo
+   * do galho, entre os 9 em volta (o de baixo pode encostar no tronco), ou null — não dá para subir nesse galho.
+   */
+  branchTile(i: number): Tile | null {
+    this.branchTiles ??= this.branches.map((branch) => {
+      // o "canto" de quem tem o pé no chão embaixo do galho (como `cornerAtFeet`, de movement.ts)
+      const under = { x: branch.x - 0.5, y: branch.y - 1 };
+      let best: Tile | null = null;
+      let bestDistance = Infinity;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const tile = { x: Math.round(under.x) + dx, y: Math.round(under.y) + dy };
+          if (!this.isWalkable(tile.x, tile.y) || !this.isReachable(tile.x, tile.y)) continue;
+          const distance = Math.hypot(tile.x - under.x, tile.y - under.y);
+          if (distance < bestDistance) {
+            best = tile;
+            bestDistance = distance;
+          }
+        }
+      }
+      return best;
+    });
+    return this.branchTiles[i] ?? null;
+  }
+
   isReachable(x: number, y: number): boolean {
     if (!this.reachable) {
       this.reachable = new Uint8Array(this.width * this.height);

@@ -1932,6 +1932,86 @@ if (reached('4c') && FLORESTA) {
   for (const [x, y, raio] of [[61.7, 49.85, 0.35], [68.05, 53.9, 0.3], [85.5, 33.3, 0.35], [64.5, 34.6, 0.35], [66.3, 13.7, 0.45], [62.6, 15.6, 0.4]] as const) cenario.push(point('planta', x, y, { tipo: 'samambaia', raio, dentro: true }));
 }
 
+// ----- os galhos dos saguis (23/11, pedido da [arte] com o ok do dono, "a opção 3") -----
+// O Sagui Encantado fica pendurado pelo rabo num galho baixo enquanto está calmo e joga a fruta lá de cima; quando o
+// herói chega perto ou acerta nele, pula para o chão. O ponto (`galho-sagui`, camada `pontos`, lido pela [estrutura]) é
+// o chão embaixo do meio do galho (o pé do sagui, andável), com a `altura` do galho (m) e a `direcao` (graus, do tronco
+// para a ponta: 0 = leste, 90 = sul). As direções viram para a câmera (o sagui fica na frente do tronco, e o galho, atrás
+// dele). Duas árvores da mata perto da trilha (a seca e uma de copa alta) e três árvores secas novas.
+/** As árvores novas: [onde a gente queria, a direção do galho]; vão para o lugar mais perto que cabe, não tampa trilha e
+ * deixa o sagui à vista. */
+const SAGUI_TREES: [number, number, number][] = [[34, 17.5, 10], [42.5, 14, 100], [38.5, 8.5, 100]];
+/** [x e y do tronco, a direção do galho em graus, a altura do galho em m] (as árvores que já existiam) */
+const SAGUI_PERCHES: [number, number, number, number][] = [
+  [34.4, 8.1, 100, 2.3], // a árvore seca (sem folha: o sagui aparece inteiro)
+  [45.6, 17.8, 110, 2.3], // (a copa dela é alta: começa a uns 3,5 m)
+];
+const PERCH_R = 1;
+const perchPoints: { x: number; y: number }[] = [];
+/** A copa de outra árvore (com folha) esconde, na tela, o sagui pendurado em (x, y)? (a câmera olha do sudeste) */
+const sagHidden = (x: number, y: number, own: { x: number; y: number }) =>
+  cenario.some((o) => {
+    if (o.type !== 'arvore' || (o.x === own.x && o.y === own.y) || o.props?.especie === 'seca' || x + y >= o.x + o.y) return false;
+    const copa = Number(o.props?.copa ?? 2.5), altura = Number(o.props?.altura ?? 5);
+    return [0.6, 0.85].some((k) => {
+      const [cx, cy] = screen(o.x, o.y, altura * k);
+      return [1.3, 2].some((kz) => {
+        const [sx, sy] = screen(x, y, kz);
+        return Math.hypot(sx - cx, sy - cy) < copa * 1.05;
+      });
+    });
+  });
+/** O chão embaixo do galho é livre (longe de tronco, moita e água)? */
+const perchFree = (x: number, y: number, own: { x: number; y: number }) =>
+  inRect(x, y, SAGUI_ZONE) && free(x, y, 0.35) && waterGap(x, y) > 0.5 &&
+  trees.every((t) => (t.x === own.x && t.y === own.y) || dist(x, y, t.x, t.y) > t.tronco / 2 + 0.72) &&
+  clumps.every((c) => dist(x, y, c.x, c.y) > c.r + 0.4);
+/** A direção pedida ou a mais perto dela (sempre virada para a câmera) em que o chão é livre e o sagui fica à vista. */
+function bestPerch(own: { x: number; y: number }, want: number): [number, number, number] | null {
+  for (const dd of [0, -25, 25, -50, 50, -75, 75, -100, 100]) {
+    const direcao = (((want + dd) % 360) + 360) % 360;
+    const a = (direcao * Math.PI) / 180;
+    if (Math.cos(a) + Math.sin(a) < 0.2) continue;
+    // (o galho pode ser um pouco mais comprido, até 1,3 m, se perto do tronco não couber)
+    for (const R of [PERCH_R, PERCH_R + 0.15, PERCH_R + 0.3]) {
+      const [x, y] = [round(own.x + Math.cos(a) * R), round(own.y + Math.sin(a) * R)];
+      if (perchFree(x, y, own) && !sagHidden(x, y, own)) return [x, y, direcao];
+    }
+  }
+  return null;
+}
+const addPerch = (p: [number, number, number], altura: number) => {
+  perchPoints.push({ x: p[0], y: p[1] });
+  pontos.push(point('galho-sagui', p[0], p[1], { altura, direcao: p[2] }));
+};
+for (const [tx, ty, want, altura] of SAGUI_PERCHES) {
+  const tree = cenario.filter((o) => o.type === 'arvore' && dist(o.x, o.y, tx, ty) < 0.5).sort((a, b) => dist(a.x, a.y, tx, ty) - dist(b.x, b.y, tx, ty))[0];
+  if (!tree) throw new Error(`Não achei a árvore do sagui perto de (${tx}, ${ty}).`);
+  const p = bestPerch(tree, want);
+  if (!p) throw new Error(`O galho do sagui da árvore em (${tree.x}, ${tree.y}) não tem direção em que ele fique à vista.`);
+  addPerch(p, altura);
+}
+for (const [tx, ty, want] of SAGUI_TREES) {
+  // (árvore seca, como a outra: sem folha, o sagui aparece inteiro, e os galhos pelados não tampam a trilha na tela)
+  const d = { tronco: 0.4, copa: 1.4, altura: 6.2 };
+  let done = false;
+  for (let r = 0; r <= 4 && !done; r += 0.5) {
+    const n = Math.max(1, Math.round(r * 8));
+    for (let k = 0; k < n && !done; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const [x, y] = [round(tx + Math.cos(a) * r), round(ty + Math.sin(a) * r)];
+      if (!inRect(x, y, SAGUI_ZONE) || !plantFits(x, y, d.tronco, d.copa, 1.25) || hidesView(x, y, d.copa, d.altura)) continue;
+      const p = bestPerch({ x, y }, want);
+      if (!p) continue;
+      trees.push({ x, y, tronco: d.tronco });
+      cenario.push(point('arvore', x, y, { especie: 'seca', ...d }));
+      addPerch(p, 2.3);
+      done = true;
+    }
+  }
+  if (!done) throw new Error(`A árvore do sagui perto de (${tx}, ${ty}) não cabe.`);
+}
+
 for (const s of cenario) {
   const p = s.props ?? {};
   if (s.type === 'arvore') colisao.push(block('tronco', s.x, s.y, Number(p.tronco)));
@@ -2006,6 +2086,11 @@ for (const s of cenario) {
   else if (s.type === 'parquinho') {
     for (const b of boxesOf(s)) colisao.push(rect('parquinho', b.x0, b.x1, b.y0, b.y1, { bloqueiaTiro: false, altura: Number(p.altura) }));
   } else if (s.type === 'cachoeira') colisao.push(rect('cachoeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+}
+// o chão embaixo de cada galho dos saguis é andável (o servidor põe o pé do sagui ali)
+for (const q of perchPoints) {
+  const hit = colisao.find((c) => q.x + 0.35 > c.x && q.x - 0.35 < c.x + c.w! && q.y + 0.35 > c.y && q.y - 0.35 < c.y + c.h!);
+  if (hit) throw new Error(`O chão embaixo do galho do sagui em (${q.x}, ${q.y}) não é andável: bate em ${hit.type}.`);
 }
 // a Xiovanna cabe atrás do balcão da Budega (a caixa do pé dela, 0,6 × 0,4 m, com o pé no meio da beirada de baixo)
 if (reached('4b') && FLORESTA) {
