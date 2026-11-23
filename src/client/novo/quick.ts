@@ -1,9 +1,10 @@
 // Atalhos de consumo do jogo novo: 1 = comida, 2 = remédio (campo "atalho" de data/items.json). Cada um usa, sem abrir
 // a mochila, o item do grupo que você TEM com a maior cura, e mostra quantos ainda há. Teclas 3 e 4 no PC.
 // Visual simples (botões redondos ao lado da barra de ações); a [arte] restiliza (#quick-slots .quick) ou leva para a
-// HUD nova.
+// HUD nova. Com o mouse em cima, a dica (`.tip`: o nome do item, o que ele faz e a tecla), na cara da dica das
+// habilidades (style.css; pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da poção/banana").
 
-import { useLabel, type ItemInfo, type QuickPick } from '../../shared/items';
+import { effectLabel, healLabel, type ItemInfo, type QuickPick } from '../../shared/items';
 import { itemIconUrl } from '../itemArt';
 
 const LABELS = ['Comida', 'Remédio'] as const;
@@ -14,6 +15,9 @@ interface QuickButton {
   img: HTMLImageElement;
   count: HTMLSpanElement;
   cd: HTMLSpanElement;
+  tipTitle: HTMLElement;
+  tipLine: HTMLElement;
+  tipLine2: HTMLElement;
 }
 
 export class QuickSlots {
@@ -46,7 +50,6 @@ export class QuickSlots {
       el.className = 'quick empty';
       el.tabIndex = -1;
       el.dataset.slot = String(i + 1);
-      el.title = `${label} (${KEYS[i]})`;
       const img = document.createElement('img');
       img.alt = '';
       img.draggable = false;
@@ -57,7 +60,23 @@ export class QuickSlots {
       key.textContent = KEYS[i]!;
       const cd = document.createElement('span');
       cd.className = 'cd';
-      el.append(img, count, key, cd);
+      // a dica (com o mouse em cima): o nome, o que faz e a tecla
+      const tip = document.createElement('div');
+      tip.className = 'tip';
+      tip.setAttribute('role', 'tooltip');
+      const tipTitle = document.createElement('strong');
+      tipTitle.className = 'tip-title';
+      tipTitle.textContent = label;
+      const tipLine = document.createElement('div');
+      tipLine.className = 'tip-line tip-bonus';
+      const tipLine2 = document.createElement('div');
+      tipLine2.className = 'tip-line tip-bonus';
+      tipLine2.hidden = true;
+      const tipKey = document.createElement('div');
+      tipKey.className = 'tip-line tip-key';
+      tipKey.textContent = `${label} · tecla ${KEYS[i]}`;
+      tip.append(tipTitle, tipLine, tipLine2, tipKey);
+      el.append(img, count, key, cd, tip);
       el.addEventListener('pointerdown', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -65,7 +84,7 @@ export class QuickSlots {
       });
       el.addEventListener('contextmenu', (event) => event.preventDefault());
       this.root.append(el);
-      this.buttons.push({ el, img, count, cd });
+      this.buttons.push({ el, img, count, cd, tipTitle, tipLine, tipLine2 });
     });
     document.body.append(this.root);
   }
@@ -78,7 +97,18 @@ export class QuickSlots {
       button.el.classList.toggle('empty', !def);
       button.img.src = itemIconUrl(def ? def.icon : i === 0 ? 'banana' : 'erva');
       button.count.textContent = pick ? String(pick.count) : '';
-      button.el.title = def ? `${def.name} — ${useLabel(def)} (${KEYS[i]})` : `${LABELS[i]}: nada na mochila (${KEYS[i]})`;
+      // a dica (no lugar da do navegador): o nome na cor da raridade e o que faz, uma coisa por linha (a cura e o efeito)
+      button.tipTitle.textContent = def ? def.name : LABELS[i]!;
+      button.tipTitle.className = `tip-title${def ? ` rarity-${def.rarity}` : ''}`;
+      const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+      const heal = def ? healLabel(def) : '';
+      const lines = !def
+        ? ['Nada na mochila (a Budega vende)']
+        : [heal ? `Cura ${heal}${(def.healPct ?? 0) > 0 ? '' : ' de vida'}` : '', def.effect ? cap(effectLabel(def.effect)) : ''].filter(Boolean);
+      button.tipLine.textContent = lines[0] ?? '';
+      button.tipLine2.textContent = lines[1] ?? '';
+      button.tipLine2.hidden = !lines[1];
+      button.tipLine.classList.toggle('tip-empty', !def);
     });
   }
 

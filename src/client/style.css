@@ -3023,8 +3023,9 @@ body.jogo-novo #effects-bar .effect .time {
   transform: translateX(-50%);
 }
 
-/* os últimos 10 s: o quadrado pisca e o tempo fica vermelho */
-body.jogo-novo #effects-bar .effect.ending {
+/* os últimos 10 s: o desenho do item pisca e o tempo fica vermelho (só o desenho: piscando o quadrado inteiro, a dica
+   piscava junto) */
+body.jogo-novo #effects-bar .effect.ending img {
   animation: effect-ending 1s ease-in-out infinite;
 }
 
@@ -3035,6 +3036,145 @@ body.jogo-novo #effects-bar .effect.ending .time {
 @keyframes effect-ending {
   50% {
     opacity: 0.45;
+  }
+}
+
+/* A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da poção/banana
+   utilizada"): no lugar da dica do navegador, o painel da dica das habilidades (.skill-tip) — fundo escuro da HUD com
+   o canto tribal, o nome do item na letra do jogo (na cor da raridade), o que ele dá em verde e o tempo em azul. Vale
+   para o efeito valendo (embaixo do quadradinho; effectsBar.ts) e para os frascos de comida e remédio (acima do anel;
+   quick.ts). No celular não tem mouse: a dica não aparece (o toque usa o item) */
+body.jogo-novo #effects-bar .effect .tip,
+body.jogo-novo #quick-slots .quick .tip {
+  position: absolute;
+  z-index: 3;
+  /* a largura do texto (sem isso a dica ficava presa na largura mínima, quebrando "por 3 / min") */
+  width: max-content;
+  min-width: 180px;
+  max-width: 260px;
+  padding: 9px 12px 10px;
+  border: 1px solid rgba(214, 170, 104, 0.8);
+  border-radius: 10px;
+  background:
+    url('/assets/ui/hud/canto-tribal.webp') right -1px bottom -1px / 34px auto no-repeat,
+    linear-gradient(180deg, rgba(44, 34, 23, 0.97), rgba(14, 11, 8, 0.97));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 224, 170, 0.16),
+    0 8px 22px rgba(0, 0, 0, 0.55);
+  color: #eadfc8;
+  font: 13px/1.4 system-ui, sans-serif;
+  text-align: left;
+  white-space: normal;
+  text-wrap: pretty;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.14s,
+    transform 0.14s,
+    visibility 0s linear 0.14s;
+  pointer-events: none;
+}
+
+body.jogo-novo #effects-bar .effect .tip {
+  left: -10px;
+  top: calc(100% + 30px);
+  transform: translateY(-4px);
+}
+
+body.jogo-novo #quick-slots .quick .tip {
+  right: -4px;
+  bottom: calc(100% + 14px);
+  transform: translateY(4px);
+}
+
+body.jogo-novo #effects-bar .effect:hover .tip,
+body.jogo-novo #quick-slots .quick:hover .tip {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 0.14s,
+    transform 0.14s;
+}
+
+/* a setinha apontando para o item */
+body.jogo-novo #effects-bar .effect .tip::before,
+body.jogo-novo #quick-slots .quick .tip::before {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #2c2217;
+  transform: rotate(45deg);
+}
+
+body.jogo-novo #effects-bar .effect .tip::before {
+  left: 23px;
+  top: -6px;
+  border-top: 1px solid rgba(214, 170, 104, 0.8);
+  border-left: 1px solid rgba(214, 170, 104, 0.8);
+}
+
+body.jogo-novo #quick-slots .quick .tip::before {
+  right: 26px;
+  bottom: -6px;
+  background: #110d09;
+  border-right: 1px solid rgba(214, 170, 104, 0.8);
+  border-bottom: 1px solid rgba(214, 170, 104, 0.8);
+}
+
+body.jogo-novo #effects-bar .tip .tip-title,
+body.jogo-novo #quick-slots .tip .tip-title {
+  display: block;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(214, 170, 104, 0.35);
+  color: #ffd66e;
+  font: 700 15px Georgia, 'Times New Roman', serif;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+body.jogo-novo #effects-bar .tip .tip-title.rarity-rare,
+body.jogo-novo #quick-slots .tip .tip-title.rarity-rare {
+  color: #8cc4ff;
+}
+
+body.jogo-novo #effects-bar .tip .tip-title.rarity-legendary,
+body.jogo-novo #quick-slots .tip .tip-title.rarity-legendary {
+  color: #ffb44a;
+}
+
+body.jogo-novo #effects-bar .tip .tip-bonus,
+body.jogo-novo #quick-slots .tip .tip-bonus {
+  color: #8de08a;
+  font-weight: 600;
+}
+
+body.jogo-novo #quick-slots .tip .tip-bonus.tip-empty {
+  color: #b9a888;
+  font-weight: 400;
+}
+
+body.jogo-novo #effects-bar .tip .tip-tempo {
+  margin-top: 2px;
+  color: #b6dcff;
+}
+
+body.jogo-novo #effects-bar .tip .tip-left {
+  color: #7fc8ff;
+  font-weight: 800;
+}
+
+body.jogo-novo #quick-slots .tip .tip-key {
+  margin-top: 3px;
+  color: #b9a888;
+  font-size: 12px;
+}
+
+@media (hover: none) {
+  body.jogo-novo #effects-bar .effect .tip,
+  body.jogo-novo #quick-slots .quick .tip {
+    display: none;
   }
 }
 
