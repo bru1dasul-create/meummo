@@ -114,7 +114,7 @@
   brilho dos olhos do Gavião (`hawkAt`). O que é lido com `performance.now()` fica com ele: o clarão do degrau
   (`arrowLevelAt`, lido no `slingshot.js`), a fala (`talkUntil`, `speechUntil`). Teste: rascunho `relogio/relogio.cjs`
 - **Personagens mais leves (23/11, escopo aprovado: "pode fazer 1 e o 2"; o 3 — menos detalhe miúdo quando pequeno —
-  "ainda não"):** cada personagem custava ~4,5 ms por quadro (navegador de teste, sem placa de vídeo). Medido no jogo,
+  "ainda não"; na main em 23/11 com o "pode" do dono):** cada personagem custava ~4,5 ms por quadro (navegador de teste, sem placa de vídeo). Medido no jogo,
   parado (ms por quadro só com personagens): Budega (você e a Xiovanna) 8,1 → 2,1; perto do Curupira 8,2 → ~1,9; perto da
   Dona Iracema 9,5 → ~2,1. Andando ou lutando: −19% por personagem (só o item 1).
   - **1, mais rápido com a imagem idêntica:** o casco (`convexHull`, `core/shapes.js`) tira os pontos de dentro do
