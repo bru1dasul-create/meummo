@@ -7,9 +7,9 @@ import type { ShotPath } from '../shared/combat';
 import { lookFromName } from '../shared/look';
 import type { MonsterZone, Tile } from '../shared/map';
 import { footTile } from '../shared/movement';
-import type { GearLook, ItemBonus, ItemInfo } from '../shared/items';
+import type { EffectKey, GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
-import { attributePointsLeft, noAttributes, type Attributes } from '../shared/attributes';
+import { ATTRIBUTE_IDS, attributePointsLeft, noAttributes, type Attributes } from '../shared/attributes';
 import { GUARD_MAX_ENERGY } from '../shared/constants';
 import type { EntityState, GuardState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
 import type { QuestLog } from '../shared/quests';
@@ -26,6 +26,14 @@ export interface Conn {
 
 const NO_ITEMS: ReadonlyMap<string, ItemInfo> = new Map();
 
+/** Um efeito com tempo valendo num jogador: o que mexe, de qual item veio, quanto e até quando. */
+export interface ActiveEffect {
+  key: EffectKey;
+  item: string;
+  value: number;
+  until: number;
+}
+
 export class Player {
   readonly kind = 'player' as const;
   /**
@@ -36,8 +44,15 @@ export class Player {
   fy: number;
   dir: Dir = DOWN;
   level = 1;
-  /** Os pontos em cada atributo (Força, Destreza, Espírito, Vitalidade): veja src/shared/attributes.ts. */
+  /** Os pontos postos em cada atributo (Força, Destreza, Espírito, Vitalidade): veja src/shared/attributes.ts. */
   attributes: Attributes = noAttributes();
+  /**
+   * Os efeitos com tempo valendo agora (a Banana, a Água de Coco, a garrafada): um por atributo e um da vida que volta
+   * sozinha ('regen'); o mais novo toma o lugar do mesmo tipo. Não ficam salvos (sair do jogo acaba com eles).
+   */
+  effects = new Map<EffectKey, ActiveEffect>();
+  /** Os efeitos mudaram: o navegador recebe a lista nova no próximo tick. */
+  effectsDirty = false;
   /** XP dentro do nível atual. */
   xp = 0;
   hp: number;
@@ -218,6 +233,26 @@ export class Player {
     return f === 1 ? [min + this.bonus.damage, max + this.bonus.damage] : [Math.max(1, Math.round((min + this.bonus.damage) * f)), Math.max(1, Math.round((max + this.bonus.damage) * f))];
   }
 
+  /** Os pontos a mais que os efeitos dão agora. */
+  attributeBonus(): Attributes {
+    const out = noAttributes();
+    for (const effect of this.effects.values()) if (effect.key !== 'regen') out[effect.key] += effect.value;
+    return out;
+  }
+
+  /** Os atributos que valem agora (no tiro, nas habilidades e na vida): os pontos postos mais os dos efeitos. */
+  effectiveAttributes(): Attributes {
+    const bonus = this.attributeBonus();
+    const out = noAttributes();
+    for (const id of ATTRIBUTE_IDS) out[id] = this.attributes[id] + bonus[id];
+    return out;
+  }
+
+  /** A vida que volta sozinha × isto (o efeito da garrafada; 1 sem efeito). */
+  regenFactor(): number {
+    return this.effects.get('regen')?.value ?? 1;
+  }
+
   stats(): PlayerStats {
     return {
       level: this.level,
@@ -228,6 +263,7 @@ export class Player {
       defense: this.bonus.defense,
       attrs: { ...this.attributes },
       attrPoints: attributePointsLeft(this.level, this.attributes),
+      attrBonus: this.attributeBonus(),
     };
   }
 }

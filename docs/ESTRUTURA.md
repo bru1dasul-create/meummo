@@ -28,10 +28,10 @@ alternativas quando vejo — sem concordar só para agradar.
 ## Onde estamos (23 de novembro de 2026) — leia isto primeiro
 - **Poções em 3 etapas (aprovadas pelo dono, 23/11: "gostei pode seguir"):** a 1 está na main (as três garrafadas em
   % da vida, 10 s entre um consumível e outro; o Fôlego fora do jogo novo; a vida voltando só fora de luta, 8 s e 1,5%
-  por segundo, no painel; `heal` com o item e o gancho `view.consume`; som `gole`; protocolo 49). **Próximas:** a 2
-  (efeitos com tempo: Banana +5 Destreza, Água de Coco +5 Espírito, garrafada vida 3× mais rápida fora de luta, tudo 3
-  min; não salvar o efeito ao sair) e a 3 (receita com a Dona Iracema — Arruda + Frasco + Água → Pequena —, quedas dos
-  bichos e a loja só com ingredientes). O efeito visual do gole "tipo Priston Tale" é da [arte], esperando a referência
+  por segundo, no painel; som `gole`; protocolo 49). A 2 também (efeitos com tempo: `Player.effects`, um por atributo e
+  um `regen`; `effectiveAttributes()` vale no tiro, nas habilidades e na vida; `expireEffects` no tick; `consume` e
+  `effects` no protocolo 50; não ficam salvos; `effectsBar.ts` provisório). **Próxima:** a 3 (receita com a Dona
+  Iracema — Arruda + Frasco + Água → Pequena —, quedas dos bichos e a loja só com ingredientes). O efeito visual do gole "tipo Priston Tale" é da [arte], esperando a referência
   do dono (não achei descrição confiável).
 - **Feito em 23/11 (tudo na main, conferido no navegador, PC e celular):**
   1. **Atributos** (aprovado pelo dono: "pode fazer assim, 3 pontos por nível, espírito"): Força (dano do tiro de
@@ -102,7 +102,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 49; `MIGRATIONS` até o passo 7 (`attributes`); `npm run check` com 576 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 50; `MIGRATIONS` até o passo 7 (`attributes`); `npm run check` com 584 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

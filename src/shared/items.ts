@@ -1,6 +1,8 @@
 // Itens: o que o navegador e o servidor precisam concordar (os números de cada item vêm de
 // data/items.json e chegam ao navegador na mensagem de boas-vindas).
 
+import { ATTRIBUTE_IDS, ATTRIBUTE_NAMES, type AttributeId } from './attributes';
+
 /** Partes do corpo onde dá para equipar alguma coisa. */
 export type EquipSlot = 'weapon' | 'head' | 'body' | 'charm';
 export const EQUIP_SLOTS: readonly EquipSlot[] = ['weapon', 'head', 'body', 'charm'];
@@ -45,6 +47,8 @@ export interface ItemInfo {
   heal: number;
   /** Consumível: quanto da vida máxima recupera, em % (as garrafadas), além do `heal`. */
   healPct?: number;
+  /** Consumível: o efeito com tempo (a Banana dá Destreza; a garrafada faz a vida voltar mais rápido). */
+  effect?: ItemEffect;
   /** Consumível: tempo até poder usar outro consumível. */
   cooldownMs: number;
   /** Quantos cabem num espaço da mochila. */
@@ -68,6 +72,38 @@ export interface QuickPick {
   slot: number;
 }
 
+/**
+ * Um efeito com tempo de um consumível (pedido do dono, 23/11: "a banana ao invés de dar vida dar destreza por
+ * determinado tempo"; a Água de Coco, Espírito; a garrafada, a vida subindo mais rápido por 3 minutos).
+ */
+export interface ItemEffect {
+  /** Pontos a mais nos atributos enquanto dura. */
+  attrs: Partial<Record<AttributeId, number>>;
+  /** A vida que volta sozinha (fora de luta) fica × isto enquanto dura (0 = não mexe nela). */
+  regen: number;
+  durationMs: number;
+}
+
+/** O que um efeito mexe: um atributo ou a vida que volta sozinha ('regen'). Um de cada vale por vez. */
+export type EffectKey = AttributeId | 'regen';
+
+/** Um efeito valendo agora, como o servidor manda: o que mexe, de qual item, quanto e quanto tempo falta (ms). */
+export interface ActiveEffectInfo {
+  k: EffectKey;
+  it: string;
+  v: number;
+  ms: number;
+}
+
+/** O efeito em texto, para as janelas: "+5 de Destreza por 3 min", "a vida volta 3× mais rápido fora de luta por 3 min". */
+export function effectLabel(effect: ItemEffect): string {
+  const parts = ATTRIBUTE_IDS.filter((id) => effect.attrs[id]).map((id) => `+${effect.attrs[id]} de ${ATTRIBUTE_NAMES[id]}`);
+  if (effect.regen > 0) parts.push(`a vida volta ${String(effect.regen).replace('.', ',')}× mais rápido fora de luta`);
+  const minutes = effect.durationMs / 60_000;
+  const time = minutes >= 1 ? `${String(Math.round(minutes * 10) / 10).replace('.', ',')} min` : `${Math.round(effect.durationMs / 1000)} s`;
+  return `${parts.join(' e ')} por ${time}`;
+}
+
 /** Quanto um consumível cura para quem tem `maxHp` de vida máxima: a cura fixa mais a porcentagem (arredondada). */
 export function healAmount(def: Pick<ItemInfo, 'heal' | 'healPct'>, maxHp: number): number {
   return def.heal + Math.round((maxHp * (def.healPct ?? 0)) / 100);
@@ -78,6 +114,14 @@ export function healLabel(def: Pick<ItemInfo, 'heal' | 'healPct'>): string {
   const pct = def.healPct ?? 0;
   if (pct <= 0) return def.heal > 0 ? String(def.heal) : '';
   return def.heal > 0 ? `${def.heal} + ${pct}% da vida` : `${pct}% da vida`;
+}
+
+/** O que um consumível faz, numa frase: "cura 40% da vida e a vida volta 3× mais rápido...", "+5 de Destreza por 3 min". */
+export function useLabel(def: Pick<ItemInfo, 'heal' | 'healPct' | 'effect'>): string {
+  const heal = healLabel(def);
+  const parts = heal ? [`cura ${heal}`] : [];
+  if (def.effect) parts.push(effectLabel(def.effect));
+  return parts.join(' e ');
 }
 
 /**

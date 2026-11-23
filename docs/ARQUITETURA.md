@@ -147,6 +147,12 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   (`regenCarry`); os dois números ficam nas regras do combate (painel: Combate › Jogador). O `heal` de um consumível
   leva o item (`it`): o motor chama `view.consume(id, item)` (o efeito do gole, da [arte]) e toca o `gole`. O Fôlego
   saiu do jogo novo (o servidor recusa o `skill` de cura no mapa novo; o jogo antigo continua com ele).
+- **Efeitos com tempo** (protocolo 50): o `efeito` de um consumível (`ItemEffect`: pontos a mais nos atributos e/ou a vida
+  que volta × `regen`, por `durationMs`) entra em `Player.effects` (um por atributo e um `regen`; o mais novo toma o
+  lugar). `Player.effectiveAttributes()` (os postos mais os dos efeitos) é o que vale no tiro, nas habilidades e na vida
+  máxima; os pontos para distribuir contam só os postos. `World.expireEffects` tira os que acabaram (a cada tick) e o
+  `effects` leva a lista ao navegador (também depois de mudar de mapa); o `stats` leva o `attrBonus`. Usar um consumível
+  manda `consume` para quem vê (o gancho `view.consume`) e, se curou, o `heal`. Não ficam salvos.
 - **Tiro que cai onde mira, espalha andando e a flecha carregada** (protocolo 41, pedidos do dono de 15/11): o `shoot`
   leva `d` (a distância até o ponto mirado): o tiro para lá (`aimedRange`: nunca além do alcance da carga, nem mais
   perto que `SHOT_MIN_RANGE`). Quem atirou andando há menos de `SHOT_MOVING_MS` erra um pouco (`shotSpread(cid, ...)`:

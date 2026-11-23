@@ -5,7 +5,7 @@
 // andam soltos (números quebrados). Ângulos são em radianos (0 = direita, π/2 = baixo); o `a` do `walk` é em graus.
 
 import type { Dir } from './dir';
-import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
+import type { ActiveEffectInfo, EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from './items';
 import type { QuestInfo, QuestLog } from './quests';
 import type { CombatRules } from './combatRules';
 import type { ChargeLevel, ClassInfo, HeroState } from './classes';
@@ -65,6 +65,8 @@ export interface PlayerStats {
   /** Os pontos em cada atributo (Força, Destreza, Espírito, Vitalidade) e quantos sobram para distribuir. */
   attrs: Attributes;
   attrPoints: number;
+  /** Os pontos a mais dos efeitos com tempo (a Banana, a Água de Coco), por cima dos `attrs`. */
+  attrBonus: Attributes;
 }
 
 /** Cliente → servidor. */
@@ -223,8 +225,12 @@ export type ServerMsg =
   | { t: 'energy'; v: number; g: GuardState }
   // você é administrador (o menu ADM aparece), com o voo e o invencível ligados ou não e os monstros que dá para criar
   | { t: 'gm'; admin: boolean; fly: boolean; god: boolean; nocd: boolean; monsters: { id: string; name: string }[] }
-  // curou: `it` = o consumível que usou (a chave em data/items.json, ex.: 'garrafada'), para o efeito de beber ou comer
+  // curou: `it` = o consumível que curou (a chave em data/items.json, ex.: 'garrafada'; sem ele, outra cura)
   | { t: 'heal'; id: number; amount: number; hp: number; it?: string }
+  // alguém usou um consumível da mochila (para quem vê: o efeito de beber ou comer; a cura, se teve, vem no `heal`)
+  | { t: 'consume'; id: number; it: string }
+  // os seus efeitos com tempo valendo agora (a lista toda, quando muda; `ms` = quanto falta)
+  | { t: 'effects'; list: ActiveEffectInfo[] }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }
   | { t: 'levelup'; id: number; level: number; maxHp: number }

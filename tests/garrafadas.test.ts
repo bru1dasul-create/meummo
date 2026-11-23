@@ -27,8 +27,8 @@ describe('as garrafadas (data/items.json)', () => {
       ['Garrafada Média', 40, 0, 10_000, 2],
       ['Garrafada Grande', 60, 0, 10_000, 2],
     ]);
-    // a comida continua curando pouco, com 3 s
-    expect(items.get('banana')).toMatchObject({ heal: 15, cooldownMs: 3000 });
+    // a comida espera só 3 s (a Banana e a Água de Coco não curam mais: dão atributos por um tempo)
+    expect(items.get('banana')).toMatchObject({ heal: 0, cooldownMs: 3000 });
   });
 
   it('a Pequena se compra na vila, a Média na Xiovanna e a Grande cai dos chefes', () => {
@@ -55,7 +55,8 @@ describe('as garrafadas (data/items.json)', () => {
     expect(healAmount(media, 180)).toBe(72);
     expect(healAmount(media, 108)).toBe(43);
     expect(healLabel(media)).toBe('40% da vida');
-    expect(healLabel(items.get('banana')!)).toBe('15');
+    expect(healLabel(items.get('erva_arruda')!)).toBe('30');
+    expect(healLabel(items.get('banana')!)).toBe(''); // não cura
     expect(healLabel({ heal: 10, healPct: 25 })).toBe('10 + 25% da vida');
   });
 
@@ -117,7 +118,8 @@ function give(player: Player, item: string, n = 1): number {
 describe('beber garrafada', () => {
   it('cura a porcentagem da vida máxima; depois, 10 s sem beber nem comer nada', () => {
     const { world, conn, player, run, clock } = setup();
-    player.maxHp = 180;
+    world.adminSetLevel(player, 11); // 180 de vida máxima
+    expect(player.maxHp).toBe(180);
     player.hp = 50;
     player.lastDamagedAt = clock.now(); // no meio da luta (a vida não volta sozinha agora)
     world.itemAction(player, 'use', give(player, 'garrafada', 2));

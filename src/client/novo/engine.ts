@@ -38,12 +38,13 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
-import { dexterityShot, noAttributes, spiritCooldownFactor, spiritDamageFactor, strengthFactor, type Attributes } from '../../shared/attributes';
+import { ATTRIBUTE_IDS, dexterityShot, noAttributes, spiritCooldownFactor, spiritDamageFactor, strengthFactor, type Attributes } from '../../shared/attributes';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, type DebugShape } from './combat';
 import { GmPanel } from './gm';
 import { GuardButton } from './guard';
 import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
+import { EffectsBar } from './effectsBar';
 import { ProvisionalView, type WorldView } from './view';
 import { Ambient, sceneOfPlace } from '../ambient';
 import { trackOfScene } from '../music';
@@ -196,6 +197,8 @@ class NewWorld implements NewWorldGame {
   private myDamage: [number, number] = [0, 0];
   /** Os meus atributos (Força, Destreza, Espírito, Vitalidade) e os pontos que sobram: o servidor manda no `stats`. */
   private myAttrs: Attributes = noAttributes();
+  /** Os pontos a mais dos efeitos com tempo (a Banana dá Destreza; a Água de Coco, Espírito). */
+  private myAttrBonus: Attributes = noAttributes();
   private myAttrPoints = 0;
   private skillTip!: SkillTip;
   /** O painel de ajustes dentro do jogo (F1; só administrador). */
@@ -209,6 +212,8 @@ class NewWorld implements NewWorldGame {
   private equippedBefore = '';
   /** Atalhos de comida (1) e remédio (2). */
   private readonly quick: QuickSlots;
+  /** Os efeitos com tempo valendo (a Banana, a Água de Coco, a garrafada), com o tempo que falta, perto da vida. */
+  private readonly effectsBar: EffectsBar;
   /** Quando dá para usar o próximo item (o servidor conta uma recarga só para todos os consumíveis). */
   private itemReadyAt = 0;
   private map!: GameMap;
@@ -392,6 +397,7 @@ class NewWorld implements NewWorldGame {
     this.myLevel = welcome.stats.level;
     this.myDamage = welcome.stats.damage;
     this.myAttrs = { ...welcome.stats.attrs };
+    this.myAttrBonus = { ...welcome.stats.attrBonus };
     this.myAttrPoints = welcome.stats.attrPoints;
     this.equippedBefore = JSON.stringify(welcome.inv.equipped);
     this.bag = new Bag(
@@ -432,7 +438,7 @@ class NewWorld implements NewWorldGame {
       resetAttributes: () => this.conn.send({ t: 'attrReset' }),
     });
     this.skillsPanel.update(this.classes, this.hero, welcome.stats.level);
-    this.skillsPanel.setAttributes(this.myAttrs, this.myAttrPoints, this.rules);
+    this.skillsPanel.setAttributes(this.myAttrs, this.myAttrPoints, this.rules, this.myAttrBonus);
     this.skillsPanel.show();
     this.skillTip = new SkillTip((slot) => this.tipOf(slot as ActionSlot));
     this.debugPanel = new DebugPanel({
@@ -458,6 +464,7 @@ class NewWorld implements NewWorldGame {
       },
     });
     this.quick = new QuickSlots((n) => this.useQuick(n, gameNow()));
+    this.effectsBar = new EffectsBar(this.items);
     this.guardButton = new GuardButton(
       () => this.startGuard(gameNow()),
       () => this.stopGuard(),
@@ -544,7 +551,9 @@ class NewWorld implements NewWorldGame {
       wind: () => ({ ...game.windNow(gameNow()), to: { ...game.wind.to } }),
       dead: () => game.dead,
       // a classe, os pontos de cada habilidade e quantos sobram; se a janela das Habilidades está aberta
-      hero: () => ({ ...game.hero, skills: { ...game.hero.skills }, attrs: { ...game.myAttrs }, attrPoints: game.myAttrPoints }),
+      hero: () => ({ ...game.hero, skills: { ...game.hero.skills }, attrs: { ...game.myAttrs }, attrPoints: game.myAttrPoints, attrBonus: { ...game.myAttrBonus } }),
+      // os efeitos com tempo valendo: o que mexe, de qual item, quanto e quanto falta (ms)
+      effects: () => game.effectsBar.active(gameNow()).map((e) => ({ key: e.key, item: e.item, value: e.value, left: Math.round(e.until - gameNow()) })),
       skillsOpen: () => game.skillsPanel.isOpen,
       skillsTab: () => game.skillsPanel.currentTab,
       // os Olhos de Gavião: quantos ms ainda valem (0 = desligados)
@@ -653,6 +662,7 @@ class NewWorld implements NewWorldGame {
     this.combat.destroy();
     this.bag.destroy();
     this.quick.destroy();
+    this.effectsBar.destroy();
     this.guardButton.destroy();
     this.gmPanel.destroy();
     this.fpsMeter?.destroy();
@@ -702,6 +712,7 @@ class NewWorld implements NewWorldGame {
     }
     this.actionBar.update(now);
     this.quick.update(now);
+    this.effectsBar.update(now);
     this.fpsMeter?.tick(now, performance.now() - workStart);
     this.raf = requestAnimationFrame(this.loop);
   };
@@ -931,8 +942,8 @@ class NewWorld implements NewWorldGame {
    */
   private tipOf(slot: ActionSlot): SkillTipText | null {
     const [min, max] = this.myDamage;
-    const strength = strengthFactor(this.myAttrs, this.rules); // a Força no tiro de sempre
-    const spirit = spiritDamageFactor(this.myAttrs, this.rules); // o Espírito nas habilidades da classe
+    const strength = strengthFactor(this.myEffectiveAttrs(), this.rules); // a Força no tiro de sempre
+    const spirit = spiritDamageFactor(this.myEffectiveAttrs(), this.rules); // o Espírito nas habilidades da classe
     const num = (value: number) => String(Math.round(value * 10) / 10).replace('.', ',');
     const hit = (pct: number) => {
       const a = Math.max(1, Math.round((min * pct) / 100));
@@ -1893,12 +1904,19 @@ class NewWorld implements NewWorldGame {
    */
   private shot(): ShotProfile {
     const weapon = this.lastInv.equipped.weapon;
-    return dexterityShot(shotProfile(this.rules, weapon ? this.items.get(weapon)?.shot : null, this.map.metric), this.myAttrs, this.rules);
+    return dexterityShot(shotProfile(this.rules, weapon ? this.items.get(weapon)?.shot : null, this.map.metric), this.myEffectiveAttrs(), this.rules);
   }
 
   /** A recarga de uma habilidade da classe para mim: menor com o Espírito (a mesma conta do servidor). */
   private classCooldownMs(skill: ClassSkillInfo): number {
-    return Math.round(skill.cooldownMs * spiritCooldownFactor(this.myAttrs, this.rules));
+    return Math.round(skill.cooldownMs * spiritCooldownFactor(this.myEffectiveAttrs(), this.rules));
+  }
+
+  /** Os meus atributos que valem agora: os pontos postos mais os dos efeitos com tempo (as mesmas contas do servidor). */
+  private myEffectiveAttrs(): Attributes {
+    const out = noAttributes();
+    for (const id of ATTRIBUTE_IDS) out[id] = this.myAttrs[id] + this.myAttrBonus[id];
+    return out;
   }
 
   /** Atira na direção `angle` (radianos), com a carga (0 a 1): a pedra ou a flecha aparece na hora; o servidor decide. */
@@ -2622,8 +2640,9 @@ class NewWorld implements NewWorldGame {
     this.myLevel = stats.level;
     this.myDamage = stats.damage;
     this.myAttrs = { ...stats.attrs };
+    this.myAttrBonus = { ...stats.attrBonus };
     this.myAttrPoints = stats.attrPoints;
-    this.skillsPanel?.setAttributes(stats.attrs, stats.attrPoints, this.rules);
+    this.skillsPanel?.setAttributes(stats.attrs, stats.attrPoints, this.rules, stats.attrBonus);
     this.bag?.setStats(stats);
     this.skillsPanel?.update(this.classes, this.hero, stats.level); // o nível novo pode liberar um ponto
     this.refreshSkillBar(); // e o "+" na barra (ou uma habilidade nova, apagada, com ele)
@@ -2659,7 +2678,7 @@ class NewWorld implements NewWorldGame {
     const pick = pickQuickItem(n, this.items, this.lastInv, this.myMaxHp);
     if (!pick) return this.toast.show(n === 1 ? 'Sem comida na mochila (a Budega vende)' : 'Sem remédio na mochila (a Budega vende)');
     if (now < this.itemReadyAt) return this.toast.show('Espere um pouquinho para usar outro item');
-    if (this.myHp >= this.myMaxHp) return this.toast.show('Sua vida já está cheia');
+    if (!this.items.get(pick.item)?.effect && this.myHp >= this.myMaxHp) return this.toast.show('Sua vida já está cheia'); // a Banana vale com a vida cheia
     this.conn.send({ t: 'item', act: 'use', i: pick.slot });
     this.noteItemUse(pick.item, now);
   }
@@ -2903,12 +2922,23 @@ class NewWorld implements NewWorldGame {
         const e = this.entities.get(msg.id);
         if (e) e.hp = msg.hp;
         this.combat.floater(msg.id, `+${msg.amount}`, '#7bd389', gameNow());
-        if (msg.it) this.view?.consume?.(msg.id, msg.it); // bebeu (ou comeu): o efeito em volta dele é da view
         if (msg.id === this.myId) {
           this.myHp = msg.hp;
           this.hud.setHp(msg.hp, this.myMaxHp);
-          this.sfx.play(msg.it && this.items.get(msg.it)?.healPct ? 'gole' : 'heal'); // garrafada: os goles
+          if (!msg.it) this.sfx.play('heal'); // a do consumível já tocou o gole (ou a mordida) no `consume`
         }
+        break;
+      }
+      case 'consume': {
+        // alguém bebeu ou comeu: o efeito em volta dele é da view (a cura, se teve, vem no `heal`)
+        this.view?.consume?.(msg.id, msg.it);
+        if (msg.id === this.myId) this.sfx.play(this.items.get(msg.it)?.healPct ? 'gole' : 'comer');
+        break;
+      }
+      case 'effects': {
+        // os meus efeitos com tempo (a lista toda): o fim no relógio do jogo
+        const now = gameNow();
+        this.effectsBar.set(msg.list.map((e) => ({ key: e.k, item: e.it, value: e.v, until: now + e.ms })));
         break;
       }
       case 'death':

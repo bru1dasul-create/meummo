@@ -17,6 +17,7 @@ export type SoundName =
   | 'death'
   | 'heal'
   | 'gole'
+  | 'comer'
   | 'kill'
   | 'arc'
   | 'loot'
@@ -256,6 +257,11 @@ export class Sfx {
       case 'heal':
         this.tone('sine', 420, 840, t, 0.3, 0.18);
         this.tone('sine', 630, 1260, t + 0.05, 0.25, 0.08);
+        break;
+      case 'comer': // comeu (a Banana, a Água de Coco): duas mordidinhas e um brilho curto do efeito
+        this.noise(t, 0.05, 'bandpass', 1800, 900, 0.16);
+        this.noise(t + 0.13, 0.05, 'bandpass', 1700, 850, 0.14);
+        this.tone('sine', 660, 990, t + 0.24, 0.18, 0.08);
         break;
       case 'gole': // bebeu uma garrafada: dois goles (glub, glub) e o brilho da cura
         this.tone('sine', 260, 150, t, 0.07, 0.22);

@@ -85,7 +85,7 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 
 | Item | Tipo | O que faz | Quem deixa |
 |---|---|---|---|
-| Banana | consumível | cura 15 | Sagui (50%, 1–2) e Saci (sempre, 2–3) |
+| Banana | consumível | +5 de Destreza por 3 min (até 23/11, curava 15) | Sagui (50%, 1–2) e Saci (sempre, 2–3) |
 | Couro de Jararaca | material | (para trocas e missões, mais adiante) | Jararaca (45%) |
 | Chapéu de Palha | cabeça | +10 de vida | Sagui (6%) |
 | Estilingue de Goiabeira (raro) | arma | +2 de dano | Sagui (4%) |

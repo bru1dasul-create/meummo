@@ -2,7 +2,8 @@
 // não programa poder criar e ajustar itens; aqui elas viram tipos do código e são conferidas.
 
 import { readFileSync } from 'node:fs';
-import { SHOT_KINDS, type EquipSlot, type ItemInfo, type ItemKind, type Rarity, type ShotKind, type WeaponShot } from '../shared/items';
+import { ATTRIBUTE_IDS, type AttributeId } from '../shared/attributes';
+import { SHOT_KINDS, type EquipSlot, type ItemEffect, type ItemInfo, type ItemKind, type Rarity, type ShotKind, type WeaponShot } from '../shared/items';
 import { Reader } from './data-reader';
 import { ITEMS_FILE } from './paths';
 
@@ -46,6 +47,45 @@ function parseWeaponShot(raw: unknown, where: string): WeaponShot {
   };
   if (shot.rangeMax < shot.rangeMin) r.fail('alcanceMaximo', 'não pode ser menor que o "alcanceMinimo"');
   return shot;
+}
+
+/** Limites do "efeito" de um consumível (os mesmos que o painel do administrador confere). */
+export const EFFECT_LIMITS = { pontos: [1, 50], vidaVolta: [1, 10], minutos: [0.1, 60] } as const;
+
+/**
+ * O campo "efeito" de um consumível: { "destreza": 5, "minutos": 3 } (pontos a mais num atributo: "forca", "destreza",
+ * "espirito", "vitalidade") ou { "vidaVolta": 3, "minutos": 3 } (a vida que volta sozinha fora de luta fica 3× mais
+ * rápida). Pode juntar mais de um; "minutos" é quanto dura.
+ */
+function parseEffect(raw: unknown, where: string): ItemEffect {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new Error(`Erro em ${FILE} (${where}): o campo "efeito" precisa ser um objeto, por exemplo { "destreza": 5, "minutos": 3 }.`);
+  }
+  const data = raw as Record<string, unknown>;
+  const r = new Reader(data, FILE, `efeito do ${where}`);
+  const known = [...ATTRIBUTE_IDS, 'vidaVolta'];
+  for (const key of Object.keys(data)) {
+    if (key !== 'minutos' && !known.includes(key)) r.fail(key, `não existe (use ${known.map((k) => `"${k}"`).join(', ')} e "minutos")`);
+  }
+  const L = EFFECT_LIMITS;
+  const minutes = r.number('minutos');
+  if (minutes < L.minutos[0] || minutes > L.minutos[1]) r.fail('minutos', `precisa ser de ${String(L.minutos[0]).replace('.', ',')} a ${L.minutos[1]}`);
+  const attrs: Partial<Record<AttributeId, number>> = {};
+  for (const id of ATTRIBUTE_IDS) {
+    if (!r.has(id)) continue;
+    const points = r.number(id);
+    if (!Number.isInteger(points) || points < L.pontos[0] || points > L.pontos[1]) r.fail(id, `precisa ser um número inteiro de ${L.pontos[0]} a ${L.pontos[1]}`);
+    attrs[id] = points;
+  }
+  let regen = 0;
+  if (r.has('vidaVolta')) {
+    regen = r.number('vidaVolta');
+    if (regen < L.vidaVolta[0] || regen > L.vidaVolta[1]) r.fail('vidaVolta', `precisa ser de ${L.vidaVolta[0]} a ${L.vidaVolta[1]} (quantas vezes mais rápido a vida volta)`);
+  }
+  if (Object.keys(attrs).length === 0 && regen === 0) {
+    r.fail('minutos', 'está sozinho: diga também o que o efeito dá (ex.: "destreza": 5 ou "vidaVolta": 3)');
+  }
+  return { attrs, regen, durationMs: Math.round(minutes * 60_000) };
 }
 
 function pick<T>(table: Record<string, T>, value: string, field: string, where: string): T {
@@ -98,8 +138,12 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       if (pct > 100) r.fail('curaPorcento', 'vai de 0 a 100 (% da vida máxima)');
       if (pct > 0) def.healPct = pct;
     }
-    if (kind === 'consumable' && def.heal === 0 && !def.healPct) {
-      r.fail('cura', 'precisa ser maior que 0, ou use "curaPorcento" (por enquanto, consumível é para curar)');
+    if (r.has('efeito')) {
+      if (kind !== 'consumable') r.fail('efeito', 'só vale para consumíveis (tipo "consumivel")');
+      def.effect = parseEffect((raw as Record<string, unknown>).efeito, where);
+    }
+    if (kind === 'consumable' && def.heal === 0 && !def.healPct && !def.effect) {
+      r.fail('cura', 'precisa ser maior que 0, ou use "curaPorcento" ou "efeito" (um consumível precisa fazer alguma coisa)');
     }
     if (r.has('tiro')) {
       if (slot !== 'weapon') r.fail('tiro', 'só vale para armas (tipo "equipamento", parte "arma")');

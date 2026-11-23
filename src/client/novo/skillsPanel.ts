@@ -100,6 +100,8 @@ export class SkillsPanel {
   private hero: HeroState = { class: null, skills: {}, points: 0, canChoose: false };
   private level = 1;
   private attrs: Attributes = noAttributes();
+  /** Os pontos a mais dos efeitos com tempo (a Banana, a Água de Coco): aparecem como "3 +5" e valem no "Agora". */
+  private attrBonus: Attributes = noAttributes();
   private attrPoints = 0;
   private rules: CombatRules = defaultCombatRules();
   /** O botão que está pedindo confirmação (e até quando). */
@@ -215,9 +217,13 @@ export class SkillsPanel {
     else this.refreshHeader();
   }
 
-  /** Os atributos que o servidor mandou (os pontos de cada um e os que sobram) e as regras de quanto vale cada ponto. */
-  setAttributes(attrs: Readonly<Attributes>, points: number, rules: CombatRules): void {
+  /**
+   * Os atributos que o servidor mandou (os pontos de cada um e os que sobram), as regras de quanto vale cada ponto e os
+   * pontos a mais dos efeitos com tempo.
+   */
+  setAttributes(attrs: Readonly<Attributes>, points: number, rules: CombatRules, bonus: Readonly<Attributes> = noAttributes()): void {
     this.attrs = { ...attrs };
+    this.attrBonus = { ...bonus };
     this.attrPoints = points;
     this.rules = rules;
     this.refreshBadges();
@@ -320,8 +326,13 @@ export class SkillsPanel {
     for (const id of ATTRIBUTE_IDS) {
       const row = this.attrRows.get(id);
       if (!row) continue;
-      const text = attributeText(id, this.attrs, this.rules);
-      row.value.textContent = String(this.attrs[id]);
+      const bonus = this.attrBonus[id];
+      const effective = { ...this.attrs };
+      for (const k of ATTRIBUTE_IDS) effective[k] += this.attrBonus[k];
+      const text = attributeText(id, effective, this.rules); // o "Agora" já com os efeitos
+      row.value.textContent = bonus > 0 ? `${this.attrs[id]} +${bonus}` : String(this.attrs[id]);
+      row.value.classList.toggle('boosted', bonus > 0);
+      row.value.title = bonus > 0 ? `${this.attrs[id]} postos e +${bonus} de um efeito com tempo` : '';
       row.each.textContent = text.each;
       row.now.textContent = text.now ? `Agora: ${text.now}` : '';
       row.plus.disabled = this.attrPoints <= 0;

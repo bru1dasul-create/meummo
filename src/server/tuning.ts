@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_COMBAT_RULES, defaultCombatRules, type CombatRules } from '../shared/combatRules';
+import { ATTRIBUTE_IDS, ATTRIBUTE_NAMES } from '../shared/attributes';
 import type { ItemInfo } from '../shared/items';
 import type { GameMap } from '../shared/map';
 import type { QuestInfo } from '../shared/quests';
@@ -333,7 +334,20 @@ const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [
   { campo: 'defesa', rotulo: 'Defesa', tipo: 'inteiro', ler: (d) => d.bonus.defense, vale: (d) => d.kind === 'equipment' },
   // arma com tiro próprio (o arco): os números do tiro dela
   ...weaponShotFields(),
+  // consumível com efeito com tempo (a Banana, a Água de Coco, as garrafadas): quanto dura e o que dá
+  ...effectFields(),
 ];
+
+/** Os números do "efeito" de um consumível (só aparecem nos que têm e, de cada um, só o que ele dá). */
+function effectFields(): FieldSpec<ItemInfo>[] {
+  return [
+    { campo: 'efeito.minutos', rotulo: 'Efeito: quanto dura (minutos)', tipo: 'numero', ler: (d) => (d.effect ? d.effect.durationMs / 60_000 : 0), vale: (d) => !!d.effect },
+    ...ATTRIBUTE_IDS.map(
+      (id): FieldSpec<ItemInfo> => ({ campo: `efeito.${id}`, rotulo: `Efeito: + ${ATTRIBUTE_NAMES[id]}`, tipo: 'inteiro', ler: (d) => d.effect?.attrs[id] ?? 0, vale: (d) => d.effect?.attrs[id] !== undefined }),
+    ),
+    { campo: 'efeito.vidaVolta', rotulo: 'Efeito: a vida volta × mais rápido', tipo: 'numero', dica: 'fora de luta', ler: (d) => d.effect?.regen ?? 0, vale: (d) => (d.effect?.regen ?? 0) > 0 },
+  ];
+}
 
 /** Os números do "tiro" de uma arma (só aparecem nas armas que têm, como o Arco de Bambu). */
 function weaponShotFields(): FieldSpec<ItemInfo>[] {

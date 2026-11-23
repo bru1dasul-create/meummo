@@ -70,9 +70,10 @@ import type { GameMap, MonsterZone, Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, footTile, nearestBodySpot, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
-import { emptyEquipment, gearLookOf, healAmount, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
+import { emptyEquipment, gearLookOf, healAmount, MAX_GOLD, sellPrice, type ActiveEffectInfo, type ItemEffect, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import {
+  ATTRIBUTE_IDS,
   attributePointsLeft,
   attributePointsSpent,
   cleanAttributes,
@@ -559,6 +560,7 @@ export class World {
     this.dropGuard(player); // mapa novo: a defesa começa baixada (o navegador também solta)
     player.hawkUntil = 0; // e os Olhos de Gavião acabam (o mapa novo começa sem o destaque; a recarga continua)
     player.armed = null; // e a flecha especial sai do arco
+    player.effectsDirty = player.effects.size > 0; // os efeitos continuam: o navegador do mapa novo recebe a lista
     player.energyClock = now;
     player.x = spot.x;
     player.y = spot.y;
@@ -976,7 +978,7 @@ export class World {
       const power = armedPower(level, shot);
       const rank = player.skillPoints[skill.id] ?? 0;
       const range = aimedRange(armedReach(level, shot, skill), aimed);
-      const spirit = spiritDamageFactor(player.attributes, this.combat); // o Espírito aumenta o dano das habilidades
+      const spirit = spiritDamageFactor(player.effectiveAttributes(), this.combat); // o Espírito aumenta o dano das habilidades
       if (skill.kind === 'chuva') {
         // a Chuva: as flechas (ou pedras) sobem agora e caem no ponto mirado daqui a `delayMs`, acertando todos os bichos
         // do círculo — de cima, então nem a casca do tatu-bola segura. Cai onde mirou (sem o espalhado de quem corre)
@@ -1005,7 +1007,7 @@ export class World {
       return;
     }
     const range = aimedRange(chargedRange(charge, metric, shot), aimed);
-    const damage = Math.max(1, Math.round(chargedDamage(base, charge, shot) * strengthFactor(player.attributes, this.combat))); // a Força
+    const damage = Math.max(1, Math.round(chargedDamage(base, charge, shot) * strengthFactor(player.effectiveAttributes(), this.combat))); // a Força
     this.spawnProjectile(player, flight, shot.speed, range, damage, shot.kind, cid);
   }
 
@@ -1031,7 +1033,7 @@ export class World {
   /** O tiro de quem atira: o da arma equipada (no mapa novo) ou a pedra (veja shotProfile), com a puxada e o intervalo da Destreza. */
   private shotOf(player: Player): ShotProfile {
     const weapon = player.inventory.equipped.weapon;
-    return dexterityShot(shotProfile(this.combat, weapon ? this.items.get(weapon)?.shot : null, this.map.metric), player.attributes, this.combat);
+    return dexterityShot(shotProfile(this.combat, weapon ? this.items.get(weapon)?.shot : null, this.map.metric), player.effectiveAttributes(), this.combat);
   }
 
   useSkill(player: Player, n: number, angle: number): void {
@@ -1217,7 +1219,7 @@ export class World {
 
   /** A recarga de uma habilidade da classe: a de sempre, menor com o Espírito (a esquiva e as do jogo antigo, não). */
   private classCooldownOf(player: Player, ms: number): number {
-    return player.noCooldown ? 0 : Math.round(ms * spiritCooldownFactor(player.attributes, this.combat));
+    return player.noCooldown ? 0 : Math.round(ms * spiritCooldownFactor(player.effectiveAttributes(), this.combat));
   }
 
   /** As Chuvas de Flechas que chegaram ao chão: cada bicho dentro do círculo leva o dano (uma vez por chuva). */
@@ -1256,13 +1258,59 @@ export class World {
     if (act !== 'use' || def.kind !== 'consumable') return;
     const now = this.now();
     if (now < player.nextItemAt - ITEM_TOLERANCE_MS) return this.fail(player, 'cooldown', true);
-    if (player.hp >= player.maxHp) return this.fail(player, 'full_hp', true);
+    // só cura (sem efeito com tempo): com a vida cheia, não adianta
+    if (!def.effect && player.hp >= player.maxHp) return this.fail(player, 'full_hp', true);
     player.inventory.take(i, 1);
     player.invDirty = true;
     player.nextItemAt = Math.max(now, player.nextItemAt) + def.cooldownMs;
+    this.emitToViewers(player, { t: 'consume', id: player.id, it: def.id }); // quem vê desenha o gole (ou a mordida)
     const amount = Math.min(player.maxHp - player.hp, healAmount(def, player.maxHp)); // a cura fixa e a da porcentagem
-    player.hp += amount;
-    this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp, it: def.id }); // quem vê desenha o gole
+    if (amount > 0) {
+      player.hp += amount;
+      this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp, it: def.id });
+    }
+    if (def.effect) this.applyEffect(player, def.id, def.effect, now);
+  }
+
+  // ======================= efeitos com tempo =======================
+
+  /**
+   * O efeito com tempo de um consumível começa (ou recomeça): um por atributo e um da vida que volta; o mais novo do
+   * mesmo tipo toma o lugar do que estava (comer outra banana recomeça os 3 minutos).
+   */
+  private applyEffect(player: Player, item: string, effect: ItemEffect, now: number): void {
+    const until = now + effect.durationMs;
+    for (const id of ATTRIBUTE_IDS) {
+      const value = effect.attrs[id];
+      if (value) player.effects.set(id, { key: id, item, value, until });
+    }
+    if (effect.regen > 0) player.effects.set('regen', { key: 'regen', item, value: effect.regen, until });
+    this.effectsChanged(player, true);
+  }
+
+  /** Os efeitos que acabaram saem (os atributos voltam e, se a Vitalidade mudou, a vida máxima também). */
+  private expireEffects(player: Player, now: number): void {
+    if (player.effects.size === 0) return;
+    let ended = false;
+    for (const [key, effect] of player.effects) {
+      if (now >= effect.until) {
+        player.effects.delete(key);
+        ended = true;
+      }
+    }
+    if (ended) this.effectsChanged(player, false);
+  }
+
+  /** Os efeitos mudaram: os números (stats), a lista para o navegador e a vida máxima (a Vitalidade). */
+  private effectsChanged(player: Player, grow: boolean): void {
+    player.effectsDirty = true;
+    player.statsDirty = true;
+    this.maxHpChanged(player, grow);
+  }
+
+  /** A lista dos efeitos para o navegador: o que mexe, de qual item, quanto e quanto tempo falta. */
+  private effectsList(player: Player, now: number): ActiveEffectInfo[] {
+    return [...player.effects.values()].map((e) => ({ k: e.key, it: e.item, v: e.value, ms: Math.max(0, Math.round(e.until - now)) }));
   }
 
   /** Tira o que está equipado nesta parte e guarda na mochila. */
@@ -1891,6 +1939,10 @@ export class World {
         player.outbox.push({ t: 'stats', stats: player.stats() });
         player.statsDirty = false;
       }
+      if (player.effectsDirty) {
+        player.outbox.push({ t: 'effects', list: this.effectsList(player, now) });
+        player.effectsDirty = false;
+      }
       if (player.invDirty) {
         player.outbox.push({ t: 'inv', inv: player.inventory.state() });
         player.invDirty = false;
@@ -1971,6 +2023,7 @@ export class World {
     if (player.charmedBy !== null) this.updateCharm(player, now);
     this.updateGuard(player, now);
     this.processWalks(player, now);
+    this.expireEffects(player, now);
     this.regenPlayer(player, now);
   }
 
@@ -2164,7 +2217,7 @@ export class World {
     }
     if (now < player.nextRegenAt) return;
     player.nextRegenAt = now + REGEN_EVERY_MS;
-    const gain = (player.maxHp * rules.regenPctPerSecond) / 100 + player.regenCarry;
+    const gain = (player.maxHp * rules.regenPctPerSecond * player.regenFactor()) / 100 + player.regenCarry; // × a garrafada
     const whole = Math.floor(gain + 1e-9); // (0,9 + 0,1 dá 0,9999...: sem a folga, o ponto inteiro se perderia)
     player.regenCarry = Math.max(0, gain - whole);
     if (whole <= 0) return;
@@ -3063,7 +3116,7 @@ export class World {
 
 /** Vida máxima: a do nível mais a dos equipamentos e a da Vitalidade. */
 function playerMaxHp(player: Player, rules: Pick<CombatRules, 'playerHpFactor' | 'vitalityHp'>): number {
-  return Math.max(1, Math.round((maxHpFor(player.level) + player.bonus.hp + vitalityHp(player.attributes, rules)) * rules.playerHpFactor));
+  return Math.max(1, Math.round((maxHpFor(player.level) + player.bonus.hp + vitalityHp(player.effectiveAttributes(), rules)) * rules.playerHpFactor));
 }
 
 /** O que fica salvo de um jogador. */

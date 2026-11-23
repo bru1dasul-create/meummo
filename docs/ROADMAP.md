@@ -942,9 +942,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   fora de luta:** 8 s sem apanhar e sem atacar, 1,5% da vida máxima por segundo (painel: Combate › Jogador). O `heal`
   leva o item usado (`it`) e a view ganhou o gancho `consume(id, item)` para o efeito do gole; som novo `gole`.
   Protocolo 49
-- [ ] **[estrutura]** Poções, etapa 2 (aprovada pelo dono: "gostei pode seguir"): efeitos com tempo — Banana +5 de
-  Destreza por 3 min, Água de Coco +5 de Espírito por 3 min, garrafada: a vida volta 3× mais rápido por 3 min (só fora
-  de luta); um ícone com o tempo que falta na tela (o bonito é da [arte])
+- [x] **[estrutura]** Poções, etapa 2 (aprovada pelo dono: "gostei pode seguir"): efeitos com tempo — **Banana** +5 de
+  Destreza por 3 min e **Água de Coco** +5 de Espírito por 3 min (não curam mais; valem com a vida cheia), e as
+  **garrafadas**, além de curar, fazem a vida voltar 3× mais rápido fora de luta por 3 min. Um efeito de cada tipo por
+  vez (o mais novo toma o lugar; comer de novo recomeça o tempo); continuam ao mudar de mapa; sair do jogo acaba com
+  eles. Campo `efeito` em `data/items.json` (`{ "destreza": 5, "minutos": 3 }`, `{ "vidaVolta": 3, "minutos": 3 }`; no
+  painel também). Mensagens `consume` (quem vê desenha o gole ou a mordida) e `effects` (a lista, com o tempo que
+  falta); `stats.attrBonus`. Na tela, provisório: os efeitos com o tempo, abaixo da vida (`effectsBar.ts`), e "3 +5" na
+  aba dos Atributos; som `comer`. Protocolo 50
 - [ ] **[estrutura]** Poções, etapa 3 (aprovada): a receita da garrafada com a Dona Iracema (planta + frasco + água; a
   Arruda vira a planta da Pequena; a Média e a Grande com plantas mais raras), garrafadas e ingredientes caindo dos bichos
   e a loja vendendo só os ingredientes
