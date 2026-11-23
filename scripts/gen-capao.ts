@@ -1375,9 +1375,10 @@ function footBox(s: Shape): Box | null {
   // viaduto, da banca e do portão fechado; nenhuma delas existe nas regiões que a floresta maior confere)
   if (s.type === 'poste') return squareBox(s.x, s.y, 0.3);
   if (s.type === 'placa-rua') return squareBox(s.x, s.y, 0.2);
+  if (s.type === 'mastro') return squareBox(s.x, s.y, 0.3);
   if (s.point) return null;
   if (s.type === 'portao' && p.aberto) return null;
-  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
+  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao', 'alambrado'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
   return null;
 }
 /** As caixas que seguram o pé (a cobertura do posto só nos quatro pilares; o balanço só nos dois pés de ferro). */
@@ -2062,6 +2063,9 @@ const ESCOLA_PREDIO = { x0: 160, x1: 185, y0: 55, y1: 63 };
 const QUADRA = { x0: 160.5, x1: 186.5, y0: 67.5, y1: 82.5 };
 /** O portão da escola (aberto), no gradil do lado da Rua do Córrego, entre o prédio e a quadra (y). */
 const ESCOLA_PORTAO = { y0: 64, y1: 67 };
+/** O alambrado da quadra (a tela do lado do prédio começa em x0: a ponta oeste é a entrada da quadra) e a arquibancada. */
+const ESCOLA_ALAMBRADO = { x0: 161.5, y0: 66.4, y1: 83.5 };
+const ESCOLA_ARQUIBANCADA = { y0: 68, y1: 82 };
 /** O córrego: entra pela beira leste, passa embaixo da ponte da Rua do Córrego e sai pela beira sul. */
 const CORREGO: [number, number][] = [[W, 96], [183, 103], [173.5, 112], [164, 123], [155, 133.5], [148.5, 140], [139, 148.5], [129, 158], [120, 168.5], [114, H]];
 const CORREGO_W = 2.6;
@@ -2172,7 +2176,7 @@ if (CAPAO_MAIOR) {
   chao.push(rect('asfalto', RUA_DOIS.x0, RUA_DOIS.x1, RUA_DOIS.y0, RUA_DOIS.y1, { estado: 'rachado', nome: 'Rua Dois' }));
   chao.push(rect('asfalto', FEIRA.x0, FEIRA.x1, FEIRA.y0, FEIRA.y1, { nome: 'Feira Livre' }));
   // a quadra da escola (terra batida com as linhas, por enquanto)
-  chao.push(rect('campinho', QUADRA.x0, QUADRA.x1, QUADRA.y0, QUADRA.y1, { linhas: true }));
+  chao.push(rect('campinho', QUADRA.x0, QUADRA.x1, QUADRA.y0, QUADRA.y1, { linhas: true, desenho: 'quadra' }));
   // as trilhas da mata e a prainha (antes da água: a beira do córrego fica por cima da grama)
   chao.push(ellipse('grama', PRAINHA.x, PRAINHA.y, PRAINHA.r));
   for (const [pts, largura] of [[TRILHA_FERRO, 2.6], [TRILHA_LESTE, 2.2], [TRILHA_CORREGO, 2.2]] as const) chao.push({ type: 'trilha', x: 0, y: 0, polyline: pts.map(([x, y]) => [x, y] as [number, number]), props: { largura } });
@@ -2340,10 +2344,33 @@ if (CAPAO_MAIOR) {
   place(rect('gradil', E.x0, E.x0 + 0.2, ESCOLA_PORTAO.y1, E.y1 - 0.4, { altura: 1.8, estado: 'quebrado' }));
   place(rect('muro', E.x1 - 0.4, E.x1, E.y0 + 0.2, E.y1, { altura: 2.4, cor: '#d8d2c4', grafite: 'cores', lado: 'leste', cipo: 0.3, musgo: true }));
   place(rect('muro', E.x0, E.x1 - 0.4, E.y1 - 0.4, E.y1, { altura: 2.4, cor: '#d8d2c4', grafite: 'cores', texto: 'ESCOLA', lado: 'sul', cipo: 0.35, musgo: true }));
-  house(ESCOLA_PREDIO.x0, ESCOLA_PREDIO.x1, ESCOLA_PREDIO.y0, ESCOLA_PREDIO.y1, 2, { altura: 6.6, cor: '#e8e2d2', caixaDagua: true, abandonada: true, pixo: true, cipo: 0.55, musgo: true, plantas: true, grade: true, tijolo: false, varal: false, morador: 'ninguem', pintura: 'ESCOLA ESTADUAL' }, 'Escola Estadual');
+  // (vestida em 23/11: a fachada de escola estadual, `estilo: 'escola'` em fundo.js, com as faixas azuis, as janelas
+  // basculantes em fita, a placa do nome na entrada e o mural dos alunos)
+  house(ESCOLA_PREDIO.x0, ESCOLA_PREDIO.x1, ESCOLA_PREDIO.y0, ESCOLA_PREDIO.y1, 2, { altura: 6.6, cor: '#e8e2d2', caixaDagua: true, abandonada: true, pixo: true, cipo: 0.55, musgo: true, plantas: true, grade: true, tijolo: false, varal: false, morador: 'ninguem', pintura: 'ESCOLA ESTADUAL', estilo: 'escola', faixa: '#3a6ea5' }, 'Escola Estadual');
   const midQ = (QUADRA.y0 + QUADRA.y1) / 2;
   place(rect('trave', QUADRA.x0 + 0.2, QUADRA.x0 + 0.4, midQ - 1.5, midQ + 1.5, { altura: 2, olhando: 0, ferrugem: true, cipo: true, rede: 'rasgada' }));
   place(rect('trave', QUADRA.x1 - 0.4, QUADRA.x1 - 0.2, midQ - 1.5, midQ + 1.5, { altura: 2, olhando: 180, ferrugem: true, cipo: true, rede: 'rasgada' }));
+  // o pátio de cimento (na frente do prédio e na entrada, do portão até a quadra)
+  chao.push(rect('calcada', E.x0 + 0.2, E.x1 - 0.4, ESCOLA_PREDIO.y1, ESCOLA_ALAMBRADO.y0, { desenho: 'placas' }));
+  chao.push(rect('calcada', E.x0 + 0.2, ESCOLA_PREDIO.x0, E.y0 + 0.2, ESCOLA_PREDIO.y1, { desenho: 'placas' }));
+  // a arquibancada de cimento, três degraus encostados no gradil, virados para a quadra (o lado que a câmera vê)
+  // (os degraus se encostam: o primeiro confere os vãos com o resto; os outros dois ficam colados nele)
+  for (const [k, altura] of [[0, 1.35], [1, 0.9], [2, 0.45]] as const) {
+    const x0 = round(E.x0 + 0.2 + k * 0.7);
+    const step = rect('muro', x0, round(x0 + 0.7), ESCOLA_ARQUIBANCADA.y0, ESCOLA_ARQUIBANCADA.y1, { altura, cor: '#bdb7a8', musgo: true, cipo: 0.1 });
+    if (k === 0) place(step);
+    else {
+      cenario.push(step);
+      solids.push(...boxesOf(step));
+    }
+  }
+  // o alambrado da quadra: a tela de arame do lado do prédio (com a entrada da quadra na ponta oeste) e a do fundo; do
+  // lado leste o muro da escola fecha, e do oeste, a arquibancada e o gradil
+  place(rect('alambrado', ESCOLA_ALAMBRADO.x0, E.x1 - 0.4, ESCOLA_ALAMBRADO.y0, ESCOLA_ALAMBRADO.y0 + 0.1, { altura: 3, cipo: 0.35 }));
+  place(rect('alambrado', E.x0 + 0.2, E.x1 - 0.4, ESCOLA_ALAMBRADO.y1, ESCOLA_ALAMBRADO.y1 + 0.1, { altura: 3, cipo: 0.5, estado: 'rasgado' }));
+  // os bancos de concreto encostados no prédio, de frente para a quadra, e o mastro com a bandeira rasgada na entrada
+  for (const x of [165, 178]) place(rect('banco', x, x + 1.6, ESCOLA_PREDIO.y1 + 0.1, ESCOLA_PREDIO.y1 + 0.6, { olhando: 90, material: 'concreto', mato: true }));
+  place(point('mastro', 157.6, 52.5, { altura: 7, cor: '#3f8f5a' }));
 
   // ---------------- a pracinha: a árvore do meio com os bancos em roda, o parquinho, os postes de luz ----------------
   const P = PRACINHA;
@@ -2377,6 +2404,12 @@ if (CAPAO_MAIOR) {
       [tx - 2.85, tx - 2.35, ty - 0.8, ty + 0.8, 0],
       [tx + 2.35, tx + 2.85, ty - 0.8, ty + 0.8, 180],
     ] as const) place(rect('banco', round(x0), round(x1), round(y0), round(y1), { olhando }));
+  }
+  // a árvore do pátio da escola, na faixa entre o prédio e o muro do leste (sem tampar a quadra nem a rua)
+  {
+    const T = { tronco: 0.5, copa: 2.4, altura: 6.5 };
+    const spot = treeSpot(186.8, 58, T, { x0: ESCOLA_PREDIO.x1 + 1.4, x1: ESCOLA.x1 - 1.6, y0: ESCOLA.y0 + 1.5, y1: ESCOLA_PREDIO.y1 + 1 });
+    if (spot) addTree(spot[0], spot[1], 'mata', T);
   }
   // o parquinho no lado leste (enferrujado, com cipó), longe da roda dos bancos
   place(rect('parquinho', 181, 184, 20.2, 20.8, { brinquedo: 'balanco', altura: 2.2, ferrugem: true, cipo: true }));
@@ -2603,6 +2636,9 @@ for (const s of cenario) {
   } else if (s.type === 'cachoeira') colisao.push(rect('cachoeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
   // o Capão maior: a estação segura tudo; a banca da feira é baixa (a pedrinha passa)
   else if (s.type === 'estacao') colisao.push(rect('estacao', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  // (a pedrinha passa pela tela do alambrado, como pela grade do gradil; o mastro é fino)
+  else if (s.type === 'alambrado') colisao.push({ ...rect('alambrado', s.x, s.x + s.w!, s.y, s.y + s.h!), props: { bloqueiaTiro: false } });
+  else if (s.type === 'mastro') colisao.push(block('mastro', s.x, s.y, 0.3, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'banca-frutas') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
 }
 // o chão embaixo de cada galho dos saguis é andável (o servidor põe o pé do sagui ali)

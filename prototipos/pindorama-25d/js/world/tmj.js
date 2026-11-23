@@ -181,6 +181,9 @@
           // o prédio antigo (a Barragem de 1909): `estilo: 'historico'` (tijolo antigo, janelas em arco, cornija), `ano`
           // (no frontão) e `relogio` (a torre, com o relógio parado no lugar das janelas do andar de cima)
           historic: pr.estilo === 'historico',
+          // outro estilo de fachada, desenhado fora do props.js (`estilo: 'escola'`, fundo.js), com a cor da `faixa`
+          style: pr.estilo && pr.estilo !== 'historico' ? pr.estilo : null,
+          band: pr.faixa || null,
           year: pr.ano || null,
           clock: !!pr.relogio,
           tank: !!pr.caixaDagua,
@@ -288,6 +291,11 @@
         const depth = 110;
         const f = { x0: r0.x0 + Math.min(0, bx * depth), x1: r0.x1 + Math.max(0, bx * depth), y0: r0.y0 + Math.min(0, by * depth), y1: r0.y1 + Math.max(0, by * depth) };
         map.props.push({ kind: 'trave', ...f, post: along ? { x: (r0.x0 + r0.x1) / 2, a: r0.y0, b: r0.y1 } : { y: (r0.y0 + r0.y1) / 2, a: r0.x0, b: r0.x1 }, along, back: { x: bx, y: by }, depth, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, net: pr.rede || 'inteira' });
+      } else if (k === 'alambrado') {
+        // o alambrado (a tela de arame nos postes de cano, a da quadra da escola do Capão maior; fundo.js), em pedaços de
+        // até 4 m: `altura`, `estado: 'rasgado'` (a tela furada), `cipo` (0 a 1)
+        const whole = rect(o);
+        for (const part of pieces(whole, 400)) map.props.push({ kind: 'alambrado', ...part, whole, h: (pr.altura || 3) * 100, torn: pr.estado === 'rasgado', vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0 });
       } else if (k === 'muro') {
         // muro em pedaços de até 4 m (cada pedaço é uma imagem): `grafite` ('cores') no `lado` (leste, sul...), `cipo`
         // (0 a 1), `musgo`; `whole` = o muro inteiro (o desenho do grafite continua de um pedaço para o outro)

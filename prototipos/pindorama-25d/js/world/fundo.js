@@ -2,7 +2,8 @@
 // capao-campinho-aprovado.jpg): o campinho de várzea com as traves de rede rasgada e o muro grafitado; o viaduto da
 // linha lilás quebrado na ponta, com mato em cima, pilares pichados e cipó pendurado; o trem lilás parado lá em cima,
 // com plantas no teto; o ônibus velho que virou horta; a barreira da rua fechada e as placas de direção. E, do Capão
-// maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura.
+// maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura; a
+// fachada da escola estadual (`PD.city.facades.escola`, para a casa com `estilo: 'escola'`) e o alambrado da quadra.
 // Mesmo traço do resto do cenário (contorno de tinta, lado da sombra mais escuro). Coisa comprida (muro, viaduto,
 // ônibus) vem do mapa em pedaços (tmj.js): cada pedaço desenha a sua parte e o desenho continua de um para o outro.
 //   PD.city.small[tipo] = { height, blocks, lift, box, shadow, paint }   (o props.js usa como as plantas)
@@ -1840,6 +1841,262 @@
       const vpts = [];
       for (let j = 0; j <= 4; j++) vpts.push({ x: m.x0 + 30 + j * 4, y: m.y1 + 2, z: z0 + m.z - j * 30 });
       vine3d(ctx, cam, vpts, rnd, ink);
+    },
+  };
+  // ------------------------------------------------------------------ a Escola Estadual (Capão maior, 23/11)
+  // A fachada do prédio da escola (a casa com `estilo: 'escola'`; o props.js chama `PD.city.facades.escola`): o concreto
+  // claro com as faixas da `faixa` (no alto e em cada laje), os pilares aparentes de 5 em 5 m, as janelas basculantes em
+  // fita (vidros quebrados, uns abertos), a entrada com a placa do nome e o portão de grade, e o mural que os alunos
+  // pintaram. Em cm da parede (`len` de comprimento, `H` de altura, o alto em 0).
+  const SCHOOL = { band: '#3a6ea5', frame: '#4b535a', pane: '#6d8c98', paneHi: 'rgba(220, 240, 245, 0.35)', hole: '#1b2226' };
+  /** Uma janela basculante em fita (em cm da parede): os módulos de 3 vidros de altura, com a moldura de ferro. */
+  function ribbonWindow(ctx, x, y, w, h, r, grade) {
+    ctx.fillStyle = SCHOOL.frame;
+    ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
+    const n = Math.max(1, Math.round(w / 105));
+    const uw = w / n;
+    const rows = 3;
+    const rh = h / rows;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < rows; j++) {
+        const px = x + i * uw + 5, py = y + j * rh + 4, pw = uw - 10, ph = rh - 8;
+        const k = r();
+        if (k < 0.22) {
+          // quebrado: o escuro de dentro
+          ctx.fillStyle = SCHOOL.hole;
+          ctx.fillRect(px, py, pw, ph);
+        } else if (k < 0.34) {
+          // o basculante aberto: o vidro virado (mais claro e mais baixo) e o vão escuro em cima
+          ctx.fillStyle = SCHOOL.hole;
+          ctx.fillRect(px, py, pw, ph * 0.45);
+          ctx.fillStyle = M.shade(SCHOOL.pane, 0.18);
+          ctx.fillRect(px, py + ph * 0.45, pw, ph * 0.55);
+        } else {
+          ctx.fillStyle = SCHOOL.pane;
+          ctx.fillRect(px, py, pw, ph);
+          ctx.fillStyle = SCHOOL.paneHi;
+          ctx.fillRect(px + pw * 0.12, py, pw * 0.16, ph);
+        }
+      }
+    }
+    // a grade do térreo (barras de ferro na frente do vidro)
+    if (grade) {
+      ctx.strokeStyle = 'rgba(40, 44, 48, 0.85)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let u = x + 14; u < x + w; u += 22) {
+        ctx.moveTo(u, y - 4);
+        ctx.lineTo(u, y + h + 4);
+      }
+      ctx.stroke();
+    }
+  }
+  /** O mural pintado pelos alunos (desbotado): o céu, o sol, os morros, a árvore e as mãozinhas coloridas. */
+  function schoolMural(ctx, x, y, w, h, r) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#7fb7d8';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#f2c84b';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.78, y + h * 0.28, h * 0.16, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = '#5c9a4a';
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.quadraticCurveTo(x + w * 0.25, y + h * 0.35, x + w * 0.55, y + h * 0.8);
+    ctx.quadraticCurveTo(x + w * 0.75, y + h * 0.5, x + w, y + h * 0.75);
+    ctx.lineTo(x + w, y + h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#6a4a2e';
+    ctx.fillRect(x + w * 0.3 - 8, y + h * 0.42, 16, h * 0.45);
+    ctx.fillStyle = '#3f7f3a';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.3, y + h * 0.4, h * 0.2, 0, M.TAU);
+    ctx.fill();
+    const HANDS = ['#e2552f', '#e8c020', '#2f6fb0', '#c4508a', '#f07a2a', '#4f9f5f'];
+    for (let k = 0; k < 9; k++) {
+      const hx = x + 30 + r() * (w - 60), hy = y + h * 0.55 + r() * h * 0.35;
+      ctx.fillStyle = HANDS[Math.floor(r() * HANDS.length)];
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 14, 17, 0, 0, M.TAU);
+      ctx.fill();
+      for (let f = 0; f < 4; f++) ctx.fillRect(hx - 12 + f * 7, hy - 30, 5, 16);
+    }
+    ctx.restore();
+    // desbotado e descascando
+    ctx.fillStyle = 'rgba(230, 226, 214, 0.3)';
+    for (let k = 0; k < 7; k++) ctx.fillRect(x + r() * w, y + r() * h, 20 + r() * 50, 8 + r() * 20);
+    ctx.strokeStyle = 'rgba(60, 56, 50, 0.4)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
+  }
+  /** A entrada: a placa com o nome (letras azuis no branco) e o portão de grade de duas folhas, fechado com corrente. */
+  function schoolEntrance(ctx, b, x, w, top, H, band, r) {
+    const bw = w - 20;
+    ctx.fillStyle = '#ece8dc';
+    ctx.fillRect(x + 10, top + 24, bw, 84);
+    ctx.strokeStyle = band;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(x + 10, top + 24, bw, 84);
+    if (b.paint) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let size = 46;
+      ctx.font = `${size}px ${ST_FONT}`;
+      while (ctx.measureText(b.paint).width > bw - 30 && size > 18) ctx.font = `${--size}px ${ST_FONT}`;
+      ctx.fillStyle = band;
+      ctx.fillText(b.paint, x + w / 2, top + 67);
+      ctx.restore();
+    }
+    // o portão: a moldura, as barras e a corrente com o cadeado no meio
+    const gy = top + 128, gh = H - gy;
+    ctx.fillStyle = 'rgba(30, 34, 38, 0.85)';
+    ctx.fillRect(x + 30, gy, w - 60, gh);
+    ctx.strokeStyle = '#5d646b';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(x + 30, gy, w - 60, gh);
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, gy);
+    ctx.lineTo(x + w / 2, H);
+    ctx.stroke();
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let u = x + 50; u < x + w - 40; u += 18) {
+      ctx.moveTo(u, gy + 6);
+      ctx.lineTo(u, H - 4);
+    }
+    ctx.moveTo(x + 30, gy + gh * 0.45);
+    ctx.lineTo(x + w - 30, gy + gh * 0.45);
+    ctx.stroke();
+    ctx.strokeStyle = '#9a8a5a';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(x + w / 2, gy + gh * 0.45, 22, 0.3, Math.PI - 0.3);
+    ctx.stroke();
+    ctx.fillStyle = '#c9a640';
+    ctx.fillRect(x + w / 2 - 9, gy + gh * 0.45 + 18, 18, 16);
+  }
+  /** Os andares da escola numa parede (a frente ou o lado). */
+  function schoolWall(ctx, b, len, H, fh, floors, r, side) {
+    const band = b.band || SCHOOL.band;
+    ctx.fillStyle = band;
+    ctx.fillRect(0, 18, len, 42);
+    for (let f = 1; f < floors; f++) {
+      ctx.fillStyle = band;
+      ctx.fillRect(0, H - f * fh - 28, len, 28);
+    }
+    const bays = Math.max(1, Math.round((len - 60) / 500));
+    const bw = (len - 60) / bays;
+    // os pilares de concreto aparente (mais claros, com a sombra de um lado)
+    for (let i = 0; i <= bays; i++) {
+      const px = 30 + i * bw;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+      ctx.fillRect(px - 16, 60, 32, H - 60);
+      ctx.fillStyle = 'rgba(70, 64, 56, 0.2)';
+      ctx.fillRect(px + 16, 60, 5, H - 60);
+    }
+    const mid = Math.floor(bays / 2);
+    for (let f = 0; f < floors; f++) {
+      const top = H - (f + 1) * fh;
+      for (let i = 0; i < bays; i++) {
+        const x0 = 30 + i * bw + 26, w = bw - 52;
+        if (!side && f === 0 && i === mid) {
+          schoolEntrance(ctx, b, x0, w, top, H, band, r);
+          continue;
+        }
+        if (!side && f === 0 && i === mid + 1) {
+          schoolMural(ctx, x0, top + fh * 0.2, w, fh * 0.68, r);
+          continue;
+        }
+        ribbonWindow(ctx, x0, top + fh * 0.24, w, fh * 0.4, r, f === 0);
+      }
+    }
+  }
+  PD.city.facades = PD.city.facades || {};
+  PD.city.facades.escola = {
+    front: (ctx, b, W, H, fh, floors, r) => schoolWall(ctx, b, W, H, fh, floors, r, false),
+    side: (ctx, b, D, H, fh, floors, r) => schoolWall(ctx, b, D, H, fh, floors, r, true),
+  };
+
+  // ------------------------------------------------------------------ o alambrado (a tela de arame da quadra)
+  // Os postes de cano galvanizado de 2,5 em 2,5 m, o cano de cima e a tela em losangos (dá para ver através dela),
+  // com um rasgo aqui e ali (`torn`) e o cipó subindo. Em pedaços (tmj.js): cada pedaço desenha a sua parte.
+  small.alambrado = {
+    fades: false,
+    height: (d) => d.h + 20,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, d.h * 0.25),
+    box: (cam, d, z0) => volBox(cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + d.h + 10, 20),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const alongY = d.whole.y1 - d.whole.y0 > d.whole.x1 - d.whole.x0;
+      const rnd = seeded(d.x0, d.y0, 3401);
+      const zt = z0 + d.h;
+      // a reta do alambrado (no meio da caixa fina) e os postes
+      const a = alongY ? { x: (d.x0 + d.x1) / 2, y: d.y1 } : { x: d.x0, y: (d.y0 + d.y1) / 2 };
+      const L = alongY ? d.y1 - d.y0 : d.x1 - d.x0;
+      const at = (u) => (alongY ? { x: a.x, y: a.y - u } : { x: a.x + u, y: a.y });
+      // a tela: losangos de arame, transparentes
+      H.onWall(ctx, cam, { ...at(0), z: zt }, alongY ? { x: 0, y: -1 } : { x: 1, y: 0 }, () => {
+        const hole = d.torn || rnd() < 0.3 ? { u: 40 + rnd() * (L - 120), v: d.h * (0.35 + rnd() * 0.4), r: 30 + rnd() * 40 } : null;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 6, L, d.h - 6);
+        if (hole) ctx.ellipse(hole.u, hole.v, hole.r * 1.3, hole.r, 0.4, 0, M.TAU);
+        ctx.clip('evenodd');
+        ctx.strokeStyle = 'rgba(150, 156, 160, 0.55)';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        const s = 16;
+        for (let k = -d.h; k < L + d.h; k += s) {
+          ctx.moveTo(k, 6);
+          ctx.lineTo(k + d.h, d.h);
+          ctx.moveTo(k + d.h, 6);
+          ctx.lineTo(k, d.h);
+        }
+        ctx.stroke();
+        ctx.restore();
+        // a beirada torta da tela em volta do rasgo
+        if (hole) {
+          ctx.strokeStyle = 'rgba(120, 126, 130, 0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(hole.u, hole.v, hole.r * 1.3, hole.r, 0.4, 0, M.TAU);
+          ctx.stroke();
+        }
+        // o cipó subindo pela tela
+        if (d.vine > 0) {
+          for (let k = 0; k < Math.round(d.vine * L / 120); k++) {
+            const u = rnd() * L, top = d.h * (0.2 + rnd() * 0.6);
+            ctx.strokeStyle = 'rgba(64, 98, 44, 0.9)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(u, d.h);
+            ctx.bezierCurveTo(u + 20, d.h * 0.8, u - 20, top + 40, u + 6, top);
+            ctx.stroke();
+            for (let j = 0; j < 6; j++) {
+              ctx.fillStyle = j % 2 ? '#4e8a3a' : '#3d7330';
+              ctx.beginPath();
+              ctx.ellipse(u + (rnd() - 0.5) * 30, top + (d.h - top) * (j / 6), 9, 6, rnd() * 3, 0, M.TAU);
+              ctx.fill();
+            }
+          }
+        }
+      });
+      // o cano de cima e os postes (de 2,5 em 2,5 m, mais um nas pontas do alambrado inteiro)
+      const pipe = '#8e969c';
+      inkLine(ctx, [P(at(0).x, at(0).y, zt), P(at(L).x, at(L).y, zt)], pipe, Math.max(1, 3 * cam.zoom), ink);
+      const post = (u) => {
+        const q = at(u);
+        inkLine(ctx, [P(q.x, q.y, z0), P(q.x, q.y, zt + 6)], pipe, Math.max(1.2, 4.5 * cam.zoom), ink);
+      };
+      // (contados do começo do alambrado inteiro: o desenho continua de um pedaço para o outro)
+      const g0 = alongY ? d.whole.y1 - d.y1 : d.x0 - d.whole.x0;
+      for (let gu = Math.ceil(g0 / 250 - 1e-6) * 250; gu < g0 + L - 1; gu += 250) post(gu - g0);
+      if (d.piece === d.pieces - 1) post(L);
     },
   };
 })(window.PD = window.PD || {});

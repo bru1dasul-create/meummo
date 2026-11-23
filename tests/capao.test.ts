@@ -903,7 +903,8 @@ describe('Mapa 01 (Capão): o Parque Santo Dias de antes, engolido pela floresta
     expect(of('bebedouro').length).toBe(1);
     // (os da floresta maior ficam na Clareira da Paineira, mais ao sul)
     const old = (o: TiledObject) => o.y / M < 120;
-    expect(of('banco').filter((o) => old(o) && prop(o, 'material') === 'concreto').length).toBe(3);
+    // (os bancos de concreto da escola do Capão maior ficam de fora: x ≥ OLD_W)
+    expect(of('banco').filter((o) => old(o) && o.x / M < OLD_W && prop(o, 'material') === 'concreto').length).toBe(3);
     expect(of('poste-praca').filter((o) => old(o) && prop(o, 'apagado') === true).length).toBe(3);
     expect(of('academia').map((o) => String(prop(o, 'aparelho'))).sort()).toEqual(['barra', 'remada', 'simulador-caminhada']);
     expect(layer('chao').filter((o) => o.type === 'calcada' && prop(o, 'quebrada') === true).length).toBeGreaterThanOrEqual(5);
@@ -1253,6 +1254,20 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
     expect(prop(gate, 'aberto')).toBe(true);
     const closed = floodWith([boxOf(gate)]);
     expect(closed(at(quadra).x, at(quadra).y)).toBe(false);
+    // (vestida em 23/11) a fachada de escola, a quadra de cimento pintada, o alambrado com a entrada da quadra na ponta
+    // oeste, a arquibancada de três degraus virada para a quadra, os bancos e o mastro
+    expect([prop(escola, 'estilo'), prop(quadra, 'desenho')]).toEqual(['escola', 'quadra']);
+    const fences = cenario.filter((o) => o.type === 'alambrado' && isNew(o));
+    expect(fences).toHaveLength(2);
+    for (const f of fences) expect(boxes.some((b) => b.type === 'alambrado' && inRect((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, f))).toBe(true);
+    for (const o of layer('colisao').filter((c) => c.type === 'alambrado')) expect(prop(o, 'bloqueiaTiro')).toBe(false);
+    const steps = cenario.filter((o) => o.type === 'muro' && isNew(o) && Number(prop(o, 'altura')) < 1.5).sort((a, b) => a.x - b.x);
+    expect(steps.map((o) => Number(prop(o, 'altura')))).toEqual([1.35, 0.9, 0.45]); // o mais alto no gradil, o mais baixo na quadra
+    const north = fences.reduce((a, b) => (a.y < b.y ? a : b));
+    const doorway = { x0: 158.4, x1: north.x / M - 0.05, y0: north.y / M - 0.2, y1: 67.9, type: 'teste' };
+    expect(doorway.x1 - doorway.x0).toBeGreaterThanOrEqual(1.5); // a entrada da quadra
+    expect(floodWith([doorway])(at(quadra).x, at(quadra).y)).toBe(false); // e é a única
+    expect(cenario.some((o) => o.type === 'mastro' && isNew(o))).toBe(true);
   });
 
   it('a Estação Capão Redondo fica fechada (a barreira na porta e a placa), com o largo e a pracinha na frente', () => {

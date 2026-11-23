@@ -228,6 +228,20 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     } else if (!o.point) {
       const [x0, y0, x1, y1] = box(o);
       cv.rect(x0, y0, x1, y1, c, alpha);
+      // a quadra de cimento da escola (o campinho com `desenho: 'quadra'`): o vermelho em volta, o verde do jogo e as linhas
+      if (t === 'campinho' && prop(o, 'desenho') === 'quadra') {
+        cv.tag = -1;
+        cv.rect(x0, y0, x1, y1, hex('#9a5a48'), 1);
+        const mm = m(0.9);
+        cv.rect(x0 + mm, y0 + mm, x1 - mm, y1 - mm, hex('#4f7d5f'), 1);
+        const lw = Math.max(1, m(0.1));
+        const white = hex('#eeece4');
+        cv.rect(x0 + mm, y0 + mm, x1 - mm, y0 + mm + lw, white, 0.85);
+        cv.rect(x0 + mm, y1 - mm - lw, x1 - mm, y1 - mm, white, 0.85);
+        cv.rect(x0 + mm, y0 + mm, x0 + mm + lw, y1 - mm, white, 0.85);
+        cv.rect(x1 - mm - lw, y0 + mm, x1 - mm, y1 - mm, white, 0.85);
+        cv.rect((x0 + x1) / 2 - lw / 2, y0 + mm, (x0 + x1) / 2 + lw / 2, y1 - mm, white, 0.85);
+      }
     }
   }
   cv.tag = -1;
@@ -413,7 +427,7 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
       cv.rect(x0 + m(1.1), y0 + back - m(0.55), x1 - m(1.1), y0 + back - m(0.25), hex(String(prop(o, 'linha') ?? '#8a63b8')), 1);
       outline(x0 + m(1.1), y0 - m(4.7), x1 - m(1.1), y0 + back - m(0.25), C.contorno, 1, 0.7);
     } else if (t === 'muro') roof(x0, y0, x1, y1, C.muro);
-    else if (t === 'gradil' || t === 'portao') {
+    else if (t === 'gradil' || t === 'portao' || t === 'alambrado') {
       cv.rect(Math.min(x0, x1 - 1.5), Math.min(y0, y1 - 1.5), Math.max(x1, x0 + 1.5), Math.max(y1, y0 + 1.5), C.ferro);
     } else if (t === 'pilar' || t === 'pilar-viaduto') roof(x0, y0, x1, y1, C.concreto);
     else if (t === 'onibus') {
