@@ -1,14 +1,60 @@
-// Janela das Habilidades do jogo 2.5D (tecla K ou o botão ✦): escolher a classe (depois das missões do começo) e pôr
-// os pontos nas habilidades dela (1 por nível). Quem decide tudo é o servidor: a janela só mostra o que ele mandou e
-// pede. O visual (o CSS abaixo, no estilo da HUD: a moldura da mochila, o dourado e o "+" redondo) é da [arte].
+// Janela das Habilidades do jogo 2.5D (tecla K ou o botão ✦), com duas abas:
+// - Habilidades: escolher a classe (depois das missões do começo) e pôr os pontos nas habilidades dela (1 por nível);
+// - Atributos: Força, Destreza, Espírito e Vitalidade (3 pontos por nível; aprovado pelo dono em 23/11).
+// Quem decide tudo é o servidor: a janela só mostra o que ele mandou e pede. O visual (o CSS abaixo, no estilo da HUD:
+// a moldura da mochila, o dourado e o "+" redondo) é da [arte]; o das abas e dos atributos ainda é provisório.
 
+import { ATTRIBUTE_IDS, ATTRIBUTE_NAMES, ATTRIBUTE_POINTS_PER_LEVEL, attributeBonus, noAttributes, type AttributeId, type Attributes } from '../../shared/attributes';
 import { learnBlocker, levelForPoint, skillPoint, type ClassInfo, type ClassSkillInfo, type HeroState, type SkillPointInfo } from '../../shared/classes';
+import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
 import { skillIconUrl } from './skillIcons';
 
 export interface SkillsPanelActions {
   choose(classId: string): void;
   learn(skillId: string): void;
   unlearn(): void;
+  addAttribute(id: AttributeId): void;
+  resetAttributes(): void;
+}
+
+export type SkillsTab = 'skills' | 'attrs';
+
+function num(value: number): string {
+  return String(Math.round(value * 10) / 10).replace('.', ',');
+}
+
+/**
+ * O que cada ponto de um atributo dá (`each`, a frase que explica o atributo) e o que os pontos dele dão agora (`now`;
+ * vazio sem pontos), em texto, com os números das regras de agora (o painel do administrador muda).
+ */
+export function attributeText(id: AttributeId, attrs: Readonly<Attributes>, rules: CombatRules): { each: string; now: string } {
+  const bonus = attributeBonus(attrs, rules);
+  const upTo = `(até ${num(rules.attributeCutMaxPct)}%)`;
+  const has = attrs[id] > 0;
+  switch (id) {
+    case 'forca':
+      return { each: `+${num(rules.strengthShotPct)}% de dano por ponto no tiro de sempre (arco e estilingue)`, now: has ? `+${num(bonus.shotDamagePct)}% de dano no tiro` : '' };
+    case 'destreza':
+      return {
+        each: `Por ponto, puxa o arco ${num(rules.dexterityChargePct)}% mais rápido e atira de novo ${num(rules.dexterityIntervalPct)}% mais cedo ${upTo}`,
+        now: has ? `puxada ${num(bonus.chargeCutPct)}% e intervalo ${num(bonus.intervalCutPct)}% mais curtos` : '',
+      };
+    case 'espirito':
+      return {
+        each: `Por ponto, as habilidades da classe dão +${num(rules.spiritSkillPct)}% de dano e voltam ${num(rules.spiritCooldownPct)}% mais cedo ${upTo}`,
+        now: has ? `+${num(bonus.skillDamagePct)}% de dano e recarga ${num(bonus.cooldownCutPct)}% menor` : '',
+      };
+    case 'vitalidade':
+      return { each: `+${num(rules.vitalityHp * rules.playerHpFactor)} de vida por ponto`, now: has ? `+${bonus.hp} de vida` : '' };
+  }
+}
+
+/** Uma linha de atributo na janela (montada uma vez e atualizada no lugar: o "+" não some no meio do clique). */
+interface AttrRow {
+  value: HTMLElement;
+  now: HTMLElement;
+  each: HTMLElement;
+  plus: HTMLButtonElement;
 }
 
 /** Quanto tempo o botão fica pedindo "tem certeza?" (escolher a classe, recomeçar os pontos). */
@@ -42,9 +88,20 @@ export class SkillsPanel {
   private readonly style = document.createElement('style');
   private readonly body = document.createElement('div');
   private readonly points = document.createElement('span');
+  private readonly heading = document.createElement('span');
+  private readonly tabButtons = new Map<SkillsTab, { button: HTMLButtonElement; count: HTMLElement }>();
+  private readonly attrBody = document.createElement('div');
+  private readonly attrRows = new Map<AttributeId, AttrRow>();
+  private readonly attrReset = document.createElement('button');
+  private attrResetAsking = 0;
+  private attrResetTimer: number | undefined;
+  private tab: SkillsTab = 'skills';
   private classes: ClassInfo[] = [];
   private hero: HeroState = { class: null, skills: {}, points: 0, canChoose: false };
   private level = 1;
+  private attrs: Attributes = noAttributes();
+  private attrPoints = 0;
+  private rules: CombatRules = defaultCombatRules();
   /** O botão que está pedindo confirmação (e até quando). */
   private confirming: { key: string; until: number } | null = null;
   private confirmTimer: number | undefined;
@@ -93,6 +150,20 @@ export class SkillsPanel {
       #skills-panel button.act.choose { display: block; width: 100%; padding: 10px; font: 700 15px var(--title-font, Georgia, serif); color: #ffe9b8; }
       #skills-panel button.act.confirm { background: linear-gradient(180deg, #a3381c, #6e1f0c); border-color: #ffb46a; }
       #skills-panel .reset { margin-top: 12px; width: 100%; padding: 7px; font-size: 12px; font-weight: 600; background: rgba(0, 0, 0, 0.35); border-color: rgba(214, 170, 104, 0.45); color: #d9c7a2; box-shadow: none; }
+      /* provisório (a [arte] veste): as abas e os atributos */
+      #skills-panel .tabs { display: flex; gap: 6px; margin: -2px 0 10px; }
+      #skills-panel .tabs button { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(214, 170, 104, 0.4); background: rgba(0, 0, 0, 0.3); color: #cbb894; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+      #skills-panel .tabs button.on { background: linear-gradient(180deg, rgba(120, 88, 44, 0.75), rgba(42, 31, 18, 0.85)); color: #ffe9b8; border-color: #ffc864; }
+      #skills-panel .tabs .count { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px; border-radius: 9px; background: radial-gradient(circle at 50% 35%, #ffe08a, #e09a26 70%); color: #2a1606; font: 900 11px/18px system-ui, sans-serif; }
+      #skills-panel .tabs .count:empty { display: none; }
+      #skills-panel .attr { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; margin-top: 8px; padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(165, 124, 66, 0.4); background: linear-gradient(180deg, rgba(64, 50, 34, 0.45), rgba(10, 8, 5, 0.55)); }
+      #skills-panel .attr .letter { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(214, 170, 104, 0.85); background: radial-gradient(circle at 50% 35%, rgba(120, 88, 44, 0.95), rgba(20, 14, 9, 0.95)); color: #ffd23e; font: 700 18px var(--title-font, Georgia, serif); text-shadow: 0 1px 2px #000; }
+      #skills-panel .attr b { color: #ffe9b8; font-size: 14px; }
+      #skills-panel .attr .value { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(214, 170, 104, 0.5); font: 800 12px system-ui, sans-serif; color: #ffd23e; vertical-align: 1px; }
+      #skills-panel .attr .what { color: #d9c7a2; font-size: 12px; }
+      #skills-panel .attr .numbers { color: #b8e39a; font-size: 12px; }
+      #skills-panel .attr .numbers:empty { display: none; }
+      #skills-panel .head { position: sticky; top: -12px; z-index: 3; margin: -12px -16px 0; padding: 12px 16px 1px; border-radius: 12px 12px 0 0; background: linear-gradient(180deg, #2a2117, #241c14); }
       @media (pointer: coarse) {
         #skills-button { top: calc(228px + env(safe-area-inset-top)); right: auto; left: calc(8px + env(safe-area-inset-left)); padding: 8px 10px; }
         #skills-button .label, #skills-button kbd { display: none; }
@@ -125,15 +196,36 @@ export class SkillsPanel {
     this.panel.id = 'skills-panel';
     this.panel.hidden = true;
     const title = document.createElement('h3');
-    title.append('✦ Habilidades');
+    this.heading.textContent = '✦ Habilidades';
     this.points.className = 'pts';
     const close = document.createElement('button');
     close.type = 'button';
     close.textContent = '✕';
     close.title = 'Fechar (K ou Esc)';
     close.addEventListener('click', () => this.close());
-    title.append(this.points, close);
-    this.panel.append(title, this.body);
+    title.append(this.heading, this.points, close);
+    const tabs = document.createElement('div');
+    tabs.className = 'tabs';
+    for (const [tab, text] of [['skills', 'Habilidades'], ['attrs', 'Atributos']] as const) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.tab = tab;
+      const count = document.createElement('span');
+      count.className = 'count';
+      button.append(text, count);
+      button.addEventListener('click', () => {
+        button.blur();
+        this.showTab(tab);
+      });
+      tabs.append(button);
+      this.tabButtons.set(tab, { button, count });
+    }
+    this.buildAttributes();
+    // o título e as abas ficam presos no alto quando a janela rola (no celular, rola quase sempre)
+    const head = document.createElement('div');
+    head.className = 'head';
+    head.append(title, tabs);
+    this.panel.append(head, this.body, this.attrBody);
     // clique na janela não vira clique no jogo (andar, atirar)
     this.panel.addEventListener('pointerdown', (event) => event.stopPropagation());
     document.body.append(this.button, this.panel);
@@ -153,7 +245,9 @@ export class SkillsPanel {
     else this.open();
   }
 
-  open(): void {
+  /** Abre (na aba `tab`, ou na que estava). */
+  open(tab?: SkillsTab): void {
+    if (tab) this.tab = tab;
     this.panel.hidden = false;
     this.render();
   }
@@ -161,6 +255,20 @@ export class SkillsPanel {
   close(): void {
     this.panel.hidden = true;
     this.confirming = null;
+    this.attrResetAsking = 0;
+  }
+
+  /** A aba aberta. */
+  get currentTab(): SkillsTab {
+    return this.tab;
+  }
+
+  showTab(tab: SkillsTab): void {
+    this.tab = tab;
+    this.confirming = null;
+    this.attrResetAsking = 0;
+    this.render();
+    this.panel.scrollTop = 0; // a outra aba começa do começo
   }
 
   /** O que o servidor mandou (as classes, o herói) e o nível de agora. */
@@ -168,10 +276,127 @@ export class SkillsPanel {
     this.classes = classes;
     this.hero = hero;
     this.level = level;
-    // o número no botão: os pontos para gastar (com classe) ou "!" (já pode escolher a classe)
-    this.badge.textContent = hero.class ? (hero.points > 0 ? String(hero.points) : '') : hero.canChoose ? '!' : '';
-    this.button.classList.toggle('news', hero.canChoose || (hero.class !== null && hero.points > 0 && this.canLearnSomething()));
-    if (this.isOpen) this.render();
+    this.refreshBadges();
+    if (this.isOpen && this.tab === 'skills') this.render();
+    else this.refreshHeader();
+  }
+
+  /** Os atributos que o servidor mandou (os pontos de cada um e os que sobram) e as regras de quanto vale cada ponto. */
+  setAttributes(attrs: Readonly<Attributes>, points: number, rules: CombatRules): void {
+    this.attrs = { ...attrs };
+    this.attrPoints = points;
+    this.rules = rules;
+    this.refreshBadges();
+    this.refreshAttributes();
+    this.refreshHeader();
+  }
+
+  /** O número no botão e nas abas, e o botão piscando quando tem o que fazer. */
+  private refreshBadges(): void {
+    const hero = this.hero;
+    const skillPoints = hero.class ? hero.points : 0;
+    // os pontos para gastar (habilidades, com classe, e atributos) ou "!" (já pode escolher a classe)
+    const total = skillPoints + this.attrPoints;
+    this.badge.textContent = !hero.class && hero.canChoose ? '!' : total > 0 ? String(total) : '';
+    this.button.classList.toggle('news', hero.canChoose || (hero.class !== null && hero.points > 0 && this.canLearnSomething()) || this.attrPoints > 0);
+    const skills = this.tabButtons.get('skills');
+    if (skills) skills.count.textContent = hero.class ? (hero.points > 0 ? String(hero.points) : '') : hero.canChoose ? '!' : '';
+    const attrs = this.tabButtons.get('attrs');
+    if (attrs) attrs.count.textContent = this.attrPoints > 0 ? String(this.attrPoints) : '';
+  }
+
+  /** O título e os pontos da aba aberta. */
+  private refreshHeader(): void {
+    const onAttrs = this.tab === 'attrs';
+    this.heading.textContent = onAttrs ? '✦ Atributos' : '✦ Habilidades';
+    const value = onAttrs ? this.attrPoints : this.hero.points;
+    this.points.replaceChildren();
+    const b = document.createElement('b');
+    b.textContent = String(value);
+    const what = onAttrs ? 'para distribuir' : 'para gastar';
+    this.points.append(b, value === 1 ? ` ponto ${what}` : ` pontos ${what}`);
+    for (const [tab, { button }] of this.tabButtons) button.classList.toggle('on', tab === this.tab);
+  }
+
+  /** Monta a aba dos atributos (uma vez: depois só os números mudam). */
+  private buildAttributes(): void {
+    this.attrBody.className = 'attrs';
+    const intro = document.createElement('p');
+    intro.className = 'intro';
+    intro.textContent = `${ATTRIBUTE_POINTS_PER_LEVEL} pontos a cada nível, a partir do 2. Recomeçar é de graça, por enquanto.`;
+    const rows = ATTRIBUTE_IDS.map((id) => {
+      const row = document.createElement('div');
+      row.className = 'attr';
+      row.dataset.attr = id;
+      const letter = document.createElement('span');
+      letter.className = 'letter';
+      letter.textContent = ATTRIBUTE_NAMES[id].charAt(0);
+      const info = document.createElement('div');
+      const name = document.createElement('b');
+      name.textContent = ATTRIBUTE_NAMES[id];
+      const value = document.createElement('span');
+      value.className = 'value';
+      const each = this.line('what', '');
+      const now = this.line('numbers', '');
+      info.append(name, value, each, now);
+      const plus = document.createElement('button');
+      plus.type = 'button';
+      plus.className = 'act learn';
+      plus.textContent = '+';
+      plus.title = `Pôr um ponto em ${ATTRIBUTE_NAMES[id]}`;
+      plus.addEventListener('click', () => this.addPoint(id));
+      row.append(letter, info, plus);
+      this.attrRows.set(id, { value, now, each, plus });
+      return row;
+    });
+    this.attrReset.type = 'button';
+    this.attrReset.className = 'act reset';
+    this.attrReset.addEventListener('click', () => {
+      this.attrReset.blur();
+      if (performance.now() < this.attrResetAsking) {
+        this.attrResetAsking = 0;
+        this.actions.resetAttributes();
+      } else {
+        this.attrResetAsking = performance.now() + CONFIRM_MS;
+        window.clearTimeout(this.attrResetTimer);
+        this.attrResetTimer = window.setTimeout(() => {
+          this.attrResetAsking = 0;
+          this.refreshAttributes();
+        }, CONFIRM_MS);
+      }
+      this.refreshAttributes();
+    });
+    this.attrBody.append(intro, ...rows, this.attrReset);
+    this.refreshAttributes();
+  }
+
+  /** Um ponto a mais: já aparece aqui (o servidor confere e manda os números de verdade logo depois). */
+  private addPoint(id: AttributeId): void {
+    if (this.attrPoints <= 0) return;
+    this.attrPoints -= 1;
+    this.attrs = { ...this.attrs, [id]: this.attrs[id] + 1 };
+    this.actions.addAttribute(id);
+    this.refreshBadges();
+    this.refreshAttributes();
+    this.refreshHeader();
+  }
+
+  /** Os números da aba dos atributos (no lugar, sem refazer os botões). */
+  private refreshAttributes(): void {
+    for (const id of ATTRIBUTE_IDS) {
+      const row = this.attrRows.get(id);
+      if (!row) continue;
+      const text = attributeText(id, this.attrs, this.rules);
+      row.value.textContent = String(this.attrs[id]);
+      row.each.textContent = text.each;
+      row.now.textContent = text.now ? `Agora: ${text.now}` : '';
+      row.plus.disabled = this.attrPoints <= 0;
+    }
+    const spent = ATTRIBUTE_IDS.some((id) => this.attrs[id] > 0);
+    this.attrReset.hidden = !spent;
+    const asking = performance.now() < this.attrResetAsking;
+    this.attrReset.textContent = asking ? 'Tem certeza? Toque de novo' : 'Recomeçar os atributos (de graça, por enquanto)';
+    this.attrReset.classList.toggle('confirm', asking);
   }
 
   /** Tem alguma habilidade que aceita um ponto agora? */
@@ -181,12 +406,15 @@ export class SkillsPanel {
   }
 
   private render(): void {
-    const hero = this.hero;
-    const cls = this.classes.find((c) => c.id === hero.class);
-    this.points.replaceChildren();
-    const b = document.createElement('b');
-    b.textContent = String(hero.points);
-    this.points.append(b, hero.points === 1 ? ' ponto para gastar' : ' pontos para gastar');
+    this.refreshHeader();
+    const onAttrs = this.tab === 'attrs';
+    this.body.hidden = onAttrs;
+    this.attrBody.hidden = !onAttrs;
+    if (onAttrs) {
+      this.refreshAttributes();
+      return;
+    }
+    const cls = this.classes.find((c) => c.id === this.hero.class);
     this.body.replaceChildren(...(cls ? this.renderClass(cls) : this.renderChoice()));
   }
 
@@ -325,6 +553,7 @@ export class SkillsPanel {
 
   destroy(): void {
     window.clearTimeout(this.confirmTimer);
+    window.clearTimeout(this.attrResetTimer);
     this.panel.remove();
     this.button.remove();
     this.style.remove();

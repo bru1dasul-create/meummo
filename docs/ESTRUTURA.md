@@ -25,7 +25,24 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Testar sem caçar:** painel do administrador no servidor de teste — `/admin/api/jogador` (dar ouro e itens,
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
-## Onde estamos (22 de novembro de 2026) — leia isto primeiro
+## Onde estamos (23 de novembro de 2026) — leia isto primeiro
+- **Feito em 23/11 (tudo na main, conferido no navegador, PC e celular):**
+  1. **Atributos** (aprovado pelo dono: "pode fazer assim, 3 pontos por nível, espírito"): Força (dano do tiro de
+     sempre), Destreza (puxada e intervalo do tiro menores), Espírito (dano e recarga das habilidades da classe;
+     a esquiva e o Fôlego não mudam) e Vitalidade (vida, antes do "vida dos jogadores ×"). 3 pontos por nível a partir
+     do 2, retroativo (nível 10 = 27); recomeçar de graça por enquanto; sem sorteio. Regras em
+     `src/shared/attributes.ts` (servidor e navegador usam as mesmas: o navegador prevê a puxada, o intervalo e a
+     recarga); os números por ponto no painel (Combate › Atributos: 2%; 1,5% e 1%; 2% e 1%; 5 de vida; corte máximo
+     40%). Protocolo **48** (`stats.attrs` e `attrPoints`; `attr` e `attrReset`), `MIGRATIONS` passo **7** (coluna
+     `attributes`, JSON; tudo zero = null). Mundo: `addAttribute`, `resetAttributes`, `maxHpChanged` (Vitalidade:
+     a vida ganha o que a máxima ganhou), `classCooldownOf` (o Espírito), `shotOf` com `dexterityShot`; o
+     `adminSetLevel` baixando devolve os atributos que não cabem. Janela K com duas abas (Habilidades | Atributos), "+"
+     em cada atributo (atualiza no lugar: clique rápido não se perde), o número no botão soma os pontos, o topo da
+     janela fica preso ao rolar (fundo **opaco**: com 99% o celular deixava o texto vazar). Teste: `tests/atributos.test.ts`.
+  2. O "+" e as bolinhas do nível de cada habilidade na barra de ações (`skillBar.ts`, estilo provisório).
+  3. Efeito subindo do chão ao subir de nível e ao pôr ponto (provisório no `combat.ts`; protocolo 47, `fx` `skillup`).
+     **O dono não gostou** ("consegue fazer tipo Priston Tale?"): pedi um print ou vídeo de referência (só o estilo,
+     sem copiar nada do jogo); o desenho de verdade é da [arte] pelo `view.levelUp`.
 - **Feito em 22/11 (tudo na main, conferido no navegador):** o Q põe a Chuva no arco como o R (sai no tiro); níveis de
   carga (fraco/médio/forte) só na Chuva e na Ancestral; a flecha sai do arco e some atrás de quem atirou; cai em curva
   no fim do alcance; rolando não puxa nem atira (puxa quando a rolada acaba); impacto das habilidades crescendo por
@@ -41,8 +58,8 @@ alternativas quando vejo — sem concordar só para agradar.
   pintadas pelo Nano Banana montadas no esqueleto atual; o dono decide olhando no jogo. **Resposta da [arte] (19/11,
   à noite):** para testar, a chave `?birim` é toda dela (`classes.js`, `view-scripts.json`, `arte.ts`), nada meu. Para
   ficar de vez, só salvar QUAL boneco. Falta o dono escolher, depois de ver o Birim no jogo: **(A)** o Birim vira o herói
-  de todos (nada meu: é a aparência padrão da [arte]) ou **(B)** cada jogador escolhe — aí é meu: passo 7 de
-  `MIGRATIONS`, protocolo 46 e `model` ('heroi' | 'birim'; sem escolha = 'heroi') no `EntityState` e no `ActorInfo`
+  de todos (nada meu: é a aparência padrão da [arte]) ou **(B)** cada jogador escolhe — aí é meu: um passo novo de
+  `MIGRATIONS` (o 7 foi dos atributos: seria o 8), a versão seguinte do protocolo e `model` ('heroi' | 'birim'; sem escolha = 'heroi') no `EntityState` e no `ActorInfo`
   (`addActor`), com teste; onde o jogador escolhe (na criação ou depois) o dono decide. Combinei com ela o nome `model`
   (inglês, regra 8). O teste do Nano Banana (~US$ 1) ela só faz com o "pode" do dono.
 - **Painel F1 completo** (etapas 1 a 4, ver o diário de 17/11). O dono vai colar o "Copiar valores": aí os números
@@ -77,7 +94,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 47; `MIGRATIONS` até o passo 6 (`hero`); `npm run check` com 542 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 48; `MIGRATIONS` até o passo 7 (`attributes`); `npm run check` com 560 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

@@ -318,7 +318,7 @@ describe('números do combate pelo painel', () => {
     expect(tuning.combat).toEqual(DEFAULT_COMBAT_RULES); // de % e graus de volta aos números do jogo, sem perder nada
     const group = tuning.view().grupos.find((g) => g.arquivo === 'combate')!;
     expect(group.titulo).toBe('Combate');
-    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo', 'noite', 'jogador']);
+    expect(group.lista.map((e) => e.id)).toEqual(['carga', 'defesa', 'recuo', 'noite', 'jogador', 'atributos']);
     const value = (part: number, field: string) => group.lista[part]!.campos.find((c) => c.campo === field)!.valor;
     expect(group.lista[0]!.campos.map((c) => [c.campo, c.valor])).toEqual([
       ['tempoMs', 1100],
@@ -342,6 +342,37 @@ describe('números do combate pelo painel', () => {
       ['xpPorcento', 150],
       ['ouroPorcento', 150],
     ]);
+    // os atributos (decisão do dono, 23/11): quanto vale cada ponto
+    expect(group.lista[5]!.campos.map((c) => [c.campo, c.valor])).toEqual([
+      ['forcaDanoTiro', 2],
+      ['destrezaPuxada', 1.5],
+      ['destrezaIntervalo', 1],
+      ['espiritoDano', 2],
+      ['espiritoRecarga', 1],
+      ['vitalidadeVida', 5],
+      ['corteMaximo', 40],
+    ]);
+  });
+
+  it('os atributos pelo painel: mudam na hora (a vida de quem já pôs ponto em Vitalidade acompanha)', () => {
+    const tuning = new Tuning(empty(), [], null);
+    const clock = new FakeClock();
+    const realm = new Realm([metricMap('praca')], { now: clock.now, random: () => 0, combat: tuning.combat });
+    tuning.onChange = (changed) => realm.tuningChanged(changed);
+    const conn = new FakeConn();
+    const joined = realm.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    const world = realm.worlds.get('praca')!;
+    world.adminSetLevel(player, 2);
+    world.addAttribute(player, 'vitalidade');
+    expect(player.maxHp).toBe(maxHpFor(2) + 5);
+    expect(tuning.set('combate', 'atributos', 'vitalidadeVida', 20)).toEqual({ ok: true });
+    expect(tuning.set('combate', 'atributos', 'destrezaPuxada', 2.5)).toEqual({ ok: true });
+    expect(tuning.combat).toMatchObject({ vitalityHp: 20, dexterityChargePct: 2.5 });
+    expect(player.maxHp).toBe(maxHpFor(2) + 20);
+    expect(tuning.set('combate', 'atributos', 'corteMaximo', 90).ok).toBe(false); // mais que 80%: recusado
+    expect(tuning.set('combate', 'atributos', 'vitalidadeVida', 2.5).ok).toBe(false); // vida: número inteiro
   });
 
   it('confere os limites e muda no lugar (o mundo lê o mesmo objeto)', () => {

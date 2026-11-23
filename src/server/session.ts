@@ -129,6 +129,12 @@ export class Session {
       case 'unlearn':
         this.lobby.realm.unlearnSkills(this.player);
         break;
+      case 'attr':
+        this.lobby.realm.addAttribute(this.player, msg.id);
+        break;
+      case 'attrReset':
+        this.lobby.realm.resetAttributes(this.player);
+        break;
       case 'cast':
         this.lobby.realm.castSkill(this.player, msg.id, msg.x, msg.y, msg.cid);
         break;

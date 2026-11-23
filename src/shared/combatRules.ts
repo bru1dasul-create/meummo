@@ -79,6 +79,18 @@ export interface CombatRules {
   nightDamageFactor: number;
   nightXpFactor: number;
   nightGoldFactor: number;
+  /**
+   * Os atributos (src/shared/attributes.ts), quanto vale cada ponto: Força, % a mais no dano do tiro; Destreza, % a menos
+   * na puxada e no intervalo do tiro; Espírito, % a mais no dano das habilidades e % a menos na recarga delas;
+   * Vitalidade, vida a mais. `attributeCutMaxPct`: o máximo que a Destreza e o Espírito tiram de cada tempo (%).
+   */
+  strengthShotPct: number;
+  dexterityChargePct: number;
+  dexterityIntervalPct: number;
+  spiritSkillPct: number;
+  spiritCooldownPct: number;
+  vitalityHp: number;
+  attributeCutMaxPct: number;
 }
 
 export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
@@ -111,6 +123,13 @@ export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
   nightDamageFactor: NIGHT_DAMAGE_FACTOR,
   nightXpFactor: NIGHT_XP_FACTOR,
   nightGoldFactor: NIGHT_GOLD_FACTOR,
+  strengthShotPct: 2,
+  dexterityChargePct: 1.5,
+  dexterityIntervalPct: 1,
+  spiritSkillPct: 2,
+  spiritCooldownPct: 1,
+  vitalityHp: 5,
+  attributeCutMaxPct: 40,
 });
 
 /** Uma cópia dos números padrão (para mudar sem mexer no padrão). */

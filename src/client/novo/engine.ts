@@ -39,6 +39,7 @@ import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, 
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
+import { dexterityShot, noAttributes, spiritCooldownFactor, spiritDamageFactor, strengthFactor, type Attributes } from '../../shared/attributes';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, type DebugShape } from './combat';
 import { GmPanel } from './gm';
 import { GuardButton } from './guard';
@@ -197,6 +198,9 @@ class NewWorld implements NewWorldGame {
   private myLevel = 1;
   /** O seu dano de agora (menor e maior), para a dica das habilidades. */
   private myDamage: [number, number] = [0, 0];
+  /** Os meus atributos (Força, Destreza, Espírito, Vitalidade) e os pontos que sobram: o servidor manda no `stats`. */
+  private myAttrs: Attributes = noAttributes();
+  private myAttrPoints = 0;
   private skillTip!: SkillTip;
   /** O painel de ajustes dentro do jogo (F1; só administrador). */
   private debugPanel!: DebugPanel;
@@ -392,6 +396,8 @@ class NewWorld implements NewWorldGame {
     this.myGold = welcome.inv.gold ?? 0;
     this.myLevel = welcome.stats.level;
     this.myDamage = welcome.stats.damage;
+    this.myAttrs = { ...welcome.stats.attrs };
+    this.myAttrPoints = welcome.stats.attrPoints;
     this.equippedBefore = JSON.stringify(welcome.inv.equipped);
     this.bag = new Bag(
       this.items,
@@ -427,8 +433,11 @@ class NewWorld implements NewWorldGame {
       choose: (id) => this.conn.send({ t: 'class', id }),
       learn: (id) => this.conn.send({ t: 'learn', id }),
       unlearn: () => this.conn.send({ t: 'unlearn' }),
+      addAttribute: (id) => this.conn.send({ t: 'attr', id }),
+      resetAttributes: () => this.conn.send({ t: 'attrReset' }),
     });
     this.skillsPanel.update(this.classes, this.hero, welcome.stats.level);
+    this.skillsPanel.setAttributes(this.myAttrs, this.myAttrPoints, this.rules);
     this.skillsPanel.show();
     this.skillTip = new SkillTip((slot) => this.tipOf(slot as ActionSlot));
     this.debugPanel = new DebugPanel({
@@ -540,8 +549,9 @@ class NewWorld implements NewWorldGame {
       wind: () => ({ ...game.windNow(gameNow()), to: { ...game.wind.to } }),
       dead: () => game.dead,
       // a classe, os pontos de cada habilidade e quantos sobram; se a janela das Habilidades está aberta
-      hero: () => ({ ...game.hero, skills: { ...game.hero.skills } }),
+      hero: () => ({ ...game.hero, skills: { ...game.hero.skills }, attrs: { ...game.myAttrs }, attrPoints: game.myAttrPoints }),
       skillsOpen: () => game.skillsPanel.isOpen,
+      skillsTab: () => game.skillsPanel.currentTab,
       // os Olhos de Gavião: quantos ms ainda valem (0 = desligados)
       hawk: () => Math.max(0, Math.round(game.hawkUntil - gameNow())),
       screenOf: (x: number, y: number) => game.view?.toScreen(x, y),
@@ -874,7 +884,7 @@ class NewWorld implements NewWorldGame {
     this.actionBar.setCooldown('skill1', this.skillReadyAt[FOLEGO]!, SKILLS[FOLEGO]!.cooldownMs);
     CLASS_SLOTS.forEach((slot, i) => {
       const skill = this.classSkillAt(i);
-      if (skill) this.actionBar.setCooldown(slot, this.castReadyAt.get(skill.id) ?? 0, skill.cooldownMs);
+      if (skill) this.actionBar.setCooldown(slot, this.castReadyAt.get(skill.id) ?? 0, this.classCooldownMs(skill));
     });
     const armed = this.armed; // a barra nova nasce sem a marca da flecha carregada
     if (armed) {
@@ -931,6 +941,8 @@ class NewWorld implements NewWorldGame {
    */
   private tipOf(slot: ActionSlot): SkillTipText | null {
     const [min, max] = this.myDamage;
+    const strength = strengthFactor(this.myAttrs, this.rules); // a Força no tiro de sempre
+    const spirit = spiritDamageFactor(this.myAttrs, this.rules); // o Espírito nas habilidades da classe
     const num = (value: number) => String(Math.round(value * 10) / 10).replace('.', ',');
     const hit = (pct: number) => {
       const a = Math.max(1, Math.round((min * pct) / 100));
@@ -948,8 +960,8 @@ class NewWorld implements NewWorldGame {
         title: `${bow ? 'Arco' : 'Estilingue'} (${key('atirar')})`,
         lines: [
           `Segure para puxar e solte: a ${bow ? 'flecha' : 'pedra'} cai onde você mirar.`,
-          `Dano: ${hit(100)}`,
-          `Puxada cheia: ${hit(100 * (1 + shot.damageBonus))}`,
+          `Dano: ${hit(100 * strength)}`,
+          `Puxada cheia: ${hit(100 * (1 + shot.damageBonus) * strength)}`,
           `Alcance: de ${meters(shot.rangeMin)} a ${meters(shot.rangeMax)}`,
           'Correndo, o tiro espalha. Puxando, você anda devagar.',
         ],
@@ -970,15 +982,15 @@ class NewWorld implements NewWorldGame {
     if (skill.kind === 'chuva') {
       lines.push(`Põe a Chuva no arco: o próximo tiro (${key('atirar')} ou o botão direito) é ela. Puxe e solte onde quer que chova.`);
       lines.push('Puxando: [b]fraco, médio e forte[/b] (mais longe e mais dano a cada degrau).');
-      lines.push(`Dano em cada bicho, no forte: ${hit(numbers.damagePct)}`);
+      lines.push(`Dano em cada bicho, no forte: ${hit(numbers.damagePct * spirit)}`);
       lines.push(`Área: ${meters(numbers.radius)} de raio · ${numbers.arrows} flechas`);
       lines.push(`Alcance no forte: ${meters(skill.range)}`);
       lines.push('[b]Nem a casca do tatu segura.[/b]');
     } else if (skill.kind === 'flecha') {
       lines.push('Carrega a flecha do espírito no arco: o próximo tiro é ela. Puxe e solte como sempre.');
       lines.push('Puxando: [b]fraco, médio e forte[/b] (mais longe e mais dano a cada degrau).');
-      lines.push(`Atravessa os bichos do caminho: ${hit(numbers.damagePct)} em cada um`);
-      if (numbers.burstRadius > 0) lines.push(`Explode onde você mirou: ${hit(numbers.burstPct)} em ${meters(numbers.burstRadius)}`);
+      lines.push(`Atravessa os bichos do caminho: ${hit(numbers.damagePct * spirit)} em cada um`);
+      if (numbers.burstRadius > 0) lines.push(`Explode onde você mirou: ${hit(numbers.burstPct * spirit)} em ${meters(numbers.burstRadius)}`);
       else lines.push('Cai onde você mirou (com 5 pontos, explode lá).');
       if (numbers.markPct > 0) lines.push(`Marca quem atravessa: [b]+${numbers.markPct}% de dano de todo mundo[/b] por ${secs(numbers.markMs)}`);
       lines.push(`Alcance no forte: ${meters(skill.range)}`);
@@ -988,7 +1000,7 @@ class NewWorld implements NewWorldGame {
       lines.push(`Você vê [a]${numbers.visionPct}% mais longe[/a]`);
       if (numbers.bonusPct > 0) lines.push(`Enquanto dura: [d]+${numbers.bonusPct}% de dano seu[/d] nos bichos`);
     }
-    lines.push(cooldown(skill.cooldownMs));
+    lines.push(cooldown(this.classCooldownMs(skill)));
     lines.push(`${rank} de ${skill.points.length} pontos${rank >= skill.points.length ? ' (no máximo)' : ' · o + na barra (ou K) para pôr mais'}`);
     return { title: `${skill.name} (${key(CLASS_KEYS[index]!)})`, lines };
   }
@@ -1895,7 +1907,12 @@ class NewWorld implements NewWorldGame {
    */
   private shot(): ShotProfile {
     const weapon = this.lastInv.equipped.weapon;
-    return shotProfile(this.rules, weapon ? this.items.get(weapon)?.shot : null, this.map.metric);
+    return dexterityShot(shotProfile(this.rules, weapon ? this.items.get(weapon)?.shot : null, this.map.metric), this.myAttrs, this.rules);
+  }
+
+  /** A recarga de uma habilidade da classe para mim: menor com o Espírito (a mesma conta do servidor). */
+  private classCooldownMs(skill: ClassSkillInfo): number {
+    return Math.round(skill.cooldownMs * spiritCooldownFactor(this.myAttrs, this.rules));
   }
 
   /** Atira na direção `angle` (radianos), com a carga (0 a 1): a pedra ou a flecha aparece na hora; o servidor decide. */
@@ -1936,7 +1953,7 @@ class NewWorld implements NewWorldGame {
         this.sfx.play('spirit');
       }
       this.setArmed(null);
-      const wait = this.gmNoCd ? 0 : special.cooldownMs;
+      const wait = this.gmNoCd ? 0 : this.classCooldownMs(special);
       const readyAt = now + wait;
       this.castReadyAt.set(special.id, readyAt);
       const slot = this.classSlotOf(special.id);
@@ -2355,7 +2372,7 @@ class NewWorld implements NewWorldGame {
     const numbers = skillPoint(skill, rank);
     if (!numbers || !this.castable(skill, now)) return;
     const feet = this.myFeet();
-    const wait = this.gmNoCd ? 0 : skill.cooldownMs;
+    const wait = this.gmNoCd ? 0 : this.classCooldownMs(skill);
     const readyAt = now + wait;
     this.castReadyAt.set(skill.id, readyAt);
     const slot = this.classSlotOf(skill.id);
@@ -2651,6 +2668,9 @@ class NewWorld implements NewWorldGame {
     this.hud.setXp(stats.xp, stats.xpNext, stats.level);
     this.myLevel = stats.level;
     this.myDamage = stats.damage;
+    this.myAttrs = { ...stats.attrs };
+    this.myAttrPoints = stats.attrPoints;
+    this.skillsPanel?.setAttributes(stats.attrs, stats.attrPoints, this.rules);
     this.bag?.setStats(stats);
     this.skillsPanel?.update(this.classes, this.hero, stats.level); // o nível novo pode liberar um ponto
     this.refreshSkillBar(); // e o "+" na barra (ou uma habilidade nova, apagada, com ele)
