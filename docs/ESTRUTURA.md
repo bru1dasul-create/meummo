@@ -103,7 +103,8 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 51; `MIGRATIONS` até o passo 7 (`attributes`); `npm run check` com 593 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 51; `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava,
+  com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com 595 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

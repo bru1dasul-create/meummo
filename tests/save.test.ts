@@ -135,6 +135,7 @@ describe('arquivo de personagens', () => {
       explored: { capao: '24:AQI=' }, // o mapa explorado (passo 5 do arquivo)
       hero: { class: 'cacador', skills: { chuva_de_flechas: 2 } }, // a classe e os pontos (passo 6)
       attributes: { forca: 3, destreza: 0, espirito: 2, vitalidade: 4 }, // os atributos (passo 7)
+      effects: [{ k: 'destreza', it: 'banana', v: 5, ms: 90_000 }], // os efeitos com tempo e quanto faltava (passo 8)
     };
     store.save([{ id: login.id, data }]);
     store.close();

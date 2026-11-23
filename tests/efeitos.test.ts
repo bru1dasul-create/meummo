@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadItemDefs, parseItemDefs } from '../src/server/items';
 import { Tuning } from '../src/server/tuning';
-import { World } from '../src/server/world';
+import { characterData, World } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
 import { effectLabel, useLabel } from '../src/shared/items';
 import { GameMap, type TiledObject } from '../src/shared/map';
@@ -171,6 +171,49 @@ describe('os efeitos no jogo', () => {
     other.tick();
     expect(lastEffects(conn)).toEqual([{ k: 'destreza', it: 'banana', v: 5, ms: 180_000 - 2 * TICK_MS }]);
     expect(player.effectiveAttributes().destreza).toBe(5);
+  });
+
+  it('ficam salvos ao sair: na volta, valem pelo tempo que faltava (o relógio fica parado fora do jogo)', () => {
+    const { world, clock, player, run, use } = setup();
+    use('forte'); // +20 de Destreza e +4 de Vitalidade por 1 min
+    run(20_000);
+    const saved = characterData(player, 'praca', clock.now());
+    expect(saved.effects).toEqual([
+      { k: 'destreza', it: 'forte', v: 20, ms: 40_000 },
+      { k: 'vitalidade', it: 'forte', v: 4, ms: 40_000 },
+    ]);
+    world.leave(player);
+    clock.advance(3_600_000); // uma hora fora do jogo: não conta
+    const conn = new FakeConn();
+    const back = world.join('Ana', conn, { character: { id: 1, name: 'Ana', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: 0 as const, look: 1, inventory: null, effects: saved.effects }, created: false });
+    if (!back.ok) throw new Error(back.reason);
+    expect(back.player.effectiveAttributes()).toMatchObject({ destreza: 20, vitalidade: 4 });
+    expect(back.player.maxHp).toBe(maxHpFor(1) + 20); // a Vitalidade do efeito já conta na vida
+    expect(conn.ofType('welcome')[0]!.stats.attrBonus).toMatchObject({ destreza: 20, vitalidade: 4 });
+    run(TICK_MS);
+    expect(conn.ofType('effects').at(-1)!.list.map((e) => [e.k, e.ms])).toEqual([
+      ['destreza', 40_000 - TICK_MS],
+      ['vitalidade', 40_000 - TICK_MS],
+    ]);
+    run(40_000);
+    expect(back.player.effects.size).toBe(0);
+    expect(back.player.maxHp).toBe(maxHpFor(1));
+  });
+
+  it('os efeitos salvos são conferidos (o que não existe ou passou dos limites fica de fora)', () => {
+    const { world, clock } = setup();
+    const conn = new FakeConn();
+    const effects = [
+      { k: 'sorte', it: 'trevo', v: 5, ms: 10_000 },
+      { k: 'forca', it: 'x', v: 500, ms: 10_000 },
+      { k: 'regen', it: 'garrafada', v: 3, ms: -5 },
+      { k: 'espirito', it: 'agua_coco', v: 5, ms: 99_999_999 }, // mais de 1 hora: fica 1 hora
+      'lixo',
+    ];
+    const joined = world.join('Cida', conn, { character: { id: 2, name: 'Cida', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: 0 as const, look: 1, inventory: null, effects: effects as never }, created: false });
+    if (!joined.ok) throw new Error(joined.reason);
+    expect([...joined.player.effects.keys()]).toEqual(['espirito']);
+    expect(joined.player.effects.get('espirito')!.until - clock.now()).toBe(3_600_000);
   });
 
   it('pelo painel: quanto dura e o que dá', () => {
