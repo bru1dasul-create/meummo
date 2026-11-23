@@ -385,10 +385,10 @@ describe('o sagui no galho', () => {
 });
 
 describe('no navegador: a fruta jogada lá de cima', () => {
-  it('sai da mão dele (60 cm abaixo do galho) e cai até a altura do voo nos primeiros 4 m, como fruta jogada', () => {
-    expect(throwZ(2.2)).toBeCloseTo(1.6);
-    expect(throwZ(1.2)).toBe(SHOT_DRAW_Z); // galho bem baixo: não sai de baixo da altura do voo
-    expect(shotZ(true, 0, 6.5, throwZ(2.2))).toBeCloseTo(1.6);
+  it('sai da mão dele (90 cm abaixo do galho) e cai até a altura do voo nos primeiros 4 m, como fruta jogada', () => {
+    expect(throwZ(2.3)).toBeCloseTo(1.4); // os galhos do Capão: onde a fruta some da mão no desenho da [arte]
+    expect(throwZ(1.6)).toBe(SHOT_DRAW_Z); // galho bem baixo: não sai de baixo da altura do voo
+    expect(shotZ(true, 0, 6.5, throwZ(2.3))).toBeCloseTo(1.4);
     const middle = shotZ(true, 2, 6.5, 1.6);
     expect(middle).toBeLessThan(1.6);
     expect(middle).toBeGreaterThan(SHOT_DRAW_Z);

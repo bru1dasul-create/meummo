@@ -1,6 +1,6 @@
 {
   "escala": 8,
-  "largura": 96,
+  "largura": 192,
   "altura": 180,
   "nomes": [
     {
@@ -22,6 +22,48 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Centrinho do Capão",
+      "x": 144,
+      "y": 45,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Estação Capão Redondo",
+      "x": 172,
+      "y": 8,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Pracinha da Estação",
+      "x": 171.75,
+      "y": 27.75,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Feira Livre",
+      "x": 138,
+      "y": 56.75,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Escola Estadual",
+      "x": 172.45,
+      "y": 70.75,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Ferro-Velho",
+      "x": 112,
+      "y": 114,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Morro do Escadão",
+      "x": 173.25,
+      "y": 161,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Portão I",
       "x": 48,
       "y": 44,
@@ -31,6 +73,48 @@
       "nome": "Budega",
       "x": 64.5,
       "y": 51.65,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Padaria",
+      "x": 99.5,
+      "y": 35.75,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Bar do Tião",
+      "x": 105.5,
+      "y": 35.25,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Salão da Cida",
+      "x": 111.5,
+      "y": 36,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Açougue",
+      "x": 117.5,
+      "y": 36.25,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Portão da Escola",
+      "x": 156.1,
+      "y": 65.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Portão do Ferro-Velho",
+      "x": 112,
+      "y": 104.15,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Escritório do Ferro-Velho",
+      "x": 103.5,
+      "y": 107.5,
       "tipo": "lugar"
     },
     {
@@ -64,6 +148,12 @@
       "tipo": "agua"
     },
     {
+      "nome": "Prainha do Córrego",
+      "x": 121.8,
+      "y": 161,
+      "tipo": "agua"
+    },
+    {
       "nome": "Mata Profunda",
       "x": 11.5,
       "y": 9,
@@ -85,6 +175,12 @@
       "nome": "Mata da Estrada",
       "x": 68,
       "y": 130,
+      "tipo": "mata"
+    },
+    {
+      "nome": "Mata do Córrego",
+      "x": 144,
+      "y": 135,
       "tipo": "mata"
     },
     {
@@ -133,6 +229,18 @@
       "nome": "Paineira",
       "x": 27.76,
       "y": 145.76,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Árvore da Pracinha",
+      "x": 171,
+      "y": 28.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Ponte do Córrego",
+      "x": 148.1,
+      "y": 137.38,
       "tipo": "lugar"
     }
   ]

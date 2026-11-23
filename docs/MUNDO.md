@@ -34,7 +34,22 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (23/11): os galhos dos saguis no Capão (na `main`)**, o pedido da [arte] com o ok do dono ("pode fazer os
+- **Agora (23/11): o Capão maior, etapa 1 (na `main`)**: o mapa inteiro aberto, de 96 para 192 m de largura (planta
+  aprovada: `docs/referencias/capao-maior-planta.jpg`; o comércio foi para o norte da rua, de frente para ela). No gerador: `W0 = 96` (tudo o que já existia usa ele e sai
+  igual; conferido camada por camada: só saiu a mata fechada da beira leste antiga, `eastOpen`, e o viaduto, o mesmo
+  objeto, foi até `W`), `W = 192` e `CAPAO_MAIOR` liga a parte nova, com sorteio próprio (`SEED + 40`). As medidas
+  ficam no alto do bloco (`AVENIDA`, `RUA_NOVA`, `RUA_CORREGO`, `URBAN_S` = 90, `UNDER`, `ESTACAO`, `LARGO`,
+  `PRACINHA`, `FEIRA`, `RUA_DOIS`, `ESCOLA`, `QUADRA`, `CORREGO`, `FERRO`, `MORRO`, `ESCADAO`, as trilhas e
+  `CORREGO_ZONES`). O que é sólido e pensado à mão entra por `place()`, que para tudo se ficar vão de entalar (0,3 a
+  1,2 m); as árvores sorteadas entram por `plantNew()` (fora de rua, longe de casa e muro, sem tampar rua, feira, quadra
+  ou trilha na tela: as chaves vão para `VILLAGE_KEYS`); as casas passam por `checkHouse` (nenhuma tampa uma rua). O
+  `footBox`/`boxesOf` agora conhecem poste, placa de rua, muro, carro, ônibus, pilar, banca, prédio, portão e trave
+  (não muda nada nas regiões antigas). A feira usa a `banca-frutas` do Guarapiranga (colisão inteira, baixa); a tecla M
+  desenha as bancas. A vila nova é zona segura ("Centrinho do Capão"); áreas com nome: Estação Capão Redondo, Pracinha
+  da Estação, Feira Livre, Escola Estadual, Mata do Córrego, Ferro-Velho, Morro do Escadão e Prainha do Córrego.
+  Desempenho: a mata nova pesa menos que as antigas (53 contra 35 quadros por segundo no teste). **Próximo: o dono
+  anda pelo mapa; depois, vestir cada região** (a estação, a escola, a feira, o escadão, o ferro-velho, a ponte).
+- **Antes (23/11): os galhos dos saguis no Capão (na `main`)**, o pedido da [arte] com o ok do dono ("pode fazer os
   dois, primeiro o sagui"). Formato combinado com a [arte] e a [estrutura]: camada `pontos`, tipo `galho-sagui`, x,y no
   chão embaixo do meio do galho, `altura` (m) e `direcao` (graus, do tronco para a ponta; 0 = leste, 90 = sul). No
   gerador (`SAGUI_PERCHES`, `SAGUI_TREES`, `bestPerch`): duas árvores que já existiam (a seca e a de copa alta) e três
@@ -42,7 +57,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   câmera em que o chão fica livre (a pelo menos 0,72 m de outro tronco, fora de moita e água) e nenhuma copa com folha
   esconde o sagui na tela; o galho tem de 1 a 1,3 m. O desenho: o tmj.js liga cada ponto à árvore mais perto
   (`perches`) e o tronco (props.js, `perchBranch`) desenha o galho baixo passando bem em cima do ponto, com raminho e
-  folhas na ponta (na seca, sem folha). **Próximo: o Capão maior** (a planta de 192 m de largura foi aprovada).
+  folhas na ponta (na seca, sem folha).
 - **Antes (24/11): o mirante vestido (na `main`); o Guarapiranga fica em pausa.** O dono: "pode seguir vestindo o
   mirante / sobre a caverna deixa para futuramente, já já paramos nesse mapa e retornamos para fazer detalhes de outras
   coisas". O `LOOKOUT` cresceu para 12..20 × 46..54 (o deque); a torre (`torre-mirante`, `LOOKOUT_TOWER` 12,15..15,75 ×
