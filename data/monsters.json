@@ -145,7 +145,8 @@
     },
     "itens": [
       { "item": "erva_arruda", "chance": 100, "quantidade": [2, 3] },
-      { "item": "ferradura_brasa", "chance": 30 }
+      { "item": "ferradura_brasa", "chance": 30 },
+      { "item": "garrafada_grande", "chance": 40 }
     ]
   },
   "jacare": {
@@ -229,7 +230,8 @@
     "itens": [
       { "item": "erva_arruda", "chance": 100, "quantidade": [1, 2] },
       { "item": "escama_iara", "chance": 60 },
-      { "item": "colar_presas", "chance": 20 }
+      { "item": "colar_presas", "chance": 20 },
+      { "item": "garrafada_grande", "chance": 40 }
     ]
   },
   "quati": {

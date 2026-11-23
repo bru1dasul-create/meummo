@@ -41,8 +41,10 @@ export interface ItemInfo {
   /** Equipamento: onde ele vai. */
   slot: EquipSlot | null;
   bonus: ItemBonus;
-  /** Consumível: quanto de vida recupera. */
+  /** Consumível: quanto de vida recupera (fixo; veja também `healPct`). */
   heal: number;
+  /** Consumível: quanto da vida máxima recupera, em % (as garrafadas), além do `heal`. */
+  healPct?: number;
   /** Consumível: tempo até poder usar outro consumível. */
   cooldownMs: number;
   /** Quantos cabem num espaço da mochila. */
@@ -66,18 +68,31 @@ export interface QuickPick {
   slot: number;
 }
 
+/** Quanto um consumível cura para quem tem `maxHp` de vida máxima: a cura fixa mais a porcentagem (arredondada). */
+export function healAmount(def: Pick<ItemInfo, 'heal' | 'healPct'>, maxHp: number): number {
+  return def.heal + Math.round((maxHp * (def.healPct ?? 0)) / 100);
+}
+
+/** A cura em texto, para as janelas: "60", "40% da vida" ou "10 + 25% da vida" ('' se não cura). */
+export function healLabel(def: Pick<ItemInfo, 'heal' | 'healPct'>): string {
+  const pct = def.healPct ?? 0;
+  if (pct <= 0) return def.heal > 0 ? String(def.heal) : '';
+  return def.heal > 0 ? `${def.heal} + ${pct}% da vida` : `${pct}% da vida`;
+}
+
 /**
- * Atalho `n` (1 = comida, 2 = remédio): dos consumíveis desse grupo que estão na mochila, o de maior cura (empate:
- * o que aparece primeiro na mochila). Null se não tem nenhum.
+ * Atalho `n` (1 = comida, 2 = remédio): dos consumíveis desse grupo que estão na mochila, o que mais cura para quem
+ * tem `maxHp` de vida máxima (empate: o que aparece primeiro na mochila). Null se não tem nenhum.
  */
-export function pickQuickItem(n: 1 | 2, items: ReadonlyMap<string, ItemInfo>, inv: InventoryState): QuickPick | null {
+export function pickQuickItem(n: 1 | 2, items: ReadonlyMap<string, ItemInfo>, inv: InventoryState, maxHp = 100): QuickPick | null {
   let best: { item: string; slot: number; heal: number } | null = null;
   for (let i = 0; i < inv.slots.length; i++) {
     const stack = inv.slots[i];
     if (!stack) continue;
     const def = items.get(stack.item);
     if (!def || def.kind !== 'consumable' || def.quick !== n) continue;
-    if (!best || def.heal > best.heal) best = { item: stack.item, slot: i, heal: def.heal };
+    const heal = healAmount(def, maxHp);
+    if (!best || heal > best.heal) best = { item: stack.item, slot: i, heal };
   }
   if (!best) return null;
   const item = best.item;

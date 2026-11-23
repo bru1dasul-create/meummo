@@ -3,7 +3,7 @@
 // Visual simples (botões redondos ao lado da barra de ações); a [arte] restiliza (#quick-slots .quick) ou leva para a
 // HUD nova.
 
-import type { ItemInfo, QuickPick } from '../../shared/items';
+import { healLabel, type ItemInfo, type QuickPick } from '../../shared/items';
 import { itemIconUrl } from '../itemArt';
 
 const LABELS = ['Comida', 'Remédio'] as const;
@@ -78,7 +78,7 @@ export class QuickSlots {
       button.el.classList.toggle('empty', !def);
       button.img.src = itemIconUrl(def ? def.icon : i === 0 ? 'banana' : 'erva');
       button.count.textContent = pick ? String(pick.count) : '';
-      button.el.title = def ? `${def.name} — cura ${def.heal} (${KEYS[i]})` : `${LABELS[i]}: nada na mochila (${KEYS[i]})`;
+      button.el.title = def ? `${def.name} — cura ${healLabel(def)} (${KEYS[i]})` : `${LABELS[i]}: nada na mochila (${KEYS[i]})`;
     });
   }
 

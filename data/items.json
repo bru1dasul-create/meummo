@@ -103,14 +103,37 @@
     "icone": "agua_coco",
     "atalho": 1
   },
+  "garrafada_pequena": {
+    "nome": "Garrafada Pequena",
+    "preco": 15,
+    "tipo": "consumivel",
+    "curaPorcento": 25,
+    "recargaMs": 10000,
+    "pilha": 10,
+    "descricao": "Um vidrinho de ervas da benzedeira. Cura um quarto da vida.",
+    "icone": "garrafada",
+    "atalho": 2
+  },
   "garrafada": {
-    "nome": "Garrafada",
+    "nome": "Garrafada Média",
     "preco": 35,
     "tipo": "consumivel",
-    "cura": 60,
-    "recargaMs": 3000,
+    "curaPorcento": 40,
+    "recargaMs": 10000,
     "pilha": 10,
     "descricao": "Remédio de ervas na garrafa, receita de benzedeira. Cura de verdade.",
+    "icone": "garrafada",
+    "atalho": 2
+  },
+  "garrafada_grande": {
+    "nome": "Garrafada Grande",
+    "preco": 100,
+    "tipo": "consumivel",
+    "curaPorcento": 60,
+    "recargaMs": 10000,
+    "pilha": 10,
+    "raridade": "raro",
+    "descricao": "A garrafada forte, que só as lendas guardam. Cura mais da metade da vida.",
     "icone": "garrafada",
     "atalho": 2
   },

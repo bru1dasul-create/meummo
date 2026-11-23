@@ -13,6 +13,7 @@
       "vende": [
         "banana",
         "erva_arruda",
+        "garrafada_pequena",
         "chapeu_palha"
       ],
       "compraPor": 50
@@ -47,6 +48,7 @@
         "banana",
         "agua_coco",
         "erva_arruda",
+        "garrafada_pequena",
         "garrafada",
         "chapeu_palha",
         "estilingue_goiabeira",
@@ -64,7 +66,7 @@
     "fala": "Banana fresquinha, arruda contra quebranto e chapéu pro sol! Vendo e compro, freguês.",
     "veste": ["chapeu_palha"],
     "loja": {
-      "vende": ["banana", "erva_arruda", "chapeu_palha"],
+      "vende": ["banana", "erva_arruda", "garrafada_pequena", "chapeu_palha"],
       "compraPor": 50
     }
   },

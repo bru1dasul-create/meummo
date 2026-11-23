@@ -149,7 +149,11 @@ export class Player {
   hawkVision = 0;
   hawkBonus = 0;
   lastDamagedAt = -Infinity;
+  /** A última vez que atacou (tiro, Chuva, Flecha Ancestral, golpe): a vida só volta sozinha fora de luta. */
+  lastAttackAt = -Infinity;
   nextRegenAt = 0;
+  /** A fração de vida que sobrou do último segundo de vida voltando (veja World.regenPlayer). */
+  regenCarry = 0;
   statsDirty = false;
 
   constructor(

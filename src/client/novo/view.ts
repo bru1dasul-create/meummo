@@ -81,6 +81,12 @@ export interface WorldView {
    */
   levelUp?(id: number, what: 'level' | 'skill', skill?: string): void;
   /**
+   * Alguém usou um consumível da mochila (`item`: a chave em data/items.json, ex.: 'garrafada_pequena', 'garrafada',
+   * 'garrafada_grande', 'banana'): o efeito de beber ou comer em volta do personagem (pedido do dono, 23/11: "o efeito
+   * de quando usar a poção na mesma pegada do Priston Tale"). Opcional: sem ele, só o número verde da cura.
+   */
+  consume?(id: number, item: string): void;
+  /**
    * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
    * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',
    * 'wake', 'sleep' e 'dash' (o pulo para o sofá e de volta).

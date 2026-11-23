@@ -7,8 +7,9 @@
 // essas não podem ser escolhidas para outra ação.
 
 // 'hab1', 'hab2' e 'hab3' = a 1ª, a 2ª e a 3ª habilidade da classe (no Caçador, a Chuva de Flechas, a Flecha Ancestral
-// e os Olhos de Gavião); até 15/11 o 'hab1' era a Bordunada ('golpe')
-export type KeyAction = 'esquiva' | 'pular' | 'atirar' | 'defesa' | 'hab1' | 'hab2' | 'hab3' | 'folego' | 'mochila' | 'habilidades' | 'mapa' | 'devagar' | 'som';
+// e os Olhos de Gavião); até 15/11 o 'hab1' era a Bordunada ('golpe'). O 'folego' (o E) saiu em 23/11, com o Fôlego:
+// a tecla guardada dele fica sem uso (o E volta a estar livre).
+export type KeyAction = 'esquiva' | 'pular' | 'atirar' | 'defesa' | 'hab1' | 'hab2' | 'hab3' | 'mochila' | 'habilidades' | 'mapa' | 'devagar' | 'som';
 
 export interface KeyActionInfo {
   action: KeyAction;
@@ -24,7 +25,6 @@ export const KEY_ACTIONS: readonly KeyActionInfo[] = [
   { action: 'hab1', label: '1ª habilidade da classe (segure para mirar)' },
   { action: 'hab2', label: '2ª habilidade da classe (segure para mirar)' },
   { action: 'hab3', label: '3ª habilidade da classe' },
-  { action: 'folego', label: 'Fôlego' },
   { action: 'mochila', label: 'Mochila' },
   { action: 'habilidades', label: 'Habilidades (classe e pontos)' },
   { action: 'mapa', label: 'Mapa' },
@@ -46,7 +46,6 @@ const DEFAULTS: Record<KeyAction, string> = {
   hab1: 'KeyQ',
   hab2: 'KeyR',
   hab3: 'KeyT',
-  folego: 'KeyE',
   mochila: 'KeyI',
   habilidades: 'KeyK',
   mapa: 'KeyM',

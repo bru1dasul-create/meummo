@@ -3,7 +3,7 @@
 // Visual de barraca de feira: toldo listrado, retrato de quem vende com a fala num balão,
 // abas Comprar/Vender e preços com a moeda desenhada (coinArt.ts).
 
-import { sellPrice, type InventoryState, type ItemInfo } from '../shared/items';
+import { healLabel, sellPrice, type InventoryState, type ItemInfo } from '../shared/items';
 import type { NpcInfo } from '../shared/protocol';
 import { bonusLines } from './bag';
 import { characterPortrait } from './game/characters';
@@ -53,7 +53,7 @@ function button(className: string, text: string, onClick: () => void): HTMLButto
 
 /** O que o item faz, numa linha curta ("cura 15", "+10 de vida"). */
 function effectOf(def: ItemInfo): string {
-  if (def.kind === 'consumable') return `cura ${def.heal}`;
+  if (def.kind === 'consumable') return `cura ${healLabel(def)}`;
   if (def.kind === 'equipment') return bonusLines(def).join(', ');
   return 'material';
 }

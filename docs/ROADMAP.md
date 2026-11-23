@@ -933,6 +933,25 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   cipó), as abas com cara de HUD, e no celular deitado os 4 atributos de uma vez, em 2 colunas (antes cabia 1 e meio).
   Na mochila, os 4 atributos e os pontos que sobram. O visual da janela K saiu do `skillsPanel.ts` para o `style.css`
   (combinado com a [estrutura]; o DOM e a lógica não mudaram). O topo preso já estava opaco
+- [x] **[estrutura]** Poções, etapa 1 (pedido do dono, 23/11: "pode fazer as três garrafadas / retira o Fôlego tecla e
+  como poder / a vida do personagem volta aos poucos depois de alguns segundos sem combate (lentamente)"): três
+  garrafadas que curam uma parte da vida máxima — **Pequena** 25% (15 de ouro, nas lojas da vila), **Média** 40% (a
+  Garrafada de antes, na Xiovanna) e **Grande** 60% (cai da Mula sem Cabeça e da Iara, 40%) —, com 10 s até o próximo
+  consumível (a comida segue com 3 s); campo `curaPorcento` em `data/items.json` (e no painel). **O Fôlego saiu do jogo
+  novo** (o botão, a tecla E; o servidor recusa no mapa novo; o jogo antigo continua com ele). **A vida volta sozinha só
+  fora de luta:** 8 s sem apanhar e sem atacar, 1,5% da vida máxima por segundo (painel: Combate › Jogador). O `heal`
+  leva o item usado (`it`) e a view ganhou o gancho `consume(id, item)` para o efeito do gole; som novo `gole`.
+  Protocolo 49
+- [ ] **[estrutura]** Poções, etapa 2 (aprovada pelo dono: "gostei pode seguir"): efeitos com tempo — Banana +5 de
+  Destreza por 3 min, Água de Coco +5 de Espírito por 3 min, garrafada: a vida volta 3× mais rápido por 3 min (só fora
+  de luta); um ícone com o tempo que falta na tela (o bonito é da [arte])
+- [ ] **[estrutura]** Poções, etapa 3 (aprovada): a receita da garrafada com a Dona Iracema (planta + frasco + água; a
+  Arruda vira a planta da Pequena; a Média e a Grande com plantas mais raras), garrafadas e ingredientes caindo dos bichos
+  e a loja vendendo só os ingredientes
+- [ ] **[arte]** Das poções (etapa 1): o efeito de usar a poção "na mesma pegada do Priston Tale" (pedido do dono, 23/11)
+  pelo gancho `view.consume(id, item)` (esperando a referência do dono); os ícones da Garrafada Pequena e da Grande (hoje
+  usam o da garrafada); o "cura X%" na mochila (`healLabel` de `src/shared/items.ts`); e a barra sem o Fôlego (ficou um
+  quadrado vazio entre o T e o Shift no PC e um buraco ao lado da Chuva no celular). Pedido mandado à [arte]
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os

@@ -111,7 +111,8 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
 - **Teclas** (`keys.ts` e `keysPanel.ts`, pedido do dono em 14/11): cada ação tem a sua tecla (`KeyboardEvent.code`;
   os dois Shifts contam como um) e o jogador troca na janela das teclas (botão "Teclas" no painel do som, só no
   computador). Padrão: `Shift` esquiva, `Espaço` pula, `J` atira, `F` defende, `Q` a 1ª habilidade da classe (ação
-  `hab1`; a tecla que alguém deu à Bordunada, `golpe`, passa para ela), `E` o Fôlego, `I` mochila, `K` Habilidades,
+  `hab1`; a tecla que alguém deu à Bordunada, `golpe`, passa para ela), `I` mochila, `K` Habilidades (o `E` era do
+  Fôlego, que saiu do jogo novo em 23/11: a tecla guardada dele fica sem uso),
   `M` mapa, `C` andar devagar e o som sem tecla. Ficam fixas (não dá para escolher) as de andar, `Enter`, `Esc`, o zoom,
   `1` a `4` e o `G` do menu ADM; Ctrl, Alt, Caps Lock e F1–F12 são recusadas (Ctrl + W fecha a aba). Trocar com uma
   tecla já usada troca as duas ações. Fica no aparelho (`meummo:teclas`); a barra de ações é refeita com as novas.
@@ -138,6 +139,14 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   em `CharacterData.attributes`, passo 7 de `MIGRATIONS`); o `stats` leva `attrs` e `attrPoints`. Pedidos: `attr` (um
   ponto) e `attrReset` (recomeçar). O navegador usa as mesmas contas para prever a puxada, o intervalo e a recarga
   (`engine.ts`: `shot()` e `classCooldownMs`); a janela é a aba Atributos do `skillsPanel.ts`.
+- **Garrafadas e a vida que volta sozinha** (protocolo 49, pedido do dono em 23/11): um consumível cura `cura` (fixo) mais
+  `curaPorcento` da vida máxima (`healAmount` e `healLabel` em `src/shared/items.ts`; o atalho do remédio usa o que mais
+  cura para a vida de quem joga). Depois de um consumível, espera a `recargaMs` dele para usar outro (as garrafadas,
+  10 s; a comida, 3 s). A vida volta sozinha só fora de luta (`World.regenPlayer`): depois de `regenDelayMs` sem apanhar
+  (`lastDamagedAt`) e sem atacar (`lastAttackAt`), `regenPctPerSecond`% da máxima por segundo, guardando a fração
+  (`regenCarry`); os dois números ficam nas regras do combate (painel: Combate › Jogador). O `heal` de um consumível
+  leva o item (`it`): o motor chama `view.consume(id, item)` (o efeito do gole, da [arte]) e toca o `gole`. O Fôlego
+  saiu do jogo novo (o servidor recusa o `skill` de cura no mapa novo; o jogo antigo continua com ele).
 - **Tiro que cai onde mira, espalha andando e a flecha carregada** (protocolo 41, pedidos do dono de 15/11): o `shoot`
   leva `d` (a distância até o ponto mirado): o tiro para lá (`aimedRange`: nunca além do alcance da carga, nem mais
   perto que `SHOT_MIN_RANGE`). Quem atirou andando há menos de `SHOT_MOVING_MS` erra um pouco (`shotSpread(cid, ...)`:

@@ -92,7 +92,15 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       icon: r.text('icone', id),
       price: whole('preco', 0),
     };
-    if (kind === 'consumable' && def.heal === 0) r.fail('cura', 'precisa ser maior que 0 (por enquanto, consumível é para curar)');
+    if (r.has('curaPorcento')) {
+      if (kind !== 'consumable') r.fail('curaPorcento', 'só vale para consumíveis (tipo "consumivel")');
+      const pct = whole('curaPorcento', 0);
+      if (pct > 100) r.fail('curaPorcento', 'vai de 0 a 100 (% da vida máxima)');
+      if (pct > 0) def.healPct = pct;
+    }
+    if (kind === 'consumable' && def.heal === 0 && !def.healPct) {
+      r.fail('cura', 'precisa ser maior que 0, ou use "curaPorcento" (por enquanto, consumível é para curar)');
+    }
     if (r.has('tiro')) {
       if (slot !== 'weapon') r.fail('tiro', 'só vale para armas (tipo "equipamento", parte "arma")');
       def.shot = parseWeaponShot((raw as Record<string, unknown>).tiro, where);

@@ -18,9 +18,7 @@ import {
   MAX_PLAYERS,
   MAX_QUEUED_WALKS,
   PICKUP_RANGE,
-  REGEN_DELAY_MS,
   REGEN_EVERY_MS,
-  REGEN_FRACTION,
   SHOT_HIT_RADIUS,
   DASH_ROLL_MS,
   JUMP_AIR_MS,
@@ -72,7 +70,7 @@ import type { GameMap, MonsterZone, Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, footTile, nearestBodySpot, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
-import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
+import { emptyEquipment, gearLookOf, healAmount, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import {
   attributePointsLeft,
@@ -963,6 +961,7 @@ export class World {
     // A próxima recarga conta a partir do horário marcado, não do pedido adiantado:
     // a folga existe só para a rede, ninguém consegue atirar mais rápido com ela.
     player.nextShotAt = Math.max(now, player.nextShotAt) + shot.cooldownMs;
+    player.lastAttackAt = now; // atirou: está lutando (a vida não volta sozinha por um tempo)
     this.faceAngle(player, angle);
     const metric = this.map.metric;
     const stance: ShotStance = !metric || now - player.lastMoveAt > SHOT_MOVING_MS ? 'still' : player.lastMoveSlow ? 'walk' : 'run';
@@ -1043,8 +1042,12 @@ export class World {
     if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
     if (now < player.skillReadyAt[n]! - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
 
+    // o Fôlego saiu do jogo novo (pedido do dono, 23/11: "retira o Fôlego, tecla e como poder"): lá, cura quem bebe
+    // garrafada ou descansa (a vida volta sozinha fora de luta). O jogo antigo continua com ele.
+    if (skill.kind === 'heal' && this.map.metric) return;
     if (skill.kind === 'arc') {
       if (this.inSafeArea(player)) return; // da área segura ninguém ataca (veja shoot)
+      player.lastAttackAt = now;
       this.faceAngle(player, angle);
       const tiles = arcTiles(player.x, player.y, angle);
       const [min, max] = player.damage();
@@ -1257,9 +1260,9 @@ export class World {
     player.inventory.take(i, 1);
     player.invDirty = true;
     player.nextItemAt = Math.max(now, player.nextItemAt) + def.cooldownMs;
-    const amount = Math.min(player.maxHp - player.hp, def.heal);
+    const amount = Math.min(player.maxHp - player.hp, healAmount(def, player.maxHp)); // a cura fixa e a da porcentagem
     player.hp += amount;
-    this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp });
+    this.emitToViewers(player, { t: 'heal', id: player.id, amount, hp: player.hp, it: def.id }); // quem vê desenha o gole
   }
 
   /** Tira o que está equipado nesta parte e guarda na mochila. */
@@ -2142,10 +2145,30 @@ export class World {
     player.outbox.push({ t: 'energy', v: value, g: state });
   }
 
+  /**
+   * A vida volta sozinha, aos poucos, fora de luta: depois de `regenDelayMs` sem apanhar e sem atacar, a cada segundo
+   * `regenPctPerSecond`% da vida máxima (a fração que sobra fica guardada para o próximo segundo: nada se perde no
+   * arredondamento).
+   */
   private regenPlayer(player: Player, now: number): void {
-    if (player.hp >= player.maxHp || now - player.lastDamagedAt < REGEN_DELAY_MS || now < player.nextRegenAt) return;
+    const rules = this.combat;
+    const quietSince = Math.max(player.lastDamagedAt, player.lastAttackAt);
+    if (player.hp >= player.maxHp || rules.regenPctPerSecond <= 0) {
+      player.regenCarry = 0;
+      return;
+    }
+    if (now - quietSince < rules.regenDelayMs) {
+      player.regenCarry = 0;
+      player.nextRegenAt = Math.max(player.nextRegenAt, quietSince + rules.regenDelayMs); // o primeiro gole vem no fim da espera
+      return;
+    }
+    if (now < player.nextRegenAt) return;
     player.nextRegenAt = now + REGEN_EVERY_MS;
-    player.hp = Math.min(player.maxHp, player.hp + Math.max(1, Math.round(player.maxHp * REGEN_FRACTION)));
+    const gain = (player.maxHp * rules.regenPctPerSecond) / 100 + player.regenCarry;
+    const whole = Math.floor(gain + 1e-9); // (0,9 + 0,1 dá 0,9999...: sem a folga, o ponto inteiro se perderia)
+    player.regenCarry = Math.max(0, gain - whole);
+    if (whole <= 0) return;
+    player.hp = Math.min(player.maxHp, player.hp + whole);
     this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
   }
 

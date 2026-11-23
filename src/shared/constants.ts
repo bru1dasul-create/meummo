@@ -1,7 +1,7 @@
 // Números que o cliente (navegador) e o servidor precisam concordar.
 
 /** Versão do protocolo de rede. Aumente quando cliente e servidor ficarem incompatíveis. */
-export const PROTOCOL_VERSION = 48;
+export const PROTOCOL_VERSION = 49;
 
 /** Tamanho de um tile (quadradinho do mapa) em pixels de arte. */
 export const TILE_SIZE = 16;
@@ -161,10 +161,14 @@ export const WIND_TRANSITION_MS = 20_000;
 
 /** Quanto tempo o jogador fica desmaiado antes de voltar para a vila. */
 export const DEATH_MS = 3000;
-/** A vida volta sozinha depois de um tempo sem apanhar. */
-export const REGEN_DELAY_MS = 6000;
+/**
+ * A vida volta sozinha, aos poucos, depois de um tempo sem lutar (sem apanhar e sem atacar; pedido do dono, 23/11:
+ * "a vida volta aos poucos depois de alguns segundos sem combate, lentamente"): `REGEN_PCT_PER_S`% da vida máxima por
+ * segundo, contada a cada `REGEN_EVERY_MS`. O tempo e a porcentagem ficam no painel (Combate › Jogador).
+ */
+export const REGEN_DELAY_MS = 8000;
 export const REGEN_EVERY_MS = 1000;
-export const REGEN_FRACTION = 0.03;
+export const REGEN_PCT_PER_S = 1.5;
 
 /** Distância (em tiles) para negociar com um vendedor. */
 export const TRADE_RANGE = 3;

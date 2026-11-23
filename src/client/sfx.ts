@@ -16,6 +16,7 @@ export type SoundName =
   | 'skillup'
   | 'death'
   | 'heal'
+  | 'gole'
   | 'kill'
   | 'arc'
   | 'loot'
@@ -255,6 +256,14 @@ export class Sfx {
       case 'heal':
         this.tone('sine', 420, 840, t, 0.3, 0.18);
         this.tone('sine', 630, 1260, t + 0.05, 0.25, 0.08);
+        break;
+      case 'gole': // bebeu uma garrafada: dois goles (glub, glub) e o brilho da cura
+        this.tone('sine', 260, 150, t, 0.07, 0.22);
+        this.noise(t + 0.01, 0.05, 'lowpass', 700, 400, 0.12);
+        this.tone('sine', 240, 140, t + 0.17, 0.07, 0.22);
+        this.noise(t + 0.18, 0.05, 'lowpass', 700, 400, 0.12);
+        this.tone('sine', 420, 840, t + 0.32, 0.3, 0.14);
+        this.tone('sine', 630, 1260, t + 0.37, 0.25, 0.06);
         break;
       case 'kill': // monstro derrotado
         this.tone('triangle', 784, 784, t, 0.08, 0.2);

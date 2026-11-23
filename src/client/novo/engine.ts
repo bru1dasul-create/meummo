@@ -26,7 +26,6 @@ import { BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, degreesOfDir, degreesToward, c
 import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
-import { SKILLS } from '../../shared/skills';
 import { armedReach, castPoint, chargeLevel, learnBlocker, skillPoint, type ChargeLevel, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
 import { decorateSkillSlots } from './skillBar';
 import { Bag } from '../bag';
@@ -61,15 +60,12 @@ import { loadFeel, saveFeel, shakeOffset, skillImpactFeel, skillImpactPower, typ
 import { SkillTip, type SkillTipText } from './skillTip';
 import { MapPicture, MapWindow, Minimap, type MapMarker } from './mapWindow';
 
-/** As teclas das habilidades da barra, na ordem de SKILLS (Bordunada, Fôlego). */
-/** As teclas 1 e 2 da barra: a 1ª habilidade da classe e o Fôlego. */
-const SKILL_KEYS: KeyAction[] = ['hab1', 'folego'];
+/** As teclas 1 e 2 da barra: a 1ª e a 2ª habilidade da classe (o Fôlego, que era o 2, saiu do jogo novo em 23/11). */
+const SKILL_KEYS: KeyAction[] = ['hab1', 'hab2'];
 /** A tecla de cada habilidade da classe, na ordem de data/classes.json (a 1ª no Q, a 2ª no R, a 3ª no T). */
 const CLASS_KEYS: KeyAction[] = ['hab1', 'hab2', 'hab3'];
 /** O quadrado da barra de cada habilidade da classe (na mesma ordem): a 1ª no que era da Bordunada, as outras nos novos. */
 const CLASS_SLOTS: ActionSlot[] = ['skill0', 'class1', 'class2'];
-/** O Fôlego na lista de SKILLS (src/shared/skills.ts). A Bordunada (a 0) saiu do jogo novo em 15/11: a classe entrou. */
-const FOLEGO = 1;
 
 export interface NewWorldDeps {
   conn: Connection;
@@ -288,7 +284,6 @@ class NewWorld implements NewWorldGame {
   private wind = { from: { strength: 0.35, angle: 0 }, to: { strength: 0.35, angle: 0 }, start: 0, ms: 0 };
   /** O que a view já sabe do vento (manda de novo só quando muda). */
   private windShown = { strength: -1, angle: -1 };
-  private readonly skillReadyAt = SKILLS.map(() => 0);
   /** As classes (do servidor) e o que o jogador tem: a classe, os pontos de cada habilidade e quantos sobram. */
   private classes: ClassInfo[] = [];
   private hero: HeroState = { class: null, skills: {}, points: 0, canChoose: false };
@@ -824,9 +819,6 @@ class NewWorld implements NewWorldGame {
       case 'hab3':
         this.startAim(2, now);
         break;
-      case 'folego':
-        this.trySkill(FOLEGO, 0, now);
-        break;
       case 'habilidades':
         this.skillsPanel.toggle();
         break;
@@ -849,7 +841,7 @@ class NewWorld implements NewWorldGame {
   /**
    * A barra de ações, com as teclas de agora (refeita quando o jogador troca uma tecla ou aprende a habilidade). As
    * habilidades da classe que já têm ponto ficam nos quadrados delas (a 1ª no 'skill0', que era da Bordunada; a 2ª e a
-   * 3ª no 'class1' e no 'class2'); depois o Fôlego, a esquiva e o pulo.
+   * 3ª no 'class1' e no 'class2'); depois a esquiva e o pulo (o Fôlego saiu do jogo novo em 23/11).
    */
   private makeActionBar(): ActionBar {
     const classDefs = CLASS_SLOTS.flatMap((slot, i) => {
@@ -860,7 +852,6 @@ class NewWorld implements NewWorldGame {
       [
         { slot: 'shot', label: 'Estilingue', key: this.keys.label('atirar') }, // segurar puxa, soltar atira (pedra com carga)
         ...classDefs,
-        { slot: 'skill1', label: SKILLS[FOLEGO]!.name, key: this.keys.label('folego') },
         { slot: 'dash', label: 'Esquiva', key: this.keys.label('esquiva') },
         { slot: 'jump', label: 'Pular', key: this.keys.label('pular') }, // no celular, o botão de pular (o desenho é da [arte])
       ],
@@ -881,7 +872,6 @@ class NewWorld implements NewWorldGame {
     this.updateShotLook(this.gearNow);
     this.actionBar.setCooldown('shot', this.nextShotAt, this.shot().cooldownMs);
     this.actionBar.setCooldown('dash', this.dashReadyAt, DASH_COOLDOWN_MS);
-    this.actionBar.setCooldown('skill1', this.skillReadyAt[FOLEGO]!, SKILLS[FOLEGO]!.cooldownMs);
     CLASS_SLOTS.forEach((slot, i) => {
       const skill = this.classSkillAt(i);
       if (skill) this.actionBar.setCooldown(slot, this.castReadyAt.get(skill.id) ?? 0, this.classCooldownMs(skill));
@@ -966,10 +956,6 @@ class NewWorld implements NewWorldGame {
           'Correndo, o tiro espalha. Puxando, você anda devagar.',
         ],
       };
-    }
-    if (slot === 'skill1') {
-      const skill = SKILLS[FOLEGO]!;
-      return { title: `${skill.name} (${key('folego')})`, lines: [`Cura: [b]${Math.round(skill.power * 100)}% da sua vida[/b]`, cooldown(skill.cooldownMs)] };
     }
     if (slot === 'dash') return { title: `Esquiva (${key('esquiva')})`, lines: [`Rola ${meters(DASH_TILES)} para onde você anda.`, 'Durante a rolada, [b]nenhum golpe te acerta[/b].', `Recarga: ${secs(DASH_COOLDOWN_MS)}`] };
     if (slot === 'jump') return { title: `Pular (${key('pular')})`, lines: ['Um pulo (por enquanto, só de enfeite).'] };
@@ -1982,7 +1968,6 @@ class NewWorld implements NewWorldGame {
     if (!down) return;
     if (slot === 'dash') this.tryDash(now);
     else if (slot === 'jump') this.tryJump(now);
-    else if (slot === 'skill1') this.trySkill(FOLEGO, 0, now);
     else if (CLASS_SLOTS.includes(slot)) {
       const skill = this.classSkillAt(CLASS_SLOTS.indexOf(slot));
       if (skill) this.castAuto(skill, now); // o botão mira sozinho: onde pega mais bichos
@@ -2072,33 +2057,6 @@ class NewWorld implements NewWorldGame {
     this.conn.send({ t: 'jump' });
     this.view?.action?.(this.myId, 'jump');
     this.sfx.play('jump');
-  }
-
-  /** Habilidade `n` de SKILLS (no jogo novo, só o Fôlego: cura; a Bordunada ficou no jogo antigo). */
-  private trySkill(n: number, angle: number, now: number): void {
-    const skill = SKILLS[n];
-    if (!skill || this.dead || this.guardHeld) return;
-    if (now < this.skillReadyAt[n]!) {
-      this.toast.show('Ainda recarregando...');
-      return;
-    }
-    if (skill.kind === 'heal' && this.myHp >= this.myMaxHp) {
-      this.toast.show('Sua vida já está cheia');
-      return;
-    }
-    if (skill.kind === 'arc' && this.refuseInSafeArea(now)) return;
-    const wait = this.gmNoCd ? 0 : skill.cooldownMs;
-    this.skillReadyAt[n] = now + wait;
-    this.actionBar.setCooldown(`skill${n}` as ActionSlot, this.skillReadyAt[n]!, wait);
-    this.conn.send({ t: 'skill', n, a: round3(angle) });
-    if (skill.kind === 'arc') {
-      // o servidor não manda o efeito da Bordunada de volta para quem golpeou: mostra aqui mesmo
-      this.sfx.play('arc');
-      this.faceAngle(toDegrees(angle));
-      this.view?.action?.(this.myId, 'arc', toDegrees(angle));
-      const feet = this.myFeet();
-      this.combat.flash(feet.x, feet.y, angle, 1.6, false, now);
-    }
   }
 
   // ======================= classe e habilidades =======================
@@ -2691,13 +2649,14 @@ class NewWorld implements NewWorldGame {
 
   /** Os atalhos mostram o que a mochila tem agora. */
   private refreshQuick(): void {
-    this.quick.set([pickQuickItem(1, this.items, this.lastInv), pickQuickItem(2, this.items, this.lastInv)], this.items);
+    // o atalho usa o que mais cura para a minha vida máxima (as garrafadas curam % dela)
+    this.quick.set([pickQuickItem(1, this.items, this.lastInv, this.myMaxHp), pickQuickItem(2, this.items, this.lastInv, this.myMaxHp)], this.items);
   }
 
   /** Atalho de comida (1) ou remédio (2): usa o item daquele grupo com a maior cura que está na mochila. */
   private useQuick(n: 1 | 2, now: number): void {
     if (this.dead) return this.toast.show('Desmaiado não dá para comer');
-    const pick = pickQuickItem(n, this.items, this.lastInv);
+    const pick = pickQuickItem(n, this.items, this.lastInv, this.myMaxHp);
     if (!pick) return this.toast.show(n === 1 ? 'Sem comida na mochila (a Budega vende)' : 'Sem remédio na mochila (a Budega vende)');
     if (now < this.itemReadyAt) return this.toast.show('Espere um pouquinho para usar outro item');
     if (this.myHp >= this.myMaxHp) return this.toast.show('Sua vida já está cheia');
@@ -2944,10 +2903,11 @@ class NewWorld implements NewWorldGame {
         const e = this.entities.get(msg.id);
         if (e) e.hp = msg.hp;
         this.combat.floater(msg.id, `+${msg.amount}`, '#7bd389', gameNow());
+        if (msg.it) this.view?.consume?.(msg.id, msg.it); // bebeu (ou comeu): o efeito em volta dele é da view
         if (msg.id === this.myId) {
           this.myHp = msg.hp;
           this.hud.setHp(msg.hp, this.myMaxHp);
-          this.sfx.play('heal');
+          this.sfx.play(msg.it && this.items.get(msg.it)?.healPct ? 'gole' : 'heal'); // garrafada: os goles
         }
         break;
       }
@@ -2970,9 +2930,6 @@ class NewWorld implements NewWorldGame {
         if (msg.n === DASH_SLOT) {
           this.dashReadyAt = now + msg.ms;
           this.actionBar.setCooldown('dash', this.dashReadyAt, msg.ms);
-        } else if (msg.n === FOLEGO) {
-          this.skillReadyAt[msg.n] = now + msg.ms;
-          this.actionBar.setCooldown('skill1', this.skillReadyAt[msg.n]!, msg.ms);
         }
         break;
       }
@@ -3029,11 +2986,7 @@ class NewWorld implements NewWorldGame {
         }
         if (msg.reason === 'cooldown') this.toast.show('Ainda recarregando...');
         else if (msg.reason === 'dead') this.toast.show('Você está desmaiado');
-        else if (msg.reason === 'full_hp') {
-          this.toast.show('Sua vida já está cheia');
-          this.skillReadyAt[FOLEGO] = 0;
-          this.actionBar.setCooldown('skill1', 0, 0);
-        }
+        else if (msg.reason === 'full_hp') this.toast.show('Sua vida já está cheia');
         break;
       case 'drop': {
         // ouro ou item no chão (só você vê os seus): o item com o desenho dele e o brilho da raridade

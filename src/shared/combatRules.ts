@@ -20,6 +20,8 @@ import {
   GUARD_READY_MS,
   GUARD_REARM_ENERGY,
   GUARD_REGEN_DELAY_MS,
+  REGEN_DELAY_MS,
+  REGEN_PCT_PER_S,
   GUARD_REGEN_PER_S,
   GUARD_WALK_FACTOR,
   RUN_SPEED,
@@ -65,6 +67,9 @@ export interface CombatRules {
   walkSpeed: number;
   playerHpFactor: number;
   playerDamageFactor: number;
+  /** A vida que volta sozinha: depois de quanto tempo sem lutar (sem apanhar e sem atacar) e quanto (% da máxima por segundo). */
+  regenDelayMs: number;
+  regenPctPerSecond: number;
   /** Atirar andando: o tiro espalha até tantos graus para cada lado (correndo e andando devagar). */
   shotSpreadRunDeg: number;
   shotSpreadWalkDeg: number;
@@ -113,6 +118,8 @@ export const DEFAULT_COMBAT_RULES: Readonly<CombatRules> = Object.freeze({
   walkSpeed: WALK_SPEED,
   playerHpFactor: 1,
   playerDamageFactor: 1,
+  regenDelayMs: REGEN_DELAY_MS,
+  regenPctPerSecond: REGEN_PCT_PER_S,
   shotSpreadRunDeg: SHOT_SPREAD_RUN_DEG,
   shotSpreadWalkDeg: SHOT_SPREAD_WALK_DEG,
   guardPushFactor: GUARD_PUSH_FACTOR,

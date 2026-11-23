@@ -90,7 +90,7 @@ const COMBAT_PARTS: { id: CombatPartId; name: string; detail: string }[] = [
   { id: 'defesa', name: 'Defesa', detail: 'segura os golpes que vêm pela frente e gasta energia (de 0 a 100)' },
   { id: 'recuo', name: 'Empurrão (recuo)', detail: 'quanto cada monstro empurra fica na aba Monstros (Empurrão do golpe)' },
   { id: 'noite', name: 'Dia e noite', detail: 'quanto dura cada um (o mesmo relógio em todos os mapas) e o quanto os bichos mudam à noite' },
-  { id: 'jogador', name: 'Jogador', detail: 'a velocidade no mundo novo e a vida e o dano de todos os jogadores (100% = o de sempre)' },
+  { id: 'jogador', name: 'Jogador', detail: 'a velocidade no mundo novo, a vida e o dano de todos os jogadores (100% = o de sempre) e a vida que volta sozinha fora de luta' },
   { id: 'atributos', name: 'Atributos', detail: 'quanto vale cada ponto de Força, Destreza, Espírito e Vitalidade (3 pontos por nível)' },
 ];
 
@@ -111,6 +111,8 @@ const COMBAT_NUMBERS: CombatNumber[] = [
   { parte: 'jogador', campo: 'velocidadeAndando', rotulo: 'Velocidade andando devagar (m/s)', tipo: 'numero', min: 0.5, max: 20, dica: 'puxando o tiro ou com o andar devagar', ler: (r) => r.walkSpeed },
   { parte: 'jogador', campo: 'vidaJogadorPorcento', rotulo: 'Vida máxima (%)', tipo: 'inteiro', min: 10, max: 1000, dica: '100 = a do nível', ler: (r) => Math.round(r.playerHpFactor * 100) },
   { parte: 'jogador', campo: 'danoJogadorPorcento', rotulo: 'Dano (%)', tipo: 'inteiro', min: 10, max: 1000, dica: '100 = o do nível e da arma', ler: (r) => Math.round(r.playerDamageFactor * 100) },
+  { parte: 'jogador', campo: 'vidaVoltaSegundos', rotulo: 'A vida volta sozinha depois de (s)', tipo: 'numero', min: 0, max: 120, dica: 'sem apanhar e sem atacar', ler: (r) => r.regenDelayMs / 1000 },
+  { parte: 'jogador', campo: 'vidaVoltaPorcento', rotulo: 'A vida volta sozinha (% da máxima por segundo)', tipo: 'numero', min: 0, max: 20, ler: (r) => r.regenPctPerSecond },
   { parte: 'carga', campo: 'tempoMs', rotulo: 'Tempo para carregar (ms)', tipo: 'inteiro', min: 100, max: 5000, dica: 'segurando o estilingue', ler: (r) => r.chargeFullMs },
   {
     parte: 'carga',
@@ -254,6 +256,8 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
     walkSpeed: j.velocidadeAndando!,
     playerHpFactor: j.vidaJogadorPorcento! / 100,
     playerDamageFactor: j.danoJogadorPorcento! / 100,
+    regenDelayMs: Math.round(j.vidaVoltaSegundos! * 1000),
+    regenPctPerSecond: j.vidaVoltaPorcento!,
     shotSpreadRunDeg: c.espalhaCorrendo!,
     shotSpreadWalkDeg: c.espalhaAndando!,
     guardPushFactor: 1 - r.defesaSeguraPorcento! / 100,
@@ -322,6 +326,7 @@ const MONSTER_FIELDS: FieldSpec<MonsterDef>[] = [
 const ITEM_FIELDS: FieldSpec<ItemInfo>[] = [
   { campo: 'preco', rotulo: 'Preço na loja', tipo: 'inteiro', dica: '0 = não se compra nem se vende', ler: (d) => d.price },
   { campo: 'cura', rotulo: 'Cura', tipo: 'inteiro', ler: (d) => d.heal, vale: (d) => d.kind === 'consumable' },
+  { campo: 'curaPorcento', rotulo: 'Cura (% da vida máxima)', tipo: 'inteiro', dica: 'as garrafadas', ler: (d) => d.healPct ?? 0, vale: (d) => d.kind === 'consumable' },
   { campo: 'recargaMs', rotulo: 'Espera até usar outro (ms)', tipo: 'inteiro', ler: (d) => d.cooldownMs, vale: (d) => d.kind === 'consumable' },
   { campo: 'dano', rotulo: 'Dano', tipo: 'inteiro', ler: (d) => d.bonus.damage, vale: (d) => d.kind === 'equipment' },
   { campo: 'vida', rotulo: 'Vida', tipo: 'inteiro', ler: (d) => d.bonus.hp, vale: (d) => d.kind === 'equipment' },

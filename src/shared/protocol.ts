@@ -223,7 +223,8 @@ export type ServerMsg =
   | { t: 'energy'; v: number; g: GuardState }
   // você é administrador (o menu ADM aparece), com o voo e o invencível ligados ou não e os monstros que dá para criar
   | { t: 'gm'; admin: boolean; fly: boolean; god: boolean; nocd: boolean; monsters: { id: string; name: string }[] }
-  | { t: 'heal'; id: number; amount: number; hp: number }
+  // curou: `it` = o consumível que usou (a chave em data/items.json, ex.: 'garrafada'), para o efeito de beber ou comer
+  | { t: 'heal'; id: number; amount: number; hp: number; it?: string }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }
   | { t: 'levelup'; id: number; level: number; maxHp: number }
