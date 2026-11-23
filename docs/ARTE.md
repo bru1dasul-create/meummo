@@ -163,7 +163,8 @@
     Rascunho `levelup/`: `prancha.cjs` (quadros, grande e no tamanho do jogo), `gif.cjs` (a animação), `bracos.cjs` (até
     onde vão os braços em cada altura), `jogo.cjs <pasta> dia|noite` (no jogo: o nível pelo painel do adm, o ponto pelo
     "+", em câmera lenta 0,25x) e `outro.cjs` (outro jogador, no celular deitado, vendo o Arqueiro subir)
-- **Os Atributos na janela K e na mochila (23/11; escopo e prévia aprovados pelo dono: "pode fazer"):**
+- **Os Atributos na janela K e na mochila (23/11; escopo e prévia aprovados pelo dono: "pode fazer"; na main em 23/11
+  com o "pode juntar na main" dele):**
   - ícones pintados (`paintedIcons.ts`, `paintedAttributeIcon`): Força = o punho em brasa (tema `fogo`), Destreza = a pena
     com o vento (`agua`), Espírito = a espiral da HUD e da tatuagem do Birim em lilás (`lilas`), Vitalidade = o coração
     com o cipó de folhas (`coracao`; com uma folha em cima, parecia uma maçã)
