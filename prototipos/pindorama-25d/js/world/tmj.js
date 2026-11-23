@@ -513,6 +513,22 @@
       map.areas.push({ ...rect(o), name: o.name || '', dark: num(pr.escuro), fog: num(pr.neblina) });
     }
     for (const o of objs('pontos')) if ((o.name || '') === 'spawn') map.spawn = { x: o.x * CM, y: o.y * CM };
+    // os galhos baixos dos saguis (`galho-sagui`, 23/11, pedido da [arte]): o ponto no chão embaixo do meio do galho, a
+    // `altura` (m) e a `direcao` (graus, do tronco para a ponta); o galho é desenhado na árvore mais perto (props.js)
+    for (const o of objs('pontos')) {
+      if (kindOf(o) !== 'galho-sagui') continue;
+      const pr = props(o);
+      const p = { x: o.x * CM, y: o.y * CM, h: (pr.altura || 2.2) * 100, dir: pr.direcao || 0 };
+      let best = null, bd = 200;
+      for (const t of map.trees) {
+        const dd = Math.hypot(t.x - p.x, t.y - p.y);
+        if (dd < bd) {
+          bd = dd;
+          best = t;
+        }
+      }
+      if (best) (best.perches || (best.perches = [])).push(p);
+    }
     if (!map.spawn) map.spawn = { x: map.w / 2, y: map.h / 2 };
     return map;
   }

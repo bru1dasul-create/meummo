@@ -2823,6 +2823,77 @@
     'ipe-amarelo': ['#6b5541', '#4a3a2b'],
     'ipe-roxo': ['#6b5541', '#4a3a2b'],
   };
+  /**
+   * O galho baixo do sagui (23/11, pedido da [arte]): sai do tronco um pouco abaixo da altura `h`, passa bem em cima do
+   * ponto marcado (onde o sagui se pendura pelo rabo; o rabo dá a volta nele) e acaba uns 40 cm depois, com um raminho e
+   * umas folhas na ponta, longe do sagui (na árvore seca, sem folha). `p`: x, y (o chão embaixo do meio do galho), h (cm),
+   * dir (graus, do tronco para a ponta).
+   */
+  function perchBranch(ctx, cam, t, z0, ink, p, bark) {
+    const a = (p.dir * Math.PI) / 180;
+    const ux = Math.cos(a), uy = Math.sin(a);
+    const L = Math.hypot(p.x - t.x, p.y - t.y);
+    const at = (s, dz) => cam.p({ x: t.x + ux * s, y: t.y + uy * s, z: z0 + p.h + dz });
+    const P0 = at((t.trunk || 20) * 0.4, -24), P1 = at(L, 0), P2 = at(L + 42, 9);
+    // (a curva passa exatamente em cima do ponto: o controle sai de P1 no meio de P0 e P2)
+    const C = { x: 2 * P1.x - (P0.x + P2.x) / 2, y: 2 * P1.y - (P0.y + P2.y) / 2 };
+    const N = 12;
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      pts.push({ x: (1 - u) * (1 - u) * P0.x + 2 * (1 - u) * u * C.x + u * u * P2.x, y: (1 - u) * (1 - u) * P0.y + 2 * (1 - u) * u * C.y + u * u * P2.y });
+    }
+    const w0 = 10 * cam.zoom, w1 = 3.4 * cam.zoom;
+    ctx.lineCap = 'round';
+    for (const [color, extra] of [[INK, ink * 2], [bark ? bark[0] : '#7a5537', 0]]) {
+      ctx.strokeStyle = color;
+      for (let i = 0; i < N; i++) {
+        ctx.lineWidth = w0 + (w1 - w0) * (i / N) + extra;
+        ctx.beginPath();
+        ctx.moveTo(pts[i].x, pts[i].y);
+        ctx.lineTo(pts[i + 1].x, pts[i + 1].y);
+        ctx.stroke();
+      }
+    }
+    // a luz em cima do galho e a sombra embaixo
+    ctx.lineWidth = Math.max(1, 1.8 * cam.zoom);
+    for (const [color, dy] of [['rgba(255, 238, 205, 0.32)', -2.2], [bark ? bark[1] : '#5a3b25', 2.2]]) {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      pts.forEach((q, i) => {
+        const w = (w0 + (w1 - w0) * (i / N)) / 2;
+        const y = q.y + Math.sign(dy) * w * 0.55;
+        if (i) ctx.lineTo(q.x, y);
+        else ctx.moveTo(q.x, y);
+      });
+      ctx.stroke();
+    }
+    // o raminho e as folhas da ponta (na árvore seca, só o raminho)
+    const tip = pts[N];
+    const twig = at(L + 62, 26);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.6 * cam.zoom + ink;
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y);
+    ctx.lineTo(twig.x, twig.y);
+    ctx.stroke();
+    ctx.strokeStyle = bark ? bark[0] : '#7a5537';
+    ctx.lineWidth = 2.6 * cam.zoom;
+    ctx.stroke();
+    if (t.kind === 'seca') return;
+    const LEAF = ['#4f7d38', '#6e9c47', '#3f6a30'];
+    for (let k = 0; k < 6; k++) {
+      const q = at(L + 40 + (k % 3) * 12, 14 + Math.floor(k / 3) * 12);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(q.x + (k - 2.5) * 2 * cam.zoom, q.y, 7 * cam.zoom + ink * 0.6, 4 * cam.zoom + ink * 0.6, k * 0.7, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = LEAF[k % 3];
+      ctx.beginPath();
+      ctx.ellipse(q.x + (k - 2.5) * 2 * cam.zoom, q.y, 7 * cam.zoom, 4 * cam.zoom, k * 0.7, 0, M.TAU);
+      ctx.fill();
+    }
+  }
   class TreeTrunk extends Prop {
     draw(ctx, t) {
       // a árvore que nasceu dentro da casa (world.js liga `house`): o tronco só aparece com a casa cortada
@@ -2850,7 +2921,13 @@
       const fl = PD.flora && PD.flora.tree[t.kind];
       if (fl && fl.trunkBox) return fl.trunkBox(this.cam, t, this.z0);
       const roots = t.kind === 'figueira' || t.inside ? (t.trunk || 60) * 4.2 : 40;
-      return bbox([this.P(t.x, t.y, this.z0), this.P(t.x, t.y, this.z0 + t.h * 0.72)], Math.max(40, roots) * this.cam.zoom);
+      const pts = [this.P(t.x, t.y, this.z0), this.P(t.x, t.y, this.z0 + t.h * 0.72)];
+      // (o galho baixo do sagui vai longe do tronco: a imagem cresce até a ponta dele)
+      for (const p of t.perches || []) {
+        const a = (p.dir * Math.PI) / 180, L = Math.hypot(p.x - t.x, p.y - t.y) + 60;
+        for (const dz of [-40, 40]) pts.push(this.P(t.x + Math.cos(a) * L, t.y + Math.sin(a) * L, this.z0 + p.h + dz));
+      }
+      return bbox(pts, Math.max(40, roots) * this.cam.zoom);
     }
     shadow(path) {
       const t = this.t;
@@ -2926,6 +3003,7 @@
         poly(ctx, pts.slice(0, wz + 1).map((p) => ({ x: p.c.x + p.r * 0.2, y: p.c.y })).concat(wr), '#cfc6b4');
       }
       if (t.kind === 'figueira' && this._sacred()) this._figGlyphs(ctx, pts);
+      for (const p of t.perches || []) this._perchBranch(ctx, p);
       if (crown) return; // os galhos saem da forquilha na copa (crownPaint)
       // galhos para dentro da copa
       ctx.strokeStyle = INK;
@@ -4369,6 +4447,9 @@
    * as faces que a câmera vê ganham tom pela luz (topo claro, lado longe da luz escuro). Musgo no topo iluminado e
    * fiapos de grama cobrindo a base da frente, para ela parecer meio enterrada. Cada pedra sai diferente (pela posição).
    */
+  TreeTrunk.prototype._perchBranch = function (ctx, p) {
+    perchBranch(ctx, this.cam, this.t, this.z0, this.ink, p, BARK[this.t.kind]);
+  };
   Small.prototype._rock = function (ctx) {
     const cam = this.cam;
     const d = this.d;

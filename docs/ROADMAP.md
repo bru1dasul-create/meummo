@@ -1036,8 +1036,10 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - o `galho` (`{ altura (m), direcao (graus) }`) no estado do monstro;
     - a fruta saindo lá de cima;
     - a mira com o mouse na altura do galho.
-  - [ ] **[mundo]**: as árvores de sagui no Capão (o ponto embaixo do galho, a altura e a direção) e o galho baixo
-    desenhado
+  - [x] **[mundo]**: as árvores de sagui no Capão (o ponto embaixo do galho, a altura e a direção) e o galho baixo
+    desenhado (23/11, na main): 5 pontos `galho-sagui` na camada `pontos` (`altura` 2,3 m e `direcao` em graus), em duas
+    árvores da trilha dos saguis e em três árvores secas novas; o gerador escolhe a direção virada para a câmera em que o
+    chão é andável, longe dos troncos, e nenhuma copa da frente esconde o sagui (o teste do Capão confere)
 - [x] **[arte]** A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da
   poção/banana utilizada"): no efeito valendo e nos frascos de comida e remédio, no lugar da dica do navegador, o
   painel da dica das habilidades — o nome na cor da raridade, o que faz em verde ("Cura 60% da vida", "+5 de Destreza

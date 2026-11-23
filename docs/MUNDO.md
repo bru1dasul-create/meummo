@@ -34,7 +34,16 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): o mirante vestido (na `main`); o Guarapiranga fica em pausa.** O dono: "pode seguir vestindo o
+- **Agora (23/11): os galhos dos saguis no Capão (na `main`)**, o pedido da [arte] com o ok do dono ("pode fazer os
+  dois, primeiro o sagui"). Formato combinado com a [arte] e a [estrutura]: camada `pontos`, tipo `galho-sagui`, x,y no
+  chão embaixo do meio do galho, `altura` (m) e `direcao` (graus, do tronco para a ponta; 0 = leste, 90 = sul). No
+  gerador (`SAGUI_PERCHES`, `SAGUI_TREES`, `bestPerch`): duas árvores que já existiam (a seca e a de copa alta) e três
+  árvores secas novas, postas onde cabem sem tampar a trilha; a direção é a pedida ou a mais perto dela virada para a
+  câmera em que o chão fica livre (a pelo menos 0,72 m de outro tronco, fora de moita e água) e nenhuma copa com folha
+  esconde o sagui na tela; o galho tem de 1 a 1,3 m. O desenho: o tmj.js liga cada ponto à árvore mais perto
+  (`perches`) e o tronco (props.js, `perchBranch`) desenha o galho baixo passando bem em cima do ponto, com raminho e
+  folhas na ponta (na seca, sem folha). **Próximo: o Capão maior** (a planta de 192 m de largura foi aprovada).
+- **Antes (24/11): o mirante vestido (na `main`); o Guarapiranga fica em pausa.** O dono: "pode seguir vestindo o
   mirante / sobre a caverna deixa para futuramente, já já paramos nesse mapa e retornamos para fazer detalhes de outras
   coisas". O `LOOKOUT` cresceu para 12..20 × 46..54 (o deque); a torre (`torre-mirante`, `LOOKOUT_TOWER` 12,15..15,75 ×
   46,15..50,75; tmj: `altura` do andar de cima, `escada` em m) fica no canto de trás, com a escada do lado sul dentro da
