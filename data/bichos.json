@@ -80,5 +80,32 @@
       "alcance": 1.8,
       "esperaSegundos": 3
     }
+  },
+  "capivaras_varzea": {
+    "nome": "Capivara",
+    "tipo": "capivara",
+    "mapa": "guarapiranga",
+    "dorme": "capivaras-varzea-descanso",
+    "area": "capivaras-varzea",
+    "quantidade": 3,
+    "dentroDeCasa": false,
+    "velocidade": 0.5,
+    "sonoSegundos": [
+      40,
+      90
+    ],
+    "passeios": [
+      2,
+      5
+    ],
+    "paradaSegundos": [
+      5,
+      12
+    ],
+    "mia": false,
+    "carinho": {
+      "alcance": 1.8,
+      "esperaSegundos": 3
+    }
   }
 }

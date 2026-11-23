@@ -13,6 +13,7 @@ export type SoundName =
   | 'dash'
   | 'jump'
   | 'levelup'
+  | 'skillup'
   | 'death'
   | 'heal'
   | 'kill'
@@ -258,6 +259,12 @@ export class Sfx {
       case 'kill': // monstro derrotado
         this.tone('triangle', 784, 784, t, 0.08, 0.2);
         this.tone('triangle', 1047, 1047, t + 0.08, 0.12, 0.2);
+        break;
+      case 'skillup': // pôs um ponto numa habilidade: três sininhos subindo, rápidos (menor que o subir de nível)
+        this.bell(784, t, 0.35, 0.08);
+        this.bell(988, t + 0.08, 0.35, 0.08);
+        this.bell(1319, t + 0.16, 0.5, 0.09);
+        this.noise(t + 0.05, 0.35, 'bandpass', 2200, 4800, 0.04);
         break;
       case 'levelup': // musiquinha subindo
         [523, 659, 784, 1047].forEach((f, i) => this.tone('square', f, f, t + i * 0.09, 0.12, 0.12));

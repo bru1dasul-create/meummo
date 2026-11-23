@@ -376,7 +376,8 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     if (o.polyline) continue;
     const [x0, y0, x1, y1] = box(o);
     if (t === 'casa') {
-      const c = hex(String(prop(o, 'cor') ?? '#b07a50'));
+      // (a casa de tijolo à mostra, a da comunidade da represa, sai na cor do tijolo)
+      const c = hex(prop(o, 'tijolo') === true ? '#b4633b' : String(prop(o, 'cor') ?? '#b07a50'));
       roof(x0, y0, x1, y1, c);
       if (prop(o, 'caixaDagua') === true) {
         const [cx, cy, r] = [x1 - m(1.1), y0 + m(1.1), m(0.6)];

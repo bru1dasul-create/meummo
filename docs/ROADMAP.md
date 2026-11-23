@@ -676,10 +676,34 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   focar para ter o mapa como se fosse aberto sem carregamento"). PARADO até ele pedir; aí decidimos por qual lado ir
   primeiro. O escopo melhorado dele (o texto e o que tem na imagem: Guarapiranga de 400 × 320 m com 13 pontos) está
   em `docs/MUNDO.md`, "Próximos passos"
-- [ ] **[mundo]** (PARADO em 19/11 pelo dono, que mandou o escopo novo acima) Os dois mapas maiores (19/11, pedido do dono: "deixa o mapa maior"; escolheu "os dois maiores"):
-  primeiro o Guarapiranga (de 120 × 100 para uns 200 × 160 m, com o parque, o brejo e a orla abertos), depois o Capão
-  (cresce para a direita, com mais rua, casas e mata). Crescer só para a direita e para baixo (a origem não muda: o mapa
-  explorado de quem já joga não desalinha) e avisar a [estrutura] antes de juntar se um NPC ou uma chegada mudar
+- [x] **[mundo]** O Guarapiranga grande, **400 × 320 m, o mapa inteiro aberto** (22/11, pedido do dono: "pode seguir com
+  o Guarapiranga maior"; escolheu "mapa inteiro primeiro"; a planta: `docs/referencias/mapa-02-400-planta.jpg`; na main):
+  a represa no meio com a Ilha do Véu (só de barco, depois); a estrada contorna pelo norte e pelo leste — a Comunidade da
+  Represa (zona segura, com a praça do Brejo Maior, a fogueira e as bancas), o campinho, a praça em ruínas com o coreto,
+  a trilha até a cachoeira e o riacho, o clube náutico em ruínas (o píer quebrado) e o prédio da Barragem de 1909 — até a
+  saída para Santo Amaro (fechada por uma barreira até o mapa de lá ficar pronto; a chegada `chegada-santo-amaro` já
+  está no mapa); pelo oeste, o mirante, o brejo do sul, a trilha da margem sul e a Caverna Sagrada; o muro da barragem
+  fecha a volta (as duas comportas jogam água na várzea de caça, ao sul). O Refúgio, a chegada, a Dona Iracema e o
+  Barqueiro no mesmo lugar (o mapa só cresceu para a direita e para baixo). 9 áreas de caça (45 bichos, os que já
+  existem) e o lugar das capivaras da várzea. Os prédios especiais começam simples. O motor do mapa ganhou a grade de
+  procura (cada quadro olha só o que está perto da tela: o mapa grande ficou tão leve quanto o Capão) e a água recorta
+  só o pedaço da tela
+- [ ] **[mundo]** Vestir cada região do Guarapiranga grande, depois de o dono andar e aprovar o tamanho e os caminhos:
+  o clube, a barragem de 1909, o coreto, a caverna e o mirante com desenho próprio. **A comunidade na main em 23/11**
+  ("pode seguir vestindo a comunidade primeiro"): 49 casas coladas em fileiras, de 1 a 3 andares (as altas no fundo),
+  de tijolo baiano à mostra, rebocadas e pintadas ou só com o puxadinho no tijolo, laje com caixa d'água, ferro espetado,
+  varal e plantas; ruelas de cimento; na praça do Brejo Maior, o Lemos Bar (com as mesas), a Peixaria, o Salão da
+  Neide e o Mercadinho, as bancas de frutas, de peixe e de artesanato, o muro grafitado "BREJO", os postes com a fiação
+  cheia de pipas enroscadas e as bandeirinhas; de noite, parte das janelas acesas
+- [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
+- [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
+  sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,
+  rachaduras finas, peixes pulando de verdade (maiores, mais vezes, com respingo), o reflexo que balança e some longe da
+  base, barcos com tábuas, cavernas e motor de popa, o ponto de ônibus redesenhado e as casas com reboco caído, sombra no
+  pé da parede e o cano da laje
+- [ ] **[mundo]** O Capão maior (19/11, "os dois maiores": cresce para a direita, com mais rua, casas e mata). Crescer
+  só para a direita e para baixo (a origem não muda: o mapa explorado de quem já joga não desalinha) e avisar a
+  [estrutura] antes de juntar se um NPC ou uma chegada mudar
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
@@ -861,6 +885,22 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   defeito) agora usam o relógio dos quadros; o clarão do degrau (`arrowLevelAt`) ficou no relógio da página, porque o
   `slingshot.js` lê com ele. Conferido no jogo depois de 4 s em 0,25x (3,3 s de atraso): antes, 2 s depois do tiro ainda
   'ancestral' e o tiro comum puxava a flecha brilhante; agora apaga em ~250 ms e o tiro comum vem com a flecha normal
+- [x] **[estrutura]** Efeito subindo do chão ao subir de nível e ao pôr ponto numa habilidade (pedido do dono, 23/11:
+  "cada nível que o personagem upar quero um efeito no personagem vindo do chão, mesma coisa quando upar uma
+  habilidade"): o `levelup` só vai quando o nível sobe (o painel baixando não manda mais); `fx` `'skillup'` com `s` =
+  a habilidade, para quem pôs o ponto e quem está perto (protocolo 47). O motor chama `view.levelUp(id, 'level' |
+  'skill', tipo)`; sem ele, um efeito provisório no `combat.ts` (anel no chão e faíscas subindo; dourado no nível,
+  na cor da habilidade no ponto). Som novo `skillup`
+- [ ] **[arte]** O desenho de verdade do efeito de subir de nível e de pôr ponto numa habilidade (`levelUp` na view:
+  quando existir, o provisório some sozinho). Pedido mandado à [arte]
+- [x] **[estrutura]** O "+" e o nível de cada habilidade na barra de ações (pedido do dono, 23/11: "o upar da habilidade
+  aparecer aqui embaixo como se fosse um + e o level de cada habilidade upável mostrando nesse menu"): cada habilidade
+  da classe mostra os pontos em bolinhas (acesas = tem) e um "+" quando dá para pôr ponto (o toque põe o ponto, sem usar
+  a habilidade); a que o nível já liberou e ainda não tem ponto aparece apagada, com o "+". `src/client/novo/skillBar.ts`:
+  atributos `data-rank`, `data-max`, `data-learn` e os elementos `.skill-rank` e `.skill-plus` nos quadrados da barra,
+  com um estilo provisório (`#skill-bar-provisorio`)
+- [ ] **[arte]** Vestir o "+" e as bolinhas do nível na barra no style.css (e apagar o estilo provisório do
+  `skillBar.ts`). Pedido mandado à [arte]
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os

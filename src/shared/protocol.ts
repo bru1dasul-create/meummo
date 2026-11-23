@@ -148,7 +148,9 @@ export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_fu
 // 'vanish' = o bicho foi embora (o filhote de boitatá ao amanhecer: em seguida vem o `despawn`); 'mark' = a Flecha
 // Ancestral marcou o bicho: ele leva mais dano de todo mundo por `ms`; 'hawk' = o jogador usou os Olhos de Gavião
 // (enxerga mais longe por `ms`)
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | 'hawk' | PetFx;
+// 'skillup': pôs um ponto numa habilidade (`s` = qual): o efeito subindo do chão, como ao subir de nível (pedido do
+// dono, 23/11)
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | 'hawk' | 'skillup' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 
@@ -206,7 +208,7 @@ export type ServerMsg =
   // `burst`: a Flecha Ancestral explodiu no fim, neste raio (metros)
   | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string; burst?: number }
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
-  | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number; ms?: number } // r = alcance do golpe (bote, investida); ms = quanto dura (a marca)
+  | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number; ms?: number; s?: string } // r = alcance do golpe (bote, investida); ms = quanto dura (a marca); s = a habilidade ('skillup')
   | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)
   // blk: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou
   | { t: 'hit'; id: number; by: number; dmg: number; hp: number; blk?: 1 | 2 }

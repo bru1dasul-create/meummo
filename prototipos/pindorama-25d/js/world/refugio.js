@@ -678,15 +678,17 @@
       const gh = tipo === 'voadeira' ? 36 : 28;
       const at = (u, w, z) => P(cx + fwd.x * u * L + side.x * w * B, cy + fwd.y * u * L + side.y * w * B, z);
       const N = 28;
+      // a curva do barco (a beirada sobe nas pontas): a canoa nas duas, a voadeira só na proa
+      const sheer = (u, z) => (z > wz + 4 ? (tipo === 'voadeira' ? Math.max(0, u - 0.4) * 18 : u * u * 12) : 0);
       const outline = (k, z, sink = 0) => {
         const pts = [];
         for (let i = 0; i <= N; i++) {
           const u = -1 + (2 * i) / N;
-          pts.push(at(u, halfBeam(tipo, u) * k, z + sink * u));
+          pts.push(at(u, halfBeam(tipo, u) * k, z + sink * u + sheer(u, z)));
         }
         for (let i = N; i >= 0; i--) {
           const u = -1 + (2 * i) / N;
-          pts.push(at(u, -halfBeam(tipo, u) * k, z + sink * u));
+          pts.push(at(u, -halfBeam(tipo, u) * k, z + sink * u + sheer(u, z)));
         }
         return pts;
       };
@@ -733,6 +735,49 @@
       // casco convexo na tela: o mais simples que fica certo para barcos
       const hullPts = convexHull(all);
       inkFill(ctx, pathOf(hullPts), M.shade(color, -0.12), ink, 2.4);
+      // (23/11, o dono: "os barcos estão feios" — eram um bloco liso. Agora o costado tem as tábuas, a tinta gasta com a
+      // madeira aparecendo, a faixa molhada e escura na linha d'água; por dentro, as cavernas; e a voadeira, o motor)
+      ctx.save();
+      ctx.clip(pathOf(hullPts));
+      const plank = (z, a) => {
+        ctx.strokeStyle = `rgba(30, 20, 12, ${a})`;
+        ctx.lineWidth = Math.max(1, 1.5 * cam.zoom);
+        ctx.beginPath();
+        outline(0.93 + ((z - wz) / gh) * 0.07, z).forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+        ctx.stroke();
+      };
+      if (tipo === 'voadeira') {
+        // a chapa de alumínio: as costuras e os rebites
+        plank(wz + gh * 0.45, 0.18);
+        ctx.fillStyle = 'rgba(60, 64, 70, 0.35)';
+        for (let u = -0.9; u < 0.8; u += 0.12) {
+          const q = at(u, halfBeam(tipo, u) * 0.96, wz + gh * 0.45);
+          ctx.fillRect(q.x - 1, q.y - 1, 2, 2);
+        }
+      } else {
+        plank(wz + gh * 0.36, 0.28);
+        plank(wz + gh * 0.68, 0.28);
+        // a tinta descascada: a madeira aparecendo em manchas
+        for (let k = 0; k < 6; k++) {
+          const q = at(-0.8 + rnd() * 1.6, (rnd() < 0.5 ? 1 : -1) * 0.95, wz + gh * (0.2 + rnd() * 0.6));
+          ctx.fillStyle = rnd() < 0.6 ? 'rgba(156, 112, 69, 0.75)' : 'rgba(255, 255, 255, 0.12)';
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y, (6 + rnd() * 9) * cam.zoom, (2 + rnd() * 2.5) * cam.zoom, 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      // a faixa molhada (escura) e o limo na linha d'água
+      ctx.strokeStyle = 'rgba(16, 34, 30, 0.45)';
+      ctx.lineWidth = 6 * cam.zoom;
+      ctx.beginPath();
+      outline(0.9, wz + 3).forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(70, 104, 60, 0.4)';
+      ctx.lineWidth = 2.5 * cam.zoom;
+      ctx.beginPath();
+      outline(0.92, wz + 7).forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.stroke();
+      ctx.restore();
       // a faixa pintada embaixo da beirada (do lado que a câmera vê)
       const stripe = tipo === 'voadeira' ? '#2f6f9f' : rnd() < 0.5 ? '#f2ede0' : '#e2b13c';
       ctx.strokeStyle = stripe;
@@ -751,6 +796,25 @@
       ctx.clip(open);
       ctx.fillStyle = tipo === 'voadeira' ? '#a9b0b3' : '#7a5a3a';
       ctx.fill(pathOf(outline(0.72, wz + 8)));
+      if (tipo !== 'voadeira') {
+        // as cavernas: as costelas de madeira atravessando o fundo, e as tábuas do fundo
+        for (let u = -0.75; u <= 0.76; u += 0.25) {
+          const hw = halfBeam(tipo, u) * 0.8;
+          inkLine(ctx, [at(u, -hw, wz + gh - 8), at(u, -hw * 0.4, wz + 10), at(u, hw * 0.4, wz + 10), at(u, hw, wz + gh - 8)], '#6a4a2c', 3 * cam.zoom, ink * 0.4);
+        }
+        ctx.strokeStyle = 'rgba(40, 26, 14, 0.4)';
+        ctx.lineWidth = Math.max(1, 1.2 * cam.zoom);
+        for (const w of [-0.25, 0.25]) {
+          ctx.beginPath();
+          for (let i = 0; i <= 12; i++) {
+            const u = -0.8 + (1.6 * i) / 12;
+            const q = at(u, w * halfBeam(tipo, u), wz + 9);
+            if (i) ctx.lineTo(q.x, q.y);
+            else ctx.moveTo(q.x, q.y);
+          }
+          ctx.stroke();
+        }
+      }
       // os bancos atravessados
       for (const u of tipo === 'voadeira' ? [-0.55, 0.05] : [-0.5, 0, 0.5]) {
         const hw = halfBeam(tipo, u);
@@ -763,11 +827,14 @@
       ctx.stroke(open);
       // o remo deitado dentro da canoa, e o motor de rabeta na popa da voadeira
       if (tipo === 'voadeira') {
-        const s0 = at(-1.02, 0, wz + gh - 4);
-        const mx = cx - fwd.x * (L + 14), my = cy - fwd.y * (L + 14);
-        H.box(ctx, cam, mx - 13, mx + 13, my - 13, my + 13, wz + gh - 6, wz + gh + 30, { front: '#2b2d30', side: '#1e2023', top: '#45484c' }, ink);
-        inkLine(ctx, [s0, P(mx, my, wz + gh)], '#3a3d40', 4 * cam.zoom, ink * 0.6);
-        inkLine(ctx, [P(mx, my, wz + gh - 6), P(mx - fwd.x * 10, my - fwd.y * 10, wz - 14)], '#45484c', 5 * cam.zoom, ink * 0.6);
+        // o motor de popa: a rabeta descendo na água, a capota (cinza com a faixa vermelha) e o braço do leme
+        const mx = cx - fwd.x * (L + 10), my = cy - fwd.y * (L + 10);
+        inkLine(ctx, [P(mx, my, wz + gh - 4), P(mx - fwd.x * 6, my - fwd.y * 6, wz - 16)], '#3a3d40', 6 * cam.zoom, ink * 0.6);
+        H.box(ctx, cam, mx - 11, mx + 11, my - 9, my + 9, wz + gh - 6, wz + gh + 14, { front: '#2f3236', side: '#222428', top: '#45484c' }, ink);
+        H.box(ctx, cam, mx - 13, mx + 13, my - 11, my + 11, wz + gh + 14, wz + gh + 34, { front: '#d9dcde', side: '#b4b8bb', top: '#eceeef' }, ink);
+        const band = [P(mx - 13, my + 11, wz + gh + 20), P(mx + 13, my + 11, wz + gh + 20), P(mx + 13, my - 11, wz + gh + 20)];
+        inkLine(ctx, band, '#c03a2a', 3 * cam.zoom, 0);
+        inkLine(ctx, [P(mx + fwd.x * 6, my + fwd.y * 6, wz + gh + 18), at(-0.82, 0.2, wz + gh + 10)], '#2b2d30', 3.5 * cam.zoom, ink * 0.5);
       } else {
         inkLine(ctx, [at(-0.7, 0.25, wz + gh - 3), at(0.6, -0.15, wz + gh - 3)], '#c99a62', 4.5 * cam.zoom, ink * 0.6);
         const bl = at(0.62, -0.16, wz + gh - 3);
@@ -910,97 +977,214 @@
     blocks: 0,
     shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, (d.h || 260) * 0.9),
     box: (cam, d, z0) => volBox(cam, d.x0 - 60, d.x1 + 80, d.y0 - 80, d.y1 + 60, z0, z0 + (d.h || 260) + 120, 20),
+    // (23/11, o dono: "melhorar ponto de ônibus" — era uma chapa fina em dois arames. Agora é o abrigo de metal verde da
+    // cidade, abandonado: colunas de verdade, o telhado com espessura e a ferrugem escorrendo, o mato e a samambaia em
+    // cima, o vidro do fundo com um quebrado, o banco de ripas, o painel do lado com o cartaz velho e o totem da placa)
     paint(ctx, cam, d, z0, ink) {
       const rnd = seeded(d.x0, d.y0, 6011);
       const P = (x, y, z) => cam.p({ x, y, z });
       const h = d.h || 260;
-      // de frente para o leste (a rua): as colunas e o painel do fundo ficam no oeste (x0)
+      const METAL = { front: '#3f5e4b', side: '#2f4739', top: '#4f705b' };
+      // de frente para o leste (a rua): as colunas e o vidro do fundo ficam no oeste (x0)
       const bx = d.x0 + 14, fx = d.x1;
       const ys = [d.y0 + 20, d.y1 - 20];
-      // a laje de cimento rachada
+      // a laje de cimento, com as trincas e o capim na beira
       H.box(ctx, cam, d.x0 - 10, d.x1 + 10, d.y0 - 10, d.y1 + 10, z0, z0 + 8, { front: '#a29c8e', side: '#878174', top: '#b8b2a4' }, ink);
-      // o painel do fundo (vidro quebrado, uma moldura vazia) e o banco
-      H.onWall(ctx, cam, { x: bx, y: d.y1 - 10, z: z0 + 210 }, { x: 0, y: -1 }, () => {
+      ctx.strokeStyle = 'rgba(70, 66, 58, 0.55)';
+      ctx.lineWidth = Math.max(1, 1.2 * cam.zoom);
+      for (let k = 0; k < 3; k++) {
+        const a = P(d.x0 + rnd() * (d.x1 - d.x0), d.y0 + rnd() * (d.y1 - d.y0), z0 + 8);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(a.x + (rnd() - 0.5) * 30 * cam.zoom, a.y + (rnd() - 0.5) * 14 * cam.zoom);
+        ctx.lineTo(a.x + (rnd() - 0.5) * 50 * cam.zoom, a.y + (rnd() - 0.5) * 20 * cam.zoom);
+        ctx.stroke();
+      }
+      // o vidro do fundo: dois painéis na moldura verde, um deles quebrado (o buraco e as trincas), sujo embaixo
+      H.onWall(ctx, cam, { x: bx, y: d.y1 - 10, z: z0 + 214 }, { x: 0, y: -1 }, () => {
         const L = d.y1 - d.y0 - 20;
         ctx.fillStyle = INK;
-        ctx.fillRect(-4, -4, L + 8, 178);
-        ctx.fillStyle = 'rgba(150, 190, 200, 0.45)';
-        ctx.fillRect(0, 0, L, 170);
-        ctx.strokeStyle = 'rgba(240, 250, 250, 0.7)';
-        ctx.lineWidth = 2;
+        ctx.fillRect(-6, -6, L + 12, 186);
+        ctx.fillStyle = METAL.front;
+        ctx.fillRect(-3, -3, L + 6, 180);
+        const pane = (x0, w, broken) => {
+          const g = ctx.createLinearGradient(0, 4, 0, 170);
+          g.addColorStop(0, 'rgba(170, 206, 214, 0.55)');
+          g.addColorStop(0.7, 'rgba(140, 176, 184, 0.5)');
+          g.addColorStop(1, 'rgba(110, 120, 100, 0.65)');
+          ctx.fillStyle = g;
+          ctx.fillRect(x0, 4, w, 166);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+          ctx.beginPath();
+          ctx.moveTo(x0 + w * 0.15, 4);
+          ctx.lineTo(x0 + w * 0.32, 4);
+          ctx.lineTo(x0 + w * 0.12, 170);
+          ctx.lineTo(x0, 170);
+          ctx.closePath();
+          ctx.fill();
+          if (broken) {
+            // o buraco (escuro, com as pontas do vidro) e as trincas em estrela
+            const cx = x0 + w * 0.55, cy = 70;
+            ctx.fillStyle = 'rgba(30, 40, 38, 0.7)';
+            ctx.beginPath();
+            for (let k = 0; k < 9; k++) {
+              const a = (k / 9) * M.TAU, rr = (k % 2 ? 14 : 30) + rnd() * 10;
+              if (k) ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+              else ctx.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(240, 250, 250, 0.75)';
+            ctx.lineWidth = 1.6;
+            for (let k = 0; k < 7; k++) {
+              const a = rnd() * M.TAU;
+              ctx.beginPath();
+              ctx.moveTo(cx + Math.cos(a) * 28, cy + Math.sin(a) * 28);
+              ctx.lineTo(cx + Math.cos(a) * (55 + rnd() * 40), cy + Math.sin(a) * (55 + rnd() * 40));
+              ctx.stroke();
+            }
+          }
+        };
+        pane(4, L / 2 - 8, false);
+        pane(L / 2 + 4, L / 2 - 8, true);
+        // o adesivo velho e a pichação no vidro inteiro
+        ctx.fillStyle = 'rgba(224, 214, 190, 0.8)';
+        ctx.fillRect(L * 0.12, 96, L * 0.16, 30);
+        ctx.strokeStyle = 'rgba(40, 30, 40, 0.55)';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(L * 0.3, 0);
-        ctx.lineTo(L * 0.42, 60);
-        ctx.lineTo(L * 0.25, 110);
-        ctx.moveTo(L * 0.42, 60);
-        ctx.lineTo(L * 0.7, 40);
+        ctx.moveTo(L * 0.08, 150);
+        ctx.bezierCurveTo(L * 0.16, 130, L * 0.22, 160, L * 0.32, 140);
         ctx.stroke();
-        // o cartaz velho desbotado, rasgado
-        ctx.fillStyle = 'rgba(224, 214, 190, 0.85)';
-        ctx.fillRect(L * 0.55, 30, L * 0.35, 90);
-        ctx.fillStyle = 'rgba(200, 80, 60, 0.4)';
-        ctx.fillRect(L * 0.58, 40, L * 0.28, 20);
       });
-      H.box(ctx, cam, bx, bx + 40, d.y0 + 26, d.y1 - 26, z0 + 40, z0 + 50, { front: '#6f7478', side: '#5a5f63', top: '#8a8f93' }, ink);
-      // as colunas e o telhado (a chapa curva, com mato e uma arvorezinha em cima)
+      // o banco de ripas (verde, como o abrigo), com os pés
+      for (const y of [d.y0 + 40, d.y1 - 40]) H.box(ctx, cam, bx + 16, bx + 22, y - 3, y + 3, z0 + 8, z0 + 44, METAL, ink);
+      for (const [x0, x1] of [[bx + 8, bx + 20], [bx + 22, bx + 34], [bx + 36, bx + 48]]) H.box(ctx, cam, x0, x1, d.y0 + 28, d.y1 - 28, z0 + 44, z0 + 49, { front: '#5b7c66', side: '#46634f', top: '#6c8f77' }, ink);
+      // as colunas (perfil de metal) com a ferrugem no pé
       for (const y of ys) {
-        inkLine(ctx, [P(bx, y, z0), P(bx, y, z0 + h)], '#5a5f63', 9 * cam.zoom, ink);
-        inkLine(ctx, [P(bx, y, z0 + h - 6), P(fx, y, z0 + h + 14)], '#5a5f63', 6 * cam.zoom, ink);
+        H.box(ctx, cam, bx - 5, bx + 5, y - 5, y + 5, z0 + 8, z0 + h, METAL, ink);
+        const r0 = P(bx + 5, y + 5, z0 + 8), r1 = P(bx + 5, y + 5, z0 + 40);
+        ctx.strokeStyle = 'rgba(140, 74, 36, 0.7)';
+        ctx.lineWidth = 3 * cam.zoom;
+        ctx.beginPath();
+        ctx.moveTo(r0.x - 2 * cam.zoom, r0.y);
+        ctx.lineTo(r1.x - 2 * cam.zoom, r1.y);
+        ctx.stroke();
+        // a viga que segura o telhado, saindo da coluna para a frente
+        inkLine(ctx, [P(bx, y, z0 + h - 8), P(fx + 10, y, z0 + h + 12)], METAL.side, 6 * cam.zoom, ink);
       }
-      const roof = pathOf([P(bx - 20, d.y0 - 6, z0 + h - 4), P(fx + 26, d.y0 - 6, z0 + h + 18), P(fx + 26, d.y1 + 6, z0 + h + 18), P(bx - 20, d.y1 + 6, z0 + h - 4)]);
-      inkFill(ctx, roof, '#8a9194', ink, 2.4);
+      // o telhado: a chapa com espessura (a beira da frente e a do lado), a ferrugem escorrendo e o mato em cima
+      const zb = z0 + h - 4, zf = z0 + h + 18, T = 10;
+      const A = { x: bx - 22, y: d.y0 - 10 }, B = { x: fx + 28, y: d.y0 - 10 }, C = { x: fx + 28, y: d.y1 + 10 }, D = { x: bx - 22, y: d.y1 + 10 };
+      const edgeE = pathOf([P(B.x, B.y, zf), P(C.x, C.y, zf), P(C.x, C.y, zf - T), P(B.x, B.y, zf - T)]);
+      const edgeS = pathOf([P(D.x, D.y, zb), P(C.x, C.y, zf), P(C.x, C.y, zf - T), P(D.x, D.y, zb - T)]);
+      inkFill(ctx, edgeE, METAL.front, ink, 2.2);
+      inkFill(ctx, edgeS, METAL.side, ink, 2.2);
+      const roof = pathOf([P(A.x, A.y, zb), P(B.x, B.y, zf), P(C.x, C.y, zf), P(D.x, D.y, zb)]);
+      inkFill(ctx, roof, METAL.top, ink, 2.4);
+      ctx.save();
+      ctx.clip(edgeE);
+      ctx.strokeStyle = 'rgba(140, 74, 36, 0.6)';
+      ctx.lineWidth = 2 * cam.zoom;
+      for (let k = 0; k < 6; k++) {
+        const y = B.y + rnd() * (C.y - B.y);
+        const q = P(B.x, y, zf);
+        ctx.beginPath();
+        ctx.moveTo(q.x, q.y);
+        ctx.lineTo(q.x, q.y + (8 + rnd() * 10) * cam.zoom);
+        ctx.stroke();
+      }
+      ctx.restore();
       ctx.save();
       ctx.clip(roof);
-      ctx.fillStyle = 'rgba(126, 70, 36, 0.45)';
+      ctx.fillStyle = 'rgba(126, 70, 36, 0.4)';
       for (let k = 0; k < 5; k++) {
-        const q = P(bx + rnd() * (fx - bx), d.y0 + rnd() * (d.y1 - d.y0), z0 + h + 6);
+        const q = P(bx + rnd() * (fx - bx), d.y0 + rnd() * (d.y1 - d.y0), zb + 8);
         ctx.beginPath();
         ctx.ellipse(q.x, q.y, (14 + rnd() * 20) * cam.zoom, (5 + rnd() * 6) * cam.zoom, 0, 0, M.TAU);
         ctx.fill();
       }
-      ctx.fillStyle = 'rgba(86, 118, 52, 0.75)';
-      for (let k = 0; k < 9; k++) {
-        const q = P(bx + rnd() * (fx - bx), d.y0 + rnd() * (d.y1 - d.y0), z0 + h + 8);
+      ctx.fillStyle = 'rgba(86, 118, 52, 0.8)';
+      for (let k = 0; k < 10; k++) {
+        const q = P(bx + rnd() * (fx - bx), d.y0 + rnd() * (d.y1 - d.y0), zb + 10);
         ctx.beginPath();
         ctx.ellipse(q.x, q.y, (10 + rnd() * 16) * cam.zoom, (4 + rnd() * 6) * cam.zoom, 0, 0, M.TAU);
         ctx.fill();
       }
       ctx.restore();
       const fern = PD.flora && PD.flora.small && PD.flora.small['planta-samambaia'];
-      if (fern) fern.paint(ctx, cam, { kind: 'planta-samambaia', x: (bx + fx) / 2, y: (d.y0 + d.y1) / 2, r: 34 }, z0 + h + 10, ink);
-      // a placa do ponto, no poste da beira da calçada (a ponta norte), com o nome da linha
-      const sx = fx + 10, sy = d.y0 - 30;
-      inkLine(ctx, [P(sx, sy, z0), P(sx, sy, z0 + 270)], '#7d8286', 6 * cam.zoom, ink);
-      H.onWall(ctx, cam, { x: sx + 2, y: sy + 30, z: z0 + 300 }, { x: 0, y: -1 }, () => {
+      if (fern) fern.paint(ctx, cam, { kind: 'planta-samambaia', x: (bx + fx) / 2 - 20, y: (d.y0 + d.y1) / 2, r: 38 }, zb + 12, ink);
+      // o painel do lado (a ponta sul): a caixa do cartaz, com o cartaz velho e desbotado da represa
+      H.onWall(ctx, cam, { x: bx + 6, y: d.y1 - 6, z: z0 + 214 }, { x: 1, y: 0 }, () => {
+        const W = Math.min(120, fx - bx - 20);
         ctx.fillStyle = INK;
-        ctx.fillRect(-4, -4, 68, 58);
+        ctx.fillRect(-4, -4, W + 8, 190);
+        ctx.fillStyle = METAL.front;
+        ctx.fillRect(-1, -1, W + 2, 184);
+        const g = ctx.createLinearGradient(0, 10, 0, 175);
+        g.addColorStop(0, '#9fc3cf');
+        g.addColorStop(0.55, '#d8d2b8');
+        g.addColorStop(0.56, '#6f9a7a');
+        g.addColorStop(1, '#4f7f63');
+        ctx.fillStyle = g;
+        ctx.fillRect(8, 10, W - 16, 165);
+        ctx.fillStyle = 'rgba(242, 196, 70, 0.85)';
+        ctx.beginPath();
+        ctx.arc(W * 0.7, 50, 16, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(40, 60, 50, 0.8)';
+        ctx.font = `20px ${H.FONT_SIGN}`;
+        ctx.textAlign = 'center';
+        ctx.fillText('REPRESA', W / 2, 128, W - 24);
+        // desbotado e rasgado no canto
+        ctx.fillStyle = 'rgba(255, 252, 240, 0.32)';
+        ctx.fillRect(8, 10, W - 16, 165);
+        ctx.fillStyle = METAL.front;
+        ctx.beginPath();
+        ctx.moveTo(W - 8, 120);
+        ctx.lineTo(W - 8, 175);
+        ctx.lineTo(W - 40, 175);
+        ctx.closePath();
+        ctx.fill();
+      });
+      // o totem do ponto na beira da calçada (a ponta norte): o poste e a placa com o ônibus (sem marca) e o nome
+      const sx = fx + 10, sy = d.y0 - 30;
+      inkLine(ctx, [P(sx, sy, z0), P(sx, sy, z0 + 270)], '#6f7a72', 8 * cam.zoom, ink);
+      H.onWall(ctx, cam, { x: sx + 2, y: sy + 36, z: z0 + 310 }, { x: 0, y: -1 }, () => {
+        ctx.fillStyle = INK;
+        ctx.fillRect(-5, -5, 82, 70);
         ctx.fillStyle = '#e9e4d6';
-        ctx.fillRect(0, 0, 60, 50);
-        // o ônibus desenhado (sem marca)
+        ctx.fillRect(0, 0, 72, 60);
+        ctx.fillStyle = METAL.front;
+        ctx.fillRect(0, 0, 72, 8);
         ctx.fillStyle = '#2f5f9f';
-        ctx.fillRect(10, 8, 40, 20);
+        ctx.fillRect(14, 14, 44, 22);
         ctx.fillStyle = '#e9e4d6';
-        ctx.fillRect(14, 11, 9, 7);
-        ctx.fillRect(26, 11, 9, 7);
-        ctx.fillRect(38, 11, 9, 7);
+        ctx.fillRect(18, 17, 10, 8);
+        ctx.fillRect(31, 17, 10, 8);
+        ctx.fillRect(44, 17, 10, 8);
         ctx.fillStyle = INK;
         ctx.beginPath();
-        ctx.arc(18, 29, 3.5, 0, M.TAU);
-        ctx.arc(42, 29, 3.5, 0, M.TAU);
+        ctx.arc(22, 37, 4, 0, M.TAU);
+        ctx.arc(50, 37, 4, 0, M.TAU);
         ctx.fill();
-        ctx.font = `9px ${H.FONT_SIGN}`;
+        ctx.font = `11px ${H.FONT_SIGN}`;
         ctx.textAlign = 'center';
         ctx.fillStyle = '#1b100d';
-        ctx.fillText((d.sign || 'PONTO').toUpperCase(), 30, 45);
+        ctx.fillText((d.sign || 'PONTO').toUpperCase(), 36, 55, 66);
       });
-      // o cipó subindo pela coluna da frente e o mato na base
+      // o cipó subindo pela coluna de trás e o mato no pé
       const vr = seeded(d.x0, d.y1, 6013);
       const pts = [];
-      for (let j = 0; j <= 9; j++) pts.push(P(bx + Math.sin(j * 1.3) * 4, ys[1] + 2, z0 + (h * 0.9 * j) / 9));
+      for (let j = 0; j <= 9; j++) pts.push(P(bx + 6 + Math.sin(j * 1.3) * 4, ys[1] + 6, z0 + (h * 0.9 * j) / 9));
       ctx.strokeStyle = '#3f5a2a';
       ctx.lineWidth = Math.max(1, 2 * cam.zoom);
       ctx.stroke(pathOf(pts, false));
       for (const q of pts) for (let j = 0; j < 2; j++) leaf(ctx, q.x + (vr() - 0.5) * 10 * cam.zoom, q.y + (vr() - 0.5) * 8 * cam.zoom, (6 + vr() * 4) * cam.zoom, vr() * M.TAU, vr() < 0.5 ? '#4f7f34' : '#3f6a2c');
+      for (let k = 0; k < 6; k++) {
+        const q = P(d.x0 - 8 + rnd() * (d.x1 - d.x0 + 16), rnd() < 0.5 ? d.y0 - 10 : d.y1 + 10, z0);
+        for (let j = 0; j < 3; j++) leaf(ctx, q.x + (rnd() - 0.5) * 8 * cam.zoom, q.y - j * 3 * cam.zoom, (5 + rnd() * 4) * cam.zoom, -Math.PI / 2 + (rnd() - 0.5) * 1.2, '#5a8a3c');
+      }
     },
   };
 
@@ -1277,6 +1461,113 @@
     ctx.lineTo(c.x, c.y);
     ctx.stroke();
     const top = z + hc;
+    if (kind === 'peixe') {
+      // o gelo e os peixes deitados (prateados, com o rabo e o olho)
+      const ice = [P(x0 + 3, y0 + 3, top), P(x1 - 3, y0 + 3, top), P(x1 - 3, y1 - 3, top), P(x0 + 3, y1 - 3, top)];
+      ctx.fillStyle = '#e4f0f0';
+      ctx.beginPath();
+      ice.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.closePath();
+      ctx.fill();
+      for (const fx of [0.3, 0.7]) {
+        const q = P(x0 + w * fx, cy + (rnd() - 0.5) * dp * 0.3, top + 2);
+        const L = 10 * cam.zoom, R = 3.4 * cam.zoom;
+        ctx.save();
+        ctx.translate(q.x, q.y);
+        ctx.rotate(-0.4 + rnd() * 0.3);
+        const fish = (pad, body, tail) => {
+          ctx.fillStyle = body;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, L + pad, R + pad, 0, 0, M.TAU);
+          ctx.fill();
+          ctx.fillStyle = tail;
+          ctx.beginPath();
+          ctx.moveTo(-L + 1, 0);
+          ctx.lineTo(-L - 5 * cam.zoom - pad, -4 * cam.zoom - pad);
+          ctx.lineTo(-L - 5 * cam.zoom - pad, 4 * cam.zoom + pad);
+          ctx.closePath();
+          ctx.fill();
+        };
+        fish(ink, INK, INK);
+        fish(0, '#a9bcc6', '#8ea3ae');
+        ctx.fillStyle = 'rgba(70, 92, 110, 0.55)';
+        ctx.fillRect(-L * 0.7, -R * 0.75, L * 1.3, R * 0.5);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.arc(L * 0.6, -R * 0.15, 0.9 * cam.zoom, 0, M.TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+      return;
+    }
+    if (kind === 'cesto' || kind === 'pote') {
+      // o cesto de palha trançada ou dois potes de barro
+      const many = kind === 'pote' ? [0.3, 0.7] : [0.5];
+      for (const fx of many) {
+        const q = P(x0 + w * fx, cy, top + (kind === 'pote' ? 7 : 5));
+        const rx = (kind === 'pote' ? 6 : 12) * cam.zoom, ry = (kind === 'pote' ? 7.5 : 7) * cam.zoom;
+        const body = kind === 'pote' ? '#b8643a' : '#c9a25e';
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx + ink, ry + ink, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx, ry, 0, 0, M.TAU);
+        ctx.fill();
+        if (kind === 'cesto') {
+          ctx.strokeStyle = 'rgba(110, 76, 30, 0.7)';
+          ctx.lineWidth = Math.max(1, 1.1 * cam.zoom);
+          for (let j = -2; j <= 2; j++) {
+            ctx.beginPath();
+            ctx.moveTo(q.x - rx * 0.9, q.y + j * ry * 0.3);
+            ctx.lineTo(q.x + rx * 0.9, q.y + j * ry * 0.3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(q.x + j * rx * 0.3, q.y - ry * 0.9);
+            ctx.lineTo(q.x + j * rx * 0.3, q.y + ry * 0.9);
+            ctx.stroke();
+          }
+          // a boca do cesto, mais escura
+          ctx.fillStyle = '#6e4e24';
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y - ry * 0.55, rx * 0.8, ry * 0.3, 0, 0, M.TAU);
+          ctx.fill();
+        } else {
+          // o gargalo e o brilho do barro
+          ctx.fillStyle = INK;
+          ctx.fillRect(q.x - rx * 0.45 - ink, q.y - ry * 1.35 - ink, rx * 0.9 + 2 * ink, ry * 0.55 + ink);
+          ctx.fillStyle = '#a3542e';
+          ctx.fillRect(q.x - rx * 0.45, q.y - ry * 1.35, rx * 0.9, ry * 0.55);
+          ctx.fillStyle = 'rgba(255, 220, 180, 0.35)';
+          ctx.beginPath();
+          ctx.ellipse(q.x - rx * 0.35, q.y - ry * 0.2, rx * 0.22, ry * 0.4, 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      return;
+    }
+    if (kind === 'colar') {
+      // colares de sementes e miçangas, em arcos
+      const colors = ['#d8453a', '#f2b632', '#2f7fd0', '#3f9f5f', '#7a3fb0'];
+      for (let j = 0; j < 3; j++) {
+        const q = P(x0 + w * (0.25 + j * 0.25), cy, top + 1);
+        const R = 6 * cam.zoom;
+        for (let b = 0; b < 9; b++) {
+          const a = Math.PI * 0.1 + (b / 8) * Math.PI * 0.8;
+          const bx = q.x + Math.cos(a) * R, by = q.y + Math.sin(a) * R * 0.6 - R * 0.3;
+          ctx.fillStyle = INK;
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.8 * cam.zoom + ink * 0.5, 0, M.TAU);
+          ctx.fill();
+          ctx.fillStyle = colors[(j + b) % colors.length];
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.5 * cam.zoom, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      return;
+    }
     if (kind === 'banana') {
       // as pencas deitadas: as bananas lado a lado (meias-luas amarelas com a pontinha escura)
       ctx.lineCap = 'round';
@@ -1476,14 +1767,23 @@
       };
       // (a câmera olha do sudeste: o lado de lá, o de cá e, por último, a frente)
       const back = yb - d.y0;
+      // a mercadoria: as frutas da quitanda, o peixe dos pescadores ou o artesanato (cestos, potes de barro e colares)
+      const goods = d.goods || 'frutas';
+      const G = {
+        frutas: { left: ['limao', 'maracuja'], right: 'tomate', front: ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'], scale: true },
+        peixe: { left: ['peixe', 'peixe'], right: 'peixe', front: ['peixe', 'peixe', 'peixe'], scale: true },
+        artesanato: { left: ['cesto', 'pote'], right: 'colar', front: ['cesto', 'pote', 'colar', 'pote'], scale: false },
+      }[goods] || null;
+      const g = G || { left: ['limao', 'maracuja'], right: 'tomate', front: ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'], scale: true };
       piece(d.x0, d.x0 + s, d.y0, yb, false);
-      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, 'limao', rnd, ink);
-      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, 'maracuja', rnd, ink);
+      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, g.left[0], rnd, ink);
+      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, g.left[1], rnd, ink);
       piece(d.x1 - s, d.x1, d.y0, yb, false);
-      crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, 'tomate', rnd, ink);
-      scale(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.74, zt, ink);
+      crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, g.right, rnd, ink);
+      if (g.scale) scale(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.74, zt, ink);
+      else crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, 'cesto', rnd, ink);
       piece(d.x0, d.x1, yb, d.y1, true);
-      const kinds = ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'];
+      const kinds = g.front;
       const n = Math.max(2, Math.min(5, Math.floor((d.x1 - d.x0 - 20) / 56)));
       const cw = 46, gap = (d.x1 - d.x0 - n * cw) / (n + 1);
       for (let k = 0; k < n; k++) crate(ctx, cam, d.x0 + gap + cw / 2 + k * (cw + gap), yb + f / 2, zt, cw, Math.min(36, f - 10), kinds[k % kinds.length], rnd, ink);

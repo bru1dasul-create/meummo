@@ -1,7 +1,7 @@
 {
-  "escala": 8,
-  "largura": 120,
-  "altura": 100,
+  "escala": 4,
+  "largura": 400,
+  "altura": 320,
   "nomes": [
     {
       "nome": "O Refúgio",
@@ -17,8 +17,80 @@
     },
     {
       "nome": "Parque Ecológico do Guarapiranga",
-      "x": 18,
-      "y": 48,
+      "x": 19,
+      "y": 49,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Mirante",
+      "x": 16,
+      "y": 50,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Brejo do Sul",
+      "x": 20,
+      "y": 105,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Trilha da Margem Sul",
+      "x": 75,
+      "y": 197,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Caverna Sagrada",
+      "x": 34,
+      "y": 270,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Brejo Maior",
+      "x": 158,
+      "y": 33,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Campinho",
+      "x": 233,
+      "y": 25,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Praça em Ruínas",
+      "x": 327,
+      "y": 30,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Clube Náutico em Ruínas",
+      "x": 296,
+      "y": 83,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "A Barragem",
+      "x": 244,
+      "y": 250,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Barragem de 1909",
+      "x": 336,
+      "y": 235,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Várzea de Caça",
+      "x": 236,
+      "y": 288,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Ilha do Véu",
+      "x": 196,
+      "y": 148,
       "tipo": "lugar"
     },
     {
@@ -52,16 +124,70 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Lemos Bar",
+      "x": 148.6,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Peixaria",
+      "x": 153.85,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Salão da Neide",
+      "x": 162.25,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Mercadinho",
+      "x": 167.75,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Clube Náutico",
+      "x": 283.5,
+      "y": 78.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Vestiário",
+      "x": 297.5,
+      "y": 77.5,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Margem da Represa",
       "x": 38.5,
       "y": 44,
       "tipo": "agua"
     },
     {
-      "nome": "Represa de Guarapiranga",
-      "x": 80,
-      "y": 65,
+      "nome": "Comunidade da Represa",
+      "x": 166,
+      "y": 26,
       "tipo": "agua"
+    },
+    {
+      "nome": "Orla da Represa",
+      "x": 241,
+      "y": 59,
+      "tipo": "agua"
+    },
+    {
+      "nome": "Represa de Guarapiranga",
+      "x": 187,
+      "y": 140,
+      "tipo": "agua"
+    },
+    {
+      "nome": "Mata do Leste",
+      "x": 370,
+      "y": 160,
+      "tipo": "mata"
     },
     {
       "nome": "Ponto final",
@@ -70,9 +196,9 @@
       "tipo": "lugar"
     },
     {
-      "nome": "Árvore caída",
-      "x": 49,
-      "y": 25.8,
+      "nome": "Saída para Santo Amaro (fechada)",
+      "x": 393.3,
+      "y": 230,
       "tipo": "lugar"
     },
     {
@@ -94,15 +220,45 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Muro grafitado",
+      "x": 145.7,
+      "y": 32,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Coreto",
+      "x": 327,
+      "y": 30,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Cachoeira",
+      "x": 392,
+      "y": 20,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Árvore do Véu",
+      "x": 194,
+      "y": 145.5,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Véu da Ilha",
-      "x": 92,
-      "y": 72,
+      "x": 205,
+      "y": 153.5,
       "tipo": "lugar"
     },
     {
       "nome": "Pedra da Ilha",
-      "x": 92.6,
-      "y": 71.4,
+      "x": 206.4,
+      "y": 152.6,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Comporta",
+      "x": 218,
+      "y": 254.7,
       "tipo": "lugar"
     }
   ]

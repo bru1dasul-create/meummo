@@ -74,6 +74,13 @@ export interface WorldView {
    */
   armed?(id: number, kind: string | null, rank?: number, level?: ChargeLevel): void;
   /**
+   * O efeito subindo do chão em volta do personagem `id` (você ou outro jogador; pedido do dono, 23/11: "cada nível que o
+   * personagem upar quero um efeito no personagem vindo do chão, mesma coisa quando upar uma habilidade"): `what` =
+   * 'level' (subiu de nível) ou 'skill' (pôs um ponto numa habilidade; `skill` = o tipo dela: 'chuva', 'flecha' ou
+   * 'olhos', para a cor). Sem este método, o motor desenha um efeito provisório (combat.ts, rise).
+   */
+  levelUp?(id: number, what: 'level' | 'skill', skill?: string): void;
+  /**
    * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
    * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',
    * 'wake', 'sleep' e 'dash' (o pulo para o sofá e de volta).

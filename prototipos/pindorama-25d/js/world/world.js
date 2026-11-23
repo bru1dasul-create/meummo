@@ -31,6 +31,10 @@
     return A.x0 + A.x1 + A.y0 + A.y1 < B.x0 + B.x1 + B.y0 + B.y1;
   }
   const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  // a grade das coisas do cenário (World._propGrid): o tamanho da casa e a folga, em px no zoom 1
+  const GRID_CELL = 512;
+  const GRID_PAD = 48;
+  const gridKey = (gx, gy) => (gx + 32768) * 65536 + (gy + 32768);
   /** Quanto tempo (ms) um quadro pode gastar refazendo imagens (objetos e chão) depois de o zoom mudar. */
   const BUILD_BUDGET = 6;
   /** Imagem "pesada" (ms estimados): só é adiantada com o herói parado (andando, o quadro comprido vira soluço). */
@@ -202,14 +206,94 @@
       return { x, y };
     }
 
+    /**
+     * A grade das coisas do cenário pela caixa na tela, dividida pelo zoom (a posição na tela é proporcional ao zoom:
+     * a grade serve para qualquer zoom). Num mapa grande — o Guarapiranga de 400 × 320 m tem 4.500 coisas —, cada quadro
+     * olha só as casas da grade que a tela cobre, e não o mapa inteiro. Feita uma vez por mapa.
+     */
+    _propGrid() {
+      if (this._grid) return this._grid;
+      const z = this.cam.zoom;
+      const cells = new Map();
+      const n = this.props.length;
+      for (let i = 0; i < n; i++) {
+        const p = this.props[i];
+        const b = p.bounds;
+        const gx0 = Math.floor(b.x0 / z / GRID_CELL), gx1 = Math.floor(b.x1 / z / GRID_CELL);
+        const gy0 = Math.floor(b.y0 / z / GRID_CELL), gy1 = Math.floor(b.y1 / z / GRID_CELL);
+        for (let gx = gx0; gx <= gx1; gx++) {
+          for (let gy = gy0; gy <= gy1; gy++) {
+            const k = gridKey(gx, gy);
+            const list = cells.get(k);
+            if (list) list.push(i);
+            else cells.set(k, [i]);
+          }
+        }
+      }
+      this._grid = { cells };
+      return this._grid;
+    }
+
+    /**
+     * As coisas do cenário cuja caixa pode cair no retângulo `r` (px do mundo), na ordem de desenho. Pela grade: a caixa
+     * de verdade ainda é conferida por quem usa (a da grade tem folga de `GRID_PAD` px no zoom 1).
+     */
+    _propsIn(r) {
+      const order = this._staticOrder();
+      const z = this.cam.zoom;
+      const { cells } = this._propGrid();
+      const gx0 = Math.floor((r.x0 / z - GRID_PAD) / GRID_CELL), gx1 = Math.floor((r.x1 / z + GRID_PAD) / GRID_CELL);
+      const gy0 = Math.floor((r.y0 / z - GRID_PAD) / GRID_CELL), gy1 = Math.floor((r.y1 / z + GRID_PAD) / GRID_CELL);
+      // (cada coisa entra uma vez só, mesmo estando em várias casas da grade: a marca é o número desta procura)
+      const seen = this._gridSeen || (this._gridSeen = new Uint32Array(this.props.length));
+      this._gridStamp = (this._gridStamp || 0) + 1;
+      if (this._gridStamp > 0xfffffff0) {
+        seen.fill(0);
+        this._gridStamp = 1;
+      }
+      const stamp = this._gridStamp;
+      const idx = [];
+      for (let gx = gx0; gx <= gx1; gx++) {
+        for (let gy = gy0; gy <= gy1; gy++) {
+          const list = cells.get(gridKey(gx, gy));
+          if (!list) continue;
+          for (const i of list) {
+            if (seen[i] === stamp) continue;
+            seen[i] = stamp;
+            idx.push(this._ordOf[i]);
+          }
+        }
+      }
+      idx.sort((a, b) => a - b);
+      return idx.map((k) => order[k]);
+    }
+
     _staticOrder() {
       if (this.order) return this.order;
       const items = this.props.slice();
       const n = items.length;
       const boxes = items.map((p) => p.bounds);
       const before = items.map(() => []);
+      // os pares que se encostam na tela, pela grade (antes, todos contra todos: 10 milhões de pares nas 4.500 coisas do
+      // Guarapiranga grande). Para cada um, os vizinhos de número maior em ordem crescente: as listas `before` saem
+      // iguais às da conta de todos contra todos, e a ordem de desenho também
+      const { cells } = this._propGrid();
+      const z = this.cam.zoom;
+      const mark = new Int32Array(n).fill(-1);
       for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
+        const b = boxes[i];
+        const near = [];
+        for (let gx = Math.floor(b.x0 / z / GRID_CELL), gx1 = Math.floor(b.x1 / z / GRID_CELL); gx <= gx1; gx++) {
+          for (let gy = Math.floor(b.y0 / z / GRID_CELL), gy1 = Math.floor(b.y1 / z / GRID_CELL); gy <= gy1; gy++) {
+            for (const j of cells.get(gridKey(gx, gy)) || []) {
+              if (j <= i || mark[j] === i) continue;
+              mark[j] = i;
+              near.push(j);
+            }
+          }
+        }
+        near.sort((a, c) => a - c);
+        for (const j of near) {
           if (!overlap(boxes[i], boxes[j])) continue;
           if (behind(items[i], items[j])) before[j].push(i);
           else before[i].push(j);
@@ -229,6 +313,9 @@
       const idx = items.map((p, i) => i).sort((a, b) => items[a].fp.x0 + items[a].fp.y0 - (items[b].fp.x0 + items[b].fp.y0));
       for (const i of idx) visit(i);
       this.order = out;
+      // o lugar de cada coisa na ordem (pelo número dela em `props`), para a grade devolver na ordem de desenho
+      const at = new Map(out.map((p, k) => [p, k]));
+      this._ordOf = items.map((p) => at.get(p));
       return out;
     }
 
@@ -365,7 +452,7 @@
      * Depois de o zoom mudar: refaz primeiro as imagens de quem está mais perto do MEIO da tela (na conversa, o NPC e o
      * que está em volta dele), dentro do orçamento do quadro. O resto continua esticado até chegar a vez.
      */
-    _buildStale(view) {
+    _buildStale(view, visible) {
       if (this.zoomSettling() || this.buildBusy()) return;
       const cam = this.cam;
       const cx = cam.viewX + cam.viewW / 2, cy = cam.viewY + cam.viewH / 2;
@@ -377,7 +464,7 @@
         const dx = Math.max(b.x0 - cx, 0, cx - b.x1), dy = Math.max(b.y0 - cy, 0, cy - b.y1);
         list.push({ p, d: dx * dx + dy * dy });
       };
-      for (const p of this.props) look(p);
+      for (const p of visible || this.props) look(p);
       for (const f of this.flats || []) look(f);
       if (!list.length) {
         this._stale = false;
@@ -439,7 +526,8 @@
           if (!p.spriteReady && p._ensureSprite && !this.buildBusy()) p._ensureSprite();
         } else if (sweep && p.sprite && p.dropSprite && !overlap(b, far)) p.dropSprite();
       };
-      for (const p of this.props) care(p);
+      // (a cada quadro, só as de perto da tela, pela grade; de 30 em 30 quadros, todas: é quando as de longe saem)
+      for (const p of sweep ? this.props : this._propsIn(near)) care(p);
       for (const f of this.flats || []) care(f);
       if (expire && this.ground.dropKept) this.ground.dropKept(aheadZoom);
     }
@@ -602,7 +690,9 @@
       this.ground.keepLevels = !!this.keepLevels;
       this.ground.hold = !this._groundTurn && this._stale;
       this.ground.draw(ctx);
-      if (this._stale) this._buildStale(view);
+      // (só as coisas que podem aparecer na tela, já na ordem de desenho; guardadas para a noite, em view.js)
+      const visible = (this.visible = this._propsIn(view));
+      if (this._stale) this._buildStale(view, visible);
       mark('chao');
       // a água mexendo por cima do chão pintado (agua.js), antes do deque e de quem fica em pé
       if (PD.agua && PD.agua.reflect) PD.agua.reflect(ctx, this, t);
@@ -616,7 +706,7 @@
       this._drawSparks(ctx);
       mark('sombra');
 
-      const order = this._staticOrder().slice();
+      const order = visible.slice();
       for (const o of order) { o.hideTarget = 1; o.hideWindow = null; o.hideWindows = null; }
       // encaixa cada personagem na ordem: depois de tudo que está atrás dele
       for (const a of actors) {
@@ -912,7 +1002,7 @@
       const cam = this.cam;
       ctx.strokeStyle = 'rgba(22, 18, 22, 0.9)';
       ctx.lineCap = 'round';
-      this.map.wires.forEach(([a, b, vine], w) => {
+      this.map.wires.forEach(([a, b, vine, kite], w) => {
         const A = this.poles[a].wireAnchors();
         const B = this.poles[b].wireAnchors();
         for (let k = 0; k < 3; k++) {
@@ -934,6 +1024,8 @@
           ctx.stroke();
           // a mata subindo pela fiação (planta da rua da Budega): cipó no fio do meio
           if (vine && k === 1 && PD.city && this._onScreen(pts)) PD.city.wireVines(ctx, cam, pts3, 977 + w * 31, this.time);
+          // a pipa que enroscou no fio do meio (a comunidade da represa)
+          if (kite && k === 1 && this._onScreen(pts)) this._kite(ctx, pts3, kite, w);
         }
       });
       // o "gato": emaranhado de fios num poste (típico da cidade); mapas sem postes de fiação não têm
@@ -952,6 +1044,80 @@
         }
         ctx.stroke();
       }
+    }
+
+    /** A pipa presa no fio: o losango de duas cores pendurado pela linha e a rabiola balançando com o vento. */
+    _kite(ctx, pts3, color, seed) {
+      const cam = this.cam;
+      const s = cam.zoom;
+      const t = this.time;
+      const p = pts3[Math.max(1, Math.min(pts3.length - 2, Math.round((0.3 + ((seed * 37) % 40) / 100) * (pts3.length - 1))))];
+      const top = cam.p(p);
+      const q = cam.p({ x: p.x, y: p.y, z: p.z - 34 });
+      const c1 = typeof color === 'string' ? color : ['#e0452c', '#2f7fd0', '#f2b632', '#7a3fb0'][seed % 4];
+      const c2 = '#fff4dc';
+      const sway = Math.sin(t * 1.6 + seed) * 0.12 + Math.sin(t * 0.7 + seed * 2) * 0.06;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(236, 230, 214, 0.85)';
+      ctx.lineWidth = Math.max(1, 0.8 * s);
+      ctx.beginPath();
+      ctx.moveTo(top.x, top.y);
+      ctx.lineTo(q.x, q.y);
+      ctx.stroke();
+      ctx.translate(q.x, q.y);
+      ctx.rotate(0.3 + sway);
+      // (uma pipa de verdade tem uns 45 × 55 cm)
+      const w = 21 * s, h = 27 * s, o = 1.8 * s;
+      const diamond = (dw, dh) => {
+        ctx.beginPath();
+        ctx.moveTo(0, -dh);
+        ctx.lineTo(dw, 0);
+        ctx.lineTo(0, dh);
+        ctx.lineTo(-dw, 0);
+        ctx.closePath();
+      };
+      ctx.fillStyle = '#1b100d';
+      diamond(w + o, h + o);
+      ctx.fill();
+      ctx.fillStyle = c2;
+      diamond(w, h);
+      ctx.fill();
+      // metade de cada cor (pipa de seda, de duas folhas)
+      ctx.fillStyle = c1;
+      ctx.beginPath();
+      ctx.moveTo(0, -h);
+      ctx.lineTo(-w, 0);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(40, 28, 20, 0.75)';
+      ctx.lineWidth = Math.max(1, 1 * s);
+      ctx.beginPath();
+      ctx.moveTo(0, -h);
+      ctx.lineTo(0, h);
+      ctx.moveTo(-w, 0);
+      ctx.lineTo(w, 0);
+      ctx.stroke();
+      // a rabiola: a linha descendo em curva, com as tirinhas
+      ctx.strokeStyle = 'rgba(236, 230, 214, 0.85)';
+      ctx.lineWidth = Math.max(1, 0.8 * s);
+      ctx.beginPath();
+      const tail = [];
+      for (let k = 0; k <= 10; k++) {
+        const ty = h + k * 5 * s;
+        const tx = Math.sin(t * 2.4 + seed + k * 0.6) * (1.5 + k * 0.6) * s;
+        tail.push([tx, ty]);
+        if (k) ctx.lineTo(tx, ty);
+        else ctx.moveTo(tx, ty);
+      }
+      ctx.stroke();
+      for (let k = 2; k <= 10; k += 2) {
+        const [tx, ty] = tail[k];
+        ctx.fillStyle = k % 4 ? c1 : c2;
+        ctx.fillRect(tx - 3 * s, ty - 1 * s, 6 * s, 2 * s);
+      }
+      ctx.restore();
     }
 
     _drawParticle(ctx, p) {

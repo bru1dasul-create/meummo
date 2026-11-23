@@ -310,7 +310,7 @@
         const r = M.rng(Math.round(w.x0 * 7 + w.y0 * 3) + 5);
         ctx.fillStyle = 'rgba(60, 54, 44, 0.12)';
         for (let i = 0; i < Math.ceil(L / 90); i++) ctx.fillRect(r() * L, 10, 10 + r() * 26, 40 + r() * (d.h * 0.6));
-        if (painted && d.graffiti) mural(ctx, L, d.h, r);
+        if (painted && d.graffiti) mural(ctx, L, d.h, r, d.text);
         if (d.moss) {
           // musgo na base e subindo pelas manchas
           for (let i = 0; i < Math.ceil(L / 40); i++) {
@@ -358,7 +358,7 @@
     },
   };
   /** O mural do campinho: manchas de cor, um sol, as letras de balão "CAPÃO" e pingos de tinta. */
-  function mural(ctx, L, Hh, r) {
+  function mural(ctx, L, Hh, r, word) {
     // manchas de fundo (azul, verde e rosa), com a beira ondulada
     const blob = (cx, cy, rx, ry, color) => {
       ctx.fillStyle = color;
@@ -400,7 +400,8 @@
     ctx.stroke();
     // letras de balão: contorno preto grosso, branco por dentro e o degradê rosa-laranja
     const FONT = H.FONT_SIGN || '"Impact", sans-serif';
-    const text = 'CAPÃO';
+    // (a palavra do muro: `texto` no mapa; sem ela, a do muro do campinho do Capão)
+    const text = word || 'CAPÃO';
     const size = Math.round(Hh * 0.56);
     const x0 = L * 0.5 - text.length * size * 0.31;
     ctx.save();
