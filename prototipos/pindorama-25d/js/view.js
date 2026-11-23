@@ -468,12 +468,13 @@
       if (a.creature) a.creature.talk(Math.max(0, ms || 0));
     }
 
-    /** Fala curta em cima do personagem. */
+    /** Fala curta em cima do personagem (o "!" de um bicho que percebeu o herói vira o selinho: `_drawAlerts`). */
     say(id, text) {
       const a = this.actors.get(id);
       if (!a) return;
       a.speech = String(text || '');
-      a.speechUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 2500 + a.speech.length * 60;
+      a.speechAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      a.speechUntil = a.speechAt + 2500 + a.speech.length * 60;
       if (a.creature) a.creature.talk(2500 + a.speech.length * 60);
     }
 
@@ -1457,12 +1458,63 @@
      */
     _drawSpeech(ctx) {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      const talking = [...this.actors.values()].filter((a) => a.speech && now <= a.speechUntil);
-      if (!talking.length) return;
+      const live = [...this.actors.values()].filter((a) => a.speech && now <= a.speechUntil);
+      if (!live.length) return;
+      // o "!" dos bichos (perceberam o herói) não usa balão: com vários juntos, os balões desviavam dos nomes, subiam
+      // e o bico esticava (no celular, uma pilha de balões). Vira um selinho em cima do nome (`_drawAlerts`)
+      const isAlert = (a) => a.kind === 'monster' && a.speech.trim() === '!';
+      const talking = live.filter((a) => !isAlert(a));
       ctx.save();
       ctx.font = '600 14px ' + UI_FONT;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      this._drawBubbles(ctx, talking);
+      this._drawAlerts(ctx, live.filter(isAlert), now);
+      ctx.restore();
+    }
+
+    /**
+     * O selinho do "!" (o bicho percebeu o herói): redondo e amarelo, em cima do nome, aparece com um pulinho, balança
+     * de leve e some em 1,4 s. Não desvia de nada: é pequeno e rápido (aprovado pelo dono em 23/11).
+     */
+    _drawAlerts(ctx, alerts, now) {
+      const SECS = 1.4;
+      for (const a of alerts) {
+        const age = (now - (a.speechAt || now)) / 1000;
+        if (age > SECS) continue;
+        const pop = age < 0.22 ? Math.max(0, M.easeOutBack(age / 0.22)) : 1;
+        const r = 11 * pop;
+        if (r < 1) continue;
+        const q = this._overHead(a);
+        const x = q.x;
+        const y = q.y - (a.name ? 17 : 2) - 13 + (age > 0.22 ? Math.sin((age - 0.22) * 9) * 1.2 : 0);
+        ctx.globalAlpha = 1 - M.smoothstep(SECS - 0.3, SECS, age);
+        // a sombrinha, o selo com o contorno de tinta, o brilho e o "!"
+        ctx.fillStyle = 'rgba(20, 12, 8, 0.28)';
+        ctx.beginPath();
+        ctx.arc(x + 1.5, y + 2, r + 1, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ffcf3a';
+        ctx.strokeStyle = '#1b100d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, M.TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 250, 222, 0.7)';
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.32, y - r * 0.4, r * 0.42, r * 0.22, -0.5, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#2a1d16';
+        ctx.font = `800 ${Math.max(1, Math.round(16 * pop))}px ` + UI_FONT;
+        ctx.fillText('!', x, y + 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    /** Os balões das falas de verdade (NPCs, jogadores): veja `_drawSpeech`. */
+    _drawBubbles(ctx, talking) {
+      if (!talking.length) return;
       const cam = this.cam;
       const left = cam.viewX + 8, right = cam.viewX + cam.viewW - 8, top = cam.viewY + 8;
       const taken = (this._nameRects || []).slice();
@@ -1512,7 +1564,6 @@
         ctx.fillStyle = '#2a1d16';
         lines.forEach((l, k) => ctx.fillText(l, x + w / 2, y + 6 + 9 + k * 18));
       }
-      ctx.restore();
     }
 
     /**
