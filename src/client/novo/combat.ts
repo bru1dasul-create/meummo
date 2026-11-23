@@ -404,6 +404,8 @@ export class CombatLayer {
    * crescendo com os pontos e o degrau (`mine` = foi a sua).
    */
   onSpiritEnd: ((end: SpiritEnd & { mine: boolean }) => void) | null = null;
+  /** Um tiro parou sem acertar ninguém (cravou no chão ou numa coisa, `on`): o motor toca o som. */
+  onStuck: ((stuck: { kind: string; on: string | null; mine: boolean }) => void) | null = null;
   private readonly marked = new Map<number, number>();
   /** O seu pé (para saber se você está dentro da casa do bicho). */
   private viewer: Point | null = null;
@@ -1249,7 +1251,10 @@ export class CombatLayer {
             this.spiritEnds.push(spirit);
             this.onSpiritEnd?.({ ...spirit, mine: shots === this.myShots });
           }
-          else ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt, shot.range) } : undefined);
+          else {
+            ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt, shot.range) } : undefined);
+            this.onStuck?.({ kind: shot.kind, on: on ?? null, mine: shots === this.myShots });
+          }
           shots.delete(key);
           if (shots === this.shots) this.shotOfServer.delete(key);
           else for (const [id, cid] of this.shotOfServer) if (cid === key) this.shotOfServer.delete(id);

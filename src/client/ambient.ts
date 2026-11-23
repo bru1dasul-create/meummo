@@ -1,5 +1,7 @@
-// Som de ambiente do jogo 2.5D, feito por código (como os efeitos, sem arquivos): o vento e as folhas da mata, a água
-// do lago com sapos, os passarinhos da vila (bem-te-vi, sabiá), as cigarras, e os grilos e a coruja da mata profunda.
+// Som de ambiente do jogo 2.5D. Por baixo, a floresta gravada (licença livre; escolha do dono em 23/11: de dia, pássaros
+// com insetos e vento; de tarde e de noite, o pântano com sapos e insetos), que passa de uma para a outra com a luz do
+// dia. Por cima, feito por código: o vento e as folhas, a água do lago, e os nossos bichos (bem-te-vi, sabiá, cigarra,
+// coruja, sapo), que dão o sotaque brasileiro.
 // O motor diz em que lugar do mapa você está (camada `areas`: Vila do Capão, Lago do Parque...); a troca de um lugar
 // para o outro é suave. O volume é o da parte "ambiente" (painel do som).
 
@@ -50,6 +52,22 @@ function nightCalls(day: Record<CallKind, number>): Record<CallKind, number> {
   return { ...day, bemtevi: 0, sabia: 0, chirp: 0, cicada: 0, crickets: Math.max(day.crickets, 3), owl: Math.max(day.owl, 0.6) };
 }
 
+/** Quanto da floresta gravada toca em cada lugar (1 = toda): na vila e na beira d'água, menos. */
+const RECORDED_LEVEL: Record<AmbientScene, number> = { vila: 0.5, clareira: 0.85, mata: 1, 'mata-profunda': 1, agua: 0.65 };
+/** O volume da floresta gravada (as duas já vêm com o mesmo volume de arquivo). */
+const RECORDED_GAIN = 0.9;
+/** Com a floresta gravada tocando: o vento e as folhas feitos por código mais baixos (a gravação já tem). */
+const BEDS_WITH_RECORDING = { wind: 0.6, leaves: 0.4 };
+/** E quantos dos nossos bichos continuam (os passarinhos genéricos e os grilos saem: a gravação já tem). */
+const CALLS_WITH_RECORDING: Record<CallKind, number> = { bemtevi: 0.6, sabia: 0.6, chirp: 0, cicada: 0.5, crickets: 0, owl: 1, frog: 0.5, drop: 1 };
+
+/** Quanto toca de cada floresta gravada com esta luz (1 de dia, 0 de noite; no anoitecer, as duas juntas). */
+export function recordedMix(scene: AmbientScene, daylight: number): { day: number; night: number } {
+  const level = RECORDED_LEVEL[scene] * RECORDED_GAIN;
+  const light = Math.max(0, Math.min(1, daylight));
+  return { day: level * light, night: level * (1 - light) };
+}
+
 /** Volume máximo de cada som contínuo (os bichos têm o seu em cada receita). */
 const BED_GAIN = { wind: 0.22, leaves: 0.05, water: 0.16, hum: 0.025 };
 /** Troca de lugar: quanto tempo (s) leva a mistura nova (constante de tempo). */
@@ -69,6 +87,10 @@ export class Ambient {
   private scene: AmbientScene | null = null;
   /** É noite (os bichos da noite no lugar dos passarinhos)? */
   private night = false;
+  /** A luz do dia (1 de dia, 0 de noite): leva a floresta gravada do dia para a da noite. */
+  private daylight = 1;
+  /** A floresta gravada (as duas tocando sempre, em loop; a luz decide o volume de cada uma). */
+  private recorded: { day: GainNode; night: GainNode; stop: () => void } | null = null;
   /** O vento (0 a 1): o chiado do vento, as rajadas e as folhas acompanham. */
   private windStrength = 0.35;
   private readonly nextAt: Record<CallKind, number> = { ...none };
@@ -98,11 +120,23 @@ export class Ambient {
     this.soon();
   }
 
+  /** A luz do dia mudou (0 a 1): a floresta gravada acompanha (só quando muda de verdade). */
+  setDaylight(light: number): void {
+    if (Math.abs(light - this.daylight) < 0.02) return;
+    this.daylight = light;
+    this.mix();
+  }
+
   /** O vento mudou de força (0 a 1): o som acompanha devagar (só quando muda de verdade). */
   setWind(strength: number): void {
     if (Math.abs(strength - this.windStrength) < 0.05) return;
     this.windStrength = strength;
     this.mix();
+  }
+
+  /** A floresta gravada está tocando? (para os testes) */
+  get recording(): boolean {
+    return this.recorded !== null;
   }
 
   /** É noite no som? (para os testes) */
@@ -127,11 +161,20 @@ export class Ambient {
       this.beds = this.start(audio.ctx, audio.out('ambiente'));
       this.mix();
     }
+    if (!this.recorded) {
+      // a floresta gravada entra quando os dois arquivos terminarem de carregar
+      const day = this.sfx.sample('floresta-dia');
+      const night = this.sfx.sample('floresta-noite');
+      if (day && night) {
+        this.recorded = this.startRecorded(audio.ctx, audio.out('ambiente'), day, night);
+        this.mix();
+      }
+    }
     const mix = MIXES[this.scene];
     const perMinute = this.night ? nightCalls(mix.perMinute) : mix.perMinute;
     for (const kind of CALLS) {
       if (now < this.nextAt[kind]) continue;
-      const rate = perMinute[kind];
+      const rate = perMinute[kind] * (this.recorded ? CALLS_WITH_RECORDING[kind] : 1);
       if (rate > 0 && !this.sfx.muted) this.call(kind, audio.ctx, audio.out('ambiente'));
       // o próximo: em média `60 / rate` segundos (sem padrão fixo, como na natureza)
       this.nextAt[kind] = now + (rate > 0 ? Math.max(2, -Math.log(1 - this.random()) * (60 / rate)) : 5);
@@ -141,6 +184,45 @@ export class Ambient {
   destroy(): void {
     this.beds?.stop();
     this.beds = null;
+    this.recorded?.stop();
+    this.recorded = null;
+  }
+
+  /** As duas florestas gravadas em loop, cada uma num ponto diferente, começando em silêncio. */
+  private startRecorded(ctx: AudioContext, out: GainNode, day: AudioBuffer, night: AudioBuffer): { day: GainNode; night: GainNode; stop: () => void } {
+    const sources: AudioBufferSourceNode[] = [];
+    const loop = (buffer: AudioBuffer) => {
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      // um fio de folga nas pontas (o arquivo comprimido pode ter um silencinho no começo e no fim)
+      src.loopStart = Math.min(0.03, buffer.duration / 4);
+      src.loopEnd = Math.max(src.loopStart + 0.1, buffer.duration - 0.03);
+      src.connect(gain).connect(out);
+      src.start(ctx.currentTime, src.loopStart + this.random() * (src.loopEnd - src.loopStart));
+      sources.push(src);
+      return gain;
+    };
+    const dayGain = loop(day);
+    const nightGain = loop(night);
+    return {
+      day: dayGain,
+      night: nightGain,
+      stop: () => {
+        for (const src of sources) {
+          try {
+            src.stop();
+            src.disconnect();
+          } catch {
+            // já parou
+          }
+        }
+        dayGain.disconnect();
+        nightGain.disconnect();
+      },
+    };
   }
 
   /** Leva os sons contínuos para a mistura do lugar de agora. */
@@ -152,9 +234,16 @@ export class Ambient {
     const t = audio.ctx.currentTime;
     // o vento do mundo: calmo (0,1) quase some; brisa (0,35) é o de sempre; forte (0,9) bem mais alto e com rajadas
     const w = this.windStrength;
-    beds.wind.gain.setTargetAtTime(m.wind * BED_GAIN.wind * (0.3 + 2 * w), t, FADE_S);
-    beds.gust.gain.setTargetAtTime(m.wind * BED_GAIN.wind * 0.45 * (0.1 + 2.6 * w), t, FADE_S);
-    beds.leaves.gain.setTargetAtTime(m.leaves * BED_GAIN.leaves * (0.5 + 1.4 * w), t, FADE_S);
+    const windBed = this.recorded ? BEDS_WITH_RECORDING.wind : 1;
+    const leavesBed = this.recorded ? BEDS_WITH_RECORDING.leaves : 1;
+    beds.wind.gain.setTargetAtTime(m.wind * BED_GAIN.wind * windBed * (0.3 + 2 * w), t, FADE_S);
+    beds.gust.gain.setTargetAtTime(m.wind * BED_GAIN.wind * windBed * 0.45 * (0.1 + 2.6 * w), t, FADE_S);
+    beds.leaves.gain.setTargetAtTime(m.leaves * BED_GAIN.leaves * leavesBed * (0.5 + 1.4 * w), t, FADE_S);
+    if (this.recorded) {
+      const rec = recordedMix(this.scene, this.daylight);
+      this.recorded.day.gain.setTargetAtTime(rec.day, t, FADE_S);
+      this.recorded.night.gain.setTargetAtTime(rec.night, t, FADE_S);
+    }
     beds.water.gain.setTargetAtTime(m.water * BED_GAIN.water, t, FADE_S);
     beds.hum.gain.setTargetAtTime(m.hum * BED_GAIN.hum, t, FADE_S);
   }
