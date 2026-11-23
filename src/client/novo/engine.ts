@@ -27,7 +27,8 @@ import { findRoute, followRoute } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
 import { SKILLS } from '../../shared/skills';
-import { armedReach, castPoint, chargeLevel, skillPoint, type ChargeLevel, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
+import { armedReach, castPoint, chargeLevel, learnBlocker, skillPoint, type ChargeLevel, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
+import { decorateSkillSlots } from './skillBar';
 import { Bag } from '../bag';
 import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
@@ -262,6 +263,8 @@ class NewWorld implements NewWorldGame {
    * dono, 22/11: "só poder quando ele voltar da esquiva e fazer a animação"; o servidor também recusa rolando).
    */
   private chargeAfterRoll: Aim | null = null;
+  /** As habilidades que a barra mostra agora (veja learnedOnBar): mudou, refaz a barra. */
+  private barKey = '';
   /** As suas Chuvas no ar: quando cada uma chega ao chão (relógio do jogo) e com que força (o tremor e a pausa). */
   private landings: { at: number; power: number }[] = [];
   private jumpedAt = -Infinity;
@@ -840,7 +843,7 @@ class NewWorld implements NewWorldGame {
    */
   private makeActionBar(): ActionBar {
     const classDefs = CLASS_SLOTS.flatMap((slot, i) => {
-      const skill = this.classSkillAt(i);
+      const skill = this.classSlotSkill(i);
       return skill ? [{ slot, label: skill.name, key: this.keys.label(CLASS_KEYS[i]!), icon: skillIconUrl(skill.id) }] : [];
     });
     return new ActionBar(
@@ -878,6 +881,8 @@ class NewWorld implements NewWorldGame {
       this.armed = null;
       this.setArmed(this.armedSkillId(armed));
     }
+    this.barKey = this.learnedOnBar();
+    this.decorateSkillBar(); // a barra nova nasce sem o nível e o "+"
   }
 
   /**
@@ -984,7 +989,7 @@ class NewWorld implements NewWorldGame {
       if (numbers.bonusPct > 0) lines.push(`Enquanto dura: [d]+${numbers.bonusPct}% de dano seu[/d] nos bichos`);
     }
     lines.push(cooldown(skill.cooldownMs));
-    lines.push(`${rank} de ${skill.points.length} pontos${rank >= skill.points.length ? ' (no máximo)' : ' · K para pôr mais'}`);
+    lines.push(`${rank} de ${skill.points.length} pontos${rank >= skill.points.length ? ' (no máximo)' : ' · o + na barra (ou K) para pôr mais'}`);
     return { title: `${skill.name} (${key(CLASS_KEYS[index]!)})`, lines };
   }
 
@@ -1964,6 +1969,10 @@ class NewWorld implements NewWorldGame {
     else if (CLASS_SLOTS.includes(slot)) {
       const skill = this.classSkillAt(CLASS_SLOTS.indexOf(slot));
       if (skill) this.castAuto(skill, now); // o botão mira sozinho: onde pega mais bichos
+      else {
+        const shown = this.classSlotSkill(CLASS_SLOTS.indexOf(slot)); // na barra, ainda sem ponto (apagada)
+        if (shown) this.toast.show(`Toque no + para pôr um ponto em ${shown.name}`);
+      }
     }
   }
 
@@ -2116,21 +2125,53 @@ class NewWorld implements NewWorldGame {
   }
 
   /** Quantas habilidades com ponto (para saber se a barra muda: aprendeu uma nova, ou tirou os pontos). */
+  /** Quais habilidades estão na barra (refaz a barra quando muda). */
   private learnedOnBar(): string {
-    return CLASS_KEYS.map((_, i) => this.classSkillAt(i)?.id ?? '').join(',');
+    return CLASS_KEYS.map((_, i) => this.classSlotSkill(i)?.id ?? '').join(',');
+  }
+
+  /**
+   * A habilidade da classe no quadrado `index` da barra, para MOSTRAR: a que tem ponto e também a que o nível já liberou
+   * e ainda não tem ponto (fica apagada, com o "+"). Para usar, continua valendo o classSkillAt (só com ponto).
+   */
+  private classSlotSkill(index: number): ClassSkillInfo | null {
+    const cls = this.classes.find((c) => c.id === this.hero.class);
+    const skill = cls?.skills[index];
+    if (!skill || !skill.kind) return null;
+    return (this.hero.skills[skill.id] ?? 0) > 0 || this.myLevel >= skill.level ? skill : null;
+  }
+
+  /** A barra acompanha o herói e o nível: refaz se mudou o que está nela; senão, só o nível e o "+" de cada uma. */
+  private refreshSkillBar(): void {
+    if (!this.actionBar) return;
+    if (this.learnedOnBar() !== this.barKey) {
+      this.cancelAim();
+      this.rebuildActionBar(); // aprendeu, tirou os pontos ou o nível liberou outra: o botão aparece (ou sai)
+    } else {
+      this.decorateSkillBar();
+    }
+  }
+
+  /** O nível (bolinhas) e o "+" de cada habilidade da barra (veja skillBar.ts). */
+  private decorateSkillBar(): void {
+    const cls = this.classes.find((c) => c.id === this.hero.class);
+    if (!cls) return;
+    const infos = CLASS_SLOTS.flatMap((slot, i) => {
+      const skill = this.classSlotSkill(i);
+      if (!skill) return [];
+      const rank = this.hero.skills[skill.id] ?? 0;
+      return [{ slot, id: skill.id, name: skill.name, rank, max: skill.points.length, canLearn: learnBlocker(cls, skill, this.myLevel, this.hero.skills) === null }];
+    });
+    decorateSkillSlots(infos, (id) => this.conn.send({ t: 'learn', id }));
   }
 
   /** O servidor mandou a classe e os pontos (escolheu, aprendeu, subiu de nível...): a janela e a barra acompanham. */
   private setHero(hero: HeroState): void {
     const before = this.hero;
-    const hadOnBar = this.learnedOnBar();
     this.hero = hero;
     if (!before.canChoose && hero.canChoose) this.toast.show('Você já pode escolher a sua classe: abra as Habilidades (K)', 4500);
     this.skillsPanel.update(this.classes, hero, this.myLevel);
-    if (this.learnedOnBar() !== hadOnBar) {
-      this.cancelAim();
-      this.rebuildActionBar(); // aprendeu (ou tirou os pontos): o botão da habilidade aparece (ou sai)
-    }
+    this.refreshSkillBar(); // o nível de cada uma e o "+" (aprendeu ou tirou os pontos: o botão aparece ou sai)
   }
 
   /** Dá para usar esta habilidade agora? (Avisa o porquê, se não der.) */
@@ -2153,7 +2194,7 @@ class NewWorld implements NewWorldGame {
     if (!skill) {
       const cls = this.classes.find((c) => c.id === this.hero.class);
       const name = cls?.skills[index]?.name;
-      this.toast.show(!this.hero.class ? 'Escolha a sua classe nas Habilidades (K)' : name ? `Ponha um ponto em ${name}: abra as Habilidades (K)` : 'Esta tecla ainda não tem habilidade');
+      this.toast.show(!this.hero.class ? 'Escolha a sua classe nas Habilidades (K)' : name ? `Ponha um ponto em ${name}: o + na barra (ou as Habilidades, K)` : 'Esta tecla ainda não tem habilidade');
       return;
     }
     if (skill.kind === 'flecha' || skill.kind === 'chuva') {
@@ -2612,6 +2653,7 @@ class NewWorld implements NewWorldGame {
     this.myDamage = stats.damage;
     this.bag?.setStats(stats);
     this.skillsPanel?.update(this.classes, this.hero, stats.level); // o nível novo pode liberar um ponto
+    this.refreshSkillBar(); // e o "+" na barra (ou uma habilidade nova, apagada, com ele)
     if (this.talk) this.refreshQuests(); // nível novo pode liberar missões
   }
 

@@ -883,6 +883,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   na cor da habilidade no ponto). Som novo `skillup`
 - [ ] **[arte]** O desenho de verdade do efeito de subir de nível e de pôr ponto numa habilidade (`levelUp` na view:
   quando existir, o provisório some sozinho). Pedido mandado à [arte]
+- [x] **[estrutura]** O "+" e o nível de cada habilidade na barra de ações (pedido do dono, 23/11: "o upar da habilidade
+  aparecer aqui embaixo como se fosse um + e o level de cada habilidade upável mostrando nesse menu"): cada habilidade
+  da classe mostra os pontos em bolinhas (acesas = tem) e um "+" quando dá para pôr ponto (o toque põe o ponto, sem usar
+  a habilidade); a que o nível já liberou e ainda não tem ponto aparece apagada, com o "+". `src/client/novo/skillBar.ts`:
+  atributos `data-rank`, `data-max`, `data-learn` e os elementos `.skill-rank` e `.skill-plus` nos quadrados da barra,
+  com um estilo provisório (`#skill-bar-provisorio`)
+- [ ] **[arte]** Vestir o "+" e as bolinhas do nível na barra no style.css (e apagar o estilo provisório do
+  `skillBar.ts`). Pedido mandado à [arte]
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
