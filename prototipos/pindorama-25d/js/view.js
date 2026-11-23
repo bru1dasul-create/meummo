@@ -16,7 +16,7 @@
 //   levelUp(id, o que, hab.)  subiu de nível ('level') ou ganhou ponto numa habilidade ('skill'): anéis de luz subindo
 //   consume(id, item)         bebeu ou comeu (a chave do item): a garrafada estourando em folhas, o benzimento da
 //                             arruda ou as faíscas da comida (js/consume.js)
-//   perch(id, galho)          o bicho no galho (o Sagui pendurado pelo rabo): galho = { altura (cm), direcao (graus,
+//   perch(id, galho)          o bicho no galho (o Sagui pendurado pelo rabo): galho = { altura (m), direcao (graus,
 //                             do tronco para a ponta do galho) } ou null (no chão); a view anima a subida e a descida.
 //                             No `addActor`, `galho` = já aparece pendurado (sem animar)
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
@@ -28,10 +28,13 @@
   'use strict';
   const M = PD.math;
 
-  /** O galho que o motor manda ({ altura: cm, direcao: graus }) → o da criatura ({ z: cm, yaw: rad }); null = no chão. */
+  /**
+   * O galho que o motor manda ({ altura: m, direcao: graus }, como no mapa) → o da criatura ({ z: cm, yaw: rad });
+   * null = no chão.
+   */
   function perchOf(galho) {
     if (!galho || !Number.isFinite(galho.altura) || galho.altura <= 0) return null;
-    return { z: galho.altura, yaw: Number.isFinite(galho.direcao) ? (galho.direcao * Math.PI) / 180 : undefined };
+    return { z: galho.altura * 100, yaw: Number.isFinite(galho.direcao) ? (galho.direcao * Math.PI) / 180 : undefined };
   }
 
   // câmera: "médio" (padrão) = 1, "longe" = 0,7 (mínimo). Aproximar além do médio e o celular em pé ainda vão
@@ -157,8 +160,8 @@
     }
 
     /**
-     * O bicho no galho (o Sagui pendurado pelo rabo; opção 3 do dono, 23/11): `galho` = { altura: cm, direcao: graus
-     * (para onde o galho aponta, do tronco para a ponta, como o `angle`) } ou null (no chão). Quem decide é o servidor;
+     * O bicho no galho (o Sagui pendurado pelo rabo; opção 3 do dono, 23/11): `galho` = { altura: m (como no mapa,
+     * 2,0 a 2,4), direcao: graus (do tronco para a ponta, como o `angle`) } ou null (no chão). Quem decide é o servidor;
      * a view anima a subida (pula, agarra o galho com o rabo e dá uma cambalhota de lado, 0,72 s) e a descida (desvira
      * soltando o rabo e cai de pé, 0,56 s).
      */

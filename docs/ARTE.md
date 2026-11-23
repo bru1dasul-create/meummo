@@ -74,9 +74,12 @@
   comportamento é da [estrutura] e as árvores (o ponto embaixo do galho, a altura, a direção e o galho baixo desenhado)
   são do [mundo]: os dois pedidos foram mandados em 23/11. **Até eles entregarem, no jogo nada muda** (sem `galho`, o
   sagui fica no chão como hoje).
-- **O gancho (`view.js`):** `view.perch(id, galho)`, com `galho = { altura (cm), direcao (graus, do tronco para a ponta,
-  como o angle) }` ou `null` (no chão); no `addActor`, o `galho` faz o sagui já aparecer pendurado, sem animar (como o
-  `asleep` do Joaquim). A criatura recebe `setPerch({ z, yaw }, instant)`.
+- **O gancho (`view.js`):** `view.perch(id, galho)`, com `galho = { altura (m, como no mapa: 2,0 a 2,4), direcao (graus,
+  do tronco para a ponta, como o angle) }` ou `null` (no chão); no `addActor`, o `galho` faz o sagui já aparecer
+  pendurado, sem animar (como o `asleep` do Joaquim). A criatura recebe `setPerch({ z (cm), yaw (rad) }, instant)`.
+  O formato do mapa é do [mundo]: na camada `pontos` do `capao.tmj`, objetos `galho-sagui` com `altura` (m) e
+  `direcao` (graus); quem lê o mapa e manda para a view é a [estrutura]. A altura era em cm no primeiro pedido: passei
+  para metros (23/11), como o resto da view e o mapa (em cm, 2,2 virava "no chão" sem erro nenhum).
 - **O desenho (`sagui.js`):** dois esqueletos, o do chão (`_groundRig`) e o pendurado (`_hangRig`), e uma pintura só
   (`_build`):
   - **pendurado:** de cabeça para baixo, uns 35 cm abaixo do galho. É o corpo do chão rolado meia volta em volta da

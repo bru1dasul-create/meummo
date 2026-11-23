@@ -1033,7 +1033,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - o `view.perch(id, galho)` e o `galho` no `addActor` (veja `docs/ARTE.md`).
   - [ ] **[estrutura]**:
     - o comportamento no servidor;
-    - o `galho` (`{ altura, direcao }`) no estado do monstro;
+    - o `galho` (`{ altura (m), direcao (graus) }`) no estado do monstro;
     - a fruta saindo lá de cima;
     - a mira com o mouse na altura do galho.
   - [ ] **[mundo]**: as árvores de sagui no Capão (o ponto embaixo do galho, a altura e a direção) e o galho baixo
