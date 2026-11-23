@@ -1042,12 +1042,12 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   - [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
 - [x] **[arte]** O selinho do "!" (23/11, pedido do dono): o "!" dos bichos que percebem o herói vira um selo amarelo em
   cima do nome, sem o balão (com vários juntos, os balões se empilhavam com o bico comprido)
-- [ ] **O aviso dos golpes no chão** (23/11, pedido do dono: "arruma esses golpes do quati aparece em quadrado vermelho,
+- [x] **O aviso dos golpes no chão** (23/11, pedido do dono: "arruma esses golpes do quati aparece em quadrado vermelho,
   muito feio"): as casas do golpe pintadas no chão, por baixo dos bichos, com cantos redondos e o miolo que enche até o
   golpe
   - [x] **[arte]** o desenho e o `view.warn(casas, ms, { fire })` (`view.js`)
-  - [ ] **[estrutura]** chamar o `view.warn` nos casos `warn` e `fire` e não pintar os quadrados vermelhos no
-    `combat.ts` quando a view tiver `warn`
+  - [x] **[estrutura]** chamar o `view.warn` nos casos `warn` e `fire` e não pintar os quadrados vermelhos no
+    `combat.ts` quando a view tiver `warn` (na main em 984aab2; sem o `warn` na view, os quadrados de sempre)
 - [x] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
   pendurado pelo rabo num galho baixo e joga a fruta lá de cima; quando o herói chega perto ou acerta, pula para o chão
   e luta; depois de um tempo calmo, sobe de novo

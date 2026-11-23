@@ -134,8 +134,8 @@
     até a hora do golpe (o relógio do aviso). No fim, a borda pulsa; depois do golpe, some em 0,12 s;
   - `fire` (o rastro do boitatá) é laranja e treme;
   - as casas são as do servidor, com o quadrado do `tileFeetSquare` do `combat.ts` (x a x + 1, y + 0,2 a y + 1,2 m);
-  - **depende da [estrutura]** (pedido de 23/11): chamar `view.warn` nos casos `warn` e `fire` do `engine.ts` e não
-    pintar os quadrados no `combat.ts` quando a view tiver `warn`. O anel laranja de quem prepara continua da
+  - a [estrutura] ligou (main 984aab2): o motor chama o `view.warn` nos casos `warn` e `fire` e, com a view tendo
+    `warn`, o `combat.ts` não recebe as casas (sem os quadrados). O anel laranja de quem prepara continua da
     [estrutura].
   - Conferido no jogo com um teste que faz o papel da [estrutura] (`quati/aviso.cjs`: pega as mensagens e chama o
     `view.warn`, com e sem os quadrados de hoje).
