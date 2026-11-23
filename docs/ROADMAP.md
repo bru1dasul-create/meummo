@@ -1026,7 +1026,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
 - [ ] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
   pendurado pelo rabo num galho baixo e joga a fruta lá de cima; quando o herói chega perto ou acerta, pula para o chão
   e luta; depois de um tempo calmo, sobe de novo
-  - [x] **[arte]** o desenho (23/11):
+  - [x] **[arte]** o desenho (23/11, na main):
     - pendurado de cabeça para baixo, balançando;
     - o aviso e o arremesso, o tranco no galho e o desmaio caindo;
     - a subida (o pulo e uma cambalhota de lado, 0,72 s) e a descida (desvira e cai de pé, 0,56 s);

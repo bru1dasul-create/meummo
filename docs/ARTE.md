@@ -68,7 +68,7 @@
   [criaturas]` (o peso; `custo-modos.cjs` desliga cada efeito), `outros.cjs` (os outros bichos, antes × depois),
   `jogo.cjs <pasta>` (no jogo) e `antes/` (a cópia das criaturas de antes do redesenho).
 
-### O Sagui no galho (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3")
+### O Sagui no galho (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"; na main em 23/11, com o "pode juntar na main" dele)
 - **A ideia:** calmo, o sagui fica pendurado pelo rabo num galho baixo e joga a fruta lá de cima (a emboscada); quando
   o herói chega perto ou acerta nele, pula para o chão e luta normal; depois de um tempo calmo, sobe de novo. O
   comportamento é da [estrutura] e as árvores (o ponto embaixo do galho, a altura, a direção e o galho baixo desenhado)
