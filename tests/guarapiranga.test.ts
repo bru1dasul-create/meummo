@@ -477,3 +477,55 @@ describe('Mapa 02: o mapa inteiro aberto (400 × 320)', () => {
     expect(reachNear(rest.x, rest.y, 1)).toBe(true);
   });
 });
+
+describe('Mapa 02: a Comunidade da Represa (vestida em 22/11)', () => {
+  const COMMUNITY_BOX = { x0: 124, x1: 208, y0: 2, y1: 51 };
+  const inCommunity = (r: Box) => r.x0 >= COMMUNITY_BOX.x0 && r.x1 <= COMMUNITY_BOX.x1 && r.y0 >= COMMUNITY_BOX.y0 && r.y1 <= COMMUNITY_BOX.y1;
+
+  it('as ruelas de cimento ficam abertas: dá para andar por todas elas, de ponta a ponta', () => {
+    const alleys = layer('chao').filter((o) => o.type === 'calcada' && !o.polyline && !o.polygon && inCommunity(rectOf(o)) && o.name !== 'Brejo Maior');
+    expect(alleys.length).toBeGreaterThanOrEqual(6);
+    for (const o of alleys) {
+      const r = rectOf(o);
+      const alongX = r.x1 - r.x0 >= r.y1 - r.y0;
+      const [cx, cy] = [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2];
+      for (let t = 1; t < (alongX ? r.x1 - r.x0 : r.y1 - r.y0) - 1; t += 1.5) {
+        const [x, y] = alongX ? [r.x0 + t, cy] : [cx, r.y0 + t];
+        expect(reachNear(x, y, 1), `ruela em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBe(true);
+      }
+    }
+  });
+
+  it('as casas ficam coladas em fileiras (a comunidade cheia) e não deixam entrar', () => {
+    const houses = layer('cenario').filter((o) => o.type === 'casa' && inCommunity(rectOf(o)));
+    expect(houses.length).toBeGreaterThanOrEqual(35);
+    // casas coladas: a maioria encosta numa vizinha (a parede de uma é a da outra)
+    const touching = houses.filter((a) => houses.some((b) => b !== a && (Math.abs(rectOf(a).x1 - rectOf(b).x0) < 1e-6 || Math.abs(rectOf(b).x1 - rectOf(a).x0) < 1e-6)));
+    expect(touching.length / houses.length).toBeGreaterThan(0.8);
+    for (const o of houses) expect(reach(at(o).x, at(o).y), `casa em (${at(o).x}, ${at(o).y})`).toBe(false);
+    // tijolo à mostra, rebocada e pintada, ou só o andar de cima no tijolo: tem dos três jeitos
+    const kinds = new Set(houses.map((o) => String(prop(o, 'tijolo') ?? 'reboco')));
+    expect([...kinds].sort()).toEqual(['cima', 'reboco', 'true']);
+  });
+
+  it('o comércio da praça (bar, peixaria, salão e mercadinho) tem letreiro, sem marca de verdade, e a frente dá para a praça', () => {
+    for (const name of ['Bar do Tonho', 'Peixaria', 'Salão da Neide', 'Mercadinho']) {
+      const shop = named('cenario', name);
+      expect(prop(shop, 'comercio'), name).toBeTypeOf('string');
+      expect(String(prop(shop, 'letreiro')).length, name).toBeGreaterThan(3);
+      const r = rectOf(shop);
+      expect(r.y1, `${name} de frente para a praça`).toBeCloseTo(23.5, 6);
+      expect(reachNear((r.x0 + r.x1) / 2, r.y1 + 0.8, 0.6), `frente de ${name}`).toBe(true);
+    }
+  });
+
+  it('a praça do Brejo Maior: a fogueira, as bancas de frutas, peixe e artesanato, as mesas do bar, o muro grafitado e as pipas na fiação', () => {
+    const plaza = layer('cenario').filter((o) => at(o).x > 145 && at(o).x < 171 && at(o).y > 23 && at(o).y < 42);
+    expect(plaza.filter((o) => o.type === 'fogueira')).toHaveLength(1);
+    expect(plaza.filter((o) => o.type === 'banca-frutas').map((o) => prop(o, 'mercadoria')).sort()).toEqual(['artesanato', 'frutas', 'peixe']);
+    for (const o of plaza.filter((c) => c.type === 'banca-frutas')) expect(reachNear(at(o).x, rectOf(o).y1 + 0.5, 0.4), 'frente da banca').toBe(true);
+    expect(plaza.filter((o) => o.type === 'mesa').length).toBeGreaterThanOrEqual(2);
+    expect(prop(named('cenario', 'Muro grafitado'), 'texto')).toBe('BREJO');
+    expect(layer('cenario').filter((o) => o.type === 'fiacao' && prop(o, 'pipa')).length).toBeGreaterThanOrEqual(2);
+  });
+});

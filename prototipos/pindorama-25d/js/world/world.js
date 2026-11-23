@@ -1002,7 +1002,7 @@
       const cam = this.cam;
       ctx.strokeStyle = 'rgba(22, 18, 22, 0.9)';
       ctx.lineCap = 'round';
-      this.map.wires.forEach(([a, b, vine], w) => {
+      this.map.wires.forEach(([a, b, vine, kite], w) => {
         const A = this.poles[a].wireAnchors();
         const B = this.poles[b].wireAnchors();
         for (let k = 0; k < 3; k++) {
@@ -1024,6 +1024,8 @@
           ctx.stroke();
           // a mata subindo pela fiação (planta da rua da Budega): cipó no fio do meio
           if (vine && k === 1 && PD.city && this._onScreen(pts)) PD.city.wireVines(ctx, cam, pts3, 977 + w * 31, this.time);
+          // a pipa que enroscou no fio do meio (a comunidade da represa)
+          if (kite && k === 1 && this._onScreen(pts)) this._kite(ctx, pts3, kite, w);
         }
       });
       // o "gato": emaranhado de fios num poste (típico da cidade); mapas sem postes de fiação não têm
@@ -1042,6 +1044,80 @@
         }
         ctx.stroke();
       }
+    }
+
+    /** A pipa presa no fio: o losango de duas cores pendurado pela linha e a rabiola balançando com o vento. */
+    _kite(ctx, pts3, color, seed) {
+      const cam = this.cam;
+      const s = cam.zoom;
+      const t = this.time;
+      const p = pts3[Math.max(1, Math.min(pts3.length - 2, Math.round((0.3 + ((seed * 37) % 40) / 100) * (pts3.length - 1))))];
+      const top = cam.p(p);
+      const q = cam.p({ x: p.x, y: p.y, z: p.z - 34 });
+      const c1 = typeof color === 'string' ? color : ['#e0452c', '#2f7fd0', '#f2b632', '#7a3fb0'][seed % 4];
+      const c2 = '#fff4dc';
+      const sway = Math.sin(t * 1.6 + seed) * 0.12 + Math.sin(t * 0.7 + seed * 2) * 0.06;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(236, 230, 214, 0.85)';
+      ctx.lineWidth = Math.max(1, 0.8 * s);
+      ctx.beginPath();
+      ctx.moveTo(top.x, top.y);
+      ctx.lineTo(q.x, q.y);
+      ctx.stroke();
+      ctx.translate(q.x, q.y);
+      ctx.rotate(0.3 + sway);
+      // (uma pipa de verdade tem uns 45 × 55 cm)
+      const w = 21 * s, h = 27 * s, o = 1.8 * s;
+      const diamond = (dw, dh) => {
+        ctx.beginPath();
+        ctx.moveTo(0, -dh);
+        ctx.lineTo(dw, 0);
+        ctx.lineTo(0, dh);
+        ctx.lineTo(-dw, 0);
+        ctx.closePath();
+      };
+      ctx.fillStyle = '#1b100d';
+      diamond(w + o, h + o);
+      ctx.fill();
+      ctx.fillStyle = c2;
+      diamond(w, h);
+      ctx.fill();
+      // metade de cada cor (pipa de seda, de duas folhas)
+      ctx.fillStyle = c1;
+      ctx.beginPath();
+      ctx.moveTo(0, -h);
+      ctx.lineTo(-w, 0);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(40, 28, 20, 0.75)';
+      ctx.lineWidth = Math.max(1, 1 * s);
+      ctx.beginPath();
+      ctx.moveTo(0, -h);
+      ctx.lineTo(0, h);
+      ctx.moveTo(-w, 0);
+      ctx.lineTo(w, 0);
+      ctx.stroke();
+      // a rabiola: a linha descendo em curva, com as tirinhas
+      ctx.strokeStyle = 'rgba(236, 230, 214, 0.85)';
+      ctx.lineWidth = Math.max(1, 0.8 * s);
+      ctx.beginPath();
+      const tail = [];
+      for (let k = 0; k <= 10; k++) {
+        const ty = h + k * 5 * s;
+        const tx = Math.sin(t * 2.4 + seed + k * 0.6) * (1.5 + k * 0.6) * s;
+        tail.push([tx, ty]);
+        if (k) ctx.lineTo(tx, ty);
+        else ctx.moveTo(tx, ty);
+      }
+      ctx.stroke();
+      for (let k = 2; k <= 10; k += 2) {
+        const [tx, ty] = tail[k];
+        ctx.fillStyle = k % 4 ? c1 : c2;
+        ctx.fillRect(tx - 3 * s, ty - 1 * s, 6 * s, 2 * s);
+      }
+      ctx.restore();
     }
 
     _drawParticle(ctx, p) {

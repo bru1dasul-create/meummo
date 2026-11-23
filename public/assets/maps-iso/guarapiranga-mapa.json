@@ -124,6 +124,30 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Bar do Tonho",
+      "x": 148.6,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Peixaria",
+      "x": 153.85,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Salão da Neide",
+      "x": 162.25,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Mercadinho",
+      "x": 167.75,
+      "y": 19.5,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Clube Náutico",
       "x": 283.5,
       "y": 78.5,
@@ -193,6 +217,12 @@
       "nome": "Atracadouro",
       "x": 49.75,
       "y": 61.75,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Muro grafitado",
+      "x": 145.7,
+      "y": 32,
       "tipo": "lugar"
     },
     {

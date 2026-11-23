@@ -118,7 +118,6 @@ const PATH_W = 3;
 const TRAIL_PARK = smooth([[36.4, 45], [30, 44], [24.5, 45.5], [20.5, 48.5]], 1); // até o mirante
 const TRAIL_SOUTH = smooth([[39.4, 56.6], [34, 64], [28, 76], [23, 90], [21, 105], [23.5, 122], [27.5, 142], [32.5, 162], [41, 184], [55, 205], [74, 222], [98, 236], [122, 246], [145, 252]], 1);
 const TRAIL_CAVE = smooth([[27.5, 142], [21, 168], [18, 198], [19, 228], [21, 252], [25, 266], [30, 273.5]], 1);
-const TRAIL_COMMUNITY = smooth([[158, 43], [159.5, 47], [161, 50]], 1);
 const TRAIL_FIELD = smooth([[233, 38.5], [233.5, 48], [234, 56.5]], 1);
 const TRAIL_SQUARE = smooth([[327, 46.5], [327.5, 56], [328.5, 70]], 1);
 const TRAIL_DAM_EAST = smooth([[340, 251.5], [352, 245], [362, 237], [370, 231]], 1);
@@ -128,7 +127,6 @@ const TRAILS: [Pt[], number, string][] = [
   [TRAIL_PARK, 2.6, 'Trilha do Mirante'],
   [TRAIL_SOUTH, 3, 'Trilha da Margem Sul'],
   [TRAIL_CAVE, 2.6, 'Trilha da Caverna'],
-  [TRAIL_COMMUNITY, 3, ''],
   [TRAIL_FIELD, 3, ''],
   [TRAIL_SQUARE, 3, ''],
   [TRAIL_DAM_EAST, 3, ''],
@@ -205,6 +203,22 @@ const BUS_STOP: Rect = { x0: 13.2, x1: 14.6, y0: 5, y1: 8.4 };
 const COMMUNITY: Pt[] = [[124, 3], [206, 3], [208, 46], [186, 51], [160, 49.5], [138, 42], [124, 34]];
 const PLAZA: Rect = { x0: 146, x1: 170, y0: 25, y1: 41 };
 const PLAZA_FIRE = { x: 158, y: 33 };
+/**
+ * As ruelas de cimento da comunidade (22/11, "vestir a comunidade"): a de cima, entre a fileira do fundo e a do meio;
+ * a do meio, que desce da de cima até a praça e da praça até a estrada; uma de cada lado; e as duas que passam na frente
+ * das fileiras do meio, uma de cada lado da praça. Casas coladas umas nas outras, com as ruelas de 2,5 a 3 m.
+ */
+const ALLEYS: Rect[] = [
+  { x0: 125, x1: 206, y0: 12.5, y1: 15.5 },
+  { x0: 156.5, x1: 159.5, y0: 15.5, y1: 25 },
+  { x0: 156.5, x1: 159.5, y0: 41, y1: 50 },
+  { x0: 137, x1: 139.5, y0: 15.5, y1: 41 },
+  { x0: 180.5, x1: 183, y0: 15.5, y1: 42.5 },
+  { x0: 125, x1: 146, y0: 23.5, y1: 26 },
+  { x0: 170, x1: 206, y0: 23.5, y1: 26 },
+];
+/** O chão de cimento da praça (o Brejo Maior), da frente das lojas até a beira de baixo. */
+const PLAZA_FLOOR: Rect = { x0: 146, x1: 170, y0: 23.5, y1: 41 };
 /** 5 · O campinho de terra. */
 const FIELD: Rect = { x0: 214, x1: 252, y0: 12, y1: 38 };
 /** 6 · A praça em ruínas, com o coreto. */
@@ -354,7 +368,8 @@ chao.push(area('lama', blob(20, 87, 17, 10, 0.12)));
 chao.push(area('lama', BREJO, undefined, 'Brejo do Sul'));
 // a comunidade (terra batida) e a praça do Brejo Maior; o campinho; a praça em ruínas; o pátio do clube
 chao.push(area('terra', COMMUNITY, undefined, 'Comunidade da Represa'));
-chao.push(rect('praca', PLAZA.x0, PLAZA.x1, PLAZA.y0, PLAZA.y1, { desenho: 'ondas', musgo: true }, 'Brejo Maior'));
+for (const r of ALLEYS) chao.push(rect('calcada', r.x0, r.x1, r.y0, r.y1, { estado: 'rachado' }));
+chao.push(rect('calcada', PLAZA_FLOOR.x0, PLAZA_FLOOR.x1, PLAZA_FLOOR.y0, PLAZA_FLOOR.y1, { estado: 'rachado', musgo: true }, 'Brejo Maior'));
 chao.push(area('lama', blob(186, 37, 9, 5.5, 0.15)));
 chao.push(rect('campinho', FIELD.x0, FIELD.x1, FIELD.y0, FIELD.y1, { linhas: true }, 'Campinho'));
 chao.push(rect('praca', SQUARE.x0, SQUARE.x1, SQUARE.y0, SQUARE.y1, { desenho: 'ondas', musgo: true }, 'Praça em Ruínas'));
@@ -458,7 +473,7 @@ chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' })
 const VIEW_KEYS: Pt[] = [...pathPoints(ROAD, ROAD_W + 2 * SIDEWALK, 2), ...pathPoints(PATH, PATH_W)];
 for (const [t, w] of TRAILS) VIEW_KEYS.push(...pathPoints(t, w, 1.5));
 for (const [r] of DECKS) VIEW_KEYS.push(...rectPoints(r));
-for (const r of [PLAZA, FIELD, SQUARE, CLUB, DAM_WALK, LOOKOUT]) VIEW_KEYS.push(...rectPoints(r, 2));
+for (const r of [PLAZA, FIELD, SQUARE, CLUB, DAM_WALK, LOOKOUT, ...ALLEYS]) VIEW_KEYS.push(...rectPoints(r, 2));
 VIEW_KEYS.push(...rectPoints({ x0: CAVE.x - 4, x1: CAVE.x + 4, y0: CAVE.y - 2, y1: CAVE.y + 4 }));
 // a cachoeira e o poço dela aparecem inteiros
 VIEW_KEYS.push(...rectPoints({ x0: FALL.x0, x1: FALL.x1, y0: FALL.y0, y1: FALL.y1 + 4 }, 1.5));
@@ -547,11 +562,11 @@ function plant(x: number, y: number, especie: string, d: { tronco: number; copa:
   return true;
 }
 /** Uma árvore posta à mão numa clareira (a sombra da praça): confere a folga dos troncos e a vista. */
-function plantHere(x: number, y: number, d: { tronco: number; copa: number; altura: number }): boolean {
+function plantHere(x: number, y: number, d: { tronco: number; copa: number; altura: number }, especie = 'mata'): boolean {
   if (nearTrunks(x, y, 6).some((t) => dist(x, y, t.x, t.y) - t.r - d.tronco / 2 < TRUNK_GAP + 1)) return false;
   if (hidesView(x, y, d.copa, d.altura)) return false;
   addTrunk({ x, y, r: d.tronco / 2 });
-  cenario.push(point('arvore', x, y, { especie: 'mata', ...d }));
+  cenario.push(point('arvore', x, y, { especie, ...d }));
   return true;
 }
 
@@ -727,41 +742,108 @@ for (const [x, y] of [[LOOKOUT.x0 + 0.3, LOOKOUT.y1 - 0.3], [LOOKOUT.x1 - 0.3, L
 cenario.push(point('placa', LOOKOUT.x1 + 0.6, LOOKOUT.y0 + 0.6, { texto: 'MIRANTE', seta: 'leste', poste: true }));
 addTrunk({ x: LOOKOUT.x1 + 0.6, y: LOOKOUT.y0 + 0.6, r: 0.1 });
 
-// ----- 4 · a comunidade da represa: as casas de bloco e a praça do Brejo Maior -----
+// ----- 4 · a comunidade da represa: as casas coladas, as ruelas, a praça do Brejo Maior e o comércio dela -----
+// (22/11, o dono: "pode seguir vestindo a comunidade primeiro"). Fileiras de casas coladas umas nas outras, de 1 a 3
+// andares (as altas no fundo, as baixas na frente: a câmera olha do sudeste), de tijolo baiano sem reboco, rebocadas e
+// pintadas, ou só com o térreo pintado e o puxadinho no tijolo; laje com caixa d'água, ferro espetado esperando o
+// próximo andar, varal e plantas. Na praça: o bar, a peixaria, o salão e o mercadinho de frente para ela; a fogueira,
+// as bancas (frutas, peixe e artesanato), as mesas do bar, o muro grafitado e os postes com a fiação cheia de pipas.
 {
   const hrng = mulberry32(SEED + 23);
-  const CORES = ['#c9774a', '#e2a3b8', '#79a9d1', '#e8c75a', '#b9673f', '#8fc08a', '#c46aa8', '#d8d2c4'];
-  const houses: Rect[] = [];
-  // a fileira de cima (a frente para o sul, para a rua de terra) e umas casas soltas mais embaixo
-  for (let x0 = 127; x0 + 6.5 <= 205; ) {
-    const w = round(6 + hrng() * 1.6);
-    houses.push({ x0, x1: round(x0 + w), y0: round(4.5 + hrng() * 1.5), y1: 12.5 });
-    x0 = round(x0 + w + (hrng() < 0.3 ? 2.2 : 0));
-  }
-  for (const [x0, y0] of [[180, 20], [188, 20], [196, 20], [128, 20]] as const) houses.push({ x0, x1: x0 + 6.5, y0, y1: y0 + 6.5 });
-  for (const h of houses) {
-    const andares = hrng() < 0.4 ? 2 : 1;
-    cenario.push(rect('casa', h.x0, h.x1, h.y0, h.y1, { altura: andares === 2 ? 5.8 : 3.2, andares, cor: CORES[Math.floor(hrng() * CORES.length)]!, caixaDagua: true, cipo: round(0.2 + hrng() * 0.4), morador: 'familia' }));
-  }
-  // a praça do Brejo Maior: a fogueira com os bancos, as barracas (as bancas dos artesãos e dos pescadores), os lampiões
-  // e as bandeirinhas
+  const pick = <T,>(list: readonly T[]) => list[Math.floor(hrng() * list.length)]!;
+  const CORES = ['#e8c75a', '#79a9d1', '#e2a3b8', '#8fc08a', '#c46aa8', '#f0a050', '#e6e0d2', '#6fc0c0', '#d86a5a'];
+  /** Uma casa da comunidade: o jeito dela sorteado (o andar de cima sem reboco só em casa de 2 ou 3 andares). */
+  const house = (h: Rect, andares: number, extra: Record<string, string | number | boolean> = {}, name?: string) => {
+    const k = hrng();
+    const tijolo = k < 0.38 ? true : k < 0.68 && andares > 1 ? 'cima' : false;
+    const props: Record<string, string | number | boolean> = {
+      altura: round(andares * 2.6 + 0.6),
+      andares,
+      cor: pick(CORES),
+      caixaDagua: hrng() < 0.85,
+      cipo: round(hrng() * 0.22),
+      morador: 'familia',
+      grade: hrng() < 0.6,
+      ...(tijolo ? { tijolo } : {}),
+      ...(hrng() < (tijolo ? 0.55 : 0.3) ? { vergalhao: true } : {}),
+      ...(hrng() < 0.3 ? { varal: true } : {}),
+      ...(hrng() < 0.2 ? { plantas: true } : {}),
+      ...(!tijolo && hrng() < 0.3 ? { pixo: true } : {}),
+      ...extra,
+    };
+    cenario.push(rect('casa', h.x0, h.x1, round(h.y0), h.y1, props, name));
+  };
+  /** Uma fileira de casas coladas de x0 a x1 (a frente em y1); o fundo varia um pouco. */
+  const row = (x0: number, x1: number, y0: number, y1: number, floors: () => number, deep = 0) => {
+    for (let x = x0; x < x1 - 0.01; ) {
+      let w = round(4.6 + hrng() * 2.4);
+      // (o que sobra no fim da fileira não vira casinha de menos de 4 m: entra na última, ou divide em duas)
+      if (x1 - (x + w) < 4) w = x1 - x >= 9.2 ? round((x1 - x) / 2) : round(x1 - x);
+      house({ x0: round(x), x1: round(x + w), y0: round(y0 + hrng() * deep), y1 }, floors());
+      x = round(x + w);
+    }
+  };
+  // a fileira do fundo (2 e 3 andares) e as do meio (as lojas de frente para a praça ficam à parte)
+  row(125, 206, 4, 12.5, () => (hrng() < 0.4 ? 3 : 2), 1);
+  row(125, 137, 15.5, 23.5, () => (hrng() < 0.5 ? 2 : 1));
+  row(139.5, 146, 15.5, 23.5, () => 2);
+  row(170.5, 180.5, 15.5, 23.5, () => (hrng() < 0.5 ? 2 : 1));
+  row(183, 206, 15.5, 23.5, () => (hrng() < 0.5 ? 2 : 1));
+  // o comércio de frente para a praça (o letreiro e o toldo; o andar de cima é a casa de quem tem a loja)
+  const SHOPS: [number, number, number, Record<string, string | number | boolean>, string][] = [
+    [146, 151.2, 2, { comercio: 'bar', letreiro: 'BAR DO TONHO', toldo: '#2f6fb0', cor: '#79a9d1', tijolo: 'cima', vergalhao: true }, 'Bar do Tonho'],
+    [151.2, 156.5, 1, { comercio: 'lanches', letreiro: 'PEIXARIA', toldo: '#2a8a9a', cor: '#6fc0c0' }, 'Peixaria'],
+    [159.5, 165, 2, { comercio: 'lanches', letreiro: 'SALÃO DA NEIDE', toldo: '#c4508a', cor: '#e2a3b8', varal: true }, 'Salão da Neide'],
+    [165, 170.5, 2, { comercio: 'vendinha', letreiro: 'MERCADINHO', toldo: '#d8902a', cor: '#e8c75a', tijolo: 'cima', vergalhao: true }, 'Mercadinho'],
+  ];
+  for (const [x0, x1, andares, extra, name] of SHOPS) house({ x0, x1, y0: 15.5, y1: 23.5 }, andares, { grade: false, pixo: false, ...extra }, name);
+  // as fileiras dos lados da praça e as de baixo (baixas: ficam na frente da praça, na tela)
+  row(125, 137, 26, 32.5, () => (hrng() < 0.3 ? 2 : 1));
+  row(139.5, 143.5, 26, 32.5, () => 1);
+  row(172, 180.5, 26, 33, () => (hrng() < 0.4 ? 2 : 1));
+  row(183, 206, 26, 33, () => (hrng() < 0.4 ? 2 : 1));
+  row(161.5, 180.5, 42.5, 48, () => 1);
+  row(183, 199, 42.5, 47.5, () => 1);
+
+  // a praça do Brejo Maior: a fogueira com os bancos, as mesas do bar, as bancas e o muro grafitado
   benchesAround(PLAZA_FIRE.x, PLAZA_FIRE.y);
-  for (const [x0, pano] of [[148.5, '#3f7fbf'], [156.7, '#e8c75a'], [164.9, '#4f9f5f']] as const) {
-    cenario.push(box('banca-frutas', { x0, x1: x0 + 2.6, y0: 26.5, y1: 27.75 }, { altura: 0.9, frente: 0.5, lados: 0.3, pano }));
+  for (const x of [148.3, 151.3]) cenario.push(point('mesa', x, 27.2, { cadeiras: 4 }));
+  for (const [x0, mercadoria, pano] of [[147.5, 'frutas', '#4f9f5f'], [151.4, 'peixe', '#3f7fbf'], [162.2, 'artesanato', '#e8c75a']] as const) {
+    cenario.push(box('banca-frutas', { x0, x1: x0 + 2.6, y0: 37.5, y1: 38.75 }, { altura: 0.9, frente: 0.5, lados: 0.3, pano, mercadoria }));
   }
-  const corners: Pt[] = [[PLAZA.x0 + 0.6, PLAZA.y0 + 0.6], [PLAZA.x1 - 0.6, PLAZA.y0 + 0.6], [PLAZA.x1 - 0.6, PLAZA.y1 - 0.6], [PLAZA.x0 + 0.6, PLAZA.y1 - 0.6]];
-  for (const [x, y] of corners) cenario.push(point('poste-praca', x, y, { altura: 3.2, luz: '#ffd36b', estilo: 'lampiao' }));
-  cenario.push(line('bandeirinhas', [corners[0]!, [PLAZA_FIRE.x, PLAZA_FIRE.y - 1], corners[1]!], { altura: 3.1 }));
-  cenario.push(line('bandeirinhas', [corners[3]!, [PLAZA_FIRE.x, PLAZA_FIRE.y + 2], corners[2]!], { altura: 3.1 }));
-  // (três árvores de sombra em volta da praça, nos primeiros lugares da lista que não tampam a vista)
-  let shade = 0;
-  for (const [x, y] of [[142, 24], [174, 30], [143, 44], [172, 23], [146, 21.5], [176, 38], [140, 32]] as const) {
-    if (shade < 3 && plantHere(x, y, { tronco: 0.5, copa: 2.6, altura: 7 })) shade++;
+  cenario.push(rect('muro', 145.5, 145.9, 27, 37, { altura: 2.5, cor: '#d8d2c4', grafite: 'cores', texto: 'BREJO', lado: 'leste', cipo: 0.08 }, 'Muro grafitado'));
+  // os postes de luz nos cantos da praça e a fiação cruzando por cima, com as pipas que enroscaram
+  const POLES: Pt[] = [[146.6, 25.6], [169.4, 25.6], [146.6, 40.4], [169.4, 40.4]];
+  for (const [x, y] of POLES) {
+    cenario.push(point('poste', x, y, { altura: 7, luz: '#ffe9a6' }));
+    addTrunk({ x, y, r: 0.15 });
   }
-  if (shade < 2) throw new Error('Sem sombra na praça do Brejo Maior.');
+  const [NW, NE, SW, SE] = POLES as [Pt, Pt, Pt, Pt];
+  cenario.push(line('fiacao', [NW, NE], { pipa: '#e0452c' }));
+  cenario.push(line('fiacao', [SW, SE]));
+  cenario.push(line('fiacao', [NW, SW]));
+  cenario.push(line('fiacao', [NE, SE], { pipa: '#f2b632' }));
+  cenario.push(line('fiacao', [NW, SE], { pipa: '#2f7fd0' }));
+  cenario.push(line('bandeirinhas', [NW, [PLAZA_FIRE.x, PLAZA_FIRE.y - 1], NE], { altura: 4.2 }));
+  cenario.push(line('bandeirinhas', [SW, [PLAZA_FIRE.x, PLAZA_FIRE.y + 2], SE], { altura: 4.2 }));
+  // as bandeirinhas da ruela de cima, de uma laje à outra
+  for (const x of [142, 170, 194]) cenario.push(line('bandeirinhas', [[x, 12.6], [x + 6, 15.4]], { altura: 4.8 }));
+
+  // a vida das ruelas: vasos e barris encostados nas casas, a moto velha, as lixeiras, os pneus
+  for (let x = 126; x < 205; x += 5 + hrng() * 4) {
+    if (ALLEYS.some((a) => a !== ALLEYS[0] && x > a.x0 - 1 && x < a.x1 + 1)) continue;
+    if (hrng() < 0.5) cenario.push(point('vaso', round(x), 12.85, { planta: pick(['espada-de-sao-jorge', 'samambaia', 'costela-de-adao']) }));
+    else cenario.push(rect('barril', round(x), round(x + 0.6), 12.55, 13.15, { altura: 0.9, cor: '#2f6fb0' }));
+  }
+  cenario.push(rect('moto', 186, 188, 23.6, 24.4, { altura: 1.1, cor: '#8a3a2a', olhando: 0 }));
+  for (const [x, y] of [[136.6, 15.85], [183.4, 15.85]] as const) cenario.push(point('lixeira', x, y, { olhando: 90 }));
+  cenario.push(point('pneus', 150.5, 43.2, { raio: 0.45, pilha: 3 }));
+  // os quintais do sudeste: bananeiras, varal e o brejinho de taboas
+  for (const [x0, x1, y] of [[186, 190, 35.6], [196, 200, 36.2]] as const) cenario.push(rect('varal', x0, x1, y, round(y + 0.2), { altura: 1.8 }));
+  for (const [x, y] of [[176.5, 37.5], [192.5, 39.5], [203, 37], [149, 45]] as const) plantHere(x, y, treeDims('bananeira', hrng), 'bananeira');
   for (let i = 0, n = 0; i < 200 && n < 6; i++) {
     const [x, y] = [180 + hrng() * 14, 33 + hrng() * 9];
-    if (inside(x, y, blob(186, 37, 9, 5.5, 0.15))) {
+    if (inside(x, y, blob(186, 37, 9, 5.5, 0.15)) && !ALLEYS.some((a) => inRect(x, y, a, 0.6))) {
       chao.push(point('planta', round(x), round(y), { tipo: 'taboa', raio: round(0.4 + hrng() * 0.2) }));
       n++;
     }
@@ -921,6 +1003,10 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'poste-praca') return [block('poste-praca', s.x, s.y, 0.25, { altura: Number(p.altura) })];
   if (s.type === 'placa' && p.poste) return [block('placa', s.x, s.y, 0.2, { bloqueiaTiro: false, altura: 2.2 })];
   if (s.type === 'barril' || s.type === 'caixote') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'mesa') return [block('mesa', s.x, s.y, 0.8, { bloqueiaTiro: false, altura: 0.75 })];
+  if (s.type === 'vaso' || s.type === 'lixeira') return [block(s.type, s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 })];
+  if (s.type === 'moto') return [box('moto', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'pneus') return [block('pneus', s.x, s.y, round(Number(p.raio) * 1.8), { bloqueiaTiro: false, altura: 0.9 })];
   if (s.type === 'rede' || s.type === 'varal') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'muro') return [box('muro', r, { altura: Number(p.altura) })];
   if (s.type === 'barreira') return [box('barreira', r, { bloqueiaTiro: false, altura: Number(p.altura) })];

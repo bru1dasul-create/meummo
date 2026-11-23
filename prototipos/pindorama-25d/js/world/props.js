@@ -464,17 +464,19 @@
   // quebradas, porta tapada com tábuas, parede manchada e cipó subindo. A vendinha (a Budega) tem porta de enrolar meio
   // aberta com as prateleiras acesas, letreiro e toldo listrado — e nada de cigarro ou tabaco no desenho.
   const BLOCK = { base: '#a59d90', mortar: '#7f786d', light: '#b9b1a3' };
+  // o tijolo baiano sem reboco (a casa de comunidade)
+  const BRICK = { base: '#b4633b', mortar: '#8a4628', laje: '#9d988d' };
   /** Quanto dura (s) o telhado e a frente saírem (ou voltarem) ao entrar (ou sair) de uma casa com interior. */
   const CUT_TIME = 0.6;
 
   class House extends Building {
     constructor(world, b) {
       super(world, b);
-      const wall = b.block ? BLOCK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
+      const wall = b.block ? BLOCK.base : b.brick === 'all' ? BRICK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
       // a laje com árvore ou varal precisa de mais espaço em cima na imagem
       // (com a árvore de dentro de verdade, `innerTree`, a copa é a da própria árvore, desenhada por cima da casa)
       const topExtra = b.treeInside && !b.innerTree ? 980 : b.roofTree ? 640 : b.clothes ? 300 : 220;
-      this.b = { ...b, wall, trim: b.block ? '#8a8378' : M.shade(wall, 0.38), topExtra };
+      this.b = { ...b, wall, trim: b.block ? '#8a8378' : b.brick === 'all' ? '#6f4a34' : M.shade(wall, 0.38), topExtra };
       if (b.interior) {
         // casa que dá para entrar (a Budega, pedido do dono: "igual HumanitZ"): na ordem de desenho ela é a parede da
         // frente — quem está dentro fica atrás dela e na frente da parede do fundo (HouseBack). Com o herói dentro, o
@@ -623,8 +625,8 @@
         const r = M.rng(Math.round(b.x0 * 3 + 11));
         const openings = [];
         wallTexture(ctx, b, W, H, r);
-        // a beirada da laje
-        ctx.fillStyle = M.shade(b.wall, -0.12);
+        // a beirada da laje (na casa de tijolo, o concreto cinza da laje)
+        ctx.fillStyle = b.brick ? BRICK.laje : M.shade(b.wall, -0.12);
         ctx.fillRect(0, 0, W, 16);
         if (b.pixo) pixo(ctx, W, H - 150, M.rng(b.x0 + 9), 0.9);
         for (let f = 0; f < floors; f++) {
@@ -698,7 +700,7 @@
           return;
         }
         wallTexture(ctx, b, D, H, r, true);
-        ctx.fillStyle = M.shade(b.wall, -0.36);
+        ctx.fillStyle = b.brick ? M.shade(BRICK.laje, -0.25) : M.shade(b.wall, -0.36);
         ctx.fillRect(0, 0, D, 16);
         for (let f = 0; f < floors; f++) {
           const yTop = H - (f + 1) * fh;
@@ -877,8 +879,50 @@
     }
   }
 
+  /**
+   * O tijolo baiano sem reboco: fiadas de 20 cm, tijolos de 30 desencontrados, uns mais claros e outros mais queimados, e
+   * a massa que sobrou nas juntas. `'top'` (o puxadinho): só os andares de cima; devolve onde o tijolo acaba (y, de cima
+   * para baixo), para o reboco do térreo começar dali.
+   */
+  function brickWall(ctx, b, len, H, r, sideFace) {
+    const floors = Math.max(1, b.floors || 1);
+    const top = b.brick === 'top' ? H - H / floors : H;
+    if (top <= 16) return 0;
+    if (b.brick === 'top') {
+      ctx.fillStyle = sideFace ? M.shade(BRICK.base, -0.26) : BRICK.base;
+      ctx.fillRect(0, 0, len, top);
+    }
+    for (let k = 0; k < (len * top) / 2400; k++) {
+      ctx.fillStyle = r() < 0.5 ? 'rgba(255, 214, 178, 0.13)' : 'rgba(96, 32, 12, 0.14)';
+      ctx.fillRect(Math.floor((r() * len) / 30) * 30 + 2, Math.floor((r() * top) / 20) * 20 + 2, 26, 16);
+    }
+    ctx.strokeStyle = sideFace ? M.shade(BRICK.mortar, -0.25) : BRICK.mortar;
+    ctx.lineWidth = 3;
+    for (let y = top, row = 0; y > 16; y -= 20, row++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(len, y);
+      ctx.stroke();
+      for (let x = (row % 2) * 15; x < len; x += 30) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - 20);
+        ctx.stroke();
+      }
+    }
+    // a massa que escorreu das juntas
+    ctx.fillStyle = 'rgba(168, 158, 142, 0.55)';
+    for (let k = 0; k < len / 50; k++) ctx.fillRect(r() * len, 20 + Math.floor((r() * (top - 30)) / 20) * 20, 6 + r() * 12, 3);
+    return top;
+  }
   /** Parede: bloco aparente (fiadas com a massa entre os blocos) ou reboco pintado com manchas de chuva. */
   function wallTexture(ctx, b, len, H, r, sideFace) {
+    // (a casa de tijolo: o reboco, quando tem, é só do térreo para baixo)
+    let y0 = 0;
+    if (b.brick) {
+      y0 = brickWall(ctx, b, len, H, r, sideFace);
+      if (y0 >= H) return;
+    }
     if (b.block) {
       ctx.strokeStyle = BLOCK.mortar;
       ctx.lineWidth = 3;
@@ -900,10 +944,17 @@
       return;
     }
     // manchas de chuva escorrendo da laje e sujeira de rodapé
+    if (y0 > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, y0, len, H - y0);
+      ctx.clip();
+    }
     ctx.fillStyle = b.abandoned ? 'rgba(40, 32, 24, 0.16)' : 'rgba(60, 50, 40, 0.08)';
-    for (let i = 0; i < Math.max(3, len / 90); i++) ctx.fillRect(r() * len, 16, 14 + r() * 30, 40 + r() * (H * 0.55));
+    for (let i = 0; i < Math.max(3, len / 90); i++) ctx.fillRect(r() * len, Math.max(16, y0), 14 + r() * 30, 40 + r() * (H * 0.55));
     ctx.fillStyle = 'rgba(70, 52, 36, 0.18)';
     ctx.fillRect(0, H - 26, len, 26);
+    if (y0 > 0) ctx.restore();
   }
   /**
    * Porta aberta da casa que dá para entrar (o vão do mapa): o escuro de dentro com o chão aparecendo e a folha aberta
@@ -1487,6 +1538,23 @@
       }
     });
   }
+  /** Quatro ferros de coluna espetados na laje (cor de ferrugem), um pouco tortos. */
+  function rebar(ctx, cam, x, y, z, ink) {
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 4; k++) {
+      const dx = (k % 2) * 9 - 4.5, dy = (k >> 1) * 9 - 4.5;
+      const a = cam.p({ x: x + dx, y: y + dy, z });
+      const c = cam.p({ x: x + dx + (k - 1.5) * 2.5, y: y + dy - (k % 2) * 2, z: z + 46 + ((k * 7) % 11) });
+      for (const [color, w] of [[INK, 2.4 * cam.zoom + ink], ['#7a4a2e', 1.6 * cam.zoom]]) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1, w);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.stroke();
+      }
+    }
+  }
   /** O que fica na laje, do fundo para a frente: caixa d'água, plantas, árvore e varal. */
   function roofItems(ctx, cam, b, z, ink) {
     const W = b.x1 - b.x0, D = b.y1 - b.y0;
@@ -1516,6 +1584,10 @@
       }
     }
     if (b.clothes) items.push({ k: b.x0 + W * 0.3 + b.y0 + D * 0.7, draw: () => clothesLine(ctx, cam, b, z, ink) });
+    // os ferros espetados nas quinas da laje (o próximo andar que ainda não veio)
+    if (b.rebar) {
+      for (const [x, y] of [[b.x0 + 14, b.y0 + 14], [b.x1 - 14, b.y0 + 14], [b.x0 + 14, b.y1 - 14], [b.x1 - 14, b.y1 - 14]]) items.push({ k: x + y, draw: () => rebar(ctx, cam, x, y, z, ink) });
+    }
     items.sort((p, q) => p.k - q.k);
     for (const it of items) it.draw();
   }

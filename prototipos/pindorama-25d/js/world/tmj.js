@@ -162,7 +162,8 @@
         // `apagado` (vidro quebrado, sem luz), `torto` e `cipo` (os do parque antigo)
         map.props.push({ kind: 'poste-praca', x, y, h: (pr.altura || 3.8) * 100, light: pr.luz || '#ffe9a6', off: !!pr.apagado, bent: !!pr.torto, vine: !!pr.cipo });
       } else if (k === 'fiacao' && o.polyline) {
-        wireLines.push({ pts: o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })), vine: !!pr.cipo });
+        // (`pipa`: uma pipa presa no fio do meio, com a cor dela)
+        wireLines.push({ pts: o.polyline.map((p) => ({ x: (o.x + p.x) * CM, y: (o.y + p.y) * CM })), vine: !!pr.cipo, kite: pr.pipa || null });
       } else if (k === 'casa') {
         // casa da vila: a frente é o lado sul (+y), o que a câmera vê
         map.houses.push({
@@ -171,6 +172,10 @@
           floors: pr.andares || 1,
           wall: pr.cor || '#c9a27a',
           block: !!pr.bloco,
+          // tijolo baiano sem reboco (a comunidade da represa): `tijolo: true` a casa inteira, `'cima'` só os andares de
+          // cima (o térreo rebocado e pintado); `vergalhao`: os ferros espetados na laje, esperando o próximo andar
+          brick: pr.tijolo === 'cima' ? 'top' : pr.tijolo ? 'all' : null,
+          rebar: !!pr.vergalhao,
           tank: !!pr.caixaDagua,
           pixo: !!pr.pixo,
           abandoned: !!pr.abandonada,
@@ -280,7 +285,7 @@
         // muro em pedaços de até 4 m (cada pedaço é uma imagem): `grafite` ('cores') no `lado` (leste, sul...), `cipo`
         // (0 a 1), `musgo`; `whole` = o muro inteiro (o desenho do grafite continua de um pedaço para o outro)
         const whole = rect(o);
-        for (const part of pieces(whole, 400)) map.props.push({ kind: 'muro', ...part, whole, h: (pr.altura || 2.2) * 100, color: pr.cor || '#c9c2b6', graffiti: pr.grafite || null, side: pr.lado || 'sul', vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0, moss: !!pr.musgo });
+        for (const part of pieces(whole, 400)) map.props.push({ kind: 'muro', ...part, whole, h: (pr.altura || 2.2) * 100, color: pr.cor || '#c9c2b6', graffiti: pr.grafite || null, text: pr.texto || null, side: pr.lado || 'sul', vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0, moss: !!pr.musgo });
       } else if (k === 'viaduto') {
         // o viaduto da linha lilás, em pedaços de 4 m: `altura` = embaixo do tabuleiro, `espessura`, `quebrado`
         // (o lado da ponta quebrada), `mato`, `cipo` (0 a 1) e `arvoresNoTopo`
@@ -362,7 +367,8 @@
         map.props.push({ kind: 'barco', ...rect(o), boat: pr.tipo || 'canoa', color: pr.cor || null, angle: pr.olhando || 0, sunk: !!pr.afundado });
       } else if (k === 'banca-frutas') {
         // a banca de frutas em U da quitanda (refugio.js): `frente` e `lados` (m) e `pano` (a cor do pano listrado)
-        map.props.push({ kind: k, ...rect(o), h: (pr.altura || 0.9) * 100, front: (pr.frente || 0.5) * 100, side: (pr.lados || 0.3) * 100, cloth: pr.pano ? [pr.pano, '#fff4dc'] : null });
+        // (`mercadoria`: 'frutas', 'peixe' — os pescadores do Brejo Maior — ou 'artesanato': cestos, potes e colares)
+        map.props.push({ kind: k, ...rect(o), h: (pr.altura || 0.9) * 100, front: (pr.frente || 0.5) * 100, side: (pr.lados || 0.3) * 100, cloth: pr.pano ? [pr.pano, '#fff4dc'] : null, goods: pr.mercadoria || 'frutas' });
       } else if (k === 'barril' || k === 'rede' || k === 'varal' || k === 'ponto-onibus') {
         // o barril (bombona, tambor ou de madeira, sorteado), a rede de pesca secando e o ponto de ônibus (`placa`)
         map.props.push({ kind: k, ...rect(o), h: pr.altura != null ? pr.altura * 100 : null, color: pr.cor || null, sign: pr.placa || '' });
@@ -425,11 +431,11 @@
       });
       return best;
     };
-    for (const { pts: line, vine } of wireLines) {
+    for (const { pts: line, vine, kite } of wireLines) {
       for (let i = 0; i + 1 < line.length; i++) {
         const a = poleNear(line[i]);
         const b = poleNear(line[i + 1]);
-        if (a >= 0 && b >= 0 && a !== b) map.wires.push([a, b, vine]);
+        if (a >= 0 && b >= 0 && a !== b) map.wires.push([a, b, vine, kite]);
       }
     }
     // portões e gradis herdam a altura do gradil vizinho quando não dizem a deles

@@ -34,6 +34,27 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (23/11): a Comunidade da Represa vestida (na `main`).** O dono: "pode seguir vestindo a comunidade primeiro".
+  No gerador (`gen-guarapiranga.ts`, o bloco "4 · a comunidade"): fileiras de casas COLADAS (`row`: larguras de 4,6 a
+  7 m; a sobra do fim entra na última ou divide em duas) com as ruelas de cimento entre elas (`ALLEYS`, 2,5 a 3 m) — a
+  de cima, a do meio (da ruela de cima à praça e da praça à estrada), uma de cada lado e as duas da frente das fileiras
+  do meio; as altas (2 e 3 andares) no fundo e as baixas na frente (a câmera olha do sudeste; o teste da fogueira
+  confere). Cada casa sorteia o jeito (`house`): tijolo à mostra (`tijolo: true`), só o puxadinho no tijolo (`'cima'`,
+  casa de 2 ou 3 andares) ou rebocada e pintada; caixa d'água, `vergalhao`, `varal`, `plantas`, `pixo` (só na rebocada) e
+  `grade`. De frente para a praça, o comércio: Bar do Tonho (`bar`, com 2 mesas de 4 cadeiras na praça), Peixaria e
+  Salão da Neide (`lanches`, porta de enrolar) e Mercadinho (`vendinha`). Na praça (cimento rachado com musgo): a
+  fogueira com os bancos, as bancas de frutas, de peixe e de artesanato (`banca-frutas` com `mercadoria`), o muro
+  grafitado com a palavra `texto: 'BREJO'` (antes o desenho só dizia CAPÃO), 4 postes de luz nos cantos com a fiação
+  cruzando por cima e `pipa` (a cor) em 3 fios, as bandeirinhas (também na ruela de cima). Nas ruelas: vasos e barris
+  azuis encostados nas casas, a moto velha, lixeiras, pneus; no sudeste, os quintais com bananeiras, varal e o brejinho
+  de taboas. **Desenho novo** (js/world): o tijolo baiano (`brickWall` no props.js: fiadas de 20 cm, tijolos de 30, a
+  massa escorrida; a beirada da laje cinza), os ferros da laje (`rebar`), a pipa no fio (`_kite` no world.js, com a
+  rabiola balançando), o peixe no gelo, o cesto, o pote de barro e os colares (`crate` no refugio.js) e, de noite, o
+  VIDRO da janela aceso (`pane` no view.js: nas casas de alvenaria com `morador`, umas janelas sim e outras não; a
+  janela que outra casa tampa na tela fica apagada, `_windowHidden`, porque a camada da noite fica por cima de tudo e a
+  bola de luz vazava para cima da laje). Medido: a praça 11 ms por quadro (como a vila do Capão); a ruela de cima ~21 a
+  24 ms (as casas altas fazem a janela transparente em volta do herói). Os testes novos: as ruelas abertas de ponta a
+  ponta, as casas coladas e dos três jeitos, a frente de cada loja e o que tem na praça.
 - **Agora (22/11): o Guarapiranga grande, 400 × 320 m, o mapa inteiro aberto (na `main`).** O dono: "pode seguir com o
   Guarapiranga maior" e escolheu "mapa inteiro primeiro" (abrir tudo de uma vez, com o chão, a água e a mata bonitos,
   para ele andar e conferir o tamanho e os caminhos; os prédios especiais começam simples; depois vestir região por

@@ -938,6 +938,37 @@
      * deixam a luz quente sair pela porta; o filhote de boitatá ilumina em volta dele. Cada uma abre o escuro e tinge
      * o ar da cor dela.
      */
+    /**
+     * A janela (x, na parede da frente de `b`, a `z` cm do chão) fica atrás de outra casa, na tela? Outra casa que fica
+     * para o lado da câmera (mais ao sul) e cuja silhueta (a caixa vista de cima e do lado) cobre o ponto da janela.
+     */
+    _windowHidden(b, x, z) {
+      const P = this.toScreen(x / 100, b.y1 / 100, z / 100);
+      for (const o of this.map.houses || []) {
+        if (o === b || o.y0 < b.y1 - 1 || o.x1 < b.x0 - 1500 || o.x0 > b.x1 + 1500) continue;
+        const h = o.h || 300;
+        const pts = [];
+        for (const xx of [o.x0, o.x1]) for (const yy of [o.y0, o.y1]) for (const zz of [0, h]) pts.push(this.toScreen(xx / 100, yy / 100, zz / 100));
+        // o contorno (convexo) dos oito cantos na tela
+        const s = pts.sort((p, q) => p.x - q.x || p.y - q.y);
+        const cross = (o0, a, c) => (a.x - o0.x) * (c.y - o0.y) - (a.y - o0.y) * (c.x - o0.x);
+        const half = (list) => {
+          const out = [];
+          for (const q of list) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+          }
+          return out;
+        };
+        const lo = half(s), hi = half(s.slice().reverse());
+        const hull = lo.slice(0, -1).concat(hi.slice(0, -1));
+        let inside = true;
+        for (let i = 0; i < hull.length && inside; i++) if (cross(hull[i], hull[(i + 1) % hull.length], P) < 0) inside = false;
+        if (inside) return true;
+      }
+      return false;
+    }
+
     _nightSources() {
       if (this._nightList) return this._nightList;
       const out = [];
@@ -955,6 +986,27 @@
         out.push({ x: dx, y: b.y1 + 50, z: 0, r: 150, color: '#ffd58a', k: 0.45 });
         // as casas de tábua do Refúgio: a luz de dentro saindo pelas janelas abertas
         if (b.material === 'tabua' && PD.refugio) for (const w of PD.refugio.windows(b)) out.push({ x: b.x0 + w.x + w.w / 2, y: b.y1 + 8, z: (w.z0 + w.z1) / 2, r: 80, color: '#ffcf7a', k: 0.55 });
+        // as casas de alvenaria com gente (a comunidade da represa): umas janelas acesas, andar por andar, nos mesmos
+        // lugares das janelas da frente (props.js: 110 cm de largura, espalhadas; no térreo, do outro lado da porta). A
+        // luz é o vidro aceso (`pane`, o retângulo da janela na parede), não uma bola de luz: a bola vazava para cima da
+        // laje; e janela que outra casa tampa na tela fica apagada (a camada da noite fica por cima de tudo)
+        if (b.material !== 'tabua' && b.resident && !b.door && !b.interior && !b.garage && !b.facade && !b.abandoned) {
+          const W = b.x1 - b.x0, Hh = b.h || 300, floors = Math.max(1, b.floors || 1), fh = Hh / floors;
+          const r = M.rng(Math.round(b.x0 * 13 + b.y1 * 7));
+          for (let f = b.shop ? 1 : 0; f < floors; f++) {
+            const doorW = f === 0 ? 92 : 0, doorX = f === 0 ? Math.min(W - doorW - 50, W * 0.18) : 0;
+            const room = f === 0 ? W - (doorX + doorW) - 60 : W - 80;
+            const n = room > 120 ? Math.max(1, Math.floor(room / 190)) : 0;
+            for (let k = 0; k < n; k++) {
+              if (r() < 0.4) continue; // (nem toda janela está acesa)
+              const wx = (f === 0 ? doorX + doorW + 40 : 40) + (room / n) * (k + 0.5) - 55;
+              const wy = Hh - (f + 1) * fh + Math.max(40, fh * 0.28), wh = Math.min(100, fh * 0.36);
+              const pane = [b.x0 + wx + 12, b.x0 + wx + 98, Hh - wy - wh + 10, Hh - wy - 10];
+              if (this._windowHidden(b, (pane[0] + pane[1]) / 2, (pane[2] + pane[3]) / 2)) continue;
+              out.push({ pane, x: (pane[0] + pane[1]) / 2, y: b.y1, z: (pane[2] + pane[3]) / 2, r: 0, color: '#ffd27a', k: 0.85 });
+            }
+          }
+        }
         // a Budega maior: o LED branco contornando a frente (luzinhas na beirada de cima) e a vitrine amarela acesa
         if (b.led) {
           for (let x = b.x0 + 40; x <= b.x1 - 40; x += 110) {
@@ -1019,7 +1071,27 @@
         fl.globalAlpha = Math.min(1, kk * 0.55);
         fl.drawImage(sprite(color), bx, by, bw, bh);
       };
+      // o vidro da janela aceso: o retângulo dela na parede (abre o escuro e pinta com a cor da luz de dentro)
+      const pane = (L, kk) => {
+        const [x0, x1, z0, z1] = L.pane;
+        const pts = [[x0, z1], [x1, z1], [x1, z0], [x0, z0]].map(([x, z]) => this.toScreen(x / 100, L.y / 100, z / 100));
+        if (pts.every((p) => p.x < -10) || pts.every((p) => p.x > W + 10) || pts.every((p) => p.y < -10) || pts.every((p) => p.y > H + 10)) return;
+        fl.beginPath();
+        pts.forEach((p, i) => (i ? fl.lineTo(p.x / Q, p.y / Q) : fl.moveTo(p.x / Q, p.y / Q)));
+        fl.closePath();
+        fl.globalCompositeOperation = 'destination-out';
+        fl.globalAlpha = Math.min(0.9, kk);
+        fl.fill();
+        fl.globalCompositeOperation = 'source-over';
+        fl.globalAlpha = Math.min(0.75, kk * 0.8);
+        fl.fillStyle = L.color;
+        fl.fill();
+      };
       for (const L of list) {
+        if (L.pane) {
+          pane(L, L.k * k);
+          continue;
+        }
         const flick = L.flicker ? 0.85 + 0.15 * Math.sin(t * 9 + L.x * 0.01) * Math.sin(t * 5.3 + L.y * 0.02) : 1;
         put(L.x, L.y, L.z, L.r * flick, L.color, L.k * k * flick);
         // o halo da lâmpada lá em cima
@@ -1042,7 +1114,8 @@
       const boxes = [];
       for (const L of list) {
         const zh = L.head || L.z;
-        if (!(zh > 60)) continue;
+        // (o vidro aceso da janela de alvenaria não faz faixa na água)
+        if (!(zh > 60) || L.pane) continue;
         const p = this.toScreen(L.x / 100, L.y / 100, -zh / 100);
         const rx = 0.32 * pxm * (0.9 + 0.1 * Math.sin(t * 2.3 + L.x * 0.03)) * (1 + 0.12 * Math.sin(t * 3.1 + L.y * 0.05));
         const ry = 0.32 * pxm * 3.2;

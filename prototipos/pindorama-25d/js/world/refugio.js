@@ -1277,6 +1277,113 @@
     ctx.lineTo(c.x, c.y);
     ctx.stroke();
     const top = z + hc;
+    if (kind === 'peixe') {
+      // o gelo e os peixes deitados (prateados, com o rabo e o olho)
+      const ice = [P(x0 + 3, y0 + 3, top), P(x1 - 3, y0 + 3, top), P(x1 - 3, y1 - 3, top), P(x0 + 3, y1 - 3, top)];
+      ctx.fillStyle = '#e4f0f0';
+      ctx.beginPath();
+      ice.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      ctx.closePath();
+      ctx.fill();
+      for (const fx of [0.3, 0.7]) {
+        const q = P(x0 + w * fx, cy + (rnd() - 0.5) * dp * 0.3, top + 2);
+        const L = 10 * cam.zoom, R = 3.4 * cam.zoom;
+        ctx.save();
+        ctx.translate(q.x, q.y);
+        ctx.rotate(-0.4 + rnd() * 0.3);
+        const fish = (pad, body, tail) => {
+          ctx.fillStyle = body;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, L + pad, R + pad, 0, 0, M.TAU);
+          ctx.fill();
+          ctx.fillStyle = tail;
+          ctx.beginPath();
+          ctx.moveTo(-L + 1, 0);
+          ctx.lineTo(-L - 5 * cam.zoom - pad, -4 * cam.zoom - pad);
+          ctx.lineTo(-L - 5 * cam.zoom - pad, 4 * cam.zoom + pad);
+          ctx.closePath();
+          ctx.fill();
+        };
+        fish(ink, INK, INK);
+        fish(0, '#a9bcc6', '#8ea3ae');
+        ctx.fillStyle = 'rgba(70, 92, 110, 0.55)';
+        ctx.fillRect(-L * 0.7, -R * 0.75, L * 1.3, R * 0.5);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.arc(L * 0.6, -R * 0.15, 0.9 * cam.zoom, 0, M.TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+      return;
+    }
+    if (kind === 'cesto' || kind === 'pote') {
+      // o cesto de palha trançada ou dois potes de barro
+      const many = kind === 'pote' ? [0.3, 0.7] : [0.5];
+      for (const fx of many) {
+        const q = P(x0 + w * fx, cy, top + (kind === 'pote' ? 7 : 5));
+        const rx = (kind === 'pote' ? 6 : 12) * cam.zoom, ry = (kind === 'pote' ? 7.5 : 7) * cam.zoom;
+        const body = kind === 'pote' ? '#b8643a' : '#c9a25e';
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx + ink, ry + ink, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx, ry, 0, 0, M.TAU);
+        ctx.fill();
+        if (kind === 'cesto') {
+          ctx.strokeStyle = 'rgba(110, 76, 30, 0.7)';
+          ctx.lineWidth = Math.max(1, 1.1 * cam.zoom);
+          for (let j = -2; j <= 2; j++) {
+            ctx.beginPath();
+            ctx.moveTo(q.x - rx * 0.9, q.y + j * ry * 0.3);
+            ctx.lineTo(q.x + rx * 0.9, q.y + j * ry * 0.3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(q.x + j * rx * 0.3, q.y - ry * 0.9);
+            ctx.lineTo(q.x + j * rx * 0.3, q.y + ry * 0.9);
+            ctx.stroke();
+          }
+          // a boca do cesto, mais escura
+          ctx.fillStyle = '#6e4e24';
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y - ry * 0.55, rx * 0.8, ry * 0.3, 0, 0, M.TAU);
+          ctx.fill();
+        } else {
+          // o gargalo e o brilho do barro
+          ctx.fillStyle = INK;
+          ctx.fillRect(q.x - rx * 0.45 - ink, q.y - ry * 1.35 - ink, rx * 0.9 + 2 * ink, ry * 0.55 + ink);
+          ctx.fillStyle = '#a3542e';
+          ctx.fillRect(q.x - rx * 0.45, q.y - ry * 1.35, rx * 0.9, ry * 0.55);
+          ctx.fillStyle = 'rgba(255, 220, 180, 0.35)';
+          ctx.beginPath();
+          ctx.ellipse(q.x - rx * 0.35, q.y - ry * 0.2, rx * 0.22, ry * 0.4, 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      return;
+    }
+    if (kind === 'colar') {
+      // colares de sementes e miçangas, em arcos
+      const colors = ['#d8453a', '#f2b632', '#2f7fd0', '#3f9f5f', '#7a3fb0'];
+      for (let j = 0; j < 3; j++) {
+        const q = P(x0 + w * (0.25 + j * 0.25), cy, top + 1);
+        const R = 6 * cam.zoom;
+        for (let b = 0; b < 9; b++) {
+          const a = Math.PI * 0.1 + (b / 8) * Math.PI * 0.8;
+          const bx = q.x + Math.cos(a) * R, by = q.y + Math.sin(a) * R * 0.6 - R * 0.3;
+          ctx.fillStyle = INK;
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.8 * cam.zoom + ink * 0.5, 0, M.TAU);
+          ctx.fill();
+          ctx.fillStyle = colors[(j + b) % colors.length];
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.5 * cam.zoom, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      return;
+    }
     if (kind === 'banana') {
       // as pencas deitadas: as bananas lado a lado (meias-luas amarelas com a pontinha escura)
       ctx.lineCap = 'round';
@@ -1476,14 +1583,23 @@
       };
       // (a câmera olha do sudeste: o lado de lá, o de cá e, por último, a frente)
       const back = yb - d.y0;
+      // a mercadoria: as frutas da quitanda, o peixe dos pescadores ou o artesanato (cestos, potes de barro e colares)
+      const goods = d.goods || 'frutas';
+      const G = {
+        frutas: { left: ['limao', 'maracuja'], right: 'tomate', front: ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'], scale: true },
+        peixe: { left: ['peixe', 'peixe'], right: 'peixe', front: ['peixe', 'peixe', 'peixe'], scale: true },
+        artesanato: { left: ['cesto', 'pote'], right: 'colar', front: ['cesto', 'pote', 'colar', 'pote'], scale: false },
+      }[goods] || null;
+      const g = G || { left: ['limao', 'maracuja'], right: 'tomate', front: ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'], scale: true };
       piece(d.x0, d.x0 + s, d.y0, yb, false);
-      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, 'limao', rnd, ink);
-      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, 'maracuja', rnd, ink);
+      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, g.left[0], rnd, ink);
+      crate(ctx, cam, d.x0 + s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, g.left[1], rnd, ink);
       piece(d.x1 - s, d.x1, d.y0, yb, false);
-      crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, 'tomate', rnd, ink);
-      scale(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.74, zt, ink);
+      crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.3, zt, s - 6, back * 0.4, g.right, rnd, ink);
+      if (g.scale) scale(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.74, zt, ink);
+      else crate(ctx, cam, d.x1 - s / 2, d.y0 + back * 0.75, zt, s - 6, back * 0.36, 'cesto', rnd, ink);
       piece(d.x0, d.x1, yb, d.y1, true);
-      const kinds = ['laranja', 'banana', 'abacaxi', 'mamao', 'abacate'];
+      const kinds = g.front;
       const n = Math.max(2, Math.min(5, Math.floor((d.x1 - d.x0 - 20) / 56)));
       const cw = 46, gap = (d.x1 - d.x0 - n * cw) / (n + 1);
       for (let k = 0; k < n; k++) crate(ctx, cam, d.x0 + gap + cw / 2 + k * (cw + gap), yb + f / 2, zt, cw, Math.min(36, f - 10), kinds[k % kinds.length], rnd, ink);
