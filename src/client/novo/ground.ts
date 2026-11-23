@@ -16,6 +16,9 @@ const GROUND_STEP: Readonly<Record<string, StepGround>> = {
   praca: 'pedra',
   pedra: 'pedra',
   'faixa-rua': 'pedra',
+  faixa: 'pedra', // a faixa de pedestre, pintada no asfalto
+  degrau: 'pedra', // a escada (o Morro do Escadão)
+  entulho: 'pedra',
   'meio-fio': 'pedra',
   bueiro: 'pedra',
   tampa: 'pedra',

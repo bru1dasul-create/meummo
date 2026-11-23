@@ -228,6 +228,20 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     } else if (!o.point) {
       const [x0, y0, x1, y1] = box(o);
       cv.rect(x0, y0, x1, y1, c, alpha);
+      // a quadra de cimento da escola (o campinho com `desenho: 'quadra'`): o vermelho em volta, o verde do jogo e as linhas
+      if (t === 'campinho' && prop(o, 'desenho') === 'quadra') {
+        cv.tag = -1;
+        cv.rect(x0, y0, x1, y1, hex('#9a5a48'), 1);
+        const mm = m(0.9);
+        cv.rect(x0 + mm, y0 + mm, x1 - mm, y1 - mm, hex('#4f7d5f'), 1);
+        const lw = Math.max(1, m(0.1));
+        const white = hex('#eeece4');
+        cv.rect(x0 + mm, y0 + mm, x1 - mm, y0 + mm + lw, white, 0.85);
+        cv.rect(x0 + mm, y1 - mm - lw, x1 - mm, y1 - mm, white, 0.85);
+        cv.rect(x0 + mm, y0 + mm, x0 + mm + lw, y1 - mm, white, 0.85);
+        cv.rect(x1 - mm - lw, y0 + mm, x1 - mm, y1 - mm, white, 0.85);
+        cv.rect((x0 + x1) / 2 - lw / 2, y0 + mm, (x0 + x1) / 2 + lw / 2, y1 - mm, white, 0.85);
+      }
     }
   }
   cv.tag = -1;
@@ -413,7 +427,7 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
       cv.rect(x0 + m(1.1), y0 + back - m(0.55), x1 - m(1.1), y0 + back - m(0.25), hex(String(prop(o, 'linha') ?? '#8a63b8')), 1);
       outline(x0 + m(1.1), y0 - m(4.7), x1 - m(1.1), y0 + back - m(0.25), C.contorno, 1, 0.7);
     } else if (t === 'muro') roof(x0, y0, x1, y1, C.muro);
-    else if (t === 'gradil' || t === 'portao') {
+    else if (t === 'gradil' || t === 'portao' || t === 'alambrado') {
       cv.rect(Math.min(x0, x1 - 1.5), Math.min(y0, y1 - 1.5), Math.max(x1, x0 + 1.5), Math.max(y1, y0 + 1.5), C.ferro);
     } else if (t === 'pilar' || t === 'pilar-viaduto') roof(x0, y0, x1, y1, C.concreto);
     else if (t === 'onibus') {
@@ -426,8 +440,26 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     } else if (t === 'tronco-caido') {
       roof(x0, y0, x1, y1, C.madeira);
     } else if (t === 'banco' || t === 'balcao') cv.rect(x0, y0, x1, y1, shade(C.madeira, 0.85), 0.9);
+    // as lonas da feira do Capão maior: o pano listrado de cada banca, da cor dela
+    else if (t === 'lona') {
+      const cores = String(prop(o, 'cores') ?? '').split(',').filter(Boolean);
+      const n = Math.max(1, Number(prop(o, 'bancas') ?? cores.length) || 1);
+      for (let i = 0; i < n; i++) {
+        const a = x0 + ((x1 - x0) * i) / n, b = x0 + ((x1 - x0) * (i + 1)) / n;
+        cv.rect(a, y0, b, y1, hex(cores[i] ?? '#2f6fb0'), 0.95);
+        for (let x = a + m(0.35); x < b - m(0.1); x += m(0.7)) cv.rect(x, y0, x + m(0.3), y1, hex('#f4f1e8'), 0.85);
+      }
+      outline(x0, y0, x1, y1, C.contorno, 1, 0.5);
+    } else if (t === 'carrinho-feira') cv.ellipse(x0, y0, Math.max(1, m(0.25)), Math.max(1, m(0.25)), hex(String(prop(o, 'cor') ?? '#b8323a')), 0.95);
+    // a mureta da ponte e a sucata do ferro-velho (o monte enferrujado)
+    else if (t === 'ponte') roof(x0, y0, x1, y1, C.concreto);
+    else if (t === 'sucata') {
+      const r = m(Number(prop(o, 'raio') ?? 1));
+      cv.ellipse(x0, y0, r, r * 0.85, hex('#7a4a2e'), 0.95);
+      cv.ellipse(x0 - r * 0.3, y0 - r * 0.2, r * 0.35, r * 0.3, hex('#8e969c'), 0.9);
+    }
     // a banca de feira (a do Capão maior e a da Dona Iracema): a madeira com o pano colorido na frente
-    else if (t === 'banca-frutas') {
+    else if (t === 'banca-frutas' || t === 'banca-pastel') {
       cv.rect(x0, y0, x1, y1, C.madeira, 0.95);
       cv.rect(x0, y1 - Math.max(1, m(0.35)), x1, y1, hex(String(prop(o, 'pano') ?? '#e2552f')), 0.95);
       outline(x0, y0, x1, y1, C.contorno, 1, 0.5);

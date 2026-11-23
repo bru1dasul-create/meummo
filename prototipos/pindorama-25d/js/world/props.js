@@ -623,6 +623,8 @@
       const floors = Math.max(1, b.floors || 1);
       const fh = H / floors;
       const shop = b.shop && b.shop.type;
+      // a fachada de um estilo desenhado fora daqui (a escola do Capão maior, em fundo.js): ela desenha os andares
+      const facade = b.style && PD.city && PD.city.facades && PD.city.facades[b.style];
       // ---- frente (+y)
       onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => {
         const r = M.rng(Math.round(b.x0 * 3 + 11));
@@ -633,7 +635,7 @@
         ctx.fillRect(0, 0, W, 16);
         // o buzinote: o cano curto que joga a água da laje para fora, e a mancha escura escorrida embaixo dele
         if (b.historic) historicFacade(ctx, b, W, H, fh, floors);
-        if (!b.interior && b.facade !== 'preta' && b.material !== 'tabua' && !b.historic && W > 260) {
+        if (!b.interior && b.facade !== 'preta' && b.material !== 'tabua' && !b.historic && !facade && W > 260) {
           const bx = W * (0.82 + r() * 0.1), run = 70 + r() * Math.min(140, H * 0.4);
           const g = ctx.createLinearGradient(0, 20, 0, 20 + run);
           g.addColorStop(0, 'rgba(40, 36, 30, 0.28)');
@@ -646,8 +648,9 @@
           ctx.fillRect(bx - 5, 12, 10, 8);
         }
         if (b.pixo) pixo(ctx, W, H - 150, M.rng(b.x0 + 9), 0.9);
-        if (b.paint) paintedSign(ctx, W, fh, b.paint, M.rng(b.x0 * 7 + 1));
-        for (let f = 0; f < floors; f++) {
+        if (b.paint && !facade) paintedSign(ctx, W, fh, b.paint, M.rng(b.x0 * 7 + 1));
+        if (facade) facade.front(ctx, b, W, H, fh, floors, r);
+        for (let f = 0; f < (facade ? 0 : floors); f++) {
           const yTop = H - (f + 1) * fh; // topo deste andar (y desce a partir da laje)
           if (b.historic) {
             historicFloor(ctx, b, W, H, fh, f, floors, M.rng(b.x0 * 3 + f * 17), false);
@@ -725,7 +728,8 @@
         ctx.fillStyle = b.brick ? M.shade(BRICK.laje, -0.25) : M.shade(b.wall, -0.36);
         ctx.fillRect(0, 0, D, 16);
         if (b.historic) historicFacade(ctx, b, D, H, fh, floors, true);
-        for (let f = 0; f < floors; f++) {
+        if (facade && facade.side) facade.side(ctx, b, D, H, fh, floors, r);
+        for (let f = 0; f < (facade && facade.side ? 0 : floors); f++) {
           const yTop = H - (f + 1) * fh;
           if (b.historic) {
             historicFloor(ctx, b, D, H, fh, f, floors, M.rng(b.y0 * 5 + f * 13), true);

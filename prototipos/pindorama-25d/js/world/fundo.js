@@ -2,7 +2,10 @@
 // capao-campinho-aprovado.jpg): o campinho de várzea com as traves de rede rasgada e o muro grafitado; o viaduto da
 // linha lilás quebrado na ponta, com mato em cima, pilares pichados e cipó pendurado; o trem lilás parado lá em cima,
 // com plantas no teto; o ônibus velho que virou horta; a barreira da rua fechada e as placas de direção. E, do Capão
-// maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura.
+// maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura; a
+// fachada da escola estadual (`PD.city.facades.escola`, para a casa com `estilo: 'escola'`) e o alambrado da quadra;
+// a feira livre: as lonas das bancas, a banca de pastel com caldo de cana e o carrinho de feira; a ponte (as muretas e
+// a lateral descendo até a água), a sucata do ferro-velho, o corrimão do escadão e os "gatos" (a fiação das vielas).
 // Mesmo traço do resto do cenário (contorno de tinta, lado da sombra mais escuro). Coisa comprida (muro, viaduto,
 // ônibus) vem do mapa em pedaços (tmj.js): cada pedaço desenha a sua parte e o desenho continua de um para o outro.
 //   PD.city.small[tipo] = { height, blocks, lift, box, shadow, paint }   (o props.js usa como as plantas)
@@ -1840,6 +1843,674 @@
       const vpts = [];
       for (let j = 0; j <= 4; j++) vpts.push({ x: m.x0 + 30 + j * 4, y: m.y1 + 2, z: z0 + m.z - j * 30 });
       vine3d(ctx, cam, vpts, rnd, ink);
+    },
+  };
+  // ------------------------------------------------------------------ a Escola Estadual (Capão maior, 23/11)
+  // A fachada do prédio da escola (a casa com `estilo: 'escola'`; o props.js chama `PD.city.facades.escola`): o concreto
+  // claro com as faixas da `faixa` (no alto e em cada laje), os pilares aparentes de 5 em 5 m, as janelas basculantes em
+  // fita (vidros quebrados, uns abertos), a entrada com a placa do nome e o portão de grade, e o mural que os alunos
+  // pintaram. Em cm da parede (`len` de comprimento, `H` de altura, o alto em 0).
+  const SCHOOL = { band: '#3a6ea5', frame: '#4b535a', pane: '#6d8c98', paneHi: 'rgba(220, 240, 245, 0.35)', hole: '#1b2226' };
+  /** Uma janela basculante em fita (em cm da parede): os módulos de 3 vidros de altura, com a moldura de ferro. */
+  function ribbonWindow(ctx, x, y, w, h, r, grade) {
+    ctx.fillStyle = SCHOOL.frame;
+    ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
+    const n = Math.max(1, Math.round(w / 105));
+    const uw = w / n;
+    const rows = 3;
+    const rh = h / rows;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < rows; j++) {
+        const px = x + i * uw + 5, py = y + j * rh + 4, pw = uw - 10, ph = rh - 8;
+        const k = r();
+        if (k < 0.22) {
+          // quebrado: o escuro de dentro
+          ctx.fillStyle = SCHOOL.hole;
+          ctx.fillRect(px, py, pw, ph);
+        } else if (k < 0.34) {
+          // o basculante aberto: o vidro virado (mais claro e mais baixo) e o vão escuro em cima
+          ctx.fillStyle = SCHOOL.hole;
+          ctx.fillRect(px, py, pw, ph * 0.45);
+          ctx.fillStyle = M.shade(SCHOOL.pane, 0.18);
+          ctx.fillRect(px, py + ph * 0.45, pw, ph * 0.55);
+        } else {
+          ctx.fillStyle = SCHOOL.pane;
+          ctx.fillRect(px, py, pw, ph);
+          ctx.fillStyle = SCHOOL.paneHi;
+          ctx.fillRect(px + pw * 0.12, py, pw * 0.16, ph);
+        }
+      }
+    }
+    // a grade do térreo (barras de ferro na frente do vidro)
+    if (grade) {
+      ctx.strokeStyle = 'rgba(40, 44, 48, 0.85)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let u = x + 14; u < x + w; u += 22) {
+        ctx.moveTo(u, y - 4);
+        ctx.lineTo(u, y + h + 4);
+      }
+      ctx.stroke();
+    }
+  }
+  /** O mural pintado pelos alunos (desbotado): o céu, o sol, os morros, a árvore e as mãozinhas coloridas. */
+  function schoolMural(ctx, x, y, w, h, r) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#7fb7d8';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#f2c84b';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.78, y + h * 0.28, h * 0.16, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = '#5c9a4a';
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.quadraticCurveTo(x + w * 0.25, y + h * 0.35, x + w * 0.55, y + h * 0.8);
+    ctx.quadraticCurveTo(x + w * 0.75, y + h * 0.5, x + w, y + h * 0.75);
+    ctx.lineTo(x + w, y + h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#6a4a2e';
+    ctx.fillRect(x + w * 0.3 - 8, y + h * 0.42, 16, h * 0.45);
+    ctx.fillStyle = '#3f7f3a';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.3, y + h * 0.4, h * 0.2, 0, M.TAU);
+    ctx.fill();
+    const HANDS = ['#e2552f', '#e8c020', '#2f6fb0', '#c4508a', '#f07a2a', '#4f9f5f'];
+    for (let k = 0; k < 9; k++) {
+      const hx = x + 30 + r() * (w - 60), hy = y + h * 0.55 + r() * h * 0.35;
+      ctx.fillStyle = HANDS[Math.floor(r() * HANDS.length)];
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 14, 17, 0, 0, M.TAU);
+      ctx.fill();
+      for (let f = 0; f < 4; f++) ctx.fillRect(hx - 12 + f * 7, hy - 30, 5, 16);
+    }
+    ctx.restore();
+    // desbotado e descascando
+    ctx.fillStyle = 'rgba(230, 226, 214, 0.3)';
+    for (let k = 0; k < 7; k++) ctx.fillRect(x + r() * w, y + r() * h, 20 + r() * 50, 8 + r() * 20);
+    ctx.strokeStyle = 'rgba(60, 56, 50, 0.4)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
+  }
+  /** A entrada: a placa com o nome (letras azuis no branco) e o portão de grade de duas folhas, fechado com corrente. */
+  function schoolEntrance(ctx, b, x, w, top, H, band, r) {
+    const bw = w - 20;
+    ctx.fillStyle = '#ece8dc';
+    ctx.fillRect(x + 10, top + 24, bw, 84);
+    ctx.strokeStyle = band;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(x + 10, top + 24, bw, 84);
+    if (b.paint) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let size = 46;
+      ctx.font = `${size}px ${ST_FONT}`;
+      while (ctx.measureText(b.paint).width > bw - 30 && size > 18) ctx.font = `${--size}px ${ST_FONT}`;
+      ctx.fillStyle = band;
+      ctx.fillText(b.paint, x + w / 2, top + 67);
+      ctx.restore();
+    }
+    // o portão: a moldura, as barras e a corrente com o cadeado no meio
+    const gy = top + 128, gh = H - gy;
+    ctx.fillStyle = 'rgba(30, 34, 38, 0.85)';
+    ctx.fillRect(x + 30, gy, w - 60, gh);
+    ctx.strokeStyle = '#5d646b';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(x + 30, gy, w - 60, gh);
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, gy);
+    ctx.lineTo(x + w / 2, H);
+    ctx.stroke();
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let u = x + 50; u < x + w - 40; u += 18) {
+      ctx.moveTo(u, gy + 6);
+      ctx.lineTo(u, H - 4);
+    }
+    ctx.moveTo(x + 30, gy + gh * 0.45);
+    ctx.lineTo(x + w - 30, gy + gh * 0.45);
+    ctx.stroke();
+    ctx.strokeStyle = '#9a8a5a';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(x + w / 2, gy + gh * 0.45, 22, 0.3, Math.PI - 0.3);
+    ctx.stroke();
+    ctx.fillStyle = '#c9a640';
+    ctx.fillRect(x + w / 2 - 9, gy + gh * 0.45 + 18, 18, 16);
+  }
+  /** Os andares da escola numa parede (a frente ou o lado). */
+  function schoolWall(ctx, b, len, H, fh, floors, r, side) {
+    const band = b.band || SCHOOL.band;
+    ctx.fillStyle = band;
+    ctx.fillRect(0, 18, len, 42);
+    for (let f = 1; f < floors; f++) {
+      ctx.fillStyle = band;
+      ctx.fillRect(0, H - f * fh - 28, len, 28);
+    }
+    const bays = Math.max(1, Math.round((len - 60) / 500));
+    const bw = (len - 60) / bays;
+    // os pilares de concreto aparente (mais claros, com a sombra de um lado)
+    for (let i = 0; i <= bays; i++) {
+      const px = 30 + i * bw;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+      ctx.fillRect(px - 16, 60, 32, H - 60);
+      ctx.fillStyle = 'rgba(70, 64, 56, 0.2)';
+      ctx.fillRect(px + 16, 60, 5, H - 60);
+    }
+    const mid = Math.floor(bays / 2);
+    for (let f = 0; f < floors; f++) {
+      const top = H - (f + 1) * fh;
+      for (let i = 0; i < bays; i++) {
+        const x0 = 30 + i * bw + 26, w = bw - 52;
+        if (!side && f === 0 && i === mid) {
+          schoolEntrance(ctx, b, x0, w, top, H, band, r);
+          continue;
+        }
+        if (!side && f === 0 && i === mid + 1) {
+          schoolMural(ctx, x0, top + fh * 0.2, w, fh * 0.68, r);
+          continue;
+        }
+        ribbonWindow(ctx, x0, top + fh * 0.24, w, fh * 0.4, r, f === 0);
+      }
+    }
+  }
+  PD.city.facades = PD.city.facades || {};
+  PD.city.facades.escola = {
+    front: (ctx, b, W, H, fh, floors, r) => schoolWall(ctx, b, W, H, fh, floors, r, false),
+    side: (ctx, b, D, H, fh, floors, r) => schoolWall(ctx, b, D, H, fh, floors, r, true),
+  };
+
+  // ------------------------------------------------------------------ o alambrado (a tela de arame da quadra)
+  // Os postes de cano galvanizado de 2,5 em 2,5 m, o cano de cima e a tela em losangos (dá para ver através dela),
+  // com um rasgo aqui e ali (`torn`) e o cipó subindo. Em pedaços (tmj.js): cada pedaço desenha a sua parte.
+  small.alambrado = {
+    fades: false,
+    height: (d) => d.h + 20,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, d.h * 0.25),
+    box: (cam, d, z0) => volBox(cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + d.h + 10, 20),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const alongY = d.whole.y1 - d.whole.y0 > d.whole.x1 - d.whole.x0;
+      const rnd = seeded(d.x0, d.y0, 3401);
+      const zt = z0 + d.h;
+      // a reta do alambrado (no meio da caixa fina) e os postes
+      const a = alongY ? { x: (d.x0 + d.x1) / 2, y: d.y1 } : { x: d.x0, y: (d.y0 + d.y1) / 2 };
+      const L = alongY ? d.y1 - d.y0 : d.x1 - d.x0;
+      const at = (u) => (alongY ? { x: a.x, y: a.y - u } : { x: a.x + u, y: a.y });
+      // a tela: losangos de arame, transparentes
+      H.onWall(ctx, cam, { ...at(0), z: zt }, alongY ? { x: 0, y: -1 } : { x: 1, y: 0 }, () => {
+        const hole = d.torn || rnd() < 0.3 ? { u: 40 + rnd() * (L - 120), v: d.h * (0.35 + rnd() * 0.4), r: 30 + rnd() * 40 } : null;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 6, L, d.h - 6);
+        if (hole) ctx.ellipse(hole.u, hole.v, hole.r * 1.3, hole.r, 0.4, 0, M.TAU);
+        ctx.clip('evenodd');
+        ctx.strokeStyle = 'rgba(150, 156, 160, 0.55)';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        const s = 16;
+        for (let k = -d.h; k < L + d.h; k += s) {
+          ctx.moveTo(k, 6);
+          ctx.lineTo(k + d.h, d.h);
+          ctx.moveTo(k + d.h, 6);
+          ctx.lineTo(k, d.h);
+        }
+        ctx.stroke();
+        ctx.restore();
+        // a beirada torta da tela em volta do rasgo
+        if (hole) {
+          ctx.strokeStyle = 'rgba(120, 126, 130, 0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(hole.u, hole.v, hole.r * 1.3, hole.r, 0.4, 0, M.TAU);
+          ctx.stroke();
+        }
+        // o cipó subindo pela tela
+        if (d.vine > 0) {
+          for (let k = 0; k < Math.round(d.vine * L / 120); k++) {
+            const u = rnd() * L, top = d.h * (0.2 + rnd() * 0.6);
+            ctx.strokeStyle = 'rgba(64, 98, 44, 0.9)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(u, d.h);
+            ctx.bezierCurveTo(u + 20, d.h * 0.8, u - 20, top + 40, u + 6, top);
+            ctx.stroke();
+            for (let j = 0; j < 6; j++) {
+              ctx.fillStyle = j % 2 ? '#4e8a3a' : '#3d7330';
+              ctx.beginPath();
+              ctx.ellipse(u + (rnd() - 0.5) * 30, top + (d.h - top) * (j / 6), 9, 6, rnd() * 3, 0, M.TAU);
+              ctx.fill();
+            }
+          }
+        }
+      });
+      // o cano de cima e os postes (de 2,5 em 2,5 m, mais um nas pontas do alambrado inteiro)
+      const pipe = '#8e969c';
+      inkLine(ctx, [P(at(0).x, at(0).y, zt), P(at(L).x, at(L).y, zt)], pipe, Math.max(1, 3 * cam.zoom), ink);
+      const post = (u) => {
+        const q = at(u);
+        inkLine(ctx, [P(q.x, q.y, z0), P(q.x, q.y, zt + 6)], pipe, Math.max(1.2, 4.5 * cam.zoom), ink);
+      };
+      // (contados do começo do alambrado inteiro: o desenho continua de um pedaço para o outro)
+      const g0 = alongY ? d.whole.y1 - d.y1 : d.x0 - d.whole.x0;
+      for (let gu = Math.ceil(g0 / 250 - 1e-6) * 250; gu < g0 + L - 1; gu += 250) post(gu - g0);
+      if (d.piece === d.pieces - 1) post(L);
+    },
+  };
+  // ------------------------------------------------------------------ a feira livre (Capão maior, 23/11)
+  // As lonas (`lona`): uma por fileira de bancas, cada banca com a lona listrada da cor do pano dela, inclinada para a
+  // frente (a câmera vê o tampo), com o babado na beira e os canos de ferro; fica por cima de quem passa embaixo dela
+  // (como a copa das árvores). A banca de pastel com caldo de cana (`banca-pastel`) e o carrinho de feira de quem compra
+  // (`carrinho-feira`). Feira viva: colorida, sem cipó.
+  const TARP = ['#2f6fb0', '#e8c020', '#e2552f', '#4f9f5f', '#f07a2a', '#c4508a'];
+  small.lona = {
+    overhead: true,
+    fades: true,
+    height: (d) => (d.h || 260) + 30,
+    blocks: 0,
+    shadow(p, cam, d) {
+      const L = cam.light;
+      const h = d.hf || 235;
+      const dx = (-L.x / L.z) * h, dy = (-L.y / L.z) * h;
+      p.moveTo(d.x0 + dx, d.y0 + dy);
+      p.lineTo(d.x1 + dx, d.y0 + dy);
+      p.lineTo(d.x1 + dx, d.y1 + dy);
+      p.lineTo(d.x0 + dx, d.y1 + dy);
+      p.closePath();
+    },
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + 20, d.y0 - 20, d.y1 + 20, z0 + 80, z0 + (d.h || 260) + 20, 20),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const zb = z0 + (d.h || 260), zf = z0 + (d.hf || 235);
+      const n = Math.max(1, d.stalls || Math.round((d.x1 - d.x0) / 260));
+      const sw = (d.x1 - d.x0) / n;
+      const pole = '#7d858b';
+      const poleAt = (x, y, za, zt) => inkLine(ctx, [P(x, y, za), P(x, y, zt)], pole, Math.max(1, 2.6 * cam.zoom), ink);
+      // os canos de trás (atrás das bancas)
+      for (let i = 0; i <= n; i++) poleAt(d.x0 + i * sw, d.y0 + 6, z0, zb);
+      for (let i = 0; i < n; i++) {
+        const xa = d.x0 + i * sw, xb = xa + sw;
+        const col = (d.colors && d.colors[i]) || TARP[(i + Math.round(d.x0 / 100)) % TARP.length];
+        // o pano: listras no sentido da descida (cor e branco), com a barriga de leve no meio
+        const strips = 8;
+        for (let k = 0; k < strips; k++) {
+          const u0 = xa + (sw * k) / strips, u1 = xa + (sw * (k + 1)) / strips;
+          const sag = (u) => 10 * Math.sin((Math.PI * (u - xa)) / sw);
+          fill(ctx, [P(u0, d.y0, zb - sag(u0)), P(u1, d.y0, zb - sag(u1)), P(u1, d.y1, zf - sag(u1)), P(u0, d.y1, zf - sag(u0))], k % 2 ? '#f4f1e8' : col);
+        }
+        edge(ctx, P(xa, d.y0, zb), P(xb, d.y0, zb), ink, 1.2);
+        // o babado da beira da frente (os dentinhos)
+        const vh = 22;
+        for (let k = 0; k < 6; k++) {
+          const u0 = xa + (sw * k) / 6, u1 = xa + (sw * (k + 1)) / 6, um = (u0 + u1) / 2;
+          inkPoly(ctx, [P(u0, d.y1, zf), P(u1, d.y1, zf), P(u1, d.y1, zf - vh * 0.55), P(um, d.y1, zf - vh), P(u0, d.y1, zf - vh * 0.55)], k % 2 ? '#f4f1e8' : M.shade(col, -0.08), ink, 1);
+        }
+      }
+      // os canos da frente (só a parte de cima da banca para cima: o pé fica atrás do balcão)
+      for (let i = 0; i <= n; i++) poleAt(d.x0 + i * sw, d.y1, z0 + 92, zf);
+    },
+  };
+  // a banca de pastel com o caldo de cana: o balcão de azulejo, a estufa de vidro com os pastéis, o tacho de óleo no
+  // fogareiro, o botijão, a moenda de cana com o feixe de cana do lado e a plaquinha pendurada
+  small['banca-pastel'] = {
+    height: (d) => (d.h || 90) + 140,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, (d.h || 90) * 0.9),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 30, d.x1 + 30, d.y0 - 20, d.y1 + 20, z0, z0 + 230, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x0, d.y0, 3501);
+      const h = d.h || 90;
+      const zt = z0 + h;
+      // o botijão e o fogareiro com o tacho (no fundo), e a moenda de cana (no canto de trás à direita)
+      const bx = d.x0 + 28, by = d.y0 + 30;
+      H.box(ctx, cam, bx - 16, bx + 16, by - 16, by + 16, z0, z0 + 62, { front: '#d9772e', side: '#b25f22', top: '#e8925a' }, ink);
+      H.box(ctx, cam, d.x0 + 70, d.x0 + 150, d.y0 + 12, d.y0 + 62, z0, z0 + 78, { front: '#3c3f43', side: '#2c2f33', top: '#4a4e53' }, ink);
+      const tc = P(d.x0 + 110, d.y0 + 37, z0 + 86);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(tc.x, tc.y, 36 * cam.zoom, 17 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#c9932e';
+      ctx.beginPath();
+      ctx.ellipse(tc.x, tc.y, 31 * cam.zoom, 14 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      for (let k = 0; k < 3; k++) {
+        // dois pastéis fritando e o vapor subindo
+        const q = P(d.x0 + 96 + k * 14, d.y0 + 32 + k * 4, z0 + 87);
+        ctx.fillStyle = '#e9b04c';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, 9 * cam.zoom, 5 * cam.zoom, 0.3, Math.PI, M.TAU);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
+      for (let k = 0; k < 2; k++) {
+        const a = P(d.x0 + 100 + k * 20, d.y0 + 37, z0 + 95), b = P(d.x0 + 108 + k * 20, d.y0 + 37, z0 + 150);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo(a.x + 8 * cam.zoom, (a.y + b.y) / 2, b.x, b.y);
+        ctx.stroke();
+      }
+      const mx0 = d.x1 - 78, my0 = d.y0 + 10;
+      H.box(ctx, cam, mx0, mx0 + 62, my0, my0 + 50, z0, z0 + 104, { front: '#c23b2e', side: '#962a20', top: '#d65a4c' }, ink);
+      const wheel = P(mx0 + 62, my0 + 25, z0 + 82);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = Math.max(1, 3.4 * cam.zoom);
+      ctx.beginPath();
+      ctx.ellipse(wheel.x, wheel.y, 10 * cam.zoom, 22 * cam.zoom, 0, 0, M.TAU);
+      ctx.stroke();
+      // o feixe de cana encostado na moenda
+      for (let k = 0; k < 7; k++) {
+        const x = d.x1 - 14 + (rnd() - 0.5) * 16, y = d.y0 + 20 + k * 6;
+        inkLine(ctx, [P(x, y, z0), P(x - 6 + rnd() * 12, y - 4, z0 + 190 + rnd() * 30)], k % 2 ? '#c9b25a' : '#8fae4a', Math.max(1, 3 * cam.zoom), ink * 0.6);
+      }
+      // o balcão de azulejo branco com a faixa vermelha, o tampo de inox e a estufa com os pastéis
+      const yb = d.y1 - 60;
+      H.box(ctx, cam, d.x0, d.x1, yb, d.y1, z0, zt, { front: '#f1efe8', side: '#d3d0c6', top: '#c9ccd0' }, ink);
+      H.onWall(ctx, cam, { x: d.x0, y: d.y1, z: zt }, { x: 1, y: 0 }, () => {
+        const W = d.x1 - d.x0;
+        ctx.strokeStyle = 'rgba(120, 120, 120, 0.35)';
+        ctx.lineWidth = 2;
+        for (let u = 15; u < W; u += 15) {
+          ctx.beginPath();
+          ctx.moveTo(u, 0);
+          ctx.lineTo(u, h);
+          ctx.stroke();
+        }
+        for (let v = 15; v < h; v += 15) {
+          ctx.beginPath();
+          ctx.moveTo(0, v);
+          ctx.lineTo(W, v);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#c8442d';
+        ctx.fillRect(0, h * 0.35, W, 16);
+      });
+      const ex0 = d.x0 + 40, ex1 = d.x0 + 150;
+      H.box(ctx, cam, ex0, ex1, yb + 8, d.y1 - 8, zt, zt + 40, { front: 'rgba(200, 230, 240, 0.45)', side: 'rgba(170, 205, 220, 0.45)', top: 'rgba(220, 240, 245, 0.5)' }, ink);
+      for (let k = 0; k < 5; k++) {
+        const q = P(ex0 + 16 + k * 20, yb + 30, zt + 10);
+        ctx.fillStyle = '#e3a443';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, 9 * cam.zoom, 6 * cam.zoom, 0, Math.PI, M.TAU);
+        ctx.fill();
+        ctx.strokeStyle = '#a8701f';
+        ctx.lineWidth = Math.max(1, 1.2 * cam.zoom);
+        ctx.stroke();
+      }
+      // os copos de caldo de cana em cima do balcão
+      for (let k = 0; k < 3; k++) {
+        const x = d.x0 + 180 + k * 18;
+        H.box(ctx, cam, x - 5, x + 5, yb + 25, yb + 35, zt, zt + 16, { front: '#c9d36a', side: '#aab450', top: '#e4ec9a' }, ink * 0.6);
+      }
+      // a plaquinha pendurada na frente (debaixo da lona)
+      // (duas linhas, cabendo na placa: o PASTEL grande e o CALDO DE CANA embaixo)
+      H.onWall(ctx, cam, { x: d.x0 + 40, y: d.y1 - 30, z: z0 + 208 }, { x: 1, y: 0 }, () => {
+        const W = d.x1 - d.x0 - 80;
+        ctx.fillStyle = '#f2c84b';
+        ctx.fillRect(0, 0, W, 50);
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(0, 0, W, 50);
+        ctx.fillStyle = '#8a2a1e';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const fit = (text, size) => {
+          ctx.font = `${size}px ${ST_FONT}`;
+          while (ctx.measureText(text).width > W - 16 && size > 8) ctx.font = `${--size}px ${ST_FONT}`;
+        };
+        fit('PASTEL', 26);
+        ctx.fillText('PASTEL', W / 2, 18);
+        fit('CALDO DE CANA', 15);
+        ctx.fillText('CALDO DE CANA', W / 2, 39);
+      });
+    },
+  };
+  // o carrinho de feira de quem compra: as duas rodinhas, o cano dobrado e a sacola xadrez com verdura saindo
+  small['carrinho-feira'] = {
+    height: () => 110,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x - 18, d.x + 18, d.y - 14, d.y + 14, 60),
+    box: (cam, d, z0) => volBox(cam, d.x - 40, d.x + 40, d.y - 40, d.y + 40, z0, z0 + 130, 12),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x, d.y, 3601);
+      const a = ((d.angle || 0) * Math.PI) / 180;
+      const [ux, uy] = [Math.cos(a), Math.sin(a)];
+      const at = (s, t, z) => P(d.x + ux * s - uy * t, d.y + uy * s + ux * t, z0 + z);
+      const bag = d.color || '#b8323a';
+      // a sacola (uma caixa inclinada para trás) com o xadrez
+      const corners = (z) => [at(-14, -12, z), at(14, -12, z), at(14, 12, z), at(-14, 12, z)];
+      const lo = corners(14), hi = corners(78).map((q) => ({ x: q.x - 4 * cam.zoom, y: q.y }));
+      inkPoly(ctx, [lo[0], lo[1], lo[2], hi[2], hi[1], hi[0]], bag, ink, 1.6);
+      inkPoly(ctx, [lo[1], lo[2], hi[2], hi[1]], M.shade(bag, -0.2), ink, 1);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+      for (let k = 1; k < 4; k++) {
+        const t = k / 4;
+        const l = { x: lo[0].x + (lo[1].x - lo[0].x) * t, y: lo[0].y + (lo[1].y - lo[0].y) * t };
+        const h2 = { x: hi[0].x + (hi[1].x - hi[0].x) * t, y: hi[0].y + (hi[1].y - hi[0].y) * t };
+        ctx.beginPath();
+        ctx.moveTo(l.x, l.y);
+        ctx.lineTo(h2.x, h2.y);
+        ctx.stroke();
+      }
+      // a verdura saindo de cima (alface, salsinha) e o cano do carrinho com as rodinhas
+      for (let k = 0; k < 4; k++) {
+        const q = at(-8 + k * 6, -4 + rnd() * 8, 84 + rnd() * 10);
+        ctx.fillStyle = k % 2 ? '#6ea84a' : '#4f8f3a';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, 9 * cam.zoom, 6 * cam.zoom, rnd() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+      inkLine(ctx, [at(-16, 0, 6), at(-18, 0, 100), at(-12, 0, 106)], '#8e969c', Math.max(1, 2.4 * cam.zoom), ink);
+      for (const t of [-12, 12]) {
+        const w = at(-16, t, 7);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(w.x, w.y, 6 * cam.zoom, 7 * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+    },
+  };
+  // ------------------------------------------------------------------ a ponte, o ferro-velho e o morro (Capão maior)
+  // A ponte da Rua do Córrego (`ponte`): cada mureta de concreto é um objeto (a caixa fina dela, para quem anda na ponte
+  // ficar entre as duas no desenho), com os furinhos de escoar, musgo e pichação; a do leste (`lado: 'leste'`) desenha
+  // também a lateral da laje descendo até a água (abaixo do chão: a água parece passar lá embaixo, na sombra da ponte).
+  small.ponte = {
+    height: (d) => d.h || 105,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, d.h || 105),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + (d.side === 'leste' ? 280 : 20), d.y0 - 20, d.y1 + 20, z0 - (d.drop || 150) - 50, z0 + (d.h || 105) + 20, 20),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x0, d.y0, 3701);
+      const drop = d.drop || 150, wh = d.h || 105;
+      const C = { front: '#a9a497', side: '#8f8a7e', top: '#bbb6a9' };
+      if (d.side === 'leste') {
+        // a lateral da laje que a câmera vê (a de +x), descendo até a água, e a sombra embaixo da ponte
+        const ya = d.y0 + 30, yb = d.y1 - 30;
+        fill(ctx, [P(d.x1, ya, z0 - drop - 40), P(d.x1 + 260, ya, z0 - drop - 40), P(d.x1 + 260, yb, z0 - drop - 40), P(d.x1, yb, z0 - drop - 40)], 'rgba(10, 24, 26, 0.28)');
+        inkPoly(ctx, [P(d.x1, ya, z0), P(d.x1, yb, z0), P(d.x1, yb, z0 - drop), P(d.x1, ya, z0 - drop)], C.side, ink, 1.8);
+        H.onWall(ctx, cam, { x: d.x1, y: yb, z: z0 }, { x: 0, y: -1 }, () => {
+          const L = yb - ya;
+          // a viga da beirada, as manchas de água escorrida, o cano e o musgo perto da água
+          ctx.fillStyle = 'rgba(60, 56, 50, 0.3)';
+          ctx.fillRect(0, 0, L, 18);
+          for (let k = 0; k < 8; k++) {
+            ctx.fillStyle = 'rgba(54, 50, 44, 0.25)';
+            ctx.fillRect(rnd() * L, 18, 8 + rnd() * 14, drop * (0.4 + rnd() * 0.6));
+          }
+          ctx.fillStyle = '#6b7075';
+          ctx.fillRect(0, 34, L, 14);
+          ctx.fillStyle = 'rgba(78, 116, 56, 0.55)';
+          for (let k = 0; k < 10; k++) {
+            ctx.beginPath();
+            ctx.ellipse(rnd() * L, drop - rnd() * 30, 14 + rnd() * 20, 8 + rnd() * 10, 0, 0, M.TAU);
+            ctx.fill();
+          }
+        });
+      }
+      // a mureta, com os furinhos de escoar no pé, o musgo e a pichação no lado que a câmera vê (o de +x)
+      H.box(ctx, cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + wh, C, ink);
+      H.onWall(ctx, cam, { x: d.x1, y: d.y1, z: z0 + wh }, { x: 0, y: -1 }, () => {
+        const L = d.y1 - d.y0;
+        ctx.fillStyle = '#4c4a44';
+        for (let u = 60; u < L - 40; u += 180) ctx.fillRect(u, wh - 22, 26, 14);
+        ctx.fillStyle = 'rgba(86, 118, 52, 0.5)';
+        for (let k = 0; k < 6; k++) {
+          ctx.beginPath();
+          ctx.ellipse(rnd() * L, wh - 6, 16 + rnd() * 18, 10, 0, 0, M.TAU);
+          ctx.fill();
+        }
+        // (a pichação em tamanho de mureta: a metade da de parede)
+        if (d.pixo) {
+          ctx.save();
+          ctx.scale(0.45, 0.45);
+          H.pixo(ctx, L / 0.45, 30, seeded(d.x1, d.y0, 3711), 0.8);
+          ctx.restore();
+        }
+      });
+    },
+  };
+  // a pilha de sucata do ferro-velho (`sucata`): geladeira deitada, máquina de lavar, bicicleta torta, canos, chapas
+  // e calotas enferrujadas, amontoadas num monte com mato nascendo
+  small.sucata = {
+    height: (d) => (d.r || 100) * 1.2,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x - d.r * 0.8, d.x + d.r * 0.8, d.y - d.r * 0.7, d.y + d.r * 0.7, d.r * 0.6),
+    box: (cam, d, z0) => volBox(cam, d.x - d.r - 30, d.x + d.r + 30, d.y - d.r - 30, d.y + d.r + 30, z0, z0 + d.r * 1.4 + 40, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x, d.y, 3801);
+      const r = d.r || 100;
+      const RUST = ['#8a4a2a', '#a35a32', '#6e3d24', '#7a7d80', '#5e6265', '#b9b4a8', '#3e6f9a', '#c8442d'];
+      // o monte (a ferrugem amontoada, mais alto no meio) e as peças por cima dele, de trás para a frente
+      const top = r * 0.72;
+      const ring = [];
+      for (let k = 0; k < 18; k++) {
+        const a = (k / 18) * M.TAU;
+        ring.push({ x: d.x + Math.cos(a) * r * (0.92 + rnd() * 0.12), y: d.y + Math.sin(a) * r * 0.82 * (0.92 + rnd() * 0.12) });
+      }
+      const hullPts = ring.map((q) => P(q.x, q.y, z0)).concat([P(d.x, d.y, z0 + top)]);
+      const S = PD.shapes;
+      const flat = [];
+      for (const q of hullPts) flat.push(q.x, q.y);
+      const hull = S && S.convexHull ? S.convexHull(flat) : flat;
+      const outline = [];
+      for (let i = 0; i < hull.length; i += 2) outline.push({ x: hull[i], y: hull[i + 1] });
+      inkPoly(ctx, outline, '#5b3a26', ink, 1.6);
+      // a luz de um lado do monte e a sombra do outro
+      const lit = [P(d.x - r * 0.9, d.y, z0), P(d.x, d.y - r * 0.8, z0), P(d.x, d.y, z0 + top)];
+      fill(ctx, lit, 'rgba(160, 96, 56, 0.35)');
+      const items = [];
+      for (let k = 0; k < 22; k++) {
+        const a = rnd() * M.TAU, rr = Math.sqrt(rnd()) * r * 0.8;
+        const f = rr / r;
+        items.push({ x: d.x + Math.cos(a) * rr, y: d.y + Math.sin(a) * rr * 0.82, z: (1 - f * f) * top * 0.92, k: Math.floor(rnd() * 4), c: RUST[Math.floor(rnd() * RUST.length)], s: 16 + rnd() * 22 });
+      }
+      items.sort((a, b) => a.x + a.y + a.z * 0.2 - (b.x + b.y + b.z * 0.2));
+      for (const it of items) {
+        const zb = z0 + it.z;
+        if (it.k === 0) {
+          // um eletrodoméstico (geladeira ou máquina) tombado
+          H.box(ctx, cam, it.x - it.s, it.x + it.s, it.y - it.s * 0.6, it.y + it.s * 0.6, zb, zb + it.s * 0.9, { front: it.c, side: M.shade(it.c, -0.25), top: M.shade(it.c, 0.12) }, ink);
+        } else if (it.k === 1) {
+          // chapa torta
+          inkPoly(ctx, [P(it.x - it.s, it.y - 10, zb), P(it.x + it.s, it.y - 4, zb + 8), P(it.x + it.s * 0.8, it.y + 12, zb + it.s * 0.7), P(it.x - it.s * 0.9, it.y + 6, zb + it.s * 0.5)], it.c, ink, 1.2);
+        } else if (it.k === 2) {
+          // canos
+          for (let j = 0; j < 3; j++) inkLine(ctx, [P(it.x - it.s, it.y + j * 8, zb + 6 + j * 4), P(it.x + it.s, it.y + j * 8 - 10, zb + 10 + j * 4)], '#8e969c', Math.max(1, 3 * cam.zoom), ink * 0.6);
+        } else {
+          // a roda de bicicleta / a calota
+          const q = P(it.x, it.y, zb + it.s * 0.6);
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y, it.s * 0.7 * cam.zoom, it.s * 0.55 * cam.zoom, 0.4, 0, M.TAU);
+          ctx.stroke();
+          ctx.strokeStyle = '#9aa0a4';
+          ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+          ctx.stroke();
+        }
+      }
+      // o mato tomando o monte
+      for (let k = 0; k < 4; k++) grass(ctx, cam, d.x + (rnd() - 0.5) * r * 1.4, d.y + (rnd() - 0.3) * r, z0, 22 + rnd() * 10, rnd, ink);
+    },
+  };
+  // o corrimão do escadão (`corrimao`): o cano de ferro nos postinhos, de uma ponta à outra da caixa fina
+  small.corrimao = {
+    height: () => 100,
+    blocks: 0,
+    shadow: () => {},
+    box: (cam, d, z0) => volBox(cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + 100, 12),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const alongY = d.y1 - d.y0 >= d.x1 - d.x0;
+      const a = alongY ? { x: (d.x0 + d.x1) / 2, y: d.y0 } : { x: d.x0, y: (d.y0 + d.y1) / 2 };
+      const L = alongY ? d.y1 - d.y0 : d.x1 - d.x0;
+      const at = (u) => (alongY ? { x: a.x, y: a.y + u } : { x: a.x + u, y: a.y });
+      const col = '#6d7378';
+      for (let u = 0; u <= L + 1; u += Math.max(120, L / Math.max(1, Math.round(L / 160)))) {
+        const q = at(Math.min(u, L));
+        inkLine(ctx, [P(q.x, q.y, z0), P(q.x, q.y, z0 + 92)], col, Math.max(1, 2.6 * cam.zoom), ink * 0.8);
+      }
+      inkLine(ctx, [P(at(0).x, at(0).y, z0 + 90), P(at(L).x, at(L).y, z0 + 90)], col, Math.max(1, 3 * cam.zoom), ink * 0.8);
+    },
+  };
+  // os "gatos" (`gatos`): a fiação puxada de casa em casa por cima das vielas, três ou quatro fios caindo em barriga, com
+  // a pipa enroscada num deles. Fica por cima de quem passa embaixo
+  small.gatos = {
+    overhead: true,
+    height: (d) => d.h + 40,
+    blocks: 0,
+    shadow: () => {},
+    box: (cam, d, z0) => volBox(cam, d.x0 - 40, d.x1 + 40, d.y0 - 40, d.y1 + 40, z0 + d.h - 160, z0 + d.h + 60, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x0, d.y0, 3901);
+      const pts = d.pts || [];
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const [a, b] = [pts[i], pts[i + 1]];
+        const strands = 3 + Math.floor(rnd() * 2);
+        for (let s = 0; s < strands; s++) {
+          const za = z0 + d.h + s * 10 - 10, sag = 40 + rnd() * 60;
+          const q0 = P(a.x, a.y, za), q1 = P(b.x, b.y, za - rnd() * 15);
+          const mid = P((a.x + b.x) / 2, (a.y + b.y) / 2, za - sag);
+          ctx.strokeStyle = 'rgba(24, 22, 26, 0.85)';
+          ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);
+          ctx.beginPath();
+          ctx.moveTo(q0.x, q0.y);
+          ctx.quadraticCurveTo(2 * mid.x - (q0.x + q1.x) / 2, 2 * mid.y - (q0.y + q1.y) / 2, q1.x, q1.y);
+          ctx.stroke();
+        }
+        // a pipa enroscada (losango colorido com a rabiola pendurada)
+        if (d.kite && i === Math.floor((pts.length - 1) / 2)) {
+          const k = P((a.x + b.x) / 2, (a.y + b.y) / 2, z0 + d.h - 50);
+          const s = 16 * cam.zoom;
+          ctx.fillStyle = d.kite;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = Math.max(1, 1.2 * cam.zoom);
+          ctx.beginPath();
+          ctx.moveTo(k.x, k.y - s);
+          ctx.lineTo(k.x + s * 0.8, k.y);
+          ctx.lineTo(k.x, k.y + s * 1.2);
+          ctx.lineTo(k.x - s * 0.8, k.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = d.kite;
+          ctx.beginPath();
+          ctx.moveTo(k.x, k.y + s * 1.2);
+          ctx.quadraticCurveTo(k.x + s, k.y + s * 2.4, k.x - s * 0.4, k.y + s * 3.4);
+          ctx.stroke();
+        }
+      }
     },
   };
 })(window.PD = window.PD || {});

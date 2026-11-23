@@ -34,7 +34,17 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (23/11): o Capão maior, etapa 1 (na `main`)**: o mapa inteiro aberto, de 96 para 192 m de largura (planta
+- **Agora (23/11): as regiões do Capão maior vestidas (na `main`)**, o dono: "pode seguir vestindo as regiões do
+  Capão". O desenho fica no `fundo.js` (o arquivo do Capão; um arquivo novo pediria mexer no `arte.ts` e no
+  `view-scripts.json`, que são da [arte]): `estacao` (o prédio e a plataforma; no tmj, o viaduto fica sem mureta e sem
+  árvore em cima dela), a fachada `PD.city.facades.escola` (o props.js chama a fachada de fora para a casa com
+  `estilo`, e a `faixa` dá a cor), `alambrado`, `lona` (overhead: por cima de quem passa embaixo), `banca-pastel`,
+  `carrinho-feira`, `ponte` (cada mureta é um objeto; a do leste desenha a lateral da laje abaixo do chão), `sucata`,
+  `corrimao` e `gatos` (polilinha de fios, overhead). No street.js: a quadra (`campinho` com `desenho: 'quadra'`) e o
+  escadão (`calcada` com `desenho: 'escada'`). O props.js passou a exportar `overgrowth`, `mossWall` e `vines` no
+  `help`. A arquibancada são três `muro` colados (só o primeiro confere os vãos no `place`). **Próximo: o que o dono
+  pedir ao andar pelo Capão maior.**
+- **Antes (23/11): o Capão maior, etapa 1 (na `main`)**: o mapa inteiro aberto, de 96 para 192 m de largura (planta
   aprovada: `docs/referencias/capao-maior-planta.jpg`; o comércio foi para o norte da rua, de frente para ela). No gerador: `W0 = 96` (tudo o que já existia usa ele e sai
   igual; conferido camada por camada: só saiu a mata fechada da beira leste antiga, `eastOpen`, e o viaduto, o mesmo
   objeto, foi até `W`), `W = 192` e `CAPAO_MAIOR` liga a parte nova, com sorteio próprio (`SEED + 40`). As medidas
@@ -47,8 +57,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   (não muda nada nas regiões antigas). A feira usa a `banca-frutas` do Guarapiranga (colisão inteira, baixa); a tecla M
   desenha as bancas. A vila nova é zona segura ("Centrinho do Capão"); áreas com nome: Estação Capão Redondo, Pracinha
   da Estação, Feira Livre, Escola Estadual, Mata do Córrego, Ferro-Velho, Morro do Escadão e Prainha do Córrego.
-  Desempenho: a mata nova pesa menos que as antigas (53 contra 35 quadros por segundo no teste). **Próximo: o dono
-  anda pelo mapa; depois, vestir cada região** (a estação, a escola, a feira, o escadão, o ferro-velho, a ponte).
+  Desempenho: a mata nova pesa menos que as antigas (53 contra 35 quadros por segundo no teste).
 - **Antes (23/11): os galhos dos saguis no Capão (na `main`)**, o pedido da [arte] com o ok do dono ("pode fazer os
   dois, primeiro o sagui"). Formato combinado com a [arte] e a [estrutura]: camada `pontos`, tipo `galho-sagui`, x,y no
   chão embaixo do meio do galho, `altura` (m) e `direcao` (graus, do tronco para a ponta; 0 = leste, 90 = sul). No

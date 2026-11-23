@@ -181,6 +181,9 @@
           // o prédio antigo (a Barragem de 1909): `estilo: 'historico'` (tijolo antigo, janelas em arco, cornija), `ano`
           // (no frontão) e `relogio` (a torre, com o relógio parado no lugar das janelas do andar de cima)
           historic: pr.estilo === 'historico',
+          // outro estilo de fachada, desenhado fora do props.js (`estilo: 'escola'`, fundo.js), com a cor da `faixa`
+          style: pr.estilo && pr.estilo !== 'historico' ? pr.estilo : null,
+          band: pr.faixa || null,
           year: pr.ano || null,
           clock: !!pr.relogio,
           tank: !!pr.caixaDagua,
@@ -288,6 +291,33 @@
         const depth = 110;
         const f = { x0: r0.x0 + Math.min(0, bx * depth), x1: r0.x1 + Math.max(0, bx * depth), y0: r0.y0 + Math.min(0, by * depth), y1: r0.y1 + Math.max(0, by * depth) };
         map.props.push({ kind: 'trave', ...f, post: along ? { x: (r0.x0 + r0.x1) / 2, a: r0.y0, b: r0.y1 } : { y: (r0.y0 + r0.y1) / 2, a: r0.x0, b: r0.x1 }, along, back: { x: bx, y: by }, depth, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, net: pr.rede || 'inteira' });
+      } else if (k === 'lona') {
+        // a lona de uma fileira de bancas da feira (fundo.js): `altura` atrás, `frente` (a altura da beira da frente),
+        // `bancas` (quantas) e `cores` (a cor de cada uma, separadas por vírgula)
+        map.props.push({ kind: 'lona', ...rect(o), h: (pr.altura || 2.6) * 100, hf: (pr.frente || 2.35) * 100, stalls: pr.bancas || 0, colors: pr.cores ? String(pr.cores).split(',') : null });
+      } else if (k === 'banca-pastel') {
+        map.props.push({ kind: 'banca-pastel', ...rect(o), h: (pr.altura || 0.9) * 100 });
+      } else if (k === 'carrinho-feira') {
+        // o carrinho de feira (ponto): `olhando` (graus) e `cor` (a sacola)
+        map.props.push({ kind: 'carrinho-feira', x, y, r: 25, angle: pr.olhando || 0, color: pr.cor || null });
+      } else if (k === 'ponte') {
+        // uma mureta da ponte da Rua do Córrego (fundo.js): `altura`, `lado` ('leste' desenha também a lateral da laje
+        // descendo `queda` m até a água) e `pixo`
+        map.props.push({ kind: 'ponte', ...rect(o), h: (pr.altura || 1.05) * 100, side: pr.lado || 'oeste', drop: (pr.queda || 1.5) * 100, pixo: !!pr.pixo });
+      } else if (k === 'sucata') {
+        map.props.push({ kind: 'sucata', x, y, r: (pr.raio || 1) * 100 });
+      } else if (k === 'corrimao') {
+        map.props.push({ kind: 'corrimao', ...rect(o) });
+      } else if (k === 'gatos' && o.polyline) {
+        // os "gatos" (a fiação puxada de casa em casa, polilinha): `altura` dos fios e a `pipa` enroscada (a cor)
+        const pts = o.polyline.map((q) => ({ x: (o.x + q.x) * CM, y: (o.y + q.y) * CM }));
+        const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
+        map.props.push({ kind: 'gatos', x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), pts, h: (pr.altura || 5) * 100, kite: pr.pipa || null });
+      } else if (k === 'alambrado') {
+        // o alambrado (a tela de arame nos postes de cano, a da quadra da escola do Capão maior; fundo.js), em pedaços de
+        // até 4 m: `altura`, `estado: 'rasgado'` (a tela furada), `cipo` (0 a 1)
+        const whole = rect(o);
+        for (const part of pieces(whole, 400)) map.props.push({ kind: 'alambrado', ...part, whole, h: (pr.altura || 3) * 100, torn: pr.estado === 'rasgado', vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0 });
       } else if (k === 'muro') {
         // muro em pedaços de até 4 m (cada pedaço é uma imagem): `grafite` ('cores') no `lado` (leste, sul...), `cipo`
         // (0 a 1), `musgo`; `whole` = o muro inteiro (o desenho do grafite continua de um pedaço para o outro)

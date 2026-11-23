@@ -232,6 +232,12 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Pastel e Caldo de Cana",
+      "x": 143.2,
+      "y": 51.63,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Árvore da Pracinha",
       "x": 171,
       "y": 28.5,
@@ -239,7 +245,7 @@
     },
     {
       "nome": "Ponte do Córrego",
-      "x": 148.1,
+      "x": 148.13,
       "y": 137.38,
       "tipo": "lugar"
     }

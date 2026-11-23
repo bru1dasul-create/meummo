@@ -297,7 +297,44 @@
     void g;
     return true;
   }
+  // ------------------------------------------------------------------ o escadão do morro (Capão maior)
+  // A calçada com `desenho: 'escada'`: os degraus de cimento atravessando a faixa comprida (de 36 em 36 cm), com a quina
+  // clara de cada um e o risco escuro do espelho, gastos no meio, musgo nos cantos e mato nas frestas.
+  function stairs(ctx, sh, box, seed, g) {
+    const b = sh;
+    const cb = clipBox(b, box);
+    if (!cb) return true;
+    const alongY = b.y1 - b.y0 >= b.x1 - b.x0;
+    ctx.save();
+    G.shapePath(ctx, sh);
+    ctx.clip();
+    ctx.fillStyle = '#a7a194';
+    ctx.fillRect(cb.x0, cb.y0, cb.x1 - cb.x0, cb.y1 - cb.y0);
+    const L = alongY ? b.y1 - b.y0 : b.x1 - b.x0;
+    const Wd = alongY ? b.x1 - b.x0 : b.y1 - b.y0;
+    const step = 36;
+    const r = seeded(b.x0, b.y0, 1901);
+    for (let u = 0; u < L; u += step) {
+      const k = r();
+      // o piso do degrau (um pouco mais claro ou mais escuro), gasto no meio, a quina e o espelho
+      const rect = (u0, v0, du, dv, color) => {
+        ctx.fillStyle = color;
+        if (alongY) ctx.fillRect(b.x0 + v0, b.y0 + u0, dv, du);
+        else ctx.fillRect(b.x0 + u0, b.y0 + v0, du, dv);
+      };
+      rect(u, 0, step, Wd, k < 0.5 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)');
+      rect(u + 6, Wd * 0.3, step - 12, Wd * 0.4, 'rgba(200, 194, 180, 0.25)');
+      rect(u, 0, 4, Wd, 'rgba(232, 228, 216, 0.7)');
+      rect(u + 4, 0, 5, Wd, 'rgba(50, 46, 40, 0.55)');
+      if (r() < 0.35) rect(u + 8, r() < 0.5 ? 0 : Wd - 22, 12, 22, 'rgba(80, 116, 54, 0.6)');
+      if (r() < 0.12) tuft(ctx, alongY ? b.x0 + r() * Wd : b.x0 + u + 10, alongY ? b.y0 + u + 10 : b.y0 + r() * Wd, 12 + r() * 8, r, g.cam, false);
+    }
+    ctx.restore();
+    void seed;
+    return true;
+  }
   texture.calcada = (ctx, sh, box, seed, g, map) => {
+    if (sh.kind === 'rect' && sh.pattern === 'escada') return stairs(ctx, sh, box, seed, g);
     if (sh.kind === 'line' && !sh.pattern) return sidewalkLine(ctx, sh, box, g, map);
     if (sh.pattern === 'placas' && sh.kind === 'poly') return loosePlates(ctx, sh, box, g);
     if (sh.pattern !== 'placas' || sh.kind !== 'rect') return false;
@@ -1424,9 +1461,117 @@
     ctx.restore();
   }
 
+  // ------------------------------------------------------------------ a quadra de cimento da escola (Capão maior)
+  // O campinho com `desenho: 'quadra'`: o cimento pintado, o verde do jogo e o vermelho em volta (desbotados e gastos
+  // onde mais se pisa), as linhas brancas do futsal e as amarelas do basquete, rachaduras com mato e musgo.
+  function quadraCourt(ctx, sh, box, seed, g) {
+    const b = sh;
+    ctx.save();
+    G.shapePath(ctx, sh);
+    ctx.clip();
+    ctx.fillStyle = '#9a5a48';
+    ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+    const m = 90;
+    const X0 = b.x0 + m, X1 = b.x1 - m, Y0 = b.y0 + m, Y1 = b.y1 - m;
+    ctx.fillStyle = '#4f7d5f';
+    ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+    // a tinta gasta: o cimento aparecendo em manchas
+    eachCell(sh, box, 200, seed + 801, (r, x0, y0) => {
+      if (r() < 0.55) {
+        ctx.fillStyle = r() < 0.6 ? 'rgba(170, 166, 156, 0.32)' : 'rgba(40, 52, 44, 0.12)';
+        ctx.beginPath();
+        ctx.ellipse(x0 + r() * 200, y0 + r() * 200, 30 + r() * 80, 18 + r() * 40, r() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+    });
+    const along = X1 - X0 >= Y1 - Y0;
+    const cx = (X0 + X1) / 2, cy = (Y0 + Y1) / 2;
+    const short = Math.min(X1 - X0, Y1 - Y0);
+    // as linhas amarelas do basquete: o garrafão e o arco de três em cada ponta
+    ctx.strokeStyle = 'rgba(232, 196, 64, 0.7)';
+    ctx.lineWidth = 6;
+    for (const end of [0, 1]) {
+      const kw = short * 0.3, kd = short * 0.36;
+      if (along) {
+        const x = end ? X1 - kd : X0;
+        ctx.strokeRect(x, cy - kw / 2, kd, kw);
+        ctx.beginPath();
+        ctx.arc(end ? X1 : X0, cy, short * 0.44, end ? Math.PI / 2 : -Math.PI / 2, end ? (3 * Math.PI) / 2 : Math.PI / 2);
+        ctx.stroke();
+      } else {
+        const y = end ? Y1 - kd : Y0;
+        ctx.strokeRect(cx - kw / 2, y, kw, kd);
+        ctx.beginPath();
+        ctx.arc(cx, end ? Y1 : Y0, short * 0.44, end ? Math.PI : 0, end ? M.TAU : Math.PI);
+        ctx.stroke();
+      }
+    }
+    // as linhas brancas do futsal: a volta, o meio, o círculo e as áreas
+    ctx.strokeStyle = 'rgba(240, 238, 230, 0.82)';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.beginPath();
+    if (along) {
+      ctx.moveTo(cx, Y0);
+      ctx.lineTo(cx, Y1);
+    } else {
+      ctx.moveTo(X0, cy);
+      ctx.lineTo(X1, cy);
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, short * 0.2, 0, M.TAU);
+    ctx.stroke();
+    for (const end of [0, 1]) {
+      ctx.beginPath();
+      const rr = short * 0.3;
+      if (along) ctx.arc(end ? X1 : X0, cy, rr, end ? Math.PI / 2 : -Math.PI / 2, end ? (3 * Math.PI) / 2 : Math.PI / 2);
+      else ctx.arc(cx, end ? Y1 : Y0, rr, end ? Math.PI : 0, end ? M.TAU : Math.PI);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(240, 238, 230, 0.85)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12, 0, M.TAU);
+    ctx.fill();
+    // rachaduras com mato e musgo, mais na beira
+    const r = seeded(b.x0, b.y0, 809);
+    for (let k = 0; k < Math.round((b.x1 - b.x0) * (b.y1 - b.y0) / 160000); k++) {
+      let x = b.x0 + r() * (b.x1 - b.x0), y = b.y0 + r() * (b.y1 - b.y0);
+      ctx.strokeStyle = 'rgba(34, 36, 32, 0.6)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      let a = r() * M.TAU;
+      for (let j = 0; j < 4; j++) {
+        a += (r() - 0.5) * 1.4;
+        x += Math.cos(a) * (40 + r() * 60);
+        y += Math.sin(a) * (40 + r() * 60);
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      if (r() < 0.7) tuft(ctx, x, y, 14 + r() * 10, r, g.cam, false);
+    }
+    ctx.fillStyle = 'rgba(78, 118, 52, 0.5)';
+    for (let x = b.x0; x < b.x1; x += 80) {
+      if (r() < 0.5) {
+        ctx.beginPath();
+        ctx.ellipse(x, b.y1 - r() * 40, 30 + r() * 50, 14 + r() * 20, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      if (r() < 0.35) {
+        ctx.beginPath();
+        ctx.ellipse(x, b.y0 + r() * 40, 30 + r() * 50, 14 + r() * 20, 0, 0, M.TAU);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    return true;
+  }
+
   // ------------------------------------------------------------------ campinho de terra
   texture.campinho = (ctx, sh, box, seed, g) => {
     if (sh.kind !== 'rect') return false;
+    if (sh.pattern === 'quadra') return quadraCourt(ctx, sh, box, seed, g);
     const b = sh;
     ctx.save();
     G.shapePath(ctx, sh);
