@@ -155,6 +155,13 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   manda `consume` para quem vê (o gancho `view.consume`) e, se curou, o `heal`. Ficam salvos com quanto faltava
   (`CharacterData.effects`, passo 8 de `MIGRATIONS`; `characterData(player, zona, now)`): na volta, `cleanSavedEffects`
   confere e o relógio de cada um volta a andar (parado enquanto o jogador está fora).
+- **Sons gravados** (CC0, créditos em `public/assets/audio/CREDITOS-SONS.md`): `Sfx` carrega a lista `SAMPLE_FILES`
+  (fetch + `decodeAudioData`, depois do primeiro toque) e toca com `playSample` no volume dos efeitos; sem o arquivo,
+  fica o som feito por código. O `Ambient` toca as duas florestas gravadas em loop (`loopStart`/`loopEnd` com uma folga
+  nas pontas) e o volume de cada uma vem da luz do dia (`recordedMix`); com elas, o vento e as folhas feitos por código
+  ficam mais baixos e os passarinhos genéricos saem. Os passos: `src/client/novo/ground.ts` (`GroundMap` lê a camada
+  `chao` do mapa — retângulos, polígonos e caminhos com `largura` — e `StepCounter` conta as passadas); o motor toca um
+  passo a cada passada, com o som do chão (terra, pedra ou areia).
 - **Receitas** (protocolo 51): `data/receitas.json` (a chave é o item que sai; `precisa` = os ingredientes; `quantidade`
   opcional), lidas e conferidas por `src/server/recipes.ts` (`checkRecipes`: os itens existem e cada NPC só prepara
   receita que existe; na partida do servidor). O campo `receitas` de um NPC em `data/npcs.json` diz o que ele prepara;

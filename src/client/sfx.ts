@@ -3,6 +3,7 @@
 // Desde 14/11 o som é da [estrutura] (escolha do dono): quem liga o som no motor também faz o som.
 
 import type { ShotKind, UseSound } from '../shared/items';
+import type { StepGround } from './novo/ground';
 import { Music } from './music';
 
 export type SoundName =
@@ -36,7 +37,44 @@ export type SoundName =
   | 'capy'
   | 'spirit'
   | 'burst'
-  | 'hawk';
+  | 'hawk'
+  | 'arrow-hit';
+
+/**
+ * Os sons gravados (licença livre, CC0, do OpenGameArt; créditos em public/assets/audio/CREDITOS-SONS.md): o nome e o
+ * arquivo. Escolhidos pelo dono em 23/11 a partir das prévias. Carregam depois do primeiro toque; até lá (ou se um
+ * faltar), toca o som feito por código.
+ */
+export const SAMPLE_FILES = {
+  'arco-soltar': '/assets/audio/efeitos/arco-soltar.mp3',
+  'flecha-vibra-1': '/assets/audio/efeitos/flecha-vibra-1.mp3',
+  'flecha-vibra-2': '/assets/audio/efeitos/flecha-vibra-2.mp3',
+  'passo-terra-1': '/assets/audio/efeitos/passo-terra-1.mp3',
+  'passo-terra-2': '/assets/audio/efeitos/passo-terra-2.mp3',
+  'passo-terra-3': '/assets/audio/efeitos/passo-terra-3.mp3',
+  'passo-pedra-1': '/assets/audio/efeitos/passo-pedra-1.mp3',
+  'passo-pedra-2': '/assets/audio/efeitos/passo-pedra-2.mp3',
+  'passo-pedra-3': '/assets/audio/efeitos/passo-pedra-3.mp3',
+  'passo-pedra-4': '/assets/audio/efeitos/passo-pedra-4.mp3',
+  'passo-pedra-5': '/assets/audio/efeitos/passo-pedra-5.mp3',
+  'passo-pedra-6': '/assets/audio/efeitos/passo-pedra-6.mp3',
+  'passo-areia-1': '/assets/audio/efeitos/passo-areia-1.mp3',
+  'passo-areia-2': '/assets/audio/efeitos/passo-areia-2.mp3',
+  'passo-areia-3': '/assets/audio/efeitos/passo-areia-3.mp3',
+  'passo-areia-4': '/assets/audio/efeitos/passo-areia-4.mp3',
+  'passo-areia-5': '/assets/audio/efeitos/passo-areia-5.mp3',
+  'passo-areia-6': '/assets/audio/efeitos/passo-areia-6.mp3',
+  'floresta-dia': '/assets/audio/ambiente/floresta-dia.mp3',
+  'floresta-noite': '/assets/audio/ambiente/floresta-noite.mp3',
+} as const;
+export type SampleName = keyof typeof SAMPLE_FILES;
+
+/** Os passos gravados de cada chão (ground.ts). */
+const STEP_SAMPLES: Record<StepGround, readonly SampleName[]> = {
+  terra: ['passo-terra-1', 'passo-terra-2', 'passo-terra-3'],
+  pedra: ['passo-pedra-1', 'passo-pedra-2', 'passo-pedra-3', 'passo-pedra-4', 'passo-pedra-5', 'passo-pedra-6'],
+  areia: ['passo-areia-1', 'passo-areia-2', 'passo-areia-3', 'passo-areia-4', 'passo-areia-5', 'passo-areia-6'],
+};
 
 const MUTE_KEY = 'meummo:som-desligado';
 const VOLUME_KEY = 'meummo:volumes';
@@ -60,6 +98,11 @@ export class Sfx {
   private readonly lastPlayed = new Map<SoundName, number>();
   /** Volume de quem toca agora (1 = o de sempre): o `consume` de quem está perto toca mais baixo. */
   private scale = 1;
+  /** Os sons gravados já carregados (SAMPLE_FILES). */
+  private readonly samples = new Map<SampleName, AudioBuffer>();
+  private samplesAsked = false;
+  /** O último passo que tocou (para não repetir o mesmo arquivo duas vezes seguidas). */
+  private lastStep: SampleName | null = null;
   /**
    * O som contínuo da puxada, que sobe com a carga: o zumbido do elástico do estilingue (revisão 17) ou o rangido da
    * corda do arco (mais grave e áspero).
@@ -96,6 +139,7 @@ export class Sfx {
         for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
       }
       void this.ctx.resume();
+      this.loadSamples();
       this.music.prime(); // no mesmo clique: libera os tocadores de música (o iPhone pede)
     } catch {
       this.ctx = null; // sem áudio neste navegador: o jogo segue mudo
@@ -353,10 +397,16 @@ export class Sfx {
         this.noise(t, 0.25, 'lowpass', 1200, 200, 0.25);
         this.tone('sine', 660, 1320, t + 0.05, 0.4, 0.07);
         break;
-      case 'bow-release': // a corda do arco solta: um "tóim" grave da corda e a flecha cortando o ar
+      case 'bow-release': // a corda do arco solta: a gravação (escolhida pelo dono); sem ela, o "tóim" feito por código
+        if (this.playSample('arco-soltar', t, 0.55, 0.96 + Math.random() * 0.08)) break;
         this.tone('triangle', 260, 120, t, 0.16, 0.3);
         this.tone('sine', 520, 300, t, 0.08, 0.1);
         this.noise(t + 0.02, 0.14, 'bandpass', 3200, 900, 0.22);
+        break;
+      case 'arrow-hit': // a flecha entrando num bicho: o "toc" surdo (o grave caindo, o abafado e um estalo seco)
+        this.tone('sine', 170, 70, t, 0.16, 0.32);
+        this.noise(t, 0.07, 'lowpass', 1100, 350, 0.28);
+        this.noise(t, 0.012, 'highpass', 3000, 2500, 0.1);
         break;
     }
   }
@@ -453,6 +503,72 @@ export class Sfx {
       this.noise(s, 0.07, 'bandpass', 1350 - k * 25, 1050 - k * 20, 0.07 - Math.min(0.03, k * 0.004));
       if (k % 2 === 1) this.tone('sine', 320, 210, s + 0.02, 0.05, 0.05);
     }
+  }
+
+  /** A sua flecha cravou: numa árvore ou coisa (`onObject`), a madeira vibrando (gravada); no chão, um "toc" baixinho. */
+  arrowStuck(onObject: boolean): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    if (onObject && this.playSample(Math.random() < 0.5 ? 'flecha-vibra-1' : 'flecha-vibra-2', t, 0.4, 0.95 + Math.random() * 0.1)) return;
+    this.tone('sine', 150, 80, t, 0.1, onObject ? 0.2 : 0.1);
+    this.noise(t, 0.05, 'lowpass', 900, 300, onObject ? 0.16 : 0.1);
+  }
+
+  /** Um passo seu no chão `ground` (um dos gravados, sem repetir o anterior, cada um num tom um pouquinho diferente). */
+  step(ground: StepGround, volume = 1): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    const options = STEP_SAMPLES[ground].filter((name) => name !== this.lastStep && this.samples.has(name));
+    if (options.length === 0) return; // ainda carregando: sem passo (melhor que um som feito por código esquisito)
+    const name = options[Math.floor(Math.random() * options.length)]!;
+    this.lastStep = name;
+    this.playSample(name, ctx.currentTime, (0.26 + Math.random() * 0.06) * volume, 0.93 + Math.random() * 0.14);
+  }
+
+  /** Quantos sons gravados já carregaram (para os testes). */
+  get loadedSamples(): number {
+    return this.samples.size;
+  }
+
+  /** O som gravado `name`, se já carregou (o ambiente pega a floresta daqui). */
+  sample(name: SampleName): AudioBuffer | null {
+    return this.samples.get(name) ?? null;
+  }
+
+  /** Carrega os sons gravados (uma vez, depois do primeiro toque). O que faltar fica com o som feito por código. */
+  private loadSamples(): void {
+    const ctx = this.ctx;
+    if (this.samplesAsked || !ctx) return;
+    this.samplesAsked = true;
+    for (const [name, url] of Object.entries(SAMPLE_FILES) as [SampleName, string][]) {
+      fetch(url)
+        .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(url))))
+        .then((data) => ctx.decodeAudioData(data))
+        .then((buffer) => this.samples.set(name, buffer))
+        .catch(() => {
+          // sem o arquivo (ou o navegador não leu): o som feito por código fica no lugar
+        });
+    }
+  }
+
+  /** Toca um som gravado (no volume dos efeitos); false se ele ainda não carregou. */
+  private playSample(name: SampleName, at: number, volume: number, rate = 1): boolean {
+    const ctx = this.ctx;
+    const buffer = this.samples.get(name);
+    if (!ctx || !buffer) return false;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = rate;
+    const gain = ctx.createGain();
+    gain.gain.value = Math.max(0, volume * this.scale);
+    source.connect(gain).connect(this.buses.efeitos!);
+    source.start(at);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+    };
+    return true;
   }
 
   /** O baque de um impacto: um grave que desce e a terra; com mais força, mais fundo, mais longo e com um brilho no fim. */

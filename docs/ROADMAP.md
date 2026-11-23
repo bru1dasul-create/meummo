@@ -980,6 +980,15 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   Boitatá, 25% desde 23/11, pedido do dono: no jogo novo, ainda sem os chefes, é o único que deixa). Receitas em
   `data/receitas.json` (a chave é o item que sai; "precisa" diz os ingredientes) e quem prepara no campo "receitas" de
   `data/npcs.json`. Mensagens `craft` e `crafted`; `NpcInfo.recipes`. Protocolo 51
+- [x] **[estrutura]** Sons gravados de licença livre (pedido do dono, 23/11: mandou sons de arco, de passos correndo e de
+  floresta de dia e de tarde/noite tirados do YouTube e do Minecraft, que não dá para pôr no jogo; achei os CC0 mais
+  parecidos no OpenGameArt, comparando as frequências e o ritmo, e ele escolheu pelas prévias): **a floresta gravada**
+  por baixo do ambiente (de dia, pássaros com insetos e vento; de tarde e de noite, o pântano), passando de uma para a
+  outra com a luz do dia, com os nossos bem-te-vis, sabiás e a coruja por cima; **os passos** do seu boneco (um a cada
+  passada, no ritmo da corrida; terra, pedra ou areia conforme o chão da camada `chao` do mapa); **o arco** (o soltar
+  gravado, a flecha cravada vibrando na árvore e a pancada ao acertar o bicho, feita por código). Arquivos em
+  `public/assets/audio/ambiente` e `efeitos` (~670 KB), créditos em `CREDITOS-SONS.md`; `src/client/novo/ground.ts`.
+  O dono achou os passos "meio bugados" na prévia: entram para ele testar no jogo e ajustar
 - [x] **[estrutura]** O som de usar cada consumível nos tempos da animação da [arte] (pedido do dono, 23/11, pela [arte]:
   "o som de cura" na poção e "comendo algo, tomando algo" na banana e na água de coco): campo "som" em
   `data/items.json` ("garrafada": o "fiu" aos 0,30 s e a cura no estouro, aos 0,52 s; "mordida": duas mordidas, aos

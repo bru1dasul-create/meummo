@@ -45,6 +45,7 @@ import { GuardButton } from './guard';
 import { Joystick } from './joystick';
 import { QuickSlots } from './quick';
 import { EffectsBar } from './effectsBar';
+import { GroundMap, StepCounter } from './ground';
 import { ProvisionalView, type WorldView } from './view';
 import { Ambient, sceneOfPlace } from '../ambient';
 import { trackOfScene } from '../music';
@@ -214,6 +215,11 @@ class NewWorld implements NewWorldGame {
   private readonly quick: QuickSlots;
   /** Os efeitos com tempo valendo (a Banana, a Água de Coco, a garrafada), com o tempo que falta, perto da vida. */
   private readonly effectsBar: EffectsBar;
+  /** O chão do mapa (para o som dos passos) e a conta dos passos do seu boneco (pedido do dono, 23/11). */
+  private ground: GroundMap | null = null;
+  private readonly steps = new StepCounter();
+  /** Quantos passos tocaram (para os testes). */
+  private stepsPlayed = 0;
   /** Quando dá para usar o próximo item (o servidor conta uma recarga só para todos os consumíveis). */
   private itemReadyAt = 0;
   private map!: GameMap;
@@ -375,6 +381,10 @@ class NewWorld implements NewWorldGame {
     this.combat = new CombatLayer(this.container, this.rules);
     // a Flecha Ancestral batendo ou explodindo (no desenho): o baque para todos, o tremor e a pausa só na sua
     this.combat.onSpiritEnd = (end) => this.skillLanded(skillImpactPower(end.rank ?? 1, end.level ?? 3), end.mine, end.r > 0, gameNow());
+    // a sua flecha cravou: na árvore (ou outra coisa), a madeira vibrando; no chão, um "toc" baixinho
+    this.combat.onStuck = (stuck) => {
+      if (stuck.mine && stuck.kind === 'flecha') this.sfx.arrowStuck(stuck.on !== null);
+    };
     this.classes = deps.welcome.classes ?? [];
     if (deps.welcome.hero) this.hero = deps.welcome.hero;
     this.actionBar = this.makeActionBar();
@@ -539,7 +549,20 @@ class NewWorld implements NewWorldGame {
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
       // o som: o lugar do ambiente, os volumes, se está desligado e se o navegador já liberou o áudio
-      sound: () => ({ scene: game.ambient.current, night: game.ambient.isNight, music: game.sfx.music.current, playing: game.sfx.music.playing, volumes: game.sfx.volumes(), muted: game.sfx.muted, running: game.sfx.audio !== null }),
+      sound: () => ({
+        scene: game.ambient.current,
+        night: game.ambient.isNight,
+        music: game.sfx.music.current,
+        playing: game.sfx.music.playing,
+        volumes: game.sfx.volumes(),
+        muted: game.sfx.muted,
+        running: game.sfx.audio !== null,
+        // os sons gravados: quantos arquivos já carregaram, se a floresta gravada está tocando e quantos passos tocaram
+        samples: game.sfx.loadedSamples,
+        recorded: game.ambient.recording,
+        steps: game.stepsPlayed,
+        ground: game.ground && game.predicted ? game.ground.typeAt(game.myFeet().x, game.myFeet().y) : null,
+      }),
       // dia e noite: em que ponto do ciclo (ms), a luz (1 dia, 0 noite) e se os bichos estão "da noite"
       time: () => {
         const position = cyclePosition(performance.now() - game.timeBase, game.rules);
@@ -569,6 +592,8 @@ class NewWorld implements NewWorldGame {
     const json = await loadMap(msg.map);
     if (this.destroyed) return;
     this.map = GameMap.fromTiled(json, msg.map);
+    this.ground = this.map.metric ? new GroundMap(json) : null; // o chão de cada lugar (o som dos passos)
+    this.steps.reset();
     // o mapa da tecla M e o mini mapa (só nos mapas do formato novo), com o que já foi explorado
     this.mapPicture = this.map.metric ? new MapPicture(json, msg.map, msg.explored) : null;
     this.view?.destroy();
@@ -688,6 +713,7 @@ class NewWorld implements NewWorldGame {
       this.landings = this.landings.filter((l) => now < l.at);
     }
     this.updateCharge(now);
+    this.updateSteps(now);
     this.updateAim();
     this.updateHawk(now);
     this.updateGuard(now);
@@ -2068,6 +2094,22 @@ class NewWorld implements NewWorldGame {
    * Pular (Espaço no padrão): por enquanto só de enfeite. Pula na hora; o servidor confere a recarga e mostra para
    * quem está perto. Defendendo ou puxando o tiro, não pula (o desenho também não deixa).
    */
+  /**
+   * Os passos do seu boneco: um a cada passada (mais longa correndo, mais curta andando devagar), com o som do chão de
+   * baixo (terra, pedra ou areia). Parado, no ar, rolando ou desmaiado, não.
+   */
+  private updateSteps(now: number): void {
+    if (!this.ground) return;
+    const feet = this.myFeet();
+    const walking = now - this.lastWalkAt < 150;
+    const speed = walking ? (this.lastWalkSlow ? this.rules.walkSpeed : this.rules.runSpeed) : 0;
+    const onGround = !this.dead && now - this.jumpedAt >= JUMP_AIR_MS && !this.rolling(now);
+    if (this.steps.update(feet.x, feet.y, speed, onGround)) {
+      this.stepsPlayed += 1;
+      this.sfx.step(this.ground.stepAt(feet.x, feet.y), this.lastWalkSlow ? 0.7 : 1);
+    }
+  }
+
   private tryJump(now: number): void {
     if (this.dead || this.guardHeld || this.charging || now < this.jumpReadyAt) return;
     if (this.rolling(now)) return; // rolando, não pula (o servidor também recusa)
@@ -2428,7 +2470,8 @@ class NewWorld implements NewWorldGame {
       return;
     }
     this.combat.floater(id, `-${dmg}`, blocked ? BLOCKED_COLOR : e?.kind === 'monster' ? '#ffe08a' : '#ffffff', now);
-    if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : 'hit'); // a casca do tatu-bola soa como a defesa
+    // a casca do tatu-bola soa como a defesa; a sua flecha entrando no bicho, o "toc" surdo
+    if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : by === this.myId && this.shot().kind === 'flecha' ? 'arrow-hit' : 'hit');
   }
 
   /**
@@ -2575,6 +2618,7 @@ class NewWorld implements NewWorldGame {
     this.nightShown = night;
     this.view?.setTimeOfDay?.({ light, night });
     this.ambient.setNight(night);
+    this.ambient.setDaylight(light); // a floresta gravada passa do dia para a tarde e a noite
     if (turned) this.toast.show(night ? 'Anoiteceu: os bichos ficam mais fortes (e dão mais XP e ouro)' : 'Amanheceu', 3500);
   }
 

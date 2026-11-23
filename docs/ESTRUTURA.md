@@ -34,6 +34,13 @@ alternativas quando vejo — sem concordar só para agradar.
   `data/receitas.json`, `src/server/recipes.ts` com `checkRecipes` na partida do servidor; a Dona Iracema prepara pela
   aba "Receitas" da loja, `World.craft`; protocolo 51; as lojas só com ingredientes; quedas novas nos bichos). O efeito visual do gole "tipo Priston Tale" é da [arte], esperando a referência
   do dono (não achei descrição confiável).
+- **Sons gravados (23/11, na main):** a floresta (dia: pássaros + insetos + vento; tarde/noite: o pântano), os passos
+  pelo chão e o arco, todos CC0 do OpenGameArt, escolhidos pelo dono pelas prévias (créditos em
+  `public/assets/audio/CREDITOS-SONS.md`). O `Sfx` carrega os arquivos depois do primeiro toque (`SAMPLE_FILES`) e cai no
+  som feito por código se faltar; o `Ambient` toca as duas florestas em loop com a luz do dia (`setDaylight`,
+  `recordedMix`); `ground.ts` lê a camada `chao` do mapa (o chão debaixo do pé) e conta as passadas. **Os passos podem
+  precisar de ajuste** (o dono achou "meio bugados" na prévia). Os arquivos que o dono mandou (YouTube, Minecraft) não
+  entram no jogo: servem de referência.
 - **Feito em 23/11 (tudo na main, conferido no navegador, PC e celular):**
   1. **Atributos** (aprovado pelo dono: "pode fazer assim, 3 pontos por nível, espírito"): Força (dano do tiro de
      sempre), Destreza (puxada e intervalo do tiro menores), Espírito (dano e recarga das habilidades da classe;
