@@ -2396,6 +2396,29 @@ class NewWorld implements NewWorldGame {
     if (e?.kind === 'monster') this.sfx.play(blocked ? 'block' : 'hit'); // a casca do tatu-bola soa como a defesa
   }
 
+  /**
+   * O efeito subindo do chão em volta de `id` (subiu de nível ou pôs ponto numa habilidade): o da view, se ela souber
+   * desenhar (`levelUp`); senão, o provisório da camada do combate, na cor da habilidade (dourado no nível).
+   */
+  private riseEffect(id: number, what: 'level' | 'skill', skill?: string): void {
+    if (this.view?.levelUp) {
+      this.view.levelUp(id, what, skill);
+      return;
+    }
+    const color = what === 'level' ? '#ffd76a' : skill === 'flecha' ? '#8dffc8' : skill === 'olhos' ? '#ffb347' : '#ffe9a0';
+    this.combat.rise(id, color, what === 'level', gameNow());
+  }
+
+  /** O tipo da habilidade `id` ('chuva', 'flecha', 'olhos'), procurando em todas as classes (a de outro jogador também). */
+  private skillKindOf(id: string | undefined): string | undefined {
+    if (!id) return undefined;
+    for (const cls of this.classes) {
+      const skill = cls.skills.find((s) => s.id === id);
+      if (skill) return skill.kind ?? undefined;
+    }
+    return undefined;
+  }
+
   /** Começa um tremor de tela (o mais forte ganha, se já tiver um). `ms`: quanto dura (sem ele, o do game feel). */
   private startShake(px: number, now: number, ms = this.feel.shakeMs): void {
     if (px <= 0 || ms <= 0) return;
@@ -2797,6 +2820,12 @@ class NewWorld implements NewWorldGame {
         // (o estouro da Flecha Ancestral toca quando o desenho chega lá: veja onSpiritEnd)
         break;
       case 'fx': {
+        if (msg.kind === 'skillup') {
+          // pôs um ponto numa habilidade (você ou quem está perto): o efeito subindo do chão, na cor dela
+          this.riseEffect(msg.id, 'skill', this.skillKindOf(msg.s));
+          if (msg.id === this.myId) this.sfx.play('skillup');
+          break;
+        }
         if (this.entities.get(msg.id)?.kind === 'pet') {
           this.onPetFx(msg.id, msg.kind, msg.a);
           break;
@@ -2869,6 +2898,7 @@ class NewWorld implements NewWorldGame {
         this.onDeath(msg.id);
         break;
       case 'levelup':
+        this.riseEffect(msg.id, 'level'); // o efeito subindo do chão (você ou quem está perto)
         if (msg.id === this.myId) {
           this.myMaxHp = msg.maxHp;
           this.toast.show(`Você subiu para o nível ${msg.level}!`, 2500);

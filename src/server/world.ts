@@ -1106,6 +1106,8 @@ export class World {
     player.skillPoints = { ...player.skillPoints, [skill.id]: has + 1 };
     player.heroDirty = true;
     player.outbox.push({ t: 'sys', text: has === 0 ? `Você aprendeu: ${skill.name}!` : `${skill.name}: ${has + 1} de ${skill.points.length}.` });
+    // o efeito subindo do chão, para quem pôs o ponto e para quem está perto (pedido do dono, 23/11)
+    this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'skillup', s: skill.id });
   }
 
   /** Tirar os pontos de todas as habilidades (de graça, por enquanto): eles voltam para gastar de novo. */
@@ -1349,6 +1351,7 @@ export class World {
   /** Vida cheia. */
   /** O painel mudou o nível: a XP do nível começa do zero, a vida enche e todo mundo vê. */
   adminSetLevel(player: Player, level: number): void {
+    const before = player.level;
     player.level = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
     player.xp = 0;
     player.maxHp = playerMaxHp(player, this.combat);
@@ -1361,7 +1364,8 @@ export class World {
       player.outbox.push({ t: 'sys', text: 'Com o nível novo, os pontos das habilidades voltaram: escolha de novo.' });
     }
     player.heroDirty = true;
-    this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
+    // "subiu de nível" (o efeito e a musiquinha) só subindo; baixando, a vida nova chega pelo `hp`
+    if (player.level > before) this.emitToViewers(player, { t: 'levelup', id: player.id, level: player.level, maxHp: player.maxHp });
     this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp: player.maxHp });
     player.outbox.push({ t: 'sys', text: `O administrador mudou o seu nível para ${player.level}.` });
     this.saveCharacters([player]);
