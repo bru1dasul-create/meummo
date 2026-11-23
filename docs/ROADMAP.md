@@ -896,8 +896,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   a habilidade, para quem pôs o ponto e quem está perto (protocolo 47). O motor chama `view.levelUp(id, 'level' |
   'skill', tipo)`; sem ele, um efeito provisório no `combat.ts` (anel no chão e faíscas subindo; dourado no nível,
   na cor da habilidade no ponto). Som novo `skillup`
-- [ ] **[arte]** O desenho de verdade do efeito de subir de nível e de pôr ponto numa habilidade (`levelUp` na view:
-  quando existir, o provisório some sozinho). Pedido mandado à [arte]
+- [x] **[arte]** O desenho de verdade do efeito de subir de nível e de pôr ponto numa habilidade (`levelUp` na view:
+  quando existir, o provisório some sozinho). Pedido mandado à [arte]. **FEITO (23/11, prévia aprovada pelo dono:
+  "gostei, só afasta mais o círculo, está pegando nos braços")**: `js/levelup.js` — um círculo de luz abre nos pés,
+  anéis de luz sobem pelo corpo por fora dos braços e fecham em volta da cabeça, com faíscas em espiral; no nível
+  (dourado, 1,7 s) uma estrela estoura acima do nome; no ponto (1,15 s), a cor da habilidade (Ancestral verde, Chuva
+  azul, Olhos laranja). De noite acende uma luz em volta. Conferido no jogo de dia e de noite, no PC e no celular, e
+  visto por outro jogador. O provisório do `combat.ts` (`rise`) deixou de ser usado: a [estrutura] pode apagá-lo
 - [x] **[estrutura]** O "+" e o nível de cada habilidade na barra de ações (pedido do dono, 23/11: "o upar da habilidade
   aparecer aqui embaixo como se fosse um + e o level de cada habilidade upável mostrando nesse menu"): cada habilidade
   da classe mostra os pontos em bolinhas (acesas = tem) e um "+" quando dá para pôr ponto (o toque põe o ponto, sem usar

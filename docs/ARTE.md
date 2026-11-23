@@ -139,6 +139,30 @@
   - comparar: `PD.characterCacheOff = true` no console desliga a imagem guardada. Testes (rascunho `leve/`): `medir.cjs`
     (tempo por personagem e perfil), `cache-teste.cjs` / `cache-exato.cjs` (guardada × direta, pixel a pixel),
     `jogo-leve.cjs` (no jogo, ligada × desligada), `interacao.cjs` (conversa e R armado)
+- **O efeito de subir de nível (23/11; prévia aprovada pelo dono: "gostei, só afasta mais o círculo, está pegando nos
+  braços"):** `js/levelup.js` (`PD.levelUpFx`), carregado antes do `view.js` (`arte.ts` e `view-scripts.json`). A view
+  ganhou o `levelUp(id, what, skill)` que o motor já chamava (`engine.ts`, `riseEffect`): com ele, o provisório do
+  `combat.ts` (`rise`) não roda mais
+  - o que aparece: um círculo de luz abre no chão, nos pés (com marquinhas girando); anéis de luz sobem pelo corpo e
+    fecham em volta da cabeça, com o rastro embaixo; uma coluna de luz fraquinha e faíscas subindo em espiral; no nível,
+    uma estrela estoura no alto. Nível: dourado, 1,7 s, 3 anéis e a estrela. Ponto de habilidade: 1,15 s, 2 anéis, sem
+    a estrela, na cor dela — Ancestral verde, Chuva azul (o amarelo provisório parecia o dourado do nível), Olhos
+    laranja (o âmbar, no jogo, também parecia dourado); outra habilidade, amarelo-claro
+  - os anéis passam a 56 cm do meio do corpo (medido no Birim: o braço chega a ~38 cm parado, 44 andando; correndo
+    balança até ~60 e pode encostar num instante) e só fecham acima dos ombros (135 cm), até 30 cm em volta da cabeça
+    (`radiusAt`). A estrela fica a ~2,5 m: o nome fica 46 cm acima da cabeça (~2,07 m) e, mais baixa, caía nas letras
+  - três passadas (`view.js`, `_withLevelFx`): `'chao'` junto com as sombras (embaixo de tudo), `'tras'` antes do corpo
+    (a metade de trás dos anéis) e `'frente'` depois. É desenhado à parte da imagem guardada (`drawCached`), e quem está
+    com o efeito não é pulado por estar fora da tela (o efeito é maior que a caixa dele)
+  - o traço do meio dos anéis vai por cima, na cor de verdade (`source-over`); os brilhos somam luz (`lighter`). Tudo
+    somando, de tarde e no chão claro, virava amarelo-claro. A estrela e os raios continuam somando (por cima, apagando,
+    ficavam cinza)
+  - de noite, o efeito acende uma luz na cor dele (no chão e no corpo) na camada da noite (`_drawNightLights`, `light`)
+  - relógio: `this.last` (o mesmo do `frame`), como os Olhos de Gavião
+  - teste: `tests/levelup-art.test.ts` (cores, anéis por fora dos braços, as três passadas, a luz e a estrela).
+    Rascunho `levelup/`: `prancha.cjs` (quadros, grande e no tamanho do jogo), `gif.cjs` (a animação), `bracos.cjs` (até
+    onde vão os braços em cada altura), `jogo.cjs <pasta> dia|noite` (no jogo: o nível pelo painel do adm, o ponto pelo
+    "+", em câmera lenta 0,25x) e `outro.cjs` (outro jogador, no celular deitado, vendo o Arqueiro subir)
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba

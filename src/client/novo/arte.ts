@@ -51,6 +51,8 @@ import '../../../prototipos/pindorama-25d/js/creatures/quati.js';
 import '../../../prototipos/pindorama-25d/js/creatures/tatu.js';
 import '../../../prototipos/pindorama-25d/js/creatures/marimbondo.js';
 import '../../../prototipos/pindorama-25d/js/creatures/boitata.js';
+// o efeito de subir de nível (e de ganhar ponto numa habilidade): o círculo no chão e os anéis de luz subindo
+import '../../../prototipos/pindorama-25d/js/levelup.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
 

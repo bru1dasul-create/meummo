@@ -13,6 +13,7 @@
 //   canDraw(kind, tipo)       desenha este bicho? (kind 'pet': o Joaquim, 'joaquim'; ações wake, sleep, meow, purr, dash)
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
 //   talk(id, ms)              quem fala mexe a boca (e a sobrancelha) por `ms`, sem balão; 0 para
+//   levelUp(id, o que, hab.)  subiu de nível ('level') ou ganhou ponto numa habilidade ('skill'): anéis de luz subindo
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -156,6 +157,17 @@
       const yaw = Number.isFinite(angle) ? rad(angle) : undefined;
       if (a.creature) a.creature.action(kind, yaw);
       else this._personAction(a, kind, yaw);
+    }
+
+    /**
+     * Subiu de nível (`what` = 'level') ou pôs um ponto numa habilidade ('skill', com `skill` = 'chuva', 'flecha' ou
+     * 'olhos', para a cor): o círculo de luz que acende no chão e os anéis subindo pelo corpo (js/levelup.js). Você ou
+     * outro jogador perto. No relógio dos quadros (`this.last`), como o brilho dos Olhos de Gavião.
+     */
+    levelUp(id, what, skill) {
+      const a = this.actors.get(id);
+      if (!a || a.creature || !PD.levelUpFx) return;
+      a.levelFx = { at: this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now()), look: PD.levelUpFx.look(what, skill) };
     }
 
     /**
@@ -641,6 +653,8 @@
         }
         if (a.id === this.followId && this.visionWant > 0) glow = Math.max(glow, 0.45);
         a.eyeGlow = glow;
+        // o efeito de subir de nível acabou
+        if (a.levelFx && (t - a.levelFx.at) / 1000 > PD.levelUpFx.duration(a.levelFx.look)) a.levelFx = null;
         if (a.armedOff && t >= a.armedOff) {
           a.armedOff = 0;
           if (a.ch) {
@@ -703,7 +717,8 @@
       const seen = this._onScreen();
       const actors = [...this.actors.values()].map((a) => {
         const d = this._actorDrawable(a);
-        if (d && d.bounds && !seen(d.bounds)) {
+        if (d && a.levelFx) this._withLevelFx(d, a);
+        else if (d && d.bounds && !seen(d.bounds)) {
           d.draw = () => {};
           d.drawShadow = () => {};
         }
@@ -1044,6 +1059,15 @@
         if (a.type !== 'filhote_boitata' || !a.creature || a.creature.dying !== null) continue;
         const lit = a.creature._lit ? a.creature._lit() : 1;
         if (lit > 0.05) list.push({ x: a.creature.pos.x, y: a.creature.pos.y, z: 0, r: 240, color: '#ff9a3a', k: 0.85 * lit, flicker: true });
+      }
+      // quem está subindo de nível: a luz do efeito abre o escuro em volta dele, no chão e no corpo (js/levelup.js)
+      for (const a of this.actors.values()) {
+        const fx = a.levelFx;
+        if (!fx || !PD.levelUpFx || !a.ch) continue;
+        const lit = PD.levelUpFx.light(fx.look, (this.last - fx.at) / 1000);
+        if (lit < 0.02) continue;
+        list.push({ x: a.ch.pos.x, y: a.ch.pos.y, z: 0, r: 230, color: fx.look.hex, k: 0.8 * lit });
+        list.push({ x: a.ch.pos.x, y: a.ch.pos.y, z: 120, r: 150, color: fx.look.hex, k: 0.7 * lit });
       }
       // os vaga-lumes acesos (vida.js)
       if (PD.vida) for (const g of PD.vida.glows(this.world)) list.push(g);
@@ -1458,6 +1482,30 @@
       }
       a.convAlpha = a.convAlpha === undefined ? want : a.convAlpha + (want - a.convAlpha) * 0.18;
       return a.convAlpha;
+    }
+
+    /**
+     * O efeito de subir de nível em volta de quem desenha `d`: o círculo do chão junto com as sombras (embaixo de tudo),
+     * a metade de trás dos anéis antes do corpo e a da frente depois (js/levelup.js). Fica fora da imagem guardada do
+     * personagem (drawCached): é desenhado à parte, então quem está parado continua leve.
+     */
+    _withLevelFx(d, a) {
+      const fx = a.levelFx;
+      const ch = a.ch;
+      const cam = this.cam;
+      const s = (this.last - fx.at) / 1000;
+      const foot = { x: ch.pos.x, y: ch.pos.y, z: ch.groundZ || 0 };
+      const draw = d.draw;
+      const shadow = d.drawShadow;
+      d.drawShadow = (c) => {
+        shadow(c);
+        PD.levelUpFx.draw(c, cam, foot, s, fx.look, 'chao');
+      };
+      d.draw = (c) => {
+        PD.levelUpFx.draw(c, cam, foot, s, fx.look, 'tras');
+        draw(c);
+        PD.levelUpFx.draw(c, cam, foot, s, fx.look, 'frente');
+      };
     }
 
     /** A caixa (px do mundo) aparece na tela? Com folga de ~2 m (o arco nas costas, o brilho, o contorno). */

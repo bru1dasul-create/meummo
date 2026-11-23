@@ -40,6 +40,7 @@
     "js/creatures/tatu.js",
     "js/creatures/marimbondo.js",
     "js/creatures/boitata.js",
+    "js/levelup.js",
     "js/view.js",
     "js/portrait.js"
   ]
