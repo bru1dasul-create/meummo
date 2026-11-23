@@ -292,16 +292,26 @@
     return R;
   }
   /** A parte da imagem acima da linha `yb` (y da tela), virada para baixo dela. Fatia `[i0, i1)` da largura (0 a 1). */
+  /**
+   * O reflexo some aos poucos longe da base (23/11, o dono: "melhora o reflexo"): a parte de cima da imagem (a que,
+   * virada, fica mais longe da beira) sai mais fraca. Três faixas: [começo, fim] da altura usada e a força de cada uma.
+   */
+  const FADE = [[0, 0.34, 0.3], [0.34, 0.67, 0.62], [0.67, 1, 0.95]];
   function flipSlice(ctx, s, yb, f0, f1) {
     const hp = (yb - s.y) / s.h;
     if (hp <= 0.01) return;
     const k = Math.min(1, hp);
     const sw = s.c.width, sh = s.c.height;
+    const a = ctx.globalAlpha;
     ctx.save();
     ctx.translate(0, 2 * yb);
     ctx.scale(1, -1);
-    ctx.drawImage(s.c, sw * f0, 0, sw * (f1 - f0), sh * k, s.x + s.w * f0, s.y, s.w * (f1 - f0) + 0.6, s.h * k);
+    for (const [b0, b1, al] of FADE) {
+      ctx.globalAlpha = a * al;
+      ctx.drawImage(s.c, sw * f0, sh * k * b0, sw * (f1 - f0), sh * k * (b1 - b0), s.x + s.w * f0, s.y + s.h * k * b0, s.w * (f1 - f0) + 0.6, s.h * k * (b1 - b0) + 0.4);
+    }
     ctx.restore();
+    ctx.globalAlpha = a;
   }
   /**
    * A parte `[f0, f1)` da largura da imagem, virada em torno da RETA da tela que passa por P com inclinação `m` (y = P.y
@@ -310,10 +320,15 @@
    */
   function flipAlong(ctx, s, P, m, f0, f1, hk) {
     const sw = s.c.width, sh = s.c.height;
+    const a = ctx.globalAlpha;
     ctx.save();
     ctx.transform(1, 2 * m, 0, -1, 0, 2 * (P.y - m * P.x));
-    ctx.drawImage(s.c, sw * f0, 0, sw * (f1 - f0), sh * hk, s.x + s.w * f0, s.y, s.w * (f1 - f0), s.h * hk);
+    for (const [b0, b1, al] of FADE) {
+      ctx.globalAlpha = a * al;
+      ctx.drawImage(s.c, sw * f0, sh * hk * b0, sw * (f1 - f0), sh * hk * (b1 - b0), s.x + s.w * f0, s.y + s.h * hk * b0, s.w * (f1 - f0), s.h * hk * (b1 - b0) + 0.4);
+    }
     ctx.restore();
+    ctx.globalAlpha = a;
   }
   function reflectOne(ctx, cam, o) {
     // (só imagem pronta: o reflexo não manda refazer nenhuma)
@@ -363,10 +378,51 @@
       clip.closePath();
     }
     const day = world.daylight == null ? 1 : world.daylight;
+    // (23/11: o reflexo balança com a água. Ele é montado numa tela à parte, com a mesma câmera, e volta para a tela em
+    // tirinhas de poucos pixels, cada uma deslocada de lado por uma onda que anda — só no retângulo onde há reflexo)
+    const cv = ctx.canvas;
+    const m = ctx.getTransform();
+    let X0 = Infinity, Y0 = Infinity, X1 = -Infinity, Y1 = -Infinity;
+    for (const o of list) {
+      const b = o.bounds;
+      const base = o.t ? cam.p({ x: o.t.x, y: o.t.y, z: 0 }).y : cam.p({ x: o.fp.x1, y: o.fp.y1, z: 0 }).y;
+      X0 = Math.min(X0, b.x0);
+      X1 = Math.max(X1, b.x1);
+      Y0 = Math.min(Y0, base - 20);
+      Y1 = Math.max(Y1, base + (base - b.y0));
+    }
+    const dx0 = Math.max(0, Math.floor(m.a * X0 + m.e) - 8), dx1 = Math.min(cv.width, Math.ceil(m.a * X1 + m.e) + 8);
+    const dy0 = Math.max(0, Math.floor(m.d * Y0 + m.f)), dy1 = Math.min(cv.height, Math.ceil(m.d * Y1 + m.f));
+    if (dx1 <= dx0 || dy1 <= dy0) return;
+    // (a tela à parte tem metade da resolução: o reflexo não precisa de nitidez — sai até mais natural, um pouco
+    // borrado — e montar e copiar uma tela inteira em resolução cheia custava 6 ms por quadro no Refúgio)
+    const Q = 2;
+    const buf = R._buf || (R._buf = document.createElement('canvas'));
+    const bw = Math.ceil(cv.width / Q), bh = Math.ceil(cv.height / Q);
+    if (buf.width !== bw || buf.height !== bh) {
+      buf.width = bw;
+      buf.height = bh;
+    }
+    const b = buf.getContext('2d');
+    const [qx0, qy0, qx1, qy1] = [Math.floor(dx0 / Q), Math.floor(dy0 / Q), Math.ceil(dx1 / Q), Math.ceil(dy1 / Q)];
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    b.clearRect(qx0, qy0, qx1 - qx0, qy1 - qy0);
+    b.setTransform(m.a / Q, m.b / Q, m.c / Q, m.d / Q, m.e / Q, m.f / Q);
+    b.save();
+    b.clip(clip);
+    b.globalAlpha = 1;
+    for (const o of list) reflectOne(b, cam, o);
+    b.restore();
     ctx.save();
-    ctx.clip(clip);
-    ctx.globalAlpha = 0.24 + 0.08 * day;
-    for (const o of list) reflectOne(ctx, cam, o);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 0.3 + 0.1 * day;
+    const px = Math.max(1, m.a);
+    const strip = Math.max(2, Math.round(3 * px)) * Q;
+    for (let y = qy0 * Q; y < qy1 * Q; y += strip) {
+      const off = (Math.sin(y * 0.05 / px + t * 2.1) * 2.4 + Math.sin(y * 0.13 / px - t * 3.3) * 1.1) * px;
+      const h = Math.min(strip, qy1 * Q - y);
+      ctx.drawImage(buf, qx0, y / Q, qx1 - qx0, h / Q, qx0 * Q + off, y, (qx1 - qx0) * Q, h);
+    }
     ctx.restore();
   }
 

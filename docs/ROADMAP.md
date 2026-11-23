@@ -692,10 +692,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   o clube, a barragem de 1909, o coreto, a caverna e o mirante com desenho próprio. **A comunidade na main em 23/11**
   ("pode seguir vestindo a comunidade primeiro"): 49 casas coladas em fileiras, de 1 a 3 andares (as altas no fundo),
   de tijolo baiano à mostra, rebocadas e pintadas ou só com o puxadinho no tijolo, laje com caixa d'água, ferro espetado,
-  varal e plantas; ruelas de cimento; na praça do Brejo Maior, o Bar do Tonho (com as mesas), a Peixaria, o Salão da
+  varal e plantas; ruelas de cimento; na praça do Brejo Maior, o Lemos Bar (com as mesas), a Peixaria, o Salão da
   Neide e o Mercadinho, as bancas de frutas, de peixe e de artesanato, o muro grafitado "BREJO", os postes com a fiação
   cheia de pipas enroscadas e as bandeirinhas; de noite, parte das janelas acesas
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
+- [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
+  sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,
+  rachaduras finas, peixes pulando de verdade (maiores, mais vezes, com respingo), o reflexo que balança e some longe da
+  base, barcos com tábuas, cavernas e motor de popa, o ponto de ônibus redesenhado e as casas com reboco caído, sombra no
+  pé da parede e o cano da laje
 - [ ] **[mundo]** O Capão maior (19/11, "os dois maiores": cresce para a direita, com mais rua, casas e mata). Crescer
   só para a direita e para baixo (a origem não muda: o mapa explorado de quem já joga não desalinha) e avisar a
   [estrutura] antes de juntar se um NPC ou uma chegada mudar

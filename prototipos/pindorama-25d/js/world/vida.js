@@ -159,19 +159,25 @@
     }
     V.darts = V.darts.filter((D) => view.sees(D.x, D.y, D.z, 100) && (day > 0.35 || Math.random() > dt));
     // ---- o peixe pulando: de vez em quando, num lugar de água aberta na tela
+    // (23/11, o dono: "coloca peixes pulando na água": eles já pulavam, mas pequenos — 7 cm — e raros; agora pulam a
+    // cada 1 a 4 s, às vezes um cardume de 2 ou 3 em fila, maiores e mais alto, com o respingo na saída e na volta)
     V.nextJump -= dt;
     if (V.nextJump <= 0) {
-      V.nextJump = 2.5 + Math.random() * 4.5;
-      for (let k = 0; k < 6; k++) {
+      V.nextJump = 1.2 + Math.random() * 2.8;
+      for (let k = 0; k < 8; k++) {
         const q = view.any();
         if (!openWater(world, q.x, q.y)) continue;
         const a = Math.random() * M.TAU;
-        V.jumps.push({ x: q.x, y: q.y, dx: Math.cos(a), dy: Math.sin(a), t: 0, size: 0.8 + Math.random() * 0.5 });
+        const n = Math.random() < 0.35 ? 2 + Math.floor(Math.random() * 2) : 1;
+        for (let j = 0; j < n; j++) {
+          const side = (j - (n - 1) / 2) * 45;
+          V.jumps.push({ x: q.x - Math.sin(a) * side, y: q.y + Math.cos(a) * side, dx: Math.cos(a), dy: Math.sin(a), t: -j * 0.28, size: 1 + Math.random() * 0.5 });
+        }
         break;
       }
     }
     for (const J of V.jumps) J.t += dt;
-    V.jumps = V.jumps.filter((J) => J.t < 2.6);
+    V.jumps = V.jumps.filter((J) => J.t < 3);
     // ---- a poeira de luz (de dia): pontinhos claros boiando no ar, nos lugares de mata e de grama
     const moteWant = Math.round(26 * M.clamp((day - 0.3) / 0.5, 0, 1));
     if (V.motes.length < moteWant && Math.random() < dt * 12) {
@@ -328,42 +334,88 @@
       ctx.ellipse(q.x, q.y, (10 + 70 * k) * z * J.size, (4 + 30 * k) * z * J.size, 0, 0, M.TAU);
       ctx.stroke();
     };
-    const L = 70 * J.size; // o salto, em cm
+    if (J.t <= 0) return;
+    const L = 120 * J.size; // o salto, em cm
+    const AIR = 0.85; // o tempo no ar, em s
     const x1 = J.x + J.dx * L, y1 = J.y + J.dy * L;
     ring(J.x, J.y, J.t / 1.4);
     ring(J.x, J.y, (J.t - 0.25) / 1.4);
-    ring(x1, y1, (J.t - 0.55) / 1.6);
-    ring(x1, y1, (J.t - 0.8) / 1.6);
-    const f = J.t / 0.55;
+    ring(x1, y1, (J.t - AIR) / 1.6);
+    ring(x1, y1, (J.t - AIR - 0.25) / 1.6);
+    // o respingo: gotas abrindo em leque na saída e na volta, caindo
+    const splash = (x, y, t0) => {
+      const tt = J.t - t0;
+      if (tt <= 0 || tt > 0.5) return;
+      ctx.fillStyle = `rgba(236, 250, 250, ${(0.9 * (1 - tt / 0.5)).toFixed(3)})`;
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * M.TAU + J.size * 3;
+        const v = 55 + ((k * 37) % 30);
+        const d = cam.p({ x: x + Math.cos(a) * v * tt, y: y + Math.sin(a) * v * tt, z: Math.max(0, 140 * tt - 300 * tt * tt) * J.size });
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, Math.max(0.9, 2 * z), 0, M.TAU);
+        ctx.fill();
+      }
+    };
+    splash(J.x, J.y, 0);
+    splash(x1, y1, AIR);
+    const f = J.t / AIR;
     if (f > 0 && f < 1) {
-      // o peixinho prateado no ar (e as gotas)
-      const px = J.x + J.dx * L * f, py = J.y + J.dy * L * f, pz = Math.sin(f * Math.PI) * 55 * J.size;
+      // o peixe prateado no ar, de lado (o dorso escuro, a barriga clara, a nadadeira e o olho), virando no arco
+      const px = J.x + J.dx * L * f, py = J.y + J.dy * L * f, pz = Math.sin(f * Math.PI) * 100 * J.size;
       const q = cam.p({ x: px, y: py, z: pz });
-      const ahead = cam.p({ x: px + J.dx * 10, y: py + J.dy * 10, z: pz + Math.cos(f * Math.PI) * 18 });
+      const ahead = cam.p({ x: px + J.dx * 10, y: py + J.dy * 10, z: pz + Math.cos(f * Math.PI) * 30 });
       ctx.save();
       ctx.translate(q.x, q.y);
       ctx.rotate(Math.atan2(ahead.y - q.y, ahead.x - q.x));
-      const s = 9 * z * J.size;
-      ctx.fillStyle = '#c9d6d8';
+      const s = 15 * z * J.size;
+      const flip = Math.sin(J.t * 30) * 0.12;
+      ctx.lineWidth = Math.max(0.8, 1.1 * z);
       ctx.strokeStyle = '#1b100d';
-      ctx.lineWidth = Math.max(0.7, 0.9 * z);
+      // o rabo (abanando)
+      ctx.fillStyle = '#8ea3ac';
       ctx.beginPath();
-      ctx.ellipse(0, 0, s, s * 0.38, 0, 0, M.TAU);
-      ctx.fill();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.9, 0);
-      ctx.lineTo(-s * 1.5, -s * 0.45);
-      ctx.lineTo(-s * 1.5, s * 0.45);
+      ctx.moveTo(-s * 0.85, 0);
+      ctx.lineTo(-s * 1.55, -s * (0.5 + flip));
+      ctx.lineTo(-s * 1.4, 0);
+      ctx.lineTo(-s * 1.55, s * (0.5 - flip));
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      // o corpo
+      ctx.fillStyle = '#c4d3d6';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s, s * 0.38, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = '#6f8a94';
+      ctx.fillRect(-s, -s * 0.4, s * 2, s * 0.28);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillRect(-s * 0.7, s * 0.05, s * 1.3, s * 0.12);
       ctx.restore();
-      ctx.fillStyle = 'rgba(235, 250, 250, 0.8)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s, s * 0.38, 0, 0, M.TAU);
+      ctx.stroke();
+      // a nadadeira de cima e o olho
+      ctx.fillStyle = '#7f98a2';
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.2, -s * 0.34);
+      ctx.lineTo(s * 0.1, -s * 0.62);
+      ctx.lineTo(s * 0.25, -s * 0.32);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#1b100d';
+      ctx.beginPath();
+      ctx.arc(s * 0.62, -s * 0.06, Math.max(0.8, s * 0.08), 0, M.TAU);
+      ctx.fill();
+      ctx.restore();
+      // a água escorrendo do peixe
+      ctx.fillStyle = 'rgba(235, 250, 250, 0.75)';
       for (let k = 0; k < 4; k++) {
-        const d = cam.p({ x: J.x + J.dx * L * f * 0.6 + (k - 1.5) * 6, y: J.y + J.dy * L * f * 0.6, z: pz * 0.5 * (1 - k * 0.15) });
+        const d = cam.p({ x: px - J.dx * (12 + k * 10), y: py - J.dy * (12 + k * 10), z: Math.max(0, pz - 12 - k * 14) });
         ctx.beginPath();
-        ctx.arc(d.x, d.y, Math.max(0.8, 1.6 * z), 0, M.TAU);
+        ctx.arc(d.x, d.y, Math.max(0.8, 1.7 * z), 0, M.TAU);
         ctx.fill();
       }
     }

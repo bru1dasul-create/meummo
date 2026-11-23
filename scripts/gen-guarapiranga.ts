@@ -431,7 +431,7 @@ chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' })
   };
   // a faixa amarela do meio, tracejada e quase apagada (na estrada inteira)
   chao.push(line('faixa-rua', ROAD, { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true }));
-  roadDetails(ROAD_OLD, srng, 16);
+  roadDetails(ROAD_OLD, srng, 8);
   // os buracos com água de chuva e o capim nas frestas e na beira do asfalto
   for (const [x, y, raio] of [[21.2, 10.6, 0.5], [31.8, 20.6, 0.42], [41.6, 24.4, 0.55]] as const) chao.push(point('buraco', x, y, { raio, agua: true }));
   const grassAlong = (part: Pt[], rng: () => number, count: number) => {
@@ -452,7 +452,7 @@ chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' })
   // o trecho novo (da orla até a saída): rachaduras, buracos e capim, com outro sorteio
   const nrng = mulberry32(SEED + 19);
   const ROAD_NEW = ROAD.filter(([x]) => x > 48);
-  roadDetails(ROAD_NEW, nrng, 70);
+  roadDetails(ROAD_NEW, nrng, 28);
   grassAlong(ROAD_NEW, nrng, 160);
   for (let i = 0, n = 0; i < 400 && n < 12; i++) {
     const k = Math.floor(nrng() * (ROAD_NEW.length - 1));
@@ -791,7 +791,7 @@ addTrunk({ x: LOOKOUT.x1 + 0.6, y: LOOKOUT.y0 + 0.6, r: 0.1 });
   row(183, 206, 15.5, 23.5, () => (hrng() < 0.5 ? 2 : 1));
   // o comércio de frente para a praça (o letreiro e o toldo; o andar de cima é a casa de quem tem a loja)
   const SHOPS: [number, number, number, Record<string, string | number | boolean>, string][] = [
-    [146, 151.2, 2, { comercio: 'bar', letreiro: 'BAR DO TONHO', toldo: '#2f6fb0', cor: '#79a9d1', tijolo: 'cima', vergalhao: true }, 'Bar do Tonho'],
+    [146, 151.2, 2, { comercio: 'bar', letreiro: 'LEMOS BAR', toldo: '#2f6fb0', cor: '#79a9d1', tijolo: 'cima', vergalhao: true }, 'Lemos Bar'],
     [151.2, 156.5, 1, { comercio: 'lanches', letreiro: 'PEIXARIA', toldo: '#2a8a9a', cor: '#6fc0c0' }, 'Peixaria'],
     [159.5, 165, 2, { comercio: 'lanches', letreiro: 'SALÃO DA NEIDE', toldo: '#c4508a', cor: '#e2a3b8', varal: true }, 'Salão da Neide'],
     [165, 170.5, 2, { comercio: 'vendinha', letreiro: 'MERCADINHO', toldo: '#d8902a', cor: '#e8c75a', tijolo: 'cima', vergalhao: true }, 'Mercadinho'],
