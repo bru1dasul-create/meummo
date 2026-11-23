@@ -193,14 +193,28 @@
 - **O efeito de usar um consumível (23/11; o dono viu as duas ideias prontas e escolheu "a sua sugestão"):**
   `js/consume.js` (`PD.consumeFx`), carregado antes do `view.js` (`arte.ts` e `view-scripts.json`). A view ganhou o
   `consume(id, item)` que o motor já chamava (mensagem `consume`, que vai para todo mundo que vê quem bebeu)
-  - **estouro, nas garrafadas:** a garrafadinha, na cor do líquido, sobe girando do peito até 2,72 m (acima do nome;
-    em 2,5 m o anel caía em cima das letras), estoura (clarão, anel e cacos de luz) e solta folhas de mato e gotas que
-    descem em espiral em volta do corpo; a luz no corpo e faíscas de cura subindo. Pequena verde, Média âmbar, Grande
-    vermelha (com mais folhas). 1,35 s
+  - **estouro, nas garrafadas:** a garrafadinha, na cor do líquido, sai da mão (aos 0,30 s; veja as animações, abaixo)
+    e sobe girando até 2,72 m (acima do nome; em 2,5 m o anel caía em cima das letras), estoura aos 0,52 s (clarão,
+    anel e cacos de luz) e solta folhas de mato e gotas que descem em espiral em volta do corpo; a luz no corpo e
+    faíscas de cura subindo. Pequena verde, Média âmbar, Grande vermelha (com mais folhas). 1,55 s
   - **benzimento, no Ramo de Arruda:** o círculo de luz abre nos pés, duas fitas de luz e as folhas de arruda sobem em
     hélice por fora dos braços (56 cm, fechando na cabeça) e no alto viram faíscas. 1,45 s. Só na arruda porque sobe
     em volta do corpo como o subir de nível: na garrafada, que se usa toda hora na luta, ia confundir
-  - **comida (Banana, Água de Coco):** o brilho no peito e faíscas na cor dela subindo. 0,9 s
+  - **comida (Banana, Água de Coco):** um brilho pequeno na boca (raio 14, bem fraco: maior, cobria o rosto) e faíscas
+    na cor dela subindo a partir de 0,3 s. 1,2 s
+  - **as animações (23/11; pedido do dono: "faça animação dele jogando a poção para cima [...] comendo a banana e
+    tomando agua de coco"):** `ANIM` e `applyPose` no `consume.js`, chamado pelo `animator.js` logo depois do
+    estilingue (como ele, mexe na mão direita, `hands[1]`; a esquerda é do arco). Cada animação são poses-chave do
+    punho em relação ao ombro (`local`: x para fora, y para a frente, z para cima), giradas em volta do ombro
+    (`swing`, sem atravessar o corpo). **toss** (garrafada, 0,8 s): a mão desce até o quadril, sobe por cima da
+    cabeça e abre aos 0,30 s (`T_REL`), a cabeça olha para cima (`look.consumeHead` −28°). **eat** (banana, 1,15 s):
+    a banana na boca, duas mordidas (0,38 s e 0,66 s; a banana encurta e a casca balança). **drink** (água de coco,
+    1,25 s): o coco com o canudinho (14 cm até a boca, por cima do coco). A boca abre na mordida e no gole
+    (`look.consumeMouth`); o item na mão é `look.heldItem`, desenhado pelo `drawHeld` (na frente ou atrás do corpo
+    conforme a câmera); a garrafa guarda onde estava na mão (`fx.grip`) para sair dali. Não entra no meio do tiro, da
+    esquiva nem desmaiado, e termina sozinha (`ch.consumeAnim` some). Os sons são da [estrutura], nos mesmos tempos
+    (`sfx.consume`, campo "som" de `data/items.json`: o "fiu" aos 0,30 s e a cura aos 0,52 s; as mordidas; o
+    canudinho de 0,32 s a 0,95 s; a cura na hora, na arruda)
   - três passadas, como o subir de nível: `_withFx` (no lugar do `_withLevelFx`) desenha os dois efeitos juntos, se
     vierem juntos. Luz na noite pelo `light` e `hex`
   - teste: `tests/consume-art.test.ts`. Rascunho `pocao/`: `gif.cjs <pasta>` (a prévia dos dois estilos, forçando o
@@ -225,8 +239,16 @@
   - **o mostrador de efeitos (`effectsBar.ts`, da [estrutura]; o estilo provisório saiu de lá):** seção "efeitos com
     tempo" do `style.css`. O quadradinho na moldura dourada da HUD, embaixo do nome e do botão do som (segue o `--hs`),
     com um brilho na cor do que mexe e o selo no canto (o ícone do atributo, `--attr-icon-*`; na vida voltando, um "+"
-    verde); o tempo numa plaquinha e, nos últimos 10 s, vermelho e piscando. O effectsBar.ts refaz os quadradinhos a
-    cada segundo: nada de animação de entrada, e a do fim tem 1 s certinho, para emendar
+    verde); o tempo numa plaquinha e, nos últimos 10 s, vermelho e piscando (só o desenho pisca, não a dica)
+  - **a dica com o mouse em cima (23/11; pedido do dono: "melhorar o visual quando passa o mouse em cima da
+    poção/banana utilizada"):** no efeito valendo (`effectsBar.ts`) e nos frascos (`quick.ts`, os dois da
+    [estrutura]; mexida pequena, avisada) a `.tip`, no lugar do `title` do navegador: o painel da `.skill-tip` (fundo
+    escuro, borda dourada e o canto tribal), o nome na letra do jogo e na cor da raridade (`.tip-title.rarity-*`), o que
+    faz em verde (`.tip-bonus`, uma coisa por linha: "Cura 60% da vida" e o efeito) e, embaixo, quanto falta em azul
+    (`.tip-tempo`, no efeito) ou "Comida · tecla 3" (`.tip-key`, nos frascos). A dica do efeito abre embaixo do
+    quadradinho; a dos frascos, em cima do anel. `width: max-content` (presa na largura mínima, quebrava "por 3 / min").
+    No celular (sem mouse) não aparece. O effectsBar.ts agora faz cada quadradinho uma vez e só troca o tempo a cada
+    segundo: refazer tudo apagava a dica com o mouse em cima
   - **a aba Receitas (`shop.ts`):** cada ingrediente numa plaquinha (`.shop-need`) com o desenho do item, o nome e
     "tem/precisa" em negrito (verde quando tem, vermelha quando falta); a linha dos ingredientes ocupa o cartão inteiro,
     embaixo do nome; com tudo na mochila, o cartão ganha a borda dourada (`:has`). O estilo provisório saiu do shop.ts
@@ -234,7 +256,7 @@
     Guarapiranga e come uma banana; tira a barra, o efeito, os atributos, a mochila e as receitas no PC e a tela no
     celular deitado e em pé), `mochila.cjs [prefixo]` (se o "Usar" aparece em 1280 × 800, 1366 × 768 e 1920 × 1080) e
     `antigo.cjs <arquivo.png>` (a mochila do jogo antigo)
-  - visto de passagem: sair do jogo acaba com os efeitos com tempo (é de propósito: está no roteiro, etapa 2 das poções)
+  - os efeitos com tempo continuam depois de sair do jogo desde 23/11 (a [estrutura], pedido do dono)
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
