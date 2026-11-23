@@ -108,6 +108,11 @@
   - conferido: prancha dos 5 pontos × 7 momentos (rascunho `niveis3/`), o herói puxando com 1 a 5 (`niveis3/arco.cjs`) e
     no jogo com 1 e 4 pontos (`niveis3/jogo-ancestral.cjs`: recomeça os pontos na janela K e põe N na Ancestral)
   - com isso as 3 etapas dos níveis estão feitas
+- **O "+" e os pontos na barra (23/11, escopo aprovado: "pode"):** no `style.css` (seção "o nível e o + das
+  habilidades da classe"): o `.skill-rank` (um `<i>` por ponto; `.on` = tem) em pedrinhas na beirada de baixo do
+  quadrado; o `.skill-plus` num botão redondo dentro do canto de cima, pulsando (`skill-plus-pulse`); `data-rank='0'`
+  apaga o ícone. O DOM e a lógica são da [estrutura] (`src/client/novo/skillBar.ts`); o estilo provisório de lá saiu.
+  Testar: rascunho `barra/foto2.cjs` (PC antes e depois de tocar o "+", celular deitado e em pé)
 - **Relógios da `view.js` (22/11, defeito achado pelo dono e medido pela [estrutura]):** o `frame(t)` recebe o relógio
   do jogo (`gameNow()`), que fica para trás depois da câmera lenta do F1. Tudo que o `frame` compara com `t` tem de ser
   marcado no mesmo relógio (`this.last`, o `t` do último quadro): o fim do brilho da flecha armada (`armedOff`) e o

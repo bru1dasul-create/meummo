@@ -904,8 +904,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   a habilidade); a que o nível já liberou e ainda não tem ponto aparece apagada, com o "+". `src/client/novo/skillBar.ts`:
   atributos `data-rank`, `data-max`, `data-learn` e os elementos `.skill-rank` e `.skill-plus` nos quadrados da barra,
   com um estilo provisório (`#skill-bar-provisorio`)
-- [ ] **[arte]** Vestir o "+" e as bolinhas do nível na barra no style.css (e apagar o estilo provisório do
-  `skillBar.ts`). Pedido mandado à [arte]
+- [x] **[arte]** Vestir o "+" e as bolinhas do nível na barra no style.css (e apagar o estilo provisório do
+  `skillBar.ts`). Pedido mandado à [arte]. **FEITO (23/11, escopo aprovado pelo dono: "pode")**: os pontos em pedrinhas
+  douradas na beirada de baixo do quadrado (acesas = tem), o "+" num botão redondo verde de borda dourada dentro do canto
+  de cima (não passa da moldura; pulsa de leve; só quando dá para pôr ponto) e a habilidade sem ponto com o ícone
+  apagado. PC e celular conferidos; o toque no "+" põe o ponto sem usar a habilidade
 - [x] **[estrutura]** Atributos (pedido do dono, 23/11: "vamos fazer sistema de pontos de força, destreza, inteligencia,
   vida etc.."; aprovado: "pode fazer assim, 3 pontos por nível, espírito"): **Força** (dano do tiro de sempre, arco e
   estilingue), **Destreza** (puxada e intervalo do tiro menores), **Espírito** (dano e recarga das habilidades da

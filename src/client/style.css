@@ -2901,6 +2901,97 @@ body.jogo-novo .action .label {
   display: none;
 }
 
+/* o nível e o "+" das habilidades da classe (23/11, o dono: "o upar da habilidade aparecer aqui embaixo como se fosse
+   um + e o level de cada habilidade upável mostrando nesse menu"). O skillBar.ts (da [estrutura]) põe nos quadrados
+   `data-rank`, `data-max`, `data-learn`, o `.skill-rank` (um <i> por ponto possível; `.on` = tem) e o `.skill-plus` (o
+   "+": um toque põe o ponto, sem usar a habilidade). Os pontos: pedrinhas na beirada de baixo do quadrado; o "+": um
+   botão redondo dentro do canto de cima (não passa da moldura), pulsando de leve; sem ponto ainda: o ícone apagado */
+body.jogo-novo .action .skill-rank {
+  position: absolute;
+  left: 50%;
+  bottom: calc(7px * var(--as));
+  z-index: 3;
+  display: flex;
+  gap: calc(5px * var(--as));
+  padding: calc(4px * var(--as)) calc(7px * var(--as));
+  border-radius: calc(9px * var(--as));
+  background: rgba(12, 7, 3, 0.66);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+body.jogo-novo .action .skill-rank:empty {
+  display: none;
+}
+
+body.jogo-novo .action .skill-rank i {
+  width: calc(10px * var(--as));
+  height: calc(10px * var(--as));
+  min-width: 5px;
+  min-height: 5px;
+  box-sizing: border-box;
+  border: max(1px, calc(1.6px * var(--as))) solid rgba(222, 182, 98, 0.7);
+  border-radius: calc(2px * var(--as));
+  background: #241709;
+  transform: rotate(45deg);
+}
+
+body.jogo-novo .action .skill-rank i.on {
+  border-color: #fff3c4;
+  background: linear-gradient(135deg, #fff3c0, #f3bc3e 55%, #b0711a);
+  box-shadow: 0 0 calc(6px * var(--as)) rgba(255, 210, 90, 0.9);
+}
+
+body.jogo-novo .action .skill-plus {
+  position: absolute;
+  top: calc(5px * var(--as));
+  right: calc(5px * var(--as));
+  z-index: 4;
+  width: calc(32px * var(--as));
+  height: calc(32px * var(--as));
+  min-width: 18px;
+  min-height: 18px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: max(1.5px, calc(2.5px * var(--as))) solid #f3d58a;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #9cf27e, #2f9a3a 58%, #145a22);
+  box-shadow:
+    0 0 0 1px rgba(40, 22, 4, 0.8),
+    0 0 calc(9px * var(--as)) rgba(150, 255, 110, 0.75);
+  color: #fff;
+  font: 900 max(14px, calc(26px * var(--as))) / 1 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  text-shadow: 0 1px 2px #0b3d12;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  animation: skill-plus-pulse 1.2s ease-in-out infinite;
+}
+
+body.jogo-novo .action .skill-plus[hidden] {
+  display: none;
+}
+
+body.jogo-novo .action .skill-plus:hover {
+  filter: brightness(1.15);
+}
+
+@keyframes skill-plus-pulse {
+  50% {
+    transform: scale(1.1);
+    box-shadow:
+      0 0 0 1px rgba(40, 22, 4, 0.8),
+      0 0 calc(15px * var(--as)) rgba(185, 255, 140, 0.95);
+  }
+}
+
+/* ainda sem ponto: o ícone apagado (o "+" acende em cima dele) */
+body.jogo-novo .action[data-rank='0'] .icon {
+  filter: grayscale(1) brightness(0.5);
+}
+
 /* a tecla vai na etiqueta da moldura, embaixo do quadrado */
 body.jogo-novo .action .key,
 body.jogo-novo #guard-button .key {
