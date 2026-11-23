@@ -1023,7 +1023,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     lado da cabeça (de frente, aparece); o tranco vai para longe do herói. As ferramentas de pintar ficaram em
     `PD.creatures.paint` (`creature.js`) para os próximos
   - [ ] Quati · [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
-- [ ] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
+- [x] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
   pendurado pelo rabo num galho baixo e joga a fruta lá de cima; quando o herói chega perto ou acerta, pula para o chão
   e luta; depois de um tempo calmo, sobe de novo
   - [x] **[arte]** o desenho (23/11, na main):
@@ -1031,11 +1031,22 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - o aviso e o arremesso, o tranco no galho e o desmaio caindo;
     - a subida (o pulo e uma cambalhota de lado, 0,72 s) e a descida (desvira e cai de pé, 0,56 s);
     - o `view.perch(id, galho)` e o `galho` no `addActor` (veja `docs/ARTE.md`).
-  - [ ] **[estrutura]**:
-    - o comportamento no servidor;
-    - o `galho` (`{ altura (m), direcao (graus) }`) no estado do monstro;
-    - a fruta saindo lá de cima;
-    - a mira com o mouse na altura do galho.
+  - [x] **[estrutura]** (23/11, na main; conferido no navegador, PC e celular, com os 5 galhos do [mundo]: os saguis
+    sobem, ficam pendurados no galho desenhado, jogam a fruta pelo lado aberto do galho — o tronco segura a fruta do
+    outro lado — e descem a 2 m):
+    - o mapa lê os pontos `galho-sagui` da camada `pontos` (`altura` em metros, de 1 a 4; `direcao` em graus) e diz de
+      que tile se sobe (`GameMap.branchTile`: o de baixo ou o andável mais perto, porque o de baixo pode encostar no
+      tronco);
+    - no servidor: calmo, o sagui vai até um galho livre da área dele (um por galho), sobe e fica pendurado; lá de
+      cima percebe quem chega até o alcance da fruta (5) e joga com o aviso de sempre; desce quando alguém chega a 3 m
+      ou acerta nele (no meio da subida, logo que chegar lá em cima) e luta no chão; calmo por 8 s, sobe de novo.
+      Subindo (0,72 s) e descendo (0,56 s) não faz nada. Os números no `data/monsters.json` (`"galho": { "desceA",
+      "sobeDepoisMs" }`) e no painel. O que ele deixa cai no chão embaixo do galho;
+    - o `perch` (`{ h, a }`) no estado do monstro e a mensagem `perch` (protocolo 53), chamando o `view.perch`;
+    - a fruta sai da mão dele, lá em cima, e cai até a altura do voo (`shotZ` com `fromZ`); a barra de vida e os
+      números ficam acima do galho;
+    - a mira com o mouse no corpo pendurado (`actorAtScreen`): o tiro vai para o pé, embaixo do galho.
+    Teste: `tests/sagui-galho.test.ts`.
   - [x] **[mundo]**: as árvores de sagui no Capão (o ponto embaixo do galho, a altura e a direção) e o galho baixo
     desenhado (23/11, na main): 5 pontos `galho-sagui` na camada `pontos` (`altura` 2,3 m e `direcao` em graus), em duas
     árvores da trilha dos saguis e em três árvores secas novas; o gerador escolhe a direção virada para a câmera em que o

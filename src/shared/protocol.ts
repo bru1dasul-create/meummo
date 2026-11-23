@@ -37,6 +37,14 @@ export interface EntityState {
   asleep?: true;
   /** Bichos: o retângulo do mapa (camada `pontos`) onde ele mora, ex.: 'joaquim-casa'. */
   home?: string;
+  /** Monstros: pendurado num galho (o Sagui no galho); `x`, `y` são o chão embaixo dele. Sem o campo = no chão. */
+  perch?: PerchState;
+}
+
+/** No galho: `h` = a altura do galho (metros) e `a` = para onde ele aponta, do tronco para a ponta (graus, 0 = leste). */
+export interface PerchState {
+  h: number;
+  a: number;
 }
 
 /** Um personagem do jogo que não é jogador (vendedora...). Fica parado no lugar dele. */
@@ -214,6 +222,7 @@ export type ServerMsg =
   | { t: 'spawn'; e: EntityState } // alguém apareceu na sua área de visão
   | { t: 'despawn'; id: number } // alguém saiu da sua área de visão (ou do jogo)
   | { t: 'move'; id: number; x: number; y: number; dir: Dir; dash?: true }
+  | { t: 'perch'; id: number; p: PerchState | null } // o monstro subiu no galho (p) ou pulou para o chão (null)
   | { t: 'ack'; seq: number; x: number; y: number; dir: Dir } // sua posição oficial após o pedido `seq`
   | { t: 'teleport'; x: number; y: number; dir: Dir } // você foi levado para outro lugar (ex.: voltou para a vila)
   | { t: 'stats'; stats: PlayerStats }

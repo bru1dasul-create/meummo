@@ -20,6 +20,7 @@
       "velocidade": 7,
       "projetil": "fruta"
     },
+    "galho": { "desceA": 3, "sobeDepoisMs": 8000 },
     "itens": [
       { "item": "banana", "chance": 50, "quantidade": [1, 2] },
       { "item": "chapeu_palha", "chance": 6 },

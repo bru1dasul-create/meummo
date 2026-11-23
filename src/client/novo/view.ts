@@ -22,6 +22,14 @@ export interface ActorInfo {
   me?: boolean;
   /** Bicho (kind 'pet'): já está dormindo quando aparece. */
   asleep?: boolean;
+  /** Monstro: já aparece pendurado neste galho (o Sagui no galho; veja `WorldView.perch`). */
+  galho?: PerchLook;
+}
+
+/** O galho de quem está pendurado: a altura (metros, como no mapa) e para onde ele aponta, do tronco para a ponta (graus). */
+export interface PerchLook {
+  altura: number;
+  direcao: number;
 }
 
 export interface WorldView {
@@ -86,6 +94,11 @@ export interface WorldView {
    * de quando usar a poção na mesma pegada do Priston Tale"). Opcional: sem ele, só o número verde da cura.
    */
   consume?(id: number, item: string): void;
+  /**
+   * O bicho subiu no galho (`galho`) ou pulou para o chão (null) — o Sagui no galho (opção 3 do dono, 23/11). Quem decide
+   * é o servidor; a view anima a subida (0,72 s) e a descida (0,56 s). O pé (`moveActor`) fica no chão embaixo do galho.
+   */
+  perch?(id: number, galho: PerchLook | null): void;
   /**
    * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
    * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',

@@ -26,6 +26,17 @@ alternativas quando vejo — sem concordar só para agradar.
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
 ## Onde estamos (23 de novembro de 2026) — leia isto primeiro
+- **Sagui no galho (opção 3 do dono, 23/11: "pode fazer, só no Capão por enquanto"; na main, conferido no jogo com os
+  5 galhos do [mundo]):** o desenho é da [arte] (`view.perch`), os galhos são do [mundo] (pontos `galho-sagui` na
+  camada `pontos` do `capao.tmj`). Meu: `GameMap.branches` e `branchTile` (`map.ts`; a altura fora de 1 a 4 m dá erro),
+  `MonsterDef.branch` (`"galho"`: `desceA` 3 m, `sobeDepoisMs` 8000; só quem joga de longe), e no `world.ts`
+  `goToBranch` → `climbBranch` → `updatePerched` → `leaveBranch` (`branchTaken`: um por galho). **Pendurado, `x`/`y`
+  têm fração** (o pé exato embaixo do galho) e ele não ocupa tile (`vacateTile` só solta o tile se for dele); o que
+  deixa cai em `groundTileOf`. Lá de cima percebe a 5 (o alcance da fruta; no chão, 4). Os tempos da subida e da
+  descida são os do desenho (`PERCH_CLIMB_MS` 720, `PERCH_DESCEND_MS` 560). No navegador: `perch` no estado e na
+  mensagem, `combat.setPerch` (barra e números acima do galho), `throwZ`/`shotZ` (a fruta cai lá de cima) e o
+  `actorAtScreen` com a altura. O tronco segura a fruta: quem chega pelo lado do tronco não leva fruta (o galho aponta
+  para a câmera, então quase sempre o lado aberto é o de quem chega pela trilha).
 - **Poções em 3 etapas (aprovadas pelo dono, 23/11: "gostei pode seguir"):** a 1 está na main (as três garrafadas em
   % da vida, 10 s entre um consumível e outro; o Fôlego fora do jogo novo; a vida voltando só fora de luta, 8 s e 1,5%
   por segundo, no painel; som `gole`; protocolo 49). A 2 também (efeitos com tempo: `Player.effects`, um por atributo e
@@ -110,8 +121,9 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 52; `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava,
-  com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com 595 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 53 (`perch`, o Sagui no galho); `MIGRATIONS` até o passo 8 (`effects`: os
+  efeitos com tempo e quanto faltava, com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com
+  643 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

@@ -65,14 +65,31 @@ const SHOOTER_TOP_Z = 1.9;
 const LAND_DESCENT = 2.5;
 
 /**
- * A altura do desenho do tiro depois de voar `traveled` metros de um voo de `range` metros: o de jogador começa no arco
- * e desce até a altura do voo; no fim do alcance, todos caem até o chão.
+ * A fruta jogada lá do galho (o Sagui no galho, 23/11) sai da mão dele, uns 60 cm abaixo do galho (ele fica pendurado de
+ * cabeça para baixo), e cai como uma fruta jogada — devagar no começo, ligeiro depois — até a altura do voo nos
+ * primeiros 4 metros (onde acerta quem está no chão).
  */
-export function shotZ(fromMonster: boolean, traveled: number, range = Infinity): number {
+export const PERCH_THROW_DROP = 0.6;
+const THROW_DESCENT = 4;
+
+/** De que altura sai a fruta de quem está num galho a `perchHeight` metros. */
+export function throwZ(perchHeight: number): number {
+  return Math.max(SHOT_DRAW_Z, perchHeight - PERCH_THROW_DROP);
+}
+
+/**
+ * A altura do desenho do tiro depois de voar `traveled` metros de um voo de `range` metros: o de jogador começa no arco
+ * e desce até a altura do voo; o jogado de um galho (`fromZ`, a altura de onde saiu) cai até ela; no fim do alcance,
+ * todos caem até o chão.
+ */
+export function shotZ(fromMonster: boolean, traveled: number, range = Infinity, fromZ?: number): number {
   let z = SHOT_DRAW_Z;
   if (!fromMonster) {
     const t = Math.min(1, Math.max(0, (traveled - LAUNCH_AHEAD) / LAUNCH_DESCENT));
     z = LAUNCH_Z + (SHOT_DRAW_Z - LAUNCH_Z) * t * t * (3 - 2 * t);
+  } else if (fromZ !== undefined && fromZ > SHOT_DRAW_Z) {
+    const u = Math.min(1, Math.max(0, traveled / THROW_DESCENT));
+    z = fromZ - (fromZ - SHOT_DRAW_Z) * u * u;
   }
   const fall = Math.min(LAND_DESCENT, range * 0.3);
   if (fall > 0 && traveled > range - fall) {
@@ -154,6 +171,8 @@ interface Flying {
   start: number;
   kind: string;
   fromMonster: boolean;
+  /** Jogado lá de cima de um galho: a altura de onde saiu (metros; veja `shotZ`). */
+  fromZ?: number;
   /** A Flecha Ancestral: os pontos e o nível da puxada (o desenho muda com eles). */
   look?: ShotLook;
   /**
@@ -390,6 +409,8 @@ export class CombatLayer {
   private readonly marks = new Map<number, '!' | '?'>();
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
   private readonly windups = new Map<number, { start: number; until: number }>();
+  /** Quem está pendurado num galho (o Sagui no galho) → a altura do galho (m): a barra de vida e os números vão acima dele. */
+  private readonly perches = new Map<number, number>();
   private readonly drops = new Map<number, GroundDrop>();
   /** Os desenhos dos itens no chão (e da moeda), um por ícone. */
   private readonly dropImages = new Map<string, HTMLImageElement>();
@@ -608,9 +629,21 @@ export class CombatLayer {
     this.windups.set(id, { start: now, until: now + ms });
   }
 
-  /** Um projétil que o servidor mandou (de monstro ou de outro jogador). */
-  shot(id: number, x: number, y: number, angle: number, speed: number, range: number, kind: string, fromMonster: boolean, now: number, look?: ShotLook): void {
-    this.shots.set(id, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster, ...(look ? { look } : {}) });
+  /** Um projétil que o servidor mandou (de monstro ou de outro jogador). `fromZ`: jogado de um galho, desta altura. */
+  shot(id: number, x: number, y: number, angle: number, speed: number, range: number, kind: string, fromMonster: boolean, now: number, look?: ShotLook, fromZ?: number): void {
+    this.shots.set(id, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster, ...(look ? { look } : {}), ...(fromZ !== undefined ? { fromZ } : {}) });
+  }
+
+  /** Pendurado num galho a `height` metros (o Sagui no galho), ou no chão (null). */
+  setPerch(id: number, height: number | null): void {
+    if (height !== null && height > 0) this.perches.set(id, height);
+    else this.perches.delete(id);
+  }
+
+  /** A altura da barra de vida de alguém (m): em cima da cabeça; pendurado num galho, acima do galho. */
+  private barZ(id: number): number {
+    const perch = this.perches.get(id);
+    return perch !== undefined ? Math.max(BODY_HEIGHT + 0.12, perch + 0.25) : BODY_HEIGHT + 0.12;
   }
 
   /** O seu tiro, desenhado na hora (o servidor confirma depois com o mesmo `cid`). */
@@ -780,6 +813,7 @@ export class CombatLayer {
     this.poofs = [];
     this.drops.clear();
     this.windups.clear();
+    this.perches.clear();
     this.marks.clear();
     this.chargeRing = null;
     this.footNote = null;
@@ -1252,7 +1286,7 @@ export class CombatLayer {
             this.onSpiritEnd?.({ ...spirit, mine: shots === this.myShots });
           }
           else {
-            ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt, shot.range) } : undefined);
+            ended(shot.kind, end.x, end.y, Math.atan2(shot.dy, shot.dx), now, on ? { on, z: shotZ(shot.fromMonster, stopAt, shot.range, shot.fromZ) } : undefined);
             this.onStuck?.({ kind: shot.kind, on: on ?? null, mine: shots === this.myShots });
           }
           shots.delete(key);
@@ -1265,7 +1299,7 @@ export class CombatLayer {
         const ground = shotFeet(shot.x + shot.dx * along, shot.y + shot.dy * along);
         const m = meter(ground.x, ground.y);
         const shadow = screen(ground.x, ground.y, 0);
-        const p = screen(ground.x, ground.y, shotZ(shot.fromMonster, along, shot.range));
+        const p = screen(ground.x, ground.y, shotZ(shot.fromMonster, along, shot.range, shot.fromZ));
         const ctx = this.ctx;
         const hidden = shot.fromMonster ? null : this.behindShooter(shot, shadow, screen, meter);
         if (hidden) {
@@ -1278,7 +1312,7 @@ export class CombatLayer {
         }
         // a flecha (e o que mais a [arte] desenhar em projectileArt.ts); o resto é a bolinha de sempre
         // a ponta aponta para onde ele vai (no fim, para baixo: o `ahead` já está mais perto do chão)
-        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, shotZ(shot.fromMonster, along + 0.3, shot.range));
+        const ahead = screen(ground.x + shot.dx * 0.3, ground.y + shot.dy * 0.3, shotZ(shot.fromMonster, along + 0.3, shot.range, shot.fromZ));
         const drawn = drawShot(ctx, shot.kind, p, shadow, ahead, m, shot.look); // a flecha, a pedra e a Flecha Ancestral
         if (drawn) {
           if (hidden) ctx.restore();
@@ -1327,7 +1361,7 @@ export class CombatLayer {
       const feet = feetOf(id);
       if (!feet || maxHp <= 0) continue;
       const m = meter(feet.x, feet.y);
-      const p = screen(feet.x, feet.y, BODY_HEIGHT + 0.12);
+      const p = screen(feet.x, feet.y, this.barZ(id));
       const width = Math.max(30, m * 0.8);
       const height = Math.max(4, m * 0.07);
       const fraction = Math.max(0, Math.min(1, hp / maxHp));
@@ -1375,8 +1409,8 @@ export class CombatLayer {
       const m = meter(feet.x, feet.y);
       const index = seen.get(floater.id) ?? 0;
       seen.set(floater.id, index + 1);
-      // começa acima do nome (que a view desenha em cima da cabeça) e sobe
-      const p = screen(feet.x, feet.y, BODY_HEIGHT + 0.7 + t * 0.6);
+      // começa acima do nome (que a view desenha em cima da cabeça) e sobe; de quem está no galho, acima da barra
+      const p = screen(feet.x, feet.y, Math.max(BODY_HEIGHT + 0.7, this.barZ(floater.id) + 0.4) + t * 0.6);
       ctx.globalAlpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
       ctx.font = `700 ${Math.round(Math.max(13, m * 0.32))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';

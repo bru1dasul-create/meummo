@@ -397,6 +397,22 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 - No navegador: enquanto `charmedUntil` não passa, não anda nem prevê a caminhada (só a esquiva); o `pull` desliza
   o personagem até a posição nova.
 
+## O Sagui no galho (`world.ts`: `goToBranch`, `climbBranch`, `updatePerched`, `leaveBranch`)
+- O mapa marca os galhos (`GameMap.branches`, dos pontos `galho-sagui` da camada `pontos`: o chão embaixo do galho, a
+  `altura` e a `direcao`). Monstro com `galho` (`MonsterDef.branch`, só quem joga de longe), calmo há
+  `sobeDepoisMs`, reserva um galho livre perto da área dele (`branchTaken`, um por galho), anda até o tile de onde se
+  sobe (`branchFoot`) ou um do lado e sobe: o pé vai para o ponto exato embaixo do galho (**`x`/`y` com fração**; ele
+  sai do `monsterAt`), `Monster.perch` e a mensagem `perch`. Subindo (`PERCH_CLIMB_MS`) e descendo
+  (`PERCH_DESCEND_MS`) não faz nada: são os tempos do desenho.
+- Lá em cima (`updatePerched`): não anda; percebe quem chega até o alcance do golpe e joga com o aviso de sempre; perdeu
+  o alvo, fica lá (`settleHome`). Alguém a `desceA` metros ou um golpe nele (`knockOffBranch`; no meio da subida,
+  `perchHit`) → `leaveBranch`: cai no tile livre mais perto embaixo do galho (`landingTile`), larga o golpe que
+  preparava e luta no chão. Caiu lá em cima: o galho fica livre (`leaveTile`) e o que deixa cai embaixo
+  (`groundTileOf`).
+- No navegador: `EntityState.perch` (`{ h, a }`) e a mensagem `perch` chamam o `view.perch` da [arte]; a fruta de quem
+  está no galho sai da mão dele (`throwZ`, 60 cm abaixo do galho) e cai até a altura do voo (`shotZ` com `fromZ`); a
+  barra de vida e os números ficam acima do galho (`combat.setPerch`); o `actorAtScreen` procura o corpo lá em cima.
+
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
   itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no
@@ -478,6 +494,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
+| servidor | `perch` | o monstro subiu no galho (`p` = `{ h, a }`: a altura e a direção do galho) ou pulou para o chão (`p` null) |
 | servidor | `ack` / `teleport` | sua posição oficial (exata) depois do pedido `seq` / você foi levado para outro lugar no mesmo mapa |
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou; sem acertar ninguém, `x`, `y` = onde parou e `on` = no que bateu, ex. 'tronco'; sem `on`, caiu no fim do alcance) |
@@ -583,8 +600,9 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   `comercio`, `letreiro` e `toldo` (a frente é sempre o lado sul, o que a câmera vê), `banco` e `capivara` com
   `olhando` em graus (0 = leste, 90 = sul), `mesa`, `fogueira`, `orelhao`, `lixeira`, `poste-praca` e `carro`),
   `colisao` (retângulos onde o pé bate; `bloqueiaTiro` false onde a pedrinha passa; `altura` nos da vila, para o
-  desenho provisório), `seguro` (zona segura por área), `areas` (nome do lugar para a faixa) e `pontos` (`spawn` e
-  chegadas). `chao` e `cenario` são do desenho (o servidor ignora).
+  desenho provisório), `seguro` (zona segura por área), `areas` (nome do lugar para a faixa) e `pontos` (`spawn`,
+  chegadas e os galhos do sagui: ponto do tipo `galho-sagui` no chão embaixo do galho, com `altura` em metros e
+  `direcao` em graus, do tronco para a ponta). `chao` e `cenario` são do desenho (o servidor ignora).
 - A `colisao` sai do gerador a partir do `cenario` (tronco, poste, pedra, gradil, portão…), para desenho e colisão
   nunca desencontrarem. Medidas para o pé de 0,6 × 0,4: passagem com pelo menos 1,5 m e 1,2 m entre troncos; duas
   coisas sólidas de frente uma para a outra ficam coladas ou a pelo menos 1,2 m (num vão menor o pé entra e entala).
