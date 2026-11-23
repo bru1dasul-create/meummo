@@ -352,6 +352,25 @@
         // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` (por enquanto só 'sul');
         // `estilo` 'comporta' (a barragem): o muro de pedra com a boca em arco e o tanque de `tanque` m
         map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo, style: pr.estilo || null, basin: (pr.tanque || 3) * 100 });
+      } else if (k === 'caverna') {
+        // a Caverna Sagrada (sul.js): o morro de pedra (a caixa) com a boca no lado sul: `boca` (largura, m), `bocaX` (o
+        // meio dela, m; sem ele, o meio da caixa), `bocaAltura` (m), `altura` (do morro, m), `brilho` (a luz lá dentro),
+        // `inscricoes`, `pinturas`, `raizes` e `arvore` (a arvorezinha no alto; todos ligados se não disser nada)
+        const r0 = rect(o);
+        const mx = pr.bocaX != null ? pr.bocaX * 100 : (r0.x0 + r0.x1) / 2;
+        map.props.push({ kind: 'caverna', ...r0, x: (r0.x0 + r0.x1) / 2, y: (r0.y0 + r0.y1) / 2, h: (pr.altura || 5) * 100, mouth: { x: mx, w: (pr.boca || 3.2) * 100, hm: (pr.bocaAltura || 2.5) * 100 }, glow: pr.brilho || '#3fd6c8', glyphs: pr.inscricoes !== false, paint: pr.pinturas !== false, roots: pr.raizes !== false, tree: pr.arvore !== false });
+      } else if (k === 'rocha') {
+        // a pedra solta da caverna (sul.js): `raio`, `altura` (m) e `musgo`
+        map.props.push({ kind: 'rocha', x, y, r: (pr.raio || 1) * 100, h: (pr.altura || 1.4) * 100, moss: pr.musgo !== false });
+      } else if (k === 'oferenda') {
+        // a pedra chata com as velas acesas, a cuia, a cabaça e as flores (sul.js): `velas`
+        map.props.push({ kind: 'oferenda', x, y, r: 40, candles: pr.velas || 4 });
+      } else if (k === 'brasas') {
+        // a fogueira apagada da caverna, com brasas e o fiozinho de fumaça (sul.js): `raio` da roda de pedras
+        map.props.push({ kind: 'brasas', x, y, r: (pr.raio || 0.7) * 100 });
+      } else if (k === 'esteio') {
+        // o tronco fincado com a cabaça, as penas e as fitas no vento (sul.js): `altura`, `fitas`
+        map.props.push({ kind: 'esteio', x, y, r: 12, h: (pr.altura || 2.2) * 100, ribbons: pr.fitas !== false });
       } else if (k === 'coreto') {
         // o coreto da praça em ruínas (sul.js): a base octogonal de `raio` m no meio da caixa, a `altura` da base, a
         // escada do lado sul (`escada: false`, sem), `ruina` (o reboco caído, a pichação, o gradil arrancado, o buraco

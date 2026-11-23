@@ -8,6 +8,8 @@
 //    transparente com o herói embaixo ou atrás), os quatro pilares, as bombas velhas (sem marca) e a pilha de pneus.
 // A lojinha do posto (a casa com `posto`) e a placa em branco (`torta`) ficam no props.js e no fundo.js; as pedras de
 // atravessar (a pinguela com `pedras`), no flora.js; o gradil quebrado, no props.js.
+// Também do Guarapiranga (o [mundo], 23 e 24/11): a cachoeira e a comporta (`cachoeira`, com `estilo: 'comporta'`), o
+// coreto da Praça em Ruínas (`coreto`) e a Caverna Sagrada (`caverna`, `rocha`, `oferenda`, `brasas`, `esteio`).
 //   PD.flora.tree.paineira = { trunk, trunkBox, crown, crownBox }
 //   PD.city.small[tipo]    = { height, blocks, overhead, fades, box, shadow, paint, live }
 (function (PD) {
@@ -674,8 +676,18 @@
       const z = zk < 0 ? o.z0 + zk : o.z0 + o.h * zk * (ri === RINGS.length - 1 && !o.flat ? 0.92 + rnd() * 0.12 : 1);
       return { x: o.x + Math.cos(a) * o.rx * rr, y: o.y + Math.sin(a) * o.ry * rr, z };
     }));
-    const base = rings[0], top = rings[rings.length - 1];
     const crown = { x: o.x + (rnd() - 0.5) * o.rx * 0.25, y: o.y + (rnd() - 0.5) * o.ry * 0.25, z: o.z0 + o.h };
+    return ringRock(ctx, cam, o, ink, rings, crown);
+  }
+  /**
+   * Desenha uma pedra dada pelas voltas (`rings`: listas de pontos na mesma ordem, do pé para o alto) e a coroa: as
+   * faces que olham para a câmera, pintadas pela luz, o contorno, a beirada clara, o molhado e o musgo. `o`: x, y, z0, h,
+   * rx, ry, seed, `wet`, `moss`, `colors` ({ dark, light } em [r, g, b]). Serve para a pedra solta (`facetRock`) e para
+   * o morro da caverna. Devolve o casco na tela.
+   */
+  function ringRock(ctx, cam, o, ink, rings, crown) {
+    const N = rings[0].length;
+    const top = rings[rings.length - 1];
     const faces = [];
     for (let ri = 0; ri < rings.length - 1; ri++) {
       for (let k = 0; k < N; k++) {
@@ -709,7 +721,8 @@
     ctx.stroke(hp);
     const art = M.rng(o.seed + 17);
     for (const f of shown) {
-      const tone = RIVER.dark.map((v, i) => Math.round(v + (RIVER.light[i] - v) * f.lit));
+      const C = o.colors || RIVER;
+      const tone = C.dark.map((v, i) => Math.round(v + (C.light[i] - v) * f.lit));
       const p = pathOf(f.pts);
       ctx.fillStyle = `rgb(${tone.join(',')})`;
       ctx.fill(p);
@@ -724,6 +737,32 @@
       ctx.strokeStyle = 'rgba(24, 22, 20, 0.32)';
       ctx.lineWidth = Math.max(0.6, ink * 0.7);
       ctx.stroke(p);
+      if (o.strata && f.pts.length === 4 && (x1 - x0) * (y1 - y0) > 4000 * cam.zoom * cam.zoom) {
+        // (o morro da caverna) as camadas da pedra: riscos paralelos ao pé da face, meio tortos, e umas manchas de líquen
+        const [q0, q1, q2, q3] = f.pts;
+        ctx.save();
+        ctx.clip(p);
+        ctx.lineCap = 'round';
+        for (let t = 0.14; t < 0.98; t += 0.16 + art() * 0.08) {
+          const a = { x: q0.x + (q3.x - q0.x) * t, y: q0.y + (q3.y - q0.y) * t }, b = { x: q1.x + (q2.x - q1.x) * t, y: q1.y + (q2.y - q1.y) * t };
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 + (art() - 0.5) * 6 * cam.zoom;
+          ctx.strokeStyle = 'rgba(36, 30, 24, 0.24)';
+          ctx.lineWidth = Math.max(0.8, 2 * cam.zoom);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.quadraticCurveTo(mx, my, b.x, b.y);
+          ctx.stroke();
+        }
+        for (let k = 0; k < 3; k++) {
+          const u = art(), v = art();
+          const px = q0.x + (q1.x - q0.x) * u + (q3.x - q0.x) * v, py = q0.y + (q1.y - q0.y) * u + (q3.y - q0.y) * v;
+          ctx.fillStyle = art() < 0.5 ? 'rgba(120, 140, 80, 0.22)' : 'rgba(210, 206, 160, 0.2)';
+          ctx.beginPath();
+          ctx.ellipse(px, py, (14 + art() * 26) * cam.zoom, (8 + art() * 12) * cam.zoom, art() * 3, 0, M.TAU);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
       if ((x1 - x0) * (y1 - y0) > 300 * cam.zoom * cam.zoom) {
         ctx.save();
         ctx.clip(p);
@@ -1902,6 +1941,794 @@
           }
         }
       }
+    },
+  };
+
+  // ------------------------------------------------------------------ Caverna Sagrada (Guarapiranga)
+  // (24/11, o dono: "pode seguir vestindo a caverna") O morro de pedra no meio da mata do sudoeste, com a boca escura
+  // virada para o sul (o lado que a câmera vê): lá no fundo, a luz verde-água da energia ancestral respirando e as
+  // faíscas subindo (`overlay`, a cada quadro; de noite, mais forte). Na pedra em volta da boca, as itacoatiaras
+  // (espiral, círculos, o sol e a cobra, gravados, que brilham fraquinho) e as pinturas de ocre (gente de braços para
+  // cima, a capivara, o veado e as mãos). As raízes da mata de cima descendo pela boca, as estalactites, o musgo e a água
+  // escorrida na pedra, o capim, as samambaias e a arvorezinha no alto. Na clareira em frente (o mapa): a fogueira, as
+  // `oferenda`s (pedra chata com velas acesas, flores, a cabaça e a cuia), os `esteio`s com as fitas no vento e as
+  // pedras soltas (`rocha`: a pedra da cachoeira, mais quente). Não dá para entrar (a boca pode virar uma saída depois).
+  const CAVE_ROCK = { dark: [58, 52, 46], light: [184, 172, 150] };
+  const OCHRE = '#9b3d24';
+  const GLOW_SPRITES = new Map();
+  /** Um círculo de luz que some para a beira, de uma cor (64 px, feito uma vez). */
+  function glowSprite(color) {
+    let c = GLOW_SPRITES.get(color);
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const n = parseInt(color.slice(1), 16);
+    const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+    const rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    rg.addColorStop(0, `rgba(${rgb}, 1)`);
+    rg.addColorStop(0.45, `rgba(${rgb}, 0.45)`);
+    rg.addColorStop(1, `rgba(${rgb}, 0)`);
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 64, 64);
+    GLOW_SPRITES.set(color, c);
+    return c;
+  }
+  /**
+   * O morro: três voltas (o pé, a barriga e o alto), com os mesmos 12 pontos na mesma ordem; os dois primeiros são a
+   * frente reta e em pé (a do sul, com a boca), o resto dá a volta, cada vez mais para dentro e mais alto.
+   */
+  function caveGeom(d, z0) {
+    const { x0, x1, y0, y1 } = d, H = d.h;
+    const W = x1 - x0, D = y1 - y0;
+    const cx = x0 + W / 2, cy = y0 + D / 2;
+    const rnd = M.rng(Math.round(x0 * 3 + y0 * 7) + 4111);
+    // o contorno do pé (a frente reta de x0 + 60 a x1 - 80; depois, a volta pelo leste, o fundo e o oeste)
+    const outline = [[x0 + 60, y1], [x1 - 80, y1], [x1, y1 - 140], [x1 - 10, cy - 20], [x1 - 70, y0 + 150], [x1 - 260, y0 + 10], [cx + 60, y0], [x0 + 330, y0 + 30], [x0 + 80, y0 + 170], [x0, cy - 30], [x0 + 10, y1 - 170], [x0 + 20, y1 - 40]];
+    const ring = (k, zk, jz) => outline.map(([x, y], i) => {
+      if (i < 2) {
+        // a frente: em pé (o mesmo y), só encolhe nas pontas
+        const ins = (1 - k) * (i ? 150 : 110);
+        return { x: x + (i ? -ins : ins), y: y1, z: z0 + H * zk * (i ? 0.93 : 1) };
+      }
+      const jx = (rnd() - 0.5) * 30 * (1 - k), jy = (rnd() - 0.5) * 30 * (1 - k);
+      return { x: cx + (x - cx) * k + jx, y: cy + (y - cy) * k + jy, z: zk < 0 ? z0 + zk : z0 + H * zk * (1 + (rnd() - 0.5) * jz) };
+    });
+    const base = ring(1, -4 / H, 0).map((q) => ({ ...q, z: z0 - 4 }));
+    const mid = ring(0.92, 0.55, 0.12);
+    const top = ring(0.74, 0.88, 0.12);
+    const crown = { x: cx + 60, y: cy - 60, z: z0 + H * 1.02 };
+    return { base, mid, top, crown, zTop: Math.max(mid[0].z, top[0].z, top[1].z), ox: base[0].x };
+  }
+  /** O contorno da boca no paredão (pontos no mundo): do pé da esquerda, por cima do arco, até o pé da direita. */
+  function caveMouth(d, z0) {
+    const m = d.mouth;
+    const rnd = M.rng(Math.round(m.x * 7 + d.y1 * 3) + 4127);
+    const pts = [];
+    const N = 16;
+    for (let i = 0; i <= N; i++) {
+      const ang = Math.PI * (1 - i / N);
+      const s = Math.sin(ang);
+      const jx = i === 0 || i === N ? 0 : (rnd() - 0.5) * 16;
+      pts.push({ x: m.x + Math.cos(ang) * (m.w / 2) * (1 - 0.08 * s) + jx, y: d.y1 + 1, z: z0 + Math.pow(s, 0.65) * m.hm + (rnd() - 0.5) * 12 * s });
+    }
+    return pts;
+  }
+  /** As itacoatiaras (em cm no paredão: `u` ao longo, `v` para baixo a partir do alto `zTop`). */
+  function caveGlyphs(d, g, z0) {
+    const m = d.mouth;
+    const Hf = g.zTop - z0;
+    const left = Math.max(70, m.x - m.w / 2 - g.ox - 400), right = m.x + m.w / 2 - g.ox + 40;
+    return [
+      { type: 'espiral', u: left + 120, v: Hf - 190, r: 30 },
+      { type: 'circulos', u: left + 270, v: Hf - 225, r: 24 },
+      { type: 'sol', u: left + 220, v: Hf - 120, r: 30 },
+      { type: 'cobra', u: left + 40, v: Hf - 70, r: 34 },
+      { type: 'espiral', u: right + 150, v: Hf - 300, r: 20 },
+    ];
+  }
+  function glyphPath(ctx, s, dx = 0, dy = 0) {
+    ctx.beginPath();
+    const u = s.u + dx, v = s.v + dy;
+    if (s.type === 'espiral') {
+      for (let i = 0; i <= 44; i++) {
+        const t = i / 44, a = t * M.TAU * 2.6, rr = s.r * t;
+        const x = u + Math.cos(a) * rr, y = v + Math.sin(a) * rr * 0.95;
+        if (i) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      }
+    } else if (s.type === 'circulos') {
+      for (const k of [1, 0.64, 0.28]) {
+        ctx.moveTo(u + s.r * k, v);
+        ctx.arc(u, v, s.r * k, 0, M.TAU);
+      }
+    } else if (s.type === 'sol') {
+      ctx.moveTo(u + s.r * 0.48, v);
+      ctx.arc(u, v, s.r * 0.48, 0, M.TAU);
+      for (let k = 0; k < 9; k++) {
+        const a = (k / 9) * M.TAU;
+        ctx.moveTo(u + Math.cos(a) * s.r * 0.68, v + Math.sin(a) * s.r * 0.68);
+        ctx.lineTo(u + Math.cos(a) * s.r, v + Math.sin(a) * s.r);
+      }
+    } else if (s.type === 'cobra') {
+      for (let i = 0; i <= 9; i++) {
+        const x = u + (i * s.r * 4) / 9, y = v + (i % 2 ? -1 : 1) * s.r * 0.32;
+        if (i) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      }
+      ctx.moveTo(u + s.r * 4 + 7, v - s.r * 0.32);
+      ctx.arc(u + s.r * 4, v - s.r * 0.32, 7, 0, M.TAU);
+    }
+  }
+  /** As pinturas de ocre (em cm no paredão): gente de braços para cima, a capivara, o veado e as mãos. */
+  function ochre(ctx, d, g, z0, rnd) {
+    const m = d.mouth;
+    const Hf = g.zTop - z0;
+    const u0 = m.x + m.w / 2 - g.ox + 50;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const paint = (a) => {
+      ctx.strokeStyle = `rgba(155, 61, 36, ${a})`;
+      ctx.fillStyle = `rgba(155, 61, 36, ${a})`;
+    };
+    // gente dançando, de braços para cima
+    for (const [du, dv, s] of [[20, 215, 1], [62, 208, 0.9], [100, 218, 1.05]]) {
+      paint(0.62 + rnd() * 0.2);
+      const u = u0 + du, v = Hf - dv;
+      ctx.lineWidth = 4 * s;
+      ctx.beginPath();
+      ctx.arc(u, v, 5.5 * s, 0, M.TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(u, v + 6 * s);
+      ctx.lineTo(u, v + 32 * s);
+      ctx.moveTo(u - 15 * s, v - 4 * s);
+      ctx.lineTo(u - 7 * s, v + 12 * s);
+      ctx.lineTo(u + 7 * s, v + 12 * s);
+      ctx.lineTo(u + 15 * s, v - 4 * s);
+      ctx.moveTo(u - 10 * s, v + 50 * s);
+      ctx.lineTo(u, v + 32 * s);
+      ctx.lineTo(u + 10 * s, v + 50 * s);
+      ctx.stroke();
+    }
+    // a capivara
+    paint(0.7);
+    {
+      const u = u0 + 70, v = Hf - 120;
+      ctx.beginPath();
+      ctx.ellipse(u, v, 30, 14, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(u + 31, v - 5, 12, 9, -0.2, 0, M.TAU);
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (const du of [-20, -10, 12, 22]) {
+        ctx.moveTo(u + du, v + 10);
+        ctx.lineTo(u + du, v + 24);
+      }
+      ctx.stroke();
+    }
+    // o veado (o corpo, o pescoço, a galhada e as pernas compridas)
+    paint(0.55);
+    {
+      const u = u0 + 200, v = Hf - 235;
+      ctx.beginPath();
+      ctx.ellipse(u, v, 24, 9, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(u + 18, v - 4);
+      ctx.lineTo(u + 30, v - 24);
+      for (const du of [-16, -8, 10, 17]) {
+        ctx.moveTo(u + du, v + 6);
+        ctx.lineTo(u + du + 2, v + 34);
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(u + 33, v - 27, 7, 4.5, -0.4, 0, M.TAU);
+      ctx.fill();
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(u + 31, v - 31);
+      ctx.lineTo(u + 26, v - 48);
+      ctx.lineTo(u + 20, v - 54);
+      ctx.moveTo(u + 27, v - 44);
+      ctx.lineTo(u + 33, v - 52);
+      ctx.moveTo(u + 35, v - 31);
+      ctx.lineTo(u + 41, v - 46);
+      ctx.stroke();
+    }
+    // as mãos carimbadas
+    for (const [du, dv, a] of [[150, 150, 0.7], [178, 128, 0.5], [205, 160, 0.65]]) {
+      paint(a);
+      const u = u0 + du, v = Hf - dv;
+      ctx.beginPath();
+      ctx.ellipse(u, v, 7, 8, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      for (const [fa, fl] of [[-1.15, 9], [-0.4, 13], [0, 14], [0.4, 12], [1.1, 9]]) {
+        const ang = -Math.PI / 2 + fa;
+        ctx.moveTo(u + Math.cos(ang) * 6, v + Math.sin(ang) * 6);
+        ctx.lineTo(u + Math.cos(ang) * (6 + fl), v + Math.sin(ang) * (6 + fl));
+      }
+      ctx.stroke();
+    }
+  }
+  function cavePaint(ctx, cam, d, z0, ink) {
+    const g = caveGeom(d, z0);
+    const rnd = seeded(d.x0, d.y0, 4101);
+    const P = (q) => cam.p(q);
+    const W = d.x1 - d.x0, D = d.y1 - d.y0;
+    // 1) o morro: as faces que a câmera vê (o capim e a mata de cima vêm depois)
+    ringRock(ctx, cam, { x: d.x0 + W / 2, y: d.y0 + D / 2, z0, h: d.h, rx: W / 2, ry: D / 2, seed: Math.round(d.x0 + d.y0 * 3), colors: CAVE_ROCK, strata: true }, ink, [g.base, g.mid, g.top], g.crown);
+    // 2) o paredão da frente: as camadas da pedra, as trincas, a água escorrida, o musgo e as inscrições
+    const F = [g.base[0], g.base[1], g.top[1], g.top[0]];
+    const front = [g.base[0], g.base[1], g.mid[1], g.top[1], g.top[0], g.mid[0]];
+    const Hf = g.zTop - z0;
+    // (a beirada de cima do paredão: a do alto, entre as duas pontas)
+    const vTopAt = (u) => g.zTop - (g.top[0].z + (g.top[1].z - g.top[0].z) * M.clamp01((u - (g.top[0].x - g.ox)) / (g.top[1].x - g.top[0].x)));
+    ctx.save();
+    ctx.clip(pathOf(front.map(P)));
+    onFace(ctx, cam, F[0], F[1], g.zTop, (L) => {
+      ctx.lineCap = 'round';
+      // (as camadas da pedra vêm do ringRock, em todas as faces; aqui, as trincas)
+      ctx.strokeStyle = 'rgba(28, 22, 18, 0.5)';
+      ctx.lineWidth = 2.2;
+      for (let k = 0; k < 7; k++) {
+        let u = rnd() * L, v = vTopAt(u) + rnd() * 60;
+        ctx.beginPath();
+        ctx.moveTo(u, v);
+        for (let j = 0; j < 5; j++) {
+          u += (rnd() - 0.5) * 26;
+          v += 18 + rnd() * 26;
+          ctx.lineTo(u, v);
+        }
+        ctx.stroke();
+      }
+      for (let k = 0; k < 12; k++) {
+        const u = rnd() * L, v0 = vTopAt(u), l = 40 + rnd() * 120, w = 6 + rnd() * 16;
+        const gr = ctx.createLinearGradient(0, v0, 0, v0 + l);
+        gr.addColorStop(0, 'rgba(32, 38, 30, 0.38)');
+        gr.addColorStop(1, 'rgba(32, 38, 30, 0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(u, v0, w, l);
+      }
+      // o musgo e o capim da beirada de cima, escorrendo
+      for (let u = 0; u < L; u += 22) {
+        const v0 = vTopAt(u);
+        for (let l = 0; l < 3; l++) {
+          ctx.fillStyle = MOSS[l];
+          ctx.beginPath();
+          ctx.ellipse(u + (rnd() - 0.5) * 16, v0 + 6 + rnd() * (l ? 18 : 34), 12 + rnd() * 10, 6 + rnd() * 7, 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+      // o pé: o limo e a terra respingada
+      const ft = ctx.createLinearGradient(0, Hf - 50, 0, Hf);
+      ft.addColorStop(0, 'rgba(40, 52, 30, 0)');
+      ft.addColorStop(1, 'rgba(40, 52, 30, 0.55)');
+      ctx.fillStyle = ft;
+      ctx.fillRect(0, Hf - 50, L, 50);
+      // as itacoatiaras gravadas (o sulco escuro e a beirada clara) e as pinturas de ocre
+      if (d.glyphs) {
+        for (const s of caveGlyphs(d, g, z0)) {
+          glyphPath(ctx, s);
+          ctx.strokeStyle = 'rgba(30, 24, 20, 0.72)';
+          ctx.lineWidth = 4.6;
+          ctx.stroke();
+          glyphPath(ctx, s, 1.4, 1.8);
+          ctx.strokeStyle = 'rgba(255, 244, 222, 0.32)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+      if (d.paint) ochre(ctx, d, g, z0, rnd);
+    });
+    ctx.restore();
+    // 3) a boca: o escuro de verdade; por dentro da beirada, a pedra ainda pega um pouco de luz (a parede do oeste mais,
+    // ela vira para a câmera) e embaixo o chão some no escuro
+    const mouth = caveMouth(d, z0);
+    const mpts = mouth.map(P);
+    const mp = pathOf(mpts);
+    const m = d.mouth;
+    ctx.save();
+    ctx.clip(mp);
+    const xs = mpts.map((q) => q.x), ys = mpts.map((q) => q.y);
+    const bx0 = Math.min(...xs), by0 = Math.min(...ys), bw = Math.max(...xs) - bx0, bh = Math.max(...ys) - by0;
+    ctx.fillStyle = '#060807';
+    ctx.fillRect(bx0 - 2, by0 - 2, bw + 4, bh + 4);
+    ctx.lineJoin = 'round';
+    for (const [w, a] of [[26, 0.22], [14, 0.3], [6, 0.38]]) {
+      ctx.strokeStyle = `rgba(92, 80, 64, ${a})`;
+      ctx.lineWidth = w * cam.zoom;
+      ctx.stroke(mp);
+    }
+    const lw = P({ x: m.x - m.w / 2, y: d.y1, z: z0 + m.hm * 0.45 });
+    const wg = ctx.createRadialGradient(lw.x, lw.y, 0, lw.x, lw.y, m.w * 0.4 * cam.zoom);
+    wg.addColorStop(0, 'rgba(110, 96, 76, 0.55)');
+    wg.addColorStop(1, 'rgba(110, 96, 76, 0)');
+    ctx.fillStyle = wg;
+    ctx.fillRect(bx0 - 2, by0 - 2, bw + 4, bh + 4);
+    const fb = P({ x: m.x, y: d.y1, z: z0 });
+    const flg = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, m.w * 0.5 * cam.zoom);
+    flg.addColorStop(0, 'rgba(70, 58, 44, 0.75)');
+    flg.addColorStop(1, 'rgba(70, 58, 44, 0)');
+    ctx.fillStyle = flg;
+    ctx.fillRect(bx0 - 2, by0 - 2, bw + 4, bh + 4);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(214, 202, 178, 0.45)';
+    ctx.lineWidth = Math.max(1, 3.4 * cam.zoom);
+    ctx.stroke(mp);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = ink * 1.8;
+    ctx.stroke(mp);
+    // 4) as estalactites no alto da boca e as raízes da mata de cima descendo por ela
+    onFace(ctx, cam, F[0], F[1], g.zTop, () => {
+      for (let i = 4; i <= 12; i += 1 + Math.floor(rnd() * 2)) {
+        const q = mouth[i];
+        const u = q.x - g.ox, v = g.zTop - q.z;
+        const w = 10 + rnd() * 9, l = 16 + rnd() * 28;
+        ctx.beginPath();
+        ctx.moveTo(u - w / 2, v - 2);
+        ctx.lineTo(u + w / 2, v - 2);
+        ctx.lineTo(u + (rnd() - 0.5) * 4, v + l);
+        ctx.closePath();
+        ctx.fillStyle = '#5e564b';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(20, 16, 12, 0.7)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(230, 220, 196, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(u - w / 2 + 1.5, v);
+        ctx.lineTo(u, v + l * 0.85);
+        ctx.stroke();
+      }
+      if (!d.roots) return;
+      const roots = [];
+      for (let k = 0; k < 7; k++) {
+        const u0 = m.x - g.ox - m.w * 0.46 + (k / 6) * m.w * 0.92 + (rnd() - 0.5) * 24;
+        const v0 = vTopAt(u0);
+        const len = Hf - m.hm - (v0 - 0) + 20 + rnd() * 100;
+        const pts = [];
+        for (let j = 0; j <= 9; j++) pts.push([u0 + Math.sin(j * 1.3 + k) * 7 + (rnd() - 0.5) * 4, v0 + (j / 9) * len]);
+        roots.push(pts);
+      }
+      ctx.lineCap = 'round';
+      for (const [col, extra] of [['#2e2118', 2.6], ['#6b4d35', 0]]) {
+        ctx.strokeStyle = col;
+        for (const pts of roots) {
+          for (let j = 0; j < pts.length - 1; j++) {
+            ctx.lineWidth = Math.max(1.2, 7.5 * Math.pow(0.82, j)) + extra;
+            ctx.beginPath();
+            ctx.moveTo(pts[j][0], pts[j][1]);
+            ctx.lineTo(pts[j + 1][0], pts[j + 1][1]);
+            ctx.stroke();
+          }
+        }
+      }
+    });
+    // o cipó descendo pelo paredão, dos dois lados da boca
+    for (const u of [0.12, 0.3, 0.78, 0.9]) {
+      const x = F[0].x + (F[1].x - F[0].x) * u;
+      const zt = g.top[0].z + (g.top[1].z - g.top[0].z) * u;
+      const len = 120 + rnd() * 180;
+      const pts = [];
+      for (let i = 0; i <= 8; i++) pts.push({ x: x + Math.sin(i * 1.1) * 10, y: d.y1 + 3, z: zt - (i / 8) * len });
+      vine3d(ctx, cam, pts, rnd, ink);
+    }
+    for (const i of [2, 3, 4]) {
+      const a = g.top[i], b = g.base[i];
+      const pts = [];
+      for (let k = 0; k <= 8; k++) {
+        const t = (k / 8) * (0.55 + rnd() * 0.3);
+        pts.push({ x: a.x + (b.x - a.x) * t + Math.sin(k * 1.3) * 8, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t });
+      }
+      vine3d(ctx, cam, pts, rnd, ink);
+    }
+    // 5) a mata em cima: o capim e o musgo, o capim pendurado na beirada, as samambaias e a arvorezinha
+    ctx.save();
+    ctx.clip(pathOf(g.top.map(P)));
+    for (let k = 0; k < 16; k++) {
+      const cx = d.x0 + 140 + rnd() * (W - 320), cy = d.y0 + 140 + rnd() * (D - 160);
+      for (let l = 0; l < 3; l++) {
+        ctx.fillStyle = k % 5 === 4 && l === 0 ? 'rgba(92, 78, 58, 0.5)' : MOSS[l + (l === 2 ? 1 : 0)];
+        for (let e = 0; e < 6 - l; e++) {
+          const q = P({ x: cx + (rnd() - 0.5) * 110, y: cy + (rnd() - 0.5) * 70, z: z0 + d.h * 0.93 + l * 3 });
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y, (10 + rnd() * 16) * cam.zoom * (1 - l * 0.2), (6 + rnd() * 8) * cam.zoom * (1 - l * 0.2), 0, 0, M.TAU);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+    for (let k = 0; k < 10; k++) {
+      const t = rnd();
+      grass(ctx, cam, g.top[0].x + (g.top[1].x - g.top[0].x) * t, d.y1 - 10, g.top[0].z + (g.top[1].z - g.top[0].z) * t, 24 + rnd() * 16, rnd, ink);
+    }
+    // as pedras em cima do morro (do fundo para a frente) e o mato entre elas
+    const tops = [[0.3, 0.3, 120, 90, 110], [0.72, 0.28, 140, 100, 90], [0.55, 0.5, 90, 70, 70], [0.12, 0.5, 80, 70, 60]].map(([u, v, rx, ry, h], i) => ({ x: d.x0 + W * u, y: d.y0 + D * v, z0: z0 + d.h * 0.9, rx, ry, h, seed: Math.round(d.x0 + i * 131), moss: true, colors: CAVE_ROCK }));
+    tops.sort((a, b) => cam.depth({ x: a.x, y: a.y, z: 0 }) - cam.depth({ x: b.x, y: b.y, z: 0 }));
+    for (const t of tops) facetRock(ctx, cam, t, ink);
+    const fern = PD.flora && PD.flora.small && PD.flora.small['planta-samambaia'];
+    if (fern) for (const [u, v] of [[0.18, 0.62], [0.86, 0.5], [0.45, 0.8], [0.66, 0.66]]) fern.paint(ctx, cam, { kind: 'planta-samambaia', x: d.x0 + W * u, y: d.y0 + D * v, r: 75 }, z0 + d.h * 0.9, ink);
+    for (let k = 0; k < 8; k++) grass(ctx, cam, d.x0 + W * (0.15 + rnd() * 0.7), d.y0 + D * (0.3 + rnd() * 0.55), z0 + d.h * 0.9, 26 + rnd() * 14, rnd, ink);
+    if (d.tree) H.roofTree(ctx, cam, d.x0 + W * 0.42, d.y0 + D * 0.3, z0 + d.h * 0.95, ink);
+  }
+  /** O que mexe: a luz respirando lá no fundo, as faíscas subindo e as itacoatiaras brilhando (de noite, mais). */
+  function caveOverlay(ctx, cam, d, z0, time) {
+    const day = PD.view && PD.view.daylight != null ? PD.view.daylight : 1;
+    const night = 1 - day;
+    const g = caveGeom(d, z0);
+    const P = (q) => cam.p(q);
+    const m = d.mouth;
+    const A = ctx.globalAlpha;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 1.1);
+    ctx.save();
+    ctx.clip(pathOf(caveMouth(d, z0).map(P)));
+    ctx.globalCompositeOperation = 'lighter';
+    const c = P({ x: m.x + 20, y: d.y1 - 260, z: z0 + 50 });
+    const R = m.w * 0.42 * cam.zoom;
+    ctx.globalAlpha = A * (0.22 + 0.18 * pulse) * (0.55 + 0.75 * night);
+    ctx.drawImage(glowSprite(d.glow), c.x - R, c.y - R * 0.75, R * 2, R * 1.5);
+    const rr = M.rng(4133);
+    ctx.fillStyle = d.glow;
+    for (let k = 0; k < 12; k++) {
+      const ph = (time * (0.1 + rr() * 0.1) + rr()) % 1;
+      const q = P({ x: m.x + (rr() - 0.5) * m.w * 0.7, y: d.y1 - 60 - rr() * 180, z: z0 + 15 + ph * m.hm * 0.9 });
+      ctx.globalAlpha = A * Math.sin(ph * Math.PI) * (0.55 + 0.45 * night);
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, Math.max(0.8, 1.7 * cam.zoom), 0, M.TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    if (d.glyphs) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = d.glow;
+      onFace(ctx, cam, g.base[0], g.base[1], g.zTop, () => {
+        caveGlyphs(d, g, z0).forEach((s, i) => {
+          const a = (0.1 + 0.2 * (0.5 + 0.5 * Math.sin(time * 0.9 + i * 1.7))) * (0.45 + 0.9 * night);
+          glyphPath(ctx, s);
+          ctx.globalAlpha = A * a * 0.45;
+          ctx.lineWidth = 11;
+          ctx.stroke();
+          ctx.globalAlpha = A * a;
+          ctx.lineWidth = 3.4;
+          ctx.stroke();
+        });
+      });
+      ctx.restore();
+    }
+    ctx.globalAlpha = A;
+  }
+  small.caverna = {
+    // (as itacoatiaras, para o escuro da noite: cada uma abre um buraquinho verde-água — flora.js, glows)
+    glowPoints(d) {
+      const g = caveGeom(d, 0);
+      return caveGlyphs(d, g, 0).map((s) => ({ x: g.ox + s.u, y: d.y1 + 6, z: g.zTop - s.v, r: 60 + s.r, color: d.glow, k: 0.45 }));
+    },
+    fades: true,
+    height: (d) => d.h + 380,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0 + 60, d.x1 - 60, d.y0 + 60, d.y1, d.h * 0.8),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 80, d.x1 + 80, d.y0 - 80, d.y1 + 60, z0 - 10, z0 + d.h + 440, 24),
+    paint: cavePaint,
+    overlay: caveOverlay,
+  };
+  /** A pedra solta da caverna (a da cachoeira, com o tom quente do morro): `r`, `h`, `moss`. */
+  small.rocha = {
+    fades: true,
+    height: (d) => d.h,
+    blocks: 0,
+    shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, d.r * 0.9, d.h * 0.5),
+    box: (cam, d, z0) => volBox(cam, d.x - d.r * 1.15, d.x + d.r * 1.15, d.y - d.r * 1.15, d.y + d.r * 1.15, z0 - 8, z0 + d.h + 14, 16),
+    paint(ctx, cam, d, z0, ink) {
+      facetRock(ctx, cam, { x: d.x, y: d.y, z0, rx: d.r, ry: d.r * 0.86, h: d.h, seed: Math.round(d.x * 3 + d.y * 7), moss: d.moss, colors: CAVE_ROCK }, ink);
+    },
+  };
+  /** A oferenda: a pedra chata com as velas acesas, a cuia com frutas, a cabaça e as flores. */
+  function offerLayout(d, z0) {
+    const rnd = seeded(d.x, d.y, 4201);
+    const zt = z0 + 13;
+    const candles = [];
+    const n = d.candles || 4;
+    const COLORS = ['#f3efe2', '#e8d36a', '#f3efe2', '#d4513a', '#f3efe2'];
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * M.TAU + rnd() * 0.6;
+      const rr = 12 + rnd() * 12;
+      candles.push({ x: d.x + Math.cos(a) * rr, y: d.y + 6 + Math.sin(a) * rr * 0.6, z: zt, h: 8 + rnd() * 10, color: COLORS[k % COLORS.length] });
+    }
+    return { zt, candles, rnd };
+  }
+  small.oferenda = {
+    fades: false,
+    height: () => 50,
+    blocks: 0,
+    shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, 34, 12),
+    box: (cam, d, z0) => volBox(cam, d.x - 60, d.x + 60, d.y - 50, d.y + 50, z0 - 6, z0 + 60, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const L = offerLayout(d, z0);
+      const rnd = L.rnd;
+      const zm = cam.zoom;
+      facetRock(ctx, cam, { x: d.x, y: d.y, z0, rx: 44, ry: 32, h: 13, seed: Math.round(d.x + d.y), flat: true, colors: CAVE_ROCK }, ink);
+      // a cuia com as frutas (atrás, à esquerda) e a cabaça (atrás, à direita)
+      const cu = cam.p({ x: d.x - 20, y: d.y - 12, z: L.zt });
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(cu.x, cu.y, 12 * zm + ink, 6 * zm + ink, 0, 0, Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#7a4e2c';
+      ctx.beginPath();
+      ctx.ellipse(cu.x, cu.y, 12 * zm, 6 * zm, 0, 0, Math.PI);
+      ctx.fill();
+      for (const [dx, col] of [[-5, '#d4513a'], [3, '#f2b632'], [-1, '#e2762e'], [6, '#7aa03a']]) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(cu.x + dx * zm, cu.y - (2 + rnd() * 3) * zm, 4 * zm, 0, M.TAU);
+        ctx.fill();
+      }
+      const cb = cam.p({ x: d.x + 24, y: d.y - 8, z: L.zt });
+      for (const [dy, rx, ry] of [[-9, 6.5, 6], [-20, 4.2, 4.2]]) {
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(cb.x, cb.y + dy * zm, rx * zm + ink, ry * zm + ink, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#c89a4a';
+        ctx.beginPath();
+        ctx.ellipse(cb.x, cb.y + dy * zm, rx * zm, ry * zm, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 244, 214, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(cb.x - rx * 0.35 * zm, cb.y + (dy - ry * 0.3) * zm, rx * 0.3 * zm, ry * 0.3 * zm, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      // as flores na beira da frente
+      for (let k = 0; k < 7; k++) {
+        const a = (rnd() - 0.5) * 2.4 + Math.PI / 2;
+        const q = cam.p({ x: d.x + Math.cos(a) * 34, y: d.y + Math.sin(a) * 26, z: L.zt - 2 });
+        const col = ['#f4f1e6', '#f2c230', '#d84a6a'][k % 3];
+        for (let p = 0; p < 5; p++) {
+          const pa = (p / 5) * M.TAU;
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(q.x + Math.cos(pa) * 2.6 * zm, q.y + Math.sin(pa) * 1.6 * zm, 1.9 * zm, 0, M.TAU);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#c98a2a';
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 1.3 * zm, 0, M.TAU);
+        ctx.fill();
+      }
+      // as velas: o corpo (com a luz de um lado), a cera escorrida e o pavio
+      const cs = L.candles.slice().sort((a, b) => cam.depth(a) - cam.depth(b));
+      for (const c of cs) {
+        const b = cam.p(c), t = cam.p({ x: c.x, y: c.y, z: c.z + c.h });
+        const w = 2.6 * zm;
+        ctx.fillStyle = INK;
+        ctx.fillRect(b.x - w - ink * 0.6, t.y - ink * 0.6, 2 * w + ink * 1.2, b.y - t.y + ink * 1.2);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(b.x - w, t.y, 2 * w, b.y - t.y);
+        ctx.fillStyle = 'rgba(40, 30, 20, 0.22)';
+        ctx.fillRect(b.x + w * 0.2, t.y, w * 0.8, b.y - t.y);
+        ctx.fillStyle = c.color;
+        ctx.beginPath();
+        ctx.ellipse(b.x, b.y, w * 2.2, w * 1.1, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.strokeStyle = '#2a2018';
+        ctx.lineWidth = Math.max(0.8, 0.9 * zm);
+        line2(ctx, t, { x: t.x, y: t.y - 2.4 * zm });
+      }
+    },
+    overlay(ctx, cam, d, z0, time) {
+      const L = offerLayout(d, z0);
+      const A = ctx.globalAlpha;
+      const zm = cam.zoom;
+      ctx.save();
+      L.candles.forEach((c, i) => {
+        const tip = cam.p({ x: c.x, y: c.y, z: c.z + c.h + 2.4 });
+        const f = 0.82 + 0.18 * Math.sin(time * 11 + i * 2.1) * Math.sin(time * 5.3 + i);
+        const sway = Math.sin(time * 3.1 + i * 1.7) * 0.8 * zm;
+        ctx.globalCompositeOperation = 'lighter';
+        const R = 15 * zm;
+        ctx.globalAlpha = A * 0.42 * f;
+        ctx.drawImage(glowSprite('#ffb347'), tip.x - R, tip.y - R * 1.3, R * 2, R * 2);
+        ctx.globalCompositeOperation = 'source-over';
+        const hgt = (7 + 2.5 * f) * zm, w = 2.1 * zm;
+        for (const [col, k] of [['#ff9a2e', 1], ['#fff1b8', 0.55]]) {
+          ctx.globalAlpha = A;
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(tip.x + sway, tip.y - hgt * k);
+          ctx.quadraticCurveTo(tip.x + w * 1.7 * k, tip.y - hgt * 0.3 * k, tip.x, tip.y);
+          ctx.quadraticCurveTo(tip.x - w * 1.7 * k, tip.y - hgt * 0.3 * k, tip.x + sway, tip.y - hgt * k);
+          ctx.fill();
+        }
+      });
+      ctx.restore();
+      ctx.globalAlpha = A;
+    },
+  };
+  /**
+   * A fogueira apagada da caverna (`brasas`): a roda de pedras, a cinza, os tições cruzados e umas brasas ainda vivas,
+   * com o fiozinho de fumaça subindo no vento (`overlay`). Alguém esteve aqui há pouco. (Não é a `fogueira` acesa: essa
+   * marca as zonas seguras.)
+   */
+  function pitLayout(d, z0) {
+    const rnd = seeded(d.x, d.y, 4401);
+    const stones = [];
+    const n = 10;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * M.TAU + rnd() * 0.3;
+      stones.push({ x: d.x + Math.cos(a) * d.r, y: d.y + Math.sin(a) * d.r * 0.92, z0, rx: 13 + rnd() * 6, ry: 11 + rnd() * 4, h: 11 + rnd() * 7, seed: Math.round(d.x + k * 97), colors: CAVE_ROCK });
+    }
+    const embers = [];
+    for (let k = 0; k < 9; k++) embers.push({ x: d.x + (rnd() - 0.5) * d.r * 0.9, y: d.y + (rnd() - 0.5) * d.r * 0.7, ph: rnd() * M.TAU });
+    return { stones, embers, rnd };
+  }
+  small.brasas = {
+    fades: false,
+    height: () => 40,
+    blocks: 0,
+    shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, d.r * 0.8, 8),
+    box: (cam, d, z0) => volBox(cam, d.x - d.r - 40, d.x + d.r + 60, d.y - d.r - 60, d.y + d.r + 40, z0 - 6, z0 + 230, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const L = pitLayout(d, z0);
+      const rnd = L.rnd;
+      const P = (x, y, z = z0) => cam.p({ x, y, z });
+      const ring = (r, k) => {
+        const pts = [];
+        for (let i = 0; i < 20; i++) {
+          const a = (i / 20) * M.TAU;
+          pts.push(P(d.x + Math.cos(a) * r * (1 + (rnd() - 0.5) * 0.12), d.y + Math.sin(a) * r * k));
+        }
+        return pathOf(pts);
+      };
+      const c = cam.depth({ x: d.x, y: d.y, z: z0 });
+      const back = L.stones.filter((s) => cam.depth({ x: s.x, y: s.y, z: z0 }) < c), front = L.stones.filter((s) => cam.depth({ x: s.x, y: s.y, z: z0 }) >= c);
+      for (const s of back) facetRock(ctx, cam, s, ink);
+      // a cinza e o chão queimado
+      ctx.fillStyle = 'rgba(34, 28, 24, 0.75)';
+      ctx.fill(ring(d.r * 0.95, 0.9));
+      ctx.fillStyle = '#77736d';
+      ctx.fill(ring(d.r * 0.7, 0.85));
+      for (let k = 0; k < 14; k++) {
+        const q = P(d.x + (rnd() - 0.5) * d.r * 1.1, d.y + (rnd() - 0.5) * d.r * 0.9);
+        ctx.fillStyle = rnd() < 0.5 ? 'rgba(200, 196, 188, 0.6)' : 'rgba(40, 34, 30, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, (3 + rnd() * 6) * cam.zoom, (2 + rnd() * 3) * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      // os tições cruzados (pretos, com a ponta de cinza)
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * M.TAU + 0.4;
+        const out = { x: d.x + Math.cos(a) * d.r * 0.9, y: d.y + Math.sin(a) * d.r * 0.8, z: z0 + 4 };
+        const inn = { x: d.x + Math.cos(a) * d.r * 0.12, y: d.y + Math.sin(a) * d.r * 0.1, z: z0 + 10 };
+        pipe(ctx, cam, [out, inn], 4.2, ink, '#2c231d');
+        const tip = cam.p(inn);
+        ctx.fillStyle = 'rgba(190, 186, 178, 0.8)';
+        ctx.beginPath();
+        ctx.arc(tip.x, tip.y, 3.2 * cam.zoom, 0, M.TAU);
+        ctx.fill();
+      }
+      for (const s of front) facetRock(ctx, cam, s, ink);
+    },
+    overlay(ctx, cam, d, z0, time) {
+      const L = pitLayout(d, z0);
+      const A = ctx.globalAlpha;
+      ctx.save();
+      // as brasas respirando
+      ctx.globalCompositeOperation = 'lighter';
+      for (const e of L.embers) {
+        const q = cam.p({ x: e.x, y: e.y, z: z0 + 6 });
+        const k = 0.35 + 0.35 * Math.sin(time * 1.6 + e.ph) * Math.sin(time * 0.7 + e.ph * 2);
+        ctx.globalAlpha = A * Math.max(0.05, k);
+        ctx.fillStyle = '#ff7a2a';
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, Math.max(0.8, 2.2 * cam.zoom), 0, M.TAU);
+        ctx.fill();
+      }
+      // o fiozinho de fumaça subindo e indo com o vento
+      ctx.globalCompositeOperation = 'source-over';
+      const world = PD.view && PD.view.world;
+      const wind = (world && world.wind) || { strength: 0.35, angle: -Math.PI / 4 };
+      const wx = Math.cos(wind.angle), wy = Math.sin(wind.angle);
+      for (let k = 0; k < 6; k++) {
+        const ph = (time * 0.16 + k / 6) % 1;
+        const drift = ph * ph * (40 + wind.strength * 90);
+        const q = cam.p({ x: d.x + wx * drift + Math.sin(time + k) * 4, y: d.y + wy * drift, z: z0 + 14 + ph * 190 });
+        const r = (6 + ph * 26) * cam.zoom;
+        ctx.globalAlpha = A * 0.26 * (1 - ph) * Math.min(1, ph * 6);
+        ctx.fillStyle = '#c9c8c4';
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, r, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = A;
+    },
+  };
+  /** O esteio: o tronco fino fincado, a cabaça pendurada, as penas e as fitas coloridas no vento (`overlay`). */
+  const RIBBONS = ['#d23b2f', '#f2c230', '#2f8f4e', '#2f6fb3', '#f4f1e6'];
+  small.esteio = {
+    fades: true,
+    height: (d) => d.h + 20,
+    blocks: 0,
+    shadow: (p, cam, d) => H.lineShadow(p, cam, d.x, d.y, d.h, 7),
+    box: (cam, d, z0) => volBox(cam, d.x - 110, d.x + 110, d.y - 110, d.y + 110, z0 - 6, z0 + d.h + 30, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const rnd = seeded(d.x, d.y, 4301);
+      const zm = cam.zoom;
+      const b = cam.p({ x: d.x, y: d.y, z: z0 }), t = cam.p({ x: d.x + 4, y: d.y, z: z0 + d.h });
+      const w0 = 7 * zm, w1 = 4.5 * zm;
+      const pole = [{ x: b.x - w0, y: b.y }, { x: t.x - w1, y: t.y }, { x: t.x + w1, y: t.y }, { x: b.x + w0, y: b.y }];
+      poly(ctx, pole, '#6b4a32', INK, ink * 2);
+      ctx.fillStyle = 'rgba(255, 236, 200, 0.22)';
+      poly(ctx, [pole[0], pole[1], { x: t.x - w1 * 0.2, y: t.y }, { x: b.x - w0 * 0.2, y: b.y }], 'rgba(255, 236, 200, 0.2)');
+      ctx.strokeStyle = 'rgba(30, 20, 14, 0.5)';
+      ctx.lineWidth = Math.max(0.8, 1.1 * zm);
+      for (let k = 0; k < 6; k++) {
+        const y = b.y + (t.y - b.y) * (0.1 + rnd() * 0.8);
+        line2(ctx, { x: b.x - w0 * 0.6, y }, { x: b.x + w0 * 0.4, y: y + 2 * zm });
+      }
+      // a amarração de corda no alto
+      const tie = cam.p({ x: d.x + 4, y: d.y, z: z0 + d.h - 14 });
+      ctx.strokeStyle = '#c9b07a';
+      ctx.lineWidth = Math.max(1, 1.8 * zm);
+      for (let k = 0; k < 3; k++) line2(ctx, { x: tie.x - w1 * 1.2, y: tie.y + k * 2.4 * zm }, { x: tie.x + w1 * 1.2, y: tie.y + k * 2.4 * zm - 1.5 * zm });
+      // a cabaça pendurada numa cordinha e as penas
+      const hang = cam.p({ x: d.x + 14, y: d.y + 6, z: z0 + d.h - 26 });
+      const gourd = cam.p({ x: d.x + 14, y: d.y + 6, z: z0 + d.h - 52 });
+      ctx.strokeStyle = '#3a2a1c';
+      ctx.lineWidth = Math.max(0.8, 0.9 * zm);
+      line2(ctx, cam.p({ x: d.x + 4, y: d.y, z: z0 + d.h - 18 }), hang);
+      line2(ctx, hang, gourd);
+      for (const [dy, rx, ry] of [[8, 6, 5.5], [-1, 3.8, 3.8]]) {
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(gourd.x, gourd.y + dy * zm, rx * zm + ink, ry * zm + ink, 0, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#b98a3e';
+        ctx.beginPath();
+        ctx.ellipse(gourd.x, gourd.y + dy * zm, rx * zm, ry * zm, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      for (const [dx, col] of [[-6, '#f4f1e6'], [-2, '#c0392b'], [3, '#1f1a18']]) {
+        const a = cam.p({ x: d.x + dx, y: d.y + 4, z: z0 + d.h - 20 });
+        ctx.strokeStyle = col;
+        ctx.lineWidth = Math.max(1.4, 3 * zm);
+        ctx.lineCap = 'round';
+        line2(ctx, a, { x: a.x + dx * 0.3 * zm, y: a.y + 16 * zm });
+      }
+    },
+    overlay(ctx, cam, d, z0, time) {
+      if (!d.ribbons) return;
+      const world = PD.view && PD.view.world;
+      const wind = (world && world.wind) || { strength: 0.35, angle: -Math.PI / 4 };
+      const wx = Math.cos(wind.angle), wy = Math.sin(wind.angle);
+      const top = { x: d.x + 4, y: d.y, z: z0 + d.h - 10 };
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      RIBBONS.forEach((col, i) => {
+        const len = 46 + i * 8;
+        const pts = [];
+        for (let j = 0; j <= 8; j++) {
+          const t = j / 8;
+          const wave = Math.sin(time * (4 + i * 0.45) - t * 5 + i * 1.3) * 9 * t;
+          const blow = (10 + wind.strength * 34) * t * (len / 60);
+          pts.push(cam.p({ x: top.x + wx * blow - wy * wave, y: top.y + wy * blow + wx * wave, z: top.z - t * len * (0.9 - wind.strength * 0.35) + Math.sin(time * 3 + t * 4 + i) * 3 * t }));
+        }
+        for (const [c, w] of [['rgba(28, 20, 16, 0.55)', 4.4], [col, 3]]) {
+          ctx.strokeStyle = c;
+          ctx.lineWidth = Math.max(1, w * cam.zoom);
+          ctx.beginPath();
+          pts.forEach((q, j) => (j ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+          ctx.stroke();
+        }
+      });
     },
   };
 

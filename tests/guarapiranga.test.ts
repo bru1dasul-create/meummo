@@ -177,7 +177,7 @@ describe('Mapa 02 (Guarapiranga): formato do mapa novo', () => {
       }
       return false;
     };
-    const SOLID = ['arvore', 'poste', 'pedra', 'tronco-caido', 'casa', 'banco', 'fogueira', 'poste-praca', 'barril', 'caixote', 'ponto-onibus', 'muro', 'cachoeira', 'barreira', 'coreto'];
+    const SOLID = ['arvore', 'poste', 'pedra', 'tronco-caido', 'casa', 'banco', 'fogueira', 'poste-praca', 'barril', 'caixote', 'ponto-onibus', 'muro', 'cachoeira', 'barreira', 'coreto', 'caverna', 'rocha', 'oferenda', 'esteio', 'brasas'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
       const solid = SOLID.includes(o.type) || (o.type === 'arbusto' && prop(o, 'fechado') === true) || (o.type === 'placa' && prop(o, 'poste') === true);
@@ -390,7 +390,7 @@ describe('Mapa 02: o mapa inteiro aberto (400 × 320)', () => {
       [16, 50, 0.5, 'Mirante'],
       [18, 104, 3, 'Brejo do Sul'],
       [30, 200, 1, 'Trilha da Margem Sul'],
-      [34, 270, 1.5, 'boca da Caverna Sagrada'],
+      [34, 266.3, 0.5, 'boca da Caverna Sagrada (entre as oferendas)'],
       [158, 33, 3.2, 'fogueira da praça do Brejo Maior'],
       [233, 25, 0.5, 'meio do campinho'],
       [327, 36, 0.6, 'pé da escada do coreto (não dá para subir: a base segura)'],

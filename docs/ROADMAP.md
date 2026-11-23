@@ -709,7 +709,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   os quatro postes antigos e as moitas no pé; não dá para subir. E o que o dono achou feio: a água que desce (comportas
   e cachoeira) refeita — nas comportas, o muro de pedra com a boca em arco, o jato e o tanque de pedra; na cachoeira, as
   pedras com lados no lugar das bolas —, o paralelepípedo maior e com volume (e a guia de granito), o caminho da barragem
-  em lajes e a ponta da trilha de terra escondida embaixo das lajes
+  em lajes e a ponta da trilha de terra escondida embaixo das lajes. **A Caverna Sagrada na main em 24/11** ("pode seguir
+  vestindo a caverna"): o morro de pedra com a boca escura virada para o sul e a luz verde-água respirando lá no fundo;
+  na pedra, as itacoatiaras gravadas (que brilham de noite) e as pinturas de ocre (gente dançando, a capivara, o veado e
+  as mãos); as raízes descendo pela boca, as estalactites, o cipó e a mata em cima; na clareira de pedra, a fogueira
+  apagada com brasas e fumacinha, as duas oferendas com velas acesas, a pedra ancestral, as pedras soltas e os esteios
+  com fitas no vento na entrada da trilha. Não dá para entrar (a boca pode virar a entrada de uma caverna por dentro)
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

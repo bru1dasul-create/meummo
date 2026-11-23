@@ -247,8 +247,9 @@ const GATE_WING = 0.26;
 // (a beira de cima do tanque cai na linha das faixas de água, de 0,5 em 0,5 m: o tanque encosta no muro sem sobra)
 const GATE_Y1 = Math.ceil((DAM_WALK.y1 + 0.5) * 2) / 2;
 const GATE_POOLS: Pt[][] = GATES.map((gx) => [[gx - GATE_W, GATE_Y1], [gx + GATE_W, GATE_Y1], [gx + GATE_W, GATE_Y1 + GATE_BASIN], [gx - GATE_W, GATE_Y1 + GATE_BASIN]]);
-/** 12 · A Caverna Sagrada (a boca, no meio das pedras). */
+/** 12 · A Caverna Sagrada: a clareira em frente da boca e o morro de pedra com a boca virada para o sul. */
 const CAVE = { x: 34, y: 269 };
+const CAVE_HILL: Rect = { x0: 27, x1: 41, y0: 257, y1: 265 };
 /** 13 · A várzea (o alagado embaixo da barragem). */
 const VARZEA = smooth([[140, 256], [200, 255], [260, 256], [318, 258], [338, 272], [334, 300], [312, 316], [250, 317], [180, 316], [142, 304], [134, 280]], 2, true, 0.6);
 /** O brejo do sudoeste (o de antes, maior). */
@@ -414,8 +415,9 @@ for (const [t, w, nome] of TRAILS) chao.push(line('trilha', t, { largura: w, ...
 // o caminho de pedra em cima da barragem: lajes de pedra (depois das trilhas: a ponta delas fica embaixo das lajes, em
 // vez da língua de terra por cima do caminho que o dono achou feia em 23/11)
 chao.push(rect('calcada', DAM_WALK.x0, DAM_WALK.x1, DAM_WALK.y0, DAM_WALK.y1, { estado: 'rachado', musgo: true, desenho: 'placas' }, 'A Barragem'));
-// a boca da caverna: o chão escuro entre as pedras
-chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' }));
+// a clareira de pedra em frente da caverna e o chão escuro na boca
+chao.push(area('pedra', blob(CAVE.x, CAVE.y + 0.4, 7.6, 4.4, 0.12)));
+chao.push(area('terra', blob(CAVE.x, CAVE_HILL.y1 + 0.7, 2.3, 0.9, 0.1), { cor: '#211812' }));
 {
   // o trecho de antes: os mesmos detalhes do asfalto (o mesmo sorteio)
   const srng = mulberry32(SEED + 9);
@@ -542,6 +544,7 @@ const treeDims = (especie: string, rng: () => number) =>
 /** As clareiras: lugares sem árvore sorteada (as praças, o campinho, o clube, a barragem, a várzea, o mirante...). */
 const CLEARINGS: ((x: number, y: number) => boolean)[] = [
   (x, y) => inside(x, y, COMMUNITY),
+  (x, y) => inRect(x, y, CAVE_HILL, 1.5),
   (x, y) => inRect(x, y, FIELD, 3),
   (x, y) => inRect(x, y, SQUARE, 3),
   (x, y) => inRect(x, y, CLUB, 2.5),
@@ -997,19 +1000,27 @@ cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 
   for (const gx of GATES) cenario.push(rect('cachoeira', gx - GATE_W, gx + GATE_W, DAM_WALK.y1, GATE_Y1, { altura: 1.5, queda: 'sul', musgo: true, estilo: 'comporta', tanque: GATE_BASIN }, 'Comporta'));
 }
 
-// ----- 12 · a Caverna Sagrada: as pedras grandes em arco em volta da boca -----
+// ----- 12 · a Caverna Sagrada -----
+// (24/11, o dono: "pode seguir vestindo a caverna") O morro de pedra com a boca virada para o sul (as itacoatiaras e as
+// pinturas de ocre em volta dela, a luz verde-água lá no fundo); na clareira de pedra em frente, a fogueira, as duas
+// oferendas encostadas no paredão, a pedra ancestral, as pedras soltas dos dois lados e os esteios com as fitas na
+// entrada da trilha. Não dá para entrar na caverna (a boca pode virar uma saída para dentro, depois).
 {
-  const crng = mulberry32(SEED + 24);
-  for (let k = 0; k < 12; k++) {
-    // (o arco fica atrás da boca, do lado de cima; a frente, para o sul, é a entrada. As pedras se encostam: entre duas
-    // delas não sobra fresta de entalar)
-    const a = Math.PI + (k / 11) * Math.PI;
-    // (o arco é regular e as pedras quase do mesmo tamanho: cada pedra tapa a fresta entre as duas vizinhas)
-    const r = 5;
-    const [x, y] = [CAVE.x + Math.cos(a) * r * 1.25, CAVE.y + Math.sin(a) * r];
-    const raio = round(1.75 + crng() * 0.05);
-    cenario.push(point('pedra', round(x), round(y), { raio, ancestral: k === 6 }));
+  cenario.push(box('caverna', CAVE_HILL, { altura: 5.4, boca: 3.2, bocaAltura: 2.5, bocaX: CAVE.x }, 'Caverna Sagrada'));
+  addTrunk({ x: (CAVE_HILL.x0 + CAVE_HILL.x1) / 2, y: (CAVE_HILL.y0 + CAVE_HILL.y1) / 2, r: 7 });
+  for (const [x, y, raio, altura] of [[29.1, 265.95, 1, 1.5], [27.5, 264.7, 0.9, 1.2], [39.1, 266, 1.1, 1.7], [41.2, 264.4, 0.85, 1.1]] as const) {
+    cenario.push(point('rocha', x, y, { raio, altura }));
     addTrunk({ x, y, r: raio });
+  }
+  for (const x of [CAVE.x - 2.4, CAVE.x + 2.4]) cenario.push(point('oferenda', x, round(CAVE_HILL.y1 + 0.35), { velas: 4 }));
+  // (a fogueira apagada, com brasas: a acesa marca as zonas seguras, e a caverna não é uma)
+  cenario.push(point('brasas', CAVE.x, 270, { raio: 0.7 }));
+  cenario.push(point('pedra', 40.6, 269.2, { raio: 0.7, ancestral: true }));
+  addTrunk({ x: 40.6, y: 269.2, r: 0.7 });
+  // os esteios com as fitas, um de cada lado da trilha, na entrada da clareira
+  for (const [x, y] of [[29, 268.8], [26, 270.7]] as const) {
+    cenario.push(point('esteio', x, y, { altura: 2.2 }));
+    addTrunk({ x, y, r: 0.15 });
   }
   cenario.push(point('placa', CAVE.x - 7.5, CAVE.y + 3.5, { texto: 'CAVERNA SAGRADA', seta: 'leste', poste: true }));
   addTrunk({ x: CAVE.x - 7.5, y: CAVE.y + 3.5, r: 0.1 });
@@ -1104,6 +1115,17 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'rede' || s.type === 'varal') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'muro') return [box('muro', r, { altura: Number(p.altura) })];
   if (s.type === 'barreira') return [box('barreira', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'caverna') {
+    // o morro: o corpo (a frente reta, onde fica a boca) e o fundo mais estreito (as quinas de trás são chanfradas)
+    return [
+      box('caverna', { x0: round(r.x0 + 0.3), x1: round(r.x1 - 0.2), y0: round(r.y0 + 1.2), y1: r.y1 }, { altura: Number(p.altura) }),
+      box('caverna', { x0: round(r.x0 + 1.5), x1: round(r.x1 - 1.5), y0: round(r.y0 + 0.3), y1: round(r.y0 + 1.3) }, { altura: Number(p.altura) }),
+    ];
+  }
+  if (s.type === 'rocha') return [block('pedra', s.x, s.y, round(Number(p.raio) * 1.5))];
+  if (s.type === 'oferenda') return [block('oferenda', s.x, s.y, 0.6, { bloqueiaTiro: false, altura: 0.5 })];
+  if (s.type === 'brasas') return [block('brasas', s.x, s.y, 1.2, { bloqueiaTiro: false, altura: 0.3 })];
+  if (s.type === 'esteio') return [block('poste', s.x, s.y, 0.3, { altura: Number(p.altura) })];
   if (s.type === 'coreto') {
     // a base octogonal (seis caixas por dentro do octógono, escalonadas nos lados de 45°) e a escada do lado sul
     const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;

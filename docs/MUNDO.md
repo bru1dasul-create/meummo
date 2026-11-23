@@ -34,7 +34,19 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): o coreto vestido e os consertos do dono (na `main`).** O dono: "pode seguir vestindo o coreto /
+- **Agora (24/11): a Caverna Sagrada vestida (na `main`).** O dono: "pode seguir vestindo a caverna". O arco de 12
+  pedras saiu; no lugar, o morro `caverna` (`CAVE_HILL`, 27..41 × 257..265, 5,4 m; sul.js; tmj: `boca`, `bocaX`,
+  `bocaAltura`, `altura`, `brilho`, `inscricoes`, `pinturas`, `raizes`, `arvore`), desenhado com o `ringRock` (a pedra
+  da cachoeira em três voltas; o `facetRock` agora só monta as voltas e chama ele), com a frente reta e em pé onde fica a
+  boca. Imagem pronta (`paint`) e, por cima, o que mexe (`overlay`, novo no `Small` do props.js): a luz lá no fundo
+  respirando, as faíscas subindo e as itacoatiaras brilhando (mais de noite; elas e a boca abrem o escuro da noite pelo
+  `flora.glows`). Coisas novas, todas no sul.js: `rocha` (a pedra solta, colisão de `pedra`), `oferenda` (pedra chata
+  com velas acesas, cuia, cabaça e flores; luz quente de noite), `brasas` (a fogueira APAGADA: roda de pedras, cinza,
+  tições, brasas e fumacinha no vento — a `fogueira` acesa marca as zonas seguras, e o teste confere isso) e `esteio`
+  (o tronco com a cabaça, as penas e as fitas no vento). O chão da clareira é `pedra`. A colisão do morro são duas
+  caixas (a frente e o fundo). O mapa visto de cima (tecla M) desenha o morro com a boca e o coreto. Não dá para entrar:
+  a boca pode virar uma `saida` para uma caverna por dentro (a Cuca, do DESIGN), se o dono quiser.
+- **Antes (24/11): o coreto vestido e os consertos do dono (na `main`).** O dono: "pode seguir vestindo o coreto /
   porém arruma issos / efeito da agua descendo está feio / chão tbm ta feio". (1) A água que desce (`small.cachoeira`,
   sul.js, reescrita): a lâmina sai da beirada já andando para a frente e cai em curva, verde-água em cima e branca
   embaixo, com fios descendo cada vez mais depressa; no pé, a espuma (mancha de beira mexendo + bolhas), respingos,
