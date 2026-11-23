@@ -42,7 +42,8 @@ alternativas quando vejo — sem concordar só para agradar.
   2. O "+" e as bolinhas do nível de cada habilidade na barra de ações (`skillBar.ts`, estilo provisório).
   3. Efeito subindo do chão ao subir de nível e ao pôr ponto (provisório no `combat.ts`; protocolo 47, `fx` `skillup`).
      **O dono não gostou** ("consegue fazer tipo Priston Tale?"): pedi um print ou vídeo de referência (só o estilo,
-     sem copiar nada do jogo); o desenho de verdade é da [arte] pelo `view.levelUp`.
+     sem copiar nada do jogo). **A [arte] fez o `view.levelUp` (main 9c1ac67, anéis de luz subindo; as cores de cada
+     tipo de habilidade ficam na view)** e eu apaguei o provisório do `combat.ts` (o motor só chama a view).
 - **Feito em 22/11 (tudo na main, conferido no navegador):** o Q põe a Chuva no arco como o R (sai no tiro); níveis de
   carga (fraco/médio/forte) só na Chuva e na Ancestral; a flecha sai do arco e some atrás de quem atirou; cai em curva
   no fim do alcance; rolando não puxa nem atira (puxa quando a rolada acaba); impacto das habilidades crescendo por

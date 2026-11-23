@@ -42,10 +42,6 @@ const paintRing: (...args: [...Parameters<typeof paintChargeRing>, ChargeLevel |
 /** A altura (metros) em que os projéteis voam no desenho. */
 export const SHOT_DRAW_Z = 0.9;
 
-/** Quanto dura o efeito subindo do chão (provisório): subiu de nível e pôs ponto numa habilidade. */
-const RISE_LEVEL_MS = 1600;
-const RISE_SKILL_MS = 1100;
-
 /**
  * O tiro de jogador sai do arco (ou do estilingue), e não do pé: à frente do corpo, na altura do ombro do herói (~77% de
  * 1,76 m), onde a mão do arco fica na hora do tiro (pedido do dono, 19/11: "a flecha não sai do arco, sai de baixo").
@@ -380,8 +376,6 @@ export class CombatLayer {
   private floaters: Floater[] = [];
   private flashes: Flash[] = [];
   private poofs: { x: number; y: number; start: number }[] = [];
-  /** O efeito subindo do chão (subiu de nível, pôs ponto numa habilidade), provisório: veja rise. */
-  private rises: { id: number; color: string; start: number; big: boolean; seed: number }[] = [];
   /** Puxando o estilingue (ou o arco): de quem, desde quando e em quanto tempo enche (o anel em volta do pé). */
   private chargeRing: { id: number; since: number; fullMs: number; level?: ChargeLevel } | null = null;
   /** Aviso curto embaixo do pé ("carga perdida", "defesa quebrou!"). */
@@ -674,60 +668,6 @@ export class CombatLayer {
     this.flashes.push({ x, y, angle, radius, wide, start: now });
   }
 
-  /**
-   * O efeito subindo do chão em volta de `id` (provisório, até a view ter o `levelUp`): um anel que abre no chão e
-   * faíscas de luz subindo, na cor `color`; `big` = subiu de nível (maior e mais demorado que o ponto de habilidade).
-   */
-  rise(id: number, color: string, big: boolean, now: number): void {
-    this.rises.push({ id, color, start: now, big, seed: Math.random() * 1000 });
-  }
-
-  private drawRises(now: number, feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, meter: (x: number, y: number) => number): void {
-    if (this.rises.length === 0) return;
-    this.rises = this.rises.filter((r) => now - r.start < (r.big ? RISE_LEVEL_MS : RISE_SKILL_MS));
-    const ctx = this.ctx;
-    for (const r of this.rises) {
-      const feet = feetOf(r.id);
-      if (!feet) continue;
-      const life = r.big ? RISE_LEVEL_MS : RISE_SKILL_MS;
-      const t = (now - r.start) / life; // 0 → 1
-      const m = meter(feet.x, feet.y);
-      ctx.save();
-      // o anel no chão: abre do pé e some
-      const ringR = (r.big ? 1.3 : 0.9) * Math.min(1, t * 2.2);
-      ctx.globalAlpha = Math.max(0, 1 - t) * 0.9;
-      ctx.strokeStyle = r.color;
-      ctx.lineWidth = Math.max(1.5, m * 0.05 * (1 - t));
-      ctx.beginPath();
-      const steps = 28;
-      for (let i = 0; i <= steps; i++) {
-        const a = (i / steps) * Math.PI * 2;
-        const p = screen(feet.x + Math.cos(a) * ringR, feet.y + Math.sin(a) * ringR, 0.02);
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-      // a luz subindo do chão: faíscas em volta do corpo, cada uma num tempo
-      const count = r.big ? 18 : 11;
-      ctx.fillStyle = r.color;
-      for (let k = 0; k < count; k++) {
-        const phase = ((k * 0.618 + r.seed) % 1) * 0.45; // cada uma começa num instante
-        const u = (t - phase) / (1 - phase);
-        if (u <= 0 || u >= 1) continue;
-        const a = k * 2.399 + r.seed;
-        const rad = 0.35 + ((k * 0.37) % 0.4);
-        const z = u * (r.big ? 2.6 : 2.1);
-        const p = screen(feet.x + Math.cos(a) * rad, feet.y + Math.sin(a) * rad, z);
-        ctx.globalAlpha = Math.sin(u * Math.PI) * 0.95;
-        const size = Math.max(1.5, m * (r.big ? 0.05 : 0.04) * (1 - u * 0.5));
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, size, size * 2.2, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-
   /** Começou (`since`) ou parou (null) de puxar o estilingue. */
   /** Começou a puxar (`since`) ou soltou (null). `fullMs`: em quanto tempo a carga enche (o arco é mais lento). */
   setCharge(id: number, since: number | null, fullMs = this.rules.chargeFullMs): void {
@@ -826,7 +766,6 @@ export class CombatLayer {
   /** Mudou de mapa: limpa tudo. */
   clear(): void {
     this.rains = [];
-    this.rises = [];
     this.aim = null;
     this.spiritEnds = [];
     this.marked.clear();
@@ -898,7 +837,6 @@ export class CombatLayer {
     this.drawPets(now, screen, meter);
     this.drawFlashes(now, screen);
     this.drawPoofs(now, screen, meter);
-    this.drawRises(now, feetOf, screen, meter);
     this.drawBursts(now, screen, meter);
     this.drawShots(now, screen, meter);
     this.drawRainAir(now, screen, meter);
@@ -912,7 +850,7 @@ export class CombatLayer {
   private busy(feetOf: (id: number) => Point | null, screen: (x: number, y: number, z?: number) => Point, w: number, h: number, bars: boolean): boolean {
     if (bars || this.debugShapes !== null || this.bursts.length > 0 || this.warnings.length > 0 || this.shots.size > 0 || this.myShots.size > 0 || this.floaters.length > 0) return true;
     if (this.rains.length > 0 || this.aim !== null || this.spiritEnds.length > 0 || this.marked.size > 0) return true;
-    if (this.flashes.length > 0 || this.poofs.length > 0 || this.rises.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
+    if (this.flashes.length > 0 || this.poofs.length > 0 || this.chargeRing !== null || this.footNote !== null) return true;
     if (this.guards.size > 0 || this.sparks.length > 0 || this.windups.size > 0 || this.drops.size > 0) return true;
     if (this.energy !== null && (this.energy.value < GUARD_MAX_ENERGY || this.energy.state !== 'off')) return true;
     for (const pet of this.pets.values()) if (this.petVisible(pet)) return true;

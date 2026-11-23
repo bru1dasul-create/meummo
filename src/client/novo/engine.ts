@@ -2455,16 +2455,11 @@ class NewWorld implements NewWorldGame {
   }
 
   /**
-   * O efeito subindo do chão em volta de `id` (subiu de nível ou pôs ponto numa habilidade): o da view, se ela souber
-   * desenhar (`levelUp`); senão, o provisório da camada do combate, na cor da habilidade (dourado no nível).
+   * O efeito subindo do chão em volta de `id` (subiu de nível ou pôs ponto numa habilidade, com o tipo dela): o desenho
+   * é da view (`levelUp`, da [arte]: a cor de cada tipo fica lá; tipo novo de habilidade, avisar a [arte]).
    */
   private riseEffect(id: number, what: 'level' | 'skill', skill?: string): void {
-    if (this.view?.levelUp) {
-      this.view.levelUp(id, what, skill);
-      return;
-    }
-    const color = what === 'level' ? '#ffd76a' : skill === 'flecha' ? '#8dffc8' : skill === 'olhos' ? '#ffb347' : '#ffe9a0';
-    this.combat.rise(id, color, what === 'level', gameNow());
+    this.view?.levelUp?.(id, what, skill);
   }
 
   /** O tipo da habilidade `id` ('chuva', 'flecha', 'olhos'), procurando em todas as classes (a de outro jogador também). */
