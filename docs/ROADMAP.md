@@ -1022,7 +1022,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     olhos acesos, os tufos brancos em leque, o rabo peludo de anéis; no aviso, ele se estica e ergue a fruta brilhando do
     lado da cabeça (de frente, aparece); o tranco vai para longe do herói. As ferramentas de pintar ficaram em
     `PD.creatures.paint` (`creature.js`) para os próximos
-  - [ ] Quati · [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
+  - [x] **Quati** (23/11):
+    - o corpo de pelo, o lombo escuro e a barriga creme, as patas escuras e o rabo em pé com anéis;
+    - o focinho comprido que mexe sempre e a máscara branca e escura no rosto;
+    - no aviso, encolhe, arqueia, arrepia e rosna de boca aberta;
+    - na mordida, dá o bote com os pés plantados;
+    - o tranco e o desmaio com as faíscas roxas.
+  - [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
 - [ ] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
   pendurado pelo rabo num galho baixo e joga a fruta lá de cima; quando o herói chega perto ou acerta, pula para o chão
   e luta; depois de um tempo calmo, sobe de novo

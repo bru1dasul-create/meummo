@@ -115,6 +115,51 @@
   - `anim-galho.cjs <pasta> [zoom]`: o filme;
   - `custo-galho.cjs`: o peso (`GALHO=1` pendurado).
 
+### Etapa 2: o Quati (23/11, com o "pode seguir para o Quati" do dono)
+- **O desenho (`quati.js`, sem as bolinhas, com as mesmas ferramentas do sagui):**
+  - **o corpo:** comprido, com a beirada de pelo. O lombo é mais escuro e a barriga, cor de creme. Os dois são as mesmas
+    bolas do corpo, menores e puxadas para cima ou para baixo na tela, pintadas dentro do recorte do corpo; assim
+    funcionam de qualquer lado;
+  - **as patas:** escuras, com o pé e, de perto, as unhas compridas das patas da frente;
+  - **o rabo:** em pé, comprido e fino, com 6 anéis escuros e a ponta escura;
+  - **a cabeça:** afina para o focinho. O **focinho comprido** é virado para cima na ponta e nasce fino de dentro da
+    cara, sem o corte reto na emenda. Ele escurece até o nariz preto e brilhante e **mexe sempre**: cada pedaço dobra um
+    pouco mais que o anterior, e farejando o chão mexe mais;
+  - **a máscara:** a cara escura em volta dos olhos, indo para o focinho; marcas brancas em cima e embaixo dos olhos; a
+    bochecha branca e a garganta clara;
+  - **os olhos:** pretos, com o pontinho de luz (de noite, vermelhos);
+  - **as orelhinhas:** atrás da cabeça, com a borda branca, que só aparece de frente.
+- **O aviso** (a mordida vem 0,45 s depois):
+  - encolhe para trás nas patas de trás, com os pés no lugar;
+  - arqueia o lombo e arrepia o pelo e o rabo, que fica duro;
+  - abaixa as orelhas e a cabeça e olha bravo;
+  - rosna de boca aberta, com o queixo claro e os dentes, e no fim treme.
+- **A mordida (o bote):** o corpo vai 21 cm para a frente em 0,07 s, com os pés de trás plantados e as patas da frente
+  esticando. A boca escancara e fecha com tudo; ele volta em 0,3 s.
+- **A boca aberta:**
+  - é o casco dos dois lábios na tela, então de frente, com o focinho vindo para a câmera, ainda aparece embaixo do
+    nariz;
+  - o queixo é claro, como o do quati de verdade. Escuro, de frente, parecia uma língua comprida.
+- **O tranco, o clarão e o desmaio:** os mesmos do sagui. O tranco vai para longe do herói e o clarão é fraquinho. No
+  desmaio, ele cai de bruços com as patas abertas e o rabo deitado, e saem as faíscas roxas.
+- **O peso:** ~1,6 ms por quati no PC (zoom 1) e ~1,3 ms no celular; o antigo pesava 1,1 e 0,8 ms. É mais leve que o
+  sagui novo (2,4 ms).
+- **Conferido:**
+  - as pranchas (4 lados × 12 momentos e o rosto de perto);
+  - o filme de antes e depois;
+  - o jogo de verdade: de dia, de noite, no celular, o tiro com o desmaio e o ataque em câmera lenta, sem erros.
+  
+  Os outros bichos não mudaram: só o `quati.js` foi alterado. Teste: `tests/quati-art.test.ts`.
+- **Observação:** o quadrado vermelho do aviso (o `combat.ts`, da [estrutura]) é pintado por cima do bicho e esconde
+  um pouco a pose do aviso. Sugeri à [estrutura] não pintar a casa de quem ataca, ou pintar por baixo.
+- **Rascunho `quati/`:**
+  - `prancha.cjs <saída> [criaturas] [zoom]` (`DIRS`, `ONLY`; `FOCO=1` de perto no focinho);
+  - `anim.cjs <pasta> [criaturas] [zoom]`: o filme;
+  - `custo.cjs [criaturas]`: o peso;
+  - `jogo.cjs <pasta>`: no jogo;
+  - `jogo2.cjs <pasta>`: o ataque em câmera lenta, sem o invencível (com ele, os bichos ignoram o herói);
+  - `antes/`: a cópia das criaturas de antes.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
