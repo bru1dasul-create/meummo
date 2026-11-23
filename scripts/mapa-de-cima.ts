@@ -417,6 +417,12 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     } else if (t === 'tronco-caido') {
       roof(x0, y0, x1, y1, C.madeira);
     } else if (t === 'banco' || t === 'balcao') cv.rect(x0, y0, x1, y1, shade(C.madeira, 0.85), 0.9);
+    // a banca de feira (a do Capão maior e a da Dona Iracema): a madeira com o pano colorido na frente
+    else if (t === 'banca-frutas') {
+      cv.rect(x0, y0, x1, y1, C.madeira, 0.95);
+      cv.rect(x0, y1 - Math.max(1, m(0.35)), x1, y1, hex(String(prop(o, 'pano') ?? '#e2552f')), 0.95);
+      outline(x0, y0, x1, y1, C.contorno, 1, 0.5);
+    }
     else if (t === 'parquinho') roof(x0, y0, x1, y1, C.ferrugem);
     else if (t === 'bomba') roof(x0, y0, x1, y1, C.bomba);
     else if (t === 'cachoeira') {

@@ -52,7 +52,16 @@ const CREATURES = true;
  * do conjunto no fundo e a vida na rua (moto, placa de rua, cadeiras, vasos, lixo, bandeirinhas).
  */
 const FLORESTA = true;
-const W = 96;
+/**
+ * O Capão maior (23/11, planta aprovada pelo dono): o mapa cresce para a direita, de 96 para 192 m, sem mudar nada de
+ * lugar (a origem fica: o mapa explorado salvo não desalinha). Tudo o que já existia usa W0 e sai igual a antes; a parte
+ * nova (x de W0 a W) tem sorteios próprios. Só a beira leste antiga sai (a mata fechada de x = 95,4), para abrir a vila
+ * para a parte nova, e o viaduto, que já era o mesmo, segue até a beira nova.
+ */
+const W0 = 96;
+const W = 192;
+/** Liga a parte nova (o Capão maior). */
+const CAPAO_MAIOR = true;
 /**
  * O mapa cresceu para o sul em 13/11 (o dono pediu a mata 50% maior: o parque foi até y = 120 e a vila até y = 80) e de
  * novo em 14/11 (a floresta maior, planta aprovada): mais 60 m para o sul, sem mudar nada de lugar. Tudo o que é sorteado
@@ -158,7 +167,7 @@ const EAST_TRAIL: [number, number][] = [[48, 161.2], [53, 161], [60, 158.5], [66
 
 // ---------------- a Vila do Capão (etapa 4b) ----------------
 /** A rua que sai do portão para o leste e a rua para o sul (a saída para Guarapiranga só abre na etapa 4c). */
-const STREET = { x0: 56, x1: W, y0: 41, y1: 47 };
+const STREET = { x0: 56, x1: W0, y0: 41, y1: 47 };
 const ROAD_S = { x0: 88, x1: 94, y0: 47, y1: VILLAGE_S };
 /** A praça (pedra portuguesa) e a Budega, a vendinha da praça (o negócio do dono; nada de tabaco). */
 const SQUARE = { x0: 61, x1: 79, y0: 48.5, y1: 59 };
@@ -238,7 +247,7 @@ const WIRES: [number, number][][] = FLORESTA
 const FIELD = { x0: 60, x1: 85, y0: 63, y1: 78 };
 const MURAL = { x0: 57.6, x1: 58.4, y0: 62, y1: 78.3 };
 /** O viaduto da Linha 5-Lilás no fundo (lá em cima, a 8 m), quebrado na ponta do parque, com o trem lilás parado. */
-const VIADUCT = { x0: PARK_X, x1: W, y0: 2, y1: 6 };
+const VIADUCT = { x0: PARK_X, x1: W0, y0: 2, y1: 6 };
 const VIADUCT_PILLARS = [58, 68, 78, 88];
 const TRAIN = { x0: 70, x1: 88, y0: 2.8, y1: 5.2 };
 /** O ônibus velho, largado perto do viaduto, com mato por cima. */
@@ -397,8 +406,8 @@ const isWater = (x: number, y: number) =>
   !inRect(x, y, PEDRAS);
 
 chao.push(rect('mata', 0, PARK_X, 0, H));
-chao.push(rect('terra', PARK_X, W, 0, VILLAGE_S)); // a vila
-chao.push(rect('mata', PARK_X, W, VILLAGE_S, H)); // a mata fechada ao sul da vila (a rua para Guarapiranga passa na 4c)
+chao.push(rect('terra', PARK_X, W0, 0, VILLAGE_S)); // a vila
+chao.push(rect('mata', PARK_X, W0, VILLAGE_S, H)); // a mata fechada ao sul da vila (a rua para Guarapiranga passa na 4c)
 chao.push(rect('asfalto', 49.5, 56, 0, VILLAGE_S, { nome: 'Travessa Jasmim da Beirada' }));
 for (const d of DEEP) chao.push({ type: 'mata-profunda', x: 0, y: 0, polygon: blob(d.x, d.y, d.rx, d.ry, 0.12) });
 chao.push({ type: 'lama', x: 0, y: 0, polygon: blob(LAKE.x, LAKE.y, LAKE.rx + 1.3, LAKE.ry + 1.2, LAKE_WOBBLE) });
@@ -417,10 +426,10 @@ if (reached('4b')) {
   chao.push(rect('calcada', 48.2, 49.5, 0, VILLAGE_S)); // a do parque, junto do gradil
   chao.push(rect('calcada', 56, 57.5, 0, STREET.y0)); // Travessa, lado leste, ao norte da rua
   chao.push(rect('calcada', 56, 57.5, STREET.y1, VILLAGE_S)); // Travessa, lado leste, ao sul da rua
-  chao.push(rect('calcada', 57.5, W, 39.5, STREET.y0)); // a das casas
+  chao.push(rect('calcada', 57.5, W0, 39.5, STREET.y0)); // a das casas
   chao.push(rect('calcada', 57.5, ROAD_S.x0, STREET.y1, SQUARE.y0)); // a da praça
   chao.push(rect('calcada', ROAD_S.x0 - 1, ROAD_S.x0, SQUARE.y0, VILLAGE_S)); // rua de baixo, lado oeste
-  chao.push(rect('calcada', ROAD_S.x1, W, STREET.y1, VILLAGE_S)); // rua de baixo, lado leste
+  chao.push(rect('calcada', ROAD_S.x1, W0, STREET.y1, VILLAGE_S)); // rua de baixo, lado leste
   chao.push(rect('asfalto', STREET.x0, STREET.x1, STREET.y0, STREET.y1));
   chao.push(rect('asfalto', ROAD_S.x0, ROAD_S.x1, ROAD_S.y0, ROAD_S.y1));
   // faixa de pedestre atravessando a Travessa (listras compridas no sentido da rua, y). No padrão novo ela fica na
@@ -861,7 +870,7 @@ if (reached('4b')) {
   const vrng = mulberry32(SEED + 4); // sorteio só da vila: a mata do parque continua igual
   for (let y = GATE.y0 + 0.5; y <= GATE.y1 - 0.5; y += 1) VILLAGE_KEYS.push([PARK_X, y, 0]);
   for (let y = 38; y <= 50; y += 1) VILLAGE_KEYS.push([52.75, y, 0]);
-  for (let x = STREET.x0; x <= W - 2; x += 1) VILLAGE_KEYS.push([x, 44, 0]);
+  for (let x = STREET.x0; x <= W0 - 2; x += 1) VILLAGE_KEYS.push([x, 44, 0]);
   VILLAGE_KEYS.push([BUDEGA_FRONT.x, BUDEGA_FRONT.y, 0], [FIRE.x, FIRE.y, 0]);
   for (let x = BUDEGA.x0 + 0.5; x <= BUDEGA.x1 - 0.5; x += 1) VILLAGE_KEYS.push([x, BUDEGA.y1 + 0.05, 2.2]); // o letreiro
 
@@ -982,14 +991,16 @@ if (reached('4b')) {
   // a beira da vila: mata fechada (a ponta da Travessa e a rua do leste terminam no mato; a partir da 4c a rua de baixo
   // segue para o sul, rumo a Guarapiranga)
   const villageEdge: [number, number][] = [];
-  for (let x = PARK_X + 0.6; x < W - 1; x += 1.1) villageEdge.push([x, 0.6], [x, VILLAGE_S - 0.6]);
-  for (let y = 0.6; y < VILLAGE_S; y += 1.1) villageEdge.push([W - 0.6, y]);
+  for (let x = PARK_X + 0.6; x < W0 - 1; x += 1.1) villageEdge.push([x, 0.6], [x, VILLAGE_S - 0.6]);
+  for (let y = 0.6; y < VILLAGE_S; y += 1.1) villageEdge.push([W0 - 0.6, y]);
   // o tamanho de cada arbusto é sorteado sempre na mesma ordem (a vila aprovada não muda); a partir da 4c a beira sul abre
   // onde a rua de baixo segue para o sul
   const roadOpen = (x: number, y: number) => reached('4c') && y > VILLAGE_S - 1 && x > ROAD_GUARA.x0 - 1 && x < ROAD_GUARA.x1 + 1;
+  // (no Capão maior, a beira leste abre inteira: a vila continua para a direita; o sorteio de cada arbusto continua)
+  const eastOpen = (x: number) => CAPAO_MAIOR && x > W0 - 1;
   for (const [x, y] of villageEdge) {
     const raio = round(0.9 + vrng() * 0.25);
-    if (!roadOpen(x, y)) cenario.push(point('arbusto', round(x), round(y), { raio, fechado: true }));
+    if (!roadOpen(x, y) && !eastOpen(x)) cenario.push(point('arbusto', round(x), round(y), { raio, fechado: true }));
   }
 
   // nada alto ao sul da rua pode tampar o portão, a rua ou o balcão
@@ -1014,7 +1025,8 @@ if (reached('4c')) {
   for (let x = FIELD.x0; x <= FIELD.x1; x += 1) for (let y = FIELD.y0; y <= FIELD.y1; y += 1) VILLAGE_KEYS.push([x, y, 0]);
 
   // o viaduto da Linha 5-Lilás: o tabuleiro lá em cima (não segura o pé), os pilares, o trem parado e os cipós
-  cenario.push(rect('viaduto', VIADUCT.x0, VIADUCT.x1, VIADUCT.y0, VIADUCT.y1, { altura: 8, espessura: 1.4, mato: true, quebrado: 'oeste' }));
+  // (no Capão maior o mesmo tabuleiro segue até a beira nova, passando pela Estação Capão Redondo)
+  cenario.push(rect('viaduto', VIADUCT.x0, CAPAO_MAIOR ? W : VIADUCT.x1, VIADUCT.y0, VIADUCT.y1, { altura: 8, espessura: 1.4, mato: true, quebrado: 'oeste' }));
   for (const x of VIADUCT_PILLARS) cenario.push(rect('pilar-viaduto', x - 0.8, x + 0.8, 3.2, 4.8, { altura: 8 }));
   cenario.push(rect('trem', TRAIN.x0, TRAIN.x1, TRAIN.y0, TRAIN.y1, { altura: 2.6, base: 9.4, cor: '#7d5ca8', vagoes: 3 }));
   for (const x of [51, 63, 74, 84, 93]) cenario.push(point('cipo', x, VIADUCT.y1 + 0.05, { comprimento: round(3 + crng() * 2.5), base: 8 }));
@@ -1140,7 +1152,7 @@ if (reached('4c') && FLORESTA) {
   const nearRoad = (x: number, r: number) => reached('4c') && x + r > ROAD_GUARA.x0 - 2.2 && x - r < ROAD_GUARA.x1 + 2.2;
   const southFits = (x: number, y: number, r: number) => !nearRoad(x, r) && south.every((t) => dist(x, y, t.x, t.y) - t.tronco / 2 - r >= TRUNK_GAP + 1.4);
   for (let i = 0, n = 0; i < 3000 && n < 45; i++) {
-    const [x, y] = [PARK_X + 1.5 + srng() * (W - PARK_X - 3), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 4.5)];
+    const [x, y] = [PARK_X + 1.5 + srng() * (W0 - PARK_X - 3), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 4.5)];
     const k = srng();
     const especie = k < 0.15 ? 'jeriva' : k < 0.3 ? 'embauba' : 'mata';
     const d = SPECIES[especie] ?? { tronco: round(0.4 + srng() * 0.25), copa: round(1.7 + srng() * 1.2), altura: round(5 + srng() * 3.5) };
@@ -1150,14 +1162,14 @@ if (reached('4c') && FLORESTA) {
     n++;
   }
   for (let i = 0, n = 0; i < 2000 && n < 14; i++) {
-    const [x, y, r] = [PARK_X + 2 + srng() * (W - PARK_X - 4), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 5), round(1 + srng() * 0.4)];
+    const [x, y, r] = [PARK_X + 2 + srng() * (W0 - PARK_X - 4), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 5), round(1 + srng() * 0.4)];
     if (!southFits(x, y, r) || canopyHides(x, y, r * 1.3, 7)) continue;
     south.push({ x, y, tronco: r * 2 });
     cenario.push(point('bambu', round(x), round(y), { raio: r, altura: 7 }));
     n++;
   }
   for (let i = 0, n = 0; i < 2000 && n < 10; i++) {
-    const [x, y] = [PARK_X + 2 + srng() * (W - PARK_X - 4), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 5)];
+    const [x, y] = [PARK_X + 2 + srng() * (W0 - PARK_X - 4), VILLAGE_S + 3 + srng() * (H0 - VILLAGE_S - 5)];
     if (!southFits(x, y, 0.2) || canopyHides(x, y, SPECIES.bananeira!.copa, SPECIES.bananeira!.altura)) continue;
     south.push({ x, y, tronco: 0.35 });
     cenario.push(point('arvore', round(x), round(y), { especie: 'bananeira', ...SPECIES.bananeira! }));
@@ -1181,14 +1193,14 @@ if (reached('4b') && FLORESTA) {
   /** O meio-fio (com a sarjeta do lado do asfalto) em toda beira de calçada com asfalto. */
   const CURBS: [number, number][][] = [
     [[49.5, 0], [49.5, VILLAGE_S]],
-    [[56, 0], [56, STREET.y0], [W, STREET.y0]],
+    [[56, 0], [56, STREET.y0], [W0, STREET.y0]],
     [[56, VILLAGE_S], [56, STREET.y1], [ROAD_S.x0, STREET.y1], [ROAD_S.x0, VILLAGE_S]],
-    [[W, STREET.y1], [ROAD_S.x1, STREET.y1], [ROAD_S.x1, VILLAGE_S]],
+    [[W0, STREET.y1], [ROAD_S.x1, STREET.y1], [ROAD_S.x1, VILLAGE_S]],
   ];
   for (const pts of CURBS) chao.push({ type: 'meio-fio', x: 0, y: 0, polyline: pts, props: { altura: 0.15, largura: 0.2, sarjeta: true, cor: '#bdb6a8' } });
   // a faixa amarela do meio, tracejada e apagada (na Travessa, parando antes do cruzamento e da faixa de pedestre)
   const CENTER_LINES: [number, number][][] = [
-    [[57.5, 44], [W - 0.5, 44]],
+    [[57.5, 44], [W0 - 0.5, 44]],
     [[91, STREET.y1 + 0.5], [91, VILLAGE_S]],
     [[52.75, 0.5], [52.75, STREET.y0 - 0.5]],
     [[52.75, 51.1], [52.75, VILLAGE_S - 0.5]],
@@ -1212,7 +1224,7 @@ if (reached('4b') && FLORESTA) {
   const onAsphalt = (x: number, y: number) =>
     !(x > 49.5 && x < 56 && y > 42.3 && y < 45.7) &&
     ((x > 49.7 && x < 55.8 && y > 0.5 && y < VILLAGE_S - 0.5) ||
-      (x > 56 && x < W - 0.3 && y > STREET.y0 + 0.2 && y < STREET.y1 - 0.2) ||
+      (x > 56 && x < W0 - 0.3 && y > STREET.y0 + 0.2 && y < STREET.y1 - 0.2) ||
       (x > ROAD_S.x0 + 0.2 && x < ROAD_S.x1 - 0.2 && y > STREET.y1 && y < VILLAGE_S));
   for (let i = 0, n = 0; i < 400 && n < 18; i++) {
     const zone = i % 3;
@@ -1359,8 +1371,13 @@ function footBox(s: Shape): Box | null {
   if (s.type === 'lixeira') return squareBox(s.x, s.y, 0.5);
   if (s.type === 'placa' && p.poste) return squareBox(s.x, s.y, 0.2);
   if (s.type === 'pneus') return squareBox(s.x, s.y, round(Number(p.raio) * 1.8));
+  // (as do Capão maior: o poste de concreto e a placa de rua, e as caixas do muro, do carro, do ônibus, do pilar do
+  // viaduto, da banca e do portão fechado; nenhuma delas existe nas regiões que a floresta maior confere)
+  if (s.type === 'poste') return squareBox(s.x, s.y, 0.3);
+  if (s.type === 'placa-rua') return squareBox(s.x, s.y, 0.2);
   if (s.point) return null;
-  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
+  if (s.type === 'portao' && p.aberto) return null;
+  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
   return null;
 }
 /** As caixas que seguram o pé (a cobertura do posto só nos quatro pilares; o balanço só nos dois pés de ferro). */
@@ -1377,6 +1394,8 @@ function boxesOf(s: Shape): Box[] {
   }
   if (s.type === 'parquinho' && p.brinquedo === 'escorregador') return [{ x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! }];
   if (s.type === 'parquinho') return [squareBox(s.x, s.y, round(Number(p.raio) * 1.75))];
+  // (da trave, só os dois postes seguram o pé)
+  if (s.type === 'trave') return [squareBox(s.x + s.w! / 2, s.y, 0.2), squareBox(s.x + s.w! / 2, s.y + s.h!, 0.2)];
   const b = footBox(s);
   return b ? [b] : [];
 }
@@ -2012,6 +2031,500 @@ for (const [tx, ty, want] of SAGUI_TREES) {
   if (!done) throw new Error(`A árvore do sagui perto de (${tx}, ${ty}) não cabe.`);
 }
 
+// ---------------- o Capão maior (23/11, planta aprovada pelo dono): a parte nova, à direita (x de W0 a W) ----------------
+// Etapa 1, o mapa inteiro aberto (como no Guarapiranga grande): a rua da Budega segue até a beira nova; duas ruas novas
+// sobem até o caminho de terra embaixo do viaduto e descem para o sul; o comércio de frente para a rua (padaria, bar,
+// salão e açougue), as casas em fileiras com vielas, a feira livre, a escola estadual abandonada com a quadra, a pracinha
+// e a Estação Capão Redondo (fechada: a saída para o leste fica para depois). Ao sul, a Mata do Córrego, de andar e de
+// caçar: o córrego com a ponte da rua, o ferro-velho e o morro com o escadão. Depois cada região ganha o desenho dela
+// ("vestir"). Nada da parte antiga muda de lugar; sorteio próprio (SEED + 40).
+/** A avenida (a rua da Budega esticada até a beira nova). */
+const AVENIDA = { x0: W0, x1: W, y0: STREET.y0, y1: STREET.y1 };
+/** As duas ruas novas (x): a Rua Nova (para o norte e, ao sul, a Rua da Feira) e a Rua do Córrego (da estação ao sul). */
+const RUA_NOVA = { x0: 122, x1: 128 };
+const RUA_CORREGO = { x0: 148, x1: 154 };
+/** Onde a vila nova acaba e começa a Mata do Córrego (y). */
+const URBAN_S = 90;
+/** O caminho de terra embaixo do viaduto (y), da beira antiga até a Rua do Córrego; as ruas novas chegam até ele. */
+const UNDER = { y0: 7.5, y1: 11 };
+/** A estação (o prédio de baixo do viaduto; a plataforma fica lá em cima) e o largo da frente. */
+const ESTACAO = { x0: 157, x1: 187, y0: 6.6, y1: 13 };
+const LARGO = { x0: RUA_CORREGO.x1, x1: 188.9, y0: 13, y1: 16 };
+/** A pracinha da estação. */
+const PRACINHA = { x0: 155.5, x1: 188, y0: 16, y1: AVENIDA.y0 - 1.5 };
+/** A feira livre (no estacionamento entre as duas ruas) e a Rua Dois (de terra e asfalto velho, de leste a oeste). */
+const FEIRA = { x0: 129.5, x1: 146.5, y0: 49, y1: 64.5 };
+const RUA_DOIS = { x0: ROAD_S.x1, x1: RUA_CORREGO.x0, y0: 66, y1: 71.5 };
+/** A escola estadual abandonada: o terreno (com o gradil e o muro), o prédio e a quadra. */
+const ESCOLA = { x0: 156, x1: 188.9, y0: 49.5, y1: 92 };
+const ESCOLA_PREDIO = { x0: 160, x1: 185, y0: 55, y1: 63 };
+const QUADRA = { x0: 160.5, x1: 186.5, y0: 67.5, y1: 82.5 };
+/** O portão da escola (aberto), no gradil do lado da Rua do Córrego, entre o prédio e a quadra (y). */
+const ESCOLA_PORTAO = { y0: 64, y1: 67 };
+/** O córrego: entra pela beira leste, passa embaixo da ponte da Rua do Córrego e sai pela beira sul. */
+const CORREGO: [number, number][] = [[W, 96], [183, 103], [173.5, 112], [164, 123], [155, 133.5], [148.5, 140], [139, 148.5], [129, 158], [120, 168.5], [114, H]];
+const CORREGO_W = 2.6;
+/** Onde a rua acaba, ao sul (a barreira; depois dela, a mata fechada da beira). */
+const RUA_CORREGO_FIM = 175.5;
+/** O ferro-velho (o terreno murado) e o morro com o escadão. */
+const FERRO = { x0: 99, x1: 125, y0: 104, y1: 124 };
+const FERRO_PORTAO = { x0: 110, x1: 114 };
+const MORRO = { x0: 160, x1: 188.5, y0: 147, y1: 174 };
+const ESCADAO = { x0: 173, x1: 176 };
+/** As trilhas da Mata do Córrego: da ponta da Rua da Feira ao portão do ferro-velho, dela até a Rua do Córrego, e da
+ * ponte para o sudoeste, pela beira do córrego, até a prainha. */
+const TRILHA_FERRO: [number, number][] = [[125, URBAN_S - 0.5], [124.6, 95.5], [118.5, 100], [112, 103.4]];
+const TRILHA_LESTE: [number, number][] = [[125.4, 94], [131, 98.2], [139, 100.6], [RUA_CORREGO.x0 - 0.4, 101.6]];
+const TRILHA_CORREGO: [number, number][] = [[RUA_CORREGO.x0 - 0.4, 125], [142, 128.6], [135.5, 135.5], [129.5, 143.5], [125, 151], [122.6, 157.9]];
+/** A prainha: a clareira de grama na beira do córrego, no fim da trilha. */
+const PRAINHA = { x: 121.8, y: 161, r: 3 };
+/** Áreas dos bichos da Mata do Córrego (os que já existem, com desenho no jogo novo). */
+const CORREGO_ZONES = {
+  quati: { x0: 128, x1: 146, y0: 104, y1: 126 },
+  tatu_bola: { x0: 100, x1: 124, y0: 128, y1: 156 },
+  marimbondo: { x0: 158, x1: 186, y0: 96, y1: 120 },
+  jararaca: { x0: 124, x1: 146, y0: 150, y1: 176 },
+};
+const inCorregoZone = (x: number, y: number) => Object.values(CORREGO_ZONES).some((z) => inRect(x, y, z));
+const corregoGap = (x: number, y: number) => distToPath(x, y, CORREGO) - CORREGO_W / 2;
+/** Onde a rua passa por cima do córrego (o pé anda na ponte). */
+const onBridge = (x: number, y: number) => x > RUA_CORREGO.x0 && x < RUA_CORREGO.x1 && y > URBAN_S;
+const isCorrego = (x: number, y: number) => corregoGap(x, y) <= 0 && !onBridge(x, y);
+
+if (CAPAO_MAIOR) {
+  const nrng = mulberry32(SEED + 40);
+  const pick = <T,>(list: readonly T[]) => list[Math.floor(nrng() * list.length)]!;
+  // ----- o que segura o pé na parte nova (e o da parte antiga perto da emenda), para conferir os vãos de entalar -----
+  const solids: Box[] = cenario.filter((o) => o.x + (o.w ?? 0) > W0 - 8).flatMap(boxesOf);
+  const fits = (b: Box) => solids.every((s) => boxGapOk(b, s));
+  /** Põe uma coisa sólida pensada à mão: com o que já está lá, o vão tem que ser 0 (até 0,3 m) ou de 1,2 m. */
+  const place = (s: Shape): Shape => {
+    for (const b of boxesOf(s)) {
+      const bad = solids.find((o) => !boxGapOk(b, o));
+      if (bad) throw new Error(`${s.name || s.type} em (${s.x}, ${s.y}) fica num vão de entalar com a caixa em (${bad.x0.toFixed(2)}, ${bad.y0.toFixed(2)})–(${bad.x1.toFixed(2)}, ${bad.y1.toFixed(2)}).`);
+    }
+    solids.push(...boxesOf(s));
+    cenario.push(s);
+    return s;
+  };
+  /** O que a câmera precisa ver na parte nova (nada alto tampa): as ruas, o largo e a pracinha, a feira, a quadra, as trilhas. */
+  const keys: [number, number, number][] = [];
+  for (let x = AVENIDA.x0; x <= AVENIDA.x1 - 2; x += 1) keys.push([x, 44, 0]);
+  for (const r of [RUA_NOVA, RUA_CORREGO]) for (let y = UNDER.y1; y < AVENIDA.y0; y += 1) keys.push([(r.x0 + r.x1) / 2, y, 0]);
+  for (let y = AVENIDA.y1; y < URBAN_S; y += 1) keys.push([(RUA_NOVA.x0 + RUA_NOVA.x1) / 2, y, 0]);
+  for (let y = AVENIDA.y1; y < RUA_CORREGO_FIM; y += 1) keys.push([(RUA_CORREGO.x0 + RUA_CORREGO.x1) / 2, y, 0]);
+  for (let x = RUA_DOIS.x0; x <= RUA_DOIS.x1; x += 1) keys.push([x, (RUA_DOIS.y0 + RUA_DOIS.y1) / 2, 0]);
+  for (let x = LARGO.x0 + 1; x < LARGO.x1; x += 2) keys.push([x, (LARGO.y0 + LARGO.y1) / 2, 0]);
+  // (da pracinha, só o parquinho: a árvore do meio pode cobrir um pedaço dela, como a da praça da Budega)
+  for (let x = 181; x <= 185; x += 1) for (let y = 20; y <= 33; y += 1.5) keys.push([x, y, 0]);
+  for (const y of [53.75, 58, 62.6]) for (let x = FEIRA.x0 + 0.5; x < FEIRA.x1; x += 1) keys.push([x, y, 0]);
+  for (let x = QUADRA.x0 + 1; x < QUADRA.x1; x += 2) for (let y = QUADRA.y0 + 1; y < QUADRA.y1; y += 2) keys.push([x, y, 0]);
+  // (a ponta de cada trilha também: os pontos de metro em metro podem parar antes dela)
+  for (const [pts, w] of [[TRILHA_FERRO, 2.6], [TRILHA_LESTE, 2.2], [TRILHA_CORREGO, 2.2]] as const) for (const [x, y] of [...pathPoints(pts, w), pts[pts.length - 1]!]) keys.push([x, y, 0]);
+  VILLAGE_KEYS.push(...keys);
+  /** Uma casa nova tampa (na tela) uma rua, a pracinha, a feira ou a quadra? */
+  const checkHouse = (s: Shape) => {
+    const hidden = boxHides({ x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! }, Number(s.props!.altura));
+    if (hidden) throw new Error(`${s.name || s.type} em (${s.x}, ${s.y}) tampa o ponto (${hidden.join(', ')}) da parte nova.`);
+  };
+
+  // ---------------- o chão (na ordem de desenho) ----------------
+  chao.push(rect('terra', W0, W, 0, URBAN_S)); // a vila nova
+  chao.push(rect('mata', W0, W, URBAN_S, H)); // a Mata do Córrego
+  // a mata invadindo a beira da vila e o mato dos fundos de quintal e dos terrenos baldios
+  for (let x = W0 + 3; x < W - 2; x += 7 + nrng() * 5) chao.push({ type: 'mata', x: 0, y: 0, polygon: blob(round(x), URBAN_S - 0.5, round(3 + nrng() * 2), round(1.6 + nrng()), 0.25) });
+  const GRASS: [number, number, number, number][] = [
+    [101, 28, 4, 2.6], [114, 27.5, 4.5, 2.4], [106, 14.5, 4, 2], [134, 26, 3.5, 2.5], [142, 17, 3, 3], [104, 84.5, 5, 2.6], [117, 85.5, 3.5, 2.4],
+    [136, 85, 5, 2.4], [158, 88, 1.6, 2.2], [186.5, 88, 1.6, 2.2], [163, 52, 2.6, 1.3], [183, 52.2, 2.6, 1.2],
+  ];
+  for (const [cx, cy, rx, ry] of GRASS) chao.push({ type: 'grama', x: 0, y: 0, polygon: blob(cx, cy, rx, ry, 0.2) });
+  // o caminho de terra embaixo do viaduto (as ruas novas acabam nele)
+  chao.push({ type: 'trilha', x: 0, y: 0, polyline: [[W0, (UNDER.y0 + UNDER.y1) / 2], [RUA_CORREGO.x1, (UNDER.y0 + UNDER.y1) / 2]], props: { largura: UNDER.y1 - UNDER.y0 } });
+  // as calçadas (de placas): as duas da avenida, as das ruas novas na vila, o largo da estação e a ladeira do morro
+  const sidewalks: [number, number, number, number][] = [
+    [AVENIDA.x0, AVENIDA.x1, AVENIDA.y0 - 1.5, AVENIDA.y0],
+    [AVENIDA.x0, AVENIDA.x1, AVENIDA.y1, AVENIDA.y1 + 1.5],
+    [RUA_NOVA.x0 - 1.5, RUA_NOVA.x0, UNDER.y1, AVENIDA.y0],
+    [RUA_NOVA.x1, RUA_NOVA.x1 + 1.5, UNDER.y1, AVENIDA.y0],
+    [RUA_NOVA.x0 - 1.5, RUA_NOVA.x0, AVENIDA.y1, URBAN_S],
+    [RUA_NOVA.x1, RUA_NOVA.x1 + 1.5, AVENIDA.y1, URBAN_S],
+    [RUA_CORREGO.x0 - 1.5, RUA_CORREGO.x0, UNDER.y1, AVENIDA.y0],
+    [RUA_CORREGO.x0 - 1.5, RUA_CORREGO.x0, AVENIDA.y1, URBAN_S],
+    [RUA_CORREGO.x1, ESCOLA.x0, AVENIDA.y1, URBAN_S],
+    [LARGO.x0, LARGO.x1, LARGO.y0, LARGO.y1],
+    // (a calçada na frente das casas da Rua Dois e a viela de cimento que sobe para o morro)
+    [W0, RUA_NOVA.x0 - 1.5, RUA_DOIS.y0 - 1.5, RUA_DOIS.y0],
+    [W0, RUA_NOVA.x0 - 1.5, RUA_DOIS.y1, RUA_DOIS.y1 + 1.5],
+    [RUA_NOVA.x1 + 1.5, RUA_CORREGO.x0 - 1.5, RUA_DOIS.y1, RUA_DOIS.y1 + 1.5],
+    [RUA_CORREGO.x1, ESCADAO.x1, MORRO.y0, MORRO.y0 + 2.5],
+    [ESCADAO.x0, ESCADAO.x1, MORRO.y0 + 2.5, MORRO.y1],
+  ];
+  for (const [x0, x1, y0, y1] of sidewalks) chao.push(rect('calcada', x0, x1, y0, y1, { desenho: 'placas' }));
+  // a pracinha (pedra portuguesa com musgo nas frestas)
+  chao.push(rect('praca', PRACINHA.x0, PRACINHA.x1, PRACINHA.y0, PRACINHA.y1, { desenho: 'ondas', musgo: true }));
+  // o asfalto: a avenida, as ruas novas, a Rua Dois e o estacionamento da feira
+  chao.push(rect('asfalto', AVENIDA.x0, AVENIDA.x1, AVENIDA.y0, AVENIDA.y1));
+  chao.push(rect('asfalto', RUA_NOVA.x0, RUA_NOVA.x1, UNDER.y1, AVENIDA.y0, { nome: 'Rua Nova' }));
+  chao.push(rect('asfalto', RUA_NOVA.x0, RUA_NOVA.x1, AVENIDA.y1, URBAN_S, { nome: 'Rua da Feira' }));
+  chao.push(rect('asfalto', RUA_CORREGO.x0, RUA_CORREGO.x1, UNDER.y1, AVENIDA.y0, { nome: 'Rua do Córrego' }));
+  chao.push(rect('asfalto', RUA_CORREGO.x0, RUA_CORREGO.x1, AVENIDA.y1, URBAN_S, { nome: 'Rua do Córrego' }));
+  chao.push(rect('asfalto', RUA_DOIS.x0, RUA_DOIS.x1, RUA_DOIS.y0, RUA_DOIS.y1, { estado: 'rachado', nome: 'Rua Dois' }));
+  chao.push(rect('asfalto', FEIRA.x0, FEIRA.x1, FEIRA.y0, FEIRA.y1, { nome: 'Feira Livre' }));
+  // a quadra da escola (terra batida com as linhas, por enquanto)
+  chao.push(rect('campinho', QUADRA.x0, QUADRA.x1, QUADRA.y0, QUADRA.y1, { linhas: true }));
+  // as trilhas da mata e a prainha (antes da água: a beira do córrego fica por cima da grama)
+  chao.push(ellipse('grama', PRAINHA.x, PRAINHA.y, PRAINHA.r));
+  for (const [pts, largura] of [[TRILHA_FERRO, 2.6], [TRILHA_LESTE, 2.2], [TRILHA_CORREGO, 2.2]] as const) chao.push({ type: 'trilha', x: 0, y: 0, polyline: pts.map(([x, y]) => [x, y] as [number, number]), props: { largura } });
+  // o córrego (a beira de lama e a água) e, por cima dele, a rua que passa na ponte (rachada, com mato)
+  chao.push({ type: 'lama', x: 0, y: 0, polyline: CORREGO, props: { largura: CORREGO_W + 1.6 } });
+  chao.push({ type: 'agua', x: 0, y: 0, polyline: CORREGO, props: { cor: '#2f6f6a', largura: CORREGO_W } });
+  chao.push(rect('asfalto', RUA_CORREGO.x0, RUA_CORREGO.x1, URBAN_S, RUA_CORREGO_FIM + 0.5, { estado: 'rachado', nome: 'Rua do Córrego' }));
+  // o pátio do ferro-velho (terra batida, mais escura)
+  chao.push(rect('terra', FERRO.x0, FERRO.x1, FERRO.y0, FERRO.y1, { cor: '#6f5a44' }));
+  // o meio-fio (com a sarjeta do lado do asfalto) nas beiras de calçada com asfalto, e a faixa apagada no meio das ruas
+  const N = RUA_NOVA, Cg = RUA_CORREGO, A = AVENIDA;
+  const CURBS2: [number, number][][] = [
+    [[A.x0, A.y0], [N.x0, A.y0], [N.x0, UNDER.y1]],
+    [[N.x1, UNDER.y1], [N.x1, A.y0], [Cg.x0, A.y0], [Cg.x0, UNDER.y1]],
+    [[Cg.x1, UNDER.y1], [Cg.x1, A.y0], [A.x1, A.y0]],
+    [[A.x1, A.y1], [Cg.x1, A.y1], [Cg.x1, URBAN_S]],
+    [[Cg.x0, URBAN_S], [Cg.x0, RUA_DOIS.y1]],
+    [[Cg.x0, RUA_DOIS.y0], [Cg.x0, A.y1], [N.x1, A.y1], [N.x1, RUA_DOIS.y0]],
+    [[N.x1, RUA_DOIS.y1], [N.x1, URBAN_S]],
+    [[N.x0, URBAN_S], [N.x0, RUA_DOIS.y1]],
+    [[N.x0, RUA_DOIS.y0], [N.x0, A.y1], [A.x0, A.y1]],
+  ];
+  for (const pts of CURBS2) chao.push({ type: 'meio-fio', x: 0, y: 0, polyline: pts, props: { altura: 0.15, largura: 0.2, sarjeta: true, cor: '#bdb6a8' } });
+  const LINES2: [number, number][][] = [
+    [[A.x0 + 0.5, 44], [A.x1 - 0.5, 44]],
+    [[(N.x0 + N.x1) / 2, UNDER.y1 + 0.5], [(N.x0 + N.x1) / 2, A.y0 - 0.5]],
+    [[(N.x0 + N.x1) / 2, A.y1 + 0.5], [(N.x0 + N.x1) / 2, URBAN_S - 0.5]],
+    [[(Cg.x0 + Cg.x1) / 2, UNDER.y1 + 0.5], [(Cg.x0 + Cg.x1) / 2, A.y0 - 0.5]],
+    [[(Cg.x0 + Cg.x1) / 2, A.y1 + 0.5], [(Cg.x0 + Cg.x1) / 2, RUA_CORREGO_FIM - 1]],
+  ];
+  for (const pts of LINES2) chao.push({ type: 'faixa-rua', x: 0, y: 0, polyline: pts, props: { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true } });
+  // rachaduras com mato, buracos com água e capim na sarjeta (como na rua da Budega)
+  const asphalt = [
+    { x0: A.x0, x1: A.x1, y0: A.y0, y1: A.y1 },
+    { x0: N.x0, x1: N.x1, y0: UNDER.y1, y1: URBAN_S },
+    { x0: Cg.x0, x1: Cg.x1, y0: UNDER.y1, y1: RUA_CORREGO_FIM },
+    RUA_DOIS,
+    FEIRA,
+  ];
+  const onAsphalt2 = (x: number, y: number) => asphalt.some((r) => x > r.x0 + 0.3 && x < r.x1 - 0.3 && y > r.y0 + 0.3 && y < r.y1 - 0.3);
+  for (let i = 0, n = 0; i < 1500 && n < 40; i++) {
+    const r = asphalt[i % asphalt.length]!;
+    let [x, y]: [number, number] = [r.x0 + nrng() * (r.x1 - r.x0), r.y0 + nrng() * (r.y1 - r.y0)];
+    if (!onAsphalt2(x, y)) continue;
+    const pts: [number, number][] = [[round(x), round(y)]];
+    let a = nrng() * Math.PI * 2;
+    for (let k = 0; k < 3 + Math.floor(nrng() * 3); k++) {
+      a += (nrng() - 0.5) * 1.6;
+      const l = 0.5 + nrng() * 0.9;
+      const [nx, ny] = [x + Math.cos(a) * l, y + Math.sin(a) * l];
+      if (!onAsphalt2(nx, ny)) break;
+      [x, y] = [nx, ny];
+      pts.push([round(x), round(y)]);
+    }
+    if (pts.length < 3) continue;
+    chao.push({ type: 'rachadura', x: 0, y: 0, polyline: pts, props: { largura: 0.06, cor: '#1e2022', mato: nrng() < 0.65 } });
+    n++;
+  }
+  for (const [x, y, raio] of [[104.5, 45.4, 0.5], [139.5, 42.6, 0.45], [171, 45.8, 0.55], [125.6, 58, 0.45], [150.4, 112, 0.5], [151.8, 158, 0.45], [112, 68.4, 0.5]] as const) {
+    chao.push(point('buraco', x, y, { raio, agua: true }));
+  }
+  for (const pts of CURBS2) {
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [[ax, ay], [bx, by]] = [pts[i]!, pts[i + 1]!];
+      const len = Math.hypot(bx - ax, by - ay);
+      const [nx, ny] = [-(by - ay) / len, (bx - ax) / len];
+      for (let d = 1 + nrng() * 2; d < len - 0.5; d += 1.5 + nrng() * 4) {
+        const side = nrng() < 0.5 ? -0.25 : 0.25;
+        chao.push(point('planta', round(ax + ((bx - ax) * d) / len + nx * side), round(ay + ((by - ay) * d) / len + ny * side), { tipo: 'capim', raio: round(0.2 + nrng() * 0.15) }));
+      }
+    }
+  }
+
+  // ---------------- as beiras do mapa novo: mata fechada (a do norte, embaixo do viaduto, a do leste e a do sul) ----------------
+  const edgeBush = (x: number, y: number) => {
+    const raio = round(0.9 + nrng() * 0.25);
+    if (corregoGap(x, y) < -0.3) return; // no meio do córrego, onde ele entra e sai, a água fecha
+    const s = point('arbusto', round(x), round(y), { raio, fechado: true });
+    solids.push(footBox(s)!);
+    cenario.push(s);
+  };
+  for (let x = PARK_X + 0.6 + 1.1 * Math.ceil((W0 - 1 - PARK_X - 0.6) / 1.1); x < W - 1; x += 1.1) edgeBush(x, 0.6);
+  for (let y = 0.6; y < H; y += 1.1) edgeBush(W - 0.6, y);
+  for (let x = W0 - 0.2; x < W - 1.2; x += 1.1) edgeBush(x, H - 0.6);
+
+  // ---------------- o viaduto (o tabuleiro já veio até aqui), os pilares, os cipós e a Estação Capão Redondo ----------------
+  for (let x = 98; x < W; x += 10) place(rect('pilar-viaduto', x - 0.8, x + 0.8, 3.2, 4.8, { altura: 8, pixo: true, musgo: true, cipo: 0.5 }));
+  for (let x = W0 + 2; x < W - 1; x += 3.5 + nrng() * 2.5) {
+    if (x > ESTACAO.x0 - 1 && x < ESTACAO.x1 + 1) continue; // (na frente da estação, não)
+    cenario.push(point('cipo', round(x), VIADUCT.y1 + 0.05, { comprimento: round(2 + nrng() * 4), base: 8 }));
+  }
+  // a estação: o prédio de baixo do viaduto, fechado (o portão de enrolar baixado e a barreira na frente), o nome pintado
+  // na parede e a mata tomando conta; a saída para o leste (o metrô) fica para depois
+  place(rect('casa', ESTACAO.x0, ESTACAO.x1, ESTACAO.y0, ESTACAO.y1, { altura: 6.2, andares: 2, cor: '#b4ada0', caixaDagua: false, abandonada: true, pixo: true, cipo: 0.45, musgo: true, plantas: true, morador: 'ninguem', pintura: 'ESTAÇÃO CAPÃO REDONDO' }, 'Estação Capão Redondo'));
+  place(rect('barreira', 169, 175, ESTACAO.y1 + 0.25, ESTACAO.y1 + 0.75, { altura: 1.1 }));
+  place(point('placa', 176.6, ESTACAO.y1 + 1.35, { texto: 'ESTAÇÃO FECHADA', poste: true }));
+  // na emenda com a rua antiga, a placa da estação aponta para cá; e uma de rua na esquina da Rua do Córrego
+  place(point('placa-rua', RUA_CORREGO.x0 - 0.3, AVENIDA.y1 + 0.3, { texto: 'R. DO CÓRREGO', texto2: 'R. SANTO DIAS' }));
+
+  // ---------------- as casas e o comércio ----------------
+  const CORES = ['#e8c75a', '#79a9d1', '#e2a3b8', '#8fc08a', '#c46aa8', '#f0a050', '#e6e0d2', '#6fc0c0', '#d86a5a', '#c9774a'];
+  /** Uma casa da vila nova (a frente é o sul): o jeito dela sorteado. */
+  const house = (x0: number, x1: number, y0: number, y1: number, andares: number, extra: Props = {}, name?: string) => {
+    const k = nrng();
+    const props: Props = {
+      altura: round(andares * 2.6 + 0.6),
+      andares,
+      cor: pick(CORES),
+      caixaDagua: nrng() < 0.8,
+      cipo: round(0.1 + nrng() * 0.35),
+      plantas: true, // (a floresta reinando: todas têm planta na laje, como as da rua da Budega)
+      musgo: nrng() < 0.5,
+      grade: nrng() < 0.6,
+      ...(k < 0.25 && andares > 1 ? { tijolo: 'cima' } : k < 0.4 ? { tijolo: true } : {}),
+      ...(nrng() < 0.3 ? { varal: true } : {}),
+      ...(nrng() < 0.25 ? { pixo: true } : {}),
+      morador: 'familia',
+      ...extra,
+    };
+    const s = place(rect('casa', x0, x1, y0, y1, props, name));
+    checkHouse(s);
+    return s;
+  };
+  // o comércio de frente para a avenida (o andar de cima é a casa de quem tem a loja), sem marca nenhuma
+  const SHOPS: [number, number, number, number, Props, string][] = [
+    [96.5, 102.5, 32, 2, { comercio: 'padaria', letreiro: 'PADARIA', toldo: '#c8442d', cor: '#e9c98f' }, 'Padaria'],
+    [102.5, 108.5, 31, 1, { comercio: 'bar', letreiro: 'BAR DO TIÃO', toldo: '#2f6fb0', cor: '#79a9d1' }, 'Bar do Tião'],
+    [108.5, 114.5, 32.5, 2, { comercio: 'lanches', letreiro: 'SALÃO DA CIDA', toldo: '#c4508a', cor: '#e2a3b8' }, 'Salão da Cida'],
+    [114.5, 120.5, 33, 1, { comercio: 'acougue', letreiro: 'AÇOUGUE', toldo: '#b8322a', cor: '#e6e0d2' }, 'Açougue'],
+  ];
+  for (const [x0, x1, y0, andares, extra, name] of SHOPS) house(x0, x1, y0, AVENIDA.y0 - 1.5, andares, { grade: false, pixo: false, tijolo: false, ...extra }, name);
+  // as casas do outro quarteirão de frente para a avenida, e as dos fundos (de frente para o quintal)
+  house(129.5, 135, 32, AVENIDA.y0 - 1.5, 1);
+  house(135, 141, 30.5, AVENIDA.y0 - 1.5, 2);
+  house(141, 146.5, 32.5, AVENIDA.y0 - 1.5, 1);
+  house(98.5, 104.5, 17.5, 24.5, 1);
+  house(110, 117, 15, 23.5, 2, { abandonada: true, caixaDagua: false, cipo: 0.8, arvoreNaLaje: true, morador: 'ninguem' });
+  house(131, 137.5, 15.5, 22.5, 1);
+  // ao sul da avenida: as fileiras de casas coladas com a viela no meio (de 1 andar na frente da avenida e da Rua Dois,
+  // para não tampar a rua na tela), a calçada da Rua Dois e as casas da Rua Dois
+  const VIELA = { x0: 108.25, x1: 110.25 };
+  const ROWS_S: [number, number, [number, number][], number][] = [
+    [49.5, 56, [[96.5, 102.25], [102.25, VIELA.x0], [VIELA.x1, 115.5], [115.5, RUA_NOVA.x0 - 1.5]], 1],
+    [58.5, RUA_DOIS.y0 - 1.5, [[96.5, 101.5], [101.5, VIELA.x0], [VIELA.x1, 116], [116, RUA_NOVA.x0 - 1.5]], 2],
+    [RUA_DOIS.y1 + 1.5, 79.5, [[96.5, 102], [102, VIELA.x0], [VIELA.x1, 114.5], [114.5, RUA_NOVA.x0 - 1.5]], 1],
+    [RUA_DOIS.y1 + 1.5, 79.5, [[RUA_NOVA.x1 + 1.5, 135], [135, 140.5], [140.5, RUA_CORREGO.x0 - 1.5]], 1],
+  ];
+  for (const [y0, y1, spans, max] of ROWS_S) for (const [x0, x1] of spans) house(x0, x1, y0, y1, max > 1 && nrng() < 0.6 ? 2 : 1);
+
+  // ---------------- a feira livre: três fileiras de bancas viradas para o sul (a frente para quem compra) ----------------
+  const PANOS = ['#e2552f', '#2f6fb0', '#e8c020', '#4f9f5f', '#c4508a', '#f07a2a'];
+  const GOODS = ['frutas', 'frutas', 'frutas', 'peixe', 'artesanato'];
+  for (const y0 of [51, 55.25, 59.5]) {
+    for (let x0 = FEIRA.x0 + 2; x0 + 2.6 <= FEIRA.x1 - 2 + 1e-9; x0 += 2.6) {
+      place(rect('banca-frutas', round(x0), round(x0 + 2.6), y0, y0 + 1.25, { altura: 0.9, frente: 0.5, lados: 0.3, pano: pick(PANOS), mercadoria: pick(GOODS) }));
+    }
+  }
+
+  // ---------------- a escola estadual abandonada: o gradil, o muro, o prédio, a quadra e o portão aberto ----------------
+  const E = ESCOLA;
+  place(rect('gradil', E.x0, E.x1, E.y0, E.y0 + 0.2, { altura: 1.8, estado: 'inteiro' }));
+  place(rect('gradil', E.x0, E.x0 + 0.2, E.y0 + 0.2, ESCOLA_PORTAO.y0, { altura: 1.8, estado: 'inteiro' }));
+  cenario.push(rect('portao', E.x0, E.x0 + 0.2, ESCOLA_PORTAO.y0, ESCOLA_PORTAO.y1, { aberto: true }, 'Portão da Escola'));
+  place(rect('gradil', E.x0, E.x0 + 0.2, ESCOLA_PORTAO.y1, E.y1 - 0.4, { altura: 1.8, estado: 'quebrado' }));
+  place(rect('muro', E.x1 - 0.4, E.x1, E.y0 + 0.2, E.y1, { altura: 2.4, cor: '#d8d2c4', grafite: 'cores', lado: 'leste', cipo: 0.3, musgo: true }));
+  place(rect('muro', E.x0, E.x1 - 0.4, E.y1 - 0.4, E.y1, { altura: 2.4, cor: '#d8d2c4', grafite: 'cores', texto: 'ESCOLA', lado: 'sul', cipo: 0.35, musgo: true }));
+  house(ESCOLA_PREDIO.x0, ESCOLA_PREDIO.x1, ESCOLA_PREDIO.y0, ESCOLA_PREDIO.y1, 2, { altura: 6.6, cor: '#e8e2d2', caixaDagua: true, abandonada: true, pixo: true, cipo: 0.55, musgo: true, plantas: true, grade: true, tijolo: false, varal: false, morador: 'ninguem', pintura: 'ESCOLA ESTADUAL' }, 'Escola Estadual');
+  const midQ = (QUADRA.y0 + QUADRA.y1) / 2;
+  place(rect('trave', QUADRA.x0 + 0.2, QUADRA.x0 + 0.4, midQ - 1.5, midQ + 1.5, { altura: 2, olhando: 0, ferrugem: true, cipo: true, rede: 'rasgada' }));
+  place(rect('trave', QUADRA.x1 - 0.4, QUADRA.x1 - 0.2, midQ - 1.5, midQ + 1.5, { altura: 2, olhando: 180, ferrugem: true, cipo: true, rede: 'rasgada' }));
+
+  // ---------------- a pracinha: a árvore do meio com os bancos em roda, o parquinho, os postes de luz ----------------
+  const P = PRACINHA;
+  /** O lugar mais perto de (x, y) onde a árvore cabe sem tampar nada (as ruas, o largo, a pracinha). */
+  const treeSpot = (x: number, y: number, d: { tronco: number; copa: number; altura: number }, within: Box): [number, number] | null => {
+    for (let r = 0; r <= 4; r += 0.5) {
+      const n = Math.max(1, Math.round(r * 8));
+      for (let k = 0; k < n; k++) {
+        const [px, py] = [round(x + Math.cos((k / n) * Math.PI * 2) * r), round(y + Math.sin((k / n) * Math.PI * 2) * r)];
+        if (!inRect(px, py, within) || !fits(squareBox(px, py, d.tronco)) || canopyHides(px, py, d.copa, d.altura)) continue;
+        if (!trees.every((t) => dist(px, py, t.x, t.y) - (t.tronco + d.tronco) / 2 >= TRUNK_GAP)) continue;
+        return [px, py];
+      }
+    }
+    return null;
+  };
+  const addTree = (x: number, y: number, especie: string, d: { tronco: number; copa: number; altura: number }, name?: string, extra: Props = {}) => {
+    trees.push({ x, y, tronco: d.tronco });
+    return place(point('arvore', x, y, { especie, ...d, ...extra }, name));
+  };
+  {
+    const T = { tronco: 0.7, copa: 3.6, altura: 6.5 };
+    const spot = treeSpot(171, 27, T, { x0: P.x0 + 4, x1: P.x1 - 4, y0: P.y0 + 4, y1: P.y1 - 4 });
+    if (!spot) throw new Error('Não achei lugar para a árvore da pracinha que não tampe o largo, a rua ou a pracinha.');
+    const [tx, ty] = spot;
+    addTree(tx, ty, 'sibipiruna', T, 'Árvore da Pracinha');
+    // os bancos em roda, virados para a árvore (as quatro entradas da roda ficam com mais de 1,5 m)
+    for (const [x0, x1, y0, y1, olhando] of [
+      [tx - 0.8, tx + 0.8, ty - 2.85, ty - 2.35, 90],
+      [tx - 0.8, tx + 0.8, ty + 2.35, ty + 2.85, 270],
+      [tx - 2.85, tx - 2.35, ty - 0.8, ty + 0.8, 0],
+      [tx + 2.35, tx + 2.85, ty - 0.8, ty + 0.8, 180],
+    ] as const) place(rect('banco', round(x0), round(x1), round(y0), round(y1), { olhando }));
+  }
+  // o parquinho no lado leste (enferrujado, com cipó), longe da roda dos bancos
+  place(rect('parquinho', 181, 184, 20.2, 20.8, { brinquedo: 'balanco', altura: 2.2, ferrugem: true, cipo: true }));
+  place(rect('parquinho', 184.15, 184.85, 25, 27.6, { brinquedo: 'escorregador', altura: 1.8, ferrugem: true, cipo: true, olhando: 90 }));
+  place(point('parquinho', 181.2, 32.4, { brinquedo: 'gira-gira', raio: 0.8, altura: 0.6, ferrugem: true, plantas: true }));
+  for (const [x, y] of [[P.x0 + 0.6, P.y0 + 0.6], [P.x1 - 0.6, P.y0 + 0.6], [P.x0 + 0.6, P.y1 - 0.6], [P.x1 - 0.6, P.y1 - 0.6]] as const) {
+    place(point('poste-praca', round(x), round(y), { altura: 3.2, luz: '#ffd36b' }));
+  }
+  place(point('lixeira', round(P.x0 + 0.6), round(P.y0 + 4)));
+
+  // ---------------- postes de concreto e a fiação na calçada das casas da avenida (como na rua da Budega) ----------------
+  const POSTS2: [number, number][] = [[W0 + 4.5, 40.86], [111.5, 40.86], [131.5, 40.86], [144.5, 40.86], [163, 40.86], [178, 40.86]];
+  for (const [x, y] of POSTS2) place(point('poste', x, y, { altura: 7, luz: '#ffd36b', cipo: true }));
+  cenario.push({ type: 'fiacao', x: 0, y: 0, polyline: [[90.5, 40.86], ...POSTS2], props: { altura: 6.6, cipo: true } });
+
+  // ---------------- a Mata do Córrego: a ponte, o ferro-velho, o morro e o escadão ----------------
+  // a ponte: a rua passa por cima do córrego; o guarda-corpo de ferro dos dois lados (a pedrinha passa pela grade)
+  {
+    let [b0, b1] = [Infinity, -Infinity];
+    for (let y = URBAN_S; y < H; y += 0.25) for (const x of [Cg.x0, Cg.x1]) if (corregoGap(x, y) < 1) [b0, b1] = [Math.min(b0, y), Math.max(b1, y)];
+    for (const x0 of [Cg.x0, Cg.x1 - 0.2]) place(rect('gradil', x0, x0 + 0.2, round(b0 - 0.5), round(b1 + 0.5), { altura: 1.1, estado: 'inteiro' }, x0 === Cg.x0 ? 'Ponte do Córrego' : undefined));
+  }
+  // o fim da rua, ao sul: a barreira (depois dela, só mata)
+  place(rect('barreira', Cg.x0, Cg.x1, RUA_CORREGO_FIM, RUA_CORREGO_FIM + 0.5, { altura: 1.1 }));
+  // o ferro-velho: o muro em volta (com grafite nos lados que a câmera vê), o portão aberto, o escritório, os carros
+  // velhos em fileira, o ônibus, as pilhas de pneu e o entulho
+  {
+    const F = FERRO;
+    place(rect('muro', F.x0, FERRO_PORTAO.x0, F.y0, F.y0 + 0.3, { altura: 2.4, cor: '#b9b2a4', cipo: 0.35, musgo: true }));
+    place(rect('muro', FERRO_PORTAO.x1, F.x1, F.y0, F.y0 + 0.3, { altura: 2.4, cor: '#b9b2a4', cipo: 0.35, musgo: true }));
+    cenario.push(rect('portao', FERRO_PORTAO.x0, FERRO_PORTAO.x1, F.y0, F.y0 + 0.3, { aberto: true }, 'Portão do Ferro-Velho'));
+    place(rect('muro', F.x0, F.x0 + 0.3, F.y0 + 0.3, F.y1, { altura: 2.4, cor: '#b9b2a4', cipo: 0.5, musgo: true }));
+    place(rect('muro', F.x1 - 0.3, F.x1, F.y0 + 0.3, F.y1, { altura: 2.4, cor: '#b9b2a4', grafite: 'cores', texto: 'FERRO-VELHO', lado: 'leste', cipo: 0.3 }));
+    place(rect('muro', F.x0 + 0.3, F.x1 - 0.3, F.y1 - 0.3, F.y1, { altura: 2.4, cor: '#b9b2a4', grafite: 'cores', lado: 'sul', cipo: 0.4, musgo: true }));
+    place(rect('casa', 101, 106, 105.5, 109.5, { altura: 3, andares: 1, cor: '#a8a092', caixaDagua: false, abandonada: true, cipo: 0.6, musgo: true, plantas: true, pixo: true, morador: 'ninguem' }, 'Escritório do Ferro-Velho'));
+    const CARS = ['#a8473e', '#3f6fa0', '#d8d2c4', '#4f7f4f', '#c9a640', '#5a5a60', '#8a3a2a', '#7d5ca8'];
+    for (const y0 of [111, 115.4]) for (const x0 of [101, 106.5, 112, 117.5]) place(rect('carro', x0, x0 + 4, y0, y0 + 2.2, { altura: 1.4, cor: pick(CARS), mato: true, ...(nrng() < 0.3 ? { arvore: true } : {}) }));
+    place(rect('onibus', 102, 114, 119, 121.6, { altura: 3, cor: '#d7b14a', mato: true }));
+    for (const [x, y, pilha] of [[119.3, 107, 4], [121.9, 108.6, 3], [118.6, 121, 5], [122.3, 120.6, 3]] as const) place(point('pneus', x, y, { raio: 0.55, pilha }));
+    for (const [x, y] of [[109.5, 107.5], [123, 114]] as const) chao.push(point('entulho', x, y));
+  }
+  // o morro: as casas subindo em três fileiras dos dois lados do escadão (de 1 e 2 andares, tijolo e laje), com as
+  // vielas de cimento entre elas
+  {
+    const M0 = MORRO;
+    const rows: [number, number][] = [[M0.y0 + 3, M0.y0 + 9], [M0.y0 + 11.5, M0.y0 + 17.5], [M0.y0 + 20, M0.y0 + 26]];
+    for (const [y0, y1] of rows) {
+      // (as do lado oeste do escadão têm a parede do lado dele, que a câmera vê, pichada)
+      for (const [x0, x1] of [[M0.x0 + 1, 167], [167, ESCADAO.x0], [ESCADAO.x1, 182], [182, M0.x1]] as const) {
+        house(x0, x1, y0, y1, nrng() < 0.55 ? 2 : 1, { tijolo: nrng() < 0.6 ? 'cima' : true, ...(x1 === ESCADAO.x0 ? { pixo: true } : {}) });
+      }
+    }
+    for (const [y0, y1] of [[M0.y0 + 9, M0.y0 + 11.5], [M0.y0 + 17.5, M0.y0 + 20]] as const) chao.push(rect('calcada', M0.x0 + 1, M0.x1, y0, y1, { desenho: 'placas' }));
+  }
+  // a prainha do córrego: pedras na beira da água (do lado da prainha)
+  for (const [dx, dy, raio] of [[1.6, 1.6, 0.6], [2.4, 0.9, 0.35], [-1.8, 2.2, 0.5], [-0.6, 2.9, 0.35]] as const) {
+    const [x, y] = [round(PRAINHA.x + dx), round(PRAINHA.y + dy)];
+    if (corregoGap(x, y) < raio + 0.2 || corregoGap(x, y) > raio + 1.5) continue;
+    place(point('pedra', x, y, { raio, musgo: true }));
+  }
+
+  // ---------------- as árvores: nos fundos de quintal da vila nova e a Mata do Córrego (mais aberta onde vivem bichos) ----------------
+  const TRAILS2: { pts: [number, number][]; half: number }[] = [
+    { pts: TRILHA_FERRO, half: 1.3 },
+    { pts: TRILHA_LESTE, half: 1.1 },
+    { pts: TRILHA_CORREGO, half: 1.1 },
+  ];
+  const trailGap2 = (x: number, y: number) => Math.min(...TRAILS2.map((t) => distToPath(x, y, t.pts) - t.half));
+  /** Os lugares onde não nasce árvore (ruas, calçadas, a pracinha, a feira, a escola por dentro, o ferro-velho, o morro). */
+  const KEEP_OUT: Box[] = [
+    { x0: W0, x1: W, y0: AVENIDA.y0 - 1.6, y1: AVENIDA.y1 + 1.6 },
+    { x0: N.x0 - 1.6, x1: N.x1 + 1.6, y0: 0, y1: URBAN_S + 0.5 },
+    { x0: Cg.x0 - 1.6, x1: Cg.x1 + 1.6, y0: 0, y1: H },
+    { x0: W0, x1: Cg.x0, y0: RUA_DOIS.y0 - 1.6, y1: RUA_DOIS.y1 + 1.6 },
+    { x0: W0, x1: W, y0: 0, y1: UNDER.y1 + 1 },
+    { x0: LARGO.x0, x1: W, y0: 0, y1: AVENIDA.y0 },
+    FEIRA,
+    { x0: ESCOLA.x0 - 0.5, x1: ESCOLA.x1 + 0.5, y0: ESCOLA.y0 - 0.5, y1: ESCOLA.y1 + 0.5 },
+    { x0: FERRO.x0 - 1, x1: FERRO.x1 + 1, y0: FERRO.y0 - 1.5, y1: FERRO.y1 + 1 },
+    { x0: MORRO.x0 - 1, x1: MORRO.x1 + 1, y0: MORRO.y0 - 1, y1: MORRO.y1 + 1 },
+    { x0: PRAINHA.x - PRAINHA.r, x1: PRAINHA.x + PRAINHA.r, y0: PRAINHA.y - PRAINHA.r, y1: PRAINHA.y + PRAINHA.r },
+  ];
+  /** As casas, os prédios e os muros (a copa não fica por cima deles). */
+  const walls = cenario.filter((o) => ['casa', 'predio', 'muro'].includes(o.type) && o.x + o.w! > W0 - 12);
+  const wallGap = (x: number, y: number) => Math.min(...walls.map((o) => Math.hypot(Math.max(o.x - x, 0, x - o.x - o.w!), Math.max(o.y - y, 0, y - o.y - o.h!))));
+  const plantNew = (x: number, y: number, especie: string, d: { tronco: number; copa: number; altura: number }, side: number, gap: number): boolean => {
+    if (x < W0 + 1.6 || x > W - 2.6 || y < 2.6 || y > H - 2.6) return false;
+    if (wallGap(x, y) < Math.max(d.copa * 0.75, side / 2 + 1.2)) return false;
+    if (KEEP_OUT.some((r) => inRect(x, y, { x0: r.x0 - d.tronco / 2, x1: r.x1 + d.tronco / 2, y0: r.y0 - d.tronco / 2, y1: r.y1 + d.tronco / 2 }))) return false;
+    if (corregoGap(x, y) < d.tronco / 2 + 0.8 || trailGap2(x, y) < d.copa + 0.3) return false;
+    if (!trees.every((t) => dist(x, y, t.x, t.y) - (t.tronco + d.tronco) / 2 >= gap)) return false;
+    if (!fits(squareBox(x, y, side)) || canopyHides(x, y, d.copa, d.altura)) return false;
+    trees.push({ x, y, tronco: d.tronco });
+    solids.push(squareBox(x, y, side));
+    cenario.push(especie === 'bambu' ? point('bambu', round(x), round(y), { raio: round(side / 1.6), altura: d.altura }) : point('arvore', round(x), round(y), { especie, ...d }));
+    return true;
+  };
+  // (as árvores dos quintais: poucas, para a vila não sumir embaixo das copas)
+  for (let i = 0, n = 0; i < 1500 && n < 16; i++) {
+    const [x, y] = [W0 + 2 + nrng() * (W - W0 - 4), 3 + nrng() * (URBAN_S - 4)];
+    const k = nrng();
+    const especie = k < 0.25 ? 'jeriva' : k < 0.45 ? 'embauba' : k < 0.55 ? 'bananeira' : 'mata';
+    const d = SPECIES[especie] ?? { tronco: round(0.4 + nrng() * 0.2), copa: round(1.8 + nrng() * 0.8), altura: round(5 + nrng() * 2) };
+    if (plantNew(x, y, especie, d, d.tronco, TRUNK_GAP + 1.4)) n++;
+  }
+  // (a mata: troncos bem espaçados, mais ainda onde vivem os bichos)
+  for (let i = 0, n = 0; i < 6000 && n < 95; i++) {
+    const [x, y] = [W0 + 2 + nrng() * (W - W0 - 4), URBAN_S + 1 + nrng() * (H - URBAN_S - 3)];
+    const k = nrng();
+    const especie = k < 0.15 ? 'jeriva' : k < 0.3 ? 'embauba' : k < 0.36 ? 'seca' : 'mata';
+    const d = SPECIES[especie] ?? { tronco: round(0.4 + nrng() * 0.25), copa: round(1.7 + nrng() * 1.2), altura: round(5 + nrng() * 3.5) };
+    if (plantNew(x, y, especie, d, d.tronco, TRUNK_GAP + (inCorregoZone(x, y) ? 3.5 : 1.4))) n++;
+  }
+  for (let i = 0, n = 0; i < 2000 && n < 14; i++) {
+    const [x, y, r] = [W0 + 2 + nrng() * (W - W0 - 4), URBAN_S + 2 + nrng() * (H - URBAN_S - 4), round(1 + nrng() * 0.4)];
+    if (plantNew(x, y, 'bambu', { tronco: r * 2, copa: r * 1.3, altura: 7 }, round(r * 1.6), TRUNK_GAP + 1.4)) n++;
+  }
+  for (let i = 0, n = 0; i < 2000 && n < 14; i++) {
+    const [x, y] = [W0 + 2 + nrng() * (W - W0 - 4), URBAN_S + 2 + nrng() * (H - URBAN_S - 4)];
+    if (corregoGap(x, y) < 6 && plantNew(x, y, 'bananeira', SPECIES.bananeira!, SPECIES.bananeira!.tronco, TRUNK_GAP + 0.8)) n++;
+  }
+  for (let i = 0, n = 0; i < 2000 && n < 10; i++) {
+    const [x, y] = [W0 + 2 + nrng() * (W - W0 - 4), URBAN_S + 2 + nrng() * (H - URBAN_S - 4)];
+    const g = corregoGap(x, y);
+    if (g > 1 && g < 5 && plantNew(x, y, 'xaxim', SPECIES.xaxim!, SPECIES.xaxim!.tronco, TRUNK_GAP + 0.6)) n++;
+  }
+  // o chão da mata (não segura o pé): samambaias, capim, helicônias na beira do córrego e taboas na água
+  for (let i = 0, n = 0; i < 4000 && n < 110; i++) {
+    const [x, y, raio] = [W0 + 1.5 + nrng() * (W - W0 - 3), URBAN_S + 1 + nrng() * (H - URBAN_S - 2.5), round(0.45 + nrng() * 0.4)];
+    if (corregoGap(x, y) < raio || trailGap2(x, y) < raio + 0.2 || KEEP_OUT.some((r) => inRect(x, y, r))) continue;
+    if (!trees.every((t) => dist(x, y, t.x, t.y) > t.tronco / 2 + raio * 0.6)) continue;
+    const g = corregoGap(x, y);
+    cenario.push(point('planta', round(x), round(y), { tipo: g < 3.5 && nrng() < 0.5 ? 'heliconia' : nrng() < 0.7 ? 'samambaia' : 'capim', raio }));
+    n++;
+  }
+  for (let i = 0, n = 0; i < 600 && n < 10; i++) {
+    const t = nrng() * (CORREGO.length - 1);
+    const [a, b] = [CORREGO[Math.floor(t)]!, CORREGO[Math.min(CORREGO.length - 1, Math.floor(t) + 1)]!];
+    const f = t - Math.floor(t);
+    const [x, y] = [a[0] + (b[0] - a[0]) * f + (nrng() - 0.5) * CORREGO_W * 0.8, a[1] + (b[1] - a[1]) * f + (nrng() - 0.5) * CORREGO_W * 0.8];
+    if (!isCorrego(x, y) || x > W - 1.5 || y > H - 1.5) continue;
+    cenario.push(point('planta', round(x), round(y), { tipo: 'taboa', raio: round(0.35 + nrng() * 0.2) }));
+    n++;
+  }
+  // ----- sem vão de entalar na Mata do Córrego: o que foi sorteado e ficou num vão sai -----
+  const randomPlant = (o: Shape) => (o.type === 'arvore' && !o.name && !o.props?.rompendo) || o.type === 'bambu';
+  const pruned = pruneWedges((o) => o.x + (o.w ?? 0) > W0 - 3 && o.y + (o.h ?? 0) > URBAN_S - 14, randomPlant);
+  console.log(`Capão maior: saíram ${pruned} plantas da Mata do Córrego que ficavam num vão de entalar.`);
+}
+
 for (const s of cenario) {
   const p = s.props ?? {};
   if (s.type === 'arvore') colisao.push(block('tronco', s.x, s.y, Number(p.tronco)));
@@ -2086,6 +2599,8 @@ for (const s of cenario) {
   else if (s.type === 'parquinho') {
     for (const b of boxesOf(s)) colisao.push(rect('parquinho', b.x0, b.x1, b.y0, b.y1, { bloqueiaTiro: false, altura: Number(p.altura) }));
   } else if (s.type === 'cachoeira') colisao.push(rect('cachoeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
+  // o Capão maior: a banca da feira é baixa (a pedrinha passa)
+  else if (s.type === 'banca-frutas') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
 }
 // o chão embaixo de cada galho dos saguis é andável (o servidor põe o pé do sagui ali)
 for (const q of perchPoints) {
@@ -2201,9 +2716,28 @@ if (reached('4b')) {
   }
 }
 
+// o córrego do Capão maior, do mesmo jeito (a ponte da Rua do Córrego fica de fora)
+if (CAPAO_MAIOR) {
+  const STEP = 0.5;
+  for (let y = URBAN_S; y < H; y += STEP) {
+    const row = y + STEP / 2;
+    let start: number | null = null;
+    for (let x = W0; x <= W; x += STEP / 4) {
+      const wet = x < W && isCorrego(x + STEP / 8, row);
+      if (wet && start === null) start = x;
+      if (!wet && start !== null) {
+        colisao.push({ ...rect('agua', round(start), round(x), round(y), round(y + STEP)), props: { bloqueiaTiro: false } });
+        start = null;
+      }
+    }
+  }
+}
+
 // ---------------- zonas, áreas e pontos ----------------
 seguro.push(rect('seguro', 31.5, 44, 39, 48.5, undefined, 'Clareira dos Despertos')); // sem combate onde se nasce
-seguro.push(rect('seguro', 49.5, W, 0, VILLAGE_S, undefined, 'Vila do Capão'));
+seguro.push(rect('seguro', 49.5, W0, 0, VILLAGE_S, undefined, 'Vila do Capão'));
+// (o Capão maior: a vila nova inteira é segura; a Mata do Córrego, não)
+if (CAPAO_MAIOR) seguro.push(rect('seguro', W0, W, 0, URBAN_S, undefined, 'Centrinho do Capão'));
 // as áreas com nome (a faixa no alto da tela) e o clima de cada uma: `escuro` e `neblina`, de 0 a 1. Onde duas se
 // cobrem, vale a menor (a mais de perto). O dono pediu a mata mais sombria (13/11): a mata toda é um pouco escura, a
 // mata profunda bem mais, e as clareiras ficam claras (o contraste com o brilho do Véu).
@@ -2212,7 +2746,7 @@ areas.push(rect('area', 0, PARK_X, 0, H, { escuro: 0.3, neblina: 0.12 }, 'Mata d
 areas.push(rect('area', LAKE.x - LAKE.rx - 2, LAKE.x + LAKE.rx + 2, LAKE.y - LAKE.ry - 2, LAKE.y + LAKE.ry + 2, { escuro: 0.2, neblina: 0.3 }, 'Lago do Parque'));
 areas.push(rect('area', BANANA.x - BANANA.r - 2, BANANA.x + BANANA.r + 2, BANANA.y - BANANA.r - 2, BANANA.y + BANANA.r + 2, { escuro: 0.15, neblina: 0.05 }, 'Clareira das Bananeiras'));
 for (const d of DEEP) areas.push(rect('area', Math.max(0, d.x - d.rx), d.x + d.rx, Math.max(0, d.y - d.ry), Math.min(H, d.y + d.ry), { escuro: 0.5, neblina: 0.45 }, 'Mata Profunda'));
-areas.push(rect('area', PARK_X, W, 0, VILLAGE_S, undefined, 'Vila do Capão'));
+areas.push(rect('area', PARK_X, W0, 0, VILLAGE_S, undefined, 'Vila do Capão'));
 if (FLORESTA_MAIOR) {
   // os lugares da floresta maior (o som de cada um sai do nome; a cachoeirinha diz que é água)
   areas.push(rect('area', PAINEIRA_C.x - PAINEIRA_C.r - 2, PAINEIRA_C.x + PAINEIRA_C.r + 2, PAINEIRA_C.y - PAINEIRA_C.r - 2, PAINEIRA_C.y + PAINEIRA_C.r + 2, { escuro: 0.1, neblina: 0.05 }, 'Clareira da Paineira'));
@@ -2221,7 +2755,19 @@ if (FLORESTA_MAIOR) {
   areas.push(rect('area', Math.max(0, d.x - d.rx), d.x + d.rx, d.y - d.ry, Math.min(H, d.y + d.ry), { escuro: 0.5, neblina: 0.45 }, 'Mata Profunda'));
   areas.push(rect('area', PARK_X, ROAD_GUARA.x0, VILLAGE_S, H, { escuro: 0.25, neblina: 0.1 }, 'Mata da Estrada'));
   areas.push(rect('area', POSTO.x0, POSTO.x1, POSTO.y0, POSTO.y1, { escuro: 0.1, neblina: 0.05 }, 'Posto Abandonado'));
-  areas.push(rect('area', ROAD_GUARA.x0, W, VILLAGE_S, H, { escuro: 0.15, neblina: 0.05 }, 'Estrada para Guarapiranga'));
+  areas.push(rect('area', ROAD_GUARA.x0, W0, VILLAGE_S, H, { escuro: 0.15, neblina: 0.05 }, 'Estrada para Guarapiranga'));
+}
+if (CAPAO_MAIOR) {
+  // os lugares do Capão maior (o som de cada um sai do nome)
+  areas.push(rect('area', W0, W, 0, URBAN_S, undefined, 'Centrinho do Capão'));
+  areas.push(rect('area', ESTACAO.x0 - 2, ESTACAO.x1 + 2, 0, LARGO.y1, { escuro: 0.1, neblina: 0 }, 'Estação Capão Redondo'));
+  areas.push(rect('area', PRACINHA.x0, PRACINHA.x1, PRACINHA.y0, PRACINHA.y1, undefined, 'Pracinha da Estação'));
+  areas.push(rect('area', FEIRA.x0, FEIRA.x1, FEIRA.y0, FEIRA.y1, undefined, 'Feira Livre'));
+  areas.push(rect('area', ESCOLA.x0, ESCOLA.x1, ESCOLA.y0, ESCOLA.y1, { escuro: 0.1, neblina: 0.05 }, 'Escola Estadual'));
+  areas.push(rect('area', W0, W, URBAN_S, H, { escuro: 0.25, neblina: 0.1 }, 'Mata do Córrego'));
+  areas.push(rect('area', FERRO.x0, FERRO.x1, FERRO.y0, FERRO.y1, { escuro: 0.15, neblina: 0.05 }, 'Ferro-Velho'));
+  areas.push(rect('area', MORRO.x0 - 2, MORRO.x1, MORRO.y0 - 1, MORRO.y1 + 2, { escuro: 0.1, neblina: 0.05 }, 'Morro do Escadão'));
+  areas.push(rect('area', PRAINHA.x - PRAINHA.r - 1, PRAINHA.x + PRAINHA.r + 1, PRAINHA.y - PRAINHA.r - 1, PRAINHA.y + PRAINHA.r + 1, { escuro: 0.15, neblina: 0.15, som: 'agua' }, 'Prainha do Córrego'));
 }
 pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
 // as capivaras andando (pedido do dono, 14/11; o formato é da [estrutura]): por bando, o retângulo onde andam
@@ -2249,6 +2795,13 @@ if (CREATURES) {
     // recanto do Véu da mata profunda do sul (só de noite: de dia a área fica vazia)
     const z = NEW_ZONES;
     for (const [zone, quantidade, nome] of [[z.meio, 10, 'quati'], [z.estradaNorte, 8, 'tatu_bola'], [z.estradaSul, 6, 'marimbondo'], [z.chefe, 2, 'filhote_boitata']] as const) {
+      monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade }, nome));
+    }
+  }
+  if (CAPAO_MAIOR) {
+    // a Mata do Córrego (Capão maior): os bichos que já existem, nas áreas de mata mais aberta
+    const z = CORREGO_ZONES;
+    for (const [zone, quantidade, nome] of [[z.quati, 8, 'quati'], [z.tatu_bola, 6, 'tatu_bola'], [z.marimbondo, 6, 'marimbondo'], [z.jararaca, 5, 'jararaca']] as const) {
       monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade }, nome));
     }
   }

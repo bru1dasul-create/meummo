@@ -727,9 +727,20 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   rachaduras finas, peixes pulando de verdade (maiores, mais vezes, com respingo), o reflexo que balança e some longe da
   base, barcos com tábuas, cavernas e motor de popa, o ponto de ônibus redesenhado e as casas com reboco caído, sombra no
   pé da parede e o cano da laje
-- [ ] **[mundo]** O Capão maior (19/11, "os dois maiores": cresce para a direita, com mais rua, casas e mata). Crescer
+- [x] **[mundo]** O Capão maior (19/11, "os dois maiores": cresce para a direita, com mais rua, casas e mata). Crescer
   só para a direita e para baixo (a origem não muda: o mapa explorado de quem já joga não desalinha) e avisar a
-  [estrutura] antes de juntar se um NPC ou uma chegada mudar
+  [estrutura] antes de juntar se um NPC ou uma chegada mudar. **Etapa 1 na `main` (23/11, planta aprovada): 96 → 192 m
+  de largura, o mapa inteiro aberto.** Nada da parte antiga mudou de lugar (só saiu a mata fechada da beira leste antiga
+  e o viaduto seguiu até a beira nova); nenhum NPC, chegada ou saída mudou. A rua da Budega segue até a beira nova; a
+  Rua Nova e a Rua do Córrego sobem até o caminho de terra embaixo do viaduto e descem para o sul; o comércio de frente
+  para a rua (padaria, bar, salão, açougue), as casas em fileira com viela, a Rua Dois, a feira livre (15 bancas), a
+  escola estadual abandonada com a quadra, a pracinha e a Estação Capão Redondo (fechada: a saída para o leste fica para
+  depois). Ao sul, a Mata do Córrego (de caçar: quatis, tatus-bola, marimbondos e jararacas, 25 a mais), com o córrego e
+  a ponte, o ferro-velho, o morro com o escadão e a prainha
+- [ ] **[mundo]** Vestir as regiões do Capão maior, depois de o dono andar e aprovar o tamanho e os caminhos: a estação
+  com cara de estação (a plataforma lá em cima, a bilheteria), a escola (o pátio, a quadra de cimento, o alambrado), a
+  feira (as lonas, a banca de pastel), o escadão com degraus e o morro com muro de arrimo, o ferro-velho (pilhas de
+  sucata), a ponte com cara de ponte
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha
