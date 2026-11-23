@@ -509,7 +509,7 @@ describe('Mapa 02: a Comunidade da Represa (vestida em 22/11)', () => {
   });
 
   it('o comércio da praça (bar, peixaria, salão e mercadinho) tem letreiro, sem marca de verdade, e a frente dá para a praça', () => {
-    for (const name of ['Bar do Tonho', 'Peixaria', 'Salão da Neide', 'Mercadinho']) {
+    for (const name of ['Lemos Bar', 'Peixaria', 'Salão da Neide', 'Mercadinho']) {
       const shop = named('cenario', name);
       expect(prop(shop, 'comercio'), name).toBeTypeOf('string');
       expect(String(prop(shop, 'letreiro')).length, name).toBeGreaterThan(3);

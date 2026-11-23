@@ -791,7 +791,7 @@ addTrunk({ x: LOOKOUT.x1 + 0.6, y: LOOKOUT.y0 + 0.6, r: 0.1 });
   row(183, 206, 15.5, 23.5, () => (hrng() < 0.5 ? 2 : 1));
   // o comércio de frente para a praça (o letreiro e o toldo; o andar de cima é a casa de quem tem a loja)
   const SHOPS: [number, number, number, Record<string, string | number | boolean>, string][] = [
-    [146, 151.2, 2, { comercio: 'bar', letreiro: 'BAR DO TONHO', toldo: '#2f6fb0', cor: '#79a9d1', tijolo: 'cima', vergalhao: true }, 'Bar do Tonho'],
+    [146, 151.2, 2, { comercio: 'bar', letreiro: 'LEMOS BAR', toldo: '#2f6fb0', cor: '#79a9d1', tijolo: 'cima', vergalhao: true }, 'Lemos Bar'],
     [151.2, 156.5, 1, { comercio: 'lanches', letreiro: 'PEIXARIA', toldo: '#2a8a9a', cor: '#6fc0c0' }, 'Peixaria'],
     [159.5, 165, 2, { comercio: 'lanches', letreiro: 'SALÃO DA NEIDE', toldo: '#c4508a', cor: '#e2a3b8', varal: true }, 'Salão da Neide'],
     [165, 170.5, 2, { comercio: 'vendinha', letreiro: 'MERCADINHO', toldo: '#d8902a', cor: '#e8c75a', tijolo: 'cima', vergalhao: true }, 'Mercadinho'],

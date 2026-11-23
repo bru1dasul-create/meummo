@@ -692,7 +692,7 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   o clube, a barragem de 1909, o coreto, a caverna e o mirante com desenho próprio. **A comunidade na main em 23/11**
   ("pode seguir vestindo a comunidade primeiro"): 49 casas coladas em fileiras, de 1 a 3 andares (as altas no fundo),
   de tijolo baiano à mostra, rebocadas e pintadas ou só com o puxadinho no tijolo, laje com caixa d'água, ferro espetado,
-  varal e plantas; ruelas de cimento; na praça do Brejo Maior, o Bar do Tonho (com as mesas), a Peixaria, o Salão da
+  varal e plantas; ruelas de cimento; na praça do Brejo Maior, o Lemos Bar (com as mesas), a Peixaria, o Salão da
   Neide e o Mercadinho, as bancas de frutas, de peixe e de artesanato, o muro grafitado "BREJO", os postes com a fiação
   cheia de pipas enroscadas e as bandeirinhas; de noite, parte das janelas acesas
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso

@@ -61,7 +61,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   do meio; as altas (2 e 3 andares) no fundo e as baixas na frente (a câmera olha do sudeste; o teste da fogueira
   confere). Cada casa sorteia o jeito (`house`): tijolo à mostra (`tijolo: true`), só o puxadinho no tijolo (`'cima'`,
   casa de 2 ou 3 andares) ou rebocada e pintada; caixa d'água, `vergalhao`, `varal`, `plantas`, `pixo` (só na rebocada) e
-  `grade`. De frente para a praça, o comércio: Bar do Tonho (`bar`, com 2 mesas de 4 cadeiras na praça), Peixaria e
+  `grade`. De frente para a praça, o comércio: Lemos Bar (pedido do dono: o nome era Bar do Tonho; `bar`, com 2 mesas de 4 cadeiras na praça), Peixaria e
   Salão da Neide (`lanches`, porta de enrolar) e Mercadinho (`vendinha`). Na praça (cimento rachado com musgo): a
   fogueira com os bancos, as bancas de frutas, de peixe e de artesanato (`banca-frutas` com `mercadoria`), o muro
   grafitado com a palavra `texto: 'BREJO'` (antes o desenho só dizia CAPÃO), 4 postes de luz nos cantos com a fiação
