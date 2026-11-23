@@ -179,6 +179,33 @@
     "N pontos para distribuir ✦ K" (o K some no celular; no jogo antigo, sem a janela K, o aviso não aparece)
   - conferir (rascunho `atributos/`): `jogo.cjs <pasta>` (PC, celular deitado e em pé: diz se os ícones entraram e se os
     4 cabem sem rolar; tira as fotos da janela, do botão ✦ e da mochila) e `antigo.cjs` (a mochila do jogo antigo)
+- **As correções das poções (23/11; com o "pode, segue essa ordem" do dono; o DOM e os ganchos são da [estrutura]):**
+  - **a barra sem o Fôlego:** no PC voltou a moldura de 6 quadrados (`habilidades-moldura.webp`, 887 × 234; a de 7 saiu
+    do repositório e está no commit `4380f90`, se um dia voltar a ter 7): Q, R, T, esquiva (`--i: 3`), defesa (o
+    `#guard-button`, no passo 4: `123 + 4 × 107,8`) e pulo (`--i: 5`); o chat usa a largura nova. No celular, a defesa
+    (botão do motor, fora da grade) entrou no buraco ao lado da Chuva, quadrada e do tamanho dos outros (64 px): R/T,
+    Chuva/defesa, pulo/esquiva. A posição dela segue a conta da grade (2ª fileira = 76 px acima do pé da grade; deitado a
+    grade fica a 112 px da direita, em pé a 112 px do chão). O `skill1` do `ui.ts` ficou só no jogo antigo
+  - **a mochila (`bag.ts`, `bonusLines`):** os consumíveis dizem o que fazem, uma coisa por linha: "Recupera 30 de vida"
+    ou "Recupera 25% da vida" (`healLabel`) e o efeito com tempo ("+5 de Destreza por 3 min", "A vida volta 3× mais
+    rápido...", `effectLabel`). Os botões do item (`.item-actions`) ficam presos no pé da mochila (`position: sticky`): em
+    1366 × 768 ela já rolava e o "Usar" sumia lá embaixo. O "grudar" conta do miolo da mochila, sem a margem de 12 px
+    dela: daí o `bottom: -12px`
+  - **o "+5" na aba dos Atributos:** `#skills-panel .attr .value.boosted` (o `skillsPanel.ts` escreve "4 +5"): o selo
+    verde, respirando devagar
+  - **o mostrador de efeitos (`effectsBar.ts`, da [estrutura]; o estilo provisório saiu de lá):** seção "efeitos com
+    tempo" do `style.css`. O quadradinho na moldura dourada da HUD, embaixo do nome e do botão do som (segue o `--hs`),
+    com um brilho na cor do que mexe e o selo no canto (o ícone do atributo, `--attr-icon-*`; na vida voltando, um "+"
+    verde); o tempo numa plaquinha e, nos últimos 10 s, vermelho e piscando. O effectsBar.ts refaz os quadradinhos a
+    cada segundo: nada de animação de entrada, e a do fim tem 1 s certinho, para emendar
+  - **a aba Receitas (`shop.ts`):** cada ingrediente numa plaquinha (`.shop-need`) com o desenho do item, o nome e
+    "tem/precisa" em negrito (verde quando tem, vermelha quando falta); a linha dos ingredientes ocupa o cartão inteiro,
+    embaixo do nome; com tudo na mochila, o cartão ganha a borda dourada (`:has`). O estilo provisório saiu do shop.ts
+  - conferir (rascunho `pocoes/`): `jogo.cjs <pasta>` (dá os itens pelo painel do adm, leva até a Dona Iracema da
+    Guarapiranga e come uma banana; tira a barra, o efeito, os atributos, a mochila e as receitas no PC e a tela no
+    celular deitado e em pé), `mochila.cjs [prefixo]` (se o "Usar" aparece em 1280 × 800, 1366 × 768 e 1920 × 1080) e
+    `antigo.cjs <arquivo.png>` (a mochila do jogo antigo)
+  - visto de passagem: sair do jogo acaba com os efeitos com tempo (é de propósito: está no roteiro, etapa 2 das poções)
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
@@ -1301,7 +1328,8 @@ Igual às duas imagens aprovadas (`docs/referencias/budega-maior-fachada.jpg` e 
 
 ### Caçador, parte 3 (15/11, com o "Ok, pode ir" do dono; os nomes dos ganchos combinados com a [estrutura])
 - **Barra:** `ActionSlot` `class1` (R) e `class2` (T) no `ui.ts` (o `actionArt.ts` usa o ícone do 1º quadrado se faltar
-  o da habilidade). PC: a moldura `habilidades-moldura-7.webp` (995 × 234), feita da de 6 (que fica como a fonte) por
+  o da habilidade). (Desde 23/11, sem o Fôlego, a barra voltou para a de 6: veja "As correções das poções", no alto.)
+  PC: a moldura `habilidades-moldura-7.webp` (995 × 234), feita da de 6 (que fica como a fonte) por
   `barra/moldura7.py` no scratchpad: tira o enfeite do meio e refaz a corda com um trecho limpo, põe uma volta inteira
   (108 px) no vão entre o 3º e o 4º quadrado, com degradê na emenda, e recoloca o enfeite no meio novo. Ordem: Q, R, T, E,
   esquiva, defesa (o `#guard-button`, no 6º) e pulo; o chat usa a largura nova. Celular: a fileira R/T em cima do 2×2 (a

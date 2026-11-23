@@ -251,7 +251,8 @@ export class Hud {
 
 /**
  * Os quadrados da barra. `skill0`: a 1ª habilidade da classe (no Q); `class1` e `class2`: a 2ª e a 3ª (no R e no T);
- * `skill1`: o Fôlego. No jogo 2.5D a moldura tem 7 quadrados: Q, R, T, E, esquiva, defesa (o botão do motor) e pulo.
+ * `skill1`: o Fôlego, que só existe no jogo antigo desde 23/11. No jogo 2.5D a moldura tem 6 quadrados: Q, R, T,
+ * esquiva, defesa (o botão do motor) e pulo.
  */
 export type ActionSlot = 'shot' | 'skill0' | 'class1' | 'class2' | 'skill1' | 'dash' | 'jump';
 

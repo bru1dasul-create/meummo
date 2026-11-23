@@ -1412,10 +1412,19 @@ body:not(.jogo-novo) .bag-stats .attr-free {
   line-height: 1.35;
 }
 
+/* os botões do item ficam sempre à vista: em tela baixa (ex.: 1366 x 768) a mochila rola, e o "Usar" não pode ficar
+   escondido lá embaixo. Presos no pé da mochila, com um fundo escuro que tampa o que rola por baixo. O "grudar" conta
+   a partir do miolo da mochila (sem os 12 px de margem de baixo dela): o `bottom: -12px` leva o fundo até a borda, e o
+   padding e a margem de baixo se anulam no lugar de sempre */
 .item-actions {
+  position: sticky;
+  bottom: -12px;
+  z-index: 1;
   display: flex;
   gap: 6px;
-  margin-top: 6px;
+  margin: 0 0 -12px;
+  padding: 8px 0 12px;
+  background: linear-gradient(180deg, rgba(16, 12, 8, 0), rgba(16, 12, 8, 0.97) 8px);
 }
 
 .item-actions button {
@@ -1930,6 +1939,73 @@ body:not(.jogo-novo) .bag-stats .attr-free {
 .shop-foot {
   text-align: center;
   font-style: italic;
+}
+
+/* receitas (a aba "Receitas" da Dona Iracema): o que sai, o que faz e os ingredientes, cada um numa plaquinha com o
+   desenho do item e "tem/precisa" (o shop.ts põe `.shop-needs` > `.shop-need[data-item]`; `.missing` = falta) */
+.shop-recipe {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.shop-recipe .shop-effect {
+  display: block;
+  line-height: 1.3;
+}
+
+/* a linha dos ingredientes ocupa o cartão inteiro, embaixo, alinhada com o nome (o quadradinho tem 40 px + 9 de vão) */
+.shop-needs {
+  display: flex;
+  flex: 0 0 calc(100% - 49px);
+  flex-wrap: wrap;
+  gap: 4px 5px;
+  margin: 0 0 2px 49px;
+}
+
+.shop-need {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 3px;
+  border: 1px solid rgba(150, 214, 120, 0.5);
+  border-radius: 999px;
+  background: rgba(70, 120, 45, 0.24);
+  color: #d4efbf;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.shop-need img {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+}
+
+body.jogo-novo .shop-need img {
+  image-rendering: auto;
+}
+
+.shop-need b {
+  color: #a6e886;
+  font-weight: 800;
+}
+
+.shop-need.missing {
+  border-color: rgba(240, 122, 92, 0.8);
+  background: rgba(150, 45, 22, 0.28);
+  color: #ffc4b0;
+}
+
+.shop-need.missing b {
+  color: #ff8d6a;
+}
+
+/* tudo na mochila: o cartão ganha a borda dourada (o botão "Preparar" já fica dourado) */
+.shop-recipe:has(.shop-buy:not(:disabled)) {
+  border-color: rgba(233, 185, 65, 0.5);
+  background: rgba(60, 40, 10, 0.35);
 }
 
 /* Conversa com NPCs (missões): o painel da loja com cipó em cima e cada missão num cartão */
@@ -2841,24 +2917,145 @@ body.jogo-novo #gm-panel {
   top: calc(315px * var(--hs) + 40px + env(safe-area-inset-top));
 }
 
+/* ---------------------------------------------------------------- efeitos com tempo (a Banana, a Água de Coco, a garrafada)
+   O effectsBar.ts (da [estrutura]) põe um `.effect` por efeito valendo, com `data-key` (o que mexe: 'forca',
+   'destreza', 'espirito', 'vitalidade' ou 'regen', a vida voltando mais rápido) e `data-item`, o desenho do item num
+   <img> e o tempo que falta em `.time`; `.ending` nos últimos 10 s. Ele refaz os quadradinhos a cada segundo, então
+   nada de animação de entrada aqui (recomeçaria todo segundo); a do fim tem 1 s certinho, para emendar.
+   O lugar: embaixo do nome e do botão do som, na coluna das barras, acompanhando o tamanho da HUD (--hs). */
+body.jogo-novo #effects-bar {
+  position: fixed;
+  z-index: 6;
+  top: calc(2px + 222px * var(--hs) + 36px + env(safe-area-inset-top));
+  left: calc(2px + 296px * var(--hs) + env(safe-area-inset-left));
+  display: flex;
+  gap: 14px;
+  pointer-events: none;
+}
+
+body.jogo-novo #effects-bar .effect {
+  --fx-glow: rgba(255, 214, 120, 0.35);
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: radial-gradient(circle at 50% 38%, #3a342d, #100e0c 72%);
+  box-shadow:
+    0 0 0 2px #24160a,
+    0 0 0 4px #a57c42,
+    0 0 0 5px #24160a,
+    inset 0 0 0 1px rgba(255, 226, 160, 0.25),
+    0 0 12px 2px var(--fx-glow),
+    0 3px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  cursor: help;
+}
+
+body.jogo-novo #effects-bar .effect img {
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+/* o selo do que o efeito mexe, no canto de cima: o ícone do atributo (o mesmo da janela K) ou, na vida voltando, um "+"
+   verde */
+body.jogo-novo #effects-bar .effect::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  top: -9px;
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+  background: var(--fx-badge, none) center / 100% 100% no-repeat;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+body.jogo-novo #effects-bar .effect:not([data-key])::after {
+  display: none;
+}
+
+body.jogo-novo #effects-bar .effect[data-key='forca'] {
+  --fx-glow: rgba(255, 130, 50, 0.45);
+  --fx-badge: var(--attr-icon-forca);
+}
+
+body.jogo-novo #effects-bar .effect[data-key='destreza'] {
+  --fx-glow: rgba(80, 215, 230, 0.42);
+  --fx-badge: var(--attr-icon-destreza);
+}
+
+body.jogo-novo #effects-bar .effect[data-key='espirito'] {
+  --fx-glow: rgba(185, 135, 255, 0.45);
+  --fx-badge: var(--attr-icon-espirito);
+}
+
+body.jogo-novo #effects-bar .effect[data-key='vitalidade'] {
+  --fx-glow: rgba(255, 95, 115, 0.42);
+  --fx-badge: var(--attr-icon-vitalidade);
+}
+
+body.jogo-novo #effects-bar .effect[data-key='regen'] {
+  --fx-glow: rgba(110, 230, 100, 0.45);
+  --fx-badge: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect x='0.8' y='0.8' width='18.4' height='18.4' rx='5' fill='%232f8a2c' stroke='%23103c0e' stroke-width='1.6'/%3E%3Cpath d='M10 4.6v10.8M4.6 10h10.8' stroke='%23f2ffe6' stroke-width='2.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* o tempo que falta, numa plaquinha escura embaixo do quadrado */
+body.jogo-novo #effects-bar .effect .time {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 5px);
+  padding: 1px 5px 2px;
+  border-radius: 999px;
+  background: rgba(14, 9, 5, 0.78);
+  box-shadow: 0 0 0 1px rgba(165, 124, 66, 0.55);
+  color: #f6e8c6;
+  font:
+    800 11px / 1.1 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* os últimos 10 s: o quadrado pisca e o tempo fica vermelho */
+body.jogo-novo #effects-bar .effect.ending {
+  animation: effect-ending 1s ease-in-out infinite;
+}
+
+body.jogo-novo #effects-bar .effect.ending .time {
+  color: #ff9d7c;
+}
+
+@keyframes effect-ending {
+  50% {
+    opacity: 0.45;
+  }
+}
+
 /* ---------------------------------------------------------------- barra de habilidades */
 body.jogo-novo #actions {
   z-index: 5;
   left: 50%;
   bottom: env(safe-area-inset-bottom);
-  width: calc(995px * var(--as));
+  width: calc(887px * var(--as));
   height: calc(234px * var(--as));
   display: block;
   transform: translateX(-50%);
-  /* a moldura de 7 quadrados (995 x 234): a de 6 (habilidades-moldura.webp, recortada da imagem do dono) com um
-     quadrado a mais no meio e o enfeite no meio de novo (veja docs/ARTE.md) */
-  background: url('/assets/ui/hud/habilidades-moldura-7.webp') 0 0 / 100% 100% no-repeat;
+  /* a moldura de 6 quadrados (887 x 234), recortada da imagem do dono. De 15/11 a 23/11 foi a de 7, com o quadrado do
+     Fôlego (E) no meio; o Fôlego saiu do jogo novo e a barra voltou para a de 6 (veja docs/ARTE.md) */
+  background: url('/assets/ui/hud/habilidades-moldura.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 -1px 3px rgba(0, 0, 0, 0.5));
   pointer-events: none;
 }
 
-/* quadrados da moldura: as três habilidades da classe (Q, R e T), o fôlego (E), a esquiva, a defesa (6º, o botão do
-   motor) e o pulo (7º). Os da classe ficam vazios até ter ponto. O tiro não fica na barra no computador: é o clique
+/* quadrados da moldura: as três habilidades da classe (Q, R e T), a esquiva, a defesa (5º, o botão do motor) e o
+   pulo (6º). Os da classe ficam vazios até ter ponto. O tiro não fica na barra no computador: é o clique
    (pedido do dono, 14/11: "o J não é habilidade"); no celular ele é o botão grande do canto (no fim do arquivo) */
 body.jogo-novo .action {
   --i: 0;
@@ -2894,17 +3091,13 @@ body.jogo-novo .action[data-slot='class2'] {
   --i: 2;
 }
 
-body.jogo-novo .action[data-slot='skill1'] {
+body.jogo-novo .action[data-slot='dash'] {
   --i: 3;
 }
 
-body.jogo-novo .action[data-slot='dash'] {
-  --i: 4;
-}
-
-/* pular: no 7º quadrado (o 6º é o da defesa) */
+/* pular: no 6º quadrado (o 5º é o da defesa) */
 body.jogo-novo .action[data-slot='jump'] {
-  --i: 6;
+  --i: 5;
 }
 
 body.jogo-novo .action:hover,
@@ -3115,10 +3308,10 @@ body.jogo-novo #guard-button .key[data-key='Shift']::after {
   filter: drop-shadow(0 1px 1px #000);
 }
 
-/* defesa (botão do motor): no 6º quadrado, com o ícone pintado (a variável vem de ui.ts) */
+/* defesa (botão do motor): no 5º quadrado, com o ícone pintado (a variável vem de ui.ts) */
 body.jogo-novo #guard-button {
   z-index: 6;
-  left: calc(50% - 995px * var(--as) / 2 + (123px + 5 * 107.8px) * var(--as));
+  left: calc(50% - 887px * var(--as) / 2 + (123px + 4 * 107.8px) * var(--as));
   right: auto;
   top: auto;
   bottom: calc(env(safe-area-inset-bottom) + 36px * var(--as));
@@ -3373,7 +3566,7 @@ body.jogo-novo .tracker-bar > div {
 
 /* ---------------------------------------------------------------- chat no painel escuro com borda de bronze */
 body.jogo-novo #chat {
-  width: clamp(220px, calc(50vw - 995px * var(--as) / 2 - 22px), 380px);
+  width: clamp(220px, calc(50vw - 887px * var(--as) / 2 - 22px), 380px);
 }
 
 body.jogo-novo #chat-log {
@@ -3506,6 +3699,29 @@ body.jogo-novo .talk-chip img {
     line-height: 30px;
   }
 
+  /* os efeitos com tempo: um pouco menores, embaixo do botão do som (que aqui é maior) */
+  body.jogo-novo #effects-bar {
+    top: calc(2px + 222px * var(--hs) + 44px + env(safe-area-inset-top));
+    gap: 12px;
+  }
+
+  body.jogo-novo #effects-bar .effect {
+    width: 32px;
+    height: 32px;
+  }
+
+  body.jogo-novo #effects-bar .effect::after {
+    right: -8px;
+    top: -8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+  }
+
+  body.jogo-novo #effects-bar .effect .time {
+    font-size: 10px;
+  }
+
   /* ações: quadrado de 2x2 no canto de baixo à direita, cada uma no quadro dourado */
   body.jogo-novo #actions {
     left: auto;
@@ -3546,19 +3762,22 @@ body.jogo-novo .talk-chip img {
     font-size: 22px;
   }
 
+  /* defesa (o botão do motor, fora da grade): no quadrado ao lado da Chuva, que era do Fôlego até 23/11 (2ª fileira,
+     à direita), do tamanho dos outros. As contas: a grade tem quadrados de 64 px com 12 px entre eles, então a 2ª
+     fileira fica 76 px acima do pé da grade (deitado e em pé mudam só o lugar da grade, no fim do arquivo) */
   body.jogo-novo #guard-button {
     left: auto;
-    right: calc(176px + env(safe-area-inset-right));
-    bottom: calc(158px + env(safe-area-inset-bottom));
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-size: 130% 130%;
+    right: calc(12px + env(safe-area-inset-right));
+    bottom: calc(12px + 76px + env(safe-area-inset-bottom));
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background-size: 100% 100%;
     box-shadow: var(--ring);
   }
 
   body.jogo-novo #guard-button.held {
-    background-size: 130% 130%;
+    background-size: 100% 100%;
     box-shadow:
       var(--ring),
       0 0 14px rgba(110, 200, 255, 0.85);
@@ -3690,9 +3909,13 @@ body.jogo-novo .talk-chip img {
   }
 }
 
-/* Celular: o tiro (lá não tem mouse) é o botão grande, sozinho no canto de baixo à direita, debaixo do polegar; a
-   bordunada, o fôlego, o pulo e a esquiva num quadrado de 2x2 do lado dele (deitado) ou em cima dele (em pé), com a
-   esquiva colada no tiro. Em pé não dá para ir para a esquerda: a metade esquerda da tela é do joystick. */
+/* Celular: o tiro (lá não tem mouse) é o botão grande, sozinho no canto de baixo à direita, debaixo do polegar; as
+   habilidades da classe, a defesa, o pulo e a esquiva numa grade de 2 colunas do lado dele (deitado) ou em cima dele
+   (em pé), com a esquiva colada no tiro:
+     R  T
+     Q  defesa   (a defesa é o botão do motor, posto no lugar que era do Fôlego; veja #guard-button)
+     pulo  esquiva
+   Em pé não dá para ir para a esquerda: a metade esquerda da tela é do joystick. */
 @media (pointer: coarse) {
   body.jogo-novo .action[data-slot='shot'] {
     display: block;
@@ -3713,10 +3936,6 @@ body.jogo-novo .talk-chip img {
 
   body.jogo-novo .action[data-slot='skill0'] {
     grid-area: 2 / 1;
-  }
-
-  body.jogo-novo .action[data-slot='skill1'] {
-    grid-area: 2 / 2;
   }
 
   body.jogo-novo .action[data-slot='jump'] {
@@ -3746,9 +3965,13 @@ body.jogo-novo .talk-chip img {
     bottom: 0;
   }
 
-  body.jogo-novo #guard-button,
   body.jogo-novo #quick-slots {
     right: calc(276px + env(safe-area-inset-right));
+  }
+
+  /* a defesa acompanha a grade (que aqui fica 112 px da direita, do lado do tiro) */
+  body.jogo-novo #guard-button {
+    right: calc(112px + env(safe-area-inset-right));
   }
 
   body:has(canvas.mundo-novo) #bag-button {
@@ -3770,6 +3993,11 @@ body.jogo-novo .talk-chip img {
   body.jogo-novo .action[data-slot='shot'] {
     right: 0;
     bottom: -100px;
+  }
+
+  /* a defesa acompanha a grade (que aqui fica 112 px acima do pé da tela, em cima do tiro) */
+  body.jogo-novo #guard-button {
+    bottom: calc(112px + 76px + env(safe-area-inset-bottom));
   }
 
   body:has(canvas.mundo-novo) #bag-button {
@@ -3891,6 +4119,10 @@ body.jogo-novo .action[data-armed='1'] .icon {
 #skills-panel .attr[data-attr='vitalidade'] { --attr-icon: var(--attr-icon-vitalidade); }
 #skills-panel .attr b { color: #ffe9b8; font-size: 14px; }
 #skills-panel .attr .value { display: inline-block; min-width: 26px; margin-left: 8px; padding: 1px 9px; border-radius: 999px; text-align: center; background: radial-gradient(circle at 50% 30%, rgba(120, 80, 30, 0.55), rgba(0, 0, 0, 0.5)); border: 1px solid rgba(255, 200, 100, 0.65); font: 800 14px system-ui, sans-serif; color: #ffd23e; vertical-align: 1px; }
+/* um efeito com tempo valendo (a Banana, a Água de Coco): o skillsPanel.ts escreve "4 +5" e põe `.boosted`; o selo fica
+   verde e respira devagar, para lembrar que o bônus acaba (o tempo que falta aparece embaixo da vida, no #effects-bar) */
+#skills-panel .attr .value.boosted { color: #c6f7a4; border-color: rgba(150, 232, 120, 0.9); background: radial-gradient(circle at 50% 30%, rgba(70, 140, 45, 0.7), rgba(0, 0, 0, 0.5)); text-shadow: 0 0 6px rgba(120, 230, 90, 0.55); animation: attr-boost 2.4s ease-in-out infinite; }
+@keyframes attr-boost { 0%, 100% { box-shadow: 0 0 5px rgba(120, 230, 90, 0.35); } 50% { box-shadow: 0 0 12px rgba(150, 245, 110, 0.8); } }
 #skills-panel .attr .what { color: #d9c7a2; font-size: 12px; }
 #skills-panel .attr .numbers { color: #b8e39a; font-size: 12px; font-weight: 600; }
 #skills-panel .attr .numbers:empty { display: none; }

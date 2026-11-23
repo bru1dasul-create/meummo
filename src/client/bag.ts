@@ -2,7 +2,16 @@
 // Só mostra e pede: quem decide se dá para equipar ou comer é o servidor.
 
 import { ATTRIBUTE_IDS, ATTRIBUTE_NAMES } from '../shared/attributes';
-import { EQUIP_SLOTS, gearLookOf, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
+import {
+  EQUIP_SLOTS,
+  effectLabel,
+  gearLookOf,
+  healLabel,
+  type EquipSlot,
+  type InventoryState,
+  type ItemInfo,
+  type Rarity,
+} from '../shared/items';
 import type { ItemAction, PlayerStats } from '../shared/protocol';
 import { characterPortrait } from './game/characters';
 import { drawHeroPortrait, hasHeroPortrait } from './heroPortrait';
@@ -45,13 +54,21 @@ function icon(def: ItemInfo): HTMLImageElement {
   return img;
 }
 
-/** "+2 de dano", "+10 de vida"... */
+/**
+ * "+2 de dano", "+10 de vida"... e, nos consumíveis, o que fazem, uma coisa por linha: "Recupera 30 de vida",
+ * "Recupera 25% da vida" (as garrafadas), "+5 de Destreza por 3 min" (a Banana), "A vida volta 3× mais rápido...".
+ */
 export function bonusLines(def: ItemInfo): string[] {
   const lines: string[] = [];
   if (def.bonus.damage) lines.push(`${def.bonus.damage > 0 ? '+' : ''}${def.bonus.damage} de dano`);
   if (def.bonus.hp) lines.push(`${def.bonus.hp > 0 ? '+' : ''}${def.bonus.hp} de vida`);
   if (def.bonus.defense) lines.push(`${def.bonus.defense > 0 ? '+' : ''}${def.bonus.defense} de defesa`);
-  if (def.heal) lines.push(`Recupera ${def.heal} de vida`);
+  const heal = healLabel(def); // "30", "25% da vida" ou "10 + 25% da vida"
+  if (heal) lines.push(`Recupera ${(def.healPct ?? 0) > 0 ? heal : `${heal} de vida`}`);
+  if (def.effect) {
+    const effect = effectLabel(def.effect);
+    lines.push(effect.charAt(0).toUpperCase() + effect.slice(1));
+  }
   return lines;
 }
 

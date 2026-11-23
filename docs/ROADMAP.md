@@ -958,12 +958,19 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   `data/receitas.json` (a chave é o item que sai; "precisa" diz os ingredientes) e quem prepara no campo "receitas" de
   `data/npcs.json`. Mensagens `craft` e `crafted`; `NpcInfo.recipes`. Protocolo 51
 - [ ] **[arte]** Das poções (etapa 3): os ícones dos ingredientes novos — Frasco Vazio, Água da Mina, Folha de Babosa e
-  Raiz de Jurubeba (hoje usam os da garrafada, da água de coco e da arruda) — e vestir a aba "Receitas" da loja (o
-  estilo provisório da lista de ingredientes está no `shop.ts`). Pedido mandado à [arte]
+  Raiz de Jurubeba (hoje usam os da garrafada, da água de coco e da arruda). A aba "Receitas" já foi vestida (item
+  abaixo). Pedido mandado à [arte]
 - [ ] **[arte]** Das poções (etapa 1): o efeito de usar a poção "na mesma pegada do Priston Tale" (pedido do dono, 23/11)
-  pelo gancho `view.consume(id, item)` (esperando a referência do dono); os ícones da Garrafada Pequena e da Grande (hoje
-  usam o da garrafada); o "cura X%" na mochila (`healLabel` de `src/shared/items.ts`); e a barra sem o Fôlego (ficou um
-  quadrado vazio entre o T e o Shift no PC e um buraco ao lado da Chuva no celular). Pedido mandado à [arte]
+  pelo gancho `view.consume(id, item)` — o dono não achou referência (lembra da poção jogada para cima, estourando); a
+  [arte] mandou duas ideias com cara de Pindorama, esperando a escolha — e os ícones da Garrafada Pequena e da Grande
+  (hoje usam o da garrafada). Pedido mandado à [arte]
+- [x] **[arte]** Das poções, as correções rápidas (23/11, com o "pode, segue essa ordem" do dono): **a barra sem o
+  Fôlego** (no PC, a moldura de 6 quadrados de novo: Q, R, T, esquiva, defesa e pulo; no celular, a defesa entrou no
+  buraco ao lado da Chuva); **a mochila diz o que o consumível faz** ("Recupera 25% da vida", "+5 de Destreza por
+  3 min"), com os botões do item presos no pé dela (em 1366 × 768 o "Usar" sumia); **o "+5" verde** na aba dos
+  Atributos; **o mostrador de efeitos** com a cara da HUD (o selo do atributo no canto e o tempo numa plaquinha) e **a
+  aba "Receitas"** com cada ingrediente numa plaquinha com o desenho do item. Os estilos provisórios saíram do
+  `effectsBar.ts` e do `shop.ts`
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os
