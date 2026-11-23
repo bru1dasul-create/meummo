@@ -1910,6 +1910,15 @@ class NewWorld implements NewWorldGame {
   }
 
   /** O seu tile está entre estes ([x1, y1, x2, y2, ...])? */
+  /**
+   * O aviso no chão (as casas de um golpe, ou o fogo): o desenho da [arte] pinta por baixo dos bichos (`view.warn`);
+   * sem ele (a view provisória, ou antes de a [arte] juntar), os quadrados de sempre do combat.ts.
+   */
+  private warnGround(tiles: number[], ms: number, now: number, fire = false): void {
+    if (this.view?.warn) this.view.warn(tiles, ms, fire ? { fire: true } : undefined);
+    else this.combat.warn(tiles, ms, now, fire);
+  }
+
   private onMyTile(tiles: number[]): boolean {
     const at = footCenter(this.predicted.x, this.predicted.y);
     const tx = Math.floor(at.x);
@@ -2899,16 +2908,16 @@ class NewWorld implements NewWorldGame {
         this.applyStats(msg.stats);
         break;
       case 'warn': {
-        // golpe vindo: quadrados vermelhos onde ele pega (golpe de perto) e o anel laranja em quem prepara
+        // golpe vindo: as casas onde ele pega (golpe de perto), pintadas no chão, e o anel laranja em quem prepara
         const now = gameNow();
-        if (msg.tiles.length > 0) this.combat.warn(msg.tiles, msg.ms, now);
+        if (msg.tiles.length > 0) this.warnGround(msg.tiles, msg.ms, now);
         this.combat.windup(msg.id, msg.ms, now);
         this.view?.action?.(msg.id, 'windup');
         if (this.onMyTile(msg.tiles)) this.sfx.play('warn');
         break;
       }
       case 'fire':
-        this.combat.warn(msg.tiles, msg.ms, gameNow(), true);
+        this.warnGround(msg.tiles, msg.ms, gameNow(), true);
         this.sfx.play('fire');
         break;
       case 'shot':
