@@ -1,7 +1,8 @@
 // O fundo do Capão (etapa 4c, aprovada pelo dono em 13/11; referências docs/referencias/capao-fundo-aprovado.jpg e
 // capao-campinho-aprovado.jpg): o campinho de várzea com as traves de rede rasgada e o muro grafitado; o viaduto da
 // linha lilás quebrado na ponta, com mato em cima, pilares pichados e cipó pendurado; o trem lilás parado lá em cima,
-// com plantas no teto; o ônibus velho que virou horta; a barreira da rua fechada e as placas de direção.
+// com plantas no teto; o ônibus velho que virou horta; a barreira da rua fechada e as placas de direção. E, do Capão
+// maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura.
 // Mesmo traço do resto do cenário (contorno de tinta, lado da sombra mais escuro). Coisa comprida (muro, viaduto,
 // ônibus) vem do mapa em pedaços (tmj.js): cada pedaço desenha a sua parte e o desenho continua de um para o outro.
 //   PD.city.small[tipo] = { height, blocks, lift, box, shadow, paint }   (o props.js usa como as plantas)
@@ -523,7 +524,8 @@
         for (let k = 0; k < 7; k++) grass(ctx, cam, d.x0 + rnd() * (d.x1 - d.x0), yN + wallT + 10 + rnd() * (yS - yN - 2 * wallT - 20), zt, 22 + rnd() * 10, rnd, ink);
         for (let k = 0; k < 2; k++) fern(ctx, cam, d.x0 + rnd() * (d.x1 - d.x0), yN + 40 + rnd() * 60, zt, 34 + rnd() * 14, ink);
       }
-      if (d.trees && !d.train) {
+      // (embaixo da cobertura da estação, não nasce árvore no leito)
+      if (d.trees && !d.train && !d.station) {
         const n = 1 + Math.floor(rnd() * 2);
         for (let k = 0; k < n; k++) bush(ctx, cam, d.x0 + 60 + rnd() * (d.x1 - d.x0 - 120), yN + 90 + rnd() * 150, zt, 48 + rnd() * 30, ink);
         if (rnd() < 0.55) H.roofTree(ctx, cam, d.x0 + 100 + rnd() * (d.x1 - d.x0 - 200), yN + 130 + rnd() * 100, zt, ink);
@@ -1462,4 +1464,382 @@
       vine3d(ctx, cam, pts, rnd, ink);
     }
   }
+  // ------------------------------------------------------------------ a Estação Capão Redondo (Capão maior, 23/11)
+  // O prédio da estação embaixo do viaduto, abandonado e tomado pela mata. Dois blocos: o da entrada (`hf` de altura),
+  // com a fachada de concreto, a faixa lilás da linha com o nome em letras brancas, a marquise sobre as três portas de
+  // aço baixadas e pichadas e as vidraças dos dois lados (muitas quebradas); e, atrás dele, o da plataforma (`back` de
+  // fundura, na altura do viaduto, `h`), com a faixa amarela da beira, os bancos, o guarda-corpo de vidro e, em cima dos
+  // trilhos, a cobertura curva de metal nas colunas de aço, com buracos, ferrugem, mato e cipó pendurado. Sem marca.
+  const ST = {
+    face: '#b9b4a8', side: '#9b968a', top: '#c6c1b4', joint: 'rgba(84, 78, 70, 0.32)', floor: '#cdc8bb',
+    glass: '#34444d', glassHi: 'rgba(170, 205, 215, 0.32)', hole: '#161b1e', frame: '#4c5257',
+    gate: '#8e9296', gateDark: '#6f7377', steel: '#596067', roof: '#c3c8cb', roofDark: '#9ea4a8', yellow: '#e2b51e',
+  };
+  const ST_FONT = '"Arial Black", "Helvetica Neue", Arial, sans-serif';
+  /** As medidas da estação (cm): o bloco da entrada, o da plataforma, a cobertura e a marquise. */
+  function stationGeom(d) {
+    const yF = d.y0 + (d.back || 360);
+    const W = d.x1 - d.x0;
+    const ent = { u0: W / 2 - 370, u1: W / 2 + 370 };
+    return {
+      yF,
+      hf: d.hf || 650,
+      hb: d.h || 800,
+      W,
+      ent,
+      // a cobertura: de um pouco ao norte dos trilhos até a beira da plataforma
+      roof: { x0: d.x0 + 110, x1: d.x1 - 110, yN: d.y0 - 470, yS: yF - 25, z: (d.h || 800) + 340, rise: 120 },
+      // a marquise da entrada (no alto das portas, saindo da fachada)
+      marq: { x0: d.x0 + ent.u0 - 60, x1: d.x0 + ent.u1 + 60, y0: d.y1, y1: d.y1 + 150, z: 330, t: 28 },
+    };
+  }
+  /** As portas de aço (de enrolar), em cm da parede: `x` e `w` do vão, `y0` o alto, `y1` o chão. */
+  function steelGate(ctx, x, w, y0, y1, r) {
+    ctx.fillStyle = ST.gate;
+    ctx.fillRect(x, y0, w, y1 - y0);
+    // as ondas do aço (listras de luz e sombra)
+    for (let y = y0 + 6; y < y1; y += 11) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.fillRect(x, y, w, 3);
+      ctx.fillStyle = 'rgba(30, 32, 36, 0.22)';
+      ctx.fillRect(x, y + 5, w, 3);
+    }
+    // ferrugem escorrida e o pé amassado
+    for (let k = 0; k < 4; k++) {
+      const rx = x + 10 + r() * (w - 20);
+      const g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, 'rgba(140, 70, 30, 0)');
+      g.addColorStop(0.55 + r() * 0.3, 'rgba(140, 70, 30, 0.45)');
+      g.addColorStop(1, 'rgba(110, 54, 24, 0.6)');
+      ctx.fillStyle = g;
+      ctx.fillRect(rx, y0 + 20, 6 + r() * 12, y1 - y0 - 20);
+    }
+    ctx.fillStyle = ST.gateDark;
+    ctx.fillRect(x, y1 - 14, w, 14);
+    // a guia de cada lado e o cadeado no pé
+    ctx.fillStyle = ST.frame;
+    ctx.fillRect(x - 5, y0, 7, y1 - y0);
+    ctx.fillRect(x + w - 2, y0, 7, y1 - y0);
+    ctx.fillStyle = '#2b2d30';
+    ctx.fillRect(x + w / 2 - 7, y1 - 24, 14, 12);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y0, w, y1 - y0);
+  }
+  /** Uma vidraça (em cm da parede): o vidro escuro com o reflexo, ou o buraco do vidro quebrado com os cacos. */
+  function stationPane(ctx, x, y, w, h, r, broken) {
+    if (!broken) {
+      ctx.fillStyle = ST.glass;
+      ctx.fillRect(x, y, w, h);
+      // o reflexo do céu, em diagonal
+      ctx.fillStyle = ST.glassHi;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.18, y);
+      ctx.lineTo(x + w * 0.42, y);
+      ctx.lineTo(x + w * 0.1, y + h);
+      ctx.lineTo(x - w * 0.14 > x ? x - w * 0.14 : x, y + h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(x + w * 0.62, y, w * 0.08, h);
+      return;
+    }
+    // quebrado: o escuro de dentro, com os cacos presos na moldura
+    ctx.fillStyle = ST.hole;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(80, 110, 70, 0.35)'; // o mato que cresceu lá dentro
+    ctx.beginPath();
+    ctx.ellipse(x + w * (0.3 + r() * 0.4), y + h, w * 0.4, h * 0.22, 0, Math.PI, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = ST.glass;
+    const shard = (pts) => {
+      ctx.beginPath();
+      pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+      ctx.closePath();
+      ctx.fill();
+    };
+    shard([[x, y], [x + w * (0.3 + r() * 0.3), y], [x, y + h * (0.25 + r() * 0.3)]]);
+    shard([[x + w, y + h], [x + w * (0.55 + r() * 0.3), y + h], [x + w, y + h * (0.5 + r() * 0.3)]]);
+    if (r() < 0.6) shard([[x + w, y], [x + w, y + h * (0.2 + r() * 0.2)], [x + w * (0.7 + r() * 0.2), y]]);
+  }
+  /** A fachada do bloco da entrada (em cm da parede: `W` de largura, `Hh` de altura, o alto em 0). */
+  function stationFront(ctx, d, g, r) {
+    const { W, ent } = g;
+    const Hh = g.hf;
+    // as juntas das placas de concreto e as manchas de chuva
+    ctx.fillStyle = ST.joint;
+    for (let u = 300; u < W; u += 300) ctx.fillRect(u - 2, 140, 4, Hh - 140);
+    ctx.fillRect(0, 170, W, 4);
+    for (let k = 0; k < 14; k++) {
+      const u = r() * W, run = 60 + r() * 200;
+      const gr = ctx.createLinearGradient(0, 140, 0, 140 + run);
+      gr.addColorStop(0, 'rgba(60, 56, 50, 0.3)');
+      gr.addColorStop(1, 'rgba(60, 56, 50, 0)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(u, 140, 10 + r() * 22, run);
+    }
+    // a faixa lilás da linha com o nome (as letras brancas, encardidas)
+    const line = d.line || '#8a63b8';
+    ctx.fillStyle = line;
+    ctx.fillRect(0, 22, W, 112);
+    ctx.fillStyle = M.shade(line, -0.25);
+    ctx.fillRect(0, 122, W, 12);
+    if (d.sign) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let size = 84;
+      ctx.font = `${size}px ${ST_FONT}`;
+      while (ctx.measureText(d.sign).width > W - 260 && size > 40) ctx.font = `${--size}px ${ST_FONT}`;
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = 'rgba(40, 24, 60, 0.7)';
+      ctx.strokeText(d.sign, W / 2, 80);
+      ctx.fillStyle = '#f3f1ea';
+      ctx.fillText(d.sign, W / 2, 80);
+      ctx.restore();
+      // a sujeira escorrendo das letras
+      for (let k = 0; k < 10; k++) {
+        ctx.fillStyle = 'rgba(70, 60, 80, 0.25)';
+        ctx.fillRect(130 + r() * (W - 260), 100 + r() * 20, 4 + r() * 5, 14 + r() * 30);
+      }
+    }
+    // as vidraças dos dois lados da entrada (do chão até perto da faixa), umas inteiras e outras quebradas
+    const gy0 = 205, gy1 = Hh - 16;
+    for (const [a, b] of [[110, ent.u0 - 70], [ent.u1 + 70, W - 110]]) {
+      const n = Math.max(2, Math.round((b - a) / 150));
+      const pw = (b - a) / n;
+      for (let i = 0; i < n; i++) {
+        const px = a + i * pw;
+        // a travessa do meio (a bandeira de cima e o vidro grande de baixo)
+        stationPane(ctx, px + 6, gy0 + 6, pw - 12, 108, r, r() < 0.3);
+        stationPane(ctx, px + 6, gy0 + 126, pw - 12, gy1 - gy0 - 132, r, r() < 0.42);
+      }
+      ctx.strokeStyle = ST.frame;
+      ctx.lineWidth = 12;
+      ctx.strokeRect(a, gy0, b - a, gy1 - gy0);
+      ctx.lineWidth = 8;
+      for (let i = 1; i < n; i++) {
+        ctx.beginPath();
+        ctx.moveTo(a + i * pw, gy0);
+        ctx.lineTo(a + i * pw, gy1);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(a, gy0 + 120);
+      ctx.lineTo(b, gy0 + 120);
+      ctx.stroke();
+    }
+    // a entrada: o vão de concreto mais escuro e as três portas de aço baixadas, pichadas
+    ctx.fillStyle = M.shade(ST.face, -0.16);
+    ctx.fillRect(ent.u0 - 30, 185, ent.u1 - ent.u0 + 60, Hh - 185);
+    const gw = (ent.u1 - ent.u0 - 4 * 20) / 3;
+    for (let i = 0; i < 3; i++) steelGate(ctx, ent.u0 + 20 + i * (gw + 20), gw, 300, Hh - 6, r);
+    H.pixo(ctx, ent.u1 - ent.u0 + 40, 420, M.rng(Math.round(d.x0) + 31), 0.95);
+    // a bilheteria, do lado direito da entrada (o guichê fechado com a grade e a plaquinha)
+    const bx = ent.u1 + 90;
+    ctx.fillStyle = '#2a3035';
+    ctx.fillRect(bx, 330, 120, 90);
+    ctx.strokeStyle = '#8b9197';
+    ctx.lineWidth = 4;
+    for (let u = bx + 10; u < bx + 120; u += 14) {
+      ctx.beginPath();
+      ctx.moveTo(u, 330);
+      ctx.lineTo(u, 420);
+      ctx.stroke();
+    }
+    ctx.fillStyle = line;
+    ctx.fillRect(bx, 300, 120, 26);
+    ctx.fillStyle = '#f3f1ea';
+    ctx.font = `18px ${ST_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('BILHETERIA', bx + 60, 314);
+    // pichação no concreto e o musgo e o cipó tomando a frente (a entrada fica mais livre)
+    if (d.pixo) {
+      ctx.save();
+      ctx.translate(0, 0);
+      H.pixo(ctx, ent.u0 - 120, 150, M.rng(Math.round(d.x0) + 7), 0.7);
+      ctx.restore();
+    }
+    if (d.moss && H.mossWall) H.mossWall(ctx, W, Hh, r);
+    if (d.vine && H.overgrowth) H.overgrowth(ctx, W, Hh, r, d.vine, [ent.u0 - 40, ent.u1 + 40]);
+  }
+  /** O lado (+x) dos dois blocos: o concreto, a faixa lilás, a porta de serviço e o cipó. */
+  function stationSide(ctx, d, len, Hh, band, r, door) {
+    ctx.fillStyle = ST.joint;
+    for (let u = 180; u < len; u += 180) ctx.fillRect(u - 2, band + 120, 4, Hh - band - 120);
+    ctx.fillStyle = M.shade(d.line || '#8a63b8', -0.18);
+    ctx.fillRect(0, band + 22, len, 112);
+    if (door) {
+      ctx.fillStyle = '#5c6166';
+      ctx.fillRect(len * 0.45, Hh - 230, 100, 224);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(len * 0.45, Hh - 230, 100, 224);
+      ctx.fillStyle = '#2b2d30';
+      ctx.fillRect(len * 0.45 + 80, Hh - 120, 10, 16);
+    }
+    // a grelha de ventilação no alto
+    ctx.fillStyle = '#6d7277';
+    ctx.fillRect(len * 0.15, band + 160, 90, 60);
+    ctx.strokeStyle = '#3e4246';
+    ctx.lineWidth = 3;
+    for (let v = band + 170; v < band + 220; v += 9) {
+      ctx.beginPath();
+      ctx.moveTo(len * 0.15 + 6, v);
+      ctx.lineTo(len * 0.15 + 84, v);
+      ctx.stroke();
+    }
+    if (d.moss && H.mossWall) H.mossWall(ctx, len, Hh, r);
+    if (d.vine && H.overgrowth) H.overgrowth(ctx, len, Hh, r, d.vine * 0.85);
+  }
+  /** A altura (cm) da cobertura curva em `y`. */
+  const roofZ = (R, y) => R.z + R.rise * Math.sin(Math.PI * M.clamp((y - R.yN) / (R.yS - R.yN), 0, 1));
+  small.estacao = {
+    fades: true, // fica transparente quando esconde o personagem atrás (embaixo do viaduto)
+    height: (d) => (d.h || 800) + 480,
+    blocks: 0,
+    shadow(p, cam, d) {
+      const g = stationGeom(d);
+      H.boxShadow(p, cam, d.x0, d.x1, d.y0, g.yF, g.hb);
+      H.boxShadow(p, cam, d.x0, d.x1, g.yF, d.y1, g.hf);
+      slabShadow(p, cam, g.roof.x0, g.roof.x1, g.roof.yN, g.roof.yS, g.roof.z, g.roof.z + g.roof.rise);
+    },
+    box(cam, d, z0) {
+      const g = stationGeom(d);
+      return volBox(cam, d.x0 - 60, d.x1 + 60, g.roof.yN - 40, g.marq.y1 + 30, z0, z0 + g.roof.z + g.roof.rise + 160, 30);
+    },
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const g = stationGeom(d);
+      const R = g.roof;
+      const rnd = seeded(d.x0, d.y0, 3301);
+      const zp = z0 + g.hb; // o chão da plataforma (a altura do viaduto)
+      const colX = [];
+      for (let x = R.x0 + 120; x <= R.x1 - 110; x += 600) colX.push(x);
+      // 1) as colunas do lado dos trilhos (em cima do viaduto, atrás de tudo)
+      const column = (x, y) => {
+        const zt = z0 + roofZ(R, y) - 6;
+        H.box(ctx, cam, x - 11, x + 11, y - 11, y + 11, zp, zt, { front: ST.steel, side: M.shade(ST.steel, -0.25), top: ST.steel }, ink);
+      };
+      for (const x of colX) column(x, d.y0 - 330);
+      // 2) o bloco da plataforma: a caixa, o chão (faixa amarela na beira dos trilhos, piso tátil e os bancos)
+      H.box(ctx, cam, d.x0, d.x1, d.y0, g.yF, z0, zp, { front: ST.face, side: ST.side, top: ST.floor }, ink);
+      H.onWall(ctx, cam, { x: d.x1, y: g.yF, z: zp }, { x: 0, y: -1 }, () => stationSide(ctx, d, g.yF - d.y0, g.hb, 0, seeded(d.x1, d.y0, 3307), false));
+      fill(ctx, [P(d.x0, d.y0 + 18, zp + 1), P(d.x1, d.y0 + 18, zp + 1), P(d.x1, d.y0 + 52, zp + 1), P(d.x0, d.y0 + 52, zp + 1)], ST.yellow);
+      fill(ctx, [P(d.x0, d.y0 + 58, zp + 1), P(d.x1, d.y0 + 58, zp + 1), P(d.x1, d.y0 + 90, zp + 1), P(d.x0, d.y0 + 90, zp + 1)], '#b3ac97');
+      // as manchas e o mato no chão da plataforma
+      for (let k = 0; k < 9; k++) {
+        const q = P(d.x0 + 60 + rnd() * (g.W - 120), d.y0 + 110 + rnd() * (g.yF - d.y0 - 160), zp + 1);
+        ctx.fillStyle = rnd() < 0.5 ? 'rgba(96, 120, 64, 0.5)' : 'rgba(70, 66, 58, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, (18 + rnd() * 30) * cam.zoom, (8 + rnd() * 10) * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      for (let x = d.x0 + 420; x < d.x1 - 300; x += 900) {
+        // banco de metal da plataforma (o assento e as pernas)
+        H.box(ctx, cam, x, x + 180, d.y0 + 190, d.y0 + 230, zp, zp + 44, { front: '#7d848a', side: '#61686d', top: '#9aa1a6' }, ink);
+      }
+      for (let k = 0; k < 5; k++) grass(ctx, cam, d.x0 + 100 + rnd() * (g.W - 200), d.y0 + 120 + rnd() * (g.yF - d.y0 - 180), zp, 22 + rnd() * 10, rnd, ink);
+      // 3) as colunas do lado da plataforma e a cobertura curva em cima (de trás para a frente, em faixas)
+      for (const x of colX) column(x, g.yF - 70);
+      // o guarda-corpo de vidro na beira da plataforma, por cima do bloco da entrada
+      const gz = zp + 105;
+      fill(ctx, [P(d.x0 + 40, g.yF - 6, zp), P(d.x1 - 40, g.yF - 6, zp), P(d.x1 - 40, g.yF - 6, gz), P(d.x0 + 40, g.yF - 6, gz)], 'rgba(150, 190, 200, 0.28)');
+      edge(ctx, P(d.x0 + 40, g.yF - 6, gz), P(d.x1 - 40, g.yF - 6, gz), ink, 2.2);
+      ctx.strokeStyle = ST.steel;
+      ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+      ctx.beginPath();
+      for (let x = d.x0 + 40; x <= d.x1 - 40; x += 150) {
+        const a = P(x, g.yF - 6, zp), b = P(x, g.yF - 6, gz);
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      }
+      ctx.stroke();
+      const N = 14;
+      const ys = [];
+      for (let i = 0; i <= N; i++) ys.push(R.yN + ((R.yS - R.yN) * i) / N);
+      const holes = [];
+      for (let k = 0; k < 4; k++) holes.push({ x: R.x0 + 200 + rnd() * (R.x1 - R.x0 - 400), i: 2 + Math.floor(rnd() * (N - 4)), w: 120 + rnd() * 180 });
+      for (let i = 0; i < N; i++) {
+        const [ya, yb] = [ys[i], ys[i + 1]];
+        const [za, zb] = [z0 + roofZ(R, ya), z0 + roofZ(R, yb)];
+        // a faixa virada para o sul (a câmera e o sol) mais clara; a do norte, mais escura
+        const t = (zb - za) / (yb - ya);
+        const col = M.mix ? M.mix(ST.roof, ST.roofDark, M.clamp(0.5 + t * 2.2, 0, 1)) : t > 0 ? ST.roofDark : ST.roof;
+        const strip = [P(R.x0, ya, za), P(R.x1, ya, za), P(R.x1, yb, zb), P(R.x0, yb, zb)];
+        fill(ctx, strip, col);
+        // as telhas onduladas (as linhas no sentido da curva) e os buracos das que caíram
+        ctx.strokeStyle = 'rgba(90, 96, 100, 0.35)';
+        ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);
+        ctx.beginPath();
+        for (let x = R.x0 + 40; x < R.x1; x += 40) {
+          const a = P(x, ya, za), b = P(x, yb, zb);
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+        }
+        ctx.stroke();
+        for (const h of holes) {
+          if (h.i !== i && h.i !== i - 1) continue;
+          fill(ctx, [P(h.x, ya, za), P(h.x + h.w, ya, za), P(h.x + h.w, yb, zb), P(h.x, yb, zb)], 'rgba(24, 28, 30, 0.85)');
+        }
+      }
+      // ferrugem e musgo na cobertura, e mato nascendo nas emendas
+      for (let k = 0; k < 16; k++) {
+        const y = R.yN + rnd() * (R.yS - R.yN);
+        const q = P(R.x0 + rnd() * (R.x1 - R.x0), y, z0 + roofZ(R, y) + 1);
+        ctx.fillStyle = rnd() < 0.55 ? 'rgba(150, 80, 36, 0.4)' : 'rgba(86, 118, 58, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, (20 + rnd() * 40) * cam.zoom, (7 + rnd() * 10) * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      for (let k = 0; k < 3; k++) {
+        const y = R.yN + 150 + rnd() * (R.yS - R.yN - 300);
+        bush(ctx, cam, R.x0 + 200 + rnd() * (R.x1 - R.x0 - 400), y, z0 + roofZ(R, y), 40 + rnd() * 26, ink);
+      }
+      // o contorno da cobertura: a beira de cima (a curva nas pontas) e a de baixo, na frente
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 2;
+      ctx.lineJoin = 'round';
+      for (const x of [R.x0, R.x1]) {
+        ctx.beginPath();
+        ys.forEach((y, i) => {
+          const q = P(x, y, z0 + roofZ(R, y));
+          if (i) ctx.lineTo(q.x, q.y);
+          else ctx.moveTo(q.x, q.y);
+        });
+        ctx.stroke();
+      }
+      // a beirada da frente (a calha lilás) e o arco de aço na ponta que a câmera vê
+      inkPoly(ctx, [P(R.x0, R.yS, z0 + R.z - 30), P(R.x1, R.yS, z0 + R.z - 30), P(R.x1, R.yS, z0 + R.z), P(R.x0, R.yS, z0 + R.z)], d.line || '#8a63b8', ink, 1.6);
+      edge(ctx, P(R.x0, R.yN, z0 + R.z), P(R.x1, R.yN, z0 + R.z), ink, 1.6);
+      // o cipó pendurado da beirada da frente
+      for (let x = R.x0 + 150 + rnd() * 200; x < R.x1 - 100; x += 260 + rnd() * 360) {
+        const pts = [];
+        const len = 120 + rnd() * 240;
+        for (let j = 0; j <= 6; j++) pts.push({ x: x + Math.sin(j * 0.9 + x) * 10, y: R.yS + 4, z: z0 + R.z - 30 - (len * j) / 6 });
+        vine3d(ctx, cam, pts, rnd, ink);
+      }
+      // 4) o bloco da entrada: a caixa, a fachada (a faixa com o nome, as vidraças e as portas), o lado e a laje
+      H.box(ctx, cam, d.x0, d.x1, g.yF, d.y1, z0, z0 + g.hf, { front: ST.face, side: ST.side, top: ST.top }, ink);
+      H.onWall(ctx, cam, { x: d.x0, y: d.y1, z: z0 + g.hf }, { x: 1, y: 0 }, () => stationFront(ctx, d, g, seeded(d.x0, d.y1, 3311)));
+      H.onWall(ctx, cam, { x: d.x1, y: d.y1, z: z0 + g.hf }, { x: 0, y: -1 }, () => stationSide(ctx, d, d.y1 - g.yF, g.hf, 0, seeded(d.x1, d.y1, 3313), true));
+      // a laje do bloco da entrada: a mureta de volta, as caixas do ar e o mato
+      const zt = z0 + g.hf;
+      for (let x = d.x0 + 300; x < d.x1 - 300; x += 700 + rnd() * 400) H.box(ctx, cam, x, x + 110, g.yF + 80, g.yF + 170, zt, zt + 70, { front: '#a9aca8', side: '#8c8f8b', top: '#c1c3bf' }, ink);
+      for (let k = 0; k < 5; k++) {
+        const x = d.x0 + 150 + rnd() * (g.W - 300), y = g.yF + 60 + rnd() * (d.y1 - g.yF - 120);
+        if (rnd() < 0.4) fern(ctx, cam, x, y, zt, 36 + rnd() * 16, ink);
+        else bush(ctx, cam, x, y, zt, 34 + rnd() * 22, ink);
+      }
+      if (d.vine > 0.3) H.roofTree(ctx, cam, d.x0 + g.W * 0.82, g.yF + (d.y1 - g.yF) * 0.45, zt, ink);
+      // 5) a marquise da entrada (a laje fina saindo da fachada, no alto das portas), com mato em cima
+      const m = g.marq;
+      H.box(ctx, cam, m.x0, m.x1, m.y0, m.y1, z0 + m.z, z0 + m.z + m.t, { front: M.shade(ST.face, 0.04), side: ST.side, top: ST.top }, ink);
+      for (let k = 0; k < 3; k++) grass(ctx, cam, m.x0 + 60 + rnd() * (m.x1 - m.x0 - 120), m.y0 + 40 + rnd() * 80, z0 + m.z + m.t, 20 + rnd() * 8, rnd, ink);
+      const vpts = [];
+      for (let j = 0; j <= 4; j++) vpts.push({ x: m.x0 + 30 + j * 4, y: m.y1 + 2, z: z0 + m.z - j * 30 });
+      vine3d(ctx, cam, vpts, rnd, ink);
+    },
+  };
 })(window.PD = window.PD || {});

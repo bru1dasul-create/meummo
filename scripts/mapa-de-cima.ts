@@ -403,6 +403,15 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
       for (let y = y0 + m(1); y < y1 - m(0.8); y += m(1.6)) for (let x = x0 + m(0.9); x < x1 - m(0.8); x += m(1.6)) cv.rect(x, y, x + m(0.6), y + m(0.6), shade(C.predio, 0.65), 0.8);
       const [cx, cy, r] = [x1 - m(1.3), y0 + m(1.3), m(0.7)];
       cv.ellipse(cx, cy, r, r, hex('#4a86c8'));
+    } else if (t === 'estacao') {
+      // a estação do Capão maior: a laje do bloco da entrada, o bloco da plataforma e a cobertura curva em cima dos
+      // trilhos (com a beirada lilás da linha)
+      const back = m(Number(prop(o, 'plataforma') ?? 3.6));
+      roof(x0, y0, x1, y1, C.predio);
+      cv.rect(x0 + m(1.1), y0 - m(4.7), x1 - m(1.1), y0 + back - m(0.25), hex('#c3c8cb'), 1);
+      for (let x = x0 + m(1.1); x < x1 - m(1.1); x += m(0.8)) cv.rect(x, y0 - m(4.7), x + 1, y0 + back - m(0.25), hex('#9ea4a8'), 0.6);
+      cv.rect(x0 + m(1.1), y0 + back - m(0.55), x1 - m(1.1), y0 + back - m(0.25), hex(String(prop(o, 'linha') ?? '#8a63b8')), 1);
+      outline(x0 + m(1.1), y0 - m(4.7), x1 - m(1.1), y0 + back - m(0.25), C.contorno, 1, 0.7);
     } else if (t === 'muro') roof(x0, y0, x1, y1, C.muro);
     else if (t === 'gradil' || t === 'portao') {
       cv.rect(Math.min(x0, x1 - 1.5), Math.min(y0, y1 - 1.5), Math.max(x1, x0 + 1.5), Math.max(y1, y0 + 1.5), C.ferro);

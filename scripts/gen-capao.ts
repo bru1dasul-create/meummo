@@ -1377,7 +1377,7 @@ function footBox(s: Shape): Box | null {
   if (s.type === 'placa-rua') return squareBox(s.x, s.y, 0.2);
   if (s.point) return null;
   if (s.type === 'portao' && p.aberto) return null;
-  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
+  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
   return null;
 }
 /** As caixas que seguram o pé (a cobertura do posto só nos quatro pilares; o balanço só nos dois pés de ferro). */
@@ -2048,7 +2048,8 @@ const URBAN_S = 90;
 /** O caminho de terra embaixo do viaduto (y), da beira antiga até a Rua do Córrego; as ruas novas chegam até ele. */
 const UNDER = { y0: 7.5, y1: 11 };
 /** A estação (o prédio de baixo do viaduto; a plataforma fica lá em cima) e o largo da frente. */
-const ESTACAO = { x0: 157, x1: 187, y0: 6.6, y1: 13 };
+// (o bloco de trás encosta no viaduto: 5 cm de folga, para o vão até os pilares ficar com 1,25 m, sem entalar)
+const ESTACAO = { x0: 157, x1: 187, y0: 6.05, y1: 13 };
 const LARGO = { x0: RUA_CORREGO.x1, x1: 188.9, y0: 13, y1: 16 };
 /** A pracinha da estação. */
 const PRACINHA = { x0: 155.5, x1: 188, y0: 16, y1: AVENIDA.y0 - 1.5 };
@@ -2263,9 +2264,10 @@ if (CAPAO_MAIOR) {
     if (x > ESTACAO.x0 - 1 && x < ESTACAO.x1 + 1) continue; // (na frente da estação, não)
     cenario.push(point('cipo', round(x), VIADUCT.y1 + 0.05, { comprimento: round(2 + nrng() * 4), base: 8 }));
   }
-  // a estação: o prédio de baixo do viaduto, fechado (o portão de enrolar baixado e a barreira na frente), o nome pintado
-  // na parede e a mata tomando conta; a saída para o leste (o metrô) fica para depois
-  place(rect('casa', ESTACAO.x0, ESTACAO.x1, ESTACAO.y0, ESTACAO.y1, { altura: 6.2, andares: 2, cor: '#b4ada0', caixaDagua: false, abandonada: true, pixo: true, cipo: 0.45, musgo: true, plantas: true, morador: 'ninguem', pintura: 'ESTAÇÃO CAPÃO REDONDO' }, 'Estação Capão Redondo'));
+  // a estação (vestida em 23/11): o prédio de baixo do viaduto, fechado (as portas de aço baixadas e a barreira na
+  // frente), com a faixa lilás da linha e o nome, e a plataforma lá em cima, na altura do viaduto, com a cobertura curva
+  // em cima dos trilhos; a mata tomando conta. A saída para o leste (o metrô) fica para depois
+  place(rect('estacao', ESTACAO.x0, ESTACAO.x1, ESTACAO.y0, ESTACAO.y1, { altura: 8, frente: 6.5, plataforma: 3.6, linha: '#8a63b8', letreiro: 'ESTAÇÃO CAPÃO REDONDO', cipo: 0.45, musgo: true, pixo: true }, 'Estação Capão Redondo'));
   place(rect('barreira', 169, 175, ESTACAO.y1 + 0.25, ESTACAO.y1 + 0.75, { altura: 1.1 }));
   place(point('placa', 176.6, ESTACAO.y1 + 1.35, { texto: 'ESTAÇÃO FECHADA', poste: true }));
   // na emenda com a rua antiga, a placa da estação aponta para cá; e uma de rua na esquina da Rua do Córrego
@@ -2599,7 +2601,8 @@ for (const s of cenario) {
   else if (s.type === 'parquinho') {
     for (const b of boxesOf(s)) colisao.push(rect('parquinho', b.x0, b.x1, b.y0, b.y1, { bloqueiaTiro: false, altura: Number(p.altura) }));
   } else if (s.type === 'cachoeira') colisao.push(rect('cachoeira', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
-  // o Capão maior: a banca da feira é baixa (a pedrinha passa)
+  // o Capão maior: a estação segura tudo; a banca da feira é baixa (a pedrinha passa)
+  else if (s.type === 'estacao') colisao.push(rect('estacao', s.x, s.x + s.w!, s.y, s.y + s.h!, { altura: Number(p.altura) }));
   else if (s.type === 'banca-frutas') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
 }
 // o chão embaixo de cada galho dos saguis é andável (o servidor põe o pé do sagui ali)

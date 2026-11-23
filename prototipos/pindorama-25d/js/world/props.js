@@ -6022,6 +6022,8 @@
   PD.props = {
     Prop, Building, House, HouseBack, TreeTrunk, TreeCanopy, Pole, Wall, Small, TrafficLight, Fence, Pillar, bbox, poly,
     // para as plantas da mata (flora.js) e as coisas da cidade (city.js) desenharem com o mesmo traço
-    help: { INK, CANOPY_INK, BARK, CANOPY, FONT_SIGN, tuftPath, limbPoly, circleShadow, lineShadow, quadShadow, taperShadow, boxShadow, box, onWall, pixo, crownPaint, roofTree },
+    // (`overgrowth`, `mossWall` e `vines`: o cipó, o musgo e as trepadeiras das paredes, para os prédios de fora, como a
+    // estação do Capão maior, em fundo.js)
+    help: { INK, CANOPY_INK, BARK, CANOPY, FONT_SIGN, tuftPath, limbPoly, circleShadow, lineShadow, quadShadow, taperShadow, boxShadow, box, onWall, pixo, crownPaint, roofTree, overgrowth, mossWall, vines },
   };
 })(window.PD = window.PD || {});
