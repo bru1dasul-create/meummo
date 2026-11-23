@@ -4060,6 +4060,12 @@
       super.draw(ctx, time);
       this.alpha = a;
       if (this.d.kind === 'fogueira') this._flames(ctx, time);
+      // o que mexe por cima da imagem pronta (as velas acesas, as fitas no vento, o brilho da caverna: sul.js)
+      if (this.fl && this.fl.overlay) {
+        ctx.globalAlpha = a * k;
+        this.fl.overlay(ctx, this.cam, this.d, this.z0, time);
+        ctx.globalAlpha = 1;
+      }
     }
     constructor(world, d) {
       const fp = d.x0 !== undefined ? { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 } : { x0: d.x - (d.r || 30), x1: d.x + (d.r || 30), y0: d.y - (d.r || 30), y1: d.y + (d.r || 30) };

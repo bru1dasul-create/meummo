@@ -12,6 +12,7 @@ import path from 'node:path';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { DOWN, isDir, type Dir } from '../shared/dir';
 import type { SavedInventory } from './inventory';
+import type { ActiveEffectInfo } from '../shared/items';
 import type { QuestLog } from '../shared/quests';
 import { lookFromName } from '../shared/look';
 import { nameKey } from '../shared/names';
@@ -43,6 +44,11 @@ export interface CharacterData {
    * mundo ao carregar (src/shared/attributes.ts: cleanAttributes).
    */
   attributes?: Partial<Record<string, number>> | null;
+  /**
+   * Os efeitos com tempo que estavam valendo (a Banana, a Água de Coco, a garrafada), com quanto faltava de cada um
+   * (null ou ausente = nenhum). O relógio deles fica parado fora do jogo. Conferidos pelo mundo ao carregar.
+   */
+  effects?: ActiveEffectInfo[] | null;
 }
 
 /** A classe escolhida e os pontos de cada habilidade dela, como ficam salvos. */
@@ -116,6 +122,9 @@ export const MIGRATIONS: readonly string[] = [
   `ALTER TABLE characters ADD COLUMN hero TEXT`,
   // versão 7: os pontos dos atributos (JSON: atributo → pontos); quem já existia começa com todos os pontos para distribuir
   `ALTER TABLE characters ADD COLUMN attributes TEXT`,
+  // versão 8: os efeitos com tempo que estavam valendo (JSON: o que mexe, o item, quanto e quanto faltava); quem já existia
+  // começa sem efeito
+  `ALTER TABLE characters ADD COLUMN effects TEXT`,
 ];
 
 interface CharacterRow {
@@ -135,9 +144,10 @@ interface CharacterRow {
   explored: string | null;
   hero: string | null;
   attributes: string | null;
+  effects: string | null;
 }
 
-const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests, admin, explored, hero, attributes';
+const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests, admin, explored, hero, attributes, effects';
 
 export class CharacterStore implements CharacterSaver {
   private readonly db: DatabaseSync;
@@ -171,7 +181,7 @@ export class CharacterStore implements CharacterSaver {
       'INSERT INTO characters (name, name_key, password_hash, look, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)',
     );
     this.update = this.db.prepare(
-      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, quests = ?, explored = ?, hero = ?, attributes = ?, saved_at = ? WHERE id = ?',
+      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, quests = ?, explored = ?, hero = ?, attributes = ?, effects = ?, saved_at = ? WHERE id = ?',
     );
     this.touch = this.db.prepare('UPDATE characters SET last_login_at = ? WHERE id = ?');
   }
@@ -254,6 +264,7 @@ export class CharacterStore implements CharacterSaver {
       explored: parseJson(row.explored) as Record<string, string> | null,
       hero: parseJson(row.hero) as SavedHero | null,
       attributes: parseJson(row.attributes) as Partial<Record<string, number>> | null,
+      effects: parseJson(row.effects) as ActiveEffectInfo[] | null,
       admin: row.admin === 1,
     };
   }
@@ -271,7 +282,8 @@ export class CharacterStore implements CharacterSaver {
         const explored = data.explored && Object.keys(data.explored).length > 0 ? JSON.stringify(data.explored) : null;
         const hero = data.hero && (data.hero.class !== null || Object.keys(data.hero.skills).length > 0) ? JSON.stringify(data.hero) : null;
         const attributes = data.attributes && Object.values(data.attributes).some((n) => typeof n === 'number' && n > 0) ? JSON.stringify(data.attributes) : null;
-        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, quests, explored, hero, attributes, now, id);
+        const effects = data.effects && data.effects.length > 0 ? JSON.stringify(data.effects) : null;
+        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, quests, explored, hero, attributes, effects, now, id);
       }
       this.db.exec('COMMIT');
     } catch (error) {

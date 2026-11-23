@@ -20,7 +20,7 @@ import {
   WALK_SLICE_MS,
 } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
-import { pickQuickItem, type GearLook, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
+import { pickQuickItem, useSoundOf, type GearLook, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
 import { GameMap, type SolidRect, type Tile, type TiledMap } from '../../shared/map';
 import { BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
@@ -2940,7 +2940,9 @@ class NewWorld implements NewWorldGame {
       case 'consume': {
         // alguém bebeu ou comeu: o efeito em volta dele é da view (a cura, se teve, vem no `heal`)
         this.view?.consume?.(msg.id, msg.it);
-        if (msg.id === this.myId) this.sfx.play(this.items.get(msg.it)?.healPct ? 'gole' : 'comer');
+        // o som de usar, nos tempos da animação (quem está perto ouve mais baixo)
+        const used = this.items.get(msg.it);
+        if (used) this.sfx.consume(useSoundOf(used), msg.id === this.myId ? 1 : 0.45);
         break;
       }
       case 'effects': {

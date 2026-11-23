@@ -422,13 +422,33 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     else if (t === 'cachoeira') {
       roof(x0, y0, x1, y1, C.pedra);
       cv.line([[(x0 + x1) / 2, y0], [(x0 + x1) / 2, y1]], Math.max(1, escala * 0.5), C.branco, 0.9);
+    } else if (t === 'caverna') {
+      // o morro de pedra e a boca escura no lado sul
+      const [cx, cy, rx, ry] = [(x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2];
+      cv.ellipse(cx, cy, rx + 1, ry + 1, C.contorno, 0.6);
+      cv.ellipse(cx, cy, rx, ry, C.pedra);
+      cv.ellipse(cx - rx * 0.2, cy - ry * 0.2, rx * 0.45, ry * 0.4, mix(C.pedra, C.branco, 0.35), 0.7);
+      cv.ellipse(s(num(o, 'bocaX', (o.x + (o.width ?? 0) / 2) / M) * M), y1 - m(0.4), m(1.6), m(0.7), hex('#1a1512'), 0.95);
+    } else if (t === 'torre-mirante') {
+      // o telhado de sapê da torre (visto de cima) e a escada do lado sul
+      const yb = y1 - m(num(o, 'escada', 1));
+      cv.rect(x0, yb, x1, y1, shade(C.madeira, 0.85), 0.9);
+      roof(x0 - m(0.45), y0 - m(0.45), x1 + m(0.45), yb + m(0.45), hex('#bf9b4e'));
+    } else if (t === 'guarda-corpo') cv.rect(x0, y0, Math.max(x1, x0 + 1), Math.max(y1, y0 + 1), shade(C.madeira, 0.7), 0.95);
+    else if (t === 'painel-mirante') cv.rect(x0, y0 - 1, x1, y1 + 1, hex('#2f5d4a'), 0.95);
+    else if (t === 'coreto') {
+      // o telhado de zinco redondo (visto de cima) e a lanterninha no meio
+      const [cx, cy, r] = [(x0 + x1) / 2, (y0 + y1) / 2, m(num(o, 'raio', 4.4) + 0.5)];
+      cv.ellipse(cx, cy, r + 1, r + 1, C.contorno, 0.6);
+      cv.ellipse(cx, cy, r, r, hex('#8e9b95'));
+      cv.ellipse(cx, cy, r * 0.22, r * 0.22, hex('#d9d0b8'));
     }
   }
   for (const o of scen) {
     if (!o.point) continue;
     const [x, y] = [s(o.x), s(o.y)];
     const t = o.type ?? '';
-    if (t === 'pedra') {
+    if (t === 'pedra' || t === 'rocha') {
       const r = s(num(o, 'raio', 0.5) * M);
       cv.ellipse(x, y, r + 1, r + 1, C.contorno, 0.6);
       cv.ellipse(x, y, r, r, C.pedra);
@@ -442,7 +462,14 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     } else if (t === 'mesa') {
       cv.ellipse(x, y, m(0.5) + 1, m(0.5) + 1, C.contorno, 0.6);
       cv.ellipse(x, y, m(0.5), m(0.5), hex('#d84a3a'));
-    } else if (t === 'poste' || t === 'poste-praca' || t === 'semaforo') cv.ellipse(x, y, Math.max(1, m(0.2)), Math.max(1, m(0.2)), C.contorno, 0.9);
+    } else if (t === 'poste' || t === 'poste-praca' || t === 'semaforo' || t === 'esteio') cv.ellipse(x, y, Math.max(1, m(0.2)), Math.max(1, m(0.2)), C.contorno, 0.9);
+    else if (t === 'oferenda') cv.ellipse(x, y, m(0.4), m(0.3), hex('#f2c230'), 0.9);
+    else if (t === 'luneta') cv.ellipse(x, y, Math.max(1, m(0.25)), Math.max(1, m(0.25)), hex('#2f5d4a'), 0.95);
+    else if (t === 'brasas') {
+      cv.ellipse(x, y, m(0.8), m(0.8), C.pedra);
+      cv.ellipse(x, y, m(0.5), m(0.5), hex('#6d6a66'));
+      cv.ellipse(x, y, m(0.15), m(0.15), hex('#e0703a'));
+    }
   }
 
   // ----- as moitas de mata fechada e o bambu -----

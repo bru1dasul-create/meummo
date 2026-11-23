@@ -169,7 +169,7 @@ describe('Mapa 02 (Guarapiranga): formato do mapa novo', () => {
     expect(back.spots.has('chegada-guarapiranga')).toBe(true);
   });
 
-  it('cada coisa sólida do cenário tem a sua colisão (tronco, poste, casa, banco, muro, cachoeira, trave, pilar do coreto...)', () => {
+  it('cada coisa sólida do cenário tem a sua colisão (tronco, poste, casa, banco, muro, cachoeira, trave, coreto...)', () => {
     const covered = (x: number, y: number) => {
       const [i, j] = [Math.floor(x / BUCKET), Math.floor(y / BUCKET)];
       for (const [di, dj] of [[0, 0], [-1, 0], [0, -1], [-1, -1], [1, 0], [0, 1], [1, 1], [1, -1], [-1, 1]] as const) {
@@ -177,14 +177,27 @@ describe('Mapa 02 (Guarapiranga): formato do mapa novo', () => {
       }
       return false;
     };
-    const SOLID = ['arvore', 'poste', 'pedra', 'tronco-caido', 'casa', 'banco', 'fogueira', 'poste-praca', 'barril', 'caixote', 'ponto-onibus', 'muro', 'cachoeira', 'barreira'];
+    const SOLID = ['arvore', 'poste', 'pedra', 'tronco-caido', 'casa', 'banco', 'fogueira', 'poste-praca', 'barril', 'caixote', 'ponto-onibus', 'muro', 'cachoeira', 'barreira', 'coreto', 'caverna', 'rocha', 'oferenda', 'esteio', 'brasas', 'torre-mirante', 'guarda-corpo', 'luneta', 'painel-mirante'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
       const solid = SOLID.includes(o.type) || (o.type === 'arbusto' && prop(o, 'fechado') === true) || (o.type === 'placa' && prop(o, 'poste') === true);
       if (solid) expect(covered(x, y), `${o.type} em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBe(true);
       const r = rectOf(o);
-      // a trave do campinho: os dois paus; o coreto: os quatro pilares (o meio é livre)
+      // a trave do campinho: os dois paus; a cobertura (a varanda do clube): os quatro pilares (o meio é livre)
       if (o.type === 'trave') for (const ty of [r.y0, r.y1]) expect(covered((r.x0 + r.x1) / 2, ty), `trave em (${x}, ${ty})`).toBe(true);
+      if (o.type === 'coreto') {
+        // o coreto: a base octogonal inteira (até perto das quinas de 45°) e a escada do lado sul seguram; fora, livre
+        const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
+        const R = Number(prop(o, 'raio'));
+        const f = R * Math.cos(Math.PI / 8);
+        for (let a = 0; a < 360; a += 15) {
+          const t = (a * Math.PI) / 180;
+          const inner = f * 0.9;
+          expect(covered(cx + Math.cos(t) * inner, cy + Math.sin(t) * inner), `coreto por dentro a ${a}°`).toBe(true);
+          expect(covered(cx + Math.cos(t) * (R + 0.4), cy + Math.sin(t) * (R + 0.4)) && !(a > 60 && a < 120), `fora do coreto a ${a}°`).toBe(false);
+        }
+        expect(covered(cx, cy + f + 1), 'a escada do coreto').toBe(true);
+      }
       if (o.type === 'cobertura') {
         for (const [px, py] of [[r.x0 + 0.6, r.y0 + 0.6], [r.x1 - 0.6, r.y0 + 0.6], [r.x0 + 0.6, r.y1 - 0.6], [r.x1 - 0.6, r.y1 - 0.6]] as const) expect(covered(px, py), `pilar em (${px}, ${py})`).toBe(true);
         expect(covered(x, y), 'meio do coreto').toBe(false);
@@ -374,13 +387,13 @@ describe('Mapa 02: a chegada e o Refúgio (no mesmo lugar de antes)', () => {
 describe('Mapa 02: o mapa inteiro aberto (400 × 320)', () => {
   it('dá para ir a pé da chegada até cada lugar do mapa', () => {
     for (const [x, y, r, what] of [
-      [16, 50, 0.5, 'Mirante'],
+      [17.5, 51.5, 0.5, 'Mirante (o deque, ao lado da torre)'],
       [18, 104, 3, 'Brejo do Sul'],
       [30, 200, 1, 'Trilha da Margem Sul'],
-      [34, 270, 1.5, 'boca da Caverna Sagrada'],
+      [34, 266.3, 0.5, 'boca da Caverna Sagrada (entre as oferendas)'],
       [158, 33, 3.2, 'fogueira da praça do Brejo Maior'],
       [233, 25, 0.5, 'meio do campinho'],
-      [327, 30, 0.5, 'dentro do coreto'],
+      [327, 36, 0.6, 'pé da escada do coreto (não dá para subir: a base segura)'],
       [392, 29, 1.5, 'frente da cachoeira'],
       [383, 23.2, 0.5, 'fim da Trilha da Cachoeira (a beira do poço)'],
       [296, 89, 0.5, 'pátio do clube'],

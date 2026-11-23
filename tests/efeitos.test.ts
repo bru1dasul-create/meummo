@@ -6,9 +6,9 @@
 import { describe, expect, it } from 'vitest';
 import { loadItemDefs, parseItemDefs } from '../src/server/items';
 import { Tuning } from '../src/server/tuning';
-import { World } from '../src/server/world';
+import { characterData, World } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
-import { effectLabel, useLabel } from '../src/shared/items';
+import { effectLabel, useLabel, useSoundOf } from '../src/shared/items';
 import { GameMap, type TiledObject } from '../src/shared/map';
 import { maxHpFor } from '../src/shared/progression';
 import { FakeClock, FakeConn } from './helpers';
@@ -26,6 +26,25 @@ describe('os efeitos em data/items.json', () => {
     expect(useLabel(items.get('banana')!)).toBe('+5 de Destreza por 3 min');
     expect(useLabel(items.get('garrafada')!)).toBe('cura 40% da vida e a vida volta 3× mais rápido fora de luta por 3 min');
     expect(useLabel(items.get('erva_arruda')!)).toBe('cura 30');
+  });
+
+  it('o som de usar (pedido do dono: a cura na poção, comendo e tomando na banana e na água de coco)', () => {
+    const items = loadItemDefs();
+    expect(['garrafada_pequena', 'garrafada', 'garrafada_grande', 'banana', 'agua_coco', 'erva_arruda'].map((id) => useSoundOf(items.get(id)!))).toEqual([
+      'garrafada',
+      'garrafada',
+      'garrafada',
+      'mordida',
+      'canudinho',
+      'cura',
+    ]);
+    // sem o campo "som": a garrafada para quem cura por %, a cura, ou a mordida
+    expect(useSoundOf({ heal: 0, healPct: 30 })).toBe('garrafada');
+    expect(useSoundOf({ heal: 10 })).toBe('cura');
+    expect(useSoundOf({ heal: 0 })).toBe('mordida');
+    const base = { nome: 'Teste', preco: 1, tipo: 'consumivel', cura: 5 };
+    expect(parseItemDefs({ a: { ...base, som: 'canudinho' } }).get('a')!.useSound).toBe('canudinho');
+    expect(() => parseItemDefs({ a: { ...base, som: 'arroto' } })).toThrow(/"som" precisa ser/);
   });
 
   it('o arquivo é conferido (e explica em português)', () => {
@@ -171,6 +190,49 @@ describe('os efeitos no jogo', () => {
     other.tick();
     expect(lastEffects(conn)).toEqual([{ k: 'destreza', it: 'banana', v: 5, ms: 180_000 - 2 * TICK_MS }]);
     expect(player.effectiveAttributes().destreza).toBe(5);
+  });
+
+  it('ficam salvos ao sair: na volta, valem pelo tempo que faltava (o relógio fica parado fora do jogo)', () => {
+    const { world, clock, player, run, use } = setup();
+    use('forte'); // +20 de Destreza e +4 de Vitalidade por 1 min
+    run(20_000);
+    const saved = characterData(player, 'praca', clock.now());
+    expect(saved.effects).toEqual([
+      { k: 'destreza', it: 'forte', v: 20, ms: 40_000 },
+      { k: 'vitalidade', it: 'forte', v: 4, ms: 40_000 },
+    ]);
+    world.leave(player);
+    clock.advance(3_600_000); // uma hora fora do jogo: não conta
+    const conn = new FakeConn();
+    const back = world.join('Ana', conn, { character: { id: 1, name: 'Ana', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: 0 as const, look: 1, inventory: null, effects: saved.effects }, created: false });
+    if (!back.ok) throw new Error(back.reason);
+    expect(back.player.effectiveAttributes()).toMatchObject({ destreza: 20, vitalidade: 4 });
+    expect(back.player.maxHp).toBe(maxHpFor(1) + 20); // a Vitalidade do efeito já conta na vida
+    expect(conn.ofType('welcome')[0]!.stats.attrBonus).toMatchObject({ destreza: 20, vitalidade: 4 });
+    run(TICK_MS);
+    expect(conn.ofType('effects').at(-1)!.list.map((e) => [e.k, e.ms])).toEqual([
+      ['destreza', 40_000 - TICK_MS],
+      ['vitalidade', 40_000 - TICK_MS],
+    ]);
+    run(40_000);
+    expect(back.player.effects.size).toBe(0);
+    expect(back.player.maxHp).toBe(maxHpFor(1));
+  });
+
+  it('os efeitos salvos são conferidos (o que não existe ou passou dos limites fica de fora)', () => {
+    const { world, clock } = setup();
+    const conn = new FakeConn();
+    const effects = [
+      { k: 'sorte', it: 'trevo', v: 5, ms: 10_000 },
+      { k: 'forca', it: 'x', v: 500, ms: 10_000 },
+      { k: 'regen', it: 'garrafada', v: 3, ms: -5 },
+      { k: 'espirito', it: 'agua_coco', v: 5, ms: 99_999_999 }, // mais de 1 hora: fica 1 hora
+      'lixo',
+    ];
+    const joined = world.join('Cida', conn, { character: { id: 2, name: 'Cida', level: 1, xp: 0, hp: null, zone: null, x: null, y: null, dir: 0 as const, look: 1, inventory: null, effects: effects as never }, created: false });
+    if (!joined.ok) throw new Error(joined.reason);
+    expect([...joined.player.effects.keys()]).toEqual(['espirito']);
+    expect(joined.player.effects.get('espirito')!.until - clock.now()).toBe(3_600_000);
   });
 
   it('pelo painel: quanto dura e o que dá', () => {

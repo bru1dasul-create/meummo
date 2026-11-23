@@ -349,8 +349,50 @@
         const shape = toy === 'gira-gira' ? { x, y, r: (pr.raio || 0.8) * 100 } : rect(o);
         map.props.push({ kind: 'parquinho', toy, ...shape, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, broken: !!pr.quebrado, plants: !!pr.plantas, angle: pr.olhando ?? 90 });
       } else if (k === 'cachoeira') {
-        // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` ('sul', 'norte', 'leste', 'oeste')
-        map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo });
+        // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` (por enquanto só 'sul');
+        // `estilo` 'comporta' (a barragem): o muro de pedra com a boca em arco e o tanque de `tanque` m
+        map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo, style: pr.estilo || null, basin: (pr.tanque || 3) * 100 });
+      } else if (k === 'torre-mirante') {
+        // a torre de observação do mirante (sul.js): a caixa é a torre com a escada do lado sul (`escada`, m); `altura`
+        // é a do andar de cima (m)
+        map.props.push({ kind: 'torre-mirante', ...rect(o), h: (pr.altura || 6.2) * 100, stair: (pr.escada || 1) * 100 });
+      } else if (k === 'guarda-corpo') {
+        // o guarda-corpo de madeira (sul.js): uma caixa fina, ao longo do lado comprido; `altura`
+        map.props.push({ kind: 'guarda-corpo', ...rect(o), h: (pr.altura || 0.95) * 100 });
+      } else if (k === 'luneta') {
+        // a luneta de moedas do mirante (sul.js): `olhando` (graus, 0 = leste)
+        map.props.push({ kind: 'luneta', x, y, r: 20, angle: pr.olhando ?? 0 });
+      } else if (k === 'painel-mirante') {
+        // o painel com o mapa da represa e as aves (sul.js), virado para o sul
+        map.props.push({ kind: 'painel-mirante', ...rect(o) });
+      } else if (k === 'caverna') {
+        // a Caverna Sagrada (sul.js): o morro de pedra (a caixa) com a boca no lado sul: `boca` (largura, m), `bocaX` (o
+        // meio dela, m; sem ele, o meio da caixa), `bocaAltura` (m), `altura` (do morro, m), `brilho` (a luz lá dentro),
+        // `inscricoes`, `pinturas`, `raizes` e `arvore` (a arvorezinha no alto; todos ligados se não disser nada)
+        const r0 = rect(o);
+        const mx = pr.bocaX != null ? pr.bocaX * 100 : (r0.x0 + r0.x1) / 2;
+        map.props.push({ kind: 'caverna', ...r0, x: (r0.x0 + r0.x1) / 2, y: (r0.y0 + r0.y1) / 2, h: (pr.altura || 5) * 100, mouth: { x: mx, w: (pr.boca || 3.2) * 100, hm: (pr.bocaAltura || 2.5) * 100 }, glow: pr.brilho || '#3fd6c8', glyphs: pr.inscricoes !== false, paint: pr.pinturas !== false, roots: pr.raizes !== false, tree: pr.arvore !== false });
+      } else if (k === 'rocha') {
+        // a pedra solta da caverna (sul.js): `raio`, `altura` (m) e `musgo`
+        map.props.push({ kind: 'rocha', x, y, r: (pr.raio || 1) * 100, h: (pr.altura || 1.4) * 100, moss: pr.musgo !== false });
+      } else if (k === 'oferenda') {
+        // a pedra chata com as velas acesas, a cuia, a cabaça e as flores (sul.js): `velas`
+        map.props.push({ kind: 'oferenda', x, y, r: 40, candles: pr.velas || 4 });
+      } else if (k === 'brasas') {
+        // a fogueira apagada da caverna, com brasas e o fiozinho de fumaça (sul.js): `raio` da roda de pedras
+        map.props.push({ kind: 'brasas', x, y, r: (pr.raio || 0.7) * 100 });
+      } else if (k === 'esteio') {
+        // o tronco fincado com a cabaça, as penas e as fitas no vento (sul.js): `altura`, `fitas`
+        map.props.push({ kind: 'esteio', x, y, r: 12, h: (pr.altura || 2.2) * 100, ribbons: pr.fitas !== false });
+      } else if (k === 'coreto') {
+        // o coreto da praça em ruínas (sul.js): a base octogonal de `raio` m no meio da caixa, a `altura` da base, a
+        // escada do lado sul (`escada: false`, sem), `ruina` (o reboco caído, a pichação, o gradil arrancado, o buraco
+        // no telhado) e `cipo` (0 a 1). A caixa do desenho é a da base com a escada (a colisão vem do mapa)
+        const r0 = rect(o);
+        const cx = (r0.x0 + r0.x1) / 2, cy = (r0.y0 + r0.y1) / 2;
+        const R = (pr.raio || 4.4) * 100, Rf = R * Math.cos(Math.PI / 8);
+        const stairs = pr.escada !== false;
+        map.props.push({ kind: 'coreto', x: cx, y: cy, r: R, x0: cx - Rf, x1: cx + Rf, y0: cy - Rf, y1: cy + Rf + (stairs ? 128 : 0), h: (pr.altura || 0.95) * 100, stairs, ruin: !!pr.ruina, vine: typeof pr.cipo === 'number' ? pr.cipo : pr.cipo ? 0.5 : 0 });
       } else if (k === 'cobertura') {
         // a cobertura do posto abandonado (sul.js): a laje no alto (por cima de quem está embaixo, fica transparente com
         // o herói embaixo ou atrás) e os 4 pilares (objetos à parte, para cada um ficar na frente ou atrás do herói)

@@ -70,10 +70,11 @@ import type { GameMap, MonsterZone, Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, footTile, nearestBodySpot, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
-import { emptyEquipment, gearLookOf, healAmount, MAX_GOLD, sellPrice, type ActiveEffectInfo, type ItemEffect, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
+import { emptyEquipment, gearLookOf, healAmount, MAX_GOLD, sellPrice, type ActiveEffectInfo, type EffectKey, type ItemEffect, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import {
   ATTRIBUTE_IDS,
+  isAttributeId,
   attributePointsLeft,
   attributePointsSpent,
   cleanAttributes,
@@ -110,7 +111,8 @@ import {
 import type { CharacterData, CharacterSaver, SavedCharacter } from './accounts';
 import type { AreaDef } from './tuning';
 import { Inventory } from './inventory';
-import { Monster, Npc, Player, type Conn, type Entity, type Hazard, type PierceShot, type Projectile, type ZoneState } from './entities';
+import { EFFECT_LIMITS } from './items';
+import { Monster, Npc, Player, type ActiveEffect, type Conn, type Entity, type Hazard, type PierceShot, type Projectile, type ZoneState } from './entities';
 import type { MonsterAttack, MonsterDef } from './monsters';
 import { DayNightClock } from './dayNight';
 import { twilightMs } from '../shared/dayNight';
@@ -637,6 +639,9 @@ export class World {
     player.level = level;
     player.xp = level >= MAX_LEVEL ? 0 : xp;
     player.attributes = cleanAttributes(level, saved.attributes);
+    // os efeitos com tempo que estavam valendo voltam com o tempo que faltava (antes da vida máxima: a Vitalidade conta)
+    player.effects = cleanSavedEffects(saved.effects, this.now());
+    player.effectsDirty = player.effects.size > 0;
     player.maxHp = playerMaxHp(player, this.combat);
     // Volta com a vida que tinha (sair do jogo não cura); na vila (ou sem vida salva), vida cheia.
     player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
@@ -683,7 +688,7 @@ export class World {
       if (player.characterId === null) continue;
       // Desmaiado num mapa sem vila (renascerEm): na volta ele acorda na vila do outro mapa.
       const zone = player.dead ? (this.map.respawnMap ?? this.map.id) : this.map.id;
-      list.push({ id: player.characterId, data: characterData(player, zone) });
+      list.push({ id: player.characterId, data: characterData(player, zone, this.now()) });
     }
     if (list.length === 0) return;
     try {
@@ -3157,6 +3162,26 @@ function playerMaxHp(player: Player, rules: Pick<CombatRules, 'playerHpFactor' |
 }
 
 /** O que fica salvo de um jogador. */
+/**
+ * Os efeitos com tempo salvos, conferidos: só o que existe (um atributo ou 'regen'), com valor e tempo dentro dos limites
+ * de data/items.json; o relógio de cada um volta a andar agora (`now`).
+ */
+function cleanSavedEffects(saved: unknown, now: number): Map<EffectKey, ActiveEffect> {
+  const out = new Map<EffectKey, ActiveEffect>();
+  if (!Array.isArray(saved)) return out;
+  for (const raw of saved.slice(0, 16)) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const { k, it, v, ms } = raw as Record<string, unknown>;
+    const key: EffectKey | null = k === 'regen' ? 'regen' : isAttributeId(k) ? k : null;
+    if (!key || typeof it !== 'string' || typeof v !== 'number' || typeof ms !== 'number' || !Number.isFinite(v) || !Number.isFinite(ms) || ms <= 0) continue;
+    const [min, max] = key === 'regen' ? EFFECT_LIMITS.vidaVolta : EFFECT_LIMITS.pontos;
+    if (v < min || v > max || (key !== 'regen' && !Number.isInteger(v))) continue;
+    const left = Math.min(ms, EFFECT_LIMITS.minutos[1] * 60_000);
+    out.set(key, { key, item: it.slice(0, 40), value: v, until: now + left });
+  }
+  return out;
+}
+
 /** O mapa explorado salvo, conferido: só textos (mapa → grade), até 64 mapas. */
 function cleanExplored(saved: unknown): Record<string, string> {
   const out: Record<string, string> = {};
@@ -3167,12 +3192,18 @@ function cleanExplored(saved: unknown): Record<string, string> {
   return out;
 }
 
-export function characterData(player: Player, zone: string): CharacterData {
+/**
+ * O que fica salvo de um jogador. `now` (o relógio do jogo): para guardar quanto falta de cada efeito com tempo (sem
+ * ele, os efeitos não entram).
+ */
+export function characterData(player: Player, zone: string, now?: number): CharacterData {
   const explored: Record<string, string> = { ...player.exploredSaved };
   for (const [map, grid] of player.explored) explored[map] = encodeGrid(grid);
   const hero = { class: player.heroClass, skills: { ...player.skillPoints } };
   const attributes = { ...player.attributes };
-  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored, hero, attributes };
+  // os efeitos com tempo e quanto falta de cada um (o relógio deles fica parado enquanto ele está fora do jogo)
+  const effects: ActiveEffectInfo[] = now === undefined ? [] : [...player.effects.values()].filter((e) => e.until > now).map((e) => ({ k: e.key, it: e.item, v: e.value, ms: Math.round(e.until - now) }));
+  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored, hero, attributes, effects };
   // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
   if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
   return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };

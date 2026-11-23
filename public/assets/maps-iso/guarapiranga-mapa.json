@@ -226,6 +226,18 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Torre do Mirante",
+      "x": 13.95,
+      "y": 48.45,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Painel da Represa",
+      "x": 18,
+      "y": 46.55,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Muro grafitado",
       "x": 145.7,
       "y": 32,
@@ -276,7 +288,7 @@
     {
       "nome": "Comporta",
       "x": 218,
-      "y": 254.7,
+      "y": 253.7,
       "tipo": "lugar"
     }
   ]

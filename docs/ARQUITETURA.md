@@ -152,7 +152,9 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   lugar). `Player.effectiveAttributes()` (os postos mais os dos efeitos) é o que vale no tiro, nas habilidades e na vida
   máxima; os pontos para distribuir contam só os postos. `World.expireEffects` tira os que acabaram (a cada tick) e o
   `effects` leva a lista ao navegador (também depois de mudar de mapa); o `stats` leva o `attrBonus`. Usar um consumível
-  manda `consume` para quem vê (o gancho `view.consume`) e, se curou, o `heal`. Não ficam salvos.
+  manda `consume` para quem vê (o gancho `view.consume`) e, se curou, o `heal`. Ficam salvos com quanto faltava
+  (`CharacterData.effects`, passo 8 de `MIGRATIONS`; `characterData(player, zona, now)`): na volta, `cleanSavedEffects`
+  confere e o relógio de cada um volta a andar (parado enquanto o jogador está fora).
 - **Receitas** (protocolo 51): `data/receitas.json` (a chave é o item que sai; `precisa` = os ingredientes; `quantidade`
   opcional), lidas e conferidas por `src/server/recipes.ts` (`checkRecipes`: os itens existem e cada NPC só prepara
   receita que existe; na partida do servidor). O campo `receitas` de um NPC em `data/npcs.json` diz o que ele prepara;

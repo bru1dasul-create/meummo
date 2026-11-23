@@ -34,7 +34,47 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a Barragem de 1909 vestida (na `main`).** O dono: "pode seguir vestindo a barragem de 1909". O prédio
+- **Agora (24/11): o mirante vestido (na `main`); o Guarapiranga fica em pausa.** O dono: "pode seguir vestindo o
+  mirante / sobre a caverna deixa para futuramente, já já paramos nesse mapa e retornamos para fazer detalhes de outras
+  coisas". O `LOOKOUT` cresceu para 12..20 × 46..54 (o deque); a torre (`torre-mirante`, `LOOKOUT_TOWER` 12,15..15,75 ×
+  46,15..50,75; tmj: `altura` do andar de cima, `escada` em m) fica no canto de trás, com a escada do lado sul dentro da
+  caixa (colisão: a caixa toda; não dá para subir). O guarda-corpo do deque são quatro `guarda-corpo` (caixas finas de
+  madeira; a entrada é o vão do leste, onde chega a trilha), a `luneta` (de moedas, sem marca; `olhando`), o
+  `painel-mirante` (o mapa da represa e a garça, o biguá e o martim-pescador), um banco, os dois lampiões e helicônias.
+  `LOOKOUT_VIEW`: o gramado até a margem (as árvores sorteadas saem DEPOIS de todas postas, para não mexer no sorteio do
+  resto do mapa; o mesmo cuidado nas samambaias, que agora não nascem no deque nem na clareira da caverna). Tudo no
+  sul.js; a tecla M desenha a torre (o sapê), o guarda-corpo, a luneta e o painel. **Próximo no Guarapiranga (quando o
+  dono voltar):** a caverna por dentro (a Cuca), detalhes de cada região, a Ilha do Véu, a saída para Santo Amaro.
+- **Antes (24/11): a Caverna Sagrada vestida (na `main`).** O dono: "pode seguir vestindo a caverna". O arco de 12
+  pedras saiu; no lugar, o morro `caverna` (`CAVE_HILL`, 27..41 × 257..265, 5,4 m; sul.js; tmj: `boca`, `bocaX`,
+  `bocaAltura`, `altura`, `brilho`, `inscricoes`, `pinturas`, `raizes`, `arvore`), desenhado com o `ringRock` (a pedra
+  da cachoeira em três voltas; o `facetRock` agora só monta as voltas e chama ele), com a frente reta e em pé onde fica a
+  boca. Imagem pronta (`paint`) e, por cima, o que mexe (`overlay`, novo no `Small` do props.js): a luz lá no fundo
+  respirando, as faíscas subindo e as itacoatiaras brilhando (mais de noite; elas e a boca abrem o escuro da noite pelo
+  `flora.glows`). Coisas novas, todas no sul.js: `rocha` (a pedra solta, colisão de `pedra`), `oferenda` (pedra chata
+  com velas acesas, cuia, cabaça e flores; luz quente de noite), `brasas` (a fogueira APAGADA: roda de pedras, cinza,
+  tições, brasas e fumacinha no vento — a `fogueira` acesa marca as zonas seguras, e o teste confere isso) e `esteio`
+  (o tronco com a cabaça, as penas e as fitas no vento). O chão da clareira é `pedra`. A colisão do morro são duas
+  caixas (a frente e o fundo). O mapa visto de cima (tecla M) desenha o morro com a boca e o coreto. Não dá para entrar:
+  a boca pode virar uma `saida` para uma caverna por dentro (a Cuca, do DESIGN), se o dono quiser.
+- **Antes (24/11): o coreto vestido e os consertos do dono (na `main`).** O dono: "pode seguir vestindo o coreto /
+  porém arruma issos / efeito da agua descendo está feio / chão tbm ta feio". (1) A água que desce (`small.cachoeira`,
+  sul.js, reescrita): a lâmina sai da beirada já andando para a frente e cai em curva, verde-água em cima e branca
+  embaixo, com fios descendo cada vez mais depressa; no pé, a espuma (mancha de beira mexendo + bolhas), respingos,
+  névoa (imagem pronta), ondinhas e espuma indo embora. As pedras viraram `facetRock` (três voltas e a coroa: redondas,
+  com lados, molhadas perto da água, musgo em tufinhos). As partes paradas viram imagem por zoom (`baked`). A comporta
+  ganhou `estilo: 'comporta'` e `tanque` (m): o muro de pedra de 60 cm com a boca em arco (fiadas, pedras em cunha,
+  limo, cipó), a água correndo no túnel, o jato, a água escorrendo pelo muro e o tanque retangular de 3 m com as alas
+  de pedra (que também seguram: `GATE_WING`); o poço octogonal virou o tanque (`GATE_POOLS`, 254..257). (2) O chão: o
+  `paralelepipedo` do street.js agora tem pedras de 30 × 19 cm de quina redonda, a beira clara do lado do sol e a
+  escura do outro, tons variados, capim nas juntas (mais perto da beira) e a guia de granito em volta; o caminho da
+  barragem virou `desenho: 'placas'` e é desenhado DEPOIS das trilhas (a ponta da trilha leste fica embaixo das lajes).
+  (3) O coreto (`coreto`, sul.js; tmj: `raio`, `altura`, `ruina`, `cipo`, `escada`): base octogonal de 4,4 m com a
+  escada de 4 degraus ao sul, piso de ladrilho com a sombra do telhado, gradil, 8 colunas com mãos-francesas,
+  lambrequim, telhado em sino com costuras, ferrugem e buraco, lanterninha e pináculo. Não dá para subir: a colisão é a
+  base inteira (seis caixas por dentro do octógono) mais a escada. Em volta, quatro `poste-praca` (um apagado, um
+  torto), moitas e samambaias. O teste do Guarapiranga confere a base, a escada e que fora dela é livre.
+- **Antes (24/11): a Barragem de 1909 vestida (na `main`).** O dono: "pode seguir vestindo a barragem de 1909". O prédio
   ficou menor e mais alto (`DAM_HOUSE` 328..344 × 231..242, 7,4 m) e ganhou o estilo novo `estilo: 'historico'` no
   props.js (`historicFacade`, `historicFloor`, `archWindow`, `archDoor`, `pediment`, `clockFace`): o tijolo antigo
   (`OLD_BRICK`), a base de pedra, as pilastras nas quinas, a faixa entre os andares, a cornija com os dentículos, as

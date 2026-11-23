@@ -1227,6 +1227,16 @@
     const out = [];
     for (const p of map.props || []) if (p.kind === 'planta-cogumelo') out.push({ x: p.x, y: p.y, z: 10, r: Math.max(90, (p.r || 35) * 3.6), color: p.glow || '#3fd6c8', k: 0.65 });
     for (const v of map.veils || []) out.push({ x: v.x, y: v.y, z: 0, r: v.r * 1.15, color: '#3fd6c8', k: 0.45 });
+    // a Caverna Sagrada (sul.js): a luz que sai da boca e as velas das oferendas
+    for (const p of map.props || []) {
+      if (p.kind === 'caverna' && p.mouth) {
+        out.push({ x: p.mouth.x, y: p.y1 + 60, z: 40, r: 300, color: p.glow || '#3fd6c8', k: 0.42 });
+        const cave = PD.city && PD.city.small && PD.city.small.caverna;
+        if (p.glyphs && cave && cave.glowPoints) for (const q of cave.glowPoints(p)) out.push(q);
+      }
+      if (p.kind === 'oferenda') out.push({ x: p.x, y: p.y, z: 20, r: 130, color: '#ffc46b', k: 0.6 });
+      if (p.kind === 'brasas') out.push({ x: p.x, y: p.y, z: 10, r: 110, color: '#ff8a3a', k: 0.35 });
+    }
     return out;
   }
 
