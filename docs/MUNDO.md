@@ -34,6 +34,26 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (23/11): o polimento da lista do dono (na `main`).** Com 5 prints, ele pediu: ponto de ônibus, árvores que
+  "parecem cortadas", sombras das árvores "todas balão", calçada, rachaduras e rua feias, barcos feios, o reflexo da água,
+  peixes pulando e as casas com mais qualidade. O que mudou (js/world): **árvores** — o tronco das árvores de copa sobe um
+  pouco além da forquilha, afina até a largura dos galhos e não tem mais o risco preto em cima; os galhos ganharam o lado
+  da sombra (`limbShade`) e o contorno aberto no pé (o risco atravessava a forquilha); a embaúba desenha o pedaço de
+  cima do tronco com os mesmos anéis e sombra (o `trunk` do flora.js ganhou `open: 'top'|'both'`). **Sombra das
+  árvores** — o cone comprido (`taperShadow`, fino no pé e uma bola larga longe: o "balão") saiu: agora a sombra cai
+  perto do pé (`TREE_SUN` = 0,45 do comprimento das outras sombras) com o contorno dos tufos da copa. **Rua** — a
+  calçada da estrada (linha) tem placas de 1,1 m, juntas, sujeira e musgo, o meio-fio claro e a sarjeta
+  (`sidewalkLine` no street.js); o asfalto tem as faixas gastas das rodas; as rachaduras ficaram finas e cinza-escuro,
+  com 1 ou 2 galhinhos e pouco capim (valem também para o Capão); o gerador põe menos (8 na estrada velha, 28 na nova).
+  **Peixes** — pulam a cada 1 a 4 s, às vezes 2 ou 3 em fila, de 22 a 35 cm, até 1,5 m de altura, com o respingo
+  (antes: 7 cm, a cada 2,5 a 7 s). **Reflexo** — some aos poucos longe da base (3 faixas, `FADE`) e balança com a água:
+  é montado numa tela à parte, com metade da resolução, e volta em tirinhas que ondulam (mais leve que o de antes: 7,7
+  ms no Refúgio contra 12 a 13). **Barcos** — a curva da proa e da popa, as tábuas do costado, a tinta descascada, a faixa
+  molhada e o limo na linha d'água, as cavernas por dentro e o motor de popa de verdade na voadeira. **Ponto de
+  ônibus** — o abrigo de metal verde com colunas, o telhado com espessura e a ferrugem escorrendo, o vidro com um quebrado,
+  o banco de ripas, o painel com o cartaz velho "REPRESA" e o totem da placa. **Casas** — o reboco caído mostrando o
+  tijolo, a sombra no pé da parede e a luz no alto, o buzinote (o cano da laje) com a mancha escorrida e as manchas na
+  laje.
 - **Agora (23/11): a Comunidade da Represa vestida (na `main`).** O dono: "pode seguir vestindo a comunidade primeiro".
   No gerador (`gen-guarapiranga.ts`, o bloco "4 · a comunidade"): fileiras de casas COLADAS (`row`: larguras de 4,6 a
   7 m; a sobra do fim entra na última ou divide em duas) com as ruelas de cimento entre elas (`ALLEYS`, 2,5 a 3 m) — a

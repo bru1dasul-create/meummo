@@ -431,7 +431,7 @@ chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' })
   };
   // a faixa amarela do meio, tracejada e quase apagada (na estrada inteira)
   chao.push(line('faixa-rua', ROAD, { cor: '#c9a640', largura: 0.12, tracejada: true, apagada: true }));
-  roadDetails(ROAD_OLD, srng, 16);
+  roadDetails(ROAD_OLD, srng, 8);
   // os buracos com água de chuva e o capim nas frestas e na beira do asfalto
   for (const [x, y, raio] of [[21.2, 10.6, 0.5], [31.8, 20.6, 0.42], [41.6, 24.4, 0.55]] as const) chao.push(point('buraco', x, y, { raio, agua: true }));
   const grassAlong = (part: Pt[], rng: () => number, count: number) => {
@@ -452,7 +452,7 @@ chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' })
   // o trecho novo (da orla até a saída): rachaduras, buracos e capim, com outro sorteio
   const nrng = mulberry32(SEED + 19);
   const ROAD_NEW = ROAD.filter(([x]) => x > 48);
-  roadDetails(ROAD_NEW, nrng, 70);
+  roadDetails(ROAD_NEW, nrng, 28);
   grassAlong(ROAD_NEW, nrng, 160);
   for (let i = 0, n = 0; i < 400 && n < 12; i++) {
     const k = Math.floor(nrng() * (ROAD_NEW.length - 1));

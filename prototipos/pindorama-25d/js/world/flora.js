@@ -109,7 +109,21 @@
     const left = pts.map((p) => ({ x: p.c.x - p.r, y: p.c.y }));
     const right = pts.map((p) => ({ x: p.c.x + p.r, y: p.c.y })).reverse();
     const shape = polyPath(left.concat(right));
-    inkFill(ctx, shape, colors[0], ink, 2.4);
+    if (opt.open) {
+      // aberto em cima (`'top'`: o tronco que continua na copa) ou nas duas pontas (`'both'`: o pedaço de cima, dentro
+      // da copa): sem o risco preto atravessando onde os dois pedaços se emendam
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 2.4;
+      const side = new Path2D();
+      if (opt.open === 'both') {
+        left.forEach((q, i) => (i ? side.lineTo(q.x, q.y) : side.moveTo(q.x, q.y)));
+        right.forEach((q, i) => (i ? side.lineTo(q.x, q.y) : side.moveTo(q.x, q.y)));
+      } else left.slice().reverse().concat(right.slice().reverse()).forEach((q, i) => (i ? side.lineTo(q.x, q.y) : side.moveTo(q.x, q.y)));
+      ctx.stroke(side);
+      ctx.fillStyle = colors[0];
+      ctx.fill(shape);
+    } else inkFill(ctx, shape, colors[0], ink, 2.4);
     ctx.save();
     ctx.clip(shape);
     ctx.fillStyle = colors[1];
@@ -584,13 +598,13 @@
     },
     trunk(ctx, cam, t, z0, ink) {
       const r = t.trunk || 17;
-      trunk(ctx, cam, t, z0, ink, t.h * 0.56, r, r * 0.82, H.BARK.embauba, { lean: 6, rings: '#a39c8c', ringGap: 30 });
+      trunk(ctx, cam, t, z0, ink, t.h * 0.56 + 10, r, r * 0.82, H.BARK.embauba, { lean: 6, rings: '#a39c8c', ringGap: 30, open: 'top' });
     },
     trunkBox: (cam, t, z0) => boxOf(cam, [{ x: t.x, y: t.y, z: z0, r: 30 }, { x: t.x + leanOf(t, 6), y: t.y, z: z0 + t.h * 0.58, r: 30 }]),
     crown(ctx, cam, t, z0, ink) {
       const { base, lead, limbs, leaves, rnd } = this.plan(t, z0);
       const w = (t.trunk || 17) * 0.82;
-      const polys = [H.limbPoly(cam, base, lead, w, w * 0.45, 0)];
+      const polys = [];
       // candelabro: o galho sai quase de lado e depois sobe (a curva cai no meio)
       for (const l of limbs) polys.push(H.limbPoly(cam, l.start, l.tip, w * 0.6, w * 0.32, -(l.tip.z - l.start.z) * 0.7));
       for (const p of polys) {
@@ -602,6 +616,9 @@
         ctx.fillStyle = H.BARK.embauba[0];
         ctx.fill(polyPath(p));
       }
+      // o pedaço de cima do tronco, por cima do pé dos galhos: o mesmo tronco de baixo (anéis e o lado da sombra), aberto
+      // nas pontas — antes era um galho liso, mais claro, e a árvore parecia emendada (23/11, o dono)
+      trunk(ctx, cam, { x: base.x, y: base.y }, base.z - 12, ink, lead.z - base.z + 12, w, w * 0.5, H.BARK.embauba, { rings: '#a39c8c', ringGap: 30, open: 'both' });
       leaves.sort((a, b) => cam.depth(a.c) - cam.depth(b.c));
       for (const l of leaves) {
         line(ctx, [cam.p(l.stem), cam.p(l.c)], EMB.stem, Math.max(1, 1.6 * cam.zoom));

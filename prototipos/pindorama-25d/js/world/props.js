@@ -628,6 +628,19 @@
         // a beirada da laje (na casa de tijolo, o concreto cinza da laje)
         ctx.fillStyle = b.brick ? BRICK.laje : M.shade(b.wall, -0.12);
         ctx.fillRect(0, 0, W, 16);
+        // o buzinote: o cano curto que joga a água da laje para fora, e a mancha escura escorrida embaixo dele
+        if (!b.interior && b.facade !== 'preta' && b.material !== 'tabua' && W > 260) {
+          const bx = W * (0.82 + r() * 0.1), run = 70 + r() * Math.min(140, H * 0.4);
+          const g = ctx.createLinearGradient(0, 20, 0, 20 + run);
+          g.addColorStop(0, 'rgba(40, 36, 30, 0.28)');
+          g.addColorStop(1, 'rgba(40, 36, 30, 0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(bx - 7, 20, 14, run);
+          ctx.fillStyle = INK;
+          ctx.fillRect(bx - 7, 10, 14, 12);
+          ctx.fillStyle = '#6a6f72';
+          ctx.fillRect(bx - 5, 12, 10, 8);
+        }
         if (b.pixo) pixo(ctx, W, H - 150, M.rng(b.x0 + 9), 0.9);
         for (let f = 0; f < floors; f++) {
           const yTop = H - (f + 1) * fh; // topo deste andar (y desce a partir da laje)
@@ -954,6 +967,54 @@
     for (let i = 0; i < Math.max(3, len / 90); i++) ctx.fillRect(r() * len, Math.max(16, y0), 14 + r() * 30, 40 + r() * (H * 0.55));
     ctx.fillStyle = 'rgba(70, 52, 36, 0.18)';
     ctx.fillRect(0, H - 26, len, 26);
+    // (23/11, o dono: "melhora as residências": mais acabamento e desgaste) o reboco caído aqui e ali, mostrando o
+    // tijolo por baixo, com a beirada do reboco fazendo sombra
+    if (!b.block && b.facade !== 'preta' && b.material !== 'tabua') {
+      const n = r() < 0.55 ? 1 + Math.floor(r() * 2) : 0;
+      for (let k = 0; k < n; k++) {
+        const cx = 30 + r() * Math.max(10, len - 60), cy = Math.max(y0 + 40, 60) + r() * Math.max(10, H - Math.max(y0 + 40, 60) - 70), R = 18 + r() * 26;
+        const patch = new Path2D();
+        for (let j = 0; j < 9; j++) {
+          const a = (j / 9) * M.TAU, rr = R * (0.65 + r() * 0.5);
+          if (j) patch.lineTo(cx + Math.cos(a) * rr * 1.4, cy + Math.sin(a) * rr);
+          else patch.moveTo(cx + Math.cos(a) * rr * 1.4, cy + Math.sin(a) * rr);
+        }
+        patch.closePath();
+        ctx.fillStyle = sideFace ? M.shade(BRICK.base, -0.25) : BRICK.base;
+        ctx.fill(patch);
+        ctx.save();
+        ctx.clip(patch);
+        ctx.strokeStyle = BRICK.mortar;
+        ctx.lineWidth = 2.5;
+        for (let y = Math.floor((cy - R) / 20) * 20, row = 0; y < cy + R; y += 20, row++) {
+          ctx.beginPath();
+          ctx.moveTo(cx - R * 1.5, y);
+          ctx.lineTo(cx + R * 1.5, y);
+          ctx.stroke();
+          for (let x = cx - R * 1.5 + (row % 2) * 15; x < cx + R * 1.5; x += 30) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + 20);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(40, 30, 24, 0.45)';
+        ctx.lineWidth = 3;
+        ctx.stroke(patch);
+      }
+    }
+    // a sombra no pé da parede (onde ela encontra o chão) e a luz batendo no alto
+    const foot = ctx.createLinearGradient(0, H - 46, 0, H);
+    foot.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    foot.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+    ctx.fillStyle = foot;
+    ctx.fillRect(0, H - 46, len, 46);
+    const top = ctx.createLinearGradient(0, Math.max(16, y0), 0, Math.max(16, y0) + 70);
+    top.addColorStop(0, sideFace ? 'rgba(255, 250, 235, 0.05)' : 'rgba(255, 250, 235, 0.12)');
+    top.addColorStop(1, 'rgba(255, 250, 235, 0)');
+    ctx.fillStyle = top;
+    ctx.fillRect(0, Math.max(16, y0), len, 70);
     if (y0 > 0) ctx.restore();
   }
   /**
@@ -1559,6 +1620,28 @@
   function roofItems(ctx, cam, b, z, ink) {
     const W = b.x1 - b.x0, D = b.y1 - b.y0;
     const items = [];
+    // as manchas da laje: a água de chuva parada que secou e a sujeira, por baixo do resto
+    if (!b.interior && b.material !== 'tabua') {
+      const rr = M.rng(Math.round(b.x0 * 5 + b.y0 * 11));
+      const top = new Path2D();
+      [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].forEach(([x, y], i) => {
+        const q = cam.p({ x, y, z });
+        if (i) top.lineTo(q.x, q.y);
+        else top.moveTo(q.x, q.y);
+      });
+      top.closePath();
+      ctx.save();
+      ctx.clip(top);
+      for (let k = 0; k < 2 + Math.floor((W * D) / 90000); k++) {
+        const q = cam.p({ x: b.x0 + rr() * W, y: b.y0 + rr() * D, z });
+        const rx = (30 + rr() * 60) * cam.zoom;
+        ctx.fillStyle = rr() < 0.6 ? 'rgba(60, 58, 50, 0.16)' : 'rgba(90, 110, 70, 0.14)';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, rx, rx * 0.5, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
     const tx = b.x0 + W * 0.68, ty = b.y0 + D * 0.35;
     if (b.tank && !b.abandoned) items.push({ k: tx + ty, draw: () => tank(ctx, cam, tx, ty, z, ink) });
     if (b.tower && b.tank && W > 500) items.push({ k: b.x0 + W * 0.3 + ty, draw: () => tank(ctx, cam, b.x0 + W * 0.3, ty, z, ink) });
@@ -2496,10 +2579,17 @@
     }
     shadow(path) {
       const t = this.t;
-      lineShadow(path, this.cam, t.x, t.y, t.h * 0.6, t.kind === 'figueira' ? (t.trunk || 60) * 1.6 : 16);
-      // (19/11, o alvo do dono: a sombra da árvore é comprida e sai do pé dela, fina perto do tronco e larga longe dele)
-      if (t.r > 60) taperShadow(path, this.cam, t.x, t.y, t.r * 0.32, t.h * 0.16, t.r * 1.02, t.h * 0.78);
-      else circleShadow(path, this.cam, t.x, t.y, t.r * 0.95, t.h * 0.72);
+      // (23/11, o dono: "sombras das árvores todas balão, muito feio": a de antes — comprida, fina no pé e uma bola larga
+      // lá longe — parecia um balão no barbante. Agora a sombra da árvore cai perto do pé (o sol mais alto para elas,
+      // `TREE_SUN`), com o contorno dos tufos da copa: o tronco liga o pé à sombra da copa, sem o barbante comprido)
+      const k = TREE_SUN;
+      const crown = BROADLEAF.has(t.kind) || t.kind === 'seca';
+      lineShadow(path, this.cam, t.x, t.y, t.h * (crown ? FORK : 0.6) * k, t.kind === 'figueira' ? (t.trunk || 60) * 1.6 : Math.max(14, (t.trunk || 17) * 0.9));
+      if (crown) {
+        const dead = t.kind === 'seca';
+        const { tufts } = crownPlan(t, this.z0, dead);
+        for (const tf of tufts) circleShadow(path, this.cam, tf.w.x, tf.w.y, tf.R * (dead ? 0.42 : 0.95), (tf.w.z - this.z0) * k);
+      } else circleShadow(path, this.cam, t.x, t.y, t.r * 0.9, t.h * 0.72 * k);
     }
     paint(ctx) {
       const cam = this.cam;
@@ -2507,10 +2597,13 @@
       const z0 = this.z0;
       const ink = this.ink;
       const crown = BROADLEAF.has(t.kind) || t.kind === 'seca';
-      const top = t.h * (t.kind === 'seca' ? DEAD_FORK : crown ? FORK : 0.68);
+      // (23/11, o dono: "árvores parecem cortadas": o tronco acabava na forquilha mais largo que os galhos e com o risco
+      // preto em cima — a emenda com a copa aparecia. Agora ele sobe um pouco além da forquilha, afina até a largura dos
+      // galhos e não tem o risco de cima)
+      const top = t.h * (t.kind === 'seca' ? DEAD_FORK : crown ? FORK : 0.68) + (crown ? 12 : 0);
       const pts = [];
       const r0 = t.trunk || 17;
-      const r1 = t.trunk ? t.trunk * (crown ? 0.75 : 0.55) : 9;
+      const r1 = crown ? (t.trunk || 17) * 0.62 : t.trunk ? t.trunk * 0.55 : 9;
       const N = 6;
       const twist = t.kind === 'seca' ? 10 : t.trunk ? 3 : 6;
       const lean = (k) => Math.sin(k * 1.3 + t.x) * twist;
@@ -2535,7 +2628,16 @@
       const left = pts.map((p) => ({ x: p.c.x - p.r, y: p.c.y }));
       const right = pts.map((p) => ({ x: p.c.x + p.r, y: p.c.y })).reverse();
       const shape = left.concat(right);
-      poly(ctx, shape, null, INK, ink * 2.4);
+      if (crown) {
+        // o contorno só dos lados e do pé (aberto em cima, onde entram os galhos)
+        const side = left.slice().reverse().concat(right.slice().reverse());
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = ink * 2.4;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        side.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+        ctx.stroke();
+      } else poly(ctx, shape, null, INK, ink * 2.4);
       poly(ctx, shape, bark ? bark[0] : '#7a5537');
       // lado da sombra
       const shadeSide = pts.map((p) => ({ x: p.c.x + p.r * 0.2, y: p.c.y })).concat(right);
@@ -3260,6 +3362,8 @@
   /** Forquilha (onde o tronco vira galhos), em fração da altura; a seca abre mais baixo. */
   const FORK = 0.42;
   const DEAD_FORK = 0.45;
+  /** O comprimento da sombra das árvores (1 = a sombra do sol de sempre, a das casas e dos postes). */
+  const TREE_SUN = 0.45;
   const DEAD = { bark: '#857c72', shade: '#5c554d', moss: '#9aa58c' };
 
   /** O plano da copa (no mundo, cm), sorteado pela posição: a forquilha e os tufos (na seca, as pontas dos galhos). */
@@ -3279,6 +3383,18 @@
     return { fork, tufts, rnd };
   }
 
+  /** A faixa da sombra de um galho (`limbPoly`): do meio dele até a beira de baixo e da direita, na tela. */
+  function limbShade(poly) {
+    const n = poly.length / 2;
+    const L = poly.slice(0, n), R = poly.slice(n).reverse();
+    const out = [], edge = [];
+    for (let i = 0; i < n; i++) {
+      const [a, b] = L[i].x + L[i].y * 0.6 > R[i].x + R[i].y * 0.6 ? [R[i], L[i]] : [L[i], R[i]];
+      out.push({ x: a.x + (b.x - a.x) * 0.6, y: a.y + (b.y - a.y) * 0.6 });
+      edge.push(b);
+    }
+    return out.concat(edge.reverse());
+  }
   function crownPaint(ctx, cam, t, z0, ink, colors, dead) {
     const { fork, tufts, rnd } = crownPlan(t, z0, dead);
     const zoom = cam.zoom;
@@ -3314,14 +3430,18 @@
     };
     ctx.lineJoin = 'round';
     for (const lb of limbs) {
+      // (aberto no pé: o risco que fechava o galho atravessava a forquilha e o tronco parecia cortado ali)
       ctx.beginPath();
       lb.poly.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
-      ctx.closePath();
       ctx.strokeStyle = INK;
       ctx.lineWidth = ink * 2.2;
       ctx.stroke();
     }
-    for (const lb of limbs) fill(lb.poly, dead ? DEAD.bark : bark[0]);
+    for (const lb of limbs) {
+      fill(lb.poly, dead ? DEAD.bark : bark[0]);
+      // o lado da sombra (o de baixo e da direita na tela), como no tronco: senão o galho liso parecia colado nele
+      fill(limbShade(lb.poly), dead ? M.shade(DEAD.bark, -0.22) : bark[1] || M.shade(bark[0], -0.22));
+    }
 
     if (dead) {
       // barba-de-velho: fios cinza-esverdeados pendurados nos gravetos

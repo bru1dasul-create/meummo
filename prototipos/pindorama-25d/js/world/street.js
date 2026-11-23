@@ -176,6 +176,31 @@
   }
   texture.asfalto = (ctx, sh, box, seed, g) => {
     asphalt(ctx, sh, box, seed, g.cam, sh.state === 'rachado');
+    // a estrada (linha): as faixas mais claras e lisas por onde as rodas passavam e a mancha de óleo no meio de cada mão
+    if (sh.kind === 'line' && sh.pts.length > 1) {
+      const W = sh.width || 600;
+      ctx.save();
+      G.shapePath(ctx, sh);
+      ctx.clip();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const [off, w, color] of [[0.36, 0.1, 'rgba(255, 255, 255, 0.035)'], [0.14, 0.1, 'rgba(255, 255, 255, 0.035)'], [0.25, 0.08, 'rgba(0, 0, 0, 0.06)']]) {
+        for (const side of [1, -1]) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = W * w;
+          ctx.beginPath();
+          for (let i = 0; i < sh.pts.length; i++) {
+            const A = sh.pts[Math.max(0, i - 1)], B = sh.pts[Math.min(sh.pts.length - 1, i + 1)];
+            const L = Math.hypot(B.x - A.x, B.y - A.y) || 1;
+            const x = sh.pts[i].x - ((B.y - A.y) / L) * W * off * side, y = sh.pts[i].y + ((B.x - A.x) / L) * W * off * side;
+            if (i) ctx.lineTo(x, y);
+            else ctx.moveTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
     return true;
   };
   texture.rua = texture.asfalto;
@@ -183,7 +208,97 @@
   // ------------------------------------------------------------------ calçada de placas de cimento
   // placas de ~1 m ao longo da calçada, cada uma de um tom; juntas escuras; umas trincadas, umas com mancha de musgo;
   // perto de raiz (ou ao acaso, poucas) a placa levanta (borda escura do lado da câmera); mato nas frestas
+  /**
+   * A calçada que acompanha a estrada (uma linha com largura, embaixo do asfalto): placas de cimento de 1,1 m, cada uma
+   * de um tom, com as juntas escuras, sujeira e musgo na beira de fora; e, na beira do asfalto, o meio-fio claro com a
+   * sarjeta (23/11, o dono: "calçada feia demais" — era um cinza liso com pintinhas).
+   */
+  function sidewalkLine(ctx, sh, box, g, map) {
+    const pts = sh.pts;
+    const W = sh.width || 200;
+    const asph = map ? map._asph || (map._asph = map.shapes.filter((s) => s.type === 'asfalto' || s.type === 'rua')) : [];
+    const road = asph.find((s) => s.kind === 'line' && s.pts.length === pts.length && Math.abs(s.pts[0].x - pts[0].x) < 1 && Math.abs(s.pts[0].y - pts[0].y) < 1);
+    const inner = road ? (road.width || 600) / 2 : 0;
+    const SLAB = 110;
+    ctx.save();
+    G.shapePath(ctx, sh);
+    ctx.clip();
+    const quad = (A, ux, uy, nx, ny, s0, s1, o0, o1) => {
+      ctx.beginPath();
+      ctx.moveTo(A.x + ux * s0 + nx * o0, A.y + uy * s0 + ny * o0);
+      ctx.lineTo(A.x + ux * s1 + nx * o0, A.y + uy * s1 + ny * o0);
+      ctx.lineTo(A.x + ux * s1 + nx * o1, A.y + uy * s1 + ny * o1);
+      ctx.lineTo(A.x + ux * s0 + nx * o1, A.y + uy * s0 + ny * o1);
+      ctx.closePath();
+    };
+    let acc = 0;
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const A = pts[i], B = pts[i + 1];
+      const L = Math.hypot(B.x - A.x, B.y - A.y);
+      if (!L) continue;
+      if (Math.max(A.x, B.x) + W < box.x0 || Math.min(A.x, B.x) - W > box.x1 || Math.max(A.y, B.y) + W < box.y0 || Math.min(A.y, B.y) - W > box.y1) {
+        acc += L;
+        continue;
+      }
+      const ux = (B.x - A.x) / L, uy = (B.y - A.y) / L, nx = -uy, ny = ux;
+      // as placas: o tom de cada uma e a sujeira na beira de fora
+      for (let s = -(acc % SLAB); s < L; s += SLAB) {
+        const s0 = Math.max(0, s), s1 = Math.min(L, s + SLAB);
+        const px = A.x + ux * (s + SLAB / 2), py = A.y + uy * (s + SLAB / 2);
+        const r = seeded(px, py, 233);
+        for (const side of [1, -1]) {
+          const t = (r() - 0.5) * 0.14;
+          ctx.fillStyle = t > 0 ? `rgba(255, 252, 240, ${t.toFixed(3)})` : `rgba(40, 36, 30, ${(-t).toFixed(3)})`;
+          quad(A, ux, uy, nx, ny, s0, s1, side * (inner + 16), side * (W / 2));
+          ctx.fill();
+          if (r() < 0.3) {
+            ctx.fillStyle = r() < 0.6 ? 'rgba(78, 104, 58, 0.22)' : 'rgba(70, 60, 44, 0.18)';
+            const m = (s0 + s1) / 2 + (r() - 0.5) * SLAB * 0.6, o = side * (W / 2 - 14);
+            ctx.beginPath();
+            ctx.ellipse(A.x + ux * m + nx * o, A.y + uy * m + ny * o, 18 + r() * 26, 8 + r() * 10, Math.atan2(uy, ux), 0, M.TAU);
+            ctx.fill();
+          }
+        }
+        // a junta de uma placa para a outra, atravessando a calçada
+        if (s >= 0) {
+          ctx.strokeStyle = 'rgba(86, 82, 72, 0.7)';
+          ctx.lineWidth = 3;
+          for (const side of [1, -1]) {
+            ctx.beginPath();
+            ctx.moveTo(A.x + ux * s + nx * side * (inner + 16), A.y + uy * s + ny * side * (inner + 16));
+            ctx.lineTo(A.x + ux * s + nx * side * (W / 2), A.y + uy * s + ny * side * (W / 2));
+            ctx.stroke();
+          }
+        }
+      }
+      // o meio-fio (a pedra clara na beira do asfalto) e a sarjeta escura rente a ele
+      if (inner) {
+        for (const side of [1, -1]) {
+          ctx.fillStyle = '#bdb8aa';
+          quad(A, ux, uy, nx, ny, 0, L, side * inner, side * (inner + 16));
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(70, 66, 58, 0.6)';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(A.x + nx * side * (inner + 16), A.y + ny * side * (inner + 16));
+          ctx.lineTo(B.x + nx * side * (inner + 16), B.y + ny * side * (inner + 16));
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(20, 20, 22, 0.45)';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(A.x + nx * side * inner, A.y + ny * side * inner);
+          ctx.lineTo(B.x + nx * side * inner, B.y + ny * side * inner);
+          ctx.stroke();
+        }
+      }
+      acc += L;
+    }
+    ctx.restore();
+    void g;
+    return true;
+  }
   texture.calcada = (ctx, sh, box, seed, g, map) => {
+    if (sh.kind === 'line' && !sh.pattern) return sidewalkLine(ctx, sh, box, g, map);
     if (sh.pattern === 'placas' && sh.kind === 'poly') return loosePlates(ctx, sh, box, g);
     if (sh.pattern !== 'placas' || sh.kind !== 'rect') return false;
     const b = sh;
@@ -588,8 +703,10 @@
   paint.rachadura = (ctx, sh, env) => {
     const p0 = sh.pts[0];
     const rnd = seeded(p0.x, p0.y, 531);
-    const w = sh.width || 6;
-    const color = sh.color || '#1e2022';
+    // (23/11, o dono: "rachaduras feias": eram traços pretos grossos com muito galho e muito mato; agora finas e cinza-
+    // escuro, afundadas — a sombra e a beira clara de leve —, com um ou dois galhinhos e pouco capim)
+    const w = (sh.width || 6) * 0.55;
+    const color = '#2c2e33';
     // o traço tremido passando pelos pontos
     const jag = [];
     for (let i = 0; i + 1 < sh.pts.length; i++) {
@@ -609,8 +726,8 @@
     ctx.lineJoin = 'round';
     ctx.beginPath();
     jag.forEach((p, i) => (i ? ctx.lineTo(p.x - 1.5, p.y - 1.5) : ctx.moveTo(p.x - 1.5, p.y - 1.5)));
-    ctx.strokeStyle = 'rgba(118, 122, 128, 0.35)';
-    ctx.lineWidth = w + 2;
+    ctx.strokeStyle = 'rgba(128, 132, 138, 0.22)';
+    ctx.lineWidth = w + 2.5;
     ctx.stroke();
     ctx.beginPath();
     jag.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
@@ -618,12 +735,12 @@
     ctx.lineWidth = w;
     ctx.stroke();
     // galhinhos
-    for (let k = 0; k < 2 + Math.floor(rnd() * 3); k++) {
+    for (let k = 0; k < 1 + Math.floor(rnd() * 2); k++) {
       const p = jag[Math.floor(rnd() * jag.length)];
-      crack(ctx, p.x, p.y, rnd() * M.TAU, 25 + rnd() * 45, rnd, Math.max(1.2, w * 0.4), color, 0);
+      crack(ctx, p.x, p.y, rnd() * M.TAU, 15 + rnd() * 25, rnd, Math.max(1, w * 0.45), color, 0);
     }
     if (sh.weeds) {
-      for (const p of walk(sh.pts, 36)) if (rnd() < 0.55) tuft(ctx, p.x + (rnd() - 0.5) * 6, p.y + (rnd() - 0.5) * 6, 12 + rnd() * 12, rnd, env.g.cam, rnd() < 0.3);
+      for (const p of walk(sh.pts, 60)) if (rnd() < 0.3) tuft(ctx, p.x + (rnd() - 0.5) * 6, p.y + (rnd() - 0.5) * 6, 9 + rnd() * 8, rnd, env.g.cam, rnd() < 0.3);
     }
   };
 
