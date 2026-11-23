@@ -3,7 +3,8 @@
 // linha lilás quebrado na ponta, com mato em cima, pilares pichados e cipó pendurado; o trem lilás parado lá em cima,
 // com plantas no teto; o ônibus velho que virou horta; a barreira da rua fechada e as placas de direção. E, do Capão
 // maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura; a
-// fachada da escola estadual (`PD.city.facades.escola`, para a casa com `estilo: 'escola'`) e o alambrado da quadra.
+// fachada da escola estadual (`PD.city.facades.escola`, para a casa com `estilo: 'escola'`) e o alambrado da quadra;
+// a feira livre: as lonas das bancas, a banca de pastel com caldo de cana e o carrinho de feira.
 // Mesmo traço do resto do cenário (contorno de tinta, lado da sombra mais escuro). Coisa comprida (muro, viaduto,
 // ônibus) vem do mapa em pedaços (tmj.js): cada pedaço desenha a sua parte e o desenho continua de um para o outro.
 //   PD.city.small[tipo] = { height, blocks, lift, box, shadow, paint }   (o props.js usa como as plantas)
@@ -2097,6 +2098,223 @@
       const g0 = alongY ? d.whole.y1 - d.y1 : d.x0 - d.whole.x0;
       for (let gu = Math.ceil(g0 / 250 - 1e-6) * 250; gu < g0 + L - 1; gu += 250) post(gu - g0);
       if (d.piece === d.pieces - 1) post(L);
+    },
+  };
+  // ------------------------------------------------------------------ a feira livre (Capão maior, 23/11)
+  // As lonas (`lona`): uma por fileira de bancas, cada banca com a lona listrada da cor do pano dela, inclinada para a
+  // frente (a câmera vê o tampo), com o babado na beira e os canos de ferro; fica por cima de quem passa embaixo dela
+  // (como a copa das árvores). A banca de pastel com caldo de cana (`banca-pastel`) e o carrinho de feira de quem compra
+  // (`carrinho-feira`). Feira viva: colorida, sem cipó.
+  const TARP = ['#2f6fb0', '#e8c020', '#e2552f', '#4f9f5f', '#f07a2a', '#c4508a'];
+  small.lona = {
+    overhead: true,
+    fades: true,
+    height: (d) => (d.h || 260) + 30,
+    blocks: 0,
+    shadow(p, cam, d) {
+      const L = cam.light;
+      const h = d.hf || 235;
+      const dx = (-L.x / L.z) * h, dy = (-L.y / L.z) * h;
+      p.moveTo(d.x0 + dx, d.y0 + dy);
+      p.lineTo(d.x1 + dx, d.y0 + dy);
+      p.lineTo(d.x1 + dx, d.y1 + dy);
+      p.lineTo(d.x0 + dx, d.y1 + dy);
+      p.closePath();
+    },
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + 20, d.y0 - 20, d.y1 + 20, z0 + 80, z0 + (d.h || 260) + 20, 20),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const zb = z0 + (d.h || 260), zf = z0 + (d.hf || 235);
+      const n = Math.max(1, d.stalls || Math.round((d.x1 - d.x0) / 260));
+      const sw = (d.x1 - d.x0) / n;
+      const pole = '#7d858b';
+      const poleAt = (x, y, za, zt) => inkLine(ctx, [P(x, y, za), P(x, y, zt)], pole, Math.max(1, 2.6 * cam.zoom), ink);
+      // os canos de trás (atrás das bancas)
+      for (let i = 0; i <= n; i++) poleAt(d.x0 + i * sw, d.y0 + 6, z0, zb);
+      for (let i = 0; i < n; i++) {
+        const xa = d.x0 + i * sw, xb = xa + sw;
+        const col = (d.colors && d.colors[i]) || TARP[(i + Math.round(d.x0 / 100)) % TARP.length];
+        // o pano: listras no sentido da descida (cor e branco), com a barriga de leve no meio
+        const strips = 8;
+        for (let k = 0; k < strips; k++) {
+          const u0 = xa + (sw * k) / strips, u1 = xa + (sw * (k + 1)) / strips;
+          const sag = (u) => 10 * Math.sin((Math.PI * (u - xa)) / sw);
+          fill(ctx, [P(u0, d.y0, zb - sag(u0)), P(u1, d.y0, zb - sag(u1)), P(u1, d.y1, zf - sag(u1)), P(u0, d.y1, zf - sag(u0))], k % 2 ? '#f4f1e8' : col);
+        }
+        edge(ctx, P(xa, d.y0, zb), P(xb, d.y0, zb), ink, 1.2);
+        // o babado da beira da frente (os dentinhos)
+        const vh = 22;
+        for (let k = 0; k < 6; k++) {
+          const u0 = xa + (sw * k) / 6, u1 = xa + (sw * (k + 1)) / 6, um = (u0 + u1) / 2;
+          inkPoly(ctx, [P(u0, d.y1, zf), P(u1, d.y1, zf), P(u1, d.y1, zf - vh * 0.55), P(um, d.y1, zf - vh), P(u0, d.y1, zf - vh * 0.55)], k % 2 ? '#f4f1e8' : M.shade(col, -0.08), ink, 1);
+        }
+      }
+      // os canos da frente (só a parte de cima da banca para cima: o pé fica atrás do balcão)
+      for (let i = 0; i <= n; i++) poleAt(d.x0 + i * sw, d.y1, z0 + 92, zf);
+    },
+  };
+  // a banca de pastel com o caldo de cana: o balcão de azulejo, a estufa de vidro com os pastéis, o tacho de óleo no
+  // fogareiro, o botijão, a moenda de cana com o feixe de cana do lado e a plaquinha pendurada
+  small['banca-pastel'] = {
+    height: (d) => (d.h || 90) + 140,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, (d.h || 90) * 0.9),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 30, d.x1 + 30, d.y0 - 20, d.y1 + 20, z0, z0 + 230, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x0, d.y0, 3501);
+      const h = d.h || 90;
+      const zt = z0 + h;
+      // o botijão e o fogareiro com o tacho (no fundo), e a moenda de cana (no canto de trás à direita)
+      const bx = d.x0 + 28, by = d.y0 + 30;
+      H.box(ctx, cam, bx - 16, bx + 16, by - 16, by + 16, z0, z0 + 62, { front: '#d9772e', side: '#b25f22', top: '#e8925a' }, ink);
+      H.box(ctx, cam, d.x0 + 70, d.x0 + 150, d.y0 + 12, d.y0 + 62, z0, z0 + 78, { front: '#3c3f43', side: '#2c2f33', top: '#4a4e53' }, ink);
+      const tc = P(d.x0 + 110, d.y0 + 37, z0 + 86);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(tc.x, tc.y, 36 * cam.zoom, 17 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#c9932e';
+      ctx.beginPath();
+      ctx.ellipse(tc.x, tc.y, 31 * cam.zoom, 14 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      for (let k = 0; k < 3; k++) {
+        // dois pastéis fritando e o vapor subindo
+        const q = P(d.x0 + 96 + k * 14, d.y0 + 32 + k * 4, z0 + 87);
+        ctx.fillStyle = '#e9b04c';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, 9 * cam.zoom, 5 * cam.zoom, 0.3, Math.PI, M.TAU);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
+      for (let k = 0; k < 2; k++) {
+        const a = P(d.x0 + 100 + k * 20, d.y0 + 37, z0 + 95), b = P(d.x0 + 108 + k * 20, d.y0 + 37, z0 + 150);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo(a.x + 8 * cam.zoom, (a.y + b.y) / 2, b.x, b.y);
+        ctx.stroke();
+      }
+      const mx0 = d.x1 - 78, my0 = d.y0 + 10;
+      H.box(ctx, cam, mx0, mx0 + 62, my0, my0 + 50, z0, z0 + 104, { front: '#c23b2e', side: '#962a20', top: '#d65a4c' }, ink);
+      const wheel = P(mx0 + 62, my0 + 25, z0 + 82);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = Math.max(1, 3.4 * cam.zoom);
+      ctx.beginPath();
+      ctx.ellipse(wheel.x, wheel.y, 10 * cam.zoom, 22 * cam.zoom, 0, 0, M.TAU);
+      ctx.stroke();
+      // o feixe de cana encostado na moenda
+      for (let k = 0; k < 7; k++) {
+        const x = d.x1 - 14 + (rnd() - 0.5) * 16, y = d.y0 + 20 + k * 6;
+        inkLine(ctx, [P(x, y, z0), P(x - 6 + rnd() * 12, y - 4, z0 + 190 + rnd() * 30)], k % 2 ? '#c9b25a' : '#8fae4a', Math.max(1, 3 * cam.zoom), ink * 0.6);
+      }
+      // o balcão de azulejo branco com a faixa vermelha, o tampo de inox e a estufa com os pastéis
+      const yb = d.y1 - 60;
+      H.box(ctx, cam, d.x0, d.x1, yb, d.y1, z0, zt, { front: '#f1efe8', side: '#d3d0c6', top: '#c9ccd0' }, ink);
+      H.onWall(ctx, cam, { x: d.x0, y: d.y1, z: zt }, { x: 1, y: 0 }, () => {
+        const W = d.x1 - d.x0;
+        ctx.strokeStyle = 'rgba(120, 120, 120, 0.35)';
+        ctx.lineWidth = 2;
+        for (let u = 15; u < W; u += 15) {
+          ctx.beginPath();
+          ctx.moveTo(u, 0);
+          ctx.lineTo(u, h);
+          ctx.stroke();
+        }
+        for (let v = 15; v < h; v += 15) {
+          ctx.beginPath();
+          ctx.moveTo(0, v);
+          ctx.lineTo(W, v);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#c8442d';
+        ctx.fillRect(0, h * 0.35, W, 16);
+      });
+      const ex0 = d.x0 + 40, ex1 = d.x0 + 150;
+      H.box(ctx, cam, ex0, ex1, yb + 8, d.y1 - 8, zt, zt + 40, { front: 'rgba(200, 230, 240, 0.45)', side: 'rgba(170, 205, 220, 0.45)', top: 'rgba(220, 240, 245, 0.5)' }, ink);
+      for (let k = 0; k < 5; k++) {
+        const q = P(ex0 + 16 + k * 20, yb + 30, zt + 10);
+        ctx.fillStyle = '#e3a443';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, 9 * cam.zoom, 6 * cam.zoom, 0, Math.PI, M.TAU);
+        ctx.fill();
+        ctx.strokeStyle = '#a8701f';
+        ctx.lineWidth = Math.max(1, 1.2 * cam.zoom);
+        ctx.stroke();
+      }
+      // os copos de caldo de cana em cima do balcão
+      for (let k = 0; k < 3; k++) {
+        const x = d.x0 + 180 + k * 18;
+        H.box(ctx, cam, x - 5, x + 5, yb + 25, yb + 35, zt, zt + 16, { front: '#c9d36a', side: '#aab450', top: '#e4ec9a' }, ink * 0.6);
+      }
+      // a plaquinha pendurada na frente (debaixo da lona)
+      // (duas linhas, cabendo na placa: o PASTEL grande e o CALDO DE CANA embaixo)
+      H.onWall(ctx, cam, { x: d.x0 + 40, y: d.y1 - 30, z: z0 + 208 }, { x: 1, y: 0 }, () => {
+        const W = d.x1 - d.x0 - 80;
+        ctx.fillStyle = '#f2c84b';
+        ctx.fillRect(0, 0, W, 50);
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(0, 0, W, 50);
+        ctx.fillStyle = '#8a2a1e';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const fit = (text, size) => {
+          ctx.font = `${size}px ${ST_FONT}`;
+          while (ctx.measureText(text).width > W - 16 && size > 8) ctx.font = `${--size}px ${ST_FONT}`;
+        };
+        fit('PASTEL', 26);
+        ctx.fillText('PASTEL', W / 2, 18);
+        fit('CALDO DE CANA', 15);
+        ctx.fillText('CALDO DE CANA', W / 2, 39);
+      });
+    },
+  };
+  // o carrinho de feira de quem compra: as duas rodinhas, o cano dobrado e a sacola xadrez com verdura saindo
+  small['carrinho-feira'] = {
+    height: () => 110,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x - 18, d.x + 18, d.y - 14, d.y + 14, 60),
+    box: (cam, d, z0) => volBox(cam, d.x - 40, d.x + 40, d.y - 40, d.y + 40, z0, z0 + 130, 12),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x, d.y, 3601);
+      const a = ((d.angle || 0) * Math.PI) / 180;
+      const [ux, uy] = [Math.cos(a), Math.sin(a)];
+      const at = (s, t, z) => P(d.x + ux * s - uy * t, d.y + uy * s + ux * t, z0 + z);
+      const bag = d.color || '#b8323a';
+      // a sacola (uma caixa inclinada para trás) com o xadrez
+      const corners = (z) => [at(-14, -12, z), at(14, -12, z), at(14, 12, z), at(-14, 12, z)];
+      const lo = corners(14), hi = corners(78).map((q) => ({ x: q.x - 4 * cam.zoom, y: q.y }));
+      inkPoly(ctx, [lo[0], lo[1], lo[2], hi[2], hi[1], hi[0]], bag, ink, 1.6);
+      inkPoly(ctx, [lo[1], lo[2], hi[2], hi[1]], M.shade(bag, -0.2), ink, 1);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+      for (let k = 1; k < 4; k++) {
+        const t = k / 4;
+        const l = { x: lo[0].x + (lo[1].x - lo[0].x) * t, y: lo[0].y + (lo[1].y - lo[0].y) * t };
+        const h2 = { x: hi[0].x + (hi[1].x - hi[0].x) * t, y: hi[0].y + (hi[1].y - hi[0].y) * t };
+        ctx.beginPath();
+        ctx.moveTo(l.x, l.y);
+        ctx.lineTo(h2.x, h2.y);
+        ctx.stroke();
+      }
+      // a verdura saindo de cima (alface, salsinha) e o cano do carrinho com as rodinhas
+      for (let k = 0; k < 4; k++) {
+        const q = at(-8 + k * 6, -4 + rnd() * 8, 84 + rnd() * 10);
+        ctx.fillStyle = k % 2 ? '#6ea84a' : '#4f8f3a';
+        ctx.beginPath();
+        ctx.ellipse(q.x, q.y, 9 * cam.zoom, 6 * cam.zoom, rnd() * 3, 0, M.TAU);
+        ctx.fill();
+      }
+      inkLine(ctx, [at(-16, 0, 6), at(-18, 0, 100), at(-12, 0, 106)], '#8e969c', Math.max(1, 2.4 * cam.zoom), ink);
+      for (const t of [-12, 12]) {
+        const w = at(-16, t, 7);
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.ellipse(w.x, w.y, 6 * cam.zoom, 7 * cam.zoom, 0, 0, M.TAU);
+        ctx.fill();
+      }
     },
   };
 })(window.PD = window.PD || {});

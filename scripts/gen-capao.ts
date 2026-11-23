@@ -1376,9 +1376,10 @@ function footBox(s: Shape): Box | null {
   if (s.type === 'poste') return squareBox(s.x, s.y, 0.3);
   if (s.type === 'placa-rua') return squareBox(s.x, s.y, 0.2);
   if (s.type === 'mastro') return squareBox(s.x, s.y, 0.3);
+  if (s.type === 'carrinho-feira') return squareBox(s.x, s.y, 0.4);
   if (s.point) return null;
   if (s.type === 'portao' && p.aberto) return null;
-  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao', 'alambrado'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
+  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao', 'alambrado', 'banca-pastel', 'caixote'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
   return null;
 }
 /** As caixas que seguram o pé (a cobertura do posto só nos quatro pilares; o balanço só nos dois pés de ferro). */
@@ -2330,11 +2331,32 @@ if (CAPAO_MAIOR) {
   // ---------------- a feira livre: três fileiras de bancas viradas para o sul (a frente para quem compra) ----------------
   const PANOS = ['#e2552f', '#2f6fb0', '#e8c020', '#4f9f5f', '#c4508a', '#f07a2a'];
   const GOODS = ['frutas', 'frutas', 'frutas', 'peixe', 'artesanato'];
-  for (const y0 of [51, 55.25, 59.5]) {
+  // (vestida em 23/11: a lona listrada de cada banca, da cor do pano dela, por cima de quem vende; a banca de pastel com
+  // caldo de cana na ponta da primeira fileira; os caixotes nas pontas, os carrinhos de feira e a placa na entrada)
+  const ROWS_FEIRA = [51, 55.25, 59.5];
+  for (const y0 of ROWS_FEIRA) {
+    const colors: string[] = [];
+    let x1 = 0;
     for (let x0 = FEIRA.x0 + 2; x0 + 2.6 <= FEIRA.x1 - 2 + 1e-9; x0 += 2.6) {
-      place(rect('banca-frutas', round(x0), round(x0 + 2.6), y0, y0 + 1.25, { altura: 0.9, frente: 0.5, lados: 0.3, pano: pick(PANOS), mercadoria: pick(GOODS) }));
+      const [pano, mercadoria] = [pick(PANOS), pick(GOODS)];
+      const pastel = y0 === ROWS_FEIRA[0] && x0 + 2.6 > FEIRA.x1 - 2 - 1e-9;
+      if (pastel) place(rect('banca-pastel', round(x0), round(x0 + 2.6), y0, y0 + 1.25, { altura: 0.9 }, 'Pastel e Caldo de Cana'));
+      else place(rect('banca-frutas', round(x0), round(x0 + 2.6), y0, y0 + 1.25, { altura: 0.9, frente: 0.5, lados: 0.3, pano, mercadoria }));
+      colors.push(pastel ? '#c8442d' : pano);
+      x1 = round(x0 + 2.6);
     }
+    // a lona por cima da parte de trás (quem vende fica embaixo dela; a mercadoria da frente fica à vista)
+    cenario.push(rect('lona', FEIRA.x0 + 2, x1, round(y0 - 0.2), round(y0 + 0.95), { altura: 2.6, frente: 2.35, bancas: colors.length, cores: colors.join(',') }));
+    // os caixotes encostados nas pontas da fileira
+    place(rect('caixote', round(FEIRA.x0 + 1), round(FEIRA.x0 + 2), round(y0 + 0.4), round(y0 + 0.9), { altura: 0.5, fruta: 'laranja' }));
+    place(rect('caixote', x1, round(x1 + 1), round(y0 + 0.05), round(y0 + 0.55), { altura: 0.5, fruta: 'banana' }));
+    place(rect('caixote', x1, round(x1 + 1), round(y0 + 0.65), round(y0 + 1.15), { altura: 0.5, fruta: 'laranja' }));
   }
+  // os carrinhos de feira encostados na frente das bancas (sem fechar o corredor) e a placa da entrada
+  for (const [x, y, olhando, cor] of [[133.4, 52.5, 20, '#b8323a'], [139.8, 56.75, 160, '#2f5fa8'], [136.6, 61.0, 40, '#3f8f5a'], [142.2, 52.5, 200, '#c4508a']] as const) {
+    place(point('carrinho-feira', x, y, { olhando, cor }));
+  }
+  place(point('placa', 129.9, 49.4, { texto: 'FEIRA LIVRE', poste: true }));
 
   // ---------------- a escola estadual abandonada: o gradil, o muro, o prédio, a quadra e o portão aberto ----------------
   const E = ESCOLA;
@@ -2639,6 +2661,9 @@ for (const s of cenario) {
   // (a pedrinha passa pela tela do alambrado, como pela grade do gradil; o mastro é fino)
   else if (s.type === 'alambrado') colisao.push({ ...rect('alambrado', s.x, s.x + s.w!, s.y, s.y + s.h!), props: { bloqueiaTiro: false } });
   else if (s.type === 'mastro') colisao.push(block('mastro', s.x, s.y, 0.3, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  // a feira: a banca de pastel é baixa como as outras; o carrinho de feira também (a lona, no alto, não segura ninguém)
+  else if (s.type === 'banca-pastel') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'carrinho-feira') colisao.push(block('carrinho-feira', s.x, s.y, 0.4, { bloqueiaTiro: false, altura: 1 }));
   else if (s.type === 'banca-frutas') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
 }
 // o chão embaixo de cada galho dos saguis é andável (o servidor põe o pé do sagui ali)

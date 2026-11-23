@@ -440,8 +440,19 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
     } else if (t === 'tronco-caido') {
       roof(x0, y0, x1, y1, C.madeira);
     } else if (t === 'banco' || t === 'balcao') cv.rect(x0, y0, x1, y1, shade(C.madeira, 0.85), 0.9);
+    // as lonas da feira do Capão maior: o pano listrado de cada banca, da cor dela
+    else if (t === 'lona') {
+      const cores = String(prop(o, 'cores') ?? '').split(',').filter(Boolean);
+      const n = Math.max(1, Number(prop(o, 'bancas') ?? cores.length) || 1);
+      for (let i = 0; i < n; i++) {
+        const a = x0 + ((x1 - x0) * i) / n, b = x0 + ((x1 - x0) * (i + 1)) / n;
+        cv.rect(a, y0, b, y1, hex(cores[i] ?? '#2f6fb0'), 0.95);
+        for (let x = a + m(0.35); x < b - m(0.1); x += m(0.7)) cv.rect(x, y0, x + m(0.3), y1, hex('#f4f1e8'), 0.85);
+      }
+      outline(x0, y0, x1, y1, C.contorno, 1, 0.5);
+    } else if (t === 'carrinho-feira') cv.ellipse(x0, y0, Math.max(1, m(0.25)), Math.max(1, m(0.25)), hex(String(prop(o, 'cor') ?? '#b8323a')), 0.95);
     // a banca de feira (a do Capão maior e a da Dona Iracema): a madeira com o pano colorido na frente
-    else if (t === 'banca-frutas') {
+    else if (t === 'banca-frutas' || t === 'banca-pastel') {
       cv.rect(x0, y0, x1, y1, C.madeira, 0.95);
       cv.rect(x0, y1 - Math.max(1, m(0.35)), x1, y1, hex(String(prop(o, 'pano') ?? '#e2552f')), 0.95);
       outline(x0, y0, x1, y1, C.contorno, 1, 0.5);

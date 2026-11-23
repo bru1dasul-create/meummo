@@ -291,6 +291,15 @@
         const depth = 110;
         const f = { x0: r0.x0 + Math.min(0, bx * depth), x1: r0.x1 + Math.max(0, bx * depth), y0: r0.y0 + Math.min(0, by * depth), y1: r0.y1 + Math.max(0, by * depth) };
         map.props.push({ kind: 'trave', ...f, post: along ? { x: (r0.x0 + r0.x1) / 2, a: r0.y0, b: r0.y1 } : { y: (r0.y0 + r0.y1) / 2, a: r0.x0, b: r0.x1 }, along, back: { x: bx, y: by }, depth, h: (pr.altura || 2) * 100, rust: !!pr.ferrugem, vine: !!pr.cipo, net: pr.rede || 'inteira' });
+      } else if (k === 'lona') {
+        // a lona de uma fileira de bancas da feira (fundo.js): `altura` atrás, `frente` (a altura da beira da frente),
+        // `bancas` (quantas) e `cores` (a cor de cada uma, separadas por vírgula)
+        map.props.push({ kind: 'lona', ...rect(o), h: (pr.altura || 2.6) * 100, hf: (pr.frente || 2.35) * 100, stalls: pr.bancas || 0, colors: pr.cores ? String(pr.cores).split(',') : null });
+      } else if (k === 'banca-pastel') {
+        map.props.push({ kind: 'banca-pastel', ...rect(o), h: (pr.altura || 0.9) * 100 });
+      } else if (k === 'carrinho-feira') {
+        // o carrinho de feira (ponto): `olhando` (graus) e `cor` (a sacola)
+        map.props.push({ kind: 'carrinho-feira', x, y, r: 25, angle: pr.olhando || 0, color: pr.cor || null });
       } else if (k === 'alambrado') {
         // o alambrado (a tela de arame nos postes de cano, a da quadra da escola do Capão maior; fundo.js), em pedaços de
         // até 4 m: `altura`, `estado: 'rasgado'` (a tela furada), `cipo` (0 a 1)

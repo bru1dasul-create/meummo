@@ -1231,9 +1231,18 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
     for (const h of houses) expect(reach(at(h).x, at(h).y), String(h.name || `casa em (${at(h).x}, ${at(h).y})`)).toBe(false);
   });
 
-  it('a feira livre: 15 bancas em três fileiras viradas para o sul, com corredores de 3 m, e a pedrinha passa por cima delas', () => {
-    const stalls = cenario.filter((o) => o.type === 'banca-frutas' && isNew(o));
+  it('a feira livre: 15 bancas em três fileiras viradas para o sul (uma é a de pastel), com corredores de 3 m, e a pedrinha passa por cima delas', () => {
+    const stalls = cenario.filter((o) => (o.type === 'banca-frutas' || o.type === 'banca-pastel') && isNew(o));
     expect(stalls).toHaveLength(15);
+    // (vestida em 23/11) a banca de pastel com caldo de cana, a lona listrada de cada fileira (no alto: não segura
+    // ninguém), os carrinhos de feira e a placa da entrada
+    expect(cenario.filter((o) => o.type === 'banca-pastel').map((o) => o.name)).toEqual(['Pastel e Caldo de Cana']);
+    const tarps = cenario.filter((o) => o.type === 'lona');
+    expect(tarps).toHaveLength(3);
+    expect(boxes.some((b) => b.type === 'lona')).toBe(false);
+    for (const t of tarps) expect(String(prop(t, 'cores')).split(',')).toHaveLength(Number(prop(t, 'bancas')));
+    expect(cenario.filter((o) => o.type === 'carrinho-feira').length).toBeGreaterThanOrEqual(3);
+    expect(cenario.some((o) => o.type === 'placa' && prop(o, 'texto') === 'FEIRA LIVRE')).toBe(true);
     expect(new Set(stalls.map((o) => o.y)).size).toBe(3);
     const area = layer('areas').find((o) => o.name === 'Feira Livre')!;
     for (const o of stalls) {
