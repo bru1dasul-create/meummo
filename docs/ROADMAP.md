@@ -714,7 +714,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   na pedra, as itacoatiaras gravadas (que brilham de noite) e as pinturas de ocre (gente dançando, a capivara, o veado e
   as mãos); as raízes descendo pela boca, as estalactites, o cipó e a mata em cima; na clareira de pedra, a fogueira
   apagada com brasas e fumacinha, as duas oferendas com velas acesas, a pedra ancestral, as pedras soltas e os esteios
-  com fitas no vento na entrada da trilha. Não dá para entrar (a boca pode virar a entrada de uma caverna por dentro)
+  com fitas no vento na entrada da trilha. Não dá para entrar (a boca pode virar a entrada de uma caverna por dentro;
+  o dono, 24/11: "deixa para futuramente"). **O mirante na main em 24/11** ("pode seguir vestindo o mirante"): o deque
+  maior (8 m) com a torre de observação de troncos (escoras em X, dois andares, a escada, o guarda-corpo lá em cima com a
+  plaquinha MIRANTE e o telhado de sapê; não dá para subir), o guarda-corpo do deque com a entrada para a trilha, a
+  luneta de moedas virada para a represa, o painel com o mapa da represa e as aves, o banco, os lampiões e as
+  helicônias; para o leste, a mata aberta num gramado até a margem. **Com isso, as regiões do Guarapiranga estão
+  vestidas; o dono vai parar neste mapa e voltar depois para os detalhes**
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

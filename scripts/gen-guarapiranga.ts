@@ -142,8 +142,20 @@ const SE_DECK: Rect = { x0: 60, x1: 69, y0: 60, y1: 66 };
 /** O píer quebrado do clube náutico: um pedaço na margem e o outro sozinho na água, depois do buraco. */
 const CLUB_PIER: Rect = { x0: 300.5, x1: 303.5, y0: 93, y1: 106 };
 const CLUB_PIER_END: Rect = { x0: 300.5, x1: 303.5, y0: 109, y1: 118 };
-/** O mirante: a plataforma de madeira na beira do parque (a torre vem depois). */
-const LOOKOUT: Rect = { x0: 13, x1: 19, y0: 47, y1: 53 };
+/**
+ * O mirante (24/11): o deque de madeira de 8 m no parque, com a torre de observação (e a escada, do lado sul) no canto de
+ * trás e o guarda-corpo em volta — a entrada é o vão do lado leste, onde chega a trilha. Para o leste, a mata aberta até
+ * a margem (`LOOKOUT_VIEW`: só o gramado; de lá se vê a represa).
+ */
+const LOOKOUT: Rect = { x0: 12, x1: 20, y0: 46, y1: 54 };
+const LOOKOUT_TOWER: Rect = { x0: 12.15, x1: 15.75, y0: 46.15, y1: 50.75 };
+const LOOKOUT_RAILS: Rect[] = [
+  { x0: 12, x1: 20, y0: 53.85, y1: 54 },
+  { x0: 12, x1: 12.15, y0: 50.75, y1: 53.85 },
+  { x0: 15.75, x1: 20, y0: 46, y1: 46.15 },
+  { x0: 19.85, x1: 20, y0: 50.5, y1: 53.85 },
+];
+const LOOKOUT_VIEW: Rect = { x0: 20.5, x1: 34, y0: 48.6, y1: 56 };
 const DECKS: [Rect, string][] = [
   [CORE, 'Praça do Refúgio'],
   [PIER, 'Píer'],
@@ -396,6 +408,8 @@ chao.push(area('lama', VARZEA, undefined, 'Várzea de Caça'));
 }
 // a água: a represa, as ilhas, o riacho, os canais, as lagoas, as poças e a piscina
 chao.push(area('agua', WATER, { cor: '#2f6f6a' }, 'Represa de Guarapiranga'));
+// o gramado aberto do mirante até a margem (de lá se vê a represa)
+chao.push(area('grama', blob((LOOKOUT_VIEW.x0 + LOOKOUT_VIEW.x1) / 2, (LOOKOUT_VIEW.y0 + LOOKOUT_VIEW.y1) / 2, (LOOKOUT_VIEW.x1 - LOOKOUT_VIEW.x0) / 2, (LOOKOUT_VIEW.y1 - LOOKOUT_VIEW.y0) / 2, 0.15)));
 chao.push(area('grama', ISLAND_SMALL, undefined, 'Ilhota'));
 chao.push(area('grama', ISLAND, undefined, 'Ilha do Véu'));
 chao.push(line('agua', CREEK, { largura: CREEK_W, cor: '#2f6f6a' }));
@@ -751,9 +765,19 @@ for (let i = 0, n = 0; i < 400 && n < 14; i++) {
   }
 }
 
-// ----- 2 · o mirante: a plataforma de madeira na beira do parque -----
+// ----- 2 · o mirante -----
+// (24/11, o dono: "pode seguir vestindo o mirante") O deque com a torre de observação de troncos (a escada, os dois
+// andares e o telhado de sapê; não dá para subir), o guarda-corpo com a entrada para a trilha, a luneta de moedas virada
+// para a represa, o painel com o mapa da represa e as aves, o banco e os lampiões; em volta, helicônias.
 cenario.push(box('deque', LOOKOUT, { altura: 0.6, palafitas: true }, 'Mirante'));
-for (const [x, y] of [[LOOKOUT.x0 + 0.3, LOOKOUT.y1 - 0.3], [LOOKOUT.x1 - 0.3, LOOKOUT.y1 - 0.3]] as const) cenario.push(point('poste-praca', x, y, { altura: 3, luz: '#ffd36b', estilo: 'lampiao' }));
+cenario.push(box('torre-mirante', LOOKOUT_TOWER, { altura: 6.2, escada: 1 }, 'Torre do Mirante'));
+addTrunk({ x: (LOOKOUT_TOWER.x0 + LOOKOUT_TOWER.x1) / 2, y: (LOOKOUT_TOWER.y0 + LOOKOUT_TOWER.y1) / 2, r: 2.4 });
+for (const r of LOOKOUT_RAILS) cenario.push(rect('guarda-corpo', r.x0, r.x1, r.y0, r.y1, { altura: 0.95 }));
+cenario.push(point('luneta', 19.55, 51.6, { olhando: 0 }));
+cenario.push(rect('painel-mirante', 17.2, 18.8, 46.4, 46.7, {}, 'Painel da Represa'));
+cenario.push(rect('banco', 15.2, 16.8, 53.2, 53.6, { olhando: 270 }));
+for (const [x, y] of [[LOOKOUT.x0 + 0.3, LOOKOUT.y1 - 0.4], [LOOKOUT.x1 - 0.3, LOOKOUT.y1 - 0.4]] as const) cenario.push(point('poste-praca', x, y, { altura: 3, luz: '#ffd36b', estilo: 'lampiao' }));
+for (const [x, y] of [[13.4, 55.2], [17.6, 55.4], [21, 53.2], [11, 51.8], [21.2, 45.2]] as const) cenario.push(point('planta', x, y, { tipo: 'heliconia', raio: 0.55 }));
 cenario.push(point('placa', LOOKOUT.x1 + 0.6, LOOKOUT.y0 + 0.6, { texto: 'MIRANTE', seta: 'leste', poste: true }));
 addTrunk({ x: LOOKOUT.x1 + 0.6, y: LOOKOUT.y0 + 0.6, r: 0.1 });
 
@@ -1064,7 +1088,10 @@ cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 
     if (inside(x, y, COMMUNITY) || inRect(x, y, FIELD, 1) || inRect(x, y, SQUARE, 1) || inRect(x, y, CLUB, 1) || onIsland(x, y)) continue;
     if (nearTrunks(x, y, 3).some((t) => dist(x, y, t.x, t.y) < t.r + raio * 0.6)) continue;
     const wet = inside(x, y, BREJO) || inVarzea(x, y) || inside(x, y, blob(20, 87, 17, 10, 0.12));
-    cenario.push(point('planta', round(x), round(y), { tipo: wet ? 'taboa' : prng() < 0.75 ? 'samambaia' : 'capim', raio }));
+    const tipo = wet ? 'taboa' : prng() < 0.75 ? 'samambaia' : 'capim';
+    // (o sorteio do tipo vem antes: tirar estas não mexe nas plantas do resto do mapa)
+    if (inRect(x, y, LOOKOUT, 0.6) || dist(x, y, CAVE.x, CAVE.y) < 8) continue;
+    cenario.push(point('planta', round(x), round(y), { tipo, raio }));
     n++;
   }
 }
@@ -1115,6 +1142,10 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'rede' || s.type === 'varal') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'muro') return [box('muro', r, { altura: Number(p.altura) })];
   if (s.type === 'barreira') return [box('barreira', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'torre-mirante') return [box('torre-mirante', r, { altura: Number(p.altura) })];
+  if (s.type === 'guarda-corpo') return [box('guarda-corpo', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'luneta') return [block('luneta', s.x, s.y, 0.4, { bloqueiaTiro: false, altura: 1.4 })];
+  if (s.type === 'painel-mirante') return [box('painel-mirante', r, { bloqueiaTiro: false, altura: 2 })];
   if (s.type === 'caverna') {
     // o morro: o corpo (a frente reta, onde fica a boca) e o fundo mais estreito (as quinas de trás são chanfradas)
     return [
@@ -1173,6 +1204,12 @@ const waterBoxes = waterStrips(isWater, 0, W, 0, H);
  * nenhum: o mapa é todo aberto. As árvores sorteadas que ficam num vão desses saem (uma de cada vez, até não sobrar vão);
  * se o vão for entre duas coisas postas à mão, o gerador para com erro.
  */
+// o mirante: a mata aberta para o leste, até a margem (só sai árvore sorteada, depois de todas postas: tirar antes
+// mexeria no sorteio do resto do mapa)
+for (let i = cenario.length - 1; i >= 0; i--) {
+  const o = cenario[i]!;
+  if (o.type === 'arvore' && o.name === undefined && inRect(o.x, o.y, LOOKOUT_VIEW)) cenario.splice(i, 1);
+}
 {
   const SOLID_CELL = 4;
   const rebuild = () => {

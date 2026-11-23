@@ -34,7 +34,18 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a Caverna Sagrada vestida (na `main`).** O dono: "pode seguir vestindo a caverna". O arco de 12
+- **Agora (24/11): o mirante vestido (na `main`); o Guarapiranga fica em pausa.** O dono: "pode seguir vestindo o
+  mirante / sobre a caverna deixa para futuramente, já já paramos nesse mapa e retornamos para fazer detalhes de outras
+  coisas". O `LOOKOUT` cresceu para 12..20 × 46..54 (o deque); a torre (`torre-mirante`, `LOOKOUT_TOWER` 12,15..15,75 ×
+  46,15..50,75; tmj: `altura` do andar de cima, `escada` em m) fica no canto de trás, com a escada do lado sul dentro da
+  caixa (colisão: a caixa toda; não dá para subir). O guarda-corpo do deque são quatro `guarda-corpo` (caixas finas de
+  madeira; a entrada é o vão do leste, onde chega a trilha), a `luneta` (de moedas, sem marca; `olhando`), o
+  `painel-mirante` (o mapa da represa e a garça, o biguá e o martim-pescador), um banco, os dois lampiões e helicônias.
+  `LOOKOUT_VIEW`: o gramado até a margem (as árvores sorteadas saem DEPOIS de todas postas, para não mexer no sorteio do
+  resto do mapa; o mesmo cuidado nas samambaias, que agora não nascem no deque nem na clareira da caverna). Tudo no
+  sul.js; a tecla M desenha a torre (o sapê), o guarda-corpo, a luneta e o painel. **Próximo no Guarapiranga (quando o
+  dono voltar):** a caverna por dentro (a Cuca), detalhes de cada região, a Ilha do Véu, a saída para Santo Amaro.
+- **Antes (24/11): a Caverna Sagrada vestida (na `main`).** O dono: "pode seguir vestindo a caverna". O arco de 12
   pedras saiu; no lugar, o morro `caverna` (`CAVE_HILL`, 27..41 × 257..265, 5,4 m; sul.js; tmj: `boca`, `bocaX`,
   `bocaAltura`, `altura`, `brilho`, `inscricoes`, `pinturas`, `raizes`, `arvore`), desenhado com o `ringRock` (a pedra
   da cachoeira em três voltas; o `facetRock` agora só monta as voltas e chama ele), com a frente reta e em pé onde fica a

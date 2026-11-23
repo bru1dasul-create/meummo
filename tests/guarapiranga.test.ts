@@ -177,7 +177,7 @@ describe('Mapa 02 (Guarapiranga): formato do mapa novo', () => {
       }
       return false;
     };
-    const SOLID = ['arvore', 'poste', 'pedra', 'tronco-caido', 'casa', 'banco', 'fogueira', 'poste-praca', 'barril', 'caixote', 'ponto-onibus', 'muro', 'cachoeira', 'barreira', 'coreto', 'caverna', 'rocha', 'oferenda', 'esteio', 'brasas'];
+    const SOLID = ['arvore', 'poste', 'pedra', 'tronco-caido', 'casa', 'banco', 'fogueira', 'poste-praca', 'barril', 'caixote', 'ponto-onibus', 'muro', 'cachoeira', 'barreira', 'coreto', 'caverna', 'rocha', 'oferenda', 'esteio', 'brasas', 'torre-mirante', 'guarda-corpo', 'luneta', 'painel-mirante'];
     for (const o of layer('cenario')) {
       const { x, y } = at(o);
       const solid = SOLID.includes(o.type) || (o.type === 'arbusto' && prop(o, 'fechado') === true) || (o.type === 'placa' && prop(o, 'poste') === true);
@@ -387,7 +387,7 @@ describe('Mapa 02: a chegada e o Refúgio (no mesmo lugar de antes)', () => {
 describe('Mapa 02: o mapa inteiro aberto (400 × 320)', () => {
   it('dá para ir a pé da chegada até cada lugar do mapa', () => {
     for (const [x, y, r, what] of [
-      [16, 50, 0.5, 'Mirante'],
+      [17.5, 51.5, 0.5, 'Mirante (o deque, ao lado da torre)'],
       [18, 104, 3, 'Brejo do Sul'],
       [30, 200, 1, 'Trilha da Margem Sul'],
       [34, 266.3, 0.5, 'boca da Caverna Sagrada (entre as oferendas)'],

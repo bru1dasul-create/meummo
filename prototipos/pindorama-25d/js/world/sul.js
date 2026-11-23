@@ -9,7 +9,8 @@
 // A lojinha do posto (a casa com `posto`) e a placa em branco (`torta`) ficam no props.js e no fundo.js; as pedras de
 // atravessar (a pinguela com `pedras`), no flora.js; o gradil quebrado, no props.js.
 // Também do Guarapiranga (o [mundo], 23 e 24/11): a cachoeira e a comporta (`cachoeira`, com `estilo: 'comporta'`), o
-// coreto da Praça em Ruínas (`coreto`) e a Caverna Sagrada (`caverna`, `rocha`, `oferenda`, `brasas`, `esteio`).
+// coreto da Praça em Ruínas (`coreto`), a Caverna Sagrada (`caverna`, `rocha`, `oferenda`, `brasas`, `esteio`) e o
+// mirante (`torre-mirante`, `guarda-corpo`, `luneta`, `painel-mirante`).
 //   PD.flora.tree.paineira = { trunk, trunkBox, crown, crownBox }
 //   PD.city.small[tipo]    = { height, blocks, overhead, fades, box, shadow, paint, live }
 (function (PD) {
@@ -2729,6 +2730,366 @@
           ctx.stroke();
         }
       });
+    },
+  };
+
+  // ------------------------------------------------------------------ o mirante (Guarapiranga)
+  // (24/11, o dono: "pode seguir vestindo o mirante") A torre de observação de troncos no canto de trás do deque: os
+  // quatro esteios com as escoras em X, o primeiro andar, a escada do lado sul (degraus, banzos e corrimão), o andar de
+  // cima com o guarda-corpo e o telhado de sapê em pirâmide (não dá para subir, por enquanto). E o que fica no deque: o
+  // guarda-corpo de madeira (`guarda-corpo`), a luneta de moedas (`luneta`, sem marca) virada para a represa e o painel
+  // (`painel-mirante`) com o mapa da represa e as aves.
+  const WOOD = { front: '#8a6b4c', side: '#6e543b', top: '#a3825f' };
+  const LOG = { hi: '#a7865f', mid: '#7a5a3c', lo: '#4a3424' };
+  /** Um tronco em pé (de z0 a z1) no ponto (x, y): o contorno, a luz de um lado e os veios da casca. */
+  function log(ctx, cam, x, y, z0, z1, r, ink) {
+    const a = cam.p({ x, y, z: z0 }), b = cam.p({ x, y, z: z1 });
+    const w = r * cam.zoom;
+    ctx.fillStyle = INK;
+    ctx.fillRect(a.x - w - ink, b.y - ink * 0.5, 2 * (w + ink), a.y - b.y + ink);
+    const g = ctx.createLinearGradient(a.x - w, 0, a.x + w, 0);
+    g.addColorStop(0, LOG.hi);
+    g.addColorStop(0.45, LOG.mid);
+    g.addColorStop(1, LOG.lo);
+    ctx.fillStyle = g;
+    ctx.fillRect(a.x - w, b.y, 2 * w, a.y - b.y);
+    ctx.strokeStyle = 'rgba(40, 26, 16, 0.35)';
+    ctx.lineWidth = Math.max(0.6, 0.8 * cam.zoom);
+    const rnd = seeded(x, y, Math.round(z0) + 4501);
+    for (let k = 0; k < 5; k++) {
+      const yy = b.y + (a.y - b.y) * rnd();
+      line2(ctx, { x: a.x - w * 0.6, y: yy }, { x: a.x - w * 0.1, y: yy + 6 * cam.zoom });
+    }
+  }
+  /** Uma viga (de `p` a `q`, pontos 3D) de seção `r`: a tinta e a madeira com a luz em cima. */
+  function beam(ctx, cam, p, q, r, ink, color = WOOD.front) {
+    pipe(ctx, cam, [p, q], r, ink * 0.8, color);
+  }
+  function towerGeom(d, z0) {
+    const yb = d.y1 - d.stair; // o fim da torre (a escada fica entre yb e y1)
+    const i = 18;
+    const posts = [[d.x0 + i, d.y0 + i], [d.x1 - i, d.y0 + i], [d.x1 - i, yb - i], [d.x0 + i, yb - i]];
+    return { yb, posts, L1: z0 + 300, L2: z0 + d.h, R: z0 + d.h + 220 };
+  }
+  /** As escoras em X de um lado (entre os esteios `a` e `b`, de za a zb). */
+  function xBrace(ctx, cam, a, b, za, zb, ink) {
+    beam(ctx, cam, { x: a[0], y: a[1], z: za }, { x: b[0], y: b[1], z: zb }, 3.4, ink);
+    beam(ctx, cam, { x: a[0], y: a[1], z: zb }, { x: b[0], y: b[1], z: za }, 3.4, ink);
+    beam(ctx, cam, { x: a[0], y: a[1], z: zb - 6 }, { x: b[0], y: b[1], z: zb - 6 }, 4, ink, WOOD.side);
+  }
+  /** O guarda-corpo de madeira de um lado (entre `a` e `b` no chão z): postes, corrimão e a travessa do meio. */
+  function woodRail(ctx, cam, a, b, z, h, ink, step = 110) {
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    const n = Math.max(1, Math.round(L / step));
+    for (let k = 0; k <= n; k++) {
+      const t = k / n;
+      const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      beam(ctx, cam, { ...p, z }, { ...p, z: z + h }, 3.6, ink, WOOD.side);
+    }
+    beam(ctx, cam, { x: a.x, y: a.y, z: z + h * 0.5 }, { x: b.x, y: b.y, z: z + h * 0.5 }, 2.6, ink);
+    beam(ctx, cam, { x: a.x, y: a.y, z: z + h }, { x: b.x, y: b.y, z: z + h }, 3.8, ink, WOOD.top);
+  }
+  small['torre-mirante'] = {
+    fades: true,
+    height: (d) => d.h + 360,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1 - d.stair, d.h + 300),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 70, d.x1 + 70, d.y0 - 70, d.y1 + 40, z0 - 10, z0 + d.h + 380, 24),
+    paint(ctx, cam, d, z0, ink) {
+      const g = towerGeom(d, z0);
+      const [NW, NE, SE, SW] = g.posts;
+      const rnd = seeded(d.x0, d.y0, 4511);
+      const floor = (z) => H.box(ctx, cam, d.x0 - 12, d.x1 + 12, d.y0 - 12, g.yb + 12, z - 14, z, WOOD, ink);
+      const planks = (z) => {
+        // as tábuas do assoalho (riscos ao longo de x) por cima da caixa
+        ctx.strokeStyle = 'rgba(50, 34, 22, 0.4)';
+        ctx.lineWidth = Math.max(0.6, 0.9 * cam.zoom);
+        for (let y = d.y0; y < g.yb + 12; y += 18) line2(ctx, cam.p({ x: d.x0 - 12, y, z }), cam.p({ x: d.x1 + 12, y, z }));
+      };
+      // o térreo: as escoras de trás, os esteios e as escoras da frente
+      xBrace(ctx, cam, NW, NE, z0 + 30, g.L1 - 14, ink);
+      xBrace(ctx, cam, NW, SW, z0 + 30, g.L1 - 14, ink);
+      for (const [x, y] of [NW, NE, SW, SE]) log(ctx, cam, x, y, z0 - 10, g.L1, 13, ink);
+      xBrace(ctx, cam, SW, SE, z0 + 30, g.L1 - 14, ink);
+      xBrace(ctx, cam, NE, SE, z0 + 30, g.L1 - 14, ink);
+      floor(g.L1);
+      planks(g.L1);
+      // o primeiro andar até o de cima (os esteios afinam)
+      xBrace(ctx, cam, NW, NE, g.L1 + 10, g.L2 - 14, ink);
+      xBrace(ctx, cam, NW, SW, g.L1 + 10, g.L2 - 14, ink);
+      for (const [x, y] of [NW, NE, SW, SE]) log(ctx, cam, x, y, g.L1, g.L2, 11, ink);
+      xBrace(ctx, cam, SW, SE, g.L1 + 10, g.L2 - 14, ink);
+      xBrace(ctx, cam, NE, SE, g.L1 + 10, g.L2 - 14, ink);
+      // a escada do lado sul: sobe do leste (no deque) para o oeste (no primeiro andar)
+      const ys = [g.yb + 8, d.y1 - 8];
+      const xa = d.x1 - 30, xb = d.x0 + 30;
+      for (const y of ys) beam(ctx, cam, { x: xa, y, z: z0 }, { x: xb, y, z: g.L1 }, 4.4, ink, WOOD.side);
+      const steps = 14;
+      for (let k = 1; k < steps; k++) {
+        const t = k / steps;
+        const x = xa + (xb - xa) * t, z = z0 + (g.L1 - z0) * t;
+        H.box(ctx, cam, x - 14, x + 14, ys[0], ys[1], z - 4, z, WOOD, ink * 0.7);
+      }
+      for (const y of [ys[1]]) {
+        beam(ctx, cam, { x: xa, y, z: z0 + 95 }, { x: xb, y, z: g.L1 + 95 }, 3.4, ink, WOOD.top);
+        for (let k = 0; k <= 4; k++) {
+          const t = k / 4;
+          const x = xa + (xb - xa) * t, z = z0 + (g.L1 - z0) * t;
+          beam(ctx, cam, { x, y, z }, { x, y, z: z + 95 }, 2.6, ink, WOOD.side);
+        }
+      }
+      // o andar de cima: o assoalho, os esteios do telhado e o guarda-corpo (os lados de trás primeiro)
+      floor(g.L2);
+      planks(g.L2);
+      const top = g.posts.map(([x, y]) => ({ x, y }));
+      woodRail(ctx, cam, top[0], top[1], g.L2, 100, ink);
+      woodRail(ctx, cam, top[0], top[3], g.L2, 100, ink);
+      for (const [x, y] of [NW, NE, SW]) log(ctx, cam, x, y, g.L2, g.R, 9, ink);
+      woodRail(ctx, cam, top[3], top[2], g.L2, 100, ink);
+      woodRail(ctx, cam, top[1], top[2], g.L2, 100, ink);
+      log(ctx, cam, SE[0], SE[1], g.L2, g.R, 9, ink);
+      // a plaquinha MIRANTE no guarda-corpo de cima, do lado sul
+      H.onWall(ctx, cam, { x: (d.x0 + d.x1) / 2 - 60, y: g.yb - 16, z: g.L2 + 92 }, { x: 1, y: 0 }, () => {
+        ctx.fillStyle = INK;
+        ctx.fillRect(-3, -3, 126, 34);
+        ctx.fillStyle = '#e9dcc0';
+        ctx.fillRect(0, 0, 120, 28);
+        ctx.fillStyle = '#5a3b22';
+        ctx.font = `bold 19px ${H.FONT_SIGN || 'sans-serif'}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('MIRANTE', 60, 15);
+      });
+      // o telhado de sapê em pirâmide: a beirada desfiada, as camadas de palha e o arremate no alto
+      const o = 46;
+      const E = [{ x: d.x0 - o, y: d.y0 - o }, { x: d.x1 + o, y: d.y0 - o }, { x: d.x1 + o, y: g.yb + o }, { x: d.x0 - o, y: g.yb + o }].map((q) => ({ ...q, z: g.R }));
+      const apex = { x: (d.x0 + d.x1) / 2, y: (d.y0 + g.yb) / 2, z: g.R + 150 };
+      const P = (q) => cam.p(q);
+      poly(ctx, hullOf(E.map(P).concat([P(apex)])), null, INK, ink * 2.4);
+      const faces = [[E[3], E[2]], [E[1], E[2]]]; // os lados que a câmera vê: o sul e o leste
+      for (const [i, [a, b]] of faces.entries()) {
+        const pts = [a, b, apex].map(P);
+        const path = pathOf(pts);
+        ctx.fillStyle = i ? '#a5843f' : '#bf9b4e';
+        ctx.fill(path);
+        ctx.save();
+        ctx.clip(path);
+        // as camadas de palha (riscos curtos do alto para a beirada)
+        for (let row = 0; row < 7; row++) {
+          const t = row / 7;
+          for (let k = 0; k < 26; k++) {
+            const u = (k + rnd() * 0.6) / 26;
+            const base = { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, z: a.z };
+            const p0 = { x: base.x + (apex.x - base.x) * t, y: base.y + (apex.y - base.y) * t, z: base.z + (apex.z - base.z) * t };
+            const p1 = { x: base.x + (apex.x - base.x) * (t + 0.11), y: base.y + (apex.y - base.y) * (t + 0.11), z: base.z + (apex.z - base.z) * (t + 0.11) };
+            ctx.strokeStyle = rnd() < 0.5 ? 'rgba(120, 88, 40, 0.55)' : 'rgba(232, 206, 140, 0.45)';
+            ctx.lineWidth = Math.max(0.7, 1.2 * cam.zoom);
+            line2(ctx, P(p0), P(p1));
+          }
+          const l0 = { x: a.x + (apex.x - a.x) * t, y: a.y + (apex.y - a.y) * t, z: a.z + (apex.z - a.z) * t };
+          const l1 = { x: b.x + (apex.x - b.x) * t, y: b.y + (apex.y - b.y) * t, z: b.z + (apex.z - b.z) * t };
+          ctx.strokeStyle = 'rgba(80, 58, 26, 0.35)';
+          ctx.lineWidth = Math.max(0.8, 1.6 * cam.zoom);
+          line2(ctx, P(l0), P(l1));
+        }
+        ctx.restore();
+        // a beirada desfiada (as pontas da palha pendendo)
+        ctx.strokeStyle = '#8a6a30';
+        ctx.lineWidth = Math.max(0.8, 1.3 * cam.zoom);
+        for (let k = 0; k <= 30; k++) {
+          const u = k / 30;
+          const q = P({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, z: a.z });
+          line2(ctx, q, { x: q.x + (rnd() - 0.5) * 3 * cam.zoom, y: q.y + (5 + rnd() * 7) * cam.zoom });
+        }
+      }
+      // o arremate do alto: a palha amarrada
+      const tip = P(apex);
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.ellipse(tip.x, tip.y + 4 * cam.zoom, 11 * cam.zoom + ink, 7 * cam.zoom + ink, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#8a6a30';
+      ctx.beginPath();
+      ctx.ellipse(tip.x, tip.y + 4 * cam.zoom, 11 * cam.zoom, 7 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+    },
+  };
+  /** O guarda-corpo do deque: uma caixa fina; os postes de 1,1 em 1,1 m, a travessa do meio e o corrimão. */
+  small['guarda-corpo'] = {
+    fades: true,
+    height: (d) => d.h,
+    blocks: 0,
+    shadow: (p, cam, d) => {
+      const along = d.x1 - d.x0 >= d.y1 - d.y0;
+      const m = along ? (d.y0 + d.y1) / 2 : (d.x0 + d.x1) / 2;
+      H.boxShadow(p, cam, along ? d.x0 : m - 3, along ? d.x1 : m + 3, along ? m - 3 : d.y0, along ? m + 3 : d.y1, d.h * 0.4);
+    },
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + 20, d.y0 - 20, d.y1 + 20, z0 - 6, z0 + d.h + 20, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const along = d.x1 - d.x0 >= d.y1 - d.y0;
+      const m = along ? (d.y0 + d.y1) / 2 : (d.x0 + d.x1) / 2;
+      const a = along ? { x: d.x0 + 4, y: m } : { x: m, y: d.y0 + 4 }, b = along ? { x: d.x1 - 4, y: m } : { x: m, y: d.y1 - 4 };
+      woodRail(ctx, cam, a, b, z0, d.h, ink);
+    },
+  };
+  /** A luneta de moedas (de parque, sem marca): o cano no chão e a cabeça com os dois olhos, virada para `angle`. */
+  small.luneta = {
+    fades: true,
+    height: () => 150,
+    blocks: 0,
+    shadow: (p, cam, d) => H.lineShadow(p, cam, d.x, d.y, 140, 9),
+    box: (cam, d, z0) => volBox(cam, d.x - 60, d.x + 60, d.y - 60, d.y + 60, z0 - 6, z0 + 160, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const GREEN = '#2f5d4a', HI = '#4f8a6e', DK = '#1e3a2f', CHROME = '#c9ced0';
+      pipe(ctx, cam, [{ x: d.x, y: d.y, z: z0 }, { x: d.x, y: d.y, z: z0 + 105 }], 5, ink, '#5b6266');
+      const base = cam.p({ x: d.x, y: d.y, z: z0 });
+      ctx.fillStyle = '#4a5054';
+      ctx.beginPath();
+      ctx.ellipse(base.x, base.y, 14 * cam.zoom, 7 * cam.zoom, 0, 0, M.TAU);
+      ctx.fill();
+      const a = (d.angle * Math.PI) / 180;
+      const f = { x: Math.cos(a), y: Math.sin(a) }, s = { x: -Math.sin(a), y: Math.cos(a) };
+      const c = { x: d.x, y: d.y, z: z0 + 118 };
+      const pt = (u, v, w) => ({ x: c.x + f.x * u + s.x * v, y: c.y + f.y * u + s.y * v, z: c.z + w });
+      // a cabeça: uma caixa virada para a frente (os lados que a câmera vê, do fundo para a frente)
+      const hl = 22, hw = 17, hh = 13;
+      const corners = (u, v, w) => pt(u * hl, v * hw, w * hh);
+      const facesDef = [
+        { n: f, pts: [corners(1, -1, -1), corners(1, 1, -1), corners(1, 1, 1), corners(1, -1, 1)], c: DK },
+        { n: { x: -f.x, y: -f.y }, pts: [corners(-1, 1, -1), corners(-1, -1, -1), corners(-1, -1, 1), corners(-1, 1, 1)], c: GREEN },
+        { n: s, pts: [corners(-1, 1, -1), corners(1, 1, -1), corners(1, 1, 1), corners(-1, 1, 1)], c: GREEN },
+        { n: { x: -s.x, y: -s.y }, pts: [corners(1, -1, -1), corners(-1, -1, -1), corners(-1, -1, 1), corners(1, -1, 1)], c: GREEN },
+      ];
+      const vis = facesDef.filter((q) => q.n.x * cam.toCamera.x + q.n.y * cam.toCamera.y > 0);
+      const all = facesDef.flatMap((q) => q.pts).map((q) => cam.p(q));
+      poly(ctx, hullOf(all), null, INK, ink * 2.2);
+      for (const q of vis) poly(ctx, q.pts.map((p) => cam.p(p)), q.c);
+      poly(ctx, [corners(-1, -1, 1), corners(1, -1, 1), corners(1, 1, 1), corners(-1, 1, 1)].map((p) => cam.p(p)), HI);
+      // os dois olhos (na frente, as lentes; atrás, os visores) e a fenda da moeda no lado
+      for (const v of [-0.5, 0.5]) {
+        const lens = cam.p(pt(hl + 3, v * hw, 0));
+        ctx.fillStyle = INK;
+        ctx.beginPath();
+        ctx.arc(lens.x, lens.y, 6.5 * cam.zoom + ink * 0.6, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#8fb7c4';
+        ctx.beginPath();
+        ctx.arc(lens.x, lens.y, 6.5 * cam.zoom, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(lens.x - 2 * cam.zoom, lens.y - 2 * cam.zoom, 2 * cam.zoom, 0, M.TAU);
+        ctx.fill();
+        pipe(ctx, cam, [pt(-hl, v * hw, 2), pt(-hl - 10, v * hw, 2)], 3.4, ink * 0.6, '#262a2c');
+      }
+      const slot = cam.p(pt(0, hw + 1, 4));
+      ctx.fillStyle = CHROME;
+      ctx.fillRect(slot.x - 4 * cam.zoom, slot.y - 1.2 * cam.zoom, 8 * cam.zoom, 2.4 * cam.zoom);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(slot.x - 2.6 * cam.zoom, slot.y - 0.5 * cam.zoom, 5.2 * cam.zoom, 1 * cam.zoom);
+    },
+  };
+  /** O painel do mirante: os dois postes, o telhadinho e a placa com o mapa da represa e as aves (virado para o sul). */
+  small['painel-mirante'] = {
+    fades: true,
+    height: () => 230,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, 200),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 40, d.x1 + 40, d.y0 - 40, d.y1 + 40, z0 - 6, z0 + 240, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const y = (d.y0 + d.y1) / 2;
+      const W = d.x1 - d.x0;
+      for (const x of [d.x0 + 8, d.x1 - 8]) log(ctx, cam, x, y, z0 - 6, z0 + 205, 6, ink);
+      // a placa
+      const top = z0 + 180, Hb = 95;
+      H.box(ctx, cam, d.x0 + 4, d.x1 - 4, y - 4, y + 4, top - Hb - 6, top + 4, WOOD, ink);
+      H.onWall(ctx, cam, { x: d.x0 + 4, y: y + 4.5, z: top }, { x: 1, y: 0 }, () => {
+        const L = W - 8;
+        ctx.fillStyle = '#efe3c4';
+        ctx.fillRect(6, 6, L - 12, Hb - 12);
+        ctx.fillStyle = '#2f5d4a';
+        ctx.fillRect(6, 6, L - 12, 14);
+        ctx.fillStyle = '#f4ecd8';
+        ctx.font = `bold 10px ${H.FONT_SIGN || 'sans-serif'}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('REPRESA GUARAPIRANGA', L / 2, 13.5);
+        // o mapa: a represa (azul), a ilha, a barragem no sul e o "você está aqui" no oeste
+        const mx = 14, my = 26, mw = L * 0.56, mh = Hb - 40;
+        ctx.fillStyle = '#9cc58c';
+        ctx.fillRect(mx, my, mw, mh);
+        ctx.fillStyle = '#4f8fb0';
+        ctx.beginPath();
+        const pts = [[0.22, 0.12], [0.6, 0.08], [0.86, 0.22], [0.9, 0.55], [0.8, 0.82], [0.5, 0.88], [0.28, 0.8], [0.12, 0.55], [0.16, 0.3]];
+        pts.forEach(([u, v], i) => (i ? ctx.lineTo(mx + u * mw, my + v * mh) : ctx.moveTo(mx + u * mw, my + v * mh)));
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#6f9e5c';
+        ctx.beginPath();
+        ctx.ellipse(mx + mw * 0.52, my + mh * 0.48, mw * 0.08, mh * 0.1, 0.3, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#8a8478';
+        ctx.fillRect(mx + mw * 0.34, my + mh * 0.86, mw * 0.4, 3);
+        ctx.fillStyle = '#d23b2f';
+        ctx.beginPath();
+        ctx.arc(mx + mw * 0.1, my + mh * 0.42, 3.4, 0, M.TAU);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(40, 30, 20, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(mx, my, mw, mh);
+        // as aves da represa: a garça, o biguá e o martim-pescador
+        const bx = mx + mw + 10;
+        const bird = (cx, cy, body, head, beak, neck) => {
+          ctx.fillStyle = body;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, 7, 4, -0.2, 0, M.TAU);
+          ctx.fill();
+          ctx.strokeStyle = body;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(cx + 5, cy - 2);
+          ctx.lineTo(cx + 7, cy - 2 - neck);
+          ctx.stroke();
+          ctx.fillStyle = head;
+          ctx.beginPath();
+          ctx.arc(cx + 7.5, cy - 3 - neck, 2.6, 0, M.TAU);
+          ctx.fill();
+          ctx.strokeStyle = beak;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(cx + 9.5, cy - 3 - neck);
+          ctx.lineTo(cx + 14, cy - 2.5 - neck);
+          ctx.stroke();
+          ctx.strokeStyle = '#4a3a2a';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx - 1, cy + 3);
+          ctx.lineTo(cx - 1, cy + 9);
+          ctx.moveTo(cx + 2, cy + 3);
+          ctx.lineTo(cx + 2, cy + 9);
+          ctx.stroke();
+        };
+        bird(bx + 6, my + 14, '#f7f4ec', '#f7f4ec', '#e8b23a', 9);
+        bird(bx + 6, my + 36, '#26282a', '#26282a', '#5a5a5a', 4);
+        bird(bx + 26, my + 26, '#2f7fb3', '#2f7fb3', '#3a2a1a', 2);
+        ctx.fillStyle = '#e07a3a';
+        ctx.beginPath();
+        ctx.ellipse(bx + 26, my + 28.5, 4.5, 2, -0.2, 0, Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(60, 44, 28, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(4, 4, L - 8, Hb - 8);
+      });
+      // o telhadinho (duas tábuas inclinadas)
+      const zr = top + 8;
+      const roof = [{ x: d.x0 - 10, y: y + 22, z: zr }, { x: d.x1 + 10, y: y + 22, z: zr }, { x: d.x1 + 10, y: y - 8, z: zr + 20 }, { x: d.x0 - 10, y: y - 8, z: zr + 20 }].map((q) => cam.p(q));
+      poly(ctx, roof, '#6e543b', INK, ink * 1.8);
+      ctx.strokeStyle = 'rgba(30, 20, 12, 0.35)';
+      ctx.lineWidth = Math.max(0.6, 0.9 * cam.zoom);
+      for (let k = 1; k < 8; k++) {
+        const t = k / 8;
+        line2(ctx, { x: roof[0].x + (roof[1].x - roof[0].x) * t, y: roof[0].y + (roof[1].y - roof[0].y) * t }, { x: roof[3].x + (roof[2].x - roof[3].x) * t, y: roof[3].y + (roof[2].y - roof[3].y) * t });
+      }
     },
   };
 

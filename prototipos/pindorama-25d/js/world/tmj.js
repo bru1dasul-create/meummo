@@ -352,6 +352,19 @@
         // a cachoeirinha (sul.js): as pedras com musgo e a água caindo para o lado `queda` (por enquanto só 'sul');
         // `estilo` 'comporta' (a barragem): o muro de pedra com a boca em arco e o tanque de `tanque` m
         map.props.push({ kind: 'cachoeira', ...rect(o), h: (pr.altura || 1.6) * 100, fall: pr.queda || 'sul', moss: !!pr.musgo, style: pr.estilo || null, basin: (pr.tanque || 3) * 100 });
+      } else if (k === 'torre-mirante') {
+        // a torre de observação do mirante (sul.js): a caixa é a torre com a escada do lado sul (`escada`, m); `altura`
+        // é a do andar de cima (m)
+        map.props.push({ kind: 'torre-mirante', ...rect(o), h: (pr.altura || 6.2) * 100, stair: (pr.escada || 1) * 100 });
+      } else if (k === 'guarda-corpo') {
+        // o guarda-corpo de madeira (sul.js): uma caixa fina, ao longo do lado comprido; `altura`
+        map.props.push({ kind: 'guarda-corpo', ...rect(o), h: (pr.altura || 0.95) * 100 });
+      } else if (k === 'luneta') {
+        // a luneta de moedas do mirante (sul.js): `olhando` (graus, 0 = leste)
+        map.props.push({ kind: 'luneta', x, y, r: 20, angle: pr.olhando ?? 0 });
+      } else if (k === 'painel-mirante') {
+        // o painel com o mapa da represa e as aves (sul.js), virado para o sul
+        map.props.push({ kind: 'painel-mirante', ...rect(o) });
       } else if (k === 'caverna') {
         // a Caverna Sagrada (sul.js): o morro de pedra (a caixa) com a boca no lado sul: `boca` (largura, m), `bocaX` (o
         // meio dela, m; sem ele, o meio da caixa), `bocaAltura` (m), `altura` (do morro, m), `brilho` (a luz lá dentro),
