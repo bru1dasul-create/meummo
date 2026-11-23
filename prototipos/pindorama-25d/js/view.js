@@ -180,7 +180,11 @@
     consume(id, item) {
       const a = this.actors.get(id);
       if (!a || a.creature || !PD.consumeFx) return;
-      a.consumeFx = { at: this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now()), look: PD.consumeFx.look(item) };
+      const look = PD.consumeFx.look(item);
+      a.consumeFx = { at: this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now()), look };
+      // o corpo: joga a garrafada para cima, come a banana, bebe a água de coco (no relógio do personagem)
+      const ch = a.ch;
+      if (ch && look.anim && !ch.death) ch.consumeAnim = { kind: look.anim, item, start: ch.time };
     }
 
     /**
@@ -1517,8 +1521,10 @@
       const list = [];
       if (a.levelFx && PD.levelUpFx) list.push([PD.levelUpFx, a.levelFx]);
       if (a.consumeFx && PD.consumeFx) list.push([PD.consumeFx, a.consumeFx]);
+      // (o de beber também recebe o esqueleto e o personagem: desenha o item na mão e a garrafada sai dela)
+      const who = (fx) => ({ rig: a.rig, ch, fx });
       const pass = (c, name) => {
-        for (const [lib, fx] of list) lib.draw(c, cam, foot, (this.last - fx.at) / 1000, fx.look, name);
+        for (const [lib, fx] of list) lib.draw(c, cam, foot, (this.last - fx.at) / 1000, fx.look, name, who(fx));
       };
       const draw = d.draw;
       const shadow = d.drawShadow;

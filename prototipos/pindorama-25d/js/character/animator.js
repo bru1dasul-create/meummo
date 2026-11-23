@@ -1987,6 +1987,8 @@
       this.look.slingDraw = 0;
       this.look.slingBand = 0; this.look.slingLoaded = false;
       if (PD.slingshot) guardK = Math.max(guardK, PD.slingshot.applyPose(this, { pelvis, spine, hands, shoulderFwd }));
+      // bebendo ou comendo (js/consume.js): a mão direita joga a garrafada para cima, leva a banana ou o coco à boca
+      if (PD.consumeFx && PD.consumeFx.applyPose) PD.consumeFx.applyPose(this, { pelvis, spine, hands, shoulderFwd });
       const hit = this.hurt;
       let hitEntry = 1, recoil = 0, balance = 0, hitGuard = 0, hitForward = 0, hitSide = 0;
       if (hit) {
@@ -2052,6 +2054,8 @@
       // puxando o arco (de lado para o alvo), a cabeça olha ao longo da flecha (slingshot.js: `look.bowHead`)
       const bowHead = this.look.bowHead;
       if (bowHead && bowHead.k > 0) hTarget.x = lerp(hTarget.x, bowHead.yaw, bowHead.k);
+      // olhando a garrafada subir, ou baixando a cabeça para morder e beber (js/consume.js; + = para baixo)
+      if (this.look.consumeHead) hTarget.y += this.look.consumeHead;
       if (!this.headSpring) this.headSpring = new M.Spring3(hTarget);
       const hv = this.headSpring.step(hTarget, lerp(3.4, 6.5, guardK), 0.82, dt);
       const head = { yaw: hv.x - cYaw, pitch: hv.y - cPitch, roll: hv.z - cRoll };
@@ -2078,6 +2082,7 @@
       this.look.gazeX = A ? clamp((angleDiff(this.yaw, A.dir) - hv.x) / (30 * DEG), -1, 1) * 0.9 * guardK : M.noise1(t * 0.4 + 11) * 0.8 * idle;
       this.look.gazeY = A ? 0 : M.noise1(t * 0.31 + 2) * 0.4 * idle;
       this.look.mouthOpen = Math.max(mouthOpen, J.state === 'preparo' ? 0.25 : 0, this.runBlend * g * 0.25);
+      if (this.look.consumeMouth) this.look.mouthOpen = Math.max(this.look.mouthOpen, this.look.consumeMouth); // a mordida
       this.look.browRaise = browRaise;
       if (hit) {
         const blink = smoothstep(0.01, 0.05, hit.t) * (1 - smoother((hit.t - 0.09) / 0.15));

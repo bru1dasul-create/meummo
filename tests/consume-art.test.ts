@@ -7,11 +7,24 @@ import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
 type Look = { kind: string; style: string; big?: boolean; rgb: number[]; pale: number[]; hex: string };
+type Vec = { x: number; y: number; z: number };
+type Hand = { local: Vec; poleLocal: number[]; fist: number; flex: number; twist: number };
+type Parts = { pelvis: Record<string, number>; spine: Record<string, number>; hands: Hand[]; shoulderFwd: number[] };
+type Char = {
+  time: number;
+  consumeAnim: { kind: string; item: string; start: number } | null;
+  look: { heldItem?: { kind: string } | null; consumeHead?: number; consumeMouth?: number };
+  attack?: unknown;
+  dodge?: unknown;
+  death?: unknown;
+};
 type Fx = {
-  draw: (ctx: unknown, cam: unknown, foot: { x: number; y: number; z: number }, t: number, look: Look, pass: string) => void;
-  look: (item: string, style?: string) => Look;
+  draw: (ctx: unknown, cam: unknown, foot: Vec, t: number, look: Look & { anim?: string }, pass: string) => void;
+  look: (item: string, style?: string) => Look & { anim?: string };
   duration: (look: Look) => number;
   light: (look: Look, t: number) => number;
+  applyPose: (ch: Char, parts: Parts) => number;
+  T_REL: number;
 };
 
 /** Um caminho de mentira (o Path2D do navegador): aceita qualquer traço. */
@@ -89,12 +102,13 @@ describe('efeito de usar um consumível', () => {
   it('desenha nas três passadas durante o efeito e nada antes ou depois', () => {
     for (const item of ['garrafada', 'garrafada_grande', 'erva_arruda', 'banana']) {
       const look = fx.look(item);
-      // no meio: o estouro já aconteceu e as folhas estão descendo (ou subindo, no benzimento)
+      // no meio: o estouro já aconteceu e as folhas estão descendo (ou subindo, no benzimento; na comida, as faíscas saem
+      // da boca depois que a mão chega, em 0,3 s)
       for (const [pass, t] of [
         ['chao', 0.6],
         ['tras', 0.6],
         ['frente', 0.6],
-        ['frente', 0.15], // a garrafada ainda subindo (ou o começo do redemoinho e da comida)
+        ...(item === 'banana' ? [] : ([['frente', 0.15]] as const)), // a garrafada ainda subindo (ou o começo do redemoinho)
       ] as const) {
         const during = fakeCtx();
         fx.draw(during.ctx, cam, foot, t, look, pass);
@@ -109,6 +123,65 @@ describe('efeito de usar um consumível', () => {
         expect(before.marks()).toBe(0);
       }
     }
+  });
+
+  it('cada item com a sua animação: joga a garrafada para cima, come a banana, bebe a água de coco', () => {
+    for (const item of ['garrafada_pequena', 'garrafada', 'garrafada_grande']) expect(fx.look(item).anim).toBe('toss');
+    expect(fx.look('banana').anim).toBe('eat');
+    expect(fx.look('agua_coco').anim).toBe('drink');
+    expect(fx.look('erva_arruda').anim).toBeUndefined(); // o benzimento já mexe o bastante
+  });
+
+  /** Um personagem parado (a mão direita caída do lado) com a animação `kind` começando no tempo 0. */
+  const person = (kind: string): { ch: Char; pose: (t: number) => Parts } => {
+    const ch: Char = { time: 0, consumeAnim: { kind, item: 'x', start: 0 }, look: {} };
+    const pose = (t: number): Parts => {
+      ch.time = t;
+      const parts: Parts = {
+        pelvis: { pitch: 0 },
+        spine: { pitch: 0, yaw: 0, roll: 0 },
+        hands: [0, 1].map(() => ({ local: { x: 4, y: 2, z: -55 }, poleLocal: [0, 0.3, -1], fist: 0.3, flex: 0, twist: 0 })),
+        shoulderFwd: [0, 0],
+      };
+      fx.applyPose(ch, parts);
+      return parts;
+    };
+    return { ch, pose };
+  };
+
+  it('a garrafada fica na mão até ser solta lá no alto, com os olhos nela', () => {
+    const { ch, pose } = person('toss');
+    const before = pose(fx.T_REL - 0.02);
+    expect(ch.look.heldItem?.kind).toBe('bottle');
+    expect(before.hands[1]!.local.z).toBeGreaterThan(30); // a mão subindo, acima do ombro
+    pose(fx.T_REL + 0.05);
+    expect(ch.look.heldItem).toBeNull(); // soltou: o voo é do efeito
+    expect(ch.look.consumeHead!).toBeLessThan(0); // olhando para cima
+    expect(pose(0.05).hands[0]!.local).toEqual({ x: 4, y: 2, z: -55 }); // a mão do arco fica como estava
+  });
+
+  it('a banana e o coco vão até a boca e voltam; no fim a animação acaba', () => {
+    for (const kind of ['eat', 'drink']) {
+      const { ch, pose } = person(kind);
+      const atMouth = pose(0.5).hands[1]!.local;
+      expect(atMouth.z, kind).toBeGreaterThan(5); // acima do ombro, na altura da boca
+      expect(atMouth.x, kind).toBeLessThan(0); // para dentro, na frente do rosto
+      expect(ch.look.heldItem?.kind).toBe(kind === 'eat' ? 'banana' : 'coco');
+      expect(ch.look.consumeHead!).toBeGreaterThan(0); // a cabeça baixa um pouco
+      pose(5);
+      expect(ch.consumeAnim).toBeNull();
+      expect(ch.look.heldItem).toBeNull();
+    }
+    // na mordida a boca abre
+    const { ch, pose } = person('eat');
+    pose(0.38);
+    expect(ch.look.consumeMouth!).toBeGreaterThan(0.4);
+  });
+
+  it('atirando ou rolando, o corpo não faz a animação (o efeito continua)', () => {
+    const { ch, pose } = person('eat');
+    ch.attack = { kind: 'slingshot' };
+    expect(pose(0.5).hands[1]!.local).toEqual({ x: 4, y: 2, z: -55 });
   });
 
   it('acende uma luz na noite só enquanto dura (na comida, mais fraca)', () => {

@@ -30,14 +30,15 @@
 
   // As cores: `rgb` = o líquido (a luz do efeito), `pale` = o brilho, `hex` = a luz que acende na noite (view.js).
   // `kind`: 'pocao' (garrafada e erva: o efeito inteiro) ou 'comida' (o pequeno). `big`: a Grande, com mais folhas.
-  // `style`: o estouro nas garrafadas, o benzimento na arruda (a escolha do dono).
+  // `style`: o estouro nas garrafadas, o benzimento na arruda (a escolha do dono). `anim`: o que o corpo faz (veja
+  // "as animações de quem bebe ou come", mais abaixo): 'toss' joga a garrafada para cima, 'eat' come, 'drink' bebe.
   const LOOKS = {
-    garrafada_pequena: { kind: 'pocao', style: 'estouro', rgb: [196, 232, 86], pale: [240, 255, 205], hex: '#cde85a' },
-    garrafada: { kind: 'pocao', style: 'estouro', rgb: [255, 172, 64], pale: [255, 236, 190], hex: '#ffb44a' },
-    garrafada_grande: { kind: 'pocao', style: 'estouro', big: true, rgb: [255, 96, 64], pale: [255, 214, 196], hex: '#ff7a52' },
+    garrafada_pequena: { kind: 'pocao', style: 'estouro', anim: 'toss', rgb: [196, 232, 86], pale: [240, 255, 205], hex: '#cde85a' },
+    garrafada: { kind: 'pocao', style: 'estouro', anim: 'toss', rgb: [255, 172, 64], pale: [255, 236, 190], hex: '#ffb44a' },
+    garrafada_grande: { kind: 'pocao', style: 'estouro', anim: 'toss', big: true, rgb: [255, 96, 64], pale: [255, 214, 196], hex: '#ff7a52' },
     erva_arruda: { kind: 'pocao', style: 'benzimento', rgb: [120, 222, 150], pale: [218, 255, 228], hex: '#86e0a0' },
-    banana: { kind: 'comida', style: 'estouro', rgb: [255, 216, 72], pale: [255, 248, 200], hex: '#ffd84a' },
-    agua_coco: { kind: 'comida', style: 'estouro', rgb: [128, 208, 255], pale: [222, 245, 255], hex: '#8ed0ff' },
+    banana: { kind: 'comida', style: 'estouro', anim: 'eat', rgb: [255, 216, 72], pale: [255, 248, 200], hex: '#ffd84a' },
+    agua_coco: { kind: 'comida', style: 'estouro', anim: 'drink', rgb: [128, 208, 255], pale: [222, 245, 255], hex: '#8ed0ff' },
     // um consumível que ainda não tem cor própria: o verde da cura, no estouro
     outro: { kind: 'pocao', style: 'estouro', rgb: [120, 230, 120], pale: [220, 255, 220], hex: '#80e080' },
   };
@@ -49,8 +50,8 @@
   }
   /** Quanto dura (s). */
   function duration(o) {
-    if (o.kind === 'comida') return 0.9;
-    return o.style === 'benzimento' ? 1.45 : 1.35;
+    if (o.kind === 'comida') return 1.2;
+    return o.style === 'benzimento' ? 1.45 : 1.55;
   }
   const fadeAt = (o, t) => 1 - clamp01((t - duration(o) * 0.7) / (duration(o) * 0.3));
   /** A força da luz que o efeito acende na noite (0 a 1). */
@@ -268,13 +269,13 @@
     }
   }
 
-  function drawEstouro(ctx, cam, W, toCam, t, o, pass) {
+  function drawEstouro(ctx, cam, W, toCam, t, o, pass, who) {
     const DUR = duration(o);
     const C = o.rgb;
     const P = o.pale;
     const z = cam.zoom;
     const fade = fadeAt(o, t);
-    const T_UP = 0.32; // a garrafada sobe até aqui e estoura
+    const T_UP = T_BURST; // a garrafada sobe até aqui e estoura
     if (pass === 'chao') {
       const k = clamp01((t - T_UP) / 0.3) * fade;
       groundGlow(ctx, cam, W, z, C, P, R_BODY * (0.6 + 0.4 * easeOut((t - T_UP) / 0.6)), k, false);
@@ -282,11 +283,19 @@
     }
     // a luz no corpo, depois do estouro
     column(ctx, W, z, C, P, clamp01((t - T_UP - 0.05) / 0.3) * fade, 215, pass);
-    // a garrafada subindo e girando (na frente de tudo; ela sai do peito, na frente do corpo)
-    if (pass === 'frente' && t < T_UP + 0.02) {
-      const u = clamp01(t / T_UP);
-      const h = 118 + (BURST_H - 118) * easeOut(u);
-      const q = W(toCam.x * 22, toCam.y * 22, h);
+    // a garrafada voando e girando até o estouro (na frente de tudo). Com a animação, ela sai da mão na hora de soltar
+    // (`fx.grip`, a última posição na mão); sem ela (atirando, rolando), sai do peito, na frente do corpo
+    const grip = who && who.fx && who.fx.grip;
+    const t0 = grip ? T_REL : 0.12;
+    if (pass === 'frente' && t >= t0 && t < T_UP + 0.02) {
+      const from = grip || { x: toCam.x * 22, y: toCam.y * 22, z: 118 };
+      const to = { x: toCam.x * 10, y: toCam.y * 10, z: BURST_H };
+      const at = (u) => {
+        const e = easeOut(u);
+        return W(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e, from.z + (to.z - from.z) * e);
+      };
+      const u = clamp01((t - t0) / (T_UP - t0));
+      const q = at(u);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       glow(ctx, q.x, q.y, 18 * z, C, 0.55);
@@ -297,8 +306,7 @@
       ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = rgba(P, 0.7);
       for (let i = 1; i <= 3; i++) {
-        const uu = clamp01(u - i * 0.09);
-        const p = W(toCam.x * 22, toCam.y * 22, 118 + (BURST_H - 118) * easeOut(uu));
+        const p = at(clamp01(u - i * 0.12));
         star(ctx, p.x + Math.sin(i * 2.4) * 3 * z, p.y, Math.max(1.2, (3 - i * 0.6) * z), t * 4 + i);
       }
       ctx.restore();
@@ -486,12 +494,13 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     if (pass === 'frente') {
-      const q = W(toCam.x * 18, toCam.y * 18, 150);
-      glow(ctx, q.x, q.y, 30 * z, C, 0.7 * clamp01(t / 0.12) * (1 - clamp01((t - 0.15) / 0.45)));
+      // (pequeno e fraco: fica na frente do rosto)
+      const q = W(toCam.x * 22, toCam.y * 22, 162);
+      glow(ctx, q.x, q.y, 14 * z, C, 0.32 * clamp01((t - 0.28) / 0.12) * (1 - clamp01((t - 0.45) / 0.5)));
     }
     const n = 12;
     for (let j = 0; j < n; j++) {
-      const u = (t - hash(j + 61) * 0.2) / 0.7;
+      const u = (t - 0.3 - hash(j + 61) * 0.25) / 0.7;
       if (u <= 0 || u >= 1) continue;
       const ang = hash(j + 63) * TAU + (o.style === 'benzimento' ? u * 3 : u * 0.6);
       const dx = Math.cos(ang);
@@ -499,25 +508,353 @@
       const far = dx * toCam.x + dy * toCam.y < 0;
       if (far !== (pass === 'tras')) continue;
       const rr = o.style === 'benzimento' ? 44 : 12 + 46 * easeOut(u);
-      const h = 140 + 90 * easeOut(u);
+      const h = 150 + 80 * easeOut(u);
       const q = W(dx * rr, dy * rr, h);
       ctx.fillStyle = rgba(P, (1 - u) * (0.75 + 0.25 * Math.sin(t * 15 + j)));
-      star(ctx, q.x, q.y, Math.max(1.6, (3.4 + 2 * hash(j + 65)) * z), t * 3 + j);
-      glow(ctx, q.x, q.y, 9 * z, C, 0.55 * (1 - u));
+      star(ctx, q.x, q.y, Math.max(1.6, (3 + 1.8 * hash(j + 65)) * z), t * 3 + j);
+      glow(ctx, q.x, q.y, 7 * z, C, 0.4 * (1 - u));
     }
     ctx.restore();
   }
 
-  function draw(ctx, cam, foot, t, o, pass) {
+  /**
+   * `who` (da view, opcional): `{ rig, ch, fx }` — o esqueleto deste quadro, o personagem (a animação dele em
+   * `ch.consumeAnim`) e o estado do efeito (`fx`, onde fica guardada a última posição da garrafada na mão). Sem ele (as
+   * pranchas e os testes), o efeito sai sem o item na mão.
+   */
+  function draw(ctx, cam, foot, t, o, pass, who) {
     if (!(t >= 0 && t <= duration(o))) return;
     const W = (x, y, h) => cam.p({ x: foot.x + x, y: foot.y + y, z: foot.z + h });
     const toCam = cam.toCamera;
     ctx.save();
+    if (who && pass !== 'chao') drawHeld(ctx, cam, foot, o, pass, who);
     if (o.kind === 'comida') drawComida(ctx, cam, W, toCam, t, o, pass);
     else if (o.style === 'benzimento') drawBenzimento(ctx, cam, W, toCam, t, o, pass);
-    else drawEstouro(ctx, cam, W, toCam, t, o, pass);
+    else drawEstouro(ctx, cam, W, toCam, t, o, pass, who);
     ctx.restore();
   }
 
-  PD.consumeFx = { draw, look, duration, light, styles: STYLES, R_BODY };
+  // ---------------------------------------------------------------- as animações de quem bebe ou come
+  // (pedido do dono, 23/11: "faça animação dele jogando a poção para cima" e "comendo a banana e tomando água de coco").
+  // A mão direita (a esquerda é a do arco) leva o item, por cima da pose do corpo (o animador chama `applyPose`, como o
+  // do estilingue); a view desenha o item na mão (`draw`, com `who`):
+  //   'toss'  — desce a garrafinha na frente da barriga, joga para cima e solta acima da cabeça em `T_REL`, olhando a
+  //             garrafa subir; o voo e o estouro (em `T_BURST`) continuam no efeito;
+  //   'eat'   — leva a banana à boca e dá duas mordidas (ela encurta a cada uma);
+  //   'drink' — leva o coco à boca, com o canudinho, e bebe.
+  // Os alvos da mão são do punho a partir do ombro direito, no espaço do peito (x = para fora, y = frente, z = cima),
+  // como os do slingshot.js; o `pole` é para onde o cotovelo aponta ([frente, fora, cima]).
+  const T_REL = 0.3;
+  const T_BURST = 0.52;
+  const ANIM = {
+    toss: {
+      dur: 0.8,
+      keys: [
+        { t: 0, k: 0 },
+        { t: 0.13, k: 1, hand: { x: 3, y: 24, z: -30 }, pole: [0.5, 0.6, -0.5], fist: 0.85 },
+        { t: T_REL, k: 1, hand: { x: 9, y: 12, z: 47 }, pole: [0.3, 0.9, 0.1], fist: 0.85 },
+        { t: 0.4, k: 1, hand: { x: 10, y: 14, z: 44 }, pole: [0.3, 0.9, 0.1], fist: 0.12 },
+        { t: 0.8, k: 0 },
+      ],
+    },
+    eat: {
+      dur: 1.15,
+      keys: [
+        { t: 0, k: 0 },
+        { t: 0.26, k: 1, hand: { x: -15, y: 17, z: 27 }, pole: [0.1, 0.8, -0.6], fist: 0.8 },
+        { t: 0.88, k: 1, hand: { x: -15, y: 17, z: 27 }, pole: [0.1, 0.8, -0.6], fist: 0.8 },
+        { t: 1.15, k: 0 },
+      ],
+      bites: [0.38, 0.66],
+    },
+    drink: {
+      dur: 1.25,
+      keys: [
+        { t: 0, k: 0 },
+        { t: 0.26, k: 1, hand: { x: -12, y: 25, z: 11 }, pole: [0.1, 0.8, -0.6], fist: 0.5 },
+        { t: 0.96, k: 1, hand: { x: -12, y: 25, z: 11 }, pole: [0.1, 0.8, -0.6], fist: 0.5 },
+        { t: 1.25, k: 0 },
+      ],
+    },
+  };
+  const ease = (k) => {
+    const v = clamp01(k);
+    return v * v * (3 - 2 * v);
+  };
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const vlen = (v) => Math.hypot(v.x, v.y, v.z);
+  /**
+   * Mistura dois alvos do punho girando em volta do ombro (a direção e a distância), e não em linha reta: a reta entre a
+   * mão caída e a boca passa colada no ombro e o cotovelo dobrava para o lado errado.
+   */
+  function swing(a, b, k) {
+    const la = vlen(a) || 1;
+    const lb = vlen(b) || 1;
+    const ua = { x: a.x / la, y: a.y / la, z: a.z / la };
+    const ub = { x: b.x / lb, y: b.y / lb, z: b.z / lb };
+    const dot = Math.max(-1, Math.min(1, ua.x * ub.x + ua.y * ub.y + ua.z * ub.z));
+    const ang = Math.acos(dot);
+    let d;
+    if (ang < 1e-3) d = ua;
+    else {
+      const s0 = Math.sin((1 - k) * ang) / Math.sin(ang);
+      const s1 = Math.sin(k * ang) / Math.sin(ang);
+      d = { x: ua.x * s0 + ub.x * s1, y: ua.y * s0 + ub.y * s1, z: ua.z * s0 + ub.z * s1 };
+    }
+    const l = lerp(la, lb, k);
+    return { x: d.x * l, y: d.y * l, z: d.z * l };
+  }
+  /** Onde está a animação no tempo `t`: o alvo da mão (misturado com o da pose de agora, `base`), o cotovelo e o punho. */
+  function sample(A, t, base, basePole, baseFist) {
+    const keys = A.keys;
+    let i = 0;
+    while (i < keys.length - 2 && t > keys[i + 1].t) i++;
+    const a = keys[i];
+    const b = keys[i + 1];
+    const u = ease((t - a.t) / Math.max(1e-3, b.t - a.t));
+    const pick = (key) => ({
+      hand: key.k > 0 ? key.hand : base,
+      pole: key.k > 0 ? key.pole : basePole,
+      fist: key.k > 0 ? key.fist : baseFist,
+    });
+    const pa = pick(a);
+    const pb = pick(b);
+    return {
+      hand: swing(pa.hand, pb.hand, u),
+      pole: pa.pole.map((v, j) => lerp(v, pb.pole[j], u)),
+      fist: lerp(pa.fist, pb.fist, u),
+      k: lerp(a.k, b.k, u),
+    };
+  }
+  /**
+   * Por cima da pose do corpo (o animador chama a cada quadro, depois do estilingue): a mão direita, a cabeça (olha a
+   * garrafa subir; baixa um pouco para morder e beber) e a boca. Deixa em `look` o que a view desenha na mão
+   * (`heldItem`) e o que o animador usa na cabeça e na boca (`consumeHead`, em radianos, + = para baixo; `consumeMouth`).
+   */
+  function applyPose(ch, parts) {
+    const L = ch.look;
+    L.heldItem = null;
+    L.consumeHead = 0;
+    L.consumeMouth = 0;
+    const C = ch.consumeAnim;
+    if (!C) return 0;
+    const A = ANIM[C.kind];
+    const t = ch.time - C.start;
+    if (!A || !(t >= 0) || t > A.dur) {
+      ch.consumeAnim = null;
+      return 0;
+    }
+    // atirando, rolando ou desmaiado, o corpo tem coisa mais importante para fazer (o efeito continua)
+    if ((ch.attack && ch.attack.kind === 'slingshot') || ch.dodge || ch.death) return 0;
+    const h = parts.hands[1];
+    const s = sample(A, t, { ...h.local }, h.poleLocal.slice(), h.fist ?? 0.3);
+    h.local = s.hand;
+    h.poleLocal = s.pole;
+    h.fist = s.fist;
+    h.flex = lerp(h.flex || 0, 0.15, s.k);
+    h.twist = lerp(h.twist || 0, C.kind === 'toss' ? 0.2 : -0.35, s.k);
+    const DEG = Math.PI / 180;
+    if (C.kind === 'toss') {
+      // um tiquinho para trás ao jogar, e os olhos na garrafa até o estouro
+      parts.spine.pitch -= 6 * DEG * Math.sin(Math.PI * clamp01((t - 0.12) / 0.4));
+      L.consumeHead = -28 * DEG * ease((t - 0.2) / 0.15) * (1 - ease((t - 0.62) / 0.18));
+      if (t < T_REL) L.heldItem = { kind: 'bottle', item: C.item };
+    } else if (C.kind === 'eat') {
+      // as mordidas: a cabeça vai de encontro à banana, a boca abre e fecha
+      let bite = 0;
+      let bitten = 0;
+      for (const b of A.bites) {
+        const v = (t - (b - 0.08)) / 0.2;
+        if (v > 0 && v < 1) bite = Math.max(bite, Math.sin(Math.PI * v));
+        if (t > b) bitten++;
+      }
+      L.consumeHead = (4 + 6 * bite) * DEG * s.k;
+      L.consumeMouth = 0.55 * bite + 0.12 * s.k * (1 - bite);
+      h.local = { x: h.local.x, y: h.local.y - 2.5 * bite, z: h.local.z + 1 * bite };
+      if (t < 1.02) L.heldItem = { kind: 'banana', item: C.item, bitten, fade: 1 - ease((t - 0.9) / 0.12) };
+    } else {
+      // bebendo: a cabeça baixa um pouco até o canudinho e a boca fica no canudo
+      const sip = ease((t - 0.3) / 0.1) * (1 - ease((t - 0.92) / 0.1));
+      L.consumeHead = 7 * DEG * sip + 2 * DEG * Math.sin(t * 9) * sip;
+      L.consumeMouth = 0.2 * sip;
+      if (t < 1.12) L.heldItem = { kind: 'coco', item: C.item, fade: 1 - ease((t - 1.02) / 0.1) };
+    }
+    return s.k;
+  }
+
+  const sub3 = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+  const add3 = (a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
+  const sc3 = (a, k) => ({ x: a.x * k, y: a.y * k, z: a.z * k });
+
+  /** O item na mão direita (a garrafinha, a banana ou o coco), na frente ou atrás do corpo, conforme a mão. */
+  function drawHeld(ctx, cam, foot, o, pass, who) {
+    const ch = who.ch;
+    const rig = who.rig;
+    const H = ch && ch.look && ch.look.heldItem;
+    if (!H || !rig || !rig.hand || !rig.hand[1]) return;
+    const hand = rig.hand[1];
+    // o meio do punho fechado: um pouco à frente do punho, do lado da palma
+    const grip = add3(add3(hand.o, sc3(hand.a, 5.5)), sc3(hand.d, -2.2));
+    if (who.fx && H.kind === 'bottle') who.fx.grip = sub3(grip, foot);
+    // na frente do corpo se a mão está mais perto da câmera que o meio do peito (ou da cabeça, na boca)
+    const ref = H.kind === 'bottle' ? rig.chest.o : rig.head.o;
+    const toCam = cam.toCamera;
+    const front = (grip.x - ref.x) * toCam.x + (grip.y - ref.y) * toCam.y >= 0;
+    if (front !== (pass === 'frente')) return;
+    const z = cam.zoom;
+    const p = cam.p(grip);
+    // o eixo do item na tela: para o lado do polegar (a garrafinha com a rolha para cima, a banana saindo do punho)
+    const q = cam.p(add3(grip, sc3(hand.s, 10)));
+    let ax = q.x - p.x;
+    let ay = q.y - p.y;
+    const al = Math.hypot(ax, ay) || 1;
+    ax /= al;
+    ay /= al;
+    if (H.kind === 'bottle') {
+      bottle(ctx, p.x, p.y, 1.05 * z, Math.atan2(ax, -ay), o.rgb);
+    } else if (H.kind === 'banana') {
+      heldBanana(ctx, p.x, p.y, ax, ay, z, H.bitten || 0, H.fade ?? 1);
+    } else {
+      // o coco na palma (um pouco à frente dela) e o canudinho até a boca
+      const ball = add3(grip, add3(sc3(hand.d, -4), sc3(hand.s, 2)));
+      const mouth = add3(rig.head.o, add3(sc3(rig.head.f, 9.5), sc3(rig.head.u, -6.5)));
+      heldCoconut(ctx, cam.p(ball), cam.p(mouth), z, H.fade ?? 1);
+    }
+  }
+
+  /** A banana na mão (na tela): descascada em cima, encurtando a cada mordida; `ax, ay` = para onde ela aponta. */
+  function heldBanana(ctx, x, y, ax, ay, z, bitten, alpha) {
+    if (alpha <= 0.01) return;
+    const len = (17 - 4.5 * Math.min(2, bitten)) * z;
+    const nx = -ay;
+    const ny = ax;
+    const N = 12;
+    const mid = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      const d = -4 * z + (len + 4 * z) * u; // do talo, embaixo do punho, até a ponta
+      const bend = Math.sin(Math.PI * u) * 2.6 * z;
+      mid.push([x + ax * d + nx * bend, y + ay * d + ny * bend]);
+    }
+    const width = (u) => Math.max(0.6, 2.7 * z * Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + u * 0.88)), 0.55));
+    const body = new Path2D();
+    for (let i = 0; i <= N; i++) {
+      const w = width(i / N);
+      const [px, py] = mid[i];
+      if (i === 0) body.moveTo(px + nx * w, py + ny * w);
+      else body.lineTo(px + nx * w, py + ny * w);
+    }
+    for (let i = N; i >= 0; i--) {
+      const w = width(i / N);
+      const [px, py] = mid[i];
+      body.lineTo(px - nx * w, py - ny * w);
+    }
+    body.closePath();
+    ctx.save();
+    ctx.globalAlpha = clamp01(alpha);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(1, 1.1 * z);
+    ctx.strokeStyle = '#3a2a08';
+    ctx.stroke(body);
+    const g = ctx.createLinearGradient(x + nx * 3 * z, y + ny * 3 * z, x - nx * 3 * z, y - ny * 3 * z);
+    g.addColorStop(0, '#fff07a');
+    g.addColorStop(0.6, '#f2c832');
+    g.addColorStop(1, '#b8860e');
+    ctx.fillStyle = g;
+    ctx.fill(body);
+    // a ponta descascada (a polpa clara) e as cascas caindo dos lados
+    const peel = Math.floor(N * 0.72);
+    const [tx, ty] = mid[N];
+    const [px, py] = mid[peel];
+    ctx.fillStyle = '#fbf3d2';
+    ctx.beginPath();
+    ctx.ellipse((tx + px) / 2, (ty + py) / 2, Math.hypot(tx - px, ty - py) / 2 + 0.6 * z, width(0.86) * 0.85, Math.atan2(ty - py, tx - px), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(0.8, 0.9 * z);
+    ctx.strokeStyle = '#6a5420';
+    ctx.stroke();
+    ctx.fillStyle = '#f2c832';
+    for (const side of [-1, 1]) {
+      const [bx, by] = mid[peel];
+      const w = width(peel / N);
+      ctx.beginPath();
+      ctx.moveTo(bx + nx * w * side, by + ny * w * side);
+      ctx.quadraticCurveTo(bx + nx * w * side * 2.4 - ax * 2 * z, by + ny * w * side * 2.4 - ay * 2 * z, bx + nx * w * side * 1.6 - ax * 5 * z, by + ny * w * side * 1.6 - ay * 5 * z);
+      ctx.lineTo(bx + nx * w * side * 0.4 - ax * 1.5 * z, by + ny * w * side * 0.4 - ay * 1.5 * z);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    // o talo, saindo embaixo do punho
+    const [sx, sy] = mid[0];
+    ctx.strokeStyle = '#5a3c10';
+    ctx.lineWidth = Math.max(1, 1.6 * z);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx - ax * 2.2 * z, sy - ay * 2.2 * z);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** O coco verde na mão (na tela), com a tampa cortada e o canudinho listrado saindo dela até a boca. */
+  function heldCoconut(ctx, c, mouth, z, alpha) {
+    if (alpha <= 0.01) return;
+    const r = 8.5 * z;
+    ctx.save();
+    ctx.globalAlpha = clamp01(alpha);
+    // o coco
+    ctx.lineWidth = Math.max(1, 1.2 * z);
+    ctx.strokeStyle = '#132a08';
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, r, r * 0.92, 0, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(c.x - r * 0.35, c.y - r * 0.35, r * 0.1, c.x, c.y, r);
+    g.addColorStop(0, '#c4ee80');
+    g.addColorStop(0.55, '#5fa82c');
+    g.addColorStop(1, '#2c5e12');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.stroke();
+    // a tampa cortada
+    const lid = { x: c.x + 1 * z, y: c.y - r * 0.72 };
+    ctx.fillStyle = '#f6efd2';
+    ctx.beginPath();
+    ctx.ellipse(lid.x, lid.y, r * 0.5, r * 0.2, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(0.8, 0.8 * z);
+    ctx.strokeStyle = '#4a4010';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(c.x - r * 0.42, c.y - r * 0.1, r * 0.18, r * 0.34, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // o canudinho, por cima: sai da tampa e aponta para a boca (até 14 cm; chega nela com o coco embaixo do queixo)
+    const dx = mouth.x - lid.x;
+    const dy = mouth.y - lid.y;
+    const dl = Math.hypot(dx, dy) || 1;
+    const reach = Math.min(dl, 14 * z);
+    const tip = { x: lid.x + (dx / dl) * reach, y: lid.y + (dy / dl) * reach };
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#3a2a1a';
+    ctx.lineWidth = Math.max(1.8, 2.8 * z);
+    ctx.beginPath();
+    ctx.moveTo(lid.x, lid.y);
+    ctx.lineTo(tip.x, tip.y);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1, 1.6 * z);
+    ctx.stroke();
+    ctx.strokeStyle = '#d8402e';
+    for (const k of [0.3, 0.65]) {
+      const mx = lid.x + (tip.x - lid.x) * k;
+      const my = lid.y + (tip.y - lid.y) * k;
+      ctx.beginPath();
+      ctx.moveTo(mx - 0.7 * z, my - 0.7 * z);
+      ctx.lineTo(mx + 0.7 * z, my + 0.7 * z);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  PD.consumeFx = { draw, look, duration, light, applyPose, styles: STYLES, ANIM, T_REL, T_BURST, R_BODY };
 })(window.PD || (window.PD = {}));
