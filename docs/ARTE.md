@@ -119,7 +119,7 @@
   - `anim-galho.cjs <pasta> [zoom]`: o filme;
   - `custo-galho.cjs`: o peso (`GALHO=1` pendurado).
 
-### O selinho do "!" e o aviso dos golpes no chão (23/11, pedidos do dono: "pode fazer o selinho" e "arruma esses golpes do quati aparece em quadrado vermelho, muito feio")
+### O selinho do "!" e o aviso dos golpes no chão (23/11, pedidos do dono: "pode fazer o selinho" e "arruma esses golpes do quati aparece em quadrado vermelho, muito feio"; na main em 23/11, com o "pode juntar na main")
 - **O selinho do "!" (`view.js`, `_drawAlerts`):**
   - o "!" que o servidor manda quando um bicho percebe o herói (`say` com "!") não usa mais o balão;
   - com vários saguis juntos, o balão desviava dos nomes, subia e o bico esticava (no celular, uma pilha);
