@@ -65,6 +65,7 @@ describe('data/npcs.json', () => {
       line: 'Olá, freguês!',
       wears: ['chapeu'],
       shop: { sells: ['fruta', 'chapeu'], buyPercent: 50 },
+      recipes: [],
       stroll: [],
     });
     expect(npcs.get('mudo')).toMatchObject({ title: '', line: '', wears: [], shop: null });

@@ -11,7 +11,7 @@ import type { EffectKey, GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
 import { ATTRIBUTE_IDS, attributePointsLeft, noAttributes, type Attributes } from '../shared/attributes';
 import { GUARD_MAX_ENERGY } from '../shared/constants';
-import type { EntityState, GuardState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
+import type { EntityState, GuardState, NpcInfo, PlayerStats, RecipeInfo, ServerMsg } from '../shared/protocol';
 import type { QuestLog } from '../shared/quests';
 import { SKILLS } from '../shared/skills';
 import { Inventory } from './inventory';
@@ -374,6 +374,8 @@ export class Npc {
     public y: number,
     /** O desenho do que ela veste (como o equipamento dos jogadores). */
     readonly gear: GearLook,
+    /** As receitas que ela prepara (de data/receitas.json, pelo campo "receitas" dela). */
+    readonly recipes: readonly RecipeInfo[] = [],
   ) {
     this.look = lookFromName(def.name);
   }
@@ -384,7 +386,9 @@ export class Npc {
 
   info(): NpcInfo {
     const shop = this.def.shop;
-    return { e: this.state(), title: this.def.title, line: this.def.line, shop: shop ? { sells: [...shop.sells], buyPercent: shop.buyPercent } : null };
+    const info: NpcInfo = { e: this.state(), title: this.def.title, line: this.def.line, shop: shop ? { sells: [...shop.sells], buyPercent: shop.buyPercent } : null };
+    if (this.recipes.length > 0) info.recipes = this.recipes.map((r) => ({ item: r.item, n: r.n, needs: r.needs.map((need) => ({ ...need })) }));
+    return info;
   }
 }
 

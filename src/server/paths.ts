@@ -13,6 +13,7 @@ export const NPCS_FILE = path.join(ROOT, 'data/npcs.json');
 export const QUESTS_FILE = path.join(ROOT, 'data/missoes.json');
 export const PETS_FILE = path.join(ROOT, 'data/bichos.json');
 export const CLASSES_FILE = path.join(ROOT, 'data/classes.json');
+export const RECIPES_FILE = path.join(ROOT, 'data/receitas.json');
 export const CLIENT_DIR = path.join(ROOT, 'dist/client');
 /** Personagens salvos (não vai para o Git: cada computador tem os seus). */
 export const SAVE_FILE = path.join(ROOT, 'saves/meummo.db');

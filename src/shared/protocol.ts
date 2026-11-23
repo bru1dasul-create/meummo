@@ -49,6 +49,15 @@ export interface NpcInfo {
   line: string;
   /** null = não tem loja. `buyPercent`: quanto ela paga pelo que você vende (% do preço). */
   shop: { sells: string[]; buyPercent: number } | null;
+  /** As receitas que ela prepara (a Dona Iracema faz as garrafadas); sem o campo = nenhuma. */
+  recipes?: RecipeInfo[];
+}
+
+/** Uma receita: o item que sai (`n` de cada vez) e os ingredientes (quantos de cada). */
+export interface RecipeInfo {
+  item: string;
+  n: number;
+  needs: ItemStack[];
 }
 
 /** Números que só o próprio jogador precisa ver. */
@@ -98,6 +107,7 @@ export type ClientMsg =
   | { t: 'unlearn' } // tirar os pontos de todas as habilidades (voltam para gastar de novo)
   | { t: 'attr'; id: AttributeId } // pôr um ponto neste atributo
   | { t: 'attrReset' } // tirar os pontos de todos os atributos (voltam para distribuir de novo)
+  | { t: 'craft'; npc: number; id: string } // pedir a este NPC (o id da entidade) para preparar a receita `id`
   // usar a habilidade `id` da sua classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
   // A Flecha Ancestral não sai na hora: fica carregada no arco (o servidor responde `armed`) e sai no próximo `shoot`;
   // pedir de novo descarrega. (`cid` não é mais usado.)
@@ -231,6 +241,8 @@ export type ServerMsg =
   | { t: 'consume'; id: number; it: string }
   // os seus efeitos com tempo valendo agora (a lista toda, quando muda; `ms` = quanto falta)
   | { t: 'effects'; list: ActiveEffectInfo[] }
+  // o NPC preparou a receita: `it` = o item que entrou na sua mochila, `n` = quantos
+  | { t: 'crafted'; it: string; n: number }
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }
   | { t: 'levelup'; id: number; level: number; maxHp: number }

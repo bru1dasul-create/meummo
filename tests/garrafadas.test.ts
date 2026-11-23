@@ -31,13 +31,9 @@ describe('as garrafadas (data/items.json)', () => {
     expect(items.get('banana')).toMatchObject({ heal: 0, cooldownMs: 3000 });
   });
 
-  it('a Pequena se compra na vila, a Média na Xiovanna e a Grande cai dos chefes', () => {
+  it('nenhuma loja vende garrafada pronta (desde a etapa 3: a Dona Iracema prepara, e os bichos deixam); a Grande cai dos chefes', () => {
     const npcs = loadNpcDefs();
-    const sells = (id: string) => npcs.get(id)!.shop!.sells;
-    expect(sells('iracema')).toContain('garrafada_pequena');
-    expect(sells('iracema_guarapiranga')).toContain('garrafada_pequena');
-    expect(sells('budega')).toEqual(expect.arrayContaining(['garrafada_pequena', 'garrafada']));
-    expect(Object.values(Object.fromEntries(npcs)).some((npc) => npc.shop?.sells.includes('garrafada_grande'))).toBe(false);
+    for (const npc of npcs.values()) for (const id of ['garrafada_pequena', 'garrafada', 'garrafada_grande']) expect(npc.shop?.sells ?? []).not.toContain(id);
     const monsters = loadMonsterDefs();
     for (const boss of ['mula_sem_cabeca', 'iara']) expect(monsters.get(boss)!.drops.map((d) => d.item)).toContain('garrafada_grande');
   });

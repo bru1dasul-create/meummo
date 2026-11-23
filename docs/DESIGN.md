@@ -94,7 +94,8 @@ Os números ficam em `data/items.json`; o que cada monstro deixa, na lista `iten
 | Gorro Vermelho do Saci (lendário) | cabeça | +2 de dano, +15 de vida | Saci (30%) |
 
 Ideias para depois: loja e ouro (M3), artesãos que transformam couro em
-roupa, equipamentos com nível mínimo, poções do Curandeiro.
+roupa, equipamentos com nível mínimo, poções do Curandeiro. (Feito em 23/11: as garrafadas, que a Dona Iracema prepara
+com planta, frasco e água; e a Banana e a Água de Coco dando atributos por um tempo.)
 
 ## Progressão no futuro
 - **Caminhos (classes)**, escolhidos depois de alguns níveis: Capoeirista (corpo a corpo, ágil),

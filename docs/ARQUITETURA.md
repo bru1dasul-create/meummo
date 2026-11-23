@@ -153,6 +153,12 @@ são os mesmos; a entrada manda `mundo: 'novo'` no `hello`, e o servidor põe o 
   máxima; os pontos para distribuir contam só os postos. `World.expireEffects` tira os que acabaram (a cada tick) e o
   `effects` leva a lista ao navegador (também depois de mudar de mapa); o `stats` leva o `attrBonus`. Usar um consumível
   manda `consume` para quem vê (o gancho `view.consume`) e, se curou, o `heal`. Não ficam salvos.
+- **Receitas** (protocolo 51): `data/receitas.json` (a chave é o item que sai; `precisa` = os ingredientes; `quantidade`
+  opcional), lidas e conferidas por `src/server/recipes.ts` (`checkRecipes`: os itens existem e cada NPC só prepara
+  receita que existe; na partida do servidor). O campo `receitas` de um NPC em `data/npcs.json` diz o que ele prepara;
+  o `Npc` guarda as receitas e o `NpcInfo.recipes` leva ao navegador (a aba "Receitas" da loja, `shop.ts`). O pedido
+  `craft` (npc, id) passa por `World.craft`: perto, sabe a receita, tem os ingredientes; tira os ingredientes e põe o
+  item (se não couber, os ingredientes voltam e vem `bag_full`); responde `crafted` e o aviso.
 - **Tiro que cai onde mira, espalha andando e a flecha carregada** (protocolo 41, pedidos do dono de 15/11): o `shoot`
   leva `d` (a distância até o ponto mirado): o tiro para lá (`aimedRange`: nunca além do alcance da carga, nem mais
   perto que `SHOT_MIN_RANGE`). Quem atirou andando há menos de `SHOT_MOVING_MS` erra um pouco (`shotSpread(cid, ...)`:

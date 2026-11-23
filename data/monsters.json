@@ -23,7 +23,8 @@
     "itens": [
       { "item": "banana", "chance": 50, "quantidade": [1, 2] },
       { "item": "chapeu_palha", "chance": 6 },
-      { "item": "estilingue_goiabeira", "chance": 4 }
+      { "item": "estilingue_goiabeira", "chance": 4 },
+      { "item": "garrafada_pequena", "chance": 4 }
     ]
   },
   "jararaca": {
@@ -47,7 +48,8 @@
     "itens": [
       { "item": "couro_jararaca", "chance": 45 },
       { "item": "colar_presas", "chance": 6 },
-      { "item": "gibao_couro", "chance": 5 }
+      { "item": "gibao_couro", "chance": 5 },
+      { "item": "garrafada_pequena", "chance": 4 }
     ]
   },
   "saci": {
@@ -75,7 +77,9 @@
     },
     "itens": [
       { "item": "banana", "chance": 100, "quantidade": [2, 3] },
-      { "item": "gorro_saci", "chance": 30 }
+      { "item": "gorro_saci", "chance": 30 },
+      { "item": "garrafada", "chance": 5 },
+      { "item": "jurubeba", "chance": 10 }
     ]
   },
   "corpo_seco": {
@@ -98,7 +102,9 @@
     "itens": [
       { "item": "sucata", "chance": 50 },
       { "item": "erva_arruda", "chance": 20 },
-      { "item": "faca_sucata", "chance": 5 }
+      { "item": "faca_sucata", "chance": 5 },
+      { "item": "garrafada", "chance": 5 },
+      { "item": "babosa", "chance": 15 }
     ]
   },
   "capelobo": {
@@ -121,7 +127,10 @@
     },
     "itens": [
       { "item": "erva_arruda", "chance": 35 },
-      { "item": "couraca_lata", "chance": 5 }
+      { "item": "couraca_lata", "chance": 5 },
+      { "item": "garrafada", "chance": 5 },
+      { "item": "babosa", "chance": 20 },
+      { "item": "jurubeba", "chance": 10 }
     ]
   },
   "mula_sem_cabeca": {
@@ -146,7 +155,8 @@
     "itens": [
       { "item": "erva_arruda", "chance": 100, "quantidade": [2, 3] },
       { "item": "ferradura_brasa", "chance": 30 },
-      { "item": "garrafada_grande", "chance": 40 }
+      { "item": "garrafada_grande", "chance": 40 },
+      { "item": "jurubeba", "chance": 60 }
     ]
   },
   "jacare": {
@@ -169,7 +179,9 @@
     },
     "itens": [
       { "item": "dente_jacare", "chance": 40 },
-      { "item": "erva_arruda", "chance": 15 }
+      { "item": "erva_arruda", "chance": 15 },
+      { "item": "garrafada", "chance": 5 },
+      { "item": "babosa", "chance": 15 }
     ]
   },
   "boto": {
@@ -195,7 +207,10 @@
     },
     "itens": [
       { "item": "erva_arruda", "chance": 30 },
-      { "item": "colar_presas", "chance": 5 }
+      { "item": "colar_presas", "chance": 5 },
+      { "item": "garrafada", "chance": 5 },
+      { "item": "babosa", "chance": 20 },
+      { "item": "jurubeba", "chance": 10 }
     ]
   },
   "iara": {
@@ -231,7 +246,8 @@
       { "item": "erva_arruda", "chance": 100, "quantidade": [1, 2] },
       { "item": "escama_iara", "chance": 60 },
       { "item": "colar_presas", "chance": 20 },
-      { "item": "garrafada_grande", "chance": 40 }
+      { "item": "garrafada_grande", "chance": 40 },
+      { "item": "jurubeba", "chance": 60 }
     ]
   },
   "quati": {
@@ -249,7 +265,8 @@
     "itens": [
       { "item": "banana", "chance": 40, "quantidade": [1, 2] },
       { "item": "chapeu_palha", "chance": 5 },
-      { "item": "estilingue_goiabeira", "chance": 3 }
+      { "item": "estilingue_goiabeira", "chance": 3 },
+      { "item": "garrafada_pequena", "chance": 4 }
     ]
   },
   "tatu_bola": {
@@ -268,7 +285,9 @@
     "itens": [
       { "item": "sucata", "chance": 40 },
       { "item": "erva_arruda", "chance": 20 },
-      { "item": "couraca_lata", "chance": 4 }
+      { "item": "couraca_lata", "chance": 4 },
+      { "item": "garrafada_pequena", "chance": 6 },
+      { "item": "babosa", "chance": 15 }
     ]
   },
   "marimbondo": {
@@ -286,7 +305,9 @@
     "desvioTiro": 40,
     "itens": [
       { "item": "erva_arruda", "chance": 30 },
-      { "item": "banana", "chance": 15 }
+      { "item": "banana", "chance": 15 },
+      { "item": "garrafada_pequena", "chance": 6 },
+      { "item": "babosa", "chance": 15 }
     ]
   },
   "filhote_boitata": {
@@ -312,7 +333,9 @@
     "itens": [
       { "item": "erva_arruda", "chance": 60, "quantidade": [1, 2] },
       { "item": "arco_bambu", "chance": 4 },
-      { "item": "ferradura_brasa", "chance": 2 }
+      { "item": "ferradura_brasa", "chance": 2 },
+      { "item": "garrafada", "chance": 5 },
+      { "item": "jurubeba", "chance": 10 }
     ]
   }
 }

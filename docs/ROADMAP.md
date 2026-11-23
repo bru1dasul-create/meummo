@@ -950,9 +950,16 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   painel também). Mensagens `consume` (quem vê desenha o gole ou a mordida) e `effects` (a lista, com o tempo que
   falta); `stats.attrBonus`. Na tela, provisório: os efeitos com o tempo, abaixo da vida (`effectsBar.ts`), e "3 +5" na
   aba dos Atributos; som `comer`. Protocolo 50
-- [ ] **[estrutura]** Poções, etapa 3 (aprovada): a receita da garrafada com a Dona Iracema (planta + frasco + água; a
-  Arruda vira a planta da Pequena; a Média e a Grande com plantas mais raras), garrafadas e ingredientes caindo dos bichos
-  e a loja vendendo só os ingredientes
+- [x] **[estrutura]** Poções, etapa 3 (aprovada): **a Dona Iracema prepara as garrafadas** (aba "Receitas" na loja dela,
+  no Refúgio e na Guarapiranga): Pequena = Arruda + Frasco Vazio + Água da Mina; Média = + Folha de Babosa; Grande = 2
+  Babosas + Raiz de Jurubeba + Frasco + Água. As lojas vendem só os ingredientes (Frasco 4, Água 2, Arruda); as
+  garrafadas também caem dos bichos (Pequena 4–6% nos de nível 1 a 3, Média 5% nos de 4 a 6, Grande 40% nos chefes), e
+  as plantas novas também (Babosa 15–20% nos de nível 3 a 6, Jurubeba 10% nos de 5 e 6 e 60% nos chefes). Receitas em
+  `data/receitas.json` (a chave é o item que sai; "precisa" diz os ingredientes) e quem prepara no campo "receitas" de
+  `data/npcs.json`. Mensagens `craft` e `crafted`; `NpcInfo.recipes`. Protocolo 51
+- [ ] **[arte]** Das poções (etapa 3): os ícones dos ingredientes novos — Frasco Vazio, Água da Mina, Folha de Babosa e
+  Raiz de Jurubeba (hoje usam os da garrafada, da água de coco e da arruda) — e vestir a aba "Receitas" da loja (o
+  estilo provisório da lista de ingredientes está no `shop.ts`). Pedido mandado à [arte]
 - [ ] **[arte]** Das poções (etapa 1): o efeito de usar a poção "na mesma pegada do Priston Tale" (pedido do dono, 23/11)
   pelo gancho `view.consume(id, item)` (esperando a referência do dono); os ícones da Garrafada Pequena e da Grande (hoje
   usam o da garrafada); o "cura X%" na mochila (`healLabel` de `src/shared/items.ts`); e a barra sem o Fôlego (ficou um

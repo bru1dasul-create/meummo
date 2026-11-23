@@ -1,0 +1,11 @@
+{
+  "garrafada_pequena": {
+    "precisa": { "erva_arruda": 1, "frasco": 1, "agua_mina": 1 }
+  },
+  "garrafada": {
+    "precisa": { "erva_arruda": 1, "babosa": 1, "frasco": 1, "agua_mina": 1 }
+  },
+  "garrafada_grande": {
+    "precisa": { "babosa": 2, "jurubeba": 1, "frasco": 1, "agua_mina": 1 }
+  }
+}

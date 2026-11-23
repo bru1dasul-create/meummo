@@ -21,6 +21,7 @@ import { Tuning } from './tuning';
 import type { World } from './world';
 import { loadPetDefs } from './pets';
 import { checkClasses, loadClassDefs } from './classes';
+import { checkRecipes, loadRecipeDefs } from './recipes';
 
 export { MAPS_DIR, ROOT, SAVE_FILE } from './paths';
 const HEARTBEAT_MS = 30_000;
@@ -98,6 +99,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   // as classes e as habilidades (data/classes.json); a missão que libera cada uma precisa existir
   const classes = loadClassDefs();
   checkClasses(classes, tuning.quests);
+  // as receitas (data/receitas.json): os itens e os ingredientes existem, e cada NPC só prepara receita que existe
+  const recipes = loadRecipeDefs();
+  checkRecipes(recipes, tuning.items, tuning.npcs);
   const clock = new PacedClock(() => performance.now());
   const realm = new Realm(maps, {
     log,
@@ -108,6 +112,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     quests: tuning.quests,
     pets: loadPetDefs(),
     classes,
+    recipes,
     combat: tuning.combat,
     saver: store,
     startMap: options.startMap,

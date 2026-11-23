@@ -416,6 +416,7 @@ class NewWorld implements NewWorldGame {
     this.shop = new ShopWindow(this.items, welcome.inv, {
       buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
       sell: (npc, i, n) => this.conn.send({ t: 'sell', npc, i, n }),
+      craft: (npc, item) => this.conn.send({ t: 'craft', npc, id: item }),
     });
     this.questList = welcome.quests ?? [];
     this.questLog = welcome.questLog ?? {};
@@ -2927,6 +2928,13 @@ class NewWorld implements NewWorldGame {
           this.hud.setHp(msg.hp, this.myMaxHp);
           if (!msg.it) this.sfx.play('heal'); // a do consumível já tocou o gole (ou a mordida) no `consume`
         }
+        break;
+      }
+      case 'crafted': {
+        // a garrafada ficou pronta (o aviso com o nome vem no `sys`; a mochila, no `inv`)
+        const def = this.items.get(msg.it);
+        this.toast.show(`${def?.name ?? msg.it}${msg.n > 1 ? ` ×${msg.n}` : ''} pronta!`);
+        this.sfx.play('loot');
         break;
       }
       case 'consume': {

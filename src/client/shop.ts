@@ -1,5 +1,6 @@
-// Janela da loja: o que o vendedor vende e o que você pode vender para ele.
-// Só mostra e pede: quem confere ouro, distância e espaço na mochila é o servidor.
+// Janela da loja: o que o vendedor vende e o que você pode vender para ele (e, se ele souber, as receitas que prepara:
+// a Dona Iracema faz as garrafadas com o que você traz).
+// Só mostra e pede: quem confere ouro, ingredientes, distância e espaço na mochila é o servidor.
 // Visual de barraca de feira: toldo listrado, retrato de quem vende com a fala num balão,
 // abas Comprar/Vender e preços com a moeda desenhada (coinArt.ts).
 
@@ -12,6 +13,8 @@ import { itemIconUrl } from './itemArt';
 export interface ShopActions {
   buy(npc: number, item: string, n: number): void;
   sell(npc: number, i: number, n: number): void;
+  /** Pedir para preparar a receita (o item que sai). */
+  craft(npc: number, item: string): void;
 }
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -62,7 +65,7 @@ export class ShopWindow {
   private readonly root = byId<HTMLDivElement>('shop');
   private npc: NpcInfo | null = null;
   private inv: InventoryState;
-  private tab: 'buy' | 'sell' = 'buy';
+  private tab: 'buy' | 'sell' | 'craft' = 'buy';
   /** Ouro na última vez que desenhou (para o número pular quando muda). */
   private shownGold = -1;
   private portrait = '';
@@ -110,6 +113,11 @@ export class ShopWindow {
     this.close();
   }
 
+  /** Quantos deste item há na mochila (somando as pilhas). */
+  private countOf(item: string): number {
+    return this.inv.slots.reduce((total, stack) => total + (stack?.item === item ? stack.n : 0), 0);
+  }
+
   private render(): void {
     const npc = this.npc;
     if (!npc?.shop) return;
@@ -139,10 +147,12 @@ export class ShopWindow {
     }).length;
     const bar = el('div', 'shop-bar');
     const tabs = el('div', 'shop-tabs');
-    for (const [key, label] of [
+    const tabList: ['buy' | 'sell' | 'craft', string][] = [
       ['buy', 'Comprar'],
       ['sell', forSale > 0 ? `Vender (${forSale})` : 'Vender'],
-    ] as const) {
+    ];
+    if (npc.recipes?.length) tabList.push(['craft', 'Receitas']);
+    for (const [key, label] of tabList) {
       const t = button(`shop-tab${this.tab === key ? ' on' : ''}`, label, () => {
         this.tab = key;
         this.render();
@@ -177,6 +187,35 @@ export class ShopWindow {
         list.append(row);
       }
       foot = 'O que você compra vai direto para a mochila.';
+    } else if (this.tab === 'craft') {
+      // as receitas: o que sai, o que vai nela (o que você tem / o que precisa) e o botão de preparar
+      for (const recipe of npc.recipes ?? []) {
+        const def = this.items.get(recipe.item);
+        if (!def) continue;
+        const row = el('li', 'shop-card shop-recipe');
+        row.dataset.recipe = recipe.item;
+        const info = el('div', 'shop-info');
+        info.append(el('span', `item-name rarity-${def.rarity}`, def.name), el('span', 'shop-effect', useLabel(def)));
+        const needs = el('span', 'shop-needs');
+        let ready = true;
+        recipe.needs.forEach((need, k) => {
+          const have = this.countOf(need.item);
+          const lacking = have < need.n;
+          if (lacking) ready = false;
+          const name = this.items.get(need.item)?.name ?? need.item;
+          if (k > 0) needs.append(' · ');
+          const part = el('span', `shop-need${lacking ? ' missing' : ''}`, `${name} ${Math.min(have, need.n)}/${need.n}`);
+          part.dataset.item = need.item;
+          needs.append(part);
+        });
+        info.append(needs);
+        const make = button('shop-buy', 'Preparar', () => this.actions.craft(npc.e.id, recipe.item));
+        make.disabled = !ready;
+        make.title = ready ? `Preparar ${recipe.n > 1 ? `${recipe.n} ` : ''}${def.name}` : 'Falta ingrediente (os bichos deixam; a loja vende frasco e água)';
+        row.append(icon(def, recipe.n), info, make);
+        list.append(row);
+      }
+      foot = `${npc.e.name.split(' ').slice(-1)[0]} prepara na hora: os ingredientes saem da mochila e a garrafada entra.`;
     } else {
       this.inv.slots.forEach((stack, i) => {
         if (!stack) return;
@@ -207,6 +246,14 @@ export class ShopWindow {
     }
 
     const parts: HTMLElement[] = [el('div', 'shop-awning'), head, bar];
+    if (this.tab === 'craft' && !document.getElementById('shop-recipes-provisorio')) {
+      // o estilo provisório da lista de ingredientes (a [arte] veste no style.css e apaga este)
+      const style = document.createElement('style');
+      style.id = 'shop-recipes-provisorio';
+      style.textContent = `.shop-recipe .shop-needs { display: block; margin-top: 3px; font-size: 12px; color: #b8e39a; }
+.shop-recipe .shop-need.missing { color: #f08a6a; font-weight: 700; }`;
+      document.head.append(style);
+    }
     if (list.children.length > 0) parts.push(list);
     else parts.push(el('p', 'shop-empty', this.tab === 'sell' ? 'Nada para vender. Os monstros deixam itens que valem ouro.' : 'Nada à venda agora.'));
     if (foot) parts.push(el('p', 'shop-foot', foot));

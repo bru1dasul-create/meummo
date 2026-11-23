@@ -13,11 +13,13 @@
       "vende": [
         "banana",
         "erva_arruda",
-        "garrafada_pequena",
+        "frasco",
+        "agua_mina",
         "chapeu_palha"
       ],
       "compraPor": 50
-    }
+    },
+    "receitas": ["garrafada_pequena", "garrafada", "garrafada_grande"]
   },
   "curupira": {
     "nome": "Curupira",
@@ -41,15 +43,15 @@
     "mapa": "capao",
     "x": 66.6,
     "y": 50.3,
-    "fala": "Oi, eu sou a Xiovanna! Bem-vindo à Budega. Água de coco geladinha, garrafada da benzedeira e banana fresca. Compro também o que você trouxer da mata.",
+    "fala": "Oi, eu sou a Xiovanna! Bem-vindo à Budega. Água de coco geladinha, banana fresca e tudo para a garrafada da Dona Iracema. Compro também o que você trouxer da mata.",
     "veste": [],
     "loja": {
       "vende": [
         "banana",
         "agua_coco",
         "erva_arruda",
-        "garrafada_pequena",
-        "garrafada",
+        "frasco",
+        "agua_mina",
         "chapeu_palha",
         "estilingue_goiabeira",
         "arco_bambu"
@@ -66,9 +68,10 @@
     "fala": "Banana fresquinha, arruda contra quebranto e chapéu pro sol! Vendo e compro, freguês.",
     "veste": ["chapeu_palha"],
     "loja": {
-      "vende": ["banana", "erva_arruda", "garrafada_pequena", "chapeu_palha"],
+      "vende": ["banana", "erva_arruda", "frasco", "agua_mina", "chapeu_palha"],
       "compraPor": 50
-    }
+    },
+    "receitas": ["garrafada_pequena", "garrafada", "garrafada_grande"]
   },
   "barqueiro": {
     "nome": "Barqueiro",

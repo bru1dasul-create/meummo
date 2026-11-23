@@ -213,6 +213,7 @@ export class WorldScene extends Phaser.Scene {
     this.shop = new ShopWindow(this.items, this.welcome.inv, {
       buy: (npc, item, n) => this.conn.send({ t: 'buy', npc, item, n }),
       sell: (npc, i, n) => this.conn.send({ t: 'sell', npc, i, n }),
+      craft: (npc, item) => this.conn.send({ t: 'craft', npc, id: item }),
     });
     this.questList = this.welcome.quests ?? [];
     this.questLog = this.welcome.questLog ?? {};

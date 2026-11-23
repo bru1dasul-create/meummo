@@ -117,6 +117,7 @@ import { twilightMs } from '../shared/dayNight';
 import { decodeGrid, encodeGrid, revealAround, type ExploreGrid } from '../shared/explore';
 import { WindWeather } from './wind';
 import type { NpcDef, NpcShop } from './npcs';
+import type { RecipeDef } from './recipes';
 import { Pet, petHome, type PetDef } from './pets';
 import { sanitizeChat } from './validate';
 
@@ -184,6 +185,8 @@ export interface WorldOptions {
   wind?: WindWeather;
   /** As classes e as habilidades delas (data/classes.json). */
   classes?: ReadonlyMap<string, ClassInfo>;
+  /** As receitas que os NPCs preparam (data/receitas.json). */
+  recipes?: ReadonlyMap<string, RecipeDef>;
 }
 
 /** Folgas para pedidos que chegam um pouquinho antes da hora (rede não é precisa). */
@@ -267,6 +270,7 @@ export class World {
   readonly quests: ReadonlyMap<string, QuestInfo>;
   /** As classes (data/classes.json). */
   readonly classes: ReadonlyMap<string, ClassInfo>;
+  readonly recipes: ReadonlyMap<string, RecipeDef>;
   /** Chuvas de Flechas no ar (caem no tick). */
   private rains: Rain[] = [];
   /** Números do combate (o painel muda no lugar: o mundo sempre lê o valor de agora). */
@@ -314,6 +318,7 @@ export class World {
     this.items = options.items ?? new Map();
     this.quests = options.quests ?? new Map();
     this.classes = options.classes ?? new Map();
+    this.recipes = options.recipes ?? new Map();
     this.combat = options.combat ?? defaultCombatRules();
     this.dayNight = options.dayNight ?? new DayNightClock(this.combat, options.now ?? Date.now);
     this.night = this.dayNight.isNight();
@@ -452,7 +457,11 @@ export class World {
       const slot = this.items.get(id)?.slot;
       if (slot) worn[slot] = id;
     }
-    const npc = new Npc(this.links.nextId(), def, spot.x, spot.y, gearLookOf(worn, this.items));
+    const recipes = (def.recipes ?? []).flatMap((id) => {
+      const recipe = this.recipes.get(id);
+      return recipe ? [recipe] : [];
+    });
+    const npc = new Npc(this.links.nextId(), def, spot.x, spot.y, gearLookOf(worn, this.items), recipes);
     this.npcs.set(npc.id, npc);
   }
 
@@ -1876,6 +1885,34 @@ export class World {
   }
 
   /** A loja do vendedor, se dá para negociar agora (perto dele, acordado). Recusa com o motivo, se não. */
+  /**
+   * Pedir ao NPC `npcId` para preparar a receita `id` (a Dona Iracema faz as garrafadas): precisa estar perto dela, ela
+   * saber a receita e você ter tudo o que vai nela. Os ingredientes saem da mochila e o que ela preparou entra.
+   */
+  craft(player: Player, npcId: number, id: string): void {
+    if (player.loading) return;
+    const npc = this.npcs.get(npcId);
+    const recipe = npc?.recipes.find((r) => r.item === id);
+    if (!npc || !recipe) return this.fail(player, 'cant_trade', true); // ela não sabe essa (ou é de outro mapa)
+    if (player.dead) return this.fail(player, 'dead', true);
+    if (!this.nearNpc(player, npc)) return this.fail(player, 'too_far', true);
+    const missing = recipe.needs.filter((need) => player.inventory.countOf(need.item) < need.n);
+    if (missing.length > 0) {
+      player.outbox.push({ t: 'sys', text: `Para ${this.items.get(recipe.item)?.name ?? recipe.item}, falta: ${this.describe(missing.map((need) => ({ item: need.item, n: need.n - player.inventory.countOf(need.item) })))}.` });
+      return;
+    }
+    npc.busyUntil = this.now() + NPC_BUSY_MS; // preparando: ela espera parada
+    for (const need of recipe.needs) player.inventory.removeItem(need.item, need.n);
+    if (player.inventory.room(recipe.item) < recipe.n) {
+      // não coube: os ingredientes voltam (os espaços que eles deixaram ainda estão livres)
+      for (const need of recipe.needs) player.inventory.add(need.item, need.n);
+      return this.fail(player, 'bag_full', true);
+    }
+    player.inventory.add(recipe.item, recipe.n);
+    player.invDirty = true;
+    player.outbox.push({ t: 'crafted', it: recipe.item, n: recipe.n }, { t: 'sys', text: `${npc.def.name} preparou: ${this.describe([{ item: recipe.item, n: recipe.n }])}.` });
+  }
+
   private shopFor(player: Player, npcId: number): NpcShop | null {
     if (player.loading) return null;
     const npc = this.npcs.get(npcId);
