@@ -108,7 +108,7 @@
   - conferido: prancha dos 5 pontos × 7 momentos (rascunho `niveis3/`), o herói puxando com 1 a 5 (`niveis3/arco.cjs`) e
     no jogo com 1 e 4 pontos (`niveis3/jogo-ancestral.cjs`: recomeça os pontos na janela K e põe N na Ancestral)
   - com isso as 3 etapas dos níveis estão feitas
-- **O "+" e os pontos na barra (23/11, escopo aprovado: "pode"):** no `style.css` (seção "o nível e o + das
+- **O "+" e os pontos na barra (23/11, escopo aprovado: "pode"; na main em 23/11 com o "gostei, pode fazer" do dono):** no `style.css` (seção "o nível e o + das
   habilidades da classe"): o `.skill-rank` (um `<i>` por ponto; `.on` = tem) em pedrinhas na beirada de baixo do
   quadrado; o `.skill-plus` num botão redondo dentro do canto de cima, pulsando (`skill-plus-pulse`); `data-rank='0'`
   apaga o ícone. O DOM e a lógica são da [estrutura] (`src/client/novo/skillBar.ts`); o estilo provisório de lá saiu.
@@ -140,7 +140,7 @@
     (tempo por personagem e perfil), `cache-teste.cjs` / `cache-exato.cjs` (guardada × direta, pixel a pixel),
     `jogo-leve.cjs` (no jogo, ligada × desligada), `interacao.cjs` (conversa e R armado)
 - **O efeito de subir de nível (23/11; prévia aprovada pelo dono: "gostei, só afasta mais o círculo, está pegando nos
-  braços"):** `js/levelup.js` (`PD.levelUpFx`), carregado antes do `view.js` (`arte.ts` e `view-scripts.json`). A view
+  braços"; na main em 23/11 com o "gostei, pode fazer" dele):** `js/levelup.js` (`PD.levelUpFx`), carregado antes do `view.js` (`arte.ts` e `view-scripts.json`). A view
   ganhou o `levelUp(id, what, skill)` que o motor já chamava (`engine.ts`, `riseEffect`): com ele, o provisório do
   `combat.ts` (`rise`) não roda mais
   - o que aparece: um círculo de luz abre no chão, nos pés (com marquinhas girando); anéis de luz sobem pelo corpo e
