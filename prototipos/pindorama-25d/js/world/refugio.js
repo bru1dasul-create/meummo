@@ -1249,6 +1249,131 @@
     },
   };
 
+  // ------------------------------------------------------------------ a barragem de 1909 (24/11, "vestir a barragem")
+  // O guincho da comporta em cima do muro: os dois pilares de concreto nas pontas, a viga de ferro em cima, a haste
+  // rosqueada descendo para a comporta e o volante grande, tudo enferrujado.
+  small['guincho-comporta'] = {
+    height: (d) => (d.h || 320) + 60,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, (d.h || 320) * 0.7),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 30, d.x1 + 30, d.y0 - 60, d.y1 + 60, z0, z0 + (d.h || 320) + 90, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const h = d.h || 320;
+      const cy = (d.y0 + d.y1) / 2;
+      const CONC = { front: '#bdb7a8', side: '#9f998b', top: '#d2ccbd' };
+      const RUST = { front: '#7a4a2e', side: '#5f3a24', top: '#8f5a38' };
+      for (const [x0, x1] of [[d.x0, d.x0 + 50], [d.x1 - 50, d.x1]]) H.box(ctx, cam, x0, x1, d.y0, d.y1, z0, z0 + h, CONC, ink);
+      // a viga de ferro em cima, de um pilar ao outro
+      H.box(ctx, cam, d.x0 - 10, d.x1 + 10, cy - 14, cy + 14, z0 + h, z0 + h + 24, RUST, ink);
+      // a haste rosqueada descendo do meio da viga e a caixa do mecanismo
+      const mx = (d.x0 + d.x1) / 2;
+      inkLine(ctx, [P(mx, cy, z0 + h), P(mx, cy, z0 + 10)], '#5a5a58', 6 * cam.zoom, ink * 0.6);
+      H.box(ctx, cam, mx - 22, mx + 22, cy - 18, cy + 18, z0 + h + 24, z0 + h + 60, RUST, ink);
+      // o volante (na frente da caixa, de pé, virado para o sul): o aro, os raios e o cubo
+      H.onWall(ctx, cam, { x: mx - 60, y: cy + 20, z: z0 + h + 110 }, { x: 1, y: 0 }, () => {
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 14;
+        ctx.beginPath();
+        ctx.arc(60, 60, 48, 0, M.TAU);
+        ctx.stroke();
+        ctx.strokeStyle = '#8a5434';
+        ctx.lineWidth = 9;
+        ctx.stroke();
+        ctx.lineWidth = 6;
+        for (let k = 0; k < 6; k++) {
+          const a = (k / 6) * M.TAU;
+          ctx.beginPath();
+          ctx.moveTo(60, 60);
+          ctx.lineTo(60 + Math.cos(a) * 46, 60 + Math.sin(a) * 46);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#5f3a24';
+        ctx.beginPath();
+        ctx.arc(60, 60, 12, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(160, 90, 50, 0.6)';
+        ctx.fillRect(20, 96, 16, 10);
+      });
+      // a ferrugem escorrida nos pilares
+      for (const x of [d.x0 + 50, d.x1]) {
+        const a = P(x, d.y1, z0 + h - 10), c = P(x, d.y1, z0 + h - 120);
+        ctx.strokeStyle = 'rgba(122, 74, 46, 0.55)';
+        ctx.lineWidth = 3 * cam.zoom;
+        ctx.beginPath();
+        ctx.moveTo(a.x - 6 * cam.zoom, a.y);
+        ctx.lineTo(c.x - 6 * cam.zoom, c.y);
+        ctx.stroke();
+      }
+    },
+  };
+  // A engrenagem velha da casa de máquinas, de pé e meio enterrada, enferrujada, com o mato em volta.
+  small.engrenagem = {
+    height: (d) => (d.r || 90) * 1.7,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x - (d.r || 90), d.x + (d.r || 90), d.y - 15, d.y + 15, (d.r || 90) * 1.5),
+    box: (cam, d, z0) => volBox(cam, d.x - (d.r || 90) - 30, d.x + (d.r || 90) + 30, d.y - 40, d.y + 40, z0, z0 + (d.r || 90) * 1.9, 14),
+    paint(ctx, cam, d, z0, ink) {
+      const R = d.r || 90;
+      H.onWall(ctx, cam, { x: d.x - R, y: d.y + 10, z: z0 + R * 1.7 }, { x: 1, y: 0 }, () => {
+        // (o chão corta a parte de baixo: a engrenagem está enterrada até 30% dela)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(-40, -40, R * 2 + 80, R * 1.7 + 40);
+        ctx.clip();
+        const cx = R, cy = R * 0.7 + R * 0.3;
+        const teeth = new Path2D();
+        const N = 18;
+        for (let k = 0; k < N * 2; k++) {
+          const a = (k / (N * 2)) * M.TAU;
+          const rr = k % 2 ? R : R * 0.86;
+          const a2 = ((k + 1) / (N * 2)) * M.TAU;
+          if (k) teeth.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+          else teeth.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+          teeth.lineTo(cx + Math.cos(a2) * rr, cy + Math.sin(a2) * rr);
+        }
+        teeth.closePath();
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = INK;
+        ctx.stroke(teeth);
+        ctx.fillStyle = '#7a4a2e';
+        ctx.fill(teeth);
+        ctx.fillStyle = '#5f3a24';
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.62, 0, M.TAU);
+        ctx.fill();
+        ctx.fillStyle = '#8f5a38';
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.5, 0, M.TAU);
+        ctx.fill();
+        // os furos e o cubo
+        ctx.fillStyle = '#2a1d14';
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * M.TAU;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(a) * R * 0.32, cy + Math.sin(a) * R * 0.32, R * 0.1, 0, M.TAU);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#4a2e1c';
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.13, 0, M.TAU);
+        ctx.fill();
+        ctx.restore();
+        // o mato na base
+        ctx.fillStyle = '#4f7f34';
+        for (let k = 0; k < 9; k++) {
+          const x = (k / 8) * R * 2;
+          ctx.beginPath();
+          ctx.moveTo(x - 6, R * 1.7);
+          ctx.lineTo(x + 2, R * 1.7 - 18 - (k % 3) * 8);
+          ctx.lineTo(x + 8, R * 1.7);
+          ctx.closePath();
+          ctx.fill();
+        }
+      });
+    },
+  };
+
   // ------------------------------------------------------------------ o clube náutico (24/11, "vestir o clube")
   // O trampolim da piscina: a base de cimento na beira e a prancha de fibra azul, descascada, avançando por cima da água.
   small.trampolim = {

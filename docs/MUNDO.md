@@ -34,6 +34,16 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
+- **Agora (24/11): a Barragem de 1909 vestida (na `main`).** O dono: "pode seguir vestindo a barragem de 1909". O prédio
+  ficou menor e mais alto (`DAM_HOUSE` 328..344 × 231..242, 7,4 m) e ganhou o estilo novo `estilo: 'historico'` no
+  props.js (`historicFacade`, `historicFloor`, `archWindow`, `archDoor`, `pediment`, `clockFace`): o tijolo antigo
+  (`OLD_BRICK`), a base de pedra, as pilastras nas quinas, a faixa entre os andares, a cornija com os dentículos, as
+  janelas altas em arco com moldura e pedra-chave (vidro quebrado no abandonado), a porta grande em arco no meio do
+  térreo, o frontão com o `ano` e, na torre colada nele (`DAM_TOWER`, 3 andares), o `relogio` parado nas 9h20. Na frente,
+  a praça de paralelepípedo (`piso` com `desenho: 'paralelepipedo'`, novo no street.js) com a grade de ferro (`gradil`),
+  o portão de dois `pilar`, a placa, dois postes e a `engrenagem` velha (nova, refugio.js) do lado de fora da grade. No
+  muro: os postes de ferro encostados no parapeito (um torto) e o `guincho-comporta` (novo, refugio.js) em cima de cada
+  comporta — os dois pilares encostam no parapeito (só eles batem), a viga, a haste e o volante.
 - **Agora (24/11): o clube náutico vestido (na `main`).** O dono: "pode seguir vestindo o clube náutico". No gerador
   (bloco "7 · o clube náutico"; `dry` confere que nada caiu na água): a sede (2 andares, abandonada, `pintura: 'CLUBE
   NÁUTICO'` — o letreiro pintado na parede, desbotado, novo no props.js —, `arvoreNaLaje`, pixo) e a varanda

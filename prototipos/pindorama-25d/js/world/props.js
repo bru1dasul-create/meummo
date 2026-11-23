@@ -466,17 +466,20 @@
   const BLOCK = { base: '#a59d90', mortar: '#7f786d', light: '#b9b1a3' };
   // o tijolo baiano sem reboco (a casa de comunidade)
   const BRICK = { base: '#b4633b', mortar: '#8a4628', laje: '#9d988d' };
+  // o tijolo antigo dos prédios de 1909 (a barragem): mais escuro, com o reboco claro das molduras e a pedra da base
+  const OLD_BRICK = { base: '#8b4a33', mortar: '#6a3a29', laje: '#a8a294', trim: '#d9cfba', stone: '#a29c8e' };
+  const BRICK_NEW = BRICK;
   /** Quanto dura (s) o telhado e a frente saírem (ou voltarem) ao entrar (ou sair) de uma casa com interior. */
   const CUT_TIME = 0.6;
 
   class House extends Building {
     constructor(world, b) {
       super(world, b);
-      const wall = b.block ? BLOCK.base : b.brick === 'all' ? BRICK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
+      const wall = b.historic ? OLD_BRICK.base : b.block ? BLOCK.base : b.brick === 'all' ? BRICK.base : b.abandoned ? M.shade(b.wall, -0.2) : b.wall;
       // a laje com árvore ou varal precisa de mais espaço em cima na imagem
       // (com a árvore de dentro de verdade, `innerTree`, a copa é a da própria árvore, desenhada por cima da casa)
-      const topExtra = b.treeInside && !b.innerTree ? 980 : b.roofTree ? 640 : b.clothes ? 300 : 220;
-      this.b = { ...b, wall, trim: b.block ? '#8a8378' : b.brick === 'all' ? '#6f4a34' : M.shade(wall, 0.38), topExtra };
+      const topExtra = b.treeInside && !b.innerTree ? 980 : b.roofTree ? 640 : b.clothes ? 300 : b.historic ? 260 : 220;
+      this.b = { ...b, wall, trim: b.historic ? OLD_BRICK.trim : b.block ? '#8a8378' : b.brick === 'all' ? '#6f4a34' : M.shade(wall, 0.38), topExtra, brick: b.historic ? 'all' : b.brick };
       if (b.interior) {
         // casa que dá para entrar (a Budega, pedido do dono: "igual HumanitZ"): na ordem de desenho ela é a parede da
         // frente — quem está dentro fica atrás dela e na frente da parede do fundo (HouseBack). Com o herói dentro, o
@@ -629,7 +632,8 @@
         ctx.fillStyle = b.brick ? BRICK.laje : M.shade(b.wall, -0.12);
         ctx.fillRect(0, 0, W, 16);
         // o buzinote: o cano curto que joga a água da laje para fora, e a mancha escura escorrida embaixo dele
-        if (!b.interior && b.facade !== 'preta' && b.material !== 'tabua' && W > 260) {
+        if (b.historic) historicFacade(ctx, b, W, H, fh, floors);
+        if (!b.interior && b.facade !== 'preta' && b.material !== 'tabua' && !b.historic && W > 260) {
           const bx = W * (0.82 + r() * 0.1), run = 70 + r() * Math.min(140, H * 0.4);
           const g = ctx.createLinearGradient(0, 20, 0, 20 + run);
           g.addColorStop(0, 'rgba(40, 36, 30, 0.28)');
@@ -645,6 +649,10 @@
         if (b.paint) paintedSign(ctx, W, fh, b.paint, M.rng(b.x0 * 7 + 1));
         for (let f = 0; f < floors; f++) {
           const yTop = H - (f + 1) * fh; // topo deste andar (y desce a partir da laje)
+          if (b.historic) {
+            historicFloor(ctx, b, W, H, fh, f, floors, M.rng(b.x0 * 3 + f * 17), false);
+            continue;
+          }
           if (f === 0 && b.facade === 'preta' && PD.budega) {
             // a Budega maior: a frente preta com a vitrine e a porta (budega.js)
             PD.budega.front(ctx, b, W, H, r);
@@ -716,8 +724,13 @@
         wallTexture(ctx, b, D, H, r, true);
         ctx.fillStyle = b.brick ? M.shade(BRICK.laje, -0.25) : M.shade(b.wall, -0.36);
         ctx.fillRect(0, 0, D, 16);
+        if (b.historic) historicFacade(ctx, b, D, H, fh, floors, true);
         for (let f = 0; f < floors; f++) {
           const yTop = H - (f + 1) * fh;
+          if (b.historic) {
+            historicFloor(ctx, b, D, H, fh, f, floors, M.rng(b.y0 * 5 + f * 13), true);
+            continue;
+          }
           const n = Math.max(1, Math.floor((D - 80) / 260));
           for (let k = 0; k < n; k++) {
             const wx = 40 + ((D - 80) / n) * (k + 0.5) - 45;
@@ -730,11 +743,13 @@
         if (b.moss) mossWall(ctx, D, H, r);
         if (b.vine) overgrowth(ctx, D, H, r, b.vine * 0.8);
       });
+      // o frontão com o ano, por cima da cornija (o prédio antigo)
+      if (b.historic && b.year) onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => pediment(ctx, b, W));
       // ---- laje: caixa d'água, plantas, árvore e varal (do fundo para a frente) e, nas de 2 andares, os ferros
       roofItems(ctx, cam, b, z0 + H, ink);
       // (a Budega maior leva o escudo na faixa preta da frente, não na placa em cima da laje)
       if (b.logo && b.facade !== 'preta') onWall(ctx, cam, { x: b.x0, y: b.y1, z: z0 + H }, { x: 1, y: 0 }, () => logoBoard(ctx, b, W));
-      if (floors >= 2) {
+      if (floors >= 2 && !b.historic) {
         ctx.strokeStyle = '#5a4a3e';
         ctx.lineWidth = Math.max(1, 2.4 * cam.zoom);
         for (const [fx, fy] of [[0.06, 0.06], [0.94, 0.06], [0.94, 0.94], [0.06, 0.94]]) {
@@ -899,6 +914,7 @@
    * para baixo), para o reboco do térreo começar dali.
    */
   function brickWall(ctx, b, len, H, r, sideFace) {
+    const BRICK = b.historic ? OLD_BRICK : BRICK_NEW;
     const floors = Math.max(1, b.floors || 1);
     const top = b.brick === 'top' ? H - H / floors : H;
     if (top <= 16) return 0;
@@ -928,6 +944,238 @@
     ctx.fillStyle = 'rgba(168, 158, 142, 0.55)';
     for (let k = 0; k < len / 50; k++) ctx.fillRect(r() * len, 20 + Math.floor((r() * (top - 30)) / 20) * 20, 6 + r() * 12, 3);
     return top;
+  }
+  /**
+   * O prédio de 1909 (a barragem; `estilo: 'historico'`): o tijolo antigo com a base de pedra, as pilastras claras nas
+   * quinas, a faixa entre os andares e a cornija com os dentículos no alto. As janelas e a porta vêm de `historicFloor`.
+   */
+  function historicFacade(ctx, b, len, H, fh, floors, sideFace) {
+    const trim = sideFace ? M.shade(OLD_BRICK.trim, -0.18) : OLD_BRICK.trim;
+    const dark = M.shade(trim, -0.3);
+    // a base de pedra, com as juntas
+    ctx.fillStyle = sideFace ? M.shade(OLD_BRICK.stone, -0.18) : OLD_BRICK.stone;
+    ctx.fillRect(0, H - 55, len, 55);
+    ctx.strokeStyle = 'rgba(60, 56, 50, 0.55)';
+    ctx.lineWidth = 2;
+    for (let x = 30; x < len; x += 60) {
+      ctx.beginPath();
+      ctx.moveTo(x, H - 55);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    ctx.fillStyle = dark;
+    ctx.fillRect(0, H - 58, len, 5);
+    // as pilastras nas quinas e a faixa entre os andares
+    ctx.fillStyle = trim;
+    ctx.fillRect(0, 34, 28, H - 92);
+    ctx.fillRect(len - 28, 34, 28, H - 92);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(24, 34, 4, H - 92);
+    ctx.fillRect(len - 28, 34, 4, H - 92);
+    for (let f = 1; f < floors; f++) {
+      const y = H - f * fh;
+      ctx.fillStyle = trim;
+      ctx.fillRect(0, y - 7, len, 14);
+      ctx.fillStyle = dark;
+      ctx.fillRect(0, y + 6, len, 3);
+    }
+    // a cornija: a faixa clara do alto, a sombra embaixo dela e os dentículos
+    ctx.fillStyle = trim;
+    ctx.fillRect(0, 0, len, 38);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillRect(0, 38, len, 5);
+    ctx.fillStyle = dark;
+    for (let x = 8; x < len - 8; x += 16) ctx.fillRect(x, 24, 8, 9);
+    ctx.fillRect(0, 10, len, 3);
+  }
+  /** Um andar do prédio antigo: as janelas altas em arco e, no térreo da frente, a porta grande em arco no meio. */
+  function historicFloor(ctx, b, len, H, fh, f, floors, r, sideFace) {
+    const yTop = H - (f + 1) * fh;
+    // a torre do relógio: no andar de cima, o relógio no lugar das janelas
+    if (b.clock && f === floors - 1 && !sideFace) {
+      clockFace(ctx, len / 2, yTop + fh * 0.5, Math.min(62, len * 0.32, fh * 0.34));
+      return;
+    }
+    const door = f === 0 && !sideFace && len >= 380;
+    const dw = 150, dh = Math.min(fh * 0.8, 280);
+    if (door) archDoor(ctx, len / 2 - dw / 2, H - dh, dw, dh, b, r);
+    const ww = 96, wh = Math.min(fh * 0.56, 190);
+    const wy = yTop + Math.max(48, fh * 0.2);
+    const n = Math.max(1, Math.floor((len - 100) / 220));
+    for (let k = 0; k < n; k++) {
+      const cx = 50 + ((len - 100) / n) * (k + 0.5);
+      if (door && Math.abs(cx - len / 2) < dw / 2 + ww / 2 + 20) continue;
+      archWindow(ctx, cx - ww / 2, wy, ww, wh, b, r, sideFace);
+    }
+  }
+  /** O contorno de um vão com o alto em arco (x, y = a quina de cima da parte reta; o arco sobe de y). */
+  function archPath(x, y, w, h, pad = 0) {
+    const p = new Path2D();
+    const R = w / 2 + pad;
+    p.moveTo(x - pad, y + h + pad);
+    p.lineTo(x - pad, y + w / 2);
+    p.arc(x + w / 2, y + w / 2, R, Math.PI, 0);
+    p.lineTo(x + w + pad, y + h + pad);
+    p.closePath();
+    return p;
+  }
+  /** A janela alta em arco: a moldura de pedra clara com a pedra-chave, os caixilhos e o vidro (quebrado, no abandonado). */
+  function archWindow(ctx, x, y, w, h, b, r, sideFace) {
+    const trim = sideFace ? M.shade(OLD_BRICK.trim, -0.18) : OLD_BRICK.trim;
+    ctx.fillStyle = INK;
+    ctx.fill(archPath(x, y, w, h, 18));
+    ctx.fillStyle = trim;
+    ctx.fill(archPath(x, y, w, h, 15));
+    const glass = archPath(x, y, w, h, 0);
+    ctx.fillStyle = b.abandoned ? '#1c2124' : sideFace ? '#4f6475' : '#6d8aa0';
+    ctx.fill(glass);
+    ctx.save();
+    ctx.clip(glass);
+    if (b.abandoned) {
+      // os cacos que sobraram, claros, nos cantos dos caixilhos
+      ctx.fillStyle = 'rgba(190, 210, 220, 0.5)';
+      for (let k = 0; k < 4; k++) {
+        const cx = x + r() * w, cy = y + w / 2 + r() * (h - w / 2);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + (r() - 0.5) * 40, cy + 10 + r() * 20);
+        ctx.lineTo(cx + (r() - 0.5) * 30, cy - 10 - r() * 20);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(x + w * 0.2, y, w * 0.18, h);
+    }
+    // os caixilhos de ferro: o do meio, os de través e os raios do arco
+    ctx.strokeStyle = '#2b2a28';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w / 2, y + h);
+    for (const t of [0.5, 0.75]) {
+      ctx.moveTo(x, y + w / 2 + (h - w / 2) * t);
+      ctx.lineTo(x + w, y + w / 2 + (h - w / 2) * t);
+    }
+    ctx.moveTo(x, y + w / 2);
+    ctx.lineTo(x + w, y + w / 2);
+    for (const a of [-0.75, -0.25].map((k) => k * Math.PI)) {
+      ctx.moveTo(x + w / 2, y + w / 2);
+      ctx.lineTo(x + w / 2 + Math.cos(a) * w / 2, y + w / 2 + Math.sin(a) * w / 2);
+    }
+    ctx.stroke();
+    ctx.restore();
+    // a pedra-chave no alto do arco e o peitoril
+    ctx.fillStyle = M.shade(trim, -0.12);
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2 - 10, y - 17);
+    ctx.lineTo(x + w / 2 + 10, y - 17);
+    ctx.lineTo(x + w / 2 + 7, y + 4);
+    ctx.lineTo(x + w / 2 - 7, y + 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = M.shade(trim, -0.2);
+    ctx.fillRect(x - 20, y + h + 14, w + 40, 10);
+  }
+  /** A porta grande em arco do prédio antigo: as duas folhas de madeira, uma meio caída (abandonado), e a moldura. */
+  function archDoor(ctx, x, y, w, h, b, r) {
+    ctx.fillStyle = INK;
+    ctx.fill(archPath(x, y + w / 2, w, h - w / 2, 22));
+    ctx.fillStyle = OLD_BRICK.trim;
+    ctx.fill(archPath(x, y + w / 2, w, h - w / 2, 18));
+    const hole = archPath(x, y + w / 2, w, h - w / 2, 0);
+    ctx.fillStyle = '#16120f';
+    ctx.fill(hole);
+    ctx.save();
+    ctx.clip(hole);
+    // a folha da esquerda inteira, a da direita aberta para dentro (só a beirada) e o escuro de dentro
+    ctx.fillStyle = '#4e3a2a';
+    ctx.fillRect(x, y, w / 2, h);
+    ctx.strokeStyle = 'rgba(20, 14, 10, 0.6)';
+    ctx.lineWidth = 3;
+    for (let k = 1; k < 4; k++) {
+      ctx.beginPath();
+      ctx.moveTo(x + (w / 8) * k, y);
+      ctx.lineTo(x + (w / 8) * k, y + h);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#3e2e21';
+    ctx.fillRect(x + w / 2, y, 14, h);
+    ctx.restore();
+    ctx.fillStyle = M.shade(OLD_BRICK.trim, -0.12);
+    ctx.fillRect(x + w / 2 - 12, y - 24, 24, 26);
+    void b;
+    void r;
+  }
+  /** O frontão triangular no meio da frente, por cima da cornija, com o ano em relevo. */
+  function pediment(ctx, b, W) {
+    const pw = Math.min(W * 0.46, 460), ph = 120;
+    const x0 = W / 2 - pw / 2;
+    const tri = new Path2D();
+    tri.moveTo(x0 - 10, 2);
+    tri.lineTo(W / 2, -ph);
+    tri.lineTo(x0 + pw + 10, 2);
+    tri.closePath();
+    ctx.fillStyle = INK;
+    ctx.save();
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = INK;
+    ctx.stroke(tri);
+    ctx.restore();
+    ctx.fillStyle = OLD_BRICK.trim;
+    ctx.fill(tri);
+    ctx.strokeStyle = M.shade(OLD_BRICK.trim, -0.3);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x0 + 16, -6);
+    ctx.lineTo(W / 2, -ph + 20);
+    ctx.lineTo(x0 + pw - 16, -6);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fillStyle = M.shade(OLD_BRICK.trim, -0.35);
+    ctx.font = 'bold 40px Georgia, "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(b.year), W / 2, -ph * 0.32);
+  }
+  /** O relógio da torre, parado: o mostrador claro, os números em traços, os ponteiros e o vidro trincado. */
+  function clockFace(ctx, cx, cy, R) {
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 8, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = OLD_BRICK.trim;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 5, 0, M.TAU);
+    ctx.fill();
+    ctx.fillStyle = '#ece6d6';
+    ctx.beginPath();
+    ctx.arc(cx, cy, R - 2, 0, M.TAU);
+    ctx.fill();
+    ctx.strokeStyle = '#2b2a28';
+    ctx.lineWidth = 3;
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * M.TAU;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * (R - 6), cy + Math.sin(a) * (R - 6));
+      ctx.lineTo(cx + Math.cos(a) * (R - (k % 3 ? 12 : 18)), cy + Math.sin(a) * (R - (k % 3 ? 12 : 18)));
+      ctx.stroke();
+    }
+    // parado nas 9 e 20 (ninguém dá mais corda)
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(Math.PI) * R * 0.5, cy + Math.sin(Math.PI) * R * 0.5);
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(Math.PI / 6) * R * 0.72, cy + Math.sin(Math.PI / 6) * R * 0.72);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - R * 0.6, cy - R * 0.5);
+    ctx.lineTo(cx - R * 0.1, cy - R * 0.05);
+    ctx.lineTo(cx + R * 0.3, cy - R * 0.6);
+    ctx.stroke();
   }
   /**
    * O letreiro pintado direto na parede, no alto do andar de cima (o clube náutico): letras grandes, azuis, desbotadas e
