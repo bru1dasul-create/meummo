@@ -3,7 +3,7 @@
 
 import { readFileSync } from 'node:fs';
 import { ATTRIBUTE_IDS, type AttributeId } from '../shared/attributes';
-import { SHOT_KINDS, type EquipSlot, type ItemEffect, type ItemInfo, type ItemKind, type Rarity, type ShotKind, type WeaponShot } from '../shared/items';
+import { SHOT_KINDS, USE_SOUNDS, type EquipSlot, type ItemEffect, type ItemInfo, type ItemKind, type Rarity, type ShotKind, type UseSound, type WeaponShot } from '../shared/items';
 import { Reader } from './data-reader';
 import { ITEMS_FILE } from './paths';
 
@@ -137,6 +137,12 @@ export function parseItemDefs(json: unknown): Map<string, ItemInfo> {
       const pct = whole('curaPorcento', 0);
       if (pct > 100) r.fail('curaPorcento', 'vai de 0 a 100 (% da vida máxima)');
       if (pct > 0) def.healPct = pct;
+    }
+    if (r.has('som')) {
+      if (kind !== 'consumable') r.fail('som', 'só vale para consumíveis (tipo "consumivel")');
+      const sound = r.text('som').toLowerCase();
+      if (!(USE_SOUNDS as readonly string[]).includes(sound)) r.fail('som', `precisa ser ${USE_SOUNDS.map((s) => `"${s}"`).join(', ')}`);
+      def.useSound = sound as UseSound;
     }
     if (r.has('efeito')) {
       if (kind !== 'consumable') r.fail('efeito', 'só vale para consumíveis (tipo "consumivel")');

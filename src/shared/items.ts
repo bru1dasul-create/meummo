@@ -49,6 +49,8 @@ export interface ItemInfo {
   healPct?: number;
   /** Consumível: o efeito com tempo (a Banana dá Destreza; a garrafada faz a vida voltar mais rápido). */
   effect?: ItemEffect;
+  /** Consumível: o som de usar (campo "som" de data/items.json; sem ele, veja `useSoundOf`). */
+  useSound?: UseSound;
   /** Consumível: tempo até poder usar outro consumível. */
   cooldownMs: number;
   /** Quantos cabem num espaço da mochila. */
@@ -82,6 +84,21 @@ export interface ItemEffect {
   /** A vida que volta sozinha (fora de luta) fica × isto enquanto dura (0 = não mexe nela). */
   regen: number;
   durationMs: number;
+}
+
+/**
+ * O som de usar um consumível (pedido do dono, 23/11: "o som de cura" na poção e "comendo algo, tomando algo" na banana
+ * e na água de coco), nos tempos da animação da [arte]: 'garrafada' (jogada para cima e estourando: a cura), 'mordida'
+ * (duas mordidas), 'canudinho' (sorvendo) e 'cura' (o brilho da cura, na hora).
+ */
+export const USE_SOUNDS = ['garrafada', 'mordida', 'canudinho', 'cura'] as const;
+export type UseSound = (typeof USE_SOUNDS)[number];
+
+/** O som de usar este consumível: o do campo "som"; sem ele, a garrafada para quem cura por %, a cura, ou a mordida. */
+export function useSoundOf(def: Pick<ItemInfo, 'useSound' | 'heal' | 'healPct'>): UseSound {
+  if (def.useSound) return def.useSound;
+  if ((def.healPct ?? 0) > 0) return 'garrafada';
+  return def.heal > 0 ? 'cura' : 'mordida';
 }
 
 /** O que um efeito mexe: um atributo ou a vida que volta sozinha ('regen'). Um de cada vale por vez. */

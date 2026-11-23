@@ -980,6 +980,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   Boitatá, 25% desde 23/11, pedido do dono: no jogo novo, ainda sem os chefes, é o único que deixa). Receitas em
   `data/receitas.json` (a chave é o item que sai; "precisa" diz os ingredientes) e quem prepara no campo "receitas" de
   `data/npcs.json`. Mensagens `craft` e `crafted`; `NpcInfo.recipes`. Protocolo 51
+- [x] **[estrutura]** O som de usar cada consumível nos tempos da animação da [arte] (pedido do dono, 23/11, pela [arte]:
+  "o som de cura" na poção e "comendo algo, tomando algo" na banana e na água de coco): campo "som" em
+  `data/items.json` ("garrafada": o "fiu" aos 0,30 s e a cura no estouro, aos 0,52 s; "mordida": duas mordidas, aos
+  0,38 s e 0,66 s; "canudinho": sorvendo de 0,32 s a 0,95 s; "cura": na hora). Quem está perto também ouve, mais baixo.
+  Protocolo 52
 - [x] **[estrutura]** Os efeitos com tempo continuam depois de sair do jogo (pedido do dono, 23/11: "faz os efeitos
   continuarem depois de sair do jogo"): ao salvar, vai quanto falta de cada efeito; na volta, eles valem pelo tempo que
   faltava (o relógio fica parado enquanto o jogador está fora). `MIGRATIONS` passo 8 (coluna `effects`); os salvos são

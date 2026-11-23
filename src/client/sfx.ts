@@ -2,7 +2,7 @@
 // Quando tivermos sons de verdade, dá para trocar cada receita por um arquivo carregado.
 // Desde 14/11 o som é da [estrutura] (escolha do dono): quem liga o som no motor também faz o som.
 
-import type { ShotKind } from '../shared/items';
+import type { ShotKind, UseSound } from '../shared/items';
 import { Music } from './music';
 
 export type SoundName =
@@ -16,8 +16,6 @@ export type SoundName =
   | 'skillup'
   | 'death'
   | 'heal'
-  | 'gole'
-  | 'comer'
   | 'kill'
   | 'arc'
   | 'loot'
@@ -60,6 +58,8 @@ export class Sfx {
   private readonly volume: SoundVolumes = readVolumes();
   private noiseBuffer: AudioBuffer | null = null;
   private readonly lastPlayed = new Map<SoundName, number>();
+  /** Volume de quem toca agora (1 = o de sempre): o `consume` de quem está perto toca mais baixo. */
+  private scale = 1;
   /**
    * O som contínuo da puxada, que sobe com a carga: o zumbido do elástico do estilingue (revisão 17) ou o rangido da
    * corda do arco (mais grave e áspero).
@@ -258,19 +258,6 @@ export class Sfx {
         this.tone('sine', 420, 840, t, 0.3, 0.18);
         this.tone('sine', 630, 1260, t + 0.05, 0.25, 0.08);
         break;
-      case 'comer': // comeu (a Banana, a Água de Coco): duas mordidinhas e um brilho curto do efeito
-        this.noise(t, 0.05, 'bandpass', 1800, 900, 0.16);
-        this.noise(t + 0.13, 0.05, 'bandpass', 1700, 850, 0.14);
-        this.tone('sine', 660, 990, t + 0.24, 0.18, 0.08);
-        break;
-      case 'gole': // bebeu uma garrafada: dois goles (glub, glub) e o brilho da cura
-        this.tone('sine', 260, 150, t, 0.07, 0.22);
-        this.noise(t + 0.01, 0.05, 'lowpass', 700, 400, 0.12);
-        this.tone('sine', 240, 140, t + 0.17, 0.07, 0.22);
-        this.noise(t + 0.18, 0.05, 'lowpass', 700, 400, 0.12);
-        this.tone('sine', 420, 840, t + 0.32, 0.3, 0.14);
-        this.tone('sine', 630, 1260, t + 0.37, 0.25, 0.06);
-        break;
       case 'kill': // monstro derrotado
         this.tone('triangle', 784, 784, t, 0.08, 0.2);
         this.tone('triangle', 1047, 1047, t + 0.08, 0.12, 0.2);
@@ -410,6 +397,64 @@ export class Sfx {
     this.thud(ctx.currentTime, power);
   }
 
+  /**
+   * Usou um consumível (pedido do dono, 23/11: "o som de cura" na poção e "comendo algo, tomando algo" na banana e na
+   * água de coco). Os tempos são os da animação da [arte] (prototipos/pindorama-25d/js/consume.js), contados da
+   * mensagem `consume`: a garrafada sai da mão aos 0,30 s (um "fiu") e estoura acima da cabeça aos 0,52 s (a cura); a
+   * banana leva duas mordidas (0,38 s e 0,66 s); a água de coco é sorvida no canudinho de 0,32 s a 0,95 s; a arruda
+   * benze na hora. `volume`: 1 para quem usou; menos para quem está vendo de perto.
+   */
+  consume(sound: UseSound, volume = 1): void {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const before = this.scale;
+    this.scale = Math.max(0, Math.min(1, volume));
+    try {
+      switch (sound) {
+        case 'garrafada':
+          this.noise(t + 0.3, 0.2, 'bandpass', 700, 2600, 0.06); // a garrafa subindo
+          this.healShimmer(t + 0.52); // e estourando acima da cabeça
+          break;
+        case 'mordida':
+          this.bite(t + 0.38);
+          this.bite(t + 0.66);
+          break;
+        case 'canudinho':
+          this.sip(t + 0.32, 0.63);
+          break;
+        case 'cura':
+          this.healShimmer(t);
+          break;
+      }
+    } finally {
+      this.scale = before;
+    }
+  }
+
+  /** A cura: um estalinho de vidro, as duas notas subindo (o "heal") e um sininho por cima. */
+  private healShimmer(at: number): void {
+    this.noise(at, 0.03, 'highpass', 3500, 5200, 0.09);
+    this.tone('sine', 420, 840, at, 0.3, 0.18);
+    this.tone('sine', 630, 1260, at + 0.05, 0.25, 0.08);
+    this.bell(1568, at + 0.06, 0.5, 0.05);
+  }
+
+  /** Uma mordida: o "nhac" (ruído curto e médio), o crocante por cima e um grave da boca. */
+  private bite(at: number): void {
+    this.noise(at, 0.05, 'bandpass', 1800, 900, 0.15);
+    this.noise(at + 0.005, 0.025, 'highpass', 3000, 2200, 0.05);
+    this.tone('sine', 180, 120, at, 0.04, 0.05);
+  }
+
+  /** Sorvendo no canudinho por `duration` s: puxadinhas de ar com líquido (um chiado que pulsa) e uns glub no meio. */
+  private sip(at: number, duration: number): void {
+    for (let k = 0, s = at; s < at + duration - 0.04; k++, s += 0.09) {
+      this.noise(s, 0.07, 'bandpass', 1350 - k * 25, 1050 - k * 20, 0.07 - Math.min(0.03, k * 0.004));
+      if (k % 2 === 1) this.tone('sine', 320, 210, s + 0.02, 0.05, 0.05);
+    }
+  }
+
   /** O baque de um impacto: um grave que desce e a terra; com mais força, mais fundo, mais longo e com um brilho no fim. */
   private thud(at: number, power: number): void {
     const p = Math.min(1, Math.max(0, power));
@@ -448,6 +493,7 @@ export class Sfx {
 
   private tone(type: OscillatorType, from: number, to: number, start: number, duration: number, volume: number): void {
     const ctx = this.ctx!;
+    volume = Math.max(0.0002, volume * this.scale);
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = type;
@@ -522,6 +568,7 @@ export class Sfx {
 
   private noise(start: number, duration: number, filterType: BiquadFilterType, from: number, to: number, volume: number): void {
     const ctx = this.ctx!;
+    volume = Math.max(0.0002, volume * this.scale);
     const source = ctx.createBufferSource();
     source.buffer = this.noiseBuffer;
     const filter = ctx.createBiquadFilter();

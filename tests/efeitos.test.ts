@@ -8,7 +8,7 @@ import { loadItemDefs, parseItemDefs } from '../src/server/items';
 import { Tuning } from '../src/server/tuning';
 import { characterData, World } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
-import { effectLabel, useLabel } from '../src/shared/items';
+import { effectLabel, useLabel, useSoundOf } from '../src/shared/items';
 import { GameMap, type TiledObject } from '../src/shared/map';
 import { maxHpFor } from '../src/shared/progression';
 import { FakeClock, FakeConn } from './helpers';
@@ -26,6 +26,25 @@ describe('os efeitos em data/items.json', () => {
     expect(useLabel(items.get('banana')!)).toBe('+5 de Destreza por 3 min');
     expect(useLabel(items.get('garrafada')!)).toBe('cura 40% da vida e a vida volta 3× mais rápido fora de luta por 3 min');
     expect(useLabel(items.get('erva_arruda')!)).toBe('cura 30');
+  });
+
+  it('o som de usar (pedido do dono: a cura na poção, comendo e tomando na banana e na água de coco)', () => {
+    const items = loadItemDefs();
+    expect(['garrafada_pequena', 'garrafada', 'garrafada_grande', 'banana', 'agua_coco', 'erva_arruda'].map((id) => useSoundOf(items.get(id)!))).toEqual([
+      'garrafada',
+      'garrafada',
+      'garrafada',
+      'mordida',
+      'canudinho',
+      'cura',
+    ]);
+    // sem o campo "som": a garrafada para quem cura por %, a cura, ou a mordida
+    expect(useSoundOf({ heal: 0, healPct: 30 })).toBe('garrafada');
+    expect(useSoundOf({ heal: 10 })).toBe('cura');
+    expect(useSoundOf({ heal: 0 })).toBe('mordida');
+    const base = { nome: 'Teste', preco: 1, tipo: 'consumivel', cura: 5 };
+    expect(parseItemDefs({ a: { ...base, som: 'canudinho' } }).get('a')!.useSound).toBe('canudinho');
+    expect(() => parseItemDefs({ a: { ...base, som: 'arroto' } })).toThrow(/"som" precisa ser/);
   });
 
   it('o arquivo é conferido (e explica em português)', () => {
