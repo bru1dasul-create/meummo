@@ -297,7 +297,44 @@
     void g;
     return true;
   }
+  // ------------------------------------------------------------------ o escadão do morro (Capão maior)
+  // A calçada com `desenho: 'escada'`: os degraus de cimento atravessando a faixa comprida (de 36 em 36 cm), com a quina
+  // clara de cada um e o risco escuro do espelho, gastos no meio, musgo nos cantos e mato nas frestas.
+  function stairs(ctx, sh, box, seed, g) {
+    const b = sh;
+    const cb = clipBox(b, box);
+    if (!cb) return true;
+    const alongY = b.y1 - b.y0 >= b.x1 - b.x0;
+    ctx.save();
+    G.shapePath(ctx, sh);
+    ctx.clip();
+    ctx.fillStyle = '#a7a194';
+    ctx.fillRect(cb.x0, cb.y0, cb.x1 - cb.x0, cb.y1 - cb.y0);
+    const L = alongY ? b.y1 - b.y0 : b.x1 - b.x0;
+    const Wd = alongY ? b.x1 - b.x0 : b.y1 - b.y0;
+    const step = 36;
+    const r = seeded(b.x0, b.y0, 1901);
+    for (let u = 0; u < L; u += step) {
+      const k = r();
+      // o piso do degrau (um pouco mais claro ou mais escuro), gasto no meio, a quina e o espelho
+      const rect = (u0, v0, du, dv, color) => {
+        ctx.fillStyle = color;
+        if (alongY) ctx.fillRect(b.x0 + v0, b.y0 + u0, dv, du);
+        else ctx.fillRect(b.x0 + u0, b.y0 + v0, du, dv);
+      };
+      rect(u, 0, step, Wd, k < 0.5 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)');
+      rect(u + 6, Wd * 0.3, step - 12, Wd * 0.4, 'rgba(200, 194, 180, 0.25)');
+      rect(u, 0, 4, Wd, 'rgba(232, 228, 216, 0.7)');
+      rect(u + 4, 0, 5, Wd, 'rgba(50, 46, 40, 0.55)');
+      if (r() < 0.35) rect(u + 8, r() < 0.5 ? 0 : Wd - 22, 12, 22, 'rgba(80, 116, 54, 0.6)');
+      if (r() < 0.12) tuft(ctx, alongY ? b.x0 + r() * Wd : b.x0 + u + 10, alongY ? b.y0 + u + 10 : b.y0 + r() * Wd, 12 + r() * 8, r, g.cam, false);
+    }
+    ctx.restore();
+    void seed;
+    return true;
+  }
   texture.calcada = (ctx, sh, box, seed, g, map) => {
+    if (sh.kind === 'rect' && sh.pattern === 'escada') return stairs(ctx, sh, box, seed, g);
     if (sh.kind === 'line' && !sh.pattern) return sidewalkLine(ctx, sh, box, g, map);
     if (sh.pattern === 'placas' && sh.kind === 'poly') return loosePlates(ctx, sh, box, g);
     if (sh.pattern !== 'placas' || sh.kind !== 'rect') return false;

@@ -702,7 +702,8 @@ describe('Mapa 01 (Capão): a rua e a praça da Budega no padrão novo (a flores
     const onPosto = (x: number, y: number) => !!posto && x >= posto.x / M && x <= (posto.x + posto.width) / M && y >= posto.y / M && y <= (posto.y + posto.height) / M;
     for (const r of of('rachadura')) for (const [x, y] of ptsOf(r)) expect(onAsphalt(x, y) || onPosto(x, y), `rachadura em (${x}, ${y})`).toBe(true);
     // a calçada é de placas de cimento e a praça tem musgo
-    for (const c of of('calcada')) expect(prop(c, 'desenho')).toBe('placas');
+    // (o escadão do morro do Capão maior é de degraus)
+    for (const c of of('calcada').filter((o) => prop(o, 'desenho') !== 'escada')) expect(prop(c, 'desenho')).toBe('placas');
     expect(prop(of('praca')[0]!, 'musgo')).toBe(true);
     // nada disso segura o pé
     expect(boxes.some((b) => ['meio-fio', 'faixa-rua', 'remendo', 'buraco', 'rachadura', 'bueiro', 'tampa', 'raiz', 'poca'].includes(b.type))).toBe(false);
@@ -1297,7 +1298,7 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
     expect(cenario.filter((o) => o.type === 'parquinho' && isNew(o)).map((o) => String(prop(o, 'brinquedo'))).sort()).toEqual(['balanco', 'escorregador', 'gira-gira']);
   });
 
-  it('o córrego: ninguém entra na água, menos na ponte da Rua do Córrego (com guarda-corpo dos dois lados)', () => {
+  it('o córrego: ninguém entra na água, menos na ponte da Rua do Córrego (com a mureta de concreto dos dois lados)', () => {
     const water = chao.find((o) => o.type === 'agua' && o.polyline && isNew({ ...o, x: o.x + o.polyline[0]!.x }))!;
     const pts = water.polyline!.map((p) => [(water.x + p.x) / M, (water.y + p.y) / M] as [number, number]);
     let bridge = 0;
@@ -1306,15 +1307,16 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
       for (let t = 0; t <= 1; t += 0.1) {
         const [x, y] = [ax + (bx - ax) * t, ay + (by - ay) * t];
         if (x < OLD_W + 1 || x > map.width - 1 || y > map.height - 1) continue;
-        const onRoad = x > 148.3 && x < 153.7;
+        const onRoad = x > 148.6 && x < 153.4; // (entre as muretas da ponte)
         if (onRoad) bridge++;
         expect(footFree(x, y), `córrego em (${x.toFixed(1)}, ${y.toFixed(1)})`).toBe(onRoad);
       }
     }
     expect(bridge).toBeGreaterThan(0);
-    const rails = cenario.filter((o) => o.type === 'gradil' && isNew(o) && o.y / M > 100);
-    expect(rails.map((o) => o.x / M).sort((a, b) => a - b)).toEqual([148, 153.8]);
+    const rails = cenario.filter((o) => o.type === 'ponte');
+    expect(rails.map((o) => o.x / M).sort((a, b) => a - b)).toEqual([148, 153.75]);
     for (const r of rails) expect(footFree(at(r).x, at(r).y)).toBe(false);
+    expect(rails.map((o) => prop(o, 'lado')).sort()).toEqual(['leste', 'oeste']); // a do leste desenha a lateral até a água
   });
 
   it('o ferro-velho é murado (só se entra pelo portão), com o escritório, os carros velhos, o ônibus e os pneus', () => {
@@ -1323,6 +1325,11 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
     expect(cenario.filter((o) => o.type === 'carro' && inside(o)).length).toBeGreaterThanOrEqual(6);
     expect(cenario.filter((o) => o.type === 'onibus' && inside(o))).toHaveLength(1);
     expect(cenario.filter((o) => o.type === 'pneus' && inside(o)).length).toBeGreaterThanOrEqual(3);
+    // (vestido em 23/11) as pilhas de sucata seguram o pé, e o escritório tem o nome pintado
+    const piles = cenario.filter((o) => o.type === 'sucata' && inside(o));
+    expect(piles.length).toBeGreaterThanOrEqual(3);
+    for (const o of piles) expect(footFree(at(o).x, at(o).y)).toBe(false);
+    expect(prop(named('Escritório do Ferro-Velho'), 'pintura')).toBe('FERRO-VELHO');
     const yard = [114, 109.5] as const; // entre o escritório e os carros
     expect(reachNear(yard[0], yard[1], 0.5)).toBe(true);
     const gate = named('Portão do Ferro-Velho');
@@ -1334,6 +1341,14 @@ describe('Mapa 01 (Capão): o Capão maior (23/11, planta aprovada pelo dono: o 
     const area = layer('areas').find((o) => o.name === 'Morro do Escadão')!;
     expect(cenario.filter((o) => o.type === 'casa' && inRect(at(o).x, at(o).y, area)).length).toBeGreaterThanOrEqual(10);
     for (let y = 148; y <= 173; y += 1) expect(reachNear(174.5, y, 0.5), `escadão em y = ${y}`).toBe(true);
+    // (vestido em 23/11) os degraus, o corrimão dos dois lados (só desenho: não fecha o escadão) e os "gatos" com pipa
+    const steps = chao.find((o) => o.type === 'calcada' && prop(o, 'desenho') === 'escada')!;
+    expect(steps.name).toBe('Escadão');
+    expect(cenario.filter((o) => o.type === 'corrimao')).toHaveLength(2);
+    expect(boxes.some((b) => b.type === 'corrimao')).toBe(false);
+    const wires = cenario.filter((o) => o.type === 'gatos');
+    expect(wires.length).toBeGreaterThanOrEqual(2);
+    for (const w of wires) expect(w.polyline!.length).toBeGreaterThanOrEqual(2);
   });
 
   it('a vila nova é zona segura; os bichos da Mata do Córrego moram fora dela, em lugar alcançável', () => {

@@ -451,6 +451,13 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
       }
       outline(x0, y0, x1, y1, C.contorno, 1, 0.5);
     } else if (t === 'carrinho-feira') cv.ellipse(x0, y0, Math.max(1, m(0.25)), Math.max(1, m(0.25)), hex(String(prop(o, 'cor') ?? '#b8323a')), 0.95);
+    // a mureta da ponte e a sucata do ferro-velho (o monte enferrujado)
+    else if (t === 'ponte') roof(x0, y0, x1, y1, C.concreto);
+    else if (t === 'sucata') {
+      const r = m(Number(prop(o, 'raio') ?? 1));
+      cv.ellipse(x0, y0, r, r * 0.85, hex('#7a4a2e'), 0.95);
+      cv.ellipse(x0 - r * 0.3, y0 - r * 0.2, r * 0.35, r * 0.3, hex('#8e969c'), 0.9);
+    }
     // a banca de feira (a do Capão maior e a da Dona Iracema): a madeira com o pano colorido na frente
     else if (t === 'banca-frutas' || t === 'banca-pastel') {
       cv.rect(x0, y0, x1, y1, C.madeira, 0.95);

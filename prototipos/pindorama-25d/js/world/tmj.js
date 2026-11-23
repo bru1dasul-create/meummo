@@ -300,6 +300,19 @@
       } else if (k === 'carrinho-feira') {
         // o carrinho de feira (ponto): `olhando` (graus) e `cor` (a sacola)
         map.props.push({ kind: 'carrinho-feira', x, y, r: 25, angle: pr.olhando || 0, color: pr.cor || null });
+      } else if (k === 'ponte') {
+        // uma mureta da ponte da Rua do Córrego (fundo.js): `altura`, `lado` ('leste' desenha também a lateral da laje
+        // descendo `queda` m até a água) e `pixo`
+        map.props.push({ kind: 'ponte', ...rect(o), h: (pr.altura || 1.05) * 100, side: pr.lado || 'oeste', drop: (pr.queda || 1.5) * 100, pixo: !!pr.pixo });
+      } else if (k === 'sucata') {
+        map.props.push({ kind: 'sucata', x, y, r: (pr.raio || 1) * 100 });
+      } else if (k === 'corrimao') {
+        map.props.push({ kind: 'corrimao', ...rect(o) });
+      } else if (k === 'gatos' && o.polyline) {
+        // os "gatos" (a fiação puxada de casa em casa, polilinha): `altura` dos fios e a `pipa` enroscada (a cor)
+        const pts = o.polyline.map((q) => ({ x: (o.x + q.x) * CM, y: (o.y + q.y) * CM }));
+        const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
+        map.props.push({ kind: 'gatos', x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), pts, h: (pr.altura || 5) * 100, kite: pr.pipa || null });
       } else if (k === 'alambrado') {
         // o alambrado (a tela de arame nos postes de cano, a da quadra da escola do Capão maior; fundo.js), em pedaços de
         // até 4 m: `altura`, `estado: 'rasgado'` (a tela furada), `cipo` (0 a 1)

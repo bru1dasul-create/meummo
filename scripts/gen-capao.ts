@@ -1377,9 +1377,10 @@ function footBox(s: Shape): Box | null {
   if (s.type === 'placa-rua') return squareBox(s.x, s.y, 0.2);
   if (s.type === 'mastro') return squareBox(s.x, s.y, 0.3);
   if (s.type === 'carrinho-feira') return squareBox(s.x, s.y, 0.4);
+  if (s.type === 'sucata') return squareBox(s.x, s.y, round(Number(p.raio) * 1.8));
   if (s.point) return null;
   if (s.type === 'portao' && p.aberto) return null;
-  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao', 'alambrado', 'banca-pastel', 'caixote'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
+  if (['gradil', 'tronco-caido', 'casa', 'barreira', 'bomba', 'banco', 'cachoeira', 'muro', 'carro', 'onibus', 'pilar-viaduto', 'banca-frutas', 'predio', 'portao', 'estacao', 'alambrado', 'banca-pastel', 'caixote', 'ponte'].includes(s.type)) return { x0: s.x, x1: s.x + s.w!, y0: s.y, y1: s.y + s.h! };
   return null;
 }
 /** As caixas que seguram o pé (a cobertura do posto só nos quatro pilares; o balanço só nos dois pés de ferro). */
@@ -2163,9 +2164,10 @@ if (CAPAO_MAIOR) {
     [W0, RUA_NOVA.x0 - 1.5, RUA_DOIS.y1, RUA_DOIS.y1 + 1.5],
     [RUA_NOVA.x1 + 1.5, RUA_CORREGO.x0 - 1.5, RUA_DOIS.y1, RUA_DOIS.y1 + 1.5],
     [RUA_CORREGO.x1, ESCADAO.x1, MORRO.y0, MORRO.y0 + 2.5],
-    [ESCADAO.x0, ESCADAO.x1, MORRO.y0 + 2.5, MORRO.y1],
   ];
   for (const [x0, x1, y0, y1] of sidewalks) chao.push(rect('calcada', x0, x1, y0, y1, { desenho: 'placas' }));
+  // o escadão do morro: os degraus de cimento (vestido em 23/11)
+  chao.push(rect('calcada', ESCADAO.x0, ESCADAO.x1, MORRO.y0 + 2.5, MORRO.y1, { desenho: 'escada' }, 'Escadão'));
   // a pracinha (pedra portuguesa com musgo nas frestas)
   chao.push(rect('praca', PRACINHA.x0, PRACINHA.x1, PRACINHA.y0, PRACINHA.y1, { desenho: 'ondas', musgo: true }));
   // o asfalto: a avenida, as ruas novas, a Rua Dois e o estacionamento da feira
@@ -2448,11 +2450,14 @@ if (CAPAO_MAIOR) {
   cenario.push({ type: 'fiacao', x: 0, y: 0, polyline: [[90.5, 40.86], ...POSTS2], props: { altura: 6.6, cipo: true } });
 
   // ---------------- a Mata do Córrego: a ponte, o ferro-velho, o morro e o escadão ----------------
-  // a ponte: a rua passa por cima do córrego; o guarda-corpo de ferro dos dois lados (a pedrinha passa pela grade)
+  // a ponte: a rua passa por cima do córrego, entre as duas muretas de concreto (vestida em 23/11: a do leste desenha
+  // também a lateral da laje descendo até a água; a pedrinha passa por cima delas, que são baixas)
   {
     let [b0, b1] = [Infinity, -Infinity];
     for (let y = URBAN_S; y < H; y += 0.25) for (const x of [Cg.x0, Cg.x1]) if (corregoGap(x, y) < 1) [b0, b1] = [Math.min(b0, y), Math.max(b1, y)];
-    for (const x0 of [Cg.x0, Cg.x1 - 0.2]) place(rect('gradil', x0, x0 + 0.2, round(b0 - 0.5), round(b1 + 0.5), { altura: 1.1, estado: 'inteiro' }, x0 === Cg.x0 ? 'Ponte do Córrego' : undefined));
+    for (const [x0, lado] of [[Cg.x0, 'oeste'], [Cg.x1 - 0.25, 'leste']] as const) {
+      place(rect('ponte', x0, round(x0 + 0.25), round(b0 - 0.5), round(b1 + 0.5), { altura: 1.05, lado, queda: 1.5, pixo: true }, lado === 'oeste' ? 'Ponte do Córrego' : undefined));
+    }
   }
   // o fim da rua, ao sul: a barreira (depois dela, só mata)
   place(rect('barreira', Cg.x0, Cg.x1, RUA_CORREGO_FIM, RUA_CORREGO_FIM + 0.5, { altura: 1.1 }));
@@ -2466,12 +2471,14 @@ if (CAPAO_MAIOR) {
     place(rect('muro', F.x0, F.x0 + 0.3, F.y0 + 0.3, F.y1, { altura: 2.4, cor: '#b9b2a4', cipo: 0.5, musgo: true }));
     place(rect('muro', F.x1 - 0.3, F.x1, F.y0 + 0.3, F.y1, { altura: 2.4, cor: '#b9b2a4', grafite: 'cores', texto: 'FERRO-VELHO', lado: 'leste', cipo: 0.3 }));
     place(rect('muro', F.x0 + 0.3, F.x1 - 0.3, F.y1 - 0.3, F.y1, { altura: 2.4, cor: '#b9b2a4', grafite: 'cores', lado: 'sul', cipo: 0.4, musgo: true }));
-    place(rect('casa', 101, 106, 105.5, 109.5, { altura: 3, andares: 1, cor: '#a8a092', caixaDagua: false, abandonada: true, cipo: 0.6, musgo: true, plantas: true, pixo: true, morador: 'ninguem' }, 'Escritório do Ferro-Velho'));
+    place(rect('casa', 101, 106, 105.5, 109.5, { altura: 3, andares: 1, cor: '#a8a092', caixaDagua: false, abandonada: true, cipo: 0.6, musgo: true, plantas: true, pixo: true, morador: 'ninguem', pintura: 'FERRO-VELHO' }, 'Escritório do Ferro-Velho'));
     const CARS = ['#a8473e', '#3f6fa0', '#d8d2c4', '#4f7f4f', '#c9a640', '#5a5a60', '#8a3a2a', '#7d5ca8'];
     for (const y0 of [111, 115.4]) for (const x0 of [101, 106.5, 112, 117.5]) place(rect('carro', x0, x0 + 4, y0, y0 + 2.2, { altura: 1.4, cor: pick(CARS), mato: true, ...(nrng() < 0.3 ? { arvore: true } : {}) }));
     place(rect('onibus', 102, 114, 119, 121.6, { altura: 3, cor: '#d7b14a', mato: true }));
     for (const [x, y, pilha] of [[119.3, 107, 4], [121.9, 108.6, 3], [118.6, 121, 5], [122.3, 120.6, 3]] as const) place(point('pneus', x, y, { raio: 0.55, pilha }));
-    for (const [x, y] of [[109.5, 107.5], [123, 114]] as const) chao.push(point('entulho', x, y));
+    for (const [x, y] of [[109.5, 107.5], [118.2, 109.8]] as const) chao.push(point('entulho', x, y));
+    // (vestido em 23/11) as pilhas de sucata: no meio do pátio e encostadas nos muros
+    for (const [x, y, raio] of [[115.5, 107.5, 1.3], [123.8, 114.3, 1], [100.2, 114.3, 1]] as const) place(point('sucata', x, y, { raio }));
   }
   // o morro: as casas subindo em três fileiras dos dois lados do escadão (de 1 e 2 andares, tijolo e laje), com as
   // vielas de cimento entre elas
@@ -2485,6 +2492,12 @@ if (CAPAO_MAIOR) {
       }
     }
     for (const [y0, y1] of [[M0.y0 + 9, M0.y0 + 11.5], [M0.y0 + 17.5, M0.y0 + 20]] as const) chao.push(rect('calcada', M0.x0 + 1, M0.x1, y0, y1, { desenho: 'placas' }));
+    // (vestido em 23/11) o corrimão dos dois lados do escadão, colado nas paredes (só desenho), e os "gatos": a fiação
+    // puxada de casa em casa por cima do escadão e das vielas, com as pipas enroscadas
+    for (const x of [ESCADAO.x0 + 0.05, ESCADAO.x1 - 0.15]) cenario.push(rect('corrimao', round(x), round(x + 0.1), M0.y0 + 3, M0.y1 - 0.3));
+    cenario.push({ type: 'gatos', x: 0, y: 0, polyline: [[ESCADAO.x0 - 0.1, M0.y0 + 4], [ESCADAO.x1 + 0.1, M0.y0 + 7], [ESCADAO.x0 - 0.1, M0.y0 + 10.5], [ESCADAO.x1 + 0.1, M0.y0 + 14], [ESCADAO.x0 - 0.1, M0.y0 + 18], [ESCADAO.x1 + 0.1, M0.y0 + 22]], props: { altura: 5, pipa: '#e2552f' } });
+    cenario.push({ type: 'gatos', x: 0, y: 0, polyline: [[M0.x0 + 1.5, M0.y0 + 10.2], [167, M0.y0 + 10.3], [ESCADAO.x0 - 0.2, M0.y0 + 10.1]], props: { altura: 4.6, pipa: '#2f6fb0' } });
+    cenario.push({ type: 'gatos', x: 0, y: 0, polyline: [[ESCADAO.x1 + 0.2, M0.y0 + 18.8], [182, M0.y0 + 18.6], [M0.x1 - 0.3, M0.y0 + 18.9]], props: { altura: 4.6, pipa: '#e8c020' } });
   }
   // a prainha do córrego: pedras na beira da água (do lado da prainha)
   for (const [dx, dy, raio] of [[1.6, 1.6, 0.6], [2.4, 0.9, 0.35], [-1.8, 2.2, 0.5], [-0.6, 2.9, 0.35]] as const) {
@@ -2664,6 +2677,9 @@ for (const s of cenario) {
   // a feira: a banca de pastel é baixa como as outras; o carrinho de feira também (a lona, no alto, não segura ninguém)
   else if (s.type === 'banca-pastel') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
   else if (s.type === 'carrinho-feira') colisao.push(block('carrinho-feira', s.x, s.y, 0.4, { bloqueiaTiro: false, altura: 1 }));
+  // a ponte (as muretas, baixas) e a sucata do ferro-velho (o monte segura a pedrinha)
+  else if (s.type === 'ponte') colisao.push(rect('ponte', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
+  else if (s.type === 'sucata') colisao.push(block('sucata', s.x, s.y, round(Number(p.raio) * 1.8), { altura: 1.3 }));
   else if (s.type === 'banca-frutas') colisao.push(rect('banca', s.x, s.x + s.w!, s.y, s.y + s.h!, { bloqueiaTiro: false, altura: Number(p.altura) }));
 }
 // o chão embaixo de cada galho dos saguis é andável (o servidor põe o pé do sagui ali)

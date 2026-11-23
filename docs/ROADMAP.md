@@ -737,10 +737,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   escola estadual abandonada com a quadra, a pracinha e a Estação Capão Redondo (fechada: a saída para o leste fica para
   depois). Ao sul, a Mata do Córrego (de caçar: quatis, tatus-bola, marimbondos e jararacas, 25 a mais), com o córrego e
   a ponte, o ferro-velho, o morro com o escadão e a prainha
-- [ ] **[mundo]** Vestir as regiões do Capão maior, depois de o dono andar e aprovar o tamanho e os caminhos: a estação
-  com cara de estação (a plataforma lá em cima, a bilheteria), a escola (o pátio, a quadra de cimento, o alambrado), a
-  feira (as lonas, a banca de pastel), o escadão com degraus e o morro com muro de arrimo, o ferro-velho (pilhas de
-  sucata), a ponte com cara de ponte
+- [x] **[mundo]** Vestir as regiões do Capão maior (23/11, "pode seguir vestindo as regiões do Capão"; tudo na `main`):
+  a Estação Capão Redondo (`estacao`: o prédio de concreto com a faixa lilás e o nome, as vidraças, a marquise sobre as
+  portas de aço baixadas, a bilheteria e, lá em cima, a plataforma com a cobertura curva em cima dos trilhos); a Escola
+  Estadual (a fachada de escola, `estilo: 'escola'`, a quadra de cimento pintada, o alambrado, a arquibancada, o pátio,
+  os bancos e o mastro); a Feira Livre (as lonas listradas, a banca de pastel com caldo de cana, os caixotes, os
+  carrinhos de feira e a placa); a ponte de concreto (as muretas e a lateral descendo até a água); o ferro-velho (as
+  pilhas de sucata e o nome pintado no escritório); e o morro (o escadão de degraus, o corrimão e os "gatos" com pipa).
+  O mapa é plano: o morro não sobe (subindo para o lado da câmera, as fileiras de cima esconderiam as de baixo)
 - [x] **[arte]** Desenhar os quatro bichos novos e as ações `dizzy` (tonto), `dodge` (a pedra passou pelo enxame),
   `vanish` (o boitatá indo embora) e `block` no tatu (a casca segurou) (15/11): `quati.js`, `tatu.js`, `marimbondo.js`
   e `boitata.js` em `prototipos/pindorama-25d/js/creatures/` — o quati trota, fareja, encolhe e morde; o tatu fecha

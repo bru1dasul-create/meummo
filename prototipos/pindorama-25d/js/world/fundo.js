@@ -4,7 +4,8 @@
 // com plantas no teto; o ônibus velho que virou horta; a barreira da rua fechada e as placas de direção. E, do Capão
 // maior (23/11), a Estação Capão Redondo (`estacao`): o prédio de baixo do viaduto e a plataforma com a cobertura; a
 // fachada da escola estadual (`PD.city.facades.escola`, para a casa com `estilo: 'escola'`) e o alambrado da quadra;
-// a feira livre: as lonas das bancas, a banca de pastel com caldo de cana e o carrinho de feira.
+// a feira livre: as lonas das bancas, a banca de pastel com caldo de cana e o carrinho de feira; a ponte (as muretas e
+// a lateral descendo até a água), a sucata do ferro-velho, o corrimão do escadão e os "gatos" (a fiação das vielas).
 // Mesmo traço do resto do cenário (contorno de tinta, lado da sombra mais escuro). Coisa comprida (muro, viaduto,
 // ônibus) vem do mapa em pedaços (tmj.js): cada pedaço desenha a sua parte e o desenho continua de um para o outro.
 //   PD.city.small[tipo] = { height, blocks, lift, box, shadow, paint }   (o props.js usa como as plantas)
@@ -2314,6 +2315,201 @@
         ctx.beginPath();
         ctx.ellipse(w.x, w.y, 6 * cam.zoom, 7 * cam.zoom, 0, 0, M.TAU);
         ctx.fill();
+      }
+    },
+  };
+  // ------------------------------------------------------------------ a ponte, o ferro-velho e o morro (Capão maior)
+  // A ponte da Rua do Córrego (`ponte`): cada mureta de concreto é um objeto (a caixa fina dela, para quem anda na ponte
+  // ficar entre as duas no desenho), com os furinhos de escoar, musgo e pichação; a do leste (`lado: 'leste'`) desenha
+  // também a lateral da laje descendo até a água (abaixo do chão: a água parece passar lá embaixo, na sombra da ponte).
+  small.ponte = {
+    height: (d) => d.h || 105,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, d.h || 105),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + (d.side === 'leste' ? 280 : 20), d.y0 - 20, d.y1 + 20, z0 - (d.drop || 150) - 50, z0 + (d.h || 105) + 20, 20),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x0, d.y0, 3701);
+      const drop = d.drop || 150, wh = d.h || 105;
+      const C = { front: '#a9a497', side: '#8f8a7e', top: '#bbb6a9' };
+      if (d.side === 'leste') {
+        // a lateral da laje que a câmera vê (a de +x), descendo até a água, e a sombra embaixo da ponte
+        const ya = d.y0 + 30, yb = d.y1 - 30;
+        fill(ctx, [P(d.x1, ya, z0 - drop - 40), P(d.x1 + 260, ya, z0 - drop - 40), P(d.x1 + 260, yb, z0 - drop - 40), P(d.x1, yb, z0 - drop - 40)], 'rgba(10, 24, 26, 0.28)');
+        inkPoly(ctx, [P(d.x1, ya, z0), P(d.x1, yb, z0), P(d.x1, yb, z0 - drop), P(d.x1, ya, z0 - drop)], C.side, ink, 1.8);
+        H.onWall(ctx, cam, { x: d.x1, y: yb, z: z0 }, { x: 0, y: -1 }, () => {
+          const L = yb - ya;
+          // a viga da beirada, as manchas de água escorrida, o cano e o musgo perto da água
+          ctx.fillStyle = 'rgba(60, 56, 50, 0.3)';
+          ctx.fillRect(0, 0, L, 18);
+          for (let k = 0; k < 8; k++) {
+            ctx.fillStyle = 'rgba(54, 50, 44, 0.25)';
+            ctx.fillRect(rnd() * L, 18, 8 + rnd() * 14, drop * (0.4 + rnd() * 0.6));
+          }
+          ctx.fillStyle = '#6b7075';
+          ctx.fillRect(0, 34, L, 14);
+          ctx.fillStyle = 'rgba(78, 116, 56, 0.55)';
+          for (let k = 0; k < 10; k++) {
+            ctx.beginPath();
+            ctx.ellipse(rnd() * L, drop - rnd() * 30, 14 + rnd() * 20, 8 + rnd() * 10, 0, 0, M.TAU);
+            ctx.fill();
+          }
+        });
+      }
+      // a mureta, com os furinhos de escoar no pé, o musgo e a pichação no lado que a câmera vê (o de +x)
+      H.box(ctx, cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + wh, C, ink);
+      H.onWall(ctx, cam, { x: d.x1, y: d.y1, z: z0 + wh }, { x: 0, y: -1 }, () => {
+        const L = d.y1 - d.y0;
+        ctx.fillStyle = '#4c4a44';
+        for (let u = 60; u < L - 40; u += 180) ctx.fillRect(u, wh - 22, 26, 14);
+        ctx.fillStyle = 'rgba(86, 118, 52, 0.5)';
+        for (let k = 0; k < 6; k++) {
+          ctx.beginPath();
+          ctx.ellipse(rnd() * L, wh - 6, 16 + rnd() * 18, 10, 0, 0, M.TAU);
+          ctx.fill();
+        }
+        // (a pichação em tamanho de mureta: a metade da de parede)
+        if (d.pixo) {
+          ctx.save();
+          ctx.scale(0.45, 0.45);
+          H.pixo(ctx, L / 0.45, 30, seeded(d.x1, d.y0, 3711), 0.8);
+          ctx.restore();
+        }
+      });
+    },
+  };
+  // a pilha de sucata do ferro-velho (`sucata`): geladeira deitada, máquina de lavar, bicicleta torta, canos, chapas
+  // e calotas enferrujadas, amontoadas num monte com mato nascendo
+  small.sucata = {
+    height: (d) => (d.r || 100) * 1.2,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x - d.r * 0.8, d.x + d.r * 0.8, d.y - d.r * 0.7, d.y + d.r * 0.7, d.r * 0.6),
+    box: (cam, d, z0) => volBox(cam, d.x - d.r - 30, d.x + d.r + 30, d.y - d.r - 30, d.y + d.r + 30, z0, z0 + d.r * 1.4 + 40, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x, d.y, 3801);
+      const r = d.r || 100;
+      const RUST = ['#8a4a2a', '#a35a32', '#6e3d24', '#7a7d80', '#5e6265', '#b9b4a8', '#3e6f9a', '#c8442d'];
+      // o monte (a ferrugem amontoada, mais alto no meio) e as peças por cima dele, de trás para a frente
+      const top = r * 0.72;
+      const ring = [];
+      for (let k = 0; k < 18; k++) {
+        const a = (k / 18) * M.TAU;
+        ring.push({ x: d.x + Math.cos(a) * r * (0.92 + rnd() * 0.12), y: d.y + Math.sin(a) * r * 0.82 * (0.92 + rnd() * 0.12) });
+      }
+      const hullPts = ring.map((q) => P(q.x, q.y, z0)).concat([P(d.x, d.y, z0 + top)]);
+      const S = PD.shapes;
+      const flat = [];
+      for (const q of hullPts) flat.push(q.x, q.y);
+      const hull = S && S.convexHull ? S.convexHull(flat) : flat;
+      const outline = [];
+      for (let i = 0; i < hull.length; i += 2) outline.push({ x: hull[i], y: hull[i + 1] });
+      inkPoly(ctx, outline, '#5b3a26', ink, 1.6);
+      // a luz de um lado do monte e a sombra do outro
+      const lit = [P(d.x - r * 0.9, d.y, z0), P(d.x, d.y - r * 0.8, z0), P(d.x, d.y, z0 + top)];
+      fill(ctx, lit, 'rgba(160, 96, 56, 0.35)');
+      const items = [];
+      for (let k = 0; k < 22; k++) {
+        const a = rnd() * M.TAU, rr = Math.sqrt(rnd()) * r * 0.8;
+        const f = rr / r;
+        items.push({ x: d.x + Math.cos(a) * rr, y: d.y + Math.sin(a) * rr * 0.82, z: (1 - f * f) * top * 0.92, k: Math.floor(rnd() * 4), c: RUST[Math.floor(rnd() * RUST.length)], s: 16 + rnd() * 22 });
+      }
+      items.sort((a, b) => a.x + a.y + a.z * 0.2 - (b.x + b.y + b.z * 0.2));
+      for (const it of items) {
+        const zb = z0 + it.z;
+        if (it.k === 0) {
+          // um eletrodoméstico (geladeira ou máquina) tombado
+          H.box(ctx, cam, it.x - it.s, it.x + it.s, it.y - it.s * 0.6, it.y + it.s * 0.6, zb, zb + it.s * 0.9, { front: it.c, side: M.shade(it.c, -0.25), top: M.shade(it.c, 0.12) }, ink);
+        } else if (it.k === 1) {
+          // chapa torta
+          inkPoly(ctx, [P(it.x - it.s, it.y - 10, zb), P(it.x + it.s, it.y - 4, zb + 8), P(it.x + it.s * 0.8, it.y + 12, zb + it.s * 0.7), P(it.x - it.s * 0.9, it.y + 6, zb + it.s * 0.5)], it.c, ink, 1.2);
+        } else if (it.k === 2) {
+          // canos
+          for (let j = 0; j < 3; j++) inkLine(ctx, [P(it.x - it.s, it.y + j * 8, zb + 6 + j * 4), P(it.x + it.s, it.y + j * 8 - 10, zb + 10 + j * 4)], '#8e969c', Math.max(1, 3 * cam.zoom), ink * 0.6);
+        } else {
+          // a roda de bicicleta / a calota
+          const q = P(it.x, it.y, zb + it.s * 0.6);
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = Math.max(1, 3 * cam.zoom);
+          ctx.beginPath();
+          ctx.ellipse(q.x, q.y, it.s * 0.7 * cam.zoom, it.s * 0.55 * cam.zoom, 0.4, 0, M.TAU);
+          ctx.stroke();
+          ctx.strokeStyle = '#9aa0a4';
+          ctx.lineWidth = Math.max(1, 1.6 * cam.zoom);
+          ctx.stroke();
+        }
+      }
+      // o mato tomando o monte
+      for (let k = 0; k < 4; k++) grass(ctx, cam, d.x + (rnd() - 0.5) * r * 1.4, d.y + (rnd() - 0.3) * r, z0, 22 + rnd() * 10, rnd, ink);
+    },
+  };
+  // o corrimão do escadão (`corrimao`): o cano de ferro nos postinhos, de uma ponta à outra da caixa fina
+  small.corrimao = {
+    height: () => 100,
+    blocks: 0,
+    shadow: () => {},
+    box: (cam, d, z0) => volBox(cam, d.x0, d.x1, d.y0, d.y1, z0, z0 + 100, 12),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const alongY = d.y1 - d.y0 >= d.x1 - d.x0;
+      const a = alongY ? { x: (d.x0 + d.x1) / 2, y: d.y0 } : { x: d.x0, y: (d.y0 + d.y1) / 2 };
+      const L = alongY ? d.y1 - d.y0 : d.x1 - d.x0;
+      const at = (u) => (alongY ? { x: a.x, y: a.y + u } : { x: a.x + u, y: a.y });
+      const col = '#6d7378';
+      for (let u = 0; u <= L + 1; u += Math.max(120, L / Math.max(1, Math.round(L / 160)))) {
+        const q = at(Math.min(u, L));
+        inkLine(ctx, [P(q.x, q.y, z0), P(q.x, q.y, z0 + 92)], col, Math.max(1, 2.6 * cam.zoom), ink * 0.8);
+      }
+      inkLine(ctx, [P(at(0).x, at(0).y, z0 + 90), P(at(L).x, at(L).y, z0 + 90)], col, Math.max(1, 3 * cam.zoom), ink * 0.8);
+    },
+  };
+  // os "gatos" (`gatos`): a fiação puxada de casa em casa por cima das vielas, três ou quatro fios caindo em barriga, com
+  // a pipa enroscada num deles. Fica por cima de quem passa embaixo
+  small.gatos = {
+    overhead: true,
+    height: (d) => d.h + 40,
+    blocks: 0,
+    shadow: () => {},
+    box: (cam, d, z0) => volBox(cam, d.x0 - 40, d.x1 + 40, d.y0 - 40, d.y1 + 40, z0 + d.h - 160, z0 + d.h + 60, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const rnd = seeded(d.x0, d.y0, 3901);
+      const pts = d.pts || [];
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const [a, b] = [pts[i], pts[i + 1]];
+        const strands = 3 + Math.floor(rnd() * 2);
+        for (let s = 0; s < strands; s++) {
+          const za = z0 + d.h + s * 10 - 10, sag = 40 + rnd() * 60;
+          const q0 = P(a.x, a.y, za), q1 = P(b.x, b.y, za - rnd() * 15);
+          const mid = P((a.x + b.x) / 2, (a.y + b.y) / 2, za - sag);
+          ctx.strokeStyle = 'rgba(24, 22, 26, 0.85)';
+          ctx.lineWidth = Math.max(1, 1.4 * cam.zoom);
+          ctx.beginPath();
+          ctx.moveTo(q0.x, q0.y);
+          ctx.quadraticCurveTo(2 * mid.x - (q0.x + q1.x) / 2, 2 * mid.y - (q0.y + q1.y) / 2, q1.x, q1.y);
+          ctx.stroke();
+        }
+        // a pipa enroscada (losango colorido com a rabiola pendurada)
+        if (d.kite && i === Math.floor((pts.length - 1) / 2)) {
+          const k = P((a.x + b.x) / 2, (a.y + b.y) / 2, z0 + d.h - 50);
+          const s = 16 * cam.zoom;
+          ctx.fillStyle = d.kite;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = Math.max(1, 1.2 * cam.zoom);
+          ctx.beginPath();
+          ctx.moveTo(k.x, k.y - s);
+          ctx.lineTo(k.x + s * 0.8, k.y);
+          ctx.lineTo(k.x, k.y + s * 1.2);
+          ctx.lineTo(k.x - s * 0.8, k.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = d.kite;
+          ctx.beginPath();
+          ctx.moveTo(k.x, k.y + s * 1.2);
+          ctx.quadraticCurveTo(k.x + s, k.y + s * 2.4, k.x - s * 0.4, k.y + s * 3.4);
+          ctx.stroke();
+        }
       }
     },
   };
