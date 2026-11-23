@@ -1512,6 +1512,34 @@
     if (sh.kind !== 'rect' && sh.kind !== 'poly') return false;
     const b = clipBox(G.shapeBox(sh), box);
     if (!b) return true;
+    if (sh.pattern === 'paralelepipedo') {
+      // o calçamento de paralelepípedo (a praça da barragem de 1909): pedras de granito de 18 × 12 cm em fiadas
+      // desencontradas, cada uma de um tom, as juntas escuras, o capim nascendo nelas e umas pedras afundadas
+      ctx.save();
+      G.shapePath(ctx, sh);
+      ctx.clip();
+      ctx.fillStyle = '#4f4b45';
+      ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+      const SW = 18, SH = 12;
+      const TONES = ['#8f8b84', '#7f7b74', '#9b978f', '#6f6b65', '#87837b'];
+      for (let j = Math.floor(b.y0 / SH); j * SH < b.y1; j++) {
+        const off = (j % 2) * (SW / 2);
+        for (let i = Math.floor((b.x0 - off) / SW); i * SW + off < b.x1; i++) {
+          const r = G.cellRng(i, j, 1311);
+          ctx.fillStyle = TONES[Math.floor(r() * TONES.length)];
+          const x = i * SW + off, y = j * SH;
+          ctx.fillRect(x + 1.5, y + 1.5, SW - 3, SH - 3);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+          ctx.fillRect(x + 1.5, y + 1.5, SW - 3, 2.5);
+          if (r() < 0.08) {
+            ctx.fillStyle = 'rgba(78, 110, 54, 0.75)';
+            ctx.fillRect(x - 1, y + SH - 3, 6 + r() * 6, 3);
+          }
+        }
+      }
+      ctx.restore();
+      return true;
+    }
     if (sh.pattern === 'azulejo') {
       // o azulejo da beira da piscina do clube: quadradinhos de 15 cm, brancos e azul-claros, o rejunte encardido, uns
       // trincados e uns que caíram (o buraco escuro do cimento)

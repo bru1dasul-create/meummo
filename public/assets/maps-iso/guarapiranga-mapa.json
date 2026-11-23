@@ -160,6 +160,12 @@
       "tipo": "lugar"
     },
     {
+      "nome": "Torre do relógio",
+      "x": 345.8,
+      "y": 234.8,
+      "tipo": "lugar"
+    },
+    {
       "nome": "Margem da Represa",
       "x": 38.5,
       "y": 44,

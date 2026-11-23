@@ -178,6 +178,11 @@
           rebar: !!pr.vergalhao,
           // o letreiro pintado na parede, desbotado (o clube náutico: `pintura: 'CLUBE NÁUTICO'`)
           paint: pr.pintura || null,
+          // o prédio antigo (a Barragem de 1909): `estilo: 'historico'` (tijolo antigo, janelas em arco, cornija), `ano`
+          // (no frontão) e `relogio` (a torre, com o relógio parado no lugar das janelas do andar de cima)
+          historic: pr.estilo === 'historico',
+          year: pr.ano || null,
+          clock: !!pr.relogio,
           tank: !!pr.caixaDagua,
           pixo: !!pr.pixo,
           abandoned: !!pr.abandonada,
@@ -381,6 +386,12 @@
       } else if (k === 'trampolim') {
         // o clube náutico (refugio.js): o trampolim da piscina; `lado` = para onde a prancha avança (por cima da água)
         map.props.push({ kind: k, ...rect(o), side: pr.lado || 'oeste' });
+      } else if (k === 'guincho-comporta') {
+        // o guincho da comporta em cima do muro da barragem (refugio.js): os dois pilares, a viga e o volante
+        map.props.push({ kind: k, ...rect(o), h: (pr.altura || 3.2) * 100 });
+      } else if (k === 'engrenagem') {
+        // a engrenagem velha largada no chão, meio enterrada (refugio.js): `raio`
+        map.props.push({ kind: k, x, y, r: (pr.raio || 0.9) * 100 });
       } else if (k === 'escada-piscina' || k === 'mastro') {
         // a escadinha de inox da piscina (`olhando`: para onde ela desce) e o mastro com a bandeira rasgada (`altura`, `cor`)
         map.props.push({ kind: k, x, y, r: 25, h: pr.altura != null ? pr.altura * 100 : null, color: pr.cor || null, angle: pr.olhando ?? 90 });

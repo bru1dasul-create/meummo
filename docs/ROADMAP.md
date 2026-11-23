@@ -698,7 +698,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   ("pode seguir vestindo o clube náutico"): a sede com o letreiro pintado "CLUBE NÁUTICO", a árvore na laje e a varanda,
   o vestiário, a garagem dos barcos com as canoas amarradas, a piscina verde com a beira de azulejo, o trampolim, a
   escadinha de inox e as cadeiras, a arquibancada de cimento virada para a represa, o mastro com a bandeira rasgada e,
-  perto do píer quebrado, um veleiro afundado com o mastro e a vela para fora d'água
+  perto do píer quebrado, um veleiro afundado com o mastro e a vela para fora d'água. **A Barragem de 1909 na main em
+  24/11** ("pode seguir vestindo a barragem de 1909"): o prédio de comando de tijolo antigo, com as janelas altas em arco
+  e moldura de pedra, a porta grande em arco, a cornija, o frontão com o ano 1909 e a árvore na laje; a torre do relógio
+  parado; a praça de paralelepípedo com a grade de ferro, o portão de pilares, a placa, os postes antigos e a engrenagem
+  enferrujada largada; e, no muro da barragem, os postes de ferro e o guincho em cima de cada comporta
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

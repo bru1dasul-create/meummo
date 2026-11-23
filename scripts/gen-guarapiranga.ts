@@ -230,7 +230,10 @@ const FALL_POOL: Pt[] = [[388, 23], [396, 23], [396.6, 24.2], [396.2, 25.6], [39
 /** 7 · O clube náutico: o pátio de cimento, os prédios e a piscina. */
 const CLUB: Rect = { x0: 272, x1: 318, y0: 72, y1: 94 };
 /** 9 · O prédio da Barragem de 1909 e 10 · o caminho de pedra em cima do muro da barragem (a comporta no meio). */
-const DAM_HOUSE: Rect = { x0: 326, x1: 346, y0: 226, y1: 244 };
+const DAM_HOUSE: Rect = { x0: 328, x1: 344, y0: 231, y1: 242 };
+/** A torre do relógio, colada no lado leste do prédio, e a praça de paralelepípedo entre o prédio e o muro. */
+const DAM_TOWER: Rect = { x0: 344, x1: 347.6, y0: 233, y1: 236.6 };
+const DAM_PLAZA: Rect = { x0: 327, x1: 345, y0: 242, y1: 250 };
 const DAM_WALK: Rect = { x0: 146, x1: 340, y0: DAM.y, y1: DAM.y + 3.4 };
 const GATES = [218, 242];
 /** A comporta: a queda d'água que sai do muro (6 m de largura, 2,4 m de fundo) e o poço onde ela cai (encosta na queda inteira). */
@@ -475,7 +478,7 @@ chao.push(area('terra', blob(CAVE.x, CAVE.y + 1, 5, 3, 0.1), { cor: '#211812' })
 const VIEW_KEYS: Pt[] = [...pathPoints(ROAD, ROAD_W + 2 * SIDEWALK, 2), ...pathPoints(PATH, PATH_W)];
 for (const [t, w] of TRAILS) VIEW_KEYS.push(...pathPoints(t, w, 1.5));
 for (const [r] of DECKS) VIEW_KEYS.push(...rectPoints(r));
-for (const r of [PLAZA, FIELD, SQUARE, CLUB, DAM_WALK, LOOKOUT, ...ALLEYS]) VIEW_KEYS.push(...rectPoints(r, 2));
+for (const r of [PLAZA, FIELD, SQUARE, CLUB, DAM_WALK, DAM_PLAZA, LOOKOUT, ...ALLEYS]) VIEW_KEYS.push(...rectPoints(r, 2));
 VIEW_KEYS.push(...rectPoints({ x0: CAVE.x - 4, x1: CAVE.x + 4, y0: CAVE.y - 2, y1: CAVE.y + 4 }));
 // a cachoeira e o poço dela aparecem inteiros
 VIEW_KEYS.push(...rectPoints({ x0: FALL.x0, x1: FALL.x1, y0: FALL.y0, y1: FALL.y1 + 4 }, 1.5));
@@ -536,7 +539,7 @@ const CLEARINGS: ((x: number, y: number) => boolean)[] = [
   (x, y) => inRect(x, y, SQUARE, 3),
   (x, y) => inRect(x, y, CLUB, 2.5),
   (x, y) => inRect(x, y, DAM_WALK, 3),
-  (x, y) => inRect(x, y, DAM_HOUSE, 4),
+  (x, y) => inRect(x, y, DAM_HOUSE, 4) || inRect(x, y, DAM_TOWER, 4) || inRect(x, y, DAM_PLAZA, 3),
   (x, y) => inVarzea(x, y),
   (x, y) => dist(x, y, (LOOKOUT.x0 + LOOKOUT.x1) / 2, (LOOKOUT.y0 + LOOKOUT.y1) / 2) < 7,
   (x, y) => dist(x, y, CAVE.x, CAVE.y) < 11,
@@ -941,12 +944,31 @@ cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 
   }
 }
 
-// ----- 9 e 10 · a barragem: o prédio de 1909, o parapeito do muro e a comporta jogando água na várzea -----
-cenario.push(box('casa', DAM_HOUSE, { altura: 6.2, andares: 2, cor: '#9a948a', caixaDagua: false, cipo: 0.5 }, 'Barragem de 1909'));
-for (let x = DAM.x0; x < DAM.x1 - 0.5; x += 20) {
-  cenario.push(rect('muro', round(x), round(Math.min(x + 20, DAM.x1)), DAM.y, round(DAM.y + 0.35), { altura: 0.9, cor: '#a8a296', musgo: true, cipo: 0.3 }));
+// ----- 9 e 10 · a barragem de 1909 (24/11, o dono: "pode seguir vestindo a barragem de 1909") -----
+// O prédio de comando da barragem, de 1909: tijolo antigo, janelas altas em arco, a cornija, o frontão com o ano e a
+// árvore crescendo na laje; colada nele, a torre do relógio parado. Na frente, a praça de paralelepípedo com a grade de
+// ferro e o portão de pilares, os postes antigos, a placa e a engrenagem velha largada. No muro da barragem: o
+// parapeito, os postes de ferro e, em cima de cada comporta, o guincho (os pilares, a viga e o volante).
+{
+  cenario.push(box('casa', DAM_HOUSE, { altura: 7.4, andares: 2, estilo: 'historico', ano: '1909', abandonada: true, caixaDagua: false, cipo: 0.45, musgo: true, arvoreNaLaje: true }, 'Barragem de 1909'));
+  cenario.push(box('casa', DAM_TOWER, { altura: 11, andares: 3, estilo: 'historico', relogio: true, abandonada: true, caixaDagua: false, cipo: 0.3 }, 'Torre do relógio'));
+  chao.push(rect('piso', DAM_PLAZA.x0, DAM_PLAZA.x1, DAM_PLAZA.y0, DAM_PLAZA.y1, { desenho: 'paralelepipedo' }));
+  // a grade de ferro com o portão (dois pilares de tijolo e o vão aberto no meio)
+  const GATE = { x0: 333.2, x1: 338.8 };
+  for (const [x0, x1] of [[DAM_PLAZA.x0, GATE.x0], [GATE.x1, DAM_PLAZA.x1]] as const) cenario.push(rect('gradil', x0, x1, 246, 246.1, { altura: 1.6 }));
+  for (const x0 of [GATE.x0, GATE.x1 - 0.6]) cenario.push(rect('pilar', x0, round(x0 + 0.6), 245.75, 246.35, { altura: 2.1 }));
+  cenario.push(point('placa', 330, 247.6, { texto: 'BARRAGEM DE 1909', poste: true }));
+  addTrunk({ x: 330, y: 247.6, r: 0.1 });
+  for (const x of [DAM_PLAZA.x0 + 0.6, DAM_PLAZA.x1 - 0.6]) cenario.push(point('poste-praca', x, 249.2, { altura: 3.6, luz: '#ffe9a6' }));
+  cenario.push(point('engrenagem', 324.4, 247.2, { raio: 0.9 }));
+  // o parapeito do muro, os postes de ferro ao longo dele e o guincho de cada comporta
+  for (let x = DAM.x0; x < DAM.x1 - 0.5; x += 20) {
+    cenario.push(rect('muro', round(x), round(Math.min(x + 20, DAM.x1)), DAM.y, round(DAM.y + 0.35), { altura: 0.9, cor: '#a8a296', musgo: true, cipo: 0.3 }));
+  }
+  for (const x of [160, 184, 204, 230, 256, 280, 300]) cenario.push(point('poste-praca', x, round(DAM.y + 0.55), { altura: 3.8, luz: '#ffe9a6', torto: x === 256 }));
+  for (const gx of GATES) cenario.push(rect('guincho-comporta', gx - 2.6, gx + 2.6, DAM.y + 0.35, round(DAM.y + 0.85), { altura: 3.2 }));
+  for (const gx of GATES) cenario.push(rect('cachoeira', gx - GATE_W, gx + GATE_W, DAM_WALK.y1, GATE_Y1, { altura: 1.6, queda: 'sul', musgo: true }, 'Comporta'));
 }
-for (const gx of GATES) cenario.push(rect('cachoeira', gx - GATE_W, gx + GATE_W, DAM_WALK.y1, GATE_Y1, { altura: 1.6, queda: 'sul', musgo: true }, 'Comporta'));
 
 // ----- 12 · a Caverna Sagrada: as pedras grandes em arco em volta da boca -----
 {
@@ -1042,6 +1064,10 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'barril' || s.type === 'caixote') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'mesa') return [block('mesa', s.x, s.y, 0.8, { bloqueiaTiro: false, altura: 0.75 })];
   if (s.type === 'cadeira') return [block('cadeira', s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 })];
+  if (s.type === 'gradil') return [box('gradil', r, { bloqueiaTiro: false, altura: Number(p.altura) || 1.6 })];
+  if (s.type === 'pilar') return [box('pilar', r, { altura: Number(p.altura) || 2 })];
+  if (s.type === 'engrenagem') return [block('engrenagem', s.x, s.y, round(Number(p.raio) * 1.4), { altura: Number(p.raio) * 1.6 })];
+  if (s.type === 'guincho-comporta') return [box('pilar', { x0: r.x0, x1: round(r.x0 + 0.5), y0: r.y0, y1: r.y1 }, { altura: Number(p.altura) }), box('pilar', { x0: round(r.x1 - 0.5), x1: r.x1, y0: r.y0, y1: r.y1 }, { altura: Number(p.altura) })];
   if (s.type === 'mastro') return [block('mastro', s.x, s.y, 0.3, { altura: Number(p.altura) })];
   // (o trampolim: só a base de cimento, na beira da piscina; a prancha fica por cima da água)
   if (s.type === 'trampolim') return [box('trampolim', { x0: round(r.x1 - 0.7), x1: r.x1, y0: r.y0, y1: r.y1 }, { bloqueiaTiro: false, altura: 0.5 })];
