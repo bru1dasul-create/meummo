@@ -410,7 +410,7 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   preparava e luta no chão. Caiu lá em cima: o galho fica livre (`leaveTile`) e o que deixa cai embaixo
   (`groundTileOf`).
 - No navegador: `EntityState.perch` (`{ h, a }`) e a mensagem `perch` chamam o `view.perch` da [arte]; a fruta de quem
-  está no galho sai da mão dele (`throwZ`, 60 cm abaixo do galho) e cai até a altura do voo (`shotZ` com `fromZ`); a
+  está no galho sai da mão dele (`throwZ`, 90 cm abaixo do galho, medido no desenho da [arte]) e cai até a altura do voo (`shotZ` com `fromZ`); a
   barra de vida e os números ficam acima do galho (`combat.setPerch`); o `actorAtScreen` procura o corpo lá em cima.
 
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)

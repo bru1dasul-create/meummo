@@ -65,11 +65,12 @@ const SHOOTER_TOP_Z = 1.9;
 const LAND_DESCENT = 2.5;
 
 /**
- * A fruta jogada lá do galho (o Sagui no galho, 23/11) sai da mão dele, uns 60 cm abaixo do galho (ele fica pendurado de
- * cabeça para baixo), e cai como uma fruta jogada — devagar no começo, ligeiro depois — até a altura do voo nos
- * primeiros 4 metros (onde acerta quem está no chão).
+ * A fruta jogada lá do galho (o Sagui no galho, 23/11) sai da mão dele, 90 cm abaixo do galho (ele fica pendurado de
+ * cabeça para baixo; medido pela [arte] no desenho: é onde a fruta some da mão no começo do arremesso), e cai como uma
+ * fruta jogada — devagar no começo, ligeiro depois — até a altura do voo nos primeiros 4 metros (onde acerta quem está
+ * no chão).
  */
-export const PERCH_THROW_DROP = 0.6;
+export const PERCH_THROW_DROP = 0.9;
 const THROW_DESCENT = 4;
 
 /** De que altura sai a fruta de quem está num galho a `perchHeight` metros. */
