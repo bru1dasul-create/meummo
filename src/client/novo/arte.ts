@@ -55,5 +55,10 @@ import '../../../prototipos/pindorama-25d/js/creatures/boitata.js';
 import '../../../prototipos/pindorama-25d/js/levelup.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
+import { installAttributeIcons } from '../paintedIcons';
+
+// os ícones pintados dos atributos (Força, Destreza, Espírito, Vitalidade) no CSS da janela K: o style.css põe cada um
+// no lugar da letra (o DOM da janela é da [estrutura], skillsPanel.ts)
+installAttributeIcons();
 
 export {};

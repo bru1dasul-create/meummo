@@ -4,6 +4,7 @@
 //
 // Habilidades: paintedActionIcon('shot' | 'skill0' | 'skill1' | 'dash' | 'guard').
 // Itens: paintedItemIcon(icone de data/items.json) para os que já ganharam pintura (os outros continuam em pixel art).
+// Atributos: paintedAttributeIcon('forca' | 'destreza' | 'espirito' | 'vitalidade'); installAttributeIcons() os põe no CSS.
 
 export const PAINT_PX = 128;
 
@@ -1485,3 +1486,305 @@ export function paintedItemIcon(icon: string): HTMLCanvasElement | null {
   }
   return canvas;
 }
+
+// ------------------------------------------------------------------------------------------------ atributos
+
+// Os ícones dos atributos (janela K e mochila; escopo aprovado pelo dono em 23/11: "pode fazer"): Força (o punho em
+// brasa), Destreza (a pena voando com o vento), Espírito (a espiral da HUD e da tatuagem do Birim, em lilás) e
+// Vitalidade (o coração com o cipó; com uma folha em cima, parecia uma maçã).
+
+const ATTR_THEMES = {
+  lilas: { bg0: '#3e2266', bg1: '#0b0516', glow: '#c9a0ff', light: '#f7f0ff', mid: '#bb8ff2', dark: '#6b3fb4', ink: '#1a0a30' },
+  coracao: { bg0: '#5c1622', bg1: '#13040a', glow: '#ff7a88', light: '#ffe3e6', mid: '#ff5a6c', dark: '#a8162c', ink: '#2c0710' },
+} satisfies Record<string, Theme>;
+
+/** Só o halo de luz em volta de uma forma (uma vez para a figura toda). */
+function halo(ctx: CanvasRenderingContext2D, path: Path2D, t: Theme, blur = 18): void {
+  ctx.save();
+  ctx.shadowColor = t.glow;
+  ctx.shadowBlur = blur;
+  ctx.fillStyle = rgba(t.glow, 0.85);
+  ctx.fill(path);
+  ctx.fill(path);
+  ctx.restore();
+}
+
+/** Uma peça da figura: contorno escuro e degradê (sem halo). */
+function piece(ctx: CanvasRenderingContext2D, path: Path2D, t: Theme, box: Box, ink = 2.2): void {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = ink * 2;
+  ctx.strokeStyle = rgba(t.ink, 0.92);
+  ctx.stroke(path);
+  ctx.fillStyle = gradient(ctx, box, t);
+  ctx.fill(path);
+  ctx.restore();
+}
+
+function rr(p: Path2D, x: number, y: number, w: number, h: number, r: number): void {
+  p.moveTo(x + r, y);
+  p.arcTo(x + w, y, x + w, y + h, r);
+  p.arcTo(x + w, y + h, x, y + h, r);
+  p.arcTo(x, y + h, x, y, r);
+  p.arcTo(x, y, x + w, y, r);
+  p.closePath();
+}
+
+/** Força: o punho fechado, aceso como brasa. */
+function paintStrength(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.fogo;
+  slotBackground(ctx, t, 91);
+  const fingers = [
+    [35, 34, 17, 30],
+    [51, 28, 17, 33],
+    [67, 29, 17, 32],
+    [83, 36, 15, 27],
+  ] as const;
+  const palm = new Path2D();
+  rr(palm, 34, 48, 64, 44, 14);
+  const wrist = new Path2D();
+  rr(wrist, 46, 86, 40, 28, 8);
+  const thumb = new Path2D();
+  thumb.moveTo(28, 62);
+  thumb.quadraticCurveTo(30, 52, 42, 54);
+  thumb.lineTo(68, 60);
+  thumb.quadraticCurveTo(76, 63, 72, 71);
+  thumb.quadraticCurveTo(68, 77, 58, 75);
+  thumb.lineTo(38, 74);
+  thumb.quadraticCurveTo(28, 72, 28, 62);
+  thumb.closePath();
+  const all = new Path2D();
+  all.addPath(palm);
+  all.addPath(wrist);
+  for (const [x, y, w, h] of fingers) rr(all, x, y, w, h, 7.5);
+  halo(ctx, all, t, 20);
+  piece(ctx, wrist, t, [46, 86, 86, 114]);
+  // a pulseira de fibra no punho
+  ctx.save();
+  ctx.fillStyle = '#5a2408';
+  ctx.fillRect(46, 98, 40, 7);
+  ctx.fillStyle = 'rgba(255, 210, 120, 0.7)';
+  for (let x = 49; x < 84; x += 6) ctx.fillRect(x, 100, 3, 3);
+  ctx.restore();
+  piece(ctx, palm, t, [34, 48, 98, 92]);
+  for (const [x, y, w, h] of fingers) {
+    const f = new Path2D();
+    rr(f, x, y, w, h, 7.5);
+    piece(ctx, f, t, [x, y, x + w, y + h]);
+    // o nó do dedo (a junta acesa)
+    ctx.save();
+    ctx.fillStyle = rgba(t.light, 0.75);
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + 7, w * 0.24, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  piece(ctx, thumb, t, [28, 52, 76, 77]);
+  for (const [x, y, r] of [[104, 30, 5.5], [22, 40, 4], [100, 86, 4]] as const) sparkle(ctx, x, y, r, t);
+}
+
+/** Destreza: a pena leve, voando com o vento (rapidez e mão leve). */
+function paintDexterity(ctx: CanvasRenderingContext2D): void {
+  const t = THEMES.agua;
+  slotBackground(ctx, t, 97);
+  // o vento atrás da pena
+  for (const [x0, y0, len] of [[14, 70, 34], [10, 86, 44], [22, 102, 30]] as const) {
+    const w = new Path2D();
+    w.moveTo(x0, y0);
+    w.quadraticCurveTo(x0 + len * 0.5, y0 - 6, x0 + len, y0 - 2);
+    glowStroke(ctx, w, 2.4, t, [x0, y0 - 6, x0 + len, y0], 10);
+  }
+  // a pena: a haste curva e as duas abas, com dois cortes na beirada
+  const A = [34, 112] as const;
+  const B = [104, 18] as const;
+  const at = (u: number): [number, number] => {
+    const x = A[0] + (B[0] - A[0]) * u;
+    const y = A[1] + (B[1] - A[1]) * u;
+    const bow = Math.sin(u * Math.PI) * 10;
+    return [x + bow * 0.8, y + bow * 0.6];
+  };
+  const dx = B[0] - A[0];
+  const dy = B[1] - A[1];
+  const L = Math.hypot(dx, dy);
+  const nx = -dy / L;
+  const ny = dx / L;
+  const width = (u: number): number => {
+    if (u < 0.2) return 0;
+    const k = (u - 0.2) / 0.8;
+    let w = 19 * Math.pow(Math.sin(Math.PI * Math.min(1, k * 0.95 + 0.02)), 0.75);
+    for (const c of [0.42, 0.68]) w *= 1 - 0.45 * Math.max(0, 1 - Math.abs(u - c) / 0.035);
+    return w;
+  };
+  const vane = new Path2D();
+  const N = 40;
+  for (let i = 0; i <= N; i++) {
+    const u = 0.2 + (0.8 * i) / N;
+    const [x, y] = at(u);
+    const w = width(u);
+    i ? vane.lineTo(x + nx * w, y + ny * w) : vane.moveTo(x + nx * w, y + ny * w);
+  }
+  for (let i = N; i >= 0; i--) {
+    const u = 0.2 + (0.8 * i) / N;
+    const [x, y] = at(u);
+    const w = width(u) * 0.8;
+    vane.lineTo(x - nx * w, y - ny * w);
+  }
+  vane.closePath();
+  halo(ctx, vane, t, 18);
+  piece(ctx, vane, t, [40, 20, 104, 104]);
+  // as barbas da pena (riscos finos saindo da haste)
+  ctx.save();
+  ctx.strokeStyle = rgba(t.ink, 0.35);
+  ctx.lineWidth = 1.2;
+  for (let i = 3; i < 19; i++) {
+    const u = 0.24 + i * 0.04;
+    const [x, y] = at(u);
+    const w = width(u);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + nx * w * 0.9 + dx / L * 6, y + ny * w * 0.9 + dy / L * 6);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - nx * w * 0.72 + dx / L * 6, y - ny * w * 0.72 + dy / L * 6);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // a haste
+  const shaft = new Path2D();
+  for (let i = 0; i <= 30; i++) {
+    const [x, y] = at(i / 30);
+    i ? shaft.lineTo(x, y) : shaft.moveTo(x, y);
+  }
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = rgba(t.ink, 0.95);
+  ctx.lineWidth = 5;
+  ctx.stroke(shaft);
+  ctx.strokeStyle = t.light;
+  ctx.lineWidth = 2.2;
+  ctx.stroke(shaft);
+  ctx.restore();
+  for (const [x, y, r] of [[106, 56, 5], [76, 14, 3.6], [112, 92, 3.4]] as const) sparkle(ctx, x, y, r, t);
+}
+
+/** Espírito: a espiral (a mesma da HUD e da tatuagem), acesa em lilás. */
+function paintSpirit(ctx: CanvasRenderingContext2D): void {
+  const t = ATTR_THEMES.lilas;
+  slotBackground(ctx, t, 101);
+  const sp = new Path2D();
+  const turns = 2.6;
+  const N = 120;
+  for (let i = 0; i <= N; i++) {
+    const u = i / N;
+    const a = u * turns * Math.PI * 2 - Math.PI / 2;
+    const r = 4 + u * 40;
+    const x = 64 + Math.cos(a) * r;
+    const y = 66 + Math.sin(a) * r * 0.96;
+    i ? sp.lineTo(x, y) : sp.moveTo(x, y);
+  }
+  glowStroke(ctx, sp, 7.5, t, [20, 22, 108, 108], 20);
+  // o centro aceso
+  const g = ctx.createRadialGradient(64, 66, 0, 64, 66, 14);
+  g.addColorStop(0, rgba(t.light, 0.95));
+  g.addColorStop(1, rgba(t.glow, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(64, 66, 14, 0, Math.PI * 2);
+  ctx.fill();
+  for (const [x, y, r] of [[104, 26, 6], [22, 30, 4.2], [108, 100, 4], [20, 98, 3.4]] as const) sparkle(ctx, x, y, r, t);
+}
+
+/** Vitalidade: o coração, com uma folha nascendo em cima (a vida da mata). */
+function paintVitality(ctx: CanvasRenderingContext2D): void {
+  const t = ATTR_THEMES.coracao;
+  slotBackground(ctx, t, 107);
+  const heart = new Path2D();
+  heart.moveTo(64, 110);
+  heart.bezierCurveTo(30, 88, 16, 66, 22, 50);
+  heart.bezierCurveTo(28, 32, 54, 30, 64, 50);
+  heart.bezierCurveTo(74, 30, 100, 32, 106, 50);
+  heart.bezierCurveTo(112, 66, 98, 88, 64, 110);
+  heart.closePath();
+  halo(ctx, heart, t, 20);
+  piece(ctx, heart, t, [22, 34, 106, 110], 2.4);
+  // o brilho no alto
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.beginPath();
+  ctx.ellipse(42, 54, 9, 5, -0.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // o cipó subindo pela beirada do coração, com folhinhas (a vida da mata; sem folha no alto: parecia uma maçã)
+  const tv = THEMES.verde;
+  const vine = new Path2D();
+  vine.moveTo(42, 104);
+  vine.bezierCurveTo(22, 92, 13, 66, 24, 46);
+  vine.bezierCurveTo(31, 32, 46, 26, 57, 31);
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.shadowColor = tv.glow;
+  ctx.shadowBlur = 8;
+  ctx.strokeStyle = rgba(tv.ink, 0.95);
+  ctx.lineWidth = 6.5;
+  ctx.stroke(vine);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = tv.mid;
+  ctx.lineWidth = 3.2;
+  ctx.stroke(vine);
+  ctx.restore();
+  const leafAt = (x: number, y: number, ang: number, len: number): void => {
+    const lf = new Path2D();
+    const ca = Math.cos(ang);
+    const sa = Math.sin(ang);
+    const tip = [x + ca * len, y + sa * len];
+    const side = len * 0.42;
+    lf.moveTo(x, y);
+    lf.quadraticCurveTo(x + ca * len * 0.5 - sa * side, y + sa * len * 0.5 + ca * side, tip[0], tip[1]);
+    lf.quadraticCurveTo(x + ca * len * 0.5 + sa * side, y + sa * len * 0.5 - ca * side, x, y);
+    lf.closePath();
+    piece(ctx, lf, tv, [Math.min(x, tip[0]), Math.min(y, tip[1]), Math.max(x, tip[0]), Math.max(y, tip[1])], 1.6);
+  };
+  leafAt(19, 74, Math.PI * 0.92, 14);
+  leafAt(23, 50, -Math.PI * 0.8, 14);
+  leafAt(42, 30, -Math.PI * 0.55, 13);
+  leafAt(32, 97, Math.PI * 0.75, 12);
+  for (const [x, y, r] of [[104, 24, 5], [110, 96, 4], [84, 22, 3.2]] as const) sparkle(ctx, x, y, r, t);
+}
+
+const ATTR_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
+  forca: paintStrength,
+  destreza: paintDexterity,
+  espirito: paintSpirit,
+  vitalidade: paintVitality,
+};
+const attrUrls = new Map<string, string>();
+
+/** O ícone pintado do atributo ('forca', 'destreza', 'espirito', 'vitalidade'), como URL. */
+export function paintedAttributeIcon(id: string): string | null {
+  const painter = ATTR_PAINTERS[id];
+  if (!painter) return null;
+  let url = attrUrls.get(id);
+  if (!url) {
+    const [canvas, ctx] = newCanvas();
+    painter(ctx);
+    url = canvas.toDataURL();
+    attrUrls.set(id, url);
+  }
+  return url;
+}
+
+/** Os atributos que têm ícone (as chaves de src/shared/attributes.ts). */
+export const ATTRIBUTE_ICON_IDS = ['forca', 'destreza', 'espirito', 'vitalidade'] as const;
+
+/**
+ * Põe os ícones dos atributos no CSS (`--attr-icon-<id>` no `<html>`, e a classe `attr-icons`): a janela K (o DOM é da
+ * [estrutura], `skillsPanel.ts`) mostra o ícone no lugar da letra só pelo style.css. Uma vez basta.
+ */
+export function installAttributeIcons(root: HTMLElement = document.documentElement): void {
+  if (root.classList.contains('attr-icons')) return;
+  for (const id of ATTRIBUTE_ICON_IDS) {
+    const url = paintedAttributeIcon(id);
+    if (url) root.style.setProperty(`--attr-icon-${id}`, `url("${url}")`);
+  }
+  root.classList.add('attr-icons');
+}
+

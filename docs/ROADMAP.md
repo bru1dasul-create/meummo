@@ -922,8 +922,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   Atributos; padrão 2%, 1,5% e 1%, 2% e 1%, 5 de vida; a Destreza e o Espírito tiram no máximo 40% de cada tempo).
   Janela K com duas abas, Habilidades e Atributos ("+" em cada um; o número no botão soma os pontos das duas). Regras em
   `src/shared/attributes.ts`; protocolo 48; passo 7 do arquivo de personagens
-- [ ] **[arte]** Vestir a aba dos Atributos da janela K (as abas, as linhas e um ícone para cada atributo no lugar da
-  letra; o topo preso precisa de fundo opaco) e, se quiser, mostrar os atributos na mochila. Pedido mandado à [arte]
+- [x] **[arte]** Vestir a aba dos Atributos da janela K (as abas, as linhas e um ícone para cada atributo no lugar da
+  letra; o topo preso precisa de fundo opaco) e, se quiser, mostrar os atributos na mochila. Pedido mandado à [arte].
+  **FEITO (23/11, escopo e prévia aprovados pelo dono: "pode fazer")**: um ícone pintado para cada atributo no lugar da
+  letra (Força: o punho em brasa; Destreza: a pena com o vento; Espírito: a espiral lilás; Vitalidade: o coração com o
+  cipó), as abas com cara de HUD, e no celular deitado os 4 atributos de uma vez, em 2 colunas (antes cabia 1 e meio).
+  Na mochila, os 4 atributos e os pontos que sobram. O visual da janela K saiu do `skillsPanel.ts` para o `style.css`
+  (combinado com a [estrutura]; o DOM e a lógica não mudaram). O topo preso já estava opaco
 - [x] **[arte]** Da mesma lista: **o visual muda a cada ponto** da Chuva e da Flecha Ancestral ("nível 1 é feio e fraco,
   nível 2 melhora, nível 3 muda e por aí vai"); **um brilho em cada degrau** da carga (fraco, médio, forte) na flecha do
   arco e no anel; a pose `'volley'` agora vem só na hora de soltar a Chuva (o `'sling-pull'` de sempre na puxada). Os

@@ -1,11 +1,13 @@
 // Mochila: o que você tem equipado, os itens que carrega e o que dá para fazer com cada um.
 // Só mostra e pede: quem decide se dá para equipar ou comer é o servidor.
 
+import { ATTRIBUTE_IDS, ATTRIBUTE_NAMES } from '../shared/attributes';
 import { EQUIP_SLOTS, gearLookOf, type EquipSlot, type InventoryState, type ItemInfo, type Rarity } from '../shared/items';
 import type { ItemAction, PlayerStats } from '../shared/protocol';
 import { characterPortrait } from './game/characters';
 import { drawHeroPortrait, hasHeroPortrait } from './heroPortrait';
 import { itemIconUrl } from './itemArt';
+import { paintedAttributeIcon } from './paintedIcons';
 
 const PART_LABELS: Record<EquipSlot, string> = { weapon: 'Arma', head: 'Cabeça', body: 'Corpo', charm: 'Amuleto' };
 const KIND_LABELS: Record<ItemInfo['kind'], string> = { equipment: 'Equipamento', consumable: 'Consumível', material: 'Material' };
@@ -275,9 +277,41 @@ export class Bag {
     this.renderInfo();
   }
 
+  /**
+   * Vida, dano e defesa; embaixo, os atributos (o ícone e os pontos de cada um) e, se sobrou ponto, o aviso para
+   * distribuir na janela K (pedido do dono, 23/11: o visual dos atributos, "pode fazer").
+   */
   private renderStats(): void {
-    const { maxHp, damage, defense } = this.stats;
-    this.statsEl.textContent = `Vida ${maxHp} · Dano ${damage[0]}–${damage[1]} · Defesa ${defense}`;
+    const { maxHp, damage, defense, attrs, attrPoints } = this.stats;
+    const line = document.createElement('span');
+    line.textContent = `Vida ${maxHp} · Dano ${damage[0]}–${damage[1]} · Defesa ${defense}`;
+    const parts: HTMLElement[] = [line];
+    if (attrs) {
+      const chips = document.createElement('div');
+      chips.className = 'attr-chips';
+      for (const id of ATTRIBUTE_IDS) {
+        const chip = document.createElement('span');
+        chip.className = 'attr-chip';
+        chip.dataset.attr = id;
+        chip.title = ATTRIBUTE_NAMES[id];
+        const icon = document.createElement('i');
+        const url = paintedAttributeIcon(id);
+        if (url) icon.style.backgroundImage = `url("${url}")`;
+        chip.append(icon, String(attrs[id] ?? 0));
+        chips.append(chip);
+      }
+      parts.push(chips);
+    }
+    if (attrPoints > 0) {
+      const free = document.createElement('span');
+      free.className = 'attr-free';
+      free.title = 'Abra a janela das Habilidades (✦ ou K) e escolha a aba Atributos';
+      const key = document.createElement('kbd');
+      key.textContent = 'K';
+      free.append(`${attrPoints} ${attrPoints === 1 ? 'ponto' : 'pontos'} para distribuir ✦ `, key);
+      parts.push(free);
+    }
+    this.statsEl.replaceChildren(...parts);
   }
 
   private renderInfo(): void {

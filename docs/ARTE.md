@@ -163,6 +163,21 @@
     Rascunho `levelup/`: `prancha.cjs` (quadros, grande e no tamanho do jogo), `gif.cjs` (a animação), `bracos.cjs` (até
     onde vão os braços em cada altura), `jogo.cjs <pasta> dia|noite` (no jogo: o nível pelo painel do adm, o ponto pelo
     "+", em câmera lenta 0,25x) e `outro.cjs` (outro jogador, no celular deitado, vendo o Arqueiro subir)
+- **Os Atributos na janela K e na mochila (23/11; escopo e prévia aprovados pelo dono: "pode fazer"):**
+  - ícones pintados (`paintedIcons.ts`, `paintedAttributeIcon`): Força = o punho em brasa (tema `fogo`), Destreza = a pena
+    com o vento (`agua`), Espírito = a espiral da HUD e da tatuagem do Birim em lilás (`lilas`), Vitalidade = o coração
+    com o cipó de folhas (`coracao`; com uma folha em cima, parecia uma maçã)
+  - a janela K é da [estrutura] (`src/client/novo/skillsPanel.ts`: o DOM e a lógica); o visual dela saiu de lá e está no
+    `style.css`, seção "janela das Habilidades e dos Atributos" (como o da barra). O ícone entra sem mexer no DOM:
+    `installAttributeIcons()` (chamado no `arte.ts`) põe `--attr-icon-<id>` no `<html>` e a classe `attr-icons`; o CSS
+    pinta a `.letter` de cada `.attr[data-attr]` (sem a classe, fica a letra antiga)
+  - abas com cara de plaquinha da HUD (a aberta acesa em dourado, com o filete embaixo); o número de pontos maior; o
+    "Agora: ..." em verde mais forte. Celular deitado (pouca altura, `max-height: 520px`): a janela maior e os 4
+    atributos em 2 colunas, sem rolar (a aba Habilidades também ganha a janela mais larga)
+  - mochila (`bag.ts`, `renderStats`): embaixo de Vida/Dano/Defesa, os 4 atributos (ícone e pontos) e, se sobra ponto,
+    "N pontos para distribuir ✦ K" (o K some no celular; no jogo antigo, sem a janela K, o aviso não aparece)
+  - conferir (rascunho `atributos/`): `jogo.cjs <pasta>` (PC, celular deitado e em pé: diz se os ícones entraram e se os
+    4 cabem sem rolar; tira as fotos da janela, do botão ✦ e da mochila) e `antigo.cjs` (a mochila do jogo antigo)
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba
