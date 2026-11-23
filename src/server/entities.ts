@@ -9,6 +9,7 @@ import type { MonsterZone, Tile } from '../shared/map';
 import { footTile } from '../shared/movement';
 import type { GearLook, ItemBonus, ItemInfo } from '../shared/items';
 import { damageRange, maxHpFor, xpToNext } from '../shared/progression';
+import { attributePointsLeft, noAttributes, type Attributes } from '../shared/attributes';
 import { GUARD_MAX_ENERGY } from '../shared/constants';
 import type { EntityState, GuardState, NpcInfo, PlayerStats, ServerMsg } from '../shared/protocol';
 import type { QuestLog } from '../shared/quests';
@@ -35,6 +36,8 @@ export class Player {
   fy: number;
   dir: Dir = DOWN;
   level = 1;
+  /** Os pontos em cada atributo (Força, Destreza, Espírito, Vitalidade): veja src/shared/attributes.ts. */
+  attributes: Attributes = noAttributes();
   /** XP dentro do nível atual. */
   xp = 0;
   hp: number;
@@ -219,6 +222,8 @@ export class Player {
       maxHp: this.maxHp,
       damage: this.damage(),
       defense: this.bonus.defense,
+      attrs: { ...this.attributes },
+      attrPoints: attributePointsLeft(this.level, this.attributes),
     };
   }
 }

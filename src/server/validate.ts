@@ -1,5 +1,6 @@
 // Nunca confie no que vem do cliente: tudo passa por aqui antes de chegar no mundo.
 
+import { isAttributeId } from '../shared/attributes';
 import { CHAT_MAX_LENGTH } from '../shared/constants';
 import { isWalkAngle } from '../shared/movement';
 import { BAG_SIZE, EQUIP_SLOTS, type EquipSlot } from '../shared/items';
@@ -113,6 +114,10 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return isKey(msg.id) ? { t: msg.t, id: msg.id } : null;
     case 'unlearn':
       return { t: 'unlearn' };
+    case 'attr':
+      return isAttributeId(msg.id) ? { t: 'attr', id: msg.id } : null;
+    case 'attrReset':
+      return { t: 'attrReset' };
     case 'cast': {
       if (!isKey(msg.id) || !isSpot(msg.x) || !isSpot(msg.y)) return null;
       if (msg.cid !== undefined && !(Number.isSafeInteger(msg.cid) && (msg.cid as number) >= 0)) return null;

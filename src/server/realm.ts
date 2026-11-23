@@ -2,6 +2,7 @@
 // o Realm cuida do que atravessa mapas — entrar no jogo no mapa certo, passar pelas saídas, acordar
 // na vila depois de desmaiar num mapa sem vila, e o chat e os avisos que valem para todo mundo.
 
+import type { AttributeId } from '../shared/attributes';
 import { MAX_PLAYERS } from '../shared/constants';
 import type { EquipSlot } from '../shared/items';
 import type { GameMap } from '../shared/map';
@@ -229,6 +230,14 @@ export class Realm {
 
   unlearnSkills(player: Player): void {
     this.worldOf(player)?.unlearnSkills(player);
+  }
+
+  addAttribute(player: Player, id: AttributeId): void {
+    this.worldOf(player)?.addAttribute(player, id);
+  }
+
+  resetAttributes(player: Player): void {
+    this.worldOf(player)?.resetAttributes(player);
   }
 
   castSkill(player: Player, id: string, x: number, y: number, cid?: number): void {

@@ -38,6 +38,11 @@ export interface CharacterData {
   explored?: Record<string, string> | null;
   /** A classe e os pontos das habilidades (null ou ausente = ainda sem classe). Conferido pelo mundo ao carregar. */
   hero?: SavedHero | null;
+  /**
+   * Os pontos em cada atributo (Força, Destreza, Espírito, Vitalidade; null ou ausente = nenhum posto). Conferido pelo
+   * mundo ao carregar (src/shared/attributes.ts: cleanAttributes).
+   */
+  attributes?: Partial<Record<string, number>> | null;
 }
 
 /** A classe escolhida e os pontos de cada habilidade dela, como ficam salvos. */
@@ -109,6 +114,8 @@ export const MIGRATIONS: readonly string[] = [
   `ALTER TABLE characters ADD COLUMN explored TEXT`,
   // versão 6: a classe e os pontos das habilidades (JSON); quem já existia começa sem classe e escolhe no jogo
   `ALTER TABLE characters ADD COLUMN hero TEXT`,
+  // versão 7: os pontos dos atributos (JSON: atributo → pontos); quem já existia começa com todos os pontos para distribuir
+  `ALTER TABLE characters ADD COLUMN attributes TEXT`,
 ];
 
 interface CharacterRow {
@@ -127,9 +134,10 @@ interface CharacterRow {
   admin: number;
   explored: string | null;
   hero: string | null;
+  attributes: string | null;
 }
 
-const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests, admin, explored, hero';
+const COLUMNS = 'id, name, level, xp, hp, zone, x, y, dir, look, inventory, quests, admin, explored, hero, attributes';
 
 export class CharacterStore implements CharacterSaver {
   private readonly db: DatabaseSync;
@@ -163,7 +171,7 @@ export class CharacterStore implements CharacterSaver {
       'INSERT INTO characters (name, name_key, password_hash, look, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)',
     );
     this.update = this.db.prepare(
-      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, quests = ?, explored = ?, hero = ?, saved_at = ? WHERE id = ?',
+      'UPDATE characters SET level = ?, xp = ?, hp = ?, zone = ?, x = ?, y = ?, dir = ?, look = ?, inventory = ?, quests = ?, explored = ?, hero = ?, attributes = ?, saved_at = ? WHERE id = ?',
     );
     this.touch = this.db.prepare('UPDATE characters SET last_login_at = ? WHERE id = ?');
   }
@@ -245,6 +253,7 @@ export class CharacterStore implements CharacterSaver {
       quests: parseJson(row.quests) as QuestLog | null,
       explored: parseJson(row.explored) as Record<string, string> | null,
       hero: parseJson(row.hero) as SavedHero | null,
+      attributes: parseJson(row.attributes) as Partial<Record<string, number>> | null,
       admin: row.admin === 1,
     };
   }
@@ -261,7 +270,8 @@ export class CharacterStore implements CharacterSaver {
         const quests = data.quests && Object.keys(data.quests).length > 0 ? JSON.stringify(data.quests) : null;
         const explored = data.explored && Object.keys(data.explored).length > 0 ? JSON.stringify(data.explored) : null;
         const hero = data.hero && (data.hero.class !== null || Object.keys(data.hero.skills).length > 0) ? JSON.stringify(data.hero) : null;
-        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, quests, explored, hero, now, id);
+        const attributes = data.attributes && Object.values(data.attributes).some((n) => typeof n === 'number' && n > 0) ? JSON.stringify(data.attributes) : null;
+        this.update.run(data.level, data.xp, data.hp, data.zone, data.x, data.y, data.dir, data.look, inventory, quests, explored, hero, attributes, now, id);
       }
       this.db.exec('COMMIT');
     } catch (error) {

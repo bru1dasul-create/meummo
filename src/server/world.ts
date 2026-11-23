@@ -74,6 +74,18 @@ import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
 import { emptyEquipment, gearLookOf, MAX_GOLD, sellPrice, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
+import {
+  attributePointsLeft,
+  attributePointsSpent,
+  cleanAttributes,
+  dexterityShot,
+  noAttributes,
+  spiritCooldownFactor,
+  spiritDamageFactor,
+  strengthFactor,
+  vitalityHp,
+  type AttributeId,
+} from '../shared/attributes';
 import type { FailReason, FxKind, GmCommand, ItemAction, QuestAction, RejectReason, ServerMsg } from '../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../shared/quests';
 import { DASH_SLOT } from '../shared/protocol';
@@ -615,6 +627,7 @@ export class World {
     }
     player.level = level;
     player.xp = level >= MAX_LEVEL ? 0 : xp;
+    player.attributes = cleanAttributes(level, saved.attributes);
     player.maxHp = playerMaxHp(player, this.combat);
     // Volta com a vida que tinha (sair do jogo não cura); na vila (ou sem vida salva), vida cheia.
     player.hp = samePlace && saved.hp !== null ? Math.min(player.maxHp, Math.max(1, saved.hp)) : player.maxHp;
@@ -964,17 +977,18 @@ export class World {
       const power = armedPower(level, shot);
       const rank = player.skillPoints[skill.id] ?? 0;
       const range = aimedRange(armedReach(level, shot, skill), aimed);
+      const spirit = spiritDamageFactor(player.attributes, this.combat); // o Espírito aumenta o dano das habilidades
       if (skill.kind === 'chuva') {
         // a Chuva: as flechas (ou pedras) sobem agora e caem no ponto mirado daqui a `delayMs`, acertando todos os bichos
         // do círculo — de cima, então nem a casca do tatu-bola segura. Cai onde mirou (sem o espalhado de quem corre)
         const feet = feetAt(player.fx, player.fy);
         const spot = { x: Math.max(0, Math.min(this.map.width, feet.x + Math.cos(angle) * range)), y: Math.max(0, Math.min(this.map.height, feet.y + Math.sin(angle) * range)) };
-        this.rains.push({ by: player.id, x: spot.x, y: spot.y, radius: numbers.radius, landAt: now + skill.delayMs, damage: player.damage(), power: (numbers.damagePct / 100) * power });
+        this.rains.push({ by: player.id, x: spot.x, y: spot.y, radius: numbers.radius, landAt: now + skill.delayMs, damage: player.damage(), power: (numbers.damagePct / 100) * power * spirit });
         const msg: ServerMsg = { t: 'cast', id: player.id, s: skill.id, x: round3(spot.x), y: round3(spot.y), r: numbers.radius, n: numbers.arrows, p: rank, ms: skill.delayMs, kind: shot.kind, lv: level };
         this.emitToViewers(player, msg, player.id); // quem atirou já desenhou na hora
       } else {
         // a Flecha Ancestral: atravessa os bichos até o ponto mirado e explode lá
-        const hit = (pct: number) => Math.max(1, Math.round((base * pct * power) / 100));
+        const hit = (pct: number) => Math.max(1, Math.round((base * pct * power * spirit) / 100));
         const pierce: PierceShot = {
           hit: new Set(),
           width: skill.width,
@@ -986,13 +1000,14 @@ export class World {
         this.spawnProjectile(player, flight, skill.speed, range, hit(numbers.damagePct), 'ancestral', cid, pierce, { rk: rank, lv: level });
       }
       player.armed = null;
-      const wait = this.cooldownOf(player, skill.cooldownMs);
+      const wait = this.classCooldownOf(player, skill.cooldownMs);
       player.castReadyAt.set(skill.id, now + wait);
       player.outbox.push({ t: 'armed', s: null }, { t: 'scd', s: skill.id, ms: wait });
       return;
     }
     const range = aimedRange(chargedRange(charge, metric, shot), aimed);
-    this.spawnProjectile(player, flight, shot.speed, range, chargedDamage(base, charge, shot), shot.kind, cid);
+    const damage = Math.max(1, Math.round(chargedDamage(base, charge, shot) * strengthFactor(player.attributes, this.combat))); // a Força
+    this.spawnProjectile(player, flight, shot.speed, range, damage, shot.kind, cid);
   }
 
   /** A flecha especial carregada no arco deste jogador (a habilidade e os números dos pontos dele), se ainda vale. */
@@ -1014,10 +1029,10 @@ export class World {
     player.outbox.push({ t: 'armed', s: null });
   }
 
-  /** O tiro de quem atira: o da arma equipada (no mapa novo) ou a pedra (veja shotProfile). */
+  /** O tiro de quem atira: o da arma equipada (no mapa novo) ou a pedra (veja shotProfile), com a puxada e o intervalo da Destreza. */
   private shotOf(player: Player): ShotProfile {
     const weapon = player.inventory.equipped.weapon;
-    return shotProfile(this.combat, weapon ? this.items.get(weapon)?.shot : null, this.map.metric);
+    return dexterityShot(shotProfile(this.combat, weapon ? this.items.get(weapon)?.shot : null, this.map.metric), player.attributes, this.combat);
   }
 
   useSkill(player: Player, n: number, angle: number): void {
@@ -1119,6 +1134,45 @@ export class World {
     player.outbox.push({ t: 'sys', text: 'Os pontos das habilidades voltaram: escolha de novo.' });
   }
 
+  // ======================= atributos =======================
+
+  /**
+   * Pôr um ponto num atributo (Força, Destreza, Espírito, Vitalidade): 3 por nível, a partir do 2 (veja
+   * src/shared/attributes.ts). Vale na hora; o salvamento de sempre guarda onde foram postos.
+   */
+  addAttribute(player: Player, id: AttributeId): void {
+    if (player.loading) return;
+    if (attributePointsLeft(player.level, player.attributes) <= 0) {
+      player.outbox.push({ t: 'sys', text: 'Sem pontos de atributo: cada nível dá mais 3.' });
+      return;
+    }
+    player.attributes = { ...player.attributes, [id]: player.attributes[id] + 1 };
+    player.statsDirty = true;
+    if (id === 'vitalidade') this.maxHpChanged(player, true);
+  }
+
+  /** Tirar os pontos de todos os atributos (de graça, por enquanto): eles voltam para distribuir de novo. */
+  resetAttributes(player: Player): void {
+    if (player.loading || attributePointsSpent(player.attributes) === 0) return;
+    player.attributes = noAttributes();
+    player.statsDirty = true;
+    this.maxHpChanged(player, false);
+    player.outbox.push({ t: 'sys', text: 'Os pontos dos atributos voltaram: distribua de novo.' });
+  }
+
+  /**
+   * A vida máxima pode ter mudado (os atributos): acerta e avisa quem vê. `grow`: a vida ganha o que a máxima ganhou
+   * (pôr um ponto em Vitalidade não deixa a barra "vazia"); baixando, a vida só não passa da máxima nova.
+   */
+  private maxHpChanged(player: Player, grow: boolean): void {
+    const maxHp = playerMaxHp(player, this.combat);
+    if (maxHp === player.maxHp) return;
+    const gain = maxHp - player.maxHp;
+    player.maxHp = maxHp;
+    if (!player.dead) player.hp = Math.max(1, Math.min(maxHp, player.hp + (grow && gain > 0 ? gain : 0)));
+    this.emitToViewers(player, { t: 'hp', id: player.id, hp: player.hp, maxHp });
+  }
+
   /**
    * Usar a habilidade `id` da classe. Os Olhos de Gavião valem na hora. A Chuva de Flechas e a Flecha Ancestral entram
    * no arco e saem no próximo tiro (veja shoot), puxando: o ponto (x, y) não vale mais para elas (vem do tiro).
@@ -1139,8 +1193,9 @@ export class World {
       player.hawkVision = numbers.visionPct / 100;
       player.hawkBonus = numbers.bonusPct / 100;
       this.emitToViewers(player, { t: 'fx', id: player.id, kind: 'hawk', ms: numbers.durationMs }, player.id);
-      player.castReadyAt.set(skill.id, Math.max(now, readyAt) + this.cooldownOf(player, skill.cooldownMs));
-      player.outbox.push({ t: 'scd', s: skill.id, ms: this.cooldownOf(player, skill.cooldownMs) });
+      const wait = this.classCooldownOf(player, skill.cooldownMs);
+      player.castReadyAt.set(skill.id, Math.max(now, readyAt) + wait);
+      player.outbox.push({ t: 'scd', s: skill.id, ms: wait });
       return;
     }
     // a Chuva de Flechas e a Flecha Ancestral não saem na hora: ficam no arco e saem no próximo tiro, com a puxada de
@@ -1155,6 +1210,11 @@ export class World {
   /** A recarga que vale para este jogador: a de sempre, ou nenhuma (o poder "sem recarga" do administrador). */
   private cooldownOf(player: Player, ms: number): number {
     return player.noCooldown ? 0 : ms;
+  }
+
+  /** A recarga de uma habilidade da classe: a de sempre, menor com o Espírito (a esquiva e as do jogo antigo, não). */
+  private classCooldownOf(player: Player, ms: number): number {
+    return player.noCooldown ? 0 : Math.round(ms * spiritCooldownFactor(player.attributes, this.combat));
   }
 
   /** As Chuvas de Flechas que chegaram ao chão: cada bicho dentro do círculo leva o dano (uma vez por chuva). */
@@ -1354,6 +1414,12 @@ export class World {
     const before = player.level;
     player.level = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
     player.xp = 0;
+    // nível menor: se os atributos passaram do que o nível dá, voltam todos para distribuir de novo
+    const attributes = cleanAttributes(player.level, player.attributes);
+    if (attributePointsSpent(attributes) !== attributePointsSpent(player.attributes)) {
+      player.attributes = attributes;
+      player.outbox.push({ t: 'sys', text: 'Com o nível novo, os pontos dos atributos voltaram: distribua de novo.' });
+    }
     player.maxHp = playerMaxHp(player, this.combat);
     if (!player.dead) player.hp = player.maxHp;
     player.statsDirty = true;
@@ -2972,9 +3038,9 @@ export class World {
   }
 }
 
-/** Vida máxima: a do nível mais a dos equipamentos. */
-function playerMaxHp(player: Player, rules: Pick<CombatRules, 'playerHpFactor'>): number {
-  return Math.max(1, Math.round((maxHpFor(player.level) + player.bonus.hp) * rules.playerHpFactor));
+/** Vida máxima: a do nível mais a dos equipamentos e a da Vitalidade. */
+function playerMaxHp(player: Player, rules: Pick<CombatRules, 'playerHpFactor' | 'vitalityHp'>): number {
+  return Math.max(1, Math.round((maxHpFor(player.level) + player.bonus.hp + vitalityHp(player.attributes, rules)) * rules.playerHpFactor));
 }
 
 /** O que fica salvo de um jogador. */
@@ -2992,7 +3058,8 @@ export function characterData(player: Player, zone: string): CharacterData {
   const explored: Record<string, string> = { ...player.exploredSaved };
   for (const [map, grid] of player.explored) explored[map] = encodeGrid(grid);
   const hero = { class: player.heroClass, skills: { ...player.skillPoints } };
-  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored, hero };
+  const attributes = { ...player.attributes };
+  const base = { level: player.level, xp: player.xp, look: player.look, zone, inventory: player.inventory.state(), quests: { ...player.quests }, explored, hero, attributes };
   // Desmaiado: na volta ele acordaria na vila com a vida cheia, então já salva assim.
   if (player.dead) return { ...base, hp: null, x: null, y: null, dir: DOWN };
   return { ...base, hp: player.hp, x: player.x, y: player.y, dir: player.dir };

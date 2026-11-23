@@ -9,6 +9,7 @@ import type { EquipSlot, GearLook, InventoryState, ItemInfo, ItemStack } from '.
 import type { QuestInfo, QuestLog } from './quests';
 import type { CombatRules } from './combatRules';
 import type { ChargeLevel, ClassInfo, HeroState } from './classes';
+import type { AttributeId, Attributes } from './attributes';
 
 /** 'pet': bicho de estimação (o Joaquim, o gato da vó): anda sozinho, mia e ronrona; nunca é alvo. */
 export type EntityKind = 'player' | 'monster' | 'npc' | 'pet';
@@ -61,6 +62,9 @@ export interface PlayerStats {
   maxHp: number;
   damage: [number, number];
   defense: number;
+  /** Os pontos em cada atributo (Força, Destreza, Espírito, Vitalidade) e quantos sobram para distribuir. */
+  attrs: Attributes;
+  attrPoints: number;
 }
 
 /** Cliente → servidor. */
@@ -90,6 +94,8 @@ export type ClientMsg =
   | { t: 'class'; id: string } // escolher a classe (a chave em data/classes.json; o servidor confere se já pode)
   | { t: 'learn'; id: string } // pôr um ponto nesta habilidade da sua classe
   | { t: 'unlearn' } // tirar os pontos de todas as habilidades (voltam para gastar de novo)
+  | { t: 'attr'; id: AttributeId } // pôr um ponto neste atributo
+  | { t: 'attrReset' } // tirar os pontos de todos os atributos (voltam para distribuir de novo)
   // usar a habilidade `id` da sua classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
   // A Flecha Ancestral não sai na hora: fica carregada no arco (o servidor responde `armed`) e sai no próximo `shoot`;
   // pedir de novo descarrega. (`cid` não é mais usado.)

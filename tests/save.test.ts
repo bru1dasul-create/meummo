@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CharacterStore,
+  MIGRATIONS,
   hashPassword,
   verifyPassword,
   type CharacterData,
@@ -133,6 +134,7 @@ describe('arquivo de personagens', () => {
       quests: { saguis_travessos: { state: 'active', count: 2 } },
       explored: { capao: '24:AQI=' }, // o mapa explorado (passo 5 do arquivo)
       hero: { class: 'cacador', skills: { chuva_de_flechas: 2 } }, // a classe e os pontos (passo 6)
+      attributes: { forca: 3, destreza: 0, espirito: 2, vitalidade: 4 }, // os atributos (passo 7)
     };
     store.save([{ id: login.id, data }]);
     store.close();
@@ -141,6 +143,30 @@ describe('arquivo de personagens', () => {
     expect(again.load(login.id)).toEqual({ id: login.id, name: 'Lúcia', admin: false, ...data });
     expect(await again.login('lúcia', 'segredo1')).toMatchObject({ ok: true, created: false });
     again.close();
+  });
+
+  it('arquivo de antes dos atributos (versão 6): ganha o lugar deles e ninguém perde nada', () => {
+    const file = path.join(dir, 'v6.db');
+    const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite');
+    const db = new DatabaseSync(file);
+    for (const step of MIGRATIONS.slice(0, 6)) db.exec(step);
+    db.exec('PRAGMA user_version = 6');
+    db.prepare('INSERT INTO characters (name, name_key, password_hash, level, xp, look, created_at, hero) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
+      'Ana',
+      'ana',
+      'x',
+      5,
+      10,
+      1,
+      new Date().toISOString(),
+      JSON.stringify({ class: 'cacador', skills: { chuva_de_flechas: 1 } }),
+    );
+    db.close();
+    const store = new CharacterStore(file, { cost: FAST_HASH });
+    expect(store.load(1)).toMatchObject({ name: 'Ana', level: 5, xp: 10, hero: { class: 'cacador', skills: { chuva_de_flechas: 1 } }, attributes: null });
+    store.save([{ id: 1, data: { ...store.load(1)!, attributes: { forca: 0, destreza: 0, espirito: 0, vitalidade: 0 } } }]);
+    expect(store.load(1)!.attributes).toBeNull(); // nenhum ponto posto: nada a guardar
+    store.close();
   });
 
   it('arquivo de uma versão mais nova do jogo: explica em vez de estragar', () => {

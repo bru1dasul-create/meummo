@@ -75,7 +75,7 @@ function parseAreas(json: Raw, maps: readonly GameMap[], monsters: ReadonlyMap<s
   return areas;
 }
 
-type CombatPartId = 'jogador' | 'carga' | 'defesa' | 'recuo' | 'noite';
+type CombatPartId = 'jogador' | 'carga' | 'defesa' | 'recuo' | 'noite' | 'atributos';
 
 /** Uma parte dos números do combate, como o painel mostra (em ms, %, graus e metros). */
 export interface CombatPart {
@@ -91,6 +91,7 @@ const COMBAT_PARTS: { id: CombatPartId; name: string; detail: string }[] = [
   { id: 'recuo', name: 'Empurrão (recuo)', detail: 'quanto cada monstro empurra fica na aba Monstros (Empurrão do golpe)' },
   { id: 'noite', name: 'Dia e noite', detail: 'quanto dura cada um (o mesmo relógio em todos os mapas) e o quanto os bichos mudam à noite' },
   { id: 'jogador', name: 'Jogador', detail: 'a velocidade no mundo novo e a vida e o dano de todos os jogadores (100% = o de sempre)' },
+  { id: 'atributos', name: 'Atributos', detail: 'quanto vale cada ponto de Força, Destreza, Espírito e Vitalidade (3 pontos por nível)' },
 ];
 
 /** Um número do combate no painel: a parte, o nome no arquivo de ajustes, os limites e como ler dos números do jogo. */
@@ -196,6 +197,13 @@ const COMBAT_NUMBERS: CombatNumber[] = [
   { parte: 'noite', campo: 'danoPorcento', rotulo: 'À noite: dano dos bichos (%)', tipo: 'porcento', min: 100, max: 400, ler: (r) => Math.round(r.nightDamageFactor * 100) },
   { parte: 'noite', campo: 'xpPorcento', rotulo: 'À noite: XP de cada bicho (%)', tipo: 'porcento', min: 100, max: 500, ler: (r) => Math.round(r.nightXpFactor * 100) },
   { parte: 'noite', campo: 'ouroPorcento', rotulo: 'À noite: ouro de cada bicho (%)', tipo: 'porcento', min: 100, max: 500, ler: (r) => Math.round(r.nightGoldFactor * 100) },
+  { parte: 'atributos', campo: 'forcaDanoTiro', rotulo: 'Força: dano do tiro por ponto (%)', tipo: 'numero', min: 0, max: 20, dica: 'arco e estilingue', ler: (r) => r.strengthShotPct },
+  { parte: 'atributos', campo: 'destrezaPuxada', rotulo: 'Destreza: puxada mais rápida por ponto (%)', tipo: 'numero', min: 0, max: 10, ler: (r) => r.dexterityChargePct },
+  { parte: 'atributos', campo: 'destrezaIntervalo', rotulo: 'Destreza: intervalo do tiro menor por ponto (%)', tipo: 'numero', min: 0, max: 10, ler: (r) => r.dexterityIntervalPct },
+  { parte: 'atributos', campo: 'espiritoDano', rotulo: 'Espírito: dano das habilidades por ponto (%)', tipo: 'numero', min: 0, max: 20, dica: 'Chuva, Flecha Ancestral', ler: (r) => r.spiritSkillPct },
+  { parte: 'atributos', campo: 'espiritoRecarga', rotulo: 'Espírito: recarga menor por ponto (%)', tipo: 'numero', min: 0, max: 10, dica: 'das habilidades da classe', ler: (r) => r.spiritCooldownPct },
+  { parte: 'atributos', campo: 'vitalidadeVida', rotulo: 'Vitalidade: vida por ponto', tipo: 'inteiro', min: 0, max: 50, ler: (r) => r.vitalityHp },
+  { parte: 'atributos', campo: 'corteMaximo', rotulo: 'O máximo que a Destreza e o Espírito tiram de cada tempo (%)', tipo: 'inteiro', min: 0, max: 80, ler: (r) => r.attributeCutMaxPct },
 ];
 
 /** O padrão dos números do combate, como no arquivo de ajustes (parte → campo → valor). */
@@ -207,7 +215,7 @@ function baseCombat(): Raw {
 
 /** Confere os números do combate (cada um nos seus limites) e monta os números que o jogo usa. */
 function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: CombatRules } {
-  const values: Record<CombatPartId, Record<string, number>> = { jogador: {}, carga: {}, defesa: {}, recuo: {}, noite: {} };
+  const values: Record<CombatPartId, Record<string, number>> = { jogador: {}, carga: {}, defesa: {}, recuo: {}, noite: {}, atributos: {} };
   for (const n of COMBAT_NUMBERS) {
     const section = isObject(json[n.parte]) ? (json[n.parte] as Raw) : {};
     const value = section[n.campo] ?? n.ler(DEFAULT_COMBAT_RULES);
@@ -222,6 +230,7 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
   const d = values.defesa;
   const r = values.recuo;
   const n = values.noite;
+  const a = values.atributos;
   if (c.alcanceMaximo! < c.alcanceMinimo!) {
     throw new Error('Erro nos ajustes (Combate › Pedra com carga): o alcance com a carga cheia não pode ser menor que o alcance sem carga.');
   }
@@ -255,6 +264,13 @@ function parseCombat(json: Raw): { parts: Map<string, CombatPart>; rules: Combat
     nightDamageFactor: n.danoPorcento! / 100,
     nightXpFactor: n.xpPorcento! / 100,
     nightGoldFactor: n.ouroPorcento! / 100,
+    strengthShotPct: a.forcaDanoTiro!,
+    dexterityChargePct: a.destrezaPuxada!,
+    dexterityIntervalPct: a.destrezaIntervalo!,
+    spiritSkillPct: a.espiritoDano!,
+    spiritCooldownPct: a.espiritoRecarga!,
+    vitalityHp: a.vitalidadeVida!,
+    attributeCutMaxPct: a.corteMaximo!,
   };
   const parts = new Map<string, CombatPart>(COMBAT_PARTS.map((p) => [p.id, { ...p, values: values[p.id] }]));
   return { parts, rules };
