@@ -697,7 +697,18 @@
       ctx.fillStyle = this.background;
       ctx.fillRect(0, 0, cam.viewW, cam.viewH);
       ctx.setTransform(dpr, 0, 0, dpr, -cam.viewX * dpr, -cam.viewY * dpr);
-      const actors = [...this.actors.values()].map((a) => this._actorDrawable(a));
+      // (quem está fora da tela continua na lista — conta para a ordem e para as copas que ficam transparentes —, mas não
+      // é pintado: antes cada um custava o desenho inteiro à toa, ~2,4 ms o Curupira longe da Budega. 22/11, "deixa os
+      // personagens mais leves")
+      const seen = this._onScreen();
+      const actors = [...this.actors.values()].map((a) => {
+        const d = this._actorDrawable(a);
+        if (d && d.bounds && !seen(d.bounds)) {
+          d.draw = () => {};
+          d.drawShadow = () => {};
+        }
+        return d;
+      });
       this.world.draw(ctx, actors);
       this._drawAtmosphere(ctx);
       this._drawVeilMotes(ctx);
@@ -1449,6 +1460,14 @@
       return a.convAlpha;
     }
 
+    /** A caixa (px do mundo) aparece na tela? Com folga de ~2 m (o arco nas costas, o brilho, o contorno). */
+    _onScreen() {
+      const cam = this.cam;
+      const m = 200 * cam.zoom;
+      const x0 = cam.viewX - m, y0 = cam.viewY - m, x1 = cam.viewX + cam.viewW + m, y1 = cam.viewY + cam.viewH + m;
+      return (b) => b.x1 >= x0 && b.x0 <= x1 && b.y1 >= y0 && b.y0 <= y1;
+    }
+
     _actorDrawable(a) {
       if (a.creature) return a.creature.drawable(this.cam, a.id === this.followId);
       const ch = a.ch;
@@ -1459,7 +1478,14 @@
       const alpha = this._conversationAlpha(a);
       const paint = (c) => {
         if (ch.look) ch.look.eyeGlow = a.eyeGlow || 0;
-        painter.draw(c, rig, ch.look, ch.equipped, a.appearance || (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch));
+        const app = a.appearance || (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch);
+        // quem está parado reaproveita a imagem pronta (CharacterRenderer.drawCached, 22/11: "deixa os personagens mais
+        // leves"); ao vivo sempre: a flecha especial no arco e os olhos do Gavião (animam com o relógio) e a transparência
+        // da conversa
+        const live = alpha <= 0.98 || !!(ch.look && (ch.look.arrowKind || (ch.look.eyeGlow || 0) > 0.01));
+        // (`PD.characterCacheOff = true` no console desliga a imagem guardada: para comparar)
+        if (painter.drawCached && !PD.characterCacheOff) painter.drawCached(c, rig, ch.look, ch.equipped, app, live);
+        else painter.draw(c, rig, ch.look, ch.equipped, app);
       };
       return {
         entity: ch,

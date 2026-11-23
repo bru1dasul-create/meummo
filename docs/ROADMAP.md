@@ -885,6 +885,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   defeito) agora usam o relógio dos quadros; o clarão do degrau (`arrowLevelAt`) ficou no relógio da página, porque o
   `slingshot.js` lê com ele. Conferido no jogo depois de 4 s em 0,25x (3,3 s de atraso): antes, 2 s depois do tiro ainda
   'ancestral' e o tiro comum puxava a flecha brilhante; agora apaga em ~250 ms e o tiro comum vem com a flecha normal
+- [x] **[arte]** Personagens mais leves (23/11, pedido do dono: "deixa os personagens mais leves"; escopo aprovado: 1 e
+  2, o 3 "ainda não"): 1) mais rápido com a imagem idêntica — o casco das formas sem ordenar os pontos de dentro, os
+  caminhos só de pintar sem `closePath` e quem está fora da tela sem pintar (−19% por personagem; ponto a ponto igual);
+  2) a imagem guardada de quem está parado (`PD.DrawCache`: o personagem e o molde de gente dos NPCs). No jogo, parado,
+  os personagens caíram de 8–9,5 para ~2 ms por quadro (Budega, Curupira, Dona Iracema). Veja `docs/ARTE.md`
 - [x] **[estrutura]** Efeito subindo do chão ao subir de nível e ao pôr ponto numa habilidade (pedido do dono, 23/11:
   "cada nível que o personagem upar quero um efeito no personagem vindo do chão, mesma coisa quando upar uma
   habilidade"): o `levelup` só vai quando o nível sobe (o painel baixando não manda mais); `fx` `'skillup'` com `s` =

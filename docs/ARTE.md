@@ -113,6 +113,27 @@
   marcado no mesmo relógio (`this.last`, o `t` do último quadro): o fim do brilho da flecha armada (`armedOff`) e o
   brilho dos olhos do Gavião (`hawkAt`). O que é lido com `performance.now()` fica com ele: o clarão do degrau
   (`arrowLevelAt`, lido no `slingshot.js`), a fala (`talkUntil`, `speechUntil`). Teste: rascunho `relogio/relogio.cjs`
+- **Personagens mais leves (23/11, escopo aprovado: "pode fazer 1 e o 2"; o 3 — menos detalhe miúdo quando pequeno —
+  "ainda não"):** cada personagem custava ~4,5 ms por quadro (navegador de teste, sem placa de vídeo). Medido no jogo,
+  parado (ms por quadro só com personagens): Budega (você e a Xiovanna) 8,1 → 2,1; perto do Curupira 8,2 → ~1,9; perto da
+  Dona Iracema 9,5 → ~2,1. Andando ou lutando: −19% por personagem (só o item 1).
+  - **1, mais rápido com a imagem idêntica:** o casco (`convexHull`, `core/shapes.js`) tira os pontos de dentro do
+    octógono dos extremos antes de ordenar (o mesmo polígono, conferido em 40 mil casos); `S.fillPath` = o caminho sem o
+    `closePath`, para o que SÓ é pintado por dentro ou recortado (o navegador fecha sozinho; o `closePath` custava ~19%).
+    Para riscar (stroke), continue com `polyPath`. E quem está fora da tela não é pintado (`view.js`, `_onScreen`:
+    continua na lista — ordem, copas transparentes —, só não pinta). Birim e herói antigo idênticos ponto a ponto
+  - **2, a imagem guardada de quem está parado** (`PD.DrawCache`, no `character/renderer.js`; o personagem usa
+    `drawCached`, o molde de gente dos NPCs — `creatures/pessoa.js` — também): a cada quadro o "retrato" (esqueleto, o
+    `look`, o equipamento, a câmera; no molde de gente, as juntas `_j`, a piscada e o aceno) é comparado com o da imagem
+    guardada; dentro de ¼ de pixel, copia a imagem pixel por pixel (a câmera anda de pixel inteiro em pixel inteiro);
+    mexendo, desenha direto; parado e mudando devagar (respiração, olhar, colar no vento), refaz. Ao vivo sempre: a
+    flecha especial no arco, os olhos do Gavião, a boca falando e a transparência da conversa
+  - **regra para quem mexer no desenho:** algo NOVO que anime com o relógio sem a pose nem o `look` mudarem (um brilho
+    pulsando numa arma, por exemplo) tem de ir ao vivo — no `view.js`, o `live` do `paint` —, senão fica parado na
+    imagem guardada. Animar pelo `look` (um número que muda) já funciona sozinho
+  - comparar: `PD.characterCacheOff = true` no console desliga a imagem guardada. Testes (rascunho `leve/`): `medir.cjs`
+    (tempo por personagem e perfil), `cache-teste.cjs` / `cache-exato.cjs` (guardada × direta, pixel a pixel),
+    `jogo-leve.cjs` (no jogo, ligada × desligada), `interacao.cjs` (conversa e R armado)
 
 ## Antes (19/11): o BIRIM foi para o jogo
 - **Estado:** o Birim (o personagem principal novo, `prototipos/pindorama-25d/js/character/birim.js`) está com a **barba

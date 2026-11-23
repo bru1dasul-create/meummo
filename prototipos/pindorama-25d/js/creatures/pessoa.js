@@ -393,8 +393,48 @@
     /** A peça para a PD.World: a sombra e as caixas das bolas (como as criaturas), o desenho de gente por cima. */
     drawable(cam, primary) {
       const d = super.drawable(cam, primary);
-      d.draw = (ctx) => this._paint(ctx, cam);
+      // parada (no balcão, respirando): reaproveita a imagem pronta — PD.DrawCache (character/renderer.js), 22/11, "deixa
+      // os personagens mais leves". Falando, a boca anima com o relógio: ao vivo
+      d.draw = (ctx) => {
+        if (!PD.DrawCache || PD.characterCacheOff) return this._paint(ctx, cam);
+        const C = this._drawCache || (this._drawCache = new PD.DrawCache());
+        const live = this.speak > 0.01 || this.dying !== null;
+        C.draw(ctx, cam, live ? null : this._drawState(cam), live, (c) => this._paint(c, cam), () => ({ box: d.bounds, pad: 10, paint: (g) => this._paint(g, cam) }));
+      };
       return d;
+    }
+
+    /**
+     * O retrato do quadro para a imagem guardada: as juntas (`_j`, em cm; o giro e as direções medidos numa ponta), a
+     * piscada e a aparência. O relógio (`t`) fica de fora: parada, só a pose muda o desenho.
+     */
+    _drawState(cam) {
+      const R = PD.DrawCache.state(cam);
+      R.other.push(this.app, this.S);
+      R.num.push(this.blink || 0, this.wave || 0);
+      R.tol.push(0.03, 0.03);
+      const walk = (v, tol) => {
+        if (typeof v === 'function') return; // (o `_j` guarda funções feitas a cada quadro: não são o desenho)
+        if (v === null || v === undefined) return R.other.push(0);
+        if (typeof v === 'number') {
+          R.num.push(v);
+          R.tol.push(tol);
+          return;
+        }
+        if (typeof v !== 'object') return R.other.push(v);
+        if (Array.isArray(v)) {
+          R.other.push(v.length);
+          for (const e of v) walk(e, tol);
+          return;
+        }
+        for (const k in v) {
+          if (k === 't') continue;
+          if (k === 'sg') R.other.push(v[k]);
+          else walk(v[k], k === 'yaw' || k === 'fwd' || k === 'side' ? R.axisTol : k === 'open' ? 0.03 : tol);
+        }
+      };
+      walk(this._j || {}, R.posTol);
+      return R;
     }
 
     /**

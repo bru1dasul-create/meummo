@@ -92,6 +92,195 @@
     return bestA > 4 ? best : null;
   }
 
+  // ---------------------------------------------------------------- a imagem guardada (quem está parado)
+  // O "retrato" de um quadro do personagem: tudo o que o desenho lê e que muda com o tempo — as posições e os eixos do
+  // esqueleto, os campos do `look` (piscada, olhar, boca, o balanço do colar e do brinco no vento, o arco...), o
+  // equipamento e a câmera. Os números vêm com a tolerância de cada um (¼ de pixel do aparelho: posições em cm, eixos
+  // medidos numa ponta a 80 cm — o arco nas costas —, os balanços do vento em cm, o olhar em 0,12 da volta do olho e os
+  // outros números do look em 0,03); o resto (textos, ligado/desligado, a forma) tem de ser igual.
+  const LOOK_CM = new Set(['hairWind', 'featherSwing', 'pendantSwing', 'tasselSwing', 'earringSwing', 'flapSwing']);
+  const LOOK_TOL = { gazeX: 0.12, gazeY: 0.12 };
+  function sigWalkRig(v, R, pos) {
+    if (v === null || v === undefined) {
+      R.other.push(0);
+      return;
+    }
+    if (typeof v === 'number') {
+      R.num.push(v);
+      R.tol.push(0.02);
+      return;
+    }
+    if (typeof v !== 'object') {
+      R.other.push(v);
+      return;
+    }
+    if (Array.isArray(v)) {
+      R.other.push(v.length);
+      for (const e of v) sigWalkRig(e, R, pos);
+      return;
+    }
+    if (v.x !== undefined && v.y !== undefined && v.z !== undefined && v.o === undefined) {
+      const t = pos ? R.posTol : R.axisTol;
+      R.num.push(v.x, v.y, v.z);
+      R.tol.push(t, t, t);
+      return;
+    }
+    for (const k in v) sigWalkRig(v[k], R, k === 'o');
+  }
+  function sigWalkLook(v, R, depth, top) {
+    if (v === null || v === undefined) {
+      R.other.push(0);
+      return;
+    }
+    switch (typeof v) {
+      case 'number':
+        R.num.push(v);
+        R.tol.push(LOOK_CM.has(top) ? R.posTol : LOOK_TOL[top] ?? 0.03);
+        return;
+      case 'object':
+        if (depth > 3) return;
+        if (Array.isArray(v)) {
+          R.other.push(v.length);
+          for (const e of v) sigWalkLook(e, R, depth + 1, top);
+          return;
+        }
+        for (const k in v) {
+          const x = v[k];
+          if (typeof x === 'function') continue;
+          if (depth === 0) R.other.push(k);
+          sigWalkLook(x, R, depth + 1, depth === 0 ? k : top);
+        }
+        return;
+      default:
+        R.other.push(v);
+    }
+  }
+  /** Um "retrato" vazio de um quadro, com as tolerâncias desta câmera (¼ de pixel do aparelho). */
+  function newDrawState(cam) {
+    const px = Math.max(0.05, cam.zoom * (cam.dpr || 1)); // px do aparelho por cm (perto disso)
+    return { num: [], tol: [], other: [cam.zoom, cam.dpr || 1, cam.lightScreen.x, cam.lightScreen.y], posTol: 0.25 / px, axisTol: 0.25 / (80 * px) };
+  }
+  function drawState(rig, look, equipped, appearance, cam) {
+    const R = newDrawState(cam);
+    R.other.push(appearance ? appearance.paleta : null, appearance ? appearance.modelo : null, appearance ? appearance.classe : null);
+    for (const k in rig) if (k !== 'ik') sigWalkRig(rig[k], R, true);
+    sigWalkLook(look || {}, R, 0, '');
+    if (equipped) for (const k in equipped) R.other.push(k, equipped[k]);
+    return R;
+  }
+  /** Quanto `b` se afastou de `a`, em tolerâncias (≤ 1 = dentro dela); Infinity se mudou a forma ou um texto. */
+  function stateDistance(a, b) {
+    if (!a || !b || a.num.length !== b.num.length || a.other.length !== b.other.length) return Infinity;
+    for (let i = 0; i < a.other.length; i++) if (a.other[i] !== b.other[i]) return Infinity;
+    let worst = 0;
+    for (let i = 0; i < a.num.length; i++) {
+      const d = Math.abs(a.num[i] - b.num[i]) / b.tol[i];
+      if (d > worst) worst = d;
+    }
+    return worst;
+  }
+
+  /**
+   * A imagem guardada de um desenho (22/11, o dono: "deixa os personagens mais leves"), para quem está parado: o
+   * personagem (CharacterRenderer.drawCached) e o molde de gente dos NPCs (creatures/pessoa.js). A cada quadro o dono
+   * do desenho manda o "retrato" do quadro (`state`: os números com as tolerâncias e o resto, que tem de ser igual):
+   *  - nada se afastou mais de ¼ de pixel do quadro em que a imagem foi feita → copia ela, pixel por pixel (a câmera anda
+   *    de pixel inteiro em pixel inteiro — IsoCamera.follow —, então ela encaixa exata);
+   *  - mexendo (andando, atirando, virando: de um quadro para o outro passou de meia tolerância) → desenha direto, como
+   *    antes;
+   *  - parado, mas foi mudando devagar (a respiração, o olhar, o colar no vento) → refaz a imagem.
+   * `live` = sempre direto (o que anima com o relógio sem a pose mudar: a flecha especial no arco, os olhos do Gavião, a
+   * boca falando; e a transparência da conversa). Desligar para comparar: `PD.characterCacheOff = true`.
+   */
+  class DrawCache {
+    constructor() {
+      this.baked = null;
+      this.prev = null;
+      this.ok = false;
+      this.still = 0;
+      this.canvas = null;
+      this.g = null;
+      this.x = 0;
+      this.y = 0;
+      this.w = 0;
+      this.h = 0;
+      this.hits = 0;
+      this.bakes = 0;
+      this.direct = 0;
+    }
+    /** `direct(ctx)` desenha direto; `bake()` devolve { box: {x0, y0, x1, y1} (px do mundo), paint(g) }. */
+    draw(ctx, cam, state, live, direct, bake) {
+      if (live || !state || typeof document === 'undefined') {
+        this.ok = false;
+        this.prev = null;
+        this.still = 0;
+        this.direct++;
+        direct(ctx);
+        return;
+      }
+      // parado = de um quadro para o outro mexeu menos de meia tolerância
+      const step = stateDistance(this.prev, state);
+      this.still = step <= 0.5 ? this.still + 1 : 0;
+      this.prev = state;
+      if (this.ok && stateDistance(this.baked, state) <= 1) {
+        this.hits++;
+        this._blit(ctx, cam);
+        return;
+      }
+      if (this.still < 3) {
+        this.ok = false;
+        this.direct++;
+        direct(ctx);
+        return;
+      }
+      this._make(cam, bake());
+      this.baked = state;
+      this._blit(ctx, cam);
+    }
+    /** Desenha numa imagem própria: a caixa com folga, alinhada no pixel do aparelho. */
+    _make(cam, job) {
+      const dpr = cam.dpr || 1;
+      if (!this.canvas) {
+        this.canvas = document.createElement('canvas');
+        this.g = this.canvas.getContext('2d');
+      }
+      const b = job.box;
+      const pad = job.pad ?? 10;
+      const X = Math.floor((b.x0 - pad) * dpr);
+      const Y = Math.floor((b.y0 - pad) * dpr);
+      const W = Math.max(1, Math.ceil((b.x1 + pad) * dpr) - X);
+      const H = Math.max(1, Math.ceil((b.y1 + pad) * dpr) - Y);
+      // (a tela só cresce; encolhe se sobrar muito)
+      const c = this.canvas;
+      if (c.width < W || c.height < H || c.width > W * 2 || c.height > H * 2) {
+        c.width = Math.ceil(W * 1.15);
+        c.height = Math.ceil(H * 1.15);
+      }
+      const g = this.g;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, c.width, c.height);
+      g.setTransform(dpr, 0, 0, dpr, -X, -Y);
+      job.paint(g);
+      this.x = X;
+      this.y = Y;
+      this.w = W;
+      this.h = H;
+      this.ok = true;
+      this.bakes++;
+    }
+    /** Copia a imagem guardada, pixel por pixel (sem suavizar). */
+    _blit(ctx, cam) {
+      const dpr = cam.dpr || 1;
+      const smooth = ctx.imageSmoothingEnabled;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(this.canvas, 0, 0, this.w, this.h, this.x / dpr, this.y / dpr, this.w / dpr, this.h / dpr);
+      ctx.imageSmoothingEnabled = smooth;
+    }
+  }
+  /** Para outros desenhos montarem o retrato: números com tolerância e o resto (igual). */
+  DrawCache.state = newDrawState;
+  DrawCache.distance = stateDistance;
+
   class CharacterRenderer {
     constructor(cam) {
       this.cam = cam;
@@ -514,7 +703,7 @@
           if (!it.segs) continue;
           for (const s of it.segs) {
             if (!s.poly || s.poly.length < 6 || s.isCap || s.isNape || s.thinOnly) continue; // toucas e o pano fino ficam dentro da silhueta
-            if (s.circles) S.polyPath(this.outlinePoly(s, this.inkOut, true), 0, 0, all);
+            if (s.circles) S.fillPath(this.outlinePoly(s, this.inkOut, true), 0, 0, all);
             else S.inkOutline(ctx, s.poly, ink, this.inkOut, this.light);
           }
         }
@@ -550,6 +739,51 @@
       }
 
       if (this.showBones) this._bones(rig);
+    }
+
+    /**
+     * O mesmo desenho do `draw`, reaproveitando a imagem pronta quando nada mudou (22/11, o dono: "deixa os personagens
+     * mais leves"). Enquanto nada se afastar mais de ¼ de pixel do quadro em que a imagem foi feita (veja drawState), ela
+     * é copiada pixel por pixel: a câmera anda de pixel inteiro em pixel inteiro (IsoCamera.follow), então ela encaixa
+     * exata. Quem está se mexendo (andando, atirando, virando) é desenhado direto, como antes; quem está parado e foi
+     * mudando devagar (a respiração, o olhar, o colar no vento) refaz a imagem quando passa do ¼ de pixel. `live`: sempre ao vivo — o que anima com o relógio sem a pose mudar (a flecha
+     * especial no arco, os olhos do Gavião) e a transparência da conversa. Num desenho de arma ou efeito novo que anime
+     * com o relógio, o chamador tem de mandar `live` (senão ele fica parado na imagem guardada).
+     */
+    drawCached(ctx, rig, look, equipped, appearance, live = false) {
+      const C = this._cache || (this._cache = new DrawCache());
+      const state = live ? null : drawState(rig, look, equipped, appearance, this.cam);
+      C.draw(ctx, this.cam, state, live, (c) => this.draw(c, rig, look, equipped, appearance), () => {
+        // as peças deste quadro (o mesmo prepare do draw) dão a caixa: os cascos e polígonos e o esqueleto com a folga dele
+        const items = this.prepare(ctx, rig, look, equipped, appearance);
+        const box = this.bounds(rig);
+        for (const it of items) {
+          if (!it.segs) continue;
+          for (const sg of it.segs) {
+            const p = sg.poly;
+            if (!p) continue;
+            for (let i = 0; i + 1 < p.length; i += 2) {
+              if (p[i] < box.x0) box.x0 = p[i];
+              if (p[i] > box.x1) box.x1 = p[i];
+              if (p[i + 1] < box.y0) box.y0 = p[i + 1];
+              if (p[i + 1] > box.y1) box.y1 = p[i + 1];
+            }
+          }
+        }
+        return {
+          box,
+          pad: this.inkOut * 2 + 6,
+          paint: (g) => {
+            const layer = this.layer;
+            this.layer = { items };
+            try {
+              this.draw(g, rig, look, equipped, appearance);
+            } finally {
+              this.layer = layer;
+            }
+          },
+        };
+      });
     }
 
     /** Peças do personagem na ordem de desenho, com o equipamento encaixado (sem desenhar nada). */
@@ -641,7 +875,7 @@
         ctx.save();
         const p = new Path2D();
         p.rect(-1e5, -1e5, 2e5, 2e5);
-        S.polyPath(it.hideInside, 0, 0, p);
+        S.fillPath(it.hideInside, 0, 0, p);
         ctx.clip(p, 'evenodd');
         this._drawRun(un.run, holes);
         ctx.restore();
@@ -825,12 +1059,13 @@
       const L = this.light;
       const mat = list[0].mat;
       const k = Math.min(...peers.map((s) => S.polyRadius(s.poly) * s.k));
+      // (caminhos só para pintar e recortar: fillPath, sem fechar)
       const U = new Path2D();
-      for (const s of peers) S.polyPath(s.poly, 0, 0, U);
+      for (const s of peers) S.fillPath(s.poly, 0, 0, U);
       const region = new Path2D();
       for (const s of list) {
-        S.polyPath(s.poly, 0, 0, region);
-        s.path = S.polyPath(s.poly);
+        S.fillPath(s.poly, 0, 0, region);
+        s.path = S.fillPath(s.poly);
         s._painted = true;
       }
       ctx.save();
@@ -847,13 +1082,13 @@
       ctx.save();
       ctx.clip(U);
       const lit = new Path2D();
-      for (const s of peers) S.polyPath(s.poly, L.x * k, L.y * k, lit);
+      for (const s of peers) S.fillPath(s.poly, L.x * k, L.y * k, lit);
       ctx.clip(lit);
       if (hk > 0) {
         ctx.fillStyle = mat.light;
         ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
         const core = new Path2D();
-        for (const s of peers) S.polyPath(s.poly, -L.x * hk, -L.y * hk, core);
+        for (const s of peers) S.fillPath(s.poly, -L.x * hk, -L.y * hk, core);
         ctx.clip(core);
       }
       ctx.fillStyle = mat.base;
@@ -909,7 +1144,7 @@
       if (clipOut) {
         const p = new Path2D();
         p.rect(-1e5, -1e5, 2e5, 2e5);
-        S.polyPath(clipOut, 0, 0, p);
+        S.fillPath(clipOut, 0, 0, p);
         ctx.clip(p, 'evenodd');
       }
       if (holes) {
@@ -926,7 +1161,7 @@
         // (`noThin`: uma peça de roupa que emenda em outra da mesma cor — o alto da bermuda sobre as pernas dela — não
         // risca a emenda; a linha de fora dela é a do contorno grosso)
         if (s.poly.length < 6 || s.noThin) continue;
-        if (s.circles) S.polyPath(this.outlinePoly(s, this.inkIn, false), 0, 0, thin);
+        if (s.circles) S.fillPath(this.outlinePoly(s, this.inkIn, false), 0, 0, thin);
         else S.inkOutline(ctx, s.poly, ink, this.inkIn, null);
       }
       ctx.fillStyle = ink;
@@ -975,7 +1210,7 @@
           if (segs[i].noInner || segs[i].poly.length < 6) continue;
           ctx.save();
           const union = new Path2D();
-          for (let j = 0; j < i; j++) S.polyPath(segs[j].poly, 0, 0, union);
+          for (let j = 0; j < i; j++) S.fillPath(segs[j].poly, 0, 0, union);
           ctx.clip(union);
           if (joints.length || clipOut) {
             const hole = new Path2D();
@@ -984,7 +1219,7 @@
               hole.moveTo(jt.pt.x + jt.r, jt.pt.y);
               hole.arc(jt.pt.x, jt.pt.y, jt.r, 0, M.TAU);
             }
-            if (clipOut) S.polyPath(clipOut, 0, 0, hole);
+            if (clipOut) S.fillPath(clipOut, 0, 0, hole);
             ctx.clip(hole, 'evenodd');
           }
           ctx.lineJoin = 'round';
@@ -2676,4 +2911,5 @@
 
   const BODYH = PD.BODY.ankleHeight;
   PD.CharacterRenderer = CharacterRenderer;
+  PD.DrawCache = DrawCache;
 })(window.PD = window.PD || {});
