@@ -103,12 +103,16 @@
   - no chão, o sagui continua idêntico ao aprovado, pixel a pixel na prancha de 4 lados × 10 momentos;
   - pendurado, o peso é o mesmo do chão: ~2,0 ms no PC e ~1,4 ms no celular (`custo-galho.cjs`);
   - medi a subida e a descida quadro a quadro: o maior salto é de ~19 cm, na saída do pulo (antes, 85 cm);
-  - o filme com a árvore de mentira (`sagui-no-galho.gif`).
-  
-  **Falta conferir no jogo**, com o servidor e as árvores.
+  - o filme com a árvore de mentira (`sagui-no-galho.gif`);
+  - **no jogo de verdade (23/11)**, com o servidor da [estrutura] e os 5 galhos do [mundo] (main 957b7da): os saguis
+    ficam pendurados nos galhos (PC e celular), sobem com o pulo e a cambalhota, e o pendurado que leva o tiro cai
+    desmaiado lá de cima, sem erros (`galho-jogo.cjs`). O arremesso lá de cima e a descida não ficaram bem nas fotos:
+    os saguis desceram antes de a câmera chegar.
 - **Teste:** `tests/sagui-art.test.ts`: pendurado em 8 lados e 4 momentos, o vaivém sem o rabo pular, a subida e a
   descida sem saltos e o desmaio caindo do galho.
 - **Rascunho `sagui2/`:**
+  - `galho-jogo.cjs <pasta>`: no jogo (pendurados, o arremesso, a descida, o tiro e o celular; o botão do
+    invencível vira "Invencível: ligado" quando liga);
   - `galho.cjs <saída> [zoom]`: a prancha pendurado (`PERTO=1` de perto, `GALHO=90` a direção);
   - `cambalhota.cjs <saída> [zoom]`: quadro a quadro (`MODO=subir|descer`, `DE`, `ATE`, `CADA`);
   - `saltos.cjs [lado] [galho]`: o maior salto de um quadro para o outro;
@@ -2301,11 +2305,9 @@ confirmou.
 2. Só com o "pode" dele, siga para as peças e a montagem.
 
 ## Esperando outras frentes
-- **[estrutura] e [mundo], o Sagui no galho (pedidos de 23/11; veja "O Sagui no galho", no alto).** A [estrutura]:
-  o comportamento no servidor, o `galho` no estado do monstro chamando o `view.perch`, a fruta saindo lá de cima
-  (`combat.ts`) e a mira com o mouse na altura do galho (`actorAtScreen`). O [mundo]: as árvores de sagui no Capão e o
-  galho baixo desenhado. Quando entregarem, conferir no jogo: a subida, o arremesso de cima, o tiro pendurado, a
-  descida e o desmaio caindo do galho, no PC e no celular.
+- **[estrutura], o quadrado vermelho do aviso por cima do bicho (sugestão, o dono decide):** o `combat.ts` pinta os
+  quadrados do aviso numa camada por cima de tudo; o quati que se prepara fica tingido de vermelho e a pose do aviso
+  some um pouco. Sugestão: não pintar a casa de quem ataca, ou pintar os quadrados embaixo dos bichos.
 - **[estrutura]:** pôr o botão de pular na barra (`{ slot: 'jump', label: 'Pular', key: this.keys.label('pular') }`
   no `makeActionBar` e o `tryJump` no `onAction`). Ela liga assim que o meu ramo (o `ActionSlot` 'jump' do `ui.ts`)
   entrar na main (antes disso a main não compila): **avisar a [estrutura] quando entrar**. Já feitos por ela (main
