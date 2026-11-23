@@ -119,6 +119,27 @@
   - `anim-galho.cjs <pasta> [zoom]`: o filme;
   - `custo-galho.cjs`: o peso (`GALHO=1` pendurado).
 
+### O selinho do "!" e o aviso dos golpes no chão (23/11, pedidos do dono: "pode fazer o selinho" e "arruma esses golpes do quati aparece em quadrado vermelho, muito feio")
+- **O selinho do "!" (`view.js`, `_drawAlerts`):**
+  - o "!" que o servidor manda quando um bicho percebe o herói (`say` com "!") não usa mais o balão;
+  - com vários saguis juntos, o balão desviava dos nomes, subia e o bico esticava (no celular, uma pilha);
+  - agora é um selinho redondo amarelo, com o contorno de tinta e o brilho, em cima do nome. Aparece com um pulinho,
+    balança de leve e some em 1,4 s, sem desviar de nada;
+  - as falas de verdade (NPCs, jogadores) continuam no balão (`_drawBubbles`).
+- **O aviso dos golpes (`view.js`, `warn(casas, ms, { fire })` e `_drawWarnings`):**
+  - antes eram quadrados vermelhos chapados que o `combat.ts` pinta por cima de tudo, bicho inclusive;
+  - agora as mesmas casas são pintadas **no chão, junto das sombras**: o desenho entra antes da sombra do primeiro da
+    lista, então fica por baixo dos bichos e de tudo que está em pé;
+  - cada casa é um quadrado de cantos redondos, com o fundo clarinho, a borda viva e o miolo que vai enchendo do meio
+    até a hora do golpe (o relógio do aviso). No fim, a borda pulsa; depois do golpe, some em 0,12 s;
+  - `fire` (o rastro do boitatá) é laranja e treme;
+  - as casas são as do servidor, com o quadrado do `tileFeetSquare` do `combat.ts` (x a x + 1, y + 0,2 a y + 1,2 m);
+  - **depende da [estrutura]** (pedido de 23/11): chamar `view.warn` nos casos `warn` e `fire` do `engine.ts` e não
+    pintar os quadrados no `combat.ts` quando a view tiver `warn`. O anel laranja de quem prepara continua da
+    [estrutura].
+  - Conferido no jogo com um teste que faz o papel da [estrutura] (`quati/aviso.cjs`: pega as mensagens e chama o
+    `view.warn`, com e sem os quadrados de hoje).
+
 ### Etapa 2: o Quati (23/11, com o "pode seguir para o Quati" do dono; na main em 23/11, com o "pode juntar na main")
 - **O desenho (`quati.js`, sem as bolinhas, com as mesmas ferramentas do sagui):**
   - **o corpo:** comprido, com a beirada de pelo. O lombo é mais escuro e a barriga, cor de creme. Os dois são as mesmas

@@ -16,6 +16,7 @@
 //   levelUp(id, o que, hab.)  subiu de nível ('level') ou ganhou ponto numa habilidade ('skill'): anéis de luz subindo
 //   consume(id, item)         bebeu ou comeu (a chave do item): a garrafada estourando em folhas, o benzimento da
 //                             arruda ou as faíscas da comida (js/consume.js)
+//   warn(casas, ms, { fire })  o aviso de um golpe no chão (as casas [x, y, ...] do servidor; por baixo dos bichos)
 //   perch(id, galho)          o bicho no galho (o Sagui pendurado pelo rabo): galho = { altura (m), direcao (graus,
 //                             do tronco para a ponta do galho) } ou null (no chão); a view anima a subida e a descida.
 //                             No `addActor`, `galho` = já aparece pendurado (sem animar)
@@ -468,6 +469,81 @@
       if (a.creature) a.creature.talk(Math.max(0, ms || 0));
     }
 
+    /**
+     * O aviso de um golpe (pedido do dono, 23/11: o quadrado vermelho por cima do quati era "muito feio"): as casas
+     * onde o golpe vai pegar, pintadas no chão, por baixo dos bichos e de tudo que fica em pé (`_drawWarnings`).
+     * `tiles`: [x, y, ...] em casas, as mesmas do servidor (o quadrado do chão de cada uma é o do `tileFeetSquare`
+     * do combat.ts: x a x + 1, y + 0,2 a y + 1,2 m); `ms`: quanto falta para o golpe; `opts.fire`: o fogo (o rastro do
+     * boitatá), laranja e tremendo.
+     */
+    warn(tiles, ms, opts) {
+      if (!tiles || tiles.length < 2) return;
+      const now = this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      const cells = [];
+      for (let i = 0; i + 1 < tiles.length; i += 2) cells.push({ x: tiles[i], y: tiles[i + 1] });
+      (this.warnings || (this.warnings = [])).push({ cells, start: now, until: now + Math.max(1, ms || 0), fire: !!(opts && opts.fire) });
+    }
+
+    /**
+     * Os avisos no chão: cada casa é um quadrado de cantos redondos (como uma almofadinha), com o fundo clarinho, a
+     * borda viva e o miolo que vai enchendo até a hora do golpe (o relógio do aviso); nos últimos instantes a borda
+     * pulsa. Depois do golpe, some num piscar (0,12 s). O fogo: laranja, tremendo.
+     */
+    _drawWarnings(ctx) {
+      const now = this.last;
+      const FADE = 120;
+      this.warnings = this.warnings.filter((w) => now < w.until + FADE);
+      if (!this.warnings.length) return;
+      const cam = this.cam;
+      const z = cam.zoom;
+      const P = (x, y) => cam.p({ x: x * 100, y: y * 100, z: 0 });
+      // o quadrado de cantos redondos, encolhido para o centro pela fração `k`
+      const round = (pts, center, k, path) => {
+        const q = pts.map((p) => ({ x: center.x + (p.x - center.x) * k, y: center.y + (p.y - center.y) * k }));
+        const r = 0.3;
+        for (let i = 0; i < 4; i++) {
+          const c = q[i], prev = q[(i + 3) % 4], next = q[(i + 1) % 4];
+          const a = { x: c.x + (prev.x - c.x) * r, y: c.y + (prev.y - c.y) * r };
+          const b = { x: c.x + (next.x - c.x) * r, y: c.y + (next.y - c.y) * r };
+          if (i === 0) path.moveTo(a.x, a.y);
+          else path.lineTo(a.x, a.y);
+          path.quadraticCurveTo(c.x, c.y, b.x, b.y);
+        }
+        path.closePath();
+        return path;
+      };
+      ctx.save();
+      ctx.lineJoin = 'round';
+      for (const w of this.warnings) {
+        const k = M.clamp01((now - w.start) / Math.max(1, w.until - w.start));
+        const out = now > w.until ? 1 - (now - w.until) / FADE : 1;
+        const flick = w.fire ? 0.75 + 0.25 * Math.sin(now / 55 + w.start) : 1;
+        const pulse = k > 0.72 ? 0.5 + 0.5 * Math.sin(now / 45) : 0;
+        const shapes = new Path2D(), cores = new Path2D();
+        for (const c of w.cells) {
+          const pts = [P(c.x + 0.07, c.y + 0.27), P(c.x + 0.93, c.y + 0.27), P(c.x + 0.93, c.y + 1.13), P(c.x + 0.07, c.y + 1.13)];
+          const center = P(c.x + 0.5, c.y + 0.7);
+          round(pts, center, 1, shapes);
+          if (k > 0.02) round(pts, center, 0.2 + 0.8 * M.easeInOut(k), cores);
+        }
+        // o fundo clarinho, o miolo que enche, o risco escuro de fora e a borda viva
+        ctx.globalAlpha = out;
+        ctx.fillStyle = w.fire ? `rgba(255, 150, 50, ${(0.16 * flick).toFixed(3)})` : `rgba(228, 72, 46, ${(0.13 + 0.1 * k).toFixed(3)})`;
+        ctx.fill(shapes);
+        if (k > 0.02) {
+          ctx.fillStyle = w.fire ? `rgba(255, 196, 90, ${(0.3 * flick).toFixed(3)})` : `rgba(248, 98, 58, ${(0.3 + 0.2 * k).toFixed(3)})`;
+          ctx.fill(cores);
+        }
+        ctx.strokeStyle = w.fire ? 'rgba(96, 32, 6, 0.4)' : 'rgba(74, 14, 8, 0.28)';
+        ctx.lineWidth = Math.max(2, 3.2 * z);
+        ctx.stroke(shapes);
+        ctx.strokeStyle = w.fire ? `rgba(255, 214, 120, ${(0.75 * flick).toFixed(3)})` : `rgba(255, ${Math.round(150 + 60 * pulse)}, ${Math.round(112 + 50 * pulse)}, ${(0.7 + 0.25 * k).toFixed(3)})`;
+        ctx.lineWidth = Math.max(1.4, 1.9 * z);
+        ctx.stroke(shapes);
+      }
+      ctx.restore();
+    }
+
     /** Fala curta em cima do personagem (o "!" de um bicho que percebeu o herói vira o selinho: `_drawAlerts`). */
     say(id, text) {
       const a = this.actors.get(id);
@@ -768,6 +844,15 @@
         }
         return d;
       });
+      // o aviso dos golpes: pintado no chão junto das sombras (por baixo dos bichos e de tudo que está em pé)
+      if (this.warnings && this.warnings.length && actors.length) {
+        const first = actors[0];
+        const own = first.drawShadow;
+        first.drawShadow = (c) => {
+          this._drawWarnings(c);
+          own(c);
+        };
+      }
       this.world.draw(ctx, actors);
       this._drawAtmosphere(ctx);
       this._drawVeilMotes(ctx);
