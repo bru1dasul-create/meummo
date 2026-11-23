@@ -1033,7 +1033,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     olhos acesos, os tufos brancos em leque, o rabo peludo de anéis; no aviso, ele se estica e ergue a fruta brilhando do
     lado da cabeça (de frente, aparece); o tranco vai para longe do herói. As ferramentas de pintar ficaram em
     `PD.creatures.paint` (`creature.js`) para os próximos
-  - [x] **Quati** (23/11):
+  - [x] **Quati** (23/11, na main):
     - o corpo de pelo, o lombo escuro e a barriga creme, as patas escuras e o rabo em pé com anéis;
     - o focinho comprido que mexe sempre e a máscara branca e escura no rosto;
     - no aviso, encolhe, arqueia, arrepia e rosna de boca aberta;

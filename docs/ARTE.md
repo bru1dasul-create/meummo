@@ -119,7 +119,7 @@
   - `anim-galho.cjs <pasta> [zoom]`: o filme;
   - `custo-galho.cjs`: o peso (`GALHO=1` pendurado).
 
-### Etapa 2: o Quati (23/11, com o "pode seguir para o Quati" do dono)
+### Etapa 2: o Quati (23/11, com o "pode seguir para o Quati" do dono; na main em 23/11, com o "pode juntar na main")
 - **O desenho (`quati.js`, sem as bolinhas, com as mesmas ferramentas do sagui):**
   - **o corpo:** comprido, com a beirada de pelo. O lombo é mais escuro e a barriga, cor de creme. Os dois são as mesmas
     bolas do corpo, menores e puxadas para cima ou para baixo na tela, pintadas dentro do recorte do corpo; assim
