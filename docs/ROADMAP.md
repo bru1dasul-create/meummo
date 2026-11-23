@@ -961,14 +961,14 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   as plantas novas também (Babosa 15–20% nos de nível 3 a 6, Jurubeba 10% nos de 5 e 6 e 60% nos chefes). Receitas em
   `data/receitas.json` (a chave é o item que sai; "precisa" diz os ingredientes) e quem prepara no campo "receitas" de
   `data/npcs.json`. Mensagens `craft` e `crafted`; `NpcInfo.recipes`. Protocolo 51
-- [ ] **[arte]** Das poções (etapa 3): os ícones dos ingredientes novos — Frasco Vazio, Água da Mina, Folha de Babosa e
-  Raiz de Jurubeba (hoje usam os da garrafada, da água de coco e da arruda). A aba "Receitas" já foi vestida (item
-  abaixo). Pedido mandado à [arte]
+- [x] **[arte]** Das poções: os ícones novos — Garrafada Pequena (o vidrinho de chá verde), Garrafada Grande (o garrafão
+  empalhado com lacre de cera), Frasco Vazio, Água da Mina (a moringa de barro), Folha de Babosa e Raiz de Jurubeba —
+  aprovados pelo dono (23/11) e na main (`paintedIcons.ts`, com as mesmas chaves dos itens). Falta a [estrutura] trocar
+  o "icone" de cada um em `data/items.json` (pedido mandado)
 - [ ] **[arte]** Das poções (etapa 1): o efeito de usar a poção "na mesma pegada do Priston Tale" (pedido do dono, 23/11)
-  pelo gancho `view.consume(id, item)` — o dono não achou referência (lembra da poção jogada para cima, estourando); a
-  [arte] mandou duas ideias com cara de Pindorama, esperando a escolha — e os ícones da Garrafada Pequena e da Grande
-  (hoje usam o da garrafada). Pedido mandado à [arte]
-- [x] **[arte]** Das poções, as correções rápidas (23/11, com o "pode, segue essa ordem" do dono): **a barra sem o
+  pelo gancho `view.consume(id, item)`. O dono não achou referência (lembra da poção jogada para cima, estourando) e
+  pediu para ver as duas ideias da [arte] prontas antes de escolher: a garrafada que estoura em folhas e o benzimento
+- [x] **[arte]** Das poções, as correções rápidas (na main em 23/11, com o "pode" do dono): **a barra sem o
   Fôlego** (no PC, a moldura de 6 quadrados de novo: Q, R, T, esquiva, defesa e pulo; no celular, a defesa entrou no
   buraco ao lado da Chuva); **a mochila diz o que o consumível faz** ("Recupera 25% da vida", "+5 de Destreza por
   3 min"), com os botões do item presos no pé dela (em 1366 × 768 o "Usar" sumia); **o "+5" verde** na aba dos

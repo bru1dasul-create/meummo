@@ -179,7 +179,18 @@
     "N pontos para distribuir ✦ K" (o K some no celular; no jogo antigo, sem a janela K, o aviso não aparece)
   - conferir (rascunho `atributos/`): `jogo.cjs <pasta>` (PC, celular deitado e em pé: diz se os ícones entraram e se os
     4 cabem sem rolar; tira as fotos da janela, do botão ✦ e da mochila) e `antigo.cjs` (a mochila do jogo antigo)
-- **As correções das poções (23/11; com o "pode, segue essa ordem" do dono; o DOM e os ganchos são da [estrutura]):**
+- **Os ícones das poções (23/11; aprovados pelo dono: "aprovado"; na main):** no `paintedIcons.ts`, com as mesmas chaves
+  dos itens: `garrafada_pequena` (o vidrinho de chá verde-dourado com um raminho), `garrafada_grande` (o garrafão de
+  remédio vermelho-escuro com raízes, empalhado e lacrado com cera), `frasco` (o mesmo vidrinho limpo e oco, com a rolha
+  deitada do lado: claro e azulado, porque vidro transparente vira cinza no fundo escuro da mochila), `agua_mina` (a
+  moringa de barro com a pintura branca, a água na boca, suando e com uma gota pulando), `babosa` (a folha grossa com
+  espinhos e pintinhas, o gel no corte e uma gota escorrendo; com uma folha menor atrás no mesmo rumo, porque duas em
+  "V" pareciam o ✓ de confirmar) e `jurubeba` (a raiz torta com um galho, os nós e o raminho com os frutinhos). A Média
+  continua a `garrafada` (âmbar): cada tamanho tem a sua cor. Ajudantes novos: `vialPath`, `glassBack`, `glassLiquid`,
+  `bubbles`, `corkTop`, `neckString`, `dropPath`, `twinkle` e `aloeLeaf`. Entram no jogo quando a [estrutura] trocar o
+  "icone" em `data/items.json` (pedido mandado). Prévia (rascunho `icones-pocoes/`): `entrada.ts` (esbuild) e
+  `folha.cjs <icones.js> <saida.png>` (grande, mochila, loja e a plaquinha das receitas)
+- **As correções das poções (23/11; na main com o "pode" do dono; o DOM e os ganchos são da [estrutura]):**
   - **a barra sem o Fôlego:** no PC voltou a moldura de 6 quadrados (`habilidades-moldura.webp`, 887 × 234; a de 7 saiu
     do repositório e está no commit `4380f90`, se um dia voltar a ter 7): Q, R, T, esquiva (`--i: 3`), defesa (o
     `#guard-button`, no passo 4: `123 + 4 × 107,8`) e pulo (`--i: 5`); o chat usa a largura nova. No celular, a defesa
