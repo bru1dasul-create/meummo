@@ -395,7 +395,7 @@
 - **Rascunho `marimbondo/`:** `prancha.cjs` (a da jararaca, com os momentos do enxame), `custo.cjs`, `jogo.cjs`,
   `celular.cjs` e `antes/`. Entregues: `entrega/marimbondos-antes-depois.png` e `.gif`.
 
-### A viagem de barco: o botão e a tela da travessia (24/11, "pode fazer" do dono; no ramo, esperando o "pode" para a main)
+### A viagem de barco: o botão e a tela da travessia (24/11, "pode fazer" do dono; na main em 24/11, com o "pode juntar na main")
 - A [estrutura] fez a viagem com o Barqueiro (`talk.ts`: o botão `talk-main talk-trip`; `engine.ts`: a tela
   `#trip-fade`, escura de uma vez e clareando em 1,1 s, com um estilo simples na própria tela). O capricho é só no
   `style.css`: **o botão** com a cor do rio (azul-esverdeado, a borda clara) e a canoinha antes do texto; **a tela** com
