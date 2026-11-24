@@ -2944,6 +2944,63 @@
     },
   };
 
+  // ------------------------------------------------------------------ o campinho (Guarapiranga)
+  // (24/11, "pode seguir com os detalhes do Guarapiranga") A bola de futebol esquecida no campo de terra: branca, com os
+  // gomos pretos e o brilho do lado da luz. O resto do campinho são peças que já existem (o muro grafitado, o alambrado,
+  // a barraca de pastel do Capão, a mesa e as cadeiras do bar, o mastro do clube).
+  small.bola = {
+    fades: false,
+    height: () => 24,
+    blocks: 0,
+    shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, 10, 6),
+    box: (cam, d, z0) => volBox(cam, d.x - 16, d.x + 16, d.y - 16, d.y + 16, z0 - 4, z0 + 26, 8),
+    paint(ctx, cam, d, z0, ink) {
+      const zm = cam.zoom;
+      const c = cam.p({ x: d.x, y: d.y, z: z0 + 11 });
+      const R = 11 * zm;
+      ctx.fillStyle = INK;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, R + ink, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = '#f3f1ea';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, R, 0, M.TAU);
+      ctx.fill();
+      // os gomos pretos (o do meio e os da beira, cortados pela borda)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, R, 0, M.TAU);
+      ctx.clip();
+      ctx.fillStyle = '#2a2a2e';
+      const pent = (x, y, r, rot) => {
+        ctx.beginPath();
+        for (let k = 0; k < 5; k++) {
+          const a = rot + (k / 5) * M.TAU;
+          const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+          if (k) ctx.lineTo(px, py);
+          else ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      };
+      pent(c.x + R * 0.1, c.y + R * 0.05, R * 0.34, -Math.PI / 2);
+      for (let k = 0; k < 5; k++) {
+        const a = -Math.PI / 2 + (k / 5) * M.TAU + Math.PI / 5;
+        pent(c.x + Math.cos(a) * R * 0.95, c.y + Math.sin(a) * R * 0.95, R * 0.3, a);
+      }
+      // a terra grudada embaixo e o brilho do lado da luz
+      ctx.fillStyle = 'rgba(120, 84, 48, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + R * 0.75, R * 0.9, R * 0.4, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(c.x - R * 0.38, c.y - R * 0.42, R * 0.26, R * 0.16, -0.5, 0, M.TAU);
+      ctx.fill();
+    },
+  };
+
   // ------------------------------------------------------------------ o mirante (Guarapiranga)
   // (24/11, o dono: "pode seguir vestindo o mirante") A torre de observação de troncos no canto de trás do deque: os
   // quatro esteios com as escoras em X, o primeiro andar, a escada do lado sul (degraus, banzos e corrimão), o andar de

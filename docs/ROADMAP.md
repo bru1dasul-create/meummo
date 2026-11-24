@@ -732,7 +732,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   itacoatiaras viradas para o meio (brilham de noite) e a oferenda no meio; o atracadouro virado para o Refúgio, com a
   canoa amarrada, os esteios de fitas, a fogueira apagada e a areia; a Trilha do Véu ligando tudo; pedras com musgo na
   água rasa, taboas, aguapés e cogumelos que brilham. Continua só de barco: a chegada `chegada-ilha-do-veu` fica na ponta
-  do atracadouro, para a viagem com o Barqueiro
+  do atracadouro, para a viagem com o Barqueiro. **Os detalhes (24/11, "pode seguir com os detalhes do
+  Guarapiranga"), por partes:** o campinho de várzea ganhou a arquibancada de cimento atrás do campo, o muro grafitado
+  do Brejo FC atrás de um gol e o alambrado rasgado atrás do outro, a barraca de pastel e caldo de cana com a mesa, o
+  mastro com a bandeira e a bola esquecida no campo
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha
@@ -1077,7 +1080,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - cada vespa pintada: cintura fina, abdômen de listras com o ferrão, cara amarela, olhos, antenas, asas e perninhas;
     - no aviso, o enxame se fecha e zune com os ferrões curvados para fora; na ferroada, mergulha num anel largo;
     - o tranco para longe de quem bateu e as vespas caindo com as faíscas.
-  - [ ] Filhote de Boitatá
+  - [x] **Filhote de Boitatá** (24/11, na main):
+    - o corpo de chama pintado (contorno quente, miolo claro, escamas de brasa), as labaredas de verdade, as fagulhas
+      e a cabeça de filhote com os olhões de fogo;
+    - no aviso, ergue a cabeça e o fogo dobra e fica branco; na investida, corre de verdade os 6 m (antes pulava);
+    - o tranco, o apagar com as faíscas roxas e o amanhecer só apagando.
 - [x] **[arte]** O selinho do "!" (23/11, pedido do dono): o "!" dos bichos que percebem o herói vira um selo amarelo em
   cima do nome, sem o balão (com vários juntos, os balões se empilhavam com o bico comprido)
 - [x] **O aviso dos golpes no chão** (23/11, pedido do dono: "arruma esses golpes do quati aparece em quadrado vermelho,

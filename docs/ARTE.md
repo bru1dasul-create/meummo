@@ -395,6 +395,28 @@
 - **Rascunho `marimbondo/`:** `prancha.cjs` (a da jararaca, com os momentos do enxame), `custo.cjs`, `jogo.cjs`,
   `celular.cjs` e `antes/`. Entregues: `entrega/marimbondos-antes-depois.png` e `.gif`.
 
+### Etapa 6: o Filhote de Boitatá (24/11, com o "segue para o Filhote de Boitatá" do dono; na main em 24/11, com o "pode juntar na main")
+- **O desenho (`boitata.js`, sem as bolinhas):** o corpo de chama numa peça só, pintado como os outros bichos, mas
+  quente: o **contorno vermelho-escuro** (o `paintLit` risca de preto; o risco vem antes, no `_warmInk`), a cor laranja,
+  o **miolo claro** no lombo (um tubo mais fino puxado para cima), as escamas de brasa nos flancos, a meia-lua de sombra
+  vermelha e o brilho claro; as **labaredas** de verdade nas costas (gotas com a base azulada e o miolo amarelo, cada
+  uma no seu tremido; as do lado longe da câmera ficam atrás do corpo), as fagulhas subindo e o brilho no chão; a
+  **cabeça de filhote**, grande e redonda, com os **olhões de fogo** (o miolo branco brilhando e a fenda, que afina no
+  aviso).
+- **O aviso** ('windup', 0,9 s): encolhe, ergue a cabeça bem alto (até ~40 cm), as labaredas dobram e ficam brancas
+  de quentes e as fagulhas giram.
+- **A investida** ('charge'): o servidor manda o pé 6 m adiante de uma vez (`dash`); o `moveTo` dela vira uma **corrida
+  de verdade** (~17 m/s, de 0,2 a 0,45 s), esticada (a onda some) e com as labaredas deitando para trás — o corpo passa
+  pelo caminho (o rastro). Antes ela pulava direto para o fim.
+- **O tranco:** para longe de quem bateu, com o clarão fraco. **Caindo:** a chama apaga numa fumacinha e o encanto sai
+  em faíscas roxas; **ao amanhecer** ('vanish') só apaga, sem as faíscas.
+- **O peso:** ~0,55 ms no PC e ~0,35 ms no celular (o antigo: 0,27 ms).
+- **Conferido:** as pranchas (4 lados × 12 momentos) e o jogo de verdade **de noite** na clareira (as duas cobrinhas de
+  fogo no escuro, a investida acertando com o fogo no chão) e o celular deitado. Sem erros. Teste:
+  `tests/boitata-art.test.ts`. Só o `boitata.js` foi alterado.
+- **Rascunho `boitata/`:** `prancha.cjs` (fundo escuro), `custo.cjs`, `jogo.cjs`, `celular.cjs`, `anim.cjs` e
+  `antes/`. Entregues: `entrega/boitata-antes-depois.png` e `.gif`.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
