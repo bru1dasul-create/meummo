@@ -1,7 +1,8 @@
 // ARQUIVO DA [ARTE]: o desenho dos tiros que voam no jogo 2.5D. O combate (combat.ts, da [estrutura]) calcula onde o
 // tiro está e chama daqui; o que esta peça não sabe desenhar volta `false` e o combate desenha a bolinha de sempre.
-//   drawProjectile(ctx, tipo, noAr, sombra, aFrente, pxPorMetro) → true se desenhou (hoje: a 'flecha' do Arco de Bambu
-//                                               e a 'ancestral', a Flecha Ancestral, que vem do spiritArt.ts)
+//   drawProjectile(ctx, tipo, noAr, sombra, aFrente, pxPorMetro) → true se desenhou (hoje: a 'flecha' do Arco de Bambu,
+//                                               a 'ancestral', a Flecha Ancestral, que vem do spiritArt.ts, e o 'caldo'
+//                                               da Cuca: a bola de caldo verde brilhando, pingando)
 //   projectileEnded(tipo, x, y, angulo, agora, preso?)  o tiro parou sem acertar ninguém: no fim do alcance a flecha
 //                                               crava no chão; com `preso` ({ on, z }: bateu em algo do mapa) crava na
 //                                               madeira, quica na pedra ou some na água; a pedra levanta poeira
@@ -104,6 +105,10 @@ function arrow(ctx: CanvasRenderingContext2D, tail: Point, tip: Point, px: numbe
  */
 // (o combate passa, depois dos de sempre, o `look` da habilidade: { rank, level } — os pontos e o degrau da puxada)
 export function drawProjectile(ctx: CanvasRenderingContext2D, kind: string, at: Point, shadow: Point, ahead: Point, m: number, ...extra: unknown[]): boolean {
+  if (kind === 'caldo') {
+    drawBroth(ctx, at, shadow, ahead, m, performance.now());
+    return true;
+  }
   if (kind === 'ancestral') {
     const look = extra[0] as { rank?: number; level?: number } | undefined;
     drawSpiritArrow(ctx, at, shadow, ahead, m, performance.now(), look);
@@ -143,8 +148,11 @@ export function drawProjectile(ctx: CanvasRenderingContext2D, kind: string, at: 
   return true;
 }
 
-/** Onde a flecha parou: no chão, cravada (madeira, mato), quicando (pedra, parede), na água; a pedra só levanta poeira. */
-type LandMode = 'chao' | 'cravada' | 'quica' | 'agua' | 'poeira';
+/**
+ * Onde a flecha parou: no chão, cravada (madeira, mato), quicando (pedra, parede), na água; a pedra só levanta poeira; o
+ * caldo da Cuca espirra verde.
+ */
+type LandMode = 'chao' | 'cravada' | 'quica' | 'agua' | 'poeira' | 'caldo';
 
 interface Landed {
   x: number;
@@ -165,13 +173,14 @@ const STAY_MS = 1600;
 const FADE_MS = 450;
 const SPLASH_MS = 900;
 const DUST_MS = 380;
+const BROTH_MS = 520;
 const MAX_LANDED = 24;
 const landed: Landed[] = [];
 
 /** O que segura a flecha (madeira, mato, estofado): ela crava. O resto (pedra, parede, ferro, carro...) ela quica. */
 const HOLDS = new Set(['tronco', 'bambu', 'tronco-caido', 'mata-fechada', 'banco', 'mesa', 'mesa-redonda', 'mesa-cozinha', 'cadeira', 'sofa', 'cama', 'estante', 'cristaleira']);
 
-const lifeOf = (f: Landed): number => (f.mode === 'agua' ? SPLASH_MS : f.mode === 'poeira' ? DUST_MS : STAY_MS + FADE_MS);
+const lifeOf = (f: Landed): number => (f.mode === 'agua' ? SPLASH_MS : f.mode === 'poeira' ? DUST_MS : f.mode === 'caldo' ? BROTH_MS : STAY_MS + FADE_MS);
 
 /**
  * Ainda tem flecha cravada (ou respingo, poeira) à vista? (o combate esconde a camada dele quando não tem nada para
@@ -190,7 +199,8 @@ export function projectileEnded(kind: string, x: number, y: number, angle: numbe
   const on = stuck?.on;
   const z = stuck ? stuck.z : 0;
   let mode: LandMode;
-  if (kind !== 'flecha') mode = on === 'agua' ? 'agua' : 'poeira';
+  if (kind === 'caldo') mode = 'caldo';
+  else if (kind !== 'flecha') mode = on === 'agua' ? 'agua' : 'poeira';
   else if (!on || on === 'borda') mode = 'chao';
   else if (on === 'agua') mode = 'agua';
   else if (HOLDS.has(on)) mode = 'cravada';
@@ -243,6 +253,10 @@ export function drawLanded(ctx: CanvasRenderingContext2D, screen: Screen, meter:
     }
     if (f.mode === 'poeira') {
       drawDust(ctx, screen, f, m, age / DUST_MS);
+      continue;
+    }
+    if (f.mode === 'caldo') {
+      drawBrothSplat(ctx, screen, f, m, age / BROTH_MS);
       continue;
     }
     const alpha = age < STAY_MS ? 1 : 1 - (age - STAY_MS) / FADE_MS;
@@ -472,6 +486,103 @@ function drawSplash(ctx: CanvasRenderingContext2D, screen: Screen, f: Landed, m:
       ctx.fill();
       ctx.stroke();
     }
+  }
+  ctx.restore();
+}
+
+/**
+ * O caldo da Cuca voando: a bola de caldo verde (balançando, esticada na direção do voo), o brilho em volta, os pingos
+ * ficando para trás e a sombra no chão.
+ */
+function drawBroth(ctx: CanvasRenderingContext2D, at: Point, shadow: Point, ahead: Point, m: number, now: number): void {
+  const dx = ahead.x - at.x;
+  const dy = ahead.y - at.y;
+  const d = Math.hypot(dx, dy);
+  const ux = d > 0.01 ? dx / d : 1;
+  const uy = d > 0.01 ? dy / d : 0;
+  const r = Math.max(4, m * 0.11);
+  const wob = Math.sin(now / 45) * 0.12;
+  ctx.save();
+  // a sombra no chão
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.beginPath();
+  ctx.ellipse(shadow.x, shadow.y, r * 1.1, r * 0.45, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // o brilho em volta (na caverna escura, a bola acende)
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y, r * 3.2);
+  g.addColorStop(0, 'rgba(160, 255, 110, 0.5)');
+  g.addColorStop(1, 'rgba(120, 230, 80, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, r * 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  // os pingos ficando para trás
+  for (let i = 1; i <= 3; i++) {
+    const back = r * (1.3 + i * 0.95);
+    const pr = r * (0.42 - i * 0.09);
+    ctx.globalAlpha = 1 - i * 0.24;
+    ctx.fillStyle = '#7fe05a';
+    ctx.beginPath();
+    ctx.arc(at.x - ux * back + uy * Math.sin(now / 70 + i) * r * 0.3, at.y - uy * back - ux * Math.sin(now / 70 + i) * r * 0.3 + i * 1.2, pr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // a bola: esticada na direção do voo, balançando, com o contorno escuro, o miolo claro e o brilhinho
+  const ang = Math.atan2(uy, ux);
+  ctx.translate(at.x, at.y);
+  ctx.rotate(ang);
+  ctx.fillStyle = '#1f4a10';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * (1.25 + wob) + 1.4, r * (0.92 - wob) + 1.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const body = ctx.createRadialGradient(r * 0.25, -r * 0.3, r * 0.1, 0, 0, r * 1.3);
+  body.addColorStop(0, '#d8ff9a');
+  body.addColorStop(0.55, '#7fe05a');
+  body.addColorStop(1, '#3f9a26');
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * (1.25 + wob), r * (0.92 - wob), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(250, 255, 235, 0.85)';
+  ctx.beginPath();
+  ctx.ellipse(r * 0.35, -r * 0.38, r * 0.32, r * 0.18, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** O caldo que caiu sem acertar ninguém: a mancha que espirra e as gotas verdes voando (a poça vem do servidor). */
+function drawBrothSplat(ctx: CanvasRenderingContext2D, screen: Screen, f: Landed, m: number, k: number): void {
+  const c = screen(f.x, f.y, 0);
+  ctx.save();
+  const grow = Math.min(1, k / 0.25);
+  ctx.globalAlpha = 1 - k * k;
+  ctx.fillStyle = 'rgba(110, 210, 70, 0.75)';
+  ctx.beginPath();
+  for (let i = 0; i <= 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const rr = (0.16 + 0.06 * Math.sin(i * 2.7 + f.spin * 9)) * m * grow;
+    const x = c.x + Math.cos(a) * rr;
+    const y = c.y + Math.sin(a) * rr * 0.5;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  // as gotas: sobem em arco e caem
+  ctx.fillStyle = '#9be06a';
+  ctx.strokeStyle = 'rgba(20, 60, 10, 0.6)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + f.spin;
+    const spread = (0.08 + k * (0.3 + (i % 3) * 0.08)) * m;
+    const up = 4 * (0.14 + (i % 2) * 0.08) * k * (1 - k) * m;
+    const r = Math.max(1.4, 0.032 * m * (1 - k * 0.5));
+    ctx.beginPath();
+    ctx.arc(c.x + Math.cos(a) * spread, c.y + Math.sin(a) * spread * 0.5 - up, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   }
   ctx.restore();
 }

@@ -1938,6 +1938,145 @@ function paintCucaBottle(ctx: CanvasRenderingContext2D): void {
   twinkle(ctx, 98, 52, 6.5, 'rgba(170, 255, 120, 0.9)');
 }
 
+/**
+ * Patuá da Cuca (o amuleto raro de quem vence a Cuca, 24/11): o saquinho de pano vinho amarrado no cordão, as ervas do
+ * caldeirão saindo pela boca, a espiral verde bordada, a costura e o dente de jacaré pendurado no nó.
+ */
+function paintCucaPatua(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 64, 117, 38);
+  // o cordão de pendurar no pescoço (a volta por cima do saquinho)
+  ctx.save();
+  ctx.lineCap = 'round';
+  const loop = new Path2D();
+  loop.moveTo(53, 49);
+  loop.bezierCurveTo(40, 30, 38, 8, 64, 7);
+  loop.bezierCurveTo(90, 8, 88, 30, 75, 49);
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 6;
+  ctx.stroke(loop);
+  ctx.strokeStyle = '#9a7442';
+  ctx.lineWidth = 3;
+  ctx.stroke(loop);
+  ctx.restore();
+  // as ervas saindo pela boca (antes do pano, que cobre o pé delas)
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 4.4;
+  ctx.beginPath();
+  ctx.moveTo(60, 50);
+  ctx.quadraticCurveTo(56, 38, 50, 30);
+  ctx.stroke();
+  ctx.strokeStyle = '#7a5230';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+  ctx.restore();
+  for (const [x, y, rx, ry, a, c] of [
+    [54, 40, 8, 3.6, -0.9, '#5f9a2c'],
+    [70, 38, 9, 3.8, 0.7, '#4f8a24'],
+    [64, 33, 7, 3.2, -0.2, '#78b83a'],
+    [76, 44, 6, 2.8, 1.2, '#5f9a2c'],
+  ] as const) {
+    const leaf = new Path2D();
+    leaf.ellipse(x, y, rx, ry, a, 0, Math.PI * 2);
+    body(ctx, leaf, '#a6d86a', c, '#2f5a14', [x - rx, y - ry, x + rx, y + ry], '#14260a', 1.6);
+  }
+  // o saquinho: a boca franzida em cima e a barriga redonda embaixo
+  const bag = new Path2D();
+  bag.moveTo(52, 50);
+  bag.bezierCurveTo(46, 56, 33, 70, 34, 90);
+  bag.bezierCurveTo(35, 107, 48, 114, 64, 114);
+  bag.bezierCurveTo(80, 114, 93, 107, 94, 90);
+  bag.bezierCurveTo(95, 70, 82, 56, 76, 50);
+  bag.bezierCurveTo(70, 46, 58, 46, 52, 50);
+  bag.closePath();
+  body(ctx, bag, '#c45a68', '#7a2e3a', '#3a0e16', [34, 46, 94, 114], '#24080c', 2.6);
+  ctx.save();
+  ctx.clip(bag);
+  // as dobras do pano e a costura de lado
+  ctx.strokeStyle = 'rgba(40, 6, 12, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  for (const [x0, y0, x1, y1, b] of [
+    [56, 54, 48, 74, -5],
+    [72, 54, 80, 74, 5],
+    [64, 56, 64, 70, 2],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo((x0 + x1) / 2 + b, (y0 + y1) / 2, x1, y1);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255, 220, 200, 0.55)';
+  ctx.setLineDash([3, 3]);
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(40, 72);
+  ctx.bezierCurveTo(38, 88, 42, 104, 54, 110);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // a espiral verde bordada no meio
+  ctx.strokeStyle = '#9be06a';
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const a = i * 0.42;
+    const r = 1 + i * 0.36;
+    const x = 64 + Math.cos(a) * r;
+    const y = 90 + Math.sin(a) * r * 0.9;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+  // o brilho do pano
+  const sh = new Path2D();
+  sh.moveTo(41, 86);
+  sh.bezierCurveTo(41, 74, 46, 64, 53, 59);
+  sh.bezierCurveTo(49, 67, 46, 76, 46, 87);
+  sh.closePath();
+  shine(ctx, sh, 0.28);
+  // a boca amarrada: o cordão dando voltas e o nó
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (const y of [51, 55]) {
+    ctx.strokeStyle = '#24150a';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(50, y);
+    ctx.quadraticCurveTo(64, y + 3, 78, y);
+    ctx.stroke();
+    ctx.strokeStyle = '#c9a060';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+  }
+  ctx.restore();
+  const knot = new Path2D();
+  knot.ellipse(70, 56, 4.2, 3.4, 0, 0, Math.PI * 2);
+  body(ctx, knot, '#e6c486', '#c9a060', '#7a5a2a', [66, 52, 74, 60], '#24150a', 1.8);
+  // o fio do dente e o dente de jacaré
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 3.6;
+  ctx.beginPath();
+  ctx.moveTo(71, 59);
+  ctx.quadraticCurveTo(74, 64, 73, 69);
+  ctx.stroke();
+  ctx.strokeStyle = '#c9a060';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  ctx.restore();
+  const tooth = new Path2D();
+  tooth.moveTo(68, 68);
+  tooth.quadraticCurveTo(73, 65.5, 78, 68);
+  tooth.quadraticCurveTo(78.5, 81, 71, 92);
+  tooth.quadraticCurveTo(72.5, 80, 68, 68);
+  tooth.closePath();
+  body(ctx, tooth, '#fffaf0', '#ece0c4', '#b8a47c', [68, 66, 79, 92], '#24150a', 1.8);
+  twinkle(ctx, 98, 60, 6.5, 'rgba(170, 255, 120, 0.9)');
+}
+
 /** Água da Mina: a moringa de barro com a água na boca, suando, e uma gota pulando. */
 function paintSpringWater(ctx: CanvasRenderingContext2D): void {
   itemShadow(ctx, 64, 116, 38);
@@ -2280,6 +2419,7 @@ const ITEM_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
   garrafada_pequena: paintSmallBottle,
   jurubeba: paintJurubeba,
   mochila: paintBag,
+  patua_cuca: paintCucaPatua,
 };
 
 const itemCanvases = new Map<string, HTMLCanvasElement>();

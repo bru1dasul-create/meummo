@@ -4,7 +4,7 @@
 //   new PD.View(container, tmj)        container = a caixa da página (ou um <canvas> pronto); tmj = o JSON do mapa
 //   addActor(id, { kind, type, name, look, x, y, angle, me })  kind: 'player' | 'npc' | 'monster'
 //   moveActor(id, x, y, angle, { durationMs, dash })           a posição nova do pé, a cada ~50–120 ms
-//   removeActor(id) · say(id, texto) · follow(id) · frame(agora) · destroy()
+//   removeActor(id) · say(id, texto) · sleep(id, dormindo) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
 //   action(id, tipo, angulo)  golpes e reações (gente: tiro, defesa, 'dash' = rola, 'jump' = pula, 'volley' = atira para o
@@ -50,6 +50,11 @@
   const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', pet: '#8fe3c8', monster: '#f1e4c8' };
   const UI_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   const rad = (deg) => (deg * Math.PI) / 180;
+  /** Um número de 0 a 1 que parece sorteado, mas é sempre o mesmo para o mesmo `k` (as bolhas da poça). */
+  const hash01 = (k) => {
+    const v = Math.sin(k * 127.1 + 311.7) * 43758.5453;
+    return v - Math.floor(v);
+  };
 
   class View {
     constructor(container, tmj, opts = {}) {
@@ -494,14 +499,14 @@
      * onde o golpe vai pegar, pintadas no chão, por baixo dos bichos e de tudo que fica em pé (`_drawWarnings`).
      * `tiles`: [x, y, ...] em casas, as mesmas do servidor (o quadrado do chão de cada uma é o do `tileFeetSquare`
      * do combat.ts: x a x + 1, y + 0,2 a y + 1,2 m); `ms`: quanto falta para o golpe; `opts.fire`: o fogo (o rastro do
-     * boitatá), laranja e tremendo.
+     * boitatá), laranja e tremendo; com `opts.kind` 'caldo', a poça de caldo verde da Cuca, borbulhando.
      */
     warn(tiles, ms, opts) {
       if (!tiles || tiles.length < 2) return;
       const now = this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now());
       const cells = [];
       for (let i = 0; i + 1 < tiles.length; i += 2) cells.push({ x: tiles[i], y: tiles[i + 1] });
-      (this.warnings || (this.warnings = [])).push({ cells, start: now, until: now + Math.max(1, ms || 0), fire: !!(opts && opts.fire) });
+      (this.warnings || (this.warnings = [])).push({ cells, start: now, until: now + Math.max(1, ms || 0), fire: !!(opts && opts.fire), kind: (opts && opts.kind) || null });
     }
 
     /**
@@ -535,6 +540,10 @@
       ctx.save();
       ctx.lineJoin = 'round';
       for (const w of this.warnings) {
+        if (w.kind === 'caldo') {
+          this._drawBrothPuddle(ctx, w, now);
+          continue;
+        }
         const k = M.clamp01((now - w.start) / Math.max(1, w.until - w.start));
         const out = now > w.until ? 1 - (now - w.until) / FADE : 1;
         const flick = w.fire ? 0.75 + 0.25 * Math.sin(now / 55 + w.start) : 1;
@@ -562,6 +571,135 @@
         ctx.stroke(shapes);
       }
       ctx.restore();
+    }
+
+    /**
+     * A poça do caldo da Cuca (o golpe que voa deixa o chão queimando): uma mancha verde só, de beirada torta, cobrindo
+     * as casas, com o brilho (na caverna escura, ela acende), o miolo mais claro e as bolhas que crescem e estouram em
+     * anelzinhos. Abre num instante e some devagar no fim.
+     */
+    _drawBrothPuddle(ctx, w, now) {
+      const cam = this.cam;
+      const z = cam.zoom;
+      const grow = M.easeOut(M.clamp01((now - w.start) / 220));
+      const alpha = 1 - M.smoothstep(w.until - 500, w.until + 120, now);
+      if (alpha <= 0) return;
+      const R = 62 * grow;
+      const blob = new Path2D(), core = new Path2D();
+      let cx = 0, cy = 0;
+      for (const c of w.cells) {
+        const gx = (c.x + 0.5) * 100, gy = (c.y + 0.7) * 100;
+        cx += gx;
+        cy += gy;
+        for (const [path, rr] of [[blob, R], [core, R * 0.55]]) {
+          for (let i = 0; i <= 16; i++) {
+            const a = (i / 16) * M.TAU;
+            const wob = 1 + 0.12 * Math.sin(a * 3 + c.x * 1.7 + c.y * 2.3) + 0.04 * Math.sin(now / 260 + a * 2 + c.x);
+            const q = cam.p({ x: gx + Math.cos(a) * rr * wob, y: gy + Math.sin(a) * rr * wob, z: 0 });
+            if (i === 0) path.moveTo(q.x, q.y);
+            else path.lineTo(q.x, q.y);
+          }
+          path.closePath();
+        }
+      }
+      cx /= w.cells.length;
+      cy /= w.cells.length;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // o brilho em volta
+      const mid = cam.p({ x: cx, y: cy, z: 0 });
+      const gr = 150 * z * (0.6 + 0.4 * Math.sqrt(w.cells.length));
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, gr);
+      g.addColorStop(0, 'rgba(140, 240, 90, 0.28)');
+      g.addColorStop(1, 'rgba(120, 220, 80, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(mid.x, mid.y, gr, gr * 0.6, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // a poça (as manchas juntas viram uma só), a beirada escura e o miolo claro
+      ctx.fillStyle = 'rgba(78, 168, 46, 0.72)';
+      ctx.fill(blob, 'nonzero');
+      ctx.strokeStyle = 'rgba(24, 66, 12, 0.6)';
+      ctx.lineWidth = Math.max(1.2, 2.2 * z);
+      ctx.stroke(blob);
+      ctx.fillStyle = 'rgba(170, 245, 110, 0.45)';
+      ctx.fill(core, 'nonzero');
+      // as bolhas: crescem e estouram num anelzinho
+      for (const c of w.cells) {
+        for (let b = 0; b < 3; b++) {
+          const h1 = hash01(c.x * 13.1 + c.y * 7.7 + b * 3.3), h2 = hash01(c.x * 5.3 + c.y * 11.9 + b * 1.7);
+          const per = 700 + h1 * 500;
+          const ph = ((now - w.start) / per + h2) % 1;
+          const bx = (c.x + 0.5 + (h1 - 0.5) * 0.7) * 100, by = (c.y + 0.7 + (h2 - 0.5) * 0.7) * 100;
+          const q = cam.p({ x: bx, y: by, z: 0 });
+          const rmax = (4 + 4 * h2) * z * grow;
+          if (ph < 0.75) {
+            const r = rmax * M.easeOut(ph / 0.75);
+            ctx.fillStyle = 'rgba(200, 255, 150, 0.75)';
+            ctx.strokeStyle = 'rgba(30, 80, 15, 0.55)';
+            ctx.lineWidth = Math.max(0.8, 0.9 * z);
+            ctx.beginPath();
+            ctx.ellipse(q.x, q.y - r * 0.4, r, r * 0.8, 0, 0, M.TAU);
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            const k = (ph - 0.75) / 0.25;
+            ctx.strokeStyle = `rgba(210, 255, 160, ${(0.8 * (1 - k)).toFixed(3)})`;
+            ctx.lineWidth = Math.max(0.8, 1.1 * z);
+            ctx.beginPath();
+            ctx.ellipse(q.x, q.y, rmax * (1 + k), rmax * (1 + k) * 0.5, 0, 0, M.TAU);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    /**
+     * Dormiu com a cantiga de ninar da Cuca (`on`) ou acordou: o "Zzz" subindo da cabeça enquanto durar (o motor manda
+     * `sleep(id, false)` quando acorda; sem esse aviso, some sozinho em 4 s).
+     */
+    sleep(id, on) {
+      const a = this.actors.get(id);
+      if (!a) return;
+      const now = this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      a.sleepAt = on ? now : 0;
+      a.sleepUntil = on ? now + 4000 : 0;
+    }
+
+    /** O "Zzz" de quem dorme: três letras subindo de lado da cabeça, crescendo e sumindo, uma atrás da outra. */
+    _drawSleep(ctx) {
+      const now = this.last;
+      let any = false;
+      for (const a of this.actors.values()) {
+        if (!a.sleepAt || now > a.sleepUntil) continue;
+        if (!any) {
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.lineJoin = 'round';
+          any = true;
+        }
+        const q = this._overHead(a);
+        const age = (now - a.sleepAt) / 1000;
+        const fadeIn = M.clamp01(age / 0.25);
+        for (let i = 0; i < 3; i++) {
+          const k = (age / 1.5 + i / 3) % 1;
+          const x = q.x + 10 + k * 22 + Math.sin(k * 6 + i) * 3;
+          const y = q.y - 22 - k * 34;
+          const size = Math.round(10 + k * 9);
+          ctx.globalAlpha = fadeIn * (k < 0.15 ? k / 0.15 : 1 - M.smoothstep(0.65, 1, k));
+          ctx.font = `800 ${size}px ` + UI_FONT;
+          ctx.lineWidth = 3.5;
+          ctx.strokeStyle = 'rgba(42, 26, 74, 0.85)';
+          ctx.strokeText('Z', x, y);
+          ctx.fillStyle = '#efe6ff';
+          ctx.fillText('Z', x, y);
+        }
+      }
+      if (any) ctx.restore();
     }
 
     /** Fala curta em cima do personagem (o "!" de um bicho que percebeu o herói vira o selinho: `_drawAlerts`). */
@@ -878,6 +1016,7 @@
       this._drawVeilMotes(ctx);
       this._drawHawk(ctx);
       this._drawNames(ctx);
+      this._drawSleep(ctx);
       this._drawSpeech(ctx);
     }
 

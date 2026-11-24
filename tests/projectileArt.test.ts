@@ -3,7 +3,7 @@
 // Cada um some depois do seu tempo, e a camada do combate fica acesa enquanto algum está à vista.
 
 import { describe, expect, it } from 'vitest';
-import { drawLanded, landedBusy, projectileEnded } from '../src/client/novo/projectileArt';
+import { drawLanded, drawProjectile, landedBusy, projectileEnded } from '../src/client/novo/projectileArt';
 
 /** Um contexto de desenho de mentira: anota o nome de cada chamada (o teste roda sem navegador). */
 function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -105,6 +105,20 @@ describe('flecha e pedra que param sem acertar ninguém', () => {
     expect(landedBusy(t + 381)).toBe(false);
     projectileEnded('pedra', 10, 10, 0, t + 1000);
     expect(landedBusy(t + 1100)).toBe(true);
+    clear(t);
+  });
+
+  it('o caldo da Cuca: voando, a bola verde (o desenho é daqui, não a bolinha do combate); caindo, o respingo verde', () => {
+    const { ctx, calls } = fakeCtx();
+    const drew = drawProjectile(ctx, 'caldo', { x: 100, y: 80 }, { x: 100, y: 120 }, { x: 110, y: 82 }, 70);
+    expect(drew).toBe(true);
+    expect(calls.filter((c) => c === 'fill').length).toBeGreaterThan(5);
+    const t = 6e7;
+    clear(t);
+    projectileEnded('caldo', 10, 10, 0, t);
+    expect(landedBusy(t + 100)).toBe(true);
+    expect(frameAt(t + 120)).toContain('arc'); // as gotas voando
+    expect(landedBusy(t + 521)).toBe(false);
     clear(t);
   });
 });

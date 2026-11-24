@@ -89,6 +89,8 @@ export const GEAR_ART: Record<string, GearArt> = {
   colar_sementes: { kind: 'necklace', cord: '#5a3a1e', pendant: '#4a2a3a', count: 9, shape: 'beads' },
   // ferradura que nunca esfria (da Mula sem Cabeça)
   ferradura: { kind: 'necklace', cord: '#4a3a2a', pendant: '#ff8a2a', count: 1, shape: 'horseshoe', glow: '#ffd36a' },
+  // o Patuá da Cuca: o dente de jacaré no cordão, com o brilho verde do caldeirão (o saquinho só aparece no ícone)
+  patua_cuca: { kind: 'necklace', cord: '#6a4a2a', pendant: '#efe6cc', count: 1, shape: 'fang', glow: '#9be06a' },
   capa: { kind: 'cape', color: '#3f8f3a', trim: '#2b6627', leaves: '#7fd05a', clasp: '#d8b050', length: 27 },
 
   // ======================= armas =======================

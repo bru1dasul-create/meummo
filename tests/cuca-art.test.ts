@@ -2,6 +2,8 @@
 // jacaré-de-papo-amarelo. Pintada de todos os lados e em todos os momentos; virada para o caldeirão do mapa quando ele
 // está perto (a view passa: `setCauldron`), mexendo com a colher dentro do caldo; sem caldeirão, a colher em pé; olhando
 // o herói; falando (a colher sai do caldo e a boca mexe); a cabeça de pé (o "para cima" da cabeça apontava para baixo).
+// De noite, a chefe (etapa 2): o aviso com a colher cheia atrás da cabeça e o arremesso por cima dela, a cantiga (as
+// mãos no colo e as notas em volta), o andar, o tranco ao apanhar, o desmaio com as faíscas roxas e os olhos vermelhos.
 
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -14,10 +16,13 @@ type Rig = {
   hf: Vec;
   hu: Vec;
   headC: Vec;
+  hump: Vec;
   handL: Vec;
+  handR: Vec;
   bowl: Vec;
   jaw: number;
   stirK: number;
+  full: boolean;
 };
 type Cuca = {
   pos: { x: number; y: number };
@@ -31,7 +36,13 @@ type Cuca = {
   moveTo: (x: number, y: number, yaw: number, ms: number, dash?: boolean) => void;
   talk: () => void;
   setCauldron: (c: { x: number; y: number; r?: number } | null) => void;
-  parts: (cam: unknown) => { paint?: (ctx: unknown, flash: number) => void };
+  action: (kind: string, yaw?: number) => void;
+  recoil: () => number;
+  flash: () => number;
+  recoilDir: { x: number; y: number };
+  walkK: number;
+  stepPh: number;
+  parts: (cam: unknown) => { paint?: (ctx: unknown, flash: number) => void; after?: (ctx: unknown) => void };
   drawable: (cam: unknown, primary: boolean) => { draw: (ctx: unknown) => void; drawShadow: (ctx: unknown) => void };
   light: () => { x: number; y: number; z: number; r: number; color: string; k: number };
   _rig: (cam?: unknown) => Rig;
@@ -44,7 +55,7 @@ class FakePath {
   }
 }
 
-function loadPD(): { create: (yaw: number) => Cuca; cam: { toCamera: Vec } } {
+function loadPD(): { create: (yaw: number) => Cuca; cam: { toCamera: Vec }; eyes: { night: boolean } } {
   const sandbox: { window: { PD?: Record<string, unknown> }; Path2D: typeof FakePath } = { window: {}, Path2D: FakePath };
   for (const file of ['core/math.js', 'core/iso.js', 'core/shapes.js', 'creatures/creature.js', 'creatures/cuca.js']) {
     runInNewContext(readFileSync(new URL(`../prototipos/pindorama-25d/js/${file}`, import.meta.url), 'utf8'), sandbox);
@@ -53,8 +64,9 @@ function loadPD(): { create: (yaw: number) => Cuca; cam: { toCamera: Vec } } {
   const Camera = PD.IsoCamera as new () => { zoom: number; toCamera: Vec };
   const cam = new Camera();
   cam.zoom = 1;
-  const C = PD.creatures as { create: (type: string, x: number, y: number, yaw: number) => Cuca };
+  const C = PD.creatures as { create: (type: string, x: number, y: number, yaw: number) => Cuca; eyes: { night: boolean } };
   return {
+    eyes: C.eyes,
     create: (yaw) => {
       const t = C.create('cuca', 0, 0, yaw);
       t.seed = 0.37;
@@ -101,7 +113,7 @@ function cauldronAt(deg: number, d = 114): { x: number; y: number; r: number } {
 }
 
 describe('a Cuca desenhada', () => {
-  const { create, cam } = loadPD();
+  const { create, cam, eyes } = loadPD();
 
   it('é pintada de todos os lados, mexendo, com a colher em pé, falando e rindo, sem cor quebrada', () => {
     const moments: [string, (t: Cuca) => void][] = [
@@ -224,5 +236,116 @@ describe('a Cuca desenhada', () => {
     expect(l.k).toBeGreaterThan(0.2);
     expect(l.r).toBeGreaterThan(100);
     expect(l.color).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
+  it('a chefe: no aviso, a colher cheia sobe atrás da cabeça; no arremesso, passa por cima e termina na frente, vazia', () => {
+    const t = create(0); // de frente para +x
+    step(t, 0.5);
+    t.action('windup', 0);
+    step(t, 0.5);
+    let r = t._rig(cam);
+    expect(t.label).toBe('enchendo a colher');
+    expect(r.full).toBe(true);
+    expect(r.bowl.z).toBeGreaterThan(r.headC.z + 10);
+    expect(r.bowl.x - t.pos.x).toBeLessThan(0); // atrás dela
+    t.action('shoot', 0);
+    step(t, 0.12);
+    expect(t.label).toBe('jogando o caldo');
+    r = t._rig(cam);
+    expect(r.bowl.z).toBeGreaterThan(r.headC.z); // passando por cima da cabeça
+    step(t, 0.25);
+    r = t._rig(cam);
+    expect(r.full).toBe(false);
+    expect(r.bowl.x - t.pos.x).toBeGreaterThan(40); // na frente
+    step(t, 0.6);
+    expect(t.label).not.toBe('jogando o caldo');
+  });
+
+  it('a cantiga: as duas mãos no colo, ninando a colher, e as notas em volta (por cima de tudo)', () => {
+    const t = create(30 * DEG);
+    step(t, 0.5);
+    t.action('windup', t.yaw);
+    t.action('song', t.yaw);
+    t.talk();
+    step(t, 0.8);
+    expect(t.label).toBe('cantando');
+    const r = t._rig(cam);
+    const f = { x: Math.cos(t.yaw), y: Math.sin(t.yaw) };
+    const ahead = (p: Vec) => (p.x - t.pos.x) * f.x + (p.y - t.pos.y) * f.y;
+    expect(ahead(r.handL)).toBeGreaterThan(15);
+    expect(ahead(r.handR)).toBeGreaterThan(15);
+    const parts = t.parts(cam);
+    expect(parts.after).toBeTypeOf('function');
+    const { ctx, fills } = fakeCtx();
+    parts.after!(ctx);
+    expect(fills()).toBeGreaterThan(3);
+    step(t, 2);
+    expect(t.parts(cam).after).toBeUndefined(); // acabou a cantiga: sem notas
+  });
+
+  it('andando, a passada arrasta (o desenho continua inteiro)', () => {
+    const t = create(45 * DEG);
+    step(t, 0.3);
+    const ph0 = t.stepPh;
+    for (let k = 0; k < 4; k++) {
+      t.moveTo(t.pos.x + 100 * Math.cos(t.yaw), t.pos.y + 100 * Math.sin(t.yaw), t.yaw, 420);
+      step(t, 0.42);
+    }
+    expect(t.walkK).toBeGreaterThan(0.5);
+    expect(t.label).toBe('andando');
+    expect(t.stepPh - ph0).toBeGreaterThan(Math.PI * 4);
+    const { ctx, fills } = fakeCtx();
+    t.drawable(cam, false).draw(ctx);
+    expect(fills()).toBeGreaterThan(20);
+  });
+
+  it('apanhando, dá um tranco para longe do herói e volta, com o clarão fraco', () => {
+    for (const heroSide of [1, -1]) {
+      const t = create(90 * DEG);
+      const near = { hero: { x: 300 * heroSide, y: 0 } };
+      step(t, 0.5, near);
+      const h0 = t._rig(cam).hump;
+      t.action('hurt');
+      expect(t.recoilDir.x).toBeCloseTo(-heroSide, 5);
+      step(t, 0.06, near);
+      expect(t.recoil()).toBeGreaterThan(0.9);
+      expect(t.flash()).toBeLessThan(0.35);
+      const h1 = t._rig(cam).hump;
+      expect((h1.x - h0.x) * -heroSide).toBeGreaterThan(6);
+      step(t, 0.6, near);
+      expect(t.recoil()).toBe(0);
+    }
+  });
+
+  it('desmaiando: cai sentada (a cabeça desce), a colher no chão e o encanto sai em faíscas roxas', () => {
+    const t = create(0);
+    step(t, 0.5);
+    const h0 = t._rig(cam).headC.z;
+    t.action('die');
+    step(t, 0.5);
+    expect(t.label).toBe('desmaiando');
+    const r = t._rig(cam);
+    expect(r.headC.z).toBeLessThan(h0 - 30);
+    expect(r.bowl.z - t.groundZ).toBeLessThan(10);
+    const a = fakeCtx();
+    t.parts(cam).after!(a.ctx);
+    expect(a.colors.filter((c) => c === '#b58cff').length).toBeGreaterThan(3);
+  });
+
+  it('de noite (a chefe), os olhos vermelhos como os dos outros monstros; de dia (a bruxa), amarelos', () => {
+    const colorsAt = (night: boolean): string[] => {
+      eyes.night = night;
+      const t = create(45 * DEG);
+      step(t, 0.3);
+      const { ctx, colors } = fakeCtx();
+      t.drawable(cam, false).draw(ctx);
+      return colors;
+    };
+    try {
+      expect(colorsAt(true)).toContain('#ff3b26');
+      expect(colorsAt(false)).toContain('#f3c83a');
+    } finally {
+      eyes.night = false;
+    }
   });
 });
