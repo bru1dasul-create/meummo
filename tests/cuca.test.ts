@@ -14,6 +14,8 @@ import { World, type Player } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
 import { cornerAtFeet } from '../src/shared/movement';
 import { FakeClock, FakeConn } from './helpers';
+import { readFileSync } from 'node:fs';
+import type { TiledMap } from '../src/shared/map';
 
 const items = loadItemDefs();
 const npcs = loadNpcDefs();
@@ -23,11 +25,15 @@ const monsters = loadMonsterDefs();
 const maps = loadMaps();
 
 describe('a Cuca (os dados)', () => {
-  it('mora na Toca da Cuca, no ponto do [mundo], e vende só frasco e água (paga pouco pelo que você traz)', () => {
+  it('mora na Toca da Cuca, ao lado do caldeirão (onde a colher alcança), e vende só frasco e água', () => {
     const cuca = npcs.get('cuca')!;
     const cave = maps.find((m) => m.id === 'caverna')!;
     expect(cuca).toMatchObject({ name: 'Cuca', title: 'a bruxa da Toca', map: 'caverna', recipes: ['garrafada_cuca'], shop: { sells: ['frasco', 'agua_mina'], buyPercent: 40 } });
-    expect({ x: cuca.x, y: cuca.y }).toEqual(cave.spots.get('toca-da-cuca'));
+    expect(cave.placeAt(cuca.x, cuca.y)?.name).toBe('Toca da Cuca');
+    // a [arte] desenha ela mexendo o caldo quando o caldeirão do mapa está a até 1,5 m (pedido de 24/11)
+    const tiled = JSON.parse(readFileSync('public/assets/maps-iso/caverna.tmj', 'utf8')) as TiledMap;
+    const cauldron = tiled.layers.find((l) => l.name === 'cenario')!.objects!.find((o) => (o.type ?? o.class) === 'caldeirao')!;
+    expect(Math.hypot(cuca.x - cauldron.x / 32, cuca.y - cauldron.y / 32)).toBeLessThanOrEqual(1.5);
     expect(() => checkNpcs(npcs, items, maps)).not.toThrow();
     expect(() => checkRecipes(recipes, items, npcs)).not.toThrow();
   });
@@ -60,8 +66,8 @@ function toca() {
   if (!joined.ok) throw new Error(joined.reason);
   const player = joined.player;
   const cuca = [...world.npcs.values()].find((n) => n.def.id === 'cuca')!;
-  // o pé um passo na frente dela (para o sul, longe do caldeirão)
-  const spot = cornerAtFeet(44.4, 12.4);
+  // o pé uns 70 cm a leste dela (do outro lado do caldeirão)
+  const spot = cornerAtFeet(49.2, 10.3);
   player.fx = spot.x;
   player.fy = spot.y;
   const flush = () => {
