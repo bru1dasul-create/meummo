@@ -1589,6 +1589,11 @@ pontos.push(point('ponto', 172.4, 148, undefined, 'chegada-ilha-do-veu'));
 pontos.push(rect('area', 280, 330, 264, 312, undefined, 'capivaras-varzea'));
 pontos.push(point('ponto', 300, 300, undefined, 'capivaras-varzea-descanso'));
 saidas.push(box('saida', EXIT_NORTH, { mapa: 'capao', chegada: 'chegada-guarapiranga' }, 'Capão Redondo'));
+// (24/11, o dono: "pode fazer a caverna por dentro") a boca da Caverna Sagrada: quem entra nela vai para dentro (o mapa
+// `caverna`, scripts/gen-caverna.ts); quem sai de lá aparece na clareira, na frente da boca (entre as duas oferendas e a
+// fogueira apagada, longe da saída: não entra de novo sem querer)
+saidas.push(rect('saida', round(CAVE.x - 1.5), round(CAVE.x + 1.5), round(CAVE_HILL.y1 - 0.5), round(CAVE_HILL.y1 + 0.6), { mapa: 'caverna', chegada: 'chegada-guarapiranga' }, 'Caverna Sagrada'));
+pontos.push(point('ponto', CAVE.x, round(CAVE_HILL.y1 + 2.4), undefined, 'chegada-caverna'));
 // os bichos (os que já existem no jogo; os de cada lugar do escopo — a Caipora, o Corpo-Seco, o Saci — vêm com a [estrutura])
 const BICHOS: [number, number, number, number, number, string][] = [
   [4, 34, 22, 40, 6, 'sagui'], // o parque, no norte do mirante

@@ -25,6 +25,7 @@
     "gen:shopping": "tsx scripts/gen-shopping.ts",
     "gen:capao": "tsx scripts/gen-capao.ts",
     "gen:guarapiranga": "tsx scripts/gen-guarapiranga.ts",
+    "gen:caverna": "tsx scripts/gen-caverna.ts",
     "render:map": "tsx scripts/render-map.ts",
     "render:characters": "tsx scripts/render-characters.ts"
   },

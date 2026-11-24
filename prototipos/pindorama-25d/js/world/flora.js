@@ -1235,6 +1235,11 @@
         if (p.glyphs && cave && cave.glowPoints) for (const q of cave.glowPoints(p)) out.push(q);
       }
       // a Ilha do Véu (sul.js): as gravuras das pedras em pé e o Véu
+      // o caldeirão da Cuca (sul.js): o fogo embaixo e a poção verde
+      if (p.kind === 'caldeirao') {
+        out.push({ x: p.x, y: p.y, z: 20, r: 190, color: '#ff9a3c', k: 0.55 });
+        out.push({ x: p.x, y: p.y, z: 95, r: 150, color: '#8cff6a', k: 0.4 });
+      }
       if (p.kind === 'menir' || p.kind === 'cortina-veu') {
         const def = PD.city && PD.city.small && PD.city.small[p.kind];
         if (def && def.glowPoints) for (const q of def.glowPoints(p)) out.push(q);

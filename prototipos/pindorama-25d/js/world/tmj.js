@@ -413,7 +413,8 @@
         map.props.push({ kind: 'caverna', ...r0, x: (r0.x0 + r0.x1) / 2, y: (r0.y0 + r0.y1) / 2, h: (pr.altura || 5) * 100, mouth: { x: mx, w: (pr.boca || 3.2) * 100, hm: (pr.bocaAltura || 2.5) * 100 }, glow: pr.brilho || '#3fd6c8', glyphs: pr.inscricoes !== false, paint: pr.pinturas !== false, roots: pr.raizes !== false, tree: pr.arvore !== false });
       } else if (k === 'rocha') {
         // a pedra solta da caverna (sul.js): `raio`, `altura` (m) e `musgo`
-        map.props.push({ kind: 'rocha', x, y, r: (pr.raio || 1) * 100, h: (pr.altura || 1.4) * 100, moss: pr.musgo !== false });
+        // (`escura`: a pedra de dentro da caverna)
+        map.props.push({ kind: 'rocha', x, y, r: (pr.raio || 1) * 100, h: (pr.altura || 1.4) * 100, moss: pr.musgo !== false, dark: !!pr.escura });
       } else if (k === 'oferenda') {
         // a pedra chata com as velas acesas, a cuia, a cabaça e as flores (sul.js): `velas`
         map.props.push({ kind: 'oferenda', x, y, r: 40, candles: pr.velas || 4 });
@@ -427,6 +428,12 @@
         // a pedra em pé da roda da Ilha do Véu (sul.js): `altura` e `largura` (m), `olhando` (para onde olha a face larga,
         // em graus) e `glifo` (a itacoatiara gravada nela: espiral, sol, circulos ou cobra)
         map.props.push({ kind: 'menir', x, y, r: ((pr.largura || 0.9) / 2) * 100, h: (pr.altura || 2.2) * 100, face: pr.olhando || 0, glyph: pr.glifo || 'espiral' });
+      } else if (k === 'caldeirao') {
+        // o caldeirão da Cuca, na caverna por dentro (sul.js): o fogo embaixo e a poção verde borbulhando; `raio`
+        map.props.push({ kind: 'caldeirao', x, y, r: (pr.raio || 0.7) * 100 });
+      } else if (k === 'estante-potes') {
+        // a estante rústica de potes da toca da Cuca (sul.js): a frente para o sul; `altura`
+        map.props.push({ kind: 'estante-potes', ...rect(o), h: (pr.altura || 1.8) * 100 });
       } else if (k === 'bola') {
         // a bola de futebol esquecida no campinho (sul.js)
         map.props.push({ kind: 'bola', x, y, r: 12 });
