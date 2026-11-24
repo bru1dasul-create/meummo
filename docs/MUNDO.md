@@ -34,7 +34,26 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): os saguis raros no Capão (na `main`)**, o dono: "pode fazer do seu jeito, área própria pra cada
+- **Agora (24/11): a Ilha do Véu vestida (na `main`)**, o dono: "pode retomar o Guarapiranga" (a caverna por dentro
+  ele deixou para depois; a saída para Santo Amaro espera o Mapa 03). No gerador, as medidas ficam no alto
+  (`ISLAND_FIG`, `ISLAND_VEIL`, `ISLAND_RING`, `ISLAND_PIER`, `ISLAND_SAND`, `TRAIL_ISLAND`): a **Árvore do Véu** é a
+  maior do jogo (figueira de 18 m, copa 11, tronco 2,4; com 3 m de tronco o pé virava a "saia" lisa); o **Véu** (o
+  `veu`, com `coluna: 12` para a luz subir alta, e a `cortina-veu` nova: as raízes finas que descem da copa e brilham,
+  sempre de frente para a câmera) fica a menos de 4 m do tronco, então a figueira acende os símbolos; do lado, a Pedra
+  da Ilha e uma oferenda. No leste, a **roda de pedras** (9 `menir` novos a 4,4 m da oferenda do meio, um a cada 40°,
+  a face larga com a itacoatiara virada para o meio; de noite elas brilham) no chão batido; no oeste, virado para o
+  Refúgio, o **atracadouro** (deque de 7,5 m, a canoa amarrada, dois esteios com fitas, a fogueira apagada e a areia) com
+  a chegada `chegada-ilha-do-veu` (para a viagem de barco, quando a [estrutura] fizer). A **Trilha do Véu** liga os
+  três. Na beira: pedras com musgo DENTRO da água rasa (encostadas na beira de terra, a caixa abria vão de entalar com a
+  água), taboas no sul, no leste e no oeste, aguapés e cogumelos que brilham. Cuidados com o sorteio: o atracadouro não
+  entrou nos `DECKS` (ele mexia nas plantas da água sorteadas antes); só a colisão da água o deixa de fora. As árvores da
+  ilha saem longe da trilha (3,4 m), do Véu, da pedra, da roda e do atracadouro, e nenhuma tampa esses lugares na tela.
+  O mapa todo saiu igual fora da ilha (só as faixas compridas de água das linhas do atracadouro mudaram). Desenho novo
+  no sul.js (`menir`: a laje em pé com `ringRock`, a gravura com `glyphPath`; `cortina-veu`: tudo no `live`); o flora.js
+  acende as gravuras e o Véu de noite; a tecla M desenha as pedras em pé. Medido: 4 a 13 ms por quadro na ilha (o Refúgio
+  dá 22 a 32). **Próximo no Guarapiranga:** a viagem de barco com o Barqueiro (da [estrutura]), a caverna por dentro (a
+  Cuca, quando o dono quiser), detalhes de cada região e a saída para Santo Amaro (com o Mapa 03).
+- **Antes (24/11): os saguis raros no Capão (na `main`)**, o dono: "pode fazer do seu jeito, área própria pra cada
   um". O **Sagui Ancestral** mora em volta da Figueira do Viaduto (área `sagui_ancestral`, x 39 a 47,5 × y 2 a 11) e o
   galho dele sai da própria figueira (grosso, com folhas na ponta); o **Sagui Corrompido** mora na Mata Profunda do
   noroeste, perto da Pedra do Véu (área `sagui_corrompido`, x 5 a 19 × y 3 a 15), numa árvore seca nova. Um de cada

@@ -726,7 +726,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   plaquinha MIRANTE e o telhado de sapê; não dá para subir), o guarda-corpo do deque com a entrada para a trilha, a
   luneta de moedas virada para a represa, o painel com o mapa da represa e as aves, o banco, os lampiões e as
   helicônias; para o leste, a mata aberta num gramado até a margem. **Com isso, as regiões do Guarapiranga estão
-  vestidas; o dono vai parar neste mapa e voltar depois para os detalhes**
+  vestidas; o dono vai parar neste mapa e voltar depois para os detalhes**. **A Ilha do Véu na main em 24/11** ("pode retomar
+  o Guarapiranga"): a Árvore do Véu, a maior árvore do jogo, com os símbolos acesos no tronco e o Véu na frente (a
+  cortina de raízes que brilham e a luz que sobe alta), a Pedra da Ilha e as oferendas; a roda de 9 pedras em pé com as
+  itacoatiaras viradas para o meio (brilham de noite) e a oferenda no meio; o atracadouro virado para o Refúgio, com a
+  canoa amarrada, os esteios de fitas, a fogueira apagada e a areia; a Trilha do Véu ligando tudo; pedras com musgo na
+  água rasa, taboas, aguapés e cogumelos que brilham. Continua só de barco: a chegada `chegada-ilha-do-veu` fica na ponta
+  do atracadouro, para a viagem com o Barqueiro
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

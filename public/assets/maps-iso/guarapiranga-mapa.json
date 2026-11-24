@@ -275,14 +275,26 @@
     },
     {
       "nome": "Véu da Ilha",
-      "x": 205,
-      "y": 153.5,
+      "x": 195.8,
+      "y": 148.6,
       "tipo": "lugar"
     },
     {
       "nome": "Pedra da Ilha",
-      "x": 206.4,
-      "y": 152.6,
+      "x": 199.6,
+      "y": 149.3,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Roda das Pedras",
+      "x": 211.5,
+      "y": 147.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Atracadouro da Ilha",
+      "x": 170.25,
+      "y": 148,
       "tipo": "lugar"
     },
     {

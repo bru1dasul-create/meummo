@@ -1234,6 +1234,11 @@
         const cave = PD.city && PD.city.small && PD.city.small.caverna;
         if (p.glyphs && cave && cave.glowPoints) for (const q of cave.glowPoints(p)) out.push(q);
       }
+      // a Ilha do Véu (sul.js): as gravuras das pedras em pé e o Véu
+      if (p.kind === 'menir' || p.kind === 'cortina-veu') {
+        const def = PD.city && PD.city.small && PD.city.small[p.kind];
+        if (def && def.glowPoints) for (const q of def.glowPoints(p)) out.push(q);
+      }
       if (p.kind === 'oferenda') out.push({ x: p.x, y: p.y, z: 20, r: 130, color: '#ffc46b', k: 0.6 });
       if (p.kind === 'brasas') out.push({ x: p.x, y: p.y, z: 10, r: 110, color: '#ff8a3a', k: 0.35 });
     }

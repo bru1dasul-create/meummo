@@ -500,7 +500,14 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
       cv.ellipse(x, y, r + 1, r + 1, C.contorno, 0.6);
       cv.ellipse(x, y, r, r, C.pedra);
       cv.ellipse(x - r * 0.3, y - r * 0.3, r * 0.4, r * 0.4, mix(C.pedra, C.branco, 0.5), 0.7);
-    } else if (t === 'pneus') cv.ellipse(x, y, s(num(o, 'raio', 0.5) * M), s(num(o, 'raio', 0.5) * M), C.pneu);
+    } else if (t === 'menir') {
+      // (a pedra em pé da roda da Ilha do Véu, com a gravura que brilha)
+      const r = Math.max(1.5, s((num(o, 'largura', 0.9) / 2) * M));
+      cv.ellipse(x, y, r + 1, r + 1, C.contorno, 0.7);
+      cv.ellipse(x, y, r, r, mix(C.pedra, C.branco, 0.15));
+      cv.ellipse(x, y, r * 0.35, r * 0.35, hex('#3fd6c8'), 0.8);
+    } else if (t === 'cortina-veu') cv.ellipse(x, y, m(1.4), m(0.9), hex('#3fd6c8'), 0.35);
+    else if (t === 'pneus') cv.ellipse(x, y, s(num(o, 'raio', 0.5) * M), s(num(o, 'raio', 0.5) * M), C.pneu);
     else if (t === 'parquinho') cv.ellipse(x, y, s(num(o, 'raio', 0.8) * M), s(num(o, 'raio', 0.8) * M), C.ferrugem, 0.95);
     else if (t === 'fogueira') {
       cv.ellipse(x, y, m(0.7), m(0.7), C.pedra);

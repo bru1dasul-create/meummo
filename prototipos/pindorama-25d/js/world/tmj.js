@@ -419,6 +419,13 @@
       } else if (k === 'esteio') {
         // o tronco fincado com a cabaça, as penas e as fitas no vento (sul.js): `altura`, `fitas`
         map.props.push({ kind: 'esteio', x, y, r: 12, h: (pr.altura || 2.2) * 100, ribbons: pr.fitas !== false });
+      } else if (k === 'menir') {
+        // a pedra em pé da roda da Ilha do Véu (sul.js): `altura` e `largura` (m), `olhando` (para onde olha a face larga,
+        // em graus) e `glifo` (a itacoatiara gravada nela: espiral, sol, circulos ou cobra)
+        map.props.push({ kind: 'menir', x, y, r: ((pr.largura || 0.9) / 2) * 100, h: (pr.altura || 2.2) * 100, face: pr.olhando || 0, glyph: pr.glifo || 'espiral' });
+      } else if (k === 'cortina-veu') {
+        // o Véu da ilha (sul.js): a cortina de raízes que brilham, de frente para a câmera; `largura` e `altura` (m)
+        map.props.push({ kind: 'cortina-veu', x, y, r: 60, w: (pr.largura || 4) * 100, h: (pr.altura || 6) * 100 });
       } else if (k === 'coreto') {
         // o coreto da praça em ruínas (sul.js): a base octogonal de `raio` m no meio da caixa, a `altura` da base, a
         // escada do lado sul (`escada: false`, sem), `ruina` (o reboco caído, a pichação, o gradil arrancado, o buraco
