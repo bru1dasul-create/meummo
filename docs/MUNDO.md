@@ -34,7 +34,24 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): os detalhes do Guarapiranga (na `main`, por partes)**, o dono: "pode seguir com os detalhes do
+- **Agora (24/11): a Caverna Sagrada por dentro (na `main`)**, o dono: "pode fazer a caverna por dentro". Um mapa
+  novo, `caverna` (`scripts/gen-caverna.ts`, `npm run gen:caverna`; o servidor lê sozinho todo `.tmj` de `maps-iso`),
+  60 × 54 m. A entrada é a boca da caverna do Guarapiranga (a saída "Caverna Sagrada", na frente da boca; quem sai de lá
+  aparece em `chegada-caverna`, na clareira, longe da saída). Dentro: o túnel do sul (a cortina de raízes que brilham,
+  cogumelos), o **Salão das Inscrições** (quatro pilares de pedra gravados encostados na parede do fundo, a **Pedra
+  Ancestral** das missões de classe com as oferendas, as estalagmites e o **poço da luz**, a água verde-água com o
+  `veu` de `coluna` alta) e, pela passagem do nordeste, a **Toca da Cuca** (o `caldeirao` borbulhando verde, com fogo e
+  vapor, as `estante-potes` com potes de barro, cabaças, vidros de poção e ervas secando, os barris e os cogumelos roxos;
+  o ponto `toca-da-cuca` é o lugar dela, para quando a [estrutura] e a [arte] fizerem a Cuca). Como é feito: o chão de
+  andar é a união do túnel, do salão, da passagem e da toca numa grade de 0,5 m (a mesma das faixas de colisão), e sai
+  todo pedaço mais estreito que 1,5 m (a beira das formas deixava bicos de meio metro onde o pé entalava); o resto é
+  rocha (faixas de colisão, como as da água) com as pedras da parede na beira (altas e em duas fileiras no fundo, baixas
+  na frente: a câmera olha do sudeste; a caixa quadrada delas avança mais na diagonal, então o afastamento leva isso em
+  conta). O escuro das áreas é limitado perto do herói (para ler o combate), então quem faz a caverna escura são os
+  materiais: chão novo `caverna` (terra escura com pedrinhas e rachaduras) e `caverna-rocha` (quase preta) no
+  ground.js/chao.js, e a `rocha` com `escura: true`. Medido: 5 a 10 ms por quadro. Conferido andando: entra pela boca e
+  sai pela ponta do túnel. Testes: `tests/caverna.test.ts` e a boca no teste do Guarapiranga.
+- **Antes (24/11): os detalhes do Guarapiranga (na `main`, por partes)**, o dono: "pode seguir com os detalhes do
   Guarapiranga". Fiz uma volta pelo mapa e o que ainda estava pelado era o campinho, a várzea de caça, a trilha da margem
   sul e a estrada fechada para Santo Amaro. **1) O campinho:** a arquibancada de cimento (três `muro` colados atrás do
   campo, do lado de trás na tela, então não tampa o jogo), o muro do time (`muro` com `texto: 'BREJO FC'` e `lado:
@@ -73,8 +90,8 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   no sul.js (`menir`: a laje em pé com `ringRock`, a gravura com `glyphPath`; `cortina-veu`: tudo no `live`); o flora.js
   acende as gravuras e o Véu de noite; a tecla M desenha as pedras em pé. Medido: 4 a 13 ms por quadro na ilha (o Refúgio
   dá 22 a 32). A viagem de barco com o Barqueiro a [estrutura] fez no mesmo dia (9b7622c): o Barqueiro da ilha fica no deque,
-  perto da canoa. **Próximo no Guarapiranga:** a caverna por dentro (a Cuca, quando o dono quiser), os detalhes de cada
-  região (em andamento, veja acima) e a saída para Santo Amaro (com o Mapa 03).
+  perto da canoa. **Próximo no Guarapiranga:** a Cuca na toca (da [estrutura] e da [arte]) e a saída para Santo Amaro
+  (com o Mapa 03).
 - **Antes (24/11): os saguis raros no Capão (na `main`)**, o dono: "pode fazer do seu jeito, área própria pra cada
   um". O **Sagui Ancestral** mora em volta da Figueira do Viaduto (área `sagui_ancestral`, x 39 a 47,5 × y 2 a 11) e o
   galho dele sai da própria figueira (grosso, com folhas na ponta); o **Sagui Corrompido** mora na Mata Profunda do

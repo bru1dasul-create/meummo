@@ -203,6 +203,8 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
   const GROUND: Record<string, RGB> = {
     mata: C.mata, 'mata-profunda': C.mataProfunda, grama: C.grama, circulo: C.circulo, terra: C.terra, campinho: C.campinho,
     praca: C.praca, calcada: C.calcada, asfalto: C.asfalto, agua: C.agua, lama: C.lama, trilha: C.trilha, piso: C.calcada,
+    // (a caverna por dentro: o chão de terra escura e a rocha em volta)
+    caverna: hex('#4a4038'), 'caverna-rocha': hex('#1c1917'),
   };
   const TAGS = Object.keys(GROUND);
   for (const o of layer('chao')) {
@@ -507,6 +509,10 @@ export function renderMapImage(map: TMap, escala = 8): MapImage {
       cv.ellipse(x, y, r, r, mix(C.pedra, C.branco, 0.15));
       cv.ellipse(x, y, r * 0.35, r * 0.35, hex('#3fd6c8'), 0.8);
     } else if (t === 'cortina-veu') cv.ellipse(x, y, m(1.4), m(0.9), hex('#3fd6c8'), 0.35);
+    else if (t === 'caldeirao') {
+      cv.ellipse(x, y, m(0.75), m(0.75), C.contorno, 0.9);
+      cv.ellipse(x, y, m(0.55), m(0.55), hex('#6fd14e'), 0.95);
+    }
     else if (t === 'pneus') cv.ellipse(x, y, s(num(o, 'raio', 0.5) * M), s(num(o, 'raio', 0.5) * M), C.pneu);
     else if (t === 'parquinho') cv.ellipse(x, y, s(num(o, 'raio', 0.8) * M), s(num(o, 'raio', 0.8) * M), C.ferrugem, 0.95);
     else if (t === 'fogueira') {

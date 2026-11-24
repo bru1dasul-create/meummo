@@ -153,8 +153,9 @@ describe('Mapa 02 (Guarapiranga): formato do mapa novo', () => {
   it('o servidor lê o mapa: a saída da beira de cima leva ao Capão, e quem chega de lá aparece na estrada, fora da saída', () => {
     const game = GameMap.fromTiled(map as unknown as TiledMap, 'guarapiranga');
     expect(game.metric).toBe(true);
-    expect(game.exits).toHaveLength(1);
-    expect(game.exits[0]).toMatchObject({ to: 'capao', arrival: 'chegada-guarapiranga', y: 0 });
+    // (as saídas: a do Capão, na beira de cima, e a da boca da Caverna Sagrada, desde 24/11)
+    expect(game.exits).toHaveLength(2);
+    expect(game.exits.find((e) => e.to === 'capao')).toMatchObject({ to: 'capao', arrival: 'chegada-guarapiranga', y: 0 });
     expect(game.exitAt(ARRIVAL.x, ARRIVAL.y)).toBeNull();
     expect(game.exitAt(ARRIVAL.x, 0.3)).not.toBeNull(); // andando para o norte pela estrada
     expect(reach(ARRIVAL.x, 0.4)).toBe(true);
@@ -438,7 +439,8 @@ describe('Mapa 02: o mapa inteiro aberto (400 × 320)', () => {
 
   it('a estrada vai até a beira do leste, onde uma barreira fecha a passagem para Santo Amaro (até o mapa de lá ficar pronto)', () => {
     const game = GameMap.fromTiled(map as unknown as TiledMap, 'guarapiranga');
-    expect(game.exits.map((e) => e.to)).toEqual(['capao']);
+    // (nenhuma saída para Santo Amaro: só a do Capão e a da caverna)
+    expect(game.exits.map((e) => e.to).sort()).toEqual(['capao', 'caverna']);
     const barrier = rectOf(named('cenario', 'Saída para Santo Amaro (fechada)'));
     const road = ptsOf(layer('chao').find((o) => o.type === 'asfalto')!);
     const end = road[road.length - 1]!;
@@ -669,6 +671,23 @@ describe('Mapa 02: os detalhes (24/11, "pode seguir com os detalhes do Guarapira
     const camp = varzea.filter((o) => Math.hypot(at(o).x - at(fire).x, at(o).y - at(fire).y) < 4.5).map((o) => o.type);
     for (const t of ['tronco-caido', 'caixote', 'rede']) expect(camp, t).toContain(t);
     expect(reachNear(at(fire).x, at(fire).y + 1.2, 0.4)).toBe(true);
+  });
+
+  it('a boca da Caverna Sagrada leva para dentro (o mapa caverna) e quem sai de lá aparece na frente dela, fora da saída', () => {
+    const game = GameMap.fromTiled(map as unknown as TiledMap, 'guarapiranga');
+    const mouth = game.exits.find((e) => e.to === 'caverna')!;
+    expect(mouth.arrival).toBe('chegada-guarapiranga');
+    const hill = rectOf(named('cenario', 'Caverna Sagrada'));
+    // a saída fica na boca (no meio da frente do morro) e o pé chega nela
+    expect(mouth.x + mouth.w / 2).toBeCloseTo((hill.x0 + hill.x1) / 2, 0);
+    expect(reachNear(mouth.x + mouth.w / 2, hill.y1 + 0.3, 0.3)).toBe(true);
+    // quem volta de lá aparece na clareira, alcançável e fora da saída
+    const back = at(named('pontos', 'chegada-caverna'));
+    expect(game.exitAt(back.x, back.y)).toBeNull();
+    expect(reachNear(back.x, back.y, 0.3)).toBe(true);
+    // e a chegada do outro lado existe no mapa de dentro
+    const inside = GameMap.fromTiled(JSON.parse(readFileSync('public/assets/maps-iso/caverna.tmj', 'utf8')) as TiledMap, 'caverna');
+    expect(inside.spots.has('chegada-guarapiranga')).toBe(true);
   });
 
   it('as placas de madeira da trilha da margem sul e a estrada fechada para Santo Amaro (a chegada de lá fica livre)', () => {

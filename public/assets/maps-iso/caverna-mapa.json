@@ -1,0 +1,55 @@
+{
+  "escala": 8,
+  "largura": 60,
+  "altura": 54,
+  "nomes": [
+    {
+      "nome": "Caverna Sagrada",
+      "x": 30,
+      "y": 27,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Entrada da Caverna",
+      "x": 30,
+      "y": 47.5,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Salão das Inscrições",
+      "x": 27.5,
+      "y": 25,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Toca da Cuca",
+      "x": 47.5,
+      "y": 10,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Raízes do Véu",
+      "x": 28.6,
+      "y": 40.2,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Pedra Ancestral",
+      "x": 23.4,
+      "y": 26.8,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Luz do Poço",
+      "x": 35.2,
+      "y": 26.4,
+      "tipo": "lugar"
+    },
+    {
+      "nome": "Caldeirão da Cuca",
+      "x": 47.6,
+      "y": 10.8,
+      "tipo": "lugar"
+    }
+  ]
+}

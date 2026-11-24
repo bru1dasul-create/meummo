@@ -65,9 +65,19 @@
   PAINT.trilha = { ...PAINT.terra, pebbles: 0.6 };
   PAINT.lama = { ...PAINT.terra, sun: { ...PAINT.terra.sun, rgb: [150, 124, 92], a: 0.2 }, pebbles: 0.3 };
   PAINT.areia = { ...PAINT.terra, sun: { ...PAINT.terra.sun, rgb: [240, 222, 170] }, pebbles: 0.25 };
+  // a caverna por dentro (24/11): terra escura batida, com pedrinhas e rachaduras, sem capim
+  PAINT.caverna = {
+    ...PAINT.terra,
+    wash: { rgb: [62, 56, 50], a: 0.22 },
+    sun: { rgb: [92, 84, 74], a: 0.16, period: 2200, rot: 0.4, blobs: 12, size: [18, 60] },
+    shade: { rgb: [8, 7, 6], a: 0.42, period: 1700, rot: -0.8, blobs: 14, size: [18, 58] },
+    grain: { rgb: [22, 19, 16], a: 0.2, period: 560, rot: 0.3, blobs: 110, size: [3, 12] },
+    leaves: ['#3a3530', '#2a2622', '#4a443d', '#221e1b'],
+    pebbles: 0.75, tufts: 0, cracks: 0.14,
+  };
 
   /** As superfícies (o que pode estar "por baixo" de um ponto do chão); o resto das formas é detalhe. */
-  const SURFACE = new Set(['mata', 'mata-profunda', 'grama', 'clareira', 'terra', 'trilha', 'lama', 'areia', 'agua', 'asfalto', 'rua', 'calcada', 'praca', 'pedra', 'circulo', 'piso', 'campinho', 'faixa']);
+  const SURFACE = new Set(['mata', 'mata-profunda', 'grama', 'clareira', 'terra', 'trilha', 'lama', 'areia', 'agua', 'asfalto', 'rua', 'calcada', 'praca', 'pedra', 'circulo', 'piso', 'campinho', 'faixa', 'caverna', 'caverna-rocha']);
   const PLANTED = new Set(['mata', 'mata-profunda', 'grama', 'clareira']);
   const natural = (type) => PAINT[type] || null;
 

@@ -1955,6 +1955,8 @@
   // `oferenda`s (pedra chata com velas acesas, flores, a cabaça e a cuia), os `esteio`s com as fitas no vento e as
   // pedras soltas (`rocha`: a pedra da cachoeira, mais quente). Não dá para entrar (a boca pode virar uma saída depois).
   const CAVE_ROCK = { dark: [58, 52, 46], light: [184, 172, 150] };
+  /** A pedra de dentro da caverna (`escura`): quase sem luz, a parede some no escuro. */
+  const DARK_ROCK = { dark: [26, 24, 24], light: [104, 98, 92] };
   const OCHRE = '#9b3d24';
   const GLOW_SPRITES = new Map();
   /** Um círculo de luz que some para a beira, de uma cor (64 px, feito uma vez). */
@@ -2428,7 +2430,7 @@
     shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, d.r * 0.9, d.h * 0.5),
     box: (cam, d, z0) => volBox(cam, d.x - d.r * 1.15, d.x + d.r * 1.15, d.y - d.r * 1.15, d.y + d.r * 1.15, z0 - 8, z0 + d.h + 14, 16),
     paint(ctx, cam, d, z0, ink) {
-      facetRock(ctx, cam, { x: d.x, y: d.y, z0, rx: d.r, ry: d.r * 0.86, h: d.h, seed: Math.round(d.x * 3 + d.y * 7), moss: d.moss, colors: CAVE_ROCK }, ink);
+      facetRock(ctx, cam, { x: d.x, y: d.y, z0, rx: d.r, ry: d.r * 0.86, h: d.h, seed: Math.round(d.x * 3 + d.y * 7), moss: d.moss, colors: d.dark ? DARK_ROCK : CAVE_ROCK }, ink);
     },
   };
   /** A oferenda: a pedra chata com as velas acesas, a cuia com frutas, a cabaça e as flores. */
@@ -2941,6 +2943,246 @@
       }
       ctx.restore();
       ctx.globalAlpha = A;
+    },
+  };
+
+  // ------------------------------------------------------------------ a caverna por dentro (a Toca da Cuca)
+  // (24/11, o dono: "pode fazer a caverna por dentro") O caldeirão da Cuca: o tripé de pedras com a lenha e o fogo
+  // embaixo, a panela de ferro e a poção verde borbulhando (o fogo, as bolhas e o vapor mexem a cada quadro: `overlay`);
+  // e a estante rústica de potes (`estante-potes`): os paus, as tábuas, os potes de barro, as cabaças, os vidros de
+  // poção e as ervas secando penduradas.
+  const BREW = '#6fd14e';
+  /** Uma linha grossa com o contorno de tinta (de `a` a `b`, na tela). */
+  function inkLine2(ctx, a, b, color, w, ink) {
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = w + ink * 2;
+    line2(ctx, a, b);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = w;
+    line2(ctx, a, b);
+  }
+  function cauldronGeom(cam, d, z0) {
+    const R = d.r;
+    const zr = z0 + 92; // a boca da panela
+    const c = cam.p({ x: d.x, y: d.y, z: zr });
+    return { R, zr, c, rx: R * cam.zoom, ry: R * 0.5 * cam.zoom, deep: 62 * 0.866 * cam.zoom };
+  }
+  small.caldeirao = {
+    fades: false,
+    height: () => 120,
+    blocks: 0,
+    shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, d.r * 0.95, 40),
+    box: (cam, d, z0) => volBox(cam, d.x - d.r - 40, d.x + d.r + 40, d.y - d.r - 40, d.y + d.r + 40, z0 - 6, z0 + 230, 18),
+    paint(ctx, cam, d, z0, ink) {
+      const rnd = seeded(d.x, d.y, 4611);
+      const zm = cam.zoom;
+      const g = cauldronGeom(cam, d, z0);
+      // as pedras em roda e a lenha (embaixo da panela)
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * M.TAU + rnd() * 0.3;
+        facetRock(ctx, cam, { x: d.x + Math.cos(a) * d.r * 0.95, y: d.y + Math.sin(a) * d.r * 0.95, z0, rx: 17, ry: 14, h: 16, seed: Math.round(d.x + k * 13), colors: CAVE_ROCK }, ink);
+      }
+      for (const [a0, a1] of [[-0.6, 2.4], [0.9, 3.9]]) {
+        const p0 = cam.p({ x: d.x + Math.cos(a0) * d.r * 0.7, y: d.y + Math.sin(a0) * d.r * 0.7, z: z0 + 10 });
+        const p1 = cam.p({ x: d.x + Math.cos(a1) * d.r * 0.7, y: d.y + Math.sin(a1) * d.r * 0.7, z: z0 + 10 });
+        inkLine2(ctx, p0, p1, '#5a3a22', Math.max(2, 7 * zm), ink);
+      }
+      // as três pernas da panela
+      for (const a of [Math.PI * 0.15, Math.PI * 0.85, Math.PI * 1.5]) {
+        const top = cam.p({ x: d.x + Math.cos(a) * g.R * 0.62, y: d.y + Math.sin(a) * g.R * 0.62, z: z0 + 34 });
+        const foot = cam.p({ x: d.x + Math.cos(a) * g.R * 0.78, y: d.y + Math.sin(a) * g.R * 0.78, z: z0 });
+        inkLine2(ctx, foot, top, '#26262b', Math.max(2, 6 * zm), ink);
+      }
+      // o bojo de ferro (a barriga que desce da boca), com o brilho do lado da luz
+      const { c, rx, ry, deep } = g;
+      const body = new Path2D();
+      body.moveTo(c.x - rx, c.y);
+      body.bezierCurveTo(c.x - rx * 1.08, c.y + deep * 0.75, c.x - rx * 0.6, c.y + deep * 1.08, c.x, c.y + deep * 1.08);
+      body.bezierCurveTo(c.x + rx * 0.6, c.y + deep * 1.08, c.x + rx * 1.08, c.y + deep * 0.75, c.x + rx, c.y);
+      body.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI, false);
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 2.4;
+      ctx.stroke(body);
+      const iron = ctx.createLinearGradient(c.x - rx, 0, c.x + rx, 0);
+      iron.addColorStop(0, '#4a4a52');
+      iron.addColorStop(0.35, '#2e2e34');
+      iron.addColorStop(1, '#1b1b20');
+      ctx.fillStyle = iron;
+      ctx.fill(body);
+      ctx.strokeStyle = 'rgba(220, 220, 235, 0.25)';
+      ctx.lineWidth = Math.max(1, 2.2 * zm);
+      ctx.beginPath();
+      ctx.ellipse(c.x - rx * 0.45, c.y + deep * 0.45, rx * 0.18, deep * 0.32, 0.3, Math.PI * 0.9, Math.PI * 1.6);
+      ctx.stroke();
+      // a boca: a beirada grossa e a poção verde lá dentro (as bolhas e o vapor vêm no `overlay`)
+      ctx.fillStyle = '#17171b';
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, rx, ry, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.fillStyle = BREW;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + ry * 0.12, rx * 0.84, ry * 0.74, 0, 0, M.TAU);
+      ctx.fill();
+      ctx.strokeStyle = '#3d3d45';
+      ctx.lineWidth = Math.max(1.5, 5 * zm);
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, rx * 0.96, ry * 0.94, 0, 0, M.TAU);
+      ctx.stroke();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = ink * 1.6;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, rx, ry, 0, 0, M.TAU);
+      ctx.stroke();
+      // a colher de pau encostada na beirada
+      const s0 = cam.p({ x: d.x + g.R * 0.3, y: d.y - g.R * 0.2, z: g.zr - 10 }), s1 = cam.p({ x: d.x + g.R * 0.95, y: d.y - g.R * 0.9, z: g.zr + 70 });
+      inkLine2(ctx, s0, s1, '#8a5a32', Math.max(1.5, 4 * zm), ink);
+    },
+    overlay(ctx, cam, d, z0, time) {
+      const zm = cam.zoom;
+      const A = ctx.globalAlpha;
+      const g = cauldronGeom(cam, d, z0);
+      ctx.save();
+      // o fogo embaixo da panela (labaredas que tremem)
+      const base = cam.p({ x: d.x, y: d.y + d.r * 0.35, z: z0 + 6 });
+      for (let k = 0; k < 5; k++) {
+        const f = 0.5 + 0.5 * Math.sin(time * 9 + k * 2.3);
+        const x = base.x + (k - 2) * 7 * zm, h = (16 + 12 * f) * zm, w = (6 + 2 * f) * zm;
+        ctx.globalAlpha = A * 0.9;
+        ctx.fillStyle = k % 2 ? '#ffb347' : '#ff7a2a';
+        ctx.beginPath();
+        ctx.moveTo(x - w, base.y);
+        ctx.quadraticCurveTo(x - w * 0.4, base.y - h * 0.6, x + Math.sin(time * 7 + k) * 2 * zm, base.y - h);
+        ctx.quadraticCurveTo(x + w * 0.4, base.y - h * 0.6, x + w, base.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // as bolhas da poção (cada uma cresce e estoura)
+      const { c, rx, ry } = g;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + ry * 0.12, rx * 0.84, ry * 0.74, 0, 0, M.TAU);
+      ctx.clip();
+      const rr = M.rng(4621);
+      for (let k = 0; k < 7; k++) {
+        const ph = (time * (0.6 + rr() * 0.5) + rr()) % 1;
+        const bx = c.x + (rr() - 0.5) * rx * 1.3, by = c.y + ry * 0.1 + (rr() - 0.5) * ry * 1.1;
+        ctx.globalAlpha = A * (1 - ph) * 0.9;
+        ctx.strokeStyle = '#d8ffb8';
+        ctx.lineWidth = Math.max(0.8, 1.4 * zm);
+        ctx.beginPath();
+        ctx.arc(bx, by, (2 + ph * 6) * zm, 0, M.TAU);
+        ctx.stroke();
+      }
+      ctx.restore();
+      // o vapor verde subindo e o brilho em cima da boca
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = A * (0.28 + 0.1 * Math.sin(time * 1.7));
+      const R = rx * 1.5;
+      ctx.drawImage(glowSprite(BREW), c.x - R, c.y - R * 0.8, R * 2, R * 1.4);
+      ctx.restore();
+      ctx.save();
+      const rs = M.rng(4631);
+      for (let k = 0; k < 4; k++) {
+        const ph = (time * (0.18 + rs() * 0.1) + rs()) % 1;
+        const sx = c.x + (rs() - 0.5) * rx * 0.9 + Math.sin(time * 1.3 + k) * 6 * zm;
+        const sy = c.y - ph * 110 * zm;
+        ctx.globalAlpha = A * Math.sin(ph * Math.PI) * 0.35;
+        ctx.fillStyle = '#c9f5b4';
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, (8 + ph * 14) * zm, (5 + ph * 8) * zm, 0, 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = A;
+    },
+  };
+  small['estante-potes'] = {
+    fades: true,
+    height: (d) => d.h + 10,
+    blocks: 0,
+    shadow: (p, cam, d) => H.boxShadow(p, cam, d.x0, d.x1, d.y0, d.y1, d.h * 0.8),
+    box: (cam, d, z0) => volBox(cam, d.x0 - 20, d.x1 + 20, d.y0 - 20, d.y1 + 30, z0 - 6, z0 + d.h + 20, 16),
+    paint(ctx, cam, d, z0, ink) {
+      const rnd = seeded(d.x0, d.y0, 4641);
+      const zm = cam.zoom;
+      const P = (x, y, z) => cam.p({ x, y, z });
+      const WOODS = { front: '#7a5232', side: '#5e3e24', top: '#94683f' };
+      // os quatro paus (os de trás primeiro) e as tábuas (de baixo para cima), com o que fica em cima de cada uma
+      for (const x of [d.x0 + 4, d.x1 - 10]) H.box(ctx, cam, x, x + 6, d.y0, d.y0 + 6, z0, z0 + d.h, WOODS, ink);
+      const levels = [z0 + 26, z0 + 86, z0 + 146];
+      const POTS = ['#a8552e', '#c06a38', '#8f4a2a'];
+      const GLASS = ['#7be04e', '#b36bff', '#f2b632', '#4fd6c8'];
+      for (const [i, zt] of levels.entries()) {
+        H.box(ctx, cam, d.x0, d.x1, d.y0, d.y1, zt - 6, zt, WOODS, ink);
+        const n = Math.max(3, Math.round((d.x1 - d.x0) / 42));
+        for (let k = 0; k < n; k++) {
+          const x = d.x0 + 18 + ((d.x1 - d.x0 - 36) * (k + 0.5)) / n + (rnd() - 0.5) * 8;
+          const q = P(x, d.y1 - 14, zt);
+          const kind = rnd();
+          if (kind < 0.4) {
+            // o pote de barro (barriga redonda, o gargalo e a boca)
+            const r = (9 + rnd() * 4) * zm;
+            ctx.fillStyle = INK;
+            ctx.beginPath();
+            ctx.ellipse(q.x, q.y - r, r + ink, r + ink, 0, 0, M.TAU);
+            ctx.fill();
+            ctx.fillStyle = POTS[Math.floor(rnd() * POTS.length)];
+            ctx.beginPath();
+            ctx.ellipse(q.x, q.y - r, r, r, 0, 0, M.TAU);
+            ctx.fill();
+            ctx.fillRect(q.x - r * 0.45, q.y - r * 2.3, r * 0.9, r * 0.5);
+            ctx.fillStyle = 'rgba(255, 220, 180, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(q.x - r * 0.35, q.y - r * 1.3, r * 0.25, r * 0.4, 0.4, 0, M.TAU);
+            ctx.fill();
+          } else if (kind < 0.65) {
+            // a cabaça (duas bolas, a de baixo maior)
+            for (const [dy, rr] of [[0, 9], [-15, 6]]) {
+              ctx.fillStyle = INK;
+              ctx.beginPath();
+              ctx.ellipse(q.x, q.y + (dy - rr) * zm, rr * zm + ink, rr * zm + ink, 0, 0, M.TAU);
+              ctx.fill();
+              ctx.fillStyle = '#c9a25a';
+              ctx.beginPath();
+              ctx.ellipse(q.x, q.y + (dy - rr) * zm, rr * zm, rr * zm, 0, 0, M.TAU);
+              ctx.fill();
+            }
+          } else {
+            // o vidro de poção (o líquido colorido, a tampa de rolha e o brilho)
+            const w = 7 * zm, h = (16 + rnd() * 8) * zm;
+            ctx.fillStyle = INK;
+            ctx.fillRect(q.x - w - ink, q.y - h - ink, (w + ink) * 2, h + ink);
+            ctx.fillStyle = 'rgba(210, 235, 240, 0.85)';
+            ctx.fillRect(q.x - w, q.y - h, w * 2, h);
+            ctx.fillStyle = GLASS[Math.floor(rnd() * GLASS.length)];
+            ctx.fillRect(q.x - w, q.y - h * 0.62, w * 2, h * 0.62);
+            ctx.fillStyle = '#8a5a32';
+            ctx.fillRect(q.x - w * 0.6, q.y - h - 4 * zm, w * 1.2, 4 * zm);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.fillRect(q.x - w * 0.6, q.y - h * 0.9, 2 * zm, h * 0.6);
+          }
+        }
+        // as ervas secando, penduradas na tábua de cima
+        if (i === levels.length - 1) {
+          for (let k = 0; k < 4; k++) {
+            const x = d.x0 + 20 + ((d.x1 - d.x0 - 40) * k) / 3;
+            const top = P(x, d.y1 + 2, zt - 6);
+            ctx.strokeStyle = '#3a2a1c';
+            ctx.lineWidth = Math.max(0.8, 1 * zm);
+            line2(ctx, top, { x: top.x, y: top.y + 10 * zm });
+            for (let j = 0; j < 6; j++) {
+              ctx.strokeStyle = j % 2 ? '#6f8f3a' : '#8aa84a';
+              ctx.lineWidth = Math.max(1, 2 * zm);
+              line2(ctx, { x: top.x, y: top.y + 10 * zm }, { x: top.x + (j - 2.5) * 2.4 * zm, y: top.y + (26 + rnd() * 8) * zm });
+            }
+          }
+        }
+      }
+      // os paus da frente e a tábua de cima
+      for (const x of [d.x0 + 4, d.x1 - 10]) H.box(ctx, cam, x, x + 6, d.y1 - 6, d.y1, z0, z0 + d.h, WOODS, ink);
+      H.box(ctx, cam, d.x0 - 6, d.x1 + 6, d.y0 - 4, d.y1 + 4, z0 + d.h - 6, z0 + d.h, WOODS, ink);
     },
   };
 

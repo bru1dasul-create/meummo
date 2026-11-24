@@ -740,6 +740,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   caça (fogueira apagada, tronco de sentar, caixotes e a rede secando); a trilha da margem sul, as placas de madeira com
   setas nos cruzamentos (Caverna, Barragem, Refúgio, Várzea de Caça); e a estrada fechada para Santo Amaro, a placa
   pintada à mão, a árvore caída atravessada depois da barreira e um carro abandonado tomado pelo mato
+- [x] **[mundo]** A Caverna Sagrada por dentro (24/11, "pode fazer a caverna por dentro"; na main): o mapa novo
+  `caverna` (`npm run gen:caverna`), com a entrada pela boca da caverna do Guarapiranga e a volta pela ponta do túnel. O
+  túnel com a cortina de raízes que brilham; o Salão das Inscrições com os pilares gravados, a Pedra Ancestral (a das
+  missões de classe) com as oferendas, as estalagmites e o poço da luz verde-água; e a Toca da Cuca com o caldeirão
+  borbulhando, as estantes de potes, os barris e os cogumelos roxos. Escura (chão e pedras escuros), com a luz do que
+  brilha. Teste: `tests/caverna.test.ts`
+- [ ] **[estrutura + arte]** A Cuca na toca: o lugar dela é o ponto `toca-da-cuca` do mapa `caverna` (o bicho, a
+  conversa ou a luta e o desenho, quando o dono quiser)
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

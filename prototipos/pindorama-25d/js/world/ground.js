@@ -602,6 +602,9 @@
     calcada: { base: '#8f8c82', dots: ['#7f7c73', '#a19e93', '#6f6c64'], n: 6, size: [3, 7] },
     rua: { base: '#3f4247', dots: ['#4a4d53', '#35383c', '#55585e'], n: 7, size: [3, 7] },
     pedra: { base: '#77736b', dots: ['#67635c', '#8a867d', '#5a564f'], n: 5, size: [6, 12] },
+    // a caverna por dentro (24/11): o chão de terra e pedra, escuro, e a rocha (quase preta) para fora das paredes
+    caverna: { base: '#2e2925', dots: ['#26221f', '#38322c', '#433d36', '#1e1b18'], n: 6, size: [5, 12] },
+    'caverna-rocha': { base: '#171514', dots: ['#1f1c1a', '#121110', '#272421'], n: 5, size: [8, 18] },
     // vila (etapa 4b): praça de pedra portuguesa e faixa de pedestre (pintores próprios logo abaixo)
     praca: { base: '#e6e0d2', dots: [], n: 0, size: [0, 0], edge: '#8f8c82' },
     faixa: { base: '#3d4045', dots: [], n: 0, size: [0, 0] },

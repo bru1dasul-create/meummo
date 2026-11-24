@@ -14,6 +14,8 @@
   (`billings.tmj`, labirinto de canais; a Iara vai morar lá), pela trilha do brejo ao sul (camada `saidas`).
   De Santo Amaro, pela rua do meio ao sul: **Terminal Santo Amaro** (`terminal-santo-amaro.tmj`, plataformas A a D);
   pela porta de vidro do prédio a oeste do largo: **Shopping do Largo Treze** (`shopping-largo-treze.tmj`, mapa de dentro).
+  No mundo novo (2.5D, `public/assets/maps-iso/`): do Guarapiranga, pela boca da Caverna Sagrada, a **Caverna Sagrada por
+  dentro** (`caverna.tmj`: o salão das inscrições e a toca da Cuca).
   Lugares reais sim, **marcas não**.
 - Visão do jogo: `docs/DESIGN.md`. Onde estamos e o que vem depois: `docs/ROADMAP.md`.
   Como funciona por dentro: `docs/ARQUITETURA.md`.
@@ -42,7 +44,7 @@
    edite um passo antigo: os personagens de quem já joga são convertidos por eles.
 7. Ao concluir algo do roteiro, marque em `docs/ROADMAP.md`.
 8. Comentários e textos do jogo em português; nomes no código em inglês.
-9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro`, `gen:billings`, `gen:terminal`, `gen:shopping` ou `gen:capao` com `--force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
+9. Não rode `npm run gen:map -- --force` (nem `gen:santo-amaro`, `gen:billings`, `gen:terminal`, `gen:shopping`, `gen:capao`, `gen:guarapiranga` ou `gen:caverna` com `--force`) sem pedir: apaga edições feitas no Tiled. Para conferir, gere em outro
    arquivo com `--out` e compare as camadas antes de substituir.
 
 ## Divisão do trabalho (3 chats)
@@ -96,6 +98,7 @@ com o dono, onde estamos e próximos passos): `docs/ESTRUTURA.md` da [estrutura]
 - `npm run gen:terminal -- --out arquivo.tmj` — idem para o Terminal Santo Amaro
 - `npm run gen:shopping -- --out arquivo.tmj` — idem para o Shopping do Largo Treze
 - `npm run gen:capao -- --out arquivo.tmj` — Mapa 01 do mundo novo (2.5D), em `public/assets/maps-iso/` (formato novo)
+- `npm run gen:caverna -- --out arquivo.tmj` — a Caverna Sagrada por dentro (a entrada é a boca da caverna do Guarapiranga)
 - `npm run render:map` — desenha todos os mapas em `docs/mapa-<id>.png` (azul-claro = saídas)
 - `npm run render:characters` — prancha de personagens (animações, equipamentos, Dona Iracema) e dos monstros pintados em `docs/personagens.png`
   (`-- --escala 6 --so Beto` para ver um de perto, `-- --tudo` para todos os quadros)
