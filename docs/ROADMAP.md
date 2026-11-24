@@ -1071,7 +1071,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - cada vespa pintada: cintura fina, abdômen de listras com o ferrão, cara amarela, olhos, antenas, asas e perninhas;
     - no aviso, o enxame se fecha e zune com os ferrões curvados para fora; na ferroada, mergulha num anel largo;
     - o tranco para longe de quem bateu e as vespas caindo com as faíscas.
-  - [ ] Filhote de Boitatá
+  - [x] **Filhote de Boitatá** (24/11, no ramo; esperando o "pode" para a main):
+    - o corpo de chama pintado (contorno quente, miolo claro, escamas de brasa), as labaredas de verdade, as fagulhas
+      e a cabeça de filhote com os olhões de fogo;
+    - no aviso, ergue a cabeça e o fogo dobra e fica branco; na investida, corre de verdade os 6 m (antes pulava);
+    - o tranco, o apagar com as faíscas roxas e o amanhecer só apagando.
 - [x] **[arte]** O selinho do "!" (23/11, pedido do dono): o "!" dos bichos que percebem o herói vira um selo amarelo em
   cima do nome, sem o balão (com vários juntos, os balões se empilhavam com o bico comprido)
 - [x] **O aviso dos golpes no chão** (23/11, pedido do dono: "arruma esses golpes do quati aparece em quadrado vermelho,
