@@ -765,7 +765,9 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     `tests/cuca-art.test.ts`. Detalhes no `docs/ARTE.md`
     - [x] **[estrutura]** mover a Cuca para (48.5, 10.1), ao lado do caldeirão, e trocar o `icone` da `garrafada_cuca`
       para `garrafada_cuca` (24/11, na main)
-    - [ ] **[mundo]** a colher encostada do caldeirão aponta para onde a Cuca fica: tirar ou virar para o outro lado
+    - [x] **[mundo]** a colher encostada do caldeirão aponta para onde a Cuca fica: tirar ou virar para o outro lado —
+      24/11, o dono: "pode fazer" (na main; conferida no PC e no celular, de dia e de noite): a colher de pau foi para a
+      beirada do oeste, com o cabo para a esquerda na tela; o leste fica para a Cuca e a colher dela
   - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (24/11, o dono: "pode fazer a Cuca virar chefe de
     luta")
     - [x] **[mundo]** a arena (na main): a toca maior (uns 22 × 14 m de chão; o mapa `caverna` foi a 66 m de largura),

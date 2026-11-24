@@ -3035,8 +3035,9 @@
       ctx.beginPath();
       ctx.ellipse(c.x, c.y, rx, ry, 0, 0, M.TAU);
       ctx.stroke();
-      // a colher de pau encostada na beirada
-      const s0 = cam.p({ x: d.x + g.R * 0.3, y: d.y - g.R * 0.2, z: g.zr - 10 }), s1 = cam.p({ x: d.x + g.R * 0.95, y: d.y - g.R * 0.9, z: g.zr + 70 });
+      // a colher de pau encostada na beirada, do lado oeste (o cabo para a esquerda na tela): o lado leste é o lugar da
+      // Cuca, que mexe com a colher dela (data/npcs.json; pedido da [arte] em 24/11)
+      const s0 = cam.p({ x: d.x - g.R * 0.3, y: d.y + g.R * 0.2, z: g.zr - 10 }), s1 = cam.p({ x: d.x - g.R * 0.95, y: d.y + g.R * 0.9, z: g.zr + 70 });
       inkLine2(ctx, s0, s1, '#8a5a32', Math.max(1.5, 4 * zm), ink);
     },
     overlay(ctx, cam, d, z0, time) {

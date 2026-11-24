@@ -34,7 +34,12 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a Cuca chefe no mapa (na `main`)**, o dono: "gera o mapa de novo com a Cuca chefe". A [estrutura]
+- **Agora (24/11): a colher do caldeirão virou para o outro lado (na `main`)**, o dono: "pode fazer" (pedido da [arte]
+  no roteiro). A bruxa fica a leste do caldeirão, em (48,5; 10,1) (`data/npcs.json`, da [estrutura]), mexendo com a
+  colher dela; a colher de pau encostada do desenho do `caldeirao` (`sul.js`) apontava justo para ela. Agora fica na
+  beirada do oeste, com o cabo para a esquerda na tela. O ponto `toca-da-cuca` do mapa não é usado pelo servidor (a
+  [estrutura] disse que não precisa mudar); fica como marca do lugar da toca.
+- **Antes (24/11): a Cuca chefe no mapa (na `main`)**, o dono: "gera o mapa de novo com a Cuca chefe". A [estrutura]
   fez a luta (a chave `cuca` em `data/monsters.json`: de dia a bruxa, de noite a chefe) e pediu para entrar na `main`
   junto com a área, porque o teste da caverna exige a área quando a chave existe: juntei o ramo dela no meu, gerei a
   caverna e mandei as duas partes juntas. A área `cuca` (camada `monstros`, quantidade 1) ficou **no fundo da toca, do
