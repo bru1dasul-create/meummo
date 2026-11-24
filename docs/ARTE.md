@@ -427,6 +427,42 @@
 - **Rascunho `boitata/`:** `prancha.cjs` (fundo escuro), `custo.cjs`, `jogo.cjs`, `celular.cjs`, `anim.cjs` e
   `antes/`. Entregues: `entrega/boitata-antes-depois.png` e `.gif`.
 
+### A Cuca, etapa 1: a bruxa da Toca (24/11, prévia aprovada com o "pode fazer" do dono; no ramo, esperando o "pode" para a main)
+- **O desenho (`creatures/cuca.js`, original: nada da Cuca da TV):** a vovó ranzinza e corcunda com a **cabeça de
+  jacaré-de-papo-amarelo** (o focinho largo e chato, os dentinhos pela beirada, o papo amarelo, os olhos de fenda em
+  cima de dois calombos e as sobrancelhas brancas e bravas), o cabelo branco desgrenhado no coque com gravetos e folhas,
+  o **xale de crochê mostarda** (o remendo vinho e a franja), o vestido roxo-escuro com o avental manchado, o colar de
+  sementes com o vidrinho, os pés de garra e a colher de pau. ~1,55 m com o coque (`S = 1.15` sobre medidas de 1,30 m).
+  Escolhi o mostarda e o roxo porque, no escuro da caverna, o vinho com verde do primeiro rascunho virava um bloco só.
+- **Mexendo o caldeirão:** a view (`view.js`, `_nearProp`) passa o caldeirão do mapa (o `caldeirao` do `sul.js`, do
+  [mundo]) que estiver a até 2,6 m, ao criar e ao mover o NPC; a até 1,5 m do meio dele (`REACH`), ela **se vira para
+  ele** (`setCauldron`; o servidor manda os NPCs olhando para baixo) e mexe por cima da beirada (a boca a 92 cm, o caldo
+  a 88: o cabo some no caldo, com o anelzinho). Sem caldeirão perto: a **colher em pé**, como cetro. A colher fica na
+  mão do lado da câmera (NPC não vira; na etapa de chefe, rever).
+- **Olha o herói** a até 5 m (só a cabeça, até 63°); **falando** (`talk`): a bocarra mexe e a colher sai do caldo
+  pingando e sacode; **a risadinha** de vez em quando (os ombros sacudindo, a cabeça para trás, a boca aberta); pisca;
+  luz própria verde fraca (`light`), para ela aparecer no escuro.
+- **A ordem com o caldeirão** (o `behind` do `world.js`, pela caixa do pé): no lugar pedido à [estrutura], (48.5, 10.1),
+  ela sai depois do caldeirão (o braço e a colher por cima da beirada). Em (48.35, 10.05), o primeiro que pedi, empatava
+  e o caldo cobria a mão dela: mandei a correção.
+- **Erro achado no caminho:** o "para cima" da cabeça (`hu = cross(hs, hf)`) apontava para baixo, e a cabeça saía de
+  ponta-cabeça (o queixo abrindo para cima e o coque embaixo; de frente parecia um bicho qualquer). Agora
+  `cross(hf, hs)`, com teste.
+- **O ícone `garrafada_cuca`** (`paintedIcons.ts`): a cabaça de vidro escuro com o caldo verde brilhando embaixo, as
+  bolhas e as ervas, o lacre de cera verde escorrendo e um dente de jacaré no cordão da cintura.
+- **O peso:** ~2,1 ms no PC e ~1,1 ms no celular (o dobro da jararaca); ela é uma só, numa caverna sem monstros.
+- **Conferido:** as pranchas (no jogo com o caldeirão de verdade do `sul.js`, os 4 lados e o tamanho do jogo ao lado do
+  Birim), o ícone (128, 48, 32 e 18 px, ao lado das outras garrafadas) e o jogo de verdade na caverna: no lugar de hoje
+  (a colher em pé) e levada pelo painel para (48.5, 10.1) (mexendo, olhando o herói e falando, com a loja aberta), no
+  PC e no celular deitado. Sem erros. Teste: `tests/cuca-art.test.ts`.
+- **Esperando:** a [estrutura] mover a Cuca para (48.5, 10.1) e, com o ícone na main, trocar o `icone` da
+  `garrafada_cuca` de `garrafada_grande` para `garrafada_cuca`; o [mundo] tirar (ou virar para o outro lado) a colher
+  encostada do caldeirão, que aponta para o nordeste, bem onde ela fica (passa atrás da cabeça dela).
+- **Etapa 2 (chefe):** a cantiga de ninar e o caldo jogado, quando a [estrutura] fizer a luta.
+- **Rascunho `cuca/`:** `prancha2.cjs` (com o caldeirão de verdade; `SUL=...` troca o `sul.js`), `perto2.cjs`
+  (de perto; `FIRST=1 DIST=114` como no jogo), `custo.cjs`, `mundo-sem-colher/sul.js` (cópia sem a colher encostada,
+  só para a prévia), `icone/` e `antes/`; `cuca-jogo/jogo.cjs <pasta>` (o jogo, com o painel movendo a Cuca).
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).

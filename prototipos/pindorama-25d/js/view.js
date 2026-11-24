@@ -104,6 +104,8 @@
         // o bicho que já aparece dormindo (o Joaquim no sofá) ou pendurado no galho (o Sagui)
         if (a.asleep && creature.setAsleep) creature.setAsleep(true);
         if (a.galho && creature.setPerch) creature.setPerch(perchOf(a.galho), true);
+        // a Cuca mexe o caldeirão do mapa que estiver perto dela (o do sul.js); sem ele, segura a colher em pé
+        if (creature.setCauldron) creature.setCauldron(this._nearProp('caldeirao', creature.pos, 260));
         const actor = { id, kind: a.kind, type: a.type, name: a.name || '', me: false, creature, ch: creature, rig: null, speech: '', speechUntil: 0 };
         this.actors.set(id, actor);
         if (this.followId === null && a.me) this.follow(id);
@@ -134,6 +136,21 @@
       return actor;
     }
 
+    /** A coisa do mapa do tipo `kind` mais perto de `pos` (cm), até `max` cm, ou null. */
+    _nearProp(kind, pos, max) {
+      let best = null;
+      let bd = max;
+      for (const p of (this.map && this.map.props) || []) {
+        if (p.kind !== kind) continue;
+        const d = Math.hypot(p.x - pos.x, p.y - pos.y);
+        if (d < bd) {
+          bd = d;
+          best = p;
+        }
+      }
+      return best;
+    }
+
     /**
      * A view sabe desenhar este tipo? (o motor pergunta para os bichos, kind 'pet': sem desenho, ele desenha um
      * provisório por cima). Hoje: o Joaquim, o gato da vó (js/creatures/gato.js).
@@ -148,6 +165,8 @@
       if (!a) return;
       if (a.creature) {
         a.creature.moveTo(x * 100, y * 100, Number.isFinite(angle) ? rad(angle) : undefined, opts && opts.durationMs, !!(opts && opts.dash));
+        // (a Cuca levada para outro lugar, pelo painel: o caldeirão perto do lugar novo)
+        if (a.creature.setCauldron) a.creature.setCauldron(this._nearProp('caldeirao', { x: x * 100, y: y * 100 }, 260));
         return;
       }
       a.target = { x: x * 100, y: y * 100 };

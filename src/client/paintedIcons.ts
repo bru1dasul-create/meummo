@@ -1812,6 +1812,132 @@ function paintBigBottle(ctx: CanvasRenderingContext2D): void {
   twinkle(ctx, 98, 46, 6.5, 'rgba(255, 220, 140, 0.9)');
 }
 
+/**
+ * Garrafada da Cuca (a receita da bruxa da Toca, 24/11): o vidro escuro em forma de cabaça (duas barrigas) com o caldo
+ * verde do caldeirão dela brilhando e borbulhando, a rolha lacrada com cera verde escorrendo e, no cordão da cintura, um
+ * dente de jacaré pendurado. Escura e verde, para não se confundir com as garrafadas
+ * da Dona Iracema (âmbar e vermelha).
+ */
+function paintCucaBottle(ctx: CanvasRenderingContext2D): void {
+  itemShadow(ctx, 64, 117, 44);
+  const glass = new Path2D();
+  glass.moveTo(57, 25);
+  glass.lineTo(57, 33);
+  glass.bezierCurveTo(45, 36, 42, 51, 53, 59);
+  glass.bezierCurveTo(33, 65, 26, 82, 29, 96);
+  glass.bezierCurveTo(32, 110, 48, 117, 64, 117);
+  glass.bezierCurveTo(80, 117, 96, 110, 99, 96);
+  glass.bezierCurveTo(102, 82, 95, 65, 75, 59);
+  glass.bezierCurveTo(86, 51, 83, 36, 71, 33);
+  glass.lineTo(71, 25);
+  glass.closePath();
+  glassBack(ctx, glass, 'rgba(36, 66, 38, 0.6)');
+  glassLiquid(ctx, glass, 66, ['#c8f47a', '#3fa82a', '#0f3008'], [28, 62, 100, 117]);
+  // o caldo brilha por dentro (a luz do caldeirão)
+  ctx.save();
+  ctx.clip(glass);
+  ctx.globalCompositeOperation = 'lighter';
+  const glow = ctx.createRadialGradient(58, 92, 2, 58, 92, 34);
+  glow.addColorStop(0, 'rgba(190, 255, 120, 0.5)');
+  glow.addColorStop(1, 'rgba(190, 255, 120, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(20, 50, 90, 70);
+  ctx.globalCompositeOperation = 'source-over';
+  // as ervas e as sementes boiando
+  ctx.strokeStyle = 'rgba(20, 50, 10, 0.8)';
+  ctx.lineWidth = 2.8;
+  ctx.lineCap = 'round';
+  for (const [x0, y0, x1, y1, b] of [
+    [42, 104, 56, 82, 7],
+    [84, 106, 74, 80, -7],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo((x0 + x1) / 2 + b, (y0 + y1) / 2, x1, y1);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(40, 20, 6, 0.75)';
+  for (const [x, y, r] of [
+    [66, 104, 2.4],
+    [52, 96, 1.8],
+    [78, 94, 2],
+  ] as const) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.3, r, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  // as bolhas subindo (cheias e de anel)
+  bubbles(ctx, glass, 'rgba(236, 255, 200, 0.75)', [
+    [70, 74, 3],
+    [58, 70, 2.2],
+    [80, 86, 2.4],
+    [47, 80, 1.6],
+  ]);
+  ctx.save();
+  ctx.clip(glass);
+  ctx.strokeStyle = 'rgba(236, 255, 200, 0.7)';
+  ctx.lineWidth = 1.4;
+  for (const [x, y, r] of [
+    [54, 88, 3.4],
+    [66, 82, 2.4],
+  ] as const) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // o brilho do vidro nas duas barrigas
+  const s1 = new Path2D();
+  s1.moveTo(36, 92);
+  s1.bezierCurveTo(35, 80, 41, 70, 50, 66);
+  s1.bezierCurveTo(45, 73, 41, 82, 41, 93);
+  s1.closePath();
+  shine(ctx, s1, 0.6);
+  const s2 = new Path2D();
+  s2.ellipse(52, 45, 2.6, 6, 0.3, 0, Math.PI * 2);
+  shine(ctx, s2, 0.5);
+  // o cordão na cintura, com o dente de jacaré pendurado
+  ctx.save();
+  ctx.lineCap = 'round';
+  const cord = new Path2D();
+  cord.moveTo(52, 59);
+  cord.quadraticCurveTo(64, 64, 76, 59);
+  cord.moveTo(70, 61.5);
+  cord.quadraticCurveTo(80, 70, 81, 79);
+  ctx.strokeStyle = '#24150a';
+  ctx.lineWidth = 5;
+  ctx.stroke(cord);
+  ctx.strokeStyle = '#a8864a';
+  ctx.lineWidth = 2.5;
+  ctx.stroke(cord);
+  ctx.restore();
+  const tooth = new Path2D();
+  tooth.moveTo(77, 78);
+  tooth.quadraticCurveTo(81, 76, 85, 78);
+  tooth.quadraticCurveTo(85, 88, 79, 96);
+  tooth.quadraticCurveTo(80, 87, 77, 78);
+  tooth.closePath();
+  body(ctx, tooth, '#fffaf0', '#ece0c4', '#b8a47c', [77, 76, 86, 96], '#24150a', 1.8);
+  // a rolha lacrada com cera verde escorrendo
+  corkTop(ctx, 54, 74, 12, 27);
+  const wax = new Path2D();
+  wax.moveTo(51, 15);
+  wax.quadraticCurveTo(64, 8, 77, 15);
+  wax.lineTo(77, 19);
+  wax.quadraticCurveTo(75.5, 26, 73, 19.5);
+  wax.quadraticCurveTo(69.5, 23.5, 66.5, 19.5);
+  wax.quadraticCurveTo(63.5, 29, 60, 19.5);
+  wax.quadraticCurveTo(56.5, 23, 54, 19.5);
+  wax.quadraticCurveTo(52, 25, 51, 19);
+  wax.closePath();
+  body(ctx, wax, '#9be06a', '#3f8f2a', '#163d0c', [51, 8, 77, 29], '#0e2406', 2);
+  const ws = new Path2D();
+  ws.ellipse(59, 12.5, 4, 1.4, -0.2, 0, Math.PI * 2);
+  shine(ctx, ws, 0.5);
+  twinkle(ctx, 98, 52, 6.5, 'rgba(170, 255, 120, 0.9)');
+}
+
 /** Água da Mina: a moringa de barro com a água na boca, suando, e uma gota pulando. */
 function paintSpringWater(ctx: CanvasRenderingContext2D): void {
   itemShadow(ctx, 64, 116, 38);
@@ -2149,6 +2275,7 @@ const ITEM_PAINTERS: Record<string, (ctx: CanvasRenderingContext2D) => void> = {
   faca: paintKnifeItem,
   frasco: paintEmptyVial,
   garrafada: paintBottle,
+  garrafada_cuca: paintCucaBottle,
   garrafada_grande: paintBigBottle,
   garrafada_pequena: paintSmallBottle,
   jurubeba: paintJurubeba,

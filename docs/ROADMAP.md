@@ -758,8 +758,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     Cuca** (`garrafada_cuca`: 2 jurubebas, 2 babosas, frasco e água; cura 40% da vida e dá +6 de Força e +6 de Espírito
     por 3 minutos; rara, 150 de ouro). A missão **O Caldeirão da Cuca** (`o_caldeirao_da_cuca`, a partir do nível 3):
     entregar 2 raízes de jurubeba; dá 80 de XP e uma Garrafada da Cuca. Teste: `tests/cuca.test.ts`
-  - [ ] **[arte]** o desenho dela (a criatura `cuca`, como o Sagui: a view desenha sozinha; original, sem copiar a Cuca
-    da TV) e o ícone da `garrafada_cuca` (hoje usa o da Garrafada Grande)
+  - [x] **[arte]** o desenho dela (a criatura `cuca`, como o Sagui: a view desenha sozinha; original, sem copiar a Cuca
+    da TV) e o ícone da `garrafada_cuca` (hoje usa o da Garrafada Grande) — 24/11, no ramo da [arte] (main com o "pode"
+    do dono): a vovó corcunda com cabeça de jacaré-de-papo-amarelo, mexendo o caldeirão do mapa (a view passa o
+    caldeirão; ela se vira para ele), olhando o herói, falando e rindo; sem caldeirão perto, a colher em pé. Teste:
+    `tests/cuca-art.test.ts`. Detalhes no `docs/ARTE.md`
+    - [ ] **[estrutura]** mover a Cuca para (48.5, 10.1), ao lado do caldeirão (pedido mandado em 24/11) e, com o ícone
+      na main, trocar o `icone` da `garrafada_cuca` para `garrafada_cuca`
+    - [ ] **[mundo]** a colher encostada do caldeirão aponta para onde a Cuca fica: tirar ou virar para o outro lado
   - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (24/11, o dono: "pode fazer a Cuca virar chefe de
     luta")
     - [x] **[mundo]** a arena (na main): a toca maior (uns 22 × 14 m de chão; o mapa `caverna` foi a 66 m de largura),

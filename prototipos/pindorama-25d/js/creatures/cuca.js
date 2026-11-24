@@ -53,8 +53,8 @@
   const REACH = 150;
   const RIM = 92;
   const BREW = 88;
-  /** A colher: o tanto do cabo que passa da mão (cm). */
-  const TAIL = 22;
+  /** A colher: o tanto do cabo que passa da mão (cm; mais que isso, mexendo, o cabo passava na frente da cara dela). */
+  const TAIL = 14;
 
   /** Ponto no quadro dela (cm): `a` para a frente, `s` para a direita, `z` para cima. */
   function local(fr, a, s, z) {
@@ -108,9 +108,11 @@
 
     /** O caldeirão do mapa perto dela ({ x, y, r } em cm; a view passa). Longe demais (ou nenhum): a colher em pé. */
     setCauldron(c) {
-      const d = c ? Math.hypot(c.x - this.pos.x, c.y - this.pos.y) : Infinity;
+      // (do lugar para onde ela está indo: levada pelo painel, ela ainda pode estar no caminho)
+      const at = this._t < this._dur ? this._to : this.pos;
+      const d = c ? Math.hypot(c.x - at.x, c.y - at.y) : Infinity;
       this.cauldron = d <= REACH && d > 1 ? { x: c.x, y: c.y, r: c.r || 70, d } : null;
-      if (this.cauldron) this.yaw = this.yawTarget = this.faceYaw = Math.atan2(c.y - this.pos.y, c.x - this.pos.x);
+      if (this.cauldron) this.yaw = this.yawTarget = this.faceYaw = Math.atan2(c.y - at.y, c.x - at.x);
     }
 
     animate(dt) {
@@ -185,11 +187,11 @@
       const neck = P3(18 + lean * 0.8, sway * 0.8, 112 + up);
       // a cabeça: na frente da corcunda, olhando o caldo (para baixo) ou o herói; rindo, vai para trás
       const lk = this.lookYaw * (0.35 + 0.65 * this.lookK);
-      const tilt = cackle * 0.5 - 0.32 * stirK * (1 - this.lookK) - 0.06 * this.lookK;
+      const tilt = cackle * 0.36 - 0.32 * stirK * (1 - this.lookK) - 0.06 * this.lookK;
       const ya = this.yaw + lk;
       const hf = M.norm({ x: Math.cos(ya) * Math.cos(tilt), y: Math.sin(ya) * Math.cos(tilt), z: Math.sin(tilt) });
       const hs = M.norm({ x: -hf.y, y: hf.x, z: 0 });
-      const hu = M.norm(M.cross(hs, hf));
+      const hu = M.norm(M.cross(hf, hs));
       const headC = M.add(neck, M.add(M.scale(hf, 9 * S), M.scale(UP, 5 * S)));
       // a boca: fala (abre e fecha) e a risada (bem aberta)
       const jaw = Math.max(talking * Math.abs(Math.sin(t * 9)) * 0.42, cackle * (0.38 + 0.18 * Math.abs(Math.sin(t * 23))));
@@ -199,7 +201,7 @@
       let handBase;
       let bowlBase;
       if (cv) {
-        handBase = W3(44 + ca * 6, side * (10 + sa * 6), 112);
+        handBase = W3(46 + ca * 6, side * (13 + sa * 5), 108);
         bowlBase = W3(cv.d - 33 + ca * 16, side * (4 + sa * 16), RIM - 14);
       } else {
         handBase = P3(24, side * 12, 84 + breath * 0.4);
@@ -448,8 +450,8 @@
             }
             c.setLineDash([]);
           }
-          // o remendo vinho com a costura (nas costas, ou no ombro de cá quando ela está de frente)
-          const pc = frontSeen ? M.add(R.sh[0], { x: 0, y: 0, z: 2 * S }) : M.add(hc, M.add(M.scale(fr.f, -12 * S), { x: 0, y: 0, z: -4 * S }));
+          // o remendo vinho com a costura, no ombro de cá (o da colher), um pouco para trás: aparece de todo lado
+          const pc = M.add(R.sh[0], M.add(M.scale(fr.f, (frontSeen ? -2 : -7) * S), { x: 0, y: 0, z: 2 * S }));
           const q = cam.p(pc);
           c.fillStyle = C.tint(PATCH, flash);
           c.fillRect(q.x - 4.5 * z, q.y - 3.5 * z, 9 * z, 7 * z);
@@ -474,32 +476,24 @@
         ctx.lineTo(p1.x + ((k % 3) - 1) * 0.6 * z, p1.y);
       }
       ctx.stroke();
-      if (M.dot(fr.f, toCam) < -0.3) return;
-      // o nó do xale no peito, com as duas pontas caindo
-      const kc = M.add(R.chest, M.add(M.scale(fr.f, 10 * S), { x: 0, y: 0, z: 3 * S }));
-      for (const sd of [-1, 1]) {
-        const tip = M.add(kc, M.add(M.scale(fr.s, sd * 3.5 * S), { x: fr.f.x * 1.5 * S, y: fr.f.y * 1.5 * S, z: -11 * S }));
-        const a0 = cam.p(M.add(kc, M.scale(fr.s, sd * 1.5 * S))), b0 = cam.p(tip);
+      if (M.dot(fr.f, toCam) < -0.1) return;
+      // o nó do xale no peito (só de frente: de lado virava um gancho amarelo)
+      if (M.dot(fr.f, toCam) > 0.25) {
+        const kq = cam.p(M.add(R.chest, M.add(M.scale(fr.f, 10 * S), { x: 0, y: 0, z: 3 * S })));
+        ctx.fillStyle = C.tint(LOOK.shawl.base, flash);
         ctx.strokeStyle = C.INK;
-        ctx.lineWidth = 5.4 * z;
+        ctx.lineWidth = Math.max(1, 1.1 * z);
         ctx.beginPath();
-        ctx.moveTo(a0.x, a0.y);
-        ctx.lineTo(b0.x, b0.y);
+        ctx.ellipse(kq.x, kq.y, 2.8 * S * z, 2.3 * S * z, 0, 0, M.TAU);
+        ctx.fill();
         ctx.stroke();
-        ctx.strokeStyle = C.tint(LOOK.shawl.base, flash);
-        ctx.lineWidth = 3.4 * z;
+        ctx.strokeStyle = CROCHET;
+        ctx.beginPath();
+        ctx.moveTo(kq.x - 1.2 * S * z, kq.y - 1.4 * S * z);
+        ctx.lineTo(kq.x + 0.4 * S * z, kq.y + 1.6 * S * z);
         ctx.stroke();
       }
-      const kq = cam.p(kc);
-      ctx.fillStyle = C.tint(LOOK.shawl.base, flash);
-      ctx.strokeStyle = C.INK;
-      ctx.lineWidth = Math.max(1, 1.1 * z);
-      ctx.beginPath();
-      ctx.ellipse(kq.x, kq.y, 3.6 * z, 3 * z, 0, 0, M.TAU);
-      ctx.fill();
-      ctx.stroke();
       // o colar de sementes (pendurado no pescoço, por cima do xale) com o vidrinho de poção
-      if (M.dot(fr.f, toCam) < -0.1) return;
       ctx.fillStyle = C.tint(SEED, flash);
       for (let k = 0; k <= 8; k++) {
         const a = -1 + (k / 8) * 2;
@@ -584,7 +578,7 @@
     _paintLadle(ctx, cam, R, ink, flash) {
       const z = cam.zoom;
       const dir = M.norm(M.sub(R.handL, R.bowl));
-      const top = M.add(R.handL, M.scale(dir, 20));
+      const top = M.add(R.handL, M.scale(dir, TAIL));
       const base = R.fr.o.z + BREW;
       let end = R.bowl;
       const inBrew = R.bowl.z < base - 1;
@@ -798,7 +792,7 @@
       // a ponta do focinho (o calombo das narinas)
       this._blob(ctx, cam, ballPts([], H(28.5, 0, 2.5), 2.6 * S, 8), LOOK.skin, 0, ink, flash, {
         after: (c) => {
-          if (small) return;
+          if (small || M.dot(hf, toCam) < -0.35) return;
           c.fillStyle = DARK;
           for (const sg of [-1, 1]) {
             const q = cam.p(H(29.5, sg * 1.2, 4.4));
