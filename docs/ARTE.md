@@ -4,6 +4,18 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Orelha e brinco do Birim (24/11)
+
+- **Forma.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `HEAD.ear` reduz os volumes e aproxima o lóbulo da cabeça. O contorno aparece menos de frente e mantém o desenho da orelha de perfil.
+- **Cartilagem e brinco.** Em `extras`, a orelha do Birim recebe um único desenho interno. `earDetail` indica a concha com sombra de frente e mostra as dobras de `earProfile` ao virar de lado. `earStud` posiciona o brinco dentro do lóbulo. Tudo usa o recorte e a ordem de desenho da orelha, incluindo quando a bochecha esconde o lado distante.
+- **Conferência.** Comparei a orelha em dez ângulos nas câmeras do mapa e do retrato. Conferi movimento, HUD e mochila em Chromium no desktop e no celular simulado. `npm run check` passou com 685 testes, e `npm run build` passou.
+
+## Costeleta e sobrancelhas do Birim (24/11)
+
+- **Costeleta e bochecha.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` abaixa o encontro entre a barba e a bochecha. A tira da costeleta sobe aos poucos quando a cabeça vira de perfil. Os volumes do lado distante passam atrás do rosto mais cedo. `beardStrands` começa na mandíbula, abaixo da ponta escura que aparecia junto ao olho.
+- **Sobrancelhas.** `HEAD.browBar` abre mais espaço entre a sobrancelha e a pálpebra. `browBar` mantém o comprimento da sobrancelha no balanço de frente e encurta a do lado distante aos poucos. A curva parte da profundidade do olho, o que evita o degrau que a emenda entre as esferas da testa e da órbita deixava no arco.
+- **Conferência.** Comparei a versão anterior e a nova em dez ângulos, com a inclinação do mapa e a do retrato. Conferi o jogo em Chromium no desktop e no celular simulado, incluindo movimento, HUD e mochila. `npm run check` passou com 685 testes, e `npm run build` passou.
+
 ## Birim de frente, de lado e de costas (24/11)
 
 - **Barba de frente.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` traz a emenda entre bigode e bochecha para a superfície do rosto e cobre a borda da mandíbula nos dois lados. `MODEL.NECK` afina o alto do pescoço sob a barba para reduzir a faixa de pele que aparecia ao lado do rosto.
