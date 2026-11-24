@@ -458,10 +458,45 @@
 - **Esperando:** a [estrutura] mover a Cuca para (48.5, 10.1) e, com o ícone na main, trocar o `icone` da
   `garrafada_cuca` de `garrafada_grande` para `garrafada_cuca`; o [mundo] tirar (ou virar para o outro lado) a colher
   encostada do caldeirão, que aponta para o nordeste, bem onde ela fica (passa atrás da cabeça dela).
-- **Etapa 2 (chefe):** a cantiga de ninar e o caldo jogado, quando a [estrutura] fizer a luta.
+- **Etapa 2 (chefe):** feita: veja a seção seguinte.
 - **Rascunho `cuca/`:** `prancha2.cjs` (com o caldeirão de verdade; `SUL=...` troca o `sul.js`), `perto2.cjs`
   (de perto; `FIRST=1 DIST=114` como no jogo), `custo.cjs`, `mundo-sem-colher/sul.js` (cópia sem a colher encostada,
   só para a prévia), `icone/` e `antes/`; `cuca-jogo/jogo.cjs <pasta>` (o jogo, com o painel movendo a Cuca).
+
+### A Cuca chefe, etapa 2 (24/11, com o "segue para a Cuca chefe" do dono; no ramo, esperando o "pode" para a main)
+- **A luta é da [estrutura]** (`data/monsters.json`, chave `cuca`, só de noite): o caldo ('windup' 0,6 s e 'shoot',
+  um a cada 1,6 s), a poça (o `fire` com `k: 'caldo'` → `view.warn(..., { fire: true, kind: 'caldo' })`, 2,5 s), a
+  cantiga ('warn' com a área, logo o `fx` 'song' e a fala: 1,5 s de aviso, a cada 12 s) e o sono (`view.sleep(id, on)`).
+  De dia é a bruxa (NPC); de noite, o monstro: **o mesmo desenho** (`cuca.js`). Só o NPC recebe o caldeirão do mapa
+  (a view confere `kind === 'npc'`), para a chefe não ficar presa nele.
+- **O desenho da chefe (`cuca.js`):** os **olhos vermelhos** de noite (`C.eyeColor`, como os outros monstros); o
+  **andar arrastado** (os pés saindo da saia um de cada vez, a barra balançando, o corpo subindo e descendo; a colher de
+  bengala); **o aviso do caldo** (a colher cheia atrás da cabeça, o montinho verde brilhando e pingando, ela inclinada
+  para trás com o sorriso torto); **o arremesso** (a colher passa por cima da cabeça e termina na frente, vazia, com o
+  corpo todo indo junto); **a cantiga** (as duas mãos no colo ninando a colher como um nenê, balançando, a cabeça
+  inclinada, a boca cantando e as notas roxas e verdes girando em volta, por cima de tudo); **o tranco** ao apanhar
+  (para longe de quem bateu, com o clarão fraco); **o desmaio** (`ownDeath`: cai sentada com a saia aberta no chão, a
+  cabeça caída, a colher no chão; o clarão lilás e as faíscas roxas).
+- **O caldo voando (`projectileArt.ts`, 'caldo'):** a bola de caldo verde balançando, esticada na direção do voo, com o
+  brilho em volta, os pingos ficando para trás e a sombra; caindo sem acertar, o respingo verde (a poça vem do
+  servidor). Antes era a bolinha verde do `combat.ts`.
+- **A poça (`view.js`, `_drawBrothPuddle`):** uma mancha verde só, de beirada torta, cobrindo as casas, com o brilho (na
+  caverna escura ela acende), o miolo claro e as bolhas que crescem e estouram em anelzinhos; abre num instante e some
+  devagar. Antes saía o fogo laranja do boitatá.
+- **O Zzz (`view.js`, `sleep` e `_drawSleep`):** três "Z" subindo de lado da cabeça de quem dormiu, crescendo e sumindo,
+  até o motor avisar que acordou (ou 4 s).
+- **O ícone `patua_cuca`** (`paintedIcons.ts`): o saquinho de pano vinho amarrado no cordão, as ervas saindo pela boca,
+  a espiral verde bordada, a costura e o dente de jacaré pendurado no nó; e o visual dele no `gearArt.ts` (o dente no
+  cordão, com brilho verde), que o teste dos personagens pede quando o ícone trocar.
+- **Conferido:** a prancha da chefe (3 lados × parada, andando, aviso, arremesso, cantiga, apanhou, desmaiando) e o jogo
+  de verdade **de noite na Toca**, com a Cuca criada pelo painel F1 (o herói nível 12, sem invencível): o caldo, as
+  poças, a cantiga com o Zzz e o desmaio, que deixa o Patuá; PC e celular deitado, sem erros. No jogo, o desmaio é
+  rápido (o motor tira o desenho 0,7 s depois) e fica meio apagado pelo esmaecer de quem cai, como nos outros bichos.
+  Testes: `tests/cuca-art.test.ts` (13) e `tests/projectileArt.test.ts`.
+- **Ficou para depois (o dono decide):** o herói ficar meio caído enquanto dorme (hoje só o Zzz); a chefe maior que a
+  bruxa (hoje o mesmo tamanho, ~1,55 m).
+- **Rascunho:** `cuca/chefe.cjs` (a prancha da chefe), `cuca/icone/` (o Patuá) e `cuca-chefe/jogo.cjs <pasta> pc|celular`
+  (o jogo: `NOVO=1` cria a conta; vira a noite, cria a Cuca pelo F1 e derruba no fim).
 
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para

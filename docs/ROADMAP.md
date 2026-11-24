@@ -782,9 +782,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       +15 de vida e +1 de defesa). A missão **A Cantiga da Cuca** (nível 5, depois de O Caldeirão): derrotá-la de noite e
       concluir de dia com ela (200 de XP, 50 de ouro e o patuá). Protocolo 56. Parado (sem esquivar nem atirar), um herói
       de nível 11 desmaia em uns 12 s; os números ficam no painel. Teste: `tests/cuca-chefe.test.ts`
-    - [ ] **[arte]** a Cuca chefe (a mesma criatura `cuca` da bruxa, com o caldo e a cantiga), a concha de caldo, a
+    - [x] **[arte]** a Cuca chefe (a mesma criatura `cuca` da bruxa, com o caldo e a cantiga), a concha de caldo, a
       poça verde (`view.warn` com `kind: 'caldo'`), o "Zzz" de quem dorme (`view.sleep`) e o ícone do Patuá (hoje o
-      `colar`)
+      `colar`) — 24/11, no ramo da [arte] (main com o "pode" do dono; conferida de noite na Toca, no PC e no celular,
+      com a Cuca criada pelo painel F1): os olhos vermelhos, o andar arrastado, a colher cheia atrás da cabeça no aviso
+      e o arremesso por cima dela, a bola de caldo verde pingando (`projectileArt.ts`) e o respingo, a poça verde
+      borbulhando, a cantiga ninando a colher com as notas em roda, o Zzz, o tranco, o desmaio com as faíscas roxas e o
+      ícone `patua_cuca` (+ o visual dele no `gearArt.ts`). Testes: `tests/cuca-art.test.ts` e
+      `tests/projectileArt.test.ts`. Falta a [estrutura] trocar o `icone` do `patua_cuca` quando estiver na main
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

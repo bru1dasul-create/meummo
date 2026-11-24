@@ -428,7 +428,7 @@
         ctx.shadowBlur = 6 * z;
         ctx.fillStyle = col;
         ctx.strokeStyle = col;
-        note(ctx, p.x, p.y, 2.6 * z, i % 3 === 1);
+        note(ctx, p.x, p.y, 3.4 * z, i % 3 === 1);
       }
       ctx.restore();
     }
