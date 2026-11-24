@@ -1067,7 +1067,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - no aviso, a rodilha com o pescoço em gancho armando e a ponta do rabo tremendo;
     - no bote, a cabeça dispara ~1,4 m de boca aberta (antes ia ~60 cm) e volta para a rodilha;
     - o tranco e o desmaio de barriga para cima com as faíscas.
-  - [x] **Marimbondos** (24/11, no ramo; esperando o "pode" para a main):
+  - [x] **Marimbondos** (24/11, na main):
     - cada vespa pintada: cintura fina, abdômen de listras com o ferrão, cara amarela, olhos, antenas, asas e perninhas;
     - no aviso, o enxame se fecha e zune com os ferrões curvados para fora; na ferroada, mergulha num anel largo;
     - o tranco para longe de quem bateu e as vespas caindo com as faíscas.

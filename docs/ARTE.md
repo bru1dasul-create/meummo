@@ -376,7 +376,7 @@
   meio do corpo), `dbg/pedacos.cjs` (cada trecho numerado com a ordem), `dbg/runs.cjs` (quantos trechos por lado) e
   `antes/` (a cópia das criaturas de antes). Entregues: `entrega/jararaca-antes-depois.png` e `.gif`.
 
-### Etapa 5: os Marimbondos (24/11, com o "segue para os Marimbondos" do dono; no ramo, esperando o "pode" para a main)
+### Etapa 5: os Marimbondos (24/11, com o "segue para os Marimbondos" do dono; na main em 24/11, com o "pode juntar na main")
 - **O desenho (`marimbondo.js`, sem as bolinhas):** cada uma das 5 vespas pintada como os outros bichos (contorno,
   meia-lua de sombra e brilho): a cabeça e o tórax escuros num traço só (a **cintura fina** atrás), a cara amarela, as
   manchinhas amarelas do tórax, os olhos grandes dos lados (de noite, vermelhos) e as antenas; o **abdômen amarelo
