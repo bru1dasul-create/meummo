@@ -1082,6 +1082,16 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     desenhado (23/11, na main): 5 pontos `galho-sagui` na camada `pontos` (`altura` 2,3 m e `direcao` em graus), em duas
     árvores da trilha dos saguis e em três árvores secas novas; o gerador escolhe a direção virada para a câmera em que o
     chão é andável, longe dos troncos, e nenhuma copa da frente esconde o sagui (o teste do Capão confere)
+- [ ] **As versões raras do Sagui** (24/11, na pegada das artes do dono: "Sagui Corrompido – Elite" e "Sagui Ancestral –
+  Raro"; os outros bichos o dono decide depois)
+  - [x] **[arte]** o desenho (24/11, na main, com o "pode juntar na main" do dono): o mesmo corpo e os mesmos golpes do
+    Comum (o galho também), com outra paleta e enfeites — o **Corrompido** (pelo preto arrepiado, fendas vermelhas
+    acesas, presas, cogumelos nas costas, brasas, fruta podre; 1,1×) e o **Ancestral** (espirais e faixas douradas, olho
+    de espírito, musgo, colar de sementes, coroa de runas, vaga-lumes, fruta dourada; 1,18×). Chaves provisórias
+    `sagui_corrompido` e `sagui_ancestral` (veja `docs/ARTE.md`); o Comum não mudou
+  - [ ] **[estrutura]** os dois no jogo (pedido mandado em 24/11): as chaves, a vida, o dano, o XP e o que deixam, onde
+    e quanto aparecem, o "Elite" / "Raro" junto do nome e a fruta que voa com a cor de cada um (`combat.ts`)
+  - [ ] **[mundo]** onde moram (pedido mandado em 24/11)
 - [x] **[arte]** A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da
   poção/banana utilizada"): no efeito valendo e nos frascos de comida e remédio, no lugar da dica do navegador, o
   painel da dica das habilidades — o nome na cor da raridade, o que faz em verde ("Cura 60% da vida", "+5 de Destreza

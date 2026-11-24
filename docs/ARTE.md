@@ -198,7 +198,7 @@
   - `jogo2.cjs <pasta>`: o ataque em câmera lenta, sem o invencível (com ele, os bichos ignoram o herói);
   - `antes/`: a cópia das criaturas de antes.
 
-### As versões raras do Sagui (24/11, prévia; NO RAMO, esperando o dono aprovar — fora da main e fora do jogo)
+### As versões raras do Sagui (24/11; NA MAIN em 24/11, com o "pode juntar na main" do dono — ainda fora do jogo: os pedidos à [estrutura] e ao [mundo] foram mandados no mesmo dia)
 - **O pedido:** o dono mandou duas artes ("Sagui Encantado – Comum", "Sagui Corrompido – Elite", "Sagui Ancestral –
   Raro") e perguntou se dava para fazer nessa pegada; com o "pode fazer a prévia", só os saguis ("os outros faremos algo
   diferente, iremos decidindo").
@@ -227,10 +227,11 @@
 - **Teste:** `tests/sagui-variantes.test.ts` (pintados em 8 lados × 8 momentos sem cor quebrada; o mesmo esqueleto do
   Comum; o Comum com as cores e o tamanho de sempre; maiores em volta do pé e do galho, com o nome junto; as presas do
   Corrompido e o clarão pela metade; o olho de espírito e o colar do Ancestral).
-- **Se o dono aprovar, falta (de outras frentes):** a [estrutura] decide as chaves de verdade, a vida, o dano, onde e
-  quanto aparecem e como o nome mostra "Elite"/"Raro"; a fruta que voa é desenhada no `combat.ts` (dela) e ainda sai
-  verde para os três — a podre e a dourada precisam dela trocar a cor pelo tipo; o [mundo] diz onde moram. Da arte:
-  ver de noite no jogo de verdade (o escuro da noite pode apagar o brilho das fendas e das runas).
+- **Falta (de outras frentes; pedidos mandados em 24/11):** a [estrutura] decide as chaves de verdade (se mudarem, o
+  `C.define` daqui muda junto), a vida, o dano, onde e quanto aparecem e como o nome mostra "Elite"/"Raro"; a fruta que
+  voa é desenhada no `combat.ts` (dela) e ainda sai verde para os três — a podre e a dourada precisam dela trocar a cor
+  pelo tipo; o [mundo] diz onde moram. Da arte, quando estiverem no jogo: ver de noite no jogo de verdade (o escuro da
+  noite pode apagar o brilho das fendas e das runas) e no celular.
 - **Rascunho `variantes/`:** `previa.cjs <saída>` (a prancha do dono: de frente, de costas, no aviso, no galho e no
   tamanho do jogo), `anim3.cjs <pasta> [zoom]` (o filme dos três), `trio.cjs <saída> [zoom]` (`LADOS`, `MOM`, `NOITE=1`),
   `prancha.cjs` (a do sagui, com `TIPO=sagui_corrompido`), `galho.cjs` (`TIPO`), `custo.cjs` (o peso), `dif.py` (a
