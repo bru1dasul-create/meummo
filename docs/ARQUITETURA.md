@@ -416,6 +416,13 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   está no galho sai da mão dele (`throwZ`, 90 cm abaixo do galho, medido no desenho da [arte]) e cai até a altura do voo (`shotZ` com `fromZ`); a
   barra de vida e os números ficam acima do galho (`combat.setPerch`); o `actorAtScreen` procura o corpo lá em cima.
 
+## Versões especiais dos monstros (os saguis raros)
+- Campo `"categoria"` em `data/monsters.json` (`elite` ou `raro`; `MonsterDef.rank`): vai no estado do monstro
+  (`EntityState.rank`) e o motor mostra o nome com "(Elite)" ou "(Raro)". De resto, é um monstro como os outros: a
+  raridade vem do lugar próprio no mapa (a área com o nome da chave, `quantidade` 1) e do `renascerMs` longo.
+- A fruta de cada um (`ataque.projetil`: `fruta_podre`, `fruta_dourada`) tem cor e brilho próprios no navegador
+  (`SHOT_BALLS`, `combat.ts`).
+
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
   itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no

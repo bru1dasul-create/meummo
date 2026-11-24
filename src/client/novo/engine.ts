@@ -24,7 +24,7 @@ import { pickQuickItem, useSoundOf, type GearLook, type InventoryState, type Ite
 import { GameMap, type SolidRect, type Tile, type TiledMap } from '../../shared/map';
 import { BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
 import { findRoute, followRoute } from '../../shared/route';
-import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
+import { DASH_SLOT, type EntityState, type GuardState, type MonsterRank, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
 import { armedReach, castPoint, chargeLevel, learnBlocker, skillPoint, type ChargeLevel, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
 import { decorateSkillSlots } from './skillBar';
@@ -105,6 +105,8 @@ const GUARD_RESEND_MS = 120;
 const PET_REACH = 1.5;
 /** A altura do bicho na tela, para tocar nele (metros). */
 const PET_HEIGHT = 0.45;
+/** O complemento do nome das versões especiais dos monstros (os saguis raros). */
+const RANK_LABELS: Readonly<Record<MonsterRank, string>> = { elite: 'Elite', raro: 'Raro' };
 /** Pendurado num galho, o corpo vai do galho até uns 95 cm abaixo dele (o rabo no galho e a cabeça embaixo). */
 const PERCH_BODY = 0.95;
 /** Puxando o estilingue: a mira nova vai para a view quando muda mais que isto (o corpo e os braços acompanham). */
@@ -760,7 +762,10 @@ class NewWorld implements NewWorldGame {
     }
     // pendurado num galho (o Sagui no galho): já aparece lá em cima, sem animar
     const galho = e.perch ? { galho: { altura: e.perch.h, direcao: e.perch.a } } : {};
-    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name: e.name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}), ...galho });
+    // os saguis raros: "Sagui Corrompido (Elite)", "Sagui Ancestral (Raro)" (até a [arte] fazer um selo)
+    const rank = e.rank ? { rank: e.rank } : {};
+    const name = e.rank ? `${e.name} (${RANK_LABELS[e.rank]})` : e.name;
+    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}), ...galho, ...rank });
     this.combat.setPerch(e.id, e.perch ? e.perch.h : null);
     if (e.kind === 'player') this.view?.gear?.(e.id, e.gear ?? {}); // o que ele tem na mão (o arco fica sempre à vista)
   }

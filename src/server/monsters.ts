@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { Reader } from './data-reader';
 import { MONSTERS_FILE } from './paths';
+import type { MonsterRank } from '../shared/protocol';
 
 export type AttackKind = 'bite' | 'strike' | 'spin' | 'projectile' | 'charge';
 
@@ -59,6 +60,8 @@ export interface MonsterDef {
    * metros ou acerta nele, e sobe de novo depois de `climbAfterMs` calmo. Mapa sem galho: fica no chão, como sempre.
    */
   branch: MonsterBranch | null;
+  /** Versão especial (campo "categoria": "elite" ou "raro"; os saguis raros, 24/11): o nome aparece com "(Elite)" ou "(Raro)". */
+  rank: MonsterRank | null;
   /** O que ele pode deixar para quem ajudou a derrubá-lo. */
   drops: MonsterDrop[];
   /** Ouro que cada um que ajudou ganha: sorteado entre [mínimo, máximo] ([0, 0] = nenhum). */
@@ -98,6 +101,7 @@ export interface MonsterDrop {
 }
 
 const FILE = 'data/monsters.json';
+const RANKS: readonly MonsterRank[] = ['elite', 'raro'];
 
 /**
  * Recuo de cada tipo de golpe quando o monstro não diz o dele (centímetros): fruta e mordida empurram pouco (como a
@@ -182,6 +186,10 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         throw new Error(`Erro em ${FILE} (monstro "${rawId}"): só quem joga de longe ("tipo": "projetil") sobe no galho.`);
       }
     }
+    const rankName = r.optionalText('categoria').toLowerCase();
+    if (rankName && !(RANKS as readonly string[]).includes(rankName)) {
+      throw new Error(`Erro em ${FILE} (monstro "${rawId}"): "categoria" "${rankName}" não existe. Use: ${RANKS.join(' ou ')} (ou tire o campo).`);
+    }
     const dodge = r.number('desvioTiro', { min: 0, fallback: 0 });
     if (dodge > 90) throw new Error(`Erro em ${FILE} (monstro "${rawId}"): "desvioTiro" é em %, de 0 a 90.`);
     defs.set(id, {
@@ -213,6 +221,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       shotDodge: dodge / 100,
       nightOnly: r.bool('soNoite', false),
       branch,
+      rank: rankName ? (rankName as MonsterRank) : null,
       drops: parseDrops(r.list('itens'), rawId),
       gold: r.wholeRange('ouro'),
     });
