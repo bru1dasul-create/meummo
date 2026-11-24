@@ -746,6 +746,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   missões de classe) com as oferendas, as estalagmites e o poço da luz verde-água; e a Toca da Cuca com o caldeirão
   borbulhando, as estantes de potes, os barris e os cogumelos roxos. Escura (chão e pedras escuros), com a luz do que
   brilha. Teste: `tests/caverna.test.ts`
+  - [x] **[estrutura]** O som lá dentro (24/11, na main; conferido no PC e no celular): antes caía no da mata (bem-te-vi
+    e floresta gravada dentro da caverna). Agora o lugar `caverna` do ambiente: a corrente de ar, o zumbido baixo do
+    lugar sagrado e as gotas pingando, sem bicho nem floresta gravada, igual de noite; a música da mata profunda; e passo
+    de pedra no chão `caverna`/`caverna-rocha`. Vale para todo o mapa de caverna (`sceneOfMap`), mesmo nos lugares cujo
+    nome não diz (o Salão das Inscrições)
 - [ ] **[estrutura + arte]** A Cuca na toca: o lugar dela é o ponto `toca-da-cuca` do mapa `caverna` (o bicho, a
   conversa ou a luta e o desenho, quando o dono quiser)
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o

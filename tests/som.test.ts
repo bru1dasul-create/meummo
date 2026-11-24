@@ -4,7 +4,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { recordedMix, sceneOfPlace } from '../src/client/ambient';
+import { recordedMix, sceneOfMap, sceneOfPlace } from '../src/client/ambient';
 import { GroundMap, StepCounter, stepGroundOf, strideFor } from '../src/client/novo/ground';
 import { SAMPLE_FILES } from '../src/client/sfx';
 import { trackOfScene } from '../src/client/music';
@@ -37,6 +37,25 @@ describe('o som de cada lugar', () => {
     expect(at(37, 43)).toBe('clareira');
     expect(at(40, 100)).toBe('mata');
     expect(capao.placeAt(10, 50)!.name).toBe('Lago do Parque');
+  });
+
+  it('a Caverna Sagrada: o som dela (sem floresta gravada nem bicho; de noite, igual), a música sombria e passo de pedra', () => {
+    const cave = loadMaps().find((m) => m.id === 'caverna') as GameMap;
+    // todo lugar com nome da caverna (a entrada, o salão, a Toca da Cuca) é caverna: o nome do mapa vale para quem não diz
+    expect(cave.places.length).toBeGreaterThan(0);
+    expect(sceneOfMap(cave.name)).toBe('caverna');
+    for (const place of cave.places) expect(sceneOfPlace(place, sceneOfMap(cave.name)), place.name).toBe('caverna');
+    // nos outros mapas nada muda (fora dos lugares com nome, a mata)
+    for (const id of ['capao', 'guarapiranga']) expect(sceneOfMap(loadMaps().find((m) => m.id === id)!.name), id).toBe('mata');
+    expect(sceneOfPlace({ name: 'Toca da Cuca', sound: null })).toBe('caverna');
+    expect(sceneOfPlace({ name: 'Mata Tocante', sound: null })).toBe('mata'); // "toca" só como palavra
+    expect(recordedMix('caverna', 1)).toEqual({ day: 0, night: 0 });
+    expect(recordedMix('caverna', 0)).toEqual({ day: 0, night: 0 });
+    expect(trackOfScene('caverna')).toBe('mata-profunda');
+    const ground = new GroundMap(JSON.parse(readFileSync('public/assets/maps-iso/caverna.tmj', 'utf8')) as TiledMap);
+    const spawn = cave.spots.get('spawn')!;
+    expect(ground.stepAt(spawn.x, spawn.y)).toBe('pedra');
+    expect([stepGroundOf('caverna'), stepGroundOf('caverna-rocha')]).toEqual(['pedra', 'pedra']);
   });
 });
 

@@ -47,7 +47,7 @@ import { QuickSlots } from './quick';
 import { EffectsBar } from './effectsBar';
 import { GroundMap, StepCounter } from './ground';
 import { ProvisionalView, type WorldView } from './view';
-import { Ambient, sceneOfPlace } from '../ambient';
+import { Ambient, sceneOfMap, sceneOfPlace } from '../ambient';
 import { trackOfScene } from '../music';
 import { SoundPanel } from './soundPanel';
 import { KeyBindings, type KeyAction } from './keys';
@@ -2716,7 +2716,7 @@ class NewWorld implements NewWorldGame {
     if (now >= this.ambientCheckAt && this.predicted) {
       this.ambientCheckAt = now + 500;
       const feet = feetAt(this.predicted.x, this.predicted.y);
-      const scene = sceneOfPlace(this.map.placeAt(feet.x, feet.y));
+      const scene = sceneOfPlace(this.map.placeAt(feet.x, feet.y), sceneOfMap(this.map.name));
       this.ambient.setScene(scene);
       this.sfx.music.play(trackOfScene(scene)); // a música do lugar (troca devagar)
     }

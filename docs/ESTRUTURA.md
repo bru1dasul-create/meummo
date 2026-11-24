@@ -26,6 +26,11 @@ alternativas quando vejo — sem concordar só para agradar.
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
 ## Onde estamos (24 de novembro de 2026) — leia isto primeiro
+- **O som da Caverna Sagrada (24/11, mapa novo do [mundo]; na main):** o ambiente ganhou o lugar `caverna` (`MIXES` com
+  `indoor`: a noite não muda; `RECORDED_LEVEL` 0, sem floresta gravada; as gotas `drop` e o `hum`), a música dela é a
+  da mata profunda e o chão `caverna`/`caverna-rocha` é passo de pedra. O motor usa `sceneOfMap(nome do mapa)` como o
+  som de quem está num lugar sem nome que diga (o Salão das Inscrições). Mapa novo com chão novo: confira o
+  `ground.ts` (tipo desconhecido vira terra) e o `ambient.ts` (nome desconhecido vira mata).
 - **A viagem de barco (24/11, pedido do dono: "faz a viagem de barco com o Barqueiro"; na main):** `"viagens"` nos NPCs
   (`NpcDef.trips`: `para` = ponto do mapa ou outro personagem do mesmo mapa, `nome` com o artigo, `preco`), conferidas
   no `checkNpcs`; `World.travel` (perto, ouro) manda `trip` e chama o `placePlayer`. O Barqueiro do Refúgio leva até

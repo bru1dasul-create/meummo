@@ -7,24 +7,39 @@
 
 import type { Sfx } from './sfx';
 
-export type AmbientScene = 'vila' | 'clareira' | 'mata' | 'mata-profunda' | 'agua';
-const SCENES: readonly AmbientScene[] = ['vila', 'clareira', 'mata', 'mata-profunda', 'agua'];
+export type AmbientScene = 'vila' | 'clareira' | 'mata' | 'mata-profunda' | 'agua' | 'caverna';
+const SCENES: readonly AmbientScene[] = ['vila', 'clareira', 'mata', 'mata-profunda', 'agua', 'caverna'];
 
-/**
- * O som de um lugar do mapa: a propriedade `som` dele (se o mapa disser), senão pelo nome. Fora de qualquer lugar com
- * nome, a mata.
- */
-export function sceneOfPlace(place: { name: string; sound: string | null } | null): AmbientScene {
-  if (place?.sound && (SCENES as readonly string[]).includes(place.sound)) return place.sound as AmbientScene;
-  const name = (place?.name ?? '')
+/** Sem acento e sem maiúscula. */
+function plain(text: string): string {
+  return text
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
     .toLowerCase();
+}
+
+/**
+ * O som de um mapa inteiro, para os lugares dele sem som pelo nome: dentro de uma caverna (a Caverna Sagrada), a
+ * caverna; nos outros, a mata.
+ */
+export function sceneOfMap(mapName: string): AmbientScene {
+  return /\b(caverna|gruta)\b/.test(plain(mapName)) ? 'caverna' : 'mata';
+}
+
+/**
+ * O som de um lugar do mapa: a propriedade `som` dele (se o mapa disser), senão pelo nome. Fora de qualquer lugar com
+ * nome (ou com um nome que não diz nada), o do mapa (`fallback`: a mata, ou a caverna dentro dela).
+ */
+export function sceneOfPlace(place: { name: string; sound: string | null } | null, fallback: AmbientScene = 'mata'): AmbientScene {
+  if (place?.sound && (SCENES as readonly string[]).includes(place.sound)) return place.sound as AmbientScene;
+  const name = plain(place?.name ?? '');
+  // a Caverna Sagrada (24/11, do [mundo]): a entrada, o salão e a Toca da Cuca
+  if (/\b(caverna|gruta|toca)\b/.test(name)) return 'caverna';
   if (name.includes('vila')) return 'vila';
   if (name.includes('lago') || name.includes('represa') || name.includes('brejo')) return 'agua';
   if (name.includes('profunda')) return 'mata-profunda';
   if (name.includes('clareira')) return 'clareira';
-  return 'mata';
+  return fallback;
 }
 
 /** Os sons contínuos (de 0 a 1) e quantas vezes por minuto cada bicho aparece, em cada lugar. */
@@ -34,6 +49,8 @@ interface SceneMix {
   water: number;
   hum: number;
   perMinute: Record<CallKind, number>;
+  /** Lugar fechado (a caverna): a noite não muda nada lá dentro (sem coruja nem grilo). */
+  indoor?: true;
 }
 type CallKind = 'bemtevi' | 'sabia' | 'chirp' | 'cicada' | 'crickets' | 'owl' | 'frog' | 'drop';
 const CALLS: readonly CallKind[] = ['bemtevi', 'sabia', 'chirp', 'cicada', 'crickets', 'owl', 'frog', 'drop'];
@@ -45,6 +62,8 @@ const MIXES: Record<AmbientScene, SceneMix> = {
   mata: { wind: 0.35, leaves: 0.35, water: 0, hum: 0, perMinute: { ...none, bemtevi: 1, sabia: 1.5, chirp: 4, cicada: 1.5 } },
   'mata-profunda': { wind: 0.5, leaves: 0.2, water: 0, hum: 0, perMinute: { ...none, chirp: 1, crickets: 2, owl: 0.8, cicada: 0.3 } },
   agua: { wind: 0.2, leaves: 0.15, water: 1, hum: 0, perMinute: { ...none, chirp: 2, sabia: 0.5, frog: 3, drop: 8 } },
+  // dentro da caverna: a corrente de ar, o zumbido baixo do lugar sagrado e as gotas pingando; nenhum bicho
+  caverna: { wind: 0.25, leaves: 0, water: 0, hum: 0.8, perMinute: { ...none, drop: 10 }, indoor: true },
 };
 
 /** De noite: os passarinhos e as cigarras dormem; os grilos e a coruja aparecem (e o sapo, na água, continua). */
@@ -53,7 +72,7 @@ function nightCalls(day: Record<CallKind, number>): Record<CallKind, number> {
 }
 
 /** Quanto da floresta gravada toca em cada lugar (1 = toda): na vila e na beira d'água, menos. */
-const RECORDED_LEVEL: Record<AmbientScene, number> = { vila: 0.5, clareira: 0.85, mata: 1, 'mata-profunda': 1, agua: 0.65 };
+const RECORDED_LEVEL: Record<AmbientScene, number> = { vila: 0.5, clareira: 0.85, mata: 1, 'mata-profunda': 1, agua: 0.65, caverna: 0 };
 /** O volume da floresta gravada (as duas já vêm com o mesmo volume de arquivo). */
 const RECORDED_GAIN = 0.9;
 /** Com a floresta gravada tocando: o vento e as folhas feitos por código mais baixos (a gravação já tem). */
@@ -171,7 +190,7 @@ export class Ambient {
       }
     }
     const mix = MIXES[this.scene];
-    const perMinute = this.night ? nightCalls(mix.perMinute) : mix.perMinute;
+    const perMinute = this.night && !mix.indoor ? nightCalls(mix.perMinute) : mix.perMinute;
     for (const kind of CALLS) {
       if (now < this.nextAt[kind]) continue;
       const rate = perMinute[kind] * (this.recorded ? CALLS_WITH_RECORDING[kind] : 1);

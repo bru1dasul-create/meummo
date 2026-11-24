@@ -18,7 +18,8 @@ export type MusicTrack = keyof typeof TRACKS;
 /** A música de cada lugar (a clareira e o lago usam a da mata). */
 export function trackOfScene(scene: AmbientScene): MusicTrack {
   if (scene === 'vila') return 'vila';
-  if (scene === 'mata-profunda') return 'mata-profunda';
+  // a caverna usa a da mata profunda (a mais sombria)
+  if (scene === 'mata-profunda' || scene === 'caverna') return 'mata-profunda';
   return 'mata';
 }
 
