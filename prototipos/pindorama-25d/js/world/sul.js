@@ -3037,7 +3037,8 @@
     const yb = d.y1 - d.stair; // o fim da torre (a escada fica entre yb e y1)
     const i = 18;
     const posts = [[d.x0 + i, d.y0 + i], [d.x1 - i, d.y0 + i], [d.x1 - i, yb - i], [d.x0 + i, yb - i]];
-    return { yb, posts, L1: z0 + 300, L2: z0 + d.h, R: z0 + d.h + 220 };
+    // (o jirau do caçador, na várzea: um andar só, baixo — a escada sobe direto do chão para ele)
+    return { yb, posts, L1: d.single ? z0 + d.h : z0 + 300, L2: z0 + d.h, R: z0 + d.h + (d.single ? 180 : 220) };
   }
   /** As escoras em X de um lado (entre os esteios `a` e `b`, de za a zb). */
   function xBrace(ctx, cam, a, b, za, zb, ink) {
@@ -3080,14 +3081,18 @@
       for (const [x, y] of [NW, NE, SW, SE]) log(ctx, cam, x, y, z0 - 10, g.L1, 13, ink);
       xBrace(ctx, cam, SW, SE, z0 + 30, g.L1 - 14, ink);
       xBrace(ctx, cam, NE, SE, z0 + 30, g.L1 - 14, ink);
-      floor(g.L1);
-      planks(g.L1);
-      // o primeiro andar até o de cima (os esteios afinam)
-      xBrace(ctx, cam, NW, NE, g.L1 + 10, g.L2 - 14, ink);
-      xBrace(ctx, cam, NW, SW, g.L1 + 10, g.L2 - 14, ink);
-      for (const [x, y] of [NW, NE, SW, SE]) log(ctx, cam, x, y, g.L1, g.L2, 11, ink);
-      xBrace(ctx, cam, SW, SE, g.L1 + 10, g.L2 - 14, ink);
-      xBrace(ctx, cam, NE, SE, g.L1 + 10, g.L2 - 14, ink);
+      if (!d.single) {
+        floor(g.L1);
+        planks(g.L1);
+      }
+      // o primeiro andar até o de cima (os esteios afinam; o jirau não tem)
+      if (!d.single) {
+        xBrace(ctx, cam, NW, NE, g.L1 + 10, g.L2 - 14, ink);
+        xBrace(ctx, cam, NW, SW, g.L1 + 10, g.L2 - 14, ink);
+        for (const [x, y] of [NW, NE, SW, SE]) log(ctx, cam, x, y, g.L1, g.L2, 11, ink);
+        xBrace(ctx, cam, SW, SE, g.L1 + 10, g.L2 - 14, ink);
+        xBrace(ctx, cam, NE, SE, g.L1 + 10, g.L2 - 14, ink);
+      }
       // a escada do lado sul: sobe do leste (no deque) para o oeste (no primeiro andar)
       const ys = [g.yb + 8, d.y1 - 8];
       const xa = d.x1 - 30, xb = d.x0 + 30;
@@ -3116,8 +3121,8 @@
       woodRail(ctx, cam, top[3], top[2], g.L2, 100, ink);
       woodRail(ctx, cam, top[1], top[2], g.L2, 100, ink);
       log(ctx, cam, SE[0], SE[1], g.L2, g.R, 9, ink);
-      // a plaquinha MIRANTE no guarda-corpo de cima, do lado sul
-      H.onWall(ctx, cam, { x: (d.x0 + d.x1) / 2 - 60, y: g.yb - 16, z: g.L2 + 92 }, { x: 1, y: 0 }, () => {
+      // a plaquinha MIRANTE no guarda-corpo de cima, do lado sul (no jirau, não)
+      if (!d.single) H.onWall(ctx, cam, { x: (d.x0 + d.x1) / 2 - 60, y: g.yb - 16, z: g.L2 + 92 }, { x: 1, y: 0 }, () => {
         ctx.fillStyle = INK;
         ctx.fillRect(-3, -3, 126, 34);
         ctx.fillStyle = '#e9dcc0';

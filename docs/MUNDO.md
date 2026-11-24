@@ -42,6 +42,19 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   e caldo de cana (a do Capão) com a mesa e as cadeiras do bar, o mastro com a bandeira verde e a `bola` (desenho novo no
   sul.js). As peças ficam em `FIELD_STANDS`, `FIELD_WALL`, `FIELD_FENCE` e `FIELD_STAND`; nada entra no índice dos
   troncos (o sorteio da mata não muda) e a árvore sorteada colada nelas sai no fim, como a do mirante.
+  **2) A várzea, a trilha do sul e a estrada fechada** (tudo numa parte do gerador DEPOIS do sorteio das árvores e das
+  plantas; cada coisa procura lugar livre perto do pedido com `freeSpot`, sem água, trilha nem tronco, e entra no índice
+  dos troncos; no fim saem as plantas de enfeite que ficaram por baixo): o **jirau do caçador** (a `torre-mirante` com
+  `jirau: true`: um andar só, baixo, sem a plaquinha MIRANTE) no leste da várzea, longe da barragem para não tampá-la; as
+  **pinguelas** de tronco nos dois canais da comporta (1,5 m, na grade de 0,5 m das faixas de água: mais estreita
+  sobrava vão de entalar; ficam em `WALKWAYS`, junto com o atracadouro da ilha, fora da colisão da água); três árvores
+  secas; o **acampamento de caça** perto do fim da trilha (fogueira apagada, tronco de sentar, caixotes e a rede de pesca
+  secando). As **placas de madeira** da trilha (`placa` com `madeira: true`: o esteio com uma tábua em seta por destino;
+  `texto` com as tábuas separadas por `|`, cada uma terminando na seta do jeito que aparece na tela, que o gerador calcula
+  pela direção do destino) perto do Refúgio, no cruzamento da caverna e no fim, na barragem; ficam do lado de trás da
+  trilha. A **estrada fechada**: a placa pintada à mão "ESTRADA FECHADA" antes da barreira, a árvore caída atravessada
+  depois dela e o carro abandonado com mato na pista de baixo (a chegada de Santo Amaro, em (380, 230), segue livre; o
+  carro ganhou colisão no gerador do Guarapiranga).
 - **Antes (24/11): a Ilha do Véu vestida (na `main`)**, o dono: "pode retomar o Guarapiranga" (a caverna por dentro
   ele deixou para depois; a saída para Santo Amaro espera o Mapa 03). No gerador, as medidas ficam no alto
   (`ISLAND_FIG`, `ISLAND_VEIL`, `ISLAND_RING`, `ISLAND_PIER`, `ISLAND_SAND`, `TRAIL_ISLAND`): a **Árvore do Véu** é a
@@ -59,8 +72,9 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   O mapa todo saiu igual fora da ilha (só as faixas compridas de água das linhas do atracadouro mudaram). Desenho novo
   no sul.js (`menir`: a laje em pé com `ringRock`, a gravura com `glyphPath`; `cortina-veu`: tudo no `live`); o flora.js
   acende as gravuras e o Véu de noite; a tecla M desenha as pedras em pé. Medido: 4 a 13 ms por quadro na ilha (o Refúgio
-  dá 22 a 32). **Próximo no Guarapiranga:** a viagem de barco com o Barqueiro (da [estrutura]), a caverna por dentro (a
-  Cuca, quando o dono quiser), detalhes de cada região e a saída para Santo Amaro (com o Mapa 03).
+  dá 22 a 32). A viagem de barco com o Barqueiro a [estrutura] fez no mesmo dia (9b7622c): o Barqueiro da ilha fica no deque,
+  perto da canoa. **Próximo no Guarapiranga:** a caverna por dentro (a Cuca, quando o dono quiser), os detalhes de cada
+  região (em andamento, veja acima) e a saída para Santo Amaro (com o Mapa 03).
 - **Antes (24/11): os saguis raros no Capão (na `main`)**, o dono: "pode fazer do seu jeito, área própria pra cada
   um". O **Sagui Ancestral** mora em volta da Figueira do Viaduto (área `sagui_ancestral`, x 39 a 47,5 × y 2 a 11) e o
   galho dele sai da própria figueira (grosso, com folhas na ponta); o **Sagui Corrompido** mora na Mata Profunda do

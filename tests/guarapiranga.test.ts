@@ -647,4 +647,47 @@ describe('Mapa 02: os detalhes (24/11, "pode seguir com os detalhes do Guarapira
     expect(at(ball).x > field.x0 && at(ball).x < field.x1 && at(ball).y > field.y0 && at(ball).y < field.y1).toBe(true);
     expect(near.filter((o) => o.type === 'mastro')).toHaveLength(1);
   });
+
+  it('a várzea: o jirau do caçador, as pinguelas sobre os canais (dá para atravessar), as árvores secas e o acampamento', () => {
+    const jirau = named('cenario', 'Jirau do caçador');
+    expect([jirau.type, prop(jirau, 'jirau')]).toEqual(['torre-mirante', true]);
+    expect(Number(prop(jirau, 'altura'))).toBeLessThan(3.5);
+    expect(rectOf(jirau).y0).toBeGreaterThan(256);
+    expect(reachNear((rectOf(jirau).x0 + rectOf(jirau).x1) / 2, rectOf(jirau).y1 + 0.5, 0.4), 'o pé da escada do jirau').toBe(true);
+    // as pinguelas: no meio delas é água por baixo, mas dá para passar (e as duas pontas também)
+    const bridges = layer('cenario').filter((o) => o.type === 'pinguela').map((o) => rectOf(o));
+    expect(bridges).toHaveLength(2);
+    for (const b of bridges) {
+      const y = (b.y0 + b.y1) / 2;
+      for (const x of [b.x0 + 0.4, (b.x0 + b.x1) / 2, b.x1 - 0.4]) expect(reachNear(x, y, 0.3), `pinguela em (${x.toFixed(1)}, ${y})`).toBe(true);
+      expect(b.y1 - b.y0, 'larga o bastante para o pé não entalar').toBeGreaterThanOrEqual(1.2);
+    }
+    const varzea = layer('cenario').filter((o) => at(o).y > 256 && at(o).x > 130 && at(o).x < 345);
+    expect(varzea.filter((o) => o.type === 'arvore' && prop(o, 'especie') === 'seca').length).toBeGreaterThanOrEqual(3);
+    // o acampamento: a fogueira apagada com o tronco de sentar, os caixotes e a rede por perto, e dá para chegar nele
+    const fire = varzea.find((o) => o.type === 'brasas')!;
+    const camp = varzea.filter((o) => Math.hypot(at(o).x - at(fire).x, at(o).y - at(fire).y) < 4.5).map((o) => o.type);
+    for (const t of ['tronco-caido', 'caixote', 'rede']) expect(camp, t).toContain(t);
+    expect(reachNear(at(fire).x, at(fire).y + 1.2, 0.4)).toBe(true);
+  });
+
+  it('as placas de madeira da trilha da margem sul e a estrada fechada para Santo Amaro (a chegada de lá fica livre)', () => {
+    const signs = layer('cenario').filter((o) => o.type === 'placa' && prop(o, 'madeira'));
+    const trail = signs.filter((o) => String(prop(o, 'texto')).includes('|'));
+    expect(trail).toHaveLength(3);
+    for (const o of trail) {
+      const boards = String(prop(o, 'texto')).split('|');
+      expect(boards.length).toBe(3);
+      for (const b of boards) expect('←→↑↓↖↗↙↘').toContain(b.trim().slice(-1));
+      expect(reachNear(at(o).x, at(o).y, 1.5), `placa em (${at(o).x}, ${at(o).y})`).toBe(true);
+    }
+    const closed = signs.find((o) => prop(o, 'texto') === 'ESTRADA FECHADA')!;
+    const gate = rectOf(named('cenario', 'Saída para Santo Amaro (fechada)'));
+    expect(at(closed).x).toBeLessThan(gate.x0);
+    // depois da barreira, a árvore caída atravessada; antes dela, o carro abandonado — e a chegada de Santo Amaro livre
+    expect(layer('cenario').some((o) => o.type === 'tronco-caido' && rectOf(o).x0 > gate.x1)).toBe(true);
+    expect(layer('cenario').some((o) => o.type === 'carro' && rectOf(o).x1 < gate.x0 && rectOf(o).x0 > 370)).toBe(true);
+    const from = at(named('pontos', 'chegada-santo-amaro'));
+    expect(reachNear(from.x, from.y, 0.3)).toBe(true);
+  });
 });

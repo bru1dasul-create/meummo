@@ -1264,18 +1264,101 @@
     const Hh = 34 + lines.length * 26;
     return { lines, W, Hh };
   }
+  /**
+   * A placa de trilha (24/11, os detalhes do Guarapiranga): o esteio de madeira com uma tábua em seta por destino, de
+   * frente para o sul (a câmera). Cada linha de `d.trail` termina na seta dela, do jeito que aparece na tela: a tábua
+   * aponta para a esquerda (← ↖ ↙), para a direita (→ ↗ ↘) ou fica reta (↑ ↓).
+   */
+  const LEFT_ARROWS = '←↖↙', RIGHT_ARROWS = '→↗↘';
+  function trailBoards(d) {
+    return d.trail.map((t, k) => {
+      const a = t.slice(-1);
+      const side = LEFT_ARROWS.includes(a) ? -1 : RIGHT_ARROWS.includes(a) ? 1 : 0;
+      return { text: t, side, W: Math.max(100, t.length * 13 + 40), z: 205 - k * 36 };
+    });
+  }
+  function trailSign(ctx, cam, d, z0, ink) {
+    const P = (x, y, z) => cam.p({ x, y, z });
+    const rnd = seeded(d.x, d.y, 2281);
+    // o esteio (um tronco fino, com a casca escura)
+    inkLine(ctx, [P(d.x, d.y, z0), P(d.x + 2, d.y, z0 + 236)], '#6b4a30', Math.max(2, 8 * cam.zoom), ink);
+    inkLine(ctx, [P(d.x - 2, d.y + 2, z0 + 10), P(d.x, d.y + 2, z0 + 226)], 'rgba(255, 236, 200, 0.18)', Math.max(1, 2 * cam.zoom), 0);
+    // o cipó subindo o pé do esteio (antes das tábuas e só até embaixo delas: não tampa os nomes)
+    const vine = [];
+    for (let j = 0; j <= 5; j++) vine.push({ x: d.x + Math.sin(j * 1.3) * 4, y: d.y + 3, z: z0 + 90 * (j / 5) });
+    vine3d(ctx, cam, vine, rnd, ink);
+    for (const b of trailBoards(d)) {
+      const x0 = b.side < 0 ? d.x - b.W + 14 : b.side > 0 ? d.x - 14 : d.x - b.W / 2;
+      H.onWall(ctx, cam, { x: x0, y: d.y + 6, z: z0 + b.z }, { x: 1, y: 0 }, () => {
+        const Hh = 30, tip = 16;
+        const pts = b.side < 0 ? [[tip, 0], [b.W, 0], [b.W, Hh], [tip, Hh], [0, Hh / 2]] : b.side > 0 ? [[0, 0], [b.W - tip, 0], [b.W, Hh / 2], [b.W - tip, Hh], [0, Hh]] : [[0, 0], [b.W, 0], [b.W, Hh], [0, Hh]];
+        const path = () => {
+          ctx.beginPath();
+          pts.forEach(([u, v], i) => (i ? ctx.lineTo(u, v) : ctx.moveTo(u, v)));
+          ctx.closePath();
+        };
+        path();
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
+        ctx.fillStyle = '#8a5a32';
+        ctx.fill();
+        // os veios da madeira e a beirada clara de cima
+        ctx.save();
+        path();
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(52, 32, 18, 0.35)';
+        ctx.lineWidth = 1.4;
+        for (let k = 0; k < 4; k++) {
+          const v = 6 + k * 6 + rnd() * 2;
+          ctx.beginPath();
+          ctx.moveTo(0, v);
+          ctx.bezierCurveTo(b.W * 0.3, v + rnd() * 3, b.W * 0.6, v - rnd() * 3, b.W, v + 1);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255, 232, 190, 0.22)';
+        ctx.fillRect(0, 0, b.W, 5);
+        ctx.restore();
+        // o nome pintado (creme, com o contorno escuro) e os dois pregos
+        ctx.font = `bold 19px ${H.FONT_SIGN || 'sans-serif'}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const cx = b.side < 0 ? (b.W + tip) / 2 + 4 : b.side > 0 ? (b.W - tip) / 2 - 4 : b.W / 2;
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(40, 24, 12, 0.85)';
+        ctx.strokeText(b.text, cx, Hh / 2 + 1);
+        ctx.fillStyle = '#f3e4c2';
+        ctx.fillText(b.text, cx, Hh / 2 + 1);
+        ctx.fillStyle = '#3a3a3a';
+        const nailU = b.side < 0 ? b.W - 14 : 14;
+        for (const v of [8, Hh - 8]) {
+          ctx.beginPath();
+          ctx.arc(nailU, v, 2.2, 0, M.TAU);
+          ctx.fill();
+        }
+      });
+    }
+    // o capim no pé
+    for (let k = 0; k < 2; k++) grass(ctx, cam, d.x + (rnd() - 0.5) * 40, d.y + 10, z0, 22, rnd, ink);
+  }
   small.placa = {
     fades: true, // a grande (3,3 m) fica transparente quando o herói passa atrás dela
-    height: (d) => (d.big ? 225 : d.pole ? 300 : 140),
+    height: (d) => (d.trail ? 250 : d.big ? 225 : d.pole ? 300 : 140),
     blocks: 0,
     shadow(p, cam, d) {
       if (d.big) {
         for (const dy of [-95, 95]) H.lineShadow(p, cam, d.x, d.y + dy, 212, 7);
         return;
       }
+      if (d.trail) return H.lineShadow(p, cam, d.x, d.y, 236, 5);
       H.lineShadow(p, cam, d.x, d.y, d.pole ? 300 : 120, 5);
     },
     box(cam, d, z0) {
+      if (d.trail) {
+        const w = Math.max(...trailBoards(d).map((b) => b.W)) + 20;
+        return volBox(cam, d.x - w, d.x + w, d.y - 20, d.y + 20, z0 - 4, z0 + 250, 16);
+      }
       if (d.big) return volBox(cam, d.x - 20, d.x + 30, d.y - 128, d.y + 128, z0, z0 + 235, 20);
       if (d.crooked) return volBox(cam, d.x - 90, d.x + 140, d.y - 30, d.y + 40, z0, z0 + 340, 20);
       const pl = plateOf(d);
@@ -1283,6 +1366,7 @@
       return volBox(cam, d.x - pl.W / 2 - 10, d.x + pl.W / 2 + 10, d.y - 10, d.y + 10, z0, zt + 10, 16);
     },
     paint(ctx, cam, d, z0, ink) {
+      if (d.trail) return trailSign(ctx, cam, d, z0, ink);
       if (d.big) return bigSign(ctx, cam, d, z0, ink);
       if (d.crooked) return crookedSign(ctx, cam, d, z0, ink);
       const P = (x, y, z) => cam.p({ x, y, z });

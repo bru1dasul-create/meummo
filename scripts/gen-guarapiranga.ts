@@ -1215,6 +1215,130 @@ cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 
   }
 }
 
+// ---------------- os detalhes (24/11, "pode seguir com os detalhes do Guarapiranga"), parte 2 ----------------
+// A várzea de caça (o jirau do caçador, as pinguelas de tábua nos dois canais, as árvores secas e o acampamento de caça)
+// e as placas de madeira da trilha da margem sul. Tudo depois do sorteio das árvores e das plantas: nada aqui mexe no
+// resto do mapa. Cada coisa procura um lugar livre perto do pedido (sem água, trilha nem tronco por perto).
+/** Pedaços de chão de andar por cima da água (o atracadouro da ilha e as pinguelas): a colisão da água fica de fora. */
+const WALKWAYS: Rect[] = [ISLAND_PIER];
+/** O que entrou nesta parte, para tirar as plantas de enfeite que ficaram por baixo. */
+const LATE_SOLIDS: Rect[] = [];
+function freeSpot(x: number, y: number, hw: number, hh = hw): Pt {
+  for (let r = 0; r <= 10; r += 0.5) {
+    const n = Math.max(1, Math.round(r * 6));
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const [px, py] = [round(x + Math.cos(a) * r), round(y + Math.sin(a) * r)];
+      const corners: Pt[] = [[px - hw, py - hh], [px + hw, py - hh], [px - hw, py + hh], [px + hw, py + hh], [px, py]];
+      if (corners.some(([cx, cy]) => waterGap(cx, cy) < 1.4 || trailGap(cx, cy) < 0.6 || roadGap(cx, cy) < 1)) continue;
+      if (nearTrunks(px, py, hw + hh + 4).some((t) => rectGap(t.x, t.y, { x0: px - hw, x1: px + hw, y0: py - hh, y1: py + hh }) - t.r < 1.4)) continue;
+      return [px, py];
+    }
+  }
+  throw new Error(`Não achei lugar livre perto de (${x}, ${y}).`);
+}
+const lateRect = (r: Rect) => {
+  LATE_SOLIDS.push(r);
+  addTrunk({ x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2, r: Math.hypot(r.x1 - r.x0, r.y1 - r.y0) / 2 });
+};
+{
+  // o jirau do caçador: a torre baixa de troncos, com o telhado de sapê, no leste da várzea (longe da barragem: não
+  // tampa o caminho dela na tela)
+  const [jx, jy] = freeSpot(316, 288, 1.5, 1.9);
+  const J: Rect = { x0: round(jx - 1.5), x1: round(jx + 1.5), y0: round(jy - 1.9), y1: round(jy + 1.9) };
+  cenario.push(box('torre-mirante', J, { altura: 2.4, escada: 1, jirau: true }, 'Jirau do caçador'));
+  lateRect(J);
+  // as pinguelas de tábua por cima dos dois canais da comporta (1,5 m de largura, na grade das faixas de água)
+  for (const c of CHANNELS) {
+    const y = 272;
+    let cx = c[0]![0];
+    for (let i = 0; i + 1 < c.length; i++) {
+      const [[ax, ay], [bx, by]] = [c[i]!, c[i + 1]!];
+      if ((ay - y) * (by - y) <= 0 && ay !== by) cx = ax + ((y - ay) / (by - ay)) * (bx - ax);
+    }
+    const P: Rect = { x0: round(cx - 2.5), x1: round(cx + 2.5), y0: 271, y1: 272.5 };
+    cenario.push(box('pinguela', P, { altura: 0.4 }));
+    WALKWAYS.push(P);
+  }
+  // as árvores secas no meio da lama (sem folha: não tampam nada na tela)
+  for (const [tx, ty] of [[188, 268], [234, 304], [284, 262]] as const) {
+    const [x, y] = freeSpot(tx, ty, 0.6);
+    const d = SPECIES.seca!;
+    addTrunk({ x, y, r: d.tronco / 2 });
+    cenario.push(point('arvore', x, y, { especie: 'seca', ...d }));
+  }
+  // o acampamento de caça, perto do fim da trilha da margem sul: a fogueira apagada, o tronco de sentar, os caixotes e
+  // a rede de pesca secando nos dois paus (os vãos entre eles: mais de 1,2 m, ou colados)
+  const [cx, cy] = freeSpot(152, 268, 3.4, 2.6);
+  cenario.push(point('brasas', cx, cy, { raio: 0.6 }));
+  lateRect({ x0: cx - 0.6, x1: cx + 0.6, y0: cy - 0.6, y1: cy + 0.6 });
+  const log: Rect = { x0: round(cx - 0.9), x1: round(cx + 0.9), y0: round(cy + 1.9), y1: round(cy + 2.35) };
+  cenario.push(box('tronco-caido', log, { altura: 0.45 }));
+  lateRect(log);
+  for (const dy of [-0.9, -0.3]) {
+    const b: Rect = { x0: round(cx + 2.1), x1: round(cx + 2.7), y0: round(cy + dy), y1: round(cy + dy + 0.6) };
+    cenario.push(box('caixote', b, { altura: 0.5 }));
+    lateRect(b);
+  }
+  const net: Rect = { x0: round(cx - 3.2), x1: round(cx - 0.8), y0: round(cy - 2.2), y1: round(cy - 2) };
+  cenario.push(box('rede', net, { altura: 1.6 }));
+  lateRect(net);
+}
+{
+  // as placas de madeira da trilha: nos cruzamentos e nas pontas, o esteio com uma tábua por destino, a seta do jeito
+  // que aparece na tela; a placa fica do lado de trás da trilha (na tela, ela não tampa a trilha)
+  const arrowTo = (fx: number, fy: number, tx: number, ty: number) => {
+    const [dx, dy] = [tx - fx, ty - fy];
+    const a = (Math.atan2((dx + dy) * 0.3536, (dx - dy) * 0.7071) * 180) / Math.PI;
+    return ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'][((Math.round(a / 45) % 8) + 8) % 8]!;
+  };
+  /** O ponto da trilha mais perto de (x, y) e a direção dela ali. */
+  const along = (t: Pt[], x: number, y: number) => {
+    let best = { d: Infinity, i: 0 };
+    t.forEach(([px, py], i) => {
+      const d = dist(px, py, x, y);
+      if (d < best.d) best = { d, i };
+    });
+    const [a, b] = [t[Math.max(0, best.i - 1)]!, t[Math.min(t.length - 1, best.i + 1)]!];
+    const l = dist(a[0], a[1], b[0], b[1]) || 1;
+    return { p: t[best.i]!, ux: (b[0] - a[0]) / l, uy: (b[1] - a[1]) / l };
+  };
+  const signs: [Pt[], number, number, number, [string, number, number][]][] = [
+    // (a trilha, o ponto, a distância do meio dela, os destinos com o ponto para onde a seta aponta)
+    [TRAIL_SOUTH, 34, 64, 2.4, [['CAVERNA', 28, 76], ['BARRAGEM', 28, 76], ['REFÚGIO', 39.4, 56.6]]],
+    [TRAIL_SOUTH, 27.5, 142, 2.6, [['CAVERNA', 21, 168], ['BARRAGEM', 32.5, 162], ['REFÚGIO', 23.5, 122]]],
+    [TRAIL_SOUTH, 140, 250, 2.4, [['BARRAGEM', 160, 252], ['VÁRZEA DE CAÇA', 150, 266], ['REFÚGIO', 122, 246]]],
+  ];
+  for (const [t, x, y, off, dests] of signs) {
+    const { p, ux, uy } = along(t, x, y);
+    // a normal do lado de trás (para onde x + y diminui)
+    let [nx, ny] = [-uy, ux];
+    if (nx + ny > 0) [nx, ny] = [-nx, -ny];
+    const [sx, sy] = [round(p[0] + nx * off), round(p[1] + ny * off)];
+    const texto = dests.map(([name, tx, ty]) => `${name} ${arrowTo(p[0], p[1], tx, ty)}`).join('|');
+    cenario.push(point('placa', sx, sy, { texto, madeira: true, poste: true }));
+    addTrunk({ x: sx, y: sy, r: 0.1 });
+  }
+}
+{
+  // a estrada fechada para Santo Amaro: a placa pintada à mão antes da barreira, a árvore caída atravessada depois dela
+  // e o carro abandonado, tomado pelo mato, na pista de baixo (a chegada de quem vier de Santo Amaro, em (380, 230),
+  // fica livre; os vãos com a barreira passam de 1,2 m)
+  cenario.push(point('placa', 391.6, 228, { texto: 'ESTRADA FECHADA', madeira: true, poste: true }));
+  addTrunk({ x: 391.6, y: 228, r: 0.1 });
+  const trunk: Rect = { x0: 396, x1: 396.8, y0: 223, y1: 237 };
+  cenario.push(box('tronco-caido', trunk, { altura: 0.8 }));
+  lateRect(trunk);
+  const car: Rect = { x0: 384, x1: 388, y0: 231.4, y1: 233.6 };
+  cenario.push(box('carro', car, { altura: 1.4, cor: '#5d7f9a', mato: true }));
+  lateRect(car);
+}
+// (as plantas de enfeite que ficaram por baixo das coisas novas saem; tirar não mexe no sorteio)
+for (let i = cenario.length - 1; i >= 0; i--) {
+  const o = cenario[i]!;
+  if (o.type === 'planta' && LATE_SOLIDS.some((r) => inRect(o.x, o.y, r, 0.4))) cenario.splice(i, 1);
+}
+
 // ---------------- a vista: nada alto tampa o caminho, o deque, a fogueira, os balcões ----------------
 /** Pontos da vila que precisam aparecer (o corpo de quem está lá): a fogueira, a Dona Iracema, o Barqueiro, o píer. */
 const VILLAGE_KEYS: Pt[] = [[FIRE.x, FIRE.y], [IRACEMA.x, IRACEMA.y], [BARQUEIRO.x, BARQUEIRO.y], [44, 56], [49, 56]];
@@ -1257,6 +1381,7 @@ function collide(s: Shape): Shape[] {
   if (s.type === 'trampolim') return [box('trampolim', { x0: round(r.x1 - 0.7), x1: r.x1, y0: r.y0, y1: r.y1 }, { bloqueiaTiro: false, altura: 0.5 })];
   if (s.type === 'vaso' || s.type === 'lixeira') return [block(s.type, s.x, s.y, 0.5, { bloqueiaTiro: false, altura: 0.8 })];
   if (s.type === 'moto') return [box('moto', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'carro') return [box('carro', r, { altura: Number(p.altura) })];
   if (s.type === 'pneus') return [block('pneus', s.x, s.y, round(Number(p.raio) * 1.8), { bloqueiaTiro: false, altura: 0.9 })];
   if (s.type === 'rede' || s.type === 'varal') return [box(s.type, r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   if (s.type === 'muro') return [box('muro', r, { altura: Number(p.altura) })];
@@ -1322,7 +1447,7 @@ function collide(s: Shape): Shape[] {
 }
 // a água: faixas que o pé não atravessa (os deques ficam de fora; as ilhas também)
 // (o atracadouro da ilha é chão de andar; ele fica fora do `isWater` de cima, que decide o sorteio das plantas da água)
-const waterBoxes = waterStrips((x, y) => !inRect(x, y, ISLAND_PIER) && isWater(x, y), 0, W, 0, H);
+const waterBoxes = waterStrips((x, y) => !WALKWAYS.some((r) => inRect(x, y, r)) && isWater(x, y), 0, W, 0, H);
 /**
  * Nenhum vão de entalar (0,3 a 1,2 m entre duas coisas sólidas de frente uma para a outra, sem nada no meio) em lugar
  * nenhum: o mapa é todo aberto. As árvores sorteadas que ficam num vão desses saem (uma de cada vez, até não sobrar vão);

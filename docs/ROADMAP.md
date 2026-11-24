@@ -735,7 +735,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   do atracadouro, para a viagem com o Barqueiro. **Os detalhes (24/11, "pode seguir com os detalhes do
   Guarapiranga"), por partes:** o campinho de várzea ganhou a arquibancada de cimento atrás do campo, o muro grafitado
   do Brejo FC atrás de um gol e o alambrado rasgado atrás do outro, a barraca de pastel e caldo de cana com a mesa, o
-  mastro com a bandeira e a bola esquecida no campo
+  mastro com a bandeira e a bola esquecida no campo; a várzea de caça ganhou o jirau do caçador (a torre baixa de troncos com
+  telhado de sapê), as pinguelas de tronco por cima dos dois canais (dá para atravessar), árvores secas e o acampamento de
+  caça (fogueira apagada, tronco de sentar, caixotes e a rede secando); a trilha da margem sul, as placas de madeira com
+  setas nos cruzamentos (Caverna, Barragem, Refúgio, Várzea de Caça); e a estrada fechada para Santo Amaro, a placa
+  pintada à mão, a árvore caída atravessada depois da barreira e um carro abandonado tomado pelo mato
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

@@ -363,7 +363,10 @@
         // a grande tem 2,4 m de tábua ao longo de y: o pé dela no chão é a tábua inteira (com o pé de um ponto só, o
         // gradil que ela encosta passava na frente dela no desenho)
         const foot = big ? { x0: x - 7, x1: x + 16, y0: y - 120, y1: y + 120 } : {};
-        map.props.push({ kind: 'placa', x, y, r: 14, ...foot, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big, weeds: !!pr.mato, crooked: !!pr.torta });
+        // `madeira`: a placa de trilha (o esteio com as tábuas em seta; `texto` com uma tábua por linha, separadas por `|`,
+        // cada uma terminando na seta dela: ← → ↑ ↓ ↖ ↗ ↙ ↘, do jeito que aparece na tela)
+        const trail = pr.madeira ? String(pr.texto || '').split('|').map((t) => t.trim()).filter(Boolean) : null;
+        map.props.push({ kind: 'placa', x, y, r: 14, ...foot, text: pr.texto || '', arrow: pr.seta || null, pole: !!pr.poste, big, weeds: !!pr.mato, crooked: !!pr.torta, trail });
       } else if (k === 'deque' || k === 'pinguela') {
         // dá para andar em cima: o lado comprido diz a direção (`pedras`: a pinguela de pedras de atravessar)
         map.flats.push({ kind: k, ...rect(o), h: (pr.altura || 0.4) * 100, stones: !!pr.pedras });
@@ -390,7 +393,8 @@
       } else if (k === 'torre-mirante') {
         // a torre de observação do mirante (sul.js): a caixa é a torre com a escada do lado sul (`escada`, m); `altura`
         // é a do andar de cima (m)
-        map.props.push({ kind: 'torre-mirante', ...rect(o), h: (pr.altura || 6.2) * 100, stair: (pr.escada || 1) * 100 });
+        // (`jirau`: o do caçador, na várzea — um andar só, baixo, sem a plaquinha)
+        map.props.push({ kind: 'torre-mirante', ...rect(o), h: (pr.altura || 6.2) * 100, stair: (pr.escada || 1) * 100, single: !!pr.jirau });
       } else if (k === 'guarda-corpo') {
         // o guarda-corpo de madeira (sul.js): uma caixa fina, ao longo do lado comprido; `altura`
         map.props.push({ kind: 'guarda-corpo', ...rect(o), h: (pr.altura || 0.95) * 100 });

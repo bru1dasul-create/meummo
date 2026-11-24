@@ -314,6 +314,12 @@
       "x": 218,
       "y": 253.7,
       "tipo": "lugar"
+    },
+    {
+      "nome": "Jirau do caçador",
+      "x": 316,
+      "y": 288,
+      "tipo": "lugar"
     }
   ]
 }
