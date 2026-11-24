@@ -395,7 +395,7 @@
 - **Rascunho `marimbondo/`:** `prancha.cjs` (a da jararaca, com os momentos do enxame), `custo.cjs`, `jogo.cjs`,
   `celular.cjs` e `antes/`. Entregues: `entrega/marimbondos-antes-depois.png` e `.gif`.
 
-### Etapa 6: o Filhote de Boitatá (24/11, com o "segue para o Filhote de Boitatá" do dono; no ramo, esperando o "pode" para a main)
+### Etapa 6: o Filhote de Boitatá (24/11, com o "segue para o Filhote de Boitatá" do dono; na main em 24/11, com o "pode juntar na main")
 - **O desenho (`boitata.js`, sem as bolinhas):** o corpo de chama numa peça só, pintado como os outros bichos, mas
   quente: o **contorno vermelho-escuro** (o `paintLit` risca de preto; o risco vem antes, no `_warmInk`), a cor laranja,
   o **miolo claro** no lombo (um tubo mais fino puxado para cima), as escamas de brasa nos flancos, a meia-lua de sombra

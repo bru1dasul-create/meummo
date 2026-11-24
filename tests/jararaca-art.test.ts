@@ -13,6 +13,7 @@ type Parts = { groups: Group[]; paint?: (ctx: unknown, flash: number) => void; a
 type Body = { pts: Vec[]; U: Vec[]; head: { c: Vec; f: Vec }; st: { open: number; strike: number } };
 type Snake = {
   pos: { x: number; y: number };
+  dist: number;
   yaw: number;
   seed: number;
   time: number;
@@ -54,6 +55,8 @@ function loadPD(): { create: (yaw: number) => Snake; cam: unknown } {
       const t = C.create('jararaca', 0, 0, yaw);
       t.seed = 0.37;
       t.time = 3.1;
+      // a fase da onda do S também vem do sorteio (no construtor): fixa, para o teste dar sempre o mesmo
+      t.dist = 0.37 * 300;
       return t;
     },
     cam,

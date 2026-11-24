@@ -11,6 +11,7 @@ type Vec = { x: number; y: number; z: number };
 type Body = { pts: (Vec & { r: number })[]; blaze: number; lit: number };
 type Fire = {
   pos: { x: number; y: number };
+  dist: number;
   yaw: number;
   seed: number;
   time: number;
@@ -48,6 +49,8 @@ function loadPD(): { create: (yaw: number) => Fire; cam: unknown } {
       const t = C.create('filhote_boitata', 0, 0, yaw);
       t.seed = 0.37;
       t.time = 3.1;
+      // a fase da onda do S também vem do sorteio (no construtor): fixa, para o teste dar sempre o mesmo
+      t.dist = 0.37 * 200;
       return t;
     },
     cam,
