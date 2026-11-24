@@ -26,8 +26,9 @@ alternativas quando vejo — sem concordar só para agradar.
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
 ## Onde estamos (24 de novembro de 2026) — leia isto primeiro
-- **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"):** pronta no meu ramo; entra na main **junto com a área `cuca`
-  do [mundo]** (o teste da caverna exige a área quando a chave existe). Peças novas: `MonsterSong.effect` (`'charm'`
+- **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"; na main com a área `cuca` do [mundo], no fundo da toca):**
+  o teste da caverna do [mundo] lê o `alcanceAgressao` da `cuca` (nenhum chão da área ao alcance da boca da toca): se
+  aumentar esse número, peça a ele para afastar a área. Peças novas: `MonsterSong.effect` (`'charm'`
   da Iara, `'sleep'` da Cuca: `putToSleep`/`wake`, `Player.asleepUntil`, golpe acorda em `damage`, a caminhada e os
   ataques recusados dormindo, a mensagem `sleep`), `MonsterAttack.puddle` (`spillPuddle` no fim do tiro: hazard com
   `look`, sem somar no mesmo chão; a mensagem `fire` com `k`), `NpcDef.dayOnly` (`npcPresent`/`presentNpc`: de noite a
