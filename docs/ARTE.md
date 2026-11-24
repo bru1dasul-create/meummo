@@ -185,6 +185,45 @@
   - `jogo2.cjs <pasta>`: o ataque em câmera lenta, sem o invencível (com ele, os bichos ignoram o herói);
   - `antes/`: a cópia das criaturas de antes.
 
+### As versões raras do Sagui (24/11, prévia; NO RAMO, esperando o dono aprovar — fora da main e fora do jogo)
+- **O pedido:** o dono mandou duas artes ("Sagui Encantado – Comum", "Sagui Corrompido – Elite", "Sagui Ancestral –
+  Raro") e perguntou se dava para fazer nessa pegada; com o "pode fazer a prévia", só os saguis ("os outros faremos algo
+  diferente, iremos decidindo").
+- **Como é feito (`sagui.js`):** o mesmo sagui (o esqueleto, os golpes, o galho e a cambalhota são os do Comum), com
+  outra paleta e enfeites. A paleta virou dado por versão (`this.pal`; a do Comum é `COMUM`, com as cores de sempre) e
+  o tamanho também (`this.size`: o `drawable` cresce o desenho em volta do pé no chão, ou do galho pendurado, e a
+  sombra em volta da sombra desse ponto; as caixas e o nome crescem junto). Os enfeites entram por ganchos que o Comum
+  não tem: `_bodyExtra` (na pele, por baixo da luz), `_bodyGlow` (o que brilha no tronco), `_tailGlow` (no rabo),
+  `_faceGlow` (no rosto), `_motes` (em volta) e grupos a mais no `_build` (com a ordem de desenho de sempre).
+  **O Comum não mudou nada:** conferido pixel a pixel contra a cópia de antes (`variantes/antes/`), no chão (4 lados ×
+  10 momentos, PC e celular) e no galho (11 momentos, com a subida e a descida).
+- **Sagui Corrompido (Elite), `sagui_corrompido` (chave provisória):** pelo quase preto e arrepiado em pontas (mechas
+  1,22× e mais pontudas), fendas vermelhas acesas no lombo, nos lados e no peito, uma veia acesa em zigue-zague no rabo
+  e uma fenda na testa (no lugar da mancha branca), olhos vermelhos, cara de bravo sempre (pálpebra baixa e sobrancelha
+  vermelha) e o rosnado com as presas de fora, três cogumelos vinho de pintas acesas nas costas, brasas subindo, a fruta
+  podre (roxa) e as faíscas vermelhas no desmaio. O clarão do golpe vai pela metade (no pelo preto, o branco do Comum
+  deixava o bicho cinza). 1,1× o Comum.
+- **Sagui Ancestral (Raro), `sagui_ancestral` (chave provisória):** castanho quente, três espirais douradas acesas
+  (lados e lombo), faixas douradas no rabo, a espiral dourada na testa e um risco dourado embaixo de cada olho, o
+  **olho de espírito** (dourado com o miolo branco aceso, sem pupila), musgo nos ombros, o colar de sementes (jequiriti
+  vermelho de olho preto e marrons) com o pingente dourado aceso, a coroa de runas girando em cima da cabeça (pendurado,
+  ela fica embaixo da cabeça: segue o corpo), vaga-lumes, folhas caindo, a fruta dourada e as faíscas douradas no
+  desmaio. 1,18× o Comum.
+- **O peso** (o navegador de teste, 4 lados × 60 quadros): o Comum ~1,9 ms por desenho no PC e ~1,1 no celular; o
+  Corrompido ~2,5 e ~1,5; o Ancestral ~2,6 e ~1,7. Como são raros (um por vez), pesa pouco no quadro.
+- **Teste:** `tests/sagui-variantes.test.ts` (pintados em 8 lados × 8 momentos sem cor quebrada; o mesmo esqueleto do
+  Comum; o Comum com as cores e o tamanho de sempre; maiores em volta do pé e do galho, com o nome junto; as presas do
+  Corrompido e o clarão pela metade; o olho de espírito e o colar do Ancestral).
+- **Se o dono aprovar, falta (de outras frentes):** a [estrutura] decide as chaves de verdade, a vida, o dano, onde e
+  quanto aparecem e como o nome mostra "Elite"/"Raro"; a fruta que voa é desenhada no `combat.ts` (dela) e ainda sai
+  verde para os três — a podre e a dourada precisam dela trocar a cor pelo tipo; o [mundo] diz onde moram. Da arte:
+  ver de noite no jogo de verdade (o escuro da noite pode apagar o brilho das fendas e das runas).
+- **Rascunho `variantes/`:** `previa.cjs <saída>` (a prancha do dono: de frente, de costas, no aviso, no galho e no
+  tamanho do jogo), `anim3.cjs <pasta> [zoom]` (o filme dos três), `trio.cjs <saída> [zoom]` (`LADOS`, `MOM`, `NOITE=1`),
+  `prancha.cjs` (a do sagui, com `TIPO=sagui_corrompido`), `galho.cjs` (`TIPO`), `custo.cjs` (o peso), `dif.py` (a
+  comparação pixel a pixel) e `antes/` (a cópia das criaturas de antes). Entregues: `entrega/sagui-versoes-previa.png`
+  e `entrega/sagui-versoes-animado.gif`.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
