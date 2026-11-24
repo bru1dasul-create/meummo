@@ -733,6 +733,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   canoa amarrada, os esteios de fitas, a fogueira apagada e a areia; a Trilha do Véu ligando tudo; pedras com musgo na
   água rasa, taboas, aguapés e cogumelos que brilham. Continua só de barco: a chegada `chegada-ilha-do-veu` fica na ponta
   do atracadouro, para a viagem com o Barqueiro
+- [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
+  Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
+  "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha
+  (`chegada-ilha-do-veu`). Na ilha, o Barqueiro de lá (`barqueiro_ilha`, no deque, perto da canoa) traz de volta (desce
+  na frente do Barqueiro do Refúgio). De graça: o `preco` de cada viagem fica em `data/npcs.json`. O campo `"viagens"`
+  dos NPCs, o pedido `travel` e a mensagem `trip` (protocolo 55). Teste: `tests/barqueiro.test.ts`
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

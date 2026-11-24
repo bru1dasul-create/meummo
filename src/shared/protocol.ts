@@ -64,6 +64,15 @@ export interface NpcInfo {
   shop: { sells: string[]; buyPercent: number } | null;
   /** As receitas que ela prepara (a Dona Iracema faz as garrafadas); sem o campo = nenhuma. */
   recipes?: RecipeInfo[];
+  /** As viagens que ele faz (o Barqueiro: a canoa até a Ilha do Véu); sem o campo = nenhuma. */
+  trips?: TripInfo[];
+}
+
+/** Uma viagem: `to` = o destino (o que vai no pedido `travel`), `name` = o nome do lugar, `price` = o ouro (0 = de graça). */
+export interface TripInfo {
+  to: string;
+  name: string;
+  price: number;
 }
 
 /** Uma receita: o item que sai (`n` de cada vez) e os ingredientes (quantos de cada). */
@@ -121,6 +130,7 @@ export type ClientMsg =
   | { t: 'attr'; id: AttributeId } // pôr um ponto neste atributo
   | { t: 'attrReset' } // tirar os pontos de todos os atributos (voltam para distribuir de novo)
   | { t: 'craft'; npc: number; id: string } // pedir a este NPC (o id da entidade) para preparar a receita `id`
+  | { t: 'travel'; npc: number; to: string } // viajar com este NPC (o Barqueiro) até o destino `to` de uma viagem dele
   // usar a habilidade `id` da sua classe mirando no ponto (x, y) do chão (metros, como o pé); longe demais, cai no alcance.
   // A Flecha Ancestral não sai na hora: fica carregada no arco (o servidor responde `armed`) e sai no próximo `shoot`;
   // pedir de novo descarrega. (`cid` não é mais usado.)
@@ -257,6 +267,7 @@ export type ServerMsg =
   | { t: 'effects'; list: ActiveEffectInfo[] }
   // o NPC preparou a receita: `it` = o item que entrou na sua mochila, `n` = quantos
   | { t: 'crafted'; it: string; n: number }
+  | { t: 'trip'; name: string } // você está viajando até `name` (o `teleport` vem logo depois, no mesmo pacote)
   | { t: 'hp'; id: number; hp: number; maxHp: number }
   | { t: 'death'; id: number }
   | { t: 'levelup'; id: number; level: number; maxHp: number }

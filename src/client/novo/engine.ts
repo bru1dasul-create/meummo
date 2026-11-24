@@ -33,7 +33,7 @@ import { KeyboardDirections } from '../game/input';
 import type { Connection } from '../net';
 import type { Sfx } from '../sfx';
 import { ShopWindow } from '../shop';
-import { npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
+import { arrivedAt, npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
 import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
@@ -442,6 +442,12 @@ class NewWorld implements NewWorldGame {
         this.talk.close();
         this.bag.close();
         this.shop.open(npc);
+      },
+      // a viagem com o Barqueiro: o servidor confere (perto, ouro) e manda `trip` e o `teleport`
+      travel: (npc, to) => {
+        this.talk.close();
+        this.clearRoute();
+        this.conn.send({ t: 'travel', npc, to });
       },
     });
     this.tracker = new QuestTracker(this.questList);
@@ -1454,7 +1460,7 @@ class NewWorld implements NewWorldGame {
         (questFinisher(q) === type && ctx.log[q.id]?.state === 'active') ||
         (q.giver === type && (ctx.log[q.id]?.state === 'active' || questBlocker(q, ctx.log, ctx.level) === null)),
     );
-    if (questNow || (this.talk.hasQuests(npc) && !npc.shop)) {
+    if (questNow || ((this.talk.hasQuests(npc) || this.talk.hasTrips(npc)) && !npc.shop)) {
       this.bag.close();
       this.shop.close();
       this.talk.open(npc, this.questContext());
@@ -1915,6 +1921,25 @@ class NewWorld implements NewWorldGame {
   }
 
   /** O seu tile está entre estes ([x1, y1, x2, y2, ...])? */
+  /**
+   * A tela da viagem (visual simples; a [arte] pode caprichar em `#trip-fade`): escurece de uma vez (esconde o pulo da
+   * câmera até o destino), mostra para onde e clareia devagar.
+   */
+  private tripFade(name: string): void {
+    document.getElementById('trip-fade')?.remove();
+    const fade = document.createElement('div');
+    fade.id = 'trip-fade';
+    fade.textContent = `Atravessando para ${name}…`;
+    fade.style.cssText =
+      'position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#05080a;color:#f3ead2;' +
+      'font:600 20px system-ui,sans-serif;letter-spacing:0.02em;pointer-events:none;opacity:1;transition:opacity 1.1s ease-in 0.7s;';
+    document.body.append(fade);
+    fade.getBoundingClientRect(); // aplica a tela escura antes de começar a clarear
+    fade.style.opacity = '0';
+    window.setTimeout(() => fade.remove(), 2000);
+    this.toast.show(`Você chegou ${arrivedAt(name)}`);
+  }
+
   /**
    * O aviso no chão (as casas de um golpe, ou o fogo): o desenho da [arte] pinta por baixo dos bichos (`view.warn`);
    * sem ele (a view provisória, ou antes de a [arte] juntar), os quadrados de sempre do combat.ts.
@@ -3012,6 +3037,10 @@ class NewWorld implements NewWorldGame {
         }
         break;
       }
+      case 'trip':
+        // a viagem (o Barqueiro): a tela escurece e clareia de novo já no destino (o `teleport` vem logo depois)
+        this.tripFade(msg.name);
+        break;
       case 'crafted': {
         // a garrafada ficou pronta (o aviso com o nome vem no `sys`; a mochila, no `inv`)
         const def = this.items.get(msg.it);

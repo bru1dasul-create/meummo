@@ -203,6 +203,10 @@ export class Realm {
     this.worldOf(player)?.buy(player, npc, item, n);
   }
 
+  travel(player: Player, npc: number, to: string): void {
+    this.worldOf(player)?.travel(player, npc, to);
+  }
+
   craft(player: Player, npc: number, id: string): void {
     this.worldOf(player)?.craft(player, npc, id);
   }

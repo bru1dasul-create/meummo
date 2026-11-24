@@ -79,6 +79,16 @@
     "mapa": "guarapiranga",
     "x": 49.6,
     "y": 62.4,
-    "fala": "A represa anda brava, desperto. Enquanto a água não assentar, barco nenhum sai daqui. Volte outra hora."
+    "fala": "A água assentou, desperto. Quer atravessar? Levo você até a Ilha do Véu, é só subir na canoa.",
+    "viagens": [{ "para": "chegada-ilha-do-veu", "nome": "a Ilha do Véu", "preco": 0 }]
+  },
+  "barqueiro_ilha": {
+    "nome": "Barqueiro",
+    "titulo": "atracadouro da Ilha do Véu",
+    "mapa": "guarapiranga",
+    "x": 169.6,
+    "y": 148.4,
+    "fala": "A Árvore do Véu fica logo ali, pela trilha. Quando quiser voltar pro Refúgio, é só falar comigo.",
+    "viagens": [{ "para": "barqueiro", "nome": "o Refúgio", "preco": 0 }]
   }
 }

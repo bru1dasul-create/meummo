@@ -17,6 +17,21 @@ export interface NpcShop {
   buyPercent: number;
 }
 
+/**
+ * Uma viagem que o NPC faz (o Barqueiro, 24/11: a canoa do Refúgio até a Ilha do Véu e de volta; campo "viagens").
+ */
+export interface NpcTrip {
+  /**
+   * Para onde: um ponto do mapa dele (camada `pontos`, ex.: 'chegada-ilha-do-veu') ou a chave de outro personagem do
+   * mesmo mapa (desce do lado dele).
+   */
+  to: string;
+  /** O nome do lugar com o artigo, para o botão e a mensagem ("a Ilha do Véu", "o Refúgio"). */
+  name: string;
+  /** Quanto custa (ouro); 0 = de graça. */
+  price: number;
+}
+
 export interface NpcDef {
   id: string;
   name: string;
@@ -35,6 +50,8 @@ export interface NpcDef {
   recipes: string[];
   /** O passeio: os pontos (o pé, em metros) por onde anda, além do lugar dele. Vazio = fica parado. */
   stroll: { x: number; y: number }[];
+  /** As viagens que ele faz (o Barqueiro); vazio = nenhuma. */
+  trips: NpcTrip[];
 }
 
 export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
@@ -76,6 +93,15 @@ export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
         const [x, y] = value as [number, number];
         return { x, y };
       }),
+      trips: r.list('viagens').map((value, i) => {
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+          r.fail('viagens', 'precisa ser uma lista de viagens, por exemplo [{ "para": "chegada-ilha-do-veu", "nome": "Ilha do Véu" }]');
+        }
+        const t = new Reader(value as Record<string, unknown>, FILE, `viagem ${i + 1} do personagem "${rawId}"`);
+        const price = t.number('preco', { min: 0, fallback: 0 });
+        if (!Number.isInteger(price)) t.fail('preco', 'precisa ser um número inteiro de ouro (0 = de graça)');
+        return { to: t.text('para').toLowerCase(), name: t.text('nome'), price };
+      }),
     });
   }
   return defs;
@@ -113,6 +139,15 @@ export function checkNpcs(npcs: ReadonlyMap<string, NpcDef>, items: ReadonlyMap<
       const def = items.get(item);
       if (!def) throw new Error(`${where}: ela veste "${item}", que não existe em data/items.json.`);
       if (def.kind !== 'equipment') throw new Error(`${where}: ela veste "${item}", mas só dá para vestir equipamento.`);
+    }
+    for (const trip of npc.trips ?? []) {
+      const other = npcs.get(trip.to);
+      const found = map.spots.has(trip.to) || (other !== undefined && other !== npc && other.map === npc.map);
+      if (!found) {
+        throw new Error(
+          `${where}: a viagem para "${trip.to}" não acha o lugar. Use um ponto da camada "pontos" do mapa "${npc.map}" ou a chave de outro personagem do mesmo mapa.`,
+        );
+      }
     }
   }
 }

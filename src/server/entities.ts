@@ -403,6 +403,8 @@ export class Npc {
     const shop = this.def.shop;
     const info: NpcInfo = { e: this.state(), title: this.def.title, line: this.def.line, shop: shop ? { sells: [...shop.sells], buyPercent: shop.buyPercent } : null };
     if (this.recipes.length > 0) info.recipes = this.recipes.map((r) => ({ item: r.item, n: r.n, needs: r.needs.map((need) => ({ ...need })) }));
+    const trips = this.def.trips ?? [];
+    if (trips.length > 0) info.trips = trips.map((t) => ({ to: t.to, name: t.name, price: t.price }));
     return info;
   }
 }

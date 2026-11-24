@@ -111,6 +111,9 @@ export class Session {
       case 'craft':
         this.lobby.realm.craft(this.player, msg.npc, msg.id);
         break;
+      case 'travel':
+        this.lobby.realm.travel(this.player, msg.npc, msg.to);
+        break;
       case 'sell':
         this.lobby.realm.sell(this.player, msg.npc, msg.i, msg.n);
         break;

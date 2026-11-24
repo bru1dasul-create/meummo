@@ -152,6 +152,8 @@ export function parseClientMsg(raw: string): ClientMsg | null {
       return isId(msg.npc) ? { t: 'talk', npc: msg.npc } : null;
     case 'craft':
       return isId(msg.npc) && typeof msg.id === 'string' && /^[a-z0-9_-]{1,40}$/.test(msg.id) ? { t: 'craft', npc: msg.npc, id: msg.id } : null;
+    case 'travel':
+      return isId(msg.npc) && typeof msg.to === 'string' && /^[a-z0-9_-]{1,40}$/.test(msg.to) ? { t: 'travel', npc: msg.npc, to: msg.to } : null;
     case 'buy':
       return isId(msg.npc) && typeof msg.item === 'string' && /^[a-z0-9_-]{1,40}$/.test(msg.item) && isCount(msg.n)
         ? { t: 'buy', npc: msg.npc, item: msg.item, n: msg.n }

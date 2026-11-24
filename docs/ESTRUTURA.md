@@ -26,6 +26,13 @@ alternativas quando vejo — sem concordar só para agradar.
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
 ## Onde estamos (24 de novembro de 2026) — leia isto primeiro
+- **A viagem de barco (24/11, pedido do dono: "faz a viagem de barco com o Barqueiro"; na main):** `"viagens"` nos NPCs
+  (`NpcDef.trips`: `para` = ponto do mapa ou outro personagem do mesmo mapa, `nome` com o artigo, `preco`), conferidas
+  no `checkNpcs`; `World.travel` (perto, ouro) manda `trip` e chama o `placePlayer`. O Barqueiro do Refúgio leva até
+  `chegada-ilha-do-veu`; o `barqueiro_ilha` (posição escolhida por mim no deque da ilha, perto da canoa; o [mundo] pode
+  pedir outra) traz de volta para a frente do Barqueiro. No navegador: o botão na conversa (`talk.ts`, `tripLabel`,
+  `hasTrips`; quem só viaja não mostra "Nenhuma missão") e a tela escura (`tripFade` no `engine.ts`, visual simples:
+  `#trip-fade`). O teste de NPCs do `maps.test.ts` aceita NPC alcançável a pé de uma chegada de viagem.
 - **Saguis raros (24/11, forma B do dono: "pode fazer a B"; na main):** `sagui_corrompido` (Elite) e `sagui_ancestral`
   (Raro) são monstros comuns do `monsters.json` com lugar próprio no mapa (o [mundo] marca as áreas com o nome da chave,
   `quantidade` 1) e `renascerMs` longo (4 e 12 min). Os números foram os da tabela que o dono aprovou (a jurubeba 30% no
@@ -130,7 +137,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 54 (`rank`, os saguis raros); `MIGRATIONS` até o passo 8 (`effects`: os
+- **Estado técnico:** `PROTOCOL_VERSION` 55 (`travel` e `trip`, a viagem de barco); `MIGRATIONS` até o passo 8 (`effects`: os
   efeitos com tempo e quanto faltava, com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com
   676 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.

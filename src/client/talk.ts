@@ -7,7 +7,7 @@
 // da cena, escrita aos poucos no ritmo da boca, com os botões grandes (Aceitar, Entregar, Desistir, Ver a loja, Tchau).
 
 import type { ItemInfo } from '../shared/items';
-import type { NpcInfo } from '../shared/protocol';
+import type { NpcInfo, TripInfo } from '../shared/protocol';
 import { questBlocker, questFinisher, questProgress, type QuestInfo, type QuestLog } from '../shared/quests';
 import { characterPortrait } from './game/characters';
 import { itemIconUrl } from './itemArt';
@@ -18,6 +18,21 @@ export interface TalkActions {
   abandon(quest: string): void;
   /** O NPC também tem loja: abre a janela dela. */
   openShop(npc: NpcInfo): void;
+  /** Viajar com o NPC (o Barqueiro) até o destino `to` de uma viagem dele. Sem isto (o jogo antigo), sem os botões. */
+  travel?(npc: number, to: string): void;
+}
+
+/** "a Ilha do Véu" → "à Ilha do Véu", "o Refúgio" → "ao Refúgio" (o "chegou a" com o artigo do lugar). */
+export function arrivedAt(place: string): string {
+  const m = /^(as|os|a|o) (.*)$/i.exec(place);
+  if (!m) return `a ${place}`;
+  const contraction: Record<string, string> = { a: 'à', o: 'ao', as: 'às', os: 'aos' };
+  return `${contraction[m[1]!.toLowerCase()]} ${m[2]}`;
+}
+
+/** O texto do botão da viagem: "Atravessar para a Ilha do Véu" (e o preço, se cobrar). */
+export function tripLabel(trip: TripInfo): string {
+  return `Atravessar para ${trip.name}${trip.price > 0 ? ` · ${trip.price} de ouro` : ''}`;
 }
 
 /** O que a conversa e a lista precisam saber do jogador. */
@@ -109,6 +124,18 @@ export class TalkWindow {
   /** Se este NPC tem missões (então clicar nele abre a conversa). */
   hasQuests(npc: NpcInfo): boolean {
     return this.quests.some((q) => q.giver === npc.e.type || questFinisher(q) === npc.e.type);
+  }
+
+  /** Se este NPC faz viagens (o Barqueiro; então clicar nele abre a conversa, com o botão de atravessar). */
+  hasTrips(npc: NpcInfo): boolean {
+    return this.actions.travel !== undefined && (npc.trips?.length ?? 0) > 0;
+  }
+
+  /** Os botões das viagens deste NPC (vazio sem viagem, ou no jogo antigo). */
+  private tripButtons(npc: NpcInfo): HTMLButtonElement[] {
+    const travel = this.actions.travel;
+    if (!travel) return [];
+    return (npc.trips ?? []).map((trip) => button(tripLabel(trip), 'talk-main talk-trip', () => travel(npc.e.id, trip.to)));
   }
 
   open(npc: NpcInfo, ctx: QuestContext): void {
@@ -257,7 +284,7 @@ export class TalkWindow {
     close.title = 'Fechar (Esc)';
     close.setAttribute('aria-label', 'Fechar a conversa');
     head.append(portrait, who, close);
-    const parts: HTMLElement[] = [el('div', 'talk-vine'), head, ...this.questParts(npc, ctx, true)];
+    const parts: HTMLElement[] = [el('div', 'talk-vine'), head, ...this.questParts(npc, ctx, true), ...this.tripButtons(npc)];
     if (npc.shop) parts.push(button('Ver a loja', 'talk-shop', () => this.actions.openShop(npc)));
     this.root.replaceChildren(...parts);
   }
@@ -271,6 +298,7 @@ export class TalkWindow {
     const line = this.reply ?? offer?.ask ?? npc.line ?? '';
     const parts: HTMLElement[] = [...this.cinemaHead(npc, line), ...this.questParts(npc, ctx, !offer || line !== offer.ask)];
     const foot = el('div', 'talk-cine-foot');
+    foot.append(...this.tripButtons(npc));
     if (npc.shop) foot.append(button('Ver a loja', 'talk-shop', () => this.actions.openShop(npc)));
     foot.append(button('Tchau', 'talk-soft talk-bye', this.close));
     parts.push(foot);
@@ -338,7 +366,9 @@ export class TalkWindow {
     if (later.length) {
       parts.push(el('p', 'shop-empty', `Volte quando tiver nível ${Math.min(...later.map((q) => q.minLevel))}: ${later.length === 1 ? 'tem mais uma missão' : `tem mais ${later.length} missões`}.`));
     }
-    if (!ready.length && !doing.length && !fresh.length && !later.length) parts.push(el('p', 'shop-empty', 'Nenhuma missão agora. Volte mais tarde!'));
+    // quem só faz viagem (o Barqueiro) não fala de missão
+    const none = !ready.length && !doing.length && !fresh.length && !later.length;
+    if (none && !this.hasTrips(npc)) parts.push(el('p', 'shop-empty', 'Nenhuma missão agora. Volte mais tarde!'));
     return parts;
   }
 }

@@ -245,6 +245,8 @@ export const AUTOSAVE_MS = 30_000;
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 /** Onde a entidade está exatamente ("de canto"): jogadores andam soltos; monstros e NPCs, de tile em tile. */
 const spotOf = (e: Entity): Tile => (e.kind === 'player' ? { x: e.fx, y: e.fy } : { x: e.x, y: e.y });
+/** Quem viaja até um personagem desce este tanto (metros) na frente dele (para o sul, o lado da câmera). */
+const TRIP_FRONT = 0.9;
 
 /** Uma Chuva de Flechas no ar: cai em `landAt`, no círculo (x, y, radius), com o dano de quem atirou. */
 interface Rain {
@@ -1905,6 +1907,45 @@ export class World {
    * Pedir ao NPC `npcId` para preparar a receita `id` (a Dona Iracema faz as garrafadas): precisa estar perto dela, ela
    * saber a receita e você ter tudo o que vai nela. Os ingredientes saem da mochila e o que ela preparou entra.
    */
+  /**
+   * A viagem com o Barqueiro (24/11, pedido do dono: "faz a viagem de barco com o Barqueiro"): perto dele, ele leva até
+   * o destino da viagem (um ponto do mapa, ou do lado de outro personagem do mesmo mapa), cobrando o preço dela. O
+   * navegador recebe `trip` (escurece a tela) e o `teleport` logo depois.
+   */
+  travel(player: Player, npcId: number, to: string): void {
+    if (player.loading) return;
+    const npc = this.npcs.get(npcId);
+    const trip = (npc?.def.trips ?? []).find((t) => t.to === to);
+    if (!npc || !trip) return this.fail(player, 'cant_trade'); // ele não faz essa viagem (ou é de outro mapa)
+    if (player.dead) return this.fail(player, 'dead');
+    if (!this.nearNpc(player, npc)) return this.fail(player, 'too_far');
+    const spot = this.tripSpot(trip.to);
+    if (!spot) return this.fail(player, 'cant_trade');
+    if (player.inventory.gold < trip.price) return this.fail(player, 'no_gold');
+    if (trip.price > 0) {
+      player.inventory.gold -= trip.price;
+      player.invDirty = true;
+    }
+    player.chargeStart = null; // larga a pedra que estava puxando
+    player.outbox.push({ t: 'trip', name: trip.name });
+    this.placePlayer(player, spot.x, spot.y);
+    const paid = trip.price > 0 ? ` (${trip.price} de ouro)` : '';
+    player.outbox.push({ t: 'sys', text: `Você atravessou até ${trip.name}${paid}.` });
+  }
+
+  /**
+   * Onde desce quem viaja para `to`: o ponto do mapa com esse nome (o pé ali) ou, se for a chave de um personagem deste
+   * mapa, um passo na frente dele; sempre no chão livre mais perto (a posição "de canto"). null = não achou.
+   */
+  private tripSpot(to: string): { x: number; y: number } | null {
+    const point = this.map.spots.get(to);
+    if (point) return nearestBodySpot(this.map, point.x, point.y, 3);
+    const npc = [...this.npcs.values()].find((n) => n.def.id === to);
+    if (!npc) return null;
+    const feet = feetAt(npc.x, npc.y);
+    return nearestBodySpot(this.map, feet.x, feet.y + TRIP_FRONT, 3);
+  }
+
   craft(player: Player, npcId: number, id: string): void {
     if (player.loading) return;
     const npc = this.npcs.get(npcId);

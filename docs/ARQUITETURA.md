@@ -388,6 +388,11 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   O servidor confere tudo: distância (`TRADE_RANGE`), acordado, item à venda, ouro, espaço na mochila (compra
   tudo ou nada) e o limite de ouro (vende só o que cabe). A loja paga `compraPor`% do preço (`sellPrice`, mínimo 1).
   Recusa vem em `fail` (`no_gold`, `too_far`, `cant_trade`, `bag_full`, `dead`), com `item: true`.
+- **Viagens** (o Barqueiro, 24/11): o campo `"viagens"` do NPC (`para`: um ponto da camada `pontos` do mapa dele ou a
+  chave de outro personagem do mesmo mapa; `nome` com o artigo, "a Ilha do Véu"; `preco` em ouro, 0 = de graça), conferido
+  no `checkNpcs`. Vai no `NpcInfo.trips`; a conversa (`talk.ts`) mostra "Atravessar para …". O pedido `travel` (npc, to)
+  passa por `World.travel`: perto, a viagem existe, acordado, ouro; manda `trip` (o navegador escurece a tela) e leva o
+  jogador (`placePlayer`, no chão livre mais perto do ponto; para um personagem, um passo na frente dele).
 
 ## O canto da Iara (`world.ts`: `startSong`, `resolveSong`, `updateCharm`, `breakCharm`)
 - Monstro com `canto` (`MonsterDef.song`), de tempos em tempos (`nextSpecialAt`), com alguém a até `alcance` tiles,

@@ -86,10 +86,10 @@ function setup(opts: { branches?: TiledObject[]; count?: number } = {}) {
   return { world, clock, conn, player, run, until, saguis, map, inner: world as unknown as Inner };
 }
 
-/** Põe o jogador na posição "de canto" (x, y) (metros), com o tile do pé junto. */
+/** Põe o jogador na posição "de canto" (x, y) (metros); o tile do pé (`player.x`/`y`) vem disso. */
 function place(player: Player, x: number, y: number): void {
-  const tile = footTile(x, y);
-  Object.assign(player, { fx: x, fy: y, x: tile.x, y: tile.y });
+  player.fx = x;
+  player.fy = y;
 }
 
 /** Põe o jogador com o pé a `distance` metros a leste (e na mesma linha) do chão embaixo do sagui. */

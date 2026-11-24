@@ -12,13 +12,35 @@ import { tiledFromAscii } from './helpers';
 import { TRADE_RANGE } from '../src/shared/constants';
 
 /** Algum metro alcançável a pé (desde o nascimento) com o meio a até `range` metros do pé (x, y)? */
-function reachableWithin(map: GameMap, x: number, y: number, range: number): boolean {
+function reachableWithin(map: GameMap, x: number, y: number, range: number, from?: ReadonlySet<number>): boolean {
   for (let ty = Math.floor(y - range); ty <= Math.floor(y + range); ty++) {
     for (let tx = Math.floor(x - range); tx <= Math.floor(x + range); tx++) {
-      if (map.isReachable(tx, ty) && Math.hypot(tx + 0.5 - x, ty + 0.5 - y) <= range) return true;
+      const reached = from ? from.has(ty * map.width + tx) : map.isReachable(tx, ty);
+      if (reached && Math.hypot(tx + 0.5 - x, ty + 0.5 - y) <= range) return true;
     }
   }
   return false;
+}
+
+/** Os tiles alcançáveis a pé a partir do pé em (x, y) (os 4 lados, como o `isReachable` faz a partir do nascimento). */
+function reachableFrom(map: GameMap, x: number, y: number): Set<number> {
+  const start = { x: Math.floor(x), y: Math.floor(y - 0.2) };
+  const seen = new Set<number>();
+  if (!map.isWalkable(start.x, start.y)) return seen;
+  const stack = [start];
+  seen.add(start.y * map.width + start.x);
+  while (stack.length > 0) {
+    const tile = stack.pop()!;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const next = { x: tile.x + dx, y: tile.y + dy };
+      const key = next.y * map.width + next.x;
+      if (!seen.has(key) && map.isWalkable(next.x, next.y)) {
+        seen.add(key);
+        stack.push(next);
+      }
+    }
+  }
+  return seen;
 }
 
 const realMap = (id: string) => JSON.parse(readFileSync(`public/assets/maps/${id}.tmj`, 'utf8')) as TiledMap;
@@ -182,8 +204,9 @@ describe('camadas do mapa', () => {
     }
   });
 
-  it('todo NPC de data/npcs.json tem lugar no mapa dele (livre e alcançável a pé)', () => {
-    const npcs = JSON.parse(readFileSync('data/npcs.json', 'utf8')) as Record<string, { mapa: string; x: number; y: number }>;
+  it('todo NPC de data/npcs.json tem lugar no mapa dele (livre e alcançável a pé, ou de barco)', () => {
+    type Trip = { para: string };
+    const npcs = JSON.parse(readFileSync('data/npcs.json', 'utf8')) as Record<string, { mapa: string; x: number; y: number; viagens?: Trip[] }>;
     for (const [id, npc] of Object.entries(npcs)) {
       // o mundo novo (2.5D) fica em maps-iso e diz onde fica o pé, exato e com fração: o corpo do NPC tem que caber ali
       const iso = existsSync(`public/assets/maps-iso/${npc.mapa}.tmj`);
@@ -194,7 +217,14 @@ describe('camadas do mapa', () => {
         // o corpo cabe no lugar dele; e dá para chegar perto o bastante para conversar e negociar (quem fica atrás
         // de um balcão, como a Xiovanna na Budega, não precisa ter caminho até o pé dela)
         expect(bodyFits(map, corner.x, corner.y), `${id} cabe em (${npc.x}, ${npc.y})`).toBe(true);
-        expect(reachableWithin(map, npc.x, npc.y, TRADE_RANGE), `dá para chegar a ${TRADE_RANGE} m de ${id}`).toBe(true);
+        // a pé do nascimento ou, numa ilha, a pé de onde a viagem de barco desce (o Barqueiro da Ilha do Véu)
+        const arrivals = Object.values(npcs)
+          .filter((other) => other.mapa === npc.mapa)
+          .flatMap((other) => other.viagens ?? [])
+          .map((trip) => map.spots.get(trip.para) ?? (npcs[trip.para] ? { x: npcs[trip.para]!.x, y: npcs[trip.para]!.y + 0.9 } : null))
+          .filter((spot): spot is { x: number; y: number } => spot !== null);
+        const reached = reachableWithin(map, npc.x, npc.y, TRADE_RANGE) || arrivals.some((a) => reachableWithin(map, npc.x, npc.y, TRADE_RANGE, reachableFrom(map, a.x, a.y)));
+        expect(reached, `dá para chegar a ${TRADE_RANGE} m de ${id}`).toBe(true);
         continue;
       }
       const fits = map.isWalkable(npc.x, npc.y);
