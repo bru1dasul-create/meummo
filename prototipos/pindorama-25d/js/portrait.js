@@ -49,10 +49,13 @@
     if (mode === 'head') background(ctx, w, h);
 
     const ch = restingHero(yawDeg, opts.weapon);
+    const appearance = PD.classes ? (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch) : undefined;
+    const birimHead = mode === 'head' && appearance?.modelo && appearance.modelo === PD.models?.birim?.MODEL;
     const cam = new PD.IsoCamera();
     cam.dpr = dpr;
-    // tamanho: 'head' mostra uns 80 cm de altura (das penas ao peito); 'full', o corpo inteiro com folga
-    const span = mode === 'head' ? (opts.span > 0 ? opts.span : 74) : 192;
+    // Ver o Birim menos de cima separa o bigode, a boca e o queixo quando a cabeça ocupa poucos pixels na HUD.
+    if (birimHead) cam.setPitch(15);
+    const span = mode === 'head' ? (opts.span > 0 ? opts.span : (birimHead ? 62 : 74)) : 192;
     cam.zoom = h / dpr / span;
     const rig = PD.rig.buildRig(ch.pose());
     const painter = new PD.CharacterRenderer(cam);
@@ -83,7 +86,7 @@
       ctx.ellipse(ground.x, ground.y, r, r * 0.42, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    painter.draw(ctx, rig, ch.look, ch.equipped, PD.classes ? (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch) : undefined);
+    painter.draw(ctx, rig, ch.look, ch.equipped, appearance);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     return true;
   }

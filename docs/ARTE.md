@@ -4,6 +4,19 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Refino da barba e da bermuda do Birim no mapa (24/11)
+
+- [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` e `beardStrands`. A faixa do bigode acompanha os cantos da boca, e o volume abaixo do lábio fecha as frestas claras. Os lados da barba sobem em direção à mandíbula, com fios mais curtos junto à nova borda.
+- No mesmo arquivo, `SHORTS` sobe a união das pernas em 4,5 cm no modelo, reduz o volume atrás do joelho e afunila os joelhos e as barras. `shortsTop` encurta a costura central, e `pelvisDetail` pinta a base do quadril na cor da bermuda quando a passada abre.
+- **Conferência.** Comparei a barba na câmera de 30° do mapa e em dois níveis de zoom. Conferi a bermuda em oito direções e em quadros de caminhada, corrida, mira de costas com arco, pulo e esquiva. Testei movimento, retrato e mochila no Chromium em desktop e celular simulado. `npm run check` passou com 659 testes e `npm run build` passou.
+
+## Barba do Birim no retrato (24/11)
+
+- **O defeito.** No retrato pequeno, a vista de cima comprimia o nariz e o bigode e acentuava um recorte claro embaixo do lábio.
+- [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js) liga a barba abaixo do lábio à base do queixo em um volume contínuo na barba cheia.
+- [`js/portrait.js`](../prototipos/pindorama-25d/js/portrait.js) aproxima o rosto e baixa a inclinação para 15° no retrato de cabeça do Birim.
+- **Conferência na branch `codex/barba-birim`.** Comparei os retratos a 90 px em vários giros da cabeça. Abri o jogo e conferi o HUD e a mochila no Chromium em desktop e celular simulado. `npm run check` passou com 659 testes e `npm run build` passou.
+
 ## Inimigos redesenhados (23/11): etapa 1, o Sagui
 - **O escopo aprovado (23/11, "desenha direto", sem Nano Banana):** um bicho por etapa, cada uma com antes e depois
   para o dono aprovar — 1) Sagui, 2) Quati, 3) Tatu-bola, 4) Jararaca, 5) Marimbondos, 6) Filhote de Boitatá. Em todas:
