@@ -1110,6 +1110,11 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     sai da própria figueira, o do Corrompido de uma árvore seca nova. O galho grosso da figueira passou a aparecer (o
     tmj.js mede da beira do tronco) e nenhum galho aponta mais para a câmera. Conferido no navegador (PC e celular):
     cada um pendurado no seu galho, nenhum comum nos galhos deles
+  - [x] **[arte]** conferidos no jogo (24/11: pendurados nos galhos, de dia e de noite, atacando, no celular) e a **luz
+    própria** (pedido do dono: "pode fazer a luz própria dos saguis raros"): de noite e no escuro ou na neblina (a Mata
+    Profunda), a view abre um halo em volta deles — vermelho pulsando no Corrompido, dourado no Ancestral —, como o
+    filhote de boitatá e os cogumelos (antes a neblina e a noite apagavam as fendas e as runas). `creature.light()` e
+    `view._creatureLights` / `_drawCreatureLights`
 - [x] **[arte]** A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da
   poção/banana utilizada"): no efeito valendo e nos frascos de comida e remédio, no lugar da dica do navegador, o
   painel da dica das habilidades — o nome na cor da raridade, o que faz em verde ("Cura 60% da vida", "+5 de Destreza

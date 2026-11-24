@@ -26,6 +26,7 @@ type Sagui = {
   drawable: (cam: unknown, primary: boolean) => { bounds: Box; draw: (ctx: unknown) => void; drawShadow: (ctx: unknown) => void };
   flash: () => number;
   setPerch: (perch: { z: number; yaw?: number } | null, instant?: boolean) => void;
+  light?: () => { x: number; y: number; z: number; r: number; color: string; k: number } | null;
 };
 type Cam = { zoom: number; p: (v: Vec) => { x: number; y: number } };
 
@@ -237,5 +238,38 @@ describe('as versões raras do Sagui (prévia)', () => {
     const o = paint(old, cam).colors;
     expect(o).toContain(core);
     expect(o).toContain(seed);
+  });
+
+  it('a luz própria (de noite, no escuro e na neblina): vermelha no Corrompido, dourada no Ancestral, na altura do corpo e apagando no desmaio; o Comum não tem', () => {
+    expect(create('sagui', 0).light).toBeUndefined();
+    for (const [type, color] of [['sagui_corrompido', '#ff4a2e'], ['sagui_ancestral', '#ffd36a']] as const) {
+      const s = create(type, 0);
+      step(s, 0.5);
+      const L = s.light!()!;
+      expect(L.color).toBe(color);
+      expect(L.r).toBeGreaterThan(100);
+      expect(L.k).toBeGreaterThan(0.4);
+      expect(L.x).toBeCloseTo(s.pos.x, 6);
+      // no chão: o meio do corpo sentado (uns 50 cm); no galho: embaixo do galho
+      expect(L.z).toBeGreaterThan(30);
+      expect(L.z).toBeLessThan(90);
+      const hung = create(type, 0);
+      hung.setPerch({ z: BRANCH, yaw: 0 }, true);
+      step(hung, 0.5);
+      const H = hung.light!()!;
+      expect(H.z).toBeGreaterThan(BRANCH - 110);
+      expect(H.z).toBeLessThan(BRANCH);
+      // pulsa (junto com as fendas e as runas)
+      const ks = [];
+      for (let i = 0; i < 30; i++) {
+        step(s, 0.05);
+        ks.push(s.light!()!.k);
+      }
+      expect(Math.max(...ks) - Math.min(...ks)).toBeGreaterThan(0.05);
+      // desmaiado, apaga
+      s.action('die');
+      step(s, 0.5);
+      expect(s.light!()).toBeNull();
+    }
   });
 });

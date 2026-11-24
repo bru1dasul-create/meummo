@@ -966,6 +966,9 @@
       }
       this._drawGlows(fl, Q, W, H, pxm, Math.max(atm.dark, atm.fog * 0.6, atm.night));
       if (atm.night >= 0.05) this._drawNightLights(fl, Q, W, H, pxm, atm.night);
+      // de dia, no escuro e na neblina (a Mata Profunda): só as luzes próprias dos bichos (de noite elas vão junto com
+      // as outras luzes da noite)
+      else this._drawCreatureLights(fl, Q, W, H, pxm, Math.max(atm.dark, atm.fog * 0.8));
       const dpr = cam.dpr;
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1181,6 +1184,71 @@
       return out;
     }
 
+    /**
+     * As luzes próprias dos bichos: quem tem `light()` (uma luz `{ x, y, z, r, color, k }` em cm, ou uma lista; null =
+     * apagado) — os saguis raros. O filhote de boitatá tem a dele à parte (na noite).
+     */
+    _creatureLights() {
+      const out = [];
+      for (const a of this.actors.values()) {
+        const c = a.creature;
+        if (!c || typeof c.light !== 'function') continue;
+        const L = c.light();
+        if (!L) continue;
+        if (Array.isArray(L)) out.push(...L);
+        else out.push(L);
+      }
+      return out;
+    }
+
+    /**
+     * De dia, no escuro e na neblina (a Mata Profunda): as luzes próprias dos bichos, do mesmo jeito das luzes da noite
+     * (abre o escuro e a névoa em volta e tinge com a cor da luz) — senão o Sagui Corrompido virava um macaco cinza na
+     * neblina, sem as fendas vermelhas.
+     */
+    _drawCreatureLights(fl, Q, W, H, pxm, k) {
+      if (k < 0.01) return;
+      const list = this._creatureLights();
+      if (!list.length) return;
+      const sinP = this.cam.sinP || 0.6;
+      for (const L of list) {
+        const p = this.toScreen(L.x / 100, L.y / 100, L.z / 100);
+        const rx = (L.r / 100) * pxm;
+        const ry = rx * Math.max(0.55, sinP);
+        if (p.x < -rx || p.x > W + rx || p.y < -ry || p.y > H + ry) continue;
+        const bx = (p.x - rx) / Q, by = (p.y - ry) / Q, bw = (2 * rx) / Q, bh = (2 * ry) / Q;
+        const kk = L.k * k;
+        fl.globalCompositeOperation = 'destination-out';
+        fl.globalAlpha = Math.min(0.85, kk * 0.9);
+        fl.drawImage(this._lightSprite('#ffffff'), bx, by, bw, bh);
+        fl.globalCompositeOperation = 'source-over';
+        fl.globalAlpha = Math.min(1, kk * 0.55);
+        fl.drawImage(this._lightSprite(L.color), bx, by, bw, bh);
+      }
+      fl.globalCompositeOperation = 'source-over';
+      fl.globalAlpha = 1;
+    }
+
+    /** A bolinha de luz (64 px, a cor no meio sumindo para a beirada), guardada por cor: a mesma das luzes da noite. */
+    _lightSprite(color) {
+      const sprites = this._glowSprites || (this._glowSprites = new Map());
+      let sp = sprites.get(color);
+      if (sp) return sp;
+      sp = document.createElement('canvas');
+      sp.width = sp.height = 64;
+      const g = sp.getContext('2d');
+      const n = parseInt(color.slice(1), 16);
+      const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+      const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, `rgba(${rgb}, 1)`);
+      gr.addColorStop(0.4, `rgba(${rgb}, 0.5)`);
+      gr.addColorStop(1, `rgba(${rgb}, 0)`);
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 64, 64);
+      sprites.set(color, sp);
+      return sp;
+    }
+
     _drawNightLights(fl, Q, W, H, pxm, k) {
       const list = this._nightSources().slice();
       // quem tem luz própria e anda: o filhote de boitatá (aceso)
@@ -1189,6 +1257,8 @@
         const lit = a.creature._lit ? a.creature._lit() : 1;
         if (lit > 0.05) list.push({ x: a.creature.pos.x, y: a.creature.pos.y, z: 0, r: 240, color: '#ff9a3a', k: 0.85 * lit, flicker: true });
       }
+      // os outros bichos de luz própria (`creature.light()`: os saguis raros — o vermelho das fendas, o dourado das runas)
+      for (const L of this._creatureLights()) list.push(L);
       // quem está subindo de nível ou bebendo: a luz do efeito abre o escuro em volta dele, no chão e no corpo
       // (js/levelup.js, js/consume.js)
       for (const a of this.actors.values()) {

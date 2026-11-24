@@ -230,8 +230,22 @@
 - **Falta (de outras frentes; pedidos mandados em 24/11):** a [estrutura] decide as chaves de verdade (se mudarem, o
   `C.define` daqui muda junto), a vida, o dano, onde e quanto aparecem e como o nome mostra "Elite"/"Raro"; a fruta que
   voa é desenhada no `combat.ts` (dela) e ainda sai verde para os três — a podre e a dourada precisam dela trocar a cor
-  pelo tipo; o [mundo] diz onde moram. Da arte, quando estiverem no jogo: ver de noite no jogo de verdade (o escuro da
-  noite pode apagar o brilho das fendas e das runas) e no celular.
+  pelo tipo; o [mundo] diz onde moram. **Feito pelas duas no mesmo dia** (na main: as chaves daqui, o nome com
+  "(Elite)" / "(Raro)" e o `rank` no `addActor`, a fruta podre e a dourada no `combat.ts`, o Ancestral na Figueira do
+  Viaduto e o Corrompido na Mata Profunda, cada um no seu galho).
+- **Conferidos no jogo (24/11)** e **a luz própria** (pedido do dono: "pode fazer a luz própria dos saguis raros"):
+  pendurados nos galhos, de dia e de noite, atacando e no celular, sem erros — mas **a neblina da Mata Profunda e a
+  noite apagavam o brilho** (o Corrompido virava um macaco cinza; as runas do Ancestral sumiam no escuro). Agora cada um
+  tem `light()` (a luz `{ x, y, z, r, color, k }` em cm, no meio do corpo — pendurado, embaixo do galho; apaga no
+  desmaio): o Corrompido vermelho (`#ff4a2e`, 1,3 m, pulsando com as fendas), o Ancestral dourado (`#ffd36a`, 1,6 m,
+  respirando com as runas). A view junta as luzes próprias dos bichos (`_creatureLights`: quem tem `light()`) com as
+  luzes da noite e, de dia no escuro e na neblina, desenha só elas (`_drawCreatureLights`, do mesmo jeito: abre o escuro
+  e a névoa em volta e tinge com a cor). O filhote de boitatá continua com a luz dele à parte. Conferido no jogo (antes e
+  depois, de dia na neblina, de noite e no celular). Teste: `tests/sagui-variantes.test.ts` (a luz própria). Rascunho:
+  `variantes/jogo-raros.cjs` (a conferência inteira), `variantes/luz.cjs` (as fotos de dia e de noite, e o celular) e
+  `variantes/ataque-raros.cjs`.
+- **Visto nos testes do celular (a investigar):** a dica "Pular (Espaço)" aparece aberta sozinha no simulador de
+  celular (Pixel 7 deitado); pode ser só do simulador.
 - **Rascunho `variantes/`:** `previa.cjs <saída>` (a prancha do dono: de frente, de costas, no aviso, no galho e no
   tamanho do jogo), `anim3.cjs <pasta> [zoom]` (o filme dos três), `trio.cjs <saída> [zoom]` (`LADOS`, `MOM`, `NOITE=1`),
   `prancha.cjs` (a do sagui, com `TIPO=sagui_corrompido`), `galho.cjs` (`TIPO`), `custo.cjs` (o peso), `dif.py` (a

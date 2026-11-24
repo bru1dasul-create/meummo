@@ -259,6 +259,18 @@
       return { ...d, bounds: box(d.bounds), body: box(d.body), draw: grow(d.draw, a), drawShadow: grow(d.drawShadow, s) };
     }
 
+    /** A altura do meio do corpo (cm, do chão): pendurado, embaixo do galho; no chão, sentado (para a luz própria). */
+    _bodyZ() {
+      const h = this.perchHeight();
+      const k = this.size;
+      return h > 0 ? Math.max(30, h - 40 * S * k) : 28 * S * k;
+    }
+
+    /** Quanto a luz própria ainda acende (1 de pé; desmaiado, apaga antes do corpo sumir). */
+    _lightLeft() {
+      return this.dying === null ? 1 : 1 - M.smoothstep(0.05, 0.45, this.dying);
+    }
+
     animate(dt) {
       const tr = this.trans;
       if (tr) {
@@ -1618,6 +1630,16 @@
       return super.flash() * 0.5;
     }
 
+    /**
+     * A luz própria: de noite, no escuro e na neblina (a Mata Profunda), a view abre um halo vermelho em volta dele,
+     * pulsando junto com as fendas (senão a neblina e a noite apagavam o que mostra que ele é Elite).
+     */
+    light() {
+      const lit = this._lightLeft();
+      if (lit < 0.02) return null;
+      return { x: this.pos.x, y: this.pos.y, z: this._bodyZ(), r: 130, color: '#ff4a2e', k: 0.9 * this._pulse() * lit };
+    }
+
     _build(cam, rig, st) {
       const out = super._build(cam, rig, st);
       // os cogumelos: saem da pele, apontando para fora e um pouco para o alto do corpo
@@ -1882,6 +1904,16 @@
     /** O quanto as runas acendem agora (respirando devagar). */
     _pulse() {
       return 0.8 + 0.2 * Math.sin(this.time * 2.2 + this.seed * 5);
+    }
+
+    /**
+     * A luz própria: de noite, no escuro e na neblina, a view abre um halo dourado em volta dele (as runas e a coroa),
+     * respirando junto com elas.
+     */
+    light() {
+      const lit = this._lightLeft();
+      if (lit < 0.02) return null;
+      return { x: this.pos.x, y: this.pos.y, z: this._bodyZ() + 6 * S, r: 160, color: '#ffd36a', k: 0.82 * this._pulse() * lit };
     }
 
     _build(cam, rig, st) {
