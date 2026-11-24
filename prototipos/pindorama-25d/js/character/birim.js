@@ -85,10 +85,8 @@
       { name: 'arcoD', p: [5.2, 12.6, 3], r: 3.1 },
     ],
     neckBase: [0, -2.4, -13],
-    // (a orelha é grande e fica do lado de fora, como na referência: do meio do olho até a base do nariz. Rodada 4: medida
-    // no perfil da referência, ela fica ~3,5 mais para trás e é maior — antes ficava colada no olho, e de lado a costeleta
-    // e os cachos a tapavam)
-    ear: { top: { p: [11.1, -5.7, -2.3], r: 2.7 }, mid: { p: [11.5, -5.0, -4.9], r: 2.8 }, lobe: { p: [11.0, -4.0, -7.9], r: 2.0 } },
+    // A borda superior abre levemente e o lóbulo encaixa mais rente à cabeça.
+    ear: { top: { p: [10.5, -5.45, -2.65], r: 2.45 }, mid: { p: [10.7, -4.9, -4.95], r: 2.45 }, lobe: { p: [10.35, -3.9, -7.35], r: 1.75 } },
     eye: { x: 5.5, z: -1.3, w: 5.6, h: 2.0, iris: 1.3, lid: 0.3 }, // (`lid`: a grossura da linha da pálpebra, em cm; o olho é uma amêndoa baixa, a íris grande passa das pálpebras)
     brow: { inner: [1.3, 0.9], outer: [8.9, 0.9], thick: 0 }, // (a sobrancelha em gota do motor fica desligada: a dele é a barra de `browBar`)
     // a sobrancelha (medida na referência): a ponta de dentro em x0, o pico em tPeak do caminho e a ponta fina em x1; zIn, zPeak e
@@ -955,48 +953,11 @@
       });
     }
 
-    // ---- brinco (um ponto de metal em cada orelha), do lado que olha para a câmera
+    // Os detalhes e o brinco usam o volume da orelha, com o mesmo recorte e a mesma ordem de desenho.
     for (let i = 0; i < 2; i++) {
-      const ear = items.find((it) => it.name === 'orelha' && it.group === 'orelha' + i);
-      if (!ear) continue;
       const side = i === 0 ? -1 : 1;
-      items.push({
-        name: 'brincoBirim', key: ear.key + 0.2,
-        draw: () => {
-          // (o brinco fica na frente do lóbulo, um pouco para fora: aparece de frente — como na referência — e de lado;
-          // de costas, o lóbulo esconde. Rodada 4b: o limite era -0,1 e, na diagonal de costas (~120°), o ponto, que fica na
-          // frente do lóbulo, saía em cima da barba; agora ele some depois de ~110°, quando a orelha já é vista por trás)
-          const n = norm(add(scale(rig.head.r, side * 0.6), scale(rig.head.f, 0.8)));
-          if (R.facing(n) < 0.3) return;
-          const L = MODEL.HEAD.ear.lobe;
-          const q = R.P(add(hp([side * L.p[0], L.p[1], L.p[2] - 0.4]), scale(n, L.r * 0.95 * hs)));
-          const r = Math.max(0.7, 0.62 * hs * R.zoom); // (um ponto pequeno, como na referência)
-          const ctx = R.ctx;
-          ctx.fillStyle = PAL.ink;
-          ctx.beginPath();
-          ctx.arc(q.x, q.y, r + Math.max(0.5, R.inkIn * 0.8), 0, M.TAU);
-          ctx.fill();
-          ctx.fillStyle = PAL.metal.base;
-          ctx.beginPath();
-          ctx.arc(q.x, q.y, r, 0, M.TAU);
-          ctx.fill();
-          ctx.fillStyle = PAL.metal.light;
-          ctx.beginPath();
-          ctx.arc(q.x - r * 0.3, q.y - r * 0.3, r * 0.4, 0, M.TAU);
-          ctx.fill();
-        },
-      });
-    }
-
-    // ---- a orelha por dentro: a dobra da borda e a concha mais escura (o motor desenha a orelha como um volume liso).
-    // Com a orelha atrás da cabeça (de frente), o contorno do rosto passando por cima dela também precisa ser riscado:
-    // a pintura da orelha cobre o contorno grosso da cabeça e a orelha se emendava na bochecha, sem linha
-    for (let i = 0; i < 2; i++) {
       const ear = items.find((it) => it.name === 'orelha' && it.group === 'orelha' + i);
-      if (!ear || !ear.segs[0] || ear.segs[0].poly.length < 6) continue;
-      const side = i === 0 ? -1 : 1;
-      const behind = ear.key < headKey;
-      items.push({ name: 'orelhaDetalhe', key: behind ? headKey + 0.11 : ear.key + 0.05, draw: () => earDetail(R, rig, ear.segs[0].poly, behind ? env.headPoly : null, side) });
+      if (ear) ear.segs[0].decal = (seg) => earDetail(R, rig, seg.poly, side);
     }
 
     // ---- boné para trás e os óculos em cima dele (saem se o encaixe da cabeça tiver um capacete)
@@ -1026,73 +987,50 @@
     if (!gear.pes && !off.chinelos) for (let i = 0; i < 2; i++) items.push(soleItem(R, rig, i, items));
   }
 
-  /**
-   * O desenho de dentro da orelha, em cima do volume dela: a concha (mais escura) e a dobra da borda (um risco que
-   * acompanha o contorno por dentro), feitas encolhendo o próprio contorno da orelha em volta do meio dela. Com a orelha
-   * atrás da cabeça (`headPoly`), só a parte de fora da cabeça recebe o desenho, e o contorno do rosto é riscado por
-   * cima da orelha. De costas não aparece (lá se vê o lado de trás da orelha).
-   */
-  function earDetail(R, rig, earPoly, headPoly, side) {
-    const inside = norm(add(scale(rig.head.r, side), scale(rig.head.f, 0.55)));
-    const f = R.facing(inside);
-    if (f < -0.2) return;
+  /** De frente, a sombra indica a concha. De perfil aparecem as dobras da cartilagem. */
+  function earDetail(R, rig, earPoly, side) {
+    const lateral = scale(rig.head.r, side);
+    const inside = norm(add(lateral, scale(rig.head.f, 0.55)));
+    const alpha = smoothstep(-0.2, 0.25, R.facing(inside));
+    if (alpha <= 0) return;
     const ctx = R.ctx;
     const PAL = R.pal;
-    const z = R.zoom;
-    const n = earPoly.length / 2;
-    let cx = 0, cy = 0;
-    for (let k = 0; k < earPoly.length; k += 2) {
-      cx += earPoly[k];
-      cy += earPoly[k + 1];
+    const profile = smoothstep(0.3, 0.78, R.facing(lateral));
+    if (profile < 1) {
+      const { p } = MODEL.HEAD.ear.mid;
+      const c = R.P(at(R.H, side * p[0], p[1] - 0.2, p[2] + 0.55));
+      const concha = earPoly.map((v, i) => M.lerp(i % 2 ? c.y : c.x, v, 0.56));
+      ctx.globalAlpha = alpha * (1 - profile) * 0.72;
+      ctx.fillStyle = PAL.skin.shade;
+      ctx.fill(S.polyPath(concha));
     }
-    cx /= n;
-    cy /= n;
-    const shrunk = (s, dx = 0, dy = 0) => {
-      const out = new Array(earPoly.length);
-      for (let k = 0; k < earPoly.length; k += 2) {
-        out[k] = cx + (earPoly[k] - cx) * s + dx;
-        out[k + 1] = cy + (earPoly[k + 1] - cy) * s + dy;
-      }
-      return out;
-    };
-    // (a concha fica um pouco para o lado do rosto: a borda de fora é a mais larga)
-    const toward = headPoly ? -side : 0;
-    const w = Math.max(1, Math.abs(earPoly[0] - cx) + Math.abs(earPoly[1] - cy));
-    ctx.save();
-    const clip = new Path2D();
-    clip.addPath(S.polyPath(earPoly));
-    ctx.clip(clip);
-    if (headPoly) {
-      // só a parte da orelha que fica fora da cabeça
-      const out = new Path2D();
-      out.rect(-1e5, -1e5, 2e5, 2e5);
-      S.polyPath(headPoly, 0, 0, out);
-      ctx.clip(out, 'evenodd');
-    }
-    const alpha = smoothstep(-0.2, 0.25, f);
-    // de lado (a orelha virada para a câmera) ela ganha o desenho de perfil, como na referência: a borda dobrada
-    // (hélice), a dobra de dentro (anti-hélice), a concha escura e o trago; de frente fica a concha simples
-    const sideK = smoothstep(0.45, 0.8, R.facing(scale(rig.head.r, side)));
-    ctx.globalAlpha = alpha * (1 - sideK);
-    ctx.fillStyle = PAL.skin.shade;
-    ctx.fill(S.polyPath(shrunk(0.6, toward * w * 0.08, 0)));
-    ctx.strokeStyle = PAL.ink;
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(0.5, 0.22 * z);
-    ctx.stroke(S.polyPath(shrunk(0.68, toward * w * 0.08, 0)));
-    if (sideK > 0.01) earProfile(R, rig, side, sideK * alpha);
-    ctx.restore();
+    if (profile > 0) earProfile(R, side, profile * alpha);
     ctx.globalAlpha = 1;
-    if (headPoly) {
-      // o contorno do rosto por cima da orelha (só dentro dela)
-      ctx.save();
-      ctx.clip(S.polyPath(earPoly));
-      ctx.strokeStyle = PAL.ink;
-      ctx.lineWidth = Math.max(0.6, R.inkIn * 1.0);
-      ctx.lineJoin = 'round';
-      ctx.stroke(S.polyPath(headPoly));
-      ctx.restore();
-    }
+    earStud(R, rig, side);
+  }
+
+  function earStud(R, rig, side) {
+    const n = norm(add(scale(rig.head.r, side * 0.6), scale(rig.head.f, 0.8)));
+    const alpha = smoothstep(0.22, 0.48, R.facing(n));
+    if (alpha <= 0) return;
+    const { p, r } = MODEL.HEAD.ear.lobe;
+    const q = R.P(add(at(R.H, side * p[0], p[1], p[2]), scale(n, r * 0.55 * R.hs)));
+    const radius = Math.max(0.65, 0.54 * R.hs * R.zoom);
+    const ctx = R.ctx;
+    const PAL = R.pal;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = PAL.metal.base;
+    ctx.strokeStyle = PAL.ink;
+    ctx.lineWidth = Math.max(0.55, R.inkIn * 0.75);
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, radius, 0, M.TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = PAL.metal.light;
+    ctx.beginPath();
+    ctx.arc(q.x - radius * 0.22, q.y - radius * 0.24, radius * 0.38, 0, M.TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   /**
@@ -1101,7 +1039,7 @@
    * contorno no alto e atrás, a dobra de dentro (anti-hélice, com o garfo no alto), a concha escura na frente dela, o trago
    * e a dobrinha do lóbulo. Já vem recortada dentro da orelha (por earDetail).
    */
-  function earProfile(R, rig, side, alpha) {
+  function earProfile(R, side, alpha) {
     const ctx = R.ctx;
     const PAL = R.pal;
     const z = R.zoom;
@@ -1111,19 +1049,19 @@
     const yf = (v) => (E.lobe.p[1] + E.lobe.r) * (1 - (v + 1) / 2) + (E.top.p[1] + E.top.r) * ((v + 1) / 2) + 0.1;
     const yb = (v) => (v >= 0 ? E.mid.p[1] - E.mid.r * 1.02 : (E.mid.p[1] - E.mid.r) + ((E.lobe.p[1] - E.lobe.r * 0.9) - (E.mid.p[1] - E.mid.r)) * -v);
     const xo = E.mid.p[0] + E.mid.r * 0.6;
-    const pt = (u, v) => R.P(at(R.H, side * (xo - 0.5 * (u - 0.5) ** 2), yf(v) + (yb(v) - yf(v)) * u, zc + hz * v));
+    const pt = (u, v) => R.P(at(R.H, side * (xo - 0.5 * (u - 0.5) ** 2), M.lerp(yf(v), yb(v), u), zc + hz * v));
     const curve = (uv) => S.smoothLinePath(uv.map(([u, v]) => pt(u, v)));
     ctx.globalAlpha = alpha;
     // a concha (o fundo da orelha, mais escuro)
     ctx.fillStyle = PAL.skin.shade;
     ctx.fill(S.smoothClosedPath([[0.1, 0.12], [0.26, 0.3], [0.46, 0.22], [0.54, -0.04], [0.46, -0.28], [0.26, -0.34], [0.1, -0.16]].map(([u, v]) => pt(u, v))));
-    ctx.strokeStyle = PAL.ink;
+    ctx.strokeStyle = PAL.inkSoft;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(0.55, 0.24 * z);
+    ctx.lineWidth = Math.max(0.5, 0.16 * z);
     ctx.stroke(curve([[0.3, 0.74], [0.5, 0.8], [0.7, 0.68], [0.82, 0.42], [0.84, 0.1], [0.78, -0.22], [0.66, -0.42]])); // hélice
     ctx.stroke(curve([[0.42, 0.52], [0.58, 0.36], [0.66, 0.08], [0.62, -0.18], [0.5, -0.34]])); // anti-hélice
-    ctx.lineWidth = Math.max(0.5, 0.2 * z);
+    ctx.lineWidth = Math.max(0.45, 0.13 * z);
     ctx.stroke(curve([[0.58, 0.36], [0.4, 0.34]])); // o garfo dela, no alto
     ctx.stroke(curve([[0.04, 0.08], [0.14, 0], [0.12, -0.14]])); // trago
     ctx.globalAlpha = alpha * 0.7;

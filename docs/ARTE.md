@@ -4,6 +4,12 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Orelha e brinco do Birim (24/11)
+
+- **Forma.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `HEAD.ear` reduz os volumes e aproxima o lóbulo da cabeça. O contorno aparece menos de frente e mantém o desenho da orelha de perfil.
+- **Cartilagem e brinco.** Em `extras`, a orelha do Birim recebe um único desenho interno. `earDetail` indica a concha com sombra de frente e mostra as dobras de `earProfile` ao virar de lado. `earStud` posiciona o brinco dentro do lóbulo. Tudo usa o recorte e a ordem de desenho da orelha, incluindo quando a bochecha esconde o lado distante.
+- **Conferência.** Comparei a orelha em dez ângulos nas câmeras do mapa e do retrato. Conferi movimento, HUD e mochila em Chromium no desktop e no celular simulado. `npm run check` passou com 685 testes, e `npm run build` passou.
+
 ## Costeleta e sobrancelhas do Birim (24/11)
 
 - **Costeleta e bochecha.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` abaixa o encontro entre a barba e a bochecha. A tira da costeleta sobe aos poucos quando a cabeça vira de perfil. Os volumes do lado distante passam atrás do rosto mais cedo. `beardStrands` começa na mandíbula, abaixo da ponta escura que aparecia junto ao olho.
