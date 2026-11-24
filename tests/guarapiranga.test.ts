@@ -542,3 +542,82 @@ describe('Mapa 02: a Comunidade da Represa (vestida em 22/11)', () => {
     expect(layer('cenario').filter((o) => o.type === 'fiacao' && prop(o, 'pipa')).length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('Mapa 02: a Ilha do Véu (vestida em 24/11)', () => {
+  const ISLE = { x0: 168, x1: 226, y0: 128, y1: 168 };
+  const onIsle = (o: TiledObject) => at(o).x > ISLE.x0 && at(o).x < ISLE.x1 && at(o).y > ISLE.y0 && at(o).y < ISLE.y1;
+  const fig = named('cenario', 'Árvore do Véu');
+  const veil = named('cenario', 'Véu da Ilha');
+  const ring = named('cenario', 'Roda das Pedras');
+  const pier = named('cenario', 'Atracadouro da Ilha');
+  const boat = at(named('pontos', 'chegada-ilha-do-veu'));
+  const fromBoat = flood(boat.x, boat.y);
+  const reachIsle = (x: number, y: number, r: number) => {
+    for (let dx = -r; dx <= r; dx += STEP) for (let dy = -r; dy <= r; dy += STEP) if (Math.hypot(dx, dy) <= r && fromBoat[Math.round((y + dy) / STEP) * COLS + Math.round((x + dx) / STEP)] === 1) return true;
+    return false;
+  };
+
+  it('a Árvore do Véu é a maior árvore do mapa e o Véu fica na frente dela (perto: os símbolos acendem), com a luz alta', () => {
+    const trees = layer('cenario').filter((o) => o.type === 'arvore');
+    const tallest = Math.max(...trees.filter((o) => o !== fig).map((o) => Number(prop(o, 'altura'))));
+    expect(Number(prop(fig, 'altura'))).toBeGreaterThan(tallest);
+    expect(Number(prop(fig, 'copa'))).toBeGreaterThanOrEqual(10);
+    // (o Véu a menos de 4 m do tronco: a figueira fica sagrada; na frente dele, do lado da câmera)
+    expect(Math.hypot(at(veil).x - at(fig).x, at(veil).y - at(fig).y)).toBeLessThan(4);
+    expect(at(veil).x + at(veil).y).toBeGreaterThan(at(fig).x + at(fig).y);
+    expect(Number(prop(veil, 'coluna'))).toBeGreaterThanOrEqual(8);
+    const curtain = layer('cenario').find((o) => o.type === 'cortina-veu')!;
+    expect(Math.hypot(at(curtain).x - at(veil).x, at(curtain).y - at(veil).y)).toBeLessThan(0.5);
+    expect(prop(named('cenario', 'Pedra da Ilha'), 'ancestral')).toBe(true);
+  });
+
+  it('a roda: 9 pedras em pé em volta da oferenda, a face gravada virada para o meio, com vão para passar entre elas', () => {
+    const stones = layer('cenario').filter((o) => o.type === 'menir');
+    expect(stones).toHaveLength(9);
+    const c = at(ring);
+    for (const o of stones) {
+      const { x, y } = at(o);
+      expect(Math.hypot(x - c.x, y - c.y)).toBeCloseTo(4.4, 1);
+      // a face larga olha para o meio da roda
+      const toCenter = (Math.atan2(c.y - y, c.x - x) * 180) / Math.PI;
+      expect(Math.abs(((Number(prop(o, 'olhando')) - toCenter + 540) % 360) - 180)).toBeLessThan(2);
+      expect(['espiral', 'sol', 'circulos', 'cobra']).toContain(prop(o, 'glifo'));
+      expect(Number(prop(o, 'altura'))).toBeGreaterThanOrEqual(1.7);
+    }
+    // entre duas pedras vizinhas cabe gente (o pé passa) e a trilha chega no meio da roda
+    for (const a of stones) {
+      const near = Math.min(...stones.filter((b) => b !== a).map((b) => Math.hypot(at(a).x - at(b).x, at(a).y - at(b).y)));
+      expect(near).toBeGreaterThan(2.4);
+    }
+    expect(reachIsle(c.x, c.y, 1.2)).toBe(true);
+  });
+
+  it('o atracadouro: do barco (a chegada da viagem com o Barqueiro) dá para andar até o Véu e a roda; a ilha segue só de barco', () => {
+    const p = rectOf(pier);
+    // o deque entra na água e encosta na ilha; a chegada fica nele, e a canoa amarrada do lado
+    expect(boat.x > p.x0 && boat.x < p.x1 && boat.y > p.y0 && boat.y < p.y1).toBe(true);
+    const canoe = layer('cenario').filter((o) => o.type === 'barco' && at(o).x > p.x0 && at(o).x < p.x1 && Math.abs(at(o).y - p.y1) < 2);
+    expect(canoe).toHaveLength(1);
+    expect(reachIsle(boat.x, boat.y, 0.3)).toBe(true);
+    expect(reachIsle(at(veil).x + 1.5, at(veil).y + 2, 1.5)).toBe(true);
+    expect(reachIsle(p.x0 + 0.5, (p.y0 + p.y1) / 2, 0.3), 'a ponta do deque').toBe(true);
+    // de lá não se chega ao continente (nem à chegada do Capão)
+    expect(fromBoat[Math.round(ARRIVAL.y / STEP) * COLS + Math.round(ARRIVAL.x / STEP)]).toBe(0);
+    expect(reach(boat.x, boat.y)).toBe(false);
+  });
+
+  it('na ilha: a Trilha do Véu, as oferendas, os esteios, as pedras da beira na água e os cogumelos que brilham', () => {
+    const trail = layer('chao').find((o) => o.type === 'trilha' && prop(o, 'nome') === 'Trilha do Véu')!;
+    const pts = ptsOf(trail);
+    const p = rectOf(pier);
+    expect(Math.hypot(pts[0]![0] - p.x1, pts[0]![1] - (p.y0 + p.y1) / 2)).toBeLessThan(0.6);
+    const last = pts[pts.length - 1]!;
+    expect(Math.hypot(last[0] - at(ring).x, last[1] - at(ring).y)).toBeLessThan(4.4);
+    const here = layer('cenario').filter(onIsle);
+    expect(here.filter((o) => o.type === 'oferenda')).toHaveLength(2);
+    expect(here.filter((o) => o.type === 'esteio').length).toBeGreaterThanOrEqual(2);
+    expect(here.filter((o) => o.type === 'planta' && prop(o, 'tipo') === 'cogumelo' && prop(o, 'brilho')).length).toBeGreaterThanOrEqual(6);
+    // as pedras da beira ficam na água: o pé não chega nelas por terra, mas a caixa delas encosta na beira
+    for (const o of here.filter((c) => c.type === 'rocha')) expect(reachIsle(at(o).x, at(o).y, 0.4)).toBe(false);
+  });
+});

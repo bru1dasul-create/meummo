@@ -29,6 +29,7 @@ import {
   covers,
   dist,
   distToPath,
+  ellipse,
   inRect,
   inside,
   line,
@@ -87,6 +88,19 @@ const WATER: Pt[] = SHORE;
 /** A ilhota de antes e a Ilha do Véu (grande, no meio): dá para pisar, mas só de barco (depois, com o Barqueiro). */
 const ISLAND_SMALL = blob(92, 72, 6, 4.5, 0.15);
 const ISLAND = blob(196, 148, 26, 18, 0.12);
+/**
+ * A Ilha do Véu vestida (24/11, o dono: "pode retomar o Guarapiranga"). No meio, a Árvore do Véu, a maior do jogo; na
+ * frente do tronco, o Véu (a cortina de raízes que brilham e o brilho no chão), com a pedra antiga do lado e a oferenda do
+ * outro. No leste, a roda de pedras em pé (as itacoatiaras viradas para o meio), com a oferenda no meio; no oeste, virado
+ * para o Refúgio (de onde o Barqueiro vem), o atracadouro com a canoa amarrada. A Trilha do Véu liga os três.
+ */
+const ISLAND_FIG = { x: 194, y: 145.5, copa: 11, altura: 18, tronco: 2.4 };
+const ISLAND_VEIL = { x: 195.8, y: 148.6 };
+const ISLAND_RING = { x: 211.5, y: 147.5, r: 4.4 };
+/** O atracadouro: entra 6,4 m na água e sobe 1 m na areia (a beira oeste da ilha fica em x ≈ 172,9). */
+const ISLAND_PIER: Rect = { x0: 166.5, x1: 174, y0: 147, y1: 149 };
+/** A areia da beira, em volta do atracadouro. */
+const ISLAND_SAND = { x: 176.2, y: 148, r: 3.2 };
 /** O riacho que desce da cachoeira, no nordeste, até a represa (passa por baixo da estrada). */
 const CREEK = smooth([[393, 23], [380, 36], [366, 50], [352, 64], [342, 80], [333, 96], [325, 112], [320, 120]], 1);
 const CREEK_W = 3;
@@ -123,6 +137,8 @@ const TRAIL_SQUARE = smooth([[327, 46.5], [327.5, 56], [328.5, 70]], 1);
 const TRAIL_DAM_EAST = smooth([[338.5, 251.7], [352, 245], [362, 237], [370, 231]], 1);
 /** Da praça em ruínas até a beira do poço da cachoeira (o riacho fica ao sul dela). */
 const TRAIL_FALL = smooth([[346.5, 27], [358, 26.2], [370, 24.8], [383.6, 23.2]], 1);
+/** A Trilha do Véu, na ilha: do atracadouro, passa na frente do Véu e entra na roda de pedras pelo vão do oeste. */
+const TRAIL_ISLAND = smooth([[174, 148], [179, 149.2], [184, 151.2], [189.5, 152.5], [195.5, 152.8], [201, 151.6], [205.2, 149.6], [207.6, 148.1]], 1);
 const TRAILS: [Pt[], number, string][] = [
   [TRAIL_PARK, 2.6, 'Trilha do Mirante'],
   [TRAIL_SOUTH, 3, 'Trilha da Margem Sul'],
@@ -131,6 +147,7 @@ const TRAILS: [Pt[], number, string][] = [
   [TRAIL_SQUARE, 3, ''],
   [TRAIL_DAM_EAST, 3, ''],
   [TRAIL_FALL, 2.4, 'Trilha da Cachoeira'],
+  [TRAIL_ISLAND, 1.8, 'Trilha do Véu'],
 ];
 
 // ----- o Refúgio: a vila sobre palafitas (igual) -----
@@ -412,6 +429,9 @@ chao.push(area('agua', WATER, { cor: '#2f6f6a' }, 'Represa de Guarapiranga'));
 chao.push(area('grama', blob((LOOKOUT_VIEW.x0 + LOOKOUT_VIEW.x1) / 2, (LOOKOUT_VIEW.y0 + LOOKOUT_VIEW.y1) / 2, (LOOKOUT_VIEW.x1 - LOOKOUT_VIEW.x0) / 2, (LOOKOUT_VIEW.y1 - LOOKOUT_VIEW.y0) / 2, 0.15)));
 chao.push(area('grama', ISLAND_SMALL, undefined, 'Ilhota'));
 chao.push(area('grama', ISLAND, undefined, 'Ilha do Véu'));
+// (na ilha: a areia da beira em volta do atracadouro e o chão batido da roda de pedras, antes da trilha que passa neles)
+chao.push(ellipse('areia', ISLAND_SAND.x, ISLAND_SAND.y, ISLAND_SAND.r));
+chao.push(ellipse('terra', ISLAND_RING.x, ISLAND_RING.y, ISLAND_RING.r + 1.4));
 chao.push(line('agua', CREEK, { largura: CREEK_W, cor: '#2f6f6a' }));
 for (const c of CHANNELS) chao.push(line('agua', c, { largura: CHANNEL_W, cor: '#2f6f6a' }));
 for (const p of PONDS) chao.push(area('agua', p, { cor: '#35706a' }));
@@ -976,21 +996,98 @@ cenario.push(box('cachoeira', FALL, { altura: 1.8, queda: 'sul', musgo: true }, 
   }
 }
 
-// ----- 8 · a Ilha do Véu: a árvore enorme, o Véu e a pedra antiga; e a ilhota de antes, com as árvores dela -----
+// ----- 8 · a Ilha do Véu (vestida em 24/11): a Árvore do Véu, o Véu, a roda de pedras, o atracadouro e a beira; e a ilhota
+// de antes, com as árvores dela (iguais: o sorteio dela vem antes) -----
 {
-  const FIG = { x: 194, y: 145.5, copa: 8, altura: 12, tronco: 2.2 };
+  const FIG = ISLAND_FIG;
   cenario.push(point('arvore', FIG.x, FIG.y, { especie: 'figueira', copa: FIG.copa, altura: FIG.altura, tronco: FIG.tronco }, 'Árvore do Véu'));
   addTrunk({ x: FIG.x, y: FIG.y, r: FIG.tronco / 2 });
-  cenario.push(point('veu', 205, 153.5, { raio: 2.2 }, 'Véu da Ilha'));
-  cenario.push(point('pedra', 206.4, 152.6, { raio: 1, ancestral: true }, 'Pedra da Ilha'));
+  // o Véu, na frente do tronco: o brilho no chão (a menos de 4 m do tronco, a figueira acende os símbolos dela) e a cortina
+  // de raízes que brilham, de frente para a câmera; a pedra antiga de um lado e a oferenda do outro
+  // (`coluna`: a luz sobe alta, para a ilha chamar a atenção de longe, da beira da represa)
+  cenario.push(point('veu', ISLAND_VEIL.x, ISLAND_VEIL.y, { raio: 1.4, coluna: 12 }, 'Véu da Ilha'));
+  cenario.push(point('cortina-veu', ISLAND_VEIL.x, ISLAND_VEIL.y, { largura: 4.2, altura: 6.5 }));
+  const STONE = { x: 199.6, y: 149.3 };
+  cenario.push(point('pedra', STONE.x, STONE.y, { raio: 1, ancestral: true }, 'Pedra da Ilha'));
+  addTrunk({ x: STONE.x, y: STONE.y, r: 0.75 });
+  const FIG_OFFER = { x: 191.6, y: 150.4 };
+  cenario.push(point('oferenda', FIG_OFFER.x, FIG_OFFER.y, { velas: 5 }));
+  addTrunk({ x: FIG_OFFER.x, y: FIG_OFFER.y, r: 0.3 });
+  // a roda de pedras em pé: 9 pedras, uma a cada 40° (a trilha entra pelo vão do oeste), a face das itacoatiaras virada
+  // para o meio, onde fica a oferenda
+  const GLYPHS = ['espiral', 'sol', 'circulos', 'cobra'];
+  const HEIGHTS = [2.4, 1.9, 2.2, 2.6, 2.0, 2.3, 1.8, 2.5, 2.1];
+  const ringStones: Pt[] = [];
+  for (let k = 0; k < 9; k++) {
+    const a = (k * 40 * Math.PI) / 180;
+    const [x, y] = [round(ISLAND_RING.x + Math.cos(a) * ISLAND_RING.r), round(ISLAND_RING.y + Math.sin(a) * ISLAND_RING.r)];
+    cenario.push(point('menir', x, y, { altura: HEIGHTS[k]!, largura: 0.95, olhando: (k * 40 + 180) % 360, glifo: GLYPHS[k % GLYPHS.length]! }));
+    addTrunk({ x, y, r: 0.45 });
+    ringStones.push([x, y]);
+  }
+  cenario.push(point('oferenda', ISLAND_RING.x, ISLAND_RING.y, { velas: 7 }, 'Roda das Pedras'));
+  addTrunk({ x: ISLAND_RING.x, y: ISLAND_RING.y, r: 0.3 });
+  // o atracadouro, virado para o Refúgio: o deque, a canoa amarrada, os esteios com as fitas e a fogueira apagada
+  cenario.push(box('deque', ISLAND_PIER, { altura: 0.6, palafitas: true }, 'Atracadouro da Ilha'));
+  cenario.push(rect('barco', 167.4, 171.4, 149.35, 150.45, { tipo: 'canoa', cor: '#8a5a3a', olhando: 180 }));
+  for (const y of [146.2, 149.9]) {
+    cenario.push(point('esteio', 175.3, y, { altura: 2.2 }));
+    addTrunk({ x: 175.3, y, r: 0.15 });
+  }
+  cenario.push(point('brasas', 178.6, 145.6, { raio: 0.6 }));
+  addTrunk({ x: 178.6, y: 145.6, r: 0.6 });
+  // a beira: pedras com musgo (no norte e no leste), taboas na água rasa e aguapés, longe do atracadouro
+  const ICX = 196, ICY = 148;
+  const islandEdge = (deg: number) => {
+    const a = (deg * Math.PI) / 180;
+    let d = 0;
+    while (inside(ICX + Math.cos(a) * d, ICY + Math.sin(a) * d, ISLAND)) d += 0.05;
+    return { d, ux: Math.cos(a), uy: Math.sin(a) };
+  };
+  const nearPier = (x: number, y: number) => rectGap(x, y, ISLAND_PIER) < 4.5;
+  for (const [deg, raio, altura] of [[252, 0.9, 1.1], [286, 1.1, 1.4], [318, 0.8, 1], [12, 1, 1.2], [58, 0.75, 0.9]] as const) {
+    // (dentro da água rasa, encostada na beira: a caixa dela fica toda na água, sem vão de entalar com a beira)
+    const e = islandEdge(deg);
+    const out = raio * 0.75 + 0.25;
+    const [x, y] = [round(ICX + e.ux * (e.d + out)), round(ICY + e.uy * (e.d + out))];
+    cenario.push(point('rocha', x, y, { raio, altura, musgo: true }));
+    addTrunk({ x, y, r: raio * 0.75 });
+  }
+  const brng = mulberry32(SEED + 50);
+  for (let deg = 0; deg < 360; deg += 7) {
+    const e = islandEdge(deg);
+    const off = 0.5 + brng() * 0.6;
+    const [x, y] = [round(ICX + e.ux * (e.d + off)), round(ICY + e.uy * (e.d + off))];
+    // (no norte, de costas para a câmera, a taboa ficaria escondida atrás da beira: só no sul, no leste e no oeste)
+    if (nearPier(x, y) || !isWater(x, y) || (deg > 250 && deg < 350)) continue;
+    cenario.push(point('planta', x, y, { tipo: 'taboa', raio: round(0.35 + brng() * 0.25) }));
+  }
+  for (let deg = 18; deg < 360; deg += 41) {
+    const e = islandEdge(deg);
+    const off = 1.6 + brng() * 2.4;
+    const [x, y] = [round(ICX + e.ux * (e.d + off)), round(ICY + e.uy * (e.d + off))];
+    if (nearPier(x, y) || !isWater(x, y)) continue;
+    cenario.push(point('aguape', x, y, { raio: round(0.5 + brng() * 0.5) }));
+  }
+  // os cogumelos que brilham, no pé da árvore grande e entre as pedras da roda
+  const shrooms: Pt[] = [[189.4, 147.6], [190.6, 143.2], [197.8, 144.6], [192.4, 141.4], [198.9, 147.1], [205.8, 144.3], [208.2, 152.6], [215.2, 151.6], [214.1, 142.4]];
+  for (const [x, y] of shrooms) cenario.push(point('planta', x, y, { tipo: 'cogumelo', brilho: '#3fd6c8', raio: 0.35 }));
+  // as árvores sorteadas: longe da árvore grande, do Véu, da roda, do atracadouro, da trilha e da beira, e nenhuma tampa
+  // na tela a trilha (ela está na vista do mapa), o atracadouro, o Véu ou a roda
+  const ISLAND_KEYS: Pt[] = [...rectPoints(ISLAND_PIER), [ISLAND_VEIL.x, ISLAND_VEIL.y], [STONE.x, STONE.y], [FIG_OFFER.x, FIG_OFFER.y], [ISLAND_RING.x, ISLAND_RING.y], ...ringStones];
+  const hidesIsland = (x: number, y: number, copa: number, altura: number) => ISLAND_KEYS.some(([kx, ky]) => covers(x, y, copa, altura, kx, ky));
+  const shore: Pt[] = [...ISLAND, ISLAND[0]!];
   const irng = mulberry32(SEED + 4);
   for (const [cx, cy, rx, ry, count, isle] of [[92, 72, 6, 4, 6, ISLAND_SMALL], [196, 148, 22, 15, 14, ISLAND]] as const) {
     for (let i = 0, n = 0; i < 600 && n < count; i++) {
       const [x, y] = [cx - rx + irng() * rx * 2, cy - ry + irng() * ry * 2];
-      if (!inside(x, y, isle) || dist(x, y, FIG.x, FIG.y) < FIG.copa + 1 || dist(x, y, 205, 153.5) < 3) continue;
-      const especie = irng() < 0.5 ? 'jeriva' : 'mata';
+      if (!inside(x, y, isle) || dist(x, y, FIG.x, FIG.y) < FIG.copa + 1) continue;
+      const big = isle === ISLAND;
+      if (big && (distToPath(x, y, shore) < 2.2 || dist(x, y, ISLAND_RING.x, ISLAND_RING.y) < ISLAND_RING.r + 3 || distToPath(x, y, TRAIL_ISLAND) < 3.4 || rectGap(x, y, ISLAND_PIER) < 5 || dist(x, y, ISLAND_VEIL.x, ISLAND_VEIL.y) < 4 || dist(x, y, STONE.x, STONE.y) < 4.5 || dist(x, y, FIG_OFFER.x, FIG_OFFER.y) < 3.5)) continue;
+      const especie = big ? (irng() < 0.45 ? 'jeriva' : irng() < 0.45 ? 'embauba' : 'mata') : irng() < 0.5 ? 'jeriva' : 'mata';
       const d = treeDims(especie, irng);
       if (nearTrunks(x, y, 4).some((t) => dist(x, y, t.x, t.y) < 2.6)) continue;
+      if (big && (hidesView(x, y, d.copa, d.altura) || hidesIsland(x, y, d.copa, d.altura))) continue;
       addTrunk({ x, y, r: d.tronco / 2 });
       cenario.push(point('arvore', round(x), round(y), { especie, ...d }));
       n++;
@@ -1154,6 +1251,8 @@ function collide(s: Shape): Shape[] {
     ];
   }
   if (s.type === 'rocha') return [block('pedra', s.x, s.y, round(Number(p.raio) * 1.5))];
+  // (a pedra em pé da roda da ilha: um quadrado do tamanho da laje de pedra)
+  if (s.type === 'menir') return [block('pedra', s.x, s.y, 0.8, { altura: Number(p.altura) })];
   if (s.type === 'oferenda') return [block('oferenda', s.x, s.y, 0.6, { bloqueiaTiro: false, altura: 0.5 })];
   if (s.type === 'brasas') return [block('brasas', s.x, s.y, 1.2, { bloqueiaTiro: false, altura: 0.3 })];
   if (s.type === 'esteio') return [block('poste', s.x, s.y, 0.3, { altura: Number(p.altura) })];
@@ -1198,7 +1297,8 @@ function collide(s: Shape): Shape[] {
   return [];
 }
 // a água: faixas que o pé não atravessa (os deques ficam de fora; as ilhas também)
-const waterBoxes = waterStrips(isWater, 0, W, 0, H);
+// (o atracadouro da ilha é chão de andar; ele fica fora do `isWater` de cima, que decide o sorteio das plantas da água)
+const waterBoxes = waterStrips((x, y) => !inRect(x, y, ISLAND_PIER) && isWater(x, y), 0, W, 0, H);
 /**
  * Nenhum vão de entalar (0,3 a 1,2 m entre duas coisas sólidas de frente uma para a outra, sem nada no meio) em lugar
  * nenhum: o mapa é todo aberto. As árvores sorteadas que ficam num vão desses saem (uma de cada vez, até não sobrar vão);
@@ -1329,6 +1429,8 @@ pontos.push(point('ponto', 54.6, 58.8, undefined, 'spawn')); // quem desmaia aqu
 pontos.push(point('ponto', ARRIVAL.x, ARRIVAL.y, undefined, 'chegada-capao'));
 // (para quando o Mapa 03 existir: quem chega de Santo Amaro aparece na estrada, antes da barreira)
 pontos.push(point('ponto', 380, 230, undefined, 'chegada-santo-amaro'));
+// a chegada de barco na Ilha do Véu, na ponta de terra do atracadouro (a viagem com o Barqueiro é da [estrutura], depois)
+pontos.push(point('ponto', 172.4, 148, undefined, 'chegada-ilha-do-veu'));
 // o lugar das capivaras na várzea (o bando é da [estrutura], em data/bichos.json): onde andam e onde deitam
 pontos.push(rect('area', 280, 330, 264, 312, undefined, 'capivaras-varzea'));
 pontos.push(point('ponto', 300, 300, undefined, 'capivaras-varzea-descanso'));

@@ -10,7 +10,7 @@
 // atravessar (a pinguela com `pedras`), no flora.js; o gradil quebrado, no props.js.
 // Também do Guarapiranga (o [mundo], 23 e 24/11): a cachoeira e a comporta (`cachoeira`, com `estilo: 'comporta'`), o
 // coreto da Praça em Ruínas (`coreto`), a Caverna Sagrada (`caverna`, `rocha`, `oferenda`, `brasas`, `esteio`) e o
-// mirante (`torre-mirante`, `guarda-corpo`, `luneta`, `painel-mirante`).
+// mirante (`torre-mirante`, `guarda-corpo`, `luneta`, `painel-mirante`); e a Ilha do Véu (`menir`, `cortina-veu`).
 //   PD.flora.tree.paineira = { trunk, trunkBox, crown, crownBox }
 //   PD.city.small[tipo]    = { height, blocks, overhead, fades, box, shadow, paint, live }
 (function (PD) {
@@ -2730,6 +2730,217 @@
           ctx.stroke();
         }
       });
+    },
+  };
+
+  // ------------------------------------------------------------------ a Ilha do Véu (Guarapiranga)
+  // (24/11, o dono: "pode retomar o Guarapiranga") A roda de pedras em pé (`menir`) e o Véu da ilha (`cortina-veu`, a
+  // cortina de raízes que descem da Árvore do Véu e brilham). A árvore é a figueira de sempre, maior; a oferenda, os
+  // esteios, as brasas e as pedras da beira são os da caverna.
+  const VEIL_GLOW = '#3fd6c8';
+  const MENHIR_ROCK = { dark: [54, 57, 58], light: [178, 180, 172] };
+  /**
+   * A laje em pé: a face larga virada para `face` (graus; na roda, para o meio), meia largura `r`, altura `h` (cm), um
+   * pouco torta para o lado e com o alto arredondado. Devolve as voltas (do pé para o alto), a coroa e o lugar da gravura.
+   */
+  function menhirGeom(d, z0) {
+    const rnd = seeded(d.x, d.y, 4411);
+    const a = (d.face * Math.PI) / 180;
+    const n = { x: Math.cos(a), y: Math.sin(a) }; // para onde olha a face larga
+    const t = { x: -n.y, y: n.x }; // ao longo dela
+    const half = d.r, thick = d.r * 0.44;
+    const lean = (rnd() - 0.5) * 0.12;
+    const N = 10;
+    const jit = [];
+    for (let k = 0; k < N; k++) jit.push([(rnd() - 0.5) * 0.25, 0.9 + rnd() * 0.16]);
+    const RINGS = [[-4, 1], [0.4, 0.97], [0.78, 0.84], [0.95, 0.5]];
+    const at = (u, v, z) => {
+      const s = lean * (z - z0);
+      return { x: d.x + t.x * (u + s) + n.x * v, y: d.y + t.y * (u + s) + n.y * v, z };
+    };
+    const rings = RINGS.map(([zk, rk]) => jit.map(([da, f], k) => {
+      const ang = (k / N) * M.TAU + da;
+      const z = zk < 0 ? z0 + zk : z0 + d.h * zk;
+      return at(Math.cos(ang) * half * rk * f, Math.sin(ang) * thick * rk * f, z);
+    }));
+    const crown = at((rnd() - 0.5) * half * 0.2, 0, z0 + d.h);
+    // a gravura: no meio da face larga, um pouco acima do meio da altura (só a face que a câmera vê tem a dela à vista)
+    const zg = z0 + d.h * 0.52;
+    return { n, half, thick, rings, crown, at, zg, gs: Math.min(half * 0.5, 30), shown: n.x + n.y > 0.15 };
+  }
+  /** Desenha na face larga, com a gravura no meio (`fn` recebe a forma dela, em cm na face). */
+  function menhirGlyph(ctx, cam, d, geo, fn) {
+    const zTop = geo.zg + geo.gs * 1.6;
+    const A = geo.at(-geo.half * 0.8, geo.thick * 0.97, zTop), B = geo.at(geo.half * 0.8, geo.thick * 0.97, zTop);
+    const type = d.glyph || 'espiral';
+    // (a cobra é comprida: menor, e começa antes do meio)
+    const r = type === 'cobra' ? geo.gs * 0.55 : geo.gs;
+    onFace(ctx, cam, A, B, zTop, (L) => fn({ type, u: type === 'cobra' ? L / 2 - r * 2 : L / 2, v: geo.gs * 1.6, r }));
+  }
+  small.menir = {
+    fades: true,
+    height: (d) => d.h,
+    blocks: 0,
+    shadow: (p, cam, d) => H.circleShadow(p, cam, d.x, d.y, d.r * 0.8, d.h * 0.55),
+    box: (cam, d, z0) => volBox(cam, d.x - d.r * 1.4, d.x + d.r * 1.4, d.y - d.r * 1.4, d.y + d.r * 1.4, z0 - 8, z0 + d.h + 16, 16),
+    // (de noite, a gravura acende um buraquinho verde-água no escuro — flora.js, glows)
+    glowPoints(d) {
+      const geo = menhirGeom(d, 0);
+      if (!geo.shown) return [];
+      const c = geo.at(0, geo.thick + 20, geo.zg);
+      return [{ x: c.x, y: c.y, z: geo.zg, r: 80, color: VEIL_GLOW, k: 0.4 }];
+    },
+    paint(ctx, cam, d, z0, ink) {
+      const geo = menhirGeom(d, z0);
+      ringRock(ctx, cam, { x: d.x, y: d.y, z0, h: d.h, rx: d.r, ry: geo.thick, seed: Math.round(d.x * 5 + d.y * 11), moss: true, colors: MENHIR_ROCK }, ink, geo.rings, geo.crown);
+      // a gravura: o sulco escuro e a beirada clara
+      if (geo.shown) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        menhirGlyph(ctx, cam, d, geo, (s) => {
+          glyphPath(ctx, s);
+          ctx.strokeStyle = 'rgba(32, 28, 24, 0.6)';
+          ctx.lineWidth = 5;
+          ctx.stroke();
+          glyphPath(ctx, s, 1.2, 1.6);
+          ctx.strokeStyle = 'rgba(236, 226, 204, 0.38)';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+      // o capim no pé
+      const rnd = seeded(d.x, d.y, 4421);
+      for (let k = 0; k < 3; k++) {
+        const a = rnd() * M.TAU;
+        grass(ctx, cam, d.x + Math.cos(a) * d.r * 0.9, d.y + Math.sin(a) * d.r * 0.6 + 10, z0, 20 + rnd() * 10, rnd, ink);
+      }
+    },
+    // a gravura brilhando (respira devagar; de noite, mais)
+    overlay(ctx, cam, d, z0, time) {
+      const geo = menhirGeom(d, z0);
+      if (!geo.shown) return;
+      const day = PD.view && PD.view.daylight != null ? PD.view.daylight : 1;
+      const night = 1 - day;
+      const A = ctx.globalAlpha;
+      const a = (0.12 + 0.22 * (0.5 + 0.5 * Math.sin(time * 0.8 + d.x * 0.013))) * (0.45 + 0.9 * night);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = VEIL_GLOW;
+      menhirGlyph(ctx, cam, d, geo, (s) => {
+        glyphPath(ctx, s);
+        ctx.globalAlpha = A * a * 0.45;
+        ctx.lineWidth = 10;
+        ctx.stroke();
+        ctx.globalAlpha = A * a;
+        ctx.lineWidth = 3.2;
+        ctx.stroke();
+      });
+      ctx.restore();
+      ctx.globalAlpha = A;
+    },
+  };
+  /**
+   * O Véu da ilha: a cortina de raízes finas que descem da copa da Árvore do Véu até perto do chão, de frente para a
+   * câmera (ao longo da diagonal da tela), balançando devagar. Cada raiz brilha verde-água, com uma gota de luz descendo;
+   * pontinhos sobem entre elas e uma névoa clara respira no meio. De noite, mais forte. Não segura ninguém: dá para passar.
+   * `w`: largura, `h`: altura do alto (cm). Tudo mexe: é desenhada a cada quadro (`live`).
+   */
+  const VEIL_DIR = { x: Math.SQRT1_2, y: -Math.SQRT1_2 };
+  const VEIL_N = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
+  function veilStrands(d) {
+    const rnd = seeded(d.x, d.y, 4431);
+    const out = [];
+    const n = Math.max(6, Math.round(d.w / 28));
+    for (let k = 0; k < n; k++) {
+      out.push({ u: (k / (n - 1) - 0.5) * d.w + (rnd() - 0.5) * 18, v: (rnd() - 0.5) * 50, top: d.h - rnd() * 90, bot: 18 + rnd() * 70, ph: rnd() * M.TAU, w: 1.6 + rnd() * 1.4, glow: rnd() });
+    }
+    return out;
+  }
+  function strandPts(cam, d, z0, s, time) {
+    const pts = [];
+    const sway = Math.sin(time * 0.55 + s.ph) * 9, sway2 = Math.sin(time * 0.9 + s.ph * 1.7) * 4;
+    for (let i = 0; i <= 10; i++) {
+      const f = i / 10; // 0 no alto, 1 embaixo
+      const du = (sway + sway2 * f) * f;
+      pts.push(cam.p({ x: d.x + VEIL_DIR.x * (s.u + du) + VEIL_N.x * s.v, y: d.y + VEIL_DIR.y * (s.u + du) + VEIL_N.y * s.v, z: z0 + s.top + (s.bot - s.top) * f }));
+    }
+    return pts;
+  }
+  small['cortina-veu'] = {
+    fades: false,
+    height: (d) => d.h,
+    blocks: 0,
+    box: (cam, d, z0) => {
+      const e = d.w / 2 + 60;
+      return volBox(cam, d.x - e, d.x + e, d.y - e, d.y + e, z0 - 10, z0 + d.h + 30, 24);
+    },
+    glowPoints: (d) => [-0.3, 0, 0.3].map((f) => ({ x: d.x + VEIL_DIR.x * d.w * f, y: d.y + VEIL_DIR.y * d.w * f, z: d.h * 0.4, r: 160, color: VEIL_GLOW, k: 0.35 })),
+    paint() {},
+    live(ctx, cam, d, z0, time) {
+      const day = PD.view && PD.view.daylight != null ? PD.view.daylight : 1;
+      const night = 1 - day;
+      const A = ctx.globalAlpha;
+      const zm = cam.zoom;
+      const strands = veilStrands(d).map((s) => ({ s, pts: strandPts(cam, d, z0, s, time) }));
+      const trace = (pts) => {
+        ctx.beginPath();
+        pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      };
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      // as raízes, finas e escuras
+      for (const { s, pts } of strands) {
+        trace(pts);
+        ctx.strokeStyle = 'rgba(30, 36, 30, 0.85)';
+        ctx.lineWidth = Math.max(1, (s.w + 1.4) * zm);
+        ctx.stroke();
+        ctx.strokeStyle = '#5c6b52';
+        ctx.lineWidth = Math.max(0.7, s.w * zm);
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      // a névoa clara no meio, respirando
+      const c = cam.p({ x: d.x, y: d.y, z: z0 + d.h * 0.35 });
+      const R = d.w * 0.55 * zm;
+      ctx.globalAlpha = A * (0.12 + 0.08 * Math.sin(time * 0.7)) * (0.6 + 0.9 * night);
+      ctx.drawImage(glowSprite(VEIL_GLOW), c.x - R, c.y - R * 0.9, R * 2, R * 1.8);
+      // o brilho de cada raiz e a gota de luz descendo por ela
+      ctx.strokeStyle = VEIL_GLOW;
+      ctx.fillStyle = '#c8fff6';
+      for (const { s, pts } of strands) {
+        const pulse = 0.5 + 0.5 * Math.sin(time * 1.3 + s.ph);
+        trace(pts);
+        ctx.globalAlpha = A * (0.1 + 0.16 * pulse) * (0.6 + 0.8 * night) * (0.6 + 0.4 * s.glow);
+        ctx.lineWidth = Math.max(2, 7 * zm);
+        ctx.stroke();
+        ctx.globalAlpha = A * (0.25 + 0.3 * pulse) * (0.55 + 0.6 * night);
+        ctx.lineWidth = Math.max(0.8, 1.6 * zm);
+        ctx.stroke();
+        const ph = (time * (0.12 + s.glow * 0.1) + s.ph) % 1;
+        const q = pts[Math.min(10, Math.floor(ph * 10))];
+        ctx.globalAlpha = A * Math.sin(ph * Math.PI) * (0.5 + 0.5 * night);
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, Math.max(0.8, 2.2 * zm), 0, M.TAU);
+        ctx.fill();
+      }
+      // os pontinhos subindo
+      const rr = M.rng(4441);
+      ctx.fillStyle = '#bdfcf2';
+      for (let k = 0; k < 14; k++) {
+        const ph = (time * (0.05 + rr() * 0.06) + rr()) % 1;
+        const u = (rr() - 0.5) * d.w;
+        const p = cam.p({ x: d.x + VEIL_DIR.x * u, y: d.y + VEIL_DIR.y * u, z: z0 + 20 + ph * d.h * 0.8 });
+        ctx.globalAlpha = A * Math.sin(ph * Math.PI) * (0.4 + 0.5 * night);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.7, 1.5 * zm), 0, M.TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = A;
     },
   };
 
