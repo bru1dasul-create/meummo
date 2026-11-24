@@ -258,11 +258,14 @@ pontos.push(point('ponto', ARRIVAL.x, ARRIVAL.y, undefined, 'spawn'));
 pontos.push(point('ponto', ARRIVAL.x, ARRIVAL.y, undefined, 'chegada-guarapiranga'));
 pontos.push(point('ponto', CUCA.x, CUCA.y, undefined, 'toca-da-cuca'));
 saidas.push(box('saida', EXIT, { mapa: 'guarapiranga', chegada: 'chegada-caverna' }, 'Guarapiranga'));
-// a luta com a Cuca (24/11, o dono: "pode fazer a Cuca virar chefe de luta"): a área dela é a toca inteira, com uma só
-// (o jeito da luta é da [estrutura], em data/monsters.json; a área só entra no mapa quando a chave `cuca` existir lá)
+// a luta com a Cuca (24/11, o dono: "pode fazer a Cuca virar chefe de luta"; "gera o mapa de novo com a Cuca chefe"):
+// uma só, que nasce e anda no fundo da toca, do caldeirão para trás. Quem chega pela boca da toca (onde o corredor do
+// salão desemboca) vê a Cuca no caldeirão antes de ela perceber (ela percebe a 6 m); dois passos para dentro e a luta
+// começa, e corre pela toca inteira, porque ela persegue quem foge. O meio da área (para onde ela volta quando desiste)
+// é chão livre. O jeito da luta é da [estrutura], em data/monsters.json; a área só entra quando a chave `cuca` existir lá.
 const monstros: Shape[] = [];
 const MONSTER_KEYS = new Set(Object.keys(JSON.parse(readFileSync('data/monsters.json', 'utf8')) as Record<string, unknown>));
-if (MONSTER_KEYS.has('cuca')) monstros.push(rect('area', 38, 61, 4, 18.5, { quantidade: 1 }, 'cuca'));
+if (MONSTER_KEYS.has('cuca')) monstros.push(rect('area', 47, 58, 5, 12, { quantidade: 1 }, 'cuca'));
 if (!walkable(ARRIVAL.x, ARRIVAL.y) || !walkable(CUCA.x, CUCA.y) || keepOut(CUCA.x, CUCA.y, 0.6)) throw new Error('A chegada ou o lugar da Cuca não ficam no chão livre.');
 
 writeTmj(

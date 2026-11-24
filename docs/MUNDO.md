@@ -34,7 +34,20 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a toca da Cuca virou arena (na `main`)**, o dono: "pode fazer a Cuca virar chefe de luta" (a luta
+- **Agora (24/11): a Cuca chefe no mapa (na `main`)**, o dono: "gera o mapa de novo com a Cuca chefe". A [estrutura]
+  fez a luta (a chave `cuca` em `data/monsters.json`: de dia a bruxa, de noite a chefe) e pediu para entrar na `main`
+  junto com a área, porque o teste da caverna exige a área quando a chave existe: juntei o ramo dela no meu, gerei a
+  caverna e mandei as duas partes juntas. A área `cuca` (camada `monstros`, quantidade 1) ficou **no fundo da toca, do
+  caldeirão para trás** (x 47 a 58 × y 5 a 12), e não na toca inteira: o servidor faz o monstro nascer num chão
+  qualquer da área, andar só dentro dela e voltar para o meio dela quando desiste. Na toca inteira ela podia nascer na
+  boca, em cima de quem chega. Assim, da boca (onde o corredor do salão desemboca, x 41, y 17), de noite, se vê a Cuca
+  no caldeirão antes de ela perceber (ela percebe a 6 m, contados em quadradinhos de 1 m, o maior dos dois lados); dois
+  passos para dentro e a luta começa, pela toca toda (ela persegue até 10 m). O teste da caverna confere a área dentro
+  da toca, o caldeirão dentro dela, o meio dela em chão livre e nenhum chão dela a 6 m da boca (lendo o
+  `alcanceAgressao` da `cuca`: se ele crescer, o teste avisa e eu afasto a área). Conferido no navegador (PC e celular):
+  de dia a bruxa no `toca-da-cuca`; de noite ela some, a chefe nasce no fundo, não vê quem está na boca e, chegando
+  perto, joga o caldo (as poças) e canta (o herói dorme e acorda com o golpe), sem erro na página nem no servidor.
+- **Antes (24/11): a toca da Cuca virou arena (na `main`)**, o dono: "pode fazer a Cuca virar chefe de luta" (a luta
   em si — o jeito dela, os golpes, o que deixa — é da [estrutura]; o desenho, da [arte]). A minha parte: o mapa
   `caverna` cresceu de 60 para 66 m de largura (só para a direita) e a toca (`LAIR`) ficou com uns 22 × 14 m de chão,
   para desviar dos golpes avisados no chão; duas estalagmites na toca para se esconder dos frascos; os barris foram para
