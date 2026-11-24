@@ -4,6 +4,13 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Barba do Birim no retrato (24/11)
+
+- **O defeito.** No retrato pequeno, a vista de cima comprimia o nariz e o bigode e acentuava um recorte claro embaixo do lábio.
+- [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js) liga a barba abaixo do lábio à base do queixo em um volume contínuo na barba cheia.
+- [`js/portrait.js`](../prototipos/pindorama-25d/js/portrait.js) aproxima o rosto e baixa a inclinação para 15° no retrato de cabeça do Birim.
+- **Conferência na branch `codex/barba-birim`.** Comparei os retratos a 90 px em vários giros da cabeça. Abri o jogo e conferi o HUD e a mochila no Chromium em desktop e celular simulado. `npm run check` passou com 659 testes e `npm run build` passou.
+
 ## Inimigos redesenhados (23/11): etapa 1, o Sagui
 - **O escopo aprovado (23/11, "desenha direto", sem Nano Banana):** um bicho por etapa, cada uma com antes e depois
   para o dono aprovar — 1) Sagui, 2) Quati, 3) Tatu-bola, 4) Jararaca, 5) Marimbondos, 6) Filhote de Boitatá. Em todas:

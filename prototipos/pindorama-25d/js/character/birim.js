@@ -855,14 +855,12 @@
         if (fa < (far ? farMin : minFacing)) return;
         (far ? (fa < backMin ? segsBack : segsFar) : segs).push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
       };
-      // queixo: três pedaços soltos (o casco de um pedaço só enchia a curva e tapava a pele embaixo do lábio)
-      // (um casco só embaixo, para a borda de baixo ficar lisa, em U; o alto dele fica abaixo da pele do queixo)
-      // (a esfera da frente abraça a frente do queixo: de perfil o queixo fica coberto de barba; de frente ela começa abaixo da
-      // pele que fica embaixo do lábio)
+      // A base faz a borda de baixo em U. A cobertura da frente emenda no queixo abaixo do lábio.
       piece([[[0, 10.0, -18.4], 2.5], [[-3.8, 9.4, -18.6], 2.2], [[3.8, 9.4, -18.6], 2.2], [[0, 12.0, -17.0], 2.7]], [0, 0.85, -0.5], -0.22, 0.24);
       for (const sx of [-1, 1]) piece([[[sx * 3.8, 9.4, -18.6], 2.2], [[sx * 6.4, 8.4, -19.0], 1.9], [[sx * 4.6, 10.4, -16.6], 2.1]], [sx * 0.3, 0.85, -0.45], -0.2); // (emenda o queixo com os cantos de baixo)
-      for (const sx of [-1, 1]) piece([[[sx * 3.3, 10.4, -15.5], 1.35]], [sx * 0.3, 0.85, -0.4], -0.2); // (arredonda os cantos de baixo da pele do queixo)
-      piece([[[0, 14.3, -14.4], 0.75], [[0, 13.6, -15.6], 1.0]], [0, 0.9, -0.3], -0.1); // a mosca, embaixo do lábio, descendo até a barba
+      for (const sx of [-1, 1]) piece([[[sx * 3.3, 10.4, -15.5], 1.35]], [sx * 0.3, 0.85, -0.4], -0.2);
+      // O pedaço estreito embaixo do lábio deixava dois recortes claros que dominavam a barba no retrato pequeno.
+      piece([[[-2.8, 13.2, -14.7], 1.4], [[0, 14.1, -14.5], 1.4], [[2.8, 13.2, -14.7], 1.4], [[0, 12.2, -16.8], 2.0]], [0, 0.9, -0.3], -0.1);
       // (de perfil, na referência, a barba cobre a frente do queixo logo abaixo do lábio: estes dois só entram com o lado deles
       // bem virado para a câmera — de frente a pele embaixo do lábio continua aparecendo, como o dono aprovou. Rodada 4)
       // (rodada 4b: com 0,78 eles entravam bem a 45° e tapavam a pele do queixo que a referência mostra de três quartos;
