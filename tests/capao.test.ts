@@ -405,6 +405,9 @@ describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
       ['tatu_bola', 8],
       ['marimbondo', 6],
       ['filhote_boitata', 2],
+      // os saguis raros (24/11, o dono escolheu a área própria pra cada um): um de cada
+      ['sagui_ancestral', 1],
+      ['sagui_corrompido', 1],
       // a Mata do Córrego (Capão maior, 23/11): os bichos que já existem, 25 a mais
       ['quati', 8],
       ['tatu_bola', 6],
