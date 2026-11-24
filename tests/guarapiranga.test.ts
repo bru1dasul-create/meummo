@@ -621,3 +621,30 @@ describe('Mapa 02: a Ilha do Véu (vestida em 24/11)', () => {
     for (const o of here.filter((c) => c.type === 'rocha')) expect(reachIsle(at(o).x, at(o).y, 0.4)).toBe(false);
   });
 });
+
+describe('Mapa 02: os detalhes (24/11, "pode seguir com os detalhes do Guarapiranga")', () => {
+  it('o campinho: a arquibancada atrás do campo, o muro do time e o alambrado atrás dos gols, a barraca de pastel e a bola', () => {
+    const field = rectOf(named('chao', 'Campinho'));
+    const near = layer('cenario').filter((o) => at(o).x > field.x0 - 4 && at(o).x < field.x1 + 4 && at(o).y > field.y0 - 4 && at(o).y < field.y1 + 8);
+    // os três degraus de cimento, colados, atrás do campo (o lado de trás na tela: não tampam o jogo), subindo para trás
+    const steps = near.filter((o) => o.type === 'muro' && !o.name).map((o) => ({ r: rectOf(o), h: Number(prop(o, 'altura')) })).sort((a, b) => b.r.y1 - a.r.y1);
+    expect(steps.map((s) => s.h)).toEqual([0.45, 0.9, 1.35]);
+    for (const s of steps) expect(s.r.y1).toBeLessThanOrEqual(field.y0);
+    for (let k = 1; k < steps.length; k++) expect(steps[k]!.r.y1).toBeCloseTo(steps[k - 1]!.r.y0, 6);
+    expect(reachNear((steps[0]!.r.x0 + steps[0]!.r.x1) / 2, steps[0]!.r.y1 + 0.4, 0.3), 'a frente da arquibancada').toBe(true);
+    // o muro do time (a pintura na face que a câmera vê) atrás do gol do oeste e o alambrado atrás do gol do leste
+    const wall = named('cenario', 'Muro do Brejo FC');
+    expect([prop(wall, 'texto'), prop(wall, 'lado')]).toEqual(['BREJO FC', 'leste']);
+    expect(rectOf(wall).x1).toBeLessThan(field.x0);
+    const fence = near.find((o) => o.type === 'alambrado')!;
+    expect(rectOf(fence).x0).toBeGreaterThan(field.x1);
+    // a barraca de pastel na beira do gramado, com a frente alcançável, e a bola dentro do campo
+    const stand = named('cenario', 'Pastel e Caldo de Cana');
+    expect(stand.type).toBe('banca-pastel');
+    expect(rectOf(stand).y0).toBeGreaterThan(field.y1);
+    expect(reachNear((rectOf(stand).x0 + rectOf(stand).x1) / 2, rectOf(stand).y1 + 0.5, 0.3), 'a frente da barraca').toBe(true);
+    const ball = near.find((o) => o.type === 'bola')!;
+    expect(at(ball).x > field.x0 && at(ball).x < field.x1 && at(ball).y > field.y0 && at(ball).y < field.y1).toBe(true);
+    expect(near.filter((o) => o.type === 'mastro')).toHaveLength(1);
+  });
+});
