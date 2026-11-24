@@ -322,6 +322,54 @@
   
   Entregues: `entrega/tatu-antes-depois.png` e `entrega/tatu-antes-depois.gif`.
 
+### Etapa 4: a Jararaca (24/11, com o "pode seguir para a Jararaca" do dono; na main em 24/11, com o "pode juntar na main")
+- **O desenho (`jararaca.js`, sem as bolinhas):**
+  - **o corpo:** os pontos do meio a cada 3 cm (da cabeça à ponta do rabo), cada um com o corte do corpo (o lombo `U`
+    e o lado `SD`). O lombo vem **do rabo para a cabeça, girando junto com o corpo** (no chão é para cima; no pescoço em
+    pé ele não vira de repente — calculado ponto a ponto "para cima", ele virava e as manchas pulavam de lado);
+  - **pintado em trechos:** pedaços de 16 cm (24 no celular) vão juntos enquanto não passam por cima de outra parte do
+    mesmo trecho na tela nem dobram (`_runs`). Esticada de lado ela é **um trecho só**; enrolada, várias, e cada trecho
+    entra na sua vez pela distância da câmera (as voltas da rodilha passam uma na frente da outra). Cada trecho: o
+    contorno só nos lados (as emendas não), a cor, **a barriga creme** (a beirada de baixo do flanco que a câmera vê),
+    **as manchas em "V"** (a ponta no lombo, a base no flanco, com a beirada clara) e a meia-lua de sombra e o brilho de
+    um trecho mais comprido (a sombra corre contínua de um trecho para o outro);
+  - **a cabeça em ponta de lança:** bem mais larga que o pescoço (as bochechas do veneno), em anéis arredondados; o
+    olho amarelo de fenda com a "sobrancelha" de escama na quina (mais baixa na frente no aviso e no bote: a cara de
+    brava), a risca escura do olho ao canto da boca, o lábio claro, a narina; de noite, os olhos vermelhos;
+  - **a boca abre** (no fim do aviso e no bote): o queixo creme desce, o rosa de dentro, a garganta e **as duas
+    presas**; a língua bifurcada entra e sai (sem parar no aviso) e fica de fora, mole, no desmaio.
+- **O aviso** ('windup', 0,65 s): se enrola numa **rodilha de dentro para fora** (o pescoço sobe do meio dela e a ponta
+  do rabo fica do lado de fora, **tremendo**, com os risquinhos), o pescoço num **gancho que puxa para trás** (a mola
+  armando), incha um pouco, treme de tensão e a boca começa a abrir.
+- **O bote** ('strike' ou 'bite'): o gancho estica reto e a cabeça dispara **~1,4 m** (o golpe do servidor pega 2 casas
+  na frente) de boca escancarada, com três riscos de vento; o pescoço puxa corpo da rodilha (ela encolhe por fora e
+  escorrega para a frente), morde (a boca fecha) e volta. Antes a cabeça ia uns 60 cm.
+- **O tranco, o clarão e o desmaio:** o tranco vai para longe de quem bateu (a cabeça recua e sobe, o S aperta); o
+  clarão é o fraco dos outros; desmaiada, **vira de barriga para cima numa torção da cabeça ao rabo** (a barriga creme
+  com as pintinhas, os olhos fechados) e o encanto sai em faíscas roxas.
+- **O peso:** ~1,8 ms por jararaca parada no PC (zoom 1; o sagui pesa 1,7) e ~1,2 ms no celular; enrolada no aviso,
+  ~2,3 ms (só durante o golpe). A antiga pesava ~1,1 ms. Pintar sempre os 13 pedaços custava ~3 ms: daí os trechos.
+- **Conferido:** as pranchas (4 lados × 13 momentos, de perto e no tamanho do jogo), o filme quadro a quadro (esticada
+  → rodilha → bote → volta, sem saltos), o jogo de verdade de dia com várias jararacas atacando (o bote vai na direção
+  do aviso laranja, junto com o clarão do golpe) e o celular deitado. Sem erros. Teste: `tests/jararaca-art.test.ts`.
+  Os outros bichos não mudaram: só o `jararaca.js` foi alterado.
+- **Cuidados que custaram tempo (para os próximos bichos compridos):**
+  - **vista desta câmera baixa (30°), cada volta "dobra" na tela** nas pontas da esquerda e da direita (a curva fica
+    mais fechada que a grossura). Um contorno de fita (o `limbShape`) dobra junto: risquinhos e listras na sombra. O
+    trecho que dobra é pintado como **soma de discos e trechos retos, todos no mesmo sentido** (`_tubePath`: pintada, é
+    a união, por mais que dobre) e a sombra dele vai por camadas;
+  - **nas emendas:** a ponta do risco reta (`butt`: a redonda passava e riscava o vizinho) e um disco da cor do corpo
+    na ponta (onde o corpo afunda para longe da câmera bem na emenda, o corte reto aparecia); o disco só ganha risco
+    onde dobra;
+  - **o trecho da sombra** vai 12 cm além das emendas (sem beirada nelas), mas **para onde o corpo vira de repente na
+    tela**: dobrado, o "ou um ou outro" da sombra abria listras;
+  - o pescoço em S de verdade (uma onda de seno) dobrava em quina nessa altura: virou um **gancho** de duas Bézier.
+- **Rascunho `jararaca/`:** `prancha.cjs <saída> [criaturas] [zoom]` (`DIRS`, `ONLY`, `CW`, `CH`, `FX`, `FY`),
+  `anim.cjs <pasta> [criaturas] [zoom]` (o filme), `custo.cjs [criaturas]` (o peso; `custo-exp.cjs` com `EXP` desliga
+  partes numa cópia), `jogo.cjs <pasta>` e `celular.cjs <saída>` (no jogo), `dbg/spine.cjs` (ângulos e viradas do
+  meio do corpo), `dbg/pedacos.cjs` (cada trecho numerado com a ordem), `dbg/runs.cjs` (quantos trechos por lado) e
+  `antes/` (a cópia das criaturas de antes). Entregues: `entrega/jararaca-antes-depois.png` e `.gif`.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).

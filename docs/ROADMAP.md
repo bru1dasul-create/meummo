@@ -1054,7 +1054,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - no aviso, fecha na bola de gomos e gira no lugar levantando poeira;
     - na investida, rola de verdade até o fim (antes pulava de uma vez) e só abre tonto depois de parar;
     - a casca segurando, o tranco e o desmaio de barriga para cima com as faíscas.
-  - [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
+  - [x] **Jararaca** (24/11, na main):
+    - pintada em trechos (as voltas da rodilha passam uma na frente da outra), com as manchas em "V", a barriga creme
+      e a cabeça em ponta de lança (olho de fenda, risca, lábio claro, boca que abre com as presas);
+    - no aviso, a rodilha com o pescoço em gancho armando e a ponta do rabo tremendo;
+    - no bote, a cabeça dispara ~1,4 m de boca aberta (antes ia ~60 cm) e volta para a rodilha;
+    - o tranco e o desmaio de barriga para cima com as faíscas.
+  - [ ] Marimbondos · [ ] Filhote de Boitatá
 - [x] **[arte]** O selinho do "!" (23/11, pedido do dono): o "!" dos bichos que percebem o herói vira um selo amarelo em
   cima do nome, sem o balão (com vários juntos, os balões se empilhavam com o bico comprido)
 - [x] **O aviso dos golpes no chão** (23/11, pedido do dono: "arruma esses golpes do quati aparece em quadrado vermelho,
