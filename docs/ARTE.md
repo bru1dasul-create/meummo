@@ -240,7 +240,7 @@
   pelo tipo; o [mundo] diz onde moram. **Feito pelas duas no mesmo dia** (na main: as chaves daqui, o nome com
   "(Elite)" / "(Raro)" e o `rank` no `addActor`, a fruta podre e a dourada no `combat.ts`, o Ancestral na Figueira do
   Viaduto e o Corrompido na Mata Profunda, cada um no seu galho).
-- **Conferidos no jogo (24/11)** e **a luz própria** (pedido do dono: "pode fazer a luz própria dos saguis raros"):
+- **Conferidos no jogo (24/11)** e **a luz própria** (pedido do dono: "pode fazer a luz própria dos saguis raros"; na main em 24/11, com o "pode juntar na main"):
   pendurados nos galhos, de dia e de noite, atacando e no celular, sem erros — mas **a neblina da Mata Profunda e a
   noite apagavam o brilho** (o Corrompido virava um macaco cinza; as runas do Ancestral sumiam no escuro). Agora cada um
   tem `light()` (a luz `{ x, y, z, r, color, k }` em cm, no meio do corpo — pendurado, embaixo do galho; apaga no

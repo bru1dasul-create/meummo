@@ -1111,7 +1111,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     sai da própria figueira, o do Corrompido de uma árvore seca nova. O galho grosso da figueira passou a aparecer (o
     tmj.js mede da beira do tronco) e nenhum galho aponta mais para a câmera. Conferido no navegador (PC e celular):
     cada um pendurado no seu galho, nenhum comum nos galhos deles
-  - [x] **[arte]** conferidos no jogo (24/11: pendurados nos galhos, de dia e de noite, atacando, no celular) e a **luz
+  - [x] **[arte]** conferidos no jogo (24/11, na main: pendurados nos galhos, de dia e de noite, atacando, no celular) e a **luz
     própria** (pedido do dono: "pode fazer a luz própria dos saguis raros"): de noite e no escuro ou na neblina (a Mata
     Profunda), a view abre um halo em volta deles — vermelho pulsando no Corrompido, dourado no Ancestral —, como o
     filhote de boitatá e os cogumelos (antes a neblina e a noite apagavam as fendas e as runas). `creature.light()` e
