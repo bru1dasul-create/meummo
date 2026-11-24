@@ -427,7 +427,7 @@
 - **Rascunho `boitata/`:** `prancha.cjs` (fundo escuro), `custo.cjs`, `jogo.cjs`, `celular.cjs`, `anim.cjs` e
   `antes/`. Entregues: `entrega/boitata-antes-depois.png` e `.gif`.
 
-### A Cuca, etapa 1: a bruxa da Toca (24/11, prévia aprovada com o "pode fazer" do dono; no ramo, esperando o "pode" para a main)
+### A Cuca, etapa 1: a bruxa da Toca (24/11, prévia aprovada com o "pode fazer" do dono; na main em 24/11)
 - **O desenho (`creatures/cuca.js`, original: nada da Cuca da TV):** a vovó ranzinza e corcunda com a **cabeça de
   jacaré-de-papo-amarelo** (o focinho largo e chato, os dentinhos pela beirada, o papo amarelo, os olhos de fenda em
   cima de dois calombos e as sobrancelhas brancas e bravas), o cabelo branco desgrenhado no coque com gravetos e folhas,
@@ -463,7 +463,7 @@
   (de perto; `FIRST=1 DIST=114` como no jogo), `custo.cjs`, `mundo-sem-colher/sul.js` (cópia sem a colher encostada,
   só para a prévia), `icone/` e `antes/`; `cuca-jogo/jogo.cjs <pasta>` (o jogo, com o painel movendo a Cuca).
 
-### A Cuca chefe, etapa 2 (24/11, com o "segue para a Cuca chefe" do dono; no ramo, esperando o "pode" para a main)
+### A Cuca chefe, etapa 2 (24/11, com o "segue para a Cuca chefe" do dono; na main em 24/11, com o "pode" dele)
 - **A luta é da [estrutura]** (`data/monsters.json`, chave `cuca`, só de noite): o caldo ('windup' 0,6 s e 'shoot',
   um a cada 1,6 s), a poça (o `fire` com `k: 'caldo'` → `view.warn(..., { fire: true, kind: 'caldo' })`, 2,5 s), a
   cantiga ('warn' com a área, logo o `fx` 'song' e a fala: 1,5 s de aviso, a cada 12 s) e o sono (`view.sleep(id, on)`).

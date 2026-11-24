@@ -763,8 +763,8 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     do dono): a vovó corcunda com cabeça de jacaré-de-papo-amarelo, mexendo o caldeirão do mapa (a view passa o
     caldeirão; ela se vira para ele), olhando o herói, falando e rindo; sem caldeirão perto, a colher em pé. Teste:
     `tests/cuca-art.test.ts`. Detalhes no `docs/ARTE.md`
-    - [ ] **[estrutura]** mover a Cuca para (48.5, 10.1), ao lado do caldeirão (pedido mandado em 24/11) e, com o ícone
-      na main, trocar o `icone` da `garrafada_cuca` para `garrafada_cuca`
+    - [x] **[estrutura]** mover a Cuca para (48.5, 10.1), ao lado do caldeirão, e trocar o `icone` da `garrafada_cuca`
+      para `garrafada_cuca` (24/11, na main)
     - [ ] **[mundo]** a colher encostada do caldeirão aponta para onde a Cuca fica: tirar ou virar para o outro lado
   - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (24/11, o dono: "pode fazer a Cuca virar chefe de
     luta")
@@ -788,7 +788,7 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       de nível 11 desmaia em uns 12 s; os números ficam no painel. Teste: `tests/cuca-chefe.test.ts`
     - [x] **[arte]** a Cuca chefe (a mesma criatura `cuca` da bruxa, com o caldo e a cantiga), a concha de caldo, a
       poça verde (`view.warn` com `kind: 'caldo'`), o "Zzz" de quem dorme (`view.sleep`) e o ícone do Patuá (hoje o
-      `colar`) — 24/11, no ramo da [arte] (main com o "pode" do dono; conferida de noite na Toca, no PC e no celular,
+      `colar`) — 24/11, na main (com o "pode" do dono; conferida de noite na Toca, no PC e no celular,
       com a Cuca criada pelo painel F1): os olhos vermelhos, o andar arrastado, a colher cheia atrás da cabeça no aviso
       e o arremesso por cima dela, a bola de caldo verde pingando (`projectileArt.ts`) e o respingo, a poça verde
       borbulhando, a cantiga ninando a colher com as notas em roda, o Zzz, o tranco, o desmaio com as faíscas roxas e o
