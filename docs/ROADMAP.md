@@ -760,7 +760,11 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     entregar 2 raízes de jurubeba; dá 80 de XP e uma Garrafada da Cuca. Teste: `tests/cuca.test.ts`
   - [ ] **[arte]** o desenho dela (a criatura `cuca`, como o Sagui: a view desenha sozinha; original, sem copiar a Cuca
     da TV) e o ícone da `garrafada_cuca` (hoje usa o da Garrafada Grande)
-  - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (proposta para o dono)
+  - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (24/11, o dono: "pode fazer a Cuca virar chefe de
+    luta")
+    - [x] **[mundo]** a arena (na main): a toca maior (uns 22 × 14 m de chão; o mapa `caverna` foi a 66 m de largura),
+      duas estalagmites para se esconder e a área `cuca` (quantidade 1, a toca inteira), que entra no mapa quando a
+      chave `cuca` existir em `data/monsters.json`
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

@@ -1,11 +1,11 @@
 {
   "escala": 8,
-  "largura": 60,
+  "largura": 66,
   "altura": 54,
   "nomes": [
     {
       "nome": "Caverna Sagrada",
-      "x": 30,
+      "x": 33,
       "y": 27,
       "tipo": "lugar"
     },
@@ -23,8 +23,8 @@
     },
     {
       "nome": "Toca da Cuca",
-      "x": 47.5,
-      "y": 10,
+      "x": 50,
+      "y": 11,
       "tipo": "lugar"
     },
     {

@@ -34,7 +34,14 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a Caverna Sagrada por dentro (na `main`)**, o dono: "pode fazer a caverna por dentro". Um mapa
+- **Agora (24/11): a toca da Cuca virou arena (na `main`)**, o dono: "pode fazer a Cuca virar chefe de luta" (a luta
+  em si — o jeito dela, os golpes, o que deixa — é da [estrutura]; o desenho, da [arte]). A minha parte: o mapa
+  `caverna` cresceu de 60 para 66 m de largura (só para a direita) e a toca (`LAIR`) ficou com uns 22 × 14 m de chão,
+  para desviar dos golpes avisados no chão; duas estalagmites na toca para se esconder dos frascos; os barris foram para
+  o canto do leste. O lugar da Cuca (`toca-da-cuca`) e o caldeirão não mudaram. A área da luta (`cuca` na camada
+  `monstros`, quantidade 1, x 38 a 61 × y 4 a 18,5: a toca inteira) entra sozinha no mapa quando a chave `cuca` existir
+  em `data/monsters.json` (como os saguis raros): é só gerar de novo. O teste da caverna confere o chão da toca e a área.
+- **Antes (24/11): a Caverna Sagrada por dentro (na `main`)**, o dono: "pode fazer a caverna por dentro". Um mapa
   novo, `caverna` (`scripts/gen-caverna.ts`, `npm run gen:caverna`; o servidor lê sozinho todo `.tmj` de `maps-iso`),
   60 × 54 m. A entrada é a boca da caverna do Guarapiranga (a saída "Caverna Sagrada", na frente da boca; quem sai de lá
   aparece em `chegada-caverna`, na clareira, longe da saída). Dentro: o túnel do sul (a cortina de raízes que brilham,
