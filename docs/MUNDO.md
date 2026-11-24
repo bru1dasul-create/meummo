@@ -34,7 +34,15 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (24/11): a Ilha do Véu vestida (na `main`)**, o dono: "pode retomar o Guarapiranga" (a caverna por dentro
+- **Agora (24/11): os detalhes do Guarapiranga (na `main`, por partes)**, o dono: "pode seguir com os detalhes do
+  Guarapiranga". Fiz uma volta pelo mapa e o que ainda estava pelado era o campinho, a várzea de caça, a trilha da margem
+  sul e a estrada fechada para Santo Amaro. **1) O campinho:** a arquibancada de cimento (três `muro` colados atrás do
+  campo, do lado de trás na tela, então não tampa o jogo), o muro do time (`muro` com `texto: 'BREJO FC'` e `lado:
+  'leste'`, a face que a câmera vê) atrás do gol do oeste, o alambrado rasgado atrás do gol do leste, a barraca de pastel
+  e caldo de cana (a do Capão) com a mesa e as cadeiras do bar, o mastro com a bandeira verde e a `bola` (desenho novo no
+  sul.js). As peças ficam em `FIELD_STANDS`, `FIELD_WALL`, `FIELD_FENCE` e `FIELD_STAND`; nada entra no índice dos
+  troncos (o sorteio da mata não muda) e a árvore sorteada colada nelas sai no fim, como a do mirante.
+- **Antes (24/11): a Ilha do Véu vestida (na `main`)**, o dono: "pode retomar o Guarapiranga" (a caverna por dentro
   ele deixou para depois; a saída para Santo Amaro espera o Mapa 03). No gerador, as medidas ficam no alto
   (`ISLAND_FIG`, `ISLAND_VEIL`, `ISLAND_RING`, `ISLAND_PIER`, `ISLAND_SAND`, `TRAIL_ISLAND`): a **Árvore do Véu** é a
   maior do jogo (figueira de 18 m, copa 11, tronco 2,4; com 3 m de tronco o pé virava a "saia" lisa); o **Véu** (o

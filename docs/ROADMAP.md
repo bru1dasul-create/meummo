@@ -732,7 +732,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   itacoatiaras viradas para o meio (brilham de noite) e a oferenda no meio; o atracadouro virado para o Refúgio, com a
   canoa amarrada, os esteios de fitas, a fogueira apagada e a areia; a Trilha do Véu ligando tudo; pedras com musgo na
   água rasa, taboas, aguapés e cogumelos que brilham. Continua só de barco: a chegada `chegada-ilha-do-veu` fica na ponta
-  do atracadouro, para a viagem com o Barqueiro
+  do atracadouro, para a viagem com o Barqueiro. **Os detalhes (24/11, "pode seguir com os detalhes do
+  Guarapiranga"), por partes:** o campinho de várzea ganhou a arquibancada de cimento atrás do campo, o muro grafitado
+  do Brejo FC atrás de um gol e o alambrado rasgado atrás do outro, a barraca de pastel e caldo de cana com a mesa, o
+  mastro com a bandeira e a bola esquecida no campo
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

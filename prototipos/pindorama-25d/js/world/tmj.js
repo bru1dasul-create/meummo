@@ -423,6 +423,9 @@
         // a pedra em pé da roda da Ilha do Véu (sul.js): `altura` e `largura` (m), `olhando` (para onde olha a face larga,
         // em graus) e `glifo` (a itacoatiara gravada nela: espiral, sol, circulos ou cobra)
         map.props.push({ kind: 'menir', x, y, r: ((pr.largura || 0.9) / 2) * 100, h: (pr.altura || 2.2) * 100, face: pr.olhando || 0, glyph: pr.glifo || 'espiral' });
+      } else if (k === 'bola') {
+        // a bola de futebol esquecida no campinho (sul.js)
+        map.props.push({ kind: 'bola', x, y, r: 12 });
       } else if (k === 'cortina-veu') {
         // o Véu da ilha (sul.js): a cortina de raízes que brilham, de frente para a câmera; `largura` e `altura` (m)
         map.props.push({ kind: 'cortina-veu', x, y, r: 60, w: (pr.largura || 4) * 100, h: (pr.altura || 6) * 100 });

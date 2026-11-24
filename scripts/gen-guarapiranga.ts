@@ -250,6 +250,12 @@ const ALLEYS: Rect[] = [
 const PLAZA_FLOOR: Rect = { x0: 146, x1: 170, y0: 23.5, y1: 41 };
 /** 5 · O campinho de terra. */
 const FIELD: Rect = { x0: 214, x1: 252, y0: 12, y1: 38 };
+/** A arquibancada de cimento do campinho (três degraus atrás do campo, virados para ele), o muro do time atrás do gol do
+ * oeste, o alambrado atrás do gol do leste e a barraca de pastel na beira do gramado (24/11). */
+const FIELD_STANDS: Rect = { x0: 219, x1: 247, y0: 9.2, y1: 11.3 };
+const FIELD_WALL: Rect = { x0: 212.3, x1: 212.7, y0: 19, y1: 31 };
+const FIELD_FENCE: Rect = { x0: 253.3, x1: 253.4, y0: 19, y1: 31 };
+const FIELD_STAND: Rect = { x0: 240.6, x1: 243.2, y0: 40.4, y1: 41.65 };
 /** 6 · A praça em ruínas, com o coreto. */
 const SQUARE: Rect = { x0: 308, x1: 346, y0: 14, y1: 46 };
 const CORETO: Rect = { x0: 321, x1: 333, y0: 24, y1: 36 };
@@ -916,6 +922,22 @@ addTrunk({ x: LOOKOUT.x1 + 0.6, y: LOOKOUT.y0 + 0.6, r: 0.1 });
   cenario.push(rect('trave', FIELD.x0 + 0.2, FIELD.x0 + 0.4, midY - 1.5, midY + 1.5, { ...TRAVE, olhando: 0 }));
   cenario.push(rect('trave', FIELD.x1 - 0.4, FIELD.x1 - 0.2, midY - 1.5, midY + 1.5, { ...TRAVE, olhando: 180 }));
   for (const x0 of [220, 236]) cenario.push(rect('banco', x0, x0 + 1.6, FIELD.y1 + 1.2, FIELD.y1 + 1.7, { olhando: 270 }));
+  // (24/11, o dono: "pode seguir com os detalhes do Guarapiranga") O campinho de várzea da comunidade: a arquibancada
+  // de cimento atrás do campo (o lado de trás na tela: ela não tampa o jogo), o muro grafitado do time atrás do gol do
+  // oeste (a pintura na face do leste, a que a câmera vê), o alambrado rasgado atrás do gol do leste, a barraca de pastel
+  // e caldo de cana com a mesa e as cadeiras na beira do gramado, o mastro com a bandeira e a bola esquecida no campo
+  for (const [k, altura] of [[0, 0.45], [1, 0.9], [2, 1.35]] as const) {
+    const y1 = round(FIELD_STANDS.y1 - k * 0.7);
+    cenario.push(rect('muro', FIELD_STANDS.x0, FIELD_STANDS.x1, round(y1 - 0.7), y1, { altura, cor: '#bdb7a8', musgo: true, cipo: 0.08 }));
+  }
+  cenario.push(box('muro', FIELD_WALL, { altura: 2.4, cor: '#d8d2c4', grafite: 'cores', texto: 'BREJO FC', lado: 'leste', cipo: 0.12 }, 'Muro do Brejo FC'));
+  cenario.push(box('alambrado', FIELD_FENCE, { altura: 3, cipo: 0.3, estado: 'rasgado' }));
+  cenario.push(box('banca-pastel', FIELD_STAND, { altura: 0.9 }, 'Pastel e Caldo de Cana'));
+  const table = { x: 244.8, y: 43.6 };
+  cenario.push(point('mesa', table.x, table.y));
+  for (const dx of [-0.75, 0.75]) cenario.push(point('cadeira', round(table.x + dx), table.y));
+  cenario.push(point('mastro', 216.2, 10.4, { altura: 6.5, cor: '#2f8f4a' }));
+  cenario.push(point('bola', 238.6, 27.4));
 }
 
 // ----- 6 · a praça em ruínas: o coreto, os postes antigos, os bancos, a cachoeira e o riacho -----
@@ -1251,6 +1273,8 @@ function collide(s: Shape): Shape[] {
     ];
   }
   if (s.type === 'rocha') return [block('pedra', s.x, s.y, round(Number(p.raio) * 1.5))];
+  if (s.type === 'alambrado') return [box('alambrado', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
+  if (s.type === 'banca-pastel') return [box('banca', r, { bloqueiaTiro: false, altura: Number(p.altura) })];
   // (a pedra em pé da roda da ilha: um quadrado do tamanho da laje de pedra)
   if (s.type === 'menir') return [block('pedra', s.x, s.y, 0.8, { altura: Number(p.altura) })];
   if (s.type === 'oferenda') return [block('oferenda', s.x, s.y, 0.6, { bloqueiaTiro: false, altura: 0.5 })];
@@ -1309,6 +1333,11 @@ const waterBoxes = waterStrips((x, y) => !inRect(x, y, ISLAND_PIER) && isWater(x
 for (let i = cenario.length - 1; i >= 0; i--) {
   const o = cenario[i]!;
   if (o.type === 'arvore' && o.name === undefined && inRect(o.x, o.y, LOOKOUT_VIEW)) cenario.splice(i, 1);
+}
+// o campinho (24/11): sai a árvore sorteada colada na arquibancada, no muro do time ou no alambrado (pelo mesmo motivo)
+for (let i = cenario.length - 1; i >= 0; i--) {
+  const o = cenario[i]!;
+  if (o.type === 'arvore' && o.name === undefined && [FIELD_STANDS, FIELD_WALL, FIELD_FENCE].some((r) => inRect(o.x, o.y, r, 1.6 + Number(o.props?.tronco ?? 0) / 2))) cenario.splice(i, 1);
 }
 {
   const SOLID_CELL = 4;
