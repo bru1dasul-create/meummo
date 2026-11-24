@@ -1996,7 +1996,9 @@ function bestPerch(own: { x: number; y: number }, want: number, zone = SAGUI_ZON
   for (const dd of [0, -25, 25, -50, 50, -75, 75, -100, 100]) {
     const direcao = (((want + dd) % 360) + 360) % 360;
     const a = (direcao * Math.PI) / 180;
-    if (Math.cos(a) + Math.sin(a) < 0.2) continue;
+    // (24/11: e para o lado na tela — o galho apontado para a câmera fica escondido atrás do sagui pendurado, que
+    // parecia agarrado no tronco: foi o caso do Corrompido, com o galho em 50°)
+    if (Math.cos(a) + Math.sin(a) < 0.2 || Math.abs(Math.cos(a) - Math.sin(a)) < 0.6) continue;
     // (o galho pode ser um pouco mais comprido, até 1,3 m, se perto do tronco não couber; `baseR` é do meio do tronco:
     // no tronco largo da figueira, ele começa na beira do tronco)
     for (const R of [baseR, baseR + 0.15, baseR + 0.3]) {

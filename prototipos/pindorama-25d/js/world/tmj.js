@@ -557,11 +557,18 @@
       if (kindOf(o) !== 'galho-sagui') continue;
       const pr = props(o);
       const p = { x: o.x * CM, y: o.y * CM, h: (pr.altura || 2.2) * 100, dir: pr.direcao || 0 };
-      let best = null, bd = 200;
+      // (24/11: a distância conta da beira do tronco, não do meio — o galho do Sagui Ancestral, na Figueira do Viaduto,
+      // fica a 2,1 m do meio do tronco grosso e sumia. E a árvore do galho é a que fica atrás do ponto, na `direcao`:
+      // se outra árvore estiver mais perto, mas para o lado, o galho não vai para ela)
+      let best = null, bd = Infinity;
       for (const t of map.trees) {
-        const dd = Math.hypot(t.x - p.x, t.y - p.y);
-        if (dd < bd) {
-          bd = dd;
+        const dx = p.x - t.x, dy = p.y - t.y;
+        const dd = Math.hypot(dx, dy) - (t.trunk || 0);
+        if (dd > 200) continue;
+        const off = Math.abs(((((Math.atan2(dy, dx) * 180) / Math.PI - p.dir) % 360) + 540) % 360 - 180);
+        const score = dd + (off > 20 ? 1000 : 0);
+        if (score < bd) {
+          bd = score;
           best = t;
         }
       }

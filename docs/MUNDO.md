@@ -34,7 +34,18 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
 ## Onde estamos (12 de novembro de 2026): o mundo novo
-- **Agora (23/11): as regiões do Capão maior vestidas (na `main`)**, o dono: "pode seguir vestindo as regiões do
+- **Agora (24/11): os saguis raros no Capão (na `main`)**, o dono: "pode fazer do seu jeito, área própria pra cada
+  um". O **Sagui Ancestral** mora em volta da Figueira do Viaduto (área `sagui_ancestral`, x 39 a 47,5 × y 2 a 11) e o
+  galho dele sai da própria figueira (grosso, com folhas na ponta); o **Sagui Corrompido** mora na Mata Profunda do
+  noroeste, perto da Pedra do Véu (área `sagui_corrompido`, x 5 a 19 × y 3 a 15), numa árvore seca nova. Um de cada
+  (`quantidade` 1); as áreas só entram no mapa com as chaves em `data/monsters.json`. Cada galho tem `bicho` (a chave):
+  é só daquele monstro e os comuns não sobem nele (a [estrutura] fez isso no servidor, ba4adad). Duas correções no
+  caminho: o **tmj.js** media a distância do galho até o meio do tronco (no máximo 2 m) e o da figueira, a 2,1 m do
+  meio do tronco grosso, sumia; agora mede da beira do tronco e escolhe a árvore que fica atrás do ponto, na direção
+  do galho. E o **`bestPerch`** não aceita mais galho apontado para a câmera (ficava escondido atrás do sagui, que
+  parecia agarrado no tronco): só vale a direção que vai para o lado na tela. O teste do Capão lê o mapa com o mesmo
+  tmj.js e confere que cada galho é desenhado na árvore dele. **Próximo: o que o dono pedir ao andar pelo Capão.**
+- **Antes (23/11): as regiões do Capão maior vestidas (na `main`)**, o dono: "pode seguir vestindo as regiões do
   Capão". O desenho fica no `fundo.js` (o arquivo do Capão; um arquivo novo pediria mexer no `arte.ts` e no
   `view-scripts.json`, que são da [arte]): `estacao` (o prédio e a plataforma; no tmj, o viaduto fica sem mureta e sem
   árvore em cima dela), a fachada `PD.city.facades.escola` (o props.js chama a fachada de fora para a casa com
@@ -42,8 +53,7 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   `carrinho-feira`, `ponte` (cada mureta é um objeto; a do leste desenha a lateral da laje abaixo do chão), `sucata`,
   `corrimao` e `gatos` (polilinha de fios, overhead). No street.js: a quadra (`campinho` com `desenho: 'quadra'`) e o
   escadão (`calcada` com `desenho: 'escada'`). O props.js passou a exportar `overgrowth`, `mossWall` e `vines` no
-  `help`. A arquibancada são três `muro` colados (só o primeiro confere os vãos no `place`). **Próximo: o que o dono
-  pedir ao andar pelo Capão maior.**
+  `help`. A arquibancada são três `muro` colados (só o primeiro confere os vãos no `place`).
 - **Antes (23/11): o Capão maior, etapa 1 (na `main`)**: o mapa inteiro aberto, de 96 para 192 m de largura (planta
   aprovada: `docs/referencias/capao-maior-planta.jpg`; o comércio foi para o norte da rua, de frente para ela). No gerador: `W0 = 96` (tudo o que já existia usa ele e sai
   igual; conferido camada por camada: só saiu a mata fechada da beira leste antiga, `eastOpen`, e o viaduto, o mesmo

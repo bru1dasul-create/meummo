@@ -240,6 +240,31 @@ describe('Mapa 01 (Capão): os saguis raros (pedido da [arte]; o dono escolheu a
       }
     }
   });
+
+  it('o jogo desenha cada galho na árvore dele, virado para o lado na tela (24/11: o da figueira sumia)', () => {
+    // (lê o mapa com o mesmo leitor do jogo, prototipos/pindorama-25d/js/world/tmj.js: é ele que prende o galho na árvore)
+    const win: { PD?: { tmj: { toMap: (m: unknown) => { trees: { kind: string; x: number; y: number; trunk?: number; perches?: { x: number; y: number; dir: number }[] }[] } } } } = {};
+    new Function('window', readFileSync('prototipos/pindorama-25d/js/world/tmj.js', 'utf8'))(win);
+    const trees = win.PD!.tmj.toMap(map).trees;
+    const drawn = trees.flatMap((t) => (t.perches ?? []).map((p) => ({ p, t })));
+    const fig = layer('cenario').find((o) => o.type === 'arvore' && o.name === 'Figueira do Viaduto')!;
+    for (const o of layer('pontos').filter((q) => q.type === 'galho-sagui')) {
+      const { x, y } = at(o);
+      const dir = Number(prop(o, 'direcao'));
+      const hit = drawn.find(({ p }) => Math.abs(p.x / 100 - x) < 0.01 && Math.abs(p.y / 100 - y) < 0.01);
+      expect(hit, `o galho em (${x}, ${y}) não é desenhado em árvore nenhuma`).toBeDefined();
+      // a árvore fica atrás do ponto, na direção do galho
+      const a = (Math.atan2(y - hit!.t.y / 100, x - hit!.t.x / 100) * 180) / Math.PI;
+      expect(Math.abs(((a - dir + 540) % 360) - 180), `o galho em (${x}, ${y}) foi para outra árvore`).toBeLessThan(10);
+      // apontado para a câmera, o galho fica escondido atrás do sagui pendurado: ele vai para o lado na tela
+      const r = (dir * Math.PI) / 180;
+      expect(Math.abs(Math.cos(r) - Math.sin(r)), `o galho em (${x}, ${y}) aponta para a câmera`).toBeGreaterThanOrEqual(0.6);
+      if (prop(o, 'bicho') === 'sagui_ancestral') {
+        expect(hit!.t.kind).toBe('figueira');
+        expect(Math.hypot(hit!.t.x / 100 - at(fig).x, hit!.t.y / 100 - at(fig).y)).toBeLessThan(0.01);
+      }
+    }
+  });
 });
 
 describe('Mapa 01 (Capão): a mata nova (pedido do dono, 13/11)', () => {
