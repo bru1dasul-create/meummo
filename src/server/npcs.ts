@@ -52,6 +52,8 @@ export interface NpcDef {
   stroll: { x: number; y: number }[];
   /** As viagens que ele faz (o Barqueiro); vazio = nenhuma. */
   trips: NpcTrip[];
+  /** Só aparece de dia (a Cuca, "soDeDia"): de noite some (ela vira a chefe da toca) e ninguém fala com ela. */
+  dayOnly: boolean;
 }
 
 export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
@@ -102,6 +104,7 @@ export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
         if (!Number.isInteger(price)) t.fail('preco', 'precisa ser um número inteiro de ouro (0 = de graça)');
         return { to: t.text('para').toLowerCase(), name: t.text('nome'), price };
       }),
+      dayOnly: r.bool('soDeDia', false),
     });
   }
   return defs;

@@ -110,7 +110,12 @@ export interface WorldView {
    * golpe (`ms`); `fire` = o chão pegando fogo (o rastro do boitatá). Sem este método, o motor pinta os quadrados de
    * sempre (combat.ts, `drawWarnings`).
    */
-  warn?(tiles: number[], ms: number, opts?: { fire?: boolean }): void;
+  warn?(tiles: number[], ms: number, opts?: { fire?: boolean; kind?: string }): void;
+  /**
+   * Alguém dormiu (a cantiga de ninar da Cuca, 24/11) ou acordou: o "Zzz" em cima dele (`asleep`). Opcional: sem ele, só
+   * o aviso na tela de quem dormiu. O `warn` com `kind: 'caldo'` é a poça verde do caldo da Cuca (sem o `kind`, fogo).
+   */
+  sleep?(id: number, asleep: boolean): void;
   /**
    * A view sabe desenhar este tipo? Hoje só pergunto para os bichos (kind 'pet', ex.: 'joaquim'): se a view não sabe
    * (ou não tem este método), o motor desenha um gatinho provisório por cima. Ações dos bichos: 'meow', 'purr',

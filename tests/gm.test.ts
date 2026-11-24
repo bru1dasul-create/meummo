@@ -47,7 +47,7 @@ const bicho: MonsterDef = {
   aggroRange: 6,
   chaseRange: 8,
   respawnMs: 1000,
-  attack: { kind: 'bite', range: 1, minDistance: 0, windupMs: 300, intervalMs: 1000, damage: [3, 3], speed: 8, projectile: 'pedra', fire: null, pushCm: 0 },
+  attack: { kind: 'bite', range: 1, minDistance: 0, windupMs: 300, intervalMs: 1000, damage: [3, 3], speed: 8, projectile: 'pedra', fire: null, puddle: null, pushCm: 0 },
   whirlwind: null,
   song: null,
   shell: null,

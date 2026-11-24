@@ -25,6 +25,11 @@ export interface MonsterAttack {
   projectile: string;
   /** Investida: rastro de fogo que fica no caminho (null = sem fogo). */
   fire: { durationMs: number; damage: [number, number] } | null;
+  /**
+   * A poça (campo "poca" do ataque; o caldo da Cuca): onde o golpe que voa cai (ou acerta alguém), o chão fica queimando
+   * por `durationMs`, com `damage` a cada meio segundo, na casa e nas vizinhas até `radius` casas (em cruz).
+   */
+  puddle: { durationMs: number; damage: [number, number]; radius: number } | null;
   /** Quanto o golpe empurra quem leva, em centímetros ("recuo"; a defesa segura boa parte). */
   pushCm: number;
 }
@@ -70,6 +75,12 @@ export interface MonsterDef {
 
 /** O canto (campo "canto" em data/monsters.json). */
 export interface MonsterSong {
+  /**
+   * O que acontece com quem fica na área ("efeito"): 'charm' = encanta e puxa para quem cantou (a Iara, "encanto", o
+   * de sempre); 'sleep' = dorme por `durationMs`, sem andar nem atirar, e levar golpe acorda (a cantiga de ninar da
+   * Cuca, "sono").
+   */
+  effect: 'charm' | 'sleep';
   /** De quanto em quanto tempo canta (se tem alguém por perto). */
   everyMs: number;
   /** Até quantos tiles dela o canto pega. */
@@ -142,6 +153,15 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       const f = new Reader(fireData, FILE, `rastro de fogo do monstro "${rawId}"`);
       fire = { durationMs: f.number('duracaoMs', { min: 200 }), damage: f.range('dano') };
     }
+    const puddleData = a.object('poca', true);
+    let puddle: MonsterAttack['puddle'] = null;
+    if (puddleData) {
+      const f = new Reader(puddleData, FILE, `poça do monstro "${rawId}"`);
+      const radius = f.number('raio', { min: 0, fallback: 1 });
+      if (!Number.isInteger(radius) || radius > 3) f.fail('raio', 'precisa ser um número inteiro de 0 a 3 (0 = só a casa onde cai)');
+      puddle = { durationMs: f.number('duracaoMs', { min: 200 }), damage: f.range('dano'), radius };
+      if (kind !== 'projectile') throw new Error(`Erro em ${FILE} (ataque do monstro "${rawId}"): só o golpe que voa ("tipo": "projetil") deixa poça.`);
+    }
     const whirl = r.object('redemoinho', true);
     let whirlwind: MonsterDef['whirlwind'] = null;
     if (whirl) {
@@ -158,7 +178,10 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
     if (songData) {
       const s = new Reader(songData, FILE, `canto do monstro "${rawId}"`);
       const lines = songData.falas;
+      const effectName = s.optionalText('efeito').toLowerCase() || 'encanto';
+      if (effectName !== 'encanto' && effectName !== 'sono') s.fail('efeito', 'precisa ser "encanto" (puxa, como a Iara) ou "sono" (dorme, como a Cuca)');
       song = {
+        effect: effectName === 'sono' ? 'sleep' : 'charm',
         everyMs: s.number('cadaMs', { min: 1000, fallback: 10000 }),
         range: s.number('alcance', { min: 1, fallback: 5 }),
         windupMs: s.number('preparoMs', { min: 300, fallback: 1300 }),
@@ -213,6 +236,7 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
         speed: a.number('velocidade', { min: 1, fallback: 8 }),
         projectile: a.text('projetil', 'pedra'),
         fire,
+        puddle,
         pushCm,
       },
       whirlwind,

@@ -231,7 +231,7 @@ describe('mapa do formato novo: o mundo', () => {
   it('NPC fica com o pé no ponto exato do data/npcs.json (com fração, só no formato novo)', () => {
     const clock = new FakeClock();
     const map = GameMap.fromTiled(metricMap(), 'teste');
-    const curupira: NpcDef = { id: 'curupira', name: 'Curupira', title: '', map: 'teste', x: 4.5, y: 7.5, line: 'Oi', wears: [], shop: null, recipes: [], stroll: [], trips: [] };
+    const curupira: NpcDef = { id: 'curupira', name: 'Curupira', title: '', map: 'teste', x: 4.5, y: 7.5, line: 'Oi', wears: [], shop: null, recipes: [], stroll: [], trips: [], dayOnly: false };
     const world = new World(map, { now: clock.now, random: () => 0, npcs: new Map([['curupira', curupira]]) });
     const npc = [...world.npcs.values()][0]!;
     expect(feetAt(npc.x, npc.y)).toEqual({ x: 4.5, y: 7.5 });

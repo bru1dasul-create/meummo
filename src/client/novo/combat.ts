@@ -83,6 +83,8 @@ export const SHOT_BALLS: Readonly<Record<string, { fill: string; stroke: string;
   fruta_podre: { fill: '#5a2346', stroke: '#2a0f20', glow: 'rgba(255, 90, 70, 0.55)' },
   // o Sagui Ancestral: a fruta dourada, com brilho claro
   fruta_dourada: { fill: '#f2c14e', stroke: '#8a5a12', glow: 'rgba(255, 226, 120, 0.6)' },
+  // a Cuca: a concha de caldo verde do caldeirão
+  caldo: { fill: '#86d84e', stroke: '#2f5a14', glow: 'rgba(140, 230, 90, 0.5)' },
 };
 
 /** De que altura sai a fruta de quem está num galho a `perchHeight` metros. */
@@ -172,6 +174,8 @@ interface Warning {
   start: number;
   until: number;
   fire: boolean;
+  /** O que queima ('caldo': a poça verde da Cuca); sem = fogo. */
+  kind?: string;
 }
 
 interface Flying {
@@ -633,8 +637,8 @@ export class CombatLayer {
   }
 
   /** Aviso de golpe nestes tiles ([x1, y1, x2, y2, ...]) por `ms`; `fire`: chão pegando fogo. */
-  warn(tiles: number[], ms: number, now: number, fire = false): void {
-    this.warnings.push({ tiles, start: now, until: now + ms, fire });
+  warn(tiles: number[], ms: number, now: number, fire = false, kind?: string): void {
+    this.warnings.push({ tiles, start: now, until: now + ms, fire, ...(kind ? { kind } : {}) });
   }
 
   /** Alguém está preparando um golpe por `ms` (o aviso laranja embaixo dele). */
@@ -921,8 +925,9 @@ export class CombatLayer {
       const progress = Math.min(1, (now - warning.start) / total);
       // o vermelho fica mais forte perto do golpe; o fogo tremula
       const alpha = warning.fire ? 0.3 + 0.12 * Math.sin(now / 70) : 0.2 + 0.35 * progress;
-      ctx.fillStyle = warning.fire ? `rgba(255, 140, 40, ${alpha.toFixed(3)})` : `rgba(229, 60, 60, ${alpha.toFixed(3)})`;
-      ctx.strokeStyle = warning.fire ? 'rgba(255, 190, 90, 0.7)' : 'rgba(255, 120, 110, 0.75)';
+      const caldo = warning.kind === 'caldo'; // a poça de caldo da Cuca: verde
+      ctx.fillStyle = caldo ? `rgba(120, 210, 70, ${alpha.toFixed(3)})` : warning.fire ? `rgba(255, 140, 40, ${alpha.toFixed(3)})` : `rgba(229, 60, 60, ${alpha.toFixed(3)})`;
+      ctx.strokeStyle = caldo ? 'rgba(170, 240, 110, 0.7)' : warning.fire ? 'rgba(255, 190, 90, 0.7)' : 'rgba(255, 120, 110, 0.75)';
       ctx.lineWidth = 1.5;
       for (let i = 0; i + 1 < warning.tiles.length; i += 2) {
         const corners = tileFeetSquare(warning.tiles[i]!, warning.tiles[i + 1]!).map((p) => screen(p.x, p.y));

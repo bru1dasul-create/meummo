@@ -320,8 +320,11 @@ const MONSTER_FIELDS: FieldSpec<MonsterDef>[] = [
   { campo: 'canto.cadaMs', rotulo: 'Canta a cada (ms)', tipo: 'inteiro', ler: (d) => d.song?.everyMs, vale: (d) => d.song !== null },
   { campo: 'canto.alcance', rotulo: 'Alcance do canto (tiles)', tipo: 'inteiro', ler: (d) => d.song?.range, vale: (d) => d.song !== null },
   { campo: 'canto.preparoMs', rotulo: 'Aviso do canto (ms)', tipo: 'inteiro', dica: 'maior = mais tempo para sair da área', ler: (d) => d.song?.windupMs, vale: (d) => d.song !== null },
-  { campo: 'canto.duracaoMs', rotulo: 'Encanto dura (ms)', tipo: 'inteiro', dica: 'a esquiva solta antes', ler: (d) => d.song?.durationMs, vale: (d) => d.song !== null },
-  { campo: 'canto.puxaACadaMs', rotulo: 'Puxa um passo a cada (ms)', tipo: 'inteiro', dica: 'menor = puxa mais forte', ler: (d) => d.song?.pullEveryMs, vale: (d) => d.song !== null },
+  { campo: 'canto.duracaoMs', rotulo: 'Encanto (ou sono) dura (ms)', tipo: 'inteiro', dica: 'encanto: a esquiva solta antes; sono: um golpe acorda', ler: (d) => d.song?.durationMs, vale: (d) => d.song !== null },
+  { campo: 'canto.puxaACadaMs', rotulo: 'Puxa um passo a cada (ms)', tipo: 'inteiro', dica: 'menor = puxa mais forte', ler: (d) => d.song?.pullEveryMs, vale: (d) => d.song?.effect === 'charm' },
+  // a poça do golpe que voa (o caldo da Cuca)
+  { campo: 'ataque.poca.duracaoMs', rotulo: 'Poça: quanto dura (ms)', tipo: 'inteiro', ler: (d) => d.attack.puddle?.durationMs, vale: (d) => d.attack.puddle !== null },
+  { campo: 'ataque.poca.dano', rotulo: 'Poça: dano a cada meio segundo', tipo: 'faixa', ler: (d) => d.attack.puddle?.damage, vale: (d) => d.attack.puddle !== null },
   // o galho (só o sagui, por enquanto): pendurado, joga a fruta lá de cima
   { campo: 'galho.desceA', rotulo: 'No galho: pula para o chão a (metros)', tipo: 'numero', dica: 'quem chega mais perto faz ele descer e lutar', ler: (d) => d.branch?.descendRange, vale: (d) => d.branch !== null },
   { campo: 'galho.sobeDepoisMs', rotulo: 'Sobe no galho de novo depois de (ms) calmo', tipo: 'inteiro', ler: (d) => d.branch?.climbAfterMs, vale: (d) => d.branch !== null },

@@ -60,6 +60,17 @@
     "descricao": "Presas de jararaca num cordão de embira. Dizem que afasta o azar.",
     "icone": "colar"
   },
+  "patua_cuca": {
+    "nome": "Patuá da Cuca",
+    "preco": 250,
+    "tipo": "equipamento",
+    "parte": "amuleto",
+    "vida": 15,
+    "defesa": 1,
+    "raridade": "raro",
+    "descricao": "Um saquinho de pano com ervas do caldeirão e um dente de jacaré. Quem enfrenta a Cuca merece proteção.",
+    "icone": "colar"
+  },
   "gibao_couro": {
     "nome": "Gibão de Couro",
     "preco": 150,

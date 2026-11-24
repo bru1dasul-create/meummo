@@ -771,6 +771,20 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     - [x] **[mundo]** a arena (na main): a toca maior (uns 22 × 14 m de chão; o mapa `caverna` foi a 66 m de largura),
       duas estalagmites para se esconder e a área `cuca` (quantidade 1, a toca inteira), que entra no mapa quando a
       chave `cuca` existir em `data/monsters.json`
+    - [x] **[estrutura]** a luta (aprovada pelo dono em 24/11: "pode fazer assim"; conferida no PC e no celular com
+      uma área de teste na toca; entra na main junto com a área do [mundo], porque o teste da caverna exige a área quando
+      a chave existe): de dia a bruxa (`"soDeDia"`: de noite ela some e ninguém negocia com ela); de noite, a chefe
+      `cuca` (nível 6, 300 de vida, só de noite, volta em 5 min; 150 de XP, 25–40 de ouro). **O caldo** (`caldo`, 10–15
+      a até 6 m, a cada 1,6 s) deixa **a poça** (`"poca"`: 3–5 a cada meio segundo por 2,5 s, em cruz; a nova toma o
+      lugar da antiga no mesmo chão). **A cantiga de ninar** (`"efeito": "sono"`: a cada 12 s, até 5 m, 1,5 s de aviso):
+      quem fica dorme 2,5 s (não anda, não esquiva nem atira); um golpe acorda e a esquiva no aviso escapa. Deixa
+      Garrafada da Cuca 50%, jurubeba 60%, Garrafada Grande 30% e o **Patuá da Cuca** 15% (`patua_cuca`: amuleto raro,
+      +15 de vida e +1 de defesa). A missão **A Cantiga da Cuca** (nível 5, depois de O Caldeirão): derrotá-la de noite e
+      concluir de dia com ela (200 de XP, 50 de ouro e o patuá). Protocolo 56. Parado (sem esquivar nem atirar), um herói
+      de nível 11 desmaia em uns 12 s; os números ficam no painel. Teste: `tests/cuca-chefe.test.ts`
+    - [ ] **[arte]** a Cuca chefe (a mesma criatura `cuca` da bruxa, com o caldo e a cantiga), a concha de caldo, a
+      poça verde (`view.warn` com `kind: 'caldo'`), o "Zzz" de quem dorme (`view.sleep`) e o ícone do Patuá (hoje o
+      `colar`)
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

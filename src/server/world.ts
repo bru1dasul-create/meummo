@@ -21,6 +21,7 @@ import {
   PERCH_DESCEND_MS,
   PICKUP_RANGE,
   REGEN_EVERY_MS,
+  SHOT_FEET_DY,
   SHOT_HIT_RADIUS,
   DASH_ROLL_MS,
   JUMP_AIR_MS,
@@ -478,9 +479,20 @@ export class World {
     this.npcs.set(npc.id, npc);
   }
 
-  /** Os NPCs deste mapa, para o navegador desenhar. */
+  /** Os NPCs deste mapa que estão aqui agora, para o navegador desenhar (de noite, a Cuca bruxa some: vira a chefe). */
   private npcList() {
-    return [...this.npcs.values()].map((npc) => npc.info());
+    return [...this.npcs.values()].filter((npc) => this.npcPresent(npc)).map((npc) => npc.info());
+  }
+
+  /** O NPC está aqui agora? (Quem só aparece de dia, "soDeDia", some de noite: ninguém fala com ele.) */
+  private npcPresent(npc: Npc): boolean {
+    return !(npc.def.dayOnly && this.night);
+  }
+
+  /** O NPC `npcId` deste mapa, se estiver aqui agora. */
+  private presentNpc(npcId: number): Npc | undefined {
+    const npc = this.npcs.get(npcId);
+    return npc && this.npcPresent(npc) ? npc : undefined;
   }
 
   // ======================= entrar e sair =======================
@@ -918,6 +930,7 @@ export class World {
   charge(player: Player): void {
     if (player.loading || player.dead || player.guardWanted) return; // defendendo, as mãos estão ocupadas
     const now = this.now();
+    if (now < player.asleepUntil) return; // dormindo (a cantiga da Cuca)
     if (this.rolling(player, now)) return; // rolando, não puxa (o navegador espera a rolada acabar)
     player.chargeStart = now;
   }
@@ -935,7 +948,7 @@ export class World {
    * guardReadyMs depois; levantar a defesa solta a pedra que estava puxando.
    */
   guard(player: Player, on: boolean, angle: number): void {
-    if (player.loading || player.dead) {
+    if (player.loading || player.dead || (on && this.now() < player.asleepUntil)) {
       player.guardWanted = false;
       return;
     }
@@ -955,6 +968,7 @@ export class World {
   jump(player: Player): void {
     const now = this.now();
     if (player.loading || player.dead || player.guardWanted || player.chargeStart !== null) return;
+    if (now < player.asleepUntil) return; // dormindo
     if (now < player.jumpReadyAt - SKILL_TOLERANCE_MS) return;
     if (this.rolling(player, now)) return; // rolando, não pula
     player.jumpAt = now;
@@ -972,6 +986,7 @@ export class World {
     const now = this.now();
     if (player.loading || player.dead || now < player.nextShotAt - SHOT_TOLERANCE_MS) return;
     if (player.guardWanted) return; // defendendo, não atira (o navegador nem pede)
+    if (now < player.asleepUntil) return; // dormindo (a cantiga da Cuca): não atira
     if (this.rolling(player, now)) {
       player.chargeStart = null; // rolando, não atira (o navegador espera a rolada acabar para puxar)
       return;
@@ -1066,6 +1081,7 @@ export class World {
     if (!skill || player.loading) return;
     const now = this.now();
     if (player.dead) return this.fail(player, 'dead');
+    if (now < player.asleepUntil) return; // dormindo
     if (player.guardWanted) return; // defendendo, as mãos estão ocupadas
     if (now < player.skillReadyAt[n]! - SKILL_TOLERANCE_MS) return this.fail(player, 'cooldown');
 
@@ -1212,6 +1228,7 @@ export class World {
     const rank = player.skillPoints[id] ?? 0;
     const numbers = found ? skillPoint(found.skill, rank) : null;
     if (!found || !numbers || !found.skill.kind || player.loading) return;
+    if (this.now() < player.asleepUntil) return; // dormindo (a cantiga da Cuca)
     const { skill } = found;
     const now = this.now();
     if (player.dead) return this.fail(player, 'dead');
@@ -1607,6 +1624,11 @@ export class World {
         // de noite chegam todos
       }
     }
+    // quem só aparece de dia (a Cuca bruxa) some ao anoitecer e volta ao amanhecer: a lista nova vai para todo mundo
+    if ([...this.npcs.values()].some((npc) => npc.def.dayOnly)) {
+      const npcs = this.npcList();
+      for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
+    }
   }
 
   // ======================= mapa explorado =======================
@@ -1747,7 +1769,7 @@ export class World {
       player.outbox.push({ t: 'sys', text: `Missão abandonada: ${quest.name}.` });
       return;
     }
-    const npc = npcId !== undefined ? this.npcs.get(npcId) : undefined;
+    const npc = npcId !== undefined ? this.presentNpc(npcId) : undefined;
     // aceitar é com quem dá a missão; concluir é com quem ela manda procurar (na de falar) ou com quem deu
     const expected = act === 'accept' ? quest.giver : questFinisher(quest);
     if (!npc || npc.def.id !== expected) return; // NPC de outro mapa, ou não é com ele
@@ -1837,7 +1859,7 @@ export class World {
   /** Comprar `n` deste item do vendedor `npcId` (pelo `preco` de data/items.json). */
   /** Alguém abriu a conversa ou a loja do NPC (ou continua com ela aberta): ele espera parado. */
   talk(player: Player, npcId: number): void {
-    const npc = this.npcs.get(npcId);
+    const npc = this.presentNpc(npcId);
     if (!npc || player.loading || player.dead || !this.nearNpc(player, npc)) return;
     npc.busyUntil = this.now() + NPC_BUSY_MS;
   }
@@ -1850,7 +1872,7 @@ export class World {
     if (this.players.size === 0) return;
     for (const npc of this.npcs.values()) {
       const points = npc.def.stroll;
-      if (points.length === 0 || now < npc.strollAt || now < npc.busyUntil) continue;
+      if (points.length === 0 || now < npc.strollAt || now < npc.busyUntil || !this.npcPresent(npc)) continue;
       if (npc.strollAt === 0) {
         npc.strollAt = now + NPC_PAUSE_MIN_MS; // o primeiro passeio espera um pouco
         continue;
@@ -1914,7 +1936,7 @@ export class World {
    */
   travel(player: Player, npcId: number, to: string): void {
     if (player.loading) return;
-    const npc = this.npcs.get(npcId);
+    const npc = this.presentNpc(npcId);
     const trip = (npc?.def.trips ?? []).find((t) => t.to === to);
     if (!npc || !trip) return this.fail(player, 'cant_trade'); // ele não faz essa viagem (ou é de outro mapa)
     if (player.dead) return this.fail(player, 'dead');
@@ -1948,7 +1970,7 @@ export class World {
 
   craft(player: Player, npcId: number, id: string): void {
     if (player.loading) return;
-    const npc = this.npcs.get(npcId);
+    const npc = this.presentNpc(npcId);
     const recipe = npc?.recipes.find((r) => r.item === id);
     if (!npc || !recipe) return this.fail(player, 'cant_trade', true); // ela não sabe essa (ou é de outro mapa)
     if (player.dead) return this.fail(player, 'dead', true);
@@ -1972,8 +1994,8 @@ export class World {
 
   private shopFor(player: Player, npcId: number): NpcShop | null {
     if (player.loading) return null;
-    const npc = this.npcs.get(npcId);
-    if (!npc?.def.shop) return null; // vendedor de outro mapa (o navegador estava desatualizado): ignora
+    const npc = this.presentNpc(npcId);
+    if (!npc?.def.shop) return null; // vendedor de outro mapa, ou que não está aqui agora (a Cuca de noite): ignora
     if (player.dead) {
       this.fail(player, 'dead', true);
       return null;
@@ -2115,6 +2137,7 @@ export class World {
       return;
     }
     if (player.charmedBy !== null) this.updateCharm(player, now);
+    if (player.asleepUntil > 0 && now >= player.asleepUntil) this.wake(player);
     this.updateGuard(player, now);
     this.processWalks(player, now);
     this.expireEffects(player, now);
@@ -2136,6 +2159,13 @@ export class World {
       // Esquiva ainda recarregando vira um pedaço de caminhada normal (o cliente se corrige com o ack).
       // no ar (logo depois do pulo), a esquiva não sai: vira um pedaço de caminhada, como a que ainda recarrega
       const dash = input.dash && now >= player.dashReadyAt - SKILL_TOLERANCE_MS && now - player.jumpAt >= JUMP_AIR_MS - SKILL_TOLERANCE_MS;
+      if (now < player.asleepUntil) {
+        // Dormindo (a cantiga da Cuca): não anda nem esquiva. O navegador corrige a posição pelo ack.
+        player.queue.shift();
+        player.ackSeq = input.seq;
+        player.ackPending = true;
+        continue;
+      }
       if (!dash && now < player.charmedUntil) {
         // Encantado: não anda (só a esquiva solta). O navegador corrige a posição pelo ack.
         player.queue.shift();
@@ -2322,6 +2352,7 @@ export class World {
   private killPlayer(player: Player, now: number): void {
     player.deadUntil = now + DEATH_MS;
     player.chargeStart = null;
+    player.asleepUntil = 0; // desmaiado não dorme (o navegador some com o sono junto)
     player.hawkUntil = 0; // os Olhos de Gavião acabam (o navegador também apaga o destaque)
     player.armed = null; // e a flecha especial sai do arco (o navegador também tira)
     this.dropGuard(player);
@@ -2392,6 +2423,7 @@ export class World {
       kind,
       viewers: new Set(),
       ...(owner.kind === 'monster' ? { push: owner.def.attack.pushCm / 100 } : {}),
+      ...(owner.kind === 'monster' && owner.def.attack.puddle ? { puddle: { ...owner.def.attack.puddle } } : {}),
       ...(pierce ? { pierce } : {}),
     };
     this.projectiles.set(shot.id, shot);
@@ -2441,7 +2473,34 @@ export class World {
       }
       for (const id of shot.viewers) this.players.get(id)?.outbox.push(end);
       if (hit.target) this.damage(hit.target, shot.damage, shot.ownerId, now, Math.atan2(shot.dy, shot.dx), shot.push ?? 0);
+      if (shot.puddle) this.spillPuddle(shot, shot.puddle, hit.target, now);
     }
+  }
+
+  /**
+   * O caldo da Cuca: onde ele caiu (ou em quem acertou) fica uma poça que queima, na casa e nas vizinhas em cruz (até
+   * `radius`), como o rastro de fogo da investida (a esquiva protege). Quem viu o tiro vê a poça.
+   */
+  private spillPuddle(shot: Projectile, puddle: NonNullable<Projectile['puddle']>, target: Entity | null, now: number): void {
+    // em quem acertou, a casa dele; senão, a casa do chão embaixo de onde o caldo parou
+    const under = cornerAtFeet(shot.x, shot.y + SHOT_FEET_DY);
+    const center = target ? { x: target.x, y: target.y } : footTile(under.x, under.y);
+    const tiles: Tile[] = [];
+    for (let dy = -puddle.radius; dy <= puddle.radius; dy++) {
+      for (let dx = -puddle.radius; dx <= puddle.radius; dx++) {
+        const tile = { x: center.x + dx, y: center.y + dy };
+        if (Math.abs(dx) + Math.abs(dy) <= puddle.radius && this.map.isWalkable(tile.x, tile.y)) tiles.push(tile);
+      }
+    }
+    if (tiles.length === 0) return;
+    // a poça nova toma o lugar da antiga no mesmo chão (não somam: duas poças no mesmo lugar queimariam em dobro)
+    for (const old of this.hazards) {
+      if (old.ownerId === shot.ownerId && old.look === shot.kind) old.tiles = old.tiles.filter((t) => !tileIn(tiles, t.x, t.y));
+    }
+    this.hazards = this.hazards.filter((h) => h.tiles.length > 0);
+    this.hazards.push({ ownerId: shot.ownerId, tiles, until: now + puddle.durationMs, nextPulseAt: now + FIRE_FIRST_PULSE_MS, damage: puddle.damage, look: shot.kind });
+    const msg: ServerMsg = { t: 'fire', id: shot.ownerId, tiles: tiles.flatMap((t) => [t.x, t.y]), ms: puddle.durationMs, k: shot.kind };
+    for (const id of shot.viewers) this.players.get(id)?.outbox.push(msg);
   }
 
   /**
@@ -2547,6 +2606,7 @@ export class World {
     }
     target.hp = Math.max(0, target.hp - amount);
     target.lastDamagedAt = now;
+    if (target.kind === 'player' && now < target.asleepUntil && target.hp > 0) this.wake(target); // o golpe acorda
     if (target.kind === 'player') target.chargeStart = null; // golpe recebido solta a pedra que estava puxando
     this.emitToViewers(target, { t: 'hit', id: target.id, by: attackerId, dmg: amount, hp: target.hp, ...(blocked ? { blk: blocked } : {}) });
     if (target.kind === 'player' && target.hp > 0 && travel !== undefined && push > 0) {
@@ -2936,6 +2996,10 @@ export class World {
     for (const player of this.players.values()) {
       if (player.dead || player.loading || player.god || now < player.invulnerableUntil || this.inSafeArea(player)) continue;
       if (chebyshev(monster, player) > song.range) continue;
+      if (song.effect === 'sleep') {
+        this.putToSleep(player, song.durationMs, now);
+        continue;
+      }
       player.charmedUntil = now + song.durationMs;
       player.charmedBy = monster.id;
       player.nextPullAt = now + song.pullEveryMs;
@@ -2960,6 +3024,25 @@ export class World {
     player.dir = result.dir;
     player.changed = true;
     player.outbox.push({ t: 'pull', x: player.fx, y: player.fy, dir: player.dir });
+  }
+
+  /**
+   * Dorme (a cantiga de ninar da Cuca, 24/11): por `ms`, não anda, não esquiva, não atira; levar golpe acorda (damage).
+   * Quem vê fica sabendo (o "Zzz"), e o próprio navegador para de andar e de atirar.
+   */
+  private putToSleep(player: Player, ms: number, now: number): void {
+    player.asleepUntil = now + ms;
+    player.queue.length = 0;
+    player.chargeStart = null; // larga a pedra que estava puxando
+    this.dropGuard(player);
+    this.emitToViewers(player, { t: 'sleep', id: player.id, ms });
+  }
+
+  /** Acorda (o tempo acabou ou levou golpe). */
+  private wake(player: Player): void {
+    if (player.asleepUntil === 0) return;
+    player.asleepUntil = 0;
+    this.emitToViewers(player, { t: 'sleep', id: player.id, ms: 0 });
   }
 
   /** Solta o encanto (esquivou, acabou o tempo, ou quem cantou sumiu). */

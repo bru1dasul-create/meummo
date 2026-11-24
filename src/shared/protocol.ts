@@ -251,7 +251,7 @@ export type ServerMsg =
   | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string; burst?: number }
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
   | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number; ms?: number; s?: string } // r = alcance do golpe (bote, investida); ms = quanto dura (a marca); s = a habilidade ('skillup')
-  | { t: 'fire'; id: number; tiles: number[]; ms: number } // chão pegando fogo nestes tiles por `ms` (queima quem fica)
+  | { t: 'fire'; id: number; tiles: number[]; ms: number; k?: string } // chão queimando nestes tiles por `ms`; `k` = o que é ('caldo': a poça da Cuca; sem = fogo)
   // blk: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou
   | { t: 'hit'; id: number; by: number; dmg: number; hp: number; blk?: 1 | 2 }
   | { t: 'guard'; id: number; on: boolean; a: number } // outro jogador levantou (ou baixou) a defesa, virada para `a`
@@ -308,6 +308,7 @@ export type ServerMsg =
   // o vento mudou: chega a esta força (0 a 1) e direção (graus no chão, para onde sopra) em `ms`, devagar
   | { t: 'wind'; strength: number; angle: number; ms: number }
   | { t: 'charm'; ms: number } // você foi encantado (canto da Iara) por `ms`: não anda, só a esquiva solta (0 = acabou)
+  | { t: 'sleep'; id: number; ms: number } // `id` dormiu por `ms` (a cantiga da Cuca): não anda nem atira; 0 = acordou (golpe acorda)
   | { t: 'pull'; x: number; y: number; dir: Dir } // o canto te puxou um passo: sua posição agora é esta
   | { t: 'online'; n: number }
   | { t: 'pong'; id: number };
