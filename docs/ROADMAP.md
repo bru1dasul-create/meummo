@@ -1045,7 +1045,13 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - no aviso, encolhe, arqueia, arrepia e rosna de boca aberta;
     - na mordida, dá o bote com os pés plantados;
     - o tranco e o desmaio com as faíscas roxas.
-  - [ ] Tatu-bola · [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
+  - [x] **Tatu-bola** (24/11, no ramo; esperando o pode do dono para a main):
+    - a carapaça de ocre com as três cintas e as plaquinhas, a cabeça pontuda com o escudo e as orelhinhas, as patas
+      com unhas e o rabo de casca;
+    - no aviso, fecha na bola de gomos e gira no lugar levantando poeira;
+    - na investida, rola de verdade até o fim (antes pulava de uma vez) e só abre tonto depois de parar;
+    - a casca segurando, o tranco e o desmaio de barriga para cima com as faíscas.
+  - [ ] Jararaca · [ ] Marimbondos · [ ] Filhote de Boitatá
 - [x] **[arte]** O selinho do "!" (23/11, pedido do dono): o "!" dos bichos que percebem o herói vira um selo amarelo em
   cima do nome, sem o balão (com vários juntos, os balões se empilhavam com o bico comprido)
 - [x] **O aviso dos golpes no chão** (23/11, pedido do dono: "arruma esses golpes do quati aparece em quadrado vermelho,

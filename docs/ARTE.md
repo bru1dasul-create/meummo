@@ -238,6 +238,57 @@
   comparação pixel a pixel) e `antes/` (a cópia das criaturas de antes). Entregues: `entrega/sagui-versoes-previa.png`
   e `entrega/sagui-versoes-animado.gif`.
 
+### Etapa 3: o Tatu-bola (24/11, com o "pode seguir para o Tatu-bola" do dono; NO RAMO, esperando o pode para a main)
+- **O desenho (`tatu.js`, sem as bolinhas, com as ferramentas do sagui e do quati):**
+  - **a carapaça:** uma abóbada cor de ocre (o casco dos pontos dela na tela, que é convexa), com a beirada em
+    plaquinhas (ondinhas redondas, sem pontas: o `furOutline` com nada pontudo). Por dentro, por baixo da luz e da
+    sombra: os dois escudos com as fileiras de plaquinhas desencontradas (tijolinho; quadriculado lembrava cesto), as
+    **três cintas** com as dobras escuras e a beirada clara e a saia mais escura. Tudo desenhado na superfície de
+    verdade (`shellPt`/`shellN`), só do lado que a câmera vê;
+  - **fechada, a bola:** a mesma superfície vira uma esfera enrolada em volta do lado do corpo — a espinha vira um
+    círculo e as cintas viram **gomos** que se juntam dos dois lados (como o tatu-bola fechado de verdade; no começo
+    elas ficavam cruzadas, parecendo novelo). Os escudos da cabeça (com as orelhinhas) e do rabo ficam encaixados no
+    fundo e aparecem rolando;
+  - **a cabeça:** pontuda, de pele rosada, com o escudo de casca em cima, as orelhinhas redondas (o miolo mais escuro),
+    os olhinhos pretos (de noite, vermelhos) e a ponta do nariz; **as patas** curtas com as unhas (as da frente,
+    compridas e curvas); **o rabo** curto de casca com os anéis.
+- **O aviso** ('windup', 0,9 s): fecha na bola em ~0,3 s e **gira no lugar, cada vez mais rápido** (até 18 rad/s),
+  recuando um pouco (tomando impulso), tremendo no fim e **levantando poeira para trás**.
+- **A investida** ('charge'): o servidor manda o golpe, o tonto e o pé no fim da linha (`dash`), **tudo no mesmo
+  instante**. O tatu guarda o tonto (`dizzyLater`) e **rola de verdade** até lá: o `moveTo` com `dash` vira um rolar
+  de `distância / 15 m/s` (de 0,2 a 0,55 s), rápido no começo e freando, com o rastro de poeira. A bola gira
+  `distância / raio` e acerta a volta inteira para **abrir de pé**. Antes ela pulava de uma vez para o fim e abria
+  tonto na hora.
+- **O tonto** (2 s): abre logo que para, cambaleia, olhos de espiral e as estrelinhas em cima da cabeça.
+- **'block'** (a casca segurou um golpe): a faísca do lado de quem bateu, a cabeça encolhe e o corpo recua um tiquinho.
+- **O tranco, o clarão e o desmaio:**
+  - o tranco e o clarão são os do sagui e do quati;
+  - desmaiado, **vira de barriga para cima**, com as patinhas para o ar, os olhos em X e a barriga peluda clara;
+  - as faíscas roxas.
+- **O peso:** ~1,2 ms por tatu no PC (zoom 1) e ~0,6 ms no celular; o antigo pesava 0,6 e 0,5 ms. Continua mais
+  leve que o sagui e o quati novos.
+- **Conferido:**
+  - as pranchas (4 lados × 15 momentos e de perto) e o filme de antes e depois;
+  - o jogo de verdade, de dia, com vários tatus atacando: a bola rolando com o aviso no chão e o "tonto!";
+  - gravado quadro a quadro na view (`rolar.cjs`): rolou 8 quadros, 0,3 a 0,4 s, andando 4 a 5 m, e abriu tonto
+    ~0,3 s depois de parar;
+  - o celular deitado.
+  
+  Sem erros. Teste: `tests/tatu-art.test.ts`. Os outros bichos não mudaram: só o `tatu.js` foi alterado.
+- **Cuidado que custou tempo:** no quadro em que termina de rolar, o golpe tem que ser lido **depois** de rolar. Lido
+  antes, a "investida" ainda valia naquele quadro e dava mais um giro, e ele precisava de mais uma volta inteira para
+  abrir.
+- **Rascunho `tatu/`:**
+  - `prancha.cjs <saída> [criaturas] [zoom]` (`DIRS`, `ONLY`);
+  - `anim.cjs <pasta> [criaturas] [zoom]`: o filme, com a câmera seguindo;
+  - `custo.cjs [criaturas]`: o peso;
+  - `jogo.cjs <pasta>`: no jogo;
+  - `rolar.cjs`: o tatu desenhado, quadro a quadro, numa investida de verdade;
+  - `celular.cjs <saída>`;
+  - `antes/`: a cópia das criaturas de antes.
+  
+  Entregues: `entrega/tatu-antes-depois.png` e `entrega/tatu-antes-depois.gif`.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
