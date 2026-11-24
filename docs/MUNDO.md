@@ -571,6 +571,10 @@ Feito pelo [mundo], tudo na `main`:
   `levar` do painel pede o `id` da entrada atual (muda a cada vez que entra: pegue de `__mundoNovo.me.id`).
 
 ## Esperando outras frentes
+- **Combinados com a [estrutura] sobre o som (24/11, 9213677):** o som do lugar sai do nome da área (ou do mapa) ou da
+  propriedade `som` na camada `areas` (os de hoje: `vila`, `clareira`, `mata`, `mata-profunda`, `agua` e `caverna`). O
+  passo de um chão que ela não conhece vira terra: **ao criar um chão duro novo, avisar a [estrutura] o nome** (a
+  `caverna` e a `caverna-rocha` já dão passo de pedra).
 - **[estrutura] (feito em 22/11, 02855f2):** o bando de capivaras da várzea do Guarapiranga (`capivaras_varzea`, 3
   capivaras, nos meus pontos `capivaras-varzea` e `-descanso`). **Ainda a combinar:** quando o mapa de Santo Amaro novo
   existir, a saída do leste (a barreira sai e a chegada `chegada-santo-amaro` já está lá); NPCs para os lugares novos,
