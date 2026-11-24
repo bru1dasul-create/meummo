@@ -238,7 +238,7 @@
   comparação pixel a pixel) e `antes/` (a cópia das criaturas de antes). Entregues: `entrega/sagui-versoes-previa.png`
   e `entrega/sagui-versoes-animado.gif`.
 
-### Etapa 3: o Tatu-bola (24/11, com o "pode seguir para o Tatu-bola" do dono; NO RAMO, esperando o pode para a main)
+### Etapa 3: o Tatu-bola (24/11, com o "pode seguir para o Tatu-bola" do dono; na main em 24/11, com o "pode juntar na main")
 - **O desenho (`tatu.js`, sem as bolinhas, com as ferramentas do sagui e do quati):**
   - **a carapaça:** uma abóbada cor de ocre (o casco dos pontos dela na tela, que é convexa), com a beirada em
     plaquinhas (ondinhas redondas, sem pontas: o `furOutline` com nada pontudo). Por dentro, por baixo da luz e da

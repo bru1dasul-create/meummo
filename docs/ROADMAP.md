@@ -1045,7 +1045,7 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     - no aviso, encolhe, arqueia, arrepia e rosna de boca aberta;
     - na mordida, dá o bote com os pés plantados;
     - o tranco e o desmaio com as faíscas roxas.
-  - [x] **Tatu-bola** (24/11, no ramo; esperando o pode do dono para a main):
+  - [x] **Tatu-bola** (24/11, na main):
     - a carapaça de ocre com as três cintas e as plaquinhas, a cabeça pontuda com o escudo e as orelhinhas, as patas
       com unhas e o rabo de casca;
     - no aviso, fecha na bola de gomos e gira no lugar levantando poeira;
