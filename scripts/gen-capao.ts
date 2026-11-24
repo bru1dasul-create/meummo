@@ -22,7 +22,7 @@
 //
 // Uso: npm run gen:capao (não sobrescreve o mapa existente sem --force; para comparar, use --out outro.tmj)
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { writeMapImage } from './mapa-de-cima';
 import { mulberry32 } from './pixels';
@@ -121,6 +121,9 @@ const ANCESTRAL = { x: 7.5, y: 9.5, raio: 1.2 };
 const NOOK = { x: 6.5, y: 98 };
 /** Áreas das criaturas: em mata mais aberta, para dar para ver e acertar (x0, x1, y0, y1). */
 const SAGUI_ZONE = { x0: 32, x1: 46, y0: 6, y1: 24 };
+/** Os saguis raros (24/11): o Ancestral em volta da Figueira do Viaduto e o Corrompido na Mata Profunda do noroeste. */
+const ANCESTRAL_ZONE = { x0: 39, x1: 47.5, y0: 2, y1: 11 };
+const CORROMPIDO_ZONE = { x0: 5, x1: 19, y0: 3, y1: 15 };
 const JARARACA_ZONE = { x0: 16, x1: 26, y0: 92, y1: 112 };
 /** Distância mínima entre troncos (borda a borda), para o pé de 0,6 × 0,4 passar. */
 const TRUNK_GAP = 1.2;
@@ -1983,28 +1986,30 @@ const sagHidden = (x: number, y: number, own: { x: number; y: number }) =>
       });
     });
   });
-/** O chão embaixo do galho é livre (longe de tronco, moita e água)? */
-const perchFree = (x: number, y: number, own: { x: number; y: number }) =>
-  inRect(x, y, SAGUI_ZONE) && free(x, y, 0.35) && waterGap(x, y) > 0.5 &&
+/** O chão embaixo do galho é livre (longe de tronco, moita e água) e fica na área (a dos saguis, ou a de um raro)? */
+const perchFree = (x: number, y: number, own: { x: number; y: number }, zone: { x0: number; x1: number; y0: number; y1: number } = SAGUI_ZONE) =>
+  inRect(x, y, zone) && free(x, y, 0.35) && waterGap(x, y) > 0.5 &&
   trees.every((t) => (t.x === own.x && t.y === own.y) || dist(x, y, t.x, t.y) > t.tronco / 2 + 0.72) &&
   clumps.every((c) => dist(x, y, c.x, c.y) > c.r + 0.4);
 /** A direção pedida ou a mais perto dela (sempre virada para a câmera) em que o chão é livre e o sagui fica à vista. */
-function bestPerch(own: { x: number; y: number }, want: number): [number, number, number] | null {
+function bestPerch(own: { x: number; y: number }, want: number, zone = SAGUI_ZONE, baseR = PERCH_R): [number, number, number] | null {
   for (const dd of [0, -25, 25, -50, 50, -75, 75, -100, 100]) {
     const direcao = (((want + dd) % 360) + 360) % 360;
     const a = (direcao * Math.PI) / 180;
     if (Math.cos(a) + Math.sin(a) < 0.2) continue;
-    // (o galho pode ser um pouco mais comprido, até 1,3 m, se perto do tronco não couber)
-    for (const R of [PERCH_R, PERCH_R + 0.15, PERCH_R + 0.3]) {
+    // (o galho pode ser um pouco mais comprido, até 1,3 m, se perto do tronco não couber; `baseR` é do meio do tronco:
+    // no tronco largo da figueira, ele começa na beira do tronco)
+    for (const R of [baseR, baseR + 0.15, baseR + 0.3]) {
       const [x, y] = [round(own.x + Math.cos(a) * R), round(own.y + Math.sin(a) * R)];
-      if (perchFree(x, y, own) && !sagHidden(x, y, own)) return [x, y, direcao];
+      if (perchFree(x, y, own, zone) && !sagHidden(x, y, own)) return [x, y, direcao];
     }
   }
   return null;
 }
-const addPerch = (p: [number, number, number], altura: number) => {
+const addPerch = (p: [number, number, number], altura: number, bicho?: string) => {
   perchPoints.push({ x: p[0], y: p[1] });
-  pontos.push(point('galho-sagui', p[0], p[1], { altura, direcao: p[2] }));
+  // (`bicho`: o galho de um sagui raro, só dele; sem ele, o galho é dos saguis comuns)
+  pontos.push(point('galho-sagui', p[0], p[1], { altura, direcao: p[2], ...(bicho ? { bicho } : {}) }));
 };
 for (const [tx, ty, want, altura] of SAGUI_PERCHES) {
   const tree = cenario.filter((o) => o.type === 'arvore' && dist(o.x, o.y, tx, ty) < 0.5).sort((a, b) => dist(a.x, a.y, tx, ty) - dist(b.x, b.y, tx, ty))[0];
@@ -2032,6 +2037,40 @@ for (const [tx, ty, want] of SAGUI_TREES) {
     }
   }
   if (!done) throw new Error(`A árvore do sagui perto de (${tx}, ${ty}) não cabe.`);
+}
+
+// ----- os saguis raros (24/11, pedido da [arte]; o dono escolheu "área própria pra cada um"): o Sagui Ancestral mora em
+// volta da Figueira do Viaduto (a árvore mais alta do mapa, o lugar de um espírito da mata) e o Sagui Corrompido na Mata
+// Profunda do noroeste, perto da Pedra do Véu (a corrupção chegando no lugar sagrado). Um de cada (o jeito e os números
+// são da [estrutura], em data/monsters.json), cada um com o galho dele (`bicho` no ponto): o do Ancestral na própria
+// figueira, o do Corrompido numa árvore seca nova da mata profunda. As áreas só entram no mapa com as chaves nos dados.
+{
+  const fig = cenario.find((o) => o.type === 'arvore' && o.name === 'Figueira do Viaduto');
+  if (!fig) throw new Error('Não achei a Figueira do Viaduto para o galho do Sagui Ancestral.');
+  const p = bestPerch(fig, 110, ANCESTRAL_ZONE, Number(fig.props!.tronco) / 2 + PERCH_R);
+  if (!p) throw new Error('O galho do Sagui Ancestral não cabe na Figueira do Viaduto.');
+  addPerch(p, 2.3, 'sagui_ancestral');
+}
+{
+  // (a árvore seca do Corrompido: a mais perto do lugar pedido que cabe, sem tampar trilha, e deixa ele à vista)
+  const d = { tronco: 0.4, copa: 1.4, altura: 6.2 };
+  const [tx, ty, want] = [14, 7.5, 100];
+  let done = false;
+  for (let r = 0; r <= 5 && !done; r += 0.5) {
+    const n = Math.max(1, Math.round(r * 8));
+    for (let k = 0; k < n && !done; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const [x, y] = [round(tx + Math.cos(a) * r), round(ty + Math.sin(a) * r)];
+      if (!inRect(x, y, CORROMPIDO_ZONE) || !plantFits(x, y, d.tronco, d.copa, 1.25) || hidesView(x, y, d.copa, d.altura)) continue;
+      const p = bestPerch({ x, y }, want, CORROMPIDO_ZONE);
+      if (!p) continue;
+      trees.push({ x, y, tronco: d.tronco });
+      cenario.push(point('arvore', x, y, { especie: 'seca', ...d }));
+      addPerch(p, 2.3, 'sagui_corrompido');
+      done = true;
+    }
+  }
+  if (!done) throw new Error('A árvore seca do Sagui Corrompido não cabe na mata profunda.');
 }
 
 // ---------------- o Capão maior (23/11, planta aprovada pelo dono): a parte nova, à direita (x de W0 a W) ----------------
@@ -2876,6 +2915,15 @@ if (CREATURES) {
     const z = NEW_ZONES;
     for (const [zone, quantidade, nome] of [[z.meio, 10, 'quati'], [z.estradaNorte, 8, 'tatu_bola'], [z.estradaSul, 6, 'marimbondo'], [z.chefe, 2, 'filhote_boitata']] as const) {
       monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade }, nome));
+    }
+  }
+  // os saguis raros (um de cada, na área deles): só quando a [estrutura] já pôs as chaves em data/monsters.json
+  {
+    const DATA = 'data/monsters.json';
+    const known = existsSync(DATA) ? Object.keys(JSON.parse(readFileSync(DATA, 'utf8')) as Record<string, unknown>) : [];
+    for (const [zone, nome] of [[ANCESTRAL_ZONE, 'sagui_ancestral'], [CORROMPIDO_ZONE, 'sagui_corrompido']] as const) {
+      if (known.includes(nome)) monstros.push(rect('area', zone.x0, zone.x1, zone.y0, zone.y1, { quantidade: 1 }, nome));
+      else console.log(`(${nome} ainda não está em ${DATA}: a área dele fica de fora do mapa)`);
     }
   }
   if (CAPAO_MAIOR) {

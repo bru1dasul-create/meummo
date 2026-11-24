@@ -190,7 +190,8 @@ describe('Mapa 01 (Capão): os galhos dos saguis (pedido da [arte] com o ok do d
     const area = layer('monstros').find((o) => o.name === 'sagui')!;
     const [ax0, ay0] = [area.x / M, area.y / M];
     const [ax1, ay1] = [ax0 + area.width / M, ay0 + area.height / M];
-    const perches = layer('pontos').filter((o) => o.type === 'galho-sagui');
+    // (os galhos dos saguis raros, com `bicho`, ficam na área de cada um: conferidos no teste deles, lá embaixo)
+    const perches = layer('pontos').filter((o) => o.type === 'galho-sagui' && !prop(o, 'bicho'));
     expect(perches.length).toBeGreaterThanOrEqual(4);
     expect(perches.length).toBeLessThanOrEqual(6);
     const trunks = layer('cenario').filter((o) => o.type === 'arvore').map((o) => ({ ...at(o), r: Number(prop(o, 'tronco')) / 2 }));
@@ -206,6 +207,37 @@ describe('Mapa 01 (Capão): os galhos dos saguis (pedido da [arte] com o ok do d
       expect(near, `galho em (${x}, ${y}) colado no tronco`).toBeGreaterThanOrEqual(0.7);
       const hit = boxes.find((b) => x + 0.35 > b.x0 && x - 0.35 < b.x1 && y + 0.35 > b.y0 && y - 0.35 < b.y1);
       expect(hit, `o chão embaixo do galho em (${x}, ${y}) não é andável`).toBeUndefined();
+    }
+  });
+});
+
+describe('Mapa 01 (Capão): os saguis raros (pedido da [arte]; o dono escolheu a área própria pra cada um, 24/11)', () => {
+  it('o Ancestral mora em volta da Figueira do Viaduto e o Corrompido na Mata Profunda, um de cada, cada um com o galho dele', () => {
+    const monsters = JSON.parse(readFileSync('data/monsters.json', 'utf8')) as Record<string, unknown>;
+    const trunks = layer('cenario').filter((o) => o.type === 'arvore').map((o) => ({ ...at(o), r: Number(prop(o, 'tronco')) / 2, name: o.name, especie: prop(o, 'especie') }));
+    const boxes = layer('colisao').map((o) => ({ x0: o.x / M, y0: o.y / M, x1: (o.x + o.width) / M, y1: (o.y + o.height) / M }));
+    const fig = trunks.find((t) => t.name === 'Figueira do Viaduto')!;
+    for (const [bicho, place] of [['sagui_ancestral', 'Figueira do Viaduto'], ['sagui_corrompido', 'Mata Profunda']] as const) {
+      const perch = layer('pontos').filter((o) => o.type === 'galho-sagui' && prop(o, 'bicho') === bicho);
+      expect(perch, bicho).toHaveLength(1);
+      const { x, y } = at(perch[0]!);
+      // a chave existe nos dados (a [estrutura]) e a área dele, com um só, tem o galho dentro
+      expect(Object.keys(monsters), bicho).toContain(bicho);
+      const zone = layer('monstros').find((z) => z.name === bicho)!;
+      expect(zone, bicho).toBeDefined();
+      expect(prop(zone, 'quantidade')).toBe(1);
+      expect(x >= zone.x / M && x <= (zone.x + zone.width) / M && y >= zone.y / M && y <= (zone.y + zone.height) / M, `${bicho}: o galho fora da área`).toBe(true);
+      // o chão embaixo do galho é andável e longe dos troncos (menos o da própria árvore, que segura o galho)
+      const hit = boxes.find((b) => x + 0.35 > b.x0 && x - 0.35 < b.x1 && y + 0.35 > b.y0 && y - 0.35 < b.y1);
+      expect(hit, `${bicho}: o chão embaixo do galho não é andável`).toBeUndefined();
+      const own = trunks.reduce((a, b) => (Math.hypot(a.x - x, a.y - y) - a.r < Math.hypot(b.x - x, b.y - y) - b.r ? a : b));
+      expect(Math.hypot(own.x - x, own.y - y) - own.r, bicho).toBeLessThan(1.4);
+      if (place === 'Figueira do Viaduto') expect(own).toBe(fig);
+      else {
+        expect(own.especie).toBe('seca');
+        const deep = layer('areas').filter((a) => a.name === 'Mata Profunda').some((a) => x >= a.x / M && x <= (a.x + a.width) / M && y >= a.y / M && y <= (a.y + a.height) / M);
+        expect(deep, 'o Corrompido na Mata Profunda').toBe(true);
+      }
     }
   });
 });
