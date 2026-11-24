@@ -4,6 +4,12 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Aba do boné e rosto de perfil do Birim (24/11)
+
+- **Aba.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `BRIM` estende a aba para trás com uma queda menor e afina as pontas até a barra. `extras` pinta a aba antes da copa. Isso resolve o arco que cruzava a lateral do boné em alguns giros. `brimEdge` acompanha a curva nova.
+- **Rosto de perfil.** `face` usa o olho de lado mais cedo ao sair da posição frontal. `sideEye` reduz a abertura e conserva a altura da sobrancelha ao piscar. `noseSide` acompanha a asa visível em uma camada sobre a bochecha, com o mesmo recuo do nariz ao virar de costas.
+- **Conferência.** Comparei o boné e o rosto em dez ângulos no mapa e no retrato. Conferi movimento, HUD e mochila em Chromium no desktop e no celular simulado. `npm run check` passou com 685 testes, e `npm run build` passou.
+
 ## Orelha e brinco do Birim (24/11)
 
 - **Forma.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `HEAD.ear` reduz os volumes e aproxima o lóbulo da cabeça. O contorno aparece menos de frente e mantém o desenho da orelha de perfil.

@@ -129,17 +129,17 @@
     }
     return z;
   };
-  // a aba: presa na barra, na nuca (de π − 1 a π + 1 em volta da cabeça), saindo para trás e um pouco para baixo; mais
-  // comprida no meio. Uma placa fina (esferas pequenas em volta da borda dela)
-  const BRIM = [];
-  for (let i = 0; i <= 8; i++) {
-    const phi = Math.PI - 1.05 + (2.1 * i) / 8;
-    const base = capPoint(phi, capRimZ(phi) + 0.3, 0.2);
-    const L = 8.8 * Math.cos((phi - Math.PI) * 1.2);
-    const dir = [Math.sin(phi) * 0.92, Math.cos(phi) * 0.92, -0.38];
-    BRIM.push(base, [base[0] + dir[0] * L, base[1] + dir[1] * L, base[2] + dir[2] * L]);
-  }
-  const BRIM_MID = [0, CAP.c[1] - CAP.a[1] - 3.2, CAP.rimBack - 1.6];
+  // A aba se alonga para trás, com uma queda suave. As pontas laterais se fecham na barra do boné.
+  const BRIM_STEPS = 12;
+  const BRIM = Array.from({ length: BRIM_STEPS + 1 }, (_, i) => {
+    const t = (2 * i) / BRIM_STEPS - 1;
+    const phi = Math.PI + t * 0.86;
+    const root = capPoint(phi, capRimZ(phi) + 0.15, -0.45);
+    const reach = 7.65 * (1 - t * t) ** 0.7;
+    return { root, tip: [root[0] * (1 + 0.02 * reach), root[1] - reach, root[2] - 0.22 * reach] };
+  });
+  const brimMiddle = BRIM[BRIM_STEPS / 2];
+  const BRIM_CENTER = brimMiddle.root.map((v, i) => M.lerp(v, brimMiddle.tip[i], 0.5));
 
   // ------------------------------------------------------------------ medidas da mão e do pé (os do herói são mais simples)
   // A MÃO, escrita em centímetros de verdade. O motor mede a mão em "unidades" (× `size`, e o raio × 0,95 disso), então
@@ -374,11 +374,15 @@
 
     // olhos e sobrancelhas (os mesmos do herói, com as medidas dele)
     const turned = R.facing(rig.head.r); // > 0: o lado direito dele olha para a câmera
+    // Ao chegar de frente, a órbita fica estreita antes do perfil. Troca para o desenho lateral mais cedo nesse trecho.
+    const profileAt = M.lerp(0.78, 0.86, smoothstep(0, 0.23, -fFace));
     for (const sx of [-1, 1]) {
-      if (-sx * turned < 0.8 && Math.abs(turned) < 0.86) {
+      if (sx * turned >= profileAt) {
+        sideEye(R, rig, head, sx, look);
+      } else if (-sx * turned < 0.8 && Math.abs(turned) < profileAt) {
         birimEye(R, head, sx, look);
         browBar(R, head, sx, look);
-      } else if (sx * turned >= 0.86) sideEye(R, rig, head, sx, look); // de perfil: o olho do lado de cá, visto de lado
+      }
     }
     // (o nariz é uma peça à parte, por cima do rosto: veja `extras` e `noseDetail`)
     // boca: fechada e séria; abre um pouco no esforço
@@ -937,9 +941,10 @@
         after: () => {
           noseLine(R, rig, head, hs);
           noseFront(R, rig, head, hs);
-          noseSide(R, rig, head, hs);
         },
       });
+      // A silhueta do nariz pode ficar atrás do rosto. O risco da asa visível fica sobre a pele.
+      if (side > 0.5) items.push({ name: 'asaNarizBirim', key: headKey + 0.265, draw: () => noseSide(R, rig, head, tuck) });
       const lipBase = M.mix(PAL.lip, PAL.skin.base, 0.3);
       const lipMat = { base: lipBase, shade: M.mix(PAL.lip, PAL.skin.shade, 0.4), light: M.mix(lipBase, PAL.skin.light, 0.4) };
       // (quando a boca abre no esforço, o lábio de baixo desce junto: senão ele tapava a boca aberta)
@@ -966,12 +971,15 @@
       // de esferas pintaria por cima do rosto a parte de trás do boné, que fica escondida atrás da cabeça)
       const dome = capShell(R, head);
       if (dome) items.push({ name: 'bone', key: headKey + 0.34, group: 'bone', segs: [{ poly: dome.poly, path: dome.path, mat: PAL.cap, k: 0.26, concave: true, decal: () => capDetail(R, rig, head, hs) }] });
-      // a aba, na nuca, saindo da barra para trás e um pouco para baixo
-      // (em gomos: cada um liga dois pontos da barra às duas pontas da aba na frente deles — um casco só achatava a aba
-      // numa placa reta, que de trás cobria a parte de baixo do boné e a coroa)
+      // Os gomos dão espessura à aba. A copa cobre a emenda e a ponta distante quando a cabeça vira de perfil.
       const brimSegs = [];
-      for (let i = 0; i + 3 < BRIM.length; i += 2) brimSegs.push({ poly: R.hull([BRIM[i], BRIM[i + 1], BRIM[i + 2], BRIM[i + 3]].map((p) => sphere(p, 0.9))), circles: R._last, mat: PAL.cap, k: 0, noInner: true, noThin: true }); // (sem risco nem sombra por gomo: a aba é uma peça só)
-      items.push({ name: 'aba', key: R.keyOf(hp(BRIM_MID)), group: 'aba', chain: true, segs: brimSegs, after: () => brimEdge(R, hp) });
+      for (let i = 0; i < BRIM_STEPS; i++) {
+        const a = BRIM[i], b = BRIM[i + 1];
+        const poly = R.hull([a.root, a.tip, b.root, b.tip].map((p) => sphere(p, 0.6)));
+        brimSegs.push({ poly, circles: R._last, mat: PAL.cap, k: 0, noInner: true, noThin: true });
+      }
+      const brimKey = Math.min(R.keyOf(hp(BRIM_CENTER)), headKey + 0.33);
+      items.push({ name: 'aba', key: brimKey, group: 'aba', chain: true, segs: brimSegs, after: () => brimEdge(R, hp) });
       // botão do alto
       items.push({ name: 'botaoBone', key: headKey + 0.36, group: 'botaoBone', segs: [{ poly: R.hull([sphere([CAP.c[0], CAP.c[1], CAP.top + 0.4], 1.2)]), circles: R._last, mat: PAL.cap, k: 0.3 }] });
       items.push({ name: 'oculos', key: R.keyOf(hp([0, 11.8, 10.6])) + 0.2, draw: () => glasses(R, rig, head, hs) });
@@ -1317,9 +1325,9 @@
   function brimEdge(R, hp) {
     const ctx = R.ctx;
     const tips = [], base = [];
-    for (let i = 0; i < BRIM.length; i += 2) {
-      base.push(R.P(hp(BRIM[i])));
-      tips.push(R.P(hp(BRIM[i + 1])));
+    for (const { root, tip } of BRIM) {
+      base.push(R.P(hp(root)));
+      tips.push(R.P(hp(tip)));
     }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -2643,20 +2651,20 @@
    * De lado (rodada 4, como na referência de perfil): a curva em "C" da asa do nariz em volta da narina, aberta para a
    * frente, no lado que olha para a câmera. De frente ela some (lá quem desenha as asas é `noseFront`).
    */
-  function noseSide(R, rig, head, hs) {
+  function noseSide(R, rig, head, tuck) {
     const t = R.facing(rig.head.r);
     const sx = t >= 0 ? 1 : -1;
-    const alpha = smoothstep(0.5, 0.85, Math.abs(t)) * smoothstep(-0.2, 0.15, R.facing(rig.head.f) + 0.25);
+    const alpha = smoothstep(0.5, 0.85, Math.abs(t)) * smoothstep(-0.25, -0.07, R.facing(rig.head.f));
     if (alpha < 0.03) return;
     const ctx = R.ctx;
     const hp = (p) => at(head, p[0], p[1], p[2]);
-    ctx.strokeStyle = R.pal.ink;
+    ctx.strokeStyle = R.pal.inkSoft;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.globalAlpha = alpha;
     ctx.lineWidth = Math.max(0.6, 0.24 * R.zoom);
-    const C = [[2.2, 15.7, -6.0], [2.7, 14.8, -6.2], [2.85, 14.15, -7.0], [2.55, 14.5, -7.85], [1.9, 15.3, -8.15]];
-    ctx.stroke(S.smoothLinePath(C.map(([x, y, z]) => R.P(hp([sx * x, y, z])))));
+    const C = [[2.2, 15.7, -6.0], [2.7, 14.8, -6.2], [2.85, 14.15, -7.0], [2.55, 14.5, -7.85], [2.0, 15.1, -8.02]];
+    ctx.stroke(S.smoothLinePath(C.map(([x, y, z]) => R.P(hp([sx * x, y - tuck, z])))));
     ctx.globalAlpha = 1;
   }
   /**
@@ -2720,9 +2728,9 @@
     const c = at(head, sx * 5.9, 10.7, E.z + 0.1); // (recuado: o olho fica atrás da raiz do nariz e da sobrancelha)
     const F = rig.head.f, U = rig.head.u;
     const blink = clamp01(look.blink || 0);
-    const h = 1 - blink * 0.9;
-    const pt0 = (a, b) => R.P(add(add(c, scale(F, a * hs)), scale(U, b * h * hs)));
-    const pt = (a, b) => pt0(2.8 - (2.8 - a) * kE, b); // (o olho, encolhendo para a ponta da frente)
+    const h = 0.86 * (1 - blink * 0.9);
+    const pt0 = (a, b) => R.P(add(add(c, scale(F, a * hs)), scale(U, b * hs)));
+    const pt = (a, b) => pt0(2.8 - (2.8 - a) * kE * 0.91, b * h); // o olho encolhe para a ponta da frente
     const showEye = kE >= 0.08;
     const eyeA = kE >= 0.22 ? 1 : 0; // (bem estreito, o branco e a íris saem: fica só a pálpebra)
     // (a = para a frente do rosto, b = para cima; o canto de fora do olho fica atrás)
