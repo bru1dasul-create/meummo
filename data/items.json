@@ -179,6 +179,20 @@
     "icone": "garrafada_grande",
     "atalho": 2
   },
+  "garrafada_cuca": {
+    "nome": "Garrafada da Cuca",
+    "preco": 150,
+    "tipo": "consumivel",
+    "som": "garrafada",
+    "curaPorcento": 40,
+    "efeito": { "forca": 6, "espirito": 6, "minutos": 3 },
+    "recargaMs": 10000,
+    "pilha": 10,
+    "raridade": "raro",
+    "descricao": "O caldo grosso e amargo do caldeirão da Cuca. Cura 40% da vida e dá +6 de Força e +6 de Espírito por 3 minutos.",
+    "icone": "garrafada_grande",
+    "atalho": 2
+  },
   "sucata": {
     "nome": "Sucata",
     "preco": 4,

@@ -23,6 +23,8 @@ describe('as receitas (data/receitas.json)', () => {
       garrafada_pequena: { erva_arruda: 1, frasco: 1, agua_mina: 1 },
       garrafada: { erva_arruda: 1, babosa: 1, frasco: 1, agua_mina: 1 },
       garrafada_grande: { babosa: 2, jurubeba: 1, frasco: 1, agua_mina: 1 },
+      // a da Cuca, no caldeirão da toca (tests/cuca.test.ts)
+      garrafada_cuca: { jurubeba: 2, babosa: 2, frasco: 1, agua_mina: 1 },
     });
     const npcs = loadNpcDefs();
     expect(() => checkRecipes(recipes, items, npcs)).not.toThrow();

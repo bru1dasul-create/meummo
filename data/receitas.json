@@ -7,5 +7,8 @@
   },
   "garrafada_grande": {
     "precisa": { "babosa": 2, "jurubeba": 1, "frasco": 1, "agua_mina": 1 }
+  },
+  "garrafada_cuca": {
+    "precisa": { "jurubeba": 2, "babosa": 2, "frasco": 1, "agua_mina": 1 }
   }
 }

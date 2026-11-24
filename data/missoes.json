@@ -53,5 +53,14 @@
     "concluida": "Quatro saguis em paz! A mata agradece, e eu também. Leve esta garrafada: receita de benzedeira, cura de verdade. E a mata já te reconhece: está na hora de escolher o seu caminho.",
     "objetivo": { "tipo": "derrotar", "monstro": "sagui", "quantidade": 4, "rotulo": "Acalmar 4 saguis encantados" },
     "recompensa": { "xp": 40, "ouro": 15, "itens": [{ "item": "garrafada", "quantidade": 1 }] }
+  },
+  "o_caldeirao_da_cuca": {
+    "nome": "O Caldeirão da Cuca",
+    "quemDa": "cuca",
+    "nivelMinimo": 3,
+    "pedido": "Hehehe... Ninguém desce até a minha toca à toa. Meu caldeirão anda com fome de raiz amarga: me traga 2 raízes de jurubeba e eu te dou um gole do que só a Cuca sabe fazer.",
+    "concluida": "Que raiz boa, bem amarga! Toma, prova do meu caldo. E volta sempre, viu? A Cuca adora uma visita... hehehe.",
+    "objetivo": { "tipo": "entregar", "item": "jurubeba", "quantidade": 2 },
+    "recompensa": { "xp": 80, "itens": [{ "item": "garrafada_cuca", "quantidade": 1 }] }
   }
 }

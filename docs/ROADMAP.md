@@ -751,8 +751,16 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     lugar sagrado e as gotas pingando, sem bicho nem floresta gravada, igual de noite; a música da mata profunda; e passo
     de pedra no chão `caverna`/`caverna-rocha`. Vale para todo o mapa de caverna (`sceneOfMap`), mesmo nos lugares cujo
     nome não diz (o Salão das Inscrições)
-- [ ] **[estrutura + arte]** A Cuca na toca: o lugar dela é o ponto `toca-da-cuca` do mapa `caverna` (o bicho, a
-  conversa ou a luta e o desenho, quando o dono quiser)
+- [ ] **A Cuca na toca** (pedido do dono, 24/11: "faz a Cuca na toca"; escolha dele: "bruxa e depois chefe"): o lugar
+  dela é o ponto `toca-da-cuca` do mapa `caverna`, ao lado do caldeirão
+  - [x] **[estrutura]** Etapa 1, a bruxa que negocia (24/11, na main; conferida no PC e no celular): a personagem `cuca`
+    ("Cuca, a bruxa da Toca") vende frasco e água (paga 40% pelo que você traz) e prepara no caldeirão a **Garrafada da
+    Cuca** (`garrafada_cuca`: 2 jurubebas, 2 babosas, frasco e água; cura 40% da vida e dá +6 de Força e +6 de Espírito
+    por 3 minutos; rara, 150 de ouro). A missão **O Caldeirão da Cuca** (`o_caldeirao_da_cuca`, a partir do nível 3):
+    entregar 2 raízes de jurubeba; dá 80 de XP e uma Garrafada da Cuca. Teste: `tests/cuca.test.ts`
+  - [ ] **[arte]** o desenho dela (a criatura `cuca`, como o Sagui: a view desenha sozinha; original, sem copiar a Cuca
+    da TV) e o ícone da `garrafada_cuca` (hoje usa o da Garrafada Grande)
+  - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (proposta para o dono)
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

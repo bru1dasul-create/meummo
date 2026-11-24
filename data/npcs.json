@@ -90,5 +90,15 @@
     "y": 148.4,
     "fala": "A Árvore do Véu fica logo ali, pela trilha. Quando quiser voltar pro Refúgio, é só falar comigo.",
     "viagens": [{ "para": "barqueiro", "nome": "o Refúgio", "preco": 0 }]
+  },
+  "cuca": {
+    "nome": "Cuca",
+    "titulo": "a bruxa da Toca",
+    "mapa": "caverna",
+    "x": 44.4,
+    "y": 11.4,
+    "fala": "Hehehe... Entra, desperto, entra. Não repara a bagunça, que o caldeirão nunca para. Veio buscar alguma coisa forte?",
+    "loja": { "vende": ["frasco", "agua_mina"], "compraPor": 40 },
+    "receitas": ["garrafada_cuca"]
   }
 }

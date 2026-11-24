@@ -26,6 +26,12 @@ alternativas quando vejo — sem concordar só para agradar.
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
 ## Onde estamos (24 de novembro de 2026) — leia isto primeiro
+- **A Cuca na toca (24/11, "faz a Cuca na toca"; o dono escolheu "bruxa e depois chefe"):** a Etapa 1 está na main:
+  só dados (`cuca` em `npcs.json`, no ponto `toca-da-cuca`; `garrafada_cuca` em `items.json` e `receitas.json`; a missão
+  `o_caldeirao_da_cuca`). O desenho é da [arte] (criatura `cuca`; até lá, o corpo de gente provisório). **Próximo:** a
+  Etapa 2, a luta: propor ao dono (minha recomendação: de noite ela vira a chefe na toca, como o filhote de boitatá
+  que só aparece de noite; a cantiga de ninar que dá sono, como o canto da Iara; e o caldo jogado que deixa poça no
+  chão, como o rastro de fogo).
 - **O som da Caverna Sagrada (24/11, mapa novo do [mundo]; na main):** o ambiente ganhou o lugar `caverna` (`MIXES` com
   `indoor`: a noite não muda; `RECORDED_LEVEL` 0, sem floresta gravada; as gotas `drop` e o `hum`), a música dela é a
   da mata profunda e o chão `caverna`/`caverna-rocha` é passo de pedra. O motor usa `sceneOfMap(nome do mapa)` como o
