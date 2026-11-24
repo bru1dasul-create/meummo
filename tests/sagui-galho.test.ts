@@ -123,17 +123,29 @@ describe('o mapa: os galhos do sagui (camada pontos, tipo galho-sagui)', () => {
     expect(map.spots.size).toBe(1);
   });
 
+  it('o galho com dono: a propriedade "bicho" (a chave do monstro)', () => {
+    const owned = { ...branch(12, 16, 6, 2.3, 110), properties: [...branch(12, 16, 6, 2.3, 110).properties!, { name: 'bicho', type: 'string', value: 'Sagui_Ancestral ' }] };
+    const map = GameMap.fromTiled(grove([branch(10, 14.5, 8), owned]), 'bosque');
+    expect(map.branches.map((b) => b.owner)).toEqual([undefined, 'sagui_ancestral']);
+    const wrong = { ...owned, properties: [{ name: 'bicho', type: 'string', value: '' }] };
+    expect(() => GameMap.fromTiled(grove([wrong]), 'bosque')).toThrow(/"bicho" é a chave do monstro dono do galho/);
+  });
+
   it('a altura errada dá erro em português (220 seria em centímetros)', () => {
     expect(() => GameMap.fromTiled(grove([branch(10, 14.5, 8, 220)]), 'bosque')).toThrow(/"altura" é em metros, de 1 a 4/);
     expect(() => GameMap.fromTiled(grove([branch(10, 14.5, 8, 'alto')]), 'bosque')).toThrow(/galho do sagui \(objeto 10\) do mapa "bosque"/);
     expect(() => GameMap.fromTiled(grove([branch(10, 14.5, 8, 2, 'leste')]), 'bosque')).toThrow(/"direcao" é em graus/);
   });
 
-  it('os mapas de hoje carregam (e cada galho do Capão tem chão embaixo, perto da área dos saguis)', () => {
+  it('os mapas de hoje carregam (e cada galho do Capão tem chão embaixo, perto da área de quem sobe nele)', () => {
     const maps = loadMaps();
     const capao = maps.find((m) => m.id === 'capao')!;
-    const zone = capao.monsterZones.find((z) => z.monster === 'sagui')!;
     capao.branches.forEach((b, i) => {
+      // galho com dono (`bicho`: o do Sagui Ancestral, o do Corrompido): perto da área dele; sem dono, da dos saguis
+      const zone = capao.monsterZones.find((z) => z.monster === (b.owner ?? 'sagui'));
+      expect(zone, `a área de quem sobe no galho em (${b.x}, ${b.y})`).toBeDefined();
+      if (!zone) return;
+      if (b.owner) expect(monsters.get(b.owner)?.branch, `${b.owner} sobe em galho`).toBeTruthy();
       // o tile de onde ele sobe: bem perto do chão embaixo do galho (o pulo da [arte] vai de uma casa ao lado)
       const tile = capao.branchTile(i);
       expect(tile, `galho em (${b.x}, ${b.y})`).not.toBeNull();
@@ -362,6 +374,13 @@ describe('o sagui no galho', () => {
     expect(saguis()).not.toContain(victim);
     // o terceiro (que estava no chão) sobe no galho que ficou livre
     expect(until(() => saguis().some((s) => s.perch?.branch === freed), 20_000)).toBe(true);
+  });
+
+  it('galho com dono (o da Figueira, do Sagui Ancestral): o comum não sobe nele', () => {
+    const owned: TiledObject = { ...branch(12, EAST.x, EAST.y, EAST.h, EAST.a), properties: [{ name: 'bicho', type: 'string', value: 'sagui_ancestral' }] };
+    const { run, saguis } = setup({ branches: [owned], count: 3 });
+    run(15_000);
+    expect(saguis().every((s) => s.perch === null)).toBe(true);
   });
 
   it('mapa sem galho: o sagui fica no chão, como sempre', () => {

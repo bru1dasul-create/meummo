@@ -1095,7 +1095,9 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     vida, fruta 4–7 a cada 1,5 s, 60 de XP, 12–25 de ouro, volta em 12 min, jurubeba 30%); sobem no galho como o comum.
     O campo `"categoria"` (`elite` ou `raro`) vai no estado do monstro (`rank`, protocolo 54) e o nome aparece com
     "(Elite)" ou "(Raro)"; a fruta sai roxa com brilho vermelho (`fruta_podre`) e dourada com brilho claro
-    (`fruta_dourada`). Conferido no navegador (PC e celular) com áreas de teste. Teste: `tests/sagui-raros.test.ts`
+    (`fruta_dourada`). Conferido no navegador (PC e celular) com áreas de teste. Teste: `tests/sagui-raros.test.ts`.
+    Pedido do [mundo]: o galho com dono (`bicho` no `galho-sagui`) é só daquele monstro, que prefere o seu; o teste dos
+    galhos do Capão confere cada galho com dono perto da área do dono
   - [ ] **[mundo]** onde moram (pedido mandado em 24/11): as áreas `sagui_ancestral` (em volta da Figueira do Viaduto) e
     `sagui_corrompido` (na Mata Profunda do noroeste) na camada `monstros`, com `quantidade` 1, e um `galho-sagui` perto
     de cada

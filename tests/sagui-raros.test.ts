@@ -147,6 +147,24 @@ describe('os saguis raros no mundo', () => {
     }
   });
 
+  it('o raro prefere o galho dele (a propriedade "bicho") a um galho de qualquer um mais perto', () => {
+    const clock = new FakeClock();
+    let seed = 5;
+    const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    const tiled = home('sagui_ancestral', true);
+    const points = tiled.layers[1]!.objects!;
+    // o de qualquer um bem no meio da área; o dele, no canto
+    points.push({ id: 4, name: '', type: 'galho-sagui', x: 15 * PX, y: 10 * PX, point: true, properties: [{ name: 'bicho', type: 'string', value: 'sagui_ancestral' }] });
+    const map = GameMap.fromTiled(tiled, 'casa');
+    const world = new World(map, { now: clock.now, random, monsters });
+    for (let t = 0; t < 15_000; t += TICK_MS) {
+      clock.advance(TICK_MS);
+      world.tick();
+    }
+    const ancestral = [...world.monsters.values()][0]!;
+    expect(ancestral.perch?.branch).toBe(map.branches.findIndex((b) => b.owner === 'sagui_ancestral'));
+  });
+
   it('sobem no galho como o comum', () => {
     for (const id of ['sagui_corrompido', 'sagui_ancestral']) {
       const { run, alive } = setup(id, true);
