@@ -3,12 +3,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadItemDefs, parseItemDefs } from '../src/server/items';
 import { checkNpcs, loadNpcDefs, parseNpcDefs } from '../src/server/npcs';
+import { loadQuestDefs } from '../src/server/quests';
 import { loadMaps } from '../src/server/server';
 import { parseClientMsg } from '../src/server/validate';
 import { World, type Player } from '../src/server/world';
-import { TRADE_RANGE } from '../src/shared/constants';
+import { TRADE_RANGE, TRADE_SLACK } from '../src/shared/constants';
 import { BAG_SIZE, MAX_GOLD, sellPrice } from '../src/shared/items';
 import { GameMap } from '../src/shared/map';
+import { bodyFits, cornerAtFeet, feetAt } from '../src/shared/movement';
 import { FakeClock, FakeConn, tiledFromAscii } from './helpers';
 
 const items = parseItemDefs({
@@ -163,6 +165,66 @@ describe('vendedora no mapa', () => {
     vila.adopt(player, { x: 1, y: 1 });
     expect(conn.ofType('zone')[0]!.npcs.map((n) => n.e.name)).toEqual(['Dona Teste']);
   });
+});
+
+it('a Xiovanna atende as missões e a loja na frente do caixa, sem alcance pela parede ou pela entrada', () => {
+  const map = loadMaps().find((entry) => entry.id === 'capao')!;
+  const items = loadItemDefs();
+  const world = new World(map, { now: clock.now, random: () => 0, items, npcs: loadNpcDefs(), quests: loadQuestDefs() });
+  const { player, conn } = join(world);
+  const curupira = [...world.npcs.values()].find((npc) => npc.def.id === 'curupira_capao')!;
+  const xiovanna = [...world.npcs.values()].find((npc) => npc.def.id === 'budega')!;
+  const moveTo = (x: number, y: number) => {
+    const corner = cornerAtFeet(x, y);
+    expect(bodyFits(map, corner.x, corner.y)).toBe(true);
+    player.fx = corner.x;
+    player.fy = corner.y;
+  };
+  const bananaPrice = items.get('banana')!.price;
+  player.inventory.addGold(bananaPrice * 2);
+  player.inventory.add('banana', 1);
+  const bananaSlot = player.inventory.slots.findIndex((stack) => stack?.item === 'banana');
+
+  const curupiraFeet = feetAt(curupira.x, curupira.y);
+  moveTo(curupiraFeet.x, curupiraFeet.y + 1);
+  world.questAction(player, 'accept', 'o_despertar', curupira.id);
+  expect(player.quests.o_despertar?.state).toBe('active');
+
+  const xiovannaFeet = feetAt(xiovanna.x, xiovanna.y);
+  for (const [x, y] of [[69, 50.3], [66.6, 53.7]] as const) {
+    moveTo(x, y);
+    expect(Math.hypot(x - xiovannaFeet.x, y - xiovannaFeet.y)).toBeLessThan(TRADE_RANGE + TRADE_SLACK);
+    world.talk(player, xiovanna.id);
+    world.questAction(player, 'complete', 'o_despertar', xiovanna.id);
+    world.buy(player, xiovanna.id, 'banana', 1);
+    world.sell(player, xiovanna.id, bananaSlot, 1);
+    expect(xiovanna.busyUntil).toBe(0);
+    expect(player.quests.o_despertar?.state).toBe('active');
+    expect(player.inventory.countOf('banana')).toBe(1);
+    expect(player.inventory.gold).toBe(bananaPrice * 2);
+  }
+  flush(world);
+  expect(conn.ofType('fail').map((msg) => msg.reason)).toEqual(Array(6).fill('too_far'));
+
+  moveTo(66.6, 52.05);
+  world.talk(player, xiovanna.id);
+  expect(xiovanna.busyUntil).toBeGreaterThan(clock.now());
+  world.questAction(player, 'complete', 'o_despertar', xiovanna.id);
+  expect(player.quests.o_despertar?.state).toBe('done');
+  expect(player.inventory.countOf('agua_coco')).toBe(2);
+
+  moveTo(66.6, 53.7);
+  world.questAction(player, 'accept', 'saguis_encantados', xiovanna.id);
+  expect(player.quests.saguis_encantados).toBeUndefined();
+
+  moveTo(66.6, 52.05);
+  world.questAction(player, 'accept', 'saguis_encantados', xiovanna.id);
+  world.buy(player, xiovanna.id, 'banana', 1);
+  expect(player.inventory.countOf('banana')).toBe(2);
+  world.sell(player, xiovanna.id, bananaSlot, 1);
+  expect(player.inventory.countOf('banana')).toBe(1);
+  expect(player.inventory.gold).toBe(bananaPrice + sellPrice(items.get('banana')!, xiovanna.def.shop!.buyPercent));
+  expect(player.quests.saguis_encantados?.state).toBe('active');
 });
 
 describe('comprar', () => {

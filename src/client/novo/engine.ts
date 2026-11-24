@@ -21,9 +21,9 @@ import {
 } from '../../shared/constants';
 import { DX, DY, type Dir } from '../../shared/dir';
 import { pickQuickItem, useSoundOf, type GearLook, type InventoryState, type ItemInfo, type ItemStack } from '../../shared/items';
-import { GameMap, type SolidRect, type Tile, type TiledMap } from '../../shared/map';
+import { GameMap, regionContains, type SolidRect, type Tile, type TiledMap } from '../../shared/map';
 import { BODY_HALF_H, BODY_HALF_W, BODY_OFFSET_Y, degreesOfDir, degreesToward, cornerAtFeet, feetAt, flySlice, footCenter, sweepBody, sliceDistance, walkSlice, type Pose } from '../../shared/movement';
-import { findRoute, followRoute } from '../../shared/route';
+import { findRoute, followRoute, lineClear } from '../../shared/route';
 import { DASH_SLOT, type EntityState, type GuardState, type NpcInfo, type PlayerStats, type ServerMsg, type WelcomeMsg, type ZoneMsg } from '../../shared/protocol';
 import { questBlocker, questFinisher, type QuestInfo, type QuestLog } from '../../shared/quests';
 import { armedReach, castPoint, chargeLevel, learnBlocker, skillPoint, type ChargeLevel, type ClassInfo, type ClassSkillInfo, type HeroState } from '../../shared/classes';
@@ -1299,10 +1299,16 @@ class NewWorld implements NewWorldGame {
     const npcId = this.actorAtScreen(clientX, clientY, 'npc');
     const npc = npcId !== null ? this.npcs.get(npcId) : undefined;
     if (npc) {
-      const feet = feetAt(npc.e.x, npc.e.y);
       this.goingToNpc = npc.e.id;
       this.goingToPet = null;
-      this.walkToPoint(feet.x, feet.y + 1);
+      if (this.npcInReach(npc, TRADE_RANGE)) {
+        this.checkNpcArrival();
+      } else {
+        const counter = this.map.npcCounter(npc.e.type);
+        const feet = feetAt(npc.e.x, npc.e.y);
+        // Lojas com balcão marcam no mapa onde o cliente espera. A rota encontra a porta pelas colisões.
+        this.walkToPoint(counter ? (counter.x0 + counter.x1) / 2 : feet.x, counter ? (counter.y0 + counter.y1) / 2 : feet.y + 1);
+      }
       return;
     }
     // tocou no Joaquim: carinho (longe, vai até ele primeiro)
@@ -1426,15 +1432,20 @@ class NewWorld implements NewWorldGame {
       this.goingToNpc = null;
       return;
     }
-    const me = feetAt(this.predicted.x, this.predicted.y);
-    const feet = feetAt(npc.e.x, npc.e.y);
-    if (Math.hypot(me.x - feet.x, me.y - feet.y) > TRADE_RANGE) {
+    if (!this.npcInReach(npc, TRADE_RANGE)) {
       if (this.route.length === 0) this.goingToNpc = null; // desistiu no caminho
       return;
     }
     this.goingToNpc = null;
     this.clearRoute();
     this.openNpc(npc);
+  }
+
+  private npcInReach(npc: NpcInfo, range: number): boolean {
+    const me = this.myFeet();
+    const feet = feetAt(npc.e.x, npc.e.y);
+    const counter = this.map.npcCounter(npc.e.type);
+    return Math.hypot(me.x - feet.x, me.y - feet.y) <= range && (!counter || regionContains(counter, me));
   }
 
   /**
@@ -1473,9 +1484,7 @@ class NewWorld implements NewWorldGame {
       const id = window.npcId;
       if (id === null) continue;
       const npc = this.npcs.get(id);
-      const me = feetAt(this.predicted.x, this.predicted.y);
-      const feet = npc ? feetAt(npc.e.x, npc.e.y) : null;
-      if (!feet || Math.hypot(me.x - feet.x, me.y - feet.y) > TRADE_RANGE + TRADE_SLACK) {
+      if (!npc || !this.npcInReach(npc, TRADE_RANGE + TRADE_SLACK)) {
         window.close();
         if (window === this.shop) this.toast.show('Você se afastou da loja');
       }
@@ -2537,6 +2546,24 @@ class NewWorld implements NewWorldGame {
     if (feel.stopMs > 0) this.hitStopUntil = Math.max(this.hitStopUntil, now + feel.stopMs);
   }
 
+  /** Um caminho curto para o sagui livre. Prefere a mata e evita atravessar troncos ou cercas. */
+  private saguiRetreat(feet: Point): Point {
+    const away = aimAngle(this.myFeet(), feet);
+    const from = cornerAtFeet(feet.x, feet.y);
+    let fallback: Point | null = null;
+    for (const distance of [2.6, 1.7, 0.85]) {
+      for (const turn of [0, 1, -1, 2, -2, 3, -3, 4]) {
+        const angle = away + turn * Math.PI / 4;
+        const spot = { x: feet.x + Math.cos(angle) * distance, y: feet.y + Math.sin(angle) * distance };
+        if (!lineClear(this.map, from, cornerAtFeet(spot.x, spot.y), 0)) continue;
+        const ground = this.ground?.typeAt(spot.x, spot.y);
+        if (ground === 'mata' || ground === 'mata-profunda') return spot;
+        fallback ??= spot;
+      }
+    }
+    return fallback ?? feet;
+  }
+
   private onDeath(id: number): void {
     this.combat.setGuard(id, null, 0); // quem desmaia baixa a defesa (o servidor não manda à parte)
     const now = gameNow();
@@ -2550,13 +2577,17 @@ class NewWorld implements NewWorldGame {
     const e = this.entities.get(id);
     if (e?.kind === 'monster') {
       this.combat.setPerch(id, null); // caiu do galho: a view anima a queda lá de cima
-      // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão). A view que anima
-      // ('die') ganha um instante para mostrar a queda antes de o desenho sair.
       const feet = this.drawnFeet(id);
-      if (feet) this.combat.poof(feet.x, feet.y, now);
       this.entities.delete(id);
       this.facing.delete(id);
       const view = this.view;
+      if (this.map.id === 'capao' && e.type === 'sagui' && feet && view?.pacifySagui) {
+        const retreat = this.saguiRetreat(feet);
+        if (view.pacifySagui(id, retreat.x, retreat.y)) return;
+      }
+      // o monstro caiu: some com uma nuvenzinha (o servidor já tirou ele da sua área de visão). A view que anima
+      // ('die') ganha um instante para mostrar a queda antes de o desenho sair.
+      if (feet) this.combat.poof(feet.x, feet.y, now);
       if (view?.action) {
         view.action(id, 'die');
         window.setTimeout(() => {
@@ -2650,7 +2681,12 @@ class NewWorld implements NewWorldGame {
     if (!picture || !this.predicted) return;
     const feet = this.myFeet();
     const me = { x: feet.x, y: feet.y, angle: this.myAngle };
-    const markers: MapMarker[] = [...this.npcs].map(([id, n]) => ({ ...feetAt(n.e.x, n.e.y), mark: this.npcMarks.get(id) ?? '' }));
+    const markers: MapMarker[] = [...this.npcs].map(([id, npc]) => {
+      const mark = this.npcMarks.get(id) ?? '';
+      const counter = mark ? this.map.npcCounter(npc.e.type) : undefined;
+      const entrance = counter && !regionContains(counter, me) ? this.map.spots.get(`entrada-${npc.e.type}`) : undefined;
+      return { ...(entrance ?? feetAt(npc.e.x, npc.e.y)), mark };
+    });
     // com os Olhos de Gavião, os bichos viram pontos na cor do perigo
     if (gameNow() < this.hawkUntil) {
       for (const e of this.entities.values()) {

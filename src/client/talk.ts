@@ -296,7 +296,7 @@ export class TalkWindow {
       box.append(title, ...extra.filter((x): x is HTMLElement => x !== null));
       return box;
     };
-    const progress = (quest: QuestInfo) => questProgress(quest, ctx.log[quest.id], ctx.inBag);
+    const progress = (quest: QuestInfo) => quest.goal.kind === 'talk' ? null : questProgress(quest, ctx.log[quest.id], ctx.inBag);
 
     if (ready.length) {
       parts.push(el('h3', '', 'Para concluir'));
@@ -356,6 +356,11 @@ export class QuestTracker {
     this.root.hidden = active.length === 0;
     this.root.replaceChildren(
       ...active.map((quest) => {
+        if (quest.goal.kind === 'talk') {
+          const row = el('div', 'tracker-row');
+          row.append(el('strong', '', quest.name), el('span', '', goalText(quest)));
+          return row;
+        }
         const done = Math.min(questProgress(quest, ctx.log[quest.id], ctx.inBag), quest.goal.count);
         const ready = done >= quest.goal.count;
         const row = el('div', `tracker-row${ready ? ' ready' : ''}`);
@@ -363,12 +368,7 @@ export class QuestTracker {
         const fill = el('div');
         fill.style.width = `${Math.round((100 * done) / quest.goal.count)}%`;
         bar.append(fill);
-        const status =
-          quest.goal.kind === 'talk'
-            ? (quest.goalLabel ?? `Fale com ${quest.goalName}`)
-            : ready
-              ? '✓ pronta: volte para entregar'
-              : `${quest.goalLabel ?? quest.goalName}: ${done}/${quest.goal.count}`;
+        const status = ready ? '✓ pronta: volte para entregar' : `${quest.goalLabel ?? quest.goalName}: ${done}/${quest.goal.count}`;
         row.append(el('strong', '', quest.name), el('span', '', status), bar);
         return row;
       }),

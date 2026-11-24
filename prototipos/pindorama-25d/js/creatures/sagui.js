@@ -81,6 +81,8 @@
   const DOWN_DUR = 0.56;
   const DOWN_FLIP = 0.42;
   const WORLD_UP = Object.freeze({ x: 0, y: 0, z: 1 });
+  const PACIFY_RUN_AT = 0.43;
+  const PACIFY_END = 1.28;
 
   /** Estrelinha de 4 pontas (o encanto), em px de tela. */
   function star(ctx, x, y, s) {
@@ -121,6 +123,8 @@
       this.swingV = 0;
       /** Desmaiou no galho: de que altura cai (cm). */
       this.fallFrom = 0;
+      /** No Capão, a quebra do encanto: segundos desde o clarão e destino da corrida, em cm. */
+      this.freed = null;
       /** Pendurado: de que lado do galho o rabo vem (+1 / -1; 0 = ainda não escolhido; veja `_hangRig`). */
       this.tailSide = 0;
     }
@@ -153,6 +157,22 @@
       if (tr && tr.kind === 'descer') return tr.z * (1 - M.clamp01(tr.t / tr.dur));
       if (tr && tr.kind === 'subir') return tr.z * M.clamp01(tr.t / tr.dur);
       return this.perch ? this.perch.z : 0;
+    }
+
+    /** O encanto se quebra. Se estava no galho, solta o rabo, cai e recupera as patas antes de sair correndo. */
+    pacify(x, y) {
+      if (this.freed || this.dying !== null) return;
+      this.fallFrom = this.perchHeight();
+      this.perch = null;
+      this.trans = null;
+      this.act = null;
+      this.armK = 0;
+      this.moveTo(this.pos.x, this.pos.y, this.yaw, 60);
+      this.freed = { t: 0, x, y, origin: null };
+    }
+
+    get pacifyFinished() {
+      return this.freed !== null && this.freed.t >= PACIFY_END;
     }
 
     action(kind, yaw) {
@@ -195,6 +215,16 @@
     }
 
     animate(dt) {
+      const freed = this.freed;
+      if (freed) {
+        const before = freed.t;
+        freed.t += dt;
+        if (before < PACIFY_RUN_AT && freed.t >= PACIFY_RUN_AT) {
+          const dx = freed.x - this.pos.x, dy = freed.y - this.pos.y;
+          const yaw = dx !== 0 || dy !== 0 ? Math.atan2(dy, dx) : this.yaw;
+          this.moveTo(freed.x, freed.y, yaw, (PACIFY_END - freed.t) * 1000);
+        }
+      }
       const tr = this.trans;
       if (tr) {
         tr.t += dt;
@@ -243,6 +273,9 @@
       const throwing = this.armMode === 'throw';
       const armK = this.armK;
       const dying = this.dying;
+      const freeing = this.freed?.t ?? null;
+      const down = freeing ?? dying;
+      const stand = freeing === null ? 0 : M.smoothstep(0.24, PACIFY_RUN_AT, freeing);
       const rd = this.recoilDir;
       return {
         t: this.time,
@@ -255,10 +288,10 @@
         thr: this.thr,
         rec: this.recoil(),
         hop: this.hurtT < 0.3 ? Math.sin((this.hurtT / 0.3) * Math.PI) : 0,
-        dying,
+        down,
         // desmaio: despenca de bruços em 0,26 s, quica de leve no chão, braços para a frente e o rabo largado
-        slump: dying === null ? 0 : M.easeIn(M.clamp01(dying / 0.26)),
-        land: dying === null ? 0 : Math.max(0, Math.sin(M.clamp01((dying - 0.26) / 0.16) * Math.PI)) * 2.5,
+        slump: down === null ? 0 : M.easeIn(M.clamp01(down / 0.26)) * (1 - stand),
+        land: down === null ? 0 : Math.max(0, Math.sin(M.clamp01((down - 0.26) / 0.16) * Math.PI)) * 2.5,
         // o tranco empurra para o lado do `recoilDir`: de frente para quem bateu, o corpo verga para trás
         push: rd.x * Math.cos(this.yaw) + rd.y * Math.sin(this.yaw),
       };
@@ -303,8 +336,8 @@
         airZ = Math.max(0, tr.z - 62 * S) * (1 - u * u);
         airX = (tr.x - this.pos.x) * (1 - u);
         airY = (tr.y - this.pos.y) * (1 - u);
-      } else if (this.fallFrom > 0 && st.dying !== null) {
-        const u = M.clamp01(st.dying / 0.24);
+      } else if (this.fallFrom > 0 && st.down !== null) {
+        const u = M.clamp01(st.down / 0.24);
         airZ = Math.max(0, this.fallFrom - 62 * S) * (1 - u * u);
       }
       const up = M.lerp(M.smoothstep(0, 1, this.up), 0.55, leap);
@@ -641,7 +674,7 @@
 
     /** As partes pintadas de um esqueleto (do chão ou do galho), cada uma com as bolas da sombra e o seu desenho. */
     _build(cam, rig, st) {
-      const { t, wind, hold, rec, slump, throwing, thr, dying } = st;
+      const { t, wind, hold, rec, slump, throwing, thr, down } = st;
       const { hipF, chestF, headC, rh, hf, hs, hu } = rig;
       const z = cam.zoom;
       const ink = Math.max(1, 1.1 * z);
@@ -756,11 +789,13 @@
         });
       }
 
-      // ---- o encanto: dois pontinhos lilás rodando em volta da cabeça; desmaiado, ele sai do corpo em faíscas roxas
+      // ---- o encanto: os pontinhos da cabeça viram faíscas. No Capão, o brilho fica para trás quando o sagui corre.
       const heart = M.lerp3(chestF, headC, 0.55);
+      const freed = this.freed;
+      if (freed) freed.origin ??= heart;
       const after = (ctx) => {
-        if (dying === null) this._motes(ctx, cam, headC);
-        else this._release(ctx, cam, heart, dying);
+        if (down === null) this._motes(ctx, cam, headC);
+        else if (down < 0.7) this._release(ctx, cam, freed?.origin ?? heart, down);
       };
       // o nome: em cima da cabeça (no chão) ou do galho (pendurado)
       this.top = rig.branch ? rig.branch.G.z - this.groundZ + 14 * S : headC.z - this.groundZ + rh + 8 * S;
@@ -769,7 +804,8 @@
         for (const g of C.byDepth(cam, groups)) if (g.paint) g.paint(ctx, flash);
         ctx.restore();
       };
-      return { groups, after, paint };
+      const alpha = freed ? 1 - M.smoothstep(0.99, PACIFY_END, freed.t) : undefined;
+      return { groups, after, paint, alpha };
     }
 
     /** Pendurado: os pontos do rabo que ficam atrás do galho (para quem olha) não são desenhados (o galho aparece). */
@@ -1080,7 +1116,7 @@
       on(0.93, 0, -0.44, 1, () => {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        if (this.dying !== null) {
+        if (this.dying !== null || st.slump > 0.68) {
           // desmaiado: a boquinha mole, ondulada
           ctx.strokeStyle = LID;
           ctx.lineWidth = Math.max(thin(0.9), 0.04 * r);
@@ -1150,14 +1186,14 @@
       const z = cam.zoom;
       const thin = (px) => px / z;
       const ew = 0.27 * r, eh = 0.26 * r;
-      const color = C.eyeColor ? C.eyeColor(EYE) : EYE;
+      const color = this.freed ? '#735340' : (C.eyeColor?.(EYE) ?? EYE);
       const glow = C.eyeGlow ? C.eyeGlow(EYE_GLOW) : EYE_GLOW;
       const sly = M.clamp01(st.wind * 1.4); // o olhar travesso do preparo
       for (const sg of [-1, 1]) {
         P.onSurface(ctx, cam, head, 0.82, 0.36 * sg, 0.14, sg, () => {
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
-          if (this.dying !== null) {
+          if (this.dying !== null || st.slump > 0.68) {
             ctx.strokeStyle = LID;
             ctx.lineWidth = Math.max(thin(1.1), 0.05 * r);
             ctx.beginPath();
@@ -1178,15 +1214,17 @@
             return;
           }
           // o brilho em volta (o encanto): duas rodelas transparentes (degradê a cada quadro pesava)
-          ctx.fillStyle = glow;
-          ctx.globalAlpha *= 0.45;
-          ctx.beginPath();
-          ctx.arc(0, 0, ew * 1.75, 0, M.TAU);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(0, 0, ew * 1.35, 0, M.TAU);
-          ctx.fill();
-          ctx.globalAlpha /= 0.45;
+          if (!this.freed) {
+            ctx.fillStyle = glow;
+            ctx.globalAlpha *= 0.45;
+            ctx.beginPath();
+            ctx.arc(0, 0, ew * 1.75, 0, M.TAU);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(0, 0, ew * 1.35, 0, M.TAU);
+            ctx.fill();
+            ctx.globalAlpha /= 0.45;
+          }
           // a íris acesa: a cor, a borda mais escura e o miolo claro do lado da luz
           ctx.fillStyle = C.tint(M.shade(color, -0.3), flash);
           ctx.beginPath();
@@ -1302,8 +1340,7 @@
     }
 
     /**
-     * Desmaiado: o encanto sai do corpo — um clarão lilás no peito e as faíscas roxas que se espalham e sobem, sumindo
-     * (o motor tira o desenho 0,7 s depois da queda; o corpo apaga de 0,4 a 0,7 s).
+     * O encanto sai do corpo: um clarão lilás e faíscas roxas que se espalham, sobem e somem em até 0,7 s.
      */
     _release(ctx, cam, heart, d) {
       const z = cam.zoom;

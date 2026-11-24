@@ -353,6 +353,7 @@ O visual muda para o do protótipo 2.5D (`prototipos/pindorama-25d/`) e os mapas
   encantados — uma pedrada e o encanto sai — e voltar; dá uma Garrafada). Objetivo novo "falar" (conclui com a
   pessoa procurada) e "rotulo" (o texto do objetivo); o monstro virou "Sagui Encantado"; sinais ! e ? em cima dos
   NPCs no jogo novo. Protocolo 20
+- [x] **[mundo + estrutura + arte]** Abertura do Capão na branch `codex/abertura-capao`. A primeira visita à Budega passa pela porta e termina no caixa. O círculo ilumina o Birim, e os saguis livres do encanto correm para longe. [Arquivos e verificação](ABERTURA_CAPAO.md)
 - [x] **[estrutura]** Atalhos de consumo no jogo novo (13/11, da HUD do dono): 1 = comida, 2 = remédio (campo
   `atalho` em `data/items.json`); cada um usa o item do grupo com a maior cura que está na mochila. Teclas 3 e 4 ou os
   dois botões redondos (`src/client/novo/quick.ts`, visual simples para a [arte] levar à HUD nova). Protocolo 19

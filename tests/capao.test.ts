@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { GameMap, type TiledMap } from '../src/shared/map';
 import { bodyFits, cornerAtFeet } from '../src/shared/movement';
+import { findRoute } from '../src/shared/route';
 
 interface TiledObject {
   name: string;
@@ -611,6 +612,30 @@ describe('Mapa 01 (Capão), etapa 4b: o portão e a vila', () => {
         expect(Math.hypot(sx - cx, sy - cy), `${prop(t, 'especie')} em (${x}, ${y}) tampa (${kx}, ${ky}, ${kz})`).toBeGreaterThanOrEqual(Number(prop(t, 'copa')) * 1.05);
       }
     }
+  });
+
+  it('o marcador na praça fica em frente à porta e leva a pé até o lado do freguês no caixa', () => {
+    const points = layer('pontos');
+    const doorGuide = points.find((o) => o.name === 'entrada-budega')!;
+    const counter = points.find((o) => o.name === 'atendimento-budega')!;
+    expect(doorGuide.point).toBe(true);
+    expect(counter.type).toBe('area');
+
+    const entry = at(doorGuide);
+    const customer = at(counter);
+    expect(entry.x).toBeGreaterThan(Number(prop(budega, 'portaDe')));
+    expect(entry.x).toBeLessThan(Number(prop(budega, 'portaAte')));
+    expect(entry.y).toBeGreaterThan((budega.y + budega.height) / M);
+    expect(reach(entry.x, entry.y)).toBe(true);
+
+    const game = GameMap.fromTiled(map as unknown as TiledMap, 'capao');
+    for (const x of [counter.x / M, (counter.x + counter.width) / M]) {
+      for (const y of [counter.y / M, (counter.y + counter.height) / M]) {
+        const corner = cornerAtFeet(x, y);
+        expect(bodyFits(game, corner.x, corner.y), `o pé na área de atendimento (${x}, ${y})`).toBe(true);
+      }
+    }
+    expect(findRoute(game, cornerAtFeet(entry.x, entry.y), cornerAtFeet(customer.x, customer.y))?.exact).toBe(true);
   });
 
   it('a floresta entrando na Budega (pedido do dono, 15/11: "interior com infestação da floresta"): raiz levantando o piso, mato nas frestas, samambaia, cipó e musgo, sem fechar o caminho', () => {

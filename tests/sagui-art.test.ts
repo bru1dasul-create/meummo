@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 type Vec = { x: number; y: number; z: number };
 type Ball = { c: Vec; r: number };
 type Group = { balls: Ball[]; ref?: Vec; noShadow?: boolean; paint?: (ctx: unknown, flash: number) => void };
-type Parts = { groups: Group[]; paint?: (ctx: unknown, flash: number) => void; after?: (ctx: unknown) => void };
+type Parts = { groups: Group[]; paint?: (ctx: unknown, flash: number) => void; after?: (ctx: unknown) => void; alpha?: number };
 type Sagui = {
   pos: { x: number; y: number };
   yaw: number;
@@ -35,6 +35,8 @@ type Sagui = {
   fallFrom: number;
   setPerch: (perch: { z: number; yaw?: number } | null, instant?: boolean) => void;
   perchHeight: () => number;
+  pacify: (x: number, y: number) => void;
+  pacifyFinished: boolean;
 };
 type Fur = { V: { x: number; y: number }[]; T: { x: number; y: number; sharp: boolean }[]; n: number };
 type Paint = {
@@ -326,5 +328,36 @@ describe('o Sagui redesenhado', () => {
     const { ctx, colors } = fakeCtx();
     s.drawable(cam, false).draw(ctx);
     expect(colors.filter((c) => /NaN|undefined/.test(c))).toEqual([]);
+  });
+
+  it.each([false, true])('liberta o sagui (no galho: %s), que pousa, foge e só então apaga', (onBranch) => {
+    const s = create(0);
+    if (onBranch) s.setPerch({ z: BRANCH, yaw: 0 }, true);
+    s.pacify(240, 0);
+    expect(s.perch).toBeNull();
+    expect(s.fallFrom).toBe(onBranch ? BRANCH : 0);
+    step(s, 0.15);
+    expect(s.pos.x).toBe(0);
+    expect(s.parts(cam).alpha).toBe(1);
+    const effect = fakeCtx();
+    s.parts(cam).after?.(effect.ctx);
+    expect(effect.colors).toContain('#b58cff');
+
+    step(s, 0.68);
+    expect(s.pos.x).toBeGreaterThan(70);
+    expect(s.label).toBe('correndo');
+    expect(s.dying).toBeNull();
+    expect(s.pacifyFinished).toBe(false);
+    const escaped = fakeCtx();
+    s.parts(cam).after?.(escaped.ctx);
+    expect(escaped.fills()).toBe(0);
+
+    step(s, 0.27);
+    expect(s.parts(cam).alpha).toBeLessThan(1);
+    expect(s.pacifyFinished).toBe(false);
+    step(s, 0.2);
+    expect(s.pos.x).toBeCloseTo(240);
+    expect(s.parts(cam).alpha).toBe(0);
+    expect(s.pacifyFinished).toBe(true);
   });
 });

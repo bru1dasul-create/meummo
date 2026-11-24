@@ -62,6 +62,8 @@ export interface WorldView {
    * investida, 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
    */
   action?(id: number, kind: string, angle?: number): void;
+  /** Quebra o encanto e deixa o sagui correr até (x, y), mesmo depois de sair da lista de alvos. */
+  pacifySagui?(id: number, x: number, y: number): boolean;
   /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */
   actorPosition?(id: number): { x: number; y: number } | null;
   /** Zoom do jogador (1 = o "médio"; menos = mais longe). A view limita e devolve o que ficou valendo. */

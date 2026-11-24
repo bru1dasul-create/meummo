@@ -187,6 +187,16 @@
       else this._personAction(a, kind, yaw);
     }
 
+    /** O Sagui já saiu da lista de alvos. O desenho fica até o encanto estourar e ele correr de volta para a mata. */
+    pacifySagui(id, x, y) {
+      const a = this.actors.get(id);
+      if (!a?.creature?.pacify) return false;
+      a.name = '';
+      a.speech = '';
+      a.creature.pacify(x * 100, y * 100);
+      return true;
+    }
+
     /**
      * Subiu de nível (`what` = 'level') ou pôs um ponto numa habilidade ('skill', com `skill` = 'chuva', 'flecha' ou
      * 'olhos', para a cor): o círculo de luz que acende no chão e os anéis subindo pelo corpo (js/levelup.js). Você ou
@@ -760,7 +770,10 @@
         this.visionK = tw.from + (tw.to - tw.from) * M.smoothstep(0, 1, tw.t);
       }
       this._resize();
-      for (const a of this.actors.values()) this._drive(a, dt);
+      for (const a of this.actors.values()) {
+        this._drive(a, dt);
+        if (a.creature?.pacifyFinished) this.removeActor(a.id);
+      }
       // o brilho dourado nos olhos de quem usou os Olhos de Gavião (e, fraco, nos seus enquanto valem)
       for (const a of this.actors.values()) {
         if (a.creature) continue;
@@ -1708,6 +1721,37 @@
       return (b) => b.x1 >= x0 && b.x0 <= x1 && b.y1 >= y0 && b.y0 <= y1;
     }
 
+    /** Reflexo do círculo do Despertar na pele e na bermuda do Birim, mais fraco perto da borda. */
+    _awakeningLight(app, foot) {
+      const light = this.map.awakening;
+      const birim = PD.models?.birim;
+      if (!light?.color || !birim || app?.modelo !== birim.MODEL) return app;
+      const distance = Math.hypot(foot.x - light.x, foot.y - light.y);
+      const step = Math.round(8 * M.clamp01(1 - distance / light.r));
+      if (!step) return app;
+
+      // Reaproveita a paleta de cada faixa para o cache do personagem funcionar mesmo em cima do círculo.
+      const looks = this._awakeningLooks || (this._awakeningLooks = []);
+      if (!looks[step]) {
+        const mix = (colors, k) => ({
+          base: M.mix(colors.base, light.color, k),
+          shade: M.mix(colors.shade, light.color, k * 0.55),
+          light: M.mix(colors.light, light.color, k * 1.25),
+        });
+        const paleta = app.paleta;
+        looks[step] = {
+          ...app,
+          paleta: {
+            ...paleta,
+            skin: mix(paleta.skin, step * 0.03),
+            skinFar: mix(paleta.skinFar, step * 0.03),
+            denim: mix(paleta.denim, step * 0.02),
+          },
+        };
+      }
+      return looks[step];
+    }
+
     _actorDrawable(a) {
       if (a.creature) return a.creature.drawable(this.cam, a.id === this.followId);
       const ch = a.ch;
@@ -1718,7 +1762,7 @@
       const alpha = this._conversationAlpha(a);
       const paint = (c) => {
         if (ch.look) ch.look.eyeGlow = a.eyeGlow || 0;
-        const app = a.appearance || (PD.classes.playerAppearance || PD.classes.appearanceOf)(ch);
+        const app = a.appearance || this._awakeningLight((PD.classes.playerAppearance || PD.classes.appearanceOf)(ch), ch.pos);
         // quem está parado reaproveita a imagem pronta (CharacterRenderer.drawCached, 22/11: "deixa os personagens mais
         // leves"); ao vivo sempre: a flecha especial no arco e os olhos do Gavião (animam com o relógio) e a transparência
         // da conversa

@@ -68,7 +68,7 @@ import {
 } from '../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../shared/combatRules';
 import { DOWN, DX, DY, stepDuration, type Dir } from '../shared/dir';
-import type { GameMap, MonsterZone, Tile } from '../shared/map';
+import { regionContains, type GameMap, type MonsterZone, type Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, footTile, nearestBodySpot, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
@@ -3327,14 +3327,15 @@ export class World {
 
   /** O jogador está numa área segura (camada `seguro` do mapa)? Lá monstro não entra, não nota e não acerta. */
   /**
-   * Perto o bastante do NPC para negociar ou falar da missão? No mapa novo, do pé ao pé, em metros (um balcão deixa o
-   * jogador a uns 3 m de quem está atrás dele); no antigo, de tile em tile, como sempre foi.
+   * Perto o bastante do NPC para negociar ou falar da missão? No mapa novo, do pé ao pé, em metros. Quando o mapa
+   * delimita o atendimento de um NPC, o freguês fica nessa área. No mapa antigo, a distância é em tiles.
    */
   private nearNpc(player: Player, npc: Npc): boolean {
     if (!this.map.metric) return chebyshev(player, npc) <= TRADE_RANGE;
     const me = feetAt(player.fx, player.fy);
     const them = feetAt(npc.x, npc.y);
-    return Math.hypot(me.x - them.x, me.y - them.y) <= TRADE_RANGE + TRADE_SLACK;
+    const counter = this.map.npcCounter(npc.def.id);
+    return (!counter || regionContains(counter, me)) && Math.hypot(me.x - them.x, me.y - them.y) <= TRADE_RANGE + TRADE_SLACK;
   }
 
   private inSafeArea(player: Player): boolean {

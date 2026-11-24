@@ -182,6 +182,8 @@ const BUDEGA = { x0: 60.5, x1: 68.5, y0: 48.9, y1: 54.4 };
 const BUDEGA_DOOR = { x0: 65, x1: 68 };
 /** A frente da porta da Budega, do lado da praça: fica livre (nada da praça encosta aqui). */
 const BUDEGA_FRONT = { x: 66.5, y: 55.2 };
+/** A faixa livre do lado do freguês, em frente ao caixa. */
+const BUDEGA_COUNTER = { x0: 65.9, x1: 67.3, y0: 51.55, y1: 52.55 };
 /**
  * A Budega por dentro (padrão novo; pedido do dono, como no HumanitZ: com o herói lá dentro, o telhado e a frente
  * somem). Paredes de 15 cm; a porta é o vão da porta de enrolar (a frente toda, menos 34 cm de cada ponta). A Xiovanna
@@ -2862,6 +2864,11 @@ pontos.push(point('ponto', C.x, C.y, undefined, 'spawn'));
     pontos.push(rect('area', FIELD.x0 + 1, FIELD.x1 - 1, FIELD.y0 + 1, FIELD.y1 - 1, undefined, 'capivaras-campinho'));
     pontos.push(point('ponto', 73.3, 71.4, undefined, 'capivaras-campinho-descanso'));
   }
+}
+if (reached('4b') && FLORESTA) {
+  const { x0, x1, y0, y1 } = BUDEGA_COUNTER;
+  pontos.push(rect('area', x0, x1, y0, y1, undefined, 'atendimento-budega'));
+  pontos.push(point('ponto', BUDEGA_FRONT.x, BUDEGA_FRONT.y, undefined, 'entrada-budega'));
 }
 /** Áreas de criaturas (camada "monstros"): o nome é o id em data/monsters.json; os saguis são os "encantados". */
 const monstros: Shape[] = [];

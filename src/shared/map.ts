@@ -20,6 +20,7 @@
 //   nunca atravessa árvore);
 // - camada de objetos `seguro`: retângulos de área segura (monstro não entra, não nota e não acerta quem está lá);
 // - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai);
+// - retângulo `atendimento-<id do NPC>` na camada `pontos`: onde o freguês fica para falar com o NPC no balcão;
 // - camada `pontos`: ponto do tipo `galho-sagui` é um galho baixo onde o sagui se pendura (Sagui no galho, 23/11). O
 //   ponto fica no chão, embaixo do meio do galho (onde o pé dele fica), com `altura` (metros, de 1 a 4) e `direcao`
 //   (graus, do tronco para a ponta do galho: 0 = leste, 90 = sul).
@@ -138,6 +139,11 @@ export interface MapRegion {
   y0: number;
   x1: number;
   y1: number;
+}
+
+/** O ponto está dentro do retângulo, em metros? */
+export function regionContains(region: MapRegion, point: Tile): boolean {
+  return point.x >= region.x0 && point.x < region.x1 && point.y >= region.y0 && point.y < region.y1;
 }
 
 /**
@@ -525,6 +531,11 @@ export class GameMap implements Walkable {
   /** Este ponto (em tiles, com fração) está numa área segura? */
   isSafeAt(x: number, y: number): boolean {
     return this.safeAreas.some((a) => x >= a.x0 && x < a.x1 && y >= a.y0 && y < a.y1);
+  }
+
+  /** Onde o jogador fica para ser atendido no balcão, se o mapa delimita uma área para este NPC. */
+  npcCounter(npcType: string): MapRegion | undefined {
+    return this.regions.get(`atendimento-${npcType}`);
   }
 
   /** Este tile encosta numa área segura? (Monstro não entra.) */

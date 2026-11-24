@@ -4,6 +4,7 @@
 //  - a fachada preta (`fachada: 'preta'`): o preto brilhante, a faixa de cima com o escudo dourado, a moldura amarela
 //    (`moldura`) em volta da vitrine e da porta, a vitrine de fundo amarelo com refrigerante, potes de doce e salgadinho,
 //    a porta de enrolar aberta à direita (`portaDe`/`portaAte`) mostrando a loja acesa e o LED branco (`led`);
+//    uma placa na lateral aponta para a entrada pela praça, com luz quente na soleira;
 //  - dentro: o porcelanato branco (com folhas secas perto da porta), as paredes claras com o "FIADO SÓ AMANHÃ" em cima
 //    das prateleiras, as prateleiras pretas de nichos amarelos (`nichos`) cheias, a geladeira branca de duas portas de
 //    vidro (`portas`, `vidro`), o balcão de vidro com os potes de bala (`balcao-vidro`), o freezer de tampa de vidro, o
@@ -408,6 +409,18 @@
     // o batente de baixo da porta (soleira)
     ctx.fillStyle = '#b9b2a4';
     ctx.fillRect(door.x0 - 4, H - 8, door.x1 - door.x0 + 8, 8);
+    if (b.door) {
+      // A luz é da abertura da porta, ao lado da vitrine. A ponta mais clara coincide com o vão de entrar.
+      const opening = door.x1 - door.x0;
+      const light = ctx.createLinearGradient(0, dy0 + 19, 0, dy0 + 55);
+      light.addColorStop(0, 'rgba(255, 209, 106, 0.55)');
+      light.addColorStop(1, 'rgba(255, 209, 106, 0)');
+      ctx.fillStyle = light;
+      ctx.fillRect(door.x0, dy0 + 19, opening, 36);
+      ctx.fillStyle = '#ffe7aa';
+      ctx.fillRect(door.x0 + 3, dy0 + 18, opening - 6, 3);
+      ctx.fillRect(door.x0 + 3, H - 8, opening - 6, 3);
+    }
     // o escudo dourado na faixa preta, em cima da vitrine
     const sw = Math.min(104, fascia * 0.86);
     shield(ctx, Math.min(vx1 - sw * 0.2, (vx0 + door.x1) / 2), (fascia - sw * 1.06) / 2, sw, true);
@@ -446,6 +459,37 @@
       ctx.moveTo(0, 3);
       ctx.lineTo(D - 3, 3);
       ctx.stroke();
+    }
+    if (b.door) {
+      // Nesta face, x = 0 fica na quina da praça. A seta aponta para a frente da loja.
+      const w = 154, h = 43, x = D * 0.62 - w / 2, y = H * 0.26;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      rrect(ctx, x + 2, y + 3, w, h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#20201e';
+      ctx.strokeStyle = '#e3bb5c';
+      ctx.lineWidth = 2;
+      rrect(ctx, x, y, w, h, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ffe4a0';
+      ctx.font = '700 21px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('ENTRADA', x + 42, y + h / 2, w - 49);
+      ctx.strokeStyle = '#ffe4a0';
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x + 33, y + h / 2);
+      ctx.lineTo(x + 12, y + h / 2);
+      ctx.lineTo(x + 20, y + h / 2 - 8);
+      ctx.moveTo(x + 12, y + h / 2);
+      ctx.lineTo(x + 20, y + h / 2 + 8);
+      ctx.stroke();
+      ctx.restore();
     }
   }
   /** As paredes de dentro: claras, azulejo branco embaixo com a faixa azul, o "FIADO SÓ AMANHÃ" e a mata entrando. */
@@ -1250,6 +1294,12 @@
     ctx.fillStyle = 'rgba(20, 16, 12, 0.22)';
     ctx.fillRect(x0 - 2, y1, x1 - x0 + 4, 6);
     if (sh.mat) {
+      // A luz da loja cai no degrau e perde força na direção da praça.
+      const glow = ctx.createLinearGradient(0, y0, 0, y1);
+      glow.addColorStop(0, 'rgba(255, 222, 150, 0.64)');
+      glow.addColorStop(1, 'rgba(255, 222, 150, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
       const mw = Math.min(110, (x1 - x0) * 0.5), mh = Math.min(30, (y1 - y0) - 8);
       const mx = (x0 + x1) / 2 - mw / 2, my = y0 + (y1 - y0 - mh) / 2 - 2;
       ctx.fillStyle = '#7a5a32';

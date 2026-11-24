@@ -121,7 +121,7 @@
     drawable(cam, primary) {
       // caiu: quem tem pose de desmaio (ownDeath) desenha a sua; as outras tombam de lado
       const parts = this.dying !== null && !this.ownDeath ? this._fall(this.parts(cam)) : this.parts(cam);
-      const alpha = this.dying !== null ? 1 - M.smoothstep(0.4, 0.7, this.dying) : 1;
+      const alpha = parts.alpha ?? (this.dying !== null ? 1 - M.smoothstep(0.4, 0.7, this.dying) : 1);
       const faded = (paint) => (ctx) => {
         if (alpha >= 1) return paint(ctx);
         ctx.save();
