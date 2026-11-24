@@ -210,7 +210,8 @@
     // (19/11, lista do dono no jogo: mais 1,5 cm, com o trapézio de dentro mais baixo — era −1,5)
     headScale: 0.66,
     headDrop: -3,
-    NECK: { r0: 7.9, r1: 6.6 },
+    // O alto entra sob a mandíbula, sem formar uma segunda borda de pele ao lado da barba.
+    NECK: { r0: 7.9, r1: 5.5 },
     // corpo de quem treina, mais estreito que o do herói
     // (rodada 3, medido contra a ficha com régua: o tronco abre em V — cintura ~26 cm de largura, peito largo em cima
     // —, as costas são mais cheias que o peito de perfil e o alto do peito não passa da linha do peitoral)
@@ -903,7 +904,10 @@
         // de baixo da barba como um triângulo do lado do queixo; este pedaço, na superfície do rosto, só entra com o lado
         // virado para a câmera, a partir de ~12°: de frente a pele embaixo do lábio continua a mesma. Rodada 4b)
         piece([[[sx * 4.3, 13.0, -13.7], 1.0], [[sx * 4.0, 12.7, -15.1], 1.15], [[sx * 4.9, 12.0, -14.6], 1.1]], [sx, 0.3, 0], 0.48, 0, false, sx);
-        piece([must[3], [[sx * 4.65, 11.9, -12.35], 0.90], [[sx * 5.3, 10.7, -13.8], 1.2]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35); // emenda ao lado da boca
+        // O canto acompanha a superfície do rosto. Recuado, deixava pele entre o bigode e a bochecha.
+        piece([must[3], [[sx * 4.65, 12.85, -12.1], 1.12], [[sx * 5.3, 12.4, -13.65], 1.38], [[sx * 4.4, 12.85, -14.6], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35);
+        // Esta faixa cobre a parte saliente da mandíbula e desce até a base da barba nos dois lados.
+        piece([[[sx * 8.5, 5.75, -10.35], 1.45], [[sx * 7.65, 8.0, -12.15], 1.85], [[sx * 6.1, 9.7, -14.9], 1.72]], [sx * 0.72, 0.65, -0.18], -0.08, 0, false, sx, -0.02, 0.16);
         // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
         // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
         piece([[[sx * 8.6, 1.2, -12.2], 1.2], [[sx * 7.0, 7.0, -13.6], 1.5], [[sx * 5.6, 10.6, -13.2], 1.0], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 5.2, 10.8, -13.8], 1.25]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
@@ -1030,7 +1034,10 @@
     }
 
     // ---- cordão com a coroa
-    if (!off.cordao) items.push({ name: 'cordao', key: env.chestKey + 0.5, draw: () => chain(R, rig, look) });
+    if (!off.cordao) {
+      const neck = items.find((it) => it.name === 'pescoco')?.segs[0].circles ?? [];
+      items.push({ name: 'cordao', key: env.chestKey + 0.5, draw: () => chain(R, rig, look, neck) });
+    }
 
     // ---- as solas dos chinelos (saem se o encaixe dos pés tiver um calçado)
     if (!gear.pes && !off.chinelos) for (let i = 0; i < 2; i++) items.push(soleItem(R, rig, i, items));
@@ -1555,107 +1562,104 @@
     }
   }
 
-  /** Cordão de elos prateados em volta do pescoço, descendo em V até o meio do peito, com a coroa pendurada. */
-  // a volta do cordão no pescoço: um anel de raio r em torno do pescoço (o meio dele fica em y, nos eixos do peito), na
-  // altura z — é só a guia: `onSkin` leva cada ponto para a pele; `hide` = até onde, de lado, o pescoço tampa o que fica
-  // atrás dele (um pouco menos que o raio do pescoço na base: o que passa rente à beirada continua aparecendo)
-  const NECK_RING = { r: 8.9, y: -0.5, z: 13.5, hide: 7.6 };
+  // A guia do cordão acompanha a base do pescoço nos eixos do peito.
+  const NECK_RING = { r: 8.9, y: -0.5, z: 13.5 };
   const SKIN_IN = [0, -1, 8.5]; // um ponto de dentro do alto do tronco: os raios de `onSkin` saem dele
-  /** Leva o ponto `g` (eixos do peito) para a pele do tronco pelo raio que sai de SKIN_IN; devolve o ponto (0,45 para
-   *  fora da pele) e a normal da pele ali. */
+  /** Leva o ponto `g` (eixos do peito) até um pouco acima da pele pelo raio que sai de `SKIN_IN`. */
   function onSkin(g) {
     const dx = g[0] - SKIN_IN[0], dy = g[1] - SKIN_IN[1], dz = g[2] - SKIN_IN[2];
     const L = Math.hypot(dx, dy, dz) || 1;
     const d = [dx / L, dy / L, dz / L];
-    let best = -1, hit = null, n = [0, 0, 1];
+    let best = -1;
     for (const s of MODEL.CHEST) {
       const ox = SKIN_IN[0] - s.p[0], oy = SKIN_IN[1] - s.p[1], oz = SKIN_IN[2] - s.p[2];
       const b = ox * d[0] + oy * d[1] + oz * d[2];
       const disc = b * b - (ox * ox + oy * oy + oz * oz - s.r * s.r);
-      if (disc < 0) continue;
-      const t = -b + Math.sqrt(disc);
-      if (t > best) {
-        best = t;
-        hit = [SKIN_IN[0] + t * d[0], SKIN_IN[1] + t * d[1], SKIN_IN[2] + t * d[2]];
-        n = [(hit[0] - s.p[0]) / s.r, (hit[1] - s.p[1]) / s.r, (hit[2] - s.p[2]) / s.r];
-      }
+      if (disc >= 0) best = Math.max(best, -b + Math.sqrt(disc));
     }
-    if (!hit) return { p: g, n };
-    return { p: [hit[0] + d[0] * 0.45, hit[1] + d[1] * 0.45, hit[2] + d[2] * 0.45], n };
+    return best < 0 ? g : SKIN_IN.map((origin, i) => origin + (best + 0.45) * d[i]);
   }
-  function chain(R, rig, look) {
+
+  // Pontos próximos deixam a volta contínua quando um trecho passa pela borda do pescoço. A normal da guia gira
+  // suavemente pelo trapézio, inclusive onde o raio troca de esfera de apoio no tronco.
+  const NECK_TRACE = Array.from({ length: 17 }, (_, i) => {
+    const a = i * 8 * M.DEG;
+    const sin = Math.sin(a), cos = Math.cos(a);
+    const p = onSkin([NECK_RING.r * sin, NECK_RING.y - NECK_RING.r * cos, NECK_RING.z]);
+    // Junto à clavícula, a pele do tronco pode ficar por dentro da base do pescoço. Deixa o elo pelo lado de fora.
+    const r = Math.max(Math.hypot(p[0], p[1] - NECK_RING.y), MODEL.NECK.r0 + 0.6);
+    return { p: [r * sin, NECK_RING.y - r * cos, p[2]], n: [sin, -cos, 0.9] };
+  });
+  const CHAIN_DOWN = [[5.2, 9.6, 9.8], [3, 12.9, 5.6], [1.1, 14.6, 1.6]];
+
+  /** Cordão de elos prateados em volta do pescoço, descendo em V até o meio do peito, com a coroa pendurada. */
+  function chain(R, rig, look, neck) {
     const ctx = R.ctx;
     const PAL = R.pal;
     const z = R.zoom;
     const ch = rig.chest;
     const sw = look.pendantSwing || { x: 0, y: 0, z: 0 };
-    // o caminho de um lado (o outro é o espelho): a volta no pescoço (nuca → trapézio → clavícula) e a descida pelo peito
-    // até o pingente
-    // (19/11, o dono: "o colar está sumindo no trapézio". Os pontos da volta eram fixos e ficavam DENTRO do trapézio — e
-    // a normal deles, que dizia se apareciam, olhava para o lado: de costas só sobrava um arquinho na nuca. Agora a volta é
-    // um anel em torno do pescoço, levado para a pele por um raio que sai de dentro do tronco (`onSkin`): ele deita no
-    // trapézio qualquer que seja o tamanho dele, aparece pela normal da pele e some só onde o pescoço tampa)
-    const RING = [0, 28, 56, 84, 108, 128].map((deg) => [NECK_RING.r * Math.sin(deg * M.DEG), NECK_RING.y - NECK_RING.r * Math.cos(deg * M.DEG), NECK_RING.z]);
-    const DOWN = [[5.2, 9.6, 9.8], [3, 12.9, 5.6], [1.1, 14.6, 1.6]];
     const pend = add(at(ch, 0, 15.1, 0.2), scale(sw, 1.6));
-    // o pescoço tampa o que fica atrás dele (ele é desenhado antes do peito, e o cordão depois)
-    const cam = { x: dot(R.toCam, ch.r), y: dot(R.toCam, ch.f) };
-    const cl = Math.hypot(cam.x, cam.y) || 1;
-    const behindNeck = (p) => {
-      const vx = p[0], vy = p[1] - NECK_RING.y;
-      return (vx * cam.x + vy * cam.y) / cl < 0 && Math.abs(vx * cam.y - vy * cam.x) / cl < NECK_RING.hide;
-    };
-    const total = RING.length + DOWN.length - 1;
-    const sideRun = (sx) => {
-      const out = [];
-      RING.forEach((g, k) => {
-        const s = onSkin([sx * g[0], g[1], g[2]]);
-        const q = add(at(ch, s.p[0], s.p[1], s.p[2]), scale(sw, (k / total) * 1.2));
-        out.push({ q, vis: R.facing(norm(dirIn(ch, s.n[0], s.n[1], s.n[2]))) > -0.06 && !behindNeck(s.p) });
+    // A volta passa atrás das mesmas esferas que desenham o pescoço, na inclinação da câmera e na pose atuais.
+    const behindNeck = (q) => {
+      const p = R.P(q);
+      const depth = dot(q, R.toCam);
+      return neck.some((c) => {
+        const inside = c.r ** 2 - (p.x - c.x) ** 2 - (p.y - c.y) ** 2;
+        return inside > 0 && c.d + Math.sqrt(inside) / z > depth + 0.45;
       });
-      DOWN.forEach((p, k) => {
+    };
+    // A nuca fica firme, e a coroa leva todo o balanço. A volta encontra a descida antes de chegar a ela.
+    const swing = (part) => scale(sw, 1.2 * part);
+    const sideRun = (sx) => {
+      const out = NECK_TRACE.map(({ p, n }, k) => {
+        const q = add(at(ch, sx * p[0], p[1], p[2]), swing((5 / 8) * k / (NECK_TRACE.length - 1)));
+        const normal = norm(dirIn(ch, sx * n[0], n[1], n[2]));
+        return { q, vis: R.facing(normal) > -0.06 && !behindNeck(q) };
+      });
+      CHAIN_DOWN.forEach((p, k) => {
         const n = norm(dirIn(ch, sx * p[0], p[1], 0.35));
-        const q = add(at(ch, sx * p[0], p[1], p[2]), scale(sw, ((RING.length + k) / total) * 1.2));
+        const q = add(at(ch, sx * p[0], p[1], p[2]), swing((6 + k) / 8));
         out.push({ q, vis: R.facing(n) > -0.06 });
       });
       out.push({ q: pend, vis: R.facing(norm(dirIn(ch, 0, 1, 0.2))) > -0.06 });
       return out;
     };
     const w = 0.82;
-    for (const sx of [-1, 1]) {
-      let run = [];
-      const flush = () => {
-        if (run.length > 1) {
-          cord(R, run, w, PAL.metal.base);
-          // elos: tracinhos escuros atravessados, só de perto
-          if (R.fine) {
-            const pts = run.map((q) => R.P(q));
-            ctx.strokeStyle = PAL.metal.shade;
-            ctx.lineWidth = Math.max(0.5, 0.3 * z);
-            ctx.beginPath();
-            for (let k = 0; k + 1 < pts.length; k++) {
-              const a = pts[k], b = pts[k + 1];
-              const L = Math.hypot(b.x - a.x, b.y - a.y);
-              const n = Math.max(1, Math.round(L / (1.5 * z)));
-              const nx = -(b.y - a.y) / (L || 1), ny = (b.x - a.x) / (L || 1);
-              for (let j = 0; j < n; j++) {
-                const t = (j + 0.5) / n;
-                const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
-                ctx.moveTo(x - nx * w * z * 0.45, y - ny * w * z * 0.45);
-                ctx.lineTo(x + nx * w * z * 0.45, y + ny * w * z * 0.45);
-              }
-            }
-            ctx.stroke();
-          }
+    const paintRun = (run) => {
+      if (run.length < 2) return;
+      cord(R, run, w, PAL.metal.base);
+      if (!R.fine) return;
+      // Os elos atravessam a corrente e só aparecem de perto.
+      const pts = run.map((q) => R.P(q));
+      ctx.strokeStyle = PAL.metal.shade;
+      ctx.lineWidth = Math.max(0.5, 0.3 * z);
+      ctx.beginPath();
+      for (let k = 0; k + 1 < pts.length; k++) {
+        const a = pts[k], b = pts[k + 1];
+        const L = Math.hypot(b.x - a.x, b.y - a.y);
+        const n = Math.max(1, Math.round(L / (1.5 * z)));
+        const nx = -(b.y - a.y) / (L || 1), ny = (b.x - a.x) / (L || 1);
+        for (let j = 0; j < n; j++) {
+          const t = (j + 0.5) / n;
+          const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+          ctx.moveTo(x - nx * w * z * 0.45, y - ny * w * z * 0.45);
+          ctx.lineTo(x + nx * w * z * 0.45, y + ny * w * z * 0.45);
         }
-        run = [];
-      };
-      for (const p of sideRun(sx)) {
-        if (p.vis) run.push(p.q);
-        else flush();
       }
-      flush();
+      ctx.stroke();
+    };
+    // A corrente é uma linha entre as duas pontas no pingente, com uma única passagem pela nuca.
+    const trace = sideRun(-1).reverse().concat(sideRun(1).slice(1));
+    let run = [];
+    for (const p of trace) {
+      if (p.vis) run.push(p.q);
+      else if (run.length) {
+        paintRun(run);
+        run = [];
+      }
     }
+    paintRun(run);
     // a coroa (o pingente), deitada no peito
     const n = norm(dirIn(ch, 0, 1, 0.12));
     const f = R.facing(n);
@@ -2004,6 +2008,7 @@
     leg: { top: -0.16, topR: 8.7, off: -0.5, kneeR: 10.1, kneeOff: -1.2, hem: 0.18, hemR: 9.1, hemOff: -1, kf: 1.16, ko: 0.95, backTop: 0, backKnee: -2.6, backHem: -2.3, bendShrink: 0.2 },
     pocket: { c: 1.28, w: 0.56, t0: 0.6, t1: 1.02, out: 1.5 }, // bolso cargo: no lado de fora da coxa, um pouco para a frente
   };
+  const SHORTS_THIGH = MODEL.THIGH.filter((p) => p.t <= 0.4);
   /** O raio e o deslocamento para fora da perna da bermuda em t (na coxa: do alto ao joelho; na canela: do joelho à barra). */
   const legShape = (shin, t) => {
     const L = SHORTS.leg;
@@ -2022,20 +2027,39 @@
   // (19/11, o dono: "o shorts quando anda parece bugado". Na corrida a coxa sobe e a perna da bermuda, larga no joelho,
   // fica de ponta para a câmera: o anel do joelho virava uma BOLA do tamanho da cintura. Com o joelho dobrado o pano cai:
   // o joelho e a barra encolhem até `bendShrink`; o alto, preso no quadril, não muda)
-  const legAt = (lf, shin, t, th, grow = 0, bend = 0) => {
+  const legAt = (rig, i, shin, t, th, grow = 0, bend = 0) => {
     const L = SHORTS.leg;
+    const lf = shin ? rig.shin[i] : rig.thigh[i];
     const g = legShape(shin, t);
     const r = g.rad * (1 - L.bendShrink * bend * (shin ? 1 : clamp01((t - L.top) / (1 - L.top)))) + grow;
     const kf = 1 + (L.kf - 1) * (1 - bend);
-    return limbAt(lf, t, Math.cos(th) * r * kf + g.back * (1 - bend), Math.sin(th) * r * L.ko + g.off);
+    const front = Math.cos(th) * r * kf + g.back * (1 - bend);
+    const side = Math.sin(th) * r * L.ko + g.off;
+    const point = limbAt(lf, t, front, side);
+    if (shin || t >= 0.34) return point;
+    // O começo da perna é costurado no quadril. Se girasse inteiro com a coxa, a borda de cima empurrava o pano para trás.
+    const hip = add(rig.hip[i], dirIn(rig.pelvis, (i === 0 ? -1 : 1) * side, front, -t * lf.len));
+    return M.lerp3(hip, point, smoothstep(L.top, 0.34, t));
   };
   /** Anel de esferinhas em volta da perna da bermuda (o casco de dois anéis é um pedaço da perna). */
-  const legRing = (R, lf, shin, t, bend, n = 10, r = 0.9) => {
+  const legRing = (R, rig, i, shin, t, bend) => {
+    const n = 10;
     const out = [];
-    for (let k = 0; k < n; k++) out.push(R.circle(legAt(lf, shin, t, (k / n) * M.TAU, 0, bend), r));
+    for (let k = 0; k < n; k++) out.push(R.circle(legAt(rig, i, shin, t, (k / n) * M.TAU, 0, bend), 0.9));
     return out;
   };
   const pelvisRing = (pv, g, phi, grow = 0, dz = 0) => at(pv, (g.rx + grow) * Math.sin(phi), g.cy + (g.ry + grow) * Math.cos(phi), g.z + dz);
+  /** A parte de baixo do assento entra sob o quadril conforme as coxas se afastam na passada. */
+  function shortsSeatPoint(rig, ring, phi, grow = 0) {
+    const pv = rig.pelvis;
+    const point = pelvisRing(pv, ring, phi, grow);
+    const rear = Math.max(0, -Math.cos(phi));
+    const depth = clamp01((SHORTS.hip.z - ring.z) / (SHORTS.hip.z - SHORTS.low.z));
+    const k = rear * depth;
+    if (!k) return point;
+    const spread = clamp01(Math.abs(dot(rig.thigh[0].a, pv.f) - dot(rig.thigh[1].a, pv.f)));
+    return add(point, dirIn(pv, 0, (3.5 + 2.4 * spread) * k, (4.2 + 2.8 * spread) * k));
+  }
   /** O anel da bermuda numa altura z da pelve (entre a cintura, o quadril e o fundo). */
   const shortsRingAt = (zz) => {
     const G = SHORTS;
@@ -2084,22 +2108,24 @@
         const th = rig.thigh[i], sh = rig.shin[i];
         const L = G.leg;
         const bend = legBend(rig, i);
-        const top = legRing(R, th, false, L.top, bend);
-        const knee = legRing(R, th, false, 1, bend);
-        const hem = legRing(R, sh, true, L.hem, bend);
+        const top = legRing(R, rig, i, false, L.top, bend);
+        // O pano acompanha a pele entre a costura do quadril e a perna, inclusive quando ela se dobra.
+        const upperThigh = SHORTS_THIGH.map((p) => R.circle(limbAt(th, p.t, p.f, p.o), p.r + 0.65));
+        const knee = legRing(R, rig, i, false, 1, bend);
+        const hem = legRing(R, rig, i, true, L.hem, bend);
         const host = hostOf('coxa', 'perna' + i);
         // o bolso cargo: uma caixa de pano por fora da coxa. Era uma peça à parte, desenhada só do lado que a câmera via —
         // com a perna girando ela aparecia e sumia de uma vez (o "pulo" do bolso). Agora os cantos dela entram no casco da
         // perna (o volume dela está sempre no contorno) e a aba e as costuras são pintadas na perna, sumindo aos poucos
         // quando o lado dela vira para longe (`cargoPocket`)
         const P = SHORTS.pocket;
-        const corner = (t, a) => R.circle(legAt(th, false, t, a, P.out, bend), 1.25);
+        const corner = (t, a) => R.circle(legAt(rig, i, false, t, a, P.out, bend), 1.25);
         const pocket = [corner(P.t0, P.c - P.w), corner(P.t0, P.c), corner(P.t0, P.c + P.w), corner(P.t1, P.c + P.w), corner(P.t1, P.c), corner(P.t1, P.c - P.w)];
         let segs;
         if (dot(th.a, sh.a) > 0.94) {
-          segs = [{ poly: R.hull(top.concat(knee, hem, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); shortsLeg(R, rig, i, 'barra'); } }];
+          segs = [{ poly: R.hull(top.concat(upperThigh, knee, hem, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); shortsLeg(R, rig, i, 'barra'); } }];
         } else {
-          const upper = { poly: R.hull(top.concat(knee, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); } };
+          const upper = { poly: R.hull(top.concat(upperThigh, knee, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); } };
           const lower = { poly: R.hull(knee.concat(hem)), circles: R._last, mat: PAL.denim, k: 0.26, noInner: true, decal: () => shortsLeg(R, rig, i, 'barra') };
           segs = [upper, lower];
         }
@@ -2116,7 +2142,7 @@
         for (let k = 0; k < n; k++) {
           const phi = (k / n) * M.TAU;
           if (near && R.facing(shortsNormal(pv, phi, g.z)) < -0.12) continue;
-          cs.push(R.circle(pelvisRing(pv, g, phi), 1));
+          cs.push(R.circle(shortsSeatPoint(rig, g, phi), 1));
         }
         return cs;
       };
@@ -2214,7 +2240,7 @@
       const tc = facingAngle(R, th);
       if (Math.cos(seam - tc) > 0.05) {
         const pts = [];
-        for (let k = 0; k <= 8; k++) pts.push(R.P(legAt(th, false, L.top + (1 - L.top) * (k / 8), seam, 0.15, bend)));
+        for (let k = 0; k <= 8; k++) pts.push(R.P(legAt(rig, i, false, L.top + (1 - L.top) * (k / 8), seam, 0.15, bend)));
         strokeRuns(R, [pts], PAL.stitch, 0.24, 0.9);
       }
       // a coroa estampada na perna direita, na frente, na parte de baixo da coxa
@@ -2223,7 +2249,7 @@
         if (Math.cos(c - tc) > 0.12) {
           const path = new Path2D();
           CROWN.forEach(([u, v], k) => {
-            const q = R.P(legAt(th, false, tcen - v * h, c + u * w, 0.25, bend));
+            const q = R.P(legAt(rig, i, false, tcen - v * h, c + u * w, 0.25, bend));
             if (k) path.lineTo(q.x, q.y);
             else path.moveTo(q.x, q.y);
           });
@@ -2241,8 +2267,8 @@
     }
     // a parte de baixo: a costura continua até a barra, e dois pespontos laranja em volta dela
     const tc = facingAngle(R, sh);
-    if (Math.cos(seam - tc) > 0.05) strokeRuns(R, [[R.P(legAt(sh, true, 0, seam, 0.15, bend)), R.P(legAt(sh, true, L.hem, seam, 0.2, bend))]], PAL.stitch, 0.24, 0.9);
-    for (const dt of [0.04, 0.075]) strokeRuns(R, arcRuns(R, sh, L.hem - dt, 0, 0, M.TAU, 0, 30, (a) => legAt(sh, true, L.hem - dt, a, 0.2, bend)), PAL.stitch, 0.22, 0.95);
+    if (Math.cos(seam - tc) > 0.05) strokeRuns(R, [[R.P(legAt(rig, i, true, 0, seam, 0.15, bend)), R.P(legAt(rig, i, true, L.hem, seam, 0.2, bend))]], PAL.stitch, 0.24, 0.9);
+    for (const dt of [0.04, 0.075]) strokeRuns(R, arcRuns(R, sh, L.hem - dt, 0, 0, M.TAU, 0, 30, (a) => legAt(rig, i, true, L.hem - dt, a, 0.2, bend)), PAL.stitch, 0.22, 0.95);
   }
 
   /** O bolso cargo (em cima da caixa dele): a aba com a linha, o pesponto laranja e os dois rebites. */
@@ -2255,7 +2281,7 @@
     const bend = legBend(rig, i);
     const vis = smoothstep(-0.25, 0.2, Math.cos(P.c - facingAngle(R, th)));
     if (vis <= 0.01) return;
-    const pt = (t, a) => R.P(legAt(th, false, t, a, P.out + 1.3, bend));
+    const pt = (t, a) => R.P(legAt(rig, i, false, t, a, P.out + 1.3, bend));
     const row = (t, inset = 0, n = 6) => { const q = []; for (let k = 0; k <= n; k++) q.push(pt(t, P.c - P.w + inset + ((P.w - inset) * 2 * k) / n)); return q; };
     const flap = P.t0 + (P.t1 - P.t0) * 0.34;
     // a aba: mais clara, com a linha escura embaixo
@@ -2333,7 +2359,7 @@
     for (const sx of [-1, 1]) {
       const c = Math.PI + sx * 0.6;
       if (R.facing(shortsNormal(pv, c, -2)) < 0.12) continue;
-      const pt = (dphi, zz) => R.P(shortsAt(pv, c + dphi, zz, 0.7));
+      const pt = (dphi, zz) => R.P(shortsSeatPoint(rig, shortsRingAt(zz), c + dphi, 0.7));
       const pts = [pt(-0.34, 3.6), pt(0.34, 3.6), pt(0.34, -5.4), pt(0, -7.6), pt(-0.34, -5.4)];
       const path = new Path2D();
       pts.forEach((q, k) => (k ? path.lineTo(q.x, q.y) : path.moveTo(q.x, q.y)));
@@ -2851,9 +2877,8 @@
   }
 
   /** A sunga das fichas também cobre a base da pelve por baixo da bermuda durante a passada. */
-  function pelvisDetail(R, seg, rig, look) {
-    const off = look.semPecas || {};
-    const waistZ = off.bermuda || R.equipped?.pernas ? 6.6 : SHORTS.mid.z;
+  function pelvisDetail(R, seg, rig) {
+    const waistZ = 6.6;
     const ctx = R.ctx;
     ctx.fillStyle = R.pal.denim.base;
     ctx.fillRect(-1e5, -1e5, 2e5, 2e5);

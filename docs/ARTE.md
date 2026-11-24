@@ -4,6 +4,13 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Birim de frente, de lado e de costas (24/11)
+
+- **Barba de frente.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` traz a emenda entre bigode e bochecha para a superfície do rosto e cobre a borda da mandíbula nos dois lados. `MODEL.NECK` afina o alto do pescoço sob a barba para reduzir a faixa de pele que aparecia ao lado do rosto.
+- **Corrente no trapézio.** No mesmo arquivo, `NECK_TRACE` usa pontos mais próximos ao redor da base do pescoço. `chain` desenha os trechos visíveis como uma volta contínua e usa as esferas do pescoço para esconder o lado de trás à medida que o Birim gira.
+- **Bermuda andando de lado e de costas.** `legAt` prende a abertura de cada perna ao quadril e passa a acompanhar a coxa ao longo do tecido. `shortsSeatPoint` recolhe a barra traseira do quadril conforme a passada abre e move os bolsos junto com o tecido. `SHORTS_THIGH` e `pelvisDetail` dão cobertura por baixo da emenda nas poses abertas.
+- **Conferência.** Comparei o rosto de frente e nos ângulos próximos, a corrente parada e em movimento e a bermuda andando em perfil e de costas. Em Chromium de desktop e celular simulado, conferi movimento, HUD e mochila. `npm run build` passou, e `npm run check` passou com 684 testes.
+
 ## Refino da barba e da bermuda do Birim no mapa (24/11)
 
 - [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` e `beardStrands`. A faixa do bigode acompanha os cantos da boca, e o volume abaixo do lábio fecha as frestas claras. Os lados da barba sobem em direção à mandíbula, com fios mais curtos junto à nova borda.
