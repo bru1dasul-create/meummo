@@ -105,6 +105,35 @@ describe('A Caverna Sagrada por dentro (o mapa caverna)', () => {
     expect(cenario.filter((o) => o.type === 'estante-potes').length).toBeGreaterThanOrEqual(2);
   });
 
+  it('a toca é a arena da luta com a Cuca: chão largo para desviar, estalagmites para se esconder e a área dela pronta', () => {
+    // o chão que se alcança dentro da toca (a área "Toca da Cuca"): largo e comprido o bastante para desviar dos golpes
+    const lair = named('areas', 'Toca da Cuca');
+    const [x0, x1, y0, y1] = [lair.x / M, (lair.x + lair.width) / M, lair.y / M, (lair.y + lair.height) / M];
+    let [cells, minX, maxX, minY, maxY] = [0, Infinity, -Infinity, Infinity, -Infinity];
+    for (let j = Math.ceil(y0 / STEP); j <= Math.floor(y1 / STEP); j++) {
+      for (let i = Math.ceil(x0 / STEP); i <= Math.floor(x1 / STEP); i++) {
+        if (seen[j * COLS + i] !== 1) continue;
+        cells++;
+        [minX, maxX, minY, maxY] = [Math.min(minX, i * STEP), Math.max(maxX, i * STEP), Math.min(minY, j * STEP), Math.max(maxY, j * STEP)];
+      }
+    }
+    expect(cells * STEP * STEP, 'm² de chão na toca').toBeGreaterThan(170);
+    expect(maxX - minX).toBeGreaterThanOrEqual(18);
+    expect(maxY - minY).toBeGreaterThanOrEqual(11);
+    const cuca = at(named('pontos', 'toca-da-cuca'));
+    expect(cuca.x > x0 && cuca.x < x1 && cuca.y > y0 && cuca.y < y1).toBe(true);
+    // as estalagmites da toca (fora o caldeirão, as estantes e os barris)
+    expect(layer('cenario').filter((o) => o.type === 'rocha' && at(o).x > x0 && at(o).x < x1 && at(o).y > y0 && at(o).y < y1 && Number(prop(o, 'raio')) <= 0.6).length).toBeGreaterThanOrEqual(2);
+    // a área da luta entra quando a chave `cuca` existir em data/monsters.json (o jeito dela é da [estrutura])
+    const monsters = JSON.parse(readFileSync('data/monsters.json', 'utf8')) as Record<string, unknown>;
+    const zone = layer('monstros').find((o) => o.name === 'cuca');
+    if ('cuca' in monsters) {
+      expect(zone, 'a área da Cuca na camada monstros').toBeDefined();
+      expect(prop(zone!, 'quantidade')).toBe(1);
+      expect(cuca.x > zone!.x / M && cuca.x < (zone!.x + zone!.width) / M && cuca.y > zone!.y / M && cuca.y < (zone!.y + zone!.height) / M).toBe(true);
+    } else expect(zone).toBeUndefined();
+  });
+
   it('é escura por dentro (mais clara na entrada, a toca a mais escura), com o que brilha: o poço, as raízes e os cogumelos', () => {
     const areas = layer('areas');
     const dark = (name: string) => Number(prop(named('areas', name), 'escuro'));

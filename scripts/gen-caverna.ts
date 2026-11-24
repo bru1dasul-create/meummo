@@ -13,12 +13,14 @@
 //
 // uso: npm run gen:caverna -- --out arquivo.tmj  (o mapa de verdade não é sobrescrito sem --force)
 
+import { readFileSync } from 'node:fs';
 import { mulberry32 } from './pixels';
 import { writeMapImage } from './mapa-de-cima';
 import { area, blob, block, box, checkWedges, dist, distToPath, ellipse, inside, outputPath, point, rect, round, smooth, waterStrips, writeTmj, type Pt, type Rect, type Shape } from './iso-map';
 
 const OUT = outputPath('public/assets/maps-iso/caverna.tmj', 'gen:caverna');
-const W = 60;
+/** (24/11: 60 → 66 m, para a toca virar a arena da luta com a Cuca — o mapa cresce só para a direita) */
+const W = 66;
 const H = 54;
 const SEED = 20261124;
 /** Duas coisas sólidas de frente uma para a outra ficam coladas ou a pelo menos isto (num vão menor o pé entala). */
@@ -33,8 +35,8 @@ const HALL = blob(28, 25, 12.5, 8.5, 0.1);
 /** A passagem do nordeste, do salão até a toca. */
 const PASSAGE = smooth([[36.5, 20.5], [41, 17.5], [44, 14.5]], 1);
 const PASSAGE_W = 3.4;
-/** A Toca da Cuca. */
-const LAIR = blob(47, 10.5, 8.5, 5.6, 0.12);
+/** A Toca da Cuca (24/11, maior: a arena da luta com a Cuca, uns 22 × 14 m de chão). */
+const LAIR = blob(49.5, 11.2, 11, 7, 0.12);
 /** O poço da luz, no leste do salão (não dá para entrar). */
 const POOL = blob(35.2, 26.4, 3.2, 2.3, 0.1);
 /** A chegada de fora (e onde acorda quem desmaia aqui dentro) e a saída de volta, na ponta sul do túnel. */
@@ -181,12 +183,18 @@ for (const [x0, x1] of [[42.6, 44.8], [49.6, 51.8]] as const) {
   solidBlock(box('estante', r, { altura: 1.8 }));
 }
 // os barris e o caixote, colados (um do lado do outro)
-for (const [x0, y0, t] of [[51.2, 12.2, 'barril'], [51.2, 12.8, 'barril'], [51.8, 12.2, 'caixote']] as const) {
+for (const [x0, y0, t] of [[56.8, 12.6, 'barril'], [56.8, 13.2, 'barril'], [57.4, 12.6, 'caixote']] as const) {
   const r: Rect = { x0, x1: round(x0 + 0.6), y0, y1: round(y0 + 0.6) };
   cenario.push(box(t, r, { altura: t === 'barril' ? 0.9 : 0.5 }));
   solidBlock(box(t, r, { bloqueiaTiro: false, altura: t === 'barril' ? 0.9 : 0.5 }));
 }
-for (const [x, y] of [[41.4, 12.2], [43.2, 15], [50.6, 14.6], [53.4, 9.2], [46, 7.6]] as const) cenario.push(point('planta', x, y, { tipo: 'cogumelo', brilho: '#b36bff', raio: 0.35 }));
+for (const [x, y] of [[41.4, 12.2], [43.2, 15], [50.6, 14.6], [53.4, 9.2], [46, 7.6], [56.2, 8.4], [55.4, 16]] as const) cenario.push(point('planta', x, y, { tipo: 'cogumelo', brilho: '#b36bff', raio: 0.35 }));
+// duas estalagmites na toca: o lugar de se esconder dos frascos da Cuca na luta
+for (const [tx, ty, h] of [[53.2, 13.6, 2], [41.8, 8.6, 1.7]] as const) {
+  const [x, y] = clearSpot(tx, ty, 2.1, 1.6);
+  cenario.push(point('rocha', x, y, { raio: 0.5, altura: h, musgo: false, escura: true }));
+  solidBlock(block('pedra', x, y, round(0.5 * 1.5)));
+}
 
 // (as plantas de enfeite ficam no chão de dentro)
 for (const o of cenario) if (o.type === 'planta' && !walkable(o.x, o.y)) throw new Error(`O cogumelo em (${o.x}, ${o.y}) ficou fora do chão.`);
@@ -245,11 +253,16 @@ checkWedges(colisao, MIN_GAP);
 areas.push(rect('area', 0, W, 0, H, { escuro: 0.72, neblina: 0.12 }, 'Caverna Sagrada'));
 areas.push(rect('area', 22, 38, 41, H, { escuro: 0.4, neblina: 0.08 }, 'Entrada da Caverna'));
 areas.push(rect('area', 13, 42, 14, 36, { escuro: 0.6, neblina: 0.12 }, 'Salão das Inscrições'));
-areas.push(rect('area', 37, 58, 2, 18, { escuro: 0.82, neblina: 0.25 }, 'Toca da Cuca'));
+areas.push(rect('area', 37, 63, 2, 20, { escuro: 0.82, neblina: 0.25 }, 'Toca da Cuca'));
 pontos.push(point('ponto', ARRIVAL.x, ARRIVAL.y, undefined, 'spawn'));
 pontos.push(point('ponto', ARRIVAL.x, ARRIVAL.y, undefined, 'chegada-guarapiranga'));
 pontos.push(point('ponto', CUCA.x, CUCA.y, undefined, 'toca-da-cuca'));
 saidas.push(box('saida', EXIT, { mapa: 'guarapiranga', chegada: 'chegada-caverna' }, 'Guarapiranga'));
+// a luta com a Cuca (24/11, o dono: "pode fazer a Cuca virar chefe de luta"): a área dela é a toca inteira, com uma só
+// (o jeito da luta é da [estrutura], em data/monsters.json; a área só entra no mapa quando a chave `cuca` existir lá)
+const monstros: Shape[] = [];
+const MONSTER_KEYS = new Set(Object.keys(JSON.parse(readFileSync('data/monsters.json', 'utf8')) as Record<string, unknown>));
+if (MONSTER_KEYS.has('cuca')) monstros.push(rect('area', 38, 61, 4, 18.5, { quantidade: 1 }, 'cuca'));
 if (!walkable(ARRIVAL.x, ARRIVAL.y) || !walkable(CUCA.x, CUCA.y) || keepOut(CUCA.x, CUCA.y, 0.6)) throw new Error('A chegada ou o lugar da Cuca não ficam no chão livre.');
 
 writeTmj(
@@ -263,6 +276,7 @@ writeTmj(
     ['areas', areas],
     ['pontos', pontos],
     ['saidas', saidas],
+    ['monstros', monstros],
   ],
   { nome: 'Caverna Sagrada', seguro: false },
 );
