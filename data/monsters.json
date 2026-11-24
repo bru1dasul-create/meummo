@@ -398,5 +398,43 @@
       { "item": "garrafada", "chance": 5 },
       { "item": "jurubeba", "chance": 25 }
     ]
+  },
+  "cuca": {
+    "nome": "Cuca",
+    "nivel": 6,
+    "vida": 300,
+    "xp": 150,
+    "ouro": [25, 40],
+    "passoMs": 420,
+    "agressivo": true,
+    "alcanceAgressao": 6,
+    "perseguicao": 10,
+    "renascerMs": 300000,
+    "soNoite": true,
+    "ataque": {
+      "tipo": "projetil",
+      "alcance": 6,
+      "distanciaMinima": 2,
+      "preparoMs": 600,
+      "intervaloMs": 1600,
+      "dano": [10, 15],
+      "velocidade": 8,
+      "projetil": "caldo",
+      "poca": { "duracaoMs": 2500, "dano": [3, 5], "raio": 1 }
+    },
+    "canto": {
+      "efeito": "sono",
+      "cadaMs": 12000,
+      "alcance": 5,
+      "preparoMs": 1500,
+      "duracaoMs": 2500,
+      "falas": ["Nana, nenê...", "Dorme, desperto... que a Cuca vem pegar...", "Hehehe... fecha o olhinho..."]
+    },
+    "itens": [
+      { "item": "garrafada_cuca", "chance": 50 },
+      { "item": "jurubeba", "chance": 60, "quantidade": [1, 2] },
+      { "item": "garrafada_grande", "chance": 30 },
+      { "item": "patua_cuca", "chance": 15 }
+    ]
   }
 }

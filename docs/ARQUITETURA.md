@@ -429,6 +429,17 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 - A fruta de cada um (`ataque.projetil`: `fruta_podre`, `fruta_dourada`) tem cor e brilho próprios no navegador
   (`SHOT_BALLS`, `combat.ts`).
 
+## A Cuca chefe (`world.ts`: `putToSleep`, `wake`, `spillPuddle`, `npcPresent`)
+- **A cantiga de ninar:** é o canto (`MonsterSong`) com `effect: 'sleep'` (no arquivo, `"efeito": "sono"`). No fim do
+  aviso, quem ficou na área (e não estava esquivando) dorme: `Player.asleepUntil`, a mensagem `sleep` (id, ms) para
+  quem vê. Dormindo, a caminhada e a esquiva são recusadas (com ack), e o tiro, as habilidades, puxar, defender e pular
+  também. Qualquer golpe acorda (`damage` chama `wake`), e o tempo acabando também (`sleep` com ms 0).
+- **A poça:** o ataque que voa com `puddle` (`"poca"`) leva a poça no tiro; onde ele acaba (no alvo ou no chão),
+  `spillPuddle` cria um `Hazard` com `look` (o tipo do tiro, `caldo`) nas casas em cruz e manda `fire` com `k` para
+  quem viu o tiro. A poça nova tira as casas dela das poças antigas do mesmo dono (não somam).
+- **De dia a bruxa:** NPC com `dayOnly` (`"soDeDia"`) some de noite: sai da lista (`npcList`), os pedidos com ele são
+  recusados (`presentNpc`) e, quando o dia vira, todo mundo recebe a lista nova (`npcs`).
+
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
   itens e `depoisDe` existem, sem sequência em círculo; `nameQuestGoals` põe o nome do alvo) e vão inteiras no
@@ -510,6 +521,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `bye` | sua sessão acabou: entrou com o personagem em outro lugar, o servidor está desligando, ou o administrador desconectou |
 | servidor | `spawn` / `despawn` | alguém (jogador ou monstro) entrou / saiu da sua área de visão |
 | servidor | `move` | alguém que você vê andou, virou ou rolou |
+| servidor | `sleep` | alguém dormiu (a cantiga da Cuca) por `ms` (0 = acordou): não anda nem atira |
 | servidor | `perch` | o monstro subiu no galho (`p` = `{ h, a }`: a altura e a direção do galho) ou pulou para o chão (`p` null) |
 | servidor | `ack` / `teleport` | sua posição oficial (exata) depois do pedido `seq` / você foi levado para outro lugar no mesmo mapa |
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |

@@ -62,5 +62,15 @@
     "concluida": "Que raiz boa, bem amarga! Toma, prova do meu caldo. E volta sempre, viu? A Cuca adora uma visita... hehehe.",
     "objetivo": { "tipo": "entregar", "item": "jurubeba", "quantidade": 2 },
     "recompensa": { "xp": 80, "itens": [{ "item": "garrafada_cuca", "quantidade": 1 }] }
+  },
+  "a_cantiga_da_cuca": {
+    "nome": "A Cantiga da Cuca",
+    "quemDa": "cuca",
+    "depoisDe": "o_caldeirao_da_cuca",
+    "nivelMinimo": 5,
+    "pedido": "Hehehe... Você é corajoso, desperto. Mas de dia a Cuca é boazinha. Volte de noite, quando todo mundo dorme... se tiver coragem.",
+    "concluida": "Hehehe... Me venceu, desperto. Desta vez. Toma o meu patuá: quem enfrenta a Cuca merece proteção.",
+    "objetivo": { "tipo": "derrotar", "monstro": "cuca", "quantidade": 1, "rotulo": "Derrotar a Cuca na toca, de noite" },
+    "recompensa": { "xp": 200, "ouro": 50, "itens": [{ "item": "patua_cuca", "quantidade": 1 }] }
   }
 }

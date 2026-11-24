@@ -352,6 +352,8 @@ class NewWorld implements NewWorldGame {
   private readonly fpsMeter = new URLSearchParams(location.search).has('fps') ? new FpsMeter() : null;
   /** Conversa aberta (missão ou loja): com quem. A câmera vai até ele e volta quando fecha. */
   private conversationNpc: number | null = null;
+  /** Dormindo até aqui (a cantiga de ninar da Cuca): não anda, não esquiva nem atira (o servidor também recusa). */
+  private asleepUntil = 0;
   /** O zoom que a tela mostra agora (o escolhido pelo jogador fica em `zoom`; na conversa, chega mais perto). */
   private viewZoom = DEFAULT_ZOOM;
   private zoomAnim: { from: number; to: number; start: number } | null = null;
@@ -1070,7 +1072,7 @@ class NewWorld implements NewWorldGame {
   private handleMovement(now: number): void {
     const delta = this.walkAt > 0 ? Math.min(250, now - this.walkAt) : 0;
     this.walkAt = now;
-    if (this.dead) {
+    if (this.dead || this.asleep(now)) {
       this.walkCredit = WALK_SLICE_MS;
       return;
     }
@@ -1561,7 +1563,7 @@ class NewWorld implements NewWorldGame {
 
   /** Começa a puxar o estilingue: o servidor conta a carga pelo relógio dele, até o tiro. */
   private startCharge(aim: Aim, now: number): void {
-    if (this.dead || this.charging || this.guardHeld) return; // defendendo, as mãos estão ocupadas
+    if (this.dead || this.charging || this.guardHeld || this.asleep(now)) return; // defendendo, as mãos estão ocupadas
     if (this.rolling(now)) {
       this.chargeAfterRoll = aim; // rolando: puxa quando a rolada acabar (se o botão continuar apertado)
       return;
@@ -1748,7 +1750,7 @@ class NewWorld implements NewWorldGame {
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
   private quickShot(angle: number, now: number): void {
-    if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt || this.rolling(now)) return;
+    if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt || this.rolling(now) || this.asleep(now)) return;
     this.conn.send({ t: 'charge' }); // zera a carga no servidor: o toque rápido é uma pedra sem carga
     this.tryShoot(angle, now, 0, undefined);
   }
@@ -1858,7 +1860,7 @@ class NewWorld implements NewWorldGame {
 
   /** Segurou F ou o botão Defesa: levanta a defesa (e solta a pedra que estava puxando). */
   private startGuard(now: number): void {
-    if (this.dead || this.guardHeld) return;
+    if (this.dead || this.guardHeld || this.asleep(now)) return;
     this.cancelCharge();
     this.guardHeld = true;
     this.guardAngle = this.guardAim(now, true);
@@ -1921,6 +1923,11 @@ class NewWorld implements NewWorldGame {
   }
 
   /** O seu tile está entre estes ([x1, y1, x2, y2, ...])? */
+  /** Dormindo agora (a cantiga da Cuca)? */
+  private asleep(now: number): boolean {
+    return now < this.asleepUntil;
+  }
+
   /**
    * A tela da viagem (visual simples; a [arte] pode caprichar em `#trip-fade`): escurece de uma vez (esconde o pulo da
    * câmera até o destino), mostra para onde e clareia devagar.
@@ -1944,9 +1951,9 @@ class NewWorld implements NewWorldGame {
    * O aviso no chão (as casas de um golpe, ou o fogo): o desenho da [arte] pinta por baixo dos bichos (`view.warn`);
    * sem ele (a view provisória, ou antes de a [arte] juntar), os quadrados de sempre do combat.ts.
    */
-  private warnGround(tiles: number[], ms: number, now: number, fire = false): void {
-    if (this.view?.warn) this.view.warn(tiles, ms, fire ? { fire: true } : undefined);
-    else this.combat.warn(tiles, ms, now, fire);
+  private warnGround(tiles: number[], ms: number, now: number, fire = false, kind?: string): void {
+    if (this.view?.warn) this.view.warn(tiles, ms, fire ? { fire: true, ...(kind ? { kind } : {}) } : undefined);
+    else this.combat.warn(tiles, ms, now, fire, kind);
   }
 
   private onMyTile(tiles: number[]): boolean {
@@ -1996,7 +2003,7 @@ class NewWorld implements NewWorldGame {
 
   /** Atira na direção `angle` (radianos), com a carga (0 a 1): a pedra ou a flecha aparece na hora; o servidor decide. */
   private tryShoot(angle: number, now: number, charge: number, aimed: number | undefined): boolean {
-    if (this.dead || this.guardHeld || now < this.nextShotAt || this.rolling(now)) return false;
+    if (this.dead || this.guardHeld || now < this.nextShotAt || this.rolling(now) || this.asleep(now)) return false;
     if (this.refuseInSafeArea(now)) return false;
     const shot = this.shot();
     // um pouco mais que a recarga do servidor, para a variação da rede não fazer um tiro ser recusado
@@ -2110,7 +2117,7 @@ class NewWorld implements NewWorldGame {
 
   /** Esquiva: rola DASH_TILES metros (desliza no que tiver no caminho); some do golpe por um instante. */
   private tryDash(now: number): void {
-    if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_WALKS) return;
+    if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_WALKS || this.asleep(now)) return;
     if (now - this.jumpedAt < JUMP_AIR_MS) return; // no ar, não rola (o servidor também recusa)
     const degrees = this.dashDegrees();
     const result = sweepBody(this.map, this.predicted, degrees, DASH_TILES);
@@ -2159,7 +2166,7 @@ class NewWorld implements NewWorldGame {
   }
 
   private tryJump(now: number): void {
-    if (this.dead || this.guardHeld || this.charging || now < this.jumpReadyAt) return;
+    if (this.dead || this.guardHeld || this.charging || now < this.jumpReadyAt || this.asleep(now)) return;
     if (this.rolling(now)) return; // rolando, não pula (o servidor também recusa)
     this.jumpedAt = now;
     this.jumpReadyAt = now + JUMP_COOLDOWN_MS + 40;
@@ -2261,7 +2268,7 @@ class NewWorld implements NewWorldGame {
   /** Dá para usar esta habilidade agora? (Avisa o porquê, se não der.) */
   private castable(skill: ClassSkillInfo, now: number, calm = skill.kind === 'olhos'): boolean {
     const look = calm; // os Olhos de Gavião não atacam (e carregar a flecha no arco também não): valem defendendo e na área segura
-    if (this.dead || (this.guardHeld && !look)) return false;
+    if (this.dead || (this.guardHeld && !look) || this.asleep(now)) return false;
     if (now < (this.castReadyAt.get(skill.id) ?? 0)) {
       this.toast.show('Ainda recarregando...');
       return false;
@@ -2367,7 +2374,7 @@ class NewWorld implements NewWorldGame {
    * puxar, mais longe; cai e explode onde você mirar. A recarga só começa quando ela sai. O servidor confirma (`armed`).
    */
   private toggleArmed(skill: ClassSkillInfo, now: number): void {
-    if (this.dead) return;
+    if (this.dead || this.asleep(now)) return;
     if (this.armed === skill.id) {
       this.setArmed(null);
       this.conn.send({ t: 'cast', id: skill.id, x: 0, y: 0 });
@@ -2947,7 +2954,8 @@ class NewWorld implements NewWorldGame {
         break;
       }
       case 'fire':
-        this.warnGround(msg.tiles, msg.ms, gameNow(), true);
+        // o chão queimando: o rastro de fogo da investida ou a poça de caldo da Cuca (`k`)
+        this.warnGround(msg.tiles, msg.ms, gameNow(), true, msg.k);
         this.sfx.play('fire');
         break;
       case 'shot':
@@ -3035,6 +3043,22 @@ class NewWorld implements NewWorldGame {
           this.hud.setHp(msg.hp, this.myMaxHp);
           if (!msg.it) this.sfx.play('heal'); // a do consumível já tocou o gole (ou a mordida) no `consume`
         }
+        break;
+      }
+      case 'sleep': {
+        // a cantiga de ninar da Cuca: quem dormiu não anda nem atira por `ms` (levar golpe acorda; 0 = acordou)
+        if (msg.id === this.myId) {
+          const now = gameNow();
+          const was = this.asleep(now);
+          this.asleepUntil = msg.ms > 0 ? now + msg.ms : 0;
+          if (msg.ms > 0) {
+            this.cancelCharge();
+            this.stopGuard();
+            this.clearRoute();
+            this.toast.show('Você dormiu com a cantiga da Cuca! Um golpe te acorda.', 2200);
+          } else if (was) this.toast.show('Você acordou!', 1200);
+        }
+        this.view?.sleep?.(msg.id, msg.ms > 0);
         break;
       }
       case 'trip':

@@ -90,6 +90,8 @@ export class Player {
   invDirty = false;
   /** Encantado pelo canto (Iara): até quando, por quem, e quando é o próximo puxão. */
   charmedUntil = 0;
+  /** Dormindo até aqui (a cantiga de ninar da Cuca): não anda, não esquiva nem atira; levar golpe acorda. */
+  asleepUntil = 0;
   charmedBy: number | null = null;
   nextPullAt = 0;
   /** Para não repetir o aviso "você está encantado" a cada passo recusado. */
@@ -416,6 +418,8 @@ export interface Hazard {
   until: number;
   nextPulseAt: number;
   damage: [number, number];
+  /** O que é ('caldo': a poça da Cuca); sem = fogo (o rastro da investida). */
+  look?: string;
 }
 
 export interface Projectile extends ShotPath {
@@ -433,6 +437,8 @@ export interface Projectile extends ShotPath {
   swarms?: Map<number, boolean>;
   /** A Flecha Ancestral: atravessa os bichos (cada um uma vez), marca e, no fim, pode explodir. */
   pierce?: PierceShot;
+  /** O caldo da Cuca: onde ele cai (ou acerta alguém), fica uma poça que queima. */
+  puddle?: { durationMs: number; damage: [number, number]; radius: number };
 }
 
 /** O que a Flecha Ancestral leva: quem ela já atravessou, a largura, a marca e a explosão do fim (0 = não tem). */

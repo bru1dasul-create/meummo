@@ -99,6 +99,7 @@
     "y": 11.4,
     "fala": "Hehehe... Entra, desperto, entra. Não repara a bagunça, que o caldeirão nunca para. Veio buscar alguma coisa forte?",
     "loja": { "vende": ["frasco", "agua_mina"], "compraPor": 40 },
-    "receitas": ["garrafada_cuca"]
+    "receitas": ["garrafada_cuca"],
+    "soDeDia": true
   }
 }

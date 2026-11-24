@@ -26,6 +26,13 @@ alternativas quando vejo — sem concordar só para agradar.
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
 ## Onde estamos (24 de novembro de 2026) — leia isto primeiro
+- **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"):** pronta no meu ramo; entra na main **junto com a área `cuca`
+  do [mundo]** (o teste da caverna exige a área quando a chave existe). Peças novas: `MonsterSong.effect` (`'charm'`
+  da Iara, `'sleep'` da Cuca: `putToSleep`/`wake`, `Player.asleepUntil`, golpe acorda em `damage`, a caminhada e os
+  ataques recusados dormindo, a mensagem `sleep`), `MonsterAttack.puddle` (`spillPuddle` no fim do tiro: hazard com
+  `look`, sem somar no mesmo chão; a mensagem `fire` com `k`), `NpcDef.dayOnly` (`npcPresent`/`presentNpc`: de noite a
+  bruxa some da lista e dos pedidos; `nightTurned` manda a lista nova). No navegador: `asleepUntil` trava andar,
+  esquivar, atirar, defender e as habilidades; `view.sleep?`; a poça em `warnGround(..., kind)`; o caldo em `SHOT_BALLS`.
 - **A Cuca na toca (24/11, "faz a Cuca na toca"; o dono escolheu "bruxa e depois chefe"):** a Etapa 1 está na main:
   só dados (`cuca` em `npcs.json`, no ponto `toca-da-cuca`; `garrafada_cuca` em `items.json` e `receitas.json`; a missão
   `o_caldeirao_da_cuca`). O desenho é da [arte] (criatura `cuca`; até lá, o corpo de gente provisório). **Próximo:** a
@@ -148,7 +155,7 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 55 (`travel` e `trip`, a viagem de barco); `MIGRATIONS` até o passo 8 (`effects`: os
+- **Estado técnico:** `PROTOCOL_VERSION` 56 (`sleep` e o `k` do `fire`, a Cuca chefe); `MIGRATIONS` até o passo 8 (`effects`: os
   efeitos com tempo e quanto faltava, com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com
   676 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
