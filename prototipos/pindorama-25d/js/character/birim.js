@@ -855,12 +855,13 @@
         if (fa < (far ? farMin : minFacing)) return;
         (far ? (fa < backMin ? segsBack : segsFar) : segs).push({ poly: R.hull(list.map(([p, r]) => sphere(p, r))), circles: R._last, mat: PAL.hair, k, noInner: true, decal: curls ? (seg) => curlLines(R, seg) : undefined });
       };
-      // A base faz a borda de baixo em U. A cobertura da frente emenda no queixo abaixo do lábio.
-      piece([[[0, 10.0, -18.4], 2.5], [[-3.8, 9.4, -18.6], 2.2], [[3.8, 9.4, -18.6], 2.2], [[0, 12.0, -17.0], 2.7]], [0, 0.85, -0.5], -0.22, 0.24);
-      for (const sx of [-1, 1]) piece([[[sx * 3.8, 9.4, -18.6], 2.2], [[sx * 6.4, 8.4, -19.0], 1.9], [[sx * 4.6, 10.4, -16.6], 2.1]], [sx * 0.3, 0.85, -0.45], -0.2); // (emenda o queixo com os cantos de baixo)
+      // O centro conserva o volume da barba cheia. Os cantos sobem para a linha da mandíbula.
+      const chinCorner = (sx) => [[sx * 6.4, 8.4, -17.9], 1.9];
+      piece([[[0, 10.0, -18.4], 2.5], [[-3.8, 9.4, -18.25], 2.15], [[3.8, 9.4, -18.25], 2.15], [[0, 12.0, -17.0], 2.7]], [0, 0.85, -0.5], -0.22, 0.24);
+      for (const sx of [-1, 1]) piece([[[sx * 3.8, 9.4, -18.25], 2.15], chinCorner(sx), [[sx * 4.6, 10.4, -16.6], 2.1]], [sx * 0.3, 0.85, -0.45], -0.2);
       for (const sx of [-1, 1]) piece([[[sx * 3.3, 10.4, -15.5], 1.35]], [sx * 0.3, 0.85, -0.4], -0.2);
-      // O pedaço estreito embaixo do lábio deixava dois recortes claros que dominavam a barba no retrato pequeno.
-      piece([[[-2.8, 13.2, -14.7], 1.4], [[0, 14.1, -14.5], 1.4], [[2.8, 13.2, -14.7], 1.4], [[0, 12.2, -16.8], 2.0]], [0, 0.9, -0.3], -0.1);
+      // A barba acompanha a parte de baixo da boca, fechando as frestas de pele nos cantos do queixo.
+      piece([[[-3.2, 13.2, -14.0], 1.4], [[0, 14.1, -14.25], 1.4], [[3.2, 13.2, -14.0], 1.4], [[0, 12.2, -16.8], 2.0]], [0, 0.9, -0.3], -0.1, 0.14);
       // (de perfil, na referência, a barba cobre a frente do queixo logo abaixo do lábio: estes dois só entram com o lado deles
       // bem virado para a câmera — de frente a pele embaixo do lábio continua aparecendo, como o dono aprovou. Rodada 4)
       // (rodada 4b: com 0,78 eles entravam bem a 45° e tapavam a pele do queixo que a referência mostra de três quartos;
@@ -885,22 +886,24 @@
         // (rodada 4: com a orelha mais para trás, o canto começa embaixo dela e a borda de trás desce na diagonal até o fim da
         // barba, como na referência)
         piece([[[sx * 9.6, -1.6, -11.0], 1.0], [[sx * 8.8, -1.0, -13.2], 1.6], [[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 8.6, 1.2, -12.2], 1.2]], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx);
-        piece([[[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 5.6, 5.4, -18.6], 2.0], [[sx * 7.0, 7.6, -16.9], 2.2]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // (embaixo da mandíbula)
-        piece([[[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 7.0, 7.6, -16.9], 2.2], [[sx * 6.4, 8.4, -19.0], 1.9]], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx, -0.18, 0.35); // frente da mandíbula: desce reta da mandíbula até o canto de baixo (a barba é quadrada embaixo, como na referência)
-        // bigode (rodada 4: um tiquinho para trás — de perfil saía como um dedo) (da base do nariz até o canto da boca; o lábio
-        // de cima aparece embaixo dele)
-        const must = [[[sx * 0.6, 14.6, -9.0], 0.9], [[sx * 2.4, 14.05, -9.4], 0.85], [[sx * 4.2, 12.6, -10.9], 0.75]];
+        piece([[[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 5.6, 5.4, -17.8], 2.0], [[sx * 7.0, 7.6, -16.9], 2.2]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // embaixo da mandíbula
+        piece([[[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 7.0, 7.6, -16.9], 2.2], chinCorner(sx)], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx, -0.18, 0.35); // frente da mandíbula
+        // A faixa sob o nariz segue até o canto da boca. Mais baixa no meio, aparece inteira na câmera do jogo.
+        const must = [
+          [[sx * 0.55, 14.6, -9.7], 0.88], [[sx * 2.1, 14.05, -9.65], 0.90],
+          [[sx * 3.45, 13.4, -10.25], 0.84], [[sx * 4.2, 12.6, -10.9], 0.75],
+        ];
         if (sx * turned < -0.12) {
           // (do lado de lá, a ponta do bigode — no canto da boca, atrás dos lábios — vai na peça de lá, antes da boca; o resto
           // fica por cima. Numa peça só, de três quartos o bigode de lá cobria os lábios e o bigode virava uma bola. Rodada 4b)
-          piece(must.slice(0, 2), [sx * 0.3, 0.9, 0.1], 0.05);
-          piece(must.slice(1), [sx * 0.3, 0.9, 0.1], 0.05, 0, false, sx);
+          piece(must.slice(0, 3), [sx * 0.3, 0.9, 0.1], 0.05);
+          piece(must.slice(2), [sx * 0.3, 0.9, 0.1], 0.05, 0, false, sx);
         } else piece(must, [sx * 0.3, 0.9, 0.1], 0.05);
         // (de três quartos, do lado de cá, a pele do queixo — mais para a frente que os pedaços de barba em volta dela — saía
         // de baixo da barba como um triângulo do lado do queixo; este pedaço, na superfície do rosto, só entra com o lado
         // virado para a câmera, a partir de ~12°: de frente a pele embaixo do lábio continua a mesma. Rodada 4b)
         piece([[[sx * 4.3, 13.0, -13.7], 1.0], [[sx * 4.0, 12.7, -15.1], 1.15], [[sx * 4.9, 12.0, -14.6], 1.1]], [sx, 0.3, 0], 0.48, 0, false, sx);
-        piece([[[sx * 4.2, 12.6, -10.9], 0.75], [[sx * 5.3, 10.7, -13.8], 1.2]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35); // do canto do bigode até a barba do queixo (por fora do canto da boca)
+        piece([must[3], [[sx * 4.65, 11.9, -12.35], 0.90], [[sx * 5.3, 10.7, -13.8], 1.2]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35); // emenda ao lado da boca
         // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
         // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
         piece([[[sx * 8.6, 1.2, -12.2], 1.2], [[sx * 7.0, 7.0, -13.6], 1.5], [[sx * 5.6, 10.6, -13.2], 1.0], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 5.2, 10.8, -13.8], 1.25]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
@@ -1176,9 +1179,9 @@
     // (rodada 4: começa na costeleta nova, na frente da orelha que foi para trás)
     const CHEEK = [[10.2, -2.4, -7.8], [9.4, -0.6, -10.65], [8.6, 1.2, -11.0], [7.0, 7.0, -12.1], [5.6, 10.6, -12.2]];
     // a borda de baixo, do lado da mandíbula até o meio do queixo (os baixos das peças de baixo)
-    const BOTTOM = [[9.4, 7.0, -15.6], [9.2, 7.4, -18.0], [7.6, 8.2, -20.4], [5.2, 9.3, -20.8], [2.4, 10.0, -20.9], [0, 10.0, -20.95]];
+    const BOTTOM = [[9.4, 7.0, -15.6], [9.2, 7.4, -17.8], [7.6, 8.2, -19.55], [5.2, 9.3, -20.15], [2.4, 10.0, -20.8], [0, 10.0, -20.95]];
     // por baixo da mandíbula, do canto dela (atrás) até o queixo: a borda de baixo que aparece de perfil
-    const UNDER = [[8.7, -1.4, -14.3], [7.6, 1.8, -18.0], [5.6, 4.6, -20.8], [3.6, 7.4, -21.0]];
+    const UNDER = [[8.7, -1.4, -14.3], [7.6, 1.8, -17.6], [5.6, 4.6, -19.85], [3.6, 7.4, -20.4]];
     for (const sx of [-1, 1]) {
       along(CHEEK, 0.42, (p, i) => {
         // (mais curtos perto do bigode: ali a barba emenda limpa nele; compridos, de três quartos espetavam ao lado do nariz)
@@ -1199,13 +1202,13 @@
         piece([[base, 0.34], [tip, 0.07]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx, 0.45);
       });
       along(UNDER, 0.55, (p, i) => {
-        const len = 0.4 + 0.4 * rnd(i + 61);
+        const len = 0.32 + 0.3 * rnd(i + 61);
         const lean = (rnd(i + 73) - 0.5) * 0.5;
         piece([[[sx * p[0], p[1], p[2] + 0.4], 0.32], [[sx * (p[0] + lean * 0.3), p[1] - 0.2 + lean, p[2] - len], 0.07]], [sx * 0.6, 0.1, -0.8], 0.04, 0, false, sx);
       });
       along(BOTTOM, 0.55, (p, i) => {
         if (sx > 0 && p[0] === 0) return; // (o fio do meio, uma vez só)
-        const len = 0.45 + 0.4 * rnd(i + 31);
+        const len = 0.35 + 0.3 * rnd(i + 31);
         const lean = (rnd(i + 47) - 0.5) * 0.5;
         const side = p[0] > 8.5; // (nos lados, o fio aponta para fora; embaixo, para baixo)
         const base = [sx * (p[0] - (side ? 0.4 : 0)), p[1], p[2] + (side ? 0 : 0.4)];
@@ -1990,18 +1993,15 @@
   }
 
   // ------------------------------------------------------------------ bermuda cargo e relógio (presos ao corpo)
-  // a bermuda na pelve: a cintura baixa (um anel), o quadril largo e o fundo; e em cada perna um tubo que dobra no joelho
-  // (rodada 3, medido contra a ficha: a bermuda começa justa na cintura e no quadril e abre em "sino" na coxa de baixo;
-  // de perfil é mais funda e caída para trás — a perna dela é OVAL: `kf` estica de frente para trás, `ko` aperta dos
-  // lados e `back*` a puxa para trás; `kneeOff`/`hemOff` trazem o joelho e a barra para dentro, como na ficha)
+  // O gancho fecha mais alto junto ao quadril. O volume abaixo dele segue cada coxa, inclusive na passada aberta.
+  // A perna ainda abre até o joelho, com pouco recuo atrás e um corte oval (`kf` frente-trás, `ko` de lado).
   const SHORTS = {
     waist: { z: 10.2, rx: 12.6, ry: 10.9, cy: 0.9 },
     mid: { z: 3.5, rx: 14.6, ry: 13, cy: 0.2 },
     hip: { z: -3, rx: 15.2, ry: 13.4, cy: -0.4 },
-    low: { z: -20, rx: 9, ry: 11.8, cy: -0.6 },
+    low: { z: -15.5, rx: 9.5, ry: 11.8, cy: -0.6 },
     // a barra fica ~7 cm abaixo do joelho (0,18 da canela)
-    // (`back*`: o quanto a perna da bermuda vai para trás — 0 no alto, onde a coxa gira, e mais embaixo, onde o pano cai)
-    leg: { top: -0.16, topR: 8.4, off: -0.5, kneeR: 11.8, kneeOff: -1.2, hem: 0.18, hemR: 10.6, hemOff: -1, kf: 1.25, ko: 0.95, backTop: 0, backKnee: -5, backHem: -4, bendShrink: 0.3 },
+    leg: { top: -0.16, topR: 8.7, off: -0.5, kneeR: 10.1, kneeOff: -1.2, hem: 0.18, hemR: 9.1, hemOff: -1, kf: 1.16, ko: 0.95, backTop: 0, backKnee: -2.6, backHem: -2.3, bendShrink: 0.2 },
     pocket: { c: 1.28, w: 0.56, t0: 0.6, t1: 1.02, out: 1.5 }, // bolso cargo: no lado de fora da coxa, um pouco para a frente
   };
   /** O raio e o deslocamento para fora da perna da bermuda em t (na coxa: do alto ao joelho; na canela: do joelho à barra). */
@@ -2325,7 +2325,7 @@
       ctx.fill();
     }
     // braguilha: a costura do meio e o pesponto em curva
-    strokeRuns(R, shortsLine(R, pv, [[0, W - 3.4], [0, 0], [0, -8], [0, -17]], 0.7), PAL.denim.shade, 0.32, 0.9);
+    strokeRuns(R, shortsLine(R, pv, [[0, W - 3.4], [0, 0], [0, -7], [0, -12]], 0.7), PAL.denim.shade, 0.32, 0.9);
     strokeRuns(R, shortsLine(R, pv, [[0.17, W - 3.6], [0.2, 0.5], [0.15, -5], [0.03, -8.6]], 0.7), PAL.stitch, 0.2, 0.85);
     // bocas dos bolsos da frente (um arco laranja de cada lado)
     for (const sx of [-1, 1]) strokeRuns(R, shortsLine(R, pv, [[sx * 0.5, W - 3.4], [sx * 0.76, W - 5.4], [sx * 1.02, W - 9.4], [sx * 1.2, W - 14.5]], 0.7), PAL.stitch, 0.22, 0.9);
@@ -2850,10 +2850,10 @@
     ctx.stroke();
   }
 
-  /** Sem a bermuda (o corpo-base das fichas): uma sunga escura pintada na pelve. */
+  /** A sunga das fichas também cobre a base da pelve por baixo da bermuda durante a passada. */
   function pelvisDetail(R, seg, rig, look) {
     const off = look.semPecas || {};
-    if (!off.bermuda && !(R.equipped || {}).pernas) return; // com a bermuda por cima, não aparece
+    const waistZ = off.bermuda || R.equipped?.pernas ? 6.6 : SHORTS.mid.z;
     const ctx = R.ctx;
     ctx.fillStyle = R.pal.denim.base;
     ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
@@ -2862,15 +2862,10 @@
     const top = [];
     for (let k = 0; k <= 30; k++) {
       const phi = (k / 30) * M.TAU;
-      top.push(R.P(pelvisRing(pv, { z: 6.6, rx: 30, ry: 30, cy: 0 }, phi)));
+      top.push(R.P(pelvisRing(pv, { z: waistZ, rx: 30, ry: 30, cy: 0 }, phi)));
     }
     const up = R.P(at(pv, 0, 0, 60));
-    const c = R.P(at(pv, 0, 0, 6.6));
-    const band = new Path2D();
-    top.forEach((q, k) => (k ? band.lineTo(q.x, q.y) : band.moveTo(q.x, q.y)));
-    band.closePath();
-    const skin = new Path2D(band);
-    for (const q of top) skin.rect(q.x - 1, q.y - 1, 0, 0);
+    const c = R.P(at(pv, 0, 0, waistZ));
     // tudo o que fica acima do plano do elástico (o disco do elástico arrastado para cima)
     ctx.fillStyle = R.pal.skin.base;
     const sweep = new Path2D();
@@ -2885,7 +2880,6 @@
       sweep.closePath();
     }
     ctx.fill(sweep, 'nonzero');
-    void skin;
   }
 
   Object.assign(MODEL, { face, chestDetail, pelvisDetail, extras, limbDetail, wear, handLines, toeLines });

@@ -4,6 +4,12 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Refino da barba e da bermuda do Birim no mapa (24/11)
+
+- [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` e `beardStrands`. A faixa do bigode acompanha os cantos da boca, e o volume abaixo do lábio fecha as frestas claras. Os lados da barba sobem em direção à mandíbula, com fios mais curtos junto à nova borda.
+- No mesmo arquivo, `SHORTS` sobe a união das pernas em 4,5 cm no modelo, reduz o volume atrás do joelho e afunila os joelhos e as barras. `shortsTop` encurta a costura central, e `pelvisDetail` pinta a base do quadril na cor da bermuda quando a passada abre.
+- **Conferência.** Comparei a barba na câmera de 30° do mapa e em dois níveis de zoom. Conferi a bermuda em oito direções e em quadros de caminhada, corrida, mira de costas com arco, pulo e esquiva. Testei movimento, retrato e mochila no Chromium em desktop e celular simulado. `npm run check` passou com 659 testes e `npm run build` passou.
+
 ## Barba do Birim no retrato (24/11)
 
 - **O defeito.** No retrato pequeno, a vista de cima comprimia o nariz e o bigode e acentuava um recorte claro embaixo do lábio.
