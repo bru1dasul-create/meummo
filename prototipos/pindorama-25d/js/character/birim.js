@@ -93,7 +93,7 @@
     brow: { inner: [1.3, 0.9], outer: [8.9, 0.9], thick: 0 }, // (a sobrancelha em gota do motor fica desligada: a dele é a barra de `browBar`)
     // a sobrancelha (medida na referência): a ponta de dentro em x0, o pico em tPeak do caminho e a ponta fina em x1; zIn, zPeak e
     // zOut = a altura da linha do meio em cada um; w = a grossura
-    browBar: { x0: 1.5, x1: 8.9, tPeak: 0.7, zIn: 0.78, zPeak: 1.85, zOut: 0.65, w: 1.4 },
+    browBar: { x0: 1.5, x1: 8.9, tPeak: 0.7, zIn: 1.45, zPeak: 2.1, zOut: 1.6, w: 1.28 },
     mouth: { x: 3.8, z: -11.55 },
   };
   // boné (para trás): um ELIPSOIDE — mais comprido de frente para trás e mais alto que a cabeça, a copa estruturada de
@@ -444,8 +444,8 @@
 
   /**
    * A sobrancelha dele, como na referência: grossa, com a ponta de dentro reta e mais baixa, subindo até o pico (a uns
-   * 2/3 do caminho, por fora do olho) e caindo rápido até uma ponta fina do lado de fora. É uma forma cheia na superfície
-   * do rosto (antes era um traço reto de ponta redonda).
+   * 2/3 do caminho, por fora do olho) e caindo até uma ponta fina. A curva se apoia na profundidade do olho para manter
+   * a distância da pálpebra entre as esferas da testa e da órbita.
    */
   function browBar(R, head, sx, look) {
     const B = MODEL.HEAD.browBar;
@@ -462,6 +462,8 @@
     const N = 16;
     const top = [];
     const bot = [];
+    const E = MODEL.HEAD.eye;
+    const eyeDepth = faceY(E.x, E.z);
     for (let k = 0; k <= N; k++) {
       const t = k / N;
       const x = B.x0 + (x1 - B.x0) * t;
@@ -473,25 +475,16 @@
       const wIn = 1 - 0.25 * soft * (1 - smoothstep(0, 0.16, t));
       const w = B.w * wOut * wIn;
       const lift = raise * (0.6 + 0.4 * (1 - t));
-      const a = R._faceAt(head, sx * x, zc + lift + w / 2, 0.15);
-      const b = R._faceAt(head, sx * x, zc + lift - w / 2, 0.15);
+      const zTop = zc + lift + w / 2;
+      const zBot = zc + lift - w / 2;
+      const a = R._faceAt(head, sx * x, zTop);
+      const b = R._faceAt(head, sx * x, zBot);
       if (!a || !b || R.facing(a.n) < 0.06 || R.facing(b.n) < 0.06) continue;
-      top.push(R.P(a.pt));
-      bot.push(R.P(b.pt));
+      const y = eyeDepth - 0.02 * (x - E.x) ** 2;
+      top.push(R.P(at(head, sx * x, y, zTop)));
+      bot.push(R.P(at(head, sx * x, y, zBot)));
     }
     if (top.length < 2) return;
-    // Suaviza o degrau da superfície entre a testa e o arco da sobrancelha, inclusive de frente.
-    if (top.length > 2) {
-      const smoothing = M.lerp(0.55, 1, soft);
-      for (const L of [top, bot]) {
-        for (let pass = 0; pass < 3; pass++) {
-          const c = L.map((q) => ({ x: q.x, y: q.y }));
-          for (let i = 1; i < L.length - 1; i++) {
-            L[i] = { x: M.lerp(c[i].x, (c[i - 1].x + 2 * c[i].x + c[i + 1].x) / 4, smoothing), y: M.lerp(c[i].y, (c[i - 1].y + 2 * c[i].y + c[i + 1].y) / 4, smoothing) };
-          }
-        }
-      }
-    }
     const p = new Path2D();
     p.moveTo(top[0].x, top[0].y);
     for (const q of top) p.lineTo(q.x, q.y);

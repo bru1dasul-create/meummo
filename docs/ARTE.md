@@ -7,7 +7,7 @@
 ## Costeleta e sobrancelhas do Birim (24/11)
 
 - **Costeleta e bochecha.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` abaixa o encontro entre a barba e a bochecha. A tira da costeleta sobe aos poucos quando a cabeça vira de perfil. Os volumes do lado distante passam atrás do rosto mais cedo. `beardStrands` começa na mandíbula, abaixo da ponta escura que aparecia junto ao olho.
-- **Sobrancelhas.** `HEAD.browBar` abre mais espaço entre a sobrancelha e a pálpebra. `browBar` mantém o comprimento da sobrancelha no balanço de frente e encurta a do lado distante aos poucos. O alisamento acompanha a testa também de frente, onde a emenda entre as esferas da cabeça entortava o arco.
+- **Sobrancelhas.** `HEAD.browBar` abre mais espaço entre a sobrancelha e a pálpebra. `browBar` mantém o comprimento da sobrancelha no balanço de frente e encurta a do lado distante aos poucos. A curva parte da profundidade do olho, o que evita o degrau que a emenda entre as esferas da testa e da órbita deixava no arco.
 - **Conferência.** Comparei a versão anterior e a nova em dez ângulos, com a inclinação do mapa e a do retrato. Conferi o jogo em Chromium no desktop e no celular simulado, incluindo movimento, HUD e mochila. `npm run check` passou com 685 testes, e `npm run build` passou.
 
 ## Birim de frente, de lado e de costas (24/11)
