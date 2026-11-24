@@ -769,11 +769,15 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   - [ ] **[estrutura + arte]** Etapa 2, ela se revela e vira a luta (24/11, o dono: "pode fazer a Cuca virar chefe de
     luta")
     - [x] **[mundo]** a arena (na main): a toca maior (uns 22 × 14 m de chão; o mapa `caverna` foi a 66 m de largura),
-      duas estalagmites para se esconder e a área `cuca` (quantidade 1, a toca inteira), que entra no mapa quando a
-      chave `cuca` existir em `data/monsters.json`
-    - [x] **[estrutura]** a luta (aprovada pelo dono em 24/11: "pode fazer assim"; conferida no PC e no celular com
-      uma área de teste na toca; entra na main junto com a área do [mundo], porque o teste da caverna exige a área quando
-      a chave existe): de dia a bruxa (`"soDeDia"`: de noite ela some e ninguém negocia com ela); de noite, a chefe
+      duas estalagmites para se esconder e a área `cuca` (quantidade 1), que entra no mapa quando a chave `cuca` existir
+      em `data/monsters.json`
+    - [x] **[mundo]** a área da Cuca chefe no mapa (24/11, o dono: "gera o mapa de novo com a Cuca chefe"; na main junto
+      com a luta da [estrutura]; conferida no PC e no celular, de dia e de noite): a área `cuca` fica no fundo da toca,
+      do caldeirão para trás (x 47 a 58 × y 5 a 12). Da boca da toca, de noite, se vê a Cuca no caldeirão antes de ela
+      perceber quem chegou (ela percebe a 6 m); dois passos para dentro e a luta começa. O teste da caverna confere isso
+    - [x] **[estrutura]** a luta (aprovada pelo dono em 24/11: "pode fazer assim"; na main, conferida no PC e no
+      celular com a área do [mundo]: a chefe nasce no fundo da toca, não vê quem está na boca e, chegando perto, vêm o
+      caldo com as poças e a cantiga com o sono): de dia a bruxa (`"soDeDia"`: de noite ela some e ninguém negocia com ela); de noite, a chefe
       `cuca` (nível 6, 300 de vida, só de noite, volta em 5 min; 150 de XP, 25–40 de ouro). **O caldo** (`caldo`, 10–15
       a até 6 m, a cada 1,6 s) deixa **a poça** (`"poca"`: 3–5 a cada meio segundo por 2,5 s, em cruz; a nova toma o
       lugar da antiga no mesmo chão). **A cantiga de ninar** (`"efeito": "sono"`: a cada 12 s, até 5 m, 1,5 s de aviso):

@@ -130,7 +130,27 @@ describe('A Caverna Sagrada por dentro (o mapa caverna)', () => {
     if ('cuca' in monsters) {
       expect(zone, 'a área da Cuca na camada monstros').toBeDefined();
       expect(prop(zone!, 'quantidade')).toBe(1);
-      expect(cuca.x > zone!.x / M && cuca.x < (zone!.x + zone!.width) / M && cuca.y > zone!.y / M && cuca.y < (zone!.y + zone!.height) / M).toBe(true);
+      // ela nasce e anda no fundo da toca, do caldeirão para trás; o meio da área, para onde volta quando desiste, é chão livre
+      const area = game.monsterZones.find((z) => z.monster === 'cuca')!;
+      const pot = at(named('cenario', 'Caldeirão da Cuca'));
+      expect(area.x >= x0 && area.x + area.w <= x1 && area.y >= y0 && area.y + area.h <= y1, 'a área fica dentro da toca').toBe(true);
+      expect(pot.x > area.x && pot.x < area.x + area.w && pot.y > area.y && pot.y < area.y + area.h, 'o caldeirão dentro da área').toBe(true);
+      const home = { x: area.x + (area.w >> 1), y: area.y + (area.h >> 1) };
+      expect(game.isWalkable(home.x, home.y) && game.isReachable(home.x, home.y), `o meio da área (${home.x}, ${home.y})`).toBe(true);
+      // da boca da toca (onde o corredor do salão desemboca) se vê a Cuca antes de ela perceber quem chegou: nenhum chão
+      // da área dela fica no alcanceAgressao (em tiles, o maior dos dois lados). Se o alcance crescer, o [mundo] afasta a área.
+      const DOOR = { x: 41, y: 17 };
+      expect(reachNear(DOOR.x + 0.5, DOOR.y + 0.5, 0.3), 'a boca da toca').toBe(true);
+      const notice = Number((monsters.cuca as { alcanceAgressao?: number }).alcanceAgressao ?? 6);
+      let free = 0;
+      for (let y = area.y; y < area.y + area.h; y++) {
+        for (let x = area.x; x < area.x + area.w; x++) {
+          if (!game.isWalkable(x, y) || !game.isReachable(x, y)) continue;
+          free++;
+          expect(Math.max(Math.abs(x - DOOR.x), Math.abs(y - DOOR.y)), `chão (${x}, ${y}) da área perto da boca`).toBeGreaterThan(notice);
+        }
+      }
+      expect(free, 'chão para ela nascer e andar').toBeGreaterThanOrEqual(40);
     } else expect(zone).toBeUndefined();
   });
 
