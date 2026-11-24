@@ -4,6 +4,12 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## Costeleta e sobrancelhas do Birim (24/11)
+
+- **Costeleta e bochecha.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` abaixa o encontro entre a barba e a bochecha. A tira da costeleta sobe aos poucos quando a cabeça vira de perfil. Os volumes do lado distante passam atrás do rosto mais cedo. `beardStrands` começa na mandíbula, abaixo da ponta escura que aparecia junto ao olho.
+- **Sobrancelhas.** `HEAD.browBar` abre mais espaço entre a sobrancelha e a pálpebra. `browBar` mantém o comprimento da sobrancelha no balanço de frente e encurta a do lado distante aos poucos. O alisamento acompanha a testa também de frente, onde a emenda entre as esferas da cabeça entortava o arco.
+- **Conferência.** Comparei a versão anterior e a nova em dez ângulos, com a inclinação do mapa e a do retrato. Conferi o jogo em Chromium no desktop e no celular simulado, incluindo movimento, HUD e mochila. `npm run check` passou com 685 testes, e `npm run build` passou.
+
 ## Birim de frente, de lado e de costas (24/11)
 
 - **Barba de frente.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `extras` traz a emenda entre bigode e bochecha para a superfície do rosto e cobre a borda da mandíbula nos dois lados. `MODEL.NECK` afina o alto do pescoço sob a barba para reduzir a faixa de pele que aparecia ao lado do rosto.

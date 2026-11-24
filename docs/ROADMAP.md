@@ -54,6 +54,7 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** Barba do Birim no retrato (24/11, branch `codex/barba-birim`). A barba abaixo do lábio emenda no queixo e o retrato do HUD mostra o rosto menos de cima. [Arquivos e conferência](ARTE.md#barba-do-birim-no-retrato-2411)
 - [x] **[arte]** Refino do Birim em jogo (24/11). Bigode e queixo mais legíveis na câmera do mapa e bermuda com menos tecido pendendo entre as pernas na passada. [Arquivos e conferência](ARTE.md#refino-da-barba-e-da-bermuda-do-birim-no-mapa-2411)
 - [x] **[arte]** Acabamento do Birim nos ângulos pedidos (24/11). Barba de frente, volta da corrente no trapézio e caimento da bermuda na caminhada de lado e de costas. [Arquivos e conferência](ARTE.md#birim-de-frente-de-lado-e-de-costas-2411)
+- [x] **[arte]** Rosto do Birim (24/11). A costeleta libera o canto do olho e as sobrancelhas continuam legíveis ao virar a cabeça. [Arquivos e conferência](ARTE.md#costeleta-e-sobrancelhas-do-birim-2411)
 - [x] **[arte]** Peças sumindo no jogo (22/11, o dono: "o shorts some correndo, mirando ou não; o chinelo acontece o
   mesmo; as flechas atrás das costas somem quando o Birim pega a flecha"). Gravado quadro a quadro no jogo: (a) a aljava
   de costas ia para trás do tronco na hora de pegar a flecha — agora fica por cima, com um buraco no formato da mão, e a

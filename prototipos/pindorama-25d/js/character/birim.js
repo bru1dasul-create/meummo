@@ -93,7 +93,7 @@
     brow: { inner: [1.3, 0.9], outer: [8.9, 0.9], thick: 0 }, // (a sobrancelha em gota do motor fica desligada: a dele é a barra de `browBar`)
     // a sobrancelha (medida na referência): a ponta de dentro em x0, o pico em tPeak do caminho e a ponta fina em x1; zIn, zPeak e
     // zOut = a altura da linha do meio em cada um; w = a grossura
-    browBar: { x0: 1.5, x1: 8.9, tPeak: 0.7, zIn: 0.35, zPeak: 1.4, zOut: 0.15, w: 1.3 },
+    browBar: { x0: 1.5, x1: 8.9, tPeak: 0.7, zIn: 0.78, zPeak: 1.85, zOut: 0.65, w: 1.4 },
     mouth: { x: 3.8, z: -11.55 },
   };
   // boné (para trás): um ELIPSOIDE — mais comprido de frente para trás e mais alto que a cabeça, a copa estruturada de
@@ -455,18 +455,10 @@
     // (de três quartos a forma fica mais macia, como na referência: o pico arredondado em vez de um bico e a ponta de
     // dentro um pouco mais fina; de frente, a que o dono aprovou, ela não muda. Rodada 4b)
     const soft = smoothstep(0.1, 0.45, Math.abs(turn));
-    // a sobrancelha do lado de lá vai só até onde o rosto ainda olha para a câmera, e afina até a ponta ali. (Antes ela
-    // encurtava por uma conta fixa: de três quartos virava uma cunha curta em cima do olho; inteira, subia como um gancho)
+    // O lado de lá encurta gradualmente. O balanço de frente passa perto da emenda entre as esferas da testa e da órbita:
+    // usar a primeira normal nessa emenda para definir o comprimento fazia a sobrancelha sumir com a cabeça quase reta.
     const away = Math.max(0, -sx * turn);
-    let x1 = B.x1;
-    if (away > 0.05) {
-      x1 = B.x0 + 1.5;
-      for (let x = B.x0 + 1.5; x <= B.x1 + 1e-6; x += 0.25) {
-        const q = R._faceAt(head, sx * x, B.zPeak, 0.15);
-        if (!q || R.facing(q.n) < 0.3) break;
-        x1 = x;
-      }
-    }
+    const x1 = M.lerp(B.x1, B.x0 + 2.5, smoothstep(0.12, 0.64, away));
     const N = 16;
     const top = [];
     const bot = [];
@@ -483,20 +475,19 @@
       const lift = raise * (0.6 + 0.4 * (1 - t));
       const a = R._faceAt(head, sx * x, zc + lift + w / 2, 0.15);
       const b = R._faceAt(head, sx * x, zc + lift - w / 2, 0.15);
-      if (!a || !b || R.facing(a.n) < 0.22 || R.facing(b.n) < 0.22) continue; // (a ponta que já virou para o outro lado do rosto não aparece)
+      if (!a || !b || R.facing(a.n) < 0.06 || R.facing(b.n) < 0.06) continue;
       top.push(R.P(a.pt));
       bot.push(R.P(b.pt));
     }
     if (top.length < 2) return;
-    // (de três quartos: a superfície do rosto tem os calombos das esferas — o arco da sobrancelha — e a sobrancelha, que a
-    // segue, saía torta, com um degrau em cima; as duas beiradas são alisadas na tela, e a ponta de dentro fica arredondada
-    // em vez de cortada reta. De frente, nada muda. Rodada 4b)
-    if (soft > 0 && top.length > 2) {
+    // Suaviza o degrau da superfície entre a testa e o arco da sobrancelha, inclusive de frente.
+    if (top.length > 2) {
+      const smoothing = M.lerp(0.55, 1, soft);
       for (const L of [top, bot]) {
         for (let pass = 0; pass < 3; pass++) {
           const c = L.map((q) => ({ x: q.x, y: q.y }));
           for (let i = 1; i < L.length - 1; i++) {
-            L[i] = { x: M.lerp(c[i].x, (c[i - 1].x + 2 * c[i].x + c[i + 1].x) / 4, soft), y: M.lerp(c[i].y, (c[i - 1].y + 2 * c[i].y + c[i + 1].y) / 4, soft) };
+            L[i] = { x: M.lerp(c[i].x, (c[i - 1].x + 2 * c[i].x + c[i + 1].x) / 4, smoothing), y: M.lerp(c[i].y, (c[i - 1].y + 2 * c[i].y + c[i + 1].y) / 4, smoothing) };
           }
         }
       }
@@ -874,19 +865,19 @@
         // fica acima dela e a costeleta começa na altura do lóbulo)
         piece([[[sx * 10.7, -2.0, 3.0], 0.9], [[sx * 10.9, -2.6, 0.6], 0.85]], [sx, 0.2, 0], 0.02); // cabelo da têmpora, acima e na frente da orelha
         for (const [p, r] of [[[sx * 11.2, -1.8, 2.8], 1.1], [[sx * 11.6, -3.0, 1.5], 1.05], [[sx * 11.6, -3.8, -0.6], 0.9]]) piece([[p, r]], [sx, 0, 0.1], -0.05, 0, true); // os cachos dela
-        // (rodada 4: as peças de trás da barba só andaram para TRÁS — a largura e a altura delas vistas de frente são as
-        // mesmas, para o rosto de frente, que o dono aprovou, não mudar; a costeleta começa na altura do lóbulo)
-        piece([[[sx * 10.2, -2.4, -8.6], 0.8], [[sx * 9.4, -0.6, -11.8], 1.15]], [sx, 0.25, -0.1], 0, 0, false, sx); // costeleta (na frente da orelha)
-        // a tira fina da costeleta subindo na frente da orelha até o cabelo da têmpora (no perfil da referência ela emenda o
-        // cabelo na barba); a normal dela aponta um pouco para trás, então de frente ela não aparece — na referência de
-        // frente a pele vai até a orelha
-        piece([[[sx * 10.9, -2.2, -0.8], 0.62], [[sx * 10.6, -1.8, -3.6], 0.7], [[sx * 10.2, -1.2, -6.2], 0.85]], [sx, -0.3, 0], 0.05, 0, false, sx);
-        piece([[[sx * 8.6, 1.2, -12.2], 1.2], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 8.0, 4.4, -15.0], 1.75]], [sx * 0.8, 0.5, -0.3], -0.12, 0, false, sx); // lado da mandíbula (a última esfera tapa um furinho de perfil entre as peças)
-        // o canto da mandíbula e a parte de baixo dela, até o pescoço: de perfil a barba cobre a mandíbula inteira, da
-        // costeleta ao queixo (sem estes pedaços ela virava uma cunha pontuda na frente do rosto)
-        // (rodada 4: com a orelha mais para trás, o canto começa embaixo dela e a borda de trás desce na diagonal até o fim da
-        // barba, como na referência)
-        piece([[[sx * 9.6, -1.6, -11.0], 1.0], [[sx * 8.8, -1.0, -13.2], 1.6], [[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 8.6, 1.2, -12.2], 1.2]], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx);
+        const jawCorner = [[sx * 9.6, 2.6, -13.5], 1.0];
+        const cheekStart = [[sx * 8.6, 4.6, -13.4], 1.2];
+        // A costeleta sobe da mandíbula até a têmpora conforme a cabeça vira de perfil. Na câmera de cima, a tira alta
+        // vista de frente invadia a altura dos olhos.
+        const sideburn = smoothstep(0.41, 0.69, sx * turned);
+        if (sideburn > 0) {
+          const upper = [sx * M.lerp(9.6, 10.9, sideburn), M.lerp(2.6, -2.2, sideburn), M.lerp(-13.5, -0.8, sideburn)];
+          const middle = [sx * M.lerp(9.6, 10.6, sideburn), M.lerp(2.6, -1.8, sideburn), M.lerp(-13.5, -3.6, sideburn)];
+          piece([[upper, 0.62], [middle, 0.7], jawCorner], [sx, -0.3, 0], 0.05, 0, false, sx);
+        }
+        piece([cheekStart, [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 8.0, 4.4, -15.0], 1.75]], [sx * 0.8, 0.5, -0.3], -0.12, 0, false, sx, -0.12, 0.46);
+        // O canto do lado distante passa por trás da cabeça ao virar, para a bochecha esconder seu volume.
+        piece([jawCorner, [[sx * 8.8, 1.0, -14.0], 1.6], [[sx * 7.6, 2.2, -15.8], 1.9], cheekStart], [sx * 0.9, 0.1, -0.35], 0.04, 0, false, sx, 0.04, 0.52);
         piece([[[sx * 7.6, 2.2, -15.8], 1.9], [[sx * 5.6, 5.4, -17.8], 2.0], [[sx * 7.0, 7.6, -16.9], 2.2]], [sx * 0.5, 0.3, -0.8], -0.2, 0, false, sx); // embaixo da mandíbula
         piece([[[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 7.0, 7.6, -16.9], 2.2], chinCorner(sx)], [sx * 0.45, 0.8, -0.35], -0.18, 0, false, sx, -0.18, 0.35); // frente da mandíbula
         // A faixa sob o nariz segue até o canto da boca. Mais baixa no meio, aparece inteira na câmera do jogo.
@@ -907,10 +898,9 @@
         // O canto acompanha a superfície do rosto. Recuado, deixava pele entre o bigode e a bochecha.
         piece([must[3], [[sx * 4.65, 12.85, -12.1], 1.12], [[sx * 5.3, 12.4, -13.65], 1.38], [[sx * 4.4, 12.85, -14.6], 1.4]], [sx * 0.5, 0.85, -0.1], 0.05, 0, false, sx, 0.05, 0.35);
         // Esta faixa cobre a parte saliente da mandíbula e desce até a base da barba nos dois lados.
-        piece([[[sx * 8.5, 5.75, -10.35], 1.45], [[sx * 7.65, 8.0, -12.15], 1.85], [[sx * 6.1, 9.7, -14.9], 1.72]], [sx * 0.72, 0.65, -0.18], -0.08, 0, false, sx, -0.02, 0.16);
-        // a bochecha de baixo, da costeleta ao canto da boca: de lado, sem ela, a barba era só uma tira no contorno do
-        // queixo; de frente, a linha da barba fica reta da costeleta até o bigode
-        piece([[[sx * 8.6, 1.2, -12.2], 1.2], [[sx * 7.0, 7.0, -13.6], 1.5], [[sx * 5.6, 10.6, -13.2], 1.0], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 5.2, 10.8, -13.8], 1.25]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx);
+        piece([[[sx * 8.5, 6.4, -12.3], 1.4], [[sx * 7.65, 8.0, -12.15], 1.85], [[sx * 6.1, 9.7, -14.9], 1.72]], [sx * 0.72, 0.65, -0.18], -0.08, 0, false, sx, -0.02, 0.46);
+        // Bochecha inferior, da mandíbula ao canto da boca.
+        piece([cheekStart, [[sx * 7.0, 7.0, -13.6], 1.5], [[sx * 5.6, 10.6, -13.2], 1.0], [[sx * 6.4, 7.4, -14.6], 2.1], [[sx * 5.2, 10.8, -13.8], 1.25]], [sx * 0.75, 0.62, -0.1], -0.1, 0, false, sx, -0.1, 0.46);
       }
       beardStrands(piece);
       if (segsBack.length) items.push({ name: 'barbaAtras', key: headKey - 0.05, group: 'barbaAtras', chain: true, segs: segsBack });
@@ -1167,7 +1157,7 @@
    * Os fios da beirada da barba (na referência a beirada é cheia de pontinhas, não uma linha lisa). Cada fio é uma
    * ponta em 3D: uma esfera grossa dentro da barba e uma fininha fora dela, deitada na pele — por ser volume, aparece
    * certa em qualquer ângulo, e some junto com o pedaço de barba quando o lado dele vira para lá.
-   *  - na bochecha: ao longo dos altos das peças da bochecha (da costeleta ao canto do bigode), apontando para cima;
+   *  - na bochecha: ao longo da linha da barba sobre a mandíbula, apontando para cima;
    *  - embaixo: ao longo da borda de baixo (dos lados e do queixo), apontando para baixo.
    */
   function beardStrands(piece) {
@@ -1182,9 +1172,8 @@
         }
       }
     };
-    // os altos das peças da bochecha (o centro x, y de cada uma e o alto dela em z) — a linha da barba na bochecha
-    // (rodada 4: começa na costeleta nova, na frente da orelha que foi para trás)
-    const CHEEK = [[10.2, -2.4, -7.8], [9.4, -0.6, -10.65], [8.6, 1.2, -11.0], [7.0, 7.0, -12.1], [5.6, 10.6, -12.2]];
+    // Os fios começam onde a barba encontra a bochecha. No alto da costeleta eles sobressaíam ao lado do olho.
+    const CHEEK = [[8.6, 4.6, -12.25], [7.0, 7.0, -12.1], [5.6, 10.6, -12.2]];
     // a borda de baixo, do lado da mandíbula até o meio do queixo (os baixos das peças de baixo)
     const BOTTOM = [[9.4, 7.0, -15.6], [9.2, 7.4, -17.8], [7.6, 8.2, -19.55], [5.2, 9.3, -20.15], [2.4, 10.0, -20.8], [0, 10.0, -20.95]];
     // por baixo da mandíbula, do canto dela (atrás) até o queixo: a borda de baixo que aparece de perfil
