@@ -56,7 +56,7 @@ Tudo isto se ajusta mexendo em números, sem programar:
 - [x] **[arte]** Acabamento do Birim nos ângulos pedidos (24/11). Barba de frente, volta da corrente no trapézio e caimento da bermuda na caminhada de lado e de costas. [Arquivos e conferência](ARTE.md#birim-de-frente-de-lado-e-de-costas-2411)
 - [x] **[arte]** Rosto do Birim (24/11). A costeleta libera o canto do olho e as sobrancelhas continuam legíveis ao virar a cabeça. [Arquivos e conferência](ARTE.md#costeleta-e-sobrancelhas-do-birim-2411)
 - [x] **[arte]** Orelha do Birim (24/11). Contorno mais rente à cabeça, dobras mais leves e brinco encaixado no lóbulo. [Arquivos e conferência](ARTE.md#orelha-e-brinco-do-birim-2411)
-- [x] **[arte]** Boné e rosto do Birim de perfil (24/11). Aba mais plana com encaixe na copa e olho e nariz legíveis de lado. [Arquivos e conferência](ARTE.md#aba-do-boné-e-rosto-de-perfil-do-birim-2411)
+- [x] **[arte]** Boné e rosto do Birim de perfil (24/11). Aba mais plana com encaixe na copa. A revisão restaurou o formato do olho e limpou os traços do lado distante e a ponta do bigode. [Arquivos e conferência](ARTE.md#aba-do-boné-e-rosto-de-perfil-do-birim-2411)
 - [x] **[arte]** Peças sumindo no jogo (22/11, o dono: "o shorts some correndo, mirando ou não; o chinelo acontece o
   mesmo; as flechas atrás das costas somem quando o Birim pega a flecha"). Gravado quadro a quadro no jogo: (a) a aljava
   de costas ia para trás do tronco na hora de pegar a flecha — agora fica por cima, com um buraco no formato da mão, e a

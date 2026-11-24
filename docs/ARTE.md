@@ -7,8 +7,9 @@
 ## Aba do boné e rosto de perfil do Birim (24/11)
 
 - **Aba.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `BRIM` estende a aba para trás com uma queda menor e afina as pontas até a barra. `extras` pinta a aba antes da copa. Isso resolve o arco que cruzava a lateral do boné em alguns giros. `brimEdge` acompanha a curva nova.
-- **Rosto de perfil.** `face` usa o olho de lado mais cedo ao sair da posição frontal. `sideEye` reduz a abertura e conserva a altura da sobrancelha ao piscar. `noseSide` acompanha a asa visível em uma camada sobre a bochecha, com o mesmo recuo do nariz ao virar de costas.
-- **Conferência.** Comparei o boné e o rosto em dez ângulos no mapa e no retrato. Conferi movimento, HUD e mochila em Chromium no desktop e no celular simulado. `npm run check` passou com 685 testes, e `npm run build` passou.
+- **Revisão do rosto após o print do dono.** Antecipar o olho de perfil em `a262c62` alargava e deslocava o olho e engrossava a sobrancelha na diagonal. `face`, `sideEye` e `noseSide` voltaram ao desenho de `578ec7e`. A versão atual combina esse rosto com a aba redesenhada.
+- **Detalhes dos recortes.** `face` reduz a opacidade do olho e da sobrancelha distantes conforme o nariz os encobre. Em `extras`, os dois primeiros volumes do bigode recuam e afinam ao virar de perfil. `noseSide` usa o tom mais suave de contorno na narina.
+- **Conferência.** Comparei a pose do print, o perfil dos dois lados e a vista de frente no mapa e no retrato. Conferi movimento, HUD e mochila em Chromium no desktop e no celular simulado. `npm run check` passou e `npm run build` passou.
 
 ## Orelha e brinco do Birim (24/11)
 
