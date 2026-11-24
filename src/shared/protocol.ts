@@ -39,7 +39,12 @@ export interface EntityState {
   home?: string;
   /** Monstros: pendurado num galho (o Sagui no galho); `x`, `y` são o chão embaixo dele. Sem o campo = no chão. */
   perch?: PerchState;
+  /** Monstros: versão especial (os saguis raros): o nome aparece com "(Elite)" ou "(Raro)". Sem o campo = comum. */
+  rank?: MonsterRank;
 }
+
+/** A versão especial de um monstro ("categoria" em data/monsters.json). */
+export type MonsterRank = 'elite' | 'raro';
 
 /** No galho: `h` = a altura do galho (metros) e `a` = para onde ele aponta, do tronco para a ponta (graus, 0 = leste). */
 export interface PerchState {

@@ -25,7 +25,16 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Testar sem caçar:** painel do administrador no servidor de teste — `/admin/api/jogador` (dar ouro e itens,
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
-## Onde estamos (23 de novembro de 2026) — leia isto primeiro
+## Onde estamos (24 de novembro de 2026) — leia isto primeiro
+- **Saguis raros (24/11, forma B do dono: "pode fazer a B"; na main):** `sagui_corrompido` (Elite) e `sagui_ancestral`
+  (Raro) são monstros comuns do `monsters.json` com lugar próprio no mapa (o [mundo] marca as áreas com o nome da chave,
+  `quantidade` 1) e `renascerMs` longo (4 e 12 min). Os números foram os da tabela que o dono aprovou (a jurubeba 30% no
+  Ancestral foi um dos pontos, aprovado junto). Campo novo `"categoria"` (`MonsterDef.rank`, `EntityState.rank`,
+  protocolo 54): o motor mostra o nome com "(Elite)"/"(Raro)" (`RANK_LABELS` no `engine.ts`) e passa `rank` no
+  `addActor` (se a [arte] fizer um selo, tirar o complemento do nome). A fruta de cada um: `SHOT_BALLS` no `combat.ts`.
+  Eu propus antes um sorteio no lugar do sagui comum (forma A); o dono preferiu a do [mundo]. Galho com dono: a
+  propriedade `bicho` no `galho-sagui` (`MapBranch.owner`) faz o galho ser só daquele monstro (`freeBranchFor`; ele
+  prefere o seu). As áreas e os galhos dos raros são do [mundo] (ramo `mundo/saguis-raros`, juntando depois das chaves).
 - **Sagui no galho (opção 3 do dono, 23/11: "pode fazer, só no Capão por enquanto"; na main, conferido no jogo com os
   5 galhos do [mundo]):** o desenho é da [arte] (`view.perch`), os galhos são do [mundo] (pontos `galho-sagui` na
   camada `pontos` do `capao.tmj`). Meu: `GameMap.branches` e `branchTile` (`map.ts`; a altura fora de 1 a 4 m dá erro),
@@ -121,9 +130,9 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 53 (`perch`, o Sagui no galho); `MIGRATIONS` até o passo 8 (`effects`: os
+- **Estado técnico:** `PROTOCOL_VERSION` 54 (`rank`, os saguis raros); `MIGRATIONS` até o passo 8 (`effects`: os
   efeitos com tempo e quanto faltava, com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com
-  643 testes.
+  676 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

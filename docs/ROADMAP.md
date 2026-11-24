@@ -1088,16 +1088,28 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
     desenhado (23/11, na main): 5 pontos `galho-sagui` na camada `pontos` (`altura` 2,3 m e `direcao` em graus), em duas
     árvores da trilha dos saguis e em três árvores secas novas; o gerador escolhe a direção virada para a câmera em que o
     chão é andável, longe dos troncos, e nenhuma copa da frente esconde o sagui (o teste do Capão confere)
-- [ ] **As versões raras do Sagui** (24/11, na pegada das artes do dono: "Sagui Corrompido – Elite" e "Sagui Ancestral –
+- [x] **As versões raras do Sagui** (24/11, na pegada das artes do dono: "Sagui Corrompido – Elite" e "Sagui Ancestral –
   Raro"; os outros bichos o dono decide depois)
   - [x] **[arte]** o desenho (24/11, na main, com o "pode juntar na main" do dono): o mesmo corpo e os mesmos golpes do
     Comum (o galho também), com outra paleta e enfeites — o **Corrompido** (pelo preto arrepiado, fendas vermelhas
     acesas, presas, cogumelos nas costas, brasas, fruta podre; 1,1×) e o **Ancestral** (espirais e faixas douradas, olho
     de espírito, musgo, colar de sementes, coroa de runas, vaga-lumes, fruta dourada; 1,18×). Chaves provisórias
     `sagui_corrompido` e `sagui_ancestral` (veja `docs/ARTE.md`); o Comum não mudou
-  - [ ] **[estrutura]** os dois no jogo (pedido mandado em 24/11): as chaves, a vida, o dano, o XP e o que deixam, onde
-    e quanto aparecem, o "Elite" / "Raro" junto do nome e a fruta que voa com a cor de cada um (`combat.ts`)
-  - [ ] **[mundo]** onde moram (pedido mandado em 24/11)
+  - [x] **[estrutura]** os dois no jogo (24/11, na main; forma B do dono, "pode fazer a B": cada um com um lugar
+    próprio, um de cada, demorando para voltar). Em `data/monsters.json`, `sagui_corrompido` (Elite: nível 3, 66 de
+    vida, fruta 3–6 a cada 1,4 s, 30 de XP, 5–10 de ouro, volta em 4 min) e `sagui_ancestral` (Raro: nível 4, 100 de
+    vida, fruta 4–7 a cada 1,5 s, 60 de XP, 12–25 de ouro, volta em 12 min, jurubeba 30%); sobem no galho como o comum.
+    O campo `"categoria"` (`elite` ou `raro`) vai no estado do monstro (`rank`, protocolo 54) e o nome aparece com
+    "(Elite)" ou "(Raro)"; a fruta sai roxa com brilho vermelho (`fruta_podre`) e dourada com brilho claro
+    (`fruta_dourada`). Conferido no navegador (PC e celular) com áreas de teste. Teste: `tests/sagui-raros.test.ts`.
+    Pedido do [mundo]: o galho com dono (`bicho` no `galho-sagui`) é só daquele monstro, que prefere o seu; o teste dos
+    galhos do Capão confere cada galho com dono perto da área do dono
+  - [x] **[mundo]** onde moram (24/11, na main; o dono: "pode fazer do seu jeito, área própria pra cada um"): as
+    áreas `sagui_ancestral` (em volta da Figueira do Viaduto) e `sagui_corrompido` (na Mata Profunda do noroeste, perto
+    da Pedra do Véu) na camada `monstros`, com `quantidade` 1, e um `galho-sagui` com `bicho` para cada: o do Ancestral
+    sai da própria figueira, o do Corrompido de uma árvore seca nova. O galho grosso da figueira passou a aparecer (o
+    tmj.js mede da beira do tronco) e nenhum galho aponta mais para a câmera. Conferido no navegador (PC e celular):
+    cada um pendurado no seu galho, nenhum comum nos galhos deles
 - [x] **[arte]** A dica com o mouse em cima (pedido do dono, 23/11: "melhorar o visual quando passa o mouse em cima da
   poção/banana utilizada"): no efeito valendo e nos frascos de comida e remédio, no lugar da dica do navegador, o
   painel da dica das habilidades — o nome na cor da raridade, o que faz em verde ("Cura 60% da vida", "+5 de Destreza

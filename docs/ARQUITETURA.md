@@ -403,7 +403,8 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 ## O Sagui no galho (`world.ts`: `goToBranch`, `climbBranch`, `updatePerched`, `leaveBranch`)
 - O mapa marca os galhos (`GameMap.branches`, dos pontos `galho-sagui` da camada `pontos`: o chão embaixo do galho, a
   `altura` e a `direcao`). Monstro com `galho` (`MonsterDef.branch`, só quem joga de longe), calmo há
-  `sobeDepoisMs`, reserva um galho livre perto da área dele (`branchTaken`, um por galho), anda até o tile de onde se
+  `sobeDepoisMs`, reserva um galho livre perto da área dele (`branchTaken`, um por galho; galho com dono, `bicho`, só
+  para o dono, que prefere o seu), anda até o tile de onde se
   sobe (`branchFoot`) ou um do lado e sobe: o pé vai para o ponto exato embaixo do galho (**`x`/`y` com fração**; ele
   sai do `monsterAt`), `Monster.perch` e a mensagem `perch`. Subindo (`PERCH_CLIMB_MS`) e descendo
   (`PERCH_DESCEND_MS`) não faz nada: são os tempos do desenho.
@@ -415,6 +416,13 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 - No navegador: `EntityState.perch` (`{ h, a }`) e a mensagem `perch` chamam o `view.perch` da [arte]; a fruta de quem
   está no galho sai da mão dele (`throwZ`, 90 cm abaixo do galho, medido no desenho da [arte]) e cai até a altura do voo (`shotZ` com `fromZ`); a
   barra de vida e os números ficam acima do galho (`combat.setPerch`); o `actorAtScreen` procura o corpo lá em cima.
+
+## Versões especiais dos monstros (os saguis raros)
+- Campo `"categoria"` em `data/monsters.json` (`elite` ou `raro`; `MonsterDef.rank`): vai no estado do monstro
+  (`EntityState.rank`) e o motor mostra o nome com "(Elite)" ou "(Raro)". De resto, é um monstro como os outros: a
+  raridade vem do lugar próprio no mapa (a área com o nome da chave, `quantidade` 1) e do `renascerMs` longo.
+- A fruta de cada um (`ataque.projetil`: `fruta_podre`, `fruta_dourada`) tem cor e brilho próprios no navegador
+  (`SHOT_BALLS`, `combat.ts`).
 
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
@@ -605,7 +613,8 @@ Os tipos exatos estão em `src/shared/protocol.ts`.
   `colisao` (retângulos onde o pé bate; `bloqueiaTiro` false onde a pedrinha passa; `altura` nos da vila, para o
   desenho provisório), `seguro` (zona segura por área), `areas` (nome do lugar para a faixa) e `pontos` (`spawn`,
   chegadas e os galhos do sagui: ponto do tipo `galho-sagui` no chão embaixo do galho, com `altura` em metros e
-  `direcao` em graus, do tronco para a ponta). `chao` e `cenario` são do desenho (o servidor ignora).
+  `direcao` em graus, do tronco para a ponta; com `bicho`, a chave de um monstro, o galho é só dele: o do Sagui Ancestral,
+  na Figueira do Viaduto). `chao` e `cenario` são do desenho (o servidor ignora).
 - A `colisao` sai do gerador a partir do `cenario` (tronco, poste, pedra, gradil, portão…), para desenho e colisão
   nunca desencontrarem. Medidas para o pé de 0,6 × 0,4: passagem com pelo menos 1,5 m e 1,2 m entre troncos; duas
   coisas sólidas de frente uma para a outra ficam coladas ou a pelo menos 1,2 m (num vão menor o pé entra e entala).

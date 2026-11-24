@@ -361,6 +361,11 @@ export class World {
       }
       this.addZone(`${map.id}#${i + 1}`, { ...zone, monster, count: area?.count ?? zone.count }, def);
     });
+    for (const branch of map.branches) {
+      if (branch.owner && !defs.has(branch.owner)) {
+        this.log(`aviso: o mapa tem um galho do monstro "${branch.owner}", mas ele não existe em data/monsters.json`);
+      }
+    }
 
     for (const def of options.pets?.values() ?? []) {
       if (def.map !== map.id) continue;
@@ -2685,17 +2690,22 @@ export class World {
     return false;
   }
 
-  /** O galho livre mais perto do bicho, perto da área dele (até 1 tile fora), ou null. */
+  /**
+   * O galho livre mais perto do bicho, perto da área dele (até 1 tile fora), ou null. Galho com dono (`bicho` no mapa:
+   * o do Sagui Ancestral, na Figueira do Viaduto) é só dele, e ele prefere o seu a qualquer outro.
+   */
   private freeBranchFor(monster: Monster): number | null {
     let best: number | null = null;
-    let bestDistance = Infinity;
+    let bestScore = Infinity;
     for (let i = 0; i < this.map.branches.length; i++) {
+      const owner = this.map.branches[i]!.owner;
+      if (owner && owner !== monster.def.id) continue;
       const foot = this.branchFoot(i);
       if (!foot || this.branchTaken.has(i) || this.zoneDistance(foot, monster.zone) > 1) continue;
-      const distance = Math.hypot(foot.x - monster.x, foot.y - monster.y);
-      if (distance < bestDistance) {
+      const score = Math.hypot(foot.x - monster.x, foot.y - monster.y) + (owner ? 0 : 1e6);
+      if (score < bestScore) {
         best = i;
-        bestDistance = distance;
+        bestScore = score;
       }
     }
     return best;

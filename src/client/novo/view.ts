@@ -24,6 +24,11 @@ export interface ActorInfo {
   asleep?: boolean;
   /** Monstro: já aparece pendurado neste galho (o Sagui no galho; veja `WorldView.perch`). */
   galho?: PerchLook;
+  /**
+   * Monstro: a versão especial (os saguis raros, 24/11). Por enquanto o motor põe "(Elite)" ou "(Raro)" no `name`; se a
+   * view desenhar um selo, avise a [estrutura] para o nome vir sem o complemento.
+   */
+  rank?: 'elite' | 'raro';
 }
 
 /** O galho de quem está pendurado: a altura (metros, como no mapa) e para onde ele aponta, do tronco para a ponta (graus). */

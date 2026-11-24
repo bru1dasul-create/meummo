@@ -22,7 +22,8 @@
 // - pontos com nome dizem onde fica o PÉ, exato (no formato antigo, o tile onde o ponto cai);
 // - camada `pontos`: ponto do tipo `galho-sagui` é um galho baixo onde o sagui se pendura (Sagui no galho, 23/11). O
 //   ponto fica no chão, embaixo do meio do galho (onde o pé dele fica), com `altura` (metros, de 1 a 4) e `direcao`
-//   (graus, do tronco para a ponta do galho: 0 = leste, 90 = sul).
+//   (graus, do tronco para a ponta do galho: 0 = leste, 90 = sul). Com `bicho` (a chave do monstro, ex.:
+//   `sagui_ancestral`), o galho é só dele: os outros não sobem.
 
 import { SHOT_FEET_DY, TILE_SIZE } from './constants';
 import { DX, DY } from './dir';
@@ -159,6 +160,8 @@ export interface MapBranch {
   y: number;
   height: number;
   angle: number;
+  /** De quem é o galho (a propriedade `bicho`: a chave do monstro, em minúsculas); sem ela, de qualquer um que sobe. */
+  owner?: string;
 }
 
 /** O tipo do ponto do galho do sagui no Tiled. */
@@ -223,7 +226,13 @@ function branchOf(obj: TiledObject, mapId: string, tw: number, th: number): MapB
   if (typeof angle !== 'number' || !Number.isFinite(angle)) {
     throw new Error(`${where}: a propriedade "direcao" é em graus (0 = leste, 90 = sul), do tronco para a ponta do galho.`);
   }
-  return { x: obj.x / tw, y: obj.y / th, height, angle: ((angle % 360) + 360) % 360 };
+  const owner = prop('bicho');
+  if (owner !== undefined && (typeof owner !== 'string' || !owner.trim())) {
+    throw new Error(`${where}: a propriedade "bicho" é a chave do monstro dono do galho (ex.: sagui_ancestral).`);
+  }
+  const branch: MapBranch = { x: obj.x / tw, y: obj.y / th, height, angle: ((angle % 360) + 360) % 360 };
+  if (typeof owner === 'string') branch.owner = owner.trim().toLowerCase();
+  return branch;
 }
 
 export class GameMap implements Walkable {

@@ -73,6 +73,18 @@ const LAND_DESCENT = 2.5;
 export const PERCH_THROW_DROP = 0.9;
 const THROW_DESCENT = 4;
 
+/**
+ * A bolinha de cada projétil de bicho que a [arte] não desenha à parte (as frutas): o miolo, a borda e, nos saguis raros
+ * (24/11, as cores do desenho da [arte]), um brilho em volta. O que não estiver aqui é a fruta verde de sempre.
+ */
+export const SHOT_BALLS: Readonly<Record<string, { fill: string; stroke: string; glow?: string }>> = {
+  fruta: { fill: '#c9e265', stroke: '#4f6b12' },
+  // o Sagui Corrompido: a fruta podre, roxa, com brilho vermelho
+  fruta_podre: { fill: '#5a2346', stroke: '#2a0f20', glow: 'rgba(255, 90, 70, 0.55)' },
+  // o Sagui Ancestral: a fruta dourada, com brilho claro
+  fruta_dourada: { fill: '#f2c14e', stroke: '#8a5a12', glow: 'rgba(255, 226, 120, 0.6)' },
+};
+
 /** De que altura sai a fruta de quem está num galho a `perchHeight` metros. */
 export function throwZ(perchHeight: number): number {
   return Math.max(SHOT_DRAW_Z, perchHeight - PERCH_THROW_DROP);
@@ -1323,11 +1335,23 @@ export class CombatLayer {
         ctx.beginPath();
         ctx.ellipse(shadow.x, shadow.y, m * 0.1, m * 0.045, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = shot.fromMonster ? '#c9e265' : '#d9d2c3';
-        ctx.strokeStyle = shot.fromMonster ? '#4f6b12' : '#4a4237';
+        const ball = shot.fromMonster ? (SHOT_BALLS[shot.kind] ?? SHOT_BALLS.fruta!) : { fill: '#d9d2c3', stroke: '#4a4237' };
+        const r = Math.max(3, m * 0.08);
+        if (ball.glow) {
+          // o brilho em volta (a fruta dos saguis raros)
+          const glow = ctx.createRadialGradient(p.x, p.y, r * 0.5, p.x, p.y, r * 2.6);
+          glow.addColorStop(0, ball.glow);
+          glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r * 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = ball.fill;
+        ctx.strokeStyle = ball.stroke;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(p.x, p.y, Math.max(3, m * 0.08), Math.max(3, m * 0.08), 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x, p.y, r, r, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         if (hidden) ctx.restore();

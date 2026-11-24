@@ -2847,7 +2847,9 @@
       const u = i / N;
       pts.push({ x: (1 - u) * (1 - u) * P0.x + 2 * (1 - u) * u * C.x + u * u * P2.x, y: (1 - u) * (1 - u) * P0.y + 2 * (1 - u) * u * C.y + u * u * P2.y });
     }
-    const w0 = 10 * cam.zoom, w1 = 3.4 * cam.zoom;
+    // (no tronco largo, o galho é mais grosso: o da Figueira do Viaduto, do Sagui Ancestral; nas árvores comuns, igual)
+    const thick = Math.max(1, (t.trunk || 20) / 36);
+    const w0 = 10 * thick * cam.zoom, w1 = 3.4 * Math.sqrt(thick) * cam.zoom;
     ctx.lineCap = 'round';
     for (const [color, extra] of [[INK, ink * 2], [bark ? bark[0] : '#7a5537', 0]]) {
       ctx.strokeStyle = color;
@@ -2968,6 +2970,8 @@
       // chão de dentro, as mesmas do chão: as que o dono aprovou na Figueira da Esquina)
       if (t.kind === 'figueira' || t.inside) {
         this._figPaint(ctx);
+        // (o galho baixo do sagui também na figueira: o do Sagui Ancestral, na Figueira do Viaduto)
+        for (const p of t.perches || []) this._perchBranch(ctx, p);
         return;
       }
       const fl = PD.flora && PD.flora.tree[t.kind];

@@ -366,6 +366,7 @@ export class Monster {
       maxHp: this.maxHp,
       stepMs: this.def.stepMs,
       ...(this.perch ? { perch: { h: this.perch.height, a: this.perch.angle } } : {}),
+      ...(this.def.rank ? { rank: this.def.rank } : {}),
     };
   }
 }

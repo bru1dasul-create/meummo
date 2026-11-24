@@ -28,6 +28,66 @@
       { "item": "garrafada_pequena", "chance": 4 }
     ]
   },
+  "sagui_corrompido": {
+    "nome": "Sagui Corrompido",
+    "categoria": "elite",
+    "nivel": 3,
+    "vida": 66,
+    "xp": 30,
+    "ouro": [5, 10],
+    "passoMs": 260,
+    "agressivo": true,
+    "alcanceAgressao": 4,
+    "perseguicao": 9,
+    "renascerMs": 240000,
+    "ataque": {
+      "tipo": "projetil",
+      "alcance": 5,
+      "distanciaMinima": 2,
+      "preparoMs": 350,
+      "intervaloMs": 1400,
+      "dano": [3, 6],
+      "velocidade": 7,
+      "projetil": "fruta_podre"
+    },
+    "galho": { "desceA": 3, "sobeDepoisMs": 8000 },
+    "itens": [
+      { "item": "banana", "chance": 60, "quantidade": [1, 2] },
+      { "item": "garrafada_pequena", "chance": 20 },
+      { "item": "chapeu_palha", "chance": 10 },
+      { "item": "estilingue_goiabeira", "chance": 12 }
+    ]
+  },
+  "sagui_ancestral": {
+    "nome": "Sagui Ancestral",
+    "categoria": "raro",
+    "nivel": 4,
+    "vida": 100,
+    "xp": 60,
+    "ouro": [12, 25],
+    "passoMs": 260,
+    "agressivo": true,
+    "alcanceAgressao": 4,
+    "perseguicao": 9,
+    "renascerMs": 720000,
+    "ataque": {
+      "tipo": "projetil",
+      "alcance": 5,
+      "distanciaMinima": 2,
+      "preparoMs": 350,
+      "intervaloMs": 1500,
+      "dano": [4, 7],
+      "velocidade": 7,
+      "projetil": "fruta_dourada"
+    },
+    "galho": { "desceA": 3, "sobeDepoisMs": 8000 },
+    "itens": [
+      { "item": "banana", "chance": 70, "quantidade": [1, 2] },
+      { "item": "garrafada", "chance": 20 },
+      { "item": "estilingue_goiabeira", "chance": 25 },
+      { "item": "jurubeba", "chance": 30 }
+    ]
+  },
   "jararaca": {
     "nome": "Jararaca",
     "nivel": 2,
