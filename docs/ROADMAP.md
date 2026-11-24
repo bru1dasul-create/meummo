@@ -746,6 +746,9 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   (`chegada-ilha-do-veu`). Na ilha, o Barqueiro de lá (`barqueiro_ilha`, no deque, perto da canoa) traz de volta (desce
   na frente do Barqueiro do Refúgio). De graça: o `preco` de cada viagem fica em `data/npcs.json`. O campo `"viagens"`
   dos NPCs, o pedido `travel` e a mensagem `trip` (protocolo 55). Teste: `tests/barqueiro.test.ts`
+  - [x] **[arte]** O capricho (24/11, "pode fazer" do dono; no ramo, esperando o "pode" para a main): o botão
+    "Atravessar" com a cor do rio e a canoinha, e a tela da travessia com a noite no rio, a canoa do Barqueiro remando
+    de lampião aceso sobre as ondinhas e o nome do lugar em letra dourada (`style.css`; conferido no PC e no celular)
 - [x] **[estrutura]** O bando de capivaras da várzea do Guarapiranga (`capivaras-varzea`, descanso em (300; 300)) em `data/bichos.json`: FEITO em 22/11 (`capivaras_varzea`, 3 capivaras, como o bando do lago do Capão). Conferido: o servidor sobe sem aviso e as três aparecem deitadas no descanso
 - [x] **[mundo]** O polimento da lista do dono (23/11, com prints; na main): árvores sem a emenda "cortada" no tronco,
   sombras das árvores perto do pé e no contorno da copa (sem o "balão"), calçada da estrada com placas e meio-fio,

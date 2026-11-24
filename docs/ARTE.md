@@ -395,6 +395,16 @@
 - **Rascunho `marimbondo/`:** `prancha.cjs` (a da jararaca, com os momentos do enxame), `custo.cjs`, `jogo.cjs`,
   `celular.cjs` e `antes/`. Entregues: `entrega/marimbondos-antes-depois.png` e `.gif`.
 
+### A viagem de barco: o botão e a tela da travessia (24/11, "pode fazer" do dono; no ramo, esperando o "pode" para a main)
+- A [estrutura] fez a viagem com o Barqueiro (`talk.ts`: o botão `talk-main talk-trip`; `engine.ts`: a tela
+  `#trip-fade`, escura de uma vez e clareando em 1,1 s, com um estilo simples na própria tela). O capricho é só no
+  `style.css`: **o botão** com a cor do rio (azul-esverdeado, a borda clara) e a canoinha antes do texto; **a tela** com
+  a noite no rio (a luz da lua em cima), a **canoa do Barqueiro remando** de lampião aceso (desenho em SVG no próprio CSS)
+  atravessando e balançando, as ondinhas correndo e o nome do lugar em letra dourada. O `!important` vale por cima do
+  estilo do `engine.ts` (a tela e o tempo continuam lá). Sem movimento para quem pede menos movimento no sistema.
+- Conferido no jogo (o atracadouro do Refúgio, a conversa, o clique e a chegada na ilha), no PC e no celular deitado.
+  Rascunho `barco/jogo.cjs <pasta>`.
+
 ### Etapa 6: o Filhote de Boitatá (24/11, com o "segue para o Filhote de Boitatá" do dono; na main em 24/11, com o "pode juntar na main")
 - **O desenho (`boitata.js`, sem as bolinhas):** o corpo de chama numa peça só, pintado como os outros bichos, mas
   quente: o **contorno vermelho-escuro** (o `paintLit` risca de preto; o risco vem antes, no `_warmInk`), a cor laranja,
