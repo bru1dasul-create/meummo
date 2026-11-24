@@ -376,6 +376,25 @@
   meio do corpo), `dbg/pedacos.cjs` (cada trecho numerado com a ordem), `dbg/runs.cjs` (quantos trechos por lado) e
   `antes/` (a cópia das criaturas de antes). Entregues: `entrega/jararaca-antes-depois.png` e `.gif`.
 
+### Etapa 5: os Marimbondos (24/11, com o "segue para os Marimbondos" do dono; no ramo, esperando o "pode" para a main)
+- **O desenho (`marimbondo.js`, sem as bolinhas):** cada uma das 5 vespas pintada como os outros bichos (contorno,
+  meia-lua de sombra e brilho): a cabeça e o tórax escuros num traço só (a **cintura fina** atrás), a cara amarela, as
+  manchinhas amarelas do tórax, os olhos grandes dos lados (de noite, vermelhos) e as antenas; o **abdômen amarelo
+  com três listras pretas** e a ponta escura com o **ferrão**; as perninhas penduradas e as **asas transparentes**
+  batendo (borradas; as de trás antes do corpo, as da frente por cima). O voo e o giro de cada vespa são os de antes.
+- **O aviso** ('windup', 0,6 s): o enxame se fecha numa bola que treme, sobe um pouco, as vespas viram de lado e
+  **curvam o abdômen com o ferrão para fora**, e aparecem os riscos do zumbido (zigue-zagues amarelos girando).
+- **A ferroada** ('spin', a área em volta): as vespas **mergulham num anel largo** (~78 cm, cobrindo as casas do
+  golpe), de ferrão para baixo, com o rastro do giro, e voltam.
+- **'dodge'** (a pedra passou pelo meio): se espalham um instante, como antes. **Apanhando:** o enxame dá um tranco para
+  longe de quem bateu (e o clarão fraco dos outros). **Caindo:** despencam no chão e o encanto sai em faíscas roxas.
+- **O peso:** ~1,0 ms o enxame no PC e ~0,5 ms no celular (o antigo: 0,3 ms; o sagui novo: 1,6 ms).
+- **Conferido:** as pranchas (4 lados × 13 momentos e de perto), o jogo de verdade de dia com vários enxames atacando
+  (o anel em volta do herói junto com o aviso laranja) e o celular deitado. Sem erros. Teste:
+  `tests/marimbondo-art.test.ts`. Só o `marimbondo.js` foi alterado.
+- **Rascunho `marimbondo/`:** `prancha.cjs` (a da jararaca, com os momentos do enxame), `custo.cjs`, `jogo.cjs`,
+  `celular.cjs` e `antes/`. Entregues: `entrega/marimbondos-antes-depois.png` e `.gif`.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).
