@@ -60,6 +60,11 @@ export interface MonsterDef {
   /** Só aparece de noite (o filhote de boitatá, "soNoite"): de dia a área fica vazia e ele vai embora ao amanhecer. */
   nightOnly: boolean;
   /**
+   * Uma luta por noite (a Cuca, "desmaiaAteAmanhecer"; pedido do dono, 25/11): vencido, não renasce até a noite seguinte.
+   * Quem vira NPC de dia (o NPC "soDeDia" com a mesma chave: a bruxa) fica desmaiada ali, à vista, até amanhecer.
+   */
+  faintsUntilDawn: boolean;
+  /**
    * Sobe em galho (o sagui, campo "galho"; Sagui no galho, 23/11): calmo, vai até um galho livre da área dele (os pontos
    * `galho-sagui` do mapa), sobe e fica pendurado, jogando o golpe lá de cima. Desce quando alguém chega a `descendRange`
    * metros ou acerta nele, e sobe de novo depois de `climbAfterMs` calmo. Mapa sem galho: fica no chão, como sempre.
@@ -215,6 +220,11 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
     }
     const dodge = r.number('desvioTiro', { min: 0, fallback: 0 });
     if (dodge > 90) throw new Error(`Erro em ${FILE} (monstro "${rawId}"): "desvioTiro" é em %, de 0 a 90.`);
+    const nightOnly = r.bool('soNoite', false);
+    const faintsUntilDawn = r.bool('desmaiaAteAmanhecer', false);
+    if (faintsUntilDawn && !nightOnly) {
+      throw new Error(`Erro em ${FILE} (monstro "${rawId}"): "desmaiaAteAmanhecer" só vale para quem aparece só de noite ("soNoite": true).`);
+    }
     defs.set(id, {
       id,
       name: r.text('nome'),
@@ -243,7 +253,8 @@ export function parseMonsterDefs(json: unknown): Map<string, MonsterDef> {
       song,
       shell,
       shotDodge: dodge / 100,
-      nightOnly: r.bool('soNoite', false),
+      nightOnly,
+      faintsUntilDawn,
       branch,
       rank: rankName ? (rankName as MonsterRank) : null,
       drops: parseDrops(r.list('itens'), rawId),

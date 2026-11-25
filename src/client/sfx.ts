@@ -38,7 +38,8 @@ export type SoundName =
   | 'spirit'
   | 'burst'
   | 'hawk'
-  | 'arrow-hit';
+  | 'arrow-hit'
+  | 'poof';
 
 /**
  * Os sons gravados (licença livre, CC0, do OpenGameArt; créditos em public/assets/audio/CREDITOS-SONS.md): o nome e o
@@ -391,6 +392,12 @@ export class Sfx {
         this.tone('sine', 2600, 1700, t + 0.02, 0.4, 0.04);
         this.noise(t, 0.3, 'bandpass', 3000, 2200, 0.05);
         this.tone('sine', 1900, 1200, t + 0.5, 0.3, 0.05);
+        break;
+      case 'poof': // a Cuca virando (bruxa ↔ chefe): o sopro da fumaça e um brilho de encanto descendo, meio torto
+        this.noise(t, 0.45, 'lowpass', 1600, 260, 0.22);
+        this.tone('sine', 1180, 520, t + 0.04, 0.5, 0.06);
+        this.tone('sine', 1250, 560, t + 0.1, 0.45, 0.04);
+        this.tone('triangle', 180, 120, t, 0.3, 0.12);
         break;
       case 'burst': // a Flecha Ancestral explode no fim: um baque fundo e o brilho subindo
         this.tone('sine', 150, 50, t, 0.35, 0.3);

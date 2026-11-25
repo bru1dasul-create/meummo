@@ -29,6 +29,13 @@ export interface ActorInfo {
    * view desenhar um selo, avise a [estrutura] para o nome vir sem o complemento.
    */
   rank?: 'elite' | 'raro';
+  /**
+   * NPC: desmaiada (a Cuca vencida de noite, caída na toca até amanhecer): já aparece caída e fica à vista (sem sumir
+   * como o monstro que cai). O motor chama logo depois `action(id, 'faint')` e, de tempos em tempos, `sleep(id, true)`
+   * (o "Zzz"). Quando a chefe acabou de cair ali, a bruxa só aparece depois que o desenho da chefe sai (DIE_MS). De manhã,
+   * o motor põe o desenho de novo (em pé, sem `fainted`) e chama `action(id, 'revive')`: levanta do chão.
+   */
+  fainted?: boolean;
 }
 
 /** O galho de quem está pendurado: a altura (metros, como no mapa) e para onde ele aponta, do tronco para a ponta (graus). */
@@ -65,6 +72,10 @@ export interface WorldView {
    * 'faint' (desmaiou: fica caído até 'revive'), 'revive' (acordou), 'sling-pull' (começou a puxar o estilingue:
    * termina com 'shoot' ou, sem atirar, com 'sling-cancel') e os golpes dos monstros ('bite', 'strike', 'charge' =
    * investida, 'spin', 'whirlwind', 'song'). `angle`: para onde, em graus no chão.
+   * A Cuca (uma luta por noite, 25/11): 'transform' = vira numa fumaça (ao anoitecer, a bruxa vira a chefe: o desenho
+   * dela sai logo depois e a chefe aparece no mesmo lugar; ao amanhecer, a bruxa acabou de aparecer onde a chefe estava),
+   * 'revive' num NPC que acabou de aparecer = levanta do chão (ela estava caída) e 'wake' num NPC = acorda confusa
+   * (esfrega os olhos, olha em volta). O motor solta a nuvenzinha no pé dela na 'transform'.
    */
   action?(id: number, kind: string, angle?: number): void;
   /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */

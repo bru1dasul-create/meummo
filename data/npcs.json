@@ -100,6 +100,12 @@
     "fala": "Hehehe... Entra, desperto, entra. Não repara a bagunça, que o caldeirão nunca para. Veio buscar alguma coisa forte?",
     "loja": { "vende": ["frasco", "agua_mina"], "compraPor": 40 },
     "receitas": ["garrafada_cuca"],
-    "soDeDia": true
+    "soDeDia": true,
+    "falasAoAcordar": [
+      "Ai, minha cabeça... Que noite foi essa?",
+      "Uaaah... Já é dia? Quem revirou a minha toca?",
+      "Hã? Eu tava mexendo o caldo... Cadê a minha colher?",
+      "Que barulheira foi essa? Sonhei que cantava pra um monte de gente..."
+    ]
   }
 }

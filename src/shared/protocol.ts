@@ -41,6 +41,8 @@ export interface EntityState {
   perch?: PerchState;
   /** Monstros: versão especial (os saguis raros): o nome aparece com "(Elite)" ou "(Raro)". Sem o campo = comum. */
   rank?: MonsterRank;
+  /** NPCs: desmaiada (a Cuca vencida de noite), caída no chão até amanhecer; ninguém negocia com ela. */
+  fainted?: true;
 }
 
 /** A versão especial de um monstro ("categoria" em data/monsters.json). */
@@ -191,7 +193,10 @@ export type FailReason = 'cooldown' | 'dead' | 'full_hp' | 'no_target' | 'bag_fu
 // (enxerga mais longe por `ms`)
 // 'skillup': pôs um ponto numa habilidade (`s` = qual): o efeito subindo do chão, como ao subir de nível (pedido do
 // dono, 23/11)
-export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | 'hawk' | 'skillup' | PetFx;
+// 'transform' = a Cuca virando (numa fumaça): ao anoitecer, a bruxa vira a chefe ali mesmo (vem no id da bruxa, logo
+// antes de ela sair da lista de NPCs); ao amanhecer, a chefe volta a ser a bruxa (no id da bruxa, logo depois de ela
+// voltar para a lista). 'wake' num NPC = a bruxa acordando de manhã, confusa (esfrega os olhos, olha em volta)
+export type FxKind = 'arc' | 'spin' | 'strike' | 'bite' | 'dash' | 'jump' | 'whirlwind' | 'charge' | 'song' | 'dizzy' | 'dodge' | 'vanish' | 'mark' | 'hawk' | 'skillup' | 'transform' | PetFx;
 /** O que um bicho faz que quem vê precisa animar: miar, ronronar (carinho), acordar e dormir. */
 export type PetFx = 'meow' | 'purr' | 'wake' | 'sleep';
 

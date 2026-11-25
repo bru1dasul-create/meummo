@@ -439,6 +439,17 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   quem viu o tiro. A poça nova tira as casas dela das poças antigas do mesmo dono (não somam).
 - **De dia a bruxa:** NPC com `dayOnly` (`"soDeDia"`) some de noite: sai da lista (`npcList`), os pedidos com ele são
   recusados (`presentNpc`) e, quando o dia vira, todo mundo recebe a lista nova (`npcs`).
+- **Uma luta por noite (25/11):** a bruxa e a chefe são a mesma pela chave (`dayFormOf`: o NPC `soDeDia` deste mapa com
+  a chave do monstro `soNoite`). Com `faintsUntilDawn` (`"desmaiaAteAmanhecer"`), `killMonster` não agenda o renascer
+  (o anoitecer completa a área) e `faintDayForm` põe a bruxa no lugar da chefe com `Npc.fainted`: aparece na lista
+  (`npcVisible`, o `fainted` no `EntityState`) mas não negocia (`npcPresent`). `nightTurned`: ao amanhecer, a chefe de
+  pé sai sem o 'vanish' e a bruxa fica onde ela estava (fx `transform`); caída ou em pé, ela acorda (fx `wake`, `say`
+  com uma das `wakeLines`, `"falasAoAcordar"`) e, `WAKE_WALK_MS` depois, `npcWalkHome` leva ela de volta pelo
+  `findRoute` (cada pedaço é um `npc_walk`; espera quem está conversando). Ao anoitecer, a chefe nasce no lugar livre
+  mais perto do pé da bruxa (`spawnMonster(zone, near)` → `freeTileNear`), com o fx `transform` no id da bruxa antes
+  da lista sem ela. No navegador: a bruxa caída aparece depois que o desenho da chefe sai (`dyingMonsters`), com
+  `action(id, 'faint')` e o "Zzz" (`view.sleep`) de tempos em tempos; acordando, o desenho volta em pé com 'revive';
+  tocar nela caída só avisa ("não responde"). O `transform` solta a nuvenzinha e o som `poof` (de perto).
 
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
@@ -528,7 +539,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou; sem acertar ninguém, `x`, `y` = onde parou e `on` = no que bateu, ex. 'tronco'; sem `on`, caiu no fim do alcance) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
 | servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
-| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, pulo, redemoinho, investida), com o alcance do golpe quando precisa |
+| servidor | `fx` | efeito visual (arco, giro, bote, esquiva, pulo, redemoinho, investida; a Cuca virando, `transform`, e acordando de manhã, `wake`), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `gm` | você é administrador: o menu ADM aparece, com o voo, o invencível e os monstros que dá para criar (só administrador recebe) |
 | servidor | `guard` / `energy` | outro jogador levantou ou baixou a defesa / a sua energia e a defesa (baixada, levantada, quebrada); no `hit`, `blk` diz se a defesa segurou (1) ou segurou e quebrou (2) |

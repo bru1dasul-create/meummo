@@ -382,6 +382,14 @@ export class Npc {
   /** O passeio: quando sai para o próximo ponto e até quando espera parado (alguém falou ou negociou com ele). */
   strollAt = 0;
   busyUntil = 0;
+  /** Desmaiada (a Cuca vencida de noite): fica caída ali, à vista, até amanhecer; ninguém negocia com ela. */
+  fainted = false;
+  /**
+   * Acordou longe do lugar dela (de manhã, onde a chefe estava): quando sai para o próximo pedaço do caminho de volta
+   * (0 = não vai) e os pontos que faltam (o primeiro é o próximo; vazio = ainda não calculou).
+   */
+  homeAt = 0;
+  homePath: { x: number; y: number }[] = [];
 
   constructor(
     readonly id: number,
@@ -398,7 +406,9 @@ export class Npc {
   }
 
   state(): EntityState {
-    return { id: this.id, kind: 'npc', type: this.def.id, name: this.def.name, x: this.x, y: this.y, dir: DOWN, look: this.look, level: 0, hp: 1, maxHp: 1, gear: this.gear };
+    const state: EntityState = { id: this.id, kind: 'npc', type: this.def.id, name: this.def.name, x: this.x, y: this.y, dir: DOWN, look: this.look, level: 0, hp: 1, maxHp: 1, gear: this.gear };
+    if (this.fainted) state.fainted = true;
+    return state;
   }
 
   info(): NpcInfo {

@@ -117,6 +117,10 @@ const ENERGY_ANIM_PER_S = 80;
 const BLOCKED_COLOR = '#bfe6f0';
 /** Monstro que caiu: tempo para a view mostrar a queda ('die') antes de o desenho sair. */
 const DIE_MS = 700;
+/** Até onde (metros) se ouve a Cuca virando numa fumaça (o aviso vem para o mapa todo). */
+const POOF_HEARD_M = 18;
+/** De quanto em quanto tempo sobe o "Zzz" em cima da Cuca desmaiada (o desenho de cada um dura uns 4 s). */
+const FAINTED_ZZZ_MS = 4200;
 /**
  * Zoom da câmera: começa longe (o dono achou o "médio" perto demais) e o jogador ajusta (roda do mouse, teclas − e +).
  * A escolha fica guardada neste aparelho. A view limita (a da [arte] vai de 0,7 a 1,4).
@@ -363,6 +367,13 @@ class NewWorld implements NewWorldGame {
   private usingTouch = false;
   /** Outros jogadores desmaiados (acordam quando a vida volta). */
   private readonly fainted = new Set<number>();
+  /**
+   * Monstros caindo agora (o desenho sai DIE_MS depois): o tipo, onde caiu e o que fazer quando o desenho sair (`then`:
+   * a Cuca vencida, a bruxa caída aparece no mesmo lugar logo depois; veja `onNpcList`).
+   */
+  private readonly dyingMonsters = new Map<number, { type: string; x: number; y: number; then?: () => void }>();
+  /** NPCs desmaiados (a Cuca vencida): quando sobe o próximo "Zzz" em cima dela. */
+  private readonly faintedNpcZzz = new Map<number, number>();
   private safeToastAt = 0;
   /** Zoom da câmera escolhido pelo jogador (veja DEFAULT_ZOOM). */
   private zoom = DEFAULT_ZOOM;
@@ -552,11 +563,11 @@ class NewWorld implements NewWorldGame {
       entities: () =>
         [...game.entities.values()].map((e) => {
           const feet = feetAt(e.x, e.y);
-          return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp, ...(e.perch ? { perch: { ...e.perch } } : {}) };
+          return { id: e.id, kind: e.kind, type: e.type, name: e.name, x: e.x, y: e.y, feetX: feet.x, feetY: feet.y, hp: e.hp, maxHp: e.maxHp, ...(e.perch ? { perch: { ...e.perch } } : {}), ...(e.fainted ? { fainted: true } : {}) };
         }),
       hp: () => ({ hp: game.myHp, maxHp: game.myMaxHp }),
       // sinais de missão em cima dos NPCs ('!' nova, '?' para concluir)
-      marks: () => [...game.npcs.values()].map((n) => ({ name: n.e.name, type: n.e.type, mark: npcMark(n.e.type, game.questList, game.questContext()) })),
+      marks: () => [...game.npcs.values()].map((n) => ({ name: n.e.name, type: n.e.type, mark: n.e.fainted ? '' : npcMark(n.e.type, game.questList, game.questContext()) })),
       zoom: () => game.zoom,
       // os números do combate que o navegador está usando (vêm do servidor; o painel pode mudar com o jogo rodando)
       combat: () => ({ ...game.rules }),
@@ -624,6 +635,8 @@ class NewWorld implements NewWorldGame {
     this.facing.clear();
     this.npcs.clear();
     this.fainted.clear();
+    this.dyingMonsters.clear(); // (o relógio de cada um confere se a view ainda é a mesma)
+    this.faintedNpcZzz.clear();
     this.pending = [];
     this.route = [];
     this.goingToNpc = null;
@@ -735,6 +748,7 @@ class NewWorld implements NewWorldGame {
     this.updateWind(now);
     this.drawMaps();
     this.updateConversation(now);
+    this.updateFaintedNpcs(now);
     this.checkNpcArrival();
     this.cuddleIfNear();
     this.checkNpcDistance();
@@ -773,7 +787,16 @@ class NewWorld implements NewWorldGame {
     // os saguis raros: "Sagui Corrompido (Elite)", "Sagui Ancestral (Raro)" (até a [arte] fazer um selo)
     const rank = e.rank ? { rank: e.rank } : {};
     const name = e.rank ? `${e.name} (${RANK_LABELS[e.rank]})` : e.name;
-    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}), ...galho, ...rank });
+    // a Cuca vencida, caída na toca até amanhecer
+    const fainted = e.fainted ? { fainted: true } : {};
+    this.view?.addActor(e.id, { kind: e.kind, type: e.type, name, look: e.look, x: feet.x, y: feet.y, angle: degreesOfDir(e.dir), me, ...(e.asleep ? { asleep: true } : {}), ...galho, ...rank, ...fainted });
+    if (e.fainted) {
+      // desmaiada (a Cuca vencida): caída até amanhecer, com o "Zzz" de tempos em tempos (veja updateFaintedNpcs)
+      this.view?.action?.(e.id, 'faint');
+      this.faintedNpcZzz.set(e.id, 0);
+    } else {
+      this.faintedNpcZzz.delete(e.id);
+    }
     this.combat.setPerch(e.id, e.perch ? e.perch.h : null);
     if (e.kind === 'player') this.view?.gear?.(e.id, e.gear ?? {}); // o que ele tem na mão (o arco fica sempre à vista)
   }
@@ -1455,6 +1478,11 @@ class NewWorld implements NewWorldGame {
    * (se vende); senão a conversa (quem só dá missão) ou a fala dele.
    */
   private openNpc(npc: NpcInfo): void {
+    if (npc.e.fainted) {
+      // a Cuca vencida, caída até amanhecer
+      this.toast.show(`${npc.e.name} não responde: acorda quando amanhecer.`, 3000);
+      return;
+    }
     const ctx = this.questContext();
     const type = npc.e.type;
     const questNow = this.questList.some(
@@ -1765,12 +1793,32 @@ class NewWorld implements NewWorldGame {
       fresh.add(npc.e.id);
       const old = this.entities.get(npc.e.id);
       this.npcs.set(npc.e.id, npc);
-      if (!old) {
+      const twin = !old && npc.e.fainted ? this.dyingTwinOf(npc.e) : undefined;
+      if (twin) {
+        // a chefe acabou de cair ali: a bruxa caída aparece quando o desenho da chefe sair (a queda e o sumir dela)
+        this.entities.set(npc.e.id, npc.e);
+        const id = npc.e.id;
+        twin.then = () => {
+          const e = this.entities.get(id);
+          if (e?.fainted && this.npcs.has(id)) this.addEntity(e, false);
+        };
+      } else if (!old) {
         this.addEntity(npc.e, false);
+      } else if (!!old.fainted !== !!npc.e.fainted) {
+        // caiu ou acordou (a Cuca de manhã): o desenho de novo, caído ou em pé, levantando do chão
+        this.view?.removeActor(npc.e.id);
+        this.addEntity(npc.e, false);
+        if (!npc.e.fainted) this.view?.action?.(npc.e.id, 'revive');
       } else if (old.x !== npc.e.x || old.y !== npc.e.y) {
         this.entities.set(npc.e.id, npc.e);
         const feet = feetAt(npc.e.x, npc.e.y);
         this.view?.moveActor(npc.e.id, feet.x, feet.y, degreesOfDir(npc.e.dir), { durationMs: 0 });
+      }
+      if (npc.e.fainted) {
+        // desmaiada não negocia: fecha o que estava aberto com ela
+        if (this.shop.npcId === npc.e.id) this.shop.close();
+        if (this.talk.npcId === npc.e.id) this.talk.close();
+        continue;
       }
       if (this.shop.npcId === npc.e.id) this.shop.open(npc); // loja aberta: mostra o que ela vende agora
       if (this.talk.npcId === npc.e.id) this.talk.open(npc, this.questContext());
@@ -1779,12 +1827,31 @@ class NewWorld implements NewWorldGame {
       if (fresh.has(id)) continue;
       this.npcs.delete(id);
       this.entities.delete(id);
+      this.faintedNpcZzz.delete(id);
       this.view?.removeActor(id);
       if (this.talk.npcId === id) this.talk.close();
       if (this.shop.npcId === id) this.shop.close();
     }
     this.gmPanel.setNpcs([...this.npcs.values()].map((npc) => ({ id: npc.e.type, name: npc.e.name })));
     this.refreshQuests(); // os sinais ! e ? em cima de quem chegou
+  }
+
+  /** A Cuca vencida: a chefe que está caindo agora no lugar onde a bruxa caída vai aparecer (mesma chave, até 1,5 m). */
+  private dyingTwinOf(e: EntityState): { then?: () => void } | undefined {
+    const feet = feetAt(e.x, e.y);
+    for (const dying of this.dyingMonsters.values()) {
+      if (dying.type === e.type && Math.hypot(dying.x - feet.x, dying.y - feet.y) <= 1.5) return dying;
+    }
+    return undefined;
+  }
+
+  /** A cada quadro: o "Zzz" subindo em cima de quem está desmaiada (a Cuca vencida), de tempos em tempos. */
+  private updateFaintedNpcs(now: number): void {
+    for (const [id, next] of this.faintedNpcZzz) {
+      if (now < next) continue;
+      this.faintedNpcZzz.set(id, now + FAINTED_ZZZ_MS);
+      this.view?.sleep?.(id, true);
+    }
   }
 
   // ======================= conversa =======================
@@ -2596,8 +2663,13 @@ class NewWorld implements NewWorldGame {
       const view = this.view;
       if (view?.action) {
         view.action(id, 'die');
+        const dying: { type: string; x: number; y: number; then?: () => void } = { type: e.type, x: feet?.x ?? NaN, y: feet?.y ?? NaN };
+        this.dyingMonsters.set(id, dying);
         window.setTimeout(() => {
-          if (this.view === view) view.removeActor(id);
+          if (this.dyingMonsters.get(id) === dying) this.dyingMonsters.delete(id);
+          if (this.view !== view) return;
+          view.removeActor(id);
+          dying.then?.();
         }, DIE_MS);
       } else {
         view?.removeActor(id);
@@ -2808,7 +2880,7 @@ class NewWorld implements NewWorldGame {
     this.tracker.update(ctx);
     this.talk.update(ctx);
     for (const [id, npc] of this.npcs) {
-      const mark = npcMark(npc.e.type, this.questList, ctx);
+      const mark = npc.e.fainted ? '' : npcMark(npc.e.type, this.questList, ctx); // desmaiada: sem sinal
       this.npcMarks.set(id, mark);
       if (this.view?.mark) this.view.mark(id, mark);
       else this.combat.setMark(id, mark);
@@ -2975,6 +3047,18 @@ class NewWorld implements NewWorldGame {
           // pôs um ponto numa habilidade (você ou quem está perto): o efeito subindo do chão, na cor dela
           this.riseEffect(msg.id, 'skill', this.skillKindOf(msg.s));
           if (msg.id === this.myId) this.sfx.play('skillup');
+          break;
+        }
+        if (msg.kind === 'transform') {
+          // a Cuca virando (bruxa ↔ chefe): a nuvenzinha no pé dela e, onde a view souber, a animação; o som, de perto
+          const feet = this.drawnFeet(msg.id);
+          if (feet) this.combat.poof(feet.x, feet.y, gameNow());
+          this.view?.action?.(msg.id, 'transform');
+          if (feet && Math.hypot(feet.x - this.myFeet().x, feet.y - this.myFeet().y) < POOF_HEARD_M) this.sfx.play('poof');
+          break;
+        }
+        if (msg.kind === 'wake' && this.entities.get(msg.id)?.kind === 'npc') {
+          this.view?.action?.(msg.id, 'wake'); // a Cuca de manhã: acorda confusa
           break;
         }
         if (this.entities.get(msg.id)?.kind === 'pet') {

@@ -53,6 +53,7 @@ const bicho: MonsterDef = {
   shell: null,
   shotDodge: 0,
   nightOnly: false,
+  faintsUntilDawn: false,
   branch: null,
   rank: null,
   drops: [],

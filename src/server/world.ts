@@ -73,6 +73,7 @@ import type { GameMap, MonsterZone, Tile } from '../shared/map';
 import { bodyFits, bodySpotIn, canStep, cornerAtFeet, degreesToward, feetAt, flySlice, footCenter, footTile, nearestBodySpot, sliceDistance, sweepBody, walkSlice } from '../shared/movement';
 import { nameKey, nameProblem, normalizeName } from '../shared/names';
 import { findPath } from '../shared/pathfind';
+import { findRoute } from '../shared/route';
 import { emptyEquipment, gearLookOf, healAmount, MAX_GOLD, sellPrice, type ActiveEffectInfo, type EffectKey, type ItemEffect, type EquipSlot, type ItemInfo, type ItemStack } from '../shared/items';
 import { MAX_LEVEL, maxHpFor, xpToNext } from '../shared/progression';
 import {
@@ -238,6 +239,11 @@ export interface GroundDrop {
 export const DROP_READY_MS = 400;
 /** O bicho que vai embora (o filhote de boitatá ao amanhecer) some do mapa este tempo depois do aviso `vanish`. */
 export const VANISH_MS = 600;
+/**
+ * A Cuca de manhã (uma luta por noite, 25/11): acordou confusa onde a chefe estava (caída ou em pé), fala e, depois
+ * deste tempo, anda de volta para o caldeirão.
+ */
+export const WAKE_WALK_MS = 3000;
 /** De quanto em quanto tempo o servidor olha o que cada jogador está vendo (o mapa explorado). */
 const EXPLORE_EVERY_MS = 500;
 /** De quanto em quanto tempo o progresso de todo mundo é salvo (além de ao sair e ao subir de nível). */
@@ -479,14 +485,32 @@ export class World {
     this.npcs.set(npc.id, npc);
   }
 
-  /** Os NPCs deste mapa que estão aqui agora, para o navegador desenhar (de noite, a Cuca bruxa some: vira a chefe). */
+  /**
+   * Os NPCs deste mapa que aparecem agora, para o navegador desenhar (de noite, a Cuca bruxa some: vira a chefe; vencida,
+   * fica caída na toca até amanhecer).
+   */
   private npcList() {
-    return [...this.npcs.values()].filter((npc) => this.npcPresent(npc)).map((npc) => npc.info());
+    return [...this.npcs.values()].filter((npc) => this.npcVisible(npc)).map((npc) => npc.info());
   }
 
-  /** O NPC está aqui agora? (Quem só aparece de dia, "soDeDia", some de noite: ninguém fala com ele.) */
+  /** O NPC aparece agora? (Quem só aparece de dia, "soDeDia", some de noite; menos a Cuca vencida, caída até amanhecer.) */
+  private npcVisible(npc: Npc): boolean {
+    return npc.fainted || !(npc.def.dayOnly && this.night);
+  }
+
+  /** Dá para falar com o NPC agora? (Aparece e está acordado: a Cuca desmaiada não negocia.) */
   private npcPresent(npc: Npc): boolean {
-    return !(npc.def.dayOnly && this.night);
+    return !npc.fainted && !(npc.def.dayOnly && this.night);
+  }
+
+  /**
+   * A bruxa da chefe: o NPC "soDeDia" deste mapa com a mesma chave do monstro "soNoite" (a Cuca). É a mesma pessoa: de
+   * dia, a bruxa que negocia; de noite, a chefe.
+   */
+  private dayFormOf(def: MonsterDef): Npc | undefined {
+    if (!def.nightOnly) return undefined;
+    for (const npc of this.npcs.values()) if (npc.def.dayOnly && npc.def.id === def.id) return npc;
+    return undefined;
   }
 
   /** O NPC `npcId` deste mapa, se estiver aqui agora. */
@@ -1603,10 +1627,27 @@ export class World {
     this.log(`${this.map.name}: ${night ? 'anoiteceu' : 'amanheceu'}`);
   }
 
-  /** Virou: a força dos bichos muda, e os bichos só da noite chegam ao anoitecer e vão embora ao amanhecer. */
+  /**
+   * Virou: a força dos bichos muda, e os bichos só da noite chegam ao anoitecer e vão embora ao amanhecer. A Cuca (a
+   * bruxa e a chefe são a mesma: veja `dayFormOf`) vira ali mesmo: ao anoitecer, a chefe nasce onde a bruxa está (no
+   * caldeirão); ao amanhecer, a bruxa volta onde a chefe estava (ou acorda caída, se venceram a chefe), confusa, e anda
+   * de volta para o lugar dela.
+   */
   private nightTurned(): void {
+    /** As bruxas que acordam agora (amanhecer) → se a chefe ainda estava de pé (ela vira de volta numa fumaça). */
+    const woke = new Map<Npc, boolean>();
     for (const monster of [...this.monsters.values()]) {
       if (monster.def.nightOnly && !this.night) {
+        const witch = this.dayFormOf(monster.def);
+        if (witch && !woke.has(witch) && monster.leavingAt === null) {
+          // a chefe de pé ao amanhecer: o encanto passa e ela volta a ser a bruxa ali mesmo
+          this.removeMonster(monster);
+          witch.x = monster.x;
+          witch.y = monster.y;
+          witch.fainted = false;
+          woke.set(witch, true);
+          continue;
+        }
         // vai embora: o navegador anima (a chama apagando) e ele sai do mapa logo depois
         if (monster.leavingAt === null) {
           monster.leavingAt = this.now() + VANISH_MS;
@@ -1617,17 +1658,44 @@ export class World {
       }
       this.fitMonsterHp(monster);
     }
+    if (!this.night) {
+      // a Cuca vencida acorda onde caiu
+      for (const npc of this.npcs.values()) {
+        if (!npc.fainted) continue;
+        npc.fainted = false;
+        woke.set(npc, false);
+      }
+    }
+    /** As bruxas que viram a chefe agora (anoitecer). */
+    const turned: Npc[] = [];
     for (const zone of this.zones) {
       if (!zone.def.nightOnly) continue;
       zone.respawnAt = [];
-      while (this.night && zone.alive.size < zone.zone.count && this.spawnMonster(zone)) {
+      if (!this.night) continue;
+      const witch = this.dayFormOf(zone.def);
+      if (witch && !witch.fainted && zone.alive.size < zone.zone.count) {
+        witch.homeAt = 0;
+        witch.homePath = [];
+        // ela vira a chefe ali mesmo (o lugar mais perto do pé dela onde o monstro cabe)
+        if (this.spawnMonster(zone, { x: Math.round(witch.x), y: Math.round(witch.y) })) turned.push(witch);
+      }
+      while (zone.alive.size < zone.zone.count && this.spawnMonster(zone)) {
         // de noite chegam todos
       }
     }
+    // a fumaça vem antes de a bruxa sair da lista: o navegador ainda tem o desenho dela para saber onde
+    for (const witch of turned) this.broadcastLocal({ t: 'fx', id: witch.id, kind: 'transform' });
     // quem só aparece de dia (a Cuca bruxa) some ao anoitecer e volta ao amanhecer: a lista nova vai para todo mundo
-    if ([...this.npcs.values()].some((npc) => npc.def.dayOnly)) {
-      const npcs = this.npcList();
-      for (const player of this.players.values()) player.outbox.push({ t: 'npcs', npcs });
+    if (woke.size > 0 || [...this.npcs.values()].some((npc) => npc.def.dayOnly)) this.broadcastLocal({ t: 'npcs', npcs: this.npcList() });
+    const now = this.now();
+    for (const [witch, transformed] of woke) {
+      if (transformed) this.broadcastLocal({ t: 'fx', id: witch.id, kind: 'transform' });
+      // acorda confusa (esfrega os olhos, olha em volta), fala e, daqui a pouco, anda de volta para o lugar dela
+      this.broadcastLocal({ t: 'fx', id: witch.id, kind: 'wake' });
+      const lines = witch.def.wakeLines;
+      if (lines.length > 0) this.broadcastLocal({ t: 'say', id: witch.id, text: lines[Math.min(lines.length - 1, Math.floor(this.random() * lines.length))]! });
+      witch.homeAt = now + WAKE_WALK_MS;
+      witch.homePath = [];
     }
   }
 
@@ -1710,6 +1778,11 @@ export class World {
       }
       if (!npc) {
         this.placeNpc(def);
+        continue;
+      }
+      if (npc.fainted) continue; // a Cuca caída fica onde caiu (acorda e anda até o lugar novo de manhã)
+      if (npc.homeAt > 0) {
+        npc.homePath = []; // voltando para o lugar dela: segue para o lugar novo
         continue;
       }
       const spot = this.npcSpot(def);
@@ -1869,10 +1942,12 @@ export class World {
    * de volta ao lugar dele. Com alguém falando ou negociando, espera. Sem ninguém no mapa, fica onde está.
    */
   private updateNpcs(now: number): void {
+    // a Cuca voltando para o caldeirão de manhã (espera quem está conversando com ela)
+    for (const npc of this.npcs.values()) if (npc.homeAt > 0 && now >= npc.homeAt && now >= npc.busyUntil) this.npcWalkHome(npc, now);
     if (this.players.size === 0) return;
     for (const npc of this.npcs.values()) {
       const points = npc.def.stroll;
-      if (points.length === 0 || now < npc.strollAt || now < npc.busyUntil || !this.npcPresent(npc)) continue;
+      if (points.length === 0 || now < npc.strollAt || now < npc.busyUntil || npc.homeAt > 0 || !this.npcPresent(npc)) continue;
       if (npc.strollAt === 0) {
         npc.strollAt = now + NPC_PAUSE_MIN_MS; // o primeiro passeio espera um pouco
         continue;
@@ -1892,6 +1967,33 @@ export class World {
       npc.strollAt = now + ms + NPC_PAUSE_MIN_MS + this.random() * (NPC_PAUSE_MAX_MS - NPC_PAUSE_MIN_MS);
       for (const player of this.players.values()) player.outbox.push({ t: 'npc_walk', id: npc.id, x: round3(to.x), y: round3(to.y), ms });
     }
+  }
+
+  /**
+   * De manhã, a bruxa acordou longe do lugar dela: o próximo pedaço do caminho de volta (pelo caminho de verdade, sem
+   * atravessar o caldeirão nem as pedras). O servidor já põe ela no fim do pedaço; o navegador anima no tempo `ms`.
+   */
+  private npcWalkHome(npc: Npc, now: number): void {
+    npc.homeAt = 0;
+    const home = this.npcSpot(npc.def);
+    if (!home || !this.npcPresent(npc)) {
+      npc.homePath = [];
+      return;
+    }
+    if (npc.homePath.length === 0) {
+      if (Math.hypot(home.x - npc.x, home.y - npc.y) < 0.05) return; // já está no lugar dela
+      const route = this.map.metric ? findRoute(this.map, { x: npc.x, y: npc.y }, home) : null;
+      npc.homePath = route?.exact ? route.points.slice() : [];
+      const last = npc.homePath.at(-1);
+      if (!last || last.x !== home.x || last.y !== home.y) npc.homePath.push(home); // (sem caminho: vai reto)
+    }
+    const to = npc.homePath.shift()!;
+    const ms = Math.round((Math.hypot(to.x - npc.x, to.y - npc.y) / NPC_WALK_SPEED) * 1000);
+    npc.x = to.x;
+    npc.y = to.y;
+    if (npc.homePath.length > 0) npc.homeAt = now + Math.max(TICK_MS, ms);
+    npc.strollAt = Math.max(npc.strollAt, now + ms + NPC_PAUSE_MIN_MS);
+    this.broadcastLocal({ t: 'npc_walk', id: npc.id, x: round3(to.x), y: round3(to.y), ms });
   }
 
   buy(player: Player, npcId: number, item: string, n: number): void {
@@ -2639,9 +2741,10 @@ export class World {
 
   // ======================= monstros =======================
 
-  private spawnMonster(zone: ZoneState): boolean {
+  /** Um monstro novo na área; `near`: de preferência ali ou no lugar livre mais perto (a Cuca nasce onde a bruxa está). */
+  private spawnMonster(zone: ZoneState, near?: Tile): boolean {
     if (zone.def.nightOnly && !this.night) return false; // só de noite (o filhote de boitatá)
-    const tile = this.freeTileInZone(zone);
+    const tile = (near && this.freeTileNear(near)) ?? this.freeTileInZone(zone);
     if (!tile) return false;
     const monster = new Monster(this.links.nextId(), zone.def, zone, tile.x, tile.y);
     monster.maxHp = monster.hp = this.monsterMaxHp(zone.def); // nasceu de noite: já mais forte
@@ -2669,10 +2772,12 @@ export class World {
     this.monsters.delete(monster.id);
     this.leaveTile(monster);
     monster.zone.alive.delete(monster.id);
-    monster.zone.respawnAt.push(now + monster.def.respawnMs);
+    // uma luta por noite (a Cuca): vencida, só volta na noite seguinte
+    if (!monster.def.faintsUntilDawn) monster.zone.respawnAt.push(now + monster.def.respawnMs);
     for (const player of this.players.values()) {
       if (player.known.delete(monster.id)) player.outbox.push({ t: 'death', id: monster.id });
     }
+    if (monster.def.faintsUntilDawn) this.faintDayForm(monster);
     // Todo mundo que ajudou leva a XP inteira (incentiva caçar em grupo); de noite, mais XP (e mais ouro, no giveLoot).
     const xp = this.night ? Math.round(monster.def.xp * this.combat.nightXpFactor) : monster.def.xp;
     for (const id of monster.contributors) {
@@ -2682,6 +2787,22 @@ export class World {
       this.giveLoot(player, monster, now);
       this.countQuestKill(player, monster.def.id);
     }
+  }
+
+  /**
+   * A chefe que de dia é a bruxa caiu (a Cuca): a bruxa fica desmaiada ali, à vista e sem negociar, até amanhecer. Se
+   * ainda há outra dela de pé (o menu ADM fez mais uma), a bruxa aparece quando a última cair.
+   */
+  private faintDayForm(monster: Monster): void {
+    const witch = this.dayFormOf(monster.def);
+    if (!witch) return;
+    for (const other of this.monsters.values()) if (other.def.id === monster.def.id && other.leavingAt === null) return;
+    witch.x = monster.x;
+    witch.y = monster.y;
+    witch.fainted = true;
+    witch.homeAt = 0;
+    witch.homePath = [];
+    this.broadcastLocal({ t: 'npcs', npcs: this.npcList() });
   }
 
   private updateMonster(monster: Monster, now: number): void {
@@ -3334,6 +3455,21 @@ export class World {
   }
 
   /** Um tile livre (e alcançável a pé) dentro da área do monstro. */
+  /** O lugar livre para monstro mais perto de `tile` (ele mesmo, ou até 2 casas de distância), ou null. */
+  private freeTileNear(tile: Tile): Tile | null {
+    for (let r = 0; r <= 2; r++) {
+      let best: Tile | null = null;
+      for (let y = tile.y - r; y <= tile.y + r; y++) {
+        for (let x = tile.x - r; x <= tile.x + r; x++) {
+          if (Math.max(Math.abs(x - tile.x), Math.abs(y - tile.y)) !== r || !this.canMonsterEnter(x, y) || !this.map.isReachable(x, y)) continue;
+          if (!best || Math.hypot(x - tile.x, y - tile.y) < Math.hypot(best.x - tile.x, best.y - tile.y)) best = { x, y };
+        }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+
   private freeTileInZone(zoneState: ZoneState): Tile | null {
     const zone = zoneState.zone;
     for (let tries = 0; tries < 40; tries++) {

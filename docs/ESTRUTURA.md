@@ -25,7 +25,15 @@ alternativas quando vejo — sem concordar só para agradar.
 - **Testar sem caçar:** painel do administrador no servidor de teste — `/admin/api/jogador` (dar ouro e itens,
   levar para outro mapa) e `/admin/api/ajustar` (ex.: baixar o dano de um chefe só durante o teste).
 
-## Onde estamos (24 de novembro de 2026) — leia isto primeiro
+## Onde estamos (25 de novembro de 2026) — leia isto primeiro
+- **Uma luta por noite (25/11, o dono: "pode fazer assim, uma luta por noite"; na main):** vencida, a Cuca chefe não
+  renasce naquela noite e a bruxa fica caída ali (à vista, sem negociar); de manhã ela acorda onde estiver (em pé, se
+  ninguém venceu: vira numa fumaça), fala confusa e volta andando ao caldeirão; ao anoitecer, vira a chefe ali mesmo.
+  Peças: `faintsUntilDawn`, `NpcDef.wakeLines`, `Npc.fainted`/`homeAt`/`homePath`, `dayFormOf`, `faintDayForm`,
+  `npcWalkHome`, `freeTileNear`; fx `transform` (novo) e `wake` num NPC; protocolo 57. **Esperando a [arte]:** a pose
+  caída que fica (`fainted`/'faint'), 'revive', 'wake' e 'transform' no `cuca.js` — hoje ela aparece em pé com o "Zzz"
+  (o desenho da criatura some 0,7 s depois do 'die'). Se a [arte] achar o "Zzz" demais com a pose pronta, é só tirar
+  o `updateFaintedNpcs` do motor.
 - **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"; na main com a área `cuca` do [mundo], no fundo da toca):**
   o teste da caverna do [mundo] lê o `alcanceAgressao` da `cuca` (nenhum chão da área ao alcance da boca da toca): se
   aumentar esse número, peça a ele para afastar a área. Peças novas: `MonsterSong.effect` (`'charm'`
@@ -156,9 +164,9 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 56 (`sleep` e o `k` do `fire`, a Cuca chefe); `MIGRATIONS` até o passo 8 (`effects`: os
-  efeitos com tempo e quanto faltava, com o relógio parado fora do jogo; pedido do dono em 23/11); `npm run check` com
-  676 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 57 (`fainted` no `EntityState` e o fx `transform`: uma luta por noite da Cuca);
+  `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava, com o relógio parado fora do jogo;
+  pedido do dono em 23/11); `npm run check` com 764 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

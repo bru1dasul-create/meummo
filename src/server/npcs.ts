@@ -52,8 +52,14 @@ export interface NpcDef {
   stroll: { x: number; y: number }[];
   /** As viagens que ele faz (o Barqueiro); vazio = nenhuma. */
   trips: NpcTrip[];
-  /** Só aparece de dia (a Cuca, "soDeDia"): de noite some (ela vira a chefe da toca) e ninguém fala com ela. */
+  /**
+   * Só aparece de dia (a Cuca, "soDeDia"): de noite some e ninguém fala com ela. Com um monstro "soNoite" de mesma chave
+   * (a chefe da toca), é a mesma pessoa: ao anoitecer ela vira a chefe ali mesmo; ao amanhecer volta a ser ela onde a
+   * chefe estava (ou caída, se venceram a chefe) e anda de volta para o lugar dela.
+   */
   dayOnly: boolean;
+  /** O que diz ao acordar de manhã, confusa, depois da noite de chefe ("falasAoAcordar"; sorteia uma). */
+  wakeLines: string[];
 }
 
 export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
@@ -105,6 +111,10 @@ export function parseNpcDefs(json: unknown): Map<string, NpcDef> {
         return { to: t.text('para').toLowerCase(), name: t.text('nome'), price };
       }),
       dayOnly: r.bool('soDeDia', false),
+      wakeLines: r.list('falasAoAcordar').map((value) => {
+        if (typeof value !== 'string' || !value.trim()) r.fail('falasAoAcordar', 'precisa ser uma lista de falas, por exemplo ["Ai, minha cabeça...", "Já é dia?"]');
+        return (value as string).trim();
+      }),
     });
   }
   return defs;

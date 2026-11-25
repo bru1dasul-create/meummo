@@ -780,7 +780,7 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     - [x] **[estrutura]** a luta (aprovada pelo dono em 24/11: "pode fazer assim"; na main, conferida no PC e no
       celular com a área do [mundo]: a chefe nasce no fundo da toca, não vê quem está na boca e, chegando perto, vêm o
       caldo com as poças e a cantiga com o sono): de dia a bruxa (`"soDeDia"`: de noite ela some e ninguém negocia com ela); de noite, a chefe
-      `cuca` (nível 6, 300 de vida, só de noite, volta em 5 min; 150 de XP, 25–40 de ouro). **O caldo** (`caldo`, 10–15
+      `cuca` (nível 6, 300 de vida, só de noite, uma luta por noite (veja abaixo); 150 de XP, 25–40 de ouro). **O caldo** (`caldo`, 10–15
       a até 6 m, a cada 1,6 s) deixa **a poça** (`"poca"`: 3–5 a cada meio segundo por 2,5 s, em cruz; a nova toma o
       lugar da antiga no mesmo chão). **A cantiga de ninar** (`"efeito": "sono"`: a cada 12 s, até 5 m, 1,5 s de aviso):
       quem fica dorme 2,5 s (não anda, não esquiva nem atira); um golpe acorda e a esquiva no aviso escapa. Deixa
@@ -795,7 +795,21 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       e o arremesso por cima dela, a bola de caldo verde pingando (`projectileArt.ts`) e o respingo, a poça verde
       borbulhando, a cantiga ninando a colher com as notas em roda, o Zzz, o tranco, o desmaio com as faíscas roxas e o
       ícone `patua_cuca` (+ o visual dele no `gearArt.ts`). Testes: `tests/cuca-art.test.ts` e
-      `tests/projectileArt.test.ts`. Falta a [estrutura] trocar o `icone` do `patua_cuca` quando estiver na main
+      `tests/projectileArt.test.ts`. O `icone` do `patua_cuca` já é o dele (a [estrutura] trocou em 24/11)
+    - [x] **[estrutura]** uma luta por noite (25/11, o dono: "a bruxa volta do nada pro caldeirão quando vira dia...
+      quando morre o corpo deve aparecer"; escolha dele: "pode fazer assim, uma luta por noite"; na main, conferida no
+      PC e no celular): vencida, a chefe não volta naquela noite (`"desmaiaAteAmanhecer"` em `data/monsters.json`) e a
+      bruxa fica caída onde ela caiu, à vista de todos e sem negociar (tocar nela: "Cuca não responde: acorda quando
+      amanhecer."; sem o sinal de missão). Ao amanhecer ela acorda ali mesmo (se ninguém venceu, vira de volta numa
+      fumaça onde a chefe estava), fala uma das `"falasAoAcordar"` (`data/npcs.json`) e, 3 s depois, anda até o
+      caldeirão pelo caminho (sem atravessar o caldeirão nem as pedras). Ao anoitecer, vira a chefe ali no caldeirão,
+      numa fumaça (com um "puf" para quem está perto). A bruxa e a chefe são a mesma pela chave (`cuca` nos dois
+      arquivos). Protocolo 57. Teste: `tests/cuca-chefe.test.ts`
+    - [ ] **[arte]** a Cuca caída e acordando (pedido da [estrutura], 25/11). Hoje, caída, ela aparece em pé com o "Zzz"
+      (o desenho da criatura some 0,7 s depois do 'die', como monstro que sai do mapa). Falta: `fainted` no `addActor` e
+      `action(id, 'faint')` = caída e à vista até acordar; `'revive'` = levanta do chão; `'wake'` = acorda confusa
+      (esfrega os olhos, olha em volta); `'transform'` = a fumaça de virar (hoje o motor solta só a nuvenzinha do
+      monstro derrotado). Contrato em `src/client/novo/view.ts` (`ActorInfo.fainted` e `WorldView.action`)
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

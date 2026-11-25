@@ -411,6 +411,7 @@
     "perseguicao": 10,
     "renascerMs": 300000,
     "soNoite": true,
+    "desmaiaAteAmanhecer": true,
     "ataque": {
       "tipo": "projetil",
       "alcance": 6,

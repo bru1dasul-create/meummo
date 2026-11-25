@@ -69,6 +69,7 @@ describe('data/npcs.json', () => {
       stroll: [],
       trips: [],
       dayOnly: false,
+      wakeLines: [],
     });
     expect(npcs.get('mudo')).toMatchObject({ title: '', line: '', wears: [], shop: null });
   });

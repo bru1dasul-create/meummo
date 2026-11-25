@@ -3,25 +3,35 @@
 // O caldo do caldeirão voa até 6 m e, onde cai, deixa uma poça verde que queima; a cantiga de ninar (a cada 12 s, até
 // 5 m, com 1,5 s de aviso no chão) faz dormir 2,5 s quem ficar na área: não anda, não esquiva nem atira; levar golpe
 // acorda, e a esquiva durante o aviso escapa. A missão "A Cantiga da Cuca" pede para derrotá-la de noite.
+// Uma luta por noite (pedido do dono, 25/11: "a bruxa volta do nada pro caldeirão quando vira dia... quando morre o corpo
+// deve aparecer"): vencida, a chefe não volta naquela noite e a bruxa fica caída ali até amanhecer; de manhã ela acorda
+// onde estiver (caída ou, se ninguém venceu, em pé, virando de volta numa fumaça), confusa, e anda até o caldeirão; ao
+// anoitecer, vira a chefe ali mesmo.
 
 import { describe, expect, it } from 'vitest';
 import { loadItemDefs } from '../src/server/items';
 import { loadMonsterDefs, parseMonsterDefs } from '../src/server/monsters';
 import { loadNpcDefs, parseNpcDefs } from '../src/server/npcs';
 import { loadQuestDefs } from '../src/server/quests';
+import { loadRecipeDefs } from '../src/server/recipes';
 import { World, type Player } from '../src/server/world';
 import { TICK_MS } from '../src/shared/constants';
 import { GameMap, type TiledObject } from '../src/shared/map';
 import { cornerAtFeet, feetAt } from '../src/shared/movement';
+import { lineClear } from '../src/shared/route';
+import { loadMaps } from '../src/server/server';
 import { FakeClock, FakeConn } from './helpers';
 
 const monsters = loadMonsterDefs();
 const items = loadItemDefs();
 const quests = loadQuestDefs();
+const recipes = loadRecipeDefs();
 
 describe('a Cuca chefe (os dados)', () => {
-  it('nível 6, 300 de vida, só de noite, volta em 5 minutos; 150 de XP e 25 a 40 de ouro', () => {
-    expect(monsters.get('cuca')).toMatchObject({ name: 'Cuca', level: 6, hp: 300, xp: 150, gold: [25, 40], nightOnly: true, respawnMs: 300_000 });
+  it('nível 6, 300 de vida, só de noite, uma luta por noite (vencida, desmaia até amanhecer); 150 de XP e 25 a 40 de ouro', () => {
+    expect(monsters.get('cuca')).toMatchObject({ name: 'Cuca', level: 6, hp: 300, xp: 150, gold: [25, 40], nightOnly: true, faintsUntilDawn: true });
+    // de manhã, acorda confusa: sorteia uma destas falas
+    expect(loadNpcDefs().get('cuca')!.wakeLines.length).toBeGreaterThanOrEqual(3);
   });
 
   it('o caldo: 10–15 de dano a até 6 m, a cada 1,6 s; a poça verde queima 3–5 a cada meio segundo por 2,5 s', () => {
@@ -57,6 +67,13 @@ describe('a Cuca chefe (os dados)', () => {
     );
     expect(() => parseMonsterDefs({ b: { ...base, ataque: { ...throws, poca: { duracaoMs: 1000, dano: [1, 1], raio: 5 } } } })).toThrow(/"raio" precisa ser um número inteiro de 0 a 3/);
   });
+
+  it('o arquivo é conferido: "desmaiaAteAmanhecer" só em quem é só de noite; "falasAoAcordar" é uma lista de falas', () => {
+    const base = { nome: 'B', nivel: 1, vida: 10, xp: 1, passoMs: 300, ataque: { tipo: 'mordida', preparoMs: 100, intervaloMs: 500, dano: [1, 2] } };
+    expect(() => parseMonsterDefs({ b: { ...base, desmaiaAteAmanhecer: true } })).toThrow(/"desmaiaAteAmanhecer" só vale para quem aparece só de noite/);
+    expect(parseMonsterDefs({ b: { ...base, soNoite: true, desmaiaAteAmanhecer: true } }).get('b')!.faintsUntilDawn).toBe(true);
+    expect(() => parseNpcDefs({ b: { nome: 'B', mapa: 'toca', x: 1, y: 1, falasAoAcordar: ['Oi', 3] } })).toThrow(/"falasAoAcordar".*lista de falas/);
+  });
 });
 
 // ---------- na toca ----------
@@ -71,9 +88,11 @@ function toca() {
     { width: 24, height: 14, tilewidth: PX, tileheight: PX, orientation: 'orthogonal', tilesets: [], layers: [{ type: 'objectgroup', name: 'monstros', objects: [area] }, { type: 'objectgroup', name: 'pontos', objects: [spawn] }] },
     'toca',
   );
-  const npcs = parseNpcDefs({ cuca: { nome: 'Cuca', mapa: 'toca', x: 11.5, y: 5.5, soDeDia: true, loja: { vende: ['frasco'] }, receitas: ['garrafada_cuca'] } });
+  const npcs = parseNpcDefs({
+    cuca: { nome: 'Cuca', mapa: 'toca', x: 11.5, y: 5.5, soDeDia: true, loja: { vende: ['frasco'] }, receitas: ['garrafada_cuca'], falasAoAcordar: ['Ai, minha cabeça...', 'Já é dia?'] },
+  });
   const clock = new FakeClock();
-  const world = new World(map, { now: clock.now, random: () => 0.5, monsters, items, npcs, quests });
+  const world = new World(map, { now: clock.now, random: () => 0.5, monsters, items, npcs, quests, recipes });
   const conn = new FakeConn();
   const joined = world.join('Ana', conn);
   if (!joined.ok) throw new Error(joined.reason);
@@ -115,9 +134,9 @@ describe('de dia a bruxa, de noite a chefe', () => {
     expect(boss()).toBeDefined();
     const night = conn.ofType('npcs').at(-1)!;
     expect(night.npcs.some((n) => n.e.type === 'cuca')).toBe(false);
-    // de noite, a bruxa não negocia nem prepara
+    // de noite, a bruxa não negocia nem prepara (com tudo na mochila: o que falta é ela)
     standAt(player, 11.5, 6.4);
-    player.inventory.add('jurubeba', 2);
+    for (const [item, n] of Object.entries({ jurubeba: 2, babosa: 2, frasco: 1, agua_mina: 1 })) player.inventory.add(item, n);
     world.craft(player, witch().id, 'garrafada_cuca');
     run(TICK_MS);
     expect(conn.ofType('fail').at(-1)).toMatchObject({ reason: 'cant_trade' });
@@ -236,5 +255,172 @@ describe('a missão "A Cantiga da Cuca"', () => {
     world.questAction(player, 'complete', 'a_cantiga_da_cuca', witch().id);
     expect(player.quests.a_cantiga_da_cuca!.state).toBe('done');
     expect(player.inventory.countOf('patua_cuca')).toBe(1);
+  });
+});
+
+// ---------- uma luta por noite ----------
+
+type Moves = { teleportMonster(monster: unknown, tile: { x: number; y: number }): void };
+
+describe('uma luta por noite (25/11)', () => {
+  /** De noite, com a chefe levada para (9, 6), longe do caldeirão (que fica em 11,5; 5,5). */
+  function night() {
+    const t = toca();
+    t.turn('noite');
+    const cuca = t.boss()!;
+    (t.world as unknown as Moves).teleportMonster(cuca, { x: 9, y: 6 });
+    return { ...t, cuca };
+  }
+  const home = cornerAtFeet(11.5, 5.5);
+  const witchInfo = (list: { npcs: { e: { type: string; x: number; y: number; fainted?: true } }[] }) => list.npcs.find((n) => n.e.type === 'cuca');
+
+  it('vencida, a bruxa fica caída onde a chefe caiu, à vista de todos e sem negociar; a chefe não volta naquela noite', () => {
+    const { world, conn, player, run, boss, witch, clock, cuca } = night();
+    conn.clear();
+    (world as unknown as Inner).damage(cuca, 9999, player.id, clock.now());
+    run(TICK_MS);
+    expect(boss()).toBeUndefined();
+    expect(witchInfo(conn.ofType('npcs').at(-1)!)!.e).toMatchObject({ x: 9, y: 6, fainted: true });
+    expect(witch().fainted).toBe(true);
+    // caída, não negocia nem prepara (com tudo na mochila e do lado dela)
+    standAt(player, 9.5, 7.6);
+    for (const [item, n] of Object.entries({ jurubeba: 2, babosa: 2, frasco: 1, agua_mina: 1 })) player.inventory.add(item, n);
+    world.craft(player, witch().id, 'garrafada_cuca');
+    run(TICK_MS);
+    expect(conn.ofType('fail').at(-1)).toMatchObject({ reason: 'cant_trade' });
+    // quem chega no mapa de noite também vê ela caída
+    const other = new FakeConn();
+    expect(world.join('Bia', other).ok).toBe(true);
+    run(TICK_MS);
+    const welcome = other.ofType('welcome')[0] ?? other.ofType('zone')[0];
+    expect(witchInfo(welcome!)!.e.fainted).toBe(true);
+    // passa o tempo de renascer (5 min) e ainda é noite: nada de chefe nova
+    run(5.5 * 60_000);
+    expect(boss()).toBeUndefined();
+    expect(witch().fainted).toBe(true);
+  });
+
+  it('ao amanhecer ela acorda ali mesmo, confusa, e depois de 3 s anda de volta até o caldeirão (pelo caminho)', () => {
+    const { world, conn, player, run, turn, witch, clock, cuca } = night();
+    (world as unknown as Inner).damage(cuca, 9999, player.id, clock.now());
+    run(TICK_MS);
+    conn.clear();
+    turn('dia');
+    expect(witch().fainted).toBe(false);
+    expect(witchInfo(conn.ofType('npcs').at(-1)!)!.e).toEqual(expect.objectContaining({ x: 9, y: 6 }));
+    expect(witchInfo(conn.ofType('npcs').at(-1)!)!.e.fainted).toBeUndefined();
+    const id = witch().id;
+    expect(conn.ofType('fx').filter((m) => m.id === id).map((m) => m.kind)).toEqual(['wake']); // caída: acorda (sem fumaça)
+    expect(['Ai, minha cabeça...', 'Já é dia?']).toContain(conn.ofType('say').find((m) => m.id === id)!.text);
+    run(2500);
+    expect(conn.ofType('npc_walk')).toHaveLength(0); // ainda esfregando os olhos
+    run(8000);
+    const walks = conn.ofType('npc_walk').filter((m) => m.id === id);
+    expect(walks.length).toBeGreaterThanOrEqual(1);
+    expect(walks.at(-1)).toMatchObject({ x: Math.round(home.x * 1000) / 1000, y: Math.round(home.y * 1000) / 1000 });
+    expect({ x: witch().x, y: witch().y }).toEqual(home);
+    // de volta ao caldeirão, negocia de novo
+    standAt(player, 11.5, 6.4);
+    player.inventory.add('babosa', 2);
+    player.inventory.add('jurubeba', 2);
+    player.inventory.add('frasco', 1);
+    player.inventory.add('agua_mina', 1);
+    conn.clear();
+    world.craft(player, id, 'garrafada_cuca');
+    run(TICK_MS);
+    expect(conn.ofType('fail')).toEqual([]);
+    expect(player.inventory.countOf('garrafada_cuca')).toBe(1);
+  });
+
+  it('amanhece com a chefe de pé: ela vira a bruxa ali mesmo, numa fumaça, acorda confusa e volta andando', () => {
+    const { conn, run, turn, boss, witch, cuca } = night();
+    const bossId = cuca.id;
+    conn.clear();
+    turn('dia');
+    expect(boss()).toBeUndefined();
+    expect(conn.ofType('fx').some((m) => m.id === bossId && m.kind === 'vanish')).toBe(false); // não é o boitatá apagando
+    expect(conn.ofType('despawn').some((m) => m.id === bossId)).toBe(true);
+    const id = witch().id;
+    expect({ x: witch().x, y: witch().y }).toEqual({ x: 9, y: 6 });
+    // a ordem: a chefe sai, a bruxa entra na lista, e a fumaça e o acordar vêm nela
+    const all = conn.all();
+    const at = (test: (m: (typeof all)[number]) => boolean) => all.findIndex(test);
+    const listed = at((m) => m.t === 'npcs' && !!witchInfo(m));
+    expect(at((m) => m.t === 'despawn' && m.id === bossId)).toBeLessThan(listed);
+    expect(listed).toBeLessThan(at((m) => m.t === 'fx' && m.id === id && m.kind === 'transform'));
+    expect(at((m) => m.t === 'fx' && m.id === id && m.kind === 'transform')).toBeLessThan(at((m) => m.t === 'fx' && m.id === id && m.kind === 'wake'));
+    run(12_000);
+    expect({ x: witch().x, y: witch().y }).toEqual(home);
+  });
+
+  it('anoitece: ela vira a chefe ali no caldeirão (a fumaça vem no id dela, antes de ela sair da lista)', () => {
+    const { conn, turn, boss, witch } = toca();
+    turn('dia');
+    const feet = feetAt(witch().x, witch().y);
+    conn.clear();
+    turn('noite');
+    const cuca = boss()!;
+    const born = feetAt(cuca.x, cuca.y);
+    expect(Math.hypot(born.x - feet.x, born.y - feet.y)).toBeLessThan(0.8);
+    const all = conn.all();
+    const smoke = all.findIndex((m) => m.t === 'fx' && m.id === witch().id && m.kind === 'transform');
+    const gone = all.findIndex((m) => m.t === 'npcs' && !witchInfo(m));
+    expect(smoke).toBeGreaterThanOrEqual(0);
+    expect(smoke).toBeLessThan(gone);
+  });
+
+  it('na noite seguinte ela volta: uma luta por noite, não uma só', () => {
+    const { world, player, run, turn, boss, clock, cuca } = night();
+    (world as unknown as Inner).damage(cuca, 9999, player.id, clock.now());
+    run(TICK_MS);
+    turn('dia');
+    run(15_000);
+    turn('noite');
+    expect(boss()).toBeDefined();
+  });
+});
+
+describe('na Caverna Sagrada de verdade', () => {
+  it('ao anoitecer, a chefe nasce no caldeirão; de manhã, a bruxa caída do outro lado volta sem atravessar o caldeirão nem as pedras', () => {
+    const map = loadMaps().find((m) => m.id === 'caverna')!;
+    const clock = new FakeClock();
+    const world = new World(map, { now: clock.now, random: () => 0.5, monsters, items, npcs: loadNpcDefs(), quests, recipes });
+    const conn = new FakeConn();
+    const joined = world.join('Ana', conn);
+    if (!joined.ok) throw new Error(joined.reason);
+    const player = joined.player;
+    player.admin = true;
+    const run = (ms: number) => {
+      for (let t = 0; t < ms; t += TICK_MS) {
+        clock.advance(TICK_MS);
+        world.tick();
+      }
+    };
+    const witch = [...world.npcs.values()].find((n) => n.def.id === 'cuca')!;
+    const home = { x: witch.x, y: witch.y };
+    world.gm(player, { do: 'time', phase: 'dia' });
+    run(TICK_MS * 2);
+    world.gm(player, { do: 'time', phase: 'noite' });
+    run(TICK_MS * 2);
+    const cuca = [...world.monsters.values()].find((m) => m.def.id === 'cuca')!;
+    const born = feetAt(cuca.x, cuca.y);
+    const feet = feetAt(home.x, home.y);
+    expect(Math.hypot(born.x - feet.x, born.y - feet.y)).toBeLessThan(1);
+    // vencida do outro lado do caldeirão (a sudoeste dele)
+    (world as unknown as Moves).teleportMonster(cuca, { x: 46, y: 12 });
+    (world as unknown as Inner).damage(cuca, 9999, player.id, clock.now());
+    run(TICK_MS);
+    expect(witch.fainted).toBe(true);
+    conn.clear();
+    world.gm(player, { do: 'time', phase: 'dia' });
+    run(20_000);
+    expect({ x: witch.x, y: witch.y }).toEqual(home);
+    const walks = conn.ofType('npc_walk').filter((m) => m.id === witch.id);
+    expect(walks.length).toBeGreaterThanOrEqual(2); // deu a volta (em linha reta, passaria pelo caldeirão)
+    let from = { x: 46, y: 12 };
+    for (const walk of walks) {
+      expect(lineClear(map, from, walk, 0)).toBe(true);
+      from = walk;
+    }
   });
 });
