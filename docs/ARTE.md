@@ -499,6 +499,52 @@
 - **Rascunho:** `cuca/chefe.cjs` (a prancha da chefe), `cuca/icone/` (o Patuá) e `cuca-chefe/jogo.cjs <pasta> pc|celular`
   (o jogo: `NOVO=1` cria a conta; vira a noite, cria a Cuca pelo F1 e derruba no fim).
 
+### A Cuca caída e acordando ("uma luta por noite", 25/11; pedido da [estrutura], escopo aprovado com o "pode fazer" do dono)
+- **A regra é da [estrutura]** (protocolo 57): vencida, a chefe não volta naquela noite e a bruxa fica caída onde a chefe
+  caiu até amanhecer (`fainted` no `addActor`, logo depois `action('faint')` e, de 4,2 em 4,2 s, `sleep(id, true)`, o
+  "Zzz"); de manhã o motor troca o desenho caído por um de pé e manda `'revive'` e `'wake'` juntos (e a fala); 3 s depois
+  ela anda de volta ao caldeirão. Ao anoitecer, `'transform'` chega logo **antes** de o desenho da bruxa sair (a chefe
+  aparece no mesmo lugar); ao amanhecer sem vitória, logo depois de a bruxa aparecer onde a chefe estava (e o `'wake'`).
+- **Caída que fica (`cuca.js`):** `faintNow()` (a view chama quando vem `fainted`) põe ela já no chão, na mesma pose do
+  fim do desmaio da chefe (sentada no monte da saia, a cabeça caída, as mãos e a colher no chão), sem as faíscas e sem
+  sumir (`dying` continua `null`, então o nome fica); respira devagar e fundo, olhos fechados, a boca entreaberta;
+  aparece aos poucos (0,35 s), porque a chefe acabou de sumir ali. `'faint'` numa de pé derruba como a chefe e ela fica.
+  O nome e o "Zzz" descem para a cabeça caída (`overHead`).
+- **Levantar (`'revive'`, 1,1 s):** ergue a cabeça primeiro; finca a concha no chão (a colher de bengala) e empurra com a
+  mão no alto do cabo, o tronco indo para a frente no esforço; a outra mão empurra o chão e vai para a lombar; quase em
+  pé, a colher sobe pela frente e volta para a mão; arqueia as costas com a boca aberta ("ai, minhas costas"). Vale
+  para a caída e para o desenho de pé que acabou de aparecer (menos de 0,6 s).
+- **Acordar confusa (`'wake'`, 1,9 s):** espera o levantar acabar (1,1 + 1,9 = 3 s, o tempo do servidor); a mão livre vem
+  pela frente do peito e esfrega o olho do lado da câmera (de olhos fechados; o antebraço passa por cima da cara só
+  quando a mão já está na frente do peito), depois olha para um lado e para o outro, pisca e sacode a cabeça; zonza, o
+  corpo balança. Andando, a confusão passa. Caída, levantando e acordando: sem mexer o caldo, sem a risadinha, sem
+  olhar o herói e sem a colher sacudindo para quem fala (a boca fala).
+- **O caldeirão sem pulo:** quem levanta fica virada para o lado em que caiu (`holdYaw`); depois de acordar, se o
+  caldeirão está perto, gira até ele em 0,5 s e volta a mexer aos poucos. Andando até ele (de manhã), olha para onde vai
+  e só vira ao chegar (antes ela virava de repente para o caldeirão ainda no caminho); o passinho de ajeitar o lugar
+  (menos de 25 cm) não tira ela do caldeirão. A colher caída ao lado do caldeirão fica inteira (só some no caldo quando
+  a concha está dentro da boca dele); o caldo volta para a concha aos poucos depois de acordar.
+- **A troca de desenho no mesmo lugar (`view.js`):** quem tem `keepsPlace` (a Cuca) e sai fica guardado por 1,5 s (onde
+  estava, para onde olhava, se estava no chão); o desenho do mesmo tipo (ou o mesmo id) que aparece a até 1,5 m fica no
+  mesmo pé e virado igual — a chefe caindo vira a bruxa caída sem pulo, e de manhã a caída vira a de pé no mesmo lado.
+- **A fumaça de virar (`js/smoke.js`, `PD.smokeFx`; a view guarda em `_smokes`):** uma nuvem roxa e verde que sobe
+  girando em volta do corpo, em tufos de três calombos (beirada de nuvem, não bola), com a sombra embaixo e o brilho em
+  cima; o miolo **cheio já no primeiro quadro** (cobre a troca de desenho), abrindo a partir de 0,2 s e sumindo em
+  ~1,2 s; o clarão do encanto, o anel de luz no chão, a sombra da nuvem e faíscas subindo em espiral. Duas peças na
+  ordem do mundo (a de trás um pouco para longe da câmera, a da frente um pouco para perto) e o chão junto das sombras;
+  fica no lugar mesmo depois que o desenho sai. Acende a luz roxa no escuro (`_creatureLights`). A nuvenzinha branca
+  do motor (`combat.poof`) sai junto, no pé. Custo medido (sem placa de vídeo, o pior caso): até 1,7 ms por quadro no
+  pico, só por 1,2 s.
+- **O "Zzz" do motor** em cima da caída: mantido (é ele que diz "está dormindo, não morreu").
+- **Conferido:** a prancha (caída dos 4 lados e ao lado da chefe no fim do desmaio; o levantar e o acordar quadro a
+  quadro; a fumaça) e o jogo de verdade na Toca: virar a noite (a fumaça), derrubar a chefe pelo F1 (ela caída com o
+  "Zzz"), virar o dia (levanta, fala, esfrega o olho, olha em volta e volta a mexer) e virar a noite e o dia sem vencer
+  (a fumaça e o acordar); vídeo no PC e fotos no celular deitado, sem erros. Testes: `tests/cuca-art.test.ts` (20) e
+  `tests/smoke-art.test.ts` (4).
+- **Rascunho:** `cuca-caida/prancha.cjs <saida.png> [zoom] [direção]`, `cuca-caida/jogo.cjs <pasta> pc|celular` (fotos;
+  `NOVO=1` cria a conta), `cuca-caida/video.cjs <pasta> pc` (o vídeo, para ver a fumaça quadro a quadro) e
+  `cuca-caida/custo.cjs`.
+
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para
   todo jogador (no mundo, no retrato da barra e na mochila — `view.js` e `portrait.js`; os NPCs têm a aparência deles).

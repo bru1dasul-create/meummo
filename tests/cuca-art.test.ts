@@ -4,6 +4,9 @@
 // o herói; falando (a colher sai do caldo e a boca mexe); a cabeça de pé (o "para cima" da cabeça apontava para baixo).
 // De noite, a chefe (etapa 2): o aviso com a colher cheia atrás da cabeça e o arremesso por cima dela, a cantiga (as
 // mãos no colo e as notas em volta), o andar, o tranco ao apanhar, o desmaio com as faíscas roxas e os olhos vermelhos.
+// Uma luta por noite (25/11): a bruxa vencida caída que fica (sem sumir nem soltar faíscas, respirando, o nome descendo
+// junto), o levantar apoiada na colher fincada no chão e o acordar confusa (esfrega o olho, olha em volta) logo depois;
+// andando, a confusão passa; e, de volta perto do caldeirão, gira até ele devagar (sem pular) e volta a mexer.
 
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -23,6 +26,10 @@ type Rig = {
   jaw: number;
   stirK: number;
   full: boolean;
+  blink: number;
+  chest: Vec;
+  f: Vec;
+  rub: number;
 };
 type Cuca = {
   pos: { x: number; y: number };
@@ -46,6 +53,13 @@ type Cuca = {
   drawable: (cam: unknown, primary: boolean) => { draw: (ctx: unknown) => void; drawShadow: (ctx: unknown) => void };
   light: () => { x: number; y: number; z: number; r: number; color: string; k: number };
   _rig: (cam?: unknown) => Rig;
+  faintNow: () => void;
+  overHead: () => Vec;
+  dying: number | null;
+  lieT: number | null;
+  appearT: number | null;
+  holdYaw: boolean;
+  act: unknown;
 };
 
 /** Um caminho de mentira (o Path2D do navegador): aceita qualquer traço. */
@@ -347,5 +361,174 @@ describe('a Cuca desenhada', () => {
     } finally {
       eyes.night = false;
     }
+  });
+
+  const angle = (a: number, b: number): number => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+
+  it('caída que fica (a vencida): já no chão, aparece aos poucos e fica à vista, sem as faíscas, de olhos fechados', () => {
+    const standing = create(45 * DEG);
+    step(standing, 0.5);
+    const top0 = standing.overHead().z;
+    const head0 = standing._rig(cam).headC.z;
+    for (const yaw of [0, 45, 135, 225, 315]) {
+      const t = create(yaw * DEG);
+      t.faintNow();
+      // aparece aos poucos (a chefe acabou de sumir ali)
+      expect(t.appearT).toBe(0);
+      step(t, 0.5);
+      expect(t.appearT).toBeNull();
+      step(t, 30);
+      expect(t.label, `${yaw}°`).toBe('caída');
+      expect(t.dying).toBeNull(); // não some (o motor só tira o desenho de quem 'die')
+      const r = t._rig(cam);
+      expect(r.headC.z).toBeLessThan(head0 - 30);
+      expect(r.blink).toBe(1);
+      expect(r.bowl.z - t.groundZ).toBeLessThan(10); // a colher no chão
+      expect(t.parts(cam).after ?? null).toBeNull(); // sem as faíscas da chefe
+      const { ctx, fills, colors } = fakeCtx();
+      const d = t.drawable(cam, false);
+      d.drawShadow(ctx);
+      d.draw(ctx);
+      expect(fills(), `${yaw}°`).toBeGreaterThan(20);
+      expect(colors.filter((c) => /NaN|undefined/.test(c)), `${yaw}°`).toEqual([]);
+      // o nome (e o "Zzz") desce para a cabeça caída
+      expect(t.overHead().z).toBeLessThan(top0 - 40);
+    }
+  });
+
+  it('caída: respira devagar; o "faint" de novo não recomeça a queda; golpe não mexe nela', () => {
+    const t = create(45 * DEG);
+    t.faintNow();
+    step(t, 2);
+    const zs: number[] = [];
+    for (let i = 0; i < 60; i++) {
+      step(t, 0.1);
+      zs.push(t._rig(cam).chest.z);
+    }
+    expect(Math.max(...zs) - Math.min(...zs)).toBeGreaterThan(2);
+    const lie = t.lieT!;
+    t.action('faint');
+    expect(t.lieT).toBe(lie);
+    t.action('windup');
+    expect(t.act).toBeNull();
+  });
+
+  it("de pé, o 'faint' derruba como a chefe (sentada, a colher no chão) e ela fica caída", () => {
+    const t = create(90 * DEG);
+    step(t, 0.5);
+    const h0 = t._rig(cam).headC.z;
+    t.action('faint');
+    step(t, 0.2);
+    const mid = t._rig(cam).headC.z;
+    expect(mid).toBeLessThan(h0 - 5);
+    step(t, 5);
+    expect(t.label).toBe('caída');
+    expect(t._rig(cam).headC.z).toBeLessThan(mid - 10);
+    expect(t.dying).toBeNull();
+  });
+
+  it("de manhã: levanta do chão apoiada na colher fincada (a concha embaixo) e acorda confusa logo depois", () => {
+    // o motor tira o desenho caído e põe um de pé no lugar; manda 'revive' e 'wake' juntos
+    const t = create(70 * DEG);
+    t.time = 0.2; // (longe da risadinha, que vem sozinha a cada 11 s)
+    t.action('revive');
+    t.action('wake');
+    step(t, 1 / 60);
+    const r0 = t._rig(cam);
+    expect(t.label).toBe('levantando');
+    expect(r0.blink).toBe(1); // começa de olhos fechados, no chão
+    step(t, 0.35);
+    // a colher fincada: a concha no chão e a mão no alto do cabo
+    const r1 = t._rig(cam);
+    expect(r1.bowl.z - t.groundZ).toBeLessThan(10);
+    expect(r1.handL.z - t.groundZ).toBeGreaterThan(35);
+    step(t, 0.8);
+    // em pé, acordando: a mão livre esfrega o olho (perto da cabeça) de olhos fechados
+    expect(t.label).toBe('acordando');
+    step(t, 0.3);
+    const r2 = t._rig(cam);
+    expect(r2.headC.z - t.groundZ).toBeGreaterThan(125);
+    expect(r2.rub).toBeGreaterThan(0.8);
+    expect(Math.hypot(r2.handR.x - r2.headC.x, r2.handR.y - r2.headC.y, r2.handR.z - r2.headC.z)).toBeLessThan(32);
+    expect(r2.blink).toBe(1);
+    // e a mão vai por cima da cara (o antebraço desenhado depois da cabeça), sem cor quebrada
+    const { ctx, colors } = fakeCtx();
+    t.drawable(cam, false).draw(ctx);
+    expect(colors.filter((c) => /NaN|undefined/.test(c))).toEqual([]);
+    // olha para um lado e para o outro
+    let turned = 0;
+    for (let i = 0; i < 30; i++) {
+      step(t, 1 / 30);
+      const r = t._rig(cam);
+      turned = Math.max(turned, angle(Math.atan2(r.hf.y, r.hf.x), t.yaw));
+    }
+    expect(turned).toBeGreaterThan(0.5);
+    // acabou (1,1 s + 1,9 s): de pé, parada, solta para virar
+    step(t, 1.2);
+    expect(t.label).toBe('parada');
+    expect(t.holdYaw).toBe(false);
+  });
+
+  it("acorda sem levantar quando já está de pé (a chefe que virou de volta numa fumaça), e andando a confusão passa", () => {
+    const t = create(30 * DEG);
+    step(t, 1);
+    t.action('revive'); // (de pé há tempo: não cai para levantar)
+    expect(t.label).not.toBe('levantando');
+    t.action('wake');
+    step(t, 0.2);
+    expect(t.label).toBe('acordando');
+    for (let k = 0; k < 4; k++) {
+      t.moveTo(t.pos.x + 90, t.pos.y, 0, 600);
+      step(t, 0.6);
+    }
+    expect(t.label).toBe('andando');
+    expect(t._rig(cam).rub).toBe(0);
+  });
+
+  it('acordada perto do caldeirão: gira até ele devagar (sem pular) e volta a mexer', () => {
+    const t = create(90 * DEG);
+    // (a view: o desenho de pé no lugar do caído fica virado igual e não vira para o caldeirão de cara)
+    t.holdYaw = true;
+    t.setCauldron(cauldronAt(142));
+    expect(angle(t.yaw, 90 * DEG)).toBeLessThan(1e-6);
+    t.action('revive');
+    t.action('wake');
+    step(t, 3.05);
+    // acabou de acordar: começa a virar, sem pular
+    const a0 = angle(t.yaw, 142 * DEG);
+    expect(a0).toBeGreaterThan(0.2);
+    step(t, 0.1);
+    const a1 = angle(t.yaw, 142 * DEG);
+    expect(a1).toBeLessThan(a0);
+    expect(a0 - a1).toBeLessThan(0.4);
+    step(t, 1.2);
+    expect(angle(t.yaw, 142 * DEG)).toBeLessThan(1e-3);
+    expect(t.label).toBe('mexendo o caldeirão');
+    expect(t._rig(cam).bowl.z).toBeLessThan(88);
+  });
+
+  it('andando até o caldeirão, olha para onde vai e só vira para ele quando chega', () => {
+    const t = create(180 * DEG);
+    t.time = 0.2; // (longe da risadinha)
+    step(t, 0.3);
+    const c = { x: -150, y: 60, r: 70 };
+    for (let k = 1; k <= 3; k++) {
+      t.moveTo(-30 * k, 0, 180 * DEG, 500);
+      t.setCauldron(c);
+      step(t, 0.5);
+      expect(angle(t.yaw, 180 * DEG), `passo ${k}`).toBeLessThan(0.05);
+    }
+    expect(t.cauldron).not.toBeNull();
+    step(t, 1.5);
+    const want = Math.atan2(c.y - t.pos.y, c.x - t.pos.x);
+    expect(angle(t.yaw, want)).toBeLessThan(1e-3);
+    expect(t.label).toBe('mexendo o caldeirão');
+    // o passinho de ajeitar o lugar (10 cm, o servidor de manhã): continua virada para o caldeirão, mexendo
+    t.moveTo(t.pos.x, t.pos.y + 10, 90 * DEG, 100);
+    for (let i = 0; i < 30; i++) {
+      step(t, 1 / 60);
+      expect(angle(t.yaw, Math.atan2(c.y - t.pos.y, c.x - t.pos.x)), `quadro ${i}`).toBeLessThan(1e-3);
+    }
+    expect(t.label).toBe('mexendo o caldeirão');
   });
 });

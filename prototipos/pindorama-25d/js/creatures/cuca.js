@@ -16,6 +16,11 @@
 // 'shoot': o arremesso por cima da cabeça, com o corpo todo); a cantiga de ninar ('song': nina a colher no colo como um
 // nenê, balançando, e as notas giram em volta); o tranco ao apanhar e o desmaio (cai sentada, a colher no chão, e o
 // encanto sai em faíscas roxas).
+// Uma luta por noite (a [estrutura], 25/11): vencida, a bruxa fica caída onde a chefe caiu até amanhecer ('faint', ou
+// `faintNow` para quem já aparece caída: sem sumir, sem as faíscas, respirando devagar e de olhos fechados); de manhã
+// levanta apoiada na colher fincada no chão, como bengala, e põe a mão na lombar ('revive') e acorda confusa ('wake':
+// esfrega os olhos, olha para um lado e para o outro e sacode a cabeça). A fumaça de virar (bruxa ↔ chefe) é da view
+// (js/smoke.js): ela fica no lugar mesmo depois que o desenho sai.
 //   PD.creatures.create('cuca', xCm, yCm, yaw); cuca.setCauldron({ x, y, r })   (cm)
 (function (PD) {
   'use strict';
@@ -61,6 +66,14 @@
   const BREW = 88;
   /** A colher: o tanto do cabo que passa da mão (cm; mais que isso, mexendo, o cabo passava na frente da cara dela). */
   const TAIL = 14;
+  /**
+   * Os tempos (s) da queda (a mesma do desmaio da chefe: a bruxa caída emenda nela), do levantar, do acordar confusa
+   * (os dois juntos cabem nos 3 s que o servidor espera para ela andar de volta ao caldeirão) e do aparecer já caída.
+   */
+  const FALL = 0.45;
+  const RISE = 1.1;
+  const WAKE = 1.9;
+  const APPEAR = 0.35;
 
   /** Ponto no quadro dela (cm): `a` para a frente, `s` para a direita, `z` para cima. */
   function local(fr, a, s, z) {
@@ -141,12 +154,117 @@
       /** A passada (rad) e quanto ela está andando (0..1), suavizado. */
       this.stepPh = 0;
       this.walkK = 0;
+      /** Segundos desde que o desenho apareceu (o 'revive' logo depois de aparecer é o levantar da caída). */
+      this.age = 0;
+      /** Caída que fica (a vencida, até amanhecer): segundos desde cair; null = de pé. */
+      this.lieT = null;
+      /** Levantando do chão / acordando confusa: segundos desde começar (null = não); o acordar pode esperar o levantar. */
+      this.riseT = null;
+      this.wakeT = null;
+      this.wakeQueued = false;
+      /** Aparecendo já caída (s; null = à vista): vem aos poucos, no lugar da chefe que acabou de sumir. */
+      this.appearT = null;
+      /** Não vira para o caldeirão (caída, levantando e acordando: fica do lado em que caiu). */
+      this.holdYaw = false;
+      /** Virada para o caldeirão (o giro suave até ele, 0..1) e quanto ela está mexendo (0..1, suavizado). */
+      this.facing = false;
+      this.turnFrom = yaw;
+      this.turnK = 1;
+      this.stirW = 0;
+      /** Segundos desde o último pedaço de caminho de verdade (mais de 25 cm): andando, ela olha para onde vai. */
+      this.goneT = 9;
+      /** A view: o desenho que volta no mesmo lugar logo depois de sair (a troca bruxa ↔ chefe) fica virado igual. */
+      this.keepsPlace = true;
+      /** O alto da cabeça desenhada (cm, 3D) e quanto ela está no chão (o nome e o "Zzz" descem junto). */
+      this._headTop = null;
+      this._downK = 0;
+    }
+
+    /** Já caída (a view, quando o motor manda `fainted`): no chão sem a queda, aparecendo aos poucos. */
+    faintNow() {
+      this.lieT = 9;
+      this.riseT = null;
+      this.wakeT = null;
+      this.wakeQueued = false;
+      this.act = null;
+      this.appearT = 0;
+      this.holdYaw = true;
     }
 
     action(kind, yaw) {
       if (this.dying !== null) return;
+      if (kind === 'faint') {
+        // desmaiou e fica (a bruxa vencida): cai sentada como a chefe, mas fica à vista, sem as faíscas
+        if (this.lieT === null) {
+          const down = this.riseT !== null ? this._lowness().body : 0;
+          this.lieT = down * FALL;
+          this.riseT = null;
+          this.wakeT = null;
+          this.wakeQueued = false;
+          this.act = null;
+          this.holdYaw = true;
+        }
+        return;
+      }
+      if (kind === 'revive') {
+        // levanta: a caída, ou o desenho de pé que o motor acabou de pôr no lugar da caída (de manhã)
+        if (this.lieT !== null || (this.age < 0.6 && this.riseT === null)) {
+          this.lieT = null;
+          this.riseT = 0;
+          this.act = null;
+          this.holdYaw = true;
+        }
+        return;
+      }
+      if (kind === 'wake') {
+        // acorda confusa: depois de levantar (o servidor manda os dois juntos) ou já, se está de pé
+        if (this.lieT !== null) {
+          this.lieT = null;
+          this.riseT = 0;
+        }
+        if (this.riseT !== null) this.wakeQueued = true;
+        else this.wakeT = 0;
+        this.act = null;
+        this.holdYaw = true;
+        return;
+      }
+      if (this.lieT !== null || this.riseT !== null) return; // no chão (ou levantando): nada de golpe
       if (kind === 'hurt') this.recoilDir = this._fromHero() || { x: -Math.cos(this.yaw), y: -Math.sin(this.yaw) };
       super.action(kind, yaw);
+    }
+
+    /**
+     * Quanto ela está no chão (0..1): `body` = o corpo (abaixa sentada e tomba para a frente), `head` = a cabeça caída
+     * (levantando, ela ergue a cabeça antes do corpo) e `lie` = a caída que fica (respira devagar, a boca entreaberta).
+     */
+    _lowness() {
+      if (this.dying !== null) {
+        const k = M.smoothstep(0, FALL, this.dying);
+        return { body: k, head: k, lie: 0 };
+      }
+      if (this.lieT !== null) {
+        const k = M.smoothstep(0, FALL, this.lieT);
+        return { body: k, head: k, lie: M.smoothstep(FALL * 0.5, FALL + 0.3, this.lieT) };
+      }
+      if (this.riseT !== null) {
+        const r = this.riseT;
+        return { body: 1 - M.easeInOut((r - 0.28) / 0.55), head: 1 - M.smoothstep(0, 0.4, r), lie: 1 - M.smoothstep(0, 0.2, r) };
+      }
+      return { body: 0, head: 0, lie: 0 };
+    }
+
+    /** Acordando confusa (0..1 cada): esfregando os olhos, olhando em volta (e para onde: rad) e sacudindo a cabeça. */
+    _wakeState() {
+      const w = this.wakeT;
+      if (w === null) return { k: 0, rub: 0, look: 0, shake: 0, blink: false };
+      const ss = M.smoothstep;
+      // (andando, a confusão passa: o servidor manda ela andar 3 s depois de acordar)
+      const k = ss(0, 0.15, w) * (1 - ss(WAKE - 0.25, WAKE, w)) * (1 - this.walkK);
+      const rub = ss(0.02, 0.3, w) * (1 - ss(0.72, 0.95, w));
+      const look = 0.85 * (-ss(0.85, 1.05, w) + 2 * ss(1.22, 1.42, w) - ss(1.52, 1.7, w));
+      const shake = ss(1.6, 1.68, w) * (1 - ss(1.8, 1.9, w)) * Math.sin(w * M.TAU * 8);
+      const blink = rub > 0.45 || (w > 1.08 && w < 1.15) || (w > 1.47 && w < 1.53);
+      return { k, rub: rub * k, look: look * k, shake: shake * k, blink };
     }
 
     /** Para longe do herói (unitário, no chão), se ele estiver perto. */
@@ -175,51 +293,109 @@
       this.talkT = 0;
     }
 
-    /** O caldeirão do mapa perto dela ({ x, y, r } em cm; a view passa). Longe demais (ou nenhum): a colher em pé. */
+    /**
+     * O caldeirão do mapa perto dela ({ x, y, r } em cm; a view passa). Longe demais (ou nenhum): a colher em pé.
+     * Parada (o desenho que acabou de aparecer no lugar dela), já fica virada para ele, mexendo; andando até lá, vira e
+     * começa a mexer quando chega (animate); caída, levantando ou acordando, fica do lado em que está.
+     */
     setCauldron(c) {
       // (do lugar para onde ela está indo: levada pelo painel, ela ainda pode estar no caminho)
-      const at = this._t < this._dur ? this._to : this.pos;
+      const moving = this._t < this._dur;
+      const at = moving ? this._to : this.pos;
       const d = c ? Math.hypot(c.x - at.x, c.y - at.y) : Infinity;
       this.cauldron = d <= REACH && d > 1 ? { x: c.x, y: c.y, r: c.r || 70, d } : null;
-      if (this.cauldron) this.yaw = this.yawTarget = this.faceYaw = Math.atan2(c.y - at.y, c.x - at.x);
+      if (this.cauldron && !moving && !this.holdYaw) {
+        this.yaw = this.yawTarget = this.faceYaw = Math.atan2(c.y - at.y, c.x - at.x);
+        this.facing = true;
+        this.turnK = 1;
+        this.stirW = 1;
+      }
+    }
+
+    /** Os relógios da caída, do levantar, do acordar e do aparecer (o acordar espera o levantar acabar). */
+    _advance(dt) {
+      this.age += dt;
+      if (this.appearT !== null && (this.appearT += dt) >= APPEAR) this.appearT = null;
+      if (this.lieT !== null) this.lieT += dt;
+      if (this.riseT !== null) {
+        this.riseT += dt;
+        if (this.riseT >= RISE) {
+          this.riseT = null;
+          if (this.wakeQueued) {
+            this.wakeQueued = false;
+            this.wakeT = 0;
+          } else this.holdYaw = false;
+        }
+      }
+      if (this.wakeT !== null) {
+        this.wakeT += dt;
+        if (this.wakeT >= WAKE || this.walkK > 0.6) {
+          this.wakeT = null;
+          this.holdYaw = false;
+        }
+      }
+      // andando de verdade (mais que o passinho de ajeitar o lugar; entre um pedaço e outro do caminho também)
+      const going = this._t < this._dur && Math.hypot(this._to.x - this._from.x, this._to.y - this._from.y) > 25;
+      this.goneT = going ? 0 : this.goneT + dt;
+      // (de manhã o servidor leva ela de volta ao caldeirão: já não fica presa do lado em que caiu)
+      if (this.holdYaw && this.lieT === null && this.riseT === null && this.wakeT === null && going) this.holdYaw = false;
     }
 
     animate(dt) {
       this.talkT += dt;
-      // virada para o caldeirão (o servidor manda os NPCs olhando para baixo)
+      this._advance(dt);
+      const low = this._lowness();
+      const conf = Math.max(low.body, low.head, this.riseT !== null ? 1 : 0, this._wakeState().k);
+      // virada para o caldeirão (o servidor manda os NPCs olhando para baixo): parada, gira até ele (meio segundo) e
+      // mexe; andando, olha para onde vai; caída, levantando ou acordando, fica do lado em que está
       const cv = this.cauldron;
-      if (cv) {
-        this.yaw = this.yawTarget = this.faceYaw = Math.atan2(cv.y - this.pos.y, cv.x - this.pos.x);
+      // (andando de verdade; o passinho de ajeitar o lugar, de uns centímetros, não tira ela do caldeirão)
+      const walking = this.goneT < 0.25;
+      if (cv && !this.holdYaw && !walking) {
+        const want = Math.atan2(cv.y - this.pos.y, cv.x - this.pos.x);
+        if (!this.facing) {
+          this.facing = true;
+          this.turnFrom = this.yaw;
+          this.turnK = 0;
+        }
+        this.turnK = Math.min(1, this.turnK + dt / 0.5);
+        const yaw = this.turnK >= 1 ? want : this.turnFrom + M.angleDiff(this.turnFrom, want) * M.easeInOut(this.turnK);
+        this.yaw = this.yawTarget = this.faceYaw = yaw;
         cv.d = Math.hypot(cv.x - this.pos.x, cv.y - this.pos.y);
-      }
-      // olha o herói quando ele chega perto (só o pescoço: o corpo fica no caldeirão)
-      let want = M.noise1(this.time * 0.25 + this.seed * 9) * 0.3;
+      } else this.facing = false;
+      // mexendo: só virada para o caldeirão, de pé e sem a confusão (começa e para aos poucos)
+      this.stirW = M.damp(this.stirW, cv && this.facing && this.turnK > 0.8 && conf < 0.02 ? 1 : 0, 4, dt);
+      // olha o herói quando ele chega perto (só o pescoço: o corpo fica no caldeirão); no chão ou confusa, não
+      let want = M.noise1(this.time * 0.25 + this.seed * 9) * 0.3 * (1 - conf);
       let looking = 0;
       const h = this.near && this.near.hero;
-      if (h) {
+      if (h && conf < 0.02) {
         const d = Math.hypot(h.x - this.pos.x, h.y - this.pos.y);
         if (d < 500) {
           want = M.clamp(M.angleDiff(this.yaw, Math.atan2(h.y - this.pos.y, h.x - this.pos.x)), -1.1, 1.1);
           looking = 1;
         }
       }
-      if (this.talkT < 2.4) looking = 1;
+      if (this.talkT < 2.4 && conf < 0.02) looking = 1;
       this.lookYaw = M.dampAngle(this.lookYaw, want, 4, dt);
       this.lookK = M.damp(this.lookK, looking, 3, dt);
-      // andando (a chefe da noite): a passada arrastada, uma a cada ~46 cm
+      // andando (a chefe da noite, e a bruxa voltando de manhã): a passada arrastada, uma a cada ~46 cm
       const sp = this.speed;
       this.walkK = M.damp(this.walkK, sp > 25 ? 1 : 0, 6, dt);
       this.stepPh += (Math.min(sp, 260) / 46) * Math.PI * dt;
       const ak = this.act && this.act.kind;
       this.label =
         this.dying !== null ? 'desmaiando'
+        : this.lieT !== null ? 'caída'
+        : this.riseT !== null ? 'levantando'
+        : this.wakeT !== null && this.walkK < 0.5 ? 'acordando'
         : ak === 'windup' ? 'enchendo a colher'
         : ak === 'shoot' ? 'jogando o caldo'
         : ak === 'song' ? 'cantando'
         : this.walkK > 0.5 ? 'andando'
         : this.talkT < 2.4 ? 'falando'
         : this._cackle() > 0.2 ? 'rindo'
-        : cv ? 'mexendo o caldeirão' : 'parada';
+        : cv && this.stirW > 0.5 ? 'mexendo o caldeirão' : 'parada';
     }
 
     /** A risadinha (0..1): sozinha de vez em quando e logo depois de falar. */
@@ -237,8 +413,17 @@
      */
     _rig(cam) {
       const t = this.time;
+      // no chão: a chefe desmaiando, a bruxa caída e levantando (a cabeça sobe antes do corpo); e acordando confusa
+      const low = this._lowness();
+      const faint = low.body;
+      const lie = low.lie;
+      const Wk = this._wakeState();
+      const rising = this.riseT;
+      // (no chão, levantando ou acordando: sem mexer o caldo, sem a risadinha, sem a colher sacudindo para quem fala e
+      // sem olhar o herói; a boca fala)
+      const conf = Math.max(faint, low.head, rising !== null ? 1 : 0, Wk.k);
       const talking = this.talkT < 2.4 ? 1 - M.smoothstep(2.0, 2.4, this.talkT) : 0;
-      const cackle = this._cackle();
+      const cackle = this._cackle() * (1 - conf);
       const cv = this.cauldron;
       // os golpes da chefe (o caldo e a cantiga), o desmaio, a passada e o tranco
       const A = this.act;
@@ -249,12 +434,11 @@
       const throwing = ak === 'shoot';
       const swing = throwing ? M.easeInOut(M.clamp01(at / 0.3)) : 0;
       const settle = throwing ? M.smoothstep(0.32, 0.75, at) : 1;
-      const faint = this.dying === null ? 0 : M.smoothstep(0, 0.45, this.dying);
       const walk = this.walkK * (1 - faint);
       const rec = this.recoil();
       const rd = this.recoilDir;
       // mexendo (ou com a colher em pé): sai disso falando, em parte rindo e nos golpes
-      const busy = 1 - Math.max(talking, cackle * 0.6);
+      const busy = 1 - Math.max(talking * (1 - conf), cackle * 0.6);
       const f = { x: Math.cos(this.yaw), y: Math.sin(this.yaw), z: 0 };
       const s = { x: -f.y, y: f.x, z: 0 };
       // o lado da colher (1 = direita, -1 = esquerda): o da câmera
@@ -263,14 +447,20 @@
       const ph = t * 2.6 + this.seed * 5;
       const ca = Math.cos(ph);
       const sa = Math.sin(ph);
-      const stirK = cv ? busy : 0;
+      const stirW = cv ? this.stirW * (1 - conf) : 0;
+      const stirK = stirW * busy;
       const sp = this.stepPh;
       const throwLean = throwing ? -5 + 15 * swing - 10 * settle * swing : 0;
-      const lean = ((2.2 + 2.6 * ca) * stirK + 1 * (1 - stirK)) + 3 * walk - 5 * wind + throwLean + 2 * song;
+      // levantando: o tronco vai para a frente no esforço e, já em pé, arqueia para trás ("ai, minhas costas")
+      const push = rising !== null ? Math.sin(Math.PI * M.clamp01((rising - 0.22) / 0.62)) : 0;
+      const arch = rising !== null ? Math.sin(Math.PI * M.clamp01((rising - 0.8) / 0.3)) : 0;
+      const lean = ((2.2 + 2.6 * ca) * stirK + 1 * (1 - stirK)) + 3 * walk - 5 * wind + throwLean + 2 * song + 9 * push - 8 * arch;
       const rock = Math.sin(t * 4.5) * 4 * song;
-      const sway = 1.8 * sa * stirK * side + Math.sin(sp) * 2.5 * walk + rock;
+      // (acordando, zonza: o corpo balança devagar)
+      const sway = 1.8 * sa * stirK * side + Math.sin(sp) * 2.5 * walk + rock + Math.sin(t * 2.3) * 2.2 * Wk.k;
       const bob = Math.abs(Math.sin(sp)) * 2.2 * walk;
-      const breath = Math.sin(t * 1.7) * 0.8;
+      // (caída: a respiração devagar e funda de quem dorme)
+      const breath = Math.sin(t * 1.7) * 0.8 * (1 - lie) + Math.sin(t * 1.1) * 2 * lie;
       const shake = cackle * Math.sin(t * 46) * 1.5;
       const fr = { o: { x: this.pos.x, y: this.pos.y, z: this.groundZ }, f, s };
       const W3 = (a, sd, z) => local(fr, a, sd, z);
@@ -291,33 +481,35 @@
       const shBack = P3(9 + lean * 0.7, -side * 15 + sway * 0.7, 105 + up);
       const neck = P3(18 + lean * 0.8, sway * 0.8, 112 + up);
       // a cabeça: na frente da corcunda, olhando o caldo (para baixo) ou o herói; rindo, vai para trás; cantando, inclina
-      // para o "nenê" no colo; no aviso, ergue (o sorriso de quem vai jogar); desmaiando, cai
-      const lk = this.lookYaw * (0.35 + 0.65 * this.lookK) * (1 - song * 0.6) + side * 0.45 * song;
-      const tilt = cackle * 0.36 - 0.32 * stirK * (1 - this.lookK) - 0.06 * this.lookK + 0.22 * wind - 0.3 * song - 0.9 * faint;
+      // para o "nenê" no colo; no aviso, ergue (o sorriso de quem vai jogar); desmaiando, cai; acordando, olha para um
+      // lado e para o outro, sacode e, esfregando o olho, vira um pouco para a mão
+      const lk = (this.lookYaw * (0.35 + 0.65 * this.lookK) * (1 - song * 0.6) + side * 0.45 * song) * (1 - Wk.k)
+        + Wk.look + 0.22 * Wk.shake + side * 0.25 * Wk.rub;
+      const tilt = cackle * 0.36 - 0.32 * stirK * (1 - this.lookK) - 0.06 * this.lookK + 0.22 * wind - 0.3 * song - 0.9 * low.head
+        - 0.12 * Wk.rub + 0.22 * arch;
       const ya = this.yaw + lk;
       const hf = M.norm({ x: Math.cos(ya) * Math.cos(tilt), y: Math.sin(ya) * Math.cos(tilt), z: Math.sin(tilt) });
       const hs = M.norm({ x: -hf.y, y: hf.x, z: 0 });
       const hu = M.norm(M.cross(hf, hs));
       const headC = M.add(neck, M.add(M.scale(hf, 9 * S), M.scale(UP, 5 * S * squash)));
-      // a boca: fala (abre e fecha), a risada (bem aberta), cantando (devagar) e o sorriso torto do aviso
+      // a boca: fala (abre e fecha), a risada (bem aberta), cantando (devagar), o sorriso torto do aviso e o "ai" de
+      // quem endireita as costas; caída, entreaberta
       const jaw = Math.max(
         talking * Math.abs(Math.sin(t * 9)) * 0.42,
         cackle * (0.38 + 0.18 * Math.abs(Math.sin(t * 23))),
         song * (0.1 + 0.16 * Math.abs(Math.sin(t * 5))),
         wind * 0.16,
-      ) * (1 - faint);
+        arch * 0.24,
+      ) * (1 - faint) + 0.07 * lie;
       // a colher: mexendo em roda por cima da beirada (o caldo a `d` cm), ou em pé como bengala/cetro (sem caldeirão);
       // falando, sai do caldo e sacode para quem fala com ela
       const wag = Math.sin(t * 7);
-      let handBase;
-      let bowlBase;
-      if (cv) {
-        handBase = W3(46 + ca * 6, side * (13 + sa * 5), 108);
-        bowlBase = W3(cv.d - 33 + ca * 16, side * (4 + sa * 16), RIM - 14);
-      } else {
-        const st = Math.sin(sp) * 5 * walk;
-        handBase = P3(24 + st, side * 12, 84 + breath * 0.4);
-        bowlBase = P3(28 + st * 1.4, side * 15, 122 + breath * 0.4);
+      const st = Math.sin(sp) * 5 * walk;
+      let handBase = P3(24 + st, side * 12, 84 + breath * 0.4);
+      let bowlBase = P3(28 + st * 1.4, side * 15, 122 + breath * 0.4);
+      if (cv && stirW > 0) {
+        handBase = M.lerp3(handBase, W3(46 + ca * 6, side * (13 + sa * 5), 108), stirW);
+        bowlBase = M.lerp3(bowlBase, W3(cv.d - 33 + ca * 16, side * (4 + sa * 16), RIM - 14), stirW);
       }
       const handTalk = P3(28, side * 17, 104 + wag * 3);
       const bowlTalk = P3(52, side * 28, 116 + wag * 6);
@@ -330,10 +522,10 @@
         handL = M.lerp3(handL, handWind, wind);
         bowl = M.lerp3(bowl, bowlWind, wind);
       }
+      const bq = (a, b, c, u) => M.lerp3(M.lerp3(a, b, u), M.lerp3(b, c, u), u);
       if (throwing) {
-        const bez = (a, b, c) => M.lerp3(M.lerp3(a, b, swing), M.lerp3(b, c, swing), swing);
-        const hS = bez(handWind, P3(20, side * 14, 156), P3(40, side * 12, 96));
-        const bS = bez(bowlWind, P3(34, side * 16, 186), P3(78, side * 10, 90));
+        const hS = bq(handWind, P3(20, side * 14, 156), P3(40, side * 12, 96), swing);
+        const bS = bq(bowlWind, P3(34, side * 16, 186), P3(78, side * 10, 90), swing);
         handL = M.lerp3(hS, handL, settle);
         bowl = M.lerp3(bS, bowl, settle);
       }
@@ -345,21 +537,48 @@
       // a outra mão nas costas (a velha curvada), sacudindo junto na risada; cantando, as duas no colo
       let handR = P3(-14 + lean * 0.4, -side * 8, 84 + breath * 0.5 + shake * 0.5);
       if (song > 0) handR = M.lerp3(handR, P3(25, -side * 3, 92), song);
-      // desmaiada: as mãos no chão e a colher caída do lado
-      if (faint > 0) {
-        handL = M.lerp3(handL, P3(30, side * 26, 12), faint);
-        bowl = M.lerp3(bowl, P3(72, side * 34, 3), faint);
-        handR = M.lerp3(handR, P3(22, -side * 24, 12), faint);
+      if (rising === null) {
+        // desmaiada (a chefe) e caída (a bruxa): as mãos no chão e a colher caída do lado
+        if (faint > 0) {
+          handL = M.lerp3(handL, P3(30, side * 26, 12), faint);
+          bowl = M.lerp3(bowl, P3(72, side * 34, 3), faint);
+          handR = M.lerp3(handR, P3(22, -side * 24, 12), faint);
+        }
+      } else {
+        // levantando: finca a concha no chão (a colher de bengala) e empurra com a mão no alto do cabo; a outra mão
+        // empurra o chão e vai para a lombar; já quase em pé, a colher sobe pela frente e volta para a mão
+        const r = rising;
+        const plantK = M.smoothstep(0.04, 0.28, r);
+        const liftK = M.smoothstep(0.55, 0.88, r);
+        const caneHand = W3(35 * S, side * 23 * S, 50);
+        const caneBowl = W3(40 * S, side * 27 * S, 3);
+        const h0 = M.lerp3(P3(30, side * 26, 12), caneHand, plantK);
+        const b0 = M.lerp3(P3(72, side * 34, 3), caneBowl, plantK);
+        handL = M.lerp3(h0, handL, liftK);
+        bowl = liftK > 0 ? bq(b0, W3(66 * S, side * 30 * S, 58), bowl, liftK) : b0;
+        handR = M.lerp3(W3(25 * S, -side * 27 * S, 7), handR, M.smoothstep(0.48, 0.82, r));
+      }
+      // acordando: a mão livre vem pela frente do peito e esfrega o olho do lado da câmera, dando voltinhas
+      let poleR = M.add(M.add(M.scale(s, -side), M.scale(f, -0.6)), { x: 0, y: 0, z: -0.3 });
+      if (Wk.rub > 0.001) {
+        const eyeN = M.norm(M.add(M.add(M.scale(hu, 0.55), M.scale(hs, side * 0.7)), M.scale(hf, 0.45)));
+        const eye = M.add(headC, M.add(M.add(M.scale(hf, 2 * S), M.scale(hs, side * 5.4 * S)), M.scale(hu, 5.9 * S)));
+        const ph2 = t * M.TAU * 3.2;
+        const circle = M.add(M.scale(hs, Math.cos(ph2) * 1.8 * S), M.scale(hu, Math.sin(ph2) * 1.5 * S));
+        const rubAt = M.add(M.add(eye, M.scale(eyeN, 7 * S)), circle);
+        handR = bq(handR, P3(26, -side * 30, 98), rubAt, Wk.rub);
+        poleR = M.lerp3(poleR, M.add(M.scale(s, -side * 0.5), { x: 0, y: 0, z: -1 }), Wk.rub);
       }
       const elL = elbowOf(shLadle, handL, M.add(M.scale(s, side), { x: 0, y: 0, z: -0.8 }));
-      const elR = elbowOf(shBack, handR, M.add(M.add(M.scale(s, -side), M.scale(f, -0.6)), { x: 0, y: 0, z: -0.3 }));
-      const blink = faint > 0.5 || (t + this.seed * 3) % 4.3 < 0.12 ? 1 : 0;
+      const elR = elbowOf(shBack, handR, poleR);
+      // (os olhos fechados: no chão, esfregando e nas piscadas de quem acordou agora)
+      const blink = low.head > 0.5 || Wk.blink || (t + this.seed * 3) % 4.3 < 0.12 ? 1 : 0;
       // a colher cheia (do aviso até soltar o caldo)
       const full = wind > 0.35 || (throwing && at < 0.16);
       return {
         fr, f, s, P3, side, waist, belly, chest, hump, sh: [shLadle, shBack], neck, headC, hf, hs, hu, jaw,
         handL, handR, elL, elR, bowl, cackle, talking, busy, stirK, blink, full, song, wind, faint, walk, step: sp,
-        spread: 1 + 0.35 * faint,
+        spread: 1 + 0.35 * faint, headLow: low.head, lie, rub: Wk.rub, conf,
       };
     }
 
@@ -373,12 +592,15 @@
       // a mão da colher é a do lado da câmera: o braço de lá (a mão nas costas) vai antes do tronco; o de cá vai por
       // cima do vestido e por baixo do xale (o braço) e por cima de tudo (o antebraço, a mão e a colher)
       const front = M.dot(R.hf, toCam) > -0.15;
+      // acordando: a mão que esfrega o olho, quando já passou para a frente do peito, vai por cima da cara (o antebraço
+      // sai do braço de lá); antes disso, continua atrás do tronco
+      const rubFront = R.rub > 0.05 && M.dot(M.sub(R.handR, R.chest), toCam) > 6;
       const g = (balls, ref, bias, paint) => ({ balls, ref, bias, body: true, paint });
       const groups = [
         g([{ c: R.P3(4, 0, 30), r: 26 * S }], R.P3(0, 0, 40), 0, (ctx, fl) => self._paintSkirt(ctx, cam, R, ink, fl, small)),
         g([], R.sh[1], -14, (ctx, fl) => {
           self._paintUpper(ctx, cam, R.sh[1], R.elR, ink, fl, small);
-          self._paintFore(ctx, cam, R.elR, R.handR, false, ink, fl, small);
+          if (!rubFront) self._paintFore(ctx, cam, R.elR, R.handR, false, ink, fl, small);
         }),
         g([{ c: R.chest, r: 18 * S }, { c: R.hump, r: 16 * S }], R.chest, 6, (ctx, fl) => {
           self._paintBodice(ctx, cam, R, ink, fl, small);
@@ -391,6 +613,12 @@
         }),
         g([{ c: R.headC, r: 15 * S }], R.headC, front ? 22 : 8, (ctx, fl) => self._paintHead(ctx, cam, R, ink, fl, small)),
       ];
+      if (rubFront) {
+        groups.push(g([{ c: R.handR, r: 6 }], R.handR, front ? 30 : 0, (ctx, fl) => self._paintFore(ctx, cam, R.elR, R.handR, false, ink, fl, small)));
+      }
+      // (o nome e o "Zzz" em cima da cabeça desenhada: no chão, ela fica bem mais baixa)
+      this._downK = Math.max(R.faint, R.headLow);
+      this._headTop = { x: R.headC.x, y: R.headC.y, z: R.headC.z + 22 * S };
       const paint = (ctx, flash) => {
         ctx.save();
         for (const gr of C.byDepth(cam, groups)) gr.paint(ctx, flash);
@@ -477,6 +705,31 @@
         ctx.fill();
       }
       ctx.restore();
+    }
+
+    /** Em cima da cabeça (cm, 3D): o nome e o "Zzz". No chão, desce para a cabeça caída. */
+    overHead() {
+      const base = super.overHead();
+      const h = this._headTop;
+      const k = this._downK;
+      if (!h || !(k > 0.01) || this.dying !== null) return base;
+      return { x: M.lerp(base.x, h.x, k), y: M.lerp(base.y, h.y, k), z: M.lerp(base.z, h.z, k) };
+    }
+
+    /** A caída que aparece no lugar da chefe (que acabou de sumir ali) vem aos poucos, em `APPEAR` s. */
+    drawable(cam, primary) {
+      const d = super.drawable(cam, primary);
+      if (this.appearT === null) return d;
+      const k = M.smoothstep(0, APPEAR, this.appearT);
+      const faded = (paint) => (ctx) => {
+        ctx.save();
+        ctx.globalAlpha *= k;
+        paint(ctx);
+        ctx.restore();
+      };
+      d.draw = faded(d.draw);
+      d.drawShadow = faded(d.drawShadow);
+      return d;
     }
 
     /** Na caverna escura: o verde do caldeirão batendo nela (a view abre a escuridão em volta). */
@@ -807,8 +1060,9 @@
       const top = M.add(R.handL, M.scale(dir, TAIL));
       const base = R.fr.o.z + BREW;
       let end = R.bowl;
-      // (só mexendo o caldeirão: a colher caída da chefe desmaiada fica inteira no chão)
-      const inBrew = !!this.cauldron && R.bowl.z < base - 1;
+      // (só com a concha dentro da boca do caldeirão: a colher caída fica inteira no chão, mesmo ao lado dele)
+      const cv = this.cauldron;
+      const inBrew = !!cv && R.bowl.z < base - 1 && Math.hypot(R.bowl.x - cv.x, R.bowl.y - cv.y) < cv.r - 4;
       if (inBrew && top.z > base) end = M.lerp3(top, R.bowl, (top.z - base) / (top.z - R.bowl.z));
       const a = cam.p(top), b = cam.p(end);
       ctx.lineCap = 'round';
@@ -846,6 +1100,10 @@
       ctx.fill();
       ctx.stroke();
       if (R.faint > 0.5) return; // a colher caída: vazia
+      // (levantando e acordando, o caldo volta aos poucos para a concha; a transparência de quem desenha fica)
+      const a0 = ctx.globalAlpha;
+      const brewA = 1 - (R.conf || 0);
+      if (brewA < 0.02) return;
       if (R.full) {
         // a colher cheia do caldo (o aviso): o montinho verde brilhando, transbordando e pingando
         ctx.save();
@@ -874,14 +1132,15 @@
         for (let k = 0; k < 3; k++) {
           const ph = (this.time * 2.4 + k / 3) % 1;
           const q = cam.p({ x: R.bowl.x, y: R.bowl.y, z: R.bowl.z - 2 - ph * 55 });
-          ctx.globalAlpha = 1 - ph;
+          ctx.globalAlpha = a0 * (1 - ph);
           ctx.beginPath();
           ctx.ellipse(q.x + (k - 1) * 2.2 * z, q.y, 1.3 * z, 2 * z, 0, 0, M.TAU);
           ctx.fill();
         }
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = a0;
         return;
       }
+      ctx.globalAlpha = a0 * brewA;
       ctx.fillStyle = C.tint(BREW_C, flash);
       ctx.beginPath();
       ctx.ellipse(b.x - Math.cos(ang) * 0.6 * z, b.y - Math.sin(ang) * 0.6 * z - 0.5 * z, 4.4 * z, 2.4 * z, ang, 0, M.TAU);
@@ -889,12 +1148,12 @@
       for (let k = 0; k < 2; k++) {
         const ph = (this.time * 1.6 + k * 0.5) % 1;
         const q = cam.p({ x: R.bowl.x, y: R.bowl.y, z: R.bowl.z - 3 - ph * 40 });
-        ctx.globalAlpha = 1 - ph;
+        ctx.globalAlpha = a0 * brewA * (1 - ph);
         ctx.beginPath();
         ctx.ellipse(q.x + (k ? 1.5 : -1) * z, q.y, 1.1 * z, 1.6 * z, 0, 0, M.TAU);
         ctx.fill();
       }
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = a0;
     }
 
     /**

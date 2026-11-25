@@ -805,11 +805,12 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       caldeirão pelo caminho (sem atravessar o caldeirão nem as pedras). Ao anoitecer, vira a chefe ali no caldeirão,
       numa fumaça (com um "puf" para quem está perto). A bruxa e a chefe são a mesma pela chave (`cuca` nos dois
       arquivos). Protocolo 57. Teste: `tests/cuca-chefe.test.ts`
-    - [ ] **[arte]** a Cuca caída e acordando (pedido da [estrutura], 25/11). Hoje, caída, ela aparece em pé com o "Zzz"
-      (o desenho da criatura some 0,7 s depois do 'die', como monstro que sai do mapa). Falta: `fainted` no `addActor` e
-      `action(id, 'faint')` = caída e à vista até acordar; `'revive'` = levanta do chão; `'wake'` = acorda confusa
-      (esfrega os olhos, olha em volta); `'transform'` = a fumaça de virar (hoje o motor solta só a nuvenzinha do
-      monstro derrotado). Contrato em `src/client/novo/view.ts` (`ActorInfo.fainted` e `WorldView.action`)
+    - [x] **[arte]** a Cuca caída e acordando (pedido da [estrutura], 25/11; escopo aprovado pelo dono, "pode fazer"):
+      `fainted` no `addActor` = já caída e à vista (sem sumir nem soltar faíscas, respirando, o nome e o "Zzz" na cabeça
+      caída), no mesmo pé e virada como a chefe que caiu ali; `'revive'` = levanta apoiada na colher fincada no chão, com
+      a mão na lombar; `'wake'` = acorda confusa depois de levantar (esfrega o olho, olha em volta, sacode a cabeça);
+      `'transform'` = a fumaça roxa e verde (`js/smoke.js`), que fica no lugar mesmo depois que o desenho sai. Conferido
+      no jogo (PC e celular). Testes: `tests/cuca-art.test.ts` e `tests/smoke-art.test.ts`
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

@@ -57,6 +57,8 @@ import '../../../prototipos/pindorama-25d/js/creatures/cuca.js';
 import '../../../prototipos/pindorama-25d/js/levelup.js';
 // o efeito de usar um consumível: o estouro das garrafadas, o benzimento da arruda e o da comida
 import '../../../prototipos/pindorama-25d/js/consume.js';
+// a fumaça de virar da Cuca (bruxa ↔ chefe): fica no lugar mesmo depois que o desenho dela sai
+import '../../../prototipos/pindorama-25d/js/smoke.js';
 import '../../../prototipos/pindorama-25d/js/view.js';
 import '../../../prototipos/pindorama-25d/js/portrait.js';
 import { installAttributeIcons } from '../paintedIcons';

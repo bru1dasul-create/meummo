@@ -2,13 +2,15 @@
 // (src/client/novo/engine.ts, página /?novo) conecta ao servidor, lê os controles e chama esta peça pela interface
 // `WorldView` (src/client/novo/view.ts):
 //   new PD.View(container, tmj)        container = a caixa da página (ou um <canvas> pronto); tmj = o JSON do mapa
-//   addActor(id, { kind, type, name, look, x, y, angle, me })  kind: 'player' | 'npc' | 'monster'
+//   addActor(id, { kind, type, name, look, x, y, angle, me })  kind: 'player' | 'npc' | 'monster'; `fainted`: a Cuca
+//                             vencida, que já aparece caída (e fica à vista até 'revive')
 //   moveActor(id, x, y, angle, { durationMs, dash })           a posição nova do pé, a cada ~50–120 ms
 //   removeActor(id) · say(id, texto) · sleep(id, dormindo) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
 //   action(id, tipo, angulo)  golpes e reações (gente: tiro, defesa, 'dash' = rola, 'jump' = pula, 'volley' = atira para o
-//                             alto, a Chuva de Flechas, 'hawk' = os olhos acendem; criaturas: os delas)
+//                             alto, a Chuva de Flechas, 'hawk' = os olhos acendem; criaturas: os delas;
+//                             'transform' = a fumaça de virar da Cuca, que fica no lugar mesmo se o desenho sair)
 //   gear(id, gear)            o que o jogador tem equipado (o ícone de cada parte): o arco (`weapon: 'arco'`) fica na mão
 //   canDraw(kind, tipo)       desenha este bicho? (kind 'pet': o Joaquim, 'joaquim'; ações wake, sleep, meow, purr, dash)
 //   focus(ponto | null)       conversa: a câmera vai até quem fala (metros, o pé), um pouco acima do meio da tela
@@ -50,6 +52,8 @@
   const NAME_COLOR = { me: '#ffe08a', player: '#ffffff', npc: '#8fe3c8', pet: '#8fe3c8', monster: '#f1e4c8' };
   const UI_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   const rad = (deg) => (deg * Math.PI) / 180;
+  /** O relógio (ms) do navegador (para o que não espera o quadro). */
+  const clockNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   /** Um número de 0 a 1 que parece sorteado, mas é sempre o mesmo para o mesmo `k` (as bolhas da poça). */
   const hash01 = (k) => {
     const v = Math.sin(k * 127.1 + 311.7) * 43758.5453;
@@ -109,6 +113,19 @@
         // o bicho que já aparece dormindo (o Joaquim no sofá) ou pendurado no galho (o Sagui)
         if (a.asleep && creature.setAsleep) creature.setAsleep(true);
         if (a.galho && creature.setPerch) creature.setPerch(perchOf(a.galho), true);
+        // a Cuca trocando de desenho no mesmo lugar (a chefe que caiu vira a bruxa caída; de manhã, a caída vira a de pé;
+        // ao anoitecer, a bruxa vira a chefe): fica no pé e virada para o lado do desenho que acabou de sair, para a
+        // troca não dar pulo
+        if (creature.keepsPlace) {
+          const prev = this._takeGone(id, a.type, creature.pos);
+          if (prev) {
+            creature.moveTo(prev.x, prev.y, prev.yaw, 0, true);
+            creature.yaw = creature.faceYaw = prev.yaw;
+            if (prev.down || a.fainted) creature.holdYaw = true;
+          }
+        }
+        // a Cuca vencida (`fainted`): já aparece caída e fica à vista até amanhecer (o motor manda 'faint' logo depois)
+        if (a.fainted && creature.faintNow) creature.faintNow();
         // a Cuca (de dia, a bruxa: NPC) mexe o caldeirão do mapa que estiver perto dela (o do sul.js); sem ele, segura a
         // colher em pé. De noite ela é a chefe (o monstro `cuca`, o mesmo desenho): esse não fica preso no caldeirão
         if (creature.setCauldron && a.kind === 'npc') creature.setCauldron(this._nearProp('caldeirao', creature.pos, 260));
@@ -181,8 +198,35 @@
     }
 
     removeActor(id) {
+      const a = this.actors.get(id);
+      // (a Cuca: o desenho que sai agora pode voltar logo em seguida no mesmo lugar, na outra forma: veja addActor)
+      if (a && a.creature && a.creature.keepsPlace) this._rememberGone(id, a);
       this.actors.delete(id);
       if (this.followId === id) this.followId = null;
+    }
+
+    /** Guarda onde estava (cm), para onde olhava e se estava no chão quem acabou de sair (só os últimos, por 1,5 s). */
+    _rememberGone(id, a) {
+      const c = a.creature;
+      const list = this._gone || (this._gone = []);
+      list.push({ id, type: a.type, x: c.pos.x, y: c.pos.y, yaw: c.yaw, down: c.dying !== null || (c._downK || 0) > 0.5, at: clockNow() });
+      if (list.length > 4) list.shift();
+    }
+
+    /** Quem acabou de sair (há menos de 1,5 s) e voltou: o mesmo (`id`) ou outro do mesmo tipo, a até 1,5 m de `pos`. */
+    _takeGone(id, type, pos) {
+      const list = this._gone;
+      if (!list || !list.length) return null;
+      const now = clockNow();
+      for (let i = list.length - 1; i >= 0; i--) {
+        const g = list[i];
+        if (now - g.at > 1500) continue;
+        if (g.id !== id && g.type !== type) continue;
+        if (Math.hypot(g.x - pos.x, g.y - pos.y) > 150) continue;
+        list.splice(i, 1);
+        return g;
+      }
+      return null;
     }
 
     /**
@@ -208,6 +252,17 @@
         return;
       }
       const yaw = Number.isFinite(angle) ? rad(angle) : undefined;
+      if (kind === 'transform') {
+        // a Cuca virando (bruxa ↔ chefe): a fumaça fica no lugar, mesmo depois que o desenho dela sai (ao anoitecer, o
+        // motor tira a bruxa logo depois); a nuvenzinha de sempre é do motor
+        if (PD.smokeFx) {
+          const c = a.creature || a.ch;
+          const n = (this._smokeN = (this._smokeN || 0) + 1);
+          (this._smokes || (this._smokes = [])).push({ x: c.pos.x, y: c.pos.y, z: c.groundZ || 0, at: this.last || clockNow(), seed: (id * 0.618 + n * 0.377) % 1 });
+        }
+        if (a.creature) a.creature.action(kind, yaw);
+        return;
+      }
       if (a.creature) a.creature.action(kind, yaw);
       else this._personAction(a, kind, yaw);
     }
@@ -1011,6 +1066,9 @@
           own(c);
         };
       }
+      // a fumaça de virar (a Cuca): a parte de trás antes de quem está no lugar e a da frente depois (sempre no fim da
+      // lista: o primeiro da lista é o herói)
+      if (this._smokes && this._smokes.length) this._smokeDrawables(actors, seen);
       this.world.draw(ctx, actors);
       this._drawAtmosphere(ctx);
       this._drawVeilMotes(ctx);
@@ -1356,6 +1414,13 @@
         if (!L) continue;
         if (Array.isArray(L)) out.push(...L);
         else out.push(L);
+      }
+      // a fumaça de virar da Cuca (js/smoke.js): o clarão roxo, que fica no lugar mesmo depois que o desenho dela sai
+      if (this._smokes && PD.smokeFx) {
+        for (const sm of this._smokes) {
+          const k = PD.smokeFx.light((this.last - sm.at) / 1000);
+          if (k > 0.02) out.push({ x: sm.x, y: sm.y, z: sm.z + 90, r: 230, color: '#b58cff', k: 0.75 * k });
+        }
       }
       return out;
     }
@@ -1927,6 +1992,38 @@
         draw(c);
         pass(c, 'frente');
       };
+    }
+
+    /**
+     * A fumaça de virar (js/smoke.js) de cada lugar: duas peças na ordem do mundo, a de trás (um pouco para longe da
+     * câmera: vem antes de quem está ali) e a da frente (um pouco para perto: vem depois); o anel no chão vai com as
+     * sombras. A que acabou sai da lista.
+     */
+    _smokeDrawables(actors, seen) {
+      const cam = this.cam;
+      const fx = PD.smokeFx;
+      const now = this.last;
+      this._smokes = this._smokes.filter((sm) => (now - sm.at) / 1000 < fx.DURATION);
+      for (const sm of this._smokes) {
+        const age = Math.max(0, (now - sm.at) / 1000);
+        const foot = { x: sm.x, y: sm.y, z: sm.z };
+        const box = fx.bounds(cam, foot);
+        if (!seen(box)) continue;
+        const piece = (layer, toward) => {
+          const ox = toward * 45;
+          return {
+            entity: null,
+            primary: false,
+            fp: { x0: sm.x + ox - 25, x1: sm.x + ox + 25, y0: sm.y + ox - 25, y1: sm.y + ox + 25 },
+            bounds: box,
+            body: box,
+            drawShadow: layer === 'tras' ? (c) => fx.draw(c, cam, foot, age, sm.seed, 'chao') : () => {},
+            draw: (c) => fx.draw(c, cam, foot, age, sm.seed, layer),
+            cam,
+          };
+        };
+        actors.push(piece('tras', -1), piece('frente', 1));
+      }
     }
 
     /** A caixa (px do mundo) aparece na tela? Com folga de ~2 m (o arco nas costas, o brilho, o contorno). */
