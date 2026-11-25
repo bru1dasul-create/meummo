@@ -30,10 +30,10 @@ alternativas quando vejo — sem concordar só para agradar.
   renasce naquela noite e a bruxa fica caída ali (à vista, sem negociar); de manhã ela acorda onde estiver (em pé, se
   ninguém venceu: vira numa fumaça), fala confusa e volta andando ao caldeirão; ao anoitecer, vira a chefe ali mesmo.
   Peças: `faintsUntilDawn`, `NpcDef.wakeLines`, `Npc.fainted`/`homeAt`/`homePath`, `dayFormOf`, `faintDayForm`,
-  `npcWalkHome`, `freeTileNear`; fx `transform` (novo) e `wake` num NPC; protocolo 57. **Esperando a [arte]:** a pose
-  caída que fica (`fainted`/'faint'), 'revive', 'wake' e 'transform' no `cuca.js` — hoje ela aparece em pé com o "Zzz"
-  (o desenho da criatura some 0,7 s depois do 'die'). Se a [arte] achar o "Zzz" demais com a pose pronta, é só tirar
-  o `updateFaintedNpcs` do motor.
+  `npcWalkHome`, `freeTileNear`; fx `transform` (novo) e `wake` num NPC; protocolo 57. O desenho é da [arte] (main
+  3f1e2a4, conferido comigo no PC e no celular): caída à vista (`fainted`/'faint'), levanta na colher ('revive',
+  1,1 s), acorda confusa ('wake', 1,9 s: os dois somam os 3 s do `WAKE_WALK_MS`) e a fumaça que fica no chão
+  ('transform', `js/smoke.js`). O "Zzz" do motor (`updateFaintedNpcs`) e o `combat.poof` ficam (a [arte] aprovou).
 - **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"; na main com a área `cuca` do [mundo], no fundo da toca):**
   o teste da caverna do [mundo] lê o `alcanceAgressao` da `cuca` (nenhum chão da área ao alcance da boca da toca): se
   aumentar esse número, peça a ele para afastar a área. Peças novas: `MonsterSong.effect` (`'charm'`
