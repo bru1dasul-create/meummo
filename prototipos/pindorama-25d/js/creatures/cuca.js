@@ -74,6 +74,12 @@
   const RISE = 1.1;
   const WAKE = 1.9;
   const APPEAR = 0.35;
+  /**
+   * De noite, a chefe é maior que a bruxa (pedido do dono, 25/11, "com 1,35"): o desenho todo em volta do pé (~2,1 m,
+   * uma cabeça acima do herói). Virando ali agora, ela cresce em `GROW` s dentro da fumaça; vencida, encolhe enquanto cai.
+   */
+  const BOSS_SCALE = 1.35;
+  const GROW = 0.5;
 
   /** Ponto no quadro dela (cm): `a` para a frente, `s` para a direita, `z` para cima. */
   function local(fr, a, s, z) {
@@ -178,6 +184,27 @@
       /** O alto da cabeça desenhada (cm, 3D) e quanto ela está no chão (o nome e o "Zzz" descem junto). */
       this._headTop = null;
       this._downK = 0;
+      /** O tamanho do desenho agora e o que ela vai ter (a chefe: `BOSS_SCALE`; a bruxa: 1). */
+      this.size = 1;
+      this.sizeWant = 1;
+      this._sizeAtDeath = null;
+    }
+
+    /**
+     * A chefe da noite (a view chama para o monstro; a bruxa é o NPC): maior que a bruxa. `from` = o tamanho de onde ela
+     * começa (a bruxa que acabou de virar ali: 1, e ela cresce dentro da fumaça); sem ele, já aparece do tamanho dela.
+     */
+    setBoss(on, from) {
+      this.sizeWant = on ? BOSS_SCALE : 1;
+      this.size = Number.isFinite(from) ? M.clamp(from, 1, BOSS_SCALE) : this.sizeWant;
+      this._sizeAtDeath = null;
+      this._applySize();
+    }
+
+    /** O pé (o raio, para a ordem de desenho) e o alto (o nome) acompanham o tamanho. */
+    _applySize() {
+      this.radius = 32 * this.size;
+      this.top = 160 * this.size;
     }
 
     /** Já caída (a view, quando o motor manda `fainted`): no chão sem a queda, aparecendo aos poucos. */
@@ -315,6 +342,16 @@
     /** Os relógios da caída, do levantar, do acordar e do aparecer (o acordar espera o levantar acabar). */
     _advance(dt) {
       this.age += dt;
+      if (this.dying !== null) {
+        // vencida: o encanto sai e ela encolhe enquanto cai (a bruxa caída aparece do tamanho dela)
+        if (this._sizeAtDeath === null) this._sizeAtDeath = this.size;
+        this.size = M.lerp(this._sizeAtDeath, 1, M.smoothstep(0, 0.6, this.dying));
+        this._applySize();
+      } else if (this.size !== this.sizeWant) {
+        const step = ((BOSS_SCALE - 1) / GROW) * dt;
+        this.size = this.size < this.sizeWant ? Math.min(this.sizeWant, this.size + step) : Math.max(this.sizeWant, this.size - step);
+        this._applySize();
+      }
       if (this.appearT !== null && (this.appearT += dt) >= APPEAR) this.appearT = null;
       if (this.lieT !== null) this.lieT += dt;
       if (this.riseT !== null) {
@@ -713,12 +750,33 @@
       const h = this._headTop;
       const k = this._downK;
       if (!h || !(k > 0.01) || this.dying !== null) return base;
-      return { x: M.lerp(base.x, h.x, k), y: M.lerp(base.y, h.y, k), z: M.lerp(base.z, h.z, k) };
+      // (o alto da cabeça desenhada, no tamanho dela, em volta do pé)
+      const s = this.size;
+      const hx = this.pos.x + (h.x - this.pos.x) * s, hy = this.pos.y + (h.y - this.pos.y) * s, hz = this.groundZ + (h.z - this.groundZ) * s;
+      return { x: M.lerp(base.x, hx, k), y: M.lerp(base.y, hy, k), z: M.lerp(base.z, hz, k) };
     }
 
     /** A caída que aparece no lugar da chefe (que acabou de sumir ali) vem aos poucos, em `APPEAR` s. */
     drawable(cam, primary) {
       const d = super.drawable(cam, primary);
+      // a chefe maior: o desenho todo (a sombra, as notas, as faíscas) em volta do pé, e as caixas junto
+      const sz = this.size;
+      if (Math.abs(sz - 1) > 1e-3) {
+        const f = cam.p({ x: this.pos.x, y: this.pos.y, z: this.groundZ });
+        const grown = (paint) => (ctx) => {
+          ctx.save();
+          ctx.translate(f.x, f.y);
+          ctx.scale(sz, sz);
+          ctx.translate(-f.x, -f.y);
+          paint(ctx);
+          ctx.restore();
+        };
+        d.draw = grown(d.draw);
+        d.drawShadow = grown(d.drawShadow);
+        const box = (b) => b && { x0: f.x + (b.x0 - f.x) * sz, x1: f.x + (b.x1 - f.x) * sz, y0: f.y + (b.y0 - f.y) * sz, y1: f.y + (b.y1 - f.y) * sz };
+        d.bounds = box(d.bounds);
+        d.body = box(d.body);
+      }
       if (this.appearT === null) return d;
       const k = M.smoothstep(0, APPEAR, this.appearT);
       const faded = (paint) => (ctx) => {
@@ -735,7 +793,7 @@
     /** Na caverna escura: o verde do caldeirão batendo nela (a view abre a escuridão em volta). */
     light() {
       const lit = this.dying === null ? 1 : 1 - M.smoothstep(0.05, 0.45, this.dying);
-      return { x: this.pos.x, y: this.pos.y, z: this.groundZ + 115, r: 150, color: '#a6e07a', k: 0.35 * lit };
+      return { x: this.pos.x, y: this.pos.y, z: this.groundZ + 115 * this.size, r: 150 * this.size, color: '#a6e07a', k: 0.35 * lit };
     }
 
     /** Um volume pintado (o casco dos pontos na tela), com o contorno, a sombra e o brilho. */

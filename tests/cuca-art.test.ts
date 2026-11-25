@@ -7,6 +7,8 @@
 // Uma luta por noite (25/11): a bruxa vencida caída que fica (sem sumir nem soltar faíscas, respirando, o nome descendo
 // junto), o levantar apoiada na colher fincada no chão e o acordar confusa (esfrega o olho, olha em volta) logo depois;
 // andando, a confusão passa; e, de volta perto do caldeirão, gira até ele devagar (sem pular) e volta a mexer.
+// A chefe maior que a bruxa (o dono, 25/11: "com 1,35"): o desenho, o pé, o alto e a luz crescem; virando ali agora, ela
+// cresce aos poucos (dentro da fumaça); vencida, encolhe enquanto cai, para a bruxa caída aparecer do tamanho dela.
 
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -50,10 +52,17 @@ type Cuca = {
   walkK: number;
   stepPh: number;
   parts: (cam: unknown) => { paint?: (ctx: unknown, flash: number) => void; after?: (ctx: unknown) => void };
-  drawable: (cam: unknown, primary: boolean) => { draw: (ctx: unknown) => void; drawShadow: (ctx: unknown) => void };
+  drawable: (
+    cam: unknown,
+    primary: boolean,
+  ) => { draw: (ctx: unknown) => void; drawShadow: (ctx: unknown) => void; bounds: { x0: number; x1: number; y0: number; y1: number } };
   light: () => { x: number; y: number; z: number; r: number; color: string; k: number };
   _rig: (cam?: unknown) => Rig;
   faintNow: () => void;
+  setBoss: (on: boolean, from?: number) => void;
+  size: number;
+  radius: number;
+  top: number;
   overHead: () => Vec;
   dying: number | null;
   lieT: number | null;
@@ -530,5 +539,47 @@ describe('a Cuca desenhada', () => {
       expect(angle(t.yaw, Math.atan2(c.y - t.pos.y, c.x - t.pos.x)), `quadro ${i}`).toBeLessThan(1e-3);
     }
     expect(t.label).toBe('mexendo o caldeirão');
+  });
+
+  it('a chefe é maior que a bruxa (1,35): o desenho, o pé, o nome e a luz crescem juntos, em volta do pé', () => {
+    const witch = create(45 * DEG);
+    witch.setBoss(false);
+    step(witch, 0.5);
+    const boss = create(45 * DEG);
+    boss.setBoss(true);
+    step(boss, 0.5);
+    expect(boss.size).toBeCloseTo(1.35, 5);
+    expect(boss.radius).toBeCloseTo(witch.radius * 1.35, 5);
+    expect(boss.top).toBeCloseTo(witch.top * 1.35, 5);
+    expect(boss.overHead().z).toBeCloseTo(witch.overHead().z * 1.35, 3);
+    expect(boss.light().z).toBeGreaterThan(witch.light().z * 1.3);
+    const bw = witch.drawable(cam, false).bounds;
+    const bb = boss.drawable(cam, false).bounds;
+    expect((bb.x1 - bb.x0) / (bw.x1 - bw.x0)).toBeCloseTo(1.35, 1);
+    expect((bb.y1 - bb.y0) / (bw.y1 - bw.y0)).toBeCloseTo(1.35, 1);
+    // pintada inteira, sem cor quebrada
+    const { ctx, fills, colors } = fakeCtx();
+    const d = boss.drawable(cam, false);
+    d.drawShadow(ctx);
+    d.draw(ctx);
+    expect(fills()).toBeGreaterThan(20);
+    expect(colors.filter((c) => /NaN|undefined/.test(c))).toEqual([]);
+  });
+
+  it('virando ali agora, a chefe cresce aos poucos (dentro da fumaça); vencida, encolhe enquanto cai', () => {
+    const t = create(90 * DEG);
+    t.setBoss(true, 1);
+    expect(t.size).toBe(1);
+    step(t, 0.25);
+    expect(t.size).toBeGreaterThan(1.1);
+    expect(t.size).toBeLessThan(1.3);
+    step(t, 0.4);
+    expect(t.size).toBeCloseTo(1.35, 5);
+    t.action('die');
+    step(t, 0.3);
+    expect(t.size).toBeLessThan(1.3);
+    expect(t.size).toBeGreaterThan(1);
+    step(t, 0.4);
+    expect(t.size).toBeCloseTo(1, 3); // (o motor tira o desenho em 0,7 s: a bruxa caída aparece do mesmo tamanho)
   });
 });

@@ -4,6 +4,23 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
+## AGORA (25/11) — LEIA PRIMEIRO: onde estamos e o que vem
+- **Na main:** a Cuca inteira (a bruxa de dia mexendo o caldeirão; a chefe de noite com o caldo, a poça, a cantiga e o
+  Zzz; a caída que fica até amanhecer, o levantar na colher e o acordar confusa; a fumaça de virar; a chefe 1,35× maior
+  que a bruxa; a poça que seca na hora). Detalhes nas seções "A Cuca..." mais abaixo.
+- **Esperando outra frente:** a [estrutura] pôr a barra de vida acima do desenho de cada um (`view.actorTop(id)`, em
+  metros, já pronto no `view.js`; hoje a barra fica a 1,72 m para todos e, com a chefe maior machucada, passa na cara
+  dela). Pedido mandado em 25/11.
+- **Ideias para o dono decidir (não fazer sem o "pode"):** o herói meio caído enquanto dorme com a cantiga (hoje só o
+  Zzz).
+- **Como sempre:** escopo antes, para o dono aprovar ("me manda o escopo antes para aprovar"); main só com o "pode" dele
+  (ou quando ele pedir para fechar a rodada antes do /clear); os combinados estão em "Combinados com o dono".
+- **Conferir no jogo (o jeito que funcionou):** `npm run build`, depois `PORT=3100 MEUMMO_SAVE=<arquivo de teste> npm
+  start` (outra porta se já tiver um servidor ligado); Playwright com conta nova (`#password2`), ADM pelo
+  `POST /admin/api/adm`, `levar` para o mapa pelo `/admin/api/jogador` e os botões "Virar noite"/"Virar dia" (painel
+  do ADM) e "Derrubar perto" (F1) apertados pelo texto, sem abrir a janela. Para efeito rápido (fumaça, poça), gravar
+  vídeo (`recordVideo` do Playwright) e tirar os quadros com o `ffmpeg`: as fotos do Playwright levam ~0,4 s cada.
+
 ## Aba do boné e rosto de perfil do Birim (24/11)
 
 - **Aba.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `BRIM` estende a aba para trás com uma queda menor e afina as pontas até a barra. `extras` pinta a aba antes da copa. Isso resolve o arco que cruzava a lateral do boné em alguns giros. `brimEdge` acompanha a curva nova.
@@ -494,8 +511,8 @@
   poças, a cantiga com o Zzz e o desmaio, que deixa o Patuá; PC e celular deitado, sem erros. No jogo, o desmaio é
   rápido (o motor tira o desenho 0,7 s depois) e fica meio apagado pelo esmaecer de quem cai, como nos outros bichos.
   Testes: `tests/cuca-art.test.ts` (13) e `tests/projectileArt.test.ts`.
-- **Ficou para depois (o dono decide):** o herói ficar meio caído enquanto dorme (hoje só o Zzz); a chefe maior que a
-  bruxa (hoje o mesmo tamanho, ~1,55 m).
+- **Ficou para depois (o dono decide):** o herói ficar meio caído enquanto dorme (hoje só o Zzz). (A chefe maior que a
+  bruxa ficou pronta em 25/11: veja "A chefe maior e a poça que seca".)
 - **Rascunho:** `cuca/chefe.cjs` (a prancha da chefe), `cuca/icone/` (o Patuá) e `cuca-chefe/jogo.cjs <pasta> pc|celular`
   (o jogo: `NOVO=1` cria a conta; vira a noite, cria a Cuca pelo F1 e derruba no fim).
 
@@ -544,6 +561,22 @@
 - **Rascunho:** `cuca-caida/prancha.cjs <saida.png> [zoom] [direção]`, `cuca-caida/jogo.cjs <pasta> pc|celular` (fotos;
   `NOVO=1` cria a conta), `cuca-caida/video.cjs <pasta> pc` (o vídeo, para ver a fumaça quadro a quadro) e
   `cuca-caida/custo.cjs`.
+
+### A chefe maior e a poça que seca (25/11, "pode fazer os dois, com 1,35" do dono; na main)
+- **A chefe 1,35× (`cuca.js`, `BOSS_SCALE`):** a view chama `setBoss(kind === 'monster', from)`; o desenho todo cresce em
+  volta do pé (a sombra, a colher, as notas, as faíscas: uma escala no canvas em `drawable`, com as caixas `bounds` e
+  `body` junto), e o pé (`radius`), o alto (`top`, o nome e a fala) e a luz acompanham. Virando ali (a bruxa que acabou de
+  sair, guardada pela view: `from` = o tamanho dela), cresce em 0,5 s dentro da fumaça; quem chega de noite já a vê
+  grande; vencida, encolhe para 1 enquanto cai (0,6 s), para a bruxa caída aparecer do mesmo tamanho. O tiro do servidor
+  acerta numa roda de 60 cm (`SHOT_HIT_RADIUS`), que cobre o corpo dela maior: o servidor não mudou.
+- **A barra de vida:** é do motor (`combat.ts`, `barZ`: 1,72 m para todos). `view.actorTop(id)` (metros, o alto do
+  desenho) está pronto para a [estrutura] usar; até lá, a barra da chefe machucada passa na cara dela.
+- **A poça que seca (`view.js`, `clearWarn(tiles)`):** o motor manda quando a Cuca sai do mapa; o fogo ou a poça dessas
+  casas some em 0,3 s (`CLEAR_MS`, junto do fim de cada desenho); o pedaço de um aviso que estava fora dessas casas
+  continua; os avisos de golpe (sem `fire`) não mudam.
+- **Conferido:** testes (`tests/cuca-art.test.ts`, 22) e o jogo em vídeo no PC: a chefe crescendo na fumaça, a poça
+  sumindo logo depois do "Virar dia" e a chefe encolhendo ao cair.
+- **Rascunho:** `cuca-maior/previa.cjs` (a prévia dos tamanhos ao lado do Birim) e `cuca-maior/video.cjs <pasta> pc`.
 
 ## AGORA (22/11): o Birim é o herói de todos — LEIA PRIMEIRO (na main em 22/11, com o "pode" do dono)
 - **Birim para todos (escolha A do dono, 22/11):** sem nada no endereço, `PD.classes.playerAppearance` devolve o Birim para

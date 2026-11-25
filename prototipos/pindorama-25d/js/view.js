@@ -8,6 +8,7 @@
 //   removeActor(id) · say(id, texto) · sleep(id, dormindo) · follow(id) · frame(agora) · destroy()
 //   toWorld(xTela, yTela) → { x, y } · toScreen(x, y, z) → { x, y } · groundDirOfScreen(dx, dy) → { x, y }
 //   actorPosition(id) → { x, y } (onde o pé está desenhado agora; o combate põe a barra de vida ali)
+//   actorTop(id) → metros (o alto do desenho acima do pé: a barra de vida vai acima dele; a Cuca chefe é alta)
 //   action(id, tipo, angulo)  golpes e reações (gente: tiro, defesa, 'dash' = rola, 'jump' = pula, 'volley' = atira para o
 //                             alto, a Chuva de Flechas, 'hawk' = os olhos acendem; criaturas: os delas;
 //                             'transform' = a fumaça de virar da Cuca, que fica no lugar mesmo se o desenho sair)
@@ -19,6 +20,7 @@
 //   consume(id, item)         bebeu ou comeu (a chave do item): a garrafada estourando em folhas, o benzimento da
 //                             arruda ou as faíscas da comida (js/consume.js)
 //   warn(casas, ms, { fire })  o aviso de um golpe no chão (as casas [x, y, ...] do servidor; por baixo dos bichos)
+//   clearWarn(casas)          o fogo ou a poça dessas casas secou antes da hora (a Cuca virou bruxa ou caiu): some depressa
 //   perch(id, galho)          o bicho no galho (o Sagui pendurado pelo rabo): galho = { altura (m), direcao (graus,
 //                             do tronco para a ponta do galho) } ou null (no chão); a view anima a subida e a descida.
 //                             No `addActor`, `galho` = já aparece pendurado (sem animar)
@@ -54,6 +56,10 @@
   const rad = (deg) => (deg * Math.PI) / 180;
   /** O relógio (ms) do navegador (para o que não espera o quadro). */
   const clockNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  /** O fogo ou a poça que secou antes da hora (`clearWarn`): some em tanto tempo (ms). */
+  const CLEAR_MS = 300;
+  /** Quanto ainda aparece (1 → 0) do aviso que secou antes da hora; 1 para os outros. */
+  const clearedK = (w, now) => (w.clearAt === undefined ? 1 : 1 - M.smoothstep(w.clearAt, w.clearAt + CLEAR_MS, now));
   /** Um número de 0 a 1 que parece sorteado, mas é sempre o mesmo para o mesmo `k` (as bolhas da poça). */
   const hash01 = (k) => {
     const v = Math.sin(k * 127.1 + 311.7) * 43758.5453;
@@ -116,14 +122,18 @@
         // a Cuca trocando de desenho no mesmo lugar (a chefe que caiu vira a bruxa caída; de manhã, a caída vira a de pé;
         // ao anoitecer, a bruxa vira a chefe): fica no pé e virada para o lado do desenho que acabou de sair, para a
         // troca não dar pulo
+        let prev = null;
         if (creature.keepsPlace) {
-          const prev = this._takeGone(id, a.type, creature.pos);
+          prev = this._takeGone(id, a.type, creature.pos);
           if (prev) {
             creature.moveTo(prev.x, prev.y, prev.yaw, 0, true);
             creature.yaw = creature.faceYaw = prev.yaw;
             if (prev.down || a.fainted) creature.holdYaw = true;
           }
         }
+        // a Cuca de noite (o monstro) é a chefe, maior que a bruxa: a que acabou de virar ali cresce dentro da fumaça
+        // (começa do tamanho do desenho que saiu); quem chega de noite já a vê grande
+        if (creature.setBoss) creature.setBoss(a.kind === 'monster', prev ? prev.size : undefined);
         // a Cuca vencida (`fainted`): já aparece caída e fica à vista até amanhecer (o motor manda 'faint' logo depois)
         if (a.fainted && creature.faintNow) creature.faintNow();
         // a Cuca (de dia, a bruxa: NPC) mexe o caldeirão do mapa que estiver perto dela (o do sul.js); sem ele, segura a
@@ -205,11 +215,22 @@
       if (this.followId === id) this.followId = null;
     }
 
+    /**
+     * O alto do desenho de alguém (metros acima do pé), para o motor pôr a barra de vida e os sinais acima dele (a Cuca
+     * chefe é bem mais alta que os outros bichos). null = não sei (o motor usa a altura de sempre).
+     */
+    actorTop(id) {
+      const a = this.actors.get(id);
+      if (!a || !a.creature) return null;
+      const c = a.creature;
+      return Math.max(0, (c.overHead().z - (c.groundZ || 0)) / 100);
+    }
+
     /** Guarda onde estava (cm), para onde olhava e se estava no chão quem acabou de sair (só os últimos, por 1,5 s). */
     _rememberGone(id, a) {
       const c = a.creature;
       const list = this._gone || (this._gone = []);
-      list.push({ id, type: a.type, x: c.pos.x, y: c.pos.y, yaw: c.yaw, down: c.dying !== null || (c._downK || 0) > 0.5, at: clockNow() });
+      list.push({ id, type: a.type, x: c.pos.x, y: c.pos.y, yaw: c.yaw, down: c.dying !== null || (c._downK || 0) > 0.5, size: c.size || 1, at: clockNow() });
       if (list.length > 4) list.shift();
     }
 
@@ -565,6 +586,30 @@
     }
 
     /**
+     * O chão parou de queimar nestas casas (`tiles` = [x, y, ...], como no `warn`): a poça do caldo da Cuca secou porque
+     * ela virou bruxa ou caiu (pedido do dono, 25/11). O fogo e a poça dessas casas somem depressa (`CLEAR_MS`); o resto
+     * de um aviso que só em parte estava ali continua. Os avisos de golpe (sem `fire`) não mudam.
+     */
+    clearWarn(tiles) {
+      if (!tiles || tiles.length < 2 || !this.warnings || !this.warnings.length) return;
+      const now = this.last || clockNow();
+      const off = new Set();
+      for (let i = 0; i + 1 < tiles.length; i += 2) off.add(tiles[i] + ',' + tiles[i + 1]);
+      const out = [];
+      for (const w of this.warnings) {
+        const gone = w.fire && w.clearAt === undefined ? w.cells.filter((c) => off.has(c.x + ',' + c.y)) : [];
+        if (!gone.length) {
+          out.push(w);
+          continue;
+        }
+        const stay = w.cells.filter((c) => !off.has(c.x + ',' + c.y));
+        if (stay.length) out.push({ ...w, cells: stay });
+        out.push({ ...w, cells: gone, clearAt: now });
+      }
+      this.warnings = out;
+    }
+
+    /**
      * Os avisos no chão: cada casa é um quadrado de cantos redondos (como uma almofadinha), com o fundo clarinho, a
      * borda viva e o miolo que vai enchendo até a hora do golpe (o relógio do aviso); nos últimos instantes a borda
      * pulsa. Depois do golpe, some num piscar (0,12 s). O fogo: laranja, tremendo.
@@ -572,7 +617,7 @@
     _drawWarnings(ctx) {
       const now = this.last;
       const FADE = 120;
-      this.warnings = this.warnings.filter((w) => now < w.until + FADE);
+      this.warnings = this.warnings.filter((w) => now < w.until + FADE && !(w.clearAt !== undefined && now >= w.clearAt + CLEAR_MS));
       if (!this.warnings.length) return;
       const cam = this.cam;
       const z = cam.zoom;
@@ -600,7 +645,7 @@
           continue;
         }
         const k = M.clamp01((now - w.start) / Math.max(1, w.until - w.start));
-        const out = now > w.until ? 1 - (now - w.until) / FADE : 1;
+        const out = (now > w.until ? 1 - (now - w.until) / FADE : 1) * clearedK(w, now);
         const flick = w.fire ? 0.75 + 0.25 * Math.sin(now / 55 + w.start) : 1;
         const pulse = k > 0.72 ? 0.5 + 0.5 * Math.sin(now / 45) : 0;
         const shapes = new Path2D(), cores = new Path2D();
@@ -637,7 +682,7 @@
       const cam = this.cam;
       const z = cam.zoom;
       const grow = M.easeOut(M.clamp01((now - w.start) / 220));
-      const alpha = 1 - M.smoothstep(w.until - 500, w.until + 120, now);
+      const alpha = (1 - M.smoothstep(w.until - 500, w.until + 120, now)) * clearedK(w, now);
       if (alpha <= 0) return;
       const R = 62 * grow;
       const blob = new Path2D(), core = new Path2D();

@@ -817,8 +817,13 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       ainda está no ar não deixa poça; o navegador recebe `fire` com `ms` 0 para tirar o desenho. O sinal ! ou ? de um
       NPC sai enquanto o balão de fala dele está na tela e volta devagar depois. Protocolo 58. Teste:
       `tests/cuca-chefe.test.ts`
-    - [ ] **[arte]** apagar o desenho da poça na hora (`clearWarn(tiles)` na view; pedido da [estrutura], 25/11): hoje,
-      quando ela seca, o verde fica no chão até o fim do tempo dele (no máximo 2,5 s), já sem queimar ninguém
+    - [x] **[arte]** apagar o desenho da poça na hora (`clearWarn(tiles)` na view; pedido da [estrutura], 25/11, com o
+      "pode fazer os dois" do dono; na main): o fogo e a poça dessas casas somem em 0,3 s (o resto continua); conferido
+      no jogo (a poça seca logo depois do "Virar dia")
+    - [x] **[arte]** a chefe maior que a bruxa (pedido do dono, 25/11: "faz a chefe maior que a bruxa", "com 1,35"; na
+      main): o desenho todo 1,35× (~2,1 m) em volta do pé; virando ali, ela cresce dentro da fumaça; vencida, encolhe
+      enquanto cai (a bruxa caída aparece do tamanho dela). `view.actorTop(id)` dá o alto do desenho para a barra de
+      vida (a [estrutura] liga no `barZ`: pedido mandado)
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha
