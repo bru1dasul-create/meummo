@@ -123,6 +123,12 @@ export interface WorldView {
    */
   warn?(tiles: number[], ms: number, opts?: { fire?: boolean; kind?: string }): void;
   /**
+   * O chão parou de queimar nestas casas (`tiles` = [x, y, ...], como no `warn`): a poça da Cuca secou porque ela virou
+   * bruxa ou caiu (pedido do dono, 25/11). Tire o desenho do fogo ou da poça dessas casas (pode sumir num piscar).
+   * Opcional: sem ele, o desenho fica até o fim do tempo dele (sem queimar ninguém).
+   */
+  clearWarn?(tiles: number[]): void;
+  /**
    * Alguém dormiu (a cantiga de ninar da Cuca, 24/11) ou acordou: o "Zzz" em cima dele (`asleep`). Opcional: sem ele, só
    * o aviso na tela de quem dormiu. O `warn` com `kind: 'caldo'` é a poça verde do caldo da Cuca (sem o `kind`, fogo).
    */

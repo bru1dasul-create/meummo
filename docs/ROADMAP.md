@@ -811,6 +811,14 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       a mão na lombar; `'wake'` = acorda confusa depois de levantar (esfrega o olho, olha em volta, sacode a cabeça);
       `'transform'` = a fumaça roxa e verde (`js/smoke.js`), que fica no lugar mesmo depois que o desenho sai. Conferido
       no jogo (PC e celular). Testes: `tests/cuca-art.test.ts` e `tests/smoke-art.test.ts`
+    - [x] **[estrutura]** a poça seca quando ela vira bruxa, e o "!" não cobre a fala (25/11, o dono: "faz a poça
+      sumir quando ela vira bruxa" e "arruma o '!' está em cima da msg"; na main, conferido no PC e no celular): quando a
+      Cuca sai do mapa (amanheceu de pé ou foi vencida), as poças de caldo dela param de queimar na hora e o caldo que
+      ainda está no ar não deixa poça; o navegador recebe `fire` com `ms` 0 para tirar o desenho. O sinal ! ou ? de um
+      NPC sai enquanto o balão de fala dele está na tela e volta devagar depois. Protocolo 58. Teste:
+      `tests/cuca-chefe.test.ts`
+    - [ ] **[arte]** apagar o desenho da poça na hora (`clearWarn(tiles)` na view; pedido da [estrutura], 25/11): hoje,
+      quando ela seca, o verde fica no chão até o fim do tempo dele (no máximo 2,5 s), já sem queimar ninguém
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

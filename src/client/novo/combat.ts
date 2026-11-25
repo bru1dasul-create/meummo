@@ -48,6 +48,8 @@ export const SHOT_DRAW_Z = 0.9;
  * Depois desce, nos primeiros metros, até a altura de sempre do voo (SHOT_DRAW_Z), onde acerta os bichos e crava.
  */
 const LAUNCH_AHEAD = 0.55;
+/** O sinal ! ou ? de um NPC que acabou de falar volta aos poucos, neste tempo (ms), quando o balão sai. */
+const MARK_RETURN_MS = 300;
 const LAUNCH_Z = 1.35;
 const LAUNCH_DESCENT = 3;
 /**
@@ -424,6 +426,8 @@ export class CombatLayer {
   private sparks: { id: number; angle: number; broke: boolean; start: number }[] = [];
   /** Sinais de missão em cima dos NPCs ('!' nova, '?' para concluir). */
   private readonly marks = new Map<number, '!' | '?'>();
+  /** Até quando o sinal de cada NPC fica escondido: o balão de fala dele está na tela (o sinal não cobre a fala). */
+  private readonly quietMarks = new Map<number, number>();
   /** Quem está preparando um golpe (anel laranja no pé), até quando. */
   private readonly windups = new Map<number, { start: number; until: number }>();
   /** Quem está pendurado num galho (o Sagui no galho) → a altura do galho (m): a barra de vida e os números vão acima dele. */
@@ -768,6 +772,25 @@ export class CombatLayer {
   setMark(id: number, mark: '!' | '?' | ''): void {
     if (mark) this.marks.set(id, mark);
     else this.marks.delete(id);
+  }
+
+  /** O NPC está falando (o balão em cima dele) até `until`: o sinal sai e volta devagar depois (pedido do dono, 25/11). */
+  quietMark(id: number, until: number): void {
+    this.quietMarks.set(id, Math.max(until, this.quietMarks.get(id) ?? 0));
+  }
+
+  /** O chão parou de queimar nestas casas ([x, y, ...]: a poça da Cuca secou): o desenho sai na hora. */
+  clearWarn(tiles: number[]): void {
+    const gone = new Set<string>();
+    for (let i = 0; i + 1 < tiles.length; i += 2) gone.add(`${tiles[i]},${tiles[i + 1]}`);
+    this.warnings = this.warnings.flatMap((warning) => {
+      if (!warning.fire) return [warning];
+      const left: number[] = [];
+      for (let i = 0; i + 1 < warning.tiles.length; i += 2) {
+        if (!gone.has(`${warning.tiles[i]},${warning.tiles[i + 1]}`)) left.push(warning.tiles[i]!, warning.tiles[i + 1]!);
+      }
+      return left.length > 0 ? [{ ...warning, tiles: left }] : [];
+    });
   }
 
   /** Nuvenzinha onde um monstro caiu. */
@@ -1407,10 +1430,16 @@ export class CombatLayer {
     for (const [id, mark] of this.marks) {
       const feet = feetOf(id);
       if (!feet) continue;
+      // falando: o sinal sai (não cobre o balão) e volta em MARK_RETURN_MS quando o balão acaba
+      const quiet = this.quietMarks.get(id) ?? 0;
+      if (now < quiet) continue;
+      if (quiet > 0 && now - quiet >= MARK_RETURN_MS) this.quietMarks.delete(id);
+      const alpha = quiet > 0 ? Math.min(1, (now - quiet) / MARK_RETURN_MS) : 1;
       const m = meter(feet.x, feet.y);
       // acima do nome, balançando de leve
       const p = screen(feet.x, feet.y, BODY_HEIGHT + 0.95 + 0.06 * Math.sin(now / 250));
       const r = Math.max(10, m * 0.2);
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = mark === '?' ? '#f2c14e' : '#ffe08a';
       ctx.strokeStyle = 'rgba(40, 24, 10, 0.9)';
       ctx.lineWidth = 2.5;
@@ -1424,6 +1453,7 @@ export class CombatLayer {
       ctx.textBaseline = 'middle';
       ctx.fillText(mark, p.x, p.y + 1);
       ctx.textBaseline = 'alphabetic';
+      ctx.globalAlpha = 1;
     }
   }
 

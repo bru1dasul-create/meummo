@@ -122,6 +122,12 @@ const POOF_HEARD_M = 18;
 /** De quanto em quanto tempo sobe o "Zzz" em cima da Cuca desmaiada (o desenho de cada um dura uns 4 s). */
 const FAINTED_ZZZ_MS = 4200;
 /**
+ * Quanto o balão de fala fica na tela: 2,5 s + 60 ms por letra (o mesmo do `say` da view da [arte], js/view.js). O
+ * sinal ! ou ? do NPC sai nesse tempo.
+ */
+const BUBBLE_BASE_MS = 2500;
+const BUBBLE_PER_CHAR_MS = 60;
+/**
  * Zoom da câmera: começa longe (o dono achou o "médio" perto demais) e o jogador ajusta (roda do mouse, teclas − e +).
  * A escolha fica guardada neste aparelho. A view limita (a da [arte] vai de 0,7 a 1,4).
  */
@@ -1499,11 +1505,11 @@ class NewWorld implements NewWorldGame {
     if (npc.shop) {
       this.bag.close();
       this.shop.open(npc);
-      if (npc.line) this.view?.say(npc.e.id, npc.line);
+      if (npc.line) this.say(npc.e.id, npc.line);
       return;
     }
     if (npc.line) {
-      this.view?.say(npc.e.id, npc.line);
+      this.say(npc.e.id, npc.line);
       this.chat.addSystem(`${npc.e.name}: ${npc.line}`);
     }
   }
@@ -1897,6 +1903,15 @@ class NewWorld implements NewWorldGame {
   private animateZoom(to: number, now: number): void {
     if (!this.view?.setZoom || Math.abs(to - this.viewZoom) < 1e-3) return;
     this.zoomAnim = { from: this.viewZoom, to, start: now };
+  }
+
+  /**
+   * O balão de fala em cima de alguém. Num NPC, o sinal ! ou ? sai enquanto o balão está na tela e volta depois
+   * (pedido do dono, 25/11: o "!" ficava em cima da fala); o tempo é o mesmo do balão da view.
+   */
+  private say(id: number, text: string): void {
+    this.view?.say(id, text);
+    if (this.npcs.has(id)) this.combat.quietMark(id, gameNow() + BUBBLE_BASE_MS + text.length * BUBBLE_PER_CHAR_MS);
   }
 
   /** `id` fala `text`: a view mexe a boca pelo tempo de ler (a que não souber, segue sem). */
@@ -2985,7 +3000,7 @@ class NewWorld implements NewWorldGame {
         void this.enter(msg, true).catch((error: Error) => this.toast.show(error.message, 6000));
         break;
       case 'say':
-        this.view?.say(msg.id, msg.text);
+        this.say(msg.id, msg.text);
         break;
       case 'chat':
         this.chat.addChat(msg.name, msg.text, msg.id === this.myId);
@@ -3026,6 +3041,12 @@ class NewWorld implements NewWorldGame {
         break;
       }
       case 'fire':
+        if (msg.ms <= 0) {
+          // secou (a Cuca virou bruxa ou caiu): o desenho da poça sai dessas casas
+          this.view?.clearWarn?.(msg.tiles);
+          this.combat.clearWarn(msg.tiles);
+          break;
+        }
         // o chão queimando: o rastro de fogo da investida ou a poça de caldo da Cuca (`k`)
         this.warnGround(msg.tiles, msg.ms, gameNow(), true, msg.k);
         this.sfx.play('fire');

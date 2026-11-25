@@ -450,6 +450,10 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
   da lista sem ela. No navegador: a bruxa caída aparece depois que o desenho da chefe sai (`dyingMonsters`), com
   `action(id, 'faint')` e o "Zzz" (`view.sleep`) de tempos em tempos; acordando, o desenho volta em pé com 'revive';
   tocar nela caída só avisa ("não responde"). O `transform` solta a nuvenzinha e o som `poof` (de perto).
+- **A poça seca:** a poça é do encanto de quem jogou. Quando ele sai do mapa (`killMonster`, `removeMonster`: vencida
+  ou virou bruxa ao amanhecer), `dryPuddles` tira as poças dele e o `puddle` do caldo que ainda está no ar, e manda
+  `fire` com `ms` 0 (o navegador tira o desenho dessas casas: `view.clearWarn?` e `combat.clearWarn`). O rastro de fogo
+  (hazard sem `look`) segue até acabar.
 
 ## Missões (`src/server/quests.ts` e `src/shared/quests.ts`)
 - As missões vêm de `data/missoes.json` (lido e conferido ao ligar: `parseQuestDefs`, `checkQuests` — NPC, monstro,
@@ -459,7 +463,8 @@ mechas, rosto em camada separada (pisca, careta, sorriso, fala) e dois tipos de 
 - Objetivos: `kill` (derrotar), `deliver` (entregar) e `talk` (falar com alguém: aceita com quem dá, conclui com a
   pessoa procurada — `questFinisher`). `goalLabel` (campo `rotulo`) é o texto do objetivo na tela, quando a missão
   escolhe. No jogo novo, a conversa e o quadro são as mesmas janelas (`talk.ts`); os sinais ! e ? em cima dos NPCs
-  são desenhados por cima pelo motor (`combat.ts`), ou pela view, se ela tiver `mark`.
+  são desenhados por cima pelo motor (`combat.ts`), ou pela view, se ela tiver `mark`. Enquanto o NPC fala (o balão
+  da view), o motor esconde o sinal dele (`say` → `combat.quietMark`) e ele volta devagar quando o balão sai.
 - Pedidos: `quest` com `accept` ou `complete` (perto do NPC que dá a missão, `TRADE_RANGE`) e `abandon` (em
   qualquer lugar). O servidor confere tudo (`questBlocker`: já fazendo, já feita e não repetível, falta a anterior,
   nível, limite de 5). "Derrotar" conta em `killMonster` para cada um que ajudou; "entregar" conta pela mochila
@@ -538,7 +543,7 @@ O cliente envia uma mensagem por vez; o servidor envia uma lista de mensagens po
 | servidor | `zone` | você foi para outro mapa: carregue o mapa novo (e responda `loaded`); vem com os NPCs de lá |
 | servidor | `shot` / `shot_end` | um projétil saiu / acabou (e em quem acertou; sem acertar ninguém, `x`, `y` = onde parou e `on` = no que bateu, ex. 'tronco'; sem `on`, caiu no fim do alcance) |
 | servidor | `warn` | aviso no chão: golpe vindo nestes quadrados |
-| servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida) |
+| servidor | `fire` | chão pegando fogo nestes quadrados por `ms` (rastro da investida; `k` 'caldo' = a poça da Cuca); `ms` 0 = secou agora (tire o desenho) |
 | servidor | `fx` | efeito visual (arco, giro, bote, esquiva, pulo, redemoinho, investida; a Cuca virando, `transform`, e acordando de manhã, `wake`), com o alcance do golpe quando precisa |
 | servidor | `hit` / `heal` / `hp` | dano / cura / vida atual de alguém |
 | servidor | `gm` | você é administrador: o menu ADM aparece, com o voo, o invencível e os monstros que dá para criar (só administrador recebe) |

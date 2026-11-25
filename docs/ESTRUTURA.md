@@ -34,6 +34,12 @@ alternativas quando vejo — sem concordar só para agradar.
   3f1e2a4, conferido comigo no PC e no celular): caída à vista (`fainted`/'faint'), levanta na colher ('revive',
   1,1 s), acorda confusa ('wake', 1,9 s: os dois somam os 3 s do `WAKE_WALK_MS`) e a fumaça que fica no chão
   ('transform', `js/smoke.js`). O "Zzz" do motor (`updateFaintedNpcs`) e o `combat.poof` ficam (a [arte] aprovou).
+- **A poça seca e o "!" sai da frente da fala (25/11, pedidos do dono; na main):** `dryPuddles` (no `removeMonster` e
+  no `killMonster`) tira as poças (hazards com `look`) de quem saiu do mapa e o `puddle` do caldo no ar, e manda `fire`
+  com `ms` 0 (protocolo 58); o motor chama `view.clearWarn?` (a [arte] vai fazer; até lá o verde fica até acabar, sem
+  queimar) e o `combat.clearWarn`. O sinal ! ou ? é do motor (`combat.ts`, por cima da view): `say()` no motor esconde
+  o sinal do NPC pelo tempo do balão da view (2,5 s + 60 ms por letra, `BUBBLE_BASE_MS`/`BUBBLE_PER_CHAR_MS`: se a
+  [arte] mudar o tempo do balão no `view.js`, acompanhe aqui).
 - **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"; na main com a área `cuca` do [mundo], no fundo da toca):**
   o teste da caverna do [mundo] lê o `alcanceAgressao` da `cuca` (nenhum chão da área ao alcance da boca da toca): se
   aumentar esse número, peça a ele para afastar a área. Peças novas: `MonsterSong.effect` (`'charm'`
@@ -164,9 +170,9 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 57 (`fainted` no `EntityState` e o fx `transform`: uma luta por noite da Cuca);
-  `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava, com o relógio parado fora do jogo;
-  pedido do dono em 23/11); `npm run check` com 764 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 58 (o `fire` com `ms` 0 = a poça secou; antes, no 57, o `fainted` e o fx
+  `transform` da Cuca); `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava, com o relógio
+  parado fora do jogo; pedido do dono em 23/11); `npm run check` com 777 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

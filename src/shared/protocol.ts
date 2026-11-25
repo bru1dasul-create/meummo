@@ -256,7 +256,7 @@ export type ServerMsg =
   | { t: 'shot_end'; id: number; hit: number; x?: number; y?: number; on?: string; burst?: number }
   | { t: 'warn'; id: number; tiles: number[]; ms: number } // aviso de golpe: [x1, y1, x2, y2, ...] em `ms` milissegundos
   | { t: 'fx'; id: number; kind: FxKind; a?: number; r?: number; ms?: number; s?: string } // r = alcance do golpe (bote, investida); ms = quanto dura (a marca); s = a habilidade ('skillup')
-  | { t: 'fire'; id: number; tiles: number[]; ms: number; k?: string } // chão queimando nestes tiles por `ms`; `k` = o que é ('caldo': a poça da Cuca; sem = fogo)
+  | { t: 'fire'; id: number; tiles: number[]; ms: number; k?: string } // chão queimando nestes tiles por `ms`; `k` = o que é ('caldo': a poça da Cuca; sem = fogo). `ms` 0 = secou agora (a Cuca virou bruxa ou caiu): o desenho sai dessas casas
   // blk: 1 = a defesa segurou (passou só um pouco), 2 = segurou e quebrou
   | { t: 'hit'; id: number; by: number; dmg: number; hp: number; blk?: 1 | 2 }
   | { t: 'guard'; id: number; on: boolean; a: number } // outro jogador levantou (ou baixou) a defesa, virada para `a`

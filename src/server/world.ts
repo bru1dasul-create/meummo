@@ -438,6 +438,7 @@ export class World {
 
   /** Tira um monstro do mapa sem ninguém ganhar nada (o painel mudou a área dele). */
   private removeMonster(monster: Monster): void {
+    this.dryPuddles(monster);
     this.monsters.delete(monster.id);
     this.leaveTile(monster);
     monster.zone.alive.delete(monster.id);
@@ -2606,6 +2607,24 @@ export class World {
   }
 
   /**
+   * A poça é do encanto de quem jogou (pedido do dono, 25/11: "faz a poça sumir quando ela vira bruxa"): quem jogou saiu
+   * do mapa (caiu, ou a Cuca virou bruxa ao amanhecer) e as poças dele secam na hora — não queimam mais, e o caldo que
+   * ainda está no ar não deixa poça. Quem está no mapa recebe `fire` com ms 0 para tirar o desenho.
+   */
+  private dryPuddles(owner: Monster): void {
+    const dried: Tile[] = [];
+    let look: string | undefined;
+    this.hazards = this.hazards.filter((hazard) => {
+      if (hazard.ownerId !== owner.id || hazard.look === undefined) return true; // (o rastro de fogo segue até acabar)
+      dried.push(...hazard.tiles);
+      look = hazard.look;
+      return false;
+    });
+    for (const shot of this.projectiles.values()) if (shot.ownerId === owner.id) delete shot.puddle;
+    if (dried.length > 0) this.broadcastLocal({ t: 'fire', id: owner.id, tiles: dried.flatMap((t) => [t.x, t.y]), ms: 0, ...(look ? { k: look } : {}) });
+  }
+
+  /**
    * A Flecha Ancestral: atravessa todo bicho que encosta (cada um uma vez; de espírito, o enxame não desvia e a casca não
    * segura), marca quem atravessou e para só no que segura tiro ou no fim do alcance — onde pode explodir.
    */
@@ -2769,6 +2788,7 @@ export class World {
   }
 
   private killMonster(monster: Monster, now: number): void {
+    this.dryPuddles(monster);
     this.monsters.delete(monster.id);
     this.leaveTile(monster);
     monster.zone.alive.delete(monster.id);

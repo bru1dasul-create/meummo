@@ -236,6 +236,56 @@ describe('o caldo e a poça', () => {
   });
 });
 
+describe('a poça seca quando ela vira bruxa (25/11)', () => {
+  type Hazards = { hazards: { look?: string; tiles: { x: number; y: number }[] }[] };
+  /** De noite, com a Ana a 4,5 m da chefe, até cair a primeira poça (só o caldo, sem a cantiga). */
+  function puddled() {
+    const t = toca();
+    t.turn('noite');
+    const cuca = t.boss()!;
+    cuca.def.song!.everyMs = 1e9;
+    cuca.nextSpecialAt = 1e12;
+    const feet = feetAt(cuca.x, cuca.y);
+    standAt(t.player, feet.x - 4.5, feet.y);
+    for (let i = 0; i < 6000 / TICK_MS && !t.conn.ofType('fire').some((m) => m.k === 'caldo'); i++) {
+      t.run(TICK_MS);
+      t.player.hp = t.player.maxHp; // (a Ana não desmaia)
+    }
+    cuca.def.song!.everyMs = 12_000;
+    const puddles = () => (t.world as unknown as Hazards).hazards.filter((h) => h.look === 'caldo');
+    expect(puddles().length).toBeGreaterThan(0);
+    return { ...t, cuca, puddles };
+  }
+
+  it('amanhece com a chefe de pé: as poças dela secam na hora (não queimam mais) e o navegador tira o desenho', () => {
+    const { conn, player, run, turn, puddles } = puddled();
+    const tiles = puddles().flatMap((h) => h.tiles.flatMap((t) => [t.x, t.y]));
+    conn.clear();
+    turn('dia');
+    expect(puddles()).toHaveLength(0);
+    const dried = conn.ofType('fire').find((m) => m.ms === 0)!;
+    expect(dried).toMatchObject({ ms: 0, k: 'caldo' });
+    expect(new Set(dried.tiles)).toEqual(new Set(tiles));
+    // em cima de onde estava a poça, ninguém se queima mais
+    const hp = player.hp;
+    run(1500);
+    expect(player.hp).toBeGreaterThanOrEqual(hp);
+  });
+
+  it('vencida, as poças dela secam junto, e o caldo que ainda estava no ar não deixa poça', () => {
+    const { world, conn, player, run, clock, cuca, puddles } = puddled();
+    const shots = (world as unknown as { projectiles: Map<number, { ownerId: number; puddle?: unknown }> }).projectiles;
+    conn.clear();
+    (world as unknown as Inner).damage(cuca, 9999, player.id, clock.now());
+    run(TICK_MS);
+    expect(puddles()).toHaveLength(0);
+    expect(conn.ofType('fire').filter((m) => m.ms === 0)).toHaveLength(1);
+    expect([...shots.values()].some((shot) => shot.ownerId === cuca.id && shot.puddle)).toBe(false);
+    run(2000);
+    expect(conn.ofType('fire').filter((m) => m.ms > 0)).toHaveLength(0);
+  });
+});
+
 describe('a missão "A Cantiga da Cuca"', () => {
   it('aceita de dia com a bruxa; derrotar a chefe de noite conta; de dia, conclui e ganha o patuá', () => {
     const { world, player, run, turn, boss, witch, clock } = toca();
