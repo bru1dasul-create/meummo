@@ -910,6 +910,7 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
   árvores cedem uma depois da outra), cada árvore com o seu ritmo, inclinada para onde ele sopra; a copa balança em
   faixas (o alto mexe mais, junto do tronco quase nada). No zoom normal: parado ~1 px, brisa ~2,6 px, forte ~9 px no
   alto da copa; as pétalas do ipê voam com ele
+- [x] **[mundo]** Rajadas fortes mais visíveis (25/11). O alto da copa cede mais e a base acompanha o tronco. [Escopo](MUNDO.md#rajadas-fortes-nas-árvores-2511)
 - [x] **[estrutura]** A flecha que acerta a árvore fica presa nela, parte das regras (14/11): o `shot_end` diz onde o tiro
   parou (na casca, não 25 cm dentro) e no que bateu (`on`: o tipo do objeto da colisão, ex. 'tronco'); o motor voa o
   desenho até lá e chama o `projectileEnded` com `stuck` (protocolo 32)
