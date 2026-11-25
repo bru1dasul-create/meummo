@@ -824,6 +824,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       main): o desenho todo 1,35× (~2,1 m) em volta do pé; virando ali, ela cresce dentro da fumaça; vencida, encolhe
       enquanto cai (a bruxa caída aparece do tamanho dela). `view.actorTop(id)` dá o alto do desenho para a barra de
       vida (a [estrutura] liga no `barZ`: pedido mandado)
+    - [x] **[estrutura]** a barra de vida da chefe maior (pedido da [arte]; o dono: "pode fazer e juntar na main"; na
+      main, conferida no PC e no celular): a barra usa o `actorTop` e, num bicho alto, vai logo acima do nome
+      (`barHeight` no `combat.ts`, a mesma folga em pixels com qualquer zoom); bicho baixo e gente continuam na altura de
+      sempre. Teste: `tests/combate-novo.test.ts`
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

@@ -55,6 +55,11 @@ alternativas quando vejo — sem concordar só para agradar.
   queimar) e o `combat.clearWarn`. O sinal ! ou ? é do motor (`combat.ts`, por cima da view): `say()` no motor esconde
   o sinal do NPC pelo tempo do balão da view (2,5 s + 60 ms por letra, `BUBBLE_BASE_MS`/`BUBBLE_PER_CHAR_MS`: se a
   [arte] mudar o tempo do balão no `view.js`, acompanhe aqui).
+- **A barra de vida dos bichos altos (25/11, pedido da [arte], "pode" do dono; na main):** a Cuca chefe ficou 1,35×
+  maior (~2,1 m) e a barra a 1,72 m passava na cara dela. `barHeight(top, perch, zPx)` no `combat.ts`: com o alto do
+  desenho (`view.actorTop?`), a barra vai logo acima do nome do bicho quando o nome fica acima da altura de sempre. As
+  medidas do nome (10 cm acima do alto, letras de 13 px) copiam o `_overHead`/`_drawNames` do `view.js`: se a [arte]
+  mudar o nome de lugar, acompanhe em `NAME_OVER_TOP`/`NAME_TEXT_PX`.
 - **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"; na main com a área `cuca` do [mundo], no fundo da toca):**
   o teste da caverna do [mundo] lê o `alcanceAgressao` da `cuca` (nenhum chão da área ao alcance da boca da toca): se
   aumentar esse número, peça a ele para afastar a área. Peças novas: `MonsterSong.effect` (`'charm'`
@@ -185,9 +190,9 @@ alternativas quando vejo — sem concordar só para agradar.
   é o processo: referência, uma coisa por vez, crítico lado a lado); Godot e 3D descartados. O Nano Banana foi
   liberado (chave no ambiente; o script é da [arte]). O dono não programa: recomendações com custo, risco e
   "faço assim?".
-- **Estado técnico:** `PROTOCOL_VERSION` 58 (o `fire` com `ms` 0 = a poça secou; antes, no 57, o `fainted` e o fx
-  `transform` da Cuca); `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava, com o relógio
-  parado fora do jogo; pedido do dono em 23/11); `npm run check` com 777 testes.
+- **Estado técnico:** `PROTOCOL_VERSION` 59 (a chuva pelo menu ADM, `rain`, que entrou na main por "karen" em 25/11;
+  no 58, o `fire` com `ms` 0 = a poça secou; no 57, o `fainted` e o fx `transform` da Cuca); `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava, com o relógio
+  parado fora do jogo; pedido do dono em 23/11); `npm run check` com 781 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)
