@@ -76,6 +76,8 @@
       // até lá, uma brisa. `angle`: para onde ele sopra, no chão (o padrão vai para a direita da tela)
       this.wind = { strength: 0.35, angle: -Math.PI / 4 };
       this._windScreen = null;
+      this.rainLevel = 0;
+      this.wetness = 0;
     }
 
     /** O vento: `strength` de 0 (parado) a 1 (forte) e, se vier, `angle` (para onde sopra, em graus no chão). */
@@ -697,6 +699,7 @@
       // a água mexendo por cima do chão pintado (agua.js), antes do deque e de quem fica em pé
       if (PD.agua && PD.agua.reflect) PD.agua.reflect(ctx, this, t);
       if (PD.agua) PD.agua.live(ctx, this, t);
+      if (PD.rainGround) PD.rainGround.draw(ctx, this, t);
       if (PD.vida) PD.vida.ground(ctx, this, t);
       this._drawAwakening(ctx);
       for (const f of this.flats || []) if (overlap(f.bounds, view)) f.draw(ctx, t);

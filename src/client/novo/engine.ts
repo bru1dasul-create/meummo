@@ -310,6 +310,7 @@ class NewWorld implements NewWorldGame {
   /** O que a view já sabe do vento (manda de novo só quando muda). */
   private windShown = { strength: -1, angle: -1 };
   private rainStrength = 0;
+  private readonly rainSurface = { wetness: 0 };
   /** As classes (do servidor) e o que o jogador tem: a classe, os pontos de cada habilidade e quantos sobram. */
   private classes: ClassInfo[] = [];
   private hero: HeroState = { class: null, skills: {}, points: 0, canChoose: false };
@@ -631,7 +632,9 @@ class NewWorld implements NewWorldGame {
     this.mapPicture = this.map.metric ? new MapPicture(json, msg.map, msg.explored) : null;
     this.view?.destroy();
     this.view = createView(this.container, json);
-    this.applyRain(msg.t === 'welcome' ? msg.rain ?? 0 : this.rainStrength);
+    const rain = msg.t === 'welcome' ? msg.rain ?? 0 : this.rainStrength;
+    if (msg.t === 'welcome') this.rainSurface.wetness = rain;
+    this.applyRain(rain);
     this.lightShown = -1; // a view nova precisa saber a hora
     this.windShown = { strength: -1, angle: -1 }; // e o vento
     this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
@@ -695,7 +698,7 @@ class NewWorld implements NewWorldGame {
     this.rainStrength = strength;
     this.gmPanel.setRain(strength > 0);
     const sheltered = this.map?.id === 'caverna' || this.map?.id === 'shopping';
-    this.view?.setRain?.(sheltered ? 0 : strength);
+    this.view?.setRain?.(strength, this.rainSurface, sheltered);
   }
 
   destroy(): void {

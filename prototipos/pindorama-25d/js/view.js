@@ -95,6 +95,8 @@
       this.rainWant = 0;
       this.rainLevel = 0;
       this._rainOutside = 0;
+      this.rainSurface = { wetness: 0 };
+      this.rainSheltered = false;
       this.background = opts.background || '#16241a';
       this._resize();
       this.world = new PD.World(this.cam, this.map);
@@ -969,8 +971,10 @@
     }
 
     /** A chuva (o motor manda do servidor); ao entrar numa casa, segue o recorte do telhado. */
-    setRain(strength) {
+    setRain(strength, surface, sheltered = false) {
       this.rainWant = Number.isFinite(strength) ? M.clamp(strength, 0, 1) : 0;
+      if (surface) this.rainSurface = surface;
+      this.rainSheltered = sheltered;
     }
 
     /**
@@ -1087,6 +1091,7 @@
         this.world.time += dt;
         this.cam.follow({ x: this.map.spawn.x, y: this.map.spawn.y, z: 0 });
       }
+      this._updateRain(dt);
       this._draw();
     }
 
@@ -1133,20 +1138,27 @@
       this._drawSpeech(ctx);
     }
 
-    /** Desenha as gotas em dois grupos, atrás dos nomes e balões. A contagem usa pixels CSS, mesmo no celular. */
-    _drawRain(ctx) {
-      if (!this.rainWant && !this._rainOutside) return;
+    /** O piso seca mais devagar do que a chuva para. Casas abrigam o jogador sem secar a rua em volta. */
+    _updateRain(dt) {
+      const { wetness } = this.rainSurface;
+      if (!this.rainWant && !this._rainOutside && !wetness) return;
       const world = this.world;
-      const dt = world._dt || 1 / 60;
       const outside = M.damp(this._rainOutside, this.rainWant, 4.5, dt);
       this._rainOutside = !this.rainWant && outside < 0.01 ? 0 : outside;
+      const nextWetness = M.damp(wetness, this.rainWant, this.rainWant > wetness ? 0.62 : 0.18, dt);
+      this.rainSurface.wetness = !this.rainWant && nextWetness < 0.01 ? 0 : nextWetness;
+      world.rainLevel = this.rainSheltered ? 0 : this._rainOutside;
+      world.wetness = this.rainSheltered ? 0 : this.rainSurface.wetness;
       const home = world.insideHouse || world.focusHouse;
-      this.rainLevel = this._rainOutside * (1 - (home?.cutK || 0));
-      if (this.rainLevel < 0.01) {
-        this.rainLevel = 0;
-        return;
-      }
+      const visible = world.rainLevel * (1 - (home?.cutK || 0));
+      this.rainLevel = visible < 0.01 ? 0 : visible;
+    }
 
+    /** Desenha as gotas em dois grupos, atrás dos nomes e balões. A contagem usa pixels CSS, mesmo no celular. */
+    _drawRain(ctx) {
+      if (!this.rainLevel) return;
+      const world = this.world;
+      const dt = world._dt || 1 / 60;
       const { dpr, viewW: w, viewH: h } = this.cam;
       const margin = 40;
       const spanX = w + 2 * margin, spanY = h + 2 * margin;

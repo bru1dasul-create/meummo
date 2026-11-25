@@ -40,6 +40,20 @@ aos poucos e inclinarem no sentido das rajadas do mapa. A chuva passa atrás dos
 as gotas diminuem à medida que o telhado sai para mostrar o interior. O desenho limita a quantidade de gotas pelo tamanho
 da tela e reúne os traços em dois grupos para o celular.
 
+### Respingos e piso molhado
+
+`prototipos/pindorama-25d/js/world/chuva-chao.js` desenha os impactos no chão, as ondulações na água e o brilho do piso
+molhado. `world.js` chama essa camada abaixo dos personagens e dos avisos de combate. Ela entra pela lista de scripts da
+view (`prototipos/pindorama-25d/view-scripts.json`) e pelo import do jogo (`src/client/novo/arte.ts`).
+
+`prototipos/pindorama-25d/js/view.js` aumenta a umidade enquanto chove e deixa o chão secar mais devagar depois que as
+gotas param. `src/client/novo/engine.ts` guarda essa umidade ao trocar de mapa, e `src/client/novo/view.ts` define como
+ela chega ao desenho. O lado de fora continua molhado quando se entra numa casa. Use **G → Chuva** para molhar o chão
+e **Tempo seco** para ver a secagem.
+
+Verifiquei a chuva e o piso no Capão em desktop e celular simulado, o abrigo dentro da Budega e da caverna, e a secagem
+depois de desligar a chuva. `npm run build` e `npm run check` passaram, com 781 testes.
+
 ## Rajadas fortes nas árvores (25/11)
 
 O dono comparou os botões do ADM e disse que o movimento praticamente não mudava. `TreeCanopy._sway` reforça o deslocamento

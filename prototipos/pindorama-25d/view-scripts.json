@@ -28,6 +28,7 @@
     "js/world/refugio.js",
     "js/world/agua.js",
     "js/world/vida.js",
+    "js/world/chuva-chao.js",
     "js/world/world.js",
     "js/creatures/creature.js",
     "js/creatures/sagui.js",

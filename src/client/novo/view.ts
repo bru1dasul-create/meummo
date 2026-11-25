@@ -156,8 +156,8 @@ export interface WorldView {
    * Vem só quando muda (as mudanças do servidor são devagar: o motor manda os passos do meio).
    */
   setWind?(strength: number, angle?: number): void;
-  /** A intensidade da chuva no mapa, de 0 (tempo seco) a 1. */
-  setRain?(strength: number): void;
+  /** A intensidade da chuva, a umidade que acompanha a troca de mapa e se o mapa é todo coberto. */
+  setRain?(strength: number, surface?: { wetness: number }, sheltered?: boolean): void;
   /**
    * Os Olhos de Gavião: os bichos destacados agora (o contorno na cor do perigo, por cima das copas e do escuro, e o
    * selo com o nível). O motor chama a cada quadro enquanto os Olhos valem; lista vazia = nenhum.
