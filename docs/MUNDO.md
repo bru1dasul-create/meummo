@@ -33,6 +33,13 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   abaixo) e só então copie por cima. Antes, veja `git log -- public/assets/maps/<id>.tmj`: se alguém além do Claude
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
+## Chuva no cenário (25/11)
+
+A chuva é ligada e desligada pelo ADM. `PD.View.setRain` em `prototipos/pindorama-25d/js/view.js` faz as gotas aparecerem
+aos poucos e inclinarem no sentido das rajadas do mapa. A chuva passa atrás dos nomes e balões. Ao entrar numa casa,
+as gotas diminuem à medida que o telhado sai para mostrar o interior. O desenho limita a quantidade de gotas pelo tamanho
+da tela e reúne os traços em dois grupos para o celular.
+
 ## Rajadas fortes nas árvores (25/11)
 
 O dono comparou os botões do ADM e disse que o movimento praticamente não mudava. `TreeCanopy._sway` reforça o deslocamento

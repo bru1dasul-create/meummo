@@ -4,6 +4,21 @@
 > Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[estrutura]**) e `docs/ARQUITETURA.md` (como o servidor funciona por dentro).
 
+## Chuva manual no 2.5D (25/11)
+
+Protocolo 59. `src/shared/protocol.ts` define as mensagens `gm` com `do: 'rain'` e `rain`, além da intensidade inicial em
+`welcome.rain`. `src/shared/constants.ts` registra a versão. `src/server/validate.ts` valida o comando, `src/server/realm.ts`
+compartilha o estado em memória, e `src/server/world.ts` aplica a mudança só para administradores e avisa o reino inteiro.
+O servidor começa em tempo seco.
+
+`src/client/novo/gm.ts` tem os botões **Chuva** e **Tempo seco** e marca o estado informado pelo servidor.
+`src/client/novo/engine.ts` passa a intensidade para o desenho na entrada e nas trocas de mapa, com abrigo no shopping e na
+caverna. `src/client/novo/view.ts` declara `setRain`. `tests/gm.test.ts` e `tests/realm.test.ts` cobrem os valores do comando,
+a permissão de administrador, o envio entre mapas e a entrada durante a chuva. [Desenho da chuva](MUNDO.md#chuva-no-cenário-2511)
+
+Conferência em Chromium no desktop e celular simulado com dois jogadores. Testei ligar e desligar pelo menu, entrar com a
+chuva em curso e voltar ao Capão da caverna. `npm run check` passou com 778 testes, e `npm run build` passou.
+
 ## Quem sou
 O chat da frente **[estrutura]**: servidor, regras compartilhadas, dados (`data/*.json`), salvamento (`MIGRATIONS`),
 protocolo, testes do servidor e o painel do administrador. O dono do projeto não programa: ele decide o jogo

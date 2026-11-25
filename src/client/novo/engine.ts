@@ -309,6 +309,7 @@ class NewWorld implements NewWorldGame {
   private wind = { from: { strength: 0.35, angle: 0 }, to: { strength: 0.35, angle: 0 }, start: 0, ms: 0 };
   /** O que a view já sabe do vento (manda de novo só quando muda). */
   private windShown = { strength: -1, angle: -1 };
+  private rainStrength = 0;
   /** As classes (do servidor) e o que o jogador tem: a classe, os pontos de cada habilidade e quantos sobram. */
   private classes: ClassInfo[] = [];
   private hero: HeroState = { class: null, skills: {}, points: 0, canChoose: false };
@@ -528,6 +529,7 @@ class NewWorld implements NewWorldGame {
       npc: (id) => this.conn.send({ t: 'gm', cmd: { do: 'npc', npc: id } }),
       time: (phase) => this.conn.send({ t: 'gm', cmd: { do: 'time', phase } }),
       wind: (level) => this.conn.send({ t: 'gm', cmd: { do: 'wind', level } }),
+      rain: (enabled) => this.conn.send({ t: 'gm', cmd: { do: 'rain', enabled } }),
     });
     this.refreshQuick();
     this.container.addEventListener('pointerdown', this.onPointerDown);
@@ -602,6 +604,7 @@ class NewWorld implements NewWorldGame {
       mapOpen: () => game.mapWindow.isOpen,
       // o vento de agora (força 0 a 1, ângulo em graus) e para onde ele está indo
       wind: () => ({ ...game.windNow(gameNow()), to: { ...game.wind.to } }),
+      rain: () => game.rainStrength,
       dead: () => game.dead,
       // a classe, os pontos de cada habilidade e quantos sobram; se a janela das Habilidades está aberta
       hero: () => ({ ...game.hero, skills: { ...game.hero.skills }, attrs: { ...game.myAttrs }, attrPoints: game.myAttrPoints, attrBonus: { ...game.myAttrBonus } }),
@@ -628,6 +631,7 @@ class NewWorld implements NewWorldGame {
     this.mapPicture = this.map.metric ? new MapPicture(json, msg.map, msg.explored) : null;
     this.view?.destroy();
     this.view = createView(this.container, json);
+    this.applyRain(msg.t === 'welcome' ? msg.rain ?? 0 : this.rainStrength);
     this.lightShown = -1; // a view nova precisa saber a hora
     this.windShown = { strength: -1, angle: -1 }; // e o vento
     this.zoom = this.view.setZoom?.(this.zoom) ?? this.zoom;
@@ -685,6 +689,13 @@ class NewWorld implements NewWorldGame {
     this.conn.listen((m) => this.onMessage(m));
     cancelAnimationFrame(this.raf);
     this.raf = requestAnimationFrame(this.loop);
+  }
+
+  private applyRain(strength: number): void {
+    this.rainStrength = strength;
+    this.gmPanel.setRain(strength > 0);
+    const sheltered = this.map?.id === 'caverna' || this.map?.id === 'shopping';
+    this.view?.setRain?.(sheltered ? 0 : strength);
   }
 
   destroy(): void {
@@ -3328,6 +3339,9 @@ class NewWorld implements NewWorldGame {
         this.wind = { from: this.windNow(now), to: { strength: msg.strength, angle: msg.angle }, start: now, ms: msg.ms };
         break;
       }
+      case 'rain':
+        this.applyRain(msg.strength);
+        break;
       case 'questDefs':
         // o painel mudou as missões: troca dentro da mesma lista (a conversa e a lista na tela usam ela)
         this.questList.splice(0, this.questList.length, ...msg.quests);

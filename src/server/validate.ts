@@ -32,6 +32,8 @@ function parseGmCommand(raw: unknown): GmCommand | null {
       return c.phase === 'dia' || c.phase === 'tarde' || c.phase === 'noite' ? { do: 'time', phase: c.phase } : null;
     case 'wind':
       return c.level === 'calmo' || c.level === 'brisa' || c.level === 'forte' ? { do: 'wind', level: c.level } : null;
+    case 'rain':
+      return typeof c.enabled === 'boolean' ? { do: 'rain', enabled: c.enabled } : null;
     case 'pace':
       return c.scale === 0.25 || c.scale === 0.5 || c.scale === 1 ? { do: 'pace', scale: c.scale } : null;
     case 'fly':

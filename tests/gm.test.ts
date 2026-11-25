@@ -168,6 +168,9 @@ describe('poderes do administrador', () => {
     expect(msg({ do: 'fly', on: true })).toEqual({ t: 'gm', cmd: { do: 'fly', on: true } });
     expect(msg({ do: 'tp', x: 10.5, y: 3 })).toEqual({ t: 'gm', cmd: { do: 'tp', x: 10.5, y: 3 } });
     expect(msg({ do: 'clear' })).toEqual({ t: 'gm', cmd: { do: 'clear' } });
+    expect(msg({ do: 'rain', enabled: true })).toEqual({ t: 'gm', cmd: { do: 'rain', enabled: true } });
+    expect(msg({ do: 'rain', enabled: false })).toEqual({ t: 'gm', cmd: { do: 'rain', enabled: false } });
+    expect(msg({ do: 'rain', enabled: 'sim' })).toBeNull();
     expect(msg({ do: 'spawn', monster: 'sagui', n: 0 })).toBeNull();
     expect(msg({ do: 'fly', on: 'sim' })).toBeNull();
     expect(msg({ do: 'tp', x: 'a', y: 3 })).toBeNull();
