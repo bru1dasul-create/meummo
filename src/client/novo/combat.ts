@@ -50,6 +50,33 @@ export const SHOT_DRAW_Z = 0.9;
 const LAUNCH_AHEAD = 0.55;
 /** O sinal ! ou ? de um NPC que acabou de falar volta aos poucos, neste tempo (ms), quando o balão sai. */
 const MARK_RETURN_MS = 300;
+/**
+ * O nome de um bicho, na view (js/view.js, `_overHead` e `_drawNames`): a linha de baixo das letras fica 10 cm acima do
+ * alto do desenho, e as letras têm 13 px. A barra de vida não pode passar nele (fica BAR_GAP_PX acima).
+ */
+const NAME_OVER_TOP = 0.1;
+const NAME_TEXT_PX = 14;
+const BAR_GAP_PX = 3;
+
+/**
+ * A altura da barra de vida (metros acima do pé): em cima da cabeça, na altura de sempre; pendurado num galho (o Sagui),
+ * acima do galho. Num bicho alto (o alto do desenho que a view conta, `actorTop`: a Cuca chefe, 1,35× maior, tem uns
+ * 2,1 m; pedido da [arte] e do dono, 25/11), a altura de sempre passava na cara dele, e logo acima da cabeça fica o nome:
+ * a barra vai acima do nome. `zPx` = quantos pixels da tela tem 1 m de altura ali (o nome tem tamanho fixo na tela).
+ * Bicho baixo (o nome fica abaixo da barra de sempre) e gente (`top` null) ficam na altura de sempre.
+ */
+export function barHeight(top: number | null, perch?: number, zPx = 0): number {
+  const base = BODY_HEIGHT + 0.12;
+  if (perch !== undefined) return Math.max(base, perch + 0.25);
+  if (top === null || !Number.isFinite(top)) return base;
+  const overName = top + NAME_OVER_TOP + (zPx > 0 ? (NAME_TEXT_PX + BAR_GAP_PX) / zPx : 0.3);
+  return Math.max(base, overName);
+}
+
+/** Quantos pixels da tela tem 1 m de altura neste ponto do chão (muda com o zoom). */
+function heightPixels(screen: (x: number, y: number, z?: number) => Point, x: number, y: number): number {
+  return screen(x, y, 0).y - screen(x, y, 1).y;
+}
 const LAUNCH_Z = 1.35;
 const LAUNCH_DESCENT = 3;
 /**
@@ -451,6 +478,8 @@ export class CombatLayer {
   private readonly marked = new Map<number, number>();
   /** O seu pé (para saber se você está dentro da casa do bicho). */
   private viewer: Point | null = null;
+  /** A view do quadro de agora (para perguntar o alto do desenho de cada um: `actorTop`). */
+  private view: WorldView | null = null;
 
   constructor(
     container: HTMLElement,
@@ -661,10 +690,9 @@ export class CombatLayer {
     else this.perches.delete(id);
   }
 
-  /** A altura da barra de vida de alguém (m): em cima da cabeça; pendurado num galho, acima do galho. */
-  private barZ(id: number): number {
-    const perch = this.perches.get(id);
-    return perch !== undefined ? Math.max(BODY_HEIGHT + 0.12, perch + 0.25) : BODY_HEIGHT + 0.12;
+  /** A altura da barra de vida de alguém (m), com `zPx` pixels por metro de altura ali: veja `barHeight`. */
+  private barZ(id: number, zPx: number): number {
+    return barHeight(this.view?.actorTop?.(id) ?? null, this.perches.get(id), zPx);
   }
 
   /** O seu tiro, desenhado na hora (o servidor confirma depois com o mesmo `cid`). */
@@ -875,6 +903,7 @@ export class CombatLayer {
    * `health(id)`: vida de quem mostra barra (null = não mostra).
    */
   frame(now: number, view: WorldView, feetOf: (id: number) => Point | null, health: Iterable<{ id: number; hp: number; maxHp: number }>): void {
+    this.view = view;
     const ctx = this.ctx;
     const w = this.canvas.clientWidth;
     const h = this.canvas.clientHeight;
@@ -1414,7 +1443,7 @@ export class CombatLayer {
       const feet = feetOf(id);
       if (!feet || maxHp <= 0) continue;
       const m = meter(feet.x, feet.y);
-      const p = screen(feet.x, feet.y, this.barZ(id));
+      const p = screen(feet.x, feet.y, this.barZ(id, heightPixels(screen, feet.x, feet.y)));
       const width = Math.max(30, m * 0.8);
       const height = Math.max(4, m * 0.07);
       const fraction = Math.max(0, Math.min(1, hp / maxHp));
@@ -1470,7 +1499,7 @@ export class CombatLayer {
       const index = seen.get(floater.id) ?? 0;
       seen.set(floater.id, index + 1);
       // começa acima do nome (que a view desenha em cima da cabeça) e sobe; de quem está no galho, acima da barra
-      const p = screen(feet.x, feet.y, Math.max(BODY_HEIGHT + 0.7, this.barZ(floater.id) + 0.4) + t * 0.6);
+      const p = screen(feet.x, feet.y, Math.max(BODY_HEIGHT + 0.7, this.barZ(floater.id, heightPixels(screen, feet.x, feet.y)) + 0.4) + t * 0.6);
       ctx.globalAlpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
       ctx.font = `700 ${Math.round(Math.max(13, m * 0.32))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';

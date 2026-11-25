@@ -80,6 +80,11 @@ export interface WorldView {
   action?(id: number, kind: string, angle?: number): void;
   /** Onde o pé de alguém está DESENHADO agora (metros): barras de vida e números de dano seguem o desenho. */
   actorPosition?(id: number): { x: number; y: number } | null;
+  /**
+   * O alto do desenho de alguém (metros acima do pé), para a barra de vida ir acima dele (a Cuca chefe, 1,35× maior,
+   * tem uns 2,1 m). null = não sei (gente): o motor usa a altura de sempre (veja `barHeight` no combat.ts).
+   */
+  actorTop?(id: number): number | null;
   /** Zoom do jogador (1 = o "médio"; menos = mais longe). A view limita e devolve o que ficou valendo. */
   setZoom?(factor: number): number;
   /** Sinal de missão em cima de um NPC: '!' tem missão nova, '?' tem missão para concluir, '' nada. */

@@ -2,7 +2,7 @@
 // (src/client/novo/combat.ts desenha; src/shared/combat.ts e o servidor decidem.)
 
 import { describe, expect, it } from 'vitest';
-import { aimAngle, distanceToSegment, SHOT_DRAW_Z, shotFeet, shotOriginOfFeet, shotZ, tileFeetSquare } from '../src/client/novo/combat';
+import { aimAngle, barHeight, BODY_HEIGHT, distanceToSegment, SHOT_DRAW_Z, shotFeet, shotOriginOfFeet, shotZ, tileFeetSquare } from '../src/client/novo/combat';
 import { angleBetween, makeShot, shotTouches } from '../src/shared/combat';
 import { feetAt, footTile } from '../src/shared/movement';
 
@@ -90,5 +90,23 @@ describe('combate do jogo novo: desenho igual à regra', () => {
       expect(z).toBeLessThanOrEqual(last + 1e-9);
       last = z;
     }
+  });
+});
+
+describe('a barra de vida', () => {
+  it('na altura de sempre para gente e bicho baixo; acima do galho; na Cuca chefe, que é alta, acima do nome (25/11)', () => {
+    const base = BODY_HEIGHT + 0.12;
+    const zPx = 57; // 1 m de altura na tela, no zoom de sempre
+    expect(barHeight(null, undefined, zPx)).toBeCloseTo(base); // gente: a view não conta o alto
+    expect(barHeight(0.6, undefined, zPx)).toBeCloseTo(base); // o sagui no chão: o nome fica abaixo da barra
+    expect(barHeight(null, 2.2, zPx)).toBeCloseTo(2.45); // pendurado num galho de 2,2 m, como antes
+    expect(barHeight(Number.NaN, undefined, zPx)).toBeCloseTo(base);
+    // a chefe (2,1 m): a barra passa da cabeça e do nome (a linha de baixo do nome a 10 cm da cabeça, letras de 13 px)
+    const boss = barHeight(2.1, undefined, zPx);
+    const nameTop = 2.1 + 0.1 + 13 / zPx;
+    expect(boss).toBeGreaterThan(nameTop);
+    expect((boss - nameTop) * zPx).toBeLessThan(8); // logo acima do nome, sem ficar longe
+    // com o zoom, o nome tem o mesmo tamanho na tela: a folga em pixels não muda
+    for (const px of [30, 57, 110]) expect((barHeight(2.1, undefined, px) - 2.2) * px).toBeCloseTo((boss - 2.2) * zPx);
   });
 });
