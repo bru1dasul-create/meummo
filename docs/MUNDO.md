@@ -33,6 +33,24 @@ Converso em português do Brasil, com explicações simples, e mando prints do n
   abaixo) e só então copie por cima. Antes, veja `git log -- public/assets/maps/<id>.tmj`: se alguém além do Claude
   mexeu (edição no Tiled), não substitua sem falar com o dono.
 
+## Chuva no cenário (25/11)
+
+A chuva é ligada e desligada pelo ADM. `PD.View.setRain` em `prototipos/pindorama-25d/js/view.js` faz as gotas aparecerem
+aos poucos e inclinarem no sentido das rajadas do mapa. A chuva passa atrás dos nomes e balões. Ao entrar numa casa,
+as gotas diminuem à medida que o telhado sai para mostrar o interior. O desenho limita a quantidade de gotas pelo tamanho
+da tela e reúne os traços em dois grupos para o celular.
+
+## Rajadas fortes nas árvores (25/11)
+
+O dono comparou os botões do ADM e disse que o movimento praticamente não mudava. `TreeCanopy._sway` reforça o deslocamento
+no topo quando a força do vento entra na faixa de rajada. `TreeCanopy.draw` reaproveita a imagem da copa e mantém a parte
+baixa presa ao tronco. As faixas se encontram na mesma altura para evitar frestas. A copa usa a mesma inclinação nos
+trechos opacos e transparentes onde o personagem passa por baixo. [Arquivo do desenho da copa](../prototipos/pindorama-25d/js/world/props.js)
+
+Comparei **Calmo** e **Vento forte** no mesmo trecho do parque do Capão em desktop e celular simulado. Na câmera de desktop,
+o maior deslocamento medido no teste foi de 6 px com a versão anterior e 17 px com a nova. Para repetir, abra o menu ADM
+com G e aguarde a transição de três segundos. `npm run build` e `npm run check` passaram, com 777 testes.
+
 ## Onde estamos (12 de novembro de 2026): o mundo novo
 - **Agora (24/11): a colher do caldeirão virou para o outro lado (na `main`)**, o dono: "pode fazer" (pedido da [arte]
   no roteiro). A bruxa fica a leste do caldeirão, em (48,5; 10,1) (`data/npcs.json`, da [estrutura]), mexendo com a

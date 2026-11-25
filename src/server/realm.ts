@@ -93,9 +93,10 @@ export class Realm {
     const dayNight = options.dayNight ?? new DayNightClock(options.combat ?? defaultCombatRules(), options.now ?? Date.now);
     // e um vento só (o reino cuida dele no tick e avisa todo mundo quando muda)
     this.wind = options.wind ?? new WindWeather(options.now ?? (() => performance.now()));
+    const rain = options.rain ?? { strength: 0 as const };
     for (const map of maps) {
       if (this.worlds.has(map.id)) throw new Error(`Dois mapas com o mesmo id: "${map.id}".`);
-      this.worlds.set(map.id, new World(map, { ...options, links, dayNight, wind: this.wind }));
+      this.worlds.set(map.id, new World(map, { ...options, links, dayNight, wind: this.wind, rain }));
     }
     if (options.startMap && !this.worlds.has(options.startMap)) {
       throw new Error(`O mapa inicial "${options.startMap}" não existe. Use um destes: ${[...this.worlds.keys()].join(', ')}.`);

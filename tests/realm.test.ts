@@ -168,6 +168,32 @@ describe('vários mapas', () => {
     expect(() => join('ana')).toThrow('name_taken'); // nome repetido, mesmo em outro mapa
   });
 
+  it('a chuva começa desligada e só o administrador muda o estado de todos os mapas', () => {
+    const ana = join('Ana');
+    realm.setAdmin('Ana', true);
+    const carla = join('Carla', { zone: 'mata' });
+    expect(realm.worldOf(ana.player)).not.toBe(realm.worldOf(carla.player));
+    expect(ana.conn.ofType('welcome')[0]?.rain).toBe(0);
+
+    realm.gm(carla.player, { do: 'rain', enabled: true });
+    run(TICK_MS);
+    expect(ana.conn.ofType('rain')).toHaveLength(0);
+    expect(carla.conn.ofType('rain')).toHaveLength(0);
+
+    realm.gm(ana.player, { do: 'rain', enabled: true });
+    run(TICK_MS);
+    expect(ana.conn.ofType('rain')).toEqual([{ t: 'rain', strength: 1 }]);
+    expect(carla.conn.ofType('rain')).toEqual([{ t: 'rain', strength: 1 }]);
+    const dora = join('Dora', { zone: 'mata' });
+    expect(dora.conn.ofType('welcome')[0]?.rain).toBe(1);
+
+    realm.gm(ana.player, { do: 'rain', enabled: false });
+    run(TICK_MS);
+    expect(ana.conn.ofType('rain').at(-1)).toEqual({ t: 'rain', strength: 0 });
+    expect(carla.conn.ofType('rain').at(-1)).toEqual({ t: 'rain', strength: 0 });
+    expect(dora.conn.ofType('rain')).toEqual([{ t: 'rain', strength: 0 }]);
+  });
+
   it('desmaiou num mapa sem vila: acorda na vila, com a vida cheia', () => {
     const ana = join('Ana', { zone: 'mata', x: 6, y: 1 });
     ana.player.hp = 0;

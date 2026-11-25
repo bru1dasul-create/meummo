@@ -24,6 +24,7 @@
 //   perch(id, galho)          o bicho no galho (o Sagui pendurado pelo rabo): galho = { altura (m), direcao (graus,
 //                             do tronco para a ponta do galho) } ou null (no chão); a view anima a subida e a descida.
 //                             No `addActor`, `galho` = já aparece pendurado (sem animar)
+//   setRain(força)            chuva de 0 (seca) a 1 (forte), inclinada pelo vento que a view já recebe
 // Posições em METROS, no pé, x para o leste e y para o sul (como o servidor e o Tiled; por dentro, centímetros).
 // `angle` é para onde olha, em graus no chão (0 = leste/+x, 90 = sul/+y), como o pedido `walk` do servidor.
 // A view não decide nada do jogo: anima o andar até a posição que recebe (perna pela distância, sem escorregar) e
@@ -91,6 +92,9 @@
       this.camTarget = null;
       this.focusPoint = null;
       this.last = 0;
+      this.rainWant = 0;
+      this.rainLevel = 0;
+      this._rainOutside = 0;
       this.background = opts.background || '#16241a';
       this._resize();
       this.world = new PD.World(this.cam, this.map);
@@ -964,6 +968,11 @@
       if (this.world && this.world.setWind) this.world.setWind(strength, angle);
     }
 
+    /** A chuva (o motor manda do servidor); ao entrar numa casa, segue o recorte do telhado. */
+    setRain(strength) {
+      this.rainWant = Number.isFinite(strength) ? M.clamp(strength, 0, 1) : 0;
+    }
+
     /**
      * Dia e noite (o motor manda a cada mudança): `light` de 1 (dia) a 0 (noite fechada), com o anoitecer e o amanhecer
      * suaves; `night` = é noite (os bichos ficam mais fortes: os olhos deles ficam vermelhos). O escuro azul, o tom
@@ -1116,11 +1125,70 @@
       if (this._smokes && this._smokes.length) this._smokeDrawables(actors, seen);
       this.world.draw(ctx, actors);
       this._drawAtmosphere(ctx);
+      this._drawRain(ctx);
       this._drawVeilMotes(ctx);
       this._drawHawk(ctx);
       this._drawNames(ctx);
       this._drawSleep(ctx);
       this._drawSpeech(ctx);
+    }
+
+    /** Desenha as gotas em dois grupos, atrás dos nomes e balões. A contagem usa pixels CSS, mesmo no celular. */
+    _drawRain(ctx) {
+      if (!this.rainWant && !this._rainOutside) return;
+      const world = this.world;
+      const dt = world._dt || 1 / 60;
+      const outside = M.damp(this._rainOutside, this.rainWant, 4.5, dt);
+      this._rainOutside = !this.rainWant && outside < 0.01 ? 0 : outside;
+      const home = world.insideHouse || world.focusHouse;
+      this.rainLevel = this._rainOutside * (1 - (home?.cutK || 0));
+      if (this.rainLevel < 0.01) {
+        this.rainLevel = 0;
+        return;
+      }
+
+      const { dpr, viewW: w, viewH: h } = this.cam;
+      const margin = 40;
+      const spanX = w + 2 * margin, spanY = h + 2 * margin;
+      if (this._rainField?.w !== w || this._rainField?.h !== h) {
+        const n = Math.round(M.clamp((w * h) / 3900, 28, 220));
+        const drops = Array.from({ length: n }, (_, i) => ({
+          x: hash01(4 * i) * spanX - margin,
+          y: hash01(4 * i + 1) * spanY - margin,
+          speed: 0.72 + hash01(4 * i + 2) * 0.63,
+        }));
+        this._rainField = { w, h, drops };
+      }
+
+      const level = this.rainLevel;
+      const drops = this._rainField.drops;
+      const count = Math.ceil(drops.length * (0.18 + 0.82 * level));
+      const wind = world.windScreen();
+      const gust = this.camTarget ? world.windAt(this.camTarget.x, this.camTarget.y, world.time) : world.wind.strength;
+      const vx = wind.x * gust * 360;
+      const vy = 425 + 160 * level + wind.y * gust * 66;
+      const night = 1 - (this.daylight ?? 1);
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (let depth = 0; depth < 2; depth++) {
+        const trail = depth ? 0.034 : 0.021;
+        ctx.lineWidth = depth ? 1.15 : 0.75;
+        ctx.strokeStyle = `rgba(205, 227, 242, ${level * (depth ? 0.48 : 0.3) * (1 + night * 0.18)})`;
+        ctx.beginPath();
+        for (let i = depth; i < count; i += 2) {
+          const drop = drops[i];
+          const dx = vx * drop.speed, dy = vy * drop.speed;
+          drop.x += dx * dt;
+          if (drop.x < -margin) drop.x += spanX;
+          else if (drop.x > w + margin) drop.x -= spanX;
+          drop.y += dy * dt;
+          if (drop.y > h + margin) drop.y -= spanY;
+          ctx.moveTo(drop.x - dx * trail, drop.y - dy * trail);
+          ctx.lineTo(drop.x, drop.y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     /**

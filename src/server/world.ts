@@ -189,6 +189,8 @@ export interface WorldOptions {
   dayNight?: DayNightClock;
   /** O vento (o reino passa o mesmo para todos os mapas e cuida dele); sem isto, um só deste mapa. */
   wind?: WindWeather;
+  /** A chuva ambiente manual, compartilhada por todos os mapas do reino. */
+  rain?: { strength: 0 | 1 };
   /** As classes e as habilidades delas (data/classes.json). */
   classes?: ReadonlyMap<string, ClassInfo>;
   /** As receitas que os NPCs preparam (data/receitas.json). */
@@ -296,6 +298,7 @@ export class World {
   readonly wind: WindWeather;
   /** O vento é só deste mapa (sem o reino, como nos testes): este mapa cuida dele. */
   private readonly ownWind: boolean;
+  private readonly ambientRain: NonNullable<WorldOptions['rain']>;
   /** Os bichos deste mapa (o Joaquim): andam sozinhos e nunca são alvo. */
   readonly pets = new Map<number, Pet>();
   /** Todos os NPCs do jogo (de todos os mapas), para saber o nome de quem deu cada missão. */
@@ -340,6 +343,7 @@ export class World {
     this.ownWind = !options.wind;
     // o vento sorteia com o sorteio dele (é só desenho e som: não mexe na ordem dos sorteios do jogo)
     this.wind = options.wind ?? new WindWeather(this.now);
+    this.ambientRain = options.rain ?? { strength: 0 };
     this.npcDefs = options.npcs ?? new Map();
     let ids = 1;
     this.links = options.links ?? {
@@ -571,6 +575,7 @@ export class World {
         combat: { ...this.combat },
         time: Math.round(this.dayNight.position()),
         wind: { strength: this.wind.strength, angle: this.wind.angle },
+        rain: this.ambientRain.strength,
         ...this.exploredField(player),
         classes: [...this.classes.values()],
         hero: this.heroState(player),
@@ -810,6 +815,16 @@ export class World {
         this.links.announce(this.wind.message(3000));
         say(`vento ${cmd.level} (força ${this.wind.strength.toFixed(2)}).`);
         this.log(`ADM ${player.name}: vento ${cmd.level}`);
+        return;
+      }
+      case 'rain': {
+        const strength = cmd.enabled ? 1 : 0;
+        if (this.ambientRain.strength === strength) return;
+        this.ambientRain.strength = strength;
+        this.links.announce({ t: 'rain', strength });
+        const action = cmd.enabled ? 'ligou a chuva' : 'desligou a chuva';
+        say(`${action}.`);
+        this.log(`ADM ${player.name}: ${action}`);
         return;
       }
       case 'clear': {

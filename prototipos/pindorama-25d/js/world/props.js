@@ -3407,6 +3407,11 @@
   };
 
   const CANOPY_INK = '#13221a';
+  const CANOPY_STRIPS = 6;
+  const canopyBend = (height) => Math.pow(1 - height, 1.3);
+  const CANOPY_EDGES = Array.from({ length: CANOPY_STRIPS + 1 }, (_, i) => canopyBend(i / CANOPY_STRIPS));
+  const CANOPY_MIDDLES = Array.from({ length: CANOPY_STRIPS }, (_, i) =>
+    canopyBend((i + 0.5) / CANOPY_STRIPS) - canopyBend(1 - 0.5 / CANOPY_STRIPS));
 
   class TreeCanopy extends Prop {
     constructor(world, t) {
@@ -3634,32 +3639,53 @@
       const osc = Math.sin(time * M.TAU * f + ph) * (0.2 + 0.55 * P) + Math.sin(time * M.TAU * f * 2.3 + ph * 1.7) * 0.1 * (0.3 + P);
       const units = P * 0.9 + osc;
       const amp = (t.kind === 'ipe' ? 3.2 : 2.6) * this.cam.zoom * (1 + strength * 0.9);
+      // Da brisa para a ventania, a mesma rajada dobra mais a copa. O limite fica dentro da folga de 40 px da view.
+      const strong = M.smoothstep(0.64, 0.79, strength);
+      const shift = M.clamp(units * amp * (1 + 3 * strong), -38, 38);
       const d = w && w.windScreen ? w.windScreen() : { x: 1, y: 0 };
-      return { x: d.x * units * amp, y: d.y * units * amp * 0.6 };
+      return { x: d.x * shift, y: d.y * shift * 0.6 };
     }
     draw(ctx, time) {
       const s = this._spriteNow();
-      // balanço da copa: desliza a imagem pronta em faixas (girar ou entortar uma imagem grande custa caro a cada
-      // quadro): a de cima vai mais, a de baixo, junto do tronco, quase nada (a copa não descola do tronco); o passo é
-      // de meio pixel do aparelho, então o movimento fica suave sem refazer pixel nenhum
+      if (s.w <= 0 || s.h <= 0) return;
       const dpr = this.cam.dpr;
       const sw = this._sway(time);
       const snap = (v) => Math.round(v * dpr) / dpr;
-      if (this.alpha < 0.999) ctx.globalAlpha = this.alpha;
-      // (meio apagada, a copa vai inteira: as faixas se cobrem numa linha e a linha apareceria mais escura)
-      if (this.alpha < 0.999 || Math.abs(sw.x) + Math.abs(sw.y) < 0.6) {
-        ctx.drawImage(s.c, s.x + snap(sw.x * 0.6), s.y + snap(sw.y * 0.6), s.w, s.h);
-      } else {
-        const N = 6;
-        const sh = s.c.height / N;
-        const dh = s.h / N;
-        for (let i = 0; i < N; i++) {
-          const k = Math.pow((N - i - 0.5) / N, 1.3);
-          const last = i === N - 1;
-          ctx.drawImage(s.c, 0, i * sh, s.c.width, last ? sh : sh + 1, s.x + snap(sw.x * k), s.y + i * dh + snap(sw.y * k), s.w, last ? dh : dh + 1 / dpr);
-        }
+      const world = this.world;
+      const cut = (world.insideHouse || world.focusHouse)?.cutK || 0;
+      const clipped = (this.fade >= 0.02 && world._window) || (cut > 0.01 && cut < 0.98);
+      const small = s.c.height < CANOPY_STRIPS || s.h <= CANOPY_STRIPS / dpr + Math.abs(sw.y);
+      if (this.alpha < 0.999 || clipped || small) {
+        // Na janela transparente, usa a mesma forma no passe de fora e nos de dentro. A base fica no lugar.
+        const x = snap(sw.x);
+        const y = M.clamp(snap(sw.y), -s.h / 2, s.h / 2);
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.transform(1, 0, -x / s.h, 1 - y / s.h, s.x + x, s.y + y);
+        ctx.drawImage(s.c, 0, 0, s.w, s.h);
+        ctx.restore();
+        return;
       }
-      ctx.globalAlpha = 1;
+      if (Math.abs(sw.x) + Math.abs(sw.y) < 0.6) {
+        ctx.drawImage(s.c, s.x, s.y, s.w, s.h);
+        return;
+      }
+      // Usa o sprite pronto. Cada faixa termina onde a próxima começa, mesmo quando a rajada puxa a copa para cima.
+      // O último pedaço fica junto do tronco; a folga de um pixel evita um risco na junção.
+      const sh = s.c.height / CANOPY_STRIPS;
+      const dh = s.h / CANOPY_STRIPS;
+      let sourceTop = 0;
+      let top = s.y + snap(sw.y);
+      for (let i = 0; i < CANOPY_STRIPS; i++) {
+        const last = i === CANOPY_STRIPS - 1;
+        const sourceBottom = Math.round((i + 1) * sh);
+        const bottom = last ? s.y + s.h : s.y + snap((i + 1) * dh + sw.y * CANOPY_EDGES[i + 1]);
+        const overlap = last ? 0 : 1;
+        ctx.drawImage(s.c, 0, sourceTop, s.c.width, sourceBottom - sourceTop + overlap,
+          s.x + snap(sw.x * CANOPY_MIDDLES[i]), top, s.w, bottom - top + overlap / dpr);
+        sourceTop = sourceBottom;
+        top = bottom;
+      }
     }
   }
 

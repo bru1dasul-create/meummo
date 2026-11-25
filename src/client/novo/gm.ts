@@ -17,6 +17,7 @@ export interface GmActions {
   time(phase: 'dia' | 'tarde' | 'noite'): void;
   /** Muda o vento na hora (todos os mapas). */
   wind(level: 'calmo' | 'brisa' | 'forte'): void;
+  rain(enabled: boolean): void;
 }
 
 export interface GmState {
@@ -38,6 +39,8 @@ export class GmPanel {
   private readonly godButton: HTMLButtonElement;
   private readonly nocdButton: HTMLButtonElement;
   private readonly teleportButton: HTMLButtonElement;
+  private readonly rainButton: HTMLButtonElement;
+  private readonly dryButton: HTMLButtonElement;
   private state: GmState = { admin: false, fly: false, god: false, nocd: false, monsters: [] };
   private teleport = false;
 
@@ -105,13 +108,19 @@ export class GmPanel {
     const wind = document.createElement('div');
     wind.className = 'row';
     wind.append(make('Calmo', () => this.actions.wind('calmo')), make('Brisa', () => this.actions.wind('brisa')), make('Vento forte', () => this.actions.wind('forte')));
+    const rain = document.createElement('div');
+    rain.className = 'row';
+    this.rainButton = make('Chuva', () => this.actions.rain(true));
+    this.dryButton = make('Tempo seco', () => this.actions.rain(false));
+    rain.append(this.rainButton, this.dryButton);
+    this.setRain(false);
     const others = document.createElement('div');
     others.className = 'row';
     others.append(make('Derrubar monstros perto', () => this.actions.clear()), make('Curar', () => this.actions.heal()));
     const hint = document.createElement('p');
     hint.className = 'hint';
     hint.textContent = 'Monstros criados não renascem. Voando, você atravessa tudo. Tudo fica registrado no servidor.';
-    this.panel.append(title, spawnRow, others, toggles, time, wind, this.teleportButton, npcRow, hint);
+    this.panel.append(title, spawnRow, others, toggles, time, wind, rain, this.teleportButton, npcRow, hint);
     // clique no menu não vira clique no jogo (andar, atirar)
     for (const el of [this.panel, this.button]) {
       el.addEventListener('pointerdown', (event) => event.stopPropagation());
@@ -156,6 +165,13 @@ export class GmPanel {
       }),
     );
     if (list.some((npc) => npc.id === current)) this.npcSelect.value = current;
+  }
+
+  setRain(enabled: boolean): void {
+    this.rainButton.classList.toggle('on', enabled);
+    this.rainButton.setAttribute('aria-pressed', String(enabled));
+    this.dryButton.classList.toggle('on', !enabled);
+    this.dryButton.setAttribute('aria-pressed', String(!enabled));
   }
 
   toggle(): void {
