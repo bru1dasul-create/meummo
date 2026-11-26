@@ -312,7 +312,7 @@ export class DebugPanel {
       row.append(label, line);
       return row;
     });
-    const flash = this.button(feel.hurtFlash ? 'Clarão ao tomar dano: ligado' : 'Clarão ao tomar dano: desligado', () => set({ hurtFlash: !feel.hurtFlash }));
+    const flash = this.button(feel.hurtFlash ? 'Brilho na barra de vida: ligado' : 'Brilho na barra de vida: desligado', () => set({ hurtFlash: !feel.hurtFlash }));
     flash.style.background = feel.hurtFlash ? '#2f6b3a' : '#3a2a18';
     return [this.caption('Padrão = o jogo de hoje: sem tremor, sem pausa, sem faíscas.'), ...rows, flash];
   }

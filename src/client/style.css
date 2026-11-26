@@ -858,17 +858,17 @@ kbd {
   }
 }
 
-/* Vermelho na borda quando apanha */
+/* Brilho breve na barra de vida quando apanha */
 #hurt {
-  position: fixed;
+  position: absolute;
   inset: 0;
   opacity: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 90px rgba(229, 72, 77, 0.85);
+  background: linear-gradient(180deg, rgba(255, 239, 197, 0.72), rgba(255, 175, 102, 0.24) 70%, transparent);
 }
 
 #hurt.on {
-  animation: hurt 0.45s ease-out;
+  animation: hurt 0.28s ease-out;
 }
 
 @keyframes hurt {

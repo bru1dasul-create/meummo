@@ -67,6 +67,16 @@
     return v - Math.floor(v);
   };
 
+  /** Casas do golpe e os lados que encostam no chão fora da área. Lados entre casas vizinhas ficam de fora. */
+  function strikeFootprint(cells) {
+    const key = (x, y) => `${x},${y}`;
+    const tiles = new Set(cells.map(({ x, y }) => key(x, y)));
+    return cells.map(({ x, y }) => ({
+      x, y,
+      edges: [!tiles.has(key(x, y - 1)), !tiles.has(key(x + 1, y)), !tiles.has(key(x, y + 1)), !tiles.has(key(x - 1, y))],
+    }));
+  }
+
   class View {
     constructor(container, tmj, opts = {}) {
       let canvas = container;
@@ -577,8 +587,7 @@
     }
 
     /**
-     * O aviso de um golpe (pedido do dono, 23/11: o quadrado vermelho por cima do quati era "muito feio"): as casas
-     * onde o golpe vai pegar, pintadas no chão, por baixo dos bichos e de tudo que fica em pé (`_drawWarnings`).
+     * O aviso pinta as casas onde o golpe vai pegar, por baixo dos bichos e de tudo que fica em pé (`_drawWarnings`).
      * `tiles`: [x, y, ...] em casas, as mesmas do servidor (o quadrado do chão de cada uma é o do `tileFeetSquare`
      * do combat.ts: x a x + 1, y + 0,2 a y + 1,2 m); `ms`: quanto falta para o golpe; `opts.fire`: o fogo (o rastro do
      * boitatá), laranja e tremendo; com `opts.kind` 'caldo', a poça de caldo verde da Cuca, borbulhando.
@@ -588,7 +597,11 @@
       const now = this.last || (typeof performance !== 'undefined' ? performance.now() : Date.now());
       const cells = [];
       for (let i = 0; i + 1 < tiles.length; i += 2) cells.push({ x: tiles[i], y: tiles[i + 1] });
-      (this.warnings || (this.warnings = [])).push({ cells, start: now, until: now + Math.max(1, ms || 0), fire: !!(opts && opts.fire), kind: (opts && opts.kind) || null });
+      const fire = !!opts?.fire;
+      (this.warnings || (this.warnings = [])).push({
+        cells: fire ? cells : strikeFootprint(cells),
+        start: now, until: now + Math.max(1, ms || 0), fire, kind: opts?.kind || null,
+      });
     }
 
     /**
@@ -615,11 +628,55 @@
       this.warnings = out;
     }
 
-    /**
-     * Os avisos no chão: cada casa é um quadrado de cantos redondos (como uma almofadinha), com o fundo clarinho, a
-     * borda viva e o miolo que vai enchendo até a hora do golpe (o relógio do aviso); nos últimos instantes a borda
-     * pulsa. Depois do golpe, some num piscar (0,12 s). O fogo: laranja, tremendo.
-     */
+    /** O contorno claro marca a área toda. A faixa avança de cima a baixo até a hora do golpe. */
+    _drawStrikeWarning(ctx, warning, progress, fade, project) {
+      const floor = new Path2D(), rim = new Path2D(), accents = new Path2D();
+      let top = Infinity, bottom = -Infinity;
+      for (const { x, y, edges } of warning.cells) {
+        const y0 = y + 0.2, y1 = (y + 1) + 0.2;
+        const corners = [project(x, y0), project(x + 1, y0), project(x + 1, y1), project(x, y1)];
+        top = Math.min(top, corners[0].y);
+        bottom = Math.max(bottom, corners[2].y);
+        floor.moveTo(corners[0].x, corners[0].y);
+        for (let edge = 0; edge < corners.length; edge++) {
+          const from = corners[edge], to = corners[(edge + 1) % corners.length];
+          floor.lineTo(to.x, to.y);
+          if (!edges[edge]) continue;
+          rim.moveTo(from.x, from.y);
+          rim.lineTo(to.x, to.y);
+          const dx = to.x - from.x, dy = to.y - from.y;
+          accents.moveTo(from.x + dx * 0.14, from.y + dy * 0.14);
+          accents.lineTo(to.x - dx * 0.14, to.y - dy * 0.14);
+        }
+        floor.closePath();
+      }
+
+      const zoom = this.cam.zoom;
+      const front = M.lerp(top, bottom, progress);
+      const width = Math.max(6, 17 * zoom);
+      const sweep = ctx.createLinearGradient(0, front - width, 0, front + width * 0.45);
+      sweep.addColorStop(0, 'rgba(212, 158, 83, 0.15)');
+      sweep.addColorStop(0.68, 'rgba(247, 213, 154, 0.44)');
+      sweep.addColorStop(1, 'rgba(247, 213, 154, 0)');
+
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = 'rgba(43, 30, 21, 0.19)';
+      ctx.fill(floor);
+      ctx.fillStyle = sweep;
+      ctx.fill(floor);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(40, 28, 21, 0.76)';
+      ctx.lineWidth = Math.max(2.8, 4.5 * zoom);
+      ctx.stroke(rim);
+      ctx.strokeStyle = 'rgba(214, 170, 104, 0.48)';
+      ctx.lineWidth = Math.max(1, 1.6 * zoom);
+      ctx.stroke(rim);
+      ctx.strokeStyle = `rgba(255, 228, 175, ${0.72 + 0.25 * progress})`;
+      ctx.lineWidth = Math.max(1.6, 2.4 * zoom);
+      ctx.stroke(accents);
+    }
+
+    /** Avisos de golpe e de chão queimando. Depois do golpe, o aviso some em 0,12 s. */
     _drawWarnings(ctx) {
       const now = this.last;
       const FADE = 120;
@@ -652,8 +709,11 @@
         }
         const k = M.clamp01((now - w.start) / Math.max(1, w.until - w.start));
         const out = (now > w.until ? 1 - (now - w.until) / FADE : 1) * clearedK(w, now);
-        const flick = w.fire ? 0.75 + 0.25 * Math.sin(now / 55 + w.start) : 1;
-        const pulse = k > 0.72 ? 0.5 + 0.5 * Math.sin(now / 45) : 0;
+        if (!w.fire) {
+          this._drawStrikeWarning(ctx, w, k, out, P);
+          continue;
+        }
+        const flick = 0.75 + 0.25 * Math.sin(now / 55 + w.start);
         const shapes = new Path2D(), cores = new Path2D();
         for (const c of w.cells) {
           const pts = [P(c.x + 0.07, c.y + 0.27), P(c.x + 0.93, c.y + 0.27), P(c.x + 0.93, c.y + 1.13), P(c.x + 0.07, c.y + 1.13)];
@@ -663,16 +723,16 @@
         }
         // o fundo clarinho, o miolo que enche, o risco escuro de fora e a borda viva
         ctx.globalAlpha = out;
-        ctx.fillStyle = w.fire ? `rgba(255, 150, 50, ${(0.16 * flick).toFixed(3)})` : `rgba(228, 72, 46, ${(0.13 + 0.1 * k).toFixed(3)})`;
+        ctx.fillStyle = `rgba(255, 150, 50, ${(0.16 * flick).toFixed(3)})`;
         ctx.fill(shapes);
         if (k > 0.02) {
-          ctx.fillStyle = w.fire ? `rgba(255, 196, 90, ${(0.3 * flick).toFixed(3)})` : `rgba(248, 98, 58, ${(0.3 + 0.2 * k).toFixed(3)})`;
+          ctx.fillStyle = `rgba(255, 196, 90, ${(0.3 * flick).toFixed(3)})`;
           ctx.fill(cores);
         }
-        ctx.strokeStyle = w.fire ? 'rgba(96, 32, 6, 0.4)' : 'rgba(74, 14, 8, 0.28)';
+        ctx.strokeStyle = 'rgba(96, 32, 6, 0.4)';
         ctx.lineWidth = Math.max(2, 3.2 * z);
         ctx.stroke(shapes);
-        ctx.strokeStyle = w.fire ? `rgba(255, 214, 120, ${(0.75 * flick).toFixed(3)})` : `rgba(255, ${Math.round(150 + 60 * pulse)}, ${Math.round(112 + 50 * pulse)}, ${(0.7 + 0.25 * k).toFixed(3)})`;
+        ctx.strokeStyle = `rgba(255, 214, 120, ${(0.75 * flick).toFixed(3)})`;
         ctx.lineWidth = Math.max(1.4, 1.9 * z);
         ctx.stroke(shapes);
       }

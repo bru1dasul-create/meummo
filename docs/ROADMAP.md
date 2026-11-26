@@ -1191,6 +1191,8 @@ e com 5); a Bordunada sai do jogo novo e o Fôlego fica.
   - [x] **[arte]** o desenho e o `view.warn(casas, ms, { fire })` (`view.js`)
   - [x] **[estrutura]** chamar o `view.warn` nos casos `warn` e `fire` e não pintar os quadrados vermelhos no
     `combat.ts` quando a view tiver `warn` (na main em 984aab2; sem o `warn` na view, os quadrados de sempre)
+- [x] **[arte]** Refinar o aviso dos inimigos no 2.5D. Contorno claro ao redor da área inteira, com uma faixa de luz
+  que avança durante o preparo. Ao levar dano, a barra de vida brilha. [Arquivos e comportamento](ARTE.md#contorno-dos-golpes-inimigos-no-chão)
 - [x] **Sagui no galho** (opção 3 do dono, 23/11: "pode fazer o sagui na árvore conforme a opção 3"): calmo, ele fica
   pendurado pelo rabo num galho baixo e joga a fruta lá de cima; quando o herói chega perto ou acerta, pula para o chão
   e luta; depois de um tempo calmo, sobe de novo

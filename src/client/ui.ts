@@ -442,7 +442,7 @@ export class Toast {
   }
 }
 
-/** Tela de "Você desmaiou!" e o vermelho na borda quando você apanha. */
+/** Tela de "Você desmaiou!" e o brilho na barra de vida quando você apanha. */
 export class Feedback {
   private readonly death = byId<HTMLDivElement>('death');
   private readonly hurt = byId<HTMLDivElement>('hurt');

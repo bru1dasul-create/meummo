@@ -21,6 +21,22 @@
   do ADM) e "Derrubar perto" (F1) apertados pelo texto, sem abrir a janela. Para efeito rápido (fumaça, poça), gravar
   vídeo (`recordVideo` do Playwright) e tirar os quadros com o `ffmpeg`: as fotos do Playwright levam ~0,4 s cada.
 
+## Contorno dos golpes inimigos no chão
+
+Em [`view.js`](../prototipos/pindorama-25d/js/view.js), `strikeFootprint` encontra a borda externa das casas enviadas
+pelo servidor. `warn` guarda essas bordas e `_drawStrikeWarning` as desenha em âmbar e marfim, com um traço escuro
+por baixo. O piso aparece através da área e a faixa de luz avança até a hora do golpe. `_drawWarnings` mantém o
+desenho abaixo dos personagens e chama o efeito próprio do fogo ou do caldo verde da Cuca quando for o caso.
+A área atingida, o tempo de preparo e o dano continuam vindo do servidor.
+
+Ao levar dano, o aviso aparece como um brilho curto na barra de vida. `src/client/index.html` coloca o elemento
+`#hurt` dentro da barra e `src/client/style.css` desenha o brilho. `Feedback.hurtFlash()` em `src/client/ui.ts`
+aciona o mesmo elemento, e `src/client/novo/debugPanel.ts` mostra o nome novo do ajuste no F1. O valor guardado
+continua sendo `hurtFlash`.
+
+Conferi a mordida do Quati, o giro dos Marimbondos e o brilho ao levar dano no Chromium, em desktop e celular
+simulado. O brilho também foi testado com o ajuste desligado. `npm run build` e `npm run check` passaram, com 781 testes.
+
 ## Aba do boné e rosto de perfil do Birim (24/11)
 
 - **Aba.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `BRIM` estende a aba para trás com uma queda menor e afina as pontas até a barra. `extras` pinta a aba antes da copa. Isso resolve o arco que cruzava a lateral do boné em alguns giros. `brimEdge` acompanha a curva nova.
