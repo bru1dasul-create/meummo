@@ -4,15 +4,21 @@
 > num chat novo. Leia junto: `CLAUDE.md` (regras e divisão do trabalho), `docs/ROADMAP.md` (tarefas com a etiqueta
 > **[arte]**) e `docs/ARQUITETURA.md` (seção "Personagem em camadas").
 
-## AGORA (25/11) — LEIA PRIMEIRO: onde estamos e o que vem
+## AGORA (26/11) — LEIA PRIMEIRO: onde estamos e o que vem
 - **Na main:** a Cuca inteira (a bruxa de dia mexendo o caldeirão; a chefe de noite com o caldo, a poça, a cantiga e o
   Zzz; a caída que fica até amanhecer, o levantar na colher e o acordar confusa; a fumaça de virar; a chefe 1,35× maior
-  que a bruxa; a poça que seca na hora). Detalhes nas seções "A Cuca..." mais abaixo.
-- **Esperando outra frente:** a [estrutura] pôr a barra de vida acima do desenho de cada um (`view.actorTop(id)`, em
-  metros, já pronto no `view.js`; hoje a barra fica a 1,72 m para todos e, com a chefe maior machucada, passa na cara
-  dela). Pedido mandado em 25/11.
+  que a bruxa; a poça que seca na hora; a barra de vida da chefe acima do nome, da [estrutura]); e, em 26/11, a bruxa
+  andando de volta ao caldeirão de manhã (antes teleportava), a runa da Flecha Ancestral com a altura que o motor
+  mandar e o alto firme dos bichos para a barra. Detalhes em "A bruxa ao amanhecer, a runa e o alto firme" e nas
+  seções "A Cuca..." mais abaixo.
+- **Esperando outra frente:** a [estrutura] ligar (pedido mandado em 26/11): a barra logo acima do nome de todo bicho
+  (o dono: "SIM"; hoje os pequenos ficam com a barra a 1,72 m, ~1,3 m acima do tatu), os números de dano saindo de
+  cima da barra e a runa a `barZ + MARK_OVER_BAR`. A [estrutura] copiou a posição e o tamanho do nome do `view.js`
+  (`_overHead`: 10 cm acima do alto; `_drawNames`: letras de 13 px) para `NAME_OVER_TOP`/`NAME_TEXT_PX` no
+  `combat.ts`: **se eu mudar o nome de lugar ou de tamanho, aviso a [estrutura]**.
 - **Ideias para o dono decidir (não fazer sem o "pode"):** o herói meio caído enquanto dorme com a cantiga (hoje só o
-  Zzz).
+  Zzz). Em 26/11 ele perguntou se o Fable 5.2 com o ultracode faria um jogo novo, do zero, "na pegada 3D" (não mudar
+  este): respondi com custo, risco e recomendação; a decisão é dele.
 - **Como sempre:** escopo antes, para o dono aprovar ("me manda o escopo antes para aprovar"); main só com o "pode" dele
   (ou quando ele pedir para fechar a rodada antes do /clear); os combinados estão em "Combinados com o dono".
 - **Conferir no jogo (o jeito que funcionou):** `npm run build`, depois `PORT=3100 MEUMMO_SAVE=<arquivo de teste> npm
@@ -20,6 +26,31 @@
   `POST /admin/api/adm`, `levar` para o mapa pelo `/admin/api/jogador` e os botões "Virar noite"/"Virar dia" (painel
   do ADM) e "Derrubar perto" (F1) apertados pelo texto, sem abrir a janela. Para efeito rápido (fumaça, poça), gravar
   vídeo (`recordVideo` do Playwright) e tirar os quadros com o `ffmpeg`: as fotos do Playwright levam ~0,4 s cada.
+
+## A bruxa ao amanhecer, a runa e o alto firme (26/11; o dono: "confirma e resolve", "pode ser" e "SIM")
+- **A bruxa teleportava ao amanhecer (confirmado no jogo):** a chefe foge do herói para manter 2 m e vai até uns 7 m
+  do caldeirão, dentro da área dela (a leste). De manhã, vencida ou não, o servidor manda a bruxa andar de volta em
+  pedaços do caminho (`npc_walk`, a 1,2 m/s: 5,1 m em 4,3 s), e o `moveTo` do `creature.js` pulava todo destino a
+  mais de 3 m. Agora só pula quando não vem tempo de andar (o painel levou) ou quando o tempo é curto demais para
+  andar (mais de 6 m/s, `WALK_MAX`); a esquiva (`dash`) continua pulo. Vale para todo desenho de criatura (os NPCs
+  pintados também). Medido no jogo: o maior salto entre duas amostras de 100 ms caiu de 5,1 m para 0,18 m (PC e
+  celular, vencida e sem vencer). Para levar a chefe longe no teste: chegar a 1 m dela pelo lado do caldeirão, várias
+  vezes (ela foge para leste); a oeste ela não segue, e longe demais (mais de ~7 m) ela volta curada.
+- **A runa da Flecha Ancestral (`spiritArt.ts`):** a 2,02 m fixos, ela caía na cara da chefe, abaixo do nome e da
+  barra (conferido no jogo com o "Arqueiro" de `arco-jogo/teste.db` no scratchpad: Caçador nível 26 com 4 pontos na
+  Ancestral; a classe só abre depois da missão dos saguis). `paintSpiritMark(..., z)` recebe a altura; o motor passa
+  `barZ + MARK_OVER_BAR` (0,3 m acima da barra: a de sempre, 1,72 + 0,3 = 2,02); sem ela, fica a de sempre. Para
+  acertar no teste: o botão direito mira no chão, então mire no pé dela (`screenOf(x, y, 0)`), não no corpo.
+- **O alto firme (`barTop`, `creature.js`, `_holdTop`):** o alto de verdade (`overHead`, onde fica o nome) segue a
+  cabeça (o sagui correndo balança ~7 cm em ~1 s; a jararaca sobe a cabeça no bote) e é contado no desenho, depois do
+  `update`. O firme é o maior alto do último 1,2 s (12 pedaços de 0,1 s), descendo a 40 cm/s quando o desenho baixa de
+  vez; o `actorTop` da view passa ao motor o maior entre o firme e o alto do quadro: a barra nunca fica abaixo do nome
+  e não balança com o passo. (Primeiro tentei "segura 0,6 s e desce": o passo do sagui leva quase 1 s, e um pico um
+  pouco mais baixo que o anterior não segurava.)
+- **Testes:** `tests/cuca-art.test.ts` (andar 5 m no tempo do servidor; o pulo sem tempo continua),
+  `tests/creature-top.test.ts` (3) e `tests/spirit-mark.test.ts` (2). Rascunho (scratchpad): `teleporte/jogo.cjs
+  <pasta> pc|celular` (registra cada `moveTo` da Cuca e o pé desenhado a cada 100 ms; `VIDEO=1` grava) e
+  `runa/jogo.cjs` (`NOME=Arqueiro`, com o save `runa/arqueiro.db`).
 
 ## Aba do boné e rosto de perfil do Birim (24/11)
 

@@ -229,7 +229,10 @@
       const a = this.actors.get(id);
       if (!a || !a.creature) return null;
       const c = a.creature;
-      return Math.max(0, (c.overHead().z - (c.groundZ || 0)) / 100);
+      // o alto firme (não balança com o passo nem com o bote; veja `_holdTop` no creature.js); o alto do desenho deste
+      // quadro só conta se passou dele (o desenho sobe a cabeça depois do `update`): a barra nunca fica abaixo do nome
+      const now = c.overHead().z - (c.groundZ || 0);
+      return Math.max(0, (c.barTop >= 0 ? Math.max(c.barTop, now) : now) / 100);
     }
 
     /** Guarda onde estava (cm), para onde olhava e se estava no chão quem acabou de sair (só os últimos, por 1,5 s). */

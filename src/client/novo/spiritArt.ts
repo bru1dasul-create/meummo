@@ -110,8 +110,13 @@ const FADE_MS = 640;
 const MARK_OUT_MS = 1500;
 /** A altura do voo (m): a mesma do combate (SHOT_DRAW_Z), onde o espírito se desfaz. */
 const FLIGHT_Z = 0.9;
-/** A altura da runa (m): logo acima da barra de vida (BODY_HEIGHT + 0,42). */
+/** A altura da runa (m) quando o motor não diz: logo acima da barra de vida de sempre (BODY_HEIGHT + 0,42). */
 const MARK_Z = 2.02;
+/**
+ * Quanto a runa fica acima da barra de vida (m): o motor passa `barra + MARK_OVER_BAR` no `paintSpiritMark`. A runa a
+ * 2,02 m fixos caía na cara da Cuca chefe (2,16 m de alto, 26/11), e nos bichos pequenos a barra desce para perto deles.
+ */
+export const MARK_OVER_BAR = 0.3;
 const TAU = Math.PI * 2;
 
 /** O verde do espírito (o mesmo da Chuva com 5 pontos), o miolo quase branco e o dourado da HUD (a mira). */
@@ -799,9 +804,10 @@ function impactHit(ctx: CanvasRenderingContext2D, end: SpiritEndLook, age: numbe
 /**
  * A runa do espírito em cima do bicho marcado (leva mais dano de todo mundo até `until`): o losango escuro com a borda
  * de luz e a espiral (o mesmo desenho do enfeite da barra, no verde do espírito), as quatro pontinhas, flutuando; e o
- * anel tracejado girando no pé. Pisca no último segundo.
+ * anel tracejado girando no pé. Pisca no último segundo. `z`: a altura da runa (m), logo acima da barra de vida de quem
+ * foi marcado (`barra + MARK_OVER_BAR`); sem ela, a de sempre.
  */
-export function paintSpiritMark(ctx: CanvasRenderingContext2D, feet: Point, until: number, now: number, screen: Screen, meter: Meter): void {
+export function paintSpiritMark(ctx: CanvasRenderingContext2D, feet: Point, until: number, now: number, screen: Screen, meter: Meter, z = MARK_Z): void {
   const left = until - now;
   if (left <= 0) return;
   const m = meter(feet.x, feet.y);
@@ -817,7 +823,7 @@ export function paintSpiritMark(ctx: CanvasRenderingContext2D, feet: Point, unti
   ctx.setLineDash([]);
   // a runa: flutua e pulsa
   const bob = Math.sin(now / 380) * m * 0.035;
-  const p0 = screen(feet.x, feet.y, MARK_Z);
+  const p0 = screen(feet.x, feet.y, z);
   const p = { x: p0.x, y: p0.y + bob };
   const s = Math.max(10, m * 0.26) * (1 + 0.05 * Math.sin(now / 140));
   ctx.globalAlpha = alpha;

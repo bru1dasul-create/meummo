@@ -828,6 +828,20 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
       main, conferida no PC e no celular): a barra usa o `actorTop` e, num bicho alto, vai logo acima do nome
       (`barHeight` no `combat.ts`, a mesma folga em pixels com qualquer zoom); bicho baixo e gente continuam na altura de
       sempre. Teste: `tests/combate-novo.test.ts`
+    - [x] **[arte]** a bruxa anda de volta ao caldeirão de manhã (o dono, 26/11: "quando vira dia a bruxa se teleporta,
+      ela não anda até o barril, confirma e resolve"; na main, conferido no PC e no celular): longe do caldeirão (a
+      chefe foge do herói para manter 2 m e vai até uns 7 m dele), o servidor manda andar 5 m em 4 s, e o desenho
+      pulava tudo de uma vez (mais de 3 m era sempre pulo). Agora só pula sem tempo de andar ou rápido demais para
+      andar (`creature.js`, `moveTo`). Teste: `tests/cuca-art.test.ts`
+    - [x] **[arte]** a runa da Flecha Ancestral aceita a altura (o dono: "pode ser"; na main): a 2,02 m fixos, ela caía na
+      cara da chefe (conferido no jogo). `paintSpiritMark(..., z)` e `MARK_OVER_BAR` (0,3 m acima da barra) no
+      `spiritArt.ts`. Teste: `tests/spirit-mark.test.ts`
+    - [x] **[arte]** o alto firme dos bichos, para a barra logo acima de cada um (o dono: "SIM" para os pequenos também;
+      na main): `barTop` no `creature.js` (o maior alto do último 1,2 s, descendo devagar) e o `actorTop` da view usa
+      ele: a barra não balança com o passo nem com o bote e nunca fica abaixo do nome. Teste: `tests/creature-top.test.ts`
+    - [ ] **[estrutura]** ligar as duas (pedido da [arte], 26/11): no `barHeight`, a barra logo acima do nome de todo
+      bicho (sem a altura de sempre como mínimo; gente continua igual), os números de dano saindo de cima da barra
+      (hoje no mínimo a 2,3 m) e a runa a `barZ + MARK_OVER_BAR`
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

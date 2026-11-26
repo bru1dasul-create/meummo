@@ -9,6 +9,15 @@
   const M = PD.math;
   const INK = '#1b100d';
   const TYPES = {};
+  /** Andar ou correr vai até esta velocidade (cm/s); um lugar novo longe, mais rápido que isso, é um pulo de lugar. */
+  const WALK_MAX = 600;
+  /**
+   * O alto firme (a barra de vida): o maior alto dos últimos TOP_HOLD s (mais que o passo do sagui correndo, ~1 s: a barra
+   * fica parada enquanto ele corre), contado em TOP_SLICES pedaços; desce nesta velocidade (cm/s).
+   */
+  const TOP_HOLD = 1.2;
+  const TOP_SLICES = 12;
+  const TOP_FALL = 40;
 
   class Creature {
     constructor(x, y, yaw) {
@@ -41,10 +50,17 @@
       this.dying = null;
     }
 
-    /** Novo ponto do pé (cm) vindo do servidor: chega lá no tempo do passo, em linha reta. */
+    /**
+     * Novo ponto do pé (cm) vindo do servidor: chega lá no tempo do passo, em linha reta. Longe (mais de 3 m) e sem
+     * tempo de andar até lá (o painel levou, ou rápido demais para andar), aparece lá. Com o tempo de quem anda, vai
+     * andando mesmo longe: a Cuca voltando ao caldeirão de manhã recebe 5 m em 4,3 s (antes ela teleportava).
+     */
     moveTo(x, y, yaw, durationMs, dash) {
       if (this.dying !== null) return;
-      if (dash || Math.hypot(x - this.pos.x, y - this.pos.y) > 300) {
+      const d = Math.hypot(x - this.pos.x, y - this.pos.y);
+      const secs = (durationMs || 0) / 1000;
+      const walking = secs > 0 && d / secs <= WALK_MAX;
+      if (dash || (d > 300 && !walking)) {
         this.pos.x = x;
         this.pos.y = y;
         this._from = { x, y };
@@ -102,6 +118,29 @@
         if (this.act.t > this.act.dur + this.act.hold) this.act = null;
       }
       this.animate(dt);
+      this._holdTop(dt);
+    }
+
+    /**
+     * O alto firme do desenho (`barTop`, cm acima do pé), para a barra de vida ir logo acima de cada bicho (o dono, 26/11;
+     * a view conta em metros no `actorTop`). O alto de verdade (`overHead`, onde fica o nome) segue a cabeça: sobe no bote
+     * da jararaca e balança com o passo do sagui. O firme é o maior alto dos últimos TOP_HOLD s: sobe na hora junto com
+     * ele (a barra nunca fica abaixo do nome) e, quando o desenho baixa de vez, desce devagar (TOP_FALL); com o passo, a
+     * cabeça volta lá em cima antes disso, e a barra fica parada.
+     */
+    _holdTop(dt) {
+      const top = this.overHead().z - (this.groundZ || 0);
+      // o maior alto de cada pedaço de TOP_HOLD / TOP_SLICES s (o mais velho sai quando entra um novo)
+      const S = this._topSlices || (this._topSlices = { t: 0, i: 0, v: new Array(TOP_SLICES).fill(top) });
+      S.t += dt;
+      if (S.t >= TOP_HOLD / TOP_SLICES) {
+        S.t = 0;
+        S.i = (S.i + 1) % TOP_SLICES;
+        S.v[S.i] = top;
+      } else if (top > S.v[S.i]) S.v[S.i] = top;
+      let peak = top;
+      for (const v of S.v) if (v > peak) peak = v;
+      this.barTop = !(this.barTop >= 0) || peak >= this.barTop ? peak : Math.max(peak, this.barTop - TOP_FALL * dt);
     }
 
     /** Cada criatura: avança o jeito de andar e a pose. */

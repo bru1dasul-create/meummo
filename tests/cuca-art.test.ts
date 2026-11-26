@@ -541,6 +541,24 @@ describe('a Cuca desenhada', () => {
     expect(t.label).toBe('mexendo o caldeirão');
   });
 
+  it('de manhã, longe do caldeirão, anda o caminho inteiro no tempo do servidor (sem teleportar)', () => {
+    const t = create(180 * DEG);
+    step(t, 0.3);
+    // o servidor: 5,1 m até perto do caldeirão, no passo de quem anda (1,2 m/s); antes, mais de 3 m era um pulo
+    t.moveTo(-511, 0, 180 * DEG, 4257);
+    step(t, 1);
+    expect(t.pos.x).toBeLessThan(-80);
+    expect(t.pos.x).toBeGreaterThan(-160);
+    expect(t.walkK).toBeGreaterThan(0.5); // andando de verdade (a passada), não deslizando
+    step(t, 3.4);
+    expect(t.pos.x).toBeCloseTo(-511, 0);
+    // um lugar novo longe sem tempo de andar (o painel levou), ou rápido demais para andar: aparece lá
+    t.moveTo(0, 0, 0, 0);
+    expect(t.pos.x).toBe(0);
+    t.moveTo(500, 0, 0, 420); // 5 m em 0,42 s (12 m/s)
+    expect(t.pos.x).toBe(500);
+  });
+
   it('a chefe é maior que a bruxa (1,35): o desenho, o pé, o nome e a luz crescem juntos, em volta do pé', () => {
     const witch = create(45 * DEG);
     witch.setBoss(false);
