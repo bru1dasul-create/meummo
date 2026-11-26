@@ -1240,8 +1240,8 @@
       return result;
     }
 
-    /** Passada por distância, com o desenho e a cadência originais. */
-    _feet(pelvis, { g, run, crouch, idle, weight, heelUp, lead }) {
+    /** Passada por distância. O pé de apoio mantém o ponto de contato no chão. */
+    _feet(pelvis, { g, run, crouch, idle, weight, heelUp, lead, style }) {
       const t = this.time, dt = this._dt, J = this.jump, ph = this.phase, A = this.attack;
       const speedK = clamp01(this.speed / SPEED.walk);
       const ankleFloor = this.groundZ + B.ankleHeight;
@@ -1253,9 +1253,14 @@
       const front = lerp(0.4, 0.42, run);
       const shuffle = shuffleNow;
       // (no passo e junta o pé vai mais baixo: é um passo de lado, quase arrastado)
-      const lift = lerp(lerp(4.5, 6.8, speedK), 23, run) * (1 - 0.45 * crouch) * (1 - 0.3 * shuffle) * B.legScale;
-      const heelStrike = lerp(13, 6, run) * (1 - 0.5 * crouch);
-      const toeOff = lerp(44, 42, run) * (1 - 0.4 * crouch);
+      const liftWalk = lerp(4.5, 6.8 - 0.55 * style, speedK);
+      const lift = lerp(liftWalk, 23 - 2 * style, run) * (1 - 0.45 * crouch) * (1 - 0.3 * shuffle) * B.legScale;
+      // Na passada mais aberta, o calcanhar precisa subir o suficiente para a perna alcançar o apoio.
+      const shortWalk = style * (1 - smoothstep(170, 195, this.speed));
+      const heelStrike = lerp(13 - 3 * shortWalk, 6 - 2 * style, run) * (1 - 0.5 * crouch);
+      const toeOff = lerp(44 - 7 * shortWalk, 42 - 7 * style, run) * (1 - 0.4 * crouch);
+      const heelRoll = 0.16 + lerp(0.06, 0.04, run) * style;
+      const heelLift = lerp(17, 8, style) * run * B.legScale;
       const heelFrom = lerp(0.55, 0.4, run);
       // ---- pés: o animador diz onde o pé "quer" estar; a trava prende no chão o pé que pisou
       const body = M.frameYaw({ x: this.pos.x, y: this.pos.y, z: this.groundZ }, this.yaw);
@@ -1290,7 +1295,7 @@
             // o calcanhar sobe devagar no começo e chega na ponta sem pressa: na saída do chão o pé não pode estar
             // girando no máximo (antes, r^1,7, girava mais rápido justo no último instante e o balanço começava parado:
             // o tornozelo trocava de velocidade de uma vez e o joelho, quase esticado, dava um tranco)
-            pitch = heelStrike * (1 - smoothstep(0, 0.16, s)) - toeOff * Math.pow(smoothstep(0, 1, rise), 1.15);
+            pitch = heelStrike * (1 - smoothstep(0, heelRoll, s)) - toeOff * Math.pow(smoothstep(0, 1, rise), 1.15);
           } else {
             // balanço: o pé sai do chão parado e pousa parado (no chão, não em relação ao corpo): enquanto o corpo
             // anda `travel`, ele vai de trás para a frente numa curva suave; o calcanhar sobe para trás no começo
@@ -1309,7 +1314,9 @@
             const upWalk = Math.pow(Math.sin(Math.PI * (1 - Math.pow(1 - s, 1.55))), 1.2);
             const upRun = Math.pow(Math.sin(Math.PI * (1 - Math.pow(1 - s, 1.3))), 1.1);
             up = lift * lerp(upWalk, upRun, run) * (1 + 0.09 * M.noise1(t * 0.41 + i * 5.7)); // cada passo um pouco diferente
-            up += run * 17 * B.legScale * Math.pow(Math.sin(Math.PI * clamp01((s - 0.05) / 0.5)), 1.2);
+            // Na corrida do Birim, o calcanhar recolhe sem chutar tão alto atrás do corpo.
+            const heelWave = Math.sin(Math.PI * clamp01((s - 0.05) / (0.5 + 0.07 * style)));
+            up += heelLift * Math.pow(heelWave, 1.2 + 0.6 * style);
             pitch = lerp(-toeOff, heelStrike, smoothstep(0, 0.85, s));
             bend = toeOff * (1 - smoothstep(0, 0.3, s));
           }
@@ -1726,7 +1733,7 @@
       // ---- pelve: alta no meio do apoio (perna quase esticada), baixa quando os dois pés estão no chão
       const mid = Math.cos(4 * Math.PI * (ph - S / 2)); // +1 no meio do apoio, -1 no apoio duplo (ou no voo)
       const bobWalk = -3 * Math.pow((1 - mid) / 2, 1.4) * lerp(0.35, 1, speedK); // e a pelve desce o resto se precisar
-      const bobRun = -2 * mid - 5; // correndo: mais baixo no meio do apoio (o joelho amortece), alto no voo
+      const bobRun = -(2 - 0.5 * style) * mid - 5; // a pelve desce no apoio e sobe no voo
       const bob = lerp(bobWalk, bobRun, run) * g * (1 - 0.6 * crouch);
       const idleSway = M.noise1(t * 0.23) * 1.1 * idle;
       // parado: o peso fica mais numa perna (troca devagar) — quadril de um lado, ombros do outro
@@ -2050,7 +2057,7 @@
         }
       }
       if (PD.guard) guardK = Math.max(guardK, PD.guard.applyPose(this, { pelvis, spine, hands, shoulderFwd }));
-      const feet = this._feet(pelvis, { g, run, crouch, idle, weight, heelUp, lead: A ? A.lead : this.lastLead });
+      const feet = this._feet(pelvis, { g, run, crouch, idle, weight, heelUp, lead: A ? A.lead : this.lastLead, style });
 
       // ---- cabeça: segue o peito (segura só uma parte do giro, como quem olha para a frente) com uma mola — a
       // cabeça tem peso e chega um pouquinho depois —, vai na frente nas curvas e, no soco, baixa o queixo

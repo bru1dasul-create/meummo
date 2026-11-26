@@ -261,10 +261,17 @@
     // (rodada 3: o deltoide mais junto do corpo — de frente e de costas o ombro passava ~2 cm da ficha para fora)
     // e o alto dele um pouco mais alto: com o trapézio abaixo da barba, a linha do ombro tinha descido ~3 cm da ficha
     UPPER_ARM: BASE.UPPER_ARM.map((s) => ({ ...s, t: s.part === 'deltoide' && s.t < 0.2 ? s.t - 0.06 : s.t, o: s.part === 'deltoide' ? s.o * 0.45 : s.o, r: s.r + (s.t === 1 ? 0.35 : s.part === 'deltoide' ? 0.45 : 1.15) })),
-    FOREARM: BASE.FOREARM.map((s, k) => ({ ...s, r: s.r + [0.35, 0.8, 0.5, 0.1][k] })),
+    FOREARM: [
+      { t: 0, f: 0, o: 0, r: 4.25 },
+      { t: 0.2, f: 0.65, o: 0.6, r: 5.35 },
+      { t: 0.49, f: 0.25, o: 0.35, r: 4.4 },
+      { t: 0.75, f: 0, o: 0.1, r: 3.35 },
+      { t: 1, f: 0, o: 0, r: 2.8 },
+    ],
     HAND,
     FOOT,
     TOES,
+    armSkinJoin: -0.6, // a pele do cotovelo fica contínua mesmo na flexão da corrida
     wristJoin: 1.5, // o punho sem emenda (veja o renderer): a ponta do antebraço não vira uma "bola" em cima da mão
     THIGH: BASE.THIGH.map((s, k) => ({ ...s, r: s.r + [0.3, 0.4, 0.4, 0.3, 0.1, 0.1][k] })),
     // canela (rodada 3, medida na ficha): a panturrilha cheia logo abaixo do joelho e a perna afinando até o tornozelo. Em
@@ -994,9 +1001,6 @@
       const neck = items.find((it) => it.name === 'pescoco')?.segs[0].circles ?? [];
       items.push({ name: 'cordao', key: env.chestKey + 0.5, draw: () => chain(R, rig, look, neck) });
     }
-
-    // ---- as solas dos chinelos (saem se o encaixe dos pés tiver um calçado)
-    if (!gear.pes && !off.chinelos) for (let i = 0; i < 2; i++) items.push(soleItem(R, rig, i, items));
   }
 
   /** De frente, a sombra indica a concha. De perfil aparecem as dobras da cartilagem. */
@@ -1619,15 +1623,6 @@
   }
 
   // ------------------------------------------------------------------ utilidades dos membros
-  /** Anel de esferinhas em volta de um osso (em t, com raio `rad`): o casco de dois anéis é um tubo de boca reta. */
-  const ringOn = (R, lf, t, rad, n, r, off = 0) => {
-    const out = [];
-    for (let k = 0; k < n; k++) {
-      const th = (k / n) * M.TAU;
-      out.push(R.circle(limbAt(lf, t, Math.cos(th) * rad, Math.sin(th) * rad + off), r));
-    }
-    return out;
-  };
   /** O ângulo em volta do osso que olha para a câmera (o meio da metade visível). */
   const facingAngle = (R, lf) => Math.atan2(dot(R.toCam, lf.out), dot(R.toCam, lf.f));
   /** Ponto na superfície de um tubo em volta do osso: fração t, ângulo th (0 = frente, π/2 = fora), raio. */
@@ -1659,24 +1654,6 @@
     for (const run of runs) ctx.stroke(S.smoothLinePath(run));
     ctx.globalAlpha = 1;
   };
-  /** Faixa em volta do osso entre t0 e t1 (a metade visível), preenchida: a pulseira do relógio. */
-  function bandOn(R, lf, t0, t1, rad, color) {
-    const tc = facingAngle(R, lf);
-    const a = [], b = [];
-    for (let k = 0; k <= 14; k++) {
-      const th = tc - Math.PI / 2 + (Math.PI * k) / 14;
-      a.push(R.P(tubeAt(lf, t0, th, rad)));
-      b.push(R.P(tubeAt(lf, t1, th, rad)));
-    }
-    const path = new Path2D();
-    path.moveTo(a[0].x, a[0].y);
-    for (const q of a) path.lineTo(q.x, q.y);
-    for (let k = b.length - 1; k >= 0; k--) path.lineTo(b[k].x, b[k].y);
-    path.closePath();
-    R.ctx.fillStyle = color;
-    R.ctx.fill(path);
-    return path;
-  }
   /**
    * O raio da pele de um membro num ponto: `s` cm ao longo do osso, ângulo `th` em volta dele. O membro desenhado é o
    * CASCO das esferas, então o raio é a borda de cima do casco das esferas vistas de perfil naquela direção (e não a
@@ -1821,12 +1798,12 @@
   // [cm ao longo, graus em volta, raio de fora, voltas, sentido, ângulo do rabo]
   const TATTOO = {
     braco: sleeve(MODEL.UPPER_ARM, PD.BODY.upperArm, [
-      [6.4, 96, 5.5, 2.05, 1, 2.5], // a grande, na capa do ombro
+      [4.8, 86, 5.5, 2.05, 1, 2.5], // a grande, na capa do ombro
       [15.6, 14, 4.9, 2, -1, 0.4], // bíceps
       [18.8, 102, 4.6, 1.95, 1, -0.6], // lado de fora, embaixo
       [13.2, 186, 5, 2, -1, 2.9], // tríceps
-      [5.2, 8, 3.5, 1.6, 1, 1.2], // frente do ombro
-      [4.8, 180, 3.4, 1.6, -1, -1.4], // trás do ombro
+      [6.1, 18, 3.5, 1.6, 1, 1.2], // frente do ombro
+      [5.8, 175, 3.4, 1.6, -1, -1.4], // trás do ombro
       [25.2, 42, 3.2, 1.55, -1, 2.2], // perto do cotovelo, na frente
       [24.6, 162, 3.3, 1.55, 1, 0.8], // perto do cotovelo, atrás
       [12, 276, 4.1, 1.8, 1, 0.2], // lado de dentro
@@ -1844,7 +1821,7 @@
     ], 0.4, 21.4), // (para antes do relógio)
   };
 
-  /** As bordas de um risco na pele (fração do osso, ângulo, raio), calculadas uma vez: a pele não muda com a pose. */
+  /** As bordas e a normal de um risco na pele, calculadas uma vez: a pele não muda com a pose. */
   function tattooEdges(spheres, len, bl) {
     if (bl.edges) return bl.edges;
     const mid = bl.pts;
@@ -1855,6 +1832,11 @@
       const [s, deg] = mid[i];
       const th = deg * M.DEG;
       const rad = skinAt(spheres, len, s, th) + lift;
+      // Nas curvas do deltoide, a pele aponta também ao longo do osso. A normal radial de um tubo escondia
+      // a espiral mesmo quando o alto do ombro ainda estava virado para a câmera.
+      const taper = (skinAt(spheres, len, s + 0.2, th) - skinAt(spheres, len, s - 0.2, th)) / 0.4;
+      const turn = (skinAt(spheres, len, s, th + 0.035) - skinAt(spheres, len, s, th - 0.035)) / (0.07 * rad);
+      const n = norm(M.v3(-taper, Math.cos(th) + turn * Math.sin(th), Math.sin(th) - turn * Math.cos(th)));
       const a = mid[Math.max(0, i - 1)], b = mid[Math.min(N, i + 1)];
       // direção da linha na pele desenrolada (cm ao longo, cm em volta)
       let ds = b[0] - a[0], dv = (b[1] - a[1]) * M.DEG * rad;
@@ -1866,7 +1848,7 @@
         const s2 = s - dv * hw * k, th2 = th + (ds * hw * k) / rad;
         return [s2 / len, th2, skinAt(spheres, len, s2, th2) + lift];
       };
-      out.push({ l: side(1), r: side(-1), th });
+      out.push({ l: side(1), r: side(-1), n });
     }
     if (bl.bulb) {
       // a bolinha do miolo da espiral
@@ -1879,14 +1861,14 @@
         const s2 = s + Math.cos(a) * bl.bulb, th2 = th + (Math.sin(a) * bl.bulb) / rad;
         ring.push([s2 / len, th2, skinAt(spheres, len, s2, th2) + lift]);
       }
-      out.bulb = { ring, th };
+      out.bulb = { ring, n: out[N].n };
     }
     return (bl.edges = out);
   }
   function tattoo(R, lf, spheres, blades) {
     const ctx = R.ctx;
     const len = lf.len;
-    const tc = facingAngle(R, lf);
+    const view = M.v3(dot(R.toCam, lf.a), dot(R.toCam, lf.f), dot(R.toCam, lf.out));
     const path = new Path2D();
     const P = (q) => R.P(tubeAt(lf, q[0], q[1], q[2]));
     // (todos os pedaços entram no mesmo sentido: um por cima do outro não abre buraco na tinta)
@@ -1912,12 +1894,22 @@
         }
         run = [];
       };
+      let prev = null;
+      let prevFacing = 0;
       for (const e of E) {
-        if (Math.cos(e.th - tc) < 0.04) flush(); // do lado de lá do braço
-        else run.push(e);
+        const facing = dot(view, e.n);
+        if (prev && (facing > 0) !== (prevFacing > 0)) {
+          const t = prevFacing / (prevFacing - facing);
+          const edge = (a, b) => a.map((v, k) => M.lerp(v, b[k], t));
+          run.push({ l: edge(prev.l, e.l), r: edge(prev.r, e.r) });
+        }
+        if (facing > 0) run.push(e);
+        else flush();
+        prev = e;
+        prevFacing = facing;
       }
       flush();
-      if (E.bulb && Math.cos(E.bulb.th - tc) >= 0.04) addPoly(E.bulb.ring.map(P));
+      if (E.bulb && dot(view, E.bulb.n) > 0) addPoly(E.bulb.ring.map(P));
     }
     ctx.fillStyle = R.pal.tattoo;
     ctx.fill(path);
@@ -2045,7 +2037,13 @@
         const upperThigh = SHORTS_THIGH.map((p) => R.circle(limbAt(th, p.t, p.f, p.o), p.r + 0.65));
         const knee = legRing(R, rig, i, false, 1, bend);
         const hem = legRing(R, rig, i, true, L.hem, bend);
-        const host = hostOf('coxa', 'perna' + i);
+        const leg = 'perna' + i;
+        const host = hostOf('coxa', leg);
+        const shinHost = hostOf('canela', leg);
+        const thighAt = items.indexOf(host);
+        const shinAt = items.indexOf(shinHost);
+        // Com as pernas cruzadas, a ordem separa a canela da coxa. A barra precisa cobrir a canela mesmo nesse quadro.
+        const separateHem = shinAt > thighAt && items.slice(thighAt + 1, shinAt).some((part) => part.group !== leg);
         // o bolso cargo: uma caixa de pano por fora da coxa. Era uma peça à parte, desenhada só do lado que a câmera via —
         // com a perna girando ela aparecia e sumia de uma vez (o "pulo" do bolso). Agora os cantos dela entram no casco da
         // perna (o volume dela está sempre no contorno) e a aba e as costuras são pintadas na perna, sumindo aos poucos
@@ -2054,12 +2052,18 @@
         const corner = (t, a) => R.circle(legAt(rig, i, false, t, a, P.out, bend), 1.25);
         const pocket = [corner(P.t0, P.c - P.w), corner(P.t0, P.c), corner(P.t0, P.c + P.w), corner(P.t1, P.c + P.w), corner(P.t1, P.c), corner(P.t1, P.c - P.w)];
         let segs;
-        if (dot(th.a, sh.a) > 0.94) {
+        if (dot(th.a, sh.a) > 0.94 && !separateHem) {
           segs = [{ poly: R.hull(top.concat(upperThigh, knee, hem, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); shortsLeg(R, rig, i, 'barra'); } }];
         } else {
           const upper = { poly: R.hull(top.concat(upperThigh, knee, pocket)), circles: R._last, mat: PAL.denim, k: 0.26, decal: () => { shortsLeg(R, rig, i, 'coxa'); cargoPocket(R, rig, i); } };
-          const lower = { poly: R.hull(knee.concat(hem)), circles: R._last, mat: PAL.denim, k: 0.26, noInner: true, decal: () => shortsLeg(R, rig, i, 'barra') };
-          segs = [upper, lower];
+          // A esfera da canela começa no joelho e invade a coxa na projeção. Tecido suficiente cobre essa junta.
+          const joint = MODEL.SHIN[0];
+          const kneeCover = separateHem ? [R.circle(limbAt(sh, joint.t, joint.f, joint.o), joint.r + 1.2)] : [];
+          const lower = { poly: R.hull(knee.concat(kneeCover, hem)), circles: R._last, mat: PAL.denim, k: 0.26, noInner: true, decal: () => shortsLeg(R, rig, i, 'barra') };
+          if (separateHem) {
+            out.push({ name: 'bermudaBarra', key: keyAfter(shinHost, i), host: shinHost, group: 'bermudaBarra' + i, segs: [lower] });
+            segs = [upper];
+          } else segs = [upper, lower];
         }
         out.push({ name: 'bermudaPerna', key: keyAfter(host, i), host, group: 'bermudaPerna' + i, chain: true, segs });
       }
@@ -2100,24 +2104,26 @@
     // ---- relógio no punho esquerdo: a pulseira (um anel em volta do punho) e a caixa, do lado das costas da mão
     if (!off.relogio) {
       const fa = rig.forearm[0], hd = rig.hand[0];
-      const rad = skinAt(MODEL.FOREARM, fa.len, fa.len * 0.9, Math.PI / 2);
-      // (com o punho sem emenda a mão fica por cima do antebraço: aí o relógio entra depois da mão, senão a base dela
-      // tapava a caixa do relógio)
-      const handHost = hostOf('mao', 'mao0');
-      const host = handHost && handHost.over ? handHost : hostOf('antebraco', 'braco0');
-      const band = ringOn(R, fa, 0.84, rad + 0.1, 8, 0.55).concat(ringOn(R, fa, 0.955, rad - 0.15, 8, 0.55));
+      const host = hostOf('antebraco', 'braco0');
+      const atWrist = (t, th, lift) => tubeAt(fa, t, th, skinAt(MODEL.FOREARM, fa.len, t * fa.len, th) + lift);
+      const band = [0.82, 0.93].flatMap((t) => Array.from({ length: 12 }, (_, k) => R.circle(atWrist(t, (k / 12) * M.TAU, 0.15), 0.4)));
       const segs = [{ poly: R.hull(band), circles: R._last, mat: PAL.watch, k: 0.22 }];
-      if (R.facing(hd.d) > -0.15) {
-        const c = add(limbAt(fa, 0.9, 0, 0), scale(hd.d, rad + 0.6));
-        const side = norm(cross(fa.a, hd.d));
+      // A mão orienta o mostrador, mas a caixa fica tangente ao punho mesmo quando a mão dobra.
+      const dorsalAngle = Math.atan2(dot(hd.d, fa.out), dot(hd.d, fa.f));
+      const dorsal = add(scale(fa.f, Math.cos(dorsalAngle)), scale(fa.out, Math.sin(dorsalAngle)));
+      const facing = R.facing(dorsal);
+      if (facing > 0) {
+        const c = atWrist(0.875, dorsalAngle, 0.55);
+        const side = norm(cross(fa.a, dorsal));
         const corner = (u, v) => R.circle(add(add(c, scale(fa.a, u * 1.75)), scale(side, v * 1.75)), 0.9);
         segs.push({
           poly: R.hull([corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)]), circles: R._last, mat: PAL.watch, k: 0.3, noInner: true,
           decal: () => {
             // o mostrador
-            const o = add(c, scale(hd.d, 0.9));
+            const o = add(c, scale(dorsal, 0.9));
             const q = R.P(o), u = R.P(add(o, scale(fa.a, 1.6))), v = R.P(add(o, scale(side, 1.6)));
             const ctx = R.ctx;
+            ctx.globalAlpha = smoothstep(0.05, 0.28, facing);
             ctx.fillStyle = PAL.watch.light;
             ctx.beginPath();
             ctx.ellipse(q.x, q.y, Math.max(0.6, Math.hypot(u.x - q.x, u.y - q.y)), Math.max(0.5, Math.hypot(v.x - q.x, v.y - q.y)), Math.atan2(u.y - q.y, u.x - q.x), 0, M.TAU);
@@ -2137,25 +2143,6 @@
       out.push({ name: 'relogio', key: keyAfter(host, 5), host, group: 'relogio', chain: true, segs });
     }
 
-    // ---- as tiras dos chinelos, por cima de cada pé
-    // (19/11, o dono: "essa linha preta no calcanhar tem que tirar, ele tá de chinelo". A tira em Y fica no peito do pé
-    // e era desenhada por cima dele de qualquer lado: de costas ela aparecia em cima do calcanhar, como uma tira de
-    // sandália. Com o pé de costas para a câmera ela entra logo depois da sola, ANTES do pé: o calcanhar e o tornozelo
-    // tampam, como no chinelo de verdade)
-    if (!gear.pes && !off.chinelos) {
-      for (let i = 0; i < 2; i++) {
-        const behind = dot(rig.foot[i].f, R.toCam) < -0.3;
-        const host = (behind && hostOf('sola', 'sola' + i)) || hostOf('pe', 'perna' + i);
-        out.push({ name: 'tiraChinelo', key: keyAfter(host, 8 + i), host, draw: () => sandalStraps(R, rig, i) });
-        // (22/11, o dono: "o chinelo some" correndo. Na diagonal de costas a câmera vê a beirada do pé, e a perna da tira
-        // daquele lado desce por ela até a sola: essa parte vai por cima do pé. De costas mesmo, nenhum lado aparece e
-        // nada muda — o calcanhar continua sem a linha preta)
-        if (behind) {
-          const foot = hostOf('pe', 'perna' + i);
-          if (foot) out.push({ name: 'tiraChinelo', key: keyAfter(foot, 10 + i), host: foot, draw: () => sandalStraps(R, rig, i, true) });
-        }
-      }
-    }
     return out;
   }
 
@@ -2316,11 +2303,9 @@
 
   // ------------------------------------------------------------------ chinelos
   // a sola: um pouco maior que o pé, rente ao chão (o pé é pintado por cima; sobra a beirada dela em volta)
-  // (22/11, o dono: "o chinelo some" correndo. No tamanho do jogo, ~1 px por cm, a beirada de 1,5 cm virava a linha do
-  // contorno: de costas e na diagonal de costas não se via chinelo nenhum, só o calcanhar. A sola ficou mais grossa,
-  // 2,1 cm, e passa um pouco mais do calcanhar: de costas sobra uma faixa preta embaixo dele)
+  // A beirada de 2,6 cm e a folga atrás do calcanhar mantêm a sola legível no zoom do jogo.
   const SOLE = [[0, -8.3], [3.8, -6.3], [4.9, -1], [5.3, 5], [5.6, 10.6], [4.6, 15.6], [1.6, 18.2], [-2.4, 17.4], [-5.2, 13.6], [-5.9, 8], [-5.3, 2], [-4.4, -5.4]];
-  const SOLE_R = 1.05; // meia grossura da sola
+  const SOLE_R = 1.3; // meia grossura da sola
   const soleSphere = (R, rig, i, s, f, u, r) => {
     const side = i === 0 ? -1 : 1;
     const B = PD.BODY;
@@ -2329,13 +2314,18 @@
     if (toe && f > B.ballFwd + 1) return R.circle(at(toe, -side * s, f - B.ballFwd, u + B.ankleHeight), r);
     return R.circle(at(rig.foot[i], -side * s, f, u), r);
   };
-  /** A sola de um pé, como peça própria: entra na ordem logo antes da perna (o pé cobre o miolo; sobra a beirada). */
-  function soleItem(R, rig, i, items) {
+  const hasSandals = (R, look) => !R.equipped.pes && !look.semPecas?.chinelos;
+  /** A sola acompanha a ordem de profundidade do próprio pé, inclusive quando as pernas se cruzam. */
+  function footUnder(R, rig, i, look) {
+    if (!hasSandals(R, look)) return null;
     const u = -PD.BODY.ankleHeight + SOLE_R;
-    const leg = items.find((it) => it.name === 'coxa' && it.group === 'perna' + i);
-    const foot = items.find((it) => it.name === 'pe' && it.group === 'perna' + i);
-    const key = Math.min(leg ? leg.key : Infinity, foot ? foot.key : Infinity) - 0.03;
-    return { name: 'sola', key, group: 'sola' + i, segs: [{ poly: R.hull(SOLE.map(([s, f]) => soleSphere(R, rig, i, s, f, u, SOLE_R))), circles: R._last, mat: R.pal.sandal, k: 0.2 }] };
+    const poly = R.hull(SOLE.map(([s, f]) => soleSphere(R, rig, i, s, f, u, SOLE_R)));
+    return [{ poly, circles: R._last, mat: R.pal.sandal, k: 0.2, ownShade: true, under: true, noInner: true }];
+  }
+  function footOver(R, rig, i, look) {
+    if (!hasSandals(R, look)) return;
+    // Vista por trás, só aparece a tira da borda que está virada para a câmera.
+    sandalStraps(R, rig, i, dot(rig.foot[i].f, R.toCam) < -0.3);
   }
   /** Tira chata: uma fita que vai de `w0` a `w1` cm de largura ao longo de pontos no espaço, com contorno de tinta. */
   function ribbon(R, pts, w0, w1, color, ink = R.pal.ink) {
@@ -2839,7 +2829,7 @@
     ctx.fill(sweep, 'nonzero');
   }
 
-  Object.assign(MODEL, { face, chestDetail, pelvisDetail, extras, limbDetail, wear, handLines, toeLines });
+  Object.assign(MODEL, { face, chestDetail, pelvisDetail, extras, limbDetail, wear, footUnder, footOver, handLines, toeLines });
 
   // ------------------------------------------------------------------ registro
   PD.models = PD.models || {};

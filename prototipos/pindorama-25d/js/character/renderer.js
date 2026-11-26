@@ -578,10 +578,15 @@
         const elbow = { pt: this.P(rig.elbow[i]), r: MOD.UPPER_ARM.find((s) => s.t === 1).r * 2.2 * this.zoom };
         // o deltoide por cima do braço (a sombra dele marca a borda, sem risco de "manga")
         items.push({ name: 'braco', key: this.keyOf(limbAt(ua, 0.5, 0, 0)) + 5.5, group: 'braco' + i, order: 0, solid: true, chain: true, clipOut: shoulderTop, segs: [armSeg, deltSeg] });
+        const forearmSeg = { poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { if (MOD.BODY_PAINT) this._band(null, fa, MOD.BODY_PAINT.forearmBand, 4.6); this._muscleLines(fa, MOD.MUSCLE_LINES.antebraco); more('antebraco'); } };
+        const bent = dot(ua.a, fa.a) < (MOD.armSkinJoin ?? 0.45);
         const forearmItem = {
-          name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, solid: true, joint: elbow, bent: dot(ua.a, fa.a) < 0.45, clipOut: shoulderTop,
-          segs: [{ poly: this.hull(faCircles), circles: this._last, mat: skin, k: 0.3, decal: () => { if (MOD.BODY_PAINT) this._band(null, fa, MOD.BODY_PAINT.forearmBand, 4.6); this._muscleLines(fa, MOD.MUSCLE_LINES.antebraco); more('antebraco'); } }],
+          name: 'antebraco', key: this.keyOf(limbAt(fa, 0.6, 0, 0)) + 5.5, group: 'braco' + i, order: 1, solid: true, joint: elbow, bent, clipOut: shoulderTop, segs: [forearmSeg],
         };
+        if (MOD.armSkinJoin !== undefined && !bent) {
+          // A mesma luz dos dois lados do cotovelo, mesmo quando outro volume fica entre as duas passagens de desenho.
+          armSeg.shadePeers = forearmSeg.shadePeers = [armSeg, forearmSeg];
+        }
         items.push(forearmItem);
         const hd = rig.hand[i];
         const HM = MOD.HAND;
@@ -904,8 +909,9 @@
       for (const [name, list] of groups) {
         const keys = list.map((it) => it.key);
         const gk = name.startsWith('perna') ? list.find((it) => it.name === 'coxa').key : Math.max(...keys);
+        const joinedArm = name.startsWith('braco') && MOD.armSkinJoin !== undefined && !list.some((it) => it.bent);
         for (const it of list) {
-          it.subKey = it.key;
+          it.subKey = joinedArm ? it.order : it.key;
           it.sortKey = gk;
         }
       }
@@ -1172,6 +1178,12 @@
       // bola com um arco no meio. O deltoide continua com a sombra dele (é ela que desenha o músculo)
       const unify = run[0].group && /^(perna|braco|tronco)/.test(run[0].group) && !run.some((it) => it.bent);
       if (unify) {
+        // A sola deve entrar antes da pele, também quando a iluminação do membro é pintada de uma vez.
+        for (const s of segs) {
+          if (!s.under || s.poly.length < 6) continue;
+          s.path = S.paintConvex(ctx, s.poly, s.mat, this.light, S.polyRadius(s.poly) * s.k, s.opts);
+          s._painted = true;
+        }
         const shared = segs.filter((s) => s.poly.length >= 6 && !s.ownShade && s.k > 0);
         if (shared.length && shared[0].shadePeers) this._paintUnion(shared, shared[0].shadePeers);
         else if (shared.length > 1) this._paintUnion(shared);

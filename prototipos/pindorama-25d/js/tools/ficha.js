@@ -82,7 +82,18 @@
     // com o contorno delas (uma peça de roupa isolada, no mesmo lugar e na mesma escala)
     if (o.sem) look.semPecas = Object.fromEntries(o.sem.map((k) => [k, true]));
     if (o.so) {
-      const items = R.prepare(ctx, rig, look, o.equipado || {}, appearance).filter((it) => o.so.includes(it.name));
+      const items = R.prepare(ctx, rig, look, o.equipado || {}, appearance).flatMap((it) => {
+        if (o.so.includes(it.name)) return [it];
+        if (it.name !== 'pe' || !R.model.footUnder) return [];
+        // Na ficha isolada, recupera a sola e as tiras de dentro da passagem do pé, sem a pele e os dedos.
+        const shoes = [];
+        const segs = it.segs.filter((s) => s.under);
+        if (segs.length && o.so.includes('sola')) shoes.push({ name: 'sola', segs });
+        if (R.model.footOver && o.so.includes('tiraChinelo')) {
+          shoes.push({ name: 'tiraChinelo', draw: () => R.model.footOver(R, rig, Number(it.group.slice(-1)), look) });
+        }
+        return shoes;
+      });
       R.layer = { items };
     }
     R.draw(ctx, rig, look, o.equipado || {}, appearance);
@@ -119,7 +130,7 @@
     bone_e_oculos: { sem: 'bone', nomes: ['bone', 'aba', 'botaoBone', 'oculos'] },
     cordao: { sem: 'cordao', nomes: ['cordao'] },
     relogio: { sem: 'relogio', nomes: ['relogio'] },
-    bermuda: { sem: 'bermuda', nomes: ['bermuda', 'bermudaPerna', 'bolsoCargo'] },
+    bermuda: { sem: 'bermuda', nomes: ['bermuda', 'bermudaPerna', 'bermudaBarra', 'bolsoCargo'] },
     chinelos: { sem: 'chinelos', nomes: ['sola', 'tiraChinelo'] },
   };
 

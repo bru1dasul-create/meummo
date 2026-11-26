@@ -52,8 +52,8 @@ for (const hz of [30, 60, 120]) for (let dir = 0; dir < 8; dir++) for (const run
 }
 check('altura igual entre 30/60/120 Hz, cm', Math.max(...heights) - Math.min(...heights), 0.1);
 
-// A view usa a faixa de velocidade da corrida para alcançar até os 2 m/s da caminhada no jogo.
-for (const hz of [30, 60, 120]) for (let dir = 0; dir < 8; dir++) for (const speed of [200, 450]) {
+// A view usa a faixa da corrida para alcançar a velocidade da caminhada. Exercita também o ritmo mais lento do ADM.
+for (const hz of [30, 60, 120]) for (let dir = 0; dir < 8; dir++) for (const speed of [170, 200, 385, 450]) {
   const yaw = dir * Math.PI / 4, ch = new P.Character(0, 0, yaw);
   ch.birimGait = true;
   const mag = Math.min(1, speed / P.SPEED.run);

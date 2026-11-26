@@ -21,6 +21,34 @@
   do ADM) e "Derrubar perto" (F1) apertados pelo texto, sem abrir a janela. Para efeito rápido (fumaça, poça), gravar
   vídeo (`recordVideo` do Playwright) e tirar os quadros com o `ffmpeg`: as fotos do Playwright levam ~0,4 s cada.
 
+## Birim em movimento e ensaio de ritmo
+
+- [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js) prende o relógio ao antebraço. A
+  pulseira segue a superfície do punho e o mostrador fica tangente a ela conforme a mão dobra. O antebraço afina
+  até o punho. A tatuagem do ombro usa a normal da pele para acompanhar a curva visível do deltoide.
+- [`js/character/renderer.js`](../prototipos/pindorama-25d/js/character/renderer.js) usa a mesma iluminação nos dois
+  lados do cotovelo do Birim durante a flexão. Também pinta a sola antes da pele do pé, inclusive quando a perna
+  recebe a iluminação numa passagem só.
+- No `birim.js`, a sola e as tiras acompanham cada pé. Quando a ordenação separa coxa e canela, `wear` prende a barra
+  da bermuda à canela e cobre o joelho com tecido. [`js/tools/ficha.js`](../prototipos/pindorama-25d/js/tools/ficha.js)
+  exporta essas peças separadas a partir das novas camadas.
+- [`js/character/animator.js`](../prototipos/pindorama-25d/js/character/animator.js) reduz a altura da perna que volta
+  na corrida e suaviza o giro do pé na caminhada. Na simulação com a mesma corrida de 4,5 m/s, a distância máxima
+  da sola ao chão no balanço caiu de 41 para 31 cm. `regressao-movimentos.cjs` cobre as velocidades atuais e as do ensaio,
+  em oito direções a 30, 60 e 120 Hz.
+- Conferi frente, os dois perfis e costas no jogo em desktop e celular simulado com joystick de toque. O build passou,
+  com 781 testes do jogo e 148 verificações de movimento.
+
+### Ritmo testado no painel de administração
+
+Em uma partida separada, pelo painel `/admin`, testei `Combate → Jogador` com caminhada a 1,7 m/s e corrida a
+3,85 m/s e `Combate → Pedra com carga` com 1,3 s para a carga cheia. A referência do jogo é 2 m/s, 4,5 m/s e 1,1 s.
+Na aba Monstros, aumentei o tempo por passo, o aviso e o intervalo entre golpes do Quati para 280, 550 e 1450 ms.
+Para o Sagui comum, o ensaio usou 310, 450 e 2000 ms.
+Entre dois avisos reais consecutivos do Quati, medi cerca de 1,67 s no padrão e 2,02 s no ensaio. O arquivo de ajustes
+do ensaio pertence à partida de teste. O tiro rápido usa seu intervalo próprio em `src/shared/combat.ts`; mudar a
+carga regula quanto demora para chegar ao tiro forte.
+
 ## Caminhada e corrida do Birim
 
 - Em [`js/character/animator.js`](../prototipos/pindorama-25d/js/character/animator.js), `pose()` faz o quadril
