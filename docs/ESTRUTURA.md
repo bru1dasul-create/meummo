@@ -59,7 +59,9 @@ alternativas quando vejo — sem concordar só para agradar.
   maior (~2,1 m) e a barra a 1,72 m passava na cara dela. `barHeight(top, perch, zPx)` no `combat.ts`: com o alto do
   desenho (`view.actorTop?`), a barra vai logo acima do nome do bicho quando o nome fica acima da altura de sempre. As
   medidas do nome (10 cm acima do alto, letras de 13 px) copiam o `_overHead`/`_drawNames` do `view.js`: se a [arte]
-  mudar o nome de lugar, acompanhe em `NAME_OVER_TOP`/`NAME_TEXT_PX`.
+  mudar o nome de lugar, acompanhe em `NAME_OVER_TOP`/`NAME_TEXT_PX`. Em 26/11 (o dono: "Pode"), vale para todo bicho:
+  a barra logo acima do nome (sem o mínimo de 1,72 m; o tatu de 36 cm tinha a barra 1,3 m acima dele), os números de
+  dano 40 cm acima da barra (`floaterHeight`) e a runa da Ancestral a `barZ + MARK_OVER_BAR` (do `spiritArt.ts`).
 - **A Cuca chefe (Etapa 2, aprovada: "pode fazer assim"; na main com a área `cuca` do [mundo], no fundo da toca):**
   o teste da caverna do [mundo] lê o `alcanceAgressao` da `cuca` (nenhum chão da área ao alcance da boca da toca): se
   aumentar esse número, peça a ele para afastar a área. Peças novas: `MonsterSong.effect` (`'charm'`
@@ -192,7 +194,7 @@ alternativas quando vejo — sem concordar só para agradar.
   "faço assim?".
 - **Estado técnico:** `PROTOCOL_VERSION` 59 (a chuva pelo menu ADM, `rain`, que entrou na main por "karen" em 25/11;
   no 58, o `fire` com `ms` 0 = a poça secou; no 57, o `fainted` e o fx `transform` da Cuca); `MIGRATIONS` até o passo 8 (`effects`: os efeitos com tempo e quanto faltava, com o relógio
-  parado fora do jogo; pedido do dono em 23/11); `npm run check` com 781 testes.
+  parado fora do jogo; pedido do dono em 23/11); `npm run check` com 788 testes.
 - **Chats** (pelo `send_message`): [arte] `session_017ztkR85SRQBP3W2PT4SxH6`, [mundo] `session_017ztkRBK34cTuyazDyAE2Dr`.
 
 ## Diário (10/11 em diante; as entradas novas foram entrando por assunto)

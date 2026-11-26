@@ -22,7 +22,7 @@ import { itemIconUrl } from '../itemArt';
 import { drawLanded, drawProjectile, landedBusy, projectileEnded } from './projectileArt';
 import { drawRainAim as paintRainAim, drawRainAir as paintRainAir, drawRainGround as paintRainGround, RAIN_LINGER_MS } from './rainArt';
 import { paintChargeRing } from './chargeArt';
-import { paintSpiritAim, paintSpiritEnd, paintSpiritMark, SPIRIT_END_MS } from './spiritArt';
+import { MARK_OVER_BAR, paintSpiritAim, paintSpiritEnd, paintSpiritMark, SPIRIT_END_MS } from './spiritArt';
 
 /**
  * A habilidade que saiu pelo arco (a Flecha Ancestral; na Chuva, vai no RainFx): os pontos dela de quem atirou (`rank`,
@@ -59,18 +59,27 @@ const NAME_TEXT_PX = 14;
 const BAR_GAP_PX = 3;
 
 /**
- * A altura da barra de vida (metros acima do pé): em cima da cabeça, na altura de sempre; pendurado num galho (o Sagui),
- * acima do galho. Num bicho alto (o alto do desenho que a view conta, `actorTop`: a Cuca chefe, 1,35× maior, tem uns
- * 2,1 m; pedido da [arte] e do dono, 25/11), a altura de sempre passava na cara dele, e logo acima da cabeça fica o nome:
- * a barra vai acima do nome. `zPx` = quantos pixels da tela tem 1 m de altura ali (o nome tem tamanho fixo na tela).
- * Bicho baixo (o nome fica abaixo da barra de sempre) e gente (`top` null) ficam na altura de sempre.
+ * A altura da barra de vida (metros acima do pé). Num bicho (a view conta o alto do desenho dele, `actorTop`), logo
+ * acima do nome, que fica logo acima da cabeça: na Cuca chefe, 1,35× maior (uns 2,1 m), a altura de sempre passava na
+ * cara dela (25/11); no tatu (36 cm), a barra ficava 1,3 m acima dele (o dono, 26/11: "SIM", logo acima dos pequenos
+ * também). `zPx` = quantos pixels da tela tem 1 m de altura ali (o nome tem tamanho fixo na tela). Gente (`top` null):
+ * em cima da cabeça, na altura de sempre; pendurado num galho (o Sagui): acima do galho.
  */
 export function barHeight(top: number | null, perch?: number, zPx = 0): number {
   const base = BODY_HEIGHT + 0.12;
   if (perch !== undefined) return Math.max(base, perch + 0.25);
   if (top === null || !Number.isFinite(top)) return base;
-  const overName = top + NAME_OVER_TOP + (zPx > 0 ? (NAME_TEXT_PX + BAR_GAP_PX) / zPx : 0.3);
-  return Math.max(base, overName);
+  return top + NAME_OVER_TOP + (zPx > 0 ? (NAME_TEXT_PX + BAR_GAP_PX) / zPx : 0.3);
+}
+
+/**
+ * De onde sobem os números de dano (metros acima do pé): 40 cm acima da barra de vida. Em gente e no galho, nunca abaixo
+ * de BODY_HEIGHT + 0,7 (como sempre); num bicho, acompanham a barra dele (perto dos pequenos, 26/11).
+ */
+export function floaterHeight(top: number | null, perch: number | undefined, zPx: number): number {
+  const bar = barHeight(top, perch, zPx);
+  const creature = perch === undefined && top !== null && Number.isFinite(top);
+  return creature ? bar + 0.4 : Math.max(BODY_HEIGHT + 0.7, bar + 0.4);
 }
 
 /** Quantos pixels da tela tem 1 m de altura neste ponto do chão (muda com o zoom). */
@@ -695,6 +704,11 @@ export class CombatLayer {
     return barHeight(this.view?.actorTop?.(id) ?? null, this.perches.get(id), zPx);
   }
 
+  /** De onde sobem os números de dano de alguém (m): veja `floaterHeight`. */
+  private floaterZ(id: number, zPx: number): number {
+    return floaterHeight(this.view?.actorTop?.(id) ?? null, this.perches.get(id), zPx);
+  }
+
   /** O seu tiro, desenhado na hora (o servidor confirma depois com o mesmo `cid`). */
   myShot(cid: number, x: number, y: number, angle: number, speed: number, range: number, now: number, kind = 'pedra', look?: ShotLook): void {
     this.myShots.set(cid, { x, y, dx: Math.cos(angle), dy: Math.sin(angle), speed, range, start: now, kind, fromMonster: false, ...(look ? { look } : {}) });
@@ -1053,7 +1067,8 @@ export class CombatLayer {
         if (now >= until) this.marked.delete(id);
         continue;
       }
-      paintSpiritMark(ctx, feet, until, now, screen, meter);
+      // a runa vai acima da barra de vida (na Cuca chefe, alta, ela caía na cara dela a 2,02 m fixos; 26/11)
+      paintSpiritMark(ctx, feet, until, now, screen, meter, this.barZ(id, heightPixels(screen, feet.x, feet.y)) + MARK_OVER_BAR);
     }
   }
 
@@ -1499,7 +1514,7 @@ export class CombatLayer {
       const index = seen.get(floater.id) ?? 0;
       seen.set(floater.id, index + 1);
       // começa acima do nome (que a view desenha em cima da cabeça) e sobe; de quem está no galho, acima da barra
-      const p = screen(feet.x, feet.y, Math.max(BODY_HEIGHT + 0.7, this.barZ(floater.id, heightPixels(screen, feet.x, feet.y)) + 0.4) + t * 0.6);
+      const p = screen(feet.x, feet.y, this.floaterZ(floater.id, heightPixels(screen, feet.x, feet.y)) + t * 0.6);
       ctx.globalAlpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
       ctx.font = `700 ${Math.round(Math.max(13, m * 0.32))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';

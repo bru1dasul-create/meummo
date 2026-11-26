@@ -839,9 +839,10 @@ quem começa. (A música de licença livre, primeiro item da lista, já está ac
     - [x] **[arte]** o alto firme dos bichos, para a barra logo acima de cada um (o dono: "SIM" para os pequenos também;
       na main): `barTop` no `creature.js` (o maior alto do último 1,2 s, descendo devagar) e o `actorTop` da view usa
       ele: a barra não balança com o passo nem com o bote e nunca fica abaixo do nome. Teste: `tests/creature-top.test.ts`
-    - [ ] **[estrutura]** ligar as duas (pedido da [arte], 26/11): no `barHeight`, a barra logo acima do nome de todo
-      bicho (sem a altura de sempre como mínimo; gente continua igual), os números de dano saindo de cima da barra
-      (hoje no mínimo a 2,3 m) e a runa a `barZ + MARK_OVER_BAR`
+    - [x] **[estrutura]** ligar as duas (pedido da [arte], 26/11; o dono: "Pode"; na main, conferido no PC e no
+      celular): no `barHeight`, a barra logo acima do nome de todo bicho (sem a altura de sempre como mínimo; gente e o
+      galho continuam iguais), os números de dano saindo 40 cm acima da barra num bicho (`floaterHeight`) e a runa a
+      `barZ + MARK_OVER_BAR`. Teste: `tests/combate-novo.test.ts`
 - [x] **[estrutura]** A viagem de barco com o Barqueiro (pedido do dono, 24/11: "faz a viagem de barco com o
   Barqueiro"; na main, conferida no PC e no celular): no atracadouro do Refúgio, a conversa com o Barqueiro tem o botão
   "Atravessar para a Ilha do Véu"; a tela escurece e você desce na ponta do atracadouro da ilha

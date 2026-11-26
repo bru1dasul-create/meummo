@@ -2,7 +2,7 @@
 // (src/client/novo/combat.ts desenha; src/shared/combat.ts e o servidor decidem.)
 
 import { describe, expect, it } from 'vitest';
-import { aimAngle, barHeight, BODY_HEIGHT, distanceToSegment, SHOT_DRAW_Z, shotFeet, shotOriginOfFeet, shotZ, tileFeetSquare } from '../src/client/novo/combat';
+import { aimAngle, barHeight, BODY_HEIGHT, distanceToSegment, floaterHeight, SHOT_DRAW_Z, shotFeet, shotOriginOfFeet, shotZ, tileFeetSquare } from '../src/client/novo/combat';
 import { angleBetween, makeShot, shotTouches } from '../src/shared/combat';
 import { feetAt, footTile } from '../src/shared/movement';
 
@@ -98,9 +98,12 @@ describe('a barra de vida', () => {
     const base = BODY_HEIGHT + 0.12;
     const zPx = 57; // 1 m de altura na tela, no zoom de sempre
     expect(barHeight(null, undefined, zPx)).toBeCloseTo(base); // gente: a view não conta o alto
-    expect(barHeight(0.6, undefined, zPx)).toBeCloseTo(base); // o sagui no chão: o nome fica abaixo da barra
     expect(barHeight(null, 2.2, zPx)).toBeCloseTo(2.45); // pendurado num galho de 2,2 m, como antes
     expect(barHeight(Number.NaN, undefined, zPx)).toBeCloseTo(base);
+    // o tatu (36 cm): a barra logo acima do nome dele, e não 1,3 m acima (o dono, 26/11: "SIM")
+    const tatu = barHeight(0.36, undefined, zPx);
+    expect(tatu).toBeGreaterThan(0.36 + 0.1 + 13 / zPx);
+    expect(tatu).toBeLessThan(0.9);
     // a chefe (2,1 m): a barra passa da cabeça e do nome (a linha de baixo do nome a 10 cm da cabeça, letras de 13 px)
     const boss = barHeight(2.1, undefined, zPx);
     const nameTop = 2.1 + 0.1 + 13 / zPx;
@@ -108,5 +111,13 @@ describe('a barra de vida', () => {
     expect((boss - nameTop) * zPx).toBeLessThan(8); // logo acima do nome, sem ficar longe
     // com o zoom, o nome tem o mesmo tamanho na tela: a folga em pixels não muda
     for (const px of [30, 57, 110]) expect((barHeight(2.1, undefined, px) - 2.2) * px).toBeCloseTo((boss - 2.2) * zPx);
+  });
+
+  it('os números de dano sobem 40 cm acima da barra: num bicho, perto dele; em gente e no galho, como sempre', () => {
+    const zPx = 57;
+    expect(floaterHeight(0.36, undefined, zPx)).toBeCloseTo(barHeight(0.36, undefined, zPx) + 0.4); // o tatu
+    expect(floaterHeight(2.1, undefined, zPx)).toBeCloseTo(barHeight(2.1, undefined, zPx) + 0.4); // a chefe
+    expect(floaterHeight(null, undefined, zPx)).toBeCloseTo(BODY_HEIGHT + 0.7); // gente
+    expect(floaterHeight(null, 2.2, zPx)).toBeCloseTo(2.85); // no galho
   });
 });
