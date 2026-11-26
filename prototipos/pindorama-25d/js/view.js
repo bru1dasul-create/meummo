@@ -151,6 +151,8 @@
         return actor;
       }
       const ch = new PD.Character(a.x * 100, a.y * 100, yaw);
+      const birim = PD.models?.birim?.MODEL;
+      ch.birimGait = a.kind === 'player' && !!birim && PD.classes.playerAppearance(ch).modelo === birim;
       ch.faceYaw = yaw;
       const actor = {
         id,

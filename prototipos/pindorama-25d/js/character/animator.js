@@ -181,6 +181,7 @@
       this.speed = 0;
       this.phase = 0;
       this.gait = 0;
+      this.birimGait = false;
       this.runBlend = 0;
       this._runRequest = false;
       this._strideTransitionUntil = 0;
@@ -600,7 +601,9 @@
       const gaitWant = smoothstep(5, 70, this.speed) * (1 - this.pivotK) * (onGround ? 1 : 0.4);
       this.gait = damp(this.gait, gaitWant, gaitWant < this.gait ? 14 : 9, dt);
       const runT = this.speed > SPEED.walk * 1.12 ? smoothstep(SPEED.walk * 1.1, SPEED.run * 0.85, this.speed) : 0;
-      const runRequest = !!input.run;
+      // A view já usa `input.run` para alcançar os 2 m/s do andar do jogo. No Birim, só troca a passada
+      // acima disso e usa um limiar menor na volta, para que o ajuste de posição não ligue e desligue a corrida.
+      const runRequest = this.birimGait ? this.speed >= (this._runRequest ? 240 : 280) : !!input.run;
       if (runRequest !== this._runRequest && this.gait > 0.8 && this.speed > 120 &&
           this.jump.state === 'chao' && !this.turnInPlace && !this.crouchWanted && !this.attack) {
         this._strideTransitionUntil = this.time + 0.85;
@@ -1710,6 +1713,12 @@
       const breath = Math.sin(t * TAU * 0.27); // respiração (~3,7 s)
       const idle = 1 - g;
       const speedK = clamp01(this.speed / SPEED.walk); // 0 parado, 1 andando no normal (ou mais rápido)
+      // A passada solta do Birim cede espaço aos poucos para o pulo, a defesa, a mira e a passada lateral.
+      const braced = 1 - Math.max(this.stanceLead, this.guard?.blend || 0);
+      const style = this.birimGait ? braced * (1 - crouch) * (1 - clamp01(J.crouch)) * (1 - this.airArm) * (1 - this._strideK) : 0;
+      const freeGait = style * g;
+      // O peso chega no pé novo logo depois do contato, antes de subir sobre ele no meio do apoio.
+      const load = freeGait * Math.pow((1 + Math.cos(TAU * 2 * (ph - 0.105))) / 2, 2);
 
       // ---- parâmetros da passada (andar ↔ correr)
       const S = lerp(lerp(0.6, 0.3, run), 0.5, this._shuffleAmount()); // parte do ciclo com o pé no chão (veja `_feet`)
@@ -1726,18 +1735,18 @@
       // antes ele descia reto, o tronco inclinava 44° e o centro de massa ficava na ponta dos pés (~11 cm à frente)
       const sitBack = (14 * crouch + 6 * J.crouch) * B.legScale;
       const pelvis = {
-        dx: -lerp(2.6, 0.9, run) * s2 * g + idleSway + weight * 2.6,
+        dx: -(lerp(2.6, 0.9, run) * g + lerp(1.45, 0.55, run) * freeGait) * s2 + idleSway + weight * 2.6,
         dy: 3 * run * g + this.leanPitch * 20 - sitBack,
-        dz: bob - (35 * crouch + 27 * J.crouch) * B.legScale + breath * 0.25 * idle,
+        dz: bob + 0.85 * mid * freeGait * (1 - run) - lerp(0.95, 1.4, run) * load - (35 * crouch + 27 * J.crouch) * B.legScale + breath * 0.25 * idle,
         yaw: lerp(6.2, 10, run) * DEG * c2 * g,
         pitch: (lerp(2, 10, run) * g + 21 * crouch + 14 * J.crouch) * DEG + this.leanPitch * 0.5,
         roll: lerp(2.7, 2.2, run) * DEG * s2 * g + idleSway * 0.012 - weight * 3.4 * DEG,
       };
       // ---- coluna (peito em relação à pelve): gira ao contrário da pelve, um pouco atrasado
-      const chestYawAbs = lerp(-5, -11, run) * DEG * Math.cos(TAU * (ph - 0.035)) * g;
+      const chestYawAbs = lerp(-5 - 1.4 * style, -11 + 1.4 * style, run) * DEG * Math.cos(TAU * (ph - 0.035 - 0.025 * style)) * g;
       const settle = (1 - Math.cos(4 * Math.PI * (ph - S / 2 - 0.05))) / 2; // o tronco "assenta" logo depois de pisar
       const spine = {
-        pitch: (lerp(4, 12, run) * g + 15 * crouch + 8 * J.crouch) * DEG + this.leanPitch - breath * 0.6 * DEG * idle + settle * 1.1 * DEG * g * (1 - run),
+        pitch: (lerp(4, 12, run) * g + 15 * crouch + 8 * J.crouch + 2.4 * load - 1.4 * run * freeGait) * DEG + this.leanPitch - breath * 0.6 * DEG * idle + settle * 1.1 * DEG * g * (1 - run),
         yaw: chestYawAbs - pelvis.yaw,
         roll: -pelvis.roll * 0.75 - lerp(1.2, 0.8, run) * DEG * Math.sin(TAU * (ph - 0.11)) * g - this.leanRoll + weight * 2.2 * DEG,
       };
@@ -1745,6 +1754,7 @@
       // ---- braços (alvo do punho em relação ao ombro, no espaço do peito: x = para fora, y = frente, z = cima)
       const hands = [];
       const shoulderFwd = [0, 0];
+      const shrug = [breath * 0.35 * idle, breath * 0.35 * idle];
       const runPole = smoothstep(0.15, 0.65, run * g);
       this.airArm = damp(this.airArm, J.state === 'ar' ? 1 : 0, 14, dt);
       // (com o arco nas costas, o braço esquerdo balança solto: slingshot.js, `bowInHand`)
@@ -1755,20 +1765,24 @@
         // espelhos perfeitos e cada passo, cópia do anterior — o que dava o ar mecânico
         const armVar = 1 + 0.07 * M.noise1(t * 0.37 + i * 7.3);
         const armLag = (i === 0 ? 0.012 : -0.008) + 0.01 * M.noise1(t * 0.29 + i * 3.1);
-        const w = (i === 1 ? Math.cos(TAU * (ph - armLag)) : -Math.cos(TAU * (ph - armLag))) * armVar; // +1 = braço na frente
+        const side = i === 1 ? 1 : -1;
+        const w = side * Math.cos(TAU * (ph - armLag - 0.022 * style)) * armVar; // +1 = braço na frente
         const fw = (w + 1) / 2;
         // parado: braço solto ao lado do corpo, cotovelo pouco dobrado
         // os braços ficam um pouco afastados do corpo (as costas são largas): antes entravam 3-4 cm no tronco
         const idleArm = armFK((2.5 + breath * 0.4) * DEG, (20 + M.noise1(t * 0.3 + i * 5) * 3) * DEG, 4.6 + breath * 0.3, 4 * DEG);
         // andando: pêndulo a partir do ombro; na frente o cotovelo dobra mais e a mão passa um pouco para dentro
         const swing = lerp(9, 18, speedK);
-        const walkArm = armFK((2 + w * swing) * DEG, (17 + 12 * Math.pow(Math.max(0, w), 1.3) + 3 * (1 - Math.abs(w))) * DEG, lerp(4.4, 2.2, fw), 3 * DEG);
+        const walkElbow = lerp(w, side * Math.cos(TAU * (ph - armLag - 0.074)) * armVar, style);
+        const walkBend = 17 - 2 * style + (12 + 5 * style) * Math.pow(Math.max(0, walkElbow), 1.3) + 3 * (1 - Math.abs(walkElbow));
+        const walkArm = armFK((2 + w * (swing + 3 * style)) * DEG, walkBend * DEG, lerp(4.4, 2.2, fw), 3 * DEG);
         // correndo: o cotovelo ABRE atrás (~62°) e FECHA na frente (~108°), um tiquinho atrasado em relação ao ombro (o
         // antebraço vai junto, não preso); o braço vai mais para a frente que para trás; a mão sobe até o peito na frente,
         // perto do corpo, sem cruzar o meio. (20/11, o dono: "braços correndo dele parece robotizado" — o cotovelo ficava
         // entre 80° e 100° o ciclo inteiro: um "L" duro balançando no ombro, como pistão, e com o cotovelo para fora)
-        const we = (i === 1 ? Math.cos(TAU * (ph - armLag - 0.035)) : -Math.cos(TAU * (ph - armLag - 0.035))) * armVar;
-        const runArm = armFK((4 + w * (w > 0 ? 36 : 27)) * DEG, (85 + 23 * we) * DEG, lerp(3.4, 1.2, fw));
+        const we = side * Math.cos(TAU * (ph - armLag - 0.035 - 0.045 * style)) * armVar;
+        const runArm = armFK((4 - 3 * style + w * (w > 0 ? 36 - 5 * style : 27 + 3 * style)) * DEG,
+          (85 - 6 * style + (23 + 5 * style) * we) * DEG, lerp(3.4, 1.2, fw));
         let a = mixV(walkArm, runArm, run);
         a = mixV(idleArm, a, g);
         if (i === 0 && this._bowCarry > 1e-3) {
@@ -1828,6 +1842,7 @@
         }
         hands.push(hand);
         shoulderFwd[i] = lerp(1.2, 2.4, run) * w * g; // o ombro acompanha o braço
+        shrug[i] += lerp(0.8, 1.05, run) * side * Math.sin(TAU * (ph - 0.04)) * freeGait;
       }
 
       // ---- soco: guarda, armar, golpe, segurar, recolher, voltar (por cima dos braços; gira o tronco em cadeia)
@@ -2071,7 +2086,6 @@
       }
 
       // ---- respiração e ombros
-      const shrug = [breath * 0.35 * idle, breath * 0.35 * idle];
       if (hit) for (let i = 0; i < 2; i++) {
         shrug[i] = lerp(hit.from.shrug[i], shrug[i] + 2.2 * hitGuard, hitEntry);
         shoulderFwd[i] = lerp(hit.from.shoulderFwd[i], shoulderFwd[i], hitEntry);

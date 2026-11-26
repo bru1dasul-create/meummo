@@ -21,6 +21,22 @@
   do ADM) e "Derrubar perto" (F1) apertados pelo texto, sem abrir a janela. Para efeito rápido (fumaça, poça), gravar
   vídeo (`recordVideo` do Playwright) e tirar os quadros com o `ffmpeg`: as fotos do Playwright levam ~0,4 s cada.
 
+## Caminhada e corrida do Birim
+
+- Em [`js/character/animator.js`](../prototipos/pindorama-25d/js/character/animator.js), `pose()` faz o quadril
+  levar o peso para a perna de apoio depois do contato. O peito acompanha com um pequeno atraso e o cotovelo
+  abre atrás e fecha depois do ombro, com uma abertura mais visível na corrida. A defesa, a mira e o pulo
+  reduzem esses movimentos conforme entram na pose. A trava dos pés continua sendo a de `_feet`.
+- Em `update()`, a troca de passada do Birim usa a velocidade que o desenho já mede, com limiares de 2,8 m/s na
+  subida e 2,4 m/s na volta. [`js/view.js`](../prototipos/pindorama-25d/js/view.js), em `addActor()`, ativa o ajuste
+  quando a aparência do jogador é a do Birim. A posição e a velocidade de jogo continuam vindo do motor.
+- Em [`regressao-movimentos.cjs`](../prototipos/pindorama-25d/ferramentas/regressao-movimentos.cjs), incluí caminhada
+  e corrida retas nas velocidades do jogo em oito direções, a 30, 60 e 120 Hz. Em uma medição de cinco segundos
+  com posições a 20 Hz e desenho a 60 Hz, a caminhada a 2 m/s passou de nove correções do pé para zero.
+- Comparei frente, lado e costas no Capão em desktop e no celular simulado com joystick. Conferi os apoios e o
+  caimento da bermuda. `npm run build` passou, `npm run check` passou com 781 testes e o roteiro de movimento passou
+  com 100 verificações.
+
 ## Aba do boné e rosto de perfil do Birim (24/11)
 
 - **Aba.** Em [`js/character/birim.js`](../prototipos/pindorama-25d/js/character/birim.js), `BRIM` estende a aba para trás com uma queda menor e afina as pontas até a barra. `extras` pinta a aba antes da copa. Isso resolve o arco que cruzava a lateral do boné em alguns giros. `brimEdge` acompanha a curva nova.

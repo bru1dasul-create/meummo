@@ -51,6 +51,25 @@ for (const hz of [30, 60, 120]) for (let dir = 0; dir < 8; dir++) for (const run
   if (!run && dir === 0) heights.push(maxHeight);
 }
 check('altura igual entre 30/60/120 Hz, cm', Math.max(...heights) - Math.min(...heights), 0.1);
+
+// A view usa a faixa de velocidade da corrida para alcançar até os 2 m/s da caminhada no jogo.
+for (const hz of [30, 60, 120]) for (let dir = 0; dir < 8; dir++) for (const speed of [200, 450]) {
+  const yaw = dir * Math.PI / 4, ch = new P.Character(0, 0, yaw);
+  ch.birimGait = true;
+  const mag = Math.min(1, speed / P.SPEED.run);
+  const input = { move: { x: Math.cos(yaw) * mag, y: Math.sin(yaw) * mag }, run: true, speedScale: Math.max(1, speed / P.SPEED.run), agile: true };
+  let corrections = 0;
+  let previousSteps = [null, null];
+  for (let k = 0; k < 6 * hz; k++) {
+    ch.update(1 / hz, input);
+    const rig = P.rig.buildRig(ch.pose());
+    inspect(ch, rig, `Birim ${hz} Hz / ${dir * 45}° / ${speed} cm/s`, k / hz);
+    const steps = ch.footLock.map(foot => foot.step);
+    if (k >= hz) corrections += steps.filter((step, i) => step && step !== previousSteps[i]).length;
+    previousSteps = steps;
+  }
+  check(`Birim sem passos extras em linha reta, ${hz} Hz / ${dir * 45}° / ${speed} cm/s`, corrections, 0);
+}
 console.log('Alturas:', heights.map(v => v.toFixed(5)).join(', '));
 console.log('Contato máximo:', JSON.stringify(contact));
 for (const failure of failures) console.error('FALHA:', failure);
