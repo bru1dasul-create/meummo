@@ -36,7 +36,7 @@ import { ShopWindow } from '../shop';
 import { arrivedAt, npcMark, QuestTracker, TalkWindow, type QuestContext } from '../talk';
 import { ActionBar, Feedback, Toast, ZoneBanner, type ActionSlot, type ChatBox, type Hud } from '../ui';
 import './arte'; // o desenho de verdade (PD.View), da [arte], quando estiver pronto
-import { aimedRange, angleDiff, chargedRange, chargeFraction, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
+import { aimedRange, angleDiff, chargedRange, chargeFraction, hasShotPath, shotProfile, shotSpread, type ShotProfile, type ShotStance } from '../../shared/combat';
 import { defaultCombatRules, type CombatRules } from '../../shared/combatRules';
 import { ATTRIBUTE_IDS, dexterityShot, noAttributes, spiritCooldownFactor, spiritDamageFactor, strengthFactor, type Attributes } from '../../shared/attributes';
 import { aimAngle, BODY_HEIGHT, CombatLayer, distanceToSegment, shotOriginOfFeet, throwZ, type DebugShape } from './combat';
@@ -78,6 +78,8 @@ export interface NewWorldDeps {
 }
 
 type Point = { x: number; y: number };
+type MobilityPress = { action: 'dash'; degrees: number } | { action: 'jump' };
+const MOBILITY_BUFFER_MS = 150;
 /** Para onde a pedra vai quando soltar: no monstro clicado, para onde o mouse aponta, ou no mais perto (botão). */
 /** Para onde vai a pedra que está sendo puxada: no monstro clicado, para o mouse, ou no mais perto (botão da tela, tecla J). */
 type Aim = { by: 'target'; id: number } | { by: 'mouse' } | { by: 'button' } | { by: 'key' };
@@ -294,6 +296,7 @@ class NewWorld implements NewWorldGame {
   private landings: { at: number; power: number }[] = [];
   private jumpedAt = -Infinity;
   private jumpReadyAt = 0;
+  private bufferedMobility: { press: MobilityPress; readyAt: number } | null = null;
   /** Dia e noite: o instante (performance.now) em que o ciclo começou, pelo relógio do servidor. */
   private timeBase = 0;
   /** O que a view já sabe da hora (manda de novo só quando muda). */
@@ -547,6 +550,7 @@ class NewWorld implements NewWorldGame {
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKey);
     window.addEventListener('blur', this.onBlur);
+    document.addEventListener('visibilitychange', this.onVisibility);
     this.pingTimer = window.setInterval(() => this.ping(), PING_EVERY_MS);
     this.exposeDebug();
   }
@@ -653,6 +657,9 @@ class NewWorld implements NewWorldGame {
     this.pending = [];
     this.route = [];
     this.goingToNpc = null;
+    this.goingToPet = null;
+    this.bufferedMobility = null;
+    this.joystick.reset();
     this.wasSafe = null;
     this.cancelCharge();
     this.cancelAim();
@@ -714,6 +721,7 @@ class NewWorld implements NewWorldGame {
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
     window.removeEventListener('blur', this.onBlur);
+    document.removeEventListener('visibilitychange', this.onVisibility);
     this.soundButton?.removeEventListener('click', this.openSoundPanel);
     this.soundPanel.destroy();
     this.keysPanel.destroy();
@@ -751,6 +759,13 @@ class NewWorld implements NewWorldGame {
     const now = gameNow(); // o relógio do jogo (em câmera lenta, anda mais devagar que o de verdade)
     if (this.destroyed || !this.view) return;
     const workStart = performance.now();
+    const buffered = this.bufferedMobility;
+    if (buffered && now >= buffered.readyAt) {
+      this.bufferedMobility = null;
+      if (!this.chat.isTyping() && !this.keysPanel.listening) {
+        this.performMobility(buffered.press, now);
+      }
+    }
     this.handleMovement(now);
     this.handlePendingShot(now);
     if (this.chargeAfterRoll && !this.rolling(now)) this.startCharge(this.chargeAfterRoll, now);
@@ -899,10 +914,10 @@ class NewWorld implements NewWorldGame {
   private keyAction(action: KeyAction, now: number): void {
     switch (action) {
       case 'esquiva':
-        this.tryDash(now);
+        this.requestMobility('dash', now);
         break;
       case 'pular':
-        this.tryJump(now);
+        this.requestMobility('jump', now);
         break;
       case 'atirar':
         this.startCharge({ by: 'key' }, now);
@@ -1107,9 +1122,19 @@ class NewWorld implements NewWorldGame {
 
 
   private readonly onBlur = () => {
+    this.keyboard.clear();
+    this.joystick.reset();
+    this.clearRoute();
+    this.goingToNpc = null;
+    this.goingToPet = null;
+    this.bufferedMobility = null;
     this.cancelAim(); // sem foco, o soltar da tecla não chega: a mira some sem usar
     this.cancelCharge(); // sem foco, o soltar do botão não chega: solta a pedra sem atirar
     this.stopGuard(); // e baixa a defesa
+  };
+
+  private readonly onVisibility = () => {
+    if (document.hidden) this.onBlur();
   };
 
   private handleMovement(now: number): void {
@@ -1230,6 +1255,7 @@ class NewWorld implements NewWorldGame {
   }
 
   private placeMe(x: number, y: number, dir: Dir): void {
+    this.bufferedMobility = null;
     this.pending = [];
     this.predicted = { x, y, dir };
     this.myAngle = degreesOfDir(dir);
@@ -1348,8 +1374,7 @@ class NewWorld implements NewWorldGame {
     const monster = this.actorAtScreen(clientX, clientY, 'monster');
     if (monster !== null) {
       // toque rápido no monstro: pedra fraca na hora (para puxar, segure o botão Estilingue)
-      const target = this.entities.get(monster)!;
-      this.quickShot(aimAngle(this.myFeet(), feetAt(target.x, target.y)), gameNow());
+      this.quickShot(monster, gameNow());
       return;
     }
     const npcId = this.actorAtScreen(clientX, clientY, 'npc');
@@ -1586,15 +1611,15 @@ class NewWorld implements NewWorldGame {
   }
 
   /** O monstro mais perto (pé a pé) até `maxDistance` metros. */
-  private nearestMonster(maxDistance: number): EntityState | null {
+  private nearestMonster(maxDistance: number, clearShot = false): EntityState | null {
     const me = this.myFeet();
     let best: EntityState | null = null;
     let bestDistance = maxDistance;
     for (const e of this.entities.values()) {
-      if (e.kind !== 'monster') continue;
+      if (e.kind !== 'monster' || e.hp <= 0 || e.fainted) continue;
       const feet = feetAt(e.x, e.y);
       const distance = Math.hypot(feet.x - me.x, feet.y - me.y);
-      if (distance <= bestDistance) {
+      if (distance <= bestDistance && (!clearShot || hasShotPath(this.map, this.predicted, e))) {
         best = e;
         bestDistance = distance;
       }
@@ -1783,7 +1808,8 @@ class NewWorld implements NewWorldGame {
       return { angle: aimAngle(feet, at), d: far(at, hovered !== null ? AIM_TARGET_SLACK : 0) };
     }
     // a mira automática procura até onde esta pedra chega (com carga cheia, mais longe)
-    const near = this.nearestMonster(chargedRange(charge, this.map.metric, this.shot()) + AUTO_AIM_SLACK);
+    const directShot = this.armedSkill()?.kind !== 'chuva';
+    const near = this.nearestMonster(chargedRange(charge, this.map.metric, this.shot()) + AUTO_AIM_SLACK, directShot);
     if (near) {
       const at = feetAt(near.x, near.y);
       return { angle: aimAngle(feet, at), d: far(at, AIM_TARGET_SLACK) };
@@ -1797,10 +1823,10 @@ class NewWorld implements NewWorldGame {
   }
 
   /** Pedra fraca na hora (toque rápido no monstro, no celular). */
-  private quickShot(angle: number, now: number): void {
+  private quickShot(targetId: number, now: number): void {
     if (this.dead || this.charging || this.guardHeld || now < this.nextShotAt || this.rolling(now) || this.asleep(now)) return;
     this.conn.send({ t: 'charge' }); // zera a carga no servidor: o toque rápido é uma pedra sem carga
-    this.tryShoot(angle, now, 0, undefined);
+    this.fireAim({ by: 'target', id: targetId }, 0, now);
   }
 
   /**
@@ -2162,8 +2188,7 @@ class NewWorld implements NewWorldGame {
       return;
     }
     if (!down) return;
-    if (slot === 'dash') this.tryDash(now);
-    else if (slot === 'jump') this.tryJump(now);
+    if (slot === 'dash' || slot === 'jump') this.requestMobility(slot, now);
     else if (CLASS_SLOTS.includes(slot)) {
       const skill = this.classSkillAt(CLASS_SLOTS.indexOf(slot));
       if (skill) this.castAuto(skill, now); // o botão mira sozinho: onde pega mais bichos
@@ -2211,11 +2236,31 @@ class NewWorld implements NewWorldGame {
     return best;
   }
 
+  /** Um único toque perto do fim da animação ou recarga vale no primeiro quadro livre. */
+  private requestMobility(action: 'dash' | 'jump', now: number): void {
+    if (!this.view || !this.predicted || this.dead || this.asleep(now) || (action === 'jump' && (this.guardHeld || this.charging))) return;
+    const readyAt = action === 'dash'
+      ? Math.max(this.dashReadyAt, this.jumpedAt + JUMP_AIR_MS)
+      : Math.max(this.jumpReadyAt, this.dashedAt + DASH_ROLL_MS);
+    if (readyAt - now > MOBILITY_BUFFER_MS) return;
+    const press: MobilityPress = action === 'dash' ? { action, degrees: this.dashDegrees() } : { action };
+    if (readyAt > now) {
+      this.bufferedMobility = { press, readyAt };
+    } else {
+      this.bufferedMobility = null;
+      this.performMobility(press, now);
+    }
+  }
+
+  private performMobility(press: MobilityPress, now: number): void {
+    if (press.action === 'dash') this.tryDash(now, press.degrees);
+    else this.tryJump(now);
+  }
+
   /** Esquiva: rola DASH_TILES metros (desliza no que tiver no caminho); some do golpe por um instante. */
-  private tryDash(now: number): void {
+  private tryDash(now: number, degrees: number): void {
     if (this.dead || now < this.dashReadyAt || this.pending.length >= MAX_PENDING_WALKS || this.asleep(now)) return;
     if (now - this.jumpedAt < JUMP_AIR_MS) return; // no ar, não rola (o servidor também recusa)
-    const degrees = this.dashDegrees();
     const result = sweepBody(this.map, this.predicted, degrees, DASH_TILES);
     if (!result.moved) {
       this.toast.show('Sem espaço para rolar aí');
@@ -2717,6 +2762,7 @@ class NewWorld implements NewWorldGame {
     if (this.dead === dead) return;
     this.dead = dead;
     if (dead) {
+      this.bufferedMobility = null;
       this.setArmed(null);
       this.cancelCharge();
       this.stopGuard();
@@ -3171,6 +3217,7 @@ class NewWorld implements NewWorldGame {
           const was = this.asleep(now);
           this.asleepUntil = msg.ms > 0 ? now + msg.ms : 0;
           if (msg.ms > 0) {
+            this.bufferedMobility = null;
             this.cancelCharge();
             this.stopGuard();
             this.clearRoute();

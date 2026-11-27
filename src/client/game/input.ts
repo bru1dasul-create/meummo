@@ -21,8 +21,8 @@ export interface HeldMove {
 }
 
 export class KeyboardDirections {
-  /** Teclas seguradas, na ordem em que foram apertadas. */
-  private held: Dir[] = [];
+  /** Cada tecla física conta até ser solta, mesmo que outra aponte para o mesmo lado. */
+  private readonly held = new Map<string, Dir>();
 
   constructor(private readonly isBlocked: () => boolean) {
     window.addEventListener('keydown', this.down);
@@ -32,18 +32,24 @@ export class KeyboardDirections {
 
   current(): HeldMove | null {
     if (this.isBlocked()) {
-      this.held = [];
+      this.clear();
       return null;
     }
     // A tecla mais recente de cada eixo vale (ex.: segurou A e depois D: vai para a direita).
-    const vertical = this.lastOf(UP, DOWN);
-    const horizontal = this.lastOf(LEFT, RIGHT);
-    if (vertical !== null && horizontal !== null) {
-      const verticalIsNewer = this.held.lastIndexOf(vertical) > this.held.lastIndexOf(horizontal);
+    let vertical: Dir | undefined;
+    let horizontal: Dir | undefined;
+    let last: Dir | undefined;
+    for (const dir of this.held.values()) {
+      if (dir === UP || dir === DOWN) vertical = dir;
+      else horizontal = dir;
+      last = dir;
+    }
+    if (vertical !== undefined && horizontal !== undefined) {
+      const verticalIsNewer = last === vertical;
       return { dir: combineDirs(vertical, horizontal), fallbacks: verticalIsNewer ? [vertical, horizontal] : [horizontal, vertical] };
     }
     const single = vertical ?? horizontal;
-    return single === null ? null : { dir: single, fallbacks: [] };
+    return single === undefined ? null : { dir: single, fallbacks: [] };
   }
 
   destroy(): void {
@@ -52,28 +58,18 @@ export class KeyboardDirections {
     window.removeEventListener('blur', this.clear);
   }
 
-  private lastOf(a: Dir, b: Dir): Dir | null {
-    const ia = this.held.lastIndexOf(a);
-    const ib = this.held.lastIndexOf(b);
-    if (ia === -1 && ib === -1) return null;
-    return ia > ib ? a : b;
-  }
-
   private readonly down = (event: KeyboardEvent) => {
     const dir = KEY_DIRS[event.code];
     if (dir === undefined || this.isBlocked()) return;
     event.preventDefault();
-    // W e seta para cima são a mesma direção: guarda só uma vez, na posição mais recente
-    this.held = this.held.filter((d) => d !== dir);
-    this.held.push(dir);
+    if (!event.repeat) this.held.set(event.code, dir);
   };
 
   private readonly up = (event: KeyboardEvent) => {
-    const dir = KEY_DIRS[event.code];
-    if (dir !== undefined) this.held = this.held.filter((d) => d !== dir);
+    this.held.delete(event.code);
   };
 
-  private readonly clear = () => {
-    this.held = [];
+  readonly clear = () => {
+    this.held.clear();
   };
 }
