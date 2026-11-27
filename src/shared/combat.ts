@@ -3,7 +3,7 @@
 
 import { DOWN, DOWN_LEFT, DOWN_RIGHT, DX, DY, LEFT, RIGHT, UP, UP_LEFT, UP_RIGHT, type Dir } from './dir';
 import type { Tile, Walkable } from './map';
-import { SHOT_COOLDOWN_MS, SHOT_MIN_RANGE, SHOT_RANGE, SHOT_SPEED } from './constants';
+import { SHOT_COOLDOWN_MS, SHOT_HIT_RADIUS, SHOT_MIN_RANGE, SHOT_RANGE, SHOT_SPEED } from './constants';
 import type { CombatRules } from './combatRules';
 import type { ShotKind, WeaponShot } from './items';
 import { canStep } from './movement';
@@ -290,4 +290,14 @@ export function shotTouches(x: number, y: number, tx: number, ty: number, radius
   const dx = x - (tx + 0.5);
   const dy = y - (ty + 0.5);
   return dx * dx + dy * dy <= radius * radius;
+}
+
+/** Mira automática: um tiro reto alcança o corpo antes de bater no cenário? Usa a mesma trajetória do servidor. */
+export function hasShotPath(map: ShotBlocker, from: Point, target: Point): boolean {
+  const dx = target.x - from.x;
+  const dy = target.y - from.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0) return true;
+  const path = makeShot(from, Math.atan2(dy, dx), 1, distance);
+  return advanceShot(path, distance, map, (x, y) => shotTouches(x, y, target.x, target.y, SHOT_HIT_RADIUS)) === 'hit';
 }

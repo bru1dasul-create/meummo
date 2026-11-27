@@ -15,8 +15,7 @@ export class Joystick {
   private dx = 0;
   private dy = 0;
   private downAt = 0;
-  /** O quanto o dedo já se afastou do ponto onde encostou (pixels). */
-  private farthest = 0;
+  private dragged = false;
 
   constructor(
     private readonly surface: HTMLElement,
@@ -33,6 +32,7 @@ export class Joystick {
     window.addEventListener('pointermove', this.move);
     window.addEventListener('pointerup', this.up);
     window.addEventListener('pointercancel', this.up);
+    surface.addEventListener('lostpointercapture', this.up);
   }
 
   /**
@@ -56,7 +56,16 @@ export class Joystick {
     window.removeEventListener('pointermove', this.move);
     window.removeEventListener('pointerup', this.up);
     window.removeEventListener('pointercancel', this.up);
+    this.surface.removeEventListener('lostpointercapture', this.up);
+    this.reset();
     this.base.remove();
+  }
+
+  reset(): void {
+    const pointer = this.pointerId;
+    this.pointerId = null;
+    this.base.style.display = 'none';
+    if (pointer !== null && this.surface.hasPointerCapture(pointer)) this.surface.releasePointerCapture(pointer);
   }
 
   private readonly down = (event: PointerEvent) => {
@@ -68,7 +77,9 @@ export class Joystick {
     this.dx = 0;
     this.dy = 0;
     this.downAt = performance.now();
-    this.farthest = 0;
+    this.dragged = false;
+    // A captura mantém o gesto mesmo que o polegar deslize por cima de outro controle.
+    try { this.surface.setPointerCapture(event.pointerId); } catch { /* os eventos da janela continuam valendo */ }
     this.base.style.left = `${event.clientX - RADIUS}px`;
     this.base.style.top = `${event.clientY - RADIUS}px`;
     this.base.style.display = 'block';
@@ -80,16 +91,26 @@ export class Joystick {
     this.dx = event.clientX - this.originX;
     this.dy = event.clientY - this.originY;
     const length = Math.hypot(this.dx, this.dy);
-    this.farthest = Math.max(this.farthest, length);
-    const k = length > RADIUS ? RADIUS / length : 1;
-    this.knob.style.transform = `translate(${this.dx * k}px, ${this.dy * k}px)`;
+    if (length >= DEAD_ZONE) this.dragged = true;
+    if (length > RADIUS) {
+      const scale = RADIUS / length;
+      this.dx *= scale;
+      this.dy *= scale;
+      this.originX = event.clientX - this.dx;
+      this.originY = event.clientY - this.dy;
+      this.base.style.left = `${this.originX - RADIUS}px`;
+      this.base.style.top = `${this.originY - RADIUS}px`;
+    }
+    this.knob.style.transform = `translate(${this.dx}px, ${this.dy}px)`;
   };
 
   private readonly up = (event: PointerEvent) => {
     if (event.pointerId !== this.pointerId) return;
-    this.pointerId = null;
-    this.base.style.display = 'none';
-    const tapped = event.type === 'pointerup' && this.farthest < DEAD_ZONE && performance.now() - this.downAt < TAP_MS;
+    if (event.type === 'lostpointercapture' && event.target !== this.surface) return;
+    const tapped = event.type === 'pointerup' && !this.dragged &&
+      Math.hypot(event.clientX - this.originX, event.clientY - this.originY) < DEAD_ZONE &&
+      performance.now() - this.downAt < TAP_MS;
+    this.reset();
     if (tapped) this.onTap(this.originX, this.originY);
   };
 }

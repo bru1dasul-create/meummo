@@ -31,6 +31,7 @@ A visão do jogo está em [DESIGN.md](DESIGN.md).
 
 ## 🔧 Refinamento do M1 (para jogar e ajustar juntos)
 Tudo isto se ajusta mexendo em números, sem programar:
+- [x] **[estrutura]** Controles do multiplayer 2.5D: joystick que acompanha arrastos longos, inversões pelo teclado, pulo e esquiva aceitos nos últimos 150 ms da recuperação e mira automática de tiro direto com caminho livre.
 - [x] Andar em 8 direções (W+D = diagonal), escorregando nas paredes; monstros e o clique para andar também usam diagonais
 - [x] **[estrutura]** Monstros que atacam (o dono jogou em 10/11: "só atacam se você ataca"): todos atacam sozinhos
   (o sagui e o boto também) e percebem de mais longe (4 a 6 tiles); quem acabou de chegar de outro mapa, de acordar

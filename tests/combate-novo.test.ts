@@ -3,13 +3,26 @@
 
 import { describe, expect, it } from 'vitest';
 import { aimAngle, barHeight, BODY_HEIGHT, distanceToSegment, floaterHeight, SHOT_DRAW_Z, shotFeet, shotOriginOfFeet, shotZ, tileFeetSquare } from '../src/client/novo/combat';
-import { angleBetween, makeShot, shotTouches } from '../src/shared/combat';
+import { angleBetween, hasShotPath, makeShot, shotTouches } from '../src/shared/combat';
 import { feetAt, footTile } from '../src/shared/movement';
 
 let seed = 7;
 const random = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
 
 describe('combate do jogo novo: desenho igual à regra', () => {
+  it('a mira respeita o tronco e enxerga um alvo ao lado dele, até dentro do mesmo tile', () => {
+    const map = { blocksShot: () => true, blocksShotAt: (x: number, y: number) => x >= 1.2 && x <= 1.4 && y < 0.7 };
+    const me = { x: 0, y: 0 };
+    expect(hasShotPath(map, me, { x: 3, y: 0 })).toBe(false);
+    expect(hasShotPath(map, me, { x: 3, y: 1.5 })).toBe(true);
+  });
+
+  it('um obstáculo depois do ponto de impacto não tira o monstro da mira', () => {
+    const map = { blocksShot: (x: number) => x >= 3 };
+    expect(hasShotPath(map, { x: 0, y: 0 }, { x: 2.75, y: 0 })).toBe(true);
+    expect(hasShotPath(map, { x: 0, y: 0 }, { x: 4, y: 0 })).toBe(false);
+  });
+
   it('o pé está dentro do quadrado vermelho do aviso exatamente quando o servidor acerta aquele tile', () => {
     for (let n = 0; n < 2000; n++) {
       const x = random() * 40;
